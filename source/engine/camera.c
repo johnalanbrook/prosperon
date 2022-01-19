@@ -2,7 +2,7 @@
 
 #include "gameobject.h"
 #include "input.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 const float CAMERA_MINSPEED = 1.f;
 const float CAMERA_MAXSPEED = 300.f;

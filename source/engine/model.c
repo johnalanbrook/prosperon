@@ -3,7 +3,6 @@
 #include "mesh.h"
 #include "resources.h"
 #include "shader.h"
-#include <SDL_image.h>
 #include <cgltf.h>
 #include <string.h>
 

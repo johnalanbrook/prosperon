@@ -658,6 +658,7 @@ Matrix 4×4 representation:
 				       mfloat_t basis[3][3]);
 
 
+
     mfloat_t *vec3_rotate_quat(mfloat_t * result, const mfloat_t * v,
 			       const mfloat_t * q);
 

@@ -19,10 +19,13 @@ static uint32_t VAO = 0;
 unsigned char ttf_buffer[24 << 20];
 unsigned char temp_bitmap[512 * 512];
 
-struct sFont MakeFont(const char *fontfile, int height)
+static struct sFont *font;
+static struct mShader *shader;
+
+struct sFont *MakeFont(const char *fontfile, int height)
 {
-    struct sFont newfont = { 0 };
-    newfont.height = height;
+    struct sFont *newfont = calloc(1, sizeof(struct sFont));
+    newfont->height = height;
 
     char fontpath[256];
     snprintf(fontpath, 256, "fonts/%s", fontfile);
@@ -42,7 +45,7 @@ struct sFont MakeFont(const char *fontfile, int height)
 	bitmap =
 	    stbtt_GetCodepointBitmap(&fontinfo, 0,
 				     stbtt_ScaleForPixelHeight(&fontinfo,
-							       newfont.
+							       newfont->
 							       height), c,
 				     &w, &h, 0, 0);
 
@@ -52,7 +55,7 @@ struct sFont MakeFont(const char *fontfile, int height)
 	glTexImage2D(GL_TEXTURE_2D,
 		     0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
 
-	glGenerateMipmap(GL_TEXTURE_2D);
+	//glGenerateMipmap(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
 			GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
@@ -85,8 +88,6 @@ struct sFont MakeFont(const char *fontfile, int height)
     glBindVertexArray(0);
 
     return newfont;
-
-
 }
 
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
@@ -156,9 +157,13 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
 
 }
 
-void renderText(struct sFont font, struct mShader *shader,
-		const char *text, mfloat_t pos[2], float scale,
-		mfloat_t color[3], float lw)
+void text_settype(struct sFont *mfont, struct mShader *mshader)
+{
+    font = mfont;
+    shader = mshader;
+}
+
+void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
 {
     shader_use(shader);
     shader_setvec3(shader, "textColor", color);
@@ -193,7 +198,7 @@ void renderText(struct sFont font, struct mShader *shader,
 		    && (cursor[0] + ((ch.Advance >> 6) * scale) - pos[0] >=
 			lw)) {
 		    cursor[0] = pos[0];
-		    cursor[1] -= scale * font.height;
+		    cursor[1] -= scale * font->height;
 
 		} else {
 		    // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
@@ -211,7 +216,7 @@ void renderText(struct sFont font, struct mShader *shader,
 		// Now wordStart and stringPos surround the word, go through them. If the word that's about to be drawn goes past the line width, go to next line
 		if (lw > 0 && (cursor[0] + wordWidth - pos[0] >= lw)) {
 		    cursor[0] = pos[0];
-		    cursor[1] -= scale * font.height;
+		    cursor[1] -= scale * font->height;
 		}
 
 		while (wordstart < line) {	// Go through
@@ -229,7 +234,7 @@ void renderText(struct sFont font, struct mShader *shader,
 
 
 	}
-	cursor[1] -= scale * font.height;
+	cursor[1] -= scale * font->height;
 
 	line = strtok(NULL, "\n");
     }

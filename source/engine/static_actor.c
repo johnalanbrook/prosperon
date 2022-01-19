@@ -1,5 +1,4 @@
 #include "static_actor.h"
-#include "editorstate.h"
 
 //ADDMAKE(StaticActor);
 

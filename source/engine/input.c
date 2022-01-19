@@ -1,7 +1,7 @@
 #include "input.h"
 
 #include "window.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
@@ -22,10 +22,10 @@ void input_poll()
     currentKeystates = SDL_GetKeyboardState(NULL);
 
     while (SDL_PollEvent(&e)) {
-	window_handle_event(window, &e);
+	window_all_handle_events(&e);
 
 #ifdef EDITOR
-	editor_input(&e);
+	//editor_input(&e);
 #endif
     }
 

@@ -2,6 +2,7 @@
 #define OPENGL_RENDER_H
 
 #include "render.h"
+#include "window.h"
 
 struct mCamera;
 struct mSDLWindow;
@@ -42,8 +43,8 @@ enum RenderMode {
     OBJECTPICKER
 };
 
-void openglInit();
-void openglRender(struct mCamera *camera);
+void openglInit(struct mSDLWindow *window);
+void openglRender(struct mSDLWindow *window, struct mCamera *camera);
 
 void openglInit3d(struct mSDLWindow *window);
 void openglRender3d(struct mSDLWindow *window, struct mCamera *camera);

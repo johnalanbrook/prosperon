@@ -56,8 +56,8 @@ GLuint load_shader_from_file(char *path, int type)
 {
     char spath[MAXPATH] = {'\0'};
 
-    sprintf(spath, "%s%s%s", DATA_PATH, "shaders/", path);
-    FILE *f = fopen(spath, "r'");
+    sprintf(spath, "%s%s", "shaders/", path);
+    FILE *f = fopen(make_path(spath), "r'");
     if (!path)
         perror(spath), exit(1);
 

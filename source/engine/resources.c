@@ -9,6 +9,8 @@
 #include <ftw.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
@@ -29,13 +31,15 @@ char pathbuf[MAXPATH];
 
 void resources_init()
 {
-    char *dpath = SDL_GetBasePath();
-    DATA_PATH = malloc(strlen(dpath) + 1);
-    strcpy(DATA_PATH, dpath);
+    DATA_PATH = malloc(256);
+    getcwd(DATA_PATH, 256);
+    strncat(DATA_PATH, "/", 256);
 
-    char *ppath = SDL_GetPrefPath("Odplot", "Test Game");
-    PREF_PATH = malloc(strlen(ppath) + 1);
-    strcpy(PREF_PATH, ppath);
+
+
+    PREF_PATH = SDL_GetPrefPath("Odplot", "Test Game");
+    if (!PREF_PATH)
+        PREF_PATH = strdup("./tmp/");
 }
 
 char *get_filename_from_path(char *path, int extension)
@@ -87,7 +91,7 @@ static int ext_check(const char *path, const struct stat *sb, int typeflag,
     return 0;
 }
 
-void fill_extensions(struct vec *vec, char *path, const char *ext)
+void fill_extensions(struct vec *vec, const char *path, const char *ext)
 {
     c_vec = vec;
     cur_ext = ext;
@@ -109,4 +113,11 @@ FILE *path_open(const char *fmt, const char *tag, ...)
 
     FILE *f = fopen(pathbuf, tag);
     return f;
+}
+
+char *make_path(char *file)
+{
+    strncpy(pathbuf, DATA_PATH, MAXPATH);
+    strncat(pathbuf, file, MAXPATH);
+    return pathbuf;
 }

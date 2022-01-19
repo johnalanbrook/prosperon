@@ -9,6 +9,8 @@
 #include "gameobject.h"
 #include <string.h>
 
+static struct mGameObject *gui_go = NULL;
+
 
 /*
 static struct mShader *spriteShader = NULL;
@@ -48,13 +50,13 @@ void sprite_init(struct mSprite *sprite, struct mGameObject *go)
 
 void sprite_loadtex(struct mSprite *sprite, const char *path)
 {
-    sprite->tex = texture_loadfromfile(sprite->tex, path);
+    sprite->tex = texture_loadfromfile(path);
 }
 
 void sprite_loadanim(struct mSprite *sprite, const char *path,
 		     struct Anim2D anim)
 {
-    sprite->tex = texture_loadfromfile(sprite->tex, path);
+    sprite->tex = texture_loadfromfile(path);
     sprite->anim = anim;
     sprite->anim.timer =
 	SDL_AddTimer(sprite->anim.ms, incrementAnimFrame, sprite);
@@ -64,6 +66,10 @@ void sprite_loadanim(struct mSprite *sprite, const char *path,
 */
 }
 
+void sprite_settex(struct mSprite *sprite, struct Texture *tex)
+{
+    sprite->tex = tex;
+}
 
 Uint32 incrementAnimFrame(Uint32 interval, struct mSprite *sprite)
 {
@@ -203,4 +209,15 @@ void video_draw(struct datastream *stream, mfloat_t position[2],
     //glBindVertexArray(stream->quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
+}
+
+void gui_init()
+{
+    gui_go = MakeGameobject();
+}
+
+struct mSprite *gui_makesprite()
+{
+    struct mSprite *new = MakeSprite(gui_go);
+    return new;
 }

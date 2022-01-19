@@ -16,6 +16,11 @@ struct mGameObject *updateGO = NULL;
 const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
 
+void init_gameobjects()
+{
+    gameobjects = vec_make(sizeof(struct mGameObject), 100);
+}
+
 struct mGameObject *get_gameobject_from_id(int id)
 {
     return vec_get(gameobjects, id - 1);

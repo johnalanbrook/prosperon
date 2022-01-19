@@ -1,7 +1,6 @@
 #include "openglrender.h"
 
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL2/SDL.h>
 #include "sprite.h"
 #include "shader.h"
 #include "font.h"
@@ -37,7 +36,7 @@ struct mShader *animSpriteShader = NULL;
 static struct mShader *textShader;
 static struct mShader *diffuseShader;
 
-struct sFont stdFont;
+struct sFont *stdFont;
 
 static struct mShader *debugDepthQuad;
 static struct mShader *debugColorPickShader;
@@ -94,34 +93,17 @@ static struct mSprite *tanim = NULL;
 
 static unsigned int projUBO;
 
-void openglInit()
+void openglInit(struct mSDLWindow *window)
 {
-    //Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER)) {
-	YughLog(0, SDL_LOG_PRIORITY_ERROR,
-		"SDL could not initialize! SDL Error: %s", SDL_GetError());
-    }
-    //Use OpenGL 3.3
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-			SDL_GL_CONTEXT_PROFILE_CORE);
+    window_makecurrent(window);
 
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);	/* How many x MSAA */
-
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
-
-    // TODO: Add non starter initializtion return here for some reason?
-    window = MakeSDLWindow("Untitled Game", 1920, 1080,
-			   SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN |
-			   SDL_WINDOW_RESIZABLE);
-
-    //Use Vsync
     if (SDL_GL_SetSwapInterval(1)) {
 	YughLog(0, SDL_LOG_PRIORITY_WARN,
 		"Unable to set VSync! SDL Error: %s", SDL_GetError());
     }
+
+    sprite_initialize();
+
     ////// MAKE SHADERS
     outlineShader = MakeShader("outlinevert.glsl", "outline.glsl");
 
@@ -161,7 +143,7 @@ void openglInit()
 
 }
 
-void openglRender(struct mCamera *mcamera)
+void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
 {
     //////////// 2D projection
     mfloat_t projection[16] = { 0.f };
@@ -640,7 +622,8 @@ void openglRender3d(struct mSDLWindow *window, struct mCamera *mcamera)
     shader_setmat4(textShader, "projection", window->projection);
     mfloat_t fontpos[2] = { 25.f, 25.f };
     mfloat_t fontcolor[3] = { 0.5f, 0.8f, 0.2f };
-    renderText(stdFont, textShader, "Sample text", fontpos, 0.4f,
+    text_settype(stdFont, textShader);
+    renderText("Sample text", fontpos, 0.4f,
 	       fontcolor, -1.f);
 
     sprite_draw(tsprite);

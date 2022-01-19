@@ -260,7 +260,7 @@ void editor_save()
     fclose(feditor);
 }
 
-void editor_init(struct mSDLWindow *mwindow)
+void editor_init(struct mSDLWindow *window)
 {
     projects = vec_make(sizeof(struct gameproject), 5);
     levels = vec_make(MAXNAME, 10);
@@ -286,7 +286,7 @@ void editor_init(struct mSDLWindow *mwindow)
     ImGui_ImplOpenGL3_Init();
 }
 
-void editor_input(SDL_Event * e)
+void editor_input(struct mSDLWindow *window, SDL_Event * e)
 {
     ImGui_ImplSDL2_ProcessEvent(e);
     io = &ImGui::GetIO();
@@ -840,9 +840,7 @@ void editor_selectasset(struct fileasset *asset)
     const char *ext = get_extension(asset->filename);
 
     if (!strcmp(ext + 1, "png") || !strcmp(ext + 1, "jpg")) {
-	asset->data =
-	    texture_loadfromfile((struct Texture *) asset->data,
-				 asset->filename);
+	asset->data = texture_loadfromfile(asset->filename);
 	tex_gui_anim.tex = (struct Texture *) asset->data;
 	asset->type = ASSET_TYPE_IMAGE;
 	tex_anim_set(&tex_gui_anim);
@@ -1046,7 +1044,7 @@ void editor_proj_select_gui()
 void editor_init_project(struct gameproject *gp)
 {
     cur_project = gp;
-    DATA_PATH = gp->path;
+    DATA_PATH = strdup(gp->path);
     stemlen = strlen(DATA_PATH);
     findPrefabs();
     get_levels();

@@ -2,7 +2,6 @@
 
 #include "shader.h"
 #include "camera.h"
-#include <SDL_image.h>
 #include <string.h>
 
 #include "openglrender.h"

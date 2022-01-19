@@ -1,12 +1,10 @@
 #include "texture.h"
 
-#define STBI_FAILURE_USERMSG
-
+#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stb_image.h>
 #include <stb_ds.h>
 #include <GL/glew.h>
-#include <SDL_image.h>
 #include "log.h"
 
 static struct {
@@ -14,14 +12,13 @@ static struct {
     struct Texture *value;
 } *texhash = NULL;
 
-
-struct Texture *texture_loadfromfile(struct Texture *tex, const char *path)
+struct Texture *texture_pullfromfile(const char *path)
 {
     int index = shgeti(texhash, path);
     if (index != -1)
 	return texhash[index].value;
 
-    tex = calloc(1, sizeof(*tex));
+    struct Texture *tex = calloc(1, sizeof(*tex));
     tex->path = malloc(strlen(path) + 1);
     strncpy(tex->path, path, strlen(path) + 1);
     tex->flipy = 0;
@@ -30,7 +27,38 @@ struct Texture *texture_loadfromfile(struct Texture *tex, const char *path)
     tex->anim.frames = 1;
     tex->anim.ms = 1;
 
+    int n;
+    stbi_set_flip_vertically_on_load(0);
+    unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
+
+    if (stbi_failure_reason()) {
+	YughLog(0, 3, "STBI failed to load file %s with message: %s",
+		tex->path, stbi_failure_reason());
+
+    }
+
+    tex->data = data;
+
+    shput(texhash, tex->path, tex);
+
     glGenTextures(1, &tex->id);
+
+    return tex;
+}
+
+struct Texture *texture_loadfromfile(const char *path)
+{
+    struct Texture *new = texture_pullfromfile(path);
+
+    tex_gpu_load(new);
+
+    return new;
+}
+
+
+
+void tex_pull(struct Texture *tex)
+{
     uint8_t n;
     stbi_set_flip_vertically_on_load(0);
     tex->data = stbi_load(tex->path, &tex->width, &tex->height, &n, 4);
@@ -38,20 +66,25 @@ struct Texture *texture_loadfromfile(struct Texture *tex, const char *path)
     if (stbi_failure_reason())
 	YughLog(0, 3, "STBI failed to load file %s with message: %s",
 		tex->path, stbi_failure_reason());
-
-    shput(texhash, tex->path, tex);
-
-    tex_gpu_load(tex);
-
-
-    return tex;
 }
 
-void tex_reload(struct Texture *tex)
+void tex_flush(struct Texture *tex)
 {
-    tex_free(tex);
+    free(tex->data);
+}
+
+void tex_gpu_reload(struct Texture *tex)
+{
+    tex_gpu_free(tex);
 
     tex_gpu_load(tex);
+}
+
+void tex_free(struct Texture *tex)
+{
+    free(tex->data);
+    free(tex->path);
+    free(tex);
 }
 
 void tex_gpu_load(struct Texture *tex)
@@ -172,7 +205,9 @@ void tex_anim_set(struct TexAnimation *anim)
     tex_anim_calc_uv(anim);
 }
 
-void tex_free(struct Texture *tex)
+
+
+void tex_gpu_free(struct Texture *tex)
 {
     if (tex->id != 0) {
 	glDeleteTextures(1, &tex->id);

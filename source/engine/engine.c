@@ -1,24 +1,11 @@
-#define PL_MPEG_IMPLEMENTATION
-#define CGLTF_IMPLEMENTATION
-#define GL_GLEXT_PROTOTYPES
-
-//#define MATHC_USE_INT16
-//#define MATHC_FLOATING_POINT_TYPE GLfloat
-//#define MATHC_USE_DOUBLE_FLOATING_POINT
-
-#define STB_DS_IMPLEMENTATION
-#include <stb_ds.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#include <pl_mpeg.h>
+#include "engine.h"
 
 #ifdef EDITOR
 #include "editor.h"
 #endif
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include "openglrender.h"
 #include "window.h"
 #include "camera.h"
@@ -27,96 +14,63 @@
 #include "2dphysics.h"
 #include "gameobject.h"
 #include "registry.h"
+#include "log.h"
+#include "resources.h"
 
-#define FPS30 33
-#define FPS60 17
-#define FPS120 8;
-#define FPS144 7
-#define FPS300 3
+
 
 unsigned int frameCount = 0;
-Uint32 lastTick = 0;
-Uint32 frameTick = 0;
-Uint32 elapsed = 0;
+uint32_t lastTick = 0;
+uint32_t frameTick = 0;
+uint32_t elapsed = 0;
 
-Uint32 physMS = FPS144;
-Uint32 physlag = 0;
-Uint32 renderMS = FPS144;
-Uint32 renderlag = 0;
+uint32_t physMS = FPS144;
+uint32_t physlag = 0;
+uint32_t renderMS = FPS144;
+uint32_t renderlag = 0;
 
+// TODO: Init on the heap
+struct mCamera camera = {0};
 
+#include "engine.h"
 
-int main(int argc, char **args)
+void engine_init()
 {
 
-    script_init();
 
-    registry_init();
-    gameobjects = vec_make(sizeof(struct mGameObject), 100);
-    prefabs = vec_make(MAXNAME, 25);
-
-    // TODO: Init these on the heap instead
-    struct mCamera camera = { 0 };
-    camera.speed = 500;
-
-    stbi_set_flip_vertically_on_load(1);
-
-    resources_init();
-    openglInit();
-    sprite_initialize();
-
-#ifdef EDITOR
-    editor_init(window);
-#endif
-
-    phys2d_init();
-
-    quit = false;
-    SDL_Event e;
-
-    //While application is running
-    while (!quit) {
-	frameTick = SDL_GetTicks();
-	elapsed = frameTick - lastTick;
-	lastTick = frameTick;
-	deltaT = elapsed / 1000.f;
-
-	physlag += elapsed;
-	renderlag += elapsed;
-
-	input_poll();
-
-	if (physlag >= physMS) {
-	    phys2d_update(physMS / 1000.f);
-
-	    physlag -= physMS;
-	}
-
-
-	if (renderlag >= renderMS) {
-	    if (physOn) {
-		vec_walk(gameobjects, gameobject_update);
-	    }
-
-
-	    camera_2d_update(&camera, renderMS / 1000.f);
-
-	    openglRender(&camera);
-
-
-#ifdef EDITOR
-	    editor_render();
-#endif
-
-	    window_swap(window);
-
-	    renderlag -= renderMS;
-	}
+     //Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
+	YughLog(0, SDL_LOG_PRIORITY_ERROR,
+		"SDL could not initialize! SDL Error: %s", SDL_GetError());
     }
 
+    //Use OpenGL 3.3
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+			SDL_GL_CONTEXT_PROFILE_CORE);
 
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);	/* How many x MSAA */
+
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
+resources_init();
+        script_init();
+    registry_init();
+    init_gameobjects();
+
+    prefabs = vec_make(MAXNAME, 25);
+    camera.speed = 500;
+    stbi_set_flip_vertically_on_load(1);
+    phys2d_init();
+    gui_init();
+    sound_init();
+
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
+}
+
+void engine_stop()
+{
     SDL_StopTextInput();
     SDL_Quit();
-
-    return 0;
 }

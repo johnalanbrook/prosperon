@@ -2,7 +2,7 @@
 #define EDITOR_H
 
 #include "config.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <stdbool.h>
 #include "resources.h"
 
@@ -45,8 +45,8 @@ struct Texture;
 void pickGameObject(int pickID);
 int is_allowed_extension(const char *ext);
 
-void editor_init(struct mSDLWindow *mwindow);
-void editor_input(SDL_Event * e);
+void editor_init(struct mSDLWindow *window);
+void editor_input(struct mSDLWindow *window, SDL_Event * e);
 void editor_render();
 int editor_wantkeyboard();
 void editor_save();

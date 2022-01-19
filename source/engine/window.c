@@ -3,6 +3,7 @@
 #include "openglrender.h"
 
 #include <string.h>
+#include "texture.h"
 #include "log.h"
 
 struct mSDLWindow *window = NULL;
@@ -126,6 +127,13 @@ void window_handle_event(struct mSDLWindow *w, SDL_Event * e)
     }
 }
 
+void window_all_handle_events(SDL_Event *e)
+{
+    for (int i = 0; i < numWindows; i++) {
+        window_handle_event(windows[i], e);
+    }
+}
+
 void window_makefullscreen(struct mSDLWindow *w)
 {
     SDL_SetWindowFullscreen(w->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -154,4 +162,16 @@ void window_makecurrent(struct mSDLWindow *w)
 void window_swap(struct mSDLWindow *w)
 {
     SDL_GL_SwapWindow(w->window);
+}
+
+void window_seticon(struct mSDLWindow *w, struct Texture *icon)
+{
+    SDL_Surface *winIcon = SDL_CreateRGBSurfaceWithFormatFrom(icon->data, icon->width, icon->height, 32, 4*icon->width, SDL_PIXELFORMAT_RGBA32);
+    SDL_SetWindowIcon(w->window, winIcon);
+    SDL_FreeSurface(winIcon);
+}
+
+int window_hasfocus(struct mSDLWindow *w)
+{
+    return SDL_GetWindowFlags(w->window) & SDL_WINDOW_INPUT_FOCUS;
 }

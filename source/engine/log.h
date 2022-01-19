@@ -1,7 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include <SDL_log.h>
+#include <SDL2/SDL_log.h>
 
 #define ERROR_BUFFER 2048
 

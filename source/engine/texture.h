@@ -1,7 +1,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include <SDL_timer.h>
+#include <SDL2/SDL_timer.h>
 
 struct Rect {
     float x;
@@ -36,8 +36,8 @@ struct Texture {
     char *type;
     unsigned int id;
     char *path;
-    unsigned int width;
-    unsigned int height;
+    int width;
+    int height;
     short flipy;
     unsigned char *data;
 
@@ -45,14 +45,14 @@ struct Texture {
     struct TexAnim anim;
 };
 
-
-
-
-struct Texture *texture_loadfromfile(struct Texture *tex,
-				     const char *path);
+struct Texture *tex_pullfromfile(const char *path);
+struct Texture *texture_loadfromfile(const char *path);
 void tex_gpu_load(struct Texture *tex);
-void tex_reload(struct Texture *tex);
+void tex_gpu_reload(struct Texture *tex);
+void tex_gpu_free(struct Texture *tex);
 void tex_free(struct Texture *tex);
+void tex_flush(struct Texture *tex);
+void tex_pull(struct Texture *tex);
 void tex_bind(struct Texture *tex);
 unsigned int powof2(unsigned int num);
 int ispow2(int num);

@@ -44,6 +44,7 @@ struct mGameObject {
 };
 
 struct mGameObject *MakeGameobject();
+void init_gameobjects();
 void gameobject_delete(int id);
 void clear_gameobjects();
 int number_of_gameobjects();

@@ -1,11 +1,5 @@
 MAKEFLAGS := --jobs=$(shell nproc)
 
-TARGET := game
-INFO :=
-
-EDITOR := 1
-DEBUG := 1
-
 UNAME := $(shell uname)
 
 ifeq ($(OS),Windows_NT)
@@ -18,13 +12,6 @@ UNAME_P := $(shell uname -m)
 CC = clang -x c --std=c99
 CXX = clang++
 
-DEFFLAGS :=
-
-ifeq ($(EDITOR), 1)
-	DEFFLAGS += -DEDITOR
-	TARGET = editor
-endif
-
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
 	INFO = dbg
@@ -33,28 +20,38 @@ endif
 BINDIR := ./bin
 BUILDDIR := ./obj
 
-THIRDPARTY_DIR := ./source/thirdparty
-THIRDPARTY_DIRS := ${sort ${dir ${wildcard ${THIRDPARTY_DIR}/*/}}}
-THIRDPARTY_I := $(addsuffix include, ${THIRDPARTY_DIRS})  $(addsuffix src, $(THIRDPARTY_DIRS)) $(THIRDPARTY_DIRS) $(addsuffix build/include, $(THIRDPARTY_DIRS)) $(addsuffix include/chipmunk, $(THIRDPARTY_DIRS))
-THIRDPARTY_L := $(addsuffix build/lib, $(THIRDPARTY_DIRS)) $(addsuffix build, ${THIRDPARTY_DIRS}) $(addsuffix build/bin, $(THIRDPARTY_DIRS) $(addsuffix build/src, $(THIRDPARTY_DIRS)))
+objprefix = ./obj
 
-# imgui sources
-IMGUI_DIR := ${THIRDPARTY_DIR}/imgui
-imgui = $(addprefix ${IMGUI_DIR}/, imgui imgui_draw imgui_widgets imgui_tables)
-imguibackends = $(addprefix ${IMGUI_DIR}/backends/, imgui_impl_sdl imgui_impl_opengl3)
-imguiobjs := $(addsuffix .cpp, $(imgui) $(imguibackends))
+DIRS := engine pinball editor brainstorm
 
-plmpeg_objs := ${THIRDPARTY_DIR}/pl_mpeg/pl_mpeg_extract_frames.c
-cpobjs := $(wildcard ${THIRDPARTY_DIR}/Chipmunk2D/src/*.c)
-s7objs := ${THIRDPARTY_DIR}/s7/s7.c
+# All other sources
+esrcs := $(shell find ./source/engine -name '*.c*')
+esrcs := $(filter-out %sqlite3.c %shell.c %s7.c, $(esrcs))
+eheaders := $(shell find ./source/engine -name '*.h')
+edirs := $(shell find ./source/engine -type d)
+edirs := $(filter-out %docs %doc %include% %src %examples  , $(edirs))
 
-includeflag := $(addprefix -I, $(THIRDPARTY_I) ./source/engine ./source/editor $(IMGUI_DIR) $(IMGUI_DIR)/backends)
+eobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(esrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(esrcs))))
 
-#LIBRARY_PATHS specifies the additional library paths we'll need
-LIB_PATHS := $(addprefix -L, $(THIRDPARTY_L))
+edsrcs := $(shell find ./source/editor -name '*.c*')
+edheaders := $(shell find ./source/editor -name '*.h')
+eddirs := $(shell find ./source/editor -type d)
 
-# Engine sources
-sources := $(wildcard ./source/engine/*.cpp ./source/engine/*.c ./source/editor/*.c ./source/editor/*.cpp) $(imguiobjs) $(s7objs) $(cpobjs)
+edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs))))
+
+bssrcs := $(shell find ./source/brainstorm -name '*.c*')
+bsheaders := $(shell find ./source/brainstorm -name '*.h')
+eddirs := $(shell find ./source/brainstorm -type d)
+
+bsobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(bssrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(bssrcs))))
+
+pinsrcs := $(shell find ./source/editor -name '*.c*')
+pinheaders := $(shell find ./source/editor -name '*.h')
+pindirs := $(shell find ./source/pinball -type d)
+
+edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs))))
+
+includeflag := $(addprefix -I, $(edirs) $(eddirs) $(pindirs) $(bsdirs))
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
 WARNING_FLAGS := -w #-pedantic -Wall -Wextra -Wwrite-strings
@@ -70,57 +67,43 @@ ifeq ($(UNAME), Windows_NT)
 else
 	LINKER_FLAGS :=
 	ELIBS :=
-	CLIBS := SDL2 GLEW GL dl pthread
+	CLIBS := SDL2 SDL2_mixer GLEW GL dl pthread
 	EXT :=
 endif
 
 LELIBS := -Wl,-Bstatic $(addprefix -l, ${ELIBS}) -Wl,-Bdynamic $(addprefix -l, $(CLIBS))
 
-BUILDD = -DGLEW_STATIC
-
 dir_guard = @mkdir -p $(@D)
-
-objprefix = ./obj/$(UNAME)/$(UNAME_P)/$(TARGET)$(INFO)
-
-objects := $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(sources))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(sources)))
-objects := $(sort $(objects))
-depends := $(patsubst %.o, %.d, $(objects))
 
 FILENAME = $(TARGET)$(INFO)_$(UNAME_P)$(EXT)
 
-all: install
+eobjects := $(filter-out %yugine.o, $(eobjects))
 
-$(TARGET): $(objects)
-	@echo Linking $(TARGET)
-	@$(CXX) $^ -DGLEW_STATIC $(LINKER_FLAGS) $(LIB_PATHS) $(LELIBS) -o $@
+.SECONARY: $(eobjects)
 
-install: $(TARGET)
-	mkdir -p bin/$(UNAME) && cp $(TARGET) bin/$(UNAME)/$(FILENAME)
-	cp $(TARGET) yugine/$(FILENAME)
-	rm $(TARGET)
+engine: engine.a
+	@echo Linking engine
+	-$(CXX) $^ -DGLEW_STATIC $(LINKER_FLAGS) $(LELIBS) -o $@
 
--include $(depends)
+engine.a: $(eobjects)
+	@echo Making library engine.a
+	-@ar -rv engine.a $(eobjects)
+
+brainstorms: engine.a $(bsobjects)
+	@echo Making brainstorm
+	$(CXX) $^ -DGLEW_STATIC $(LINKER_FLAGS) $(LELIBS) -o $@
 
 $(objprefix)/%.o:%.cpp
 	$(dir_guard)
-	@echo Making C++ object $(notdir $@)
-	-@$(CXX) $(BUILDD) $(DEFFLAGS) $(includeflag) $(COMPILER_FLAGS) -MD -c $< -o $@
+	@echo Making C++ object $@
+	-@$(CXX) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
 
 $(objprefix)/%.o:%.c
 	$(dir_guard)
-	@echo Making C object $(notdir $@)
-	-@$(CC) $(BUILDD) $(DEFFLAGS) $(includeflag) $(COMPILER_FLAGS) -MD -c $< -o $@
+	@echo Making C object $@
+	$(CC) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
 
 clean:
 	@echo Cleaning project
-	@rm -f $(objects) $(depends)
+	@rm -f $(eobjects)
 
-bsclean:
-	rm -f $(bsobjects)
-
-gameclean:
-	rm -f $(gameobjects)
-
-TAGS: $(sources) $(edsources)
-	@echo Generating TAGS file
-	@ctags -eR $^

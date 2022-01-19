@@ -131,15 +131,13 @@ void ds_seek(struct datastream *ds, uint32_t time)
     plm_seek(ds->plm, time, false);
 }
 
-void ds_fwdframes(struct datastream *ds, int frames)
+void ds_advanceframes(struct datastream *ds, int frames)
 {
     for (int i = 0; i < frames; i++) {
 	plm_frame_t *frame = plm_decode_video(ds->plm);
 	render_frame(ds->plm, frame, ds);
     }
 }
-
-
 
 void ds_pause(struct datastream *ds)
 {
@@ -170,4 +168,9 @@ double ds_remainingtime(struct datastream *ds)
 	return plm_get_duration(ds->plm) - plm_get_time(ds->plm);
     else
 	return 0.f;
+}
+
+double ds_length(struct datastream *ds)
+{
+    return plm_get_duration(ds->plm);
 }
