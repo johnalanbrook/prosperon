@@ -33,11 +33,21 @@ edirs := $(filter-out %docs %doc %include% %src %examples  , $(edirs))
 
 eobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(esrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(esrcs))))
 
-edsrcs := $(shell find ./source/editor -name '*.c*')
+imguidir := ./source/editor/imgui/
+imguisrcs := $(addprefix $(imguidir), imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_sdl backends/imgui_impl_opengl3)
+imguisrcs := $(addsuffix .cpp, $(imguisrcs))
+imguiobjs := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(imguisrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(imguisrcs))))
+
+edsrcs := $(wildcard ./source/editor/*)
 edheaders := $(shell find ./source/editor -name '*.h')
 eddirs := $(shell find ./source/editor -type d)
 
-edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs))))
+edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs)))) $(imguiobjs)
+
+eobjects := $(filter-out %yugine.o %pl_mpeg_extract_frames.o %pl_mpeg_player.o, $(eobjects)) $(edobjects)
+
+edirs := $(edirs) $(eddirs)
+
 
 bssrcs := $(shell find ./source/brainstorm -name '*.c*')
 bsheaders := $(shell find ./source/brainstorm -name '*.h')
@@ -51,12 +61,13 @@ pindirs := $(shell find ./source/pinball -type d)
 
 edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs))))
 
-includeflag := $(addprefix -I, $(edirs) $(eddirs) $(pindirs) $(bsdirs))
+includeflag := $(addprefix -I, $(edirs) $(eddirs) $(pindirs) $(bsdirs) ./source/editor ./source/editor/imgui ./source/editor/imgui/backends)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
 WARNING_FLAGS := -w #-pedantic -Wall -Wextra -Wwrite-strings
 COMPILER_FLAGS := -g -O0 $(WARNING_FLAGS)
 
+LIBPATH := $(addprefix -L, .)
 
 ifeq ($(UNAME), Windows_NT)
 	LINKER_FLAGS:= -static
@@ -66,42 +77,40 @@ ifeq ($(UNAME), Windows_NT)
 	EXT := .exe
 else
 	LINKER_FLAGS :=
-	ELIBS :=
+	ELIBS := engine
 	CLIBS := SDL2 SDL2_mixer GLEW GL dl pthread
 	EXT :=
 endif
 
 LELIBS := -Wl,-Bstatic $(addprefix -l, ${ELIBS}) -Wl,-Bdynamic $(addprefix -l, $(CLIBS))
 
-dir_guard = @mkdir -p $(@D)
 
-FILENAME = $(TARGET)$(INFO)_$(UNAME_P)$(EXT)
 
-eobjects := $(filter-out %yugine.o, $(eobjects))
+yuginec := ./source/engine/yugine.c
 
 .SECONARY: $(eobjects)
 
 engine: engine.a
 	@echo Linking engine
-	-$(CXX) $^ -DGLEW_STATIC $(LINKER_FLAGS) $(LELIBS) -o $@
+	$(CXX) $(yuginec) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o yugine
 
 engine.a: $(eobjects)
 	@echo Making library engine.a
-	-@ar -rv engine.a $(eobjects)
+	@ar -rv libengine.a $(eobjects)
 
 brainstorms: engine.a $(bsobjects)
 	@echo Making brainstorm
-	$(CXX) $^ -DGLEW_STATIC $(LINKER_FLAGS) $(LELIBS) -o $@
+	$(CXX) $(bsobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
 $(objprefix)/%.o:%.cpp
-	$(dir_guard)
+	@mkdir -p $(@D)
 	@echo Making C++ object $@
-	-@$(CXX) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
+	@$(CXX) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
 
 $(objprefix)/%.o:%.c
-	$(dir_guard)
+	@mkdir -p $(@D)
 	@echo Making C object $@
-	$(CC) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
+	@$(CC) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
 
 clean:
 	@echo Cleaning project

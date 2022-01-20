@@ -1,7 +1,7 @@
 #include "registry.h"
 #include "gameobject.h"
 #include "2dphysics.h"
-#include "editor.h"
+#include <editor.h>
 #include "sprite.h"
 #include "pinball.h"
 
