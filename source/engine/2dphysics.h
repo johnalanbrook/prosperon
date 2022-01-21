@@ -1,7 +1,7 @@
 #ifndef TWODPHYSICS_H
 #define TWODPHYSICS_H
 
-#include <chipmunk.h>
+#include <chipmunk/chipmunk.h>
 
 
 struct mGameObject;

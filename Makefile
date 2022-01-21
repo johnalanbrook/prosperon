@@ -9,7 +9,7 @@ endif
 UNAME_P := $(shell uname -m)
 
 #CC specifies which compiler we're using
-CC = clang -x c --std=c99
+CC = clang
 CXX = clang++
 
 ifeq ($(DEBUG), 1)
@@ -23,12 +23,13 @@ BUILDDIR := ./obj
 objprefix = ./obj
 
 DIRS := engine pinball editor brainstorm
+ETP := ./source/engine/thirdparty/
 
 # All other sources
 esrcs := $(shell find ./source/engine -name '*.c*')
-esrcs := $(filter-out %sqlite3.c %shell.c %s7.c, $(esrcs))
+esrcs := $(filter-out %sqlite3.c %shell.c, $(esrcs))
 eheaders := $(shell find ./source/engine -name '*.h')
-edirs := $(shell find ./source/engine -type d)
+edirs := $(addprefix $(ETP), Chipmunk2D/include bitmap-outliner cgltf enet/include pl_mpeg s7 sqlite3 stb) ./source/engine # $(shell find ./source/engine -type d)
 edirs := $(filter-out %docs %doc %include% %src %examples  , $(edirs))
 
 eobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(esrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(esrcs))))
@@ -90,17 +91,18 @@ yuginec := ./source/engine/yugine.c
 
 .SECONARY: $(eobjects)
 
-engine: engine.a
+engine: libengine.a
 	@echo Linking engine
 	$(CXX) $(yuginec) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o yugine
 
-engine.a: $(eobjects)
+libengine.a: $(eobjects)
 	@echo Making library engine.a
-	@ar -rv libengine.a $(eobjects)
+	@ar -r libengine.a $(eobjects)
 
-brainstorms: engine.a $(bsobjects)
+xbrainstorm: libengine.a $(bsobjects)
 	@echo Making brainstorm
 	$(CXX) $(bsobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
+	mv xbrainstorm brainstorm/xbrainstorm
 
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)

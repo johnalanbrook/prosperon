@@ -1,7 +1,7 @@
 #ifndef EDITOR_H
 #define EDITOR_H
 
-#include "config.h"
+#include <config.h>
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 #include "resources.h"

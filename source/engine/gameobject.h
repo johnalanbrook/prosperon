@@ -6,7 +6,7 @@
 #include "transform.h"
 #include "config.h"
 #include <stdbool.h>
-#include <chipmunk.h>
+#include <chipmunk/chipmunk.h>
 
 struct mShader;
 struct mSprite;

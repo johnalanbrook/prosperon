@@ -18,7 +18,7 @@ extern "C" {
 #include "level.h"
 #include "texture.h"
 #include "sprite.h"
-#include <chipmunk.h>
+#include <chipmunk/chipmunk.h>
 #include "math.h"
 #include <GL/glew.h>
 #include <ftw.h>

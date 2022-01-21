@@ -8,7 +8,7 @@
 #include "vec.h"
 #include "input.h"
 #include <string.h>
-#include <chipmunk.h>
+#include <chipmunk/chipmunk.h>
 
 struct vec *gameobjects = NULL;
 struct mGameObject *updateGO = NULL;

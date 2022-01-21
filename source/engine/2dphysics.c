@@ -205,7 +205,7 @@ void phys2d_edgeaddvert(struct phys2d_edge *edge)
 #include "debugdraw.h"
 #include "gameobject.h"
 #include <math.h>
-#include <chipmunk_unsafe.h>
+#include <chipmunk/chipmunk_unsafe.h>
 
 void phys2d_applycircle(struct phys2d_circle *circle)
 {
