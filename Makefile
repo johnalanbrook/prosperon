@@ -30,7 +30,7 @@ esrcs := $(shell find ./source/engine -name '*.c*')
 esrcs := $(filter-out %sqlite3.c %shell.c, $(esrcs))
 eheaders := $(shell find ./source/engine -name '*.h')
 edirs := $(addprefix $(ETP), Chipmunk2D/include bitmap-outliner cgltf enet/include pl_mpeg s7 sqlite3 stb) ./source/engine # $(shell find ./source/engine -type d)
-edirs := $(filter-out %docs %doc %include% %src %examples  , $(edirs))
+edirs := $(filter-out %docs %doc %include% %src %examples  , $(edirs)) /usr/include/directfb
 
 eobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(esrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(esrcs))))
 
@@ -71,10 +71,10 @@ COMPILER_FLAGS := -g -O0 $(WARNING_FLAGS)
 LIBPATH := $(addprefix -L, .)
 
 ifeq ($(UNAME), Windows_NT)
-	LINKER_FLAGS:= -static
-	# DYNAMIC LIBS: SDL2 opengl32
-	ELIBS := glew32 mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
-	CLIBS :=
+	LINKER_FLAGS:= -static -DSDL_MAIN_HANDLED
+	ELIBS := engine   mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
+	ELIBS := $(ELIBS) SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi
+	CLIBS := glew32
 	EXT := .exe
 else
 	LINKER_FLAGS :=
@@ -101,8 +101,8 @@ libengine.a: $(eobjects)
 
 xbrainstorm: libengine.a $(bsobjects)
 	@echo Making brainstorm
-	$(CXX) $(bsobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
-	mv xbrainstorm brainstorm/xbrainstorm
+	@$(CXX) $(bsobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
+	mv xbrainstorm brainstorm/brainstorm$(EXT)
 
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)
@@ -116,5 +116,5 @@ $(objprefix)/%.o:%.c
 
 clean:
 	@echo Cleaning project
-	@rm -f $(eobjects)
+	@rm -f $(eobjects) $(bsobjects)
 

@@ -54,7 +54,7 @@
 #endif
 
 #if !defined(HAS_SOCKLEN_T) && !defined(__socklen_t_defined)
-typedef int socklen_t;
+typedef unsigned socklen_t;
 #endif
 
 #ifndef MSG_NOSIGNAL
