@@ -11,16 +11,18 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
-static struct Character Characters[127] = { '\0' };
-
 static uint32_t VBO = 0;
 static uint32_t VAO = 0;
 
 unsigned char ttf_buffer[24 << 20];
 unsigned char temp_bitmap[512 * 512];
 
-static struct sFont *font;
+struct sFont *font;
 static struct mShader *shader;
+
+void font_init() {
+    shader = MakeShader("textvert.glsl", "textfrag.glsl");
+}
 
 struct sFont *MakeFont(const char *fontfile, int height)
 {
@@ -65,12 +67,12 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
 			GL_LINEAR_MIPMAP_LINEAR);
 
-	Characters[c].TextureID = ftexture;
-	Characters[c].Advance = advance;
-	Characters[c].Size[0] = w;
-	Characters[c].Size[1] = h;
-	Characters[c].Bearing[0] = lsb;
-	Characters[c].Bearing[1] = 0;
+	newfont->Characters[c].TextureID = ftexture;
+	newfont->Characters[c].Advance = advance;
+	newfont->Characters[c].Size[0] = w;
+	newfont->Characters[c].Size[1] = h;
+	newfont->Characters[c].Bearing[0] = lsb;
+	newfont->Characters[c].Bearing[1] = 0;
     }
 
     // configure VAO/VBO for texture quads
@@ -157,10 +159,13 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
 
 }
 
-void text_settype(struct sFont *mfont, struct mShader *mshader)
+void text_settype(struct sFont *mfont)
 {
     font = mfont;
-    shader = mshader;
+}
+
+void strwidth(const char *str) {
+
 }
 
 void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
@@ -176,68 +181,46 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    char modText[sizeof(*text)];
-    strcpy(modText, text);
-
     char *line, *wordstart;
-    line = strtok(modText, "\n");
-
-    while (line != NULL) {
-	cursor[0] = pos[0];
-
-	int wordWidth = 0;
-
-	// iterate through all characters
-	while (*line != '\0') {
-
-	    wordstart = line;
-	    if (!isspace(*line)) {
-		struct Character ch = Characters[*line];
-
-		if (lw > 0
-		    && (cursor[0] + ((ch.Advance >> 6) * scale) - pos[0] >=
-			lw)) {
-		    cursor[0] = pos[0];
-		    cursor[1] -= scale * font->height;
-
-		} else {
-		    // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-		    cursor[0] += (ch.Advance >> 6) * scale;	// bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
-		}
-
-		sdrawCharacter(ch, cursor, scale, shader, color);
-		++line;
-	    } else {
-		while (!isspace(*line) || *line != '\0') {	// Seek line to the end of the word
-		    ++line;
-		    wordWidth += (Characters[*line].Advance >> 6) * scale;
-		}
-
-		// Now wordStart and stringPos surround the word, go through them. If the word that's about to be drawn goes past the line width, go to next line
-		if (lw > 0 && (cursor[0] + wordWidth - pos[0] >= lw)) {
-		    cursor[0] = pos[0];
-		    cursor[1] -= scale * font->height;
-		}
-
-		while (wordstart < line) {	// Go through
+    line = text;
 
 
-		    struct Character ch = Characters[*wordstart];
-		    sdrawCharacter(Characters[*wordstart], cursor, scale,
-				   shader, color);
+    while (*line != '\0') {
 
-		    cursor[0] += (ch.Advance >> 6) * scale;
-		    ++wordstart;
-		}
-	    }
+        switch (*line) {
+            case '\n':
+                cursor[1] -= scale * font->height;
+                line++;
+                break;
 
+            case ' ':
+                sdrawCharacter(font->Characters[*line], cursor, scale, shader, color);
+                cursor[0] += font->Characters[*line].Advance * scale;
+                line++;
+                break;
 
+            default:
+                wordstart = line;
+                int wordWidth = 0;
 
-	}
-	cursor[1] -= scale * font->height;
+                while (!isspace(*line) && *line != '\0') {
+                    wordWidth += font->Characters[*line].Advance * scale;
+                    line++;
+                }
 
-	line = strtok(NULL, "\n");
+                if (lw > 0 && (cursor[0] + wordWidth - pos[0]) >= lw) {
+                    cursor[0] = pos[0];
+                    cursor[1] -= scale * font->height;
+                }
+
+                while (wordstart < line) {
+                    sdrawCharacter(font->Characters[*wordstart], cursor, scale, shader, color);
+                    cursor[0] += font->Characters[*wordstart].Advance * scale;
+                    wordstart++;
+                }
+        }
     }
+
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);

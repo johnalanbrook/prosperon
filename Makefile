@@ -85,7 +85,7 @@ endif
 
 LELIBS := -Wl,-Bstatic $(addprefix -l, ${ELIBS}) -Wl,-Bdynamic $(addprefix -l, $(CLIBS))
 
-
+DEPENDS := $(patsubst %.o, %.d, $(bsobjects) $(eobjects))
 
 yuginec := ./source/engine/yugine.c
 
@@ -104,15 +104,17 @@ xbrainstorm: libengine.a $(bsobjects)
 	@$(CXX) $(bsobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 	mv xbrainstorm brainstorm/brainstorm$(EXT)
 
+-include $(DEPENDS)
+
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)
 	@echo Making C++ object $@
-	@$(CXX) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
+	@$(CXX) $(includeflag) $(COMPILER_FLAGS) -c -MMD -MP $< -o $@
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
-	@$(CC) $(includeflag) $(COMPILER_FLAGS) -c $< -o $@
+	@$(CC) $(includeflag) $(COMPILER_FLAGS) -c -MMD -MP $< -o $@
 
 clean:
 	@echo Cleaning project

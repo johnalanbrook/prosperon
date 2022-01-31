@@ -16,12 +16,14 @@ struct Character {
 struct sFont {
     uint32_t fontTexture;
     uint32_t height;
+    struct Character Characters[127];
 };
 
+void font_init();
 struct sFont *MakeFont(const char *fontfile, int height);
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
 		    struct mShader *shader, float color[3]);
-void text_settype(struct sFont *font, struct mShader *shader);
+void text_settype(struct sFont *font);
 void renderText(
 		const char *text, mfloat_t pos[2], float scale,
 		mfloat_t color[3], float lw);

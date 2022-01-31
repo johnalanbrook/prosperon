@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <GL/glew.h>
 
-#define logLevel 0
+#define logLevel 4
 
 void mYughLog(int category, int priority, const char *message,
 	      int line, const char *file, ...)

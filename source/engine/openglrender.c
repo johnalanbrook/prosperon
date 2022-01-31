@@ -107,7 +107,6 @@ void openglInit(struct mSDLWindow *window)
     ////// MAKE SHADERS
     outlineShader = MakeShader("outlinevert.glsl", "outline.glsl");
 
-    textShader = MakeShader("textvert.glsl", "textfrag.glsl");
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
     animSpriteShader =
 	MakeShader("animspritevert.glsl", "animspritefrag.glsl");
@@ -115,6 +114,8 @@ void openglInit(struct mSDLWindow *window)
     debugdraw_init();
 
     stdFont = MakeFont("notosans.ttf", 300);
+
+    text_settype(stdFont);
 
     //glEnable(GL_STENCIL_TEST);
     glClearColor(editorClearColor[0], editorClearColor[1],
@@ -137,7 +138,7 @@ void openglInit(struct mSDLWindow *window)
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     shader_setUBO(spriteShader, "Projection", 0);
-    shader_setUBO(textShader, "Projection", 0);
+   /* shader_setUBO(textShader, "Projection", 0);*/
     shader_setUBO(animSpriteShader, "Projection", 0);
 
 
@@ -622,7 +623,7 @@ void openglRender3d(struct mSDLWindow *window, struct mCamera *mcamera)
     shader_setmat4(textShader, "projection", window->projection);
     mfloat_t fontpos[2] = { 25.f, 25.f };
     mfloat_t fontcolor[3] = { 0.5f, 0.8f, 0.2f };
-    text_settype(stdFont, textShader);
+    text_settype(stdFont);
     renderText("Sample text", fontpos, 0.4f,
 	       fontcolor, -1.f);
 
