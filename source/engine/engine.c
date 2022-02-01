@@ -54,8 +54,11 @@ void engine_init()
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);	/* How many x MSAA */
 
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
-resources_init();
-        script_init();
+
+
+
+    resources_init();
+    script_init();
     registry_init();
     init_gameobjects();
 

@@ -11,6 +11,8 @@ struct mSDLWindow *window = NULL;
 static struct mSDLWindow *windows[5];
 static int numWindows = 0;
 
+static SDL_GLContext publicGLContext = NULL;
+
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 				 uint32_t flags)
 {
@@ -24,13 +26,20 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 		"Window could not be created! SDL Error: %s",
 		SDL_GetError());
     } else {
-	w->glContext = SDL_GL_CreateContext(w->window);
+        if (publicGLContext == NULL) {
+	    publicGLContext = SDL_GL_CreateContext(w->window);
+	}
 
-	if (w->glContext == NULL) {
+        w->glContext = publicGLContext;
+        SDL_GL_MakeCurrent(w->window, w->glContext);
+
+
+	if (publicGLContext == NULL) {
 	    YughLog(0, SDL_LOG_PRIORITY_ERROR,
 		    "OpenGL context could not be created! SDL Error: %s",
 		    SDL_GetError());
 	}
+
 	w->id = SDL_GetWindowID(w->window);
 
 	glewExperimental = GL_TRUE;

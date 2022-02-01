@@ -43,7 +43,7 @@ enum RenderMode {
     OBJECTPICKER
 };
 
-void openglInit(struct mSDLWindow *window);
+void openglInit();
 void openglRender(struct mSDLWindow *window, struct mCamera *camera);
 
 void openglInit3d(struct mSDLWindow *window);

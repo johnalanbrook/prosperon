@@ -93,10 +93,8 @@ static struct mSprite *tanim = NULL;
 
 static unsigned int projUBO;
 
-void openglInit(struct mSDLWindow *window)
+void openglInit()
 {
-    window_makecurrent(window);
-
     if (SDL_GL_SetSwapInterval(1)) {
 	YughLog(0, SDL_LOG_PRIORITY_WARN,
 		"Unable to set VSync! SDL Error: %s", SDL_GetError());
@@ -178,9 +176,11 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
        renderText(stdFont, textShader, "Sample text", fontpos, 0.4f, fontcolor, -1.f);
      */
 
+/*
     for (int i = 0; i < numSprites; i++) {
 	sprite_draw(sprites[i]);
     }
+    */
 
 
     //glDepthFunc(GL_LESS);
