@@ -10,6 +10,7 @@
 
 int main(int argc, char **args)
 {
+/*
     engine_init();
 
     struct mSDLWindow *window = MakeSDLWindow("Untitled Game", 1920, 1080,
@@ -19,9 +20,9 @@ int main(int argc, char **args)
 
     openglInit(window);
 
-#ifdef EDITOR
+
     editor_init(window);
-#endif
+
 
     quit = false;
     SDL_Event e;
@@ -56,9 +57,9 @@ int main(int argc, char **args)
 	    openglRender(window, &camera);
 
 
-#ifdef EDITOR
+
 	    editor_render();
-#endif
+
 
 	    window_swap(window);
 
@@ -68,6 +69,7 @@ int main(int argc, char **args)
 
 
     engine_stop();
+    */
 
     return 0;
 }

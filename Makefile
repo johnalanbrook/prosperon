@@ -1,12 +1,13 @@
-MAKEFLAGS := --jobs=$(shell nproc)
+procs != nproc
+MAKEFLAGS = --jobs=$(procs)
 
-UNAME := $(shell uname)
+UNAME != uname
 
 ifeq ($(OS),Windows_NT)
-	UNAME := Windows_NT
+	UNAME = Windows_NT
 endif
 
-UNAME_P := $(shell uname -m)
+UNAME_P != uname -m
 
 #CC specifies which compiler we're using
 CC = clang
@@ -17,77 +18,77 @@ ifeq ($(DEBUG), 1)
 	INFO = dbg
 endif
 
-BINDIR := ./bin
-BUILDDIR := ./obj
-
 objprefix = ./obj
 
-DIRS := engine pinball editor brainstorm
-ETP := ./source/engine/thirdparty/
+DIRS = engine pinball editor brainstorm
+ETP = ./source/engine/thirdparty/
+
+define make_objs
+	find $(1) -type f -name *.c -o -name *.cpp | sed 's|\.c.*|.o|' | sed 's|\.|./obj|1'
+endef
+
+define find_include
+	find $(1) -type f -name *.h | sed 's|\/[^\/]*\.h$$||' | sort | uniq
+endef
+
+define prefix
+	echo $(1) | tr " " "\n" | sed 's|.*|$(2)&$(3)|'
+endef
+
+define rm
+	tmp=$$(mktemp); \
+	echo $(2) | tr " " "\n" > $${tmp}; \
+	echo $(1) | tr " " "\n" | grep -v -f $${tmp}; \
+	rm $${tmp}
+endef
 
 # All other sources
-esrcs := $(shell find ./source/engine -name '*.c*')
-esrcs := $(filter-out %sqlite3.c %shell.c, $(esrcs))
-eheaders := $(shell find ./source/engine -name '*.h')
-edirs := $(addprefix $(ETP), Chipmunk2D/include bitmap-outliner cgltf enet/include pl_mpeg s7 sqlite3 stb) ./source/engine # $(shell find ./source/engine -type d)
-edirs := $(filter-out %docs %doc %include% %src %examples  , $(edirs)) /usr/include/directfb
+edirs != $(call find_include, ./source/engine)
+eobjects != $(call make_objs, ./source/engine)
+eobjects != $(call rm,$(eobjects),sqlite s7 pl_mpeg_extract_frames pl_mpeg_player)
 
-eobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(esrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(esrcs))))
+imguisrcs = imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_sdl backends/imgui_impl_opengl3
+imguiobjs != $(call prefix,$(imguisrcs),./source/editor/imgui/,.o)
 
-imguidir := ./source/editor/imgui/
-imguisrcs := $(addprefix $(imguidir), imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_sdl backends/imgui_impl_opengl3)
-imguisrcs := $(addsuffix .cpp, $(imguisrcs))
-imguiobjs := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(imguisrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(imguisrcs))))
+eddirs != find ./source/editor -type d
+edobjects != $(call make_objs, ./source/editor)
 
-edsrcs := $(wildcard ./source/editor/*)
-edheaders := $(shell find ./source/editor -name '*.h')
-eddirs := $(shell find ./source/editor -type d)
+bsdirs != find ./source/brainstorm -type d
+bsobjects != $(call make_objs, ./source/brainstorm)
 
-edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs)))) $(imguiobjs)
+pindirs != find ./source/pinball -type d
+pinobjects != $(call make_objs, ./source/pinball);
 
-eobjects := $(filter-out %yugine.o %pl_mpeg_extract_frames.o %pl_mpeg_player.o, $(eobjects)) $(edobjects)
-
-edirs := $(edirs) $(eddirs)
-
-
-bssrcs := $(shell find ./source/brainstorm -name '*.c*')
-bsheaders := $(shell find ./source/brainstorm -name '*.h')
-eddirs := $(shell find ./source/brainstorm -type d)
-
-bsobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(bssrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(bssrcs))))
-
-pinsrcs := $(shell find ./source/editor -name '*.c*')
-pinheaders := $(shell find ./source/editor -name '*.h')
-pindirs := $(shell find ./source/pinball -type d)
-
-edobjects := $(sort $(patsubst .%.cpp, $(objprefix)%.o, $(filter %.cpp, $(edsrcs))) $(patsubst .%.c, $(objprefix)%.o, $(filter %.c, $(edsrcs))))
-
-includeflag := $(addprefix -I, $(edirs) $(eddirs) $(pindirs) $(bsdirs) ./source/editor ./source/editor/imgui ./source/editor/imgui/backends)
+edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include
+includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
-WARNING_FLAGS := -w #-pedantic -Wall -Wextra -Wwrite-strings
-COMPILER_FLAGS := -g -O0 $(WARNING_FLAGS)
+WARNING_FLAGS = -w #-pedantic -Wall -Wextra -Wwrite-strings
+COMPILER_FLAGS = -g -O0 $(WARNING_FLAGS)
 
-LIBPATH := $(addprefix -L, .)
+LIBPATH = -L.
 
 ifeq ($(UNAME), Windows_NT)
-	LINKER_FLAGS:= -static -DSDL_MAIN_HANDLED
-	ELIBS := engine   mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
-	ELIBS := $(ELIBS) SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi
-	CLIBS := glew32
-	EXT := .exe
+	LINKER_FLAGS = -static -DSDL_MAIN_HANDLED
+	ELIBS = engine   mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
+	ELIBS += SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi
+	CLIBS = glew32
+	EXT = .exe
 else
-	LINKER_FLAGS :=
-	ELIBS := engine
-	CLIBS := SDL2 SDL2_mixer GLEW GL dl pthread
-	EXT :=
+	LINKER_FLAGS =
+	ELIBS = engine
+	CLIBS = SDL2 SDL2_mixer GLEW GL dl pthread
+	EXT =
 endif
 
-LELIBS := -Wl,-Bstatic $(addprefix -l, ${ELIBS}) -Wl,-Bdynamic $(addprefix -l, $(CLIBS))
+ELIBS != $(call prefix, $(ELIBS), -l)
+CLIBS != $(call prefix, $(CLIBS), -l)
 
-DEPENDS := $(patsubst %.o, %.d, $(bsobjects) $(eobjects))
+LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
 
-yuginec := ./source/engine/yugine.c
+DEPENDS = $(bsobjects:.o=.d) $(eobjects:.o=.d)
+
+yuginec = ./source/engine/yugine.c
 
 .SECONARY: $(eobjects)
 
@@ -103,6 +104,11 @@ xbrainstorm: libengine.a $(bsobjects)
 	@echo Making brainstorm
 	@$(CXX) $(bsobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 	mv xbrainstorm brainstorm/brainstorm$(EXT)
+
+pinball: libengine.a $(pinobjects)
+	@echo Making pinball
+	@$(CXX) $(pinobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
+	mv pinball paladin/pinball
 
 -include $(DEPENDS)
 
