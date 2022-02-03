@@ -1,6 +1,3 @@
-procs != nproc
-MAKEFLAGS = --jobs=$(procs)
-
 UNAME != uname
 
 ifeq ($(OS),Windows_NT)
@@ -24,11 +21,11 @@ DIRS = engine pinball editor brainstorm
 ETP = ./source/engine/thirdparty/
 
 define make_objs
-	find $(1) -type f -name *.c -o -name *.cpp | sed 's|\.c.*|.o|' | sed 's|\.|./obj|1'
+	find $(1) -type f -name '*.c' -o -name '*.cpp' | sed 's|\.c.*|.o|' | sed 's|\.|./obj|1'
 endef
 
 define find_include
-	find $(1) -type f -name *.h | sed 's|\/[^\/]*\.h$$||' | sort | uniq
+	find $(1) -type f -name '*.h'  | sed 's|\/[^\/]*\.h$$||' | sort | uniq
 endef
 
 define prefix
@@ -86,18 +83,19 @@ CLIBS != $(call prefix, $(CLIBS), -l)
 
 LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
 
-DEPENDS = $(bsobjects:.o=.d) $(eobjects:.o=.d)
+objects = $(bsobjects) $(eobjects) $(pinobjects)
+DEPENDS = $(objects:.o=.d)
+-include $(DEPENDS)
 
 yuginec = ./source/engine/yugine.c
 
-.SECONARY: $(eobjects)
-
 engine: libengine.a
-	@echo Linking engine
+	Linking engine
 	$(CXX) $(yuginec) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o yugine
 
 libengine.a: $(eobjects)
 	@echo Making library engine.a
+
 	@ar -r libengine.a $(eobjects)
 
 xbrainstorm: libengine.a $(bsobjects)
@@ -109,8 +107,6 @@ pinball: libengine.a $(pinobjects)
 	@echo Making pinball
 	@$(CXX) $(pinobjects) -DGLEW_STATIC $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 	mv pinball paladin/pinball
-
--include $(DEPENDS)
 
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)
@@ -125,4 +121,3 @@ $(objprefix)/%.o:%.c
 clean:
 	@echo Cleaning project
 	@rm -f $(eobjects) $(bsobjects)
-
