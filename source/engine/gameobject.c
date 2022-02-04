@@ -203,3 +203,7 @@ void gameobject_rotate(struct mGameObject *go, float as)
     a += as * deltaT;
     cpBodySetAngle(go->body, a);
 }
+
+void update_gameobjects() {
+    vec_walk(gameobjects, gameobject_update);
+}

@@ -1,8 +1,18 @@
 #include "engine.h"
 
+#define PL_MPEG_IMPLEMENTATION
+#define CGLTF_IMPLEMENTATION
+#define GL_GLEXT_PROTOTYPES
+#define STB_DS_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+
 #ifdef EDITOR
 #include "editor.h"
 #endif
+
+#include <stb_ds.h>
+#include <stb_image.h>
+#include <pl_mpeg.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
@@ -17,20 +27,8 @@
 #include "log.h"
 #include "resources.h"
 
-
-
-unsigned int frameCount = 0;
-uint32_t lastTick = 0;
-uint32_t frameTick = 0;
-uint32_t elapsed = 0;
-
-uint32_t physMS = FPS144;
-uint32_t physlag = 0;
-uint32_t renderMS = FPS144;
-uint32_t renderlag = 0;
-
 // TODO: Init on the heap
-struct mCamera camera = {0};
+
 
 #include "engine.h"
 
@@ -63,7 +61,6 @@ void engine_init()
     init_gameobjects();
 
     prefabs = vec_make(MAXNAME, 25);
-    camera.speed = 500;
     stbi_set_flip_vertically_on_load(1);
     phys2d_init();
     gui_init();

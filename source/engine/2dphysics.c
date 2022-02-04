@@ -7,7 +7,6 @@
 cpBody *ballBody = NULL;
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
-int physOn = 0;
 
 void phys2d_init()
 {
@@ -17,7 +16,7 @@ void phys2d_init()
 
 void phys2d_update(float deltaT)
 {
-    cpSpaceStep(space, deltaT * physOn);
+    cpSpaceStep(space, deltaT);
 }
 
 void phys2d_apply()

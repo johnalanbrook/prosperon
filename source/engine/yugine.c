@@ -1,16 +1,30 @@
-#define PL_MPEG_IMPLEMENTATION
-#define CGLTF_IMPLEMENTATION
-#define GL_GLEXT_PROTOTYPES
-#define STB_DS_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-
 #include <SDL2/SDL.h>
-
+#include "camera.h"
+#include "window.h"
 #include "engine.h"
+#include "editor.h"
+#include "input.h"
+#include "2dphysics.h"
+#include "openglrender.h"
+#include "gameobject.h"
+
+int physOn = 0;
+unsigned int frameCount = 0;
+Uint32 lastTick = 0;
+Uint32 frameTick = 0;
+Uint32 elapsed = 0;
+
+Uint32 physMS = FPS144;
+Uint32 physlag = 0;
+Uint32 renderMS = FPS144;
+Uint32 renderlag = 0;
+
+struct mCamera camera = {0};
 
 int main(int argc, char **args)
 {
-/*
+    camera.speed = 500;
+
     engine_init();
 
     struct mSDLWindow *window = MakeSDLWindow("Untitled Game", 1920, 1080,
@@ -18,13 +32,13 @@ int main(int argc, char **args)
 			   SDL_WINDOW_RESIZABLE);
 
 
-    openglInit(window);
+    openglInit();
 
 
     editor_init(window);
 
 
-    quit = false;
+    int quit = 0;
     SDL_Event e;
 
     //While application is running
@@ -48,7 +62,7 @@ int main(int argc, char **args)
 
 	if (renderlag >= renderMS) {
 	    if (physOn) {
-		vec_walk(gameobjects, gameobject_update);
+		update_gameobjects();
 	    }
 
 
@@ -69,7 +83,7 @@ int main(int argc, char **args)
 
 
     engine_stop();
-    */
+
 
     return 0;
 }

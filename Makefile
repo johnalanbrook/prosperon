@@ -18,7 +18,8 @@ ifeq ($(DEBUG), 1)
 	INFO = dbg
 endif
 
-objprefix = ./bin/obj
+BIN = ./bin/
+objprefix = $(BIN)obj
 
 DIRS = engine pinball editor brainstorm
 ETP = ./source/engine/thirdparty/
@@ -47,7 +48,7 @@ define rm
 endef
 
 define findindir
-	find $(1) -type f -maxdepth 1 -name '$(2)'
+	find $(1) -maxdepth 1 -type f -name '$(2)'
 endef
 
 # All other sources
@@ -55,15 +56,15 @@ edirs != find ./source/engine -type d -name include
 edirs += ./source/engine
 ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
-eobjects != $(call rm,$(eobjects),sqlite s7 pl_mpeg_extract_frames pl_mpeg_player)
+eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine.c yugine.c)
 
 imguisrcs = imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_sdl backends/imgui_impl_opengl3
-imguiobjs != $(call prefix,$(imguisrcs),./source/editor/imgui/,.o)
+imguiobjs != $(call prefix,$(imguisrcs),$(objprefix)/source/editor/imgui/,.o)
 
 eddirs != find ./source/editor -type d
 eddirs += ./source/editor
 edhead != $(call findindir,./source/editor,*.h)
-edobjects != find ./source/editor -type f -maxdepth 1 -name '*.c' -o -name '*.cpp'
+edobjects != find ./source/editor -maxdepth 1 -type f  -name '*.c' -o -name '*.cpp'
 edobjects != $(call make_obj,$(edobjects))
 edobjects += $(imguiobjs)
 
@@ -75,22 +76,23 @@ pinobjects != $(call make_objs, ./source/pinball);
 
 edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include
 includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
+COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
 WARNING_FLAGS = -w #-pedantic -Wall -Wextra -Wwrite-strings
-COMPILER_FLAGS = -g -O0 $(WARNING_FLAGS)
+COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -c -MMD -MP $< -o $@
 
 LIBPATH = -L./bin
 
 ifeq ($(UNAME), Windows_NT)
 	LINKER_FLAGS = -static -DSDL_MAIN_HANDLED
-	ELIBS = engine   mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
+	ELIBS = engine editor mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
 	ELIBS += SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi
 	CLIBS = glew32
 	EXT = .exe
 else
 	LINKER_FLAGS =
-	ELIBS = engine
+	ELIBS = editor engine
 	CLIBS = SDL2 SDL2_mixer GLEW GL dl pthread
 	EXT =
 endif
@@ -106,48 +108,52 @@ DEPENDS = $(objects:.o=.d)
 
 yuginec = ./source/engine/yugine.c
 
-LINK = $(includeflag) $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
+ENGINE = $(BIN)libengine.a
+EDITOR = $(BIN)libeditor.a
+INCLUDE = $(BIN)include
 
-engine: libengine.a
+linkinclude = ./bin/include
+
+LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
+
+engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	$(CXX) $(yuginec) -DGLEW_STATIC $(LINK) -o engine
+	@$(CXX) $< $(linkinclude:%=-I%) $(LINK)
 
-editor: ./bin/libengine.a ./bin/libeditor.a
+editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
-	$(CXX) $(yuginec) -DGLEW_STATIC $(LINK) -o editor
+	$(CXX) $< $(linkinclude:%=-I%) $(LINK)
 
-./bin/libengine.a: $(eobjects)
+$(ENGINE): $(eobjects)
 	@echo Making library engine.a
-	@ar -r libengine.a $(eobjects)
-	@mv libengine.a bin/libengine.a
-	@cp $() bin/include
+	@ar -r $(ENGINE) $(eobjects)
+	@cp -u -r $(ehead) $(INCLUDE)
 
-./bin/libeditor.a: $(edobjects)
+$(EDITOR): $(edobjects)
 	@echo Making editor library
-	@ar -r libeditor.a $(edobjects)
-	@mv libeditor.a bin/libeditor.a
-	@cp $(edhead) bin/include
+	@ar -r $(EDITOR) $(edobjects)
+	@cp -u -r $(edhead) $(INCLUDE)
 
-xbrainstorm: libengine.a $(bsobjects)
+xbrainstorm: $(ENGINE) $(bsobjects)
 	@echo Making brainstorm
-	@$(CXX) $(bsobjects) -DGLEW_STATIC $(LINK) -o $@
-	mv xbrainstorm brainstorm/brainstorm$(EXT)
+	@$(CXX) $(bsobjects) $(LINK) -o $@
+	@mv xbrainstorm brainstorm/brainstorm$(EXT)
 
-pinball: libengine.a $(pinobjects)
+pinball: $(ENGINE) $(pinobjects)
 	@echo Making pinball
-	@$(CXX) $(pinobjects) -DGLEW_STATIC $(LINK) -o $@
-	mv pinball paladin/pinball
+	@$(CXX) $(pinobjects) $(LINK) -o $@
+	@mv pinball paladin/pinball
 
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)
 	@echo Making C++ object $@
-	@$(CXX) $(includeflag) $(COMPILER_FLAGS) -c -MMD -MP $< -o $@
+	@$(CXX) $(COMPILER_FLAGS)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
-	@$(CC) $(includeflag) $(COMPILER_FLAGS) -c -MMD -MP $< -o $@
+	@$(CC) $(COMPILER_FLAGS)
 
 clean:
 	@echo Cleaning project
-	@rm -f $(eobjects) $(bsobjects)
+	@find $(BIN) -type f -delete
