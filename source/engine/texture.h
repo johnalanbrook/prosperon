@@ -1,7 +1,13 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include <SDL2/SDL_timer.h>
+#include "timer.h"
+
+#define TEX_SPEC 0
+#define TEX_NORM 1
+#define TEX_HEIGHT 2
+#define TEX_DIFF 3
+
 
 struct Rect {
     float x;
@@ -14,7 +20,7 @@ struct TexAnimation {
     int frame;
     int playing;
     int pausetime;
-    SDL_TimerID timer;
+    struct timer *timer;
     struct Rect uv;
     struct Texture *tex;
 };
@@ -33,7 +39,7 @@ struct TextureOptions {
 };
 
 struct Texture {
-    char *type;
+    int type;
     unsigned int id;
     char *path;
     int width;
@@ -65,7 +71,7 @@ void anim_bkwd(struct TexAnimation *anim);
 void anim_incr(struct TexAnimation  *anim);
 void anim_decr(struct TexAnimation *anim);
 
-Uint32 tex_incr_anim(Uint32 interval, struct TexAnimation *tex_anim);
+unsigned int tex_incr_anim(unsigned int interval, struct TexAnimation *tex_anim);
 void tex_anim_calc_uv(struct TexAnimation *anim);
 void tex_anim_set(struct TexAnimation *anim);
 

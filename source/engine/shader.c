@@ -1,12 +1,12 @@
 #include "shader.h"
 
+#include "render.h"
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "log.h"
 #include "resources.h"
-#include <GL/glew.h>
 
 #define SHADER_BUF 10000
 
@@ -33,7 +33,7 @@ int shader_compile_error(GLuint shader)
     if (success) return 0;
 
     glGetShaderInfoLog(shader, ERROR_BUFFER, NULL, infoLog);
-    YughLog(0, SDL_LOG_PRIORITY_ERROR, "Shader compilation error.\nLog: %s", infoLog);
+    YughLog(0, LOG_ERROR, "Shader compilation error.\nLog: %s", infoLog);
 
     return 1;
 }
@@ -47,12 +47,12 @@ int shader_link_error(GLuint shader)
     if (success) return 0;
 
     glGetProgramInfoLog(shader, ERROR_BUFFER, NULL, infoLog);
-    YughLog(0, SDL_LOG_PRIORITY_ERROR, "Shader link error.\nLog: %s", infoLog);
+    YughLog(0, LOG_ERROR, "Shader link error.\nLog: %s", infoLog);
 
     return 1;
 }
 
-GLuint load_shader_from_file(char *path, int type)
+GLuint load_shader_from_file(const char *path, int type)
 {
     char spath[MAXPATH] = {'\0'};
 
@@ -169,7 +169,7 @@ void shader_compile_all()
 {
     struct mShader **curshader = mshaders;
     do {
-	YughLog(0, SDL_LOG_PRIORITY_INFO, "Compiled Shader %d", 1);
+	YughLog(0, LOG_INFO, "Compiled Shader %d", 1);
 	shader_compile(*curshader);
     } while (++curshader != lastShader);
 

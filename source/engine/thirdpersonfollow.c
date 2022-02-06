@@ -35,12 +35,6 @@
 //      // TODO: Figure out how to translate rotation to a global rotation
 // }
 
-mfloat_t *follow_calcpos()
-{
-    mfloat_t p1[3] = { 0 };
-    mfloat_t p2[3] = { 0 };
-}
-
 /*
 
 glm::vec3 ThirdPersonFollow::CalculatePosition()

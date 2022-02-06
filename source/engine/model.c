@@ -5,6 +5,7 @@
 #include "shader.h"
 #include <cgltf.h>
 #include <string.h>
+#include <stdlib.h>
 
 static struct mModel *lastRendered;
 static struct mModel *loadedModels[100];

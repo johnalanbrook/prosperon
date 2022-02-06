@@ -3,6 +3,7 @@
 #include "shader.h"
 #include "camera.h"
 #include <string.h>
+#include <stdlib.h>
 
 #include "openglrender.h"
 
@@ -71,24 +72,27 @@ struct mSkybox *MakeSkybox(const char *cubemap)
     shader_use(newskybox->shader);
     shader_setint(newskybox->shader, "skybox", 0);
 
+/*
     const char *faces[6] =
 	{ "right.jpg", "left.jpg", "top.jpg", "bottom.jpg", "front.jpg",
 	"back.jpg"
     };
+*/
 
     glGenTextures(1, &newskybox->id);
     glBindTexture(GL_TEXTURE_CUBE_MAP, newskybox->id);
-    char buf[100] = { '\0' };
+    /*char buf[100] = { '\0' };*/
 
     for (unsigned int i = 0; i < 6; i++) {
+    /*
 	buf[0] = '\0';
 	strcat(buf, cubemap);
 	strcat(buf, "/");
 	strcat(buf, faces[i]);
-	SDL_Surface *data = NULL;	//IMG_Load(buf);
+	IMG_Load(buf);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 2048,
 		     2048, 0, GL_RGB, GL_UNSIGNED_BYTE, data->pixels);
-	SDL_FreeSurface(data);
+    */
     }
 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

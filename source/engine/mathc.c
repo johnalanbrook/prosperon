@@ -44,8 +44,6 @@ const mint_t VEC3I_ONE[3] = { 1, 1, 1 };
 
 #include <string.h>
 
-typedef float mfloat_t;
-
 #if defined(MATHC_USE_INT)
 mint_t clampi(mint_t value, mint_t min, mint_t max)
 {
@@ -4971,9 +4969,10 @@ bool squat_is_equal(struct quat q0, struct quat q1)
     return quat_is_equal((mfloat_t *) & q0, (mfloat_t *) & q1);
 }
 
+// TODO: Implement
 struct quat squat_from_euler(mfloat_t x, mfloat_t y, mfloat_t z)
 {
-    struct quat result;
+    struct quat result = {0};
 
     return result;
 }

@@ -3,8 +3,6 @@
 
 #include <SDL2/SDL_mixer.h>
 
-
-
 struct sound {
     Mix_Chunk *sound;
     unsigned char volume;
@@ -13,10 +11,6 @@ struct sound {
 struct music {
     Mix_Music *music;
     unsigned char volume;
-};
-
-struct player {
-
 };
 
 extern const char *audioDriver;
@@ -40,6 +34,11 @@ void music_volume(unsigned char vol);
 void music_resume();
 void music_pause();
 void music_stop();
+
+void close_audio_device(int device);
+void clear_raw(int device);
+void play_raw(int device, void *data, int size);
+int open_device(const char *adriver);
 
 void audio_init();
 

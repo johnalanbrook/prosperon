@@ -1,11 +1,11 @@
 #include "font.h"
 
+#include "render.h"
 #include <shader.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
-#include <GL/glew.h>
 
 
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -33,7 +33,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     snprintf(fontpath, 256, "fonts/%s", fontfile);
 
     stbtt_fontinfo fontinfo = { 0 };
-    int i, j, ascent, baseline, ch = 0;
+    int ascent = 0;
 
     stbtt_InitFont(&fontinfo, ttf_buffer, 0);
     stbtt_GetFontVMetrics(&fontinfo, &ascent, 0, 0);
@@ -164,10 +164,6 @@ void text_settype(struct sFont *mfont)
     font = mfont;
 }
 
-void strwidth(const char *str) {
-
-}
-
 void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
 {
     shader_use(shader);
@@ -181,8 +177,8 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    char *line, *wordstart;
-    line = text;
+    const unsigned char *line, *wordstart;
+    line = (unsigned char*)text;
 
 
     while (*line != '\0') {

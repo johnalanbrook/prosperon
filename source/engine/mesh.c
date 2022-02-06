@@ -1,11 +1,11 @@
 #include "mesh.h"
 
+#include "render.h"
 #include "shader.h"
 #include "texture.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <GL/glew.h>
 
 void DrawMesh(struct mMesh *mesh, struct mShader *shader)
 {
@@ -18,26 +18,26 @@ void DrawMesh(struct mMesh *mesh, struct mShader *shader)
     for (uint32_t i = 0; i < (mesh->te - mesh->textures); i++) {
 	glActiveTexture(GL_TEXTURE0 + i);	// active proper texture unit before binding
 	// retrieve texture number (the N in diffuse_textureN)
-	char number;
+	char number = 0;
 	// TODO: malloc every single frame ... nope! Change to stack
-	char *name =
+	/*char *name =
 	    (char *) malloc(sizeof(char) *
-			    (strlen(mesh->textures[i].type) + 2));
-	if (mesh->textures[i].type == "texture_diffuse")
+			    (strlen(mesh->textures[i].type) + 2));*/
+	if (mesh->textures[i].type == TEX_DIFF)
 	    number = diffuseNr++;
-	else if (mesh->textures[i].type == "texture_specular")
+	else if (mesh->textures[i].type == TEX_SPEC)
 	    number = specularNr++;
-	else if (mesh->textures[i].type == "texture_normal")
+	else if (mesh->textures[i].type == TEX_NORM)
 	    number = normalNr++;
-	else if (mesh->textures[i].type == "texture_height")
+	else if (mesh->textures[i].type == TEX_HEIGHT)
 	    number = heightNr++;
 
-	sprintf(name, "%s%d", mesh->textures[i].type, number);
-	// now set the sampler to the correct texture unit
+
+/*
 	glUniform1i(glGetUniformLocation(shader->id, name), i);
-	// and finally bind the texture
 	glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id);
 	free(name);
+	*/
     }
 
     // draw mesh

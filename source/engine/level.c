@@ -3,6 +3,7 @@
 #include <string.h>
 #include "vec.h"
 #include "gameobject.h"
+#include "resources.h"
 
 void save_level(char name[MAXNAME])
 {

@@ -1,4 +1,5 @@
 extern "C" {
+#include "openglrender.h"
 #include "editor.h"
 #include "window.h"
 #include "resources.h"
@@ -12,7 +13,6 @@ extern "C" {
 #include "editorstate.h"
 #include <stdlib.h>
 #include "input.h"
-#include "openglrender.h"
 #include "2dphysics.h"
 #include "debugdraw.h"
 #include "level.h"
@@ -20,7 +20,6 @@ extern "C" {
 #include "sprite.h"
 #include <chipmunk/chipmunk.h>
 #include "math.h"
-#include <GL/glew.h>
 #include <ftw.h>
 #include <ctype.h>
 #include "pinball.h"
@@ -32,18 +31,11 @@ extern "C" {
 #include <stb_ds.h>
 #define ASSET_TEXT_BUF 1024*1024	/* 1 MB buffer for editing text files */
 #include <imgui.h>
-#include <imgui_impl_sdl.h>
+#include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 struct gameproject *cur_project;
 struct vec *projects;
 static char setpath[MAXPATH];
-
-
-
-
-
-
-
 
 
 // Menus
@@ -55,14 +47,11 @@ bool flashlightOn = false;
 // Lighting effect flags
 static bool renderAO = true;
 static bool renderDynamicShadows = true;
-static bool renderRefraction = true;
-static bool renderReflection = true;
 
 // Debug render modes
 static bool renderGizmos = false;
 static bool showGrid = true;
 static bool debugDrawPhysics = false;
-static bool renderNav = false;
 
 const char *allowed_extensions[] = { "jpg", "png", "gltf", "glsl" };
 
@@ -78,10 +67,6 @@ static char asset_search_buffer[100] = { 0 };
 struct fileasset *selected_asset;
 
 static int selected_index = -1;
-
-static struct mCamera camera = { 0 };
-
-static int tex_view = 0;
 
 static int grid1_width = 1;
 static int grid1_span = 100;
@@ -260,6 +245,155 @@ void editor_save()
     fclose(feditor);
 }
 
+static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int mods)
+{
+    if (editor_wantkeyboard()) return;
+
+    switch (key) {
+        case GLFW_KEY_ESCAPE:
+	    quit = true;
+	    editor_save_projects();
+	    editor_save();
+	    break;
+
+	case GLFW_KEY_1:
+	    renderMode = LIT;
+	    break;
+
+	case GLFW_KEY_2:
+	    renderMode = UNLIT;
+	    break;
+
+	case GLFW_KEY_3:
+	    renderMode = WIREFRAME;
+	    break;
+
+	case GLFW_KEY_4:
+	    renderMode = DIRSHADOWMAP;
+	    break;
+
+	case GLFW_KEY_5:
+	    renderGizmos = !renderGizmos;
+	    break;
+
+	case GLFW_KEY_6:
+	    debugDrawPhysics = !debugDrawPhysics;
+	    break;
+
+	case GLFW_KEY_7:
+	    break;
+
+	case GLFW_KEY_8:
+	    break;
+
+	case GLFW_KEY_9:
+	    break;
+
+	case GLFW_KEY_0:
+	    break;
+
+	case GLFW_KEY_T:
+	    break;
+
+	case GLFW_KEY_F2:
+	    editor.showAssetMenu = !editor.showAssetMenu;
+	    break;
+
+	case GLFW_KEY_F3:
+	    editor.showStats = !editor.showStats;
+	    break;
+
+	case GLFW_KEY_F4:
+	    editor.showHierarchy = !editor.showHierarchy;
+	    break;
+
+	case GLFW_KEY_F5:
+	    editor.showLighting = !editor.showLighting;
+	    break;
+
+	case GLFW_KEY_F6:
+	    editor.showGameSettings = !editor.showGameSettings;
+	    break;
+
+	case GLFW_KEY_F7:
+	    editor.showViewmode = !editor.showViewmode;
+	    break;
+
+	case GLFW_KEY_F8:
+	    editor.showDebugMenu = !editor.showDebugMenu;
+	    break;
+
+	case GLFW_KEY_F9:
+	    editor.showExport = !editor.showExport;
+	    break;
+
+	case GLFW_KEY_F10:
+	    editor.showLevel = !editor.showLevel;
+	    break;
+
+	case GLFW_KEY_F11:
+	    window_togglefullscreen(mainwin);
+	    break;
+
+	case GLFW_KEY_GRAVE_ACCENT:
+	    editor.showREPL = !editor.showREPL;
+	    break;
+
+	case GLFW_KEY_K:
+	    showGrid = !showGrid;
+	    break;
+
+	case GLFW_KEY_DELETE:
+	    break;
+
+	case GLFW_KEY_F:
+	    /*
+	       if (selectedobject != NULL) {
+	       cam_goto_object(&camera, &selectedobject->transform);
+	       }
+	     */
+	    break;
+
+    }
+}
+
+static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods)
+{
+    if (editor_wantkeyboard()) return;
+
+    if (action == GLFW_PRESS) {
+        switch (button) {
+            case GLFW_MOUSE_BUTTON_RIGHT:
+                cursor_hide();
+                break;
+
+            case GLFW_MOUSE_BUTTON_MIDDLE:
+                /*
+	      glBindFramebuffer(GL_FRAMEBUFFER, debugColorPickBO);
+	      int mx = 0;
+	      int my = 0;
+	      SDL_GetMouseState(&mx, &my);
+	      unsigned char data[4];
+	      glReadPixels(mx, SCREEN_HEIGHT - my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	      int pickID = data[0] + data[1]*256 + data[2]*256*256;
+	      snprintf(objectName, 200, "Object %d", pickID);
+	      pickGameObject(pickID);
+	      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	      */
+
+                pickGameObject(-1);
+
+	        break;
+        }
+    } else if (action == GLFW_RELEASE) {
+        switch (button) {
+            case GLFW_MOUSE_BUTTON_RIGHT:
+                cursor_show();
+                break;
+        }
+    }
+}
+
 void editor_init(struct mSDLWindow *window)
 {
     projects = vec_make(sizeof(struct gameproject), 5);
@@ -276,197 +410,24 @@ void editor_init(struct mSDLWindow *window)
 
 
 
-
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO & io = ImGui::GetIO();
-    (void) io;
     ImGui::StyleColorsClassic();
-    ImGui_ImplSDL2_InitForOpenGL(window->window, window->glContext);
+    ImGui_ImplGlfw_InitForOpenGL(window->window, true);
     ImGui_ImplOpenGL3_Init();
+
+    glfwSetKeyCallback(window->window, edit_input_cb);
+    glfwSetMouseButtonCallback(window->window, edit_mouse_cb);
 }
 
-void editor_input(struct mSDLWindow *window, SDL_Event * e)
+void editor_input()
 {
-    ImGui_ImplSDL2_ProcessEvent(e);
     io = &ImGui::GetIO();
-
-
-    //User requests quit
-    if (e->type == SDL_QUIT) {
-	quit = true;
-    }
-    //Handle keypress with current mouse position
-    else if (!editor_wantkeyboard() && e->type == SDL_KEYDOWN) {
-	switch (e->key.keysym.sym) {
-	case SDLK_ESCAPE:
-	    quit = true;
-	    editor_save_projects();
-	    editor_save();
-	    break;
-
-	case SDLK_1:
-	    renderMode = LIT;
-	    break;
-
-	case SDLK_2:
-	    renderMode = UNLIT;
-	    break;
-
-	case SDLK_3:
-	    renderMode = WIREFRAME;
-	    break;
-
-	case SDLK_4:
-	    renderMode = DIRSHADOWMAP;
-	    break;
-
-	case SDLK_5:
-	    renderGizmos = !renderGizmos;
-	    break;
-
-	case SDLK_6:
-	    debugDrawPhysics = !debugDrawPhysics;
-	    break;
-
-	case SDLK_7:
-	    break;
-
-	case SDLK_8:
-	    break;
-
-	case SDLK_9:
-	    break;
-
-	case SDLK_0:
-	    break;
-
-	case SDLK_t:
-	    break;
-
-	case SDLK_F2:
-	    editor.showAssetMenu = !editor.showAssetMenu;
-	    break;
-
-	case SDLK_F3:
-	    editor.showStats = !editor.showStats;
-	    break;
-
-	case SDLK_F4:
-	    editor.showHierarchy = !editor.showHierarchy;
-	    break;
-
-	case SDLK_F5:
-	    editor.showLighting = !editor.showLighting;
-	    break;
-
-	case SDLK_F6:
-	    editor.showGameSettings = !editor.showGameSettings;
-	    break;
-
-	case SDLK_F7:
-	    editor.showViewmode = !editor.showViewmode;
-	    break;
-
-	case SDLK_F8:
-	    editor.showDebugMenu = !editor.showDebugMenu;
-	    break;
-
-	case SDLK_F9:
-	    editor.showExport = !editor.showExport;
-	    break;
-
-	case SDLK_F10:
-	    editor.showLevel = !editor.showLevel;
-	    break;
-
-	case SDLK_F11:
-	    window_togglefullscreen(window);
-	    break;
-
-	case SDLK_BACKQUOTE:
-	    editor.showREPL = !editor.showREPL;
-	    break;
-
-	case SDLK_k:
-	    showGrid = !showGrid;
-	    break;
-
-	case SDLK_DELETE:
-	    break;
-
-	case SDLK_f:
-	    /*
-	       if (selectedobject != NULL) {
-	       cam_goto_object(&camera, &selectedobject->transform);
-	       }
-	     */
-	    break;
-
-	};
-    } else if (!editor_wantkeyboard() && e->type == SDL_MOUSEBUTTONDOWN) {
-	if (selectedobject != NULL) {
-	    switch (e->key.keysym.sym) {
-	    case SDLK_g:
-		// handle translate
-		break;
-
-	    case SDLK_r:
-		break;
-
-	    case SDLK_t:
-		break;
-	    }
-	}
-	switch (e->button.button) {
-	case SDL_BUTTON_RIGHT:
-	    SDL_SetRelativeMouseMode(SDL_TRUE);
-	    break;
-
-	case SDL_BUTTON_MIDDLE:
-/*
-	      glBindFramebuffer(GL_FRAMEBUFFER, debugColorPickBO);
-	      int mx = 0;
-	      int my = 0;
-	      SDL_GetMouseState(&mx, &my);
-	      unsigned char data[4];
-	      glReadPixels(mx, SCREEN_HEIGHT - my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	      int pickID = data[0] + data[1]*256 + data[2]*256*256;
-	      snprintf(objectName, 200, "Object %d", pickID);
-	      pickGameObject(pickID);
-	      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	      */
-
-	    pickGameObject(-1);
-
-	    break;
-	}
-
-    } else if (!editor_wantkeyboard() && e->type == SDL_MOUSEBUTTONUP) {
-	switch (e->button.button) {
-	case SDL_BUTTON_RIGHT:
-
-	    SDL_SetRelativeMouseMode(SDL_FALSE);
-	    SDL_WarpMouseInWindow(window->window, SCREEN_WIDTH / 2.f,
-				  SCREEN_HEIGHT / 2.f);
-	    break;
-	}
-    } else if (e->type == SDL_MOUSEWHEEL) {
-	mouseWheelY = e->wheel.y;
-    }
-
-
-
-
-    SDL_GetRelativeMouseState(&xchange, &ychange);
-
-    if (SDL_GetRelativeMouseMode()) {
-	//      camera_update(&camera, xchange, ychange, currentKeyStates, mouseWheelY, deltaT);
-    }
 }
 
 int editor_wantkeyboard()
 {
+    if (io == NULL) return 0;
     return io->WantCaptureKeyboard;
 }
 
@@ -589,7 +550,7 @@ void editor_project_gui()
     if (editor.showStats) {
 	ImGui::Begin("Stats", &editor.showStats);
 	ImGui::Text("FPS: %2.4f", 1.f / deltaT);
-	ImGui::Text("Triangles rendered: %d", triCount);
+	ImGui::Text("Triangles rendered: %llu", triCount);
 	ImGui::End();
     }
 
@@ -789,7 +750,7 @@ void editor_project_gui()
 void editor_render()
 {
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
 
@@ -817,7 +778,7 @@ void pickGameObject(int pickID)
 
 int is_allowed_extension(const char *ext)
 {
-    for (int i = 0;
+    for (size_t i = 0;
 	 i < sizeof(allowed_extensions) / sizeof(allowed_extensions[0]);
 	 i++) {
 	if (!strcmp(ext + 1, allowed_extensions[i]))
@@ -1019,7 +980,7 @@ void editor_project_btn_gui(struct gameproject *gp)
 
 
     ImGui::SameLine();
-    ImGui::Text(gp->path);
+    ImGui::Text("%s", gp->path);
 }
 
 void editor_proj_select_gui()
@@ -1053,7 +1014,7 @@ void editor_init_project(struct gameproject *gp)
 
 void editor_make_project(char *path)
 {
-    FILE *f = path_open("%s%s", "w", path, "/project.yugh");
+    FILE *f = path_open("w", "%s%s", path, "/project.yugh");
     cur_project =
 	(struct gameproject *) malloc(sizeof(struct gameproject));
     strncpy(cur_project->name, "New Game", 127);
@@ -1069,7 +1030,7 @@ void editor_make_project(char *path)
 
 void editor_import_project(char *path)
 {
-    FILE *f = path_open("%s%s", "r", path, "/project.yugh");
+    FILE *f = path_open("r", "%s%s", path, "/project.yugh");
     if (!f)
 	return;
 
@@ -1133,7 +1094,7 @@ void staticactor_gui(struct mStaticActor *sa)
     object_gui(&sa->obj);
     if (ImGui::CollapsingHeader("Model")) {
 	ImGui::Checkbox("Cast Shadows", &sa->castShadows);
-	ImGui::Text("Model path", &sa->currentModelPath);
+	ImGui::Text("Model path: %s", sa->currentModelPath);
 
 	ImGui::SameLine();
 	if (ImGui::Button("Load model")) {
@@ -1236,10 +1197,6 @@ void object_gui(struct mGameObject *go)
 
 
 	}
-
-      end:
-
-
 
 	ImGui::PopID();
     }

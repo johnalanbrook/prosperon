@@ -1,6 +1,5 @@
 #include "openglrender.h"
 
-#include <SDL2/SDL.h>
 #include "sprite.h"
 #include "shader.h"
 #include "font.h"
@@ -15,7 +14,7 @@
 int renderMode = 0;
 
 static GLuint UBO;
-static GLuint UBOBind = 0;
+
 
 static GLuint gridVBO = 0;
 static GLuint gridVAO = 0;
@@ -84,22 +83,17 @@ bool renderReflection = true;
 struct mGameObject *selectedobject = NULL;
 char objectName[200] = { '\0' };	// object name buffer
 
-uint16_t debugColorPickBO = 0;
-uint16_t debugColorPickTEX = 0;
+GLuint debugColorPickBO = 0;
+GLuint debugColorPickTEX = 0;
 
 
 struct mSprite *tsprite = NULL;
-static struct mSprite *tanim = NULL;
+
 
 static unsigned int projUBO;
 
 void openglInit()
 {
-    if (SDL_GL_SetSwapInterval(1)) {
-	YughLog(0, SDL_LOG_PRIORITY_WARN,
-		"Unable to set VSync! SDL Error: %s", SDL_GetError());
-    }
-
     sprite_initialize();
 
     ////// MAKE SHADERS
@@ -222,34 +216,7 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
 
 void openglInit3d(struct mSDLWindow *window)
 {
-    //Initialize SDL
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
-	YughLog(0, SDL_LOG_PRIORITY_ERROR,
-		"SDL could not initialize! SDL Error: %s", SDL_GetError());
-    }
-    //Use OpenGL 3.3
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-			SDL_GL_CONTEXT_PROFILE_CORE);
-
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);	/* How many x MSAA */
-
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
-
-    // TODO: Add non starter initializtion return here for some reason?
-    MakeSDLWindow("Untitled Game", 1280, 720,
-		  SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN |
-		  SDL_WINDOW_RESIZABLE);
-
-
-    //Use Vsync
-    if (!SDL_GL_SetSwapInterval(1)) {
-	YughLog(0, SDL_LOG_PRIORITY_WARN,
-		"Unable to set VSync! SDL Error: %s", SDL_GetError());
-    }
-/*    TODO: IMG init doesn't work in C+
+/*    TODO: IMG init doesn't work in C++
    int init =(0x00000001 | 0x00000002);
     int initted =IMG_Init(init);
     YughLog(0, SDL_LOG_PRIORITY_ERROR, "Init flags: %d\nInitted values: %d ", init, initted);
@@ -438,7 +405,7 @@ void openglRender3d(struct mSDLWindow *window, struct mCamera *mcamera)
     glClear(GL_DEPTH_BUFFER_BIT);
 
     // Configure matrices with an orthogonal
-    mfloat_t lightView[16] = { 0.f };
+
     mfloat_t lightSpaceMatrix[16] = { 0.f };
 
 /*

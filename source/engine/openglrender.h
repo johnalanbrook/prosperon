@@ -2,7 +2,6 @@
 #define OPENGL_RENDER_H
 
 #include "render.h"
-#include "window.h"
 
 struct mCamera;
 struct mSDLWindow;
@@ -31,7 +30,7 @@ extern float plane_size;
 extern float near_plane;
 extern float far_plane;
 extern char objectName[];
-extern uint16_t debugColorPickBO;
+extern GLuint debugColorPickBO;
 
 extern struct mGameObject *selectedobject;
 

@@ -12,7 +12,7 @@ int ncomponent = 0;
 void registry_init()
 {
     register_component("Sprite", sizeof(struct mSprite), &MakeSprite, NULL,
-		       sprite_gui, &sprite_init, NULL);
+		       &sprite_gui, &sprite_init, NULL);
     register_component("2D Circle Collider", sizeof(struct phys2d_circle),
 		       &Make2DCircle, &phys2d_dbgdrawcircle, &circle_gui,
 		       &phys2d_circleinit, NULL);

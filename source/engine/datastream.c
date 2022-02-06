@@ -1,12 +1,12 @@
 #include "datastream.h"
 
-#include <pl_mpeg.h>
-
+#include "render.h"
 #include "config.h"
 #include "shader.h"
 #include "resources.h"
-#include <GL/glew.h>
+#include "sound.h"
 #include <stdbool.h>
+#include "log.h"
 
 static void ds_update_texture(uint32_t unit, uint32_t texture,
 			      plm_plane_t * plane)
@@ -30,11 +30,10 @@ static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 {
     struct datastream *ds = (struct datastream *) user;
     int size = sizeof(float) * samples->count * 2;
-    SDL_QueueAudio(ds->audio_device, samples->interleaved, size);
+    play_raw(ds->audio_device, samples->interleaved, size);
 }
 
-void ds_openvideo(struct datastream *ds, const char *video,
-		  const char *adriver)
+void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 {
     ds_stop(ds);
     char buf[MAXPATH] = {'\0'};
@@ -42,12 +41,10 @@ void ds_openvideo(struct datastream *ds, const char *video,
     ds->plm = plm_create_with_filename(buf);
 
     if (!ds->plm) {
-	SDL_Log("Couldn't open %s", video);
+        YughLog(0, 0, "Couldn't open %s", video);
     }
 
-    int samplerate = plm_get_samplerate(ds->plm);
-
-    SDL_Log("Opened %s - framerate: %f, samplerate: %d, duration: %f",
+    YughLog(0, 0, "Opened %s - framerate: %f, samplerate: %d, duration: %f",
 	    video,
 	    plm_get_framerate(ds->plm),
 	    plm_get_samplerate(ds->plm), plm_get_duration(ds->plm)
@@ -59,24 +56,6 @@ void ds_openvideo(struct datastream *ds, const char *video,
 
     plm_set_audio_enabled(ds->plm, true);
     plm_set_audio_stream(ds->plm, 0);
-    SDL_AudioSpec audio_spec;
-    SDL_memset(&audio_spec, 0, sizeof(audio_spec));
-    audio_spec.freq = samplerate;
-    audio_spec.format = AUDIO_F32;
-    audio_spec.channels = 2;
-    audio_spec.samples = 4096;
-
-    ds->audio_device =
-	SDL_OpenAudioDevice(adriver, 0, &audio_spec, NULL, 0);
-    printf("Opened audio device %d on driver %s\n", ds->audio_device,
-	   adriver);
-    // if (audio_device == 0) {
-    //     SDL_Log("Failed to open audio device: %s", SDL_GetError());
-    // }
-    SDL_PauseAudioDevice(ds->audio_device, 0);
-
-
-
 
     // Adjust the audio lead time according to the audio_spec buffer size
     //plm_set_audio_lead_time(plm, (double)audio_spec.samples / (double)samplerate);
@@ -127,7 +106,7 @@ void ds_advance(struct datastream *ds, uint32_t ms)
 
 void ds_seek(struct datastream *ds, uint32_t time)
 {
-    SDL_ClearQueuedAudio(0);
+    clear_raw(ds->audio_device);
     plm_seek(ds->plm, time, false);
 }
 
@@ -151,7 +130,7 @@ void ds_stop(struct datastream *ds)
 	ds->plm = NULL;
     }
     if (ds->audio_device)
-	SDL_CloseAudioDevice(ds->audio_device);
+	close_audio_device(ds->audio_device);
     ds->playing = false;
 }
 

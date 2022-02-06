@@ -1,4 +1,5 @@
 #include "sound.h"
+#include "resources.h"
 
 const char *audioDriver;
 
@@ -8,11 +9,13 @@ void sound_init()
 {
     int flags = MIX_INIT_MP3 | MIX_INIT_OGG;
     int err = Mix_Init(flags);
-    if (err&flags != flags) {
+    if ((err&flags) != flags) {
         printf("MIX did not init!!");
     }
 
     mus_ch = Mix_AllocateChannels(1);
+
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
 }
 
 void audio_open(const char *device)
@@ -91,4 +94,32 @@ void music_stop()
 void audio_init()
 {
     audioDriver = SDL_GetAudioDeviceName(0,0);
+}
+
+void play_raw(int device, void *data, int size)
+{
+    SDL_QueueAudio(device, data, size);
+}
+
+void close_audio_device(int device)
+{
+    SDL_CloseAudioDevice(device);
+}
+
+void clear_raw(int device)
+{
+   SDL_ClearQueuedAudio(device);
+}
+
+int open_device(const char *adriver)
+{
+    SDL_AudioSpec audio_spec;
+    SDL_memset(&audio_spec, 0, sizeof(audio_spec));
+    audio_spec.freq = 48000;
+    audio_spec.format = AUDIO_F32;
+    audio_spec.channels = 2;
+    audio_spec.samples = 4096;
+    int dev = (int) SDL_OpenAudioDevice(adriver, 0, &audio_spec, NULL, 0);
+    SDL_PauseAudioDevice(dev, 0);
+    return dev;
 }

@@ -1,16 +1,17 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
-/*
+#include <stdint.h>
+
 struct mLight {
-    struct mGameObject obj;
-    mfloat_t color[3];
+    struct mGameObject *go;
+    uint8_t color[3];
     float strength;
     int dynamic;
     int on;
 };
 
-
+/*
 struct mPointLight {
     struct mLight light;
     float constant;

@@ -1,17 +1,17 @@
 #include "window.h"
 
-#include "openglrender.h"
+
 
 #include <string.h>
 #include "texture.h"
 #include "log.h"
+#include <stdlib.h>
+#include <stdio.h>
 
-struct mSDLWindow *window = NULL;
+struct mSDLWindow *mainwin;
 
 static struct mSDLWindow *windows[5];
 static int numWindows = 0;
-
-static SDL_GLContext publicGLContext = NULL;
 
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 				 uint32_t flags)
@@ -19,44 +19,36 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
     struct mSDLWindow *w = calloc(1, sizeof(struct mSDLWindow));
     w->width = width;
     w->height = height;
-    w->window = SDL_CreateWindow(name, 0, 0, width, height, flags);
+    w->window = glfwCreateWindow(width, height, "New Game", NULL, NULL);
 
-    if (w->window == NULL) {
-	YughLog(0, SDL_LOG_PRIORITY_ERROR,
-		"Window could not be created! SDL Error: %s",
-		SDL_GetError());
+    if (!w->window) {
+        printf("Couldn't make GLFW window\n");
     } else {
-        if (publicGLContext == NULL) {
-	    publicGLContext = SDL_GL_CreateContext(w->window);
-	}
+        glfwMakeContextCurrent(w->window);
+        gladLoadGL(glfwGetProcAddress);
 
-        w->glContext = publicGLContext;
-        SDL_GL_MakeCurrent(w->window, w->glContext);
+	glfwSwapInterval(1);
 
+	w->id = numWindows;
 
-	if (publicGLContext == NULL) {
-	    YughLog(0, SDL_LOG_PRIORITY_ERROR,
-		    "OpenGL context could not be created! SDL Error: %s",
-		    SDL_GetError());
-	}
-
-	w->id = SDL_GetWindowID(w->window);
-
-	glewExperimental = GL_TRUE;
-	glewInit();
-
-	SDL_GL_SetSwapInterval(1);
 
 	if (numWindows < 5)
 	    windows[numWindows++] = w;
+
     }
 
-
+    mainwin = windows[0];
     return w;
 }
 
-void window_handle_event(struct mSDLWindow *w, SDL_Event * e)
+void window_destroy(struct mSDLWindow *w)
 {
+    glfwDestroyWindow(w->window);
+}
+
+void window_handle_event(struct mSDLWindow *w)
+{
+/*
     if (e->type == SDL_WINDOWEVENT && e->window.windowID == w->id) {	// TODO: Check ptr direct?
 	switch (e->window.event) {
 	case SDL_WINDOWEVENT_SHOWN:
@@ -77,9 +69,9 @@ void window_handle_event(struct mSDLWindow *w, SDL_Event * e)
 		    "Changed size of window %d: width %d, height %d.",
 		    w->id, w->width, w->height);
 	    window_makecurrent(w);
-	    /*w.projection =
+	    w.projection =
 	       glm::ortho(0.f, (float) width, 0.f, (float) height, -1.f,
-	       1.f); */
+	       1.f);
 	    w->render = true;
 	    break;
 
@@ -134,18 +126,19 @@ void window_handle_event(struct mSDLWindow *w, SDL_Event * e)
 	    break;
 	}
     }
+*/
 }
 
-void window_all_handle_events(SDL_Event *e)
+void window_all_handle_events()
 {
     for (int i = 0; i < numWindows; i++) {
-        window_handle_event(windows[i], e);
+        window_handle_event(windows[i]);
     }
 }
 
 void window_makefullscreen(struct mSDLWindow *w)
 {
-    SDL_SetWindowFullscreen(w->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    glfwMaximizeWindow(w->window);
     w->fullscreen = true;
 }
 
@@ -156,31 +149,48 @@ void window_togglefullscreen(struct mSDLWindow *w)
     if (w->fullscreen) {
 	window_makefullscreen(w);
     } else {
-	SDL_SetWindowFullscreen(w->window, 0);
+	glfwRestoreWindow(w->window);
     }
 
 }
 
 void window_makecurrent(struct mSDLWindow *w)
 {
+/*
     if (w->window != SDL_GL_GetCurrentWindow())
 	SDL_GL_MakeCurrent(w->window, w->glContext);
     glViewport(0, 0, w->width, w->height);
+*/
 }
 
 void window_swap(struct mSDLWindow *w)
 {
-    SDL_GL_SwapWindow(w->window);
+    glfwSwapBuffers(w->window);
 }
 
 void window_seticon(struct mSDLWindow *w, struct Texture *icon)
 {
-    SDL_Surface *winIcon = SDL_CreateRGBSurfaceWithFormatFrom(icon->data, icon->width, icon->height, 32, 4*icon->width, SDL_PIXELFORMAT_RGBA32);
-    SDL_SetWindowIcon(w->window, winIcon);
-    SDL_FreeSurface(winIcon);
+/*
+    GLFWimage images[1];
+    images[0] = load_icon(icon->path);
+    glfwSetWindowIcon(w->window, 1, images);
+*/
 }
 
 int window_hasfocus(struct mSDLWindow *w)
 {
-    return SDL_GetWindowFlags(w->window) & SDL_WINDOW_INPUT_FOCUS;
+    return glfwGetWindowAttrib(w->window, GLFW_FOCUSED);
+}
+
+double frame_time()
+{
+    return glfwGetTime();
+}
+
+double elapsed_time()
+{
+    static double last_time;
+    static double elapsed;
+    elapsed = frame_time() - last_time;
+    return elapsed;
 }

@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
@@ -22,7 +23,6 @@ const char *EXT_LEVEL = ".level";
 int stemlen = 0;
 
 static const char *cur_ext = NULL;
-static DIR *cur_dir = NULL;
 struct dirent *c_dirent = NULL;
 struct vec *c_vec = NULL;
 
@@ -35,9 +35,6 @@ void resources_init()
     getcwd(DATA_PATH, 256);
     strncat(DATA_PATH, "/", 256);
 
-
-
-    PREF_PATH = SDL_GetPrefPath("Odplot", "Test Game");
     if (!PREF_PATH)
         PREF_PATH = strdup("./tmp/");
 }
@@ -104,7 +101,7 @@ void findPrefabs()
     fill_extensions(prefabs, DATA_PATH, EXT_PREFAB);
 }
 
-FILE *path_open(const char *fmt, const char *tag, ...)
+FILE *path_open(const char *tag, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -115,7 +112,7 @@ FILE *path_open(const char *fmt, const char *tag, ...)
     return f;
 }
 
-char *make_path(char *file)
+char *make_path(const char *file)
 {
     strncpy(pathbuf, DATA_PATH, MAXPATH);
     strncat(pathbuf, file, MAXPATH);

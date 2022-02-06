@@ -10,7 +10,6 @@ struct follow {
     mfloat_t target_rot[4];
 };
 
-mfloat_t *follow_calcpos();
 mfloat_t *follow_calccenter();
 mfloat_t *follow_postoffset();
 mfloat_t *extentsoffset();

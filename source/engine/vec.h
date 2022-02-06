@@ -6,15 +6,15 @@
 struct vec {
     int len;
     int size;
-    int width;
+    size_t width;
     void *data;
 };
 
-struct vec *vec_make(int width, int size);
+struct vec *vec_make(size_t width, int size);
 void *vec_get(struct vec *vec, int n);
 void vec_walk(struct vec *vec, void (*fn)(void *data));
 void vec_clear(struct vec *vec);
-void *vec_add(struct vec *vec, void *data);
+void *vec_add(struct vec *vec, const void *data);
 
 /* sort returns 0 for a<=b, 1 for a>b */
 void *vec_add_sort(struct vec *vec, void *data,

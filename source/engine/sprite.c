@@ -1,6 +1,7 @@
 #include "sprite.h"
 
 
+#include "timer.h"
 #include "render.h"
 #include "openglrender.h"
 #include "texture.h"
@@ -18,14 +19,13 @@ static struct mShader *spriteShader = NULL;
 static struct mShader *animSpriteShader = NULL;
 */
 
-struct TextureOptions TEX_SPRITE = { 1, 0 };
+struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
 struct mSprite *sprites[100] = { NULL };
 
 int numSprites = 0;
 
 static uint32_t quadVAO;
-static uint32_t VBO;
 
 struct mSprite *MakeSprite(struct mGameObject *go)
 {
@@ -58,8 +58,7 @@ void sprite_loadanim(struct mSprite *sprite, const char *path,
 {
     sprite->tex = texture_loadfromfile(path);
     sprite->anim = anim;
-    sprite->anim.timer =
-	SDL_AddTimer(sprite->anim.ms, incrementAnimFrame, sprite);
+    sprite->anim.timer = timer_make(sprite->anim.ms, &incrementAnimFrame, sprite);
 /*
     sprite->tex = texture_loadanimfromfile(sprite->tex, path, sprite->anim.frames,
 				       sprite->anim.dimensions);
@@ -71,7 +70,7 @@ void sprite_settex(struct mSprite *sprite, struct Texture *tex)
     sprite->tex = tex;
 }
 
-Uint32 incrementAnimFrame(Uint32 interval, struct mSprite *sprite)
+unsigned int incrementAnimFrame(unsigned int interval, struct mSprite *sprite)
 {
     sprite->anim.frame = (sprite->anim.frame + 1) % sprite->anim.frames;
     return interval;

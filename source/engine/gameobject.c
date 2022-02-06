@@ -9,6 +9,7 @@
 #include "input.h"
 #include <string.h>
 #include <chipmunk/chipmunk.h>
+#include "resources.h"
 
 struct vec *gameobjects = NULL;
 struct mGameObject *updateGO = NULL;
@@ -186,7 +187,7 @@ void gameobject_update(struct mGameObject *go)
 	script_run(updateGO->update);
     }
 
-    vec_walk(go->components, component_update);
+    vec_walk(go->components, &component_update);
 }
 
 void gameobject_move(struct mGameObject *go, float xs, float ys)
@@ -205,5 +206,5 @@ void gameobject_rotate(struct mGameObject *go, float as)
 }
 
 void update_gameobjects() {
-    vec_walk(gameobjects, gameobject_update);
+    vec_walk(gameobjects, &gameobject_update);
 }

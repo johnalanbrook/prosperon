@@ -22,7 +22,7 @@ void fill_extensions(struct vec *vec, const char *path, const char *ext);
 char *get_filename_from_path(char *path, int extension);
 char *get_directory_from_path(char *path);
 FILE *res_open(char *path, const char *tag);
-FILE *path_open(const char *fmt, const char *tag, ...);
-char *make_path(char *file);
+FILE *path_open(const char *tag, const char *fmt, ...);
+char *make_path(const char *file);
 
 #endif

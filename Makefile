@@ -10,7 +10,7 @@ endif
 UNAME_P != uname -m
 
 #CC specifies which compiler we're using
-CC = clang
+CC = clang -std=c99
 CXX = clang++
 
 ifeq ($(DEBUG), 1)
@@ -58,7 +58,7 @@ ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine.c yugine.c)
 
-imguisrcs = imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_sdl backends/imgui_impl_opengl3
+imguisrcs = imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_glfw backends/imgui_impl_opengl3
 imguiobjs != $(call prefix,$(imguisrcs),$(objprefix)/source/editor/imgui/,.o)
 
 eddirs != find ./source/editor -type d
@@ -79,8 +79,8 @@ includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
 COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
-WARNING_FLAGS = -w #-pedantic -Wall -Wextra -Wwrite-strings
-COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -c -MMD -MP $< -o $@
+WARNING_FLAGS = -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
 
 LIBPATH = -L./bin
 
@@ -93,7 +93,7 @@ ifeq ($(UNAME), Windows_NT)
 else
 	LINKER_FLAGS =
 	ELIBS = editor engine
-	CLIBS = SDL2 SDL2_mixer GLEW GL dl pthread
+	CLIBS = glfw SDL2 SDL2_mixer dl pthread
 	EXT =
 endif
 
@@ -119,10 +119,13 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
 	@$(CXX) $< $(linkinclude:%=-I%) $(LINK)
+	@echo Finished build
 
 editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
 	$(CXX) $< $(linkinclude:%=-I%) $(LINK)
+	@mv editor yugine/editor
+	@echo Finished build
 
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
@@ -147,12 +150,12 @@ pinball: $(ENGINE) $(pinobjects)
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)
 	@echo Making C++ object $@
-	@$(CXX) $(COMPILER_FLAGS)
+	-@$(CXX) $(COMPILER_FLAGS)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
-	@$(CC) $(COMPILER_FLAGS)
+	-@$(CC) $(COMPILER_FLAGS)
 
 clean:
 	@echo Cleaning project

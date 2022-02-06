@@ -1,11 +1,11 @@
 #include "texture.h"
 
-#include <SDL2/SDL.h>
+#include "render.h"
 #include <stdio.h>
 #include <stb_image.h>
 #include <stb_ds.h>
-#include <GL/glew.h>
 #include "log.h"
+#include <math.h>
 
 static struct {
     char *key;
@@ -59,7 +59,7 @@ struct Texture *texture_loadfromfile(const char *path)
 
 void tex_pull(struct Texture *tex)
 {
-    uint8_t n;
+    int n;
     stbi_set_flip_vertically_on_load(0);
     tex->data = stbi_load(tex->path, &tex->width, &tex->height, &n, 4);
 
@@ -112,6 +112,7 @@ void tex_gpu_load(struct Texture *tex)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     } else {
+    /*
 	glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
 	glTexImage3D(GL_TEXTURE_2D_ARRAY,
 		     0,
@@ -163,10 +164,11 @@ void tex_gpu_load(struct Texture *tex)
 
 	SDL_FreeSurface(loadedSurface);
 	SDL_FreeSurface(tempSurface);
+	*/
     }
 }
 
-Uint32 tex_incr_anim(Uint32 interval, struct TexAnimation *tex_anim)
+unsigned int tex_incr_anim(unsigned int interval, struct TexAnimation *tex_anim)
 {
     anim_incr(tex_anim);
 
@@ -195,9 +197,9 @@ void anim_decr(struct TexAnimation *anim)
 void tex_anim_set(struct TexAnimation *anim)
 {
     if (anim->playing) {
-	SDL_RemoveTimer(anim->timer);
+	timer_remove(anim->timer);
 	anim->timer =
-	    SDL_AddTimer(floor(1000.f / anim->tex->anim.ms), tex_incr_anim,
+	    timer_make(floor(1000.f / anim->tex->anim.ms), &tex_incr_anim,
 			 anim);
 
     }
@@ -262,9 +264,9 @@ void anim_play(struct TexAnimation *anim)
 	anim->frame = 0;
 
     anim->playing = 1;
-    SDL_RemoveTimer(anim->timer);
+    timer_remove(anim->timer);
     anim->timer =
-	SDL_AddTimer(floor(1000.f / anim->tex->anim.ms), tex_incr_anim,
+	timer_make(floor(1000.f / anim->tex->anim.ms), &tex_incr_anim,
 		     anim);
 }
 
@@ -276,7 +278,7 @@ void anim_stop(struct TexAnimation *anim)
     anim->playing = 0;
     anim->frame = 0;
     anim->pausetime = 0;
-    SDL_RemoveTimer(anim->timer);
+    timer_remove(anim->timer);
     tex_anim_calc_uv(anim);
 }
 
@@ -286,7 +288,7 @@ void anim_pause(struct TexAnimation *anim)
 	return;
 
     anim->playing = 0;
-    SDL_RemoveTimer(anim->timer);
+    timer_remove(anim->timer);
 }
 
 void anim_fwd(struct TexAnimation *anim)

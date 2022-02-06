@@ -1,6 +1,5 @@
 #include "engine.h"
 
-#define PL_MPEG_IMPLEMENTATION
 #define CGLTF_IMPLEMENTATION
 #define GL_GLEXT_PROTOTYPES
 #define STB_DS_IMPLEMENTATION
@@ -14,8 +13,8 @@
 #include <stb_image.h>
 #include <pl_mpeg.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
+#include "render.h"
+
 #include "openglrender.h"
 #include "window.h"
 #include "camera.h"
@@ -26,51 +25,47 @@
 #include "registry.h"
 #include "log.h"
 #include "resources.h"
+#include "timer.h"
+#include "script.h"
+#include "vec.h"
+#include "sound.h"
 
 // TODO: Init on the heap
 
 
 #include "engine.h"
 
+void error_callback(int error, const char *description)
+{
+    fprintf(stderr, "Error: %s\n", description);
+}
+
 void engine_init()
 {
-
-
-     //Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
-	YughLog(0, SDL_LOG_PRIORITY_ERROR,
-		"SDL could not initialize! SDL Error: %s", SDL_GetError());
+    /* Initialize GLFW */
+    if (!glfwInit()) {
+        printf("Could not init GLFW\n");
     }
+    glfwSetErrorCallback(error_callback);
 
-    //Use OpenGL 3.3
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-			SDL_GL_CONTEXT_PROFILE_CORE);
-
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);	/* How many x MSAA */
-
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
-
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
 
     resources_init();
     script_init();
     registry_init();
     init_gameobjects();
+    timer_init();
 
     prefabs = vec_make(MAXNAME, 25);
     stbi_set_flip_vertically_on_load(1);
     phys2d_init();
     gui_init();
     sound_init();
-
-    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
 }
 
 void engine_stop()
 {
-    SDL_StopTextInput();
-    SDL_Quit();
+    glfwTerminate();
 }

@@ -2,7 +2,6 @@
 #define EDITOR_H
 
 #include <config.h>
-#include <SDL2/SDL.h>
 #include <stdbool.h>
 #include "resources.h"
 
@@ -41,12 +40,13 @@ struct gameproject {
 };
 
 struct Texture;
+struct mSDLWindow;
 
 void pickGameObject(int pickID);
 int is_allowed_extension(const char *ext);
 
 void editor_init(struct mSDLWindow *window);
-void editor_input(struct mSDLWindow *window, SDL_Event * e);
+void editor_input();
 void editor_render();
 int editor_wantkeyboard();
 void editor_save();
@@ -76,6 +76,21 @@ void game_stop();
 void game_pause();
 
 void get_levels();
+
+struct mLight;
+struct mPointLight;
+struct mSpotLight;
+struct mStaticActor;
+struct mTransform;
+struct mGameObject;
+struct mSprite;
+struct phys2d_circle;
+struct phys2d_segment;
+struct phys2d_box;
+struct phys2d_edge;
+struct phys2d_shape;
+struct phys2d_poly;
+struct flipper;
 
 ///////// Object GUIs
 void light_gui(struct mLight *light);

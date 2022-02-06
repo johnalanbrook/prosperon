@@ -2,7 +2,7 @@
 
 #include "gameobject.h"
 #include "input.h"
-#include <SDL2/SDL.h>
+
 
 const float CAMERA_MINSPEED = 1.f;
 const float CAMERA_MAXSPEED = 300.f;
@@ -41,20 +41,18 @@ mfloat_t *getviewmatrix(mfloat_t view[16],
 
 void camera_2d_update(struct mCamera *camera, float deltaT)
 {
-    static mfloat_t holdvec[3];
     static mfloat_t frame[3];
     vec3_zero(frame);
-
-    if (currentKeystates[SDL_SCANCODE_W])
+    if (action_down(GLFW_KEY_W))
 	vec3_add(frame, frame, UP);
-    if (currentKeystates[SDL_SCANCODE_S])
+    if (action_down(GLFW_KEY_S))
 	vec3_add(frame, frame, DOWN);
-    if (currentKeystates[SDL_SCANCODE_A])
+    if (action_down(GLFW_KEY_A))
 	vec3_add(frame, frame, LEFT);
-    if (currentKeystates[SDL_SCANCODE_D])
+    if (action_down(GLFW_KEY_D))
 	vec3_add(frame, frame, RIGHT);
 
-    float speedMult = currentKeystates[SDL_SCANCODE_LSHIFT] ? 2.f : 1.f;
+    float speedMult = action_down(GLFW_KEY_LEFT_SHIFT) ? 2.f : 1.f;
 
     if (!vec3_is_zero(frame)) {
 	vec3_normalize(frame, frame);

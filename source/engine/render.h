@@ -1,9 +1,7 @@
 #ifndef RENDER_H
 #define RENDER_H
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/glew.h>
-#include <SDL2/SDL_opengl.h>
-
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
 
 #endif

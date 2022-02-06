@@ -98,9 +98,6 @@ struct phys2d_box *Make2DBox(struct mGameObject *go)
 
 void phys2d_boxinit(struct phys2d_box *box, struct mGameObject *go)
 {
-    cpVect verts[4] =
-	{ { -5.f, -5.f }, { 5.f, -5.f }, { 5.f, 5.f }, { -5.f, 5.f } };
-    cpTransform T = { 0 };
     box->shape.shape =
 	cpSpaceAddShape(space,
 			cpBoxShapeNew(go->body, box->w, box->h, box->r));
@@ -291,7 +288,6 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
 void phys2d_dbgdrawseg(struct phys2d_segment *seg)
 {
     cpVect p = cpBodyGetPosition(seg->shape.go->body);
-    float s = seg->shape.go->scale;
     cpVect a = cpSegmentShapeGetA(seg->shape.shape);
     cpVect b = cpSegmentShapeGetB(seg->shape.shape);
 
@@ -329,7 +325,6 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 
     float s = poly->shape.go->scale;
     for (int i = 0; i < poly->n; i++) {
-	float point[2];
 	float d =
 	    sqrt(pow(poly->points[i * 2] * s, 2.f) +
 		 pow(poly->points[i * 2 + 1] * s, 2.f));
@@ -362,7 +357,6 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
     float angle = cpBodyGetAngle(edge->shape.go->body);
 
     for (int i = 0; i < edge->n; i++) {
-	float point[2];
 	float d =
 	    sqrt(pow(edge->points[i * 2] * s, 2.f) +
 		 pow(edge->points[i * 2 + 1] * s, 2.f));
