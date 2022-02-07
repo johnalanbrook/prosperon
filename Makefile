@@ -79,7 +79,7 @@ includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
 COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
-WARNING_FLAGS = -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+WARNING_FLAGS = #-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
 
 LIBPATH = -L./bin

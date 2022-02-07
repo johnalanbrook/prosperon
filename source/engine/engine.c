@@ -1,17 +1,11 @@
 #include "engine.h"
 
-#define CGLTF_IMPLEMENTATION
-#define GL_GLEXT_PROTOTYPES
 #define STB_DS_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
+#include <stb_ds.h>
 
 #ifdef EDITOR
 #include "editor.h"
 #endif
-
-#include <stb_ds.h>
-#include <stb_image.h>
-#include <pl_mpeg.h>
 
 #include "render.h"
 

@@ -27,6 +27,7 @@ extern "C" {
 #include "vec.h"
 #include "debug.h"
 #include "script.h"
+
 }
 #include <stb_ds.h>
 #define ASSET_TEXT_BUF 1024*1024	/* 1 MB buffer for editing text files */
@@ -58,10 +59,14 @@ const char *allowed_extensions[] = { "jpg", "png", "gltf", "glsl" };
 static const char *editor_filename = "editor.ini";
 
 static ImGuiIO *io = NULL;
-static struct {
+
+struct asset {
     char *key;
     struct fileasset *value;
-} *assets = NULL;
+};
+
+static struct asset *assets = NULL;
+
 static char asset_search_buffer[100] = { 0 };
 
 struct fileasset *selected_asset;
@@ -827,7 +832,7 @@ void editor_selectasset(struct fileasset *asset)
 
 void editor_selectasset_str(char *path)
 {
-    struct fileasset *asset = shget(assets, path);
+    struct fileasset *asset = (struct fileasset*)shget(assets, path);
 
     if (asset)
 	editor_selectasset(asset);
