@@ -1,15 +1,15 @@
 /* Copyright (c) 2013 Scott Lembcke and Howling Moon Software
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -42,23 +42,23 @@ cpPolyShapeCacheData(cpPolyShape *poly, cpTransform transform)
 	int count = poly->count;
 	struct cpSplittingPlane *dst = poly->planes;
 	struct cpSplittingPlane *src = dst + count;
-	
+
 	cpFloat l = (cpFloat)INFINITY, r = -(cpFloat)INFINITY;
 	cpFloat b = (cpFloat)INFINITY, t = -(cpFloat)INFINITY;
-	
+
 	for(int i=0; i<count; i++){
 		cpVect v = cpTransformPoint(transform, src[i].v0);
 		cpVect n = cpTransformVect(transform, src[i].n);
-		
+
 		dst[i].v0 = v;
 		dst[i].n = n;
-		
+
 		l = cpfmin(l, v.x);
 		r = cpfmax(r, v.x);
 		b = cpfmin(b, v.y);
 		t = cpfmax(t, v.y);
 	}
-	
+
 	cpFloat radius = poly->r;
 	return (poly->shape.bb = cpBBNew(l - radius, b - radius, r + radius, t + radius));
 }
@@ -68,36 +68,36 @@ cpPolyShapePointQuery(cpPolyShape *poly, cpVect p, cpPointQueryInfo *info){
 	int count = poly->count;
 	struct cpSplittingPlane *planes = poly->planes;
 	cpFloat r = poly->r;
-	
+
 	cpVect v0 = planes[count - 1].v0;
 	cpFloat minDist = INFINITY;
 	cpVect closestPoint = cpvzero;
 	cpVect closestNormal = cpvzero;
 	cpBool outside = cpFalse;
-	
+
 	for(int i=0; i<count; i++){
 		cpVect v1 = planes[i].v0;
 		outside = outside || (cpvdot(planes[i].n, cpvsub(p,v1)) > 0.0f);
-		
+
 		cpVect closest = cpClosetPointOnSegment(p, v0, v1);
-		
+
 		cpFloat dist = cpvdist(p, closest);
 		if(dist < minDist){
 			minDist = dist;
 			closestPoint = closest;
 			closestNormal = planes[i].n;
 		}
-		
+
 		v0 = v1;
 	}
-	
+
 	cpFloat dist = (outside ? minDist : -minDist);
 	cpVect g = cpvmult(cpvsub(p, closestPoint), 1.0f/dist);
-	
+
 	info->shape = (cpShape *)poly;
 	info->point = cpvadd(closestPoint, cpvmult(g, r));
 	info->distance = dist - r;
-	
+
 	// Use the normal of the closest segment if the distance is small.
 	info->gradient = (minDist > MAGIC_EPSILON ? g : closestNormal);
 }
@@ -109,23 +109,23 @@ cpPolyShapeSegmentQuery(cpPolyShape *poly, cpVect a, cpVect b, cpFloat r2, cpSeg
 	int count = poly->count;
 	cpFloat r = poly->r;
 	cpFloat rsum = r + r2;
-	
+
 	for(int i=0; i<count; i++){
 		cpVect n = planes[i].n;
 		cpFloat an = cpvdot(a, n);
 		cpFloat d =  an - cpvdot(planes[i].v0, n) - rsum;
 		if(d < 0.0f) continue;
-		
+
 		cpFloat bn = cpvdot(b, n);
 		// Avoid divide by zero. (d is always positive)
 		cpFloat t = d/cpfmax(an - bn, CPFLOAT_MIN);
 		if(t < 0.0f || 1.0f < t) continue;
-		
+
 		cpVect point = cpvlerp(a, b, t);
 		cpFloat dt = cpvcross(n, point);
 		cpFloat dtMin = cpvcross(n, planes[(i - 1 + count)%count].v0);
 		cpFloat dtMax = cpvcross(n, planes[i].v0);
-		
+
 		if(dtMin <= dt && dt <= dtMax){
 			info->shape = (cpShape *)poly;
 			info->point = cpvsub(cpvlerp(a, b, t), cpvmult(n, r2));
@@ -133,7 +133,7 @@ cpPolyShapeSegmentQuery(cpPolyShape *poly, cpVect a, cpVect b, cpFloat r2, cpSeg
 			info->alpha = t;
 		}
 	}
-	
+
 	// Also check against the beveled vertexes.
 	if(rsum > 0.0f){
 		for(int i=0; i<count; i++){
@@ -153,12 +153,12 @@ SetVerts(cpPolyShape *poly, int count, const cpVect *verts)
 	} else {
 		poly->planes = (struct cpSplittingPlane *)cpcalloc(2*count, sizeof(struct cpSplittingPlane));
 	}
-	
+
 	for(int i=0; i<count; i++){
 		cpVect a = verts[(i - 1 + count)%count];
 		cpVect b = verts[i];
 		cpVect n = cpvnormalize(cpvrperp(cpvsub(b, a)));
-		
+
 		poly->planes[i + count].v0 = b;
 		poly->planes[i + count].n = n;
 	}
@@ -168,14 +168,14 @@ static struct cpShapeMassInfo
 cpPolyShapeMassInfo(cpFloat mass, int count, const cpVect *verts, cpFloat radius)
 {
 	// TODO moment is approximate due to radius.
-	
+
 	cpVect centroid = cpCentroidForPoly(count, verts);
 	struct cpShapeMassInfo info = {
 		mass, cpMomentForPoly(1.0f, count, verts, cpvneg(centroid), radius),
 		centroid,
 		cpAreaForPoly(count, verts, radius),
 	};
-	
+
 	return info;
 }
 
@@ -191,10 +191,10 @@ cpPolyShape *
 cpPolyShapeInit(cpPolyShape *poly, cpBody *body, int count, const cpVect *verts, cpTransform transform, cpFloat radius)
 {
 	cpVect *hullVerts = (cpVect *)alloca(count*sizeof(cpVect));
-	
+
 	// Transform the verts before building the hull in case of a negative scale.
 	for(int i=0; i<count; i++) hullVerts[i] = cpTransformPoint(transform, verts[i]);
-	
+
 	unsigned int hullCount = cpConvexHull(count, hullVerts, hullVerts, NULL, 0.0);
 	return cpPolyShapeInitRaw(poly, body, hullCount, hullVerts, radius);
 }
@@ -203,7 +203,7 @@ cpPolyShape *
 cpPolyShapeInitRaw(cpPolyShape *poly, cpBody *body, int count, const cpVect *verts, cpFloat radius)
 {
 	cpShapeInit((cpShape *)poly, &polyClass, body, cpPolyShapeMassInfo(0.0f, count, verts, radius));
-	
+
 	SetVerts(poly, count, verts);
 	poly->r = radius;
 
@@ -227,20 +227,20 @@ cpBoxShapeInit(cpPolyShape *poly, cpBody *body, cpFloat width, cpFloat height, c
 {
 	cpFloat hw = width/2.0f;
 	cpFloat hh = height/2.0f;
-	
+
 	return cpBoxShapeInit2(poly, body, cpBBNew(-hw, -hh, hw, hh), radius);
 }
 
 cpPolyShape *
 cpBoxShapeInit2(cpPolyShape *poly, cpBody *body, cpBB box, cpFloat radius)
 {
-	cpVect verts[] = {
+	cpVect verts[4] = {
 		cpv(box.r, box.b),
 		cpv(box.r, box.t),
 		cpv(box.l, box.t),
 		cpv(box.l, box.b),
 	};
-	
+
 	return cpPolyShapeInitRaw(poly, body, 4, verts, radius);
 }
 
@@ -267,10 +267,10 @@ cpVect
 cpPolyShapeGetVert(const cpShape *shape, int i)
 {
 	cpAssertHard(shape->klass == &polyClass, "Shape is not a poly shape.");
-	
+
 	int count = cpPolyShapeGetCount(shape);
 	cpAssertHard(0 <= i && i < count, "Index out of range.");
-	
+
 	return ((cpPolyShape *)shape)->planes[i + count].v0;
 }
 
@@ -287,10 +287,10 @@ void
 cpPolyShapeSetVerts(cpShape *shape, int count, cpVect *verts, cpTransform transform)
 {
 	cpVect *hullVerts = (cpVect *)alloca(count*sizeof(cpVect));
-	
+
 	// Transform the verts before building the hull in case of a negative scale.
 	for(int i=0; i<count; i++) hullVerts[i] = cpTransformPoint(transform, verts[i]);
-	
+
 	unsigned int hullCount = cpConvexHull(count, hullVerts, hullVerts, NULL, 0.0);
 	cpPolyShapeSetVertsRaw(shape, hullCount, hullVerts);
 }
@@ -301,9 +301,9 @@ cpPolyShapeSetVertsRaw(cpShape *shape, int count, cpVect *verts)
 	cpAssertHard(shape->klass == &polyClass, "Shape is not a poly shape.");
 	cpPolyShape *poly = (cpPolyShape *)shape;
 	cpPolyShapeDestroy(poly);
-	
+
 	SetVerts(poly, count, verts);
-	
+
 	cpFloat mass = shape->massInfo.m;
 	shape->massInfo = cpPolyShapeMassInfo(shape->massInfo.m, count, verts, poly->r);
 	if(mass > 0.0f) cpBodyAccumulateMassFromShapes(shape->body);
@@ -315,8 +315,8 @@ cpPolyShapeSetRadius(cpShape *shape, cpFloat radius)
 	cpAssertHard(shape->klass == &polyClass, "Shape is not a poly shape.");
 	cpPolyShape *poly = (cpPolyShape *)shape;
 	poly->r = radius;
-	
-	
+
+
 	// TODO radius is not handled by moment/area
 //	cpFloat mass = shape->massInfo.m;
 //	shape->massInfo = cpPolyShapeMassInfo(shape->massInfo.m, poly->count, poly->verts, poly->r);

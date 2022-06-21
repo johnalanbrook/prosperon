@@ -174,7 +174,7 @@ void toggleprefab(struct mGameObject *go)
     }
 }
 
-void sdDCC						Q(struct component *c)
+void component_update(struct component *c)
 {
     if (c->update)
 	c->update(c->data, c->go);

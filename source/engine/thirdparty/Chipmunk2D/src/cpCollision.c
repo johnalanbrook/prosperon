@@ -1,15 +1,15 @@
 /* Copyright (c) 2013 Scott Lembcke and Howling Moon Software
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -45,12 +45,12 @@ static inline void
 cpCollisionInfoPushContact(struct cpCollisionInfo *info, cpVect p1, cpVect p2, cpHashValue hash)
 {
 	cpAssertSoft(info->count <= CP_MAX_CONTACTS_PER_ARBITER, "Internal error: Tried to push too many contacts.");
-	
+
 	struct cpContact *con = &info->arr[info->count];
 	con->r1 = p1;
 	con->r2 = p2;
 	con->hash = hash;
-	
+
 	info->count++;
 }
 
@@ -64,7 +64,7 @@ PolySupportPointIndex(const int count, const struct cpSplittingPlane *planes, co
 {
 	cpFloat max = -INFINITY;
 	int index = 0;
-	
+
 	for(int i=0; i<count; i++){
 		cpVect v = planes[i].v0;
 		cpFloat d = cpvdot(v, n);
@@ -73,7 +73,7 @@ PolySupportPointIndex(const int count, const struct cpSplittingPlane *planes, co
 			index = i;
 		}
 	}
-	
+
 	return index;
 }
 
@@ -165,11 +165,11 @@ SupportEdgeForPoly(const cpPolyShape *poly, const cpVect n)
 {
 	int count = poly->count;
 	int i1 = PolySupportPointIndex(poly->count, poly->planes, n);
-	
+
 	// TODO: get rid of mod eventually, very expensive on ARM
 	int i0 = (i1 - 1 + count)%count;
 	int i2 = (i1 + 1)%count;
-	
+
 	const struct cpSplittingPlane *planes = poly->planes;
 	cpHashValue hashid = poly->shape.hashid;
 	if(cpvdot(n, planes[i1].n) > cpvdot(n, planes[i2].n)){
@@ -230,19 +230,19 @@ ClosestPointsNew(const struct MinkowskiPoint v0, const struct MinkowskiPoint v1)
 	// Find the closest p(t) on the minkowski difference to (0, 0)
 	cpFloat t = ClosestT(v0.ab, v1.ab);
 	cpVect p = LerpT(v0.ab, v1.ab, t);
-	
+
 	// Interpolate the original support points using the same 't' value as above.
 	// This gives you the closest surface points in absolute coordinates. NEAT!
 	cpVect pa = LerpT(v0.a, v1.a, t);
 	cpVect pb = LerpT(v0.b, v1.b, t);
 	cpCollisionID id = (v0.id & 0xFFFF)<<16 | (v1.id & 0xFFFF);
-	
+
 	// First try calculating the MSA from the minkowski difference edge.
 	// This gives us a nice, accurate MSA when the surfaces are close together.
 	cpVect delta = cpvsub(v1.ab, v0.ab);
 	cpVect n = cpvnormalize(cpvrperp(delta));
 	cpFloat d = cpvdot(n, p);
-	
+
 	if(d <= 0.0f || (-1.0f < t && t < 1.0f)){
 		// If the shapes are overlapping, or we have a regular vertex/edge collision, we are done.
 		struct ClosestPoints points = {pa, pb, n, d, id};
@@ -251,7 +251,7 @@ ClosestPointsNew(const struct MinkowskiPoint v0, const struct MinkowskiPoint v1)
 		// Vertex/vertex collisions need special treatment since the MSA won't be shared with an axis of the minkowski difference.
 		cpFloat d2 = cpvlength(p);
 		cpVect n2 = cpvmult(p, 1.0f/(d2 + CPFLOAT_MIN));
-		
+
 		struct ClosestPoints points = {pa, pb, n2, d2, id};
 		return points;
 	}
@@ -272,7 +272,7 @@ EPARecurse(const struct SupportContext *ctx, const int count, const struct Minko
 {
 	int mini = 0;
 	cpFloat minDist = INFINITY;
-	
+
 	// TODO: precalculate this when building the hull and save a step.
 	// Find the closest segment hull[i] and hull[i + 1] to (0, 0)
 	for(int j=0, i=count-1; j<count; i=j, j++){
@@ -282,47 +282,47 @@ EPARecurse(const struct SupportContext *ctx, const int count, const struct Minko
 			mini = i;
 		}
 	}
-	
+
 	struct MinkowskiPoint v0 = hull[mini];
 	struct MinkowskiPoint v1 = hull[(mini + 1)%count];
 	cpAssertSoft(!cpveql(v0.ab, v1.ab), "Internal Error: EPA vertexes are the same (%d and %d)", mini, (mini + 1)%count);
-	
+
 	// Check if there is a point on the minkowski difference beyond this edge.
 	struct MinkowskiPoint p = Support(ctx, cpvperp(cpvsub(v1.ab, v0.ab)));
-	
+
 #if DRAW_EPA
 	cpVect verts[count];
 	for(int i=0; i<count; i++) verts[i] = hull[i].ab;
-	
+
 	ChipmunkDebugDrawPolygon(count, verts, 0.0, RGBAColor(1, 1, 0, 1), RGBAColor(1, 1, 0, 0.25));
 	ChipmunkDebugDrawSegment(v0.ab, v1.ab, RGBAColor(1, 0, 0, 1));
-	
+
 	ChipmunkDebugDrawDot(5, p.ab, LAColor(1, 1));
 #endif
-	
+
 	// The usual exit condition is a duplicated vertex.
 	// Much faster to check the ids than to check the signed area.
 	cpBool duplicate = (p.id == v0.id || p.id == v1.id);
-	
+
 	if(!duplicate && cpCheckPointGreater(v0.ab, v1.ab, p.ab) && iteration < MAX_EPA_ITERATIONS){
 		// Rebuild the convex hull by inserting p.
 		struct MinkowskiPoint *hull2 = (struct MinkowskiPoint *)alloca((count + 1)*sizeof(struct MinkowskiPoint));
 		int count2 = 1;
 		hull2[0] = p;
-		
+
 		for(int i=0; i<count; i++){
 			int index = (mini + 1 + i)%count;
-			
+
 			cpVect h0 = hull2[count2 - 1].ab;
 			cpVect h1 = hull[index].ab;
 			cpVect h2 = (i + 1 < count ? hull[(index + 1)%count] : p).ab;
-			
+
 			if(cpCheckPointGreater(h0, h2, h1)){
 				hull2[count2] = hull[index];
 				count2++;
 			}
 		}
-		
+
 		return EPARecurse(ctx, count2, hull2, iteration + 1);
 	} else {
 		// Could not find a new point to insert, so we have found the closest edge of the minkowski difference.
@@ -352,7 +352,7 @@ GJKRecurse(const struct SupportContext *ctx, const struct MinkowskiPoint v0, con
 		cpAssertWarn(iteration < WARN_GJK_ITERATIONS, "High GJK iterations: %d", iteration);
 		return ClosestPointsNew(v0, v1);
 	}
-	
+
 	if(cpCheckPointGreater(v1.ab, v0.ab, cpvzero)){
 		// Origin is behind axis. Flip and try again.
 		return GJKRecurse(ctx, v1, v0, iteration);
@@ -360,15 +360,15 @@ GJKRecurse(const struct SupportContext *ctx, const struct MinkowskiPoint v0, con
 		cpFloat t = ClosestT(v0.ab, v1.ab);
 		cpVect n = (-1.0f < t && t < 1.0f ? cpvperp(cpvsub(v1.ab, v0.ab)) : cpvneg(LerpT(v0.ab, v1.ab, t)));
 		struct MinkowskiPoint p = Support(ctx, n);
-		
+
 #if DRAW_GJK
 		ChipmunkDebugDrawSegment(v0.ab, v1.ab, RGBAColor(1, 1, 1, 1));
 		cpVect c = cpvlerp(v0.ab, v1.ab, 0.5);
 		ChipmunkDebugDrawSegment(c, cpvadd(c, cpvmult(cpvnormalize(n), 5.0)), RGBAColor(1, 0, 0, 1));
-		
+
 		ChipmunkDebugDrawDot(5.0, p.ab, LAColor(1, 1));
 #endif
-		
+
 		if(cpCheckPointGreater(p.ab, v0.ab, cpvzero) && cpCheckPointGreater(v1.ab, p.ab, cpvzero)){
 			// The triangle v0, p, v1 contains the origin. Use EPA to find the MSA.
 			cpAssertWarn(iteration < WARN_GJK_ITERATIONS, "High GJK->EPA iterations: %d", iteration);
@@ -419,27 +419,27 @@ GJK(const struct SupportContext *ctx, cpCollisionID *id)
 #if DRAW_GJK || DRAW_EPA
 	int count1 = 1;
 	int count2 = 1;
-	
+
 	switch(ctx->shape1->klass->type){
 		case CP_SEGMENT_SHAPE: count1 = 2; break;
 		case CP_POLY_SHAPE: count1 = ((cpPolyShape *)ctx->shape1)->count; break;
 		default: break;
 	}
-	
+
 	switch(ctx->shape2->klass->type){
 		case CP_SEGMENT_SHAPE: count1 = 2; break;
 		case CP_POLY_SHAPE: count2 = ((cpPolyShape *)ctx->shape2)->count; break;
 		default: break;
 	}
-	
-	
+
+
 	// draw the minkowski difference origin
 	cpVect origin = cpvzero;
 	ChipmunkDebugDrawDot(5.0, origin, RGBAColor(1,0,0,1));
-	
+
 	int mdiffCount = count1*count2;
 	cpVect *mdiffVerts = alloca(mdiffCount*sizeof(cpVect));
-	
+
 	for(int i=0; i<count1; i++){
 		for(int j=0; j<count2; j++){
 			cpVect v = cpvsub(ShapePoint(ctx->shape2, j).p, ShapePoint(ctx->shape1, i).p);
@@ -447,13 +447,13 @@ GJK(const struct SupportContext *ctx, cpCollisionID *id)
 			ChipmunkDebugDrawDot(2.0, v, RGBAColor(1, 0, 0, 1));
 		}
 	}
-	 
+
 	cpVect *hullVerts = alloca(mdiffCount*sizeof(cpVect));
 	int hullCount = cpConvexHull(mdiffCount, mdiffVerts, hullVerts, NULL, 0.0);
-	
+
 	ChipmunkDebugDrawPolygon(hullCount, hullVerts, 0.0, RGBAColor(1, 0, 0, 1), RGBAColor(1, 0, 0, 0.25));
 #endif
-	
+
 	struct MinkowskiPoint v0, v1;
 	if(*id){
 		// Use the minkowski points from the last frame as a starting point using the cached indexes.
@@ -465,7 +465,7 @@ GJK(const struct SupportContext *ctx, cpCollisionID *id)
 		v0 = Support(ctx, axis);
 		v1 = Support(ctx, cpvneg(axis));
 	}
-	
+
 	struct ClosestPoints points = GJKRecurse(ctx, v0, v1, 1);
 	*id = points.id;
 	return points;
@@ -484,17 +484,17 @@ ContactPoints(const struct Edge e1, const struct Edge e2, const struct ClosestPo
 	ChipmunkDebugDrawFatSegment(e2.a.p, e2.b.p, e2.r, RGBAColor(1, 0, 0, 1), LAColor(0, 0));
 #endif
 		cpVect n = info->n = points.n;
-		
+
 		// Distances along the axis parallel to n
 		cpFloat d_e1_a = cpvcross(e1.a.p, n);
 		cpFloat d_e1_b = cpvcross(e1.b.p, n);
 		cpFloat d_e2_a = cpvcross(e2.a.p, n);
 		cpFloat d_e2_b = cpvcross(e2.b.p, n);
-		
+
 		// TODO + min isn't a complete fix.
 		cpFloat e1_denom = 1.0f/(d_e1_b - d_e1_a + CPFLOAT_MIN);
 		cpFloat e2_denom = 1.0f/(d_e2_b - d_e2_a + CPFLOAT_MIN);
-		
+
 		// Project the endpoints of the two edges onto the opposing edge, clamping them as necessary.
 		// Compare the projected points to the collision normal to see if the shapes overlap there.
 		{
@@ -528,7 +528,7 @@ CircleToCircle(const cpCircleShape *c1, const cpCircleShape *c2, struct cpCollis
 	cpFloat mindist = c1->r + c2->r;
 	cpVect delta = cpvsub(c2->tc, c1->tc);
 	cpFloat distsq = cpvlengthsq(delta);
-	
+
 	if(distsq < mindist*mindist){
 		cpFloat dist = cpfsqrt(distsq);
 		cpVect n = info->n = (dist ? cpvmult(delta, 1.0f/dist) : cpv(1.0f, 0.0f));
@@ -542,12 +542,12 @@ CircleToSegment(const cpCircleShape *circle, const cpSegmentShape *segment, stru
 	cpVect seg_a = segment->ta;
 	cpVect seg_b = segment->tb;
 	cpVect center = circle->tc;
-	
+
 	// Find the closest point on the segment to the circle.
 	cpVect seg_delta = cpvsub(seg_b, seg_a);
 	cpFloat closest_t = cpfclamp01(cpvdot(seg_delta, cpvsub(center, seg_a))/cpvlengthsq(seg_delta));
 	cpVect closest = cpvadd(seg_a, cpvmult(seg_delta, closest_t));
-	
+
 	// Compare the radii of the two shapes to see if they are colliding.
 	cpFloat mindist = circle->r + segment->r;
 	cpVect delta = cpvsub(closest, center);
@@ -556,7 +556,7 @@ CircleToSegment(const cpCircleShape *circle, const cpSegmentShape *segment, stru
 		cpFloat dist = cpfsqrt(distsq);
 		// Handle coincident shapes as gracefully as possible.
 		cpVect n = info->n = (dist ? cpvmult(delta, 1.0f/dist) : segment->tn);
-		
+
 		// Reject endcap collisions if tangents are provided.
 		cpVect rot = cpBodyGetRotation(segment->shape.body);
 		if(
@@ -573,22 +573,22 @@ SegmentToSegment(const cpSegmentShape *seg1, const cpSegmentShape *seg2, struct 
 {
 	struct SupportContext context = {(cpShape *)seg1, (cpShape *)seg2, (SupportPointFunc)SegmentSupportPoint, (SupportPointFunc)SegmentSupportPoint};
 	struct ClosestPoints points = GJK(&context, &info->id);
-	
+
 #if DRAW_CLOSEST
 #if PRINT_LOG
 //	ChipmunkDemoPrintString("Distance: %.2f\n", points.d);
 #endif
-	
+
 	ChipmunkDebugDrawDot(6.0, points.a, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawDot(6.0, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, cpvadd(points.a, cpvmult(points.n, 10.0)), RGBAColor(1, 0, 0, 1));
 #endif
-	
+
 	cpVect n = points.n;
 	cpVect rot1 = cpBodyGetRotation(seg1->shape.body);
 	cpVect rot2 = cpBodyGetRotation(seg2->shape.body);
-	
+
 	// If the closest points are nearer than the sum of the radii...
 	if(
 		points.d <= (seg1->r + seg2->r) && (
@@ -608,18 +608,18 @@ PolyToPoly(const cpPolyShape *poly1, const cpPolyShape *poly2, struct cpCollisio
 {
 	struct SupportContext context = {(cpShape *)poly1, (cpShape *)poly2, (SupportPointFunc)PolySupportPoint, (SupportPointFunc)PolySupportPoint};
 	struct ClosestPoints points = GJK(&context, &info->id);
-	
+
 #if DRAW_CLOSEST
 #if PRINT_LOG
 //	ChipmunkDemoPrintString("Distance: %.2f\n", points.d);
 #endif
-	
+
 	ChipmunkDebugDrawDot(3.0, points.a, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawDot(3.0, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, cpvadd(points.a, cpvmult(points.n, 10.0)), RGBAColor(1, 0, 0, 1));
 #endif
-	
+
 	// If the closest points are nearer than the sum of the radii...
 	if(points.d - poly1->r - poly2->r <= 0.0){
 		ContactPoints(SupportEdgeForPoly(poly1, points.n), SupportEdgeForPoly(poly2, cpvneg(points.n)), points, info);
@@ -631,21 +631,21 @@ SegmentToPoly(const cpSegmentShape *seg, const cpPolyShape *poly, struct cpColli
 {
 	struct SupportContext context = {(cpShape *)seg, (cpShape *)poly, (SupportPointFunc)SegmentSupportPoint, (SupportPointFunc)PolySupportPoint};
 	struct ClosestPoints points = GJK(&context, &info->id);
-	
+
 #if DRAW_CLOSEST
 #if PRINT_LOG
 //	ChipmunkDemoPrintString("Distance: %.2f\n", points.d);
 #endif
-	
+
 	ChipmunkDebugDrawDot(3.0, points.a, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawDot(3.0, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, cpvadd(points.a, cpvmult(points.n, 10.0)), RGBAColor(1, 0, 0, 1));
 #endif
-	
+
 	cpVect n = points.n;
 	cpVect rot = cpBodyGetRotation(seg->shape.body);
-	
+
 	if(
 		// If the closest points are nearer than the sum of the radii...
 		points.d - seg->r - poly->r <= 0.0 && (
@@ -663,14 +663,14 @@ CircleToPoly(const cpCircleShape *circle, const cpPolyShape *poly, struct cpColl
 {
 	struct SupportContext context = {(cpShape *)circle, (cpShape *)poly, (SupportPointFunc)CircleSupportPoint, (SupportPointFunc)PolySupportPoint};
 	struct ClosestPoints points = GJK(&context, &info->id);
-	
+
 #if DRAW_CLOSEST
 	ChipmunkDebugDrawDot(3.0, points.a, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawDot(3.0, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, points.b, RGBAColor(1, 1, 1, 1));
 	ChipmunkDebugDrawSegment(points.a, cpvadd(points.a, cpvmult(points.n, 10.0)), RGBAColor(1, 0, 0, 1));
 #endif
-	
+
 	// If the closest points are nearer than the sum of the radii...
 	if(points.d <= circle->r + poly->r){
 		cpVect n = info->n = points.n;
@@ -702,25 +702,25 @@ struct cpCollisionInfo
 cpCollide(const cpShape *a, const cpShape *b, cpCollisionID id, struct cpContact *contacts)
 {
 	struct cpCollisionInfo info = {a, b, id, cpvzero, 0, contacts};
-	
+
 	// Make sure the shape types are in order.
 	if(a->klass->type > b->klass->type){
 		info.a = b;
 		info.b = a;
 	}
-	
+
 	CollisionFuncs[info.a->klass->type + info.b->klass->type*CP_NUM_SHAPES](info.a, info.b, &info);
-	
+
 //	if(0){
 //		for(int i=0; i<info.count; i++){
 //			cpVect r1 = info.arr[i].r1;
 //			cpVect r2 = info.arr[i].r2;
 //			cpVect mid = cpvlerp(r1, r2, 0.5f);
-//			
+//
 //			ChipmunkDebugDrawSegment(r1, mid, RGBAColor(1, 0, 0, 1));
 //			ChipmunkDebugDrawSegment(r2, mid, RGBAColor(0, 0, 1, 1));
 //		}
 //	}
-	
+
 	return info;
 }

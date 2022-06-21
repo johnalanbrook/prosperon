@@ -8,7 +8,6 @@
 #include <limits.h>
 
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
 static uint32_t VBO = 0;

@@ -10,8 +10,9 @@ endif
 UNAME_P != uname -m
 
 #CC specifies which compiler we're using
-CC = clang -std=c99
-CXX = clang++
+CC = gcc -std=c99
+
+MUSL = /usr/local/musl
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -58,15 +59,11 @@ ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine.c yugine.c)
 
-imguisrcs = imgui imgui_draw imgui_widgets imgui_tables backends/imgui_impl_glfw backends/imgui_impl_opengl3
-imguiobjs != $(call prefix,$(imguisrcs),$(objprefix)/source/editor/imgui/,.o)
-
 eddirs != find ./source/editor -type d
 eddirs += ./source/editor
 edhead != $(call findindir,./source/editor,*.h)
 edobjects != find ./source/editor -maxdepth 1 -type f  -name '*.c' -o -name '*.cpp'
 edobjects != $(call make_obj,$(edobjects))
-edobjects += $(imguiobjs)
 
 bsdirs != find ./source/brainstorm -type d
 bsobjects != $(call make_objs, ./source/brainstorm)
@@ -80,7 +77,8 @@ COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
 WARNING_FLAGS = #-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
-COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
+#COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
+COMPILER_FLAGS = $(includeflag) -I/usr/local/lib-I$MUSL/include -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c $< -o $@
 
 LIBPATH = -L./bin
 
@@ -92,7 +90,7 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS =
-	ELIBS = editor engine
+	ELIBS = editor engine m
 	CLIBS = glfw SDL2 SDL2_mixer dl pthread
 	EXT =
 endif
@@ -100,7 +98,7 @@ endif
 ELIBS != $(call prefix, $(ELIBS), -l)
 CLIBS != $(call prefix, $(CLIBS), -l)
 
-LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
+LELIBS = $(ELIBS) $(CLIBS)
 
 objects = $(bsobjects) $(eobjects) $(pinobjects)
 DEPENDS = $(objects:.o=.d)
@@ -118,13 +116,12 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
 engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	@$(CXX) $< $(linkinclude:%=-I%) $(LINK)
+	@$(CC) $< $(linkinclude:%=-I%) $(LINK)
 	@echo Finished build
 
 editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
-	$(CXX) $< $(linkinclude:%=-I%) $(LINK)
-	@mv editor yugine/editor
+	$(CC) $< $(linkinclude:%=-I%) $(LINK)
 	@echo Finished build
 
 $(ENGINE): $(eobjects)
@@ -139,18 +136,18 @@ $(EDITOR): $(edobjects)
 
 xbrainstorm: $(ENGINE) $(bsobjects)
 	@echo Making brainstorm
-	@$(CXX) $(bsobjects) $(LINK) -o $@
+	@$(CC) $(bsobjects) $(LINK) -o $@
 	@mv xbrainstorm brainstorm/brainstorm$(EXT)
 
 pinball: $(ENGINE) $(pinobjects)
 	@echo Making pinball
-	@$(CXX) $(pinobjects) $(LINK) -o $@
+	@$(CC) $(pinobjects) $(LINK) -o $@
 	@mv pinball paladin/pinball
 
 $(objprefix)/%.o:%.cpp
 	@mkdir -p $(@D)
 	@echo Making C++ object $@
-	-@$(CXX) $(COMPILER_FLAGS)
+	-@$(CC) $(COMPILER_FLAGS)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
