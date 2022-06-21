@@ -6,6 +6,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdlib.h>
+
 
 
 #include <stb_truetype.h>
@@ -13,7 +15,7 @@
 static uint32_t VBO = 0;
 static uint32_t VAO = 0;
 
-unsigned char ttf_buffer[24 << 20];
+unsigned char ttf_buffer[1<<25];
 unsigned char temp_bitmap[512 * 512];
 
 struct sFont *font;
@@ -34,7 +36,10 @@ struct sFont *MakeFont(const char *fontfile, int height)
     stbtt_fontinfo fontinfo = { 0 };
     int ascent = 0;
 
-    stbtt_InitFont(&fontinfo, ttf_buffer, 0);
+    fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
+
+    stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
+
     stbtt_GetFontVMetrics(&fontinfo, &ascent, 0, 0);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

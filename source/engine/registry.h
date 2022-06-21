@@ -22,6 +22,11 @@ struct component {
 extern struct component components[MAXNAME];
 extern int ncomponent;
 
+void comp_draw_debug(struct component *c);
+void comp_draw_gui(struct component *c);
+void comp_update(struct component *c, struct mGameObject *go);
+
+
 void registry_init();
 void register_component(const char *name, size_t size,
 			void (*make)(struct mGameObject * go,

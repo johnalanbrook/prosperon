@@ -6079,6 +6079,7 @@ NK_LIB void nk_property(struct nk_context *ctx, const char *name, struct nk_prop
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
 
+
 /* Allow consumer to define own STBTT_malloc/STBTT_free, and use the font atlas' allocator otherwise */
 #ifndef STBTT_malloc
 static void*
@@ -15093,7 +15094,6 @@ STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info
          gbm.stride = gbm.w;
 
          stbtt_Rasterize(&gbm, 0.35f, vertices, num_verts, scale_x, scale_y, shift_x, shift_y, ix0, iy0, 1, info->userdata);
-      }
    }
    STBTT_free(vertices, info->userdata);
    return gbm.pixels;

@@ -12,8 +12,6 @@ UNAME_P != uname -m
 #CC specifies which compiler we're using
 CC = gcc -std=c99
 
-MUSL = /usr/local/musl
-
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
 	INFO = dbg
@@ -78,7 +76,7 @@ COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 #COMPILER_FLAGS specifies the additional compilation options we're using
 WARNING_FLAGS = #-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 #COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
-COMPILER_FLAGS = $(includeflag) -I/usr/local/lib-I$MUSL/include -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c $< -o $@
+COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c $< -o $@
 
 LIBPATH = -L./bin
 
@@ -89,16 +87,16 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS =
-	ELIBS = editor engine m
-	CLIBS = glfw SDL2 SDL2_mixer dl pthread
+	LINKER_FLAGS = -static-libgcc
+	ELIBS = editor engine
+	CLIBS = glfw SDL2 SDL2_mixer m
 	EXT =
 endif
 
 ELIBS != $(call prefix, $(ELIBS), -l)
 CLIBS != $(call prefix, $(CLIBS), -l)
 
-LELIBS = $(ELIBS) $(CLIBS)
+LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
 
 objects = $(bsobjects) $(eobjects) $(pinobjects)
 DEPENDS = $(objects:.o=.d)
@@ -110,18 +108,18 @@ ENGINE = $(BIN)libengine.a
 EDITOR = $(BIN)libeditor.a
 INCLUDE = $(BIN)include
 
-linkinclude = ./bin/include
+linkinclude = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
 engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	@$(CC) $< $(linkinclude:%=-I%) $(LINK)
+	@$(CC) $< $(LINK)
 	@echo Finished build
 
 editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
-	$(CC) $< $(linkinclude:%=-I%) $(LINK)
+	$(CC) $< $(LINK)
 	@echo Finished build
 
 $(ENGINE): $(eobjects)

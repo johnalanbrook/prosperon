@@ -53,3 +53,15 @@ void register_component(const char *name, size_t size,
     c->id = ncomponent - 1;
     c->datasize = size;
 }
+
+void comp_draw_debug(struct component *c) {
+    c->draw_debug(c->data);
+}
+
+void comp_draw_gui(struct component *c) {
+    c->draw_gui(c->data);
+}
+
+void comp_update(struct component *c, struct mGameObject *go) {
+    c->update(c->data, go);
+}
