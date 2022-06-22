@@ -10,7 +10,7 @@ endif
 UNAME_P != uname -m
 
 #CC specifies which compiler we're using
-CC = gcc -std=c99
+CC = clang -std=c99
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -87,7 +87,7 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -static-libgcc
+	LINKER_FLAGS =
 	ELIBS = editor engine
 	CLIBS = glfw SDL2 SDL2_mixer m
 	EXT =
@@ -96,7 +96,8 @@ endif
 ELIBS != $(call prefix, $(ELIBS), -l)
 CLIBS != $(call prefix, $(CLIBS), -l)
 
-LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
+#LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
+LELIBS = $(ELIBS) $(CLIBS)
 
 objects = $(bsobjects) $(eobjects) $(pinobjects)
 DEPENDS = $(objects:.o=.d)

@@ -416,7 +416,7 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods)
     }
 }
 
-struct nk_context *nkctx;
+struct nk_context *ctx;
 struct nk_glfw nkglfw = {0};
 
 void editor_init(struct mSDLWindow *window)
@@ -433,8 +433,13 @@ void editor_init(struct mSDLWindow *window)
 	fclose(feditor);
     }
 
-    nkctx = nk_glfw3_init(&nkglfw, window->window, NK_GLFW3_INSTALL_CALLBACKS);
-    //set_style(nkctx, THEME_WHITE);
+    ctx = nk_glfw3_init(&nkglfw, window->window, NK_GLFW3_INSTALL_CALLBACKS);
+
+
+   struct nk_font_atlas *atlas;
+    nk_glfw3_font_stash_begin(&nkglfw, &atlas);
+    struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "fonts/notosans.tff", 14, 0);
+    nk_glfw3_font_stash_end(&nkglfw);
 
     glfwSetKeyCallback(window->window, edit_input_cb);
     glfwSetMouseButtonCallback(window->window, edit_mouse_cb);
@@ -442,17 +447,17 @@ void editor_init(struct mSDLWindow *window)
 
 void editor_input()
 {
-    //io = &ImGui::GetIO();
 }
 
 int editor_wantkeyboard()
 {
-/*
-    if (io == NULL) return 0;
-    return io->WantCaptureKeyboard;
-    */
     return 0;
 }
+
+const int nuk_std = NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+            NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE;
+
+const struct nk_rect nk_rect_std = {250, 250, 250, 250};
 
 void editor_project_gui()
 {
@@ -471,18 +476,56 @@ void editor_project_gui()
 	 */
     }
 
+    static char text[3][64];
+    static int text_len[3];
+    static const char *items[] = {"Item 0","item 1","item 2"};
+    static int selected_item = 0;
+    static int check = 1;
 
+    int i;
 
-/*
-    if (ImGui::BeginMainMenuBar()) {
-	ImGui::Text("Current level: %s",
-		    current_level[0] ==
-		    '\0' ? "Level not saved!" : current_level);
+    if (nk_begin(ctx, "Grid Demo", nk_rect(600, 350, 275, 250),
+        NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
+        NK_WINDOW_NO_SCROLLBAR))
+    {
 
-	if (ImGui::BeginMenu("Windows")) {
-	    ImGui::MenuItem("Resources", "F2", &editor.showAssetMenu);
-	    ImGui::MenuItem("Hierarchy", "F4", &editor.showHierarchy);
-	    ImGui::MenuItem("Lighting", "F5", &editor.showLighting);
+        nk_layout_row_dynamic(ctx, 30, 2);
+        nk_label(ctx, "Floating point:", NK_TEXT_RIGHT);
+        nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_float);
+        nk_label(ctx, "Hexadecimal:", NK_TEXT_RIGHT);
+        nk_edit_string(ctx, NK_EDIT_FIELD, text[1], &text_len[1], 64, nk_filter_hex);
+        nk_label(ctx, "Binary:", NK_TEXT_RIGHT);
+        nk_edit_string(ctx, NK_EDIT_FIELD, text[2], &text_len[2], 64, nk_filter_binary);
+        nk_label(ctx, "Checkbox:", NK_TEXT_RIGHT);
+        nk_checkbox_label(ctx, "Check me", &check);
+        nk_label(ctx, "Combobox:", NK_TEXT_RIGHT);
+        if (nk_combo_begin_label(ctx, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
+            nk_layout_row_dynamic(ctx, 25, 1);
+            for (i = 0; i < 3; ++i)
+                if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
+                    selected_item = i;
+            nk_combo_end(ctx);
+        }
+    }
+nk_end(ctx);
+
+if (nk_begin(ctx, "Menu Demo", nk_rect(600, 350, 275, 250), nuk_std)) {
+     nk_menubar_begin(ctx);
+
+     nk_layout_row_dynamic(ctx, 30, 4);
+
+     char bbbuf[256];
+     snprintf(bbbuf, 256, "Current level: %s", current_level[0] == '\0' ? "Level not saved!" : current_level);
+     nk_label(ctx, bbbuf, NK_TEXT_LEFT);
+
+     if (nk_menu_begin_text(ctx, "Windows", 7, NK_TEXT_LEFT, nk_vec2(100, 30))) {
+         nk_layout_row_dynamic(ctx, 30, 1);
+
+          if (nk_button_label(ctx, "Resources")) editor.showAssetMenu = !editor.showAssetMenu;
+          if (nk_button_label(ctx, "Hierarchy")) editor.showHierarchy = !editor.showHierarchy;
+
+          /*
+          	    ImGui::MenuItem("Lighting", "F5", &editor.showLighting);
 	    ImGui::MenuItem("Game Settings", "F6",
 			    &editor.showGameSettings);
 	    ImGui::MenuItem("View", "F7", &editor.showViewmode);
@@ -490,67 +533,66 @@ void editor_project_gui()
 	    ImGui::MenuItem("Export", "F9", &editor.showExport);
 	    ImGui::MenuItem("Level", "F10", &editor.showLevel);
 	    ImGui::MenuItem("REPL", "`", &editor.showREPL);
-	    ImGui::EndMenu();
-	}
 
-	if (ImGui::BeginMenu("Levels")) {
-	    if (ImGui::Button("New")) {
-		new_level();
-		current_level[0] = '\0';
-	    }
+          */
 
+     }
 
-	    if (ImGui::Button("Save")) {
-		save_level(current_level);
-		get_levels();
-	    }
+     if (nk_menu_begin_text(ctx, "Levels", 100, 0, nk_vec2(100, 50))) {
 
-	    if (ImGui::Button("Save as")) {
-		save_level(levelname);
+         if (nk_button_label(ctx, "New")) {
+             new_level();
+             current_level[0] = '\0';
+         }
+
+         if (nk_button_label(ctx, "Save")) {
+             save_level(current_level);
+             get_levels();
+         }
+
+         if (nk_button_label(ctx, "Save as")) {
+                  save_level(levelname);
 		strcpy(current_level, levelname);
 		levelname[0] = '\0';
 		get_levels();
-	    }
-
-	    ImGui::SameLine();
-	    ImGui::InputText("", levelname, MAXNAME);
-
-	    vec_walk(levels, (void (*)(void *)) &editor_level_btn);
-
-	    ImGui::EndMenu();
 	}
 
-	ImGui::EndMainMenuBar();
-    }
+	   // ImGui::InputText("", levelname, MAXNAME);
 
-    if (editor.showExport) {
-	ImGui::Begin("Export and Bake", &editor.showExport);
+	   vec_walk(levels, (void (*)(void *)) &editor_level_btn);
 
-	if (ImGui::Button("Bake")) {
+     }
+
+    nk_menubar_end(ctx);
+}
+nk_end(ctx);
+
+
+    if (editor.showExport && nk_begin(ctx, "Export and Bake", nk_rect_std, nuk_std)) {
+
+	if (nk_button_label(ctx, "Bake")) {
 	}
-	if (ImGui::Button("Build")) {
+	if (nk_button_label(ctx, "Build")) {
 	}
 
-	ImGui::End();
+	nk_end(ctx);
     }
 
 
     // Shadow map vars
-    if (editor.showLighting) {
-	ImGui::Begin("Lighting options", &editor.showLighting);
-	if (ImGui::CollapsingHeader("Directional shadow map")) {
-	    ImGui::SliderFloat("Near plane", &near_plane, -200.f, 200.f,
-			       NULL, 1.f);
-	    ImGui::SliderFloat("Far plane", &far_plane, -200.f, 200.f,
-			       NULL, 1.f);
-	    ImGui::SliderFloat("Shadow Lookahead", &shadowLookahead, 0.f,
-			       100.f, NULL, 1.f);
-	    ImGui::SliderFloat("Plane size", &plane_size, 0.f, 100.f, NULL,
-			       1.f);
+    if (editor.showLighting && nk_begin(ctx, "Lighting options", nk_rect_std, nuk_std)) {
+        nk_layout_row_dynamic(ctx, 25, 1);
+	if (nk_combo_begin_text(ctx, "Directional shadow map", 50, nk_vec2(nk_widget_width(ctx), 400))) {
+	    nk_slider_float(ctx, -200.f, &near_plane, 200.f, 1.f);
+	    nk_slider_float(ctx, -200.f, &far_plane, 200.f, 1.f);
+	    nk_slider_float(ctx, 0.f, &shadowLookahead, 100.f, 1.f);
+	    nk_slider_float(ctx, 0.f, &plane_size, 100.f, 1.f);
 	}
 
-	ImGui::End();
+	nk_end(ctx);
     }
+
+    /*
 
     if (editor.showGameSettings) {
 	ImGui::Begin("Game settings", &editor.showGameSettings);
@@ -775,13 +817,50 @@ void editor_render()
 {
     nk_glfw3_new_frame(&nkglfw);
 
+    struct nk_colorf bg;
+    bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
+
     if (cur_project)
 	editor_project_gui();
     else
 	editor_proj_select_gui();
 
+	editor_project_gui();
 
-    nk_end(nkctx);
+       if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
+            NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+            NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+        {
+            enum {EASY, HARD};
+            static int op = EASY;
+            static int property = 20;
+            nk_layout_row_static(ctx, 30, 80, 1);
+            if (nk_button_label(ctx, "button"))
+                fprintf(stdout, "button pressed\n");
+
+            nk_layout_row_dynamic(ctx, 30, 2);
+            if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
+            if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+
+            nk_layout_row_dynamic(ctx, 25, 1);
+            nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+
+            nk_layout_row_dynamic(ctx, 20, 1);
+            nk_label(ctx, "background:", NK_TEXT_LEFT);
+            nk_layout_row_dynamic(ctx, 25, 1);
+            if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx),400))) {
+                nk_layout_row_dynamic(ctx, 120, 1);
+                bg = nk_color_picker(ctx, bg, NK_RGBA);
+                nk_layout_row_dynamic(ctx, 25, 1);
+                bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f,0.005f);
+                bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f,0.005f);
+                bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
+                bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
+                nk_combo_end(ctx);
+            }
+        }
+nk_end(ctx);
+
     nk_glfw3_render(&nkglfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }
 
@@ -812,12 +891,12 @@ int is_allowed_extension(const char *ext)
 
 void editor_level_btn(char *level)
 {
-/*
-    if (ImGui::Button(level)) {
+
+    if (nk_button_label(ctx, level)) {
 	load_level(level);
 	strcpy(current_level, level);
     }
-    */
+
 }
 
 void editor_selectasset(struct fileasset *asset)

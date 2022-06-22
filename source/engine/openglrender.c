@@ -105,9 +105,9 @@ void openglInit()
 
     debugdraw_init();
 
-    stdFont = MakeFont("notosans.ttf", 300);
+    //stdFont = MakeFont("notosans.ttf", 300);
 
-    text_settype(stdFont);
+    //text_settype(stdFont);
 
     //glEnable(GL_STENCIL_TEST);
     glClearColor(editorClearColor[0], editorClearColor[1],
