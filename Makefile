@@ -24,7 +24,7 @@ DIRS = engine pinball editor brainstorm
 ETP = ./source/engine/thirdparty/
 
 define make_objs
-	find $(1) -type f -name '*.c' -o -name '*.cpp' | sed 's|\.c.*|.o|' | sed 's|\.|$(objprefix)|1'
+	find $(1) -type f -name '*.c' | sed 's|\.c.*|.o|' | sed 's|\.|$(objprefix)|1'
 endef
 
 define make_obj
@@ -60,7 +60,7 @@ eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player y
 eddirs != find ./source/editor -type d
 eddirs += ./source/editor
 edhead != $(call findindir,./source/editor,*.h)
-edobjects != find ./source/editor -maxdepth 1 -type f  -name '*.c' -o -name '*.cpp'
+edobjects != find ./source/editor -maxdepth 1 -type f  -name '*.c'
 edobjects != $(call make_obj,$(edobjects))
 
 bsdirs != find ./source/brainstorm -type d
@@ -142,11 +142,6 @@ pinball: $(ENGINE) $(pinobjects)
 	@echo Making pinball
 	@$(CC) $(pinobjects) $(LINK) -o $@
 	@mv pinball paladin/pinball
-
-$(objprefix)/%.o:%.cpp
-	@mkdir -p $(@D)
-	@echo Making C++ object $@
-	-@$(CC) $(COMPILER_FLAGS)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
