@@ -513,29 +513,25 @@ if (nk_begin(ctx, "Menu Demo", nk_rect(600, 350, 275, 250), nuk_std)) {
      nk_menubar_begin(ctx);
 
      nk_layout_row_dynamic(ctx, 30, 4);
-
+/*
      char bbbuf[256];
      snprintf(bbbuf, 256, "Current level: %s", current_level[0] == '\0' ? "Level not saved!" : current_level);
      nk_label(ctx, bbbuf, NK_TEXT_LEFT);
-
-     if (nk_menu_begin_text(ctx, "Windows", 7, NK_TEXT_LEFT, nk_vec2(100, 30))) {
+*/
+     if (nk_menu_begin_label(ctx, "Windows", NK_TEXT_LEFT, nk_vec2(100, 200))) {
          nk_layout_row_dynamic(ctx, 30, 1);
 
-          if (nk_button_label(ctx, "Resources")) editor.showAssetMenu = !editor.showAssetMenu;
-          if (nk_button_label(ctx, "Hierarchy")) editor.showHierarchy = !editor.showHierarchy;
+          nk_checkbox_label(ctx, "Resources", &editor.showAssetMenu);
+          nk_checkbox_label(ctx, "Hierarchy", &editor.showHierarchy);
+          nk_checkbox_label(ctx, "Lighting F5", &editor.showLighting);
+          nk_checkbox_label(ctx, "Game Settings F6", &editor.showGameSettings);
+          nk_checkbox_label(ctx, "View F7", &editor.showViewmode);
+          nk_checkbox_label(ctx, "Debug F8", &editor.showDebugMenu);
+          nk_checkbox_label(ctx, "Export F9", &editor.showExport);
+          nk_checkbox_label(ctx, "Level F10", &editor.showLevel);
+          nk_checkbox_label(ctx, "REPL", &editor.showREPL);
 
-          /*
-          	    ImGui::MenuItem("Lighting", "F5", &editor.showLighting);
-	    ImGui::MenuItem("Game Settings", "F6",
-			    &editor.showGameSettings);
-	    ImGui::MenuItem("View", "F7", &editor.showViewmode);
-	    ImGui::MenuItem("Debug", "F8", &editor.showDebugMenu);
-	    ImGui::MenuItem("Export", "F9", &editor.showExport);
-	    ImGui::MenuItem("Level", "F10", &editor.showLevel);
-	    ImGui::MenuItem("REPL", "`", &editor.showREPL);
-
-          */
-
+          nk_menu_end(ctx);
      }
 
      if (nk_menu_begin_text(ctx, "Levels", 100, 0, nk_vec2(100, 50))) {
@@ -557,7 +553,7 @@ if (nk_begin(ctx, "Menu Demo", nk_rect(600, 350, 275, 250), nuk_std)) {
 		get_levels();
 	}
 
-	   // ImGui::InputText("", levelname, MAXNAME);
+            nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, levelname, MAXNAME-1, nk_filter_default);
 
 	   vec_walk(levels, (void (*)(void *)) &editor_level_btn);
 
@@ -580,147 +576,178 @@ nk_end(ctx);
 
 
     // Shadow map vars
-    if (editor.showLighting && nk_begin(ctx, "Lighting options", nk_rect_std, nuk_std)) {
+    if (nk_begin(ctx, "Lighting options", nk_rect_std, nuk_std)) {
         nk_layout_row_dynamic(ctx, 25, 1);
-	if (nk_combo_begin_text(ctx, "Directional shadow map", 50, nk_vec2(nk_widget_width(ctx), 400))) {
-	    nk_slider_float(ctx, -200.f, &near_plane, 200.f, 1.f);
-	    nk_slider_float(ctx, -200.f, &far_plane, 200.f, 1.f);
-	    nk_slider_float(ctx, 0.f, &shadowLookahead, 100.f, 1.f);
-	    nk_slider_float(ctx, 0.f, &plane_size, 100.f, 1.f);
+        nk_label(ctx, "Directional shadow map", NK_TEXT_LEFT);
+
+	    nk_property_float(ctx, "Near plane", -200.f, &near_plane, 200.f, 1.f, 0.01f);
+	    nk_property_float(ctx, "Far plane", -200.f, &far_plane, 200.f, 1.f, 0.01f);
+	    nk_property_float(ctx, "Shadow lookahead", 0.f, &shadowLookahead, 100.f, 1.f, 0.01f);
+	    nk_property_float(ctx, "Plane size", 0.f, &plane_size, 100.f, 1.f, 0.01f);
+
+
+
+    }nk_end(ctx);
+
+
+    if (editor.showGameSettings) {
+	nk_begin(ctx, "Game settings", nk_rect_std, nuk_std);
+
+	//nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, cur_project->name, 126, nk_filter_default);
+
+	if (nk_tree_push(ctx, NK_TREE_NODE, "Physics", NK_MINIMIZED)) {
+	    nk_property_float(ctx, "2d Gravity", -5000.f, &phys2d_gravity, 0.f, 1.f, 0.1f);
+	    phys2d_apply();
+	    nk_tree_pop(ctx);
+	}
+
+	if (nk_tree_push(ctx, NK_TREE_NODE, "Quality", NK_MINIMIZED)) {
+	    nk_tree_pop(ctx);
+	}
+	nk_end(ctx);
+    }
+
+
+    if (editor.showStats) {
+	nk_begin(ctx, "Stats", nk_rect_std, nuk_std);
+	nk_labelf(ctx, NK_TEXT_LEFT, "FPS: %2.4f", 1.f/deltaT);
+	nk_labelf(ctx, NK_TEXT_LEFT, "Triangles rendered: %llu", triCount);
+	nk_end(ctx);
+    }
+
+
+    if (editor.showREPL) {
+        nk_begin(ctx, "REPL", nk_rect_std, nuk_std);
+
+	nk_flags active;
+
+	static char buffer[512] = { '\0' };
+
+	active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX|NK_EDIT_SIG_ENTER, buffer, 512-1, nk_filter_ascii);
+	if (active && NK_EDIT_COMMITED) {
+	    script_run(buffer);
+	    buffer[0] = '\0';
+	}
+
+	nk_end(ctx);
+
+    }
+
+    if (editor.showViewmode) {
+	nk_begin(ctx, "View options", nk_rect_std, nuk_std);
+
+	nk_property_float(ctx, "Camera FOV", 0.1f, &editorFOV, 90.f, 1.f, 0.1f);
+	nk_property_float(ctx, "Camera Near Plane", 0.1f, &editorClose, 5.f, 0.1f, 0.01f);
+	nk_property_float(ctx, "Camera Far Plane", 50.f, &editorFar, 10000.f, 1.f, 1.f);
+
+	if (nk_tree_push(ctx, NK_TREE_NODE, "Shading mode", NK_MINIMIZED)) {
+	    renderMode = nk_option_label(ctx, "Lit", renderMode == LIT) ? LIT : renderMode;
+	    renderMode = nk_option_label(ctx, "Unlit", renderMode == UNLIT) ? UNLIT : renderMode;
+	    renderMode = nk_option_label(ctx, "Wireframe", renderMode == WIREFRAME) ? WIREFRAME : renderMode;
+	    renderMode = nk_option_label(ctx, "Directional shadow map", renderMode == DIRSHADOWMAP) ? DIRSHADOWMAP : renderMode;
+	    nk_tree_pop(ctx);
+	}
+
+	if (nk_tree_push(ctx, NK_TREE_NODE, "Lighting", NK_MINIMIZED)) {
+	    nk_checkbox_label(ctx, "Shadows", &renderDynamicShadows);
+	    nk_checkbox_label(ctx, "Ambient Occlusion", &renderAO);
+	    nk_tree_pop(ctx);
+	}
+
+	if (nk_tree_push(ctx, NK_TREE_NODE, "Debug Draws", NK_MINIMIZED)) {
+	    nk_checkbox_label(ctx, "Gizmos", &renderGizmos);
+	    nk_checkbox_label(ctx, "Grid", &showGrid);
+	    nk_checkbox_label(ctx, "Physics", &debugDrawPhysics);
+	    nk_tree_pop(ctx);
 	}
 
 	nk_end(ctx);
     }
 
-    /*
-
-    if (editor.showGameSettings) {
-	ImGui::Begin("Game settings", &editor.showGameSettings);
-
-	ImGui::InputText("Game name", cur_project->name, 127);
-
-	if (ImGui::CollapsingHeader("Physics")) {
-	    ImGui::DragFloat("2d Gravity", &phys2d_gravity, 1.f, -5000.f,
-			     0.f, "%.3f");
-	    phys2d_apply();
-	}
-
-	if (ImGui::CollapsingHeader("Quality")) {
-
-	}
-
-	ImGui::End();
-    }
-
-
-    if (editor.showStats) {
-	ImGui::Begin("Stats", &editor.showStats);
-	ImGui::Text("FPS: %2.4f", 1.f / deltaT);
-	ImGui::Text("Triangles rendered: %llu", triCount);
-	ImGui::End();
-    }
-
-
-    if (editor.showREPL) {
-	ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-	ImGui::Begin("REPL", &editor.showREPL);
-	static char buffer[512] = { '\0' };
-	if (ImGui::InputText("", buffer, 512, flags)) {
-	    //scheme_load_string(sc, buffer);
-	    script_run(buffer);
-	    buffer[0] = { '\0' };
-	}
-	ImGui::End();
-
-    }
-
-    if (editor.showViewmode) {
-	ImGui::Begin("View options", &editor.showViewmode);
-
-	ImGui::SliderFloat("Camera FOV", &editorFOV, 0.1f, 90.f);
-	ImGui::SliderFloat("Camera Near Plane", &editorClose, 0.1f, 5.f);
-	ImGui::SliderFloat("Camera Far Plane", &editorFar, 50.f, 10000.f);
-
-	if (ImGui::CollapsingHeader("Shading mode")) {
-	    ImGui::RadioButton("Lit", &renderMode, RenderMode::LIT);
-	    ImGui::RadioButton("Unlit", &renderMode, RenderMode::UNLIT);
-	    ImGui::RadioButton("Wireframe", &renderMode,
-			       RenderMode::WIREFRAME);
-	    ImGui::RadioButton("Directional shadow map", &renderMode,
-			       RenderMode::DIRSHADOWMAP);
-	}
-
-	if (ImGui::CollapsingHeader("Lighting")) {
-	    ImGui::Checkbox("Shadows", &renderDynamicShadows);
-	    ImGui::Checkbox("Ambient Occlusion", &renderAO);
-	}
-
-	if (ImGui::CollapsingHeader("Debug Draws")) {
-	    ImGui::Checkbox("Gizmos", &renderGizmos);
-	    ImGui::Checkbox("Grid", &showGrid);
-	    ImGui::Checkbox("Physics", &debugDrawPhysics);
-	}
-
-	ImGui::End();
-    }
-
     if (editor.showHierarchy) {
-	ImGui::Begin("Objects", &editor.showHierarchy);
+        nk_begin(ctx, "Objects", nk_rect_std, nuk_std);
 
-	if (ImGui::Button("New Object")) {
+	if (nk_button_label(ctx, "New Object")) {
 	    MakeGameobject();
 	}
 
 	obj_gui_hierarchy(selectedobject);
 
-	ImGui::End();
+	nk_end(ctx);
     }
 
-    ImGui::Begin("Simulate");
+
+    nk_begin(ctx, "Simulate", nk_rect_std, nuk_std);
 
     if (physOn) {
-	if (ImGui::Button("Pause"))
+	if (nk_button_label(ctx, "Pause"))
 	    game_pause();
 
-	ImGui::SameLine();
-	if (ImGui::Button("Stop"))
+	if (nk_button_label(ctx, "Stop"))
 	    game_stop();
     } else {
-	if (ImGui::Button("Play"))
+	if (nk_button_label(ctx, "Play"))
 	    game_start();
     }
 
-    ImGui::End();
+    nk_end(ctx);
 
 
-    ImGui::Begin("Prefab Creator");
+    nk_begin(ctx, "Prefab Creator", nk_rect_std, nuk_std);
 
     vec_walk(prefabs, (void (*)(void *)) &editor_prefab_btn);
 
-    ImGui::End();
+    nk_end(ctx);
 
 
     if (editor.showAssetMenu) {
-	ImGui::Begin("Asset Menu", &editor.showAssetMenu);
+	nk_begin(ctx, "Asset Menu", nk_rect_std, nuk_std);
+	//active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX|NK_EDIT_SIG_ENTER, buffer, 512-1, nk_filter_ascii);
+	nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
 
-	ImGui::InputText("Search", asset_search_buffer, 100,
-			 ImGuiInputTextFlags_CallbackEdit, MyCallback);
 
-	if (ImGui::Button("Reload all files"))
+			 /*
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
+	data->InsertChars(data->CursorPos, "..");
+    } else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
+	if (data->EventKey == ImGuiKey_UpArrow) {
+	    data->DeleteChars(0, data->BufTextLen);
+	    data->InsertChars(0, "Pressed Up!");
+	    data->SelectAll();
+	} else if (data->EventKey == ImGuiKey_DownArrow) {
+	    data->DeleteChars(0, data->BufTextLen);
+	    data->InsertChars(0, "Pressed Down!");
+	    data->SelectAll();
+	}
+    } else if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+	int i = 0;
+	if (data->Buf[0] == '\0')
+	    while (i < shlen(assets))
+		assets[i].value->searched = true;
+	else
+	    while (i < shlen(assets))
+		assets[i].value->searched =
+		    (strstr(assets[i].value->filename, data->Buf) ==
+		     NULL) ? false : true;
+
+    }
+*/
+
+	if (nk_button_label(ctx,"Reload all files"))
 	    get_all_files();
 
-	ImGui::BeginChild("##scrolling");
+	nk_group_begin(ctx, "##scrolling", NK_WINDOW_NO_SCROLLBAR);
 	for (int i = 0; i < shlen(assets); i++) {
 	    if (!assets[i].value->searched)
 		continue;
 
-	    if (ImGui::Button(assets[i].value->filename + stemlen)) {
+	    if (nk_button_label(ctx, assets[i].value->filename + stemlen)) {
 		editor_selectasset(assets[i].value);
 	    }
 	}
-	ImGui::EndChild();
+	nk_group_end(ctx);
 
-	ImGui::End();
+	nk_end(ctx);
     }
 
     if (selected_asset)
@@ -730,31 +757,33 @@ nk_end(ctx);
 
 
     if (editor.showDebugMenu) {
-	ImGui::Begin("Debug Menu", &editor.showDebugMenu);
-	if (ImGui::Button("Reload Shaders")) {
+	nk_begin(ctx, "Debug Menu", nk_rect_std, nuk_std);
+	if (nk_button_label(ctx, "Reload Shaders")) {
 	    shader_compile_all();
 	}
 	//ImGui::SliderFloat("Grid scale", &gridScale, 100.f, 500.f, "%1.f");
 
-	ImGui::SliderInt("Grid 1 Span", &grid1_span, 1, 500);
-	ImGui::SameLine();
-	ImGui::Checkbox("Draw", &grid1_draw);
+	nk_property_int(ctx, "Grid 1 Span", 1, &grid1_span, 500, 1, 1);
+	nk_checkbox_label(ctx, "Draw", &grid1_draw);
 
-	ImGui::SliderInt("Grid 2 Span", &grid2_span, 10, 1000);
-	ImGui::SameLine();
-	ImGui::Checkbox("Draw", &grid2_draw);
+	nk_property_int(ctx, "Grid 2 Span", 10, &grid2_span, 1000, 1, 1);
+	nk_checkbox_label(ctx, "Draw", &grid2_draw);
 
 
-	   ImGui::SliderFloat("Grid Opacity", &gridOpacity, 0.f, 1.f);
-	   ImGui::SliderFloat("Small unit", &smallGridUnit, 0.5f, 5.f);
-	   ImGui::SliderFloat("Big unit", &bigGridUnit, 10.f, 50.f);
-	   ImGui::SliderFloat("Small thickness", &gridSmallThickness, 1.f, 10.f, "%1.f");
-	   ImGui::SliderFloat("Big thickness", &gridBigThickness, 1.f, 10.f, "%1.f");
-	   ImGui::ColorEdit3("1 pt grid color", (float*)&gridSmallColor);
-	   ImGui::ColorEdit3("10 pt grid color", (float*)&gridBigColor);
+	   nk_property_float(ctx, "Grid Opacity",0.f,  &gridOpacity, 1.f, 0.01f, 0.01f);
+	   nk_property_float(ctx, "Small unit", 0.5f,&smallGridUnit,  5.f, 0.1f, 0.1f);
+	   nk_property_float(ctx, "Big unit", 10.f,&bigGridUnit,  50.f, 1.f, 0.1f);
+	   nk_property_float(ctx, "Small thickness",1.f, &gridSmallThickness,  10.f, 0.1f, 0.1f);
+	   nk_property_float(ctx, "Big thickness", 1.f, &gridBigThickness, 10.f, 0.1f, 0.1f);
+
+	   static struct nk_colorf smgrd;
+	   static struct nk_colorf lgrd;
+
+	   nk_color_pick(ctx, &smgrd, NK_RGBA);
+	   nk_color_pick(ctx, &lgrd, NK_RGBA);
 
 	//ImGui::SliderInt("MSAA", &msaaSamples, 0, 4);
-	ImGui::End();
+	nk_end(ctx);
     }
 
   startobjectgui:
@@ -764,53 +793,51 @@ nk_end(ctx);
 		   selectedobject->transform.position[1], 5);
 
 
-	ImGui::Begin("Object Parameters");
+	nk_begin(ctx, "Object Parameters", nk_rect_std, nuk_std);
 
-	if (ImGui::Button("Save"))
+	if (nk_button_label(ctx, "Save"))
 	    gameobject_saveprefab(selectedobject);
 
-	ImGui::SameLine();
-	if (ImGui::Button("Del")) {
+	// ImGui::SameLine();
+	if (nk_button_label(ctx, "Del")) {
 	    gameobject_delete(selected_index);
 	    pickGameObject(-1);
-	    ImGui::End();
+	    nk_end(ctx);
 	    goto startobjectgui;
 	}
 
-	ImGui::SameLine();
+	// ImGui::SameLine();
 	if (selectedobject->editor.prefabSync) {
-	    if (ImGui::Button("Revert"))
+	    if (nk_button_label(ctx, "Revert"))
 		gameobject_revertprefab(selectedobject);
 
 	}
 
 
-	ImGui::InputText("Name", selectedobject->editor.mname, 50);
+	nk_edit_string_zero_terminated(ctx, "Name", selectedobject->editor.mname, 50, nk_filter_ascii);
 
-	ImGui::InputText("Prefab", selectedobject->editor.prefabName, 50,
-			 selectedobject->editor.
-			 prefabSync ? ImGuiInputTextFlags_ReadOnly : 0);
+         nk_edit_string_zero_terminated(ctx, "Prefab", selectedobject->editor.prefabName, 50, nk_filter_ascii);
+			 // Disabled if::::: selectedobject->editor.prefabSync ? ImGuiInputTextFlags_ReadOnly : 0);
 
 	object_gui(selectedobject);
 
 
-	ImGui::End();
+	nk_end(ctx);
 
 
-	ImGui::Begin("Components");
+	nk_begin(ctx, "Components", nk_rect_std, nuk_std);
 
 	for (int i = 0; i < ncomponent; i++) {
-	    if (ImGui::Button(components[i].name)) {
+	    if (nk_button_label(ctx, components[i].name)) {
 		gameobject_addcomponent(selectedobject, &components[i]);
 	    }
 	}
 
 
-	ImGui::End();
+	nk_end(ctx);
 
     }
 
-*/
 }
 
 void editor_render()
@@ -826,40 +853,6 @@ void editor_render()
 	editor_proj_select_gui();
 
 	editor_project_gui();
-
-       if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
-            NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-            NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-        {
-            enum {EASY, HARD};
-            static int op = EASY;
-            static int property = 20;
-            nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button"))
-                fprintf(stdout, "button pressed\n");
-
-            nk_layout_row_dynamic(ctx, 30, 2);
-            if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-            if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-
-            nk_layout_row_dynamic(ctx, 25, 1);
-            nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
-
-            nk_layout_row_dynamic(ctx, 20, 1);
-            nk_label(ctx, "background:", NK_TEXT_LEFT);
-            nk_layout_row_dynamic(ctx, 25, 1);
-            if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx),400))) {
-                nk_layout_row_dynamic(ctx, 120, 1);
-                bg = nk_color_picker(ctx, bg, NK_RGBA);
-                nk_layout_row_dynamic(ctx, 25, 1);
-                bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f,0.005f);
-                bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f,0.005f);
-                bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
-                bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
-                nk_combo_end(ctx);
-            }
-        }
-nk_end(ctx);
 
     nk_glfw3_render(&nkglfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }
@@ -1039,13 +1032,13 @@ void editor_asset_text_gui(char *text)
 
 void editor_asset_gui(struct fileasset *asset)
 {
-/*
-    ImGui::Begin("Asset Viewer");
 
-    ImGui::Text("%s", selected_asset->filename);
+    nk_begin(ctx, "Asset Viewer", nk_rect_std, nuk_std);
 
-    ImGui::SameLine();
-    if (ImGui::Button("Close"))
+    nk_labelf(ctx, NK_TEXT_LEFT, "%s", selected_asset->filename);
+
+    //ImGui::SameLine();
+    if (nk_button_label(ctx, "Close"))
         selected_asset = NULL;
 
     switch (asset->type) {
@@ -1061,8 +1054,8 @@ void editor_asset_gui(struct fileasset *asset)
 	break;
     }
 
-    ImGui::End();
-    */
+    nk_end(ctx);
+
 }
 
 void editor_load_projects()
@@ -1160,15 +1153,17 @@ void editor_import_project(char *path)
 #include "transform.h"
 #include "static_actor.h"
 
+
 /*
 void light_gui(struct mLight *light)
 {
     object_gui(&light->obj);
 
-    if (ImGui::CollapsingHeader("Light")) {
-	ImGui::DragFloat("Strength", &light->strength, 0.001f, 0.f, 1.f);
-	ImGui::ColorEdit3("Color", &light->color[0]);
-	ImGui::Checkbox("Dynamic", (bool *) &light->dynamic);
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Light", NK_MINIMIZED)) {
+	nk_property_float(ctx, "Strength", 0.f, &light->strength, 1.f, 0.01f, 0.001f);
+	// ImGui::ColorEdit3("Color", &light->color[0]);
+	nk_checkbox_label(ctx, "Dynamic", (bool *) &light->dynamic);
+	nk_tree_pop(ctx);
     }
 }
 
@@ -1177,11 +1172,11 @@ void pointlight_gui(struct mPointLight *light)
 {
     light_gui(&light->light);
 
-    if (ImGui::CollapsingHeader("Point Light")) {
-	ImGui::DragFloat("Constant", &light->constant, 0.001f, 0.f, 1.f);
-	ImGui::DragFloat("Linear", &light->linear, 0.001f, 0.f, 0.3f);
-	ImGui::DragFloat("Quadratic", &light->quadratic, 0.001f, 0.f,
-			 0.3f);
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Point Light", NK_MINIMIZED)) {
+	nk_property_float(ctx, "Constant", 0.f, &light->constant, 1.f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Linear", 0.f, &light->linear, 0.3f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Quadratic", 0.f, &light->quadratic, 0.3f, 0.01f, 0.001f);
+	nk_tree_pop(ctx);
     }
 
 }
@@ -1190,14 +1185,13 @@ void spotlight_gui(struct mSpotLight *spot)
 {
     light_gui(&spot->light);
 
-    if (ImGui::CollapsingHeader("Spotlight")) {
-	ImGui::DragFloat("Linear", &spot->linear, 0.001f, 0.f, 1.f);
-	ImGui::DragFloat("Quadratic", &spot->quadratic, 0.001f, 0.f, 1.f);
-	ImGui::DragFloat("Distance", &spot->distance, 0.1f, 0.f, 200.f);
-	ImGui::DragFloat("Cutoff Degrees", &spot->cutoff, 0.01f, 0.f,
-			 0.7f);
-	ImGui::DragFloat("Outer Cutoff Degrees", &spot->outerCutoff, 0.01f,
-			 0.f, 0.7f);
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Spotlight", NK_MINIMIZED)) {
+	nk_property_float(ctx, "Linear", 0.f, &spot->linear, 1.f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Quadratic", 0.f, &spot->quadratic, 1.f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Distance", 0.f, &spot->distance, 200.f, 1.f, 0.1f, 200.f);
+	nk_property_float(ctx, "Cutoff Degrees", 0.f, &spot->cutoff, 0.7f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Outer Cutoff Degrees", 0.f, &spot->outerCutoff, 0.7f, 0.01f, 0.001f);
+	nk_tree_pop(ctx);
     }
 }
 */
@@ -1205,31 +1199,45 @@ void spotlight_gui(struct mSpotLight *spot)
 void staticactor_gui(struct mStaticActor *sa)
 {
     object_gui(&sa->obj);
-    /*
-    if (ImGui::CollapsingHeader("Model")) {
-	ImGui::Checkbox("Cast Shadows", &sa->castShadows);
-	ImGui::Text("Model path: %s", sa->currentModelPath);
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Model", NK_MINIMIZED)) {
+	nk_checkbox_label(ctx, "Cast Shadows", &sa->castShadows);
+	nk_labelf(ctx, NK_TEXT_LEFT, "Model path: %s", sa->currentModelPath);
 
-	ImGui::SameLine();
-	if (ImGui::Button("Load model")) {
+	//ImGui::SameLine();
+	if (nk_button_label(ctx, "Load model")) {
 	    //asset_command = set_new_model;
 	    curActor = sa;
 	}
 
     }
-    */
+}
+
+void nk_property_float3(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+    nk_layout_row_dynamic(ctx, 25, 1);
+    nk_label(ctx, label, NK_TEXT_LEFT);
+    nk_layout_row_dynamic(ctx, 25, 3);
+    nk_property_float(ctx, "X", min, &val[0], max, step, dragstep);
+    nk_property_float(ctx, "Y", min, &val[1], max, step, dragstep);
+    nk_property_float(ctx, "Z", min, &val[2], max, step, dragstep);
+}
+
+nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+    nk_layout_row_dynamic(ctx, 25, 1);
+    nk_label(ctx, label, NK_TEXT_LEFT);
+    nk_layout_row_dynamic(ctx, 25, 2);
+    nk_property_float(ctx, "X", min, &val[0], max, step, dragstep);
+    nk_property_float(ctx, "Y", min, &val[1], max, step, dragstep);
 }
 
 void trans_drawgui(struct mTransform *T)
 {
-    /*ImGui::DragFloat3("Position", (float *) &T->position, 0.01f, -1000.f,
-       1000.f, "%4.2f");
-       ImGui::DragFloat("Rotation", (float *) &T->rotation[0]   , 0.5f, 0.f,
-       360.f, "%4.2f");
+    nk_property_float3(ctx, "Position", -1000.f, T->position, 1000.f, 1.f, 1.f);
+    nk_property_float3(ctx, "Rotation", 0.f, T->rotation, 360.f, 1.f, 0.1f);
+    nk_property_float(ctx, "Scale", 0.f, &T->scale, 1000.f, 0.1f, 0.1f);
+}
 
-    ImGui::DragFloat("Scale", (float *) &T->scale, 0.001f, 0.f, 1000.f,
-		     "%3.1f");
-		     */
+void nk_radio_button_label(struct nk_contex *ctx, const char *label, int *val, int cmp) {
+    if (nk_option_label(ctx, label, *val == cmp)) *val = cmp;
 }
 
 void object_gui(struct mGameObject *go)
@@ -1240,8 +1248,7 @@ void object_gui(struct mGameObject *go)
 
     draw_point(temp_pos[0], temp_pos[1], 3);
 
-    //ImGui::DragFloat2("Position", (float *) temp_pos, 1.f, 0.f, 0.f,
-		   //   "%.0f");
+    nk_property_float2(ctx, "Position", 0.f, temp_pos, 1.f, 0.01f, 0.01f);
 
     cpVect tvect = { temp_pos[0], temp_pos[1] };
     cpBodySetPosition(go->body, tvect);
@@ -1249,54 +1256,48 @@ void object_gui(struct mGameObject *go)
     float mtry = cpBodyGetAngle(go->body);
     float modtry = fmodf(mtry * RAD2DEGS, 360.f);
     float modtry2 = modtry;
-    //ImGui::DragFloat("Angle", &modtry, 0.5f, -1000.f, 1000.f, "%3.1f");
+    nk_property_float(ctx, "Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
     modtry -= modtry2;
     cpBodySetAngle(go->body, mtry + (modtry * DEG2RADS));
 
-   // ImGui::DragFloat("Scale", &go->scale, 0.001f, 0.f, 1000.f, "%3.3f");
+    nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, 0.001f);
 
-  /*  if (ImGui::Button("Start")) {
-
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("Update")) {
+    nk_layout_row_dynamic(ctx, 25, 4);
+   if (nk_button_label(ctx, "Start")) {
 
     }
 
-    ImGui::SameLine();
-    if (ImGui::Button("Fixed Update")) {
+    if (nk_button_label(ctx, "Update")) {
 
     }
 
-    ImGui::SameLine();
-    if (ImGui::Button("End")) {
+    if (nk_button_label(ctx, "Fixed Update")) {
 
     }
 
-    ImGui::RadioButton("Static", (int *) &go->bodytype,
-		       (int) CP_BODY_TYPE_STATIC);
-    ImGui::SameLine();
-    ImGui::RadioButton("Dynamic", (int *) &go->bodytype,
-		       (int) CP_BODY_TYPE_DYNAMIC);
-    ImGui::SameLine();
-    ImGui::RadioButton("Kinematic", (int *) &go->bodytype,
-		       (int) CP_BODY_TYPE_KINEMATIC);
+    if (nk_button_label(ctx, "End")) {
+
+    }
+
+    nk_layout_row_dynamic(ctx, 25, 3);
+    nk_radio_button_label(ctx, "Static", &go->bodytype, CP_BODY_TYPE_STATIC);
+    nk_radio_button_label(ctx, "Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
+    nk_radio_button_label(ctx, "Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
 
     cpBodySetType(go->body, go->bodytype);
 
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
-	ImGui::DragFloat("Mass", &go->mass, 0.01f, 0.01f, 1000.f);
+         nk_property_float(ctx, "Mass", 0.01f, &go->mass, 1000.f, 0.01f, 0.01f);
 	cpBodySetMass(go->body, go->mass);
     }
 
-    ImGui::DragFloat("Friction", &go->f, 0.01f, 0.f, 10.f);
-    ImGui::DragFloat("Elasticity", &go->e, 0.01f, 0.f, 2.f);
+    nk_property_float(ctx, "Friction", 0.f, &go->f, 10.f, 0.01f, 0.01f);
+    nk_property_float(ctx, "Elasticity", 0.f, &go->e, 2.f, 0.01f, 0.01f);
 
     int n = -1;
 
     for (int i = 0; i < go->components->len; i++) {
-	ImGui::PushID(i);
+	//ImGui::PushID(i);
 
 	struct component *c =
 	    (struct component *) vec_get(go->components, i);
@@ -1304,143 +1305,117 @@ void object_gui(struct mGameObject *go)
 	if (c->draw_debug)
 	    c->draw_debug(c->data);
 
-	if (ImGui::CollapsingHeader(c->name)) {
-	    if (ImGui::Button("Del")) {
+	if (nk_tree_push(ctx, NK_TREE_NODE, c->name, NK_MINIMIZED)) {
+	    if (nk_button_label(ctx, "Del")) {
 		n = i;
 	    }
 
 	    c->draw_gui(c->data);
 
-
+	    nk_tree_pop(ctx);
 	}
 
-	ImGui::PopID();
+	//ImGui::PopID();
     }
 
     if (n >= 0)
 	gameobject_delcomponent(go, n);
-*/
+
 }
 
 
 void sprite_gui(struct mSprite *sprite)
 {
-
-    //ImGui::Text("Path", sprite->tex->path);
+    nk_labelf(ctx, NK_TEXT_LEFT, "Path %s", sprite->tex->path);
     //ImGui::SameLine();
-    /*
-    if (ImGui::Button("Load texture") && selected_asset != NULL) {
+
+    if (nk_button_label(ctx, "Load texture") && selected_asset != NULL) {
 	sprite_loadtex(sprite, selected_asset->filename);
     }
 
     if (sprite->tex != NULL) {
-	ImGui::Text("%s", sprite->tex->path);
-	ImGui::Text("%dx%d", sprite->tex->width, sprite->tex->height);
-	if (ImGui::ImageButton
-	    ((void *) (intptr_t) sprite->tex->id, ImVec2(50, 50))) {
-	    editor_selectasset_str(sprite->tex->path);
-	}
+	nk_labelf(ctx, NK_TEXT_LEFT, "%s", sprite->tex->path);
+	nk_labelf(ctx, NK_TEXT_LEFT, "%dx%d", sprite->tex->width, sprite->tex->height);
+	if (nk_button_label(ctx, "Imgbutton")) editor_selectasset_str(sprite->tex->path);
+	// if (ImGui::ImageButton ((void *) (intptr_t) sprite->tex->id, ImVec2(50, 50))) {
     }
+    nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
 
-    ImGui::DragFloat2("Sprite Position", (float *) sprite->pos, 0.01f,
-		      -1.f, 0.f);
-
-    if (ImGui::Button("C")) {
+    nk_layout_row_dynamic(ctx, 25, 3);
+    if (nk_button_label(ctx, "C")) {
 	sprite->pos[0] = -0.5f;
 	sprite->pos[1] = -0.5f;
     }
 
-    ImGui::SameLine();
-    if (ImGui::Button("U")) {
+
+    if (nk_button_label(ctx, "U")) {
 	sprite->pos[0] = -0.5f;
 	sprite->pos[1] = -1.f;
     }
 
-    ImGui::SameLine();
-    if (ImGui::Button("D")) {
+
+    if (nk_button_label(ctx, "D")) {
 	sprite->pos[0] = -0.5f;
 	sprite->pos[1] = 0.f;
     }
-*/
+
 }
 
 void circle_gui(struct phys2d_circle *circle)
 {
-
-  //  ImGui::DragFloat("Radius", &circle->radius, 1.f, 1.f, 10000.f);
-//    ImGui::DragFloat2("Offset", circle->offset, 1.f, 0.f, 0.f);
+    nk_property_float(ctx, "Radius", 1.f, &circle->radius, 10000.f, 1.f, 1.f);
+    nk_property_float2(ctx, "Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
 
     phys2d_applycircle(circle);
-
-
-
 }
 
 void segment_gui(struct phys2d_segment *seg)
 {
-
-//    ImGui::DragFloat2("a", seg->a, 1.f, 0.f, 0.f);
- //   ImGui::DragFloat2("b", seg->b, 1.f, 0.f, 0.f);
+    nk_property_float2(ctx, "a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
+    nk_property_float2(ctx, "b", 0.f, seg->b, 1.f, 0.01f, 0.01f);
 
     phys2d_applyseg(seg);
-
-
-
 }
 
 void box_gui(struct phys2d_box *box)
 {
-/*
-    ImGui::DragFloat("Width", &box->w, 1.f, 0.f, 1000.f);
-    ImGui::DragFloat("Height", &box->h, 1.f, 0.f, 1000.f);
-    ImGui::DragFloat2("Offset", box->offset, 1.f, 0.f, 0.f);
-    ImGui::DragFloat("Radius", &box->r, 1.f, 0.f, 100.f);
-*/
+    nk_property_float(ctx, "Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
+    nk_property_float(ctx, "Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
+    nk_property_float2(ctx, "Offset", 0.f, &box->offset, 1.f, 0.01f, 0.01f);
+    nk_property_float(ctx, "Radius", 0.f, &box->r, 100.f, 1.f, 0.1f);
+
     phys2d_applybox(box);
-
-
-
 }
 
 void poly_gui(struct phys2d_poly *poly)
 {
-/*
-    if (ImGui::Button("Add Poly Vertex"))
-	phys2d_polyaddvert(poly);
+
+    if (nk_button_label(ctx, "Add Poly Vertex")) phys2d_polyaddvert(poly);
 
     for (int i = 0; i < poly->n; i++) {
-	ImGui::PushID(i);
-	ImGui::DragFloat2("P", &poly->points[i * 2], 1.f, 0.f, 0.f);
-	ImGui::PopID();
+	//ImGui::PushID(i);
+	nk_property_float2(ctx, "P", 0.f, &poly->points[i*2], 1.f, 0.1f, 0.1f);
+	//ImGui::PopID();
     }
 
-    ImGui::DragFloat("Radius", &poly->radius);
+    nk_property_float(ctx, "Radius", 0.01f, &poly->radius, 1000.f, 1.f, 0.1f);
 
     phys2d_applypoly(poly);
-
-*/
-
-
 }
 
 void edge_gui(struct phys2d_edge *edge)
 {
-/*
-    if (ImGui::Button("Add Edge Vertex"))
-	phys2d_edgeaddvert(edge);
+    if (nk_button_label(ctx, "Add Edge Vertex")) phys2d_edgeaddvert(edge);
 
     for (int i = 0; i < edge->n; i++) {
-	ImGui::PushID(i);
-	ImGui::DragFloat2("E", &edge->points[i * 2], 1.f, 0.f, 0.f);
-	ImGui::PopID();
+	//ImGui::PushID(i);
+	nk_property_float2(ctx, "E", 0.f, &edge->points[i*2], 1.f, 0.01f, 0.01f);
+	//ImGui::PopID();
     }
 
-    ImGui::DragFloat("Thickness", &edge->thickness);
+    nk_property_float(ctx, "Thickness", 0.01f, &edge->thickness, 1.f, 0.01f, 0.01f);
 
     phys2d_applyedge(edge);
-
-
-*/
 }
 
 void editor_makenewobject()
@@ -1450,16 +1425,16 @@ void editor_makenewobject()
 
 int obj_gui_hierarchy(struct mGameObject *selected)
 {
-/*
+
     for (int i = 0; i < gameobjects->len; i++) {
-	struct mGameObject *go =
-	    (struct mGameObject *) vec_get(gameobjects, i);
-	if (ImGui::Selectable(go->editor.mname, go == selected, 1 << 22)) {
+	struct mGameObject *go = (struct mGameObject *) vec_get(gameobjects, i);
+
+	if (nk_select_label(ctx, go->editor.mname, NK_TEXT_LEFT, go == selected)) {
 	    if (go != selected)
 		pickGameObject(i);
 	}
     }
-*/
+
     return 0;
 }
 
@@ -1470,11 +1445,11 @@ void get_levels()
 
 void editor_prefab_btn(char *prefab)
 {
-   // if (ImGui::Button(prefab)) {
-//	gameobject_makefromprefab(prefab);
+   if (nk_button_label(ctx, prefab)) {
+	gameobject_makefromprefab(prefab);
 	/*GameObject* newprefab = (GameObject*)createPrefab(*prefab); */
 	/*cam_inverse_goto(&camera, &newprefab->transform); */
-//    }
+   }
 
 }
 
@@ -1500,9 +1475,7 @@ void game_pause()
 
 void pinball_flipper_gui(struct flipper *flip)
 {
-/*
-    ImGui::DragFloat("Angle start", &flip->angle1, 0, 360);
-    ImGui::DragFloat("Angle end", &flip->angle2, 0, 360);
-    ImGui::DragFloat("Flipper speed", &flip->flipspeed, 0, 100);
-    */
+    nk_property_float(ctx, "Angle start", 0.f, &flip->angle1, 360.f, 1.f, 0.1f);
+    nk_property_float(ctx, "Angle end", 0.f, &flip->angle2, 360.f, 1.f, 0.1f);
+    nk_property_float(ctx, "Flipper speed", 0.f, &flip->flipspeed, 100.f, 1.f, 0.1f);
 }
