@@ -19,7 +19,7 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
     struct mSDLWindow *w = calloc(1, sizeof(struct mSDLWindow));
     w->width = width;
     w->height = height;
-    w->window = glfwCreateWindow(width, height, "New Game", NULL, NULL);
+    w->window = glfwCreateWindow(width, height, name, NULL, NULL);
 
     if (!w->window) {
         printf("Couldn't make GLFW window\n");

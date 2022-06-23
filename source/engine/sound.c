@@ -1,25 +1,46 @@
-#define MINIAUDIO_IMPLEMENTATION
+
 
 
 #include "sound.h"
 #include "resources.h"
 
+
+ma_engine engine;
+
 const char *audioDriver;
 
-static int mus_ch = -1;
+struct sound *mus_cur;
+ma_sound_group mus_grp;
+
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    // In playback mode copy data to pOutput. In capture mode read data from pInput. In full-duplex mode, both
+    // pOutput and pInput will be valid and you can move data from pInput into pOutput. Never process more than
+    // frameCount frames.
+}
 
 void sound_init()
 {
 /*
-    int flags = MIX_INIT_MP3 | MIX_INIT_OGG;
-    int err = Mix_Init(flags);
-    if ((err&flags) != flags) {
-        printf("MIX did not init!!");
-    }
-*/
-    //mus_ch = Mix_AllocateChannels(1);
+    ma_device_config cnf = ma_device_config_init(ma_device_type_playback);
+    cnf.playback.format = ma_format_f32;
+    cnf.playback.channels = 0;
+    cnf.sampleRate = 0;
+    cnf.dataCallback = data_callback;
 
-    //Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
+    ma_device device;
+    ma_device_init(NULL, &cnf, &device);
+
+    ma_device_start(&device);
+
+*/
+
+    ma_result result = ma_engine_init(NULL, &engine);
+    if (result != MA_SUCCESS) {
+        printf("UHOH!!!");
+    }
+
+    ma_sound_group_init(&engine, 0, NULL, &mus_grp);
 }
 
 void audio_open(const char *device)
@@ -35,28 +56,35 @@ void audio_close()
 struct sound *make_sound(const char *wav)
 {
     struct sound *new = calloc(1, sizeof(struct sound));
-    //new->sound = Mix_LoadWAV(wav);
+    ma_result res = ma_sound_init_from_file(&engine, wav, 0, NULL, NULL, &new->sound);
+
+    if (res != MA_SUCCESS) {
+        printf("HONO!!!!");
+    }
 
     return new;
 }
 
-struct music *make_music(const char *ogg)
+struct sound *make_music(const char *ogg)
 {
-    struct music *sound = calloc(1, sizeof(struct music));
-    //sound->music = Mix_LoadMUS(make_path(ogg));
+    struct sound *sound = calloc(1, sizeof(struct sound));
+    ma_result res = ma_sound_init_from_file(&engine, ogg, 0, NULL, &mus_grp, &sound->sound);
 
     return sound;
 }
 
 void play_sound(struct sound *sound)
 {
-    //Mix_VolumeChunk(sound->sound, sound->volume);
-    //Mix_PlayChannel(-1, sound->sound, 0);
+    //ma_sound_set_volume(&sound->sound, (float)sound->volume/127);
+    ma_sound_start(&sound->sound);
+    sound->state = MUS_PLAY;
 }
 
 void play_music(struct sound *music)
 {
-    //Mix_PlayChannel(mus_ch, music->sound, -1);
+    ma_sound_start(&music->sound);
+    music->state = MUS_PLAY;
+    mus_cur = music;
 }
 
 void music_set(struct sound *music)
@@ -66,34 +94,35 @@ void music_set(struct sound *music)
 
 void music_volume(unsigned char vol)
 {
-    //Mix_Volume(mus_ch, vol);
+    ma_sound_group_set_volume(&mus_grp, (float)vol/127);
 }
 
 int music_playing()
 {
-    //return Mix_Playing(mus_ch);
-    return 0;
+    return ma_sound_is_playing(&mus_cur->sound);
 }
 
 int music_paused()
 {
-    //return Mix_Paused(mus_ch);
-    return 0;
+    return mus_cur->state == MUS_PAUSE;
 }
 
 void music_resume()
 {
-    //Mix_Resume(mus_ch);
+    ma_sound_start(&mus_cur->sound);
 }
 
 void music_pause()
 {
-    //Mix_Pause(mus_ch);
+    ma_sound_stop(&mus_cur->sound);
+    mus_cur->state = MUS_PAUSE;
 }
 
 void music_stop()
 {
-    //Mix_HaltChannel(mus_ch);
+    ma_sound_stop(&mus_cur->sound);
+    mus_cur->state = MUS_STOP;
+    ma_sound_seek_to_pcm_frame(&mus_cur->sound, 0);
 }
 
 
@@ -119,6 +148,7 @@ void clear_raw(int device)
 
 int open_device(const char *adriver)
 {
+
 /*
     SDL_AudioSpec audio_spec;
     SDL_memset(&audio_spec, 0, sizeof(audio_spec));

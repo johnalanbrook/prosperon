@@ -488,6 +488,16 @@ void editor_project_gui()
         NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
         NK_WINDOW_NO_SCROLLBAR))
     {
+        nk_layout_row_dynamic(ctx, 25, 2);
+        static struct sound *ss;
+
+        if (nk_button_label(ctx, "Load sound")) {
+            ss = make_sound("alert.wav");
+        }
+
+        if (nk_button_label(ctx, "Play sound")) {
+            play_sound(ss);
+        }
 
         nk_layout_row_dynamic(ctx, 30, 2);
         nk_label(ctx, "Floating point:", NK_TEXT_RIGHT);

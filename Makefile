@@ -1,5 +1,5 @@
-procs != nproc
-MAKEFLAGS = --jobs=$(procs)
+#procs != nproc
+#MAKEFLAGS = --jobs=$(procs)
 
 UNAME != uname
 
@@ -10,7 +10,7 @@ endif
 UNAME_P != uname -m
 
 #CC specifies which compiler we're using
-CC = tcc -std=c99
+CC = clang
 
 MUSL = /usr/local/musl/include
 
@@ -57,7 +57,7 @@ edirs != find ./source/engine -type d -name include
 edirs += ./source/engine
 ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
-eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine.c yugine.c)
+eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine)
 
 eddirs != find ./source/editor -type d
 eddirs += ./source/editor
@@ -76,7 +76,7 @@ includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
 COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
-WARNING_FLAGS = #-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+WARNING_FLAGS = -Wno-everything#-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 #COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
 COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c $< -o $@
 
@@ -90,7 +90,7 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS = -fPIC -rdynamic
-	ELIBS = editor engine glfw3 m c tcc tcc1
+	ELIBS = m c engine editor glfw3
 	CLIBS =
 	EXT =
 endif
@@ -117,27 +117,27 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
 engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	@$(CC) $< $(LINK)
+	@$(CC) $^ $(LINK)
 	@echo Finished build
 
 editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
-	$(CC) $< $(LINK)
+	$(CC) $^ $(LINK)
 	@echo Finished build
 
 $(ENGINE): $(eobjects) bin/libglfw3.a
 	@echo Making library engine.a
-	@ar -r $(ENGINE) $(eobjects)
+	@ar -r $(ENGINE) $^
 	@cp -u -r $(ehead) $(INCLUDE)
 
 $(EDITOR): $(edobjects)
 	@echo Making editor library
-	@ar -r $(EDITOR) $(edobjects)
+	@ar -r $(EDITOR) $^
 	@cp -u -r $(edhead) $(INCLUDE)
 
-xbrainstorm: $(ENGINE) $(bsobjects)
+xbrainstorm: $(bsobjects) $(ENGINE) $(EDITOR)
 	@echo Making brainstorm
-	@$(CC) $(bsobjects) $(LINK) -o $@
+	$(CC) $^ $(LINK)
 	@mv xbrainstorm brainstorm/brainstorm$(EXT)
 
 pinball: $(ENGINE) $(pinobjects)

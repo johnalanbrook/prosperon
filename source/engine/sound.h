@@ -3,6 +3,8 @@
 
 #include <miniaudio.h>
 
+
+
 struct Mix_Chunk {
     int i;
 };
@@ -11,13 +13,15 @@ struct Mix_Music {
     int i;
 };
 
-struct sound {
-    struct Mix_Chunk *sound;
-    unsigned char volume;
+enum MUS {
+    MUS_STOP,
+    MUS_PLAY,
+    MUS_PAUSE
 };
 
-struct music {
-    struct Mix_Music *music;
+struct sound {
+    ma_sound sound;
+    enum MUS state;
     unsigned char volume;
 };
 
@@ -28,7 +32,7 @@ void audio_open(const char *device);
 void audio_close();
 
 struct sound *make_sound(const char *wav);
-struct music *make_music(const char *ogg);
+struct sound *make_music(const char *ogg);
 
 void play_sound(struct sound *sound);
 
