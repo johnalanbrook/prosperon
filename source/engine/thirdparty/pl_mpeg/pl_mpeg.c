@@ -139,7 +139,7 @@ int plm_has_headers(plm_t *self) {
 	if (!plm_demux_has_headers(self->demux)) {
 		return FALSE;
 	}
-	
+
 	if (!plm_init_decoders(self)) {
 		return FALSE;
 	}
@@ -299,7 +299,7 @@ void plm_decode(plm_t *self, double tick) {
 
 	do {
 		did_decode = FALSE;
-		
+
 		if (decode_video && plm_video_get_time(self->video_decoder) < video_target_time) {
 			plm_frame_t *frame = plm_video_decode(self->video_decoder);
 			if (frame) {
@@ -322,10 +322,10 @@ void plm_decode(plm_t *self, double tick) {
 			}
 		}
 	} while (did_decode);
-	
+
 	// Did all sources we wanted to decode fail and the demuxer is at the end?
 	if (
-		(!decode_video || decode_video_failed) && 
+		(!decode_video || decode_video_failed) &&
 		(!decode_audio || decode_audio_failed) &&
 		plm_demux_has_ended(self->demux)
 	) {
@@ -440,7 +440,7 @@ plm_frame_t *plm_seek_frame(plm_t *self, double time, int seek_exact) {
 	else if (time > duration) {
 		time = duration;
 	}
-	
+
 	plm_packet_t *packet = plm_demux_seek(self->demux, time, type, TRUE);
 	if (!packet) {
 		return NULL;
@@ -454,7 +454,7 @@ plm_frame_t *plm_seek_frame(plm_t *self, double time, int seek_exact) {
 	plm_video_rewind(self->video_decoder);
 	plm_video_set_time(self->video_decoder, packet->pts - start_time);
 	plm_buffer_write(self->video_buffer, packet->data, packet->length);
-	plm_frame_t *frame = plm_video_decode(self->video_decoder);	
+	plm_frame_t *frame = plm_video_decode(self->video_decoder);
 
 	// If we want to seek to an exact frame, we have to decode all frames
 	// on top of the intra frame we just jumped to.
@@ -477,13 +477,13 @@ plm_frame_t *plm_seek_frame(plm_t *self, double time, int seek_exact) {
 
 int plm_seek(plm_t *self, double time, int seek_exact) {
 	plm_frame_t *frame = plm_seek_frame(self, time, seek_exact);
-	
+
 	if (!frame) {
 		return FALSE;
 	}
 
 	if (self->video_decode_callback) {
-		self->video_decode_callback(self, frame, self->video_decode_callback_user_data);	
+		self->video_decode_callback(self, frame, self->video_decode_callback_user_data);
 	}
 
 	// If audio is not enabled we are done here.
@@ -512,8 +512,8 @@ int plm_seek(plm_t *self, double time, int seek_exact) {
 			plm_decode(self, 0);
 			break;
 		}
-	}	
-	
+	}
+
 	return TRUE;
 }
 
@@ -586,7 +586,7 @@ plm_buffer_t *plm_buffer_create_with_file(FILE *fh, int close_when_done) {
 	self->close_when_done = close_when_done;
 	self->mode = PLM_BUFFER_MODE_FILE;
 	self->discard_read_bytes = TRUE;
-	
+
 	fseek(self->fh, 0, SEEK_END);
 	self->total_size = ftell(self->fh);
 	fseek(self->fh, 0, SEEK_SET);
@@ -652,8 +652,8 @@ size_t plm_buffer_write(plm_buffer_t *self, uint8_t *bytes, size_t length) {
 	}
 
 	if (self->discard_read_bytes) {
-		// This should be a ring buffer, but instead it just shifts all unread 
-		// data to the beginning of the buffer and appends new data at the end. 
+		// This should be a ring buffer, but instead it just shifts all unread
+		// data to the beginning of the buffer and appends new data at the end.
 		// Seems to be good enough.
 
 		plm_buffer_discard_read_bytes(self);
@@ -703,7 +703,7 @@ void plm_buffer_seek(plm_buffer_t *self, size_t pos) {
 	else if (self->mode == PLM_BUFFER_MODE_RING) {
 		if (pos != 0) {
 			// Seeking to non-0 is forbidden for dynamic-mem buffers
-			return; 
+			return;
 		}
 		self->bit_index = 0;
 		self->length = 0;
@@ -735,7 +735,7 @@ void plm_buffer_discard_read_bytes(plm_buffer_t *self) {
 
 void plm_buffer_load_file_callback(plm_buffer_t *self, void *user) {
 	PLM_UNUSED(user);
-	
+
 	if (self->discard_read_bytes) {
 		plm_buffer_discard_read_bytes(self);
 	}
@@ -760,12 +760,12 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 
 	if (self->load_callback) {
 		self->load_callback(self, self->load_callback_user_data);
-		
+
 		if (((self->length << 3) - self->bit_index) >= count) {
 			return TRUE;
 		}
-	}	
-	
+	}
+
 	if (self->total_size != 0 && self->length == self->total_size) {
 		self->has_ended = TRUE;
 	}
@@ -847,7 +847,7 @@ int plm_buffer_find_start_code(plm_buffer_t *self, int code) {
 int plm_buffer_has_start_code(plm_buffer_t *self, int code) {
 	size_t previous_bit_index = self->bit_index;
 	int previous_discard_read_bytes = self->discard_read_bytes;
-	
+
 	self->discard_read_bytes = FALSE;
 	int current = plm_buffer_find_start_code(self, code);
 
@@ -1033,7 +1033,7 @@ double plm_demux_get_start_time(plm_demux_t *self, int type) {
 
 	int previous_pos = plm_buffer_tell(self->buffer);
 	int previous_start_code = self->start_code;
-	
+
 	// Find first video PTS
 	plm_demux_rewind(self);
 	do {
@@ -1063,8 +1063,8 @@ double plm_demux_get_duration(plm_demux_t *self, int type) {
 
 	size_t previous_pos = plm_buffer_tell(self->buffer);
 	int previous_start_code = self->start_code;
-	
-	// Find last video PTS. Start searching 64kb from the end and go further 
+
+	// Find last video PTS. Start searching 64kb from the end and go further
 	// back if needed.
 	long start_range = 64 * 1024;
 	long max_range = 4096 * 1024;
@@ -1103,7 +1103,7 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int 
 
 	// Using the current time, current byte position and the average bytes per
 	// second for this file, try to jump to a byte position that hopefully has
-	// packets containing timestamps within one second before to the desired 
+	// packets containing timestamps within one second before to the desired
 	// seek_time.
 
 	// If we hit close to the seek_time scan through all packets to find the
@@ -1112,7 +1112,7 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int 
 	// per second for the jumped range and jump again.
 
 	// The number of retries here is hard-limited to a generous amount. Usually
-	// the correct range is found after 1--5 jumps, even for files with very 
+	// the correct range is found after 1--5 jumps, even for files with very
 	// variable bitrates. If significantly more jumps are needed, there's
 	// probably something wrong with the file and we just avoid getting into an
 	// infinite loop. 32 retries should be enough for anybody.
@@ -1165,7 +1165,7 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int 
 
 			// Bail scanning through packets if we hit one that is outside
 			// seek_time - scan_span.
-			// We also adjust the cur_time and byterate values here so the next 
+			// We also adjust the cur_time and byterate values here so the next
 			// iteration can be a bit more precise.
 			if (packet->pts > seek_time || packet->pts < seek_time - scan_span) {
 				found_packet_with_pts = TRUE;
@@ -1185,7 +1185,7 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int 
 			}
 
 			// Check if this is an intra frame packet. If so, record the buffer
-			// position of the start of this packet. We want to jump back to it 
+			// position of the start of this packet. We want to jump back to it
 			// later, when we know it's the last intra frame before desired
 			// seek time.
 			if (force_intra) {
@@ -1197,7 +1197,7 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int 
 						packet->data[i + 2] == 0x01 &&
 						packet->data[i + 3] == 0x00
 					) {
-						// Bits 11--13 in the picture header contain the frame 
+						// Bits 11--13 in the picture header contain the frame
 						// type, where 1=Intra
 						if ((packet->data[i + 5] & 0x38) == 8) {
 							last_valid_packet_start = packet_start;
@@ -1266,9 +1266,9 @@ plm_packet_t *plm_demux_decode(plm_demux_t *self) {
 	do {
 		self->start_code = plm_buffer_next_start_code(self->buffer);
 		if (
-			self->start_code == PLM_DEMUX_PACKET_VIDEO_1 || 
+			self->start_code == PLM_DEMUX_PACKET_VIDEO_1 ||
 			self->start_code == PLM_DEMUX_PACKET_PRIVATE || (
-				self->start_code >= PLM_DEMUX_PACKET_AUDIO_1 && 
+				self->start_code >= PLM_DEMUX_PACKET_AUDIO_1 &&
 				self->start_code <= PLM_DEMUX_PACKET_AUDIO_4
 			)
 		) {
@@ -1326,7 +1326,7 @@ plm_packet_t *plm_demux_decode_packet(plm_demux_t *self, int type) {
 	else {
 		return NULL; // invalid
 	}
-	
+
 	return plm_demux_get_packet(self);
 }
 
@@ -1349,7 +1349,7 @@ plm_packet_t *plm_demux_get_packet(plm_demux_t *self) {
 // -----------------------------------------------------------------------------
 // plm_video implementation
 
-// Inspired by Java MPEG-1 Video Decoder and Player by Zoltan Korandi 
+// Inspired by Java MPEG-1 Video Decoder and Player by Zoltan Korandi
 // https://sourceforge.net/projects/javampeg1video/
 
 static const int PLM_VIDEO_PICTURE_TYPE_INTRA = 1;
@@ -1837,7 +1837,7 @@ void plm_video_idct(int *block);
 plm_video_t * plm_video_create_with_buffer(plm_buffer_t *buffer, int destroy_when_done) {
 	plm_video_t *self = (plm_video_t *)malloc(sizeof(plm_video_t));
 	memset(self, 0, sizeof(plm_video_t));
-	
+
 	self->buffer = buffer;
 	self->destroy_buffer_when_done = destroy_when_done;
 
@@ -1908,12 +1908,12 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 	if (!plm_video_has_header(self)) {
 		return NULL;
 	}
-	
+
 	plm_frame_t *frame = NULL;
 	do {
 		if (self->start_code != PLM_START_PICTURE) {
 			self->start_code = plm_buffer_find_start_code(self->buffer, PLM_START_PICTURE);
-			
+
 			if (self->start_code == -1) {
 				// If we reached the end of the file and the previously decoded
 				// frame was a reference frame, we still have to return it.
@@ -1946,7 +1946,7 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 			return NULL;
 		}
 		plm_buffer_discard_read_bytes(self->buffer);
-		
+
 		plm_video_decode_picture(self);
 
 		if (self->assume_no_b_frames) {
@@ -1962,11 +1962,11 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 			self->has_reference_frame = TRUE;
 		}
 	} while (!frame);
-	
+
 	frame->time = self->time;
 	self->frames_decoded++;
 	self->time = (double)self->frames_decoded / self->framerate;
-	
+
 	return frame;
 }
 
@@ -1981,7 +1981,7 @@ int plm_video_has_header(plm_video_t *self) {
 	if (self->start_code == -1) {
 		return FALSE;
 	}
-	
+
 	if (!plm_video_decode_sequence_header(self)) {
 		return FALSE;
 	}
@@ -2011,7 +2011,7 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	plm_buffer_skip(self->buffer, 18 + 1 + 10 + 1);
 
 	// Load custom intra quant matrix?
-	if (plm_buffer_read(self->buffer, 1)) { 
+	if (plm_buffer_read(self->buffer, 1)) {
 		for (int i = 0; i < 64; i++) {
 			int idx = PLM_VIDEO_ZIG_ZAG[i];
 			self->intra_quant_matrix[idx] = plm_buffer_read(self->buffer, 8);
@@ -2022,7 +2022,7 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	}
 
 	// Load custom non intra quant matrix?
-	if (plm_buffer_read(self->buffer, 1)) { 
+	if (plm_buffer_read(self->buffer, 1)) {
 		for (int i = 0; i < 64; i++) {
 			int idx = PLM_VIDEO_ZIG_ZAG[i];
 			self->non_intra_quant_matrix[idx] = plm_buffer_read(self->buffer, 8);
@@ -2124,7 +2124,7 @@ void plm_video_decode_picture(plm_video_t *self) {
 	do {
 		self->start_code = plm_buffer_next_start_code(self->buffer);
 	} while (
-		self->start_code == PLM_START_EXTENSION || 
+		self->start_code == PLM_START_EXTENSION ||
 		self->start_code == PLM_START_USER_DATA
 	);
 
@@ -2394,7 +2394,7 @@ void plm_video_process_macroblock(
 
 	unsigned int si = ((self->mb_row * block_size) + vp) * dw + (self->mb_col * block_size) + hp;
 	unsigned int di = (self->mb_row * dw + self->mb_col) * block_size;
-	
+
 	unsigned int max_address = (dw * (self->mb_height * block_size - block_size + 1) - block_size);
 	if (si > max_address || di > max_address) {
 		return; // corrupt video
@@ -2823,10 +2823,10 @@ static const uint8_t PLM_AUDIO_QUANT_LUT_STEP_1[2][16] = {
 };
 
 // Quantizer lookup, step 2: bitrate class, sample rate -> B2 table idx, sblimit
-static const uint8_t PLM_AUDIO_QUANT_TAB_A = (27 | 64);   // Table 3-B.2a: high-rate, sblimit = 27
-static const uint8_t PLM_AUDIO_QUANT_TAB_B = (30 | 64);   // Table 3-B.2b: high-rate, sblimit = 30
-static const uint8_t PLM_AUDIO_QUANT_TAB_C = 8;           // Table 3-B.2c:  low-rate, sblimit =  8
-static const uint8_t PLM_AUDIO_QUANT_TAB_D = 12;          // Table 3-B.2d:  low-rate, sblimit = 12
+#define PLM_AUDIO_QUANT_TAB_A (27 | 64)   // Table 3-B.2a: high-rate, sblimit = 27
+#define PLM_AUDIO_QUANT_TAB_B (30 | 64)  // Table 3-B.2b: high-rate, sblimit = 30
+#define PLM_AUDIO_QUANT_TAB_C 8       // Table 3-B.2c:  low-rate, sblimit =  8
+#define PLM_AUDIO_QUANT_TAB_D 12        // Table 3-B.2d:  low-rate, sblimit = 12
 
 static const uint8_t QUANT_LUT_STEP_2[3][3] = {
 	//44.1 kHz,              48 kHz,                32 kHz
@@ -2907,7 +2907,7 @@ typedef struct plm_audio_t {
 	int v_pos;
 	int next_frame_data_size;
 	int has_header;
-	
+
 	plm_buffer_t *buffer;
 	int destroy_buffer_when_done;
 
@@ -2926,7 +2926,7 @@ int plm_audio_find_frame_sync(plm_audio_t *self);
 int plm_audio_decode_header(plm_audio_t *self);
 void plm_audio_decode_frame(plm_audio_t *self);
 const plm_quantizer_spec_t *plm_audio_read_allocation(plm_audio_t *self, int sb, int tab3);
-void plm_audio_read_samples(plm_audio_t *self, int ch, int sb, int part); 
+void plm_audio_read_samples(plm_audio_t *self, int ch, int sb, int part);
 void plm_audio_idct36(int s[32][3], int ss, float *d, int dp);
 
 plm_audio_t *plm_audio_create_with_buffer(plm_buffer_t *buffer, int destroy_when_done) {
@@ -2958,7 +2958,7 @@ int plm_audio_has_header(plm_audio_t *self) {
 	if (self->has_header) {
 		return TRUE;
 	}
-	
+
 	self->next_frame_data_size = plm_audio_decode_header(self);
 	return self->has_header;
 }
@@ -2974,7 +2974,7 @@ double plm_audio_get_time(plm_audio_t *self) {
 }
 
 void plm_audio_set_time(plm_audio_t *self, double time) {
-	self->samples_decoded = time * 
+	self->samples_decoded = time *
 		(double)PLM_AUDIO_SAMPLE_RATE[self->samplerate_index];
 	self->time = time;
 }
@@ -3008,13 +3008,13 @@ plm_samples_t *plm_audio_decode(plm_audio_t *self) {
 
 	plm_audio_decode_frame(self);
 	self->next_frame_data_size = 0;
-	
+
 	self->samples.time = self->time;
 
 	self->samples_decoded += PLM_AUDIO_SAMPLES_PER_FRAME;
-	self->time = (double)self->samples_decoded / 
+	self->time = (double)self->samples_decoded /
 		(double)PLM_AUDIO_SAMPLE_RATE[self->samplerate_index];
-	
+
 	return &self->samples;
 }
 
@@ -3042,10 +3042,10 @@ int plm_audio_decode_header(plm_audio_t *self) {
 	int sync = plm_buffer_read(self->buffer, 11);
 
 
-	// Attempt to resync if no syncword was found. This sucks balls. The MP2 
+	// Attempt to resync if no syncword was found. This sucks balls. The MP2
 	// stream contains a syncword just before every frame (11 bits set to 1).
 	// However, this syncword is not guaranteed to not occur elsewhere in the
-	// stream. So, if we have to resync, we also have to check if the header 
+	// stream. So, if we have to resync, we also have to check if the header
 	// (samplerate, bitrate) differs from the one we had before. This all
 	// may still lead to garbage data being decoded :/
 
@@ -3122,7 +3122,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 	// Prepare the quantizer table lookups
 	int tab3 = 0;
 	int sblimit = 0;
-	
+
 	int tab1 = (self->mode == PLM_AUDIO_MODE_MONO) ? 0 : 1;
 	int tab2 = PLM_AUDIO_QUANT_LUT_STEP_1[tab1][self->bitrate_index];
 	tab3 = QUANT_LUT_STEP_2[tab2][self->samplerate_index];
@@ -3170,18 +3170,18 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						sf[2] = plm_buffer_read(self->buffer, 6);
 						break;
 					case 1:
-						sf[0] = 
+						sf[0] =
 						sf[1] = plm_buffer_read(self->buffer, 6);
 						sf[2] = plm_buffer_read(self->buffer, 6);
 						break;
 					case 2:
-						sf[0] = 
-						sf[1] = 
+						sf[0] =
+						sf[1] =
 						sf[2] = plm_buffer_read(self->buffer, 6);
 						break;
 					case 3:
 						sf[0] = plm_buffer_read(self->buffer, 6);
-						sf[1] = 
+						sf[1] =
 						sf[2] = plm_buffer_read(self->buffer, 6);
 						break;
 				}
@@ -3262,7 +3262,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						}
 					#else
 						for (int j = 0; j < 32; j++) {
-							self->samples.interleaved[((out_pos + j) << 1) + ch] = 
+							self->samples.interleaved[((out_pos + j) << 1) + ch] =
 								self->U[j] / 2147418112.0f;
 						}
 					#endif

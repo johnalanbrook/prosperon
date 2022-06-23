@@ -1,5 +1,5 @@
-#procs != nproc
-#MAKEFLAGS = --jobs=$(procs)
+procs != nproc
+MAKEFLAGS = --jobs=$(procs)
 
 UNAME != uname
 
@@ -75,10 +75,14 @@ edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdpart
 includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
 COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
-#COMPILER_FLAGS specifies the additional compilation options we're using
+
+
 WARNING_FLAGS = -Wno-everything#-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
-#COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
-COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c $< -o $@
+
+
+
+COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -MD -c $< -o $@
+#-D_POSIX_C_SOURCE=1993809L
 
 LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc
 
@@ -89,8 +93,8 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -fPIC -rdynamic
-	ELIBS = m c engine editor glfw3
+	LINKER_FLAGS = -fuse-ld=lld  #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
+	ELIBS = m c engine editor glfw3 tcc1
 	CLIBS =
 	EXT =
 endif
@@ -117,22 +121,22 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
 engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	@$(CC) $^ $(LINK)
+	@$(CC) $@ $(LINK)
 	@echo Finished build
 
 editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
-	$(CC) $^ $(LINK)
+	@$(CC) $^ $(LINK)
 	@echo Finished build
 
 $(ENGINE): $(eobjects) bin/libglfw3.a
 	@echo Making library engine.a
-	@ar -r $(ENGINE) $^
+	@ar r $(ENGINE) $(eobjects)
 	@cp -u -r $(ehead) $(INCLUDE)
 
 $(EDITOR): $(edobjects)
 	@echo Making editor library
-	@ar -r $(EDITOR) $^
+	@ar r $(EDITOR) $^
 	@cp -u -r $(edhead) $(INCLUDE)
 
 xbrainstorm: $(bsobjects) $(ENGINE) $(EDITOR)
@@ -147,8 +151,8 @@ pinball: $(ENGINE) $(pinobjects)
 
 bin/libglfw3.a:
 	@echo Making GLFW
-	make glfw/build
-	cp glfw/build/src/libglfw3.a bin/libglfw3.a
+	@make glfw/build
+	@cp glfw/build/src/libglfw3.a bin/libglfw3.a
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
