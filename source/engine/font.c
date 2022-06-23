@@ -8,8 +8,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-
-
 #include <stb_truetype.h>
 
 static uint32_t VBO = 0;
@@ -34,17 +32,23 @@ struct sFont *MakeFont(const char *fontfile, int height)
     snprintf(fontpath, 256, "fonts/%s", fontfile);
 
     stbtt_fontinfo fontinfo = { 0 };
-    int ascent = 0;
+    int ascent, descent, linegap;
 
-    fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
+     fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
 
-    stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
+    if (!stbtt_InitFont(&fontinfo, ttf_buffer, 0)) {
+        printf("failed\n");
+    }
 
-    stbtt_GetFontVMetrics(&fontinfo, &ascent, 0, 0);
+    float scale = stbtt_ScaleForPixelHeight(&fontinfo, 64);
+
+    stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
+    ascent = roundf(ascent*scale);
+    descent=roundf(descent*scale);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    for (unsigned char c = 0; c < 128; c++) {
+    for (unsigned char c = 32; c < 128; c++) {
 	unsigned char *bitmap;
 	int advance, lsb, w, h;
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
