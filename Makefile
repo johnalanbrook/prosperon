@@ -10,7 +10,9 @@ endif
 UNAME_P != uname -m
 
 #CC specifies which compiler we're using
-CC = musl-clang -std=c99
+CC = tcc -std=c99
+
+MUSL = /usr/local/musl/include
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -78,7 +80,7 @@ WARNING_FLAGS = #-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused
 #COMPILER_FLAGS = $(includeflag) -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c -MMD -MP $< -o $@
 COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -DGLEW_STATIC -D_GLFW_X11 -D_POSIX_C_SOURCE=1993809L -c $< -o $@
 
-LIBPATH = -L./bin
+LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc
 
 ifeq ($(UNAME), Windows_NT)
 	LINKER_FLAGS = -static -DSDL_MAIN_HANDLED
@@ -87,17 +89,17 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS =
-	ELIBS = editor engine glfw3 m pthread
+	LINKER_FLAGS = -fPIC -rdynamic
+	ELIBS = editor engine glfw3 m c tcc tcc1
 	CLIBS =
 	EXT =
 endif
 
 ELIBS != $(call prefix, $(ELIBS), -l)
-CLIBS != $(call prefix, $(CLIBS), -l)
+#CLIBS != $(call prefix, $(CLIBS), -l)
 
 #LELIBS = -Wl,-Bstatic $(ELIBS)# -Wl,-Bdynamic $(CLIBS)
-LELIBS = $(ELIBS) #$(CLIBS)
+LELIBS = $(ELIBS) $(CLIBS)
 
 objects = $(bsobjects) $(eobjects) $(pinobjects)
 DEPENDS = $(objects:.o=.d)

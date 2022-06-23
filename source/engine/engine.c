@@ -40,11 +40,12 @@ void error_callback(int error, const char *description)
 
 void engine_init()
 {
+    glfwSetErrorCallback(error_callback);
     /* Initialize GLFW */
     if (!glfwInit()) {
         printf("Could not init GLFW\n");
     }
-    glfwSetErrorCallback(error_callback);
+
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
