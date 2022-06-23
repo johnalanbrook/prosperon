@@ -156,11 +156,11 @@ void window_togglefullscreen(struct mSDLWindow *w)
 
 void window_makecurrent(struct mSDLWindow *w)
 {
-/*
-    if (w->window != SDL_GL_GetCurrentWindow())
-	SDL_GL_MakeCurrent(w->window, w->glContext);
+
+    if (w->window != glfwGetCurrentContext())
+	glfwMakeContextCurrent(w->window);
     glViewport(0, 0, w->width, w->height);
-*/
+
 }
 
 void window_swap(struct mSDLWindow *w)
@@ -170,11 +170,13 @@ void window_swap(struct mSDLWindow *w)
 
 void window_seticon(struct mSDLWindow *w, struct Texture *icon)
 {
-/*
-    GLFWimage images[1];
-    images[0] = load_icon(icon->path);
+
+    static GLFWimage images[1];
+    images[0].width = icon->width;
+    images[0].height = icon->height;
+    images[0].pixels = icon->data;
     glfwSetWindowIcon(w->window, 1, images);
-*/
+
 }
 
 int window_hasfocus(struct mSDLWindow *w)
@@ -194,3 +196,10 @@ double elapsed_time()
     elapsed = frame_time() - last_time;
     return elapsed;
 }
+
+int elapsed_time_ms()
+{
+    return elapsed_time() * 1000;
+}
+
+

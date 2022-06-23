@@ -40,5 +40,6 @@ int window_hasfocus(struct mSDLWindow *w);
 
 double frame_time();
 double elapsed_time();
+int elapsed_time_ms();
 
 #endif
