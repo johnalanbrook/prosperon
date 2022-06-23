@@ -10,7 +10,7 @@ endif
 UNAME_P != uname -m
 
 #CC specifies which compiler we're using
-CC = clang -std=c99
+CC = musl-clang -std=c99
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -88,16 +88,16 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS =
-	ELIBS = editor engine
-	CLIBS = glfw SDL2 SDL2_mixer m
+	ELIBS = editor engine glfw3 m pthread
+	CLIBS =
 	EXT =
 endif
 
 ELIBS != $(call prefix, $(ELIBS), -l)
 CLIBS != $(call prefix, $(CLIBS), -l)
 
-#LELIBS = -Wl,-Bstatic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
-LELIBS = $(ELIBS) $(CLIBS)
+#LELIBS = -Wl,-Bstatic $(ELIBS)# -Wl,-Bdynamic $(CLIBS)
+LELIBS = $(ELIBS) #$(CLIBS)
 
 objects = $(bsobjects) $(eobjects) $(pinobjects)
 DEPENDS = $(objects:.o=.d)
@@ -123,7 +123,7 @@ editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	$(CC) $< $(LINK)
 	@echo Finished build
 
-$(ENGINE): $(eobjects)
+$(ENGINE): $(eobjects) bin/libglfw3.a
 	@echo Making library engine.a
 	@ar -r $(ENGINE) $(eobjects)
 	@cp -u -r $(ehead) $(INCLUDE)
@@ -142,6 +142,11 @@ pinball: $(ENGINE) $(pinobjects)
 	@echo Making pinball
 	@$(CC) $(pinobjects) $(LINK) -o $@
 	@mv pinball paladin/pinball
+
+bin/libglfw3.a:
+	@echo Making GLFW
+	make glfw/build
+	cp glfw/build/src/libglfw3.a bin/libglfw3.a
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)

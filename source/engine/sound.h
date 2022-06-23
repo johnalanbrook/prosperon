@@ -1,15 +1,23 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include <SDL2/SDL_mixer.h>
+#include <miniaudio.h>
+
+struct Mix_Chunk {
+    int i;
+};
+
+struct Mix_Music {
+    int i;
+};
 
 struct sound {
-    Mix_Chunk *sound;
+    struct Mix_Chunk *sound;
     unsigned char volume;
 };
 
 struct music {
-    Mix_Music *music;
+    struct Mix_Music *music;
     unsigned char volume;
 };
 
