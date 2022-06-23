@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
 #include <stb_truetype.h>
 
 static uint32_t VBO = 0;
@@ -30,50 +32,53 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
     char fontpath[256];
     snprintf(fontpath, 256, "fonts/%s", fontfile);
-
-    stbtt_fontinfo fontinfo = { 0 };
-    int ascent, descent, linegap;
-
      fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
 
-    if (!stbtt_InitFont(&fontinfo, ttf_buffer, 0)) {
+
+    stbtt_fontinfo fontinfo = { 0 };
+    if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
         printf("failed\n");
     }
 
+    int tw,th;
+
+    unsigned char *testbitmap = stbtt_GetCodepointBitmap(&fontinfo, 0, stbtt_ScaleForPixelHeight(&fontinfo, 40), 'a', &tw, &th, 0,0);
+
+    for (int i = 0; i < th; ++i) {
+        for (int j = 0; j<tw; ++j)
+            putchar(" .:ioVM@"[testbitmap[i*tw+j]>>5]);
+        putchar('\n');
+    }
+
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, 64);
+
+    int ascent, descent, linegap;
 
     stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
     ascent = roundf(ascent*scale);
     descent=roundf(descent*scale);
 
+
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
 
     for (unsigned char c = 32; c < 128; c++) {
 	unsigned char *bitmap;
 	int advance, lsb, w, h;
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
-	bitmap =
-	    stbtt_GetCodepointBitmap(&fontinfo, 0,
-				     stbtt_ScaleForPixelHeight(&fontinfo,
-							       newfont->
-							       height), c,
-				     &w, &h, 0, 0);
+	bitmap = stbtt_GetCodepointBitmap(&fontinfo, 0,
+				     stbtt_ScaleForPixelHeight(&fontinfo, newfont->height), c, &w, &h, 0, 0);
 
 	GLuint ftexture;
 	glGenTextures(1, &ftexture);
 	glBindTexture(GL_TEXTURE_2D, ftexture);
-	glTexImage2D(GL_TEXTURE_2D,
-		     0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
 
 	//glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-			GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-			GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-			GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
 	newfont->Characters[c].TextureID = ftexture;
 	newfont->Characters[c].Advance = advance;
@@ -96,6 +101,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
 
     return newfont;
 }
