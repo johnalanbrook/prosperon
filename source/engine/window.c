@@ -10,16 +10,24 @@
 
 struct mSDLWindow *mainwin;
 
-static struct mSDLWindow *windows[5];
+static struct mSDLWindow windows[5];
 static int numWindows = 0;
 
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 				 uint32_t flags)
 {
-    struct mSDLWindow *w = calloc(1, sizeof(struct mSDLWindow));
+    if (numWindows >= 5) {
+        YughError("Already max number of windows.", 5);
+    }
+
+    struct mSDLWindow *w = &windows[numWindows++];
     w->width = width;
     w->height = height;
-    w->window = glfwCreateWindow(width, height, name, NULL, NULL);
+
+    if (numWindows > 0)
+        w->window = glfwCreateWindow(width, height, name, NULL, windows[0].window);
+    else
+        w->window = glfwCreateWindow(width, height, name, NULL, NULL);
 
     if (!w->window) {
         printf("Couldn't make GLFW window\n");
@@ -29,15 +37,11 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 
 	glfwSwapInterval(1);
 
-	w->id = numWindows;
-
-
-	if (numWindows < 5)
-	    windows[numWindows++] = w;
+	w->id = numWindows-1;
 
     }
 
-    mainwin = windows[0];
+    mainwin = &windows[0];
     return w;
 }
 
@@ -132,7 +136,7 @@ void window_handle_event(struct mSDLWindow *w)
 void window_all_handle_events()
 {
     for (int i = 0; i < numWindows; i++) {
-        window_handle_event(windows[i]);
+        window_handle_event(&windows[i]);
     }
 }
 
