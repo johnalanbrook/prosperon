@@ -42,7 +42,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
     int tw,th;
 
-    unsigned char *testbitmap = stbtt_GetCodepointBitmap(&fontinfo, 0, stbtt_ScaleForPixelHeight(&fontinfo, 40), 'a', &tw, &th, 0,0);
+    unsigned char *testbitmap = stbtt_GetCodepointBitmap(&fontinfo, 0, stbtt_ScaleForPixelHeight(&fontinfo, 100), 'G', &tw, &th, 0,0);
 
     for (int i = 0; i < th; ++i) {
         for (int j = 0; j<tw; ++j)

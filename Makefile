@@ -9,8 +9,10 @@ endif
 
 UNAME_P != uname -m
 
+CCACHE = ccache
+
 #CC specifies which compiler we're using
-CC = clang
+CC = $(CCACHE) clang
 
 MUSL = /usr/local/musl/include
 
@@ -94,7 +96,7 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS = -fuse-ld=lld  #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
-	ELIBS = m c engine editor glfw3 tcc1
+	ELIBS = m c engine editor glfw3
 	CLIBS =
 	EXT =
 endif
