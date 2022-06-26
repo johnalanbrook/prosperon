@@ -102,12 +102,13 @@ void openglInit()
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
     animSpriteShader =
 	MakeShader("animspritevert.glsl", "animspritefrag.glsl");
+    textShader = MakeShader("textvert.glsl", "textfrag.glsl");
 
     debugdraw_init();
 
-    //stdFont = MakeFont("notosans.ttf", 300);
+    stdFont = MakeFont("notosans.ttf", 300);
 
-    //text_settype(stdFont);
+    text_settype(stdFont);
 
     //glEnable(GL_STENCIL_TEST);
     glClearColor(editorClearColor[0], editorClearColor[1],
@@ -130,7 +131,7 @@ void openglInit()
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     shader_setUBO(spriteShader, "Projection", 0);
-   /* shader_setUBO(textShader, "Projection", 0);*/
+    shader_setUBO(textShader, "Projection", 0);
     shader_setUBO(animSpriteShader, "Projection", 0);
 
 
@@ -147,28 +148,28 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
-    /*
+
        glEnable(GL_CULL_FACE);
        glEnable(GL_DEPTH_TEST);
        glCullFace(GL_BACK);
-     */
+
     // Clear color and depth
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
 	    GL_STENCIL_BUFFER_BIT);
 
     ////// TEXT && GUI
-    /*
+
        glDepthFunc(GL_ALWAYS);
-       shader_use(textShader);
-       shader_setmat4(textShader, "projection", window->projection);
+       //shader_use(textShader);
+       //shader_setmat4(textShader, "projection", window->projection);
 
-     */
 
-    /*
-       mfloat_t fontpos[2] = { 25.f, 25.f };
-       mfloat_t fontcolor[3] = { 0.5f, 0.8f, 0.2f };
-       renderText(stdFont, textShader, "Sample text", fontpos, 0.4f, fontcolor, -1.f);
-     */
+
+
+       //mfloat_t fontpos[2] = { 25.f, 25.f };
+       //mfloat_t fontcolor[3] = { 0.5f, 0.8f, 0.2f };
+       //renderText("Sample text", fontpos, 0.4f, fontcolor, -1.f);
+
 
 /*
     for (int i = 0; i < numSprites; i++) {

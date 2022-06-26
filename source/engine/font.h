@@ -19,7 +19,10 @@ struct sFont {
     struct Character Characters[127];
 };
 
+struct mSDLWindow;
+
 void font_init();
+void font_frame(struct mSDLWindow *w);
 struct sFont *MakeFont(const char *fontfile, int height);
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
 		    struct mShader *shader, float color[3]);

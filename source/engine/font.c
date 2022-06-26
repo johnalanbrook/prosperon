@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <window.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_STATIC
@@ -23,6 +24,11 @@ static struct mShader *shader;
 
 void font_init() {
     shader = MakeShader("textvert.glsl", "textfrag.glsl");
+}
+
+void font_frame(struct mSDLWindow *w) {
+    shader_use(shader);
+    shader_setmat4(shader, "projection", w->projection);
 }
 
 struct sFont *MakeFont(const char *fontfile, int height)
@@ -68,6 +74,13 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
 	bitmap = stbtt_GetCodepointBitmap(&fontinfo, 0,
 				     stbtt_ScaleForPixelHeight(&fontinfo, newfont->height), c, &w, &h, 0, 0);
+
+
+for (int i = 0; i < h; ++i) {
+        for (int j = 0; j<w; ++j)
+            putchar(" .:ioVM@"[bitmap[i*w+j]>>5]);
+        putchar('\n');
+        }
 
 	GLuint ftexture;
 	glGenTextures(1, &ftexture);
@@ -180,7 +193,7 @@ void text_settype(struct sFont *mfont)
 
 void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
 {
-    shader_use(shader);
+    //shader_use(shader);
     shader_setvec3(shader, "textColor", color);
 
     mfloat_t cursor[2] = { 0.f };
