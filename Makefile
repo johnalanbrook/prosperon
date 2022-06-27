@@ -12,7 +12,7 @@ UNAME_P != uname -m
 CCACHE = ccache
 
 #CC specifies which compiler we're using
-CC = $(CCACHE) clang
+CC = $(CCACHE) tcc
 
 MUSL = /usr/local/musl/include
 
@@ -95,7 +95,7 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -fuse-ld=lld  #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
+	LINKER_FLAGS = -g #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
 	ELIBS = m c engine editor glfw3
 	CLIBS =
 	EXT =

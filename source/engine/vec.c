@@ -3,6 +3,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+struct vec vec_init(size_t width, int size)
+{
+    struct vec v;
+    v.size = size;
+    v.width = width;
+    v.len = 0;
+    v.data = calloc(v.size, v.width);
+    return v;
+}
+
 struct vec *vec_make(size_t width, int size)
 {
     struct vec *new = calloc(1, sizeof(struct vec));

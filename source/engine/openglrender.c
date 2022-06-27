@@ -94,6 +94,11 @@ static unsigned int projUBO;
 
 void openglInit()
 {
+    if (!mainwin) {
+        YughError("No window to init OpenGL on.", 1);
+        abort();
+    }
+
     sprite_initialize();
 
     ////// MAKE SHADERS

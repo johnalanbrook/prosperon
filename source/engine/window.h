@@ -28,6 +28,7 @@ extern struct mSDLWindow *mainwin;
 
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 				 uint32_t flags);
+void window_set_icon(const char *png);
 void window_destroy(struct mSDLWindow *w);
 void window_handle_event(struct mSDLWindow *w);
 void window_all_handle_events();

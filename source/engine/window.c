@@ -8,42 +8,60 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-struct mSDLWindow *mainwin;
+#include <vec.h>
 
-static struct mSDLWindow *windows[5];
-static int numWindows = 0;
+static struct mSDLWindow *mainwin;
+
+static struct vec windows;
+struct Texture *icon = NULL;
 
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
 				 uint32_t flags)
 {
-    struct mSDLWindow *w = calloc(1, sizeof(struct mSDLWindow));
-    w->width = width;
-    w->height = height;
-    w->window = glfwCreateWindow(width, height, name, NULL, NULL);
+     struct mSDLWindow *w;
 
-    if (!w->window) {
-        printf("Couldn't make GLFW window\n");
+    if (windows.data == NULL) {
+        windows = vec_init(sizeof(struct mSDLWindow), 5);
+        w = vec_add(&windows, NULL);
+        mainwin = w;
     } else {
-        glfwMakeContextCurrent(w->window);
-        gladLoadGL(glfwGetProcAddress);
-
-	glfwSwapInterval(1);
-
-	w->id = numWindows;
-
-
-	if (numWindows < 5)
-	    windows[numWindows++] = w;
-
+        w = vec_add(&windows, NULL);
     }
 
-    mainwin = windows[0];
+    GLFWwindow *sharewin = mainwin ? NULL : mainwin->window;
+
+    w->width = width;
+    w->height = height;
+    printf("NUmber of windows: %d.\n", windows.len);
+    w->id = windows.len-1;
+
+    w->window = glfwCreateWindow(width, height, name, NULL, sharewin);
+
+    if (!w->window) {
+        YughError("Couldn't make GLFW window\n", 1);
+        return w;
+    }
+
+    if (icon) window_seticon(w, icon);
+
+    glfwMakeContextCurrent(w->window);
+    gladLoadGL(glfwGetProcAddress);
+    glfwSwapInterval(1);
+
+
+
     return w;
+}
+
+void window_set_icon(const char *png)
+{
+    icon = texture_pullfromfile(png);
 }
 
 void window_destroy(struct mSDLWindow *w)
 {
     glfwDestroyWindow(w->window);
+    vec_delete(&windows, w->id);
 }
 
 void window_handle_event(struct mSDLWindow *w)
@@ -131,9 +149,7 @@ void window_handle_event(struct mSDLWindow *w)
 
 void window_all_handle_events()
 {
-    for (int i = 0; i < numWindows; i++) {
-        window_handle_event(windows[i]);
-    }
+    vec_walk(&windows, window_handle_event);
 }
 
 void window_makefullscreen(struct mSDLWindow *w)

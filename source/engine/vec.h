@@ -4,12 +4,13 @@
 #include <stdio.h>
 
 struct vec {
-    int len;
-    int size;
-    size_t width;
+    int len; // How many elements are in the vec
+    int size; // The capacity of the vec
+    size_t width; // The size in bytes of an element of the vector
     void *data;
 };
 
+struct vec vec_init(size_t width, int size);
 struct vec *vec_make(size_t width, int size);
 void *vec_get(struct vec *vec, int n);
 void vec_walk(struct vec *vec, void (*fn)(void *data));

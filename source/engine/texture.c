@@ -41,7 +41,7 @@ struct Texture *texture_pullfromfile(const char *path)
 
     shput(texhash, tex->path, tex);
 
-    glGenTextures(1, &tex->id);
+    //glGenTextures(1, &tex->id);
 
     return tex;
 }

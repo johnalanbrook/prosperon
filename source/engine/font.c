@@ -46,16 +46,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
         printf("failed\n");
     }
 
-    int tw,th;
-
-    unsigned char *testbitmap = stbtt_GetCodepointBitmap(&fontinfo, 0, stbtt_ScaleForPixelHeight(&fontinfo, 100), 'G', &tw, &th, 0,0);
-
-    for (int i = 0; i < th; ++i) {
-        for (int j = 0; j<tw; ++j)
-            putchar(" .:ioVM@"[testbitmap[i*tw+j]>>5]);
-        putchar('\n');
-    }
-
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, 64);
 
     int ascent, descent, linegap;
@@ -74,13 +64,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
 	bitmap = stbtt_GetCodepointBitmap(&fontinfo, 0,
 				     stbtt_ScaleForPixelHeight(&fontinfo, newfont->height), c, &w, &h, 0, 0);
-
-
-for (int i = 0; i < h; ++i) {
-        for (int j = 0; j<w; ++j)
-            putchar(" .:ioVM@"[bitmap[i*w+j]>>5]);
-        putchar('\n');
-        }
 
 	GLuint ftexture;
 	glGenTextures(1, &ftexture);
