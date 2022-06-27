@@ -15,7 +15,7 @@ struct datastream {
     uint32_t texture_cr;
 };
 
-struct datastream *MakeDatastream(struct mShader *shader);
+struct datastream *MakeDatastream();
 void ds_openvideo(struct datastream *ds, const char *path,
 		  const char *adriver);
 void ds_advance(struct datastream *ds, uint32_t ms);

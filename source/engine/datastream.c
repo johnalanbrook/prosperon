@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include "log.h"
 
+struct mShader *vid_shader;
+
 static void ds_update_texture(uint32_t unit, uint32_t texture,
 			      plm_plane_t * plane)
 {
@@ -63,11 +65,12 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     ds->playing = true;
 }
 
-struct datastream *MakeDatastream(struct mShader *shader)
+struct datastream *MakeDatastream()
 {
-    struct datastream *newds =
-	(struct datastream *) malloc(sizeof(struct datastream));
-    newds->shader = shader;
+    struct datastream *newds = malloc(sizeof(*newds));
+    if (!vid_shader) vid_shader = MakeShader("videovert.glsl", "videofrag.glsl");
+
+    newds->shader = vid_shader;
     shader_use(newds->shader);
     glGenTextures(1, &newds->texture_y);
     glBindTexture(GL_TEXTURE_2D, newds->texture_y);
