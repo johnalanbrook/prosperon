@@ -1,9 +1,6 @@
-
-
-
 #include "sound.h"
 #include "resources.h"
-
+#include <stdlib.h>
 
 ma_engine engine;
 

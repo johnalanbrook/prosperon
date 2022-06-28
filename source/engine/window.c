@@ -1,13 +1,9 @@
 #include "window.h"
-
-
-
 #include <string.h>
 #include "texture.h"
 #include "log.h"
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <vec.h>
 
 static struct mSDLWindow *mainwin;

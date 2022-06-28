@@ -88,6 +88,8 @@ COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -MD
 
 LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc
 
+ALLFILES != find source/ -name '*.[ch]' -type f
+
 ifeq ($(UNAME), Windows_NT)
 	LINKER_FLAGS = -static -DSDL_MAIN_HANDLED
 	ELIBS = engine editor mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
@@ -160,6 +162,10 @@ $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
 	-@$(CC) $(COMPILER_FLAGS)
+
+tags: $(ALLFILES)
+	@echo Making tags
+	@ctags -x -R source > tags
 
 clean:
 	@echo Cleaning project
