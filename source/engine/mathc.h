@@ -25,6 +25,7 @@ extern "C" {
 #ifndef MATHC_H
 #define MATHC_H
 
+#include <stdint.h>
 
 
 // CONFIG

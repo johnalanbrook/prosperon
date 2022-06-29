@@ -83,7 +83,7 @@ struct mSkybox *MakeSkybox(const char *cubemap)
     glBindTexture(GL_TEXTURE_CUBE_MAP, newskybox->id);
     /*char buf[100] = { '\0' };*/
 
-    for (unsigned int i = 0; i < 6; i++) {
+    for (int i = 0; i < 6; i++) {
     /*
 	buf[0] = '\0';
 	strcat(buf, cubemap);

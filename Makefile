@@ -9,7 +9,7 @@ endif
 
 UNAME_P != uname -m
 
-CCACHE = ccache
+CCACHE = #ccache
 
 #CC specifies which compiler we're using
 CC = $(CCACHE) tcc
@@ -83,8 +83,7 @@ WARNING_FLAGS = -Wno-everything#-Wall -Wextra -Wwrite-strings -Wno-unused-parame
 
 
 
-COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 $(WARNING_FLAGS) -MD -c $< -o $@
-#-D_POSIX_C_SOURCE=1993809L
+COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 -MD $(WARNING_FLAGS) -c $< -o $@
 
 LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc
 
@@ -104,9 +103,7 @@ else
 endif
 
 ELIBS != $(call prefix, $(ELIBS), -l)
-#CLIBS != $(call prefix, $(CLIBS), -l)
 
-#LELIBS = -Wl,-Bstatic $(ELIBS)# -Wl,-Bdynamic $(CLIBS)
 LELIBS = $(ELIBS) $(CLIBS)
 
 objects = $(bsobjects) $(eobjects) $(pinobjects)

@@ -59,7 +59,7 @@ void draw_model(struct mModel *model, struct mShader *shader)
 {
     if (lastRendered != model) {
 	lastRendered = model;
-	for (uint32_t i = 0; i < (model->mp - model->meshes); i++)
+	for (int i = 0; i < (model->mp - model->meshes); i++)
 	    DrawMesh(&model->meshes[i], shader);
     } else {
 	for (uint32_t i = 0; i < (model->mp - model->meshes); i++)

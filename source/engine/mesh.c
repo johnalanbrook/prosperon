@@ -15,7 +15,7 @@ void DrawMesh(struct mMesh *mesh, struct mShader *shader)
     uint32_t normalNr = 1;
     uint32_t heightNr = 1;
 
-    for (uint32_t i = 0; i < (mesh->te - mesh->textures); i++) {
+    for (int i = 0; i < (mesh->te - mesh->textures); i++) {
 	glActiveTexture(GL_TEXTURE0 + i);	// active proper texture unit before binding
 	// retrieve texture number (the N in diffuse_textureN)
 	char number = 0;
