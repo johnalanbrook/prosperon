@@ -105,11 +105,14 @@ void openglInit()
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
 
+    shader_use(textShader);
+    shader_setint(textShader, "text", 0);
+
 
 
     font_init(textShader);
     sprite_initialize();
-    debugdraw_init();
+    //debugdraw_init();
 
 
 
@@ -118,12 +121,14 @@ void openglInit()
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glLineWidth(1.3f);
-/*
-    glEnable(GL_TEXTURE_3D);
-    glEnable(GL_MULTISAMPLE);
-    glLineWidth(2);
-    */
+
+    //glDisable(GL_DEPTH_TEST);
+    //glLineWidth(1.3f);
+
+    //glEnable(GL_TEXTURE_3D);
+    //glEnable(GL_MULTISAMPLE);
+    //glLineWidth(2);
+
 
     glGenBuffers(1, &projUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
@@ -150,40 +155,41 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
 
+	    glColorMask(true, true, true, true);
 
 
-   glEnable(GL_CULL_FACE);
+   //glEnable(GL_CULL_FACE);
    glEnable(GL_DEPTH_TEST);
-   glCullFace(GL_BACK);
+   //glCullFace(GL_BACK);
 
     // Clear color and depth
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     ////// TEXT && GUI
 
-       glDepthFunc(GL_ALWAYS);
+      // glDepthFunc(GL_ALWAYS);
        shader_use(textShader);
-       //shader_setmat4(textShader, "projection", window->projection);
+       shader_setmat4(textShader, "projection", projection);
 
 
 
 
        mfloat_t fontpos[2] = { 25.f, 25.f };
       mfloat_t fontcolor[3] = { 0.5f, 0.8f, 0.2f };
-       renderText("Sample text", fontpos, 4.f, fontcolor, -1.f);
+       renderText("Sample text", fontpos, 1.f, fontcolor, -1.f);
 
 
     ///// Sprites
 
     shader_use(spriteShader);
-    shader_setmat4(spriteShader, "projection", window->projection);
+    //shader_setmat4(spriteShader, "projection", window->projection);
     for (int i = 0; i < numSprites; i++) {
 	sprite_draw(sprites[i]);
     }
 
 
 
-    //glDepthFunc(GL_LESS);
+    glDepthFunc(GL_LESS);
 }
 
 

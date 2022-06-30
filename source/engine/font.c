@@ -22,64 +22,8 @@ static struct mShader *shader;
 
 void font_init(struct mShader *textshader) {
     shader = textshader;
-}
 
-void font_frame(struct mSDLWindow *w) {
     shader_use(shader);
-}
-
-struct sFont *MakeFont(const char *fontfile, int height)
-{
-    struct sFont *newfont = calloc(1, sizeof(struct sFont));
-    newfont->height = height;
-
-    char fontpath[256];
-    snprintf(fontpath, 256, "fonts/%s", fontfile);
-     fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
-
-
-    stbtt_fontinfo fontinfo = { 0 };
-    if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
-        printf("failed\n");
-    }
-
-    float scale = stbtt_ScaleForPixelHeight(&fontinfo, 64);
-
-    int ascent, descent, linegap;
-
-    stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
-    ascent = roundf(ascent*scale);
-    descent=roundf(descent*scale);
-
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-
-    for (unsigned char c = 32; c < 128; c++) {
-	unsigned char *bitmap;
-	int advance, lsb, w, h;
-	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
-	bitmap = stbtt_GetCodepointBitmap(&fontinfo, 0,
-				     stbtt_ScaleForPixelHeight(&fontinfo, newfont->height), c, &w, &h, 0, 0);
-
-	GLuint ftexture;
-	glGenTextures(1, &ftexture);
-	glBindTexture(GL_TEXTURE_2D, ftexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
-
-	//glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-	newfont->Characters[c].TextureID = ftexture;
-	newfont->Characters[c].Advance = advance;
-	newfont->Characters[c].Size[0] = w;
-	newfont->Characters[c].Size[1] = h;
-	newfont->Characters[c].Bearing[0] = lsb;
-	newfont->Characters[c].Bearing[1] = 0;
-    }
 
     // configure VAO/VBO for texture quads
     glGenVertexArrays(1, &VAO);
@@ -93,7 +37,67 @@ struct sFont *MakeFont(const char *fontfile, int height)
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
 
+void font_frame(struct mSDLWindow *w) {
+    shader_use(shader);
+}
+
+// Height in pixels
+struct sFont *MakeFont(const char *fontfile, int height)
+{
+    shader_use(shader);
+
+    struct sFont *newfont = calloc(1, sizeof(struct sFont));
+    newfont->height = height;
+
+    char fontpath[256];
+    snprintf(fontpath, 256, "fonts/%s", fontfile);
+     fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
+
+
+    stbtt_fontinfo fontinfo;
+    if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
+        printf("failed\n");
+    }
+
+    float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
+
+    int ascent, descent, linegap;
+
+    stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
+
+    ascent = roundf(ascent*scale);
+    descent = roundf(descent*scale);
+
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+
+    for (unsigned char c = 32; c < 128; c++) {
+	unsigned char *bitmap;
+	int advance, lsb, w, h, x0, y0;
+	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
+	bitmap = stbtt_GetCodepointBitmap(&fontinfo, scale, scale, c, &w, &h, &x0, &y0);
+
+	GLuint ftexture;
+	glGenTextures(1, &ftexture);
+	glBindTexture(GL_TEXTURE_2D, ftexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+
+	//glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+	newfont->Characters[c].TextureID = ftexture;
+	newfont->Characters[c].Advance = advance * scale;
+	newfont->Characters[c].Size[0] = w;
+	newfont->Characters[c].Size[1] = h;
+	newfont->Characters[c].Bearing[0] = x0;
+	newfont->Characters[c].Bearing[1] = y0;
+    }
 
     return newfont;
 }
@@ -157,7 +161,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     */
 
     //// Character pass
-    shader_setvec3(shader, "textColor", color);
+    //shader_setvec3(shader, "textColor", color);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
