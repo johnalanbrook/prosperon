@@ -5,14 +5,56 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vec.h>
+#include "input.h"
 
 static struct mSDLWindow *mainwin;
 
 static struct vec windows;
 struct Texture *icon = NULL;
 
-struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
-				 uint32_t flags)
+int is_win(struct mSDLWindow *s, GLFWwindow *w)
+{
+    return s->window == w;
+}
+
+void window_size_callback(GLFWwindow *w)
+{
+
+}
+
+void window_iconify_callback(GLFWwindow *w, int iconified)
+{
+    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    win->iconified = iconified;
+}
+
+void window_focus_callback(GLFWwindow *w, int focused)
+{
+    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    win->keyboardFocus = focused;
+}
+
+void window_maximize_callback(GLFWwindow *w, int maximized)
+{
+    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    win->minimized = !maximized;
+}
+
+void window_framebuffer_size_cb(GLFWwindow *w, int width, int height)
+{
+    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    win->width = width;
+    win->height = height;
+    window_makecurrent(win);
+    win->render = 1;
+}
+
+void window_close_callback(GLFWwindow *w)
+{
+    quit = 1;
+}
+
+struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32_t flags)
 {
      struct mSDLWindow *w;
 
@@ -44,7 +86,11 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height,
     gladLoadGL(glfwGetProcAddress);
     glfwSwapInterval(1);
 
-
+    // Set callbacks
+    glfwSetWindowCloseCallback(w->window, window_close_callback);
+    glfwSetWindowSizeCallback(w->window, window_size_callback);
+    glfwSetFramebufferSizeCallback(w->window, window_framebuffer_size_cb);
+    glfwSetWindowFocusCallback(w->window, window_focus_callback);
 
     return w;
 }
@@ -59,6 +105,8 @@ void window_destroy(struct mSDLWindow *w)
     glfwDestroyWindow(w->window);
     vec_delete(&windows, w->id);
 }
+
+
 
 void window_handle_event(struct mSDLWindow *w)
 {

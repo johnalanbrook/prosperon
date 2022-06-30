@@ -18,10 +18,10 @@ void vec_clear(struct vec *vec);
 void *vec_add(struct vec *vec, const void *data);
 
 /* sort returns 0 for a<=b, 1 for a>b */
-void *vec_add_sort(struct vec *vec, void *data,
-		   int (*sort)(void *a, void *b));
+void *vec_add_sort(struct vec *vec, void *data, int (*sort)(void *a, void *b));
 void *vec_insert(struct vec *vec, void *data, int n);
 void *vec_set(struct vec *vec, int n, void *data);
+void *vec_find(struct vec *v, int (*valid)(void *a, void *data), void *data);
 void vec_delete(struct vec *vec, int n);
 void vec_del_order(struct vec *vec, int n);
 void vec_store(struct vec *vec, FILE *f);

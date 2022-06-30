@@ -95,8 +95,7 @@ void sprite_initialize()
     glBindVertexArray(quadVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices,
-		 GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
 
 
     glEnableVertexAttribArray(0);
@@ -111,7 +110,7 @@ void sprite_draw(struct mSprite *sprite)
 {
     if (sprite->tex != NULL) {
 
-	shader_use(spriteShader);
+	//shader_use(spriteShader);
 
 
 	mfloat_t model[16] = { 0.f };
@@ -126,10 +125,8 @@ void sprite_draw(struct mSprite *sprite)
 	mfloat_t t_move[2] = { 0.f };
 	mfloat_t t_scale[2] = { 0.f };
 
-	t_scale[0] =
-	    sprite->size[0] * sprite->tex->width * sprite->go->scale;
-	t_scale[1] =
-	    sprite->size[1] * sprite->tex->height * sprite->go->scale;
+	t_scale[0] = sprite->size[0] * sprite->tex->width * sprite->go->scale;
+	t_scale[1] = sprite->size[1] * sprite->tex->height * sprite->go->scale;
 
 	t_move[0] = sprite->pos[0] * t_scale[0];
 	t_move[1] = sprite->pos[1] * t_scale[1];
@@ -184,8 +181,7 @@ sprite->size[1] * sprite->anim.dimensions[1] };
 }
 
 
-void video_draw(struct datastream *stream, mfloat_t position[2],
-		mfloat_t size[2], float rotate, mfloat_t color[3])
+void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2], float rotate, mfloat_t color[3])
 {
     shader_use(spriteShader);
 

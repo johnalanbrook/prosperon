@@ -158,7 +158,7 @@ bin/libglfw3.a:
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
-	-@$(CC) $(COMPILER_FLAGS)
+	@$(CC) $(COMPILER_FLAGS)
 
 tags: $(ALLFILES)
 	@echo Making tags

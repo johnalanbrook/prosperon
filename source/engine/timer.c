@@ -15,6 +15,14 @@ struct timer *timer_make(int interval, void *(*callback)(void *param), void *par
     return new;
 }
 
+void timer_pause(struct timer *t) {
+
+}
+
+void timer_start(struct timer *t) {
+
+}
+
 void timer_remove(struct timer *t) {
     free(t);
 }

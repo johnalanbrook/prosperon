@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <window.h>
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#define STBTT_STATIC
 #include <stb_truetype.h>
 
 static uint32_t VBO = 0;
@@ -22,13 +20,12 @@ unsigned char temp_bitmap[512 * 512];
 struct sFont *font;
 static struct mShader *shader;
 
-void font_init() {
-    shader = MakeShader("textvert.glsl", "textfrag.glsl");
+void font_init(struct mShader *textshader) {
+    shader = textshader;
 }
 
 void font_frame(struct mSDLWindow *w) {
     shader_use(shader);
-    shader_setmat4(shader, "projection", w->projection);
 }
 
 struct sFont *MakeFont(const char *fontfile, int height)
@@ -90,8 +87,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, NULL,
-		 GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
@@ -102,8 +98,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     return newfont;
 }
 
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
-		    struct mShader *shader, float color[3])
+void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct mShader *shader, float color[3])
 {
     float xpos = cursor[0] + c.Bearing[0] * scale;
     float ypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale;
@@ -118,6 +113,8 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
 	xpos + w, ypos, 1.f, 1.f
     };
 
+
+////// Outline calculation
     // float outlineWidth = 1.1;
 
     // float ow = c.Size[0] * scale * outlineWidth;
@@ -126,8 +123,6 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
     // float oxpos = cursor[0] + c.Bearing[0] * scale * outlineWidth - ((ow-w)/2);
     // float oypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale * outlineWidth - ((oh-h)/2);
 
-
-
     // float overts[4*4] = {
     //     oxpos, oypos + oh, 0.f, 0.f,
     //     oxpos, oypos, 0.f, 1.f,
@@ -135,12 +130,13 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
     //     oxpos + ow, oypos, 1.f, 1.f
     // };
 
+
+/////////// Shadow calculation
+/*
+
     float shadowOffset = 6.f;
-    float sxpos =
-	cursor[0] + c.Bearing[0] * scale + (scale * shadowOffset);
-    float sypos =
-	cursor[1] - (c.Size[1] - c.Bearing[1]) * scale -
-	(scale * shadowOffset);
+    float sxpos = cursor[0] + c.Bearing[0] * scale + (scale * shadowOffset);
+    float sypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale - (scale * shadowOffset);
 
     float sverts[4 * 4] = {
 	sxpos, sypos + h, 0.f, 0.f,
@@ -148,22 +144,20 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale,
 	sxpos + w, sypos + h, 1.f, 0.f,
 	sxpos + w, sypos, 1.f, 1.f
     };
-
+*/
 
     glBindTexture(GL_TEXTURE_2D, c.TextureID);
 
     //// Shadow pass
+    /*
     float black[3] = { 0, 0, 0 };
     shader_setvec3(shader, "textColor", black);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sverts), sverts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    */
 
-    //// Outline pass
-
-
-
+    //// Character pass
     shader_setvec3(shader, "textColor", color);
-
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 

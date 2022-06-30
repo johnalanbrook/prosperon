@@ -75,7 +75,7 @@ GLuint load_shader_from_file(const char *path, int type)
     const char *code = buf;
     glShaderSource(id, 1, &code, NULL);
     glCompileShader(id);
-    if ( shader_compile_error(id))
+    if (shader_compile_error(id))
         return 0;
 
     return id;
@@ -116,51 +116,39 @@ void shader_setfloat(struct mShader *shader, const char *name, float val)
     glUniform1f(glGetUniformLocation(shader->id, name), val);
 }
 
-void shader_setvec2(struct mShader *shader, const char *name,
-		    mfloat_t val[2])
+void shader_setvec2(struct mShader *shader, const char *name, mfloat_t val[2])
 {
     glUniform2fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setvec3(struct mShader *shader, const char *name,
-		    mfloat_t val[3])
+void shader_setvec3(struct mShader *shader, const char *name, mfloat_t val[3])
 {
     glUniform3fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setvec4(struct mShader *shader, const char *name,
-		    mfloat_t val[4])
+void shader_setvec4(struct mShader *shader, const char *name, mfloat_t val[4])
 {
     glUniform4fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setmat2(struct mShader *shader, const char *name,
-		    mfloat_t val[4])
+void shader_setmat2(struct mShader *shader, const char *name, mfloat_t val[4])
 {
-    glUniformMatrix2fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE,
-		       val);
+    glUniformMatrix2fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }
 
-void shader_setmat3(struct mShader *shader, const char *name,
-		    mfloat_t val[9])
+void shader_setmat3(struct mShader *shader, const char *name, mfloat_t val[9])
 {
-    glUniformMatrix3fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE,
-		       val);
+    glUniformMatrix3fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }
 
-void shader_setmat4(struct mShader *shader, const char *name,
-		    mfloat_t val[16])
+void shader_setmat4(struct mShader *shader, const char *name, mfloat_t val[16])
 {
-    shader_use(shader);
-    glUniformMatrix4fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE,
-		       val);
+    glUniformMatrix4fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }
 
-void shader_setUBO(struct mShader *shader, const char *name,
-		   unsigned int index)
+void shader_setUBO(struct mShader *shader, const char *name, unsigned int index)
 {
-    glUniformBlockBinding(shader->id,
-			  glGetUniformBlockIndex(shader->id, name), index);
+    glUniformBlockBinding(shader->id, glGetUniformBlockIndex(shader->id, name), index);
 }
 
 

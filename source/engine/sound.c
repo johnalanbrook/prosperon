@@ -1,6 +1,7 @@
 #include "sound.h"
 #include "resources.h"
 #include <stdlib.h>
+#include "log.h"
 
 ma_engine engine;
 
@@ -34,7 +35,8 @@ void sound_init()
 
     ma_result result = ma_engine_init(NULL, &engine);
     if (result != MA_SUCCESS) {
-        printf("UHOH!!!");
+        YughError("Miniaudio did not start properly.",1);
+        exit(1);
     }
 
     ma_sound_group_init(&engine, 0, NULL, &mus_grp);

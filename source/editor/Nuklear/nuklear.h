@@ -6078,6 +6078,7 @@ NK_LIB void nk_property(struct nk_context *ctx, const char *name, struct nk_prop
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
 
 /* Allow consumer to define own STBTT_malloc/STBTT_free, and use the font atlas' allocator otherwise */
 #ifndef STBTT_malloc

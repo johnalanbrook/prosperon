@@ -27,9 +27,7 @@ void *vec_get(struct vec *vec, int n)
     if (n < vec->len)
 	return (char *) vec->data + (n * vec->width);
 
-    YughLog(0, 4,
-	    "Attempted to access element %d of a vec with %d elements.", n,
-	    vec->len);
+    YughLog(0, 4,"Attempted to access element %d of a vec with %d elements.", n, vec->len);
     return NULL;
 }
 
@@ -71,8 +69,7 @@ void *vec_add(struct vec *vec, const void *data)
     return vec_get(vec, vec->len - 1);
 }
 
-void *vec_add_sort(struct vec *vec, void *data,
-		   int (*sort)(void *a, void *b))
+void *vec_add_sort(struct vec *vec, void *data, int (*sort)(void *a, void *b))
 {
     if(vec->size == vec->len)
 	vec_expand(vec);
@@ -82,6 +79,14 @@ void *vec_add_sort(struct vec *vec, void *data,
 	n--;
 
     return vec_insert(vec, data, n);
+}
+
+void *vec_find(struct vec *v, int (*valid)(void *a, void *data), void *data)
+{
+    for (int i = 0; i < v->len; i++) {
+        if (valid(vec_p(v, i), data))
+            return vec_p(v, i);
+    }
 }
 
 void *vec_insert(struct vec *vec, void *data, int n)
