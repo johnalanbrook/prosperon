@@ -41,14 +41,14 @@ struct Texture *texture_pullfromfile(const char *path)
 
     shput(texhash, tex->path, tex);
 
-    //glGenTextures(1, &tex->id);
-
     return tex;
 }
 
 struct Texture *texture_loadfromfile(const char *path)
 {
     struct Texture *new = texture_pullfromfile(path);
+
+    glGenTextures(1, &new->id);
 
     tex_gpu_load(new);
 
@@ -89,83 +89,22 @@ void tex_free(struct Texture *tex)
 
 void tex_gpu_load(struct Texture *tex)
 {
-    if (tex->anim.frames >= 0) {
 	glBindTexture(GL_TEXTURE_2D, tex->id);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0,
-		     GL_RGBA, GL_UNSIGNED_BYTE, tex->data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex->data);
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	if (tex->opts.sprite) {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			    GL_NEAREST);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-			    GL_NEAREST);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	} else {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			    GL_LINEAR_MIPMAP_LINEAR);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-			    GL_LINEAR);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    } else {
-    /*
-	glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY,
-		     0,
-		     GL_RGBA,
-		     tex->anim.dimensions[0],
-		     tex->anim.dimensions[1],
-		     tex->anim.frames, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-	SDL_Surface *loadedSurface =
-	    SDL_CreateRGBSurfaceFrom(tex->data, tex->width, tex->height,
-				     32, (4 * tex->width),
-				     0x000000ff, 0x0000ff00, 0x00ff0000,
-				     0xff000000);
-
-	SDL_Surface *tempSurface;
-	tempSurface =
-	    SDL_CreateRGBSurfaceWithFormat(0, tex->anim.dimensions[0],
-					   tex->anim.dimensions[1], 32,
-					   SDL_PIXELFORMAT_RGBA32);
-
-	SDL_Rect srcRect;
-	srcRect.x = 0;
-	srcRect.y = 0;
-	srcRect.w = tex->anim.dimensions[0];
-	srcRect.h = tex->anim.dimensions[1];
-
-	for (int i = 0; i < tex->anim.frames; i++) {
-	    srcRect.x = i * srcRect.w;
-	    SDL_FillRect(tempSurface, NULL, 0x000000);
-
-	    TestSDLError(SDL_BlitSurface
-			 (loadedSurface, &srcRect, tempSurface, NULL));
-
-	    //SDL_UnlockSurface(tempSurface);
-	    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i,
-			    tex->anim.dimensions[0],
-			    tex->anim.dimensions[1], 1, GL_RGBA,
-			    GL_UNSIGNED_BYTE, tempSurface->pixels);
-	}
-
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,
-			GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,
-			GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,
-			GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,
-			GL_CLAMP_TO_EDGE);
-
-	SDL_FreeSurface(loadedSurface);
-	SDL_FreeSurface(tempSurface);
-	*/
-    }
 }
 
 unsigned int tex_incr_anim(unsigned int interval, struct TexAnimation *tex_anim)
