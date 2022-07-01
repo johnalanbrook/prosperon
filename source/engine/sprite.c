@@ -48,6 +48,13 @@ void sprite_init(struct mSprite *sprite, struct mGameObject *go)
     sprite->go = go;
 }
 
+void sprite_draw_all()
+{
+    shader_use(spriteShader);
+    for (int i = 0; i < numSprites; i++)
+        sprite_draw(sprites[i]);
+}
+
 void sprite_loadtex(struct mSprite *sprite, const char *path)
 {
     sprite->tex = texture_loadfromfile(path);
@@ -60,8 +67,7 @@ void sprite_loadanim(struct mSprite *sprite, const char *path,
     sprite->anim = anim;
     sprite->anim.timer = timer_make(sprite->anim.ms, &incrementAnimFrame, sprite);
 /*
-    sprite->tex = texture_loadanimfromfile(sprite->tex, path, sprite->anim.frames,
-				       sprite->anim.dimensions);
+    sprite->tex = texture_loadanimfromfile(sprite->tex, path, sprite->anim.frames, sprite->anim.dimensions);
 */
 }
 

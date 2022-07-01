@@ -78,6 +78,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	unsigned char *bitmap;
 	int advance, lsb, w, h, x0, y0;
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
+
 	bitmap = stbtt_GetCodepointBitmap(&fontinfo, scale, scale, c, &w, &h, &x0, &y0);
 
 	GLuint ftexture;
@@ -85,7 +86,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	glBindTexture(GL_TEXTURE_2D, ftexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
 
-	//glGenerateMipmap(GL_TEXTURE_2D);
+	glGenerateMipmap(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -96,7 +97,8 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	newfont->Characters[c].Size[0] = w;
 	newfont->Characters[c].Size[1] = h;
 	newfont->Characters[c].Bearing[0] = x0;
-	newfont->Characters[c].Bearing[1] = y0;
+	newfont->Characters[c].Bearing[1] = y0*-1;
+	printf("Y0 is %d for %c.\n", y0, c);
     }
 
     return newfont;
@@ -104,17 +106,17 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct mShader *shader, float color[3])
 {
-    float xpos = cursor[0] + c.Bearing[0] * scale;
-    float ypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale;
-
     float w = c.Size[0] * scale;
     float h = c.Size[1] * scale;
+
+    float xpos = cursor[0] + c.Bearing[0] * scale;
+    float ypos = cursor[1] + (c.Bearing[1] * scale) - h;
 
     float verts[4 * 4] = {
 	xpos, ypos, 0.f, 0.f,
 	xpos+w, ypos, 1.f, 0.f,
 	xpos, ypos + h, 0.f, 1.f,
-	xpos + w, ypos+h, 1.f, 1.f
+	xpos + w, ypos + h, 1.f, 1.f
     };
 
 
@@ -136,32 +138,32 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
 
 
 /////////// Shadow calculation
-/*
+
 
     float shadowOffset = 6.f;
     float sxpos = cursor[0] + c.Bearing[0] * scale + (scale * shadowOffset);
     float sypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale - (scale * shadowOffset);
 
     float sverts[4 * 4] = {
-	sxpos, sypos + h, 0.f, 0.f,
-	sxpos, sypos, 0.f, 1.f,
-	sxpos + w, sypos + h, 1.f, 0.f,
-	sxpos + w, sypos, 1.f, 1.f
+	sxpos, sypos, 0.f, 0.f,
+	sxpos+w, sypos, 1.f, 0.f,
+	sxpos, sypos + h, 0.f, 1.f,
+	sxpos + w, sypos+h, 1.f, 1.f
     };
-*/
+
 
     glBindTexture(GL_TEXTURE_2D, c.TextureID);
 
     //// Shadow pass
-    /*
+
     float black[3] = { 0, 0, 0 };
     shader_setvec3(shader, "textColor", black);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sverts), sverts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    */
+
 
     //// Character pass
-    //shader_setvec3(shader, "textColor", color);
+    shader_setvec3(shader, "textColor", color);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 

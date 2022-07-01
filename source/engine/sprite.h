@@ -41,6 +41,7 @@ void sprite_initialize();
 void sprite_draw(struct mSprite *sprite);
 void spriteanim_draw(struct mSprite *sprite);
 void video_draw(struct datastream *ds, mfloat_t pos[2], mfloat_t size[2], float rotate, mfloat_t color[3]);
+void sprite_draw_all();
 unsigned int incrementAnimFrame(unsigned int interval, struct mSprite *sprite);
 
 struct mSprite *gui_makesprite();

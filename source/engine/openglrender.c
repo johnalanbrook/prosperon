@@ -115,10 +115,12 @@ void openglInit()
     //debugdraw_init();
 
 
-
     //glEnable(GL_STENCIL_TEST);
+
+
     glClearColor(editorClearColor[0], editorClearColor[1], editorClearColor[2], editorClearColor[3]);
 
+    glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -158,38 +160,26 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
 	    glColorMask(true, true, true, true);
 
 
-   //glEnable(GL_CULL_FACE);
    glEnable(GL_DEPTH_TEST);
-   //glCullFace(GL_BACK);
 
     // Clear color and depth
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     ////// TEXT && GUI
 
-      // glDepthFunc(GL_ALWAYS);
-       shader_use(textShader);
-       shader_setmat4(textShader, "projection", projection);
 
-
-
-
-       mfloat_t fontpos[2] = { 25.f, 25.f };
-      mfloat_t fontcolor[3] = { 0.5f, 0.8f, 0.2f };
-       renderText("Sample text", fontpos, 1.f, fontcolor, -1.f);
 
 
     ///// Sprites
-
-    shader_use(spriteShader);
-    //shader_setmat4(spriteShader, "projection", window->projection);
-    for (int i = 0; i < numSprites; i++) {
-	sprite_draw(sprites[i]);
-    }
-
-
-
     glDepthFunc(GL_LESS);
+    shader_use(spriteShader);
+    sprite_draw_all();
+
+
+
+          glDepthFunc(GL_ALWAYS);
+       shader_use(textShader);
+       shader_setmat4(textShader, "projection", projection);
 }
 
 
