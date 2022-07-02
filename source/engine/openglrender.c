@@ -10,6 +10,7 @@
 #include "window.h"
 #include "debugdraw.h"
 #include "log.h"
+#include "datastream.h"
 
 int renderMode = 0;
 
@@ -92,6 +93,31 @@ struct mSprite *tsprite = NULL;
 
 static unsigned int projUBO;
 
+const char *textvert =
+"#version 330 core\n"
+"layout (location = 0) in vec4 vertex; \n"
+"out vec2 TexCoords;\n"
+
+"uniform mat4 projection;\n"
+
+"void main() {\n"
+ "   gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);\n"
+"    TexCoords = vec2(vertex.z, 1.0 - vertex.w);\n"
+"}\n";
+
+const char *textfrag =
+"#version 330 core\n"
+"in vec2 TexCoords;\n"
+"out vec4 color;\n"
+
+"uniform sampler2D text;\n"
+"uniform vec3 textColor;\n"
+
+"void main() {    \n"
+"    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);\n"
+"    color = vec4(textColor, 1.0) * sampled;\n"
+"}\n";
+
 void openglInit()
 {
     if (!mainwin) {
@@ -104,6 +130,7 @@ void openglInit()
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
+    //textShader = CreateShader(textverg, textfrag);
 
     shader_use(textShader);
     shader_setint(textShader, "text", 0);
@@ -156,10 +183,7 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
-
-	    glColorMask(true, true, true, true);
-
-
+    shader_setmat4(vid_shader, "projection", projection);
    glEnable(GL_DEPTH_TEST);
 
     // Clear color and depth
@@ -167,19 +191,15 @@ void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
 
     ////// TEXT && GUI
 
-
-
-
     ///// Sprites
     glDepthFunc(GL_LESS);
     shader_use(spriteShader);
     sprite_draw_all();
 
-
-
           glDepthFunc(GL_ALWAYS);
        shader_use(textShader);
        shader_setmat4(textShader, "projection", projection);
+
 }
 
 

@@ -249,17 +249,15 @@ double frame_time()
     return glfwGetTime();
 }
 
-double elapsed_time()
+int elapsed_time()
 {
     static double last_time;
-    static double elapsed;
+    double elapsed;
     elapsed = frame_time() - last_time;
-    return elapsed;
+    last_time = frame_time();
+    //printf("Elapsed: %d.\n", elapsed);
+    return elapsed * 1000;
 }
 
-int elapsed_time_ms()
-{
-    return elapsed_time() * 1000;
-}
 
 

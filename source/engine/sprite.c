@@ -9,6 +9,7 @@
 #include "datastream.h"
 #include "gameobject.h"
 #include <string.h>
+#include "vec.h"
 
 static struct mGameObject *gui_go = NULL;
 
@@ -21,16 +22,16 @@ static struct mShader *animSpriteShader = NULL;
 
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
-struct mSprite *sprites[100] = { NULL };
-
-int numSprites = 0;
+struct vec sprites;
 
 static uint32_t quadVAO;
 
 struct mSprite *MakeSprite(struct mGameObject *go)
 {
-    struct mSprite *sprite = malloc(sizeof(struct mSprite));
-    sprites[numSprites++] = sprite;
+    // TODO: Init this once and never check again
+    if (sprites.data == NULL) sprites = vec_init(sizeof(struct mSprite), 10);
+
+    struct mSprite *sprite = vec_add(&sprites, NULL);
     sprite->color[0] = 1.f;
     sprite->color[1] = 1.f;
     sprite->color[2] = 1.f;
@@ -51,8 +52,7 @@ void sprite_init(struct mSprite *sprite, struct mGameObject *go)
 void sprite_draw_all()
 {
     shader_use(spriteShader);
-    for (int i = 0; i < numSprites; i++)
-        sprite_draw(sprites[i]);
+    vec_walk(&sprites, sprite_draw);
 }
 
 void sprite_loadtex(struct mSprite *sprite, const char *path)
@@ -60,8 +60,7 @@ void sprite_loadtex(struct mSprite *sprite, const char *path)
     sprite->tex = texture_loadfromfile(path);
 }
 
-void sprite_loadanim(struct mSprite *sprite, const char *path,
-		     struct Anim2D anim)
+void sprite_loadanim(struct mSprite *sprite, const char *path, struct Anim2D anim)
 {
     sprite->tex = texture_loadfromfile(path);
     sprite->anim = anim;
@@ -171,7 +170,7 @@ void spriteanim_draw(struct mSprite *sprite)
     mat4_translate_vec2(model, sprite->pos);
     mfloat_t msize[2] =
 	{ sprite->size[0] * sprite->anim.dimensions[0],
-sprite->size[1] * sprite->anim.dimensions[1] };
+	  sprite->size[1] * sprite->anim.dimensions[1] };
     mat4_scale_vec2(model, msize);
 
     shader_setmat4(animSpriteShader, "model", model);
@@ -189,15 +188,15 @@ sprite->size[1] * sprite->anim.dimensions[1] };
 
 void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2], float rotate, mfloat_t color[3])
 {
-    shader_use(spriteShader);
+    shader_use(vid_shader);
 
     static mfloat_t model[16];
     memcpy(model, UNITMAT4, sizeof(UNITMAT4));
     mat4_translate_vec2(model, position);
     mat4_scale_vec2(model, size);
 
-    shader_setmat4(spriteShader, "model", model);
-    shader_setvec3(spriteShader, "spriteColor", color);
+    shader_setmat4(vid_shader, "model", model);
+    shader_setvec3(vid_shader, "spriteColor", color);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, stream->texture_y);
@@ -207,9 +206,8 @@ void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2
     glBindTexture(GL_TEXTURE_2D, stream->texture_cr);
 
     // TODO: video bind VAO
-    //glBindVertexArray(stream->quadVAO);
+    glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
 }
 
 void gui_init()

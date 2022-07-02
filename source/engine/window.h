@@ -39,7 +39,6 @@ void window_seticon(struct mSDLWindow *w, struct Texture *icon);
 int window_hasfocus(struct mSDLWindow *w);
 
 double frame_time();
-double elapsed_time();
-int elapsed_time_ms();
+int elapsed_time();
 
 #endif

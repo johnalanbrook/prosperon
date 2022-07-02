@@ -98,7 +98,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	newfont->Characters[c].Size[1] = h;
 	newfont->Characters[c].Bearing[0] = x0;
 	newfont->Characters[c].Bearing[1] = y0*-1;
-	printf("Y0 is %d for %c.\n", y0, c);
     }
 
     return newfont;

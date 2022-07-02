@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define logLevel 4
+#define logLevel 0
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {

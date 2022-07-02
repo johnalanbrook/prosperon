@@ -15,11 +15,15 @@ struct datastream {
     uint32_t texture_cr;
 };
 
+struct Texture;
+
+extern struct mShader *vid_shader;
+
 struct datastream *MakeDatastream();
-void ds_openvideo(struct datastream *ds, const char *path,
-		  const char *adriver);
-void ds_advance(struct datastream *ds, uint32_t ms);
-void ds_seek(struct datastream *ds, uint32_t time);
+void ds_openvideo(struct datastream *ds, const char *path, const char *adriver);
+struct Texture *ds_maketexture(struct datastream*);
+void ds_advance(struct datastream *ds, double);
+void ds_seek(struct datastream *ds, double);
 void ds_advanceframes(struct datastream *ds, int frames);
 void ds_pause(struct datastream *ds);
 void ds_stop(struct datastream *ds);

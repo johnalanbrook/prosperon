@@ -29,9 +29,6 @@ struct mSprite {
     struct mGameObject *go;
 };
 
-extern struct mSprite *sprites[100];
-extern int numSprites;
-
 struct mSprite *MakeSprite(struct mGameObject *go);
 void sprite_init(struct mSprite *sprite, struct mGameObject *go);
 void sprite_loadtex(struct mSprite *sprite, const char *path);

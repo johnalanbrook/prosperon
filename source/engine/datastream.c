@@ -7,16 +7,15 @@
 #include "sound.h"
 #include <stdbool.h>
 #include "log.h"
+#include "texture.h"
 
 struct mShader *vid_shader;
 
-static void ds_update_texture(uint32_t unit, uint32_t texture,
-			      plm_plane_t * plane)
+static void ds_update_texture(uint32_t unit, uint32_t texture, plm_plane_t * plane)
 {
     glActiveTexture(unit);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane->width, plane->height, 0,
-		 GL_RED, GL_UNSIGNED_BYTE, plane->data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane->width, plane->height, 0, GL_RED, GL_UNSIGNED_BYTE, plane->data);
 }
 
 static void render_frame(plm_t * mpeg, plm_frame_t * frame, void *user)
@@ -30,16 +29,25 @@ static void render_frame(plm_t * mpeg, plm_frame_t * frame, void *user)
 
 static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 {
-    struct datastream *ds = (struct datastream *) user;
+    struct datastream *ds = user;
     int size = sizeof(float) * samples->count * 2;
     play_raw(ds->audio_device, samples->interleaved, size);
 }
 
+struct Texture *ds_maketexture(struct datastream *ds)
+{
+    struct Texture *new = malloc(sizeof(*new));
+    new->id = ds->texture_cb;
+    new->width = 500;
+    new->height = 500;
+    return new;
+}
+
 void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 {
-    ds_stop(ds);
+   // ds_stop(ds);
     char buf[MAXPATH] = {'\0'};
-    sprintf(buf, "%s%s", DATA_PATH, video);
+    sprintf(buf, "%s%s", "video/", video);
     ds->plm = plm_create_with_filename(buf);
 
     if (!ds->plm) {
@@ -99,15 +107,14 @@ struct datastream *MakeDatastream()
     return newds;
 }
 
-void ds_advance(struct datastream *ds, uint32_t ms)
+void ds_advance(struct datastream *ds, double s)
 {
     if (ds->playing) {
-	double advanceTime = ms / 1000.f;
-	plm_decode(ds->plm, advanceTime);
+	plm_decode(ds->plm, s);
     }
 }
 
-void ds_seek(struct datastream *ds, uint32_t time)
+void ds_seek(struct datastream *ds, double time)
 {
     clear_raw(ds->audio_device);
     plm_seek(ds->plm, time, false);

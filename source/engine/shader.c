@@ -7,21 +7,26 @@
 #include <stdlib.h>
 #include "log.h"
 #include "resources.h"
+#include "vec.h"
 
 #define SHADER_BUF 10000
 
-struct mShader *mshaders[255];
-struct mShader **lastShader = mshaders;
+struct vec shaders;
 
 struct mShader *MakeShader(const char *vertpath, const char *fragpath)
 {
+    if (shaders.data == NULL) shaders = vec_init(sizeof(struct mShader), 10);
+
     struct mShader init = { 0, vertpath, fragpath };
-    struct mShader *newshader =
-	(struct mShader *) malloc(sizeof(struct mShader));
-    memcpy(newshader, &init, sizeof(*newshader));
-    *lastShader++ = newshader;
-    shader_compile(newshader);
-    return newshader;
+    struct mShader *new = vec_add(&shaders, NULL);
+    memcpy(new, &init, sizeof(*new));
+    shader_compile(new);
+    return new;
+}
+
+struct mShader *CreateShader(const char *vert, const char *frag)
+{
+    return NULL;
 }
 
 int shader_compile_error(GLuint shader)
@@ -75,8 +80,10 @@ GLuint load_shader_from_file(const char *path, int type)
     const char *code = buf;
     glShaderSource(id, 1, &code, NULL);
     glCompileShader(id);
-    if (shader_compile_error(id))
+    if (shader_compile_error(id)) {
+        printf("Error with shader %s.\n", path);
         return 0;
+    }
 
     return id;
 }
@@ -155,10 +162,5 @@ void shader_setUBO(struct mShader *shader, const char *name, unsigned int index)
 
 void shader_compile_all()
 {
-    struct mShader **curshader = mshaders;
-    do {
-	YughLog(0, LOG_INFO, "Compiled Shader %d", 1);
-	shader_compile(*curshader);
-    } while (++curshader != lastShader);
-
+    vec_walk(&shaders, shader_compile);
 }

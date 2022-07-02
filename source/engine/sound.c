@@ -12,34 +12,47 @@ ma_sound_group mus_grp;
 
 void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
+    printf("audio cb\n");
     // In playback mode copy data to pOutput. In capture mode read data from pInput. In full-duplex mode, both
     // pOutput and pInput will be valid and you can move data from pInput into pOutput. Never process more than
     // frameCount frames.
+    ma_engine_read_pcm_frames(&engine, pOutput, frameCount, NULL);
 }
 
 void sound_init()
 {
-/*
+
+
     ma_device_config cnf = ma_device_config_init(ma_device_type_playback);
     cnf.playback.format = ma_format_f32;
-    cnf.playback.channels = 0;
-    cnf.sampleRate = 0;
+    cnf.playback.channels = 2;
+    cnf.sampleRate = 48000;
     cnf.dataCallback = data_callback;
+    cnf.pUserData = mus_cur;
 
     ma_device device;
-    ma_device_init(NULL, &cnf, &device);
+    if (ma_device_init(NULL, &cnf, &device) != MA_SUCCESS) {
+        YughError("Did not initialize audio playback!!",0);
+    }
 
-    ma_device_start(&device);
 
-*/
+   if (ma_device_start(&device) != MA_SUCCESS) {
+       printf("Failed to start playback device.\n");
+   }
 
-    ma_result result = ma_engine_init(NULL, &engine);
+
+
+    ma_engine_config enginecnf = ma_engine_config_init();
+    enginecnf.pDevice = &device;
+
+    ma_result result = ma_engine_init(&enginecnf, &engine);
     if (result != MA_SUCCESS) {
         YughError("Miniaudio did not start properly.",1);
         exit(1);
     }
 
     ma_sound_group_init(&engine, 0, NULL, &mus_grp);
+
 }
 
 void audio_open(const char *device)
