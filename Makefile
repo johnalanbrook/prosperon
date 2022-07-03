@@ -79,13 +79,13 @@ COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 
 
-WARNING_FLAGS = -Wno-everything#-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+WARNING_FLAGS = -Wall -Wwrite-strings -Wunsupported #-Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
 
 
 COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 -MD $(WARNING_FLAGS) -c $< -o $@
 
-LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc
+LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc -L/usr/lib64/pipewire-0.3/jack
 
 ALLFILES != find source/ -name '*.[ch]' -type f
 
@@ -96,8 +96,8 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -g #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
-	ELIBS = m c engine editor glfw3
+	LINKER_FLAGS = -g /usr/lib64/pipewire-0.3/jack/libjack.so.0 #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
+	ELIBS = m c engine editor glfw3 portaudio rt asound pthread
 	CLIBS =
 	EXT =
 endif

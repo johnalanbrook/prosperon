@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include "log.h"
 #include "texture.h"
+#include <stdlib.h>
 
 struct mShader *vid_shader;
 
@@ -31,7 +32,7 @@ static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 {
     struct datastream *ds = user;
     int size = sizeof(float) * samples->count * 2;
-    play_raw(ds->audio_device, samples->interleaved, size);
+    play_raw(ds->audio_device, samples->interleaved, samples->count * 2);
 }
 
 struct Texture *ds_maketexture(struct datastream *ds)
@@ -54,10 +55,12 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
         YughLog(0, 0, "Couldn't open %s", video);
     }
 
-    YughLog(0, 0, "Opened %s - framerate: %f, samplerate: %d, duration: %f",
+    YughLog(0, 0, "Opened %s - framerate: %f, samplerate: %d, audio streams: %i, duration: %f",
 	    video,
 	    plm_get_framerate(ds->plm),
-	    plm_get_samplerate(ds->plm), plm_get_duration(ds->plm)
+	    plm_get_samplerate(ds->plm),
+	    plm_get_num_audio_streams(ds->plm),
+	    plm_get_duration(ds->plm)
 	);
 
     plm_set_video_decode_callback(ds->plm, render_frame, ds);
@@ -68,7 +71,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     plm_set_audio_stream(ds->plm, 0);
 
     // Adjust the audio lead time according to the audio_spec buffer size
-    //plm_set_audio_lead_time(plm, (double)audio_spec.samples / (double)samplerate);
+    //plm_set_audio_lead_time(ds->plm, 4096/48000);
 
     ds->playing = true;
 }

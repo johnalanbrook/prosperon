@@ -22,16 +22,16 @@ struct fileasset {
 };
 
 struct editorVars {
-    bool showStats;
-    bool showHierarchy;
-    bool showLighting;
-    bool showGameSettings;
-    bool showViewmode;
-    bool showDebugMenu;
-    bool showAssetMenu;
-    bool showREPL;
-    bool showExport;
-    bool showLevel;
+    bool showStats :1 ;
+    bool showHierarchy :1 ;
+    bool showLighting :1 ;
+    bool showGameSettings :1 ;
+    bool showViewmode :1 ;
+    bool showDebugMenu :1 ;
+    bool showAssetMenu :1 ;
+    bool showREPL :1 ;
+    bool showExport :1 ;
+    bool showLevel :1 ;
 };
 
 struct gameproject {

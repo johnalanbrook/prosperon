@@ -6,11 +6,11 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #define PL_MPEG_IMPLEMENTATION
 #include <pl_mpeg.h>
-
-#define MINIAUDIO_IMPLEMENTATION
-#include <miniaudio.h>
 
 #ifdef EDITOR
 #include "editor.h"

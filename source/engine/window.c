@@ -7,7 +7,7 @@
 #include <vec.h>
 #include "input.h"
 
-static struct mSDLWindow *mainwin;
+struct mSDLWindow *mainwin;
 
 static struct vec windows;
 struct Texture *icon = NULL;

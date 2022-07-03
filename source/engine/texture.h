@@ -51,7 +51,7 @@ struct Texture {
     struct TexAnim anim;
 };
 
-struct Texture *tex_pullfromfile(const char *path);
+struct Texture *texture_pullfromfile(const char *path);
 struct Texture *texture_loadfromfile(const char *path);
 void tex_gpu_load(struct Texture *tex);
 void tex_gpu_reload(struct Texture *tex);

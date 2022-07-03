@@ -87,6 +87,8 @@ void *vec_find(struct vec *v, int (*valid)(void *a, void *data), void *data)
         if (valid(vec_p(v, i), data))
             return vec_p(v, i);
     }
+
+    return NULL;
 }
 
 void *vec_insert(struct vec *vec, void *data, int n)

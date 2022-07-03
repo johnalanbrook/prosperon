@@ -1,10 +1,6 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include "miniaudio.h"
-
-
-
 struct Mix_Chunk {
     int i;
 };
@@ -20,7 +16,7 @@ enum MUS {
 };
 
 struct sound {
-    ma_sound sound;
+    int sound;
     enum MUS state;
     unsigned char volume;
 };

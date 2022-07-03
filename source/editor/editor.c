@@ -36,13 +36,18 @@
 #include "sprite.h"
 #include <chipmunk/chipmunk.h>
 #include "math.h"
-#include <ftw.h>
 #include <ctype.h>
 #include "pinball.h"
 #include "config.h"
 #include "vec.h"
 #include "debug.h"
+#include <stdlib.h>
 #include "script.h"
+#include "sound.h"
+
+
+#define __USE_XOPEN_EXTENDED 1
+#include "ftw.h"
 
 
 #include <stb_ds.h>
@@ -824,9 +829,11 @@ nk_end(ctx);
 	}
 
 
-	nk_edit_string_zero_terminated(ctx, "Name", selectedobject->editor.mname, 50, nk_filter_ascii);
+         nk_label(ctx, "Name", NK_TEXT_LEFT);
+	nk_edit_string_zero_terminated(ctx, 0, selectedobject->editor.mname, 50, nk_filter_ascii);
 
-         nk_edit_string_zero_terminated(ctx, "Prefab", selectedobject->editor.prefabName, 50, nk_filter_ascii);
+         nk_label(ctx, "Prefab", NK_TEXT_LEFT);
+         nk_edit_string_zero_terminated(ctx, 0, selectedobject->editor.prefabName, 50, nk_filter_ascii);
 			 // Disabled if::::: selectedobject->editor.prefabSync ? ImGuiInputTextFlags_ReadOnly : 0);
 
 	object_gui(selectedobject);
@@ -1231,7 +1238,7 @@ void nk_property_float3(struct nk_context *ctx, const char *label, float min, fl
     nk_property_float(ctx, "Z", min, &val[2], max, step, dragstep);
 }
 
-nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+void nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
     nk_layout_row_dynamic(ctx, 25, 1);
     nk_label(ctx, label, NK_TEXT_LEFT);
     nk_layout_row_dynamic(ctx, 25, 2);
@@ -1247,7 +1254,7 @@ void trans_drawgui(struct mTransform *T)
 }
 
 void nk_radio_button_label(struct nk_contex *ctx, const char *label, int *val, int cmp) {
-    if (nk_option_label(ctx, label, *val == cmp)) *val = cmp;
+    if (nk_option_label(ctx, label, (bool)*val == cmp)) *val = cmp;
 }
 
 void object_gui(struct mGameObject *go)

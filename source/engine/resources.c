@@ -6,12 +6,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "vec.h"
-#include <ftw.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+
+#define __USE_XOPEN_EXTENDED 1
+#include <ftw.h>
 
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
