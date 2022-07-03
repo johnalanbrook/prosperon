@@ -4,9 +4,6 @@
 #include "log.h"
 #include "string.h"
 
-#define TSF_IMPLEMENTATION
-#include "tsf.h"
-
 
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
@@ -15,6 +12,8 @@
 #include "dr_mp3.h"
 
 #include "portaudio.h"
+
+#include "circbuf.h"
 
 //ma_engine engine;
 
@@ -29,11 +28,7 @@ typedef struct
     float right_phase;
 } paTestData;
 
-#define SOUNDBUF 163864
-
-float samplebuffer[SOUNDBUF];
-float *tail;
-float *head;
+struct circbuf vidbuf;
 
 short HalfSecond[22400];
 short *shorthead;
@@ -47,71 +42,27 @@ short *shorthead;
 
         drmp3 mp3;
 
+ float inbuf[4096*2];
+ float filtbuf[3763*2];
+
 static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
     /* Cast data passed through stream to our structure. */
-    float *out = (float*)outputBuffer;
+    short *out = (short*)outputBuffer;
 
     int f = 0;
 
-/*
-    while (curcmf < totalpcmf && f <= framesPerBuffer) {
-        *(out++) = psamps[curcmf++];
-        curcmf++;
-        *(out++) = psamps[curcmf++];
-        curcmf++;
-        f++;
-    }
-*/
-    //printf("Now is %lu of %lu.\n", curcmf, totalpcmf);
-
-/*
-    while (f < framesPerBuffer && shorthead != &HalfSecond[22400]) {
-        *(out++) = (float)*(shorthead++) / 32767.f;
-    }
-*/
+    static int interp = 0;
 
     for (int i = 0; i < framesPerBuffer; i++) {
-        float a[2] = {0.f, 0.f};
-        drmp3_uint64 fraead = drmp3_read_pcm_frames_f32(&mp3, 1, a);
+       short a[2] = {0, 0};
 
-
-        if (tail != head)
-            a[0] += *(tail++) * 5;
-
-        if (tail == samplebuffer + SOUNDBUF-1) tail = samplebuffer;
-
-        if (tail != head)
-            a[1] += *(tail++) * 5;
-
-        if (tail == samplebuffer + SOUNDBUF-1) tail = samplebuffer;
-
+        a[0] += *(short*)cbuf_take(&vidbuf) * 5;
+        a[1] += *(short*)cbuf_take(&vidbuf) * 5;
 
         *(out++) = a[0];
         *(out++) = a[1];
     }
-
-/*
-
-    while (tail != head && f++ < framesPerBuffer) {
-        *(out++) = *(tail++);
-
-         if (tail == (samplebuffer+SOUNDBUF-1))
-            tail = samplebuffer;
-
-        *(out++) = *(tail++);
-
-        if (tail == (samplebuffer+SOUNDBUF-1))
-            tail = samplebuffer;
-
-    }
-
-
-    while (f++ < framesPerBuffer) {
-        drmp3_uint64 framesread = drmp3_read_pcm_frames_f32(&mp3, 1, out);
-        out += 2;
-    }
-*/
 
     return 0;
 }
@@ -129,13 +80,7 @@ static PaStream *stream_def;
 
 void sound_init()
 {
-/*
-    tsf *sf = tsf_load_filename("sounds/test.sf2");
-    tsf_set_output(sf, TSF_STEREO_INTERLEAVED, 48000, 0);
-    tsf_note_on(sf, 0, 60, 1.f);
-
-    tsf_render_short(sf, HalfSecond, 22400, 0);
-*/
+    vidbuf = circbuf_init(sizeof(short), 163864);
 
     drwav wav;
     if (!drwav_init_file(&wav, "sounds/alert.wav", NULL)) {
@@ -146,7 +91,7 @@ void sound_init()
     //size_t samps = drwav_read_pcm_frames_s32(&wav, wav.totalPCMFrameCount, wavdec);
 
 
-    psamps = drwav_open_file_and_read_pcm_frames_f32("sounds/alert.wav", &ch, &srate, &totalpcmf, NULL);
+    psamps = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &ch, &srate, &totalpcmf, NULL);
 
     printf("WAV is: %i channels, %i samplerate, %l frames.\n", ch, srate, totalpcmf);
 
@@ -160,7 +105,6 @@ void sound_init()
 
         PaError err = Pa_Initialize();
     check_pa_err(err);
-    head = tail = samplebuffer;
 
     int numDevices = Pa_GetDeviceCount();
     const PaDeviceInfo *deviceInfo;
@@ -168,20 +112,22 @@ void sound_init()
     for (int i = 0; i < numDevices; i++) {
         deviceInfo = Pa_GetDeviceInfo(i);
 
-        //printf("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
+        printf("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
     }
 
     PaStreamParameters outparams;
 
 
-
+/*
     outparams.channelCount = 2;
-    outparams.device = 6;
-    outparams.sampleFormat = paFloat32;
+    outparams.device = 19;
+    outparams.sampleFormat = paInt16;
     outparams.suggestedLatency = Pa_GetDeviceInfo(outparams.device)->defaultLowOutputLatency;
     outparams.hostApiSpecificStreamInfo = NULL;
+    */
 
-    err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
+    //err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
+    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 4096, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
@@ -326,13 +272,17 @@ void audio_init()
 void play_raw(int device, void *data, int size)
 {
     float *d = data;
-    while (size >= 0) {
-        *(head++) = *(d++);
-
-        if (head == (samplebuffer+SOUNDBUF-1)) head = samplebuffer;
-
-        size--;
+    short t[size];
+    for (int i = 0; i < size; i++) {
+        t[i] = d[i]*32767;
     }
+    cbuf_append(&vidbuf, t, size);
+    /*
+    for (int i = 0; i < size; i++) {
+        short temp = (short)(d[i] * 32767);
+        cbuf_append(&vidbuf, &temp, 1);
+    }
+    */
 }
 
 void close_audio_device(int device)
