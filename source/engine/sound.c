@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include "log.h"
 #include "string.h"
+#include "math.h"
+#include "limits.h"
+#include "time.h"
 
 
 #define DR_WAV_IMPLEMENTATION
@@ -29,10 +32,6 @@ struct circbuf vidbuf;
 struct wav mwav;
 struct sound wavsound;
 
-short *get_sound_frame(struct sound *s, int sr) {
-    s->frame = (s->frame+3) % s->w->frames;
-    return &s->w->data[s->frame];
-}
 
 int vidplaying = 0;
 
@@ -40,6 +39,7 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
 {
     /* Cast data passed through stream to our structure. */
     short *out = (short*)outputBuffer;
+
 /*
     int f = 0;
 
@@ -50,15 +50,40 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
         *(out++) = *(short*)(mwav.data++);
     }
     */
-/*
+
+
     if (wavsound.play) {
+        //clock_t start = clock();
+        //wavsound.data->gain = -6;
+
+        float mult = powf(10.f, (float)wavsound.data->gain/20.f);
+        printf("Mult is %f\n", mult);
+        short *s = (short*)wavsound.data->data;
         for (int i = 0; i < framesPerBuffer; i++) {
-            short *f = get_sound_frame(&wavsound, 48000);
-            out[i*2] += f[0];
-            out[i*2+1] += f[1];
+            out[i*2] = s[wavsound.frame++] * mult;
+            if (wavsound.frame == wavsound.data->frames) wavsound.frame = 0;
+            out[i*2+1] = s[wavsound.frame++] * mult;
+            if (wavsound.frame == wavsound.data->frames) wavsound.frame = 0;
         }
+
+        /*
+        static int end = 0;
+        end = wavsound.data->frames - wavsound.frame;
+        if (end >= framesPerBuffer) {
+            memcpy(out, &s[wavsound.frame*2], framesPerBuffer * 2 * sizeof(short));
+            wavsound.frame += framesPerBuffer;
+        } else {
+            memcpy(out, &s[wavsound.frame*2], end * 2 * sizeof(short));
+            wavsound.frame = framesPerBuffer - end;
+            memcpy(out+(end*2), s, wavsound.frame *2*sizeof(short));
+        }
+*/
+        //printf("Time took is %f.\n", (double)(clock() - start)/CLOCKS_PER_SEC);
     }
-    */
+
+
+
+
     if (!vidplaying) return 0;
 
     for (int i = 0; i < framesPerBuffer; i++) {
@@ -67,8 +92,8 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
         //a[0] += *(short*)cbuf_shift(&vidbuf) * 5;
         //a[1] += *(short*)cbuf_shift(&vidbuf) * 5;
 
-        *(out++) = cbuf_shift(&vidbuf) * 5;
-        *(out++) = cbuf_shift(&vidbuf) * 5;
+        out[i*2] += cbuf_shift(&vidbuf) * 5;
+        out[i*2+1] += cbuf_shift(&vidbuf) * 5;
     }
 
     return 0;
@@ -84,7 +109,19 @@ void check_pa_err(PaError e)
 
 static PaStream *stream_def;
 
+void normalize_gain(struct wav *w, double lv)
+{
+    short tarmax = pow(10, lv/20.f) * SHRT_MAX;
+    short max = 0;
+    short *s = w->data;
+    for (int i = 0; i < w->frames; i++) {
+        for (int j = 0; j < w->ch; j++) {
+            max = (abs(s[i*w->ch + j]) > max) ? abs(s[i*w->ch + j]) : max;
+        }
+    }
 
+    w->gain = log10((float)tarmax/max) * 20;
+}
 
 void sound_init()
 {
@@ -92,11 +129,25 @@ void sound_init()
 
     mwav.data = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
+    mwav.gain = 0;
+
     printf("Loaded wav: ch %i, sr %i, fr %i.\n", mwav.ch, mwav.samplerate, mwav.frames);
 
-    wavsound.w = &mwav;
+    short *tdata = mwav.data;
+    mwav.frames /= 2;
+    short *newdata = calloc(mwav.frames * 2, sizeof(short));
+    for (int i = 0; i < mwav.frames; i++) {
+        newdata[i] = tdata[i*2];
+    }
+
+    free(mwav.data);
+    mwav.data = newdata;
+
+    wavsound.data = &mwav;
     wavsound.loop = 1;
     wavsound.play = 1;
+
+    normalize_gain(&mwav, -3);
 
 /*
     if (!drmp3_init_file(&mp3, "sounds/circus.mp3", NULL)) {
@@ -130,7 +181,7 @@ void sound_init()
     */
 
     //err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
-    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 256, patestCallback, NULL);
+    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 2048, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);

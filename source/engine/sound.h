@@ -18,11 +18,11 @@ enum MUS {
 struct sound {
     int sound;
     int loop;
-    int mono;
+    int ch;
     int fin;
     int frame;
     int play;
-    struct wav *w;
+    struct wav *data;
     enum MUS state;
     unsigned char volume;
 };
@@ -31,6 +31,7 @@ struct wav {
     int ch;
     int samplerate;
     int frames;
+    double gain;
     void *data;
 };
 
