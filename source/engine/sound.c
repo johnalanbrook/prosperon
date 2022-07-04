@@ -7,6 +7,8 @@
 #include "limits.h"
 #include "time.h"
 
+#include "dsp.h"
+
 
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
@@ -133,15 +135,16 @@ void sound_init()
 
     printf("Loaded wav: ch %i, sr %i, fr %i.\n", mwav.ch, mwav.samplerate, mwav.frames);
 
+    mwav = gen_square(1, 150, 48000, 2);
+
+/*
     short *tdata = mwav.data;
     mwav.frames /= 2;
     short *newdata = calloc(mwav.frames * 2, sizeof(short));
     for (int i = 0; i < mwav.frames; i++) {
         newdata[i] = tdata[i*2];
     }
-
-    free(mwav.data);
-    mwav.data = newdata;
+*/
 
     wavsound.data = &mwav;
     wavsound.loop = 1;
