@@ -17,8 +17,21 @@ enum MUS {
 
 struct sound {
     int sound;
+    int loop;
+    int mono;
+    int fin;
+    int frame;
+    int play;
+    struct wav *w;
     enum MUS state;
     unsigned char volume;
+};
+
+struct wav {
+    int ch;
+    int samplerate;
+    int frames;
+    void *data;
 };
 
 extern const char *audioDriver;

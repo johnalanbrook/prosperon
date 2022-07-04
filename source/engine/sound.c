@@ -15,53 +15,60 @@
 
 #include "circbuf.h"
 
-//ma_engine engine;
 
 const char *audioDriver;
 
 struct sound *mus_cur;
-//ma_sound_group mus_grp;
 
-typedef struct
-{
-    float left_phase;
-    float right_phase;
-} paTestData;
+#define BUSFRAMES 15000
 
 struct circbuf vidbuf;
 
-short HalfSecond[22400];
-short *shorthead;
-
-
-   unsigned int ch;
-    unsigned int srate;
-    drwav_uint64 curcmf = 0;
-    drwav_uint64 totalpcmf;
-    float *psamps;
-
         drmp3 mp3;
 
- float inbuf[4096*2];
- float filtbuf[3763*2];
+struct wav mwav;
+struct sound wavsound;
+
+short *get_sound_frame(struct sound *s, int sr) {
+    s->frame = (s->frame+3) % s->w->frames;
+    return &s->w->data[s->frame];
+}
+
+int vidplaying = 0;
 
 static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
     /* Cast data passed through stream to our structure. */
     short *out = (short*)outputBuffer;
-
+/*
     int f = 0;
 
     static int interp = 0;
 
     for (int i = 0; i < framesPerBuffer; i++) {
-       short a[2] = {0, 0};
+        *(out++) = *(short*)(mwav.data++);
+        *(out++) = *(short*)(mwav.data++);
+    }
+    */
+/*
+    if (wavsound.play) {
+        for (int i = 0; i < framesPerBuffer; i++) {
+            short *f = get_sound_frame(&wavsound, 48000);
+            out[i*2] += f[0];
+            out[i*2+1] += f[1];
+        }
+    }
+    */
+    if (!vidplaying) return 0;
 
-        a[0] += *(short*)cbuf_take(&vidbuf) * 5;
-        a[1] += *(short*)cbuf_take(&vidbuf) * 5;
+    for (int i = 0; i < framesPerBuffer; i++) {
+       //short a[2] = {0, 0};
 
-        *(out++) = a[0];
-        *(out++) = a[1];
+        //a[0] += *(short*)cbuf_shift(&vidbuf) * 5;
+        //a[1] += *(short*)cbuf_shift(&vidbuf) * 5;
+
+        *(out++) = cbuf_shift(&vidbuf) * 5;
+        *(out++) = cbuf_shift(&vidbuf) * 5;
     }
 
     return 0;
@@ -75,33 +82,29 @@ void check_pa_err(PaError e)
     }
 }
 
-static paTestData data;
 static PaStream *stream_def;
+
+
 
 void sound_init()
 {
-    vidbuf = circbuf_init(sizeof(short), 163864);
+    vidbuf = circbuf_init(sizeof(short), 262144);
 
-    drwav wav;
-    if (!drwav_init_file(&wav, "sounds/alert.wav", NULL)) {
-        YughError("Could not open wav.",0);
-    }
+    mwav.data = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
-    //drwav_int32 *wavdec = malloc(wav.totalPCMFrameCount * wav.channels * sizeof(drwav_int32));
-    //size_t samps = drwav_read_pcm_frames_s32(&wav, wav.totalPCMFrameCount, wavdec);
+    printf("Loaded wav: ch %i, sr %i, fr %i.\n", mwav.ch, mwav.samplerate, mwav.frames);
 
+    wavsound.w = &mwav;
+    wavsound.loop = 1;
+    wavsound.play = 1;
 
-    psamps = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &ch, &srate, &totalpcmf, NULL);
-
-    printf("WAV is: %i channels, %i samplerate, %l frames.\n", ch, srate, totalpcmf);
-
-
+/*
     if (!drmp3_init_file(&mp3, "sounds/circus.mp3", NULL)) {
         YughError("Could not open mp3.",0);
     }
 
     printf("CIrcus mp3 channels: %ui, samplerate: %ui\n", mp3.channels, mp3.sampleRate);
-
+*/
 
         PaError err = Pa_Initialize();
     check_pa_err(err);
@@ -112,7 +115,7 @@ void sound_init()
     for (int i = 0; i < numDevices; i++) {
         deviceInfo = Pa_GetDeviceInfo(i);
 
-        printf("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
+       // printf("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
     }
 
     PaStreamParameters outparams;
@@ -127,54 +130,14 @@ void sound_init()
     */
 
     //err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
-    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 4096, patestCallback, NULL);
+    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 256, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
     check_pa_err(err);
 
-    //Pa_Sleep(1000);
-
-    //check_pa_err(Pa_StopStream(stream));
 
 
-
-/*
-
-    ma_result result;
-    ma_device device;
-    ma_device_config cnf;
-
-    cnf = ma_device_config_init(ma_device_type_playback);
-    cnf.playback.format = ma_format_f32;
-    cnf.playback.channels = 2;
-    cnf.sampleRate = 48000;
-    cnf.dataCallback = data_callback;
-
-    result = ma_device_init(NULL, &cnf, &device);
-    if (result != MA_SUCCESS) {
-        YughError("Did not initialize audio playback!!",0);
-    }
-
-
-    result = ma_device_start(&device);
-   if (result != MA_SUCCESS) {
-       printf("Failed to start playback device.\n");
-   }
-*/
-
-/*
-    ma_engine_config enginecnf = ma_engine_config_init();
-    enginecnf.pDevice = &device;
-
-    ma_result result = ma_engine_init(&enginecnf, &engine);
-    if (result != MA_SUCCESS) {
-        YughError("Miniaudio did not start properly.",1);
-        exit(1);
-    }
-
-    ma_sound_group_init(&engine, 0, NULL, &mus_grp);
-*/
 }
 
 void audio_open(const char *device)
@@ -271,12 +234,15 @@ void audio_init()
 
 void play_raw(int device, void *data, int size)
 {
+
     float *d = data;
-    short t[size];
+    short t;
     for (int i = 0; i < size; i++) {
-        t[i] = d[i]*32767;
+        t = (short)(d[i]*32767);
+        cbuf_push(&vidbuf, t);
     }
-    cbuf_append(&vidbuf, t, size);
+
+    vidplaying = 1;
     /*
     for (int i = 0; i < size; i++) {
         short temp = (short)(d[i] * 32767);

@@ -31,7 +31,6 @@ static void render_frame(plm_t * mpeg, plm_frame_t * frame, void *user)
 static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 {
     struct datastream *ds = user;
-    int size = sizeof(float) * samples->count * 2;
     play_raw(ds->audio_device, samples->interleaved, samples->count * 2);
 }
 
@@ -71,7 +70,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     plm_set_audio_stream(ds->plm, 0);
 
     // Adjust the audio lead time according to the audio_spec buffer size
-    //plm_set_audio_lead_time(ds->plm, 4096/48000);
+    plm_set_audio_lead_time(ds->plm, 4096/48000);
 
     ds->playing = true;
 }

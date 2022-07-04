@@ -1,52 +1,43 @@
 #include "circbuf.h"
 
-
-
+#include "assert.h"
 
 struct circbuf circbuf_init(size_t size, int len)
 {
     struct circbuf new;
-    new.size = size;
     new.len = len;
-    new.data = calloc(size, len);
-    new.head = new.tail = new.data;
+    new.data = calloc(sizeof(short), new.len);
+    new.read = new.write = 0;
 
     return new;
 }
 
-void cbuf_append(struct circbuf *buf, void *data, int n)
-{
-
-    for (int i = 0; i < n; i++) {
-        memcpy(buf->head, data+(buf->size*i), buf->size);
-
-        buf->head += buf->size;
-
-        if (buf ->head == buf->data + buf->size*buf->len) buf->head = buf->data;
-    }
-
-/*
-    size_t cpbytes = n * buf->size;
-    size_t rembytes = (buf->size * buf->len) - (buf->head - buf->data);
-
-    if (cpbytes <= rembytes)
-        memcpy(buf->head, data, cpbytes);
-    else {
-        memcpy(buf->head, data, rembytes);
-        cpbytes -= rembytes;
-        buf->head = buf->data;
-        memcpy(buf->head, data+rembytes, cpbytes);
-    }
-*/
-
+int cbuf_size(struct circbuf *buf) {
+    return buf->write - buf->read;
 }
 
-void *cbuf_take(struct circbuf *buf)
-{
-    void *ret = buf->tail;
-
-    if (buf->tail == buf->data + buf->len*buf->size) buf->tail = buf->data;
-    else buf->tail += buf->size;
-
-    return ret;
+int cbuf_empty(struct circbuf *buf) {
+    return buf->read == buf->write;
 }
+
+int cbuf_full(struct circbuf *buf) {
+    return cbuf_size(buf) == buf->len;
+}
+
+uint32_t cbuf_mask(struct circbuf *buf, uint32_t n) {
+    return n & (buf->len-1);
+}
+
+void cbuf_push(struct circbuf *buf, short data) {
+    assert(!cbuf_full(buf));
+
+    buf->data[cbuf_mask(buf,buf->write++)] = data;
+}
+
+short cbuf_shift(struct circbuf *buf) {
+    assert(!cbuf_empty(buf));
+    return buf->data[cbuf_mask(buf, buf->read++)];
+}
+
+
+

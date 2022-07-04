@@ -2,22 +2,18 @@
 #define CIRCBUF_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 struct circbuf {
-    void *head;
-    void *tail;
-    void *data;
-    size_t size;
+    int16_t *data;
+    uint32_t read;
+    uint32_t write;
     int len;
 };
 
 struct circbuf circbuf_init(size_t size, int len);
-void cbuf_append(struct circbuf *buf, void *data, int n);
-void *cbuf_take(struct circbuf *buf);
-
-
-
-
+void cbuf_push(struct circbuf *buf, short data);
+short cbuf_shift(struct circbuf *buf);
 
 
 #endif
