@@ -88,8 +88,10 @@ struct wav gen_saw(float amp, float freq, int sr, int ch)
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
 
+    samp = amp*SHRT_MAX;
+
     for (int i = 0; i < new.frames; i++) {
-        short val = 2 * ( (i/new.frames) - floor( (0.5 + (i/new.frames))));
+        short val = samp * 2 * i/sr - samp;
         for (int j = 0; j < new.ch; j++) {
             new.data[i+j] = val;
         }
