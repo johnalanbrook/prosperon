@@ -10,6 +10,8 @@
 
 #include "SDL2/SDL.h"
 
+#include "mix.h"
+
 #include "dsp.h"
 
 #define TSF_IMPLEMENTATION
@@ -27,11 +29,11 @@
 #include "circbuf.h"
 
 
+
 const char *audioDriver;
 
 struct sound *mus_cur;
 
-#define BUSFRAMES 15000
 
 struct circbuf vidbuf;
 
@@ -40,59 +42,32 @@ struct circbuf vidbuf;
 struct wav mwav;
 struct sound wavsound;
 
+struct wav sin440;
+struct sound a440;
+
 
 int vidplaying = 0;
 
 struct wav change_samplerate(struct wav w, int rate)
 {
-    SDL_AudioCVT cvt;
-    printf("Convert from %i to %i.\n", w.samplerate, rate);
+    printf("Going from sr %i to sr %i.\n", w.samplerate, rate);
+    SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
+    SDL_AudioStreamPut(stream, w.data, w.frames*w.ch*sizeof(short));
 
-    SDL_BuildAudioCVT(&cvt, AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
+    int oldframes = w.frames;
+    w.frames *= (float)rate/w.samplerate;
 
-    cvt.len = w.frames * w.ch * sizeof(short);
-    cvt.buf = malloc(cvt.len * cvt.len_mult);
-    memcpy(cvt.buf, w.data, cvt.len*cvt.len_mult);
-    SDL_ConvertAudio(&cvt);
-
-   w.samplerate = rate;
-   free(w.data);
-   w.data = cvt.buf;
-   printf("cvt len: %i\n", cvt.len_cvt);
-   w.frames = cvt.len_cvt / (w.ch * sizeof(short));
-
-
-/*
-    float change = (float)rate/w.samplerate;
-    int oldsamples = w.frames * w.ch;
+    printf("Went from %i to %i frames.\n", oldframes, w.frames);
     w.samplerate = rate;
-    w.frames *= change;
+    int samples = sizeof(short)*w.ch*w.frames;
+    short *new = malloc(samples);
+    SDL_AudioStreamGet(stream, new, samples);
 
-    short *old = (short*)w.data;
-    short *new = calloc(w.frames * w.ch, sizeof(short));
-
-    int samples =  w.frames*w.ch;
-
-    short s1;
-    short s2;
-
-    for (int i = 0; i < w.frames; i++) {
-        for (int j = 0; j < w.ch; j++) {
-            int v1 = ((float)(i*w.ch+j)/samples) * oldsamples;
-            int v2 = ((float)(i*w.ch+j+w.ch)/samples) * oldsamples;
-            printf("Val is %i and %i.\n", v1, v2);
-            s1 = old[v1];
-            s2 = old[v2];
-            new[i*w.ch+j] = (s1 + s2) >> 1; // Average of the two with bitshift ops
-        }
-    }
-
-    printf("Old samples: %i\nNew samples: %i\nFrames:%i\n", oldsamples, samples, w.frames);
-
+    free(w.data);
     w.data = new;
+    SDL_FreeAudioStream(stream);
 
-    free(old);
-    */
+    return w;
 }
 
 static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
@@ -100,60 +75,21 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
     /* Cast data passed through stream to our structure. */
     short *out = (short*)outputBuffer;
 
-/*
-    int f = 0;
+    bus_fill_buffers();
 
-    static int interp = 0;
-
-    for (int i = 0; i < framesPerBuffer; i++) {
-        *(out++) = *(short*)(mwav.data++);
-        *(out++) = *(short*)(mwav.data++);
+    for (int i = 0; i < framesPerBuffer * 2; i++) {
+        out[i] = mastermix[i];
     }
-    */
-
-
-    if (wavsound.play) {
-        //clock_t start = clock();
-        //wavsound.data->gain = -6;
-
-        float mult = powf(10.f, (float)wavsound.data->gain/20.f);
-        short *s = (short*)wavsound.data->data;
-        for (int i = 0; i < framesPerBuffer; i++) {
-            out[i*2] = s[wavsound.frame++] * mult;
-            if (wavsound.frame == wavsound.data->frames) wavsound.frame = 0;
-            out[i*2+1] = s[wavsound.frame++] * mult;
-            if (wavsound.frame == wavsound.data->frames) wavsound.frame = 0;
-        }
-
-        /*
-        static int end = 0;
-        end = wavsound.data->frames - wavsound.frame;
-        if (end >= framesPerBuffer) {
-            memcpy(out, &s[wavsound.frame*2], framesPerBuffer * 2 * sizeof(short));
-            wavsound.frame += framesPerBuffer;
-        } else {
-            memcpy(out, &s[wavsound.frame*2], end * 2 * sizeof(short));
-            wavsound.frame = framesPerBuffer - end;
-            memcpy(out+(end*2), s, wavsound.frame *2*sizeof(short));
-        }
-*/
-        //printf("Time took is %f.\n", (double)(clock() - start)/CLOCKS_PER_SEC);
-    }
-
 
 
 
     if (!vidplaying) return 0;
 
     for (int i = 0; i < framesPerBuffer; i++) {
-       //short a[2] = {0, 0};
-
-        //a[0] += *(short*)cbuf_shift(&vidbuf) * 5;
-        //a[1] += *(short*)cbuf_shift(&vidbuf) * 5;
-
         out[i*2] += cbuf_shift(&vidbuf) * 5;
         out[i*2+1] += cbuf_shift(&vidbuf) * 5;
     }
+
 
     return 0;
 }
@@ -192,15 +128,23 @@ void sound_init()
 
     printf("Loaded wav: ch %i, sr %i, fr %i.\n", mwav.ch, mwav.samplerate, mwav.frames);
 
-    change_samplerate(mwav, 48000);
+   // mwav = change_samplerate(mwav, 48000);
 
     //mwav = gen_square(1, 150, 48000, 2);
 
     wavsound.data = &mwav;
     wavsound.loop = 1;
-    wavsound.play = 1;
 
     normalize_gain(&mwav, -3);
+
+    //play_sound(&wavsound);
+
+    sin440 = gen_sine(0.4f, 30, 48000, 2);
+    a440.data = &sin440;
+    a440.loop = 1;
+    play_sound(&a440);
+
+    printf("Playing wav with %i frames.\n", wavsound.data->frames);
 
 /*
     if (!drmp3_init_file(&mp3, "sounds/circus.mp3", NULL)) {
@@ -234,7 +178,7 @@ void sound_init()
     */
 
     //err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
-    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 2048, patestCallback, NULL);
+    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 4096, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
@@ -276,11 +220,13 @@ struct sound *make_music(const char *ogg)
     return sound;
 }
 
+
 void play_sound(struct sound *sound)
 {
-    //ma_sound_set_volume(&sound->sound, (float)sound->volume/127);
-  //  ma_sound_start(&sound->sound);
-   // sound->state = MUS_PLAY;
+    struct bus *b = first_free_bus();
+    b->sound = sound;
+    b->on = 1;
+    sound->frame = 0;
 }
 
 void play_music(struct sound *music)

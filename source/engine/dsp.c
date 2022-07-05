@@ -34,9 +34,11 @@ struct wav gen_sine(float amp, float freq, int sr, int ch)
     short *data = (short*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
-        short val = amp * sin(2*PI*((float)i / new.frames));
+        short val = samp * sin(2*PI*((float)i / new.frames));
+
         for (int j = 0; j < new.ch; j++) {
-            data[i+j] = val;
+            data[i*new.ch+j] = val;
+            printf("Element %i gets val  %i.\n", i*new.frames+j, val);
         }
     }
 
@@ -59,7 +61,7 @@ struct wav gen_square(float amp, float freq, int sr, int ch)
     for (int i = 0; i < new.frames; i++) {
         short val = -2 * floor(2 * i / new.frames) + 1;
         for (int j = 0; j < new.ch; j++) {
-            data[i+j] = val;
+            data[i*new.frames+j] = val;
         }
     }
 
