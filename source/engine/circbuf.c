@@ -1,10 +1,12 @@
 #include "circbuf.h"
 
+#include "util.h"
 #include "assert.h"
 
-struct circbuf circbuf_init(size_t size, int len)
+struct circbuf circbuf_init(size_t size, unsigned int len)
 {
     struct circbuf new;
+    new.len = powof2(len);
     new.len = len;
     new.data = calloc(sizeof(short), new.len);
     new.read = new.write = 0;

@@ -6,6 +6,7 @@
 #include <stb_ds.h>
 #include "log.h"
 #include <math.h>
+#include "util.h"
 
 static struct {
     char *key;
@@ -167,25 +168,7 @@ void tex_anim_calc_uv(struct TexAnimation *anim)
     anim->uv = uv;
 }
 
-unsigned int powof2(unsigned int num)
-{
-    if (num != 0) {
-	num--;
-	num |= (num >> 1);
-	num |= (num >> 2);
-	num |= (num >> 4);
-	num |= (num >> 8);
-	num |= (num >> 16);
-	num++;
-    }
 
-    return num;
-}
-
-int ispow2(int num)
-{
-    return (num && !(num & (num - 1)));
-}
 
 void tex_bind(struct Texture *tex)
 {

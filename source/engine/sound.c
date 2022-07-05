@@ -7,7 +7,13 @@
 #include "limits.h"
 #include "time.h"
 
+
+#include "SDL2/SDL.h"
+
 #include "dsp.h"
+
+#define TSF_IMPLEMENTATION
+#include "tsf.h"
 
 
 #define DR_WAV_IMPLEMENTATION
@@ -37,6 +43,58 @@ struct sound wavsound;
 
 int vidplaying = 0;
 
+struct wav change_samplerate(struct wav w, int rate)
+{
+    SDL_AudioCVT cvt;
+    printf("Convert from %i to %i.\n", w.samplerate, rate);
+
+    SDL_BuildAudioCVT(&cvt, AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
+
+    cvt.len = w.frames * w.ch * sizeof(short);
+    cvt.buf = malloc(cvt.len * cvt.len_mult);
+    memcpy(cvt.buf, w.data, cvt.len*cvt.len_mult);
+    SDL_ConvertAudio(&cvt);
+
+   w.samplerate = rate;
+   free(w.data);
+   w.data = cvt.buf;
+   printf("cvt len: %i\n", cvt.len_cvt);
+   w.frames = cvt.len_cvt / (w.ch * sizeof(short));
+
+
+/*
+    float change = (float)rate/w.samplerate;
+    int oldsamples = w.frames * w.ch;
+    w.samplerate = rate;
+    w.frames *= change;
+
+    short *old = (short*)w.data;
+    short *new = calloc(w.frames * w.ch, sizeof(short));
+
+    int samples =  w.frames*w.ch;
+
+    short s1;
+    short s2;
+
+    for (int i = 0; i < w.frames; i++) {
+        for (int j = 0; j < w.ch; j++) {
+            int v1 = ((float)(i*w.ch+j)/samples) * oldsamples;
+            int v2 = ((float)(i*w.ch+j+w.ch)/samples) * oldsamples;
+            printf("Val is %i and %i.\n", v1, v2);
+            s1 = old[v1];
+            s2 = old[v2];
+            new[i*w.ch+j] = (s1 + s2) >> 1; // Average of the two with bitshift ops
+        }
+    }
+
+    printf("Old samples: %i\nNew samples: %i\nFrames:%i\n", oldsamples, samples, w.frames);
+
+    w.data = new;
+
+    free(old);
+    */
+}
+
 static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
     /* Cast data passed through stream to our structure. */
@@ -59,7 +117,6 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
         //wavsound.data->gain = -6;
 
         float mult = powf(10.f, (float)wavsound.data->gain/20.f);
-        printf("Mult is %f\n", mult);
         short *s = (short*)wavsound.data->data;
         for (int i = 0; i < framesPerBuffer; i++) {
             out[i*2] = s[wavsound.frame++] * mult;
@@ -135,16 +192,9 @@ void sound_init()
 
     printf("Loaded wav: ch %i, sr %i, fr %i.\n", mwav.ch, mwav.samplerate, mwav.frames);
 
-    mwav = gen_square(1, 150, 48000, 2);
+    change_samplerate(mwav, 48000);
 
-/*
-    short *tdata = mwav.data;
-    mwav.frames /= 2;
-    short *newdata = calloc(mwav.frames * 2, sizeof(short));
-    for (int i = 0; i < mwav.frames; i++) {
-        newdata[i] = tdata[i*2];
-    }
-*/
+    //mwav = gen_square(1, 150, 48000, 2);
 
     wavsound.data = &mwav;
     wavsound.loop = 1;

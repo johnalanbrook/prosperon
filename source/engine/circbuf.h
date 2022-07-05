@@ -8,10 +8,10 @@ struct circbuf {
     int16_t *data;
     uint32_t read;
     uint32_t write;
-    int len;
+    unsigned int len;
 };
 
-struct circbuf circbuf_init(size_t size, int len);
+struct circbuf circbuf_init(size_t size, unsigned int len);
 void cbuf_push(struct circbuf *buf, short data);
 short cbuf_shift(struct circbuf *buf);
 

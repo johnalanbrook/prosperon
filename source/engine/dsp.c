@@ -73,10 +73,12 @@ struct wav gen_triangle(float amp, float freq, int sr, int ch)
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
 
+    short *data = (short*)new.data;
+
     for (int i = 0; i < new.frames; i++) {
         short val = 2 * abs( (i/new.frames) - floor( (i/new.frames) + 0.5));
         for (int j = 0; j < new.ch; j++) {
-            new.data[i+j] = val;
+            data[i+j] = val;
         }
     }
 }
@@ -88,12 +90,24 @@ struct wav gen_saw(float amp, float freq, int sr, int ch)
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
 
-    samp = amp*SHRT_MAX;
+    short samp = amp*SHRT_MAX;
+
+    short *data = (short*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
         short val = samp * 2 * i/sr - samp;
         for (int j = 0; j < new.ch; j++) {
-            new.data[i+j] = val;
+            data[i+j] = val;
         }
     }
+}
+
+void make_dsp_filter()
+{
+
+}
+
+void dsp_filter(short *in, short *out, int samples, struct dsp_delay *d)
+{
+
 }
