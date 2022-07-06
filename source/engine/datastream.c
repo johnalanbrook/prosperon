@@ -9,6 +9,8 @@
 #include "log.h"
 #include "texture.h"
 #include <stdlib.h>
+#include "mix.h"
+#include "limits.h"
 
 struct mShader *vid_shader;
 
@@ -31,7 +33,12 @@ static void render_frame(plm_t * mpeg, plm_frame_t * frame, void *user)
 static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 {
     struct datastream *ds = user;
-    play_raw(ds->audio_device, samples->interleaved, samples->count * 2);
+    short t;
+
+    for (int i = 0; i < samples->count * CHANNELS; i++) {
+        t = (short)(samples->interleaved[i] * SHRT_MAX);
+        cbuf_push(&ds->astream.buf, t*5);
+    }
 }
 
 struct Texture *ds_maketexture(struct datastream *ds)
@@ -61,6 +68,14 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 	    plm_get_num_audio_streams(ds->plm),
 	    plm_get_duration(ds->plm)
 	);
+
+    ds->astream = soundstream_make();
+    struct dsp_filter astream_filter;
+    astream_filter.data = &ds->astream;
+    astream_filter.filter = soundstream_fillbuf;
+    first_free_bus(astream_filter);
+
+    printf("Circbuf size is %u.\n", ds->astream.buf.len);
 
     plm_set_video_decode_callback(ds->plm, render_frame, ds);
     plm_set_audio_decode_callback(ds->plm, render_audio, ds);
@@ -118,7 +133,7 @@ void ds_advance(struct datastream *ds, double s)
 
 void ds_seek(struct datastream *ds, double time)
 {
-    clear_raw(ds->audio_device);
+    //clear_raw(ds->audio_device);
     plm_seek(ds->plm, time, false);
 }
 

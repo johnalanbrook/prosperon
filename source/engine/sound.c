@@ -11,7 +11,6 @@
 #include "SDL2/SDL.h"
 
 #include "mix.h"
-
 #include "dsp.h"
 
 #define TSF_IMPLEMENTATION
@@ -75,21 +74,7 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned 
     /* Cast data passed through stream to our structure. */
     short *out = (short*)outputBuffer;
 
-    bus_fill_buffers();
-
-    for (int i = 0; i < framesPerBuffer * 2; i++) {
-        out[i] = mastermix[i];
-    }
-
-
-
-    if (!vidplaying) return 0;
-
-    for (int i = 0; i < framesPerBuffer; i++) {
-        out[i*2] += cbuf_shift(&vidbuf) * 5;
-        out[i*2+1] += cbuf_shift(&vidbuf) * 5;
-    }
-
+    bus_fill_buffers(outputBuffer, framesPerBuffer);
 
     return 0;
 }
@@ -118,6 +103,13 @@ void normalize_gain(struct wav *w, double lv)
     w->gain = log10((float)tarmax/max) * 20;
 }
 
+struct osc sin600;
+struct osc sin20;
+struct dsp_ammod dspammod;
+struct dsp_delay dspdel;
+struct wav s600wav;
+struct sound s600wavsound;
+
 void sound_init()
 {
     vidbuf = circbuf_init(sizeof(short), 262144);
@@ -139,12 +131,53 @@ void sound_init()
 
     //play_sound(&wavsound);
 
-    sin440 = gen_sine(0.4f, 30, 48000, 2);
+    sin440 = gen_sine(0.4f, 30, SAMPLERATE, 2);
     a440.data = &sin440;
     a440.loop = 1;
-    play_sound(&a440);
+    //play_sound(&a440);
 
     printf("Playing wav with %i frames.\n", wavsound.data->frames);
+
+    sin600.f = tri_phasor;
+    sin600.p = phasor_make(SAMPLERATE, 200);
+
+
+
+    sin20.f = square_phasor;
+    sin20.p.sr = SAMPLERATE;
+    sin20.p.freq = 4;
+
+    s600wav = gen_sine(0.6f, 600, SAMPLERATE, CHANNELS);
+
+    s600wavsound.loop = -1;
+    s600wavsound.data = &s600wav;
+
+
+    struct dsp_filter s600;
+    s600.data = &s600wavsound;
+    s600.filter = sound_fillbuf;
+
+    struct dsp_filter s20;
+    s20.data = &sin20;
+    s20.filter = osc_fillbuf;
+
+    struct dsp_filter am_filter;
+
+
+    dspammod.ina = s600;
+    dspammod.inb = s20;
+
+    am_filter.filter = am_mod;
+    am_filter.data = &dspammod;
+
+    dspdel = dsp_delay_make(150);
+    dspdel.in = am_filter;
+    struct dsp_filter del_filter;
+    del_filter.filter = dsp_delay_filbuf;
+    del_filter.data = &dspdel;
+
+    //first_free_bus(s600);
+    first_free_bus(del_filter);
 
 /*
     if (!drmp3_init_file(&mp3, "sounds/circus.mp3", NULL)) {
@@ -154,7 +187,7 @@ void sound_init()
     printf("CIrcus mp3 channels: %ui, samplerate: %ui\n", mp3.channels, mp3.sampleRate);
 */
 
-        PaError err = Pa_Initialize();
+     PaError err = Pa_Initialize();
     check_pa_err(err);
 
     int numDevices = Pa_GetDeviceCount();
@@ -178,7 +211,7 @@ void sound_init()
     */
 
     //err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
-    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, 48000, 4096, patestCallback, NULL);
+    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, SAMPLERATE, BUF_FRAMES, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
@@ -221,13 +254,6 @@ struct sound *make_music(const char *ogg)
 }
 
 
-void play_sound(struct sound *sound)
-{
-    struct bus *b = first_free_bus();
-    b->sound = sound;
-    b->on = 1;
-    sound->frame = 0;
-}
 
 void play_music(struct sound *music)
 {
@@ -282,33 +308,10 @@ void audio_init()
     //audioDriver = SDL_GetAudioDeviceName(0,0);
 }
 
-void play_raw(int device, void *data, int size)
-{
-
-    float *d = data;
-    short t;
-    for (int i = 0; i < size; i++) {
-        t = (short)(d[i]*32767);
-        cbuf_push(&vidbuf, t);
-    }
-
-    vidplaying = 1;
-    /*
-    for (int i = 0; i < size; i++) {
-        short temp = (short)(d[i] * 32767);
-        cbuf_append(&vidbuf, &temp, 1);
-    }
-    */
-}
 
 void close_audio_device(int device)
 {
     //SDL_CloseAudioDevice(device);
-}
-
-void clear_raw(int device)
-{
-   //SDL_ClearQueuedAudio(device);
 }
 
 int open_device(const char *adriver)
@@ -317,10 +320,10 @@ int open_device(const char *adriver)
 /*
     SDL_AudioSpec audio_spec;
     SDL_memset(&audio_spec, 0, sizeof(audio_spec));
-    audio_spec.freq = 48000;
+    audio_spec.freq = SAMPLERATE;
     audio_spec.format = AUDIO_F32;
     audio_spec.channels = 2;
-    audio_spec.samples = 4096;
+    audio_spec.samples = BUF_FRAMES;
     int dev = (int) SDL_OpenAudioDevice(adriver, 0, &audio_spec, NULL, 0);
     SDL_PauseAudioDevice(dev, 0);
 
@@ -328,3 +331,43 @@ int open_device(const char *adriver)
 */
     return 0;
 }
+
+void play_sound(struct sound *sound)
+{
+    sound->frame = 0;
+    //struct bus *b = first_free_bus(sound, sound_fillbuf);
+}
+
+
+void sound_fillbuf(struct sound *s, short *buf, int n)
+{
+    short *in = s->data->data;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < 2; j++) {
+            buf[i*2+j] = in[s->frame+j];
+        }
+        s->frame++;
+        if (s->frame == s->data->frames) {
+            s->frame = 0;
+            if (s->loop > 0) {
+                s->loop--;
+            }
+        }
+    }
+}
+
+struct soundstream soundstream_make()
+{
+    struct soundstream new;
+    new.buf = circbuf_init(sizeof(short), BUF_FRAMES*CHANNELS*2);
+    return new;
+}
+
+void soundstream_fillbuf(struct soundstream *s, short *buf, int n)
+{
+    int max = s->buf.write - s->buf.read;
+    for (int i = 0; i < n*CHANNELS; i++) {
+        buf[i] = (i < max) ? cbuf_shift(&s->buf) : 0;
+    }
+}
+

@@ -1,23 +1,21 @@
 #ifndef MIX_H
 #define MIX_H
 
-#define BUF_FRAMES 4096
-#define CHANNELS 2
-#define MUSIZE 2
+#include "dsp.h"
 
 struct sound;
 
 
 struct bus {
     int on;
-    struct sound *sound;
+    struct dsp_filter in;
     short buf[BUF_FRAMES*CHANNELS];
 };
 
 extern short mastermix[BUF_FRAMES*CHANNELS];
 
-struct bus *first_free_bus();
-void bus_fill_buffers();
+struct bus *first_free_bus(struct dsp_filter in);
+void bus_fill_buffers(short *master, int n);
 
 
 #endif

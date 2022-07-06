@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <pl_mpeg.h>
+#include "sound.h"
 
 struct datastream {
     plm_t *plm;
@@ -13,6 +14,7 @@ struct datastream {
     uint32_t texture_y;
     uint32_t texture_cb;
     uint32_t texture_cr;
+    struct soundstream astream;
 };
 
 struct Texture;

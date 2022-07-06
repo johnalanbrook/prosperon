@@ -7,7 +7,6 @@ struct circbuf circbuf_init(size_t size, unsigned int len)
 {
     struct circbuf new;
     new.len = powof2(len);
-    new.len = len;
     new.data = calloc(sizeof(short), new.len);
     new.read = new.write = 0;
 
@@ -23,7 +22,7 @@ int cbuf_empty(struct circbuf *buf) {
 }
 
 int cbuf_full(struct circbuf *buf) {
-    return cbuf_size(buf) == buf->len;
+    return cbuf_size(buf) >= buf->len;
 }
 
 uint32_t cbuf_mask(struct circbuf *buf, uint32_t n) {
@@ -31,13 +30,13 @@ uint32_t cbuf_mask(struct circbuf *buf, uint32_t n) {
 }
 
 void cbuf_push(struct circbuf *buf, short data) {
-    assert(!cbuf_full(buf));
+    //assert(!cbuf_full(buf));
 
     buf->data[cbuf_mask(buf,buf->write++)] = data;
 }
 
 short cbuf_shift(struct circbuf *buf) {
-    assert(!cbuf_empty(buf));
+    //assert(!cbuf_empty(buf));
     return buf->data[cbuf_mask(buf, buf->read++)];
 }
 

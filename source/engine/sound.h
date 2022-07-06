@@ -1,6 +1,8 @@
 #ifndef SOUND_H
 #define SOUND_H
 
+#include "circbuf.h"
+
 struct Mix_Chunk {
     int i;
 };
@@ -14,6 +16,12 @@ enum MUS {
     MUS_PLAY,
     MUS_PAUSE
 };
+
+struct soundstream {
+    struct circbuf buf;
+};
+
+struct soundstream soundstream_make();
 
 struct sound {
     int loop;
@@ -36,6 +44,8 @@ void sound_init();
 void audio_open(const char *device);
 void audio_close();
 
+void sound_fillbuf(struct sound *s, short *buf, int n);
+
 struct sound *make_sound(const char *wav);
 struct sound *make_music(const char *ogg);
 
@@ -52,9 +62,9 @@ void music_resume();
 void music_pause();
 void music_stop();
 
+void soundstream_fillbuf(struct soundstream *stream, short *buf, int n);
+
 void close_audio_device(int device);
-void clear_raw(int device);
-void play_raw(int device, void *data, int size);
 int open_device(const char *adriver);
 
 void audio_init();
