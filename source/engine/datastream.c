@@ -73,9 +73,24 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     struct dsp_filter astream_filter;
     astream_filter.data = &ds->astream;
     astream_filter.filter = soundstream_fillbuf;
-    first_free_bus(astream_filter);
 
-    printf("Circbuf size is %u.\n", ds->astream.buf.len);
+    //struct dsp_filter lpf = lpf_make(8, 10000);
+    struct dsp_filter lpf = lpf_make(1, 200);
+    struct dsp_iir *iir = lpf.data;
+    iir->in = astream_filter;
+
+
+    struct dsp_filter hpf = hpf_make(1, 2000);
+    struct dsp_iir *hiir = hpf.data;
+    hiir->in = astream_filter;
+
+/*
+    struct dsp_filter llpf = lp_fir_make(20);
+    struct dsp_fir *fir = llpf.data;
+    fir->in = astream_filter;
+*/
+
+    first_free_bus(hpf);
 
     plm_set_video_decode_callback(ds->plm, render_frame, ds);
     plm_set_audio_decode_callback(ds->plm, render_audio, ds);

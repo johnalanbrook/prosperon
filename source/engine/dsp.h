@@ -16,6 +16,37 @@ struct dsp_filter {
     void *data;
 };
 
+struct dsp_iir {
+    float freq;
+    int poles;
+    int n;  // Amount of constants
+    int order;  // How many times it's applied
+    float *ccof;
+    float *dcof;
+    float *dx;
+    float *dy;
+
+    struct dsp_filter in;
+};
+
+struct dsp_fir {
+    float freq;
+    int n;
+    int head;
+    float *cof;
+    float *dx;
+
+    struct dsp_filter in;
+};
+
+struct dsp_filter lp_fir_make(float freq);
+
+void dsp_iir_fillbuf(struct dsp_iir *iir, short *out, int n);
+struct dsp_filter hpf_make(int poles, float freq);
+struct dsp_filter lpf_make(int poles, float freq);
+struct dsp_filter bpf_make(int poles, float freq1, float freq2);
+struct dsp_filter npf_make(int poles, float freq1, float freq2);
+
 struct dsp_delay {
     unsigned int ms_delay;
     struct circbuf buf;
@@ -40,13 +71,7 @@ struct dsp_limiter {
 
 };
 
-struct dsp_hpf {
 
-};
-
-struct dsp_lpf {
-
-};
 
 struct phasor {
     unsigned int sr;
@@ -73,6 +98,9 @@ struct wav gen_sine(float amp, float freq, int sr, int ch);
 struct wav gen_square(float amp, float freq, int sr, int ch);
 struct wav gen_triangle(float amp, float freq, int sr, int ch);
 struct wav gen_saw(float amp, float freq, int sr, int ch);
+
+void gen_whitenoise(void *data, short *out, int n);
+void gen_pinknoise(void *data, short *out, int n);
 
 
 float sin_phasor(float p);

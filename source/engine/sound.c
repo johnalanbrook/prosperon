@@ -177,7 +177,10 @@ void sound_init()
     del_filter.data = &dspdel;
 
     //first_free_bus(s600);
-    first_free_bus(del_filter);
+
+    struct dsp_filter wn;
+    wn.filter = gen_pinknoise;
+    //first_free_bus(wn);
 
 /*
     if (!drmp3_init_file(&mp3, "sounds/circus.mp3", NULL)) {
@@ -366,8 +369,9 @@ struct soundstream soundstream_make()
 void soundstream_fillbuf(struct soundstream *s, short *buf, int n)
 {
     int max = s->buf.write - s->buf.read;
-    for (int i = 0; i < n*CHANNELS; i++) {
-        buf[i] = (i < max) ? cbuf_shift(&s->buf) : 0;
+    int lim = (max < n*CHANNELS) ? max : n*CHANNELS;
+    for (int i = 0; i < lim; i++) {
+        buf[i] = cbuf_shift(&s->buf);
     }
 }
 
