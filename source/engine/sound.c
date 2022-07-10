@@ -8,18 +8,10 @@
 #include "time.h"
 #include "music.h"
 
-
 #include "SDL2/SDL.h"
 
 #include "mix.h"
 #include "dsp.h"
-
-#define TSF_IMPLEMENTATION
-#include "tsf.h"
-
-#define TML_IMPLEMENTATION
-#include "tml.h"
-
 
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
@@ -31,7 +23,11 @@
 
 #include "circbuf.h"
 
+#define TSF_IMPLEMENTATION
+#include "tsf.h"
 
+#define TML_IMPLEMENTATION
+#include "tml.h"
 
 const char *audioDriver;
 

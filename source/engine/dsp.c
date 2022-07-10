@@ -17,7 +17,11 @@ struct dsp_filter make_dsp(void *data, void (*in)(void *data, short *out, int n)
     new.data = data;
     new.filter = in;
 
-    if (filters.len == 0)
+    return new;
+
+    if (filters.len == 0) {
+
+    }
 }
 
 void dsp_run(struct dsp_filter filter, short *out, int n) {
@@ -27,18 +31,20 @@ void dsp_run(struct dsp_filter filter, short *out, int n) {
         return;
 
     for (int i = 0; i < filter.inputs; i++)
-        dsp_run(filter.in[i], out, n);
+        dsp_run(*(filter.in[i]), out, n);
 
     filter.filter(filter.data, out, n);
 }
 
-struct dsp_filter_addin(struct dsp_filter filter, struct dsp_filter in)
+void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter *in)
 {
     if (filter.inputs > 5) {
         YughError("Too many inputs in filter.", 0);
     }
 
     filter.in[filter.inputs++] = in;
+
+    return filter;
 }
 
 void am_mod(struct dsp_ammod *mod, short *c, int n)

@@ -32,7 +32,7 @@ struct dsp_fir {
     struct dsp_filter in;
 };
 
-void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter in);
+void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter *in);
 
 struct dsp_filter lp_fir_make(float freq);
 

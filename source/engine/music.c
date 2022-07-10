@@ -6,7 +6,7 @@
 #include "mix.h"
 #include "sound.h"
 
-#define TSF_BLOCK 64
+#define TSF_BLOCK 32
 
 struct dsp_filter cursong;
 struct dsp_midi_song gsong;
@@ -16,10 +16,10 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
     short *o = (short*)out;
     tml_message *midi = song->midi;
 
-    for (int i = TSF_BLOCK; n; n -= i, o += n*CHANNELS) {
-        if (i > n) i = n;
+    for (int i = 0; i < n; i += TSF_BLOCK) {
 
-        for (song->time += i * (1000.f / SAMPLERATE); midi && song->time >= midi->time; midi = midi->next) {
+        while (midi && song->time >= midi->time) {
+
             switch (midi->type)
             {
                 case TML_PROGRAM_CHANGE:
@@ -42,9 +42,15 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
                     tsf_channel_midi_control(song->sf, midi->channel, midi->control, midi->control_value);
                     break;
             }
+
+
+             midi = midi->next;
         }
 
-        tsf_render_short(song->sf, o, i, 0);
+
+        tsf_render_short(song->sf, o, TSF_BLOCK, 0);
+        o += TSF_BLOCK*2;
+       song->time += TSF_BLOCK * (1000.f/SAMPLERATE);
     }
 
     song->midi = midi;
@@ -52,8 +58,8 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 
 void play_song(const char *midi, const char *sf)
 {
-    gsong.midi = tml_load_filename("sounds/one-winged-angel.mid");
-    gsong.sf = tsf_load_filename("sounds/mario.sf2");
+    gsong.midi = tml_load_filename("sounds/stickerbrush.mid");
+    gsong.sf = tsf_load_filename("sounds/ff7.sf2");
     gsong.time = 0.f;
 
     tsf_set_output(gsong.sf, TSF_STEREO_INTERLEAVED, SAMPLERATE, 0.f);
