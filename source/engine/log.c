@@ -23,8 +23,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	va_end(args);
 
 	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "LEVEL %d :: %s [ %s:%d ] %s\n",
-		 priority, msgbuffer, file, line, dt);
+	snprintf(buffer, ERROR_BUFFER, "%s\n[ %s:%d ] %s\n",
+		 msgbuffer, file, line, dt);
 
 	printf("%s", buffer);
 	fflush(stdout);

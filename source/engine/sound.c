@@ -164,8 +164,7 @@ void sound_init()
     struct dsp_filter am_filter;
 
 
-    dspammod.ina = s600;
-    dspammod.inb = s20;
+
 
     am_filter.filter = am_mod;
     am_filter.data = &dspammod;
@@ -176,7 +175,12 @@ void sound_init()
     del_filter.filter = dsp_delay_filbuf;
     del_filter.data = &dspdel;
 
-    //first_free_bus(s600);
+    struct dsp_filter ad = make_adsr(50, 200, 500, 100);
+
+    dspammod.ina = s600;
+    dspammod.inb = ad;
+
+    first_free_bus(am_filter);
 
     struct dsp_filter wn;
     wn.filter = gen_pinknoise;

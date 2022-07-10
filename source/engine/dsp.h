@@ -18,7 +18,7 @@ struct dsp_filter {
     int inputs;
     struct dsp_filter *in[6];
 
-    short cache[CHANNELS*SAMPLERATE];
+    short cache[CHANNELS*BUF_FRAMES];
     int dirty;
 };
 
@@ -42,6 +42,24 @@ struct dsp_filter lpf_make(int poles, float freq);
 struct dsp_filter bpf_make(int poles, float freq1, float freq2);
 struct dsp_filter npf_make(int poles, float freq1, float freq2);
 
+/* atk, dec, sus, rls specify the time, in miliseconds, the phase begins */
+struct dsp_adsr {
+    unsigned int atk;
+    double atk_t;
+    unsigned int dec;
+    double dec_t;
+    unsigned int sus;
+    float sus_pwr; // Between 0 and 1
+    unsigned int rls;
+    double rls_t;
+
+    double time; /* Current time of the filter */
+    float out;
+};
+
+void dsp_adsr_fillbuf(struct dsp_adsr *adsr, short *out, int n);
+struct dsp_filter make_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigned int rls);
+
 struct dsp_delay {
     unsigned int ms_delay;
     struct circbuf buf;
@@ -54,18 +72,23 @@ void dsp_delay_filbuf(struct dsp_delay *delay, short *buf, int n);
 struct dsp_ammod {
     struct dsp_filter ina;
     struct dsp_filter inb;
-    short abuf[BUF_FRAMES*2];
-    short bbuf[BUF_FRAMES*2];
+    short abuf[BUF_FRAMES*CHANNELS];
+    short bbuf[BUF_FRAMES*CHANNELS];
 };
 
 struct dsp_compressor {
 
 };
 
+struct dsp_filter dsp_make_compressor();
+void dsp_compressor_fillbuf(struct dsp_compressor *comp, short *out, int n);
+
 struct dsp_limiter {
 
 };
 
+struct dsp_filter dsp_make_limiter();
+void dsp_limiter_fillbuf(struct dsp_limiter *lim, short *out, int n);
 
 
 struct phasor {

@@ -43,8 +43,6 @@ void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter *in)
     }
 
     filter.in[filter.inputs++] = in;
-
-    return filter;
 }
 
 void am_mod(struct dsp_ammod *mod, short *c, int n)
@@ -52,10 +50,8 @@ void am_mod(struct dsp_ammod *mod, short *c, int n)
     dsp_run(mod->ina, mod->abuf, n);
     dsp_run(mod->inb, mod->bbuf, n);
 
-    for (int i = 0; i < n*2; i++) {
+    for (int i = 0; i < n*CHANNELS; i++)
         c[i] = (mod->abuf[i]*mod->bbuf[i])>>15;
-        //c[i] = mod->abuf[i];
-    }
 }
 
 static struct wav make_wav(float freq, int sr, int ch) {
@@ -334,11 +330,10 @@ struct dsp_filter lpf_make(int poles, float freq)
 
   free(ccof);
 
-  printf("LPF coefficients are:\n");
+  YughInfo("LPF coefficients are:", 0);
 
-  for (int i = 0; i < new->n; i++) {
-      YughInfo("%f, %f\n", new->ccof[i], new->dcof[i]);
-  }
+  for (int i = 0; i < new->n; i++)
+      YughInfo("%f, %f", new->ccof[i], new->dcof[i]);
 
   struct dsp_filter lpf;
   lpf.data = new;
@@ -361,9 +356,8 @@ struct dsp_filter hpf_make(int poles, float freq)
   for (int i = 0; i < new->n; i++)
       new->ccof[i] = ccof[i] * sf;
 
-    for (int i = 0; i < new->n; i++) {
-      printf("%f, %f\n", new->ccof[i], new->dcof[i]);
-  }
+    for (int i = 0; i < new->n; i++)
+      YughInfo("%f, %f", new->ccof[i], new->dcof[i]);
 
   free(ccof);
 
@@ -449,4 +443,78 @@ void dsp_delay_filbuf(struct dsp_delay *delay, short *buf, int n)
         cbuf_push(&delay->buf, cache[i] / 2);
         buf[i] = cache[i] + cbuf_shift(&delay->buf);
     }
+}
+
+/* Get decay constant for a given pole */
+/* Samples to decay 1 time constant is exp(-1/timeconstant) */
+double tau2pole(double tau)
+{
+    return exp(-1/(tau*SAMPLERATE));
+}
+
+void dsp_adsr_fillbuf(struct dsp_adsr *adsr, short *out, int n)
+{
+    short val;
+
+    for (int i = 0; i < n; i++) {
+        if (adsr->time > adsr->rls) {
+            // Totally decayed
+            adsr->out = 0.f;
+
+            goto fin;
+        }
+
+        if (adsr->time > adsr->sus) {
+            // Release phase
+            adsr->out = adsr->rls_t * adsr->out;
+
+            goto fin;
+        }
+
+        if (adsr->time > adsr->dec) {
+            // Sustain phase
+            adsr->out = adsr->sus_pwr;
+
+            goto fin;
+        }
+
+        if (adsr->time > adsr->atk) {
+            // Decay phase
+            adsr->out = (1 - adsr->dec_t) * adsr->sus_pwr + adsr->dec_t * adsr->out;
+
+            goto fin;
+        }
+
+        // Attack phase
+        adsr->out = (1-adsr->atk_t) + adsr->atk_t * adsr->out;
+
+
+
+        fin:
+
+        val = SHRT_MAX * adsr->out;
+        out[i*CHANNELS] = out[i*CHANNELS+1] = val;
+        adsr->time += (double)(1000.f / SAMPLERATE);
+    }
+}
+
+
+
+struct dsp_filter make_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigned int rls)
+{
+    struct dsp_adsr *adsr = calloc(sizeof(*adsr), 1);
+    adsr->atk = atk;
+    /* decay to 3 tau */
+    adsr->atk_t = tau2pole(atk / 3000.f);
+
+    adsr->dec = dec + adsr->atk;
+    adsr->dec_t = tau2pole(dec / 3000.f);
+
+    adsr->sus = sus + adsr->dec;
+    adsr->sus_pwr = 0.8f;
+
+    adsr->rls = rls + adsr->sus;
+    adsr->rls_t = tau2pole(rls / 3000.f);
+
+    return make_dsp(adsr, dsp_adsr_fillbuf);
 }

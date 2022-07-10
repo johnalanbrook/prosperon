@@ -58,7 +58,7 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 
 void play_song(const char *midi, const char *sf)
 {
-    gsong.midi = tml_load_filename("sounds/stickerbrush.mid");
+    gsong.midi = tml_load_filename("sounds/littlewonder.mid");
     gsong.sf = tsf_load_filename("sounds/ff7.sf2");
     gsong.time = 0.f;
 
