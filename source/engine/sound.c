@@ -16,6 +16,9 @@
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
 
+#define TML_IMPLEMENTATION
+#include "tml.h"
+
 
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
@@ -222,6 +225,9 @@ void sound_init()
 
 
 
+
+    tsf *tsf_load_filename("sounds/ff7.sf2");
+    tml_message *tml_load_filename("sounds/one_winged_angel.mid");
 }
 
 void audio_open(const char *device)

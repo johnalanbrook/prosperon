@@ -43,6 +43,35 @@
 #include "limits.h"
 #include "iir.h"
 #include "dsp.h"
+#include "log.h"
+
+struct dsp_iir make_iir(int cofs, int order)
+{
+    struct dsp_iir new;
+    new.dcof = calloc(sizeof(float), cofs * order);
+    new.ccof = calloc(sizeof(float), cofs * order);
+    new.dx = calloc(sizeof(float), cofs * order);
+    new.dy = calloc(sizeof(float), cofs * order);
+    new.order = order;
+    new.n = cofs;
+
+    return new;
+}
+
+
+struct dsp_iir biquad_iir()
+{
+    struct dsp_iir new = make_iir(3, 1);
+    return new;
+}
+
+struct dsp_iir p2_iir_order(int order)
+{
+    struct dsp_iir new = make_iir(3, order);
+    new.order = order;
+
+    return new;
+}
 
 /**********************************************************************
   binomial_mult - multiplies a series of binomials together and returns
@@ -641,26 +670,105 @@ float *fir_bpf(int n, double fcf1, double fcf2)
 
 
 
+struct dsp_iir sp_lp(double fcf)
+{
+    struct dsp_iir new = make_iir(2, 1);
+    double x = exp(-2*M_PI*fcf);
 
+    new.ccof[0] = 1 - x;
+    new.ccof[1] = 0.f;
 
+    new.dcof[0] = 0.f;
+    new.dcof[1] = x;
+
+    return new;
+}
+
+struct dsp_iir sp_hp(double fcf)
+{
+    struct dsp_iir new = make_iir(2, 1);
+    double x = exp(-2*M_PI*fcf);
+
+    new.ccof[0] = (1 + x)/2;
+    new.ccof[1] = -new.ccof[0];
+
+    new.dcof[0] = 0.f;
+    new.dcof[1] = x;
+
+    return new;
+}
+
+/* http://www.dspguide.com/ch19/3.htm */
+struct dsp_iir sp_bp(double fcf, double bw)
+{
+    double R = 1 - 3*bw;
+    double K = (1 - 2*R*cos(2*M_PI*fcf)+pow(R, 2)) / (2 - 2*cos(2*M_PI*fcf));
+
+    struct dsp_iir new = make_iir(3, 1);
+
+    new.ccof[0] = 1-K;
+    new.ccof[1] = 2*(K-R)*cos(2*M_PI*fcf);
+    new.ccof[2] = pow(R, 2) - K;
+
+    new.dcof[0] = 0.f;
+    new.dcof[1] = 2*R*cos(2*M_PI*fcf);
+    new.dcof[2] = -1 * pow(R, 2);
+
+    return new;
+}
+
+struct dsp_iir sp_notch(double fcf, double bw)
+{
+    double R = 1 - 3*bw;
+    double K = (1 - 2*R*cos(2*M_PI*fcf)+pow(R, 2)) / (2 - 2*cos(2*M_PI*fcf));
+
+    struct dsp_iir new = make_iir(3, 1);
+
+    new.ccof[0] = K;
+    new.ccof[1] = -2*K*cos(2*M_PI*fcf);
+    new.ccof[2] = K;
+
+    new.dcof[0] = 0.f;
+    new.dcof[1] = 2*R*cos(2*M_PI*fcf);
+    new.dcof[2] = -1 * pow(R, 2);
+
+    return new;
+}
+
+double chevy_pct_to_e(double pct)
+{
+    if (pct > 0.292 || pct < 0) {
+        YughWarn("Gave a percentage out of range. Should be between 0.0 and 0.292 to get a proper value. Gave %f.", pct);
+        pct = pct > 0.292 ? 0.292 : 0.f;
+    }
+
+    double e = pow(1/(1-pct), 2) - 1;
+
+    return e;
+}
+
+/* Four stage single pole low pass, similar to gauss */
+/* http://www.dspguide.com/ch19/2.htm */
+struct dsp_iir sp_lp_gauss(double fcf)
+{
+    struct dsp_iir new = make_iir(5, 1);
+    double x = exp(-14.445*fcf);
+
+    new.ccof[0] = pow((1 - x), 4);
+
+    new.dcof[0] = 0.f;
+    new.dcof[1] = 4*x;
+    new.dcof[2] = -6 * pow(x, 2);
+    new.dcof[3] = 4 * pow(x, 3);
+    new.dcof[4] = -1 * pow(x,4);
+
+    return new;
+}
 
 
 
 
 /* Biquad filters */
-
-struct dsp_iir biquad_iir()
-{
-    struct dsp_iir new;
-    new.dcof = malloc(sizeof(float) * 3);
-    new.ccof = malloc(sizeof(float) * 3);
-    new.dx = malloc(sizeof(float) * 3);
-    new.dy = malloc(sizeof(float) * 3);
-    new.n = 3;
-    new.poles = 2;
-    return new;
-}
-
 void biquad_iir_fill(struct dsp_iir bq, double *a, double *b)
 {
     bq.ccof[0] = (b[0] / a[0]);
@@ -843,7 +951,7 @@ void p2_ccalc(double fcf, double p, double g, double *a, double *b)
     double w0 = tan(M_PI * fcf);
     double k[2];
     k[0] = p * w0;
-    k[1] = g * pow2(w0);
+    k[1] = g * pow(w0, 2);
 
     a[0] = k[1] / (1 + k[0] + k[1]);
     a[1] = 2 * a[0];
@@ -913,19 +1021,7 @@ struct dsp_iir p2_beshp(double fcf)
     return new;
 }
 
-struct dsp_iir p2_iir_order(int order)
-{
-    struct dsp_iir new;
-    new.n = 3;
-    new.order = order;
 
-    new.ccof = calloc(sizeof(float), 3 * order);
-    new.dcof = calloc(sizeof(float), 3 * order);
-    new.dx = calloc(sizeof(float), 3 * order);
-    new.dy = calloc(sizeof(float), 3 * order);
-
-    return new;
-}
 
 short p2_filter(struct dsp_iir iir, short val)
 {
@@ -963,8 +1059,8 @@ struct dsp_iir che_lp(int order, double fcf, double e)
 
 
     double a = tan(M_PI * fcf);
-    double a2 = pow2(a);
-    double u = log((1.f + sqrt(1.f + pow2(e)))/e);
+    double a2 = pow(a, 2);
+    double u = log((1.f + sqrt(1.f + pow(e, 2)))/e);
     double su = sinh(u/new.order);
     double cu = cosh(u/new.order);
     double b, c, s;
@@ -974,7 +1070,7 @@ struct dsp_iir che_lp(int order, double fcf, double e)
     {
         b = sin(M_PI * (2.f*i + 1.f)/(2.f*new.order)) * su;
         c = cos(M_PI * (2.f*i + 1.f)/(2.f*new.order)) * cu;
-        c = pow2(b) + pow2(c);
+        c = pow(b, 2) + pow(c, 2);
         s = a2*c + 2.f*a*b + 1.f;
         double A = a2/(4.f);
 
@@ -995,8 +1091,8 @@ struct dsp_iir che_hp(int order, double fcf, double e)
     struct dsp_iir new = che_lp(order, fcf, e);
 
     double a = tan(M_PI * fcf);
-    double a2 = pow2(a);
-    double u = log((1.f + sqrt(1.f + pow2(e)))/e);
+    double a2 = pow(a, 2);
+    double u = log((1.f + sqrt(1.f + pow(e, 2)))/e);
     double su = sinh(u/new.order);
     double cu = cosh(u/new.order);
     double b, c, s;
@@ -1006,7 +1102,7 @@ struct dsp_iir che_hp(int order, double fcf, double e)
     {
         b = sin(M_PI * (2.f*i + 1.f)/(2.f*new.order)) * su;
         c = cos(M_PI * (2.f*i + 1.f)/(2.f*new.order)) * cu;
-        c = pow2(b) + pow2(c);
+        c = pow(b, 2) + pow(c, 2);
         s = a2*c + 2.f*a*b + 1.f;
         double A = 1.f/(4.f);
 
@@ -1020,31 +1116,32 @@ struct dsp_iir che_hp(int order, double fcf, double e)
     return new;
 }
 
-struct dsp_iir che_bp(int order, double fcf1, double fcf2, double e)
+struct dsp_iir che_bp(int order, double s, double fcf1, double fcf2, double e)
 {
-        struct dsp_iir new = p2_iir_order(order);
+        struct dsp_iir new = make_iir(5, order);
 
-        double a = cos(M_PI*(fcf1+fcf2)/2) / cos(M_PI*(fcf2-fcf1));
-        double a2 = pow2(a);
-        double b = tan(M_PI*(fcf2-fcf1));
-        double b2 = pow2(b);
-        double u = log((1.f+sqrt(1.f+pow2(e)))/e);
+        double a = cos(M_PI*(fcf1+fcf2)/s) / cos(M_PI*(fcf2-fcf1)/s);
+        double a2 = pow(a, 2);
+        double b = tan(M_PI*(fcf2-fcf1)/s);
+        double b2 = pow(b, 2);
+        double u = log((1.f+sqrt(1.f+pow(e, 2)))/e);
         double su = sinh(2.f*u/new.order);
         double cu = cosh(2.f*u/new.order);
         double A = b2/(4.f);
-        double r, c, s;
+        double r, c;
+        double ep = 2.f/e;
 
         for (int i = 0; i < new.order; ++i) {
             r = sin(M_PI*(2.f*i+1.f)/new.order)*su;
             c = cos(M_PI*(2.f*i+1.f)/new.order)*su;
-            c = pow2(r) + pow2(c);
+            c = pow(r, 2) + pow(c, 2);
             s = b2*c + 2.f*b*r + 1.f;
 
             new.ccof[0*i] = ep * 1.f/A;
             new.ccof[1*i] = ep * -2.f/A;
             new.ccof[2*i] = ep * 1.f/A;
 
-            new.ddof[0*i] = 0.f;
+            new.dcof[0*i] = 0.f;
             new.dcof[1*i] = ep * 4.f*a*(1.f+b*r)/s;
             new.dcof[2*i] = ep * 2.f*(b2*c-2.f*a2-1.f)/s;
             new.dcof[3*i] = ep * 4.f*a*(1.f-b*r)/s;
@@ -1054,31 +1151,32 @@ struct dsp_iir che_bp(int order, double fcf1, double fcf2, double e)
         return new;
 }
 
-struct dsp_iir che_notch(int order, double fcf1, double fcf2, double e)
+struct dsp_iir che_notch(int order, double s, double fcf1, double fcf2, double e)
 {
-    struct dsp_iir new = p2_iir_order(order);
+    struct dsp_iir new = make_iir(5, order);
 
-    double a = cos(M_PI*(fcf1+fcf2)/2) / cos(M_PI*(fcf2-fcf1));
-    double a2 = pow2(a);
-    double b = tan(M_PI*(fcf2-fcf1));
-    double b2 = pow2(b);
-    double u = log((1.f+sqrt(1.f+pow2(e)))/e);
-    double su = sinh(2.f*u/n);
-    double cu = cosh(2.f*u/n);
+    double a = cos(M_PI*(fcf1+fcf2)/s) / cos(M_PI*(fcf2-fcf1)/s);
+    double a2 = pow(a, 2);
+    double b = tan(M_PI*(fcf2-fcf1)/s);
+    double b2 = pow(b, 2);
+    double u = log((1.f+sqrt(1.f+pow(e, 2)))/e);
+    double su = sinh(2.f*u/new.n);
+    double cu = cosh(2.f*u/new.n);
     double A = b2/(4.f*s);
-    double r, c, s;
+    double r, c;
+    double ep = 2.f/e;
 
     for (int i = 0; i < new.order; ++i) {
         r = sin(M_PI*(2.f*i+1.f)/new.order)*su;
-        c = cos(M_PI*(2.f*i+1.f)/ew.order)*su;
-        c = pow2(r) + pow2(c);
+        c = cos(M_PI*(2.f*i+1.f)/new.order)*su;
+        c = pow(r, 2) + pow(c, 2);
         s = b2*c + 2.f*b*r + 1.f;
 
         new.ccof[0*i] = ep * 1.f/A;
         new.ccof[1*i] = ep * -2.f/A;
         new.ccof[2*i] = ep * 1.f/A;
 
-        new.ddof[0*i] = 0.f;
+        new.dcof[0*i] = 0.f;
         new.dcof[1*i] = ep * 4.f*a*(c+b*r)/s;
         new.dcof[2*i] = ep * 2.f*(b2-2.f*a2*c-c)/s;
         new.dcof[3*i] = ep * 4.f*a*(c-b*r)/s;

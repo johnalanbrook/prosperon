@@ -5,17 +5,40 @@
 #include "math.h"
 #include "stdlib.h"
 #include "iir.h"
+#include "log.h"
+#include "vec.h"
 
 #define PI 3.14159265
+
+struct vec filters;
 
 struct dsp_filter make_dsp(void *data, void (*in)(void *data, short *out, int n)) {
     struct dsp_filter new;
     new.data = data;
     new.filter = in;
+
+    if (filters.len == 0)
 }
 
 void dsp_run(struct dsp_filter filter, short *out, int n) {
+    filter.dirty = 1; // Always on for testing
+
+    if (!filter.dirty)
+        return;
+
+    for (int i = 0; i < filter.inputs; i++)
+        dsp_run(filter.in[i], out, n);
+
     filter.filter(filter.data, out, n);
+}
+
+struct dsp_filter_addin(struct dsp_filter filter, struct dsp_filter in)
+{
+    if (filter.inputs > 5) {
+        YughError("Too many inputs in filter.", 0);
+    }
+
+    filter.in[filter.inputs++] = in;
 }
 
 void am_mod(struct dsp_ammod *mod, short *c, int n)
@@ -133,9 +156,8 @@ void dsp_filter(short *in, short *out, int samples, struct dsp_delay *d)
 
 void dsp_rectify(short *in, short *out, int n)
 {
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
         out[i] = abs(in[i]);
-    }
 }
 
 struct phasor phasor_make(unsigned int sr, float freq)
@@ -245,25 +267,27 @@ void gen_pinknoise(void *data, short *out, int n)
     */
 }
 
-short iir_filter(struct dsp_iir *iir, short val)
+short iir_filter(struct dsp_iir *miir, short val)
 {
+    struct dsp_iir iir = *miir;
+
     float a = 0.f;
 
-    iir->dx[0] = (float)val/SHRT_MAX;
-    for (int i = 0; i < iir->n; i++)
-        a += iir->ccof[i] * iir->dx[i];
+    iir.dx[0] = (float)val/SHRT_MAX;
+    for (int i = 0; i < iir.n; i++)
+        a += iir.ccof[i] * iir.dx[i];
 
-    for (int i = iir->n-1; i > 0; i--)
-        iir->dx[i] = iir->dx[i-1];
+    for (int i = iir.n-1; i > 0; i--)
+        iir.dx[i] = iir.dx[i-1];
 
 
-    for (int i =0; i < iir->n; i++)
-        a -= iir->dcof[i] * iir->dy[i];
+    for (int i =0; i < iir.n; i++)
+        a -= iir.dcof[i] * iir.dy[i];
 
-    iir->dy[0] = a;
+    iir.dy[0] = a;
 
-    for (int i = iir->n-1; i > 0; i--)
-        iir->dy[i] = iir->dy[i-1];
+    for (int i = iir.n-1; i > 0; i--)
+        iir.dy[i] = iir.dy[i-1];
 
 
 
@@ -283,46 +307,31 @@ void dsp_iir_fillbuf(struct dsp_iir *iir, short *out, int n)
     }
 }
 
-struct dsp_iir new_iir(int poles, float freq)
-{
-    struct dsp_iir new;
-    new.poles = poles;
-    new.freq = freq;
-    new.n = new.poles+1;
-    new.ccof = malloc(new.n*sizeof(float));
-    new.dcof = malloc(new.n*sizeof(float));
-    new.dy = malloc(new.n*sizeof(float));
-    new.dx = malloc(new.n*sizeof(float));
-    return new;
-}
-
 struct dsp_filter lpf_make(int poles, float freq)
 {
     struct dsp_iir *new = malloc(sizeof(*new));
-    *new = new_iir(poles, freq);
+    (*new) = make_iir(3, 1);
 
   double fcf = new->freq*2/SAMPLERATE;
+
   double sf = sf_bwlp(poles, fcf);
 
   printf("Making LPF filter, fcf: %f, coeffs: %i, scale %1.15lf\n", fcf, new->n, sf);
 
-  int *ccof = ccof_bwlp(new->poles);
-  double *dcof = dcof_bwlp(new->poles, fcf);
+  int *ccof = ccof_bwlp(new->n);
+  new->dcof = dcof_bwlp(new->n, fcf);
 
-  for (int i = 0; i < new->n; i++) {
-      new->ccof[i] = ccof[i] * sf;
-      new->dcof[i] = dcof[i];
-  }
+  for (int i = 0; i < new->n; i++)
+      new->ccof[i] = (float)ccof[i] * sf;
 
   new->dcof[0] = 0.f;
 
   free(ccof);
-  free(dcof);
 
   printf("LPF coefficients are:\n");
 
   for (int i = 0; i < new->n; i++) {
-      printf("%f, %f\n", new->ccof[i], new->dcof[i]);
+      YughInfo("%f, %f\n", new->ccof[i], new->dcof[i]);
   }
 
   struct dsp_filter lpf;
@@ -335,25 +344,22 @@ struct dsp_filter lpf_make(int poles, float freq)
 struct dsp_filter hpf_make(int poles, float freq)
 {
   struct dsp_iir *new = malloc(sizeof(*new));
-  *new = new_iir(poles, freq);
+  *new = make_iir(3, 1);
 
   double fcf = new->freq*2/SAMPLERATE;
-  double sf = sf_bwhp(new->poles, fcf);
+  double sf = sf_bwhp(new->n, fcf);
 
-  int *ccof = ccof_bwhp(new->poles);
-  double *dcof = dcof_bwhp(new->poles, fcf);
+  int *ccof = ccof_bwhp(new->n);
+  new->dcof = dcof_bwhp(new->n, fcf);
 
-  for (int i = 0; i < new->n; i++) {
+  for (int i = 0; i < new->n; i++)
       new->ccof[i] = ccof[i] * sf;
-      new->dcof[i] = dcof[i];
-  }
 
     for (int i = 0; i < new->n; i++) {
       printf("%f, %f\n", new->ccof[i], new->dcof[i]);
   }
 
   free(ccof);
-  free(dcof);
 
   struct dsp_filter hpf;
   hpf.data = new;

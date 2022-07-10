@@ -79,7 +79,7 @@ COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
 
 
 
-WARNING_FLAGS = #-Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+WARNING_FLAGS = -Wno #-Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
 
 

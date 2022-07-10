@@ -1,6 +1,22 @@
 #ifndef IIR_H
 #define IIR_H
 
+#include "dsp.h"
+
+struct dsp_iir {
+    float freq;
+    int n;  // Amount of constants
+    int order;  // How many times it's applied
+    float *ccof;
+    float *dcof;
+    float *dx;
+    float *dy;
+
+    struct dsp_filter in;
+};
+
+struct dsp_iir make_iir(int cofs, int order);
+
 double *binomial_mult( int n, double *p );
 double *trinomial_mult( int n, double *b, double *c );
 
@@ -23,6 +39,11 @@ float *fir_lp(int n, double fcf);
 float *fir_hp(int n, double fcf);
 float *fir_bpf(int n, double fcf1, double fcf2);
 
+struct dsp_iir sp_lp(double fcf);
+struct dsp_iir sp_hp(double fcf);
+
+double chevy_pct_to_e(double pct);
+
 struct dsp_iir bqlp_dcof(double fcf, float Q);
 struct dsp_iir bqhp_dcof(double fcf, float Q);
 struct dsp_iir bqbpq_dcof(double fcf, float Q);
@@ -42,7 +63,7 @@ struct dsp_iir p2_beshp(double fcf);
 
 struct dsp_iir che_lp(int order, double fcf, double e);
 struct dsp_iir che_hp(int order, double fcf, double e);
-struct dsp_iir che_bp(int order, double fcf1, double fcf2, double e);
-struct dsp_iir che_notch(int order, double fcf1, double fcf2, double e);
+struct dsp_iir che_bp(int order, double s, double fcf1, double fcf2, double e);
+struct dsp_iir che_notch(int order, double s, double fcf1, double fcf2, double e);
 
 #endif

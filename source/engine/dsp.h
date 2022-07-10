@@ -14,19 +14,12 @@ void dsp_rectify(short *in, short *out, int n);
 struct dsp_filter {
     void (*filter)(void *data, short *out, int samples);
     void *data;
-};
 
-struct dsp_iir {
-    float freq;
-    int poles;
-    int n;  // Amount of constants
-    int order;  // How many times it's applied
-    float *ccof;
-    float *dcof;
-    float *dx;
-    float *dy;
+    int inputs;
+    struct dsp_filter *in[6];
 
-    struct dsp_filter in;
+    short cache[CHANNELS*SAMPLERATE];
+    int dirty;
 };
 
 struct dsp_fir {
@@ -38,6 +31,8 @@ struct dsp_fir {
 
     struct dsp_filter in;
 };
+
+void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter in);
 
 struct dsp_filter lp_fir_make(float freq);
 
