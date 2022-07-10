@@ -6,6 +6,7 @@
 #include "math.h"
 #include "limits.h"
 #include "time.h"
+#include "music.h"
 
 
 #include "SDL2/SDL.h"
@@ -226,8 +227,7 @@ void sound_init()
 
 
 
-    tsf *tsf_load_filename("sounds/ff7.sf2");
-    tml_message *tml_load_filename("sounds/one_winged_angel.mid");
+    play_song("", "");
 }
 
 void audio_open(const char *device)
