@@ -54,6 +54,11 @@ void am_mod(struct dsp_ammod *mod, short *c, int n)
         c[i] = (mod->abuf[i]*mod->bbuf[i])>>15;
 }
 
+void fm_mod(float *in1, float *in2, float *out, int n)
+{
+
+}
+
 static struct wav make_wav(float freq, int sr, int ch) {
     struct wav new;
     new.ch = ch;
@@ -185,13 +190,6 @@ float phasor_step(struct phasor *p)
     p->cur += p->freq/p->sr;
     if (p->cur >= 1.f) p->cur = 0.f;
     return p->cur;
-
-/*
-    float ret = p->cache[p->cstep++];
-    if (p->cstep ==p->clen) p->cstep = 0;
-
-    return ret;
-    */
 }
 
 float sin_phasor(float p)
@@ -517,4 +515,14 @@ struct dsp_filter make_adsr(unsigned int atk, unsigned int dec, unsigned int sus
     adsr->rls_t = tau2pole(rls / 3000.f);
 
     return make_dsp(adsr, dsp_adsr_fillbuf);
+}
+
+struct dsp_filter make_reverb()
+{
+
+}
+
+void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n)
+{
+
 }

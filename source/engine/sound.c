@@ -143,9 +143,9 @@ void sound_init()
 
 
 
-    sin20.f = square_phasor;
+    sin20.f = sin_phasor;
     sin20.p.sr = SAMPLERATE;
-    sin20.p.freq = 4;
+    sin20.p.freq = 250;
 
     s600wav = gen_sine(0.6f, 600, SAMPLERATE, CHANNELS);
 
@@ -178,9 +178,9 @@ void sound_init()
     struct dsp_filter ad = make_adsr(50, 200, 500, 100);
 
     dspammod.ina = s600;
-    dspammod.inb = ad;
+    dspammod.inb = s20;
 
-    first_free_bus(am_filter);
+   // first_free_bus(am_filter);
 
     struct dsp_filter wn;
     wn.filter = gen_pinknoise;
@@ -227,7 +227,7 @@ void sound_init()
 
 
 
-    play_song("", "");
+    //play_song("", "");
 }
 
 void audio_open(const char *device)

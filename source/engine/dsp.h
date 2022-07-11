@@ -130,4 +130,11 @@ void osc_fillbuf(struct osc *osc, short *buf, int n);
 
 void am_mod(struct dsp_ammod *mod, short *c, int n);
 
+struct dsp_reverb {
+    unsigned int time; /* Time in miliseconds for the sound to decay out */
+};
+
+struct dsp_filter make_reverb();
+void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n);
+
 #endif

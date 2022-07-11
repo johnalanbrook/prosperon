@@ -91,7 +91,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     fir->in = astream_filter;
 */
 
-    //first_free_bus(astream_filter);
+    first_free_bus(astream_filter);
 
     plm_set_video_decode_callback(ds->plm, render_frame, ds);
     plm_set_audio_decode_callback(ds->plm, render_audio, ds);
