@@ -31,8 +31,22 @@
 
 const char *audioDriver;
 
+void new_samplerate(short *in, short *out, int n, int ch, int sr_in, int sr_out)
+{
+    SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, ch, sr_in, AUDIO_S16, ch, sr_out);
+    SDL_AudioStreamPut(stream, in, n * ch * sizeof(short));
+    SDL_AudioStreamGet(stream, out, n * ch * sizeof(short));
+    SDL_FreeAudioStream(stream);
+}
+
 struct wav change_samplerate(struct wav w, int rate)
 {
+    int samples = sizeof(short) * w.ch * w.frames;
+    short *new = malloc(samples);
+    new_samplerate(w.data, new,
+
+
+
     SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
     SDL_AudioStreamPut(stream, w.data, w.frames*w.ch*sizeof(short));
 
@@ -70,7 +84,7 @@ void check_pa_err(PaError e)
 
 static PaStream *stream_def;
 
-void normalize_gain(struct wav *w, double lv)
+void wav_norm_gain(struct wav *w, double lv)
 {
     short tarmax = db2short(lv);
     short max = 0;
@@ -81,7 +95,13 @@ void normalize_gain(struct wav *w, double lv)
         }
     }
 
-    w->gain = log10((float)tarmax/max) * 20;
+    float mult = (float)max / tarmax;
+
+    for (int i = 0; i < w->frames; i++) {
+        for (int j = 0; j < w->ch; j++) {
+            s[i*w->ch + j] *= mult;
+        }
+    }
 }
 
 struct osc sin600;
@@ -143,25 +163,59 @@ struct wav make_sound(const char *wav)
         mwav = change_samplerate(mwav, 48000);
     }
 
-    mwav.gain = 0;
-
-    normalize_gain(&mwav, -3);
+    mwav.gain = 1.f;
 
     return mwav;
 }
 
-struct sound play_sound(struct wav *wav)
+struct sound *play_sound(struct wav *wav)
 {
-    struct sound new;
-    new.loop = 0;
-    new.frame = 0;
-    new.gain = 0;
+    struct sound *new = calloc(1, sizeof(*new));
     new.data = wav;
 
-    // TODO: Make filter to send to mixer
+    new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
+    new->playing = 1;
 
     return new;
 
+}
+
+int sound_playing(const struct sound *s)
+{
+    return s.playing;
+}
+
+int sound_paused(const struct sound *s)
+{
+    return (!s.playing && s.frame < s.data->frames);
+}
+void sound_pause(struct sound *s)
+{
+    s->playing = 0;
+    bus_free(s->bus);
+}
+
+void sound_resume(struct sound *s)
+{
+    s->playing = 1;
+    s->bus = first_free_bus(dsp_filter(s, sound_fillbuf));
+}
+
+void sound_stop(struct sound *s)
+{
+    s->playing = 0;
+    s->frame = 0;
+    bus_free(s->bus);
+}
+
+int sound_finished(struct sound *s)
+{
+    return !s->playing && s->frame == s->data->frames;
+}
+
+int sound_stopped(struct sound *s)
+{
+    return !s->playing && s->frame = 0;
 }
 
 struct music make_music(const char *mp3)
@@ -170,11 +224,7 @@ struct music make_music(const char *mp3)
     if (!drmp3_init_file(&new, mp3, NULL)) {
         YughError("Could not open mp3 file %s.", mp3);
     }
-
-    //printf("CIrcus mp3 channels: %ui, samplerate: %ui\n", mp3.channels, mp3.sampleRate);
 }
-
-
 
 
 void audio_init()
@@ -208,19 +258,30 @@ int open_device(const char *adriver)
 
 void sound_fillbuf(struct sound *s, short *buf, int n)
 {
+    float gainmult = pct2mult(s->data->gain);
+
     short *in = s->data->data;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < 2; j++) {
-            buf[i*2+j] = in[s->frame+j];
+            buf[i*2+j] = in[s->frame+j] * gainmult;
         }
+
         s->frame++;
         if (s->frame == s->data->frames) {
-            s->frame = 0;
+
             if (s->loop > 0) {
                 s->loop--;
+                s->frame = 0;
+            } else {
+                bus_free(s->bus);
             }
         }
     }
+}
+
+void mp3_fillbuf(struct sound *s, short *buf, int n)
+{
+
 }
 
 struct soundstream soundstream_make()
@@ -259,4 +320,11 @@ float pct2db(float pct)
     if (pct <= 0) return -72.f;
 
     return 10*log2(pct);
+}
+
+float pct2mult(float pct)
+{
+    if (pct <= 0) return 0.f;
+
+    return pow(10, 0.5*log2(pct));
 }

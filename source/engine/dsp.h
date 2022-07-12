@@ -22,6 +22,8 @@ struct dsp_filter {
     int dirty;
 };
 
+struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, int samples));
+
 struct dsp_fir {
     float freq;
     int n;
@@ -146,5 +148,7 @@ void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n);
 void dsp_pan(float *deg, short *out, int n);
 
 void dsp_mono(void *p, short *out, int n);
+
+void dsp_bitcrush(void *p, short *out, int n);
 
 #endif

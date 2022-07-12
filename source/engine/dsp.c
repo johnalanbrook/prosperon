@@ -130,6 +130,8 @@ struct wav gen_triangle(float amp, float freq, int sr, int ch)
             data[i+j] = val;
         }
     }
+
+    return new;
 }
 
 struct wav gen_saw(float amp, float freq, int sr, int ch)
@@ -149,11 +151,16 @@ struct wav gen_saw(float amp, float freq, int sr, int ch)
             data[i+j] = val;
         }
     }
+
+    return new;
 }
 
-void make_dsp_filter()
+struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, int samples))
 {
-
+    struct dsp_filter new;
+    new.data = data;
+    data.filter = filter;
+    return new;
 }
 
 void dsp_filter(short *in, short *out, int samples, struct dsp_delay *d)
@@ -600,10 +607,7 @@ void dsp_pan(float *deg, short *out, int n)
         short L = out[i*CHANNELS];
         short R = out[i*CHANNELS +1];
 
-
         if (*deg > 0) {
-
-
             out[i*CHANNELS] = short_gain(L, db1);
             out[i*CHANNELS+1] = (R + short_gain(L, db2)) / 2;
 
@@ -612,13 +616,7 @@ void dsp_pan(float *deg, short *out, int n)
 
         out[i*CHANNELS+1] = short_gain(R, db1);
         out[i*CHANNELS] = short_gain(L, db1) + short_gain(R, db2);
-
-
-
-
     }
-
-
 }
 
 void dsp_mono(void *p, short *out, int n)
@@ -628,5 +626,13 @@ void dsp_mono(void *p, short *out, int n)
 
         for (int j = 0; j < CHANNELS; j++)
             out[i*CHANNELS+j] = val;
+    }
+}
+
+void dsp_bitcrush(void *p, short *out, int n)
+{
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < CHANNELS; j++)
+            out[i*CHANNELS+j] = (out[i*CHANNELS+j] | 0xFF); /* Mask out the lower 8 bits */
     }
 }

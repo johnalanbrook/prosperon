@@ -120,12 +120,12 @@ linkinclude = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
-engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
+engine: tags $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
 	@$(CC) $@ $(LINK)
 	@echo Finished build
 
-editor: $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
+editor: tags $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
 	@$(CC) $^ $(LINK)
 	@echo Finished build
@@ -145,7 +145,7 @@ xbrainstorm: $(bsobjects) $(ENGINE) $(EDITOR)
 	$(CC) $^ $(LINK)
 	@mv xbrainstorm brainstorm/brainstorm$(EXT)
 
-pinball: $(ENGINE) $(pinobjects)
+pinball: tags $(ENGINE) $(pinobjects)
 	@echo Making pinball
 	@$(CC) $(pinobjects) $(LINK) -o $@
 	@mv pinball paladin/pinball
