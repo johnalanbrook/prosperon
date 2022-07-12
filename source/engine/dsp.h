@@ -77,7 +77,13 @@ struct dsp_ammod {
 };
 
 struct dsp_compressor {
-
+    double ratio;
+    double threshold;
+    float target;
+    unsigned int atk; /* Milliseconds */
+    double atk_tau;
+    unsigned int rls; /* MIlliseconds */
+    double rls_tau;
 };
 
 struct dsp_filter dsp_make_compressor();
@@ -136,5 +142,9 @@ struct dsp_reverb {
 
 struct dsp_filter make_reverb();
 void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n);
+
+void dsp_pan(float *deg, short *out, int n);
+
+void dsp_mono(void *p, short *out, int n);
 
 #endif

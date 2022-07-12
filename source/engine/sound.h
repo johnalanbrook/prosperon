@@ -67,6 +67,13 @@ void soundstream_fillbuf(struct soundstream *stream, short *buf, int n);
 void close_audio_device(int device);
 int open_device(const char *adriver);
 
+float short2db(short val);
+short db2short(float db);
+float pct2db(float pct);
+short short_gain(short val, float db);
+
 void audio_init();
+
+
 
 #endif

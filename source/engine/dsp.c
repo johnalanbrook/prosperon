@@ -526,3 +526,107 @@ void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n)
 {
 
 }
+
+struct dsp_filter dsp_make_compressor()
+{
+    struct dsp_filter filter;
+    struct dsp_compressor new;
+
+    new.ratio = 4000;
+    new.atk = 50;
+    new.rls = 250;
+    new.target = 0.f;
+    new.threshold = -3.f;
+    new.atk_tau = tau2pole(new.atk / 3000.f);
+    new.rls_tau = tau2pole(new.rls / 3000.f);
+
+    struct dsp_compressor *c = malloc(sizeof(*c));
+    *c = new;
+
+    filter.data = c;
+    filter.filter = dsp_compressor_fillbuf;
+
+    return filter;
+}
+
+void dsp_compressor_fillbuf(struct dsp_compressor *comp, short *out, int n)
+{
+    float val;
+    float db;
+    db = comp->target * (val - comp->threshold) / comp->ratio;
+
+    for (int i = 0; i < n; i++) {
+        val = short2db(out[i*CHANNELS]);
+
+
+        if (val < comp->threshold) {
+            comp->target = comp->rls_tau * comp->target;
+
+            val += db;
+        } else {
+            comp->target = (1 - comp->atk_tau) + comp->atk_tau * comp->target; // TODO: Bake in the 1 - atk_tau
+
+            val -= db;
+        }
+
+
+
+        // Apply same compression to both channels
+        out[i*CHANNELS] = out[i*CHANNELS+1] = db2short(val) * ( out[i*CHANNELS] > 0 ? 1 : -1);
+    }
+}
+
+void dsp_pan(float *deg, short *out, int n)
+{
+    if (*deg < -100) *deg = -100.f;
+    else if (*deg > 100) *deg = 100.f;
+
+    if (*deg == 0.f) return;
+
+    float db1, db2;
+    float pct = *deg / 100.f;
+
+    if (*deg > 0) {
+        db1 = pct2db(1 - pct);
+        db2 = pct2db(pct);
+    } else {
+        db1 = pct2db(1 + pct);
+        db2 = pct2db(-1*pct);
+    }
+
+
+    for (int i = 0; i < n; i++) {
+        double pct = *deg / 100.f;
+        short L = out[i*CHANNELS];
+        short R = out[i*CHANNELS +1];
+
+
+        if (*deg > 0) {
+
+
+            out[i*CHANNELS] = short_gain(L, db1);
+            out[i*CHANNELS+1] = (R + short_gain(L, db2)) / 2;
+
+            continue;
+        }
+
+        out[i*CHANNELS+1] = short_gain(R, db1);
+        out[i*CHANNELS] = short_gain(L, db1) + short_gain(R, db2);
+
+
+
+
+    }
+
+
+}
+
+void dsp_mono(void *p, short *out, int n)
+{
+    for (int i = 0; i < n; i++) {
+        short val = (out[i*CHANNELS] + out[i*CHANNELS+1]) / 2;
+
+        for (int j = 0; j < CHANNELS; j++)
+            out[i*CHANNELS+j] = val;
+    }
+}

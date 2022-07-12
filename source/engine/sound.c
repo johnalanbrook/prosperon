@@ -91,7 +91,7 @@ static PaStream *stream_def;
 
 void normalize_gain(struct wav *w, double lv)
 {
-    short tarmax = pow(10, lv/20.f) * SHRT_MAX;
+    short tarmax = db2short(lv);
     short max = 0;
     short *s = w->data;
     for (int i = 0; i < w->frames; i++) {
@@ -180,7 +180,7 @@ void sound_init()
     dspammod.ina = s600;
     dspammod.inb = s20;
 
-   // first_free_bus(am_filter);
+   //first_free_bus(am_filter);
 
     struct dsp_filter wn;
     wn.filter = gen_pinknoise;
@@ -227,7 +227,7 @@ void sound_init()
 
 
 
-    //play_song("", "");
+    play_song("", "");
 }
 
 void audio_open(const char *device)
@@ -381,3 +381,24 @@ void soundstream_fillbuf(struct soundstream *s, short *buf, int n)
     }
 }
 
+float short2db(short val)
+{
+    return 20*log10(abs((double)val) / SHRT_MAX);
+}
+
+short db2short(float db)
+{
+    return pow(10, db/20.f) * SHRT_MAX;
+}
+
+short short_gain(short val, float db)
+{
+    return (short)(pow(10, db/20.f) * val);
+}
+
+float pct2db(float pct)
+{
+    if (pct <= 0) return -72.f;
+
+    return 10*log2(pct);
+}

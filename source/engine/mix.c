@@ -19,14 +19,10 @@ struct bus *first_free_bus(struct dsp_filter in) {
 }
 
 void bus_fill_buffers(short *master, int n) {
-    //clock_t sa = clock();
     for (int i = 0; i < 256; i++) {
         if (bus[i].on != 1) continue;
         dsp_run(bus[i].in, bus[i].buf, BUF_FRAMES);
     }
-    //printf("DSP run took %f.\n", (double)(clock() - sa)/CLOCKS_PER_SEC);
-
-    //sa = clock();
 
     memset(master, 0, BUF_FRAMES*CHANNELS*sizeof(short));
 
@@ -36,6 +32,4 @@ void bus_fill_buffers(short *master, int n) {
                 master[i] += bus[j].buf[i];
             }
         }
-
-    //printf("Mix took %f.\n", (double)(clock() - sa)/CLOCKS_PER_SEC);
 }

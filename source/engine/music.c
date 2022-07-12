@@ -11,6 +11,8 @@
 struct dsp_filter cursong;
 struct dsp_midi_song gsong;
 
+float music_pan = 0.f;
+
 void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 {
     short *o = (short*)out;
@@ -54,12 +56,14 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
     }
 
     song->midi = midi;
+
+    dsp_pan(&music_pan, out, n);
 }
 
 void play_song(const char *midi, const char *sf)
 {
-    gsong.midi = tml_load_filename("sounds/littlewonder.mid");
-    gsong.sf = tsf_load_filename("sounds/ff7.sf2");
+    gsong.midi = tml_load_filename("sounds/one-winged-angel.mid");
+    gsong.sf = tsf_load_filename("sounds/mario.sf2");
     gsong.time = 0.f;
 
     tsf_set_output(gsong.sf, TSF_STEREO_INTERLEAVED, SAMPLERATE, 0.f);

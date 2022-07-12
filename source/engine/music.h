@@ -11,6 +11,8 @@ struct dsp_midi_song {
     tml_message *midi;
 };
 
+extern float music_pan;
+
 void play_song(const char *midi, const char *sf);
 void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n);
 

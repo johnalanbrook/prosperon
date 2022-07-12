@@ -12,6 +12,12 @@ struct bus {
     short buf[BUF_FRAMES*CHANNELS];
 };
 
+struct listener {
+    float x;
+    float y;
+    float z;
+};
+
 extern short mastermix[BUF_FRAMES*CHANNELS];
 
 struct bus *first_free_bus(struct dsp_filter in);
