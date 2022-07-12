@@ -5,6 +5,7 @@
 #include "tml.h"
 #include "mix.h"
 #include "sound.h"
+#include "log.h"
 
 #define TSF_BLOCK 32
 
@@ -62,8 +63,19 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 
 void play_song(const char *midi, const char *sf)
 {
-    gsong.midi = tml_load_filename("sounds/one-winged-angel.mid");
-    gsong.sf = tsf_load_filename("sounds/mario.sf2");
+    gsong.midi = tml_load_filename(midi);
+    if (gsong.midi == NULL) {
+        YughWarn("Midi %s not found.", midi);
+        return;
+    }
+
+    gsong.sf = tsf_load_filename(sf);
+
+    if (gsong.sf == NULL) {
+        YughWarn("SF2 %s not found.", sf);
+        return;
+    }
+
     gsong.time = 0.f;
 
     tsf_set_output(gsong.sf, TSF_STEREO_INTERLEAVED, SAMPLERATE, 0.f);

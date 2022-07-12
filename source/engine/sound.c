@@ -31,32 +31,14 @@
 
 const char *audioDriver;
 
-struct sound *mus_cur;
-
-
-struct circbuf vidbuf;
-
-        drmp3 mp3;
-
-struct wav mwav;
-struct sound wavsound;
-
-struct wav sin440;
-struct sound a440;
-
-
-int vidplaying = 0;
-
 struct wav change_samplerate(struct wav w, int rate)
 {
-    printf("Going from sr %i to sr %i.\n", w.samplerate, rate);
     SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
     SDL_AudioStreamPut(stream, w.data, w.frames*w.ch*sizeof(short));
 
     int oldframes = w.frames;
     w.frames *= (float)rate/w.samplerate;
 
-    printf("Went from %i to %i frames.\n", oldframes, w.frames);
     w.samplerate = rate;
     int samples = sizeof(short)*w.ch*w.frames;
     short *new = malloc(samples);
@@ -71,7 +53,6 @@ struct wav change_samplerate(struct wav w, int rate)
 
 static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
-    /* Cast data passed through stream to our structure. */
     short *out = (short*)outputBuffer;
 
     bus_fill_buffers(outputBuffer, framesPerBuffer);
@@ -112,88 +93,6 @@ struct sound s600wavsound;
 
 void sound_init()
 {
-    vidbuf = circbuf_init(sizeof(short), 262144);
-
-    mwav.data = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-
-    mwav.gain = 0;
-
-    printf("Loaded wav: ch %i, sr %i, fr %i.\n", mwav.ch, mwav.samplerate, mwav.frames);
-
-   // mwav = change_samplerate(mwav, 48000);
-
-    //mwav = gen_square(1, 150, 48000, 2);
-
-    wavsound.data = &mwav;
-    wavsound.loop = 1;
-
-    normalize_gain(&mwav, -3);
-
-    //play_sound(&wavsound);
-
-    sin440 = gen_sine(0.4f, 30, SAMPLERATE, 2);
-    a440.data = &sin440;
-    a440.loop = 1;
-    //play_sound(&a440);
-
-    printf("Playing wav with %i frames.\n", wavsound.data->frames);
-
-    sin600.f = tri_phasor;
-    sin600.p = phasor_make(SAMPLERATE, 200);
-
-
-
-    sin20.f = sin_phasor;
-    sin20.p.sr = SAMPLERATE;
-    sin20.p.freq = 250;
-
-    s600wav = gen_sine(0.6f, 600, SAMPLERATE, CHANNELS);
-
-    s600wavsound.loop = -1;
-    s600wavsound.data = &s600wav;
-
-
-    struct dsp_filter s600;
-    s600.data = &s600wavsound;
-    s600.filter = sound_fillbuf;
-
-    struct dsp_filter s20;
-    s20.data = &sin20;
-    s20.filter = osc_fillbuf;
-
-    struct dsp_filter am_filter;
-
-
-
-
-    am_filter.filter = am_mod;
-    am_filter.data = &dspammod;
-
-    dspdel = dsp_delay_make(150);
-    dspdel.in = am_filter;
-    struct dsp_filter del_filter;
-    del_filter.filter = dsp_delay_filbuf;
-    del_filter.data = &dspdel;
-
-    struct dsp_filter ad = make_adsr(50, 200, 500, 100);
-
-    dspammod.ina = s600;
-    dspammod.inb = s20;
-
-   //first_free_bus(am_filter);
-
-    struct dsp_filter wn;
-    wn.filter = gen_pinknoise;
-    //first_free_bus(wn);
-
-/*
-    if (!drmp3_init_file(&mp3, "sounds/circus.mp3", NULL)) {
-        YughError("Could not open mp3.",0);
-    }
-
-    printf("CIrcus mp3 channels: %ui, samplerate: %ui\n", mp3.channels, mp3.sampleRate);
-*/
-
      PaError err = Pa_Initialize();
     check_pa_err(err);
 
@@ -223,11 +122,6 @@ void sound_init()
 
     err = Pa_StartStream(stream_def);
     check_pa_err(err);
-
-
-
-
-    play_song("", "");
 }
 
 void audio_open(const char *device)
@@ -240,76 +134,47 @@ void audio_close()
     //Mix_CloseAudio();
 }
 
-struct sound *make_sound(const char *wav)
+struct wav make_sound(const char *wav)
 {
+    struct wav mwav;
+    mwav.data = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
-    struct sound *new = calloc(1, sizeof(struct sound));
-  /*  ma_result res = ma_sound_init_from_file(&engine, wav, 0, NULL, NULL, &new->sound);
-
-    if (res != MA_SUCCESS) {
-        printf("HONO!!!!");
+    if (mwav.samplerate != SAMPLERATE) {
+        mwav = change_samplerate(mwav, 48000);
     }
-*/
+
+    mwav.gain = 0;
+
+    normalize_gain(&mwav, -3);
+
+    return mwav;
+}
+
+struct sound play_sound(struct wav *wav)
+{
+    struct sound new;
+    new.loop = 0;
+    new.frame = 0;
+    new.gain = 0;
+    new.data = wav;
+
+    // TODO: Make filter to send to mixer
+
     return new;
+
 }
 
-struct sound *make_music(const char *ogg)
+struct music make_music(const char *mp3)
 {
+    drmp3 new;
+    if (!drmp3_init_file(&new, mp3, NULL)) {
+        YughError("Could not open mp3 file %s.", mp3);
+    }
 
-    struct sound *sound = calloc(1, sizeof(struct sound));
-   // ma_result res = ma_sound_init_from_file(&engine, ogg, 0, NULL, &mus_grp, &sound->sound);
-
-    return sound;
+    //printf("CIrcus mp3 channels: %ui, samplerate: %ui\n", mp3.channels, mp3.sampleRate);
 }
 
 
-
-void play_music(struct sound *music)
-{
-    //ma_sound_start(&music->sound);
-    //music->state = MUS_PLAY;
-   // mus_cur = music;
-}
-
-void music_set(struct sound *music)
-{
-
-}
-
-void music_volume(unsigned char vol)
-{
-  //  ma_sound_group_set_volume(&mus_grp, (float)vol/127);
-}
-
-int music_playing()
-{
-    //return ma_sound_is_playing(&mus_cur->sound);
-    return 0;
-}
-
-int music_paused()
-{
-  //  return mus_cur->state == MUS_PAUSE;
-  return 0;
-}
-
-void music_resume()
-{
-  //  ma_sound_start(&mus_cur->sound);
-}
-
-void music_pause()
-{
-    //ma_sound_stop(&mus_cur->sound);
-    //mus_cur->state = MUS_PAUSE;
-}
-
-void music_stop()
-{
-   // ma_sound_stop(&mus_cur->sound);
- //   mus_cur->state = MUS_STOP;
- //   ma_sound_seek_to_pcm_frame(&mus_cur->sound, 0);
-}
 
 
 void audio_init()
@@ -340,13 +205,6 @@ int open_device(const char *adriver)
 */
     return 0;
 }
-
-void play_sound(struct sound *sound)
-{
-    sound->frame = 0;
-    //struct bus *b = first_free_bus(sound, sound_fillbuf);
-}
-
 
 void sound_fillbuf(struct sound *s, short *buf, int n)
 {

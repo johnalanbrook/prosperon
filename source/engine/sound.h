@@ -26,16 +26,22 @@ struct soundstream soundstream_make();
 struct sound {
     int loop;
     int frame;
+    float gain;
+
     struct wav *data;
-    unsigned char volume;
 };
 
 struct wav {
     unsigned int ch;
     unsigned int samplerate;
     unsigned int frames;
-    double gain;
+    float gain;
+
     void *data;
+};
+
+struct music {
+
 };
 
 extern const char *audioDriver;
@@ -46,21 +52,13 @@ void audio_close();
 
 void sound_fillbuf(struct sound *s, short *buf, int n);
 
-struct sound *make_sound(const char *wav);
+struct wav make_sound(const char *wav);
 struct sound *make_music(const char *ogg);
 
-void play_sound(struct sound *sound);
+void play_sound(struct wav wav);
+
 
 const char *get_audio_driver();
-
-void play_music(struct sound *music);
-void music_set(struct sound *music);
-int music_playing();
-int music_paused();
-void music_volume(unsigned char vol);
-void music_resume();
-void music_pause();
-void music_stop();
 
 void soundstream_fillbuf(struct soundstream *stream, short *buf, int n);
 
