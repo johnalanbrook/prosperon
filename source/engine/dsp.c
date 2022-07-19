@@ -159,13 +159,8 @@ struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, 
 {
     struct dsp_filter new;
     new.data = data;
-    data.filter = filter;
+    new.filter = filter;
     return new;
-}
-
-void dsp_filter(short *in, short *out, int samples, struct dsp_delay *d)
-{
-
 }
 
 void dsp_rectify(short *in, short *out, int n)

@@ -38,7 +38,7 @@ static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 
     for (int i = 0; i < samples->count * CHANNELS; i++) {
         t = (short)(samples->interleaved[i] * SHRT_MAX);
-        cbuf_push(&ds->astream.buf, t*5);
+        cbuf_push(ds->astream->buf, t*5);
     }
 }
 

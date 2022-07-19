@@ -11,6 +11,7 @@ struct circbuf {
     unsigned int len;
 };
 
+struct circbuf *circbuf_make(size_t size, unsigned int len);
 struct circbuf circbuf_init(size_t size, unsigned int len);
 void cbuf_push(struct circbuf *buf, short data);
 short cbuf_shift(struct circbuf *buf);

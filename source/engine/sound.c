@@ -8,6 +8,7 @@
 #include "time.h"
 #include "music.h"
 
+
 #include "SDL2/SDL.h"
 
 #include "mix.h"
@@ -41,9 +42,9 @@ void new_samplerate(short *in, short *out, int n, int ch, int sr_in, int sr_out)
 
 struct wav change_samplerate(struct wav w, int rate)
 {
-    int samples = sizeof(short) * w.ch * w.frames;
-    short *new = malloc(samples);
-    new_samplerate(w.data, new,
+    //int samples = sizeof(short) * w.ch * w.frames;
+    //short *new = malloc(samples);
+    //new_samplerate(w.data, new,
 
 
 
@@ -52,9 +53,8 @@ struct wav change_samplerate(struct wav w, int rate)
 
     int oldframes = w.frames;
     w.frames *= (float)rate/w.samplerate;
-
+    int samples = sizeof(short) * w.ch * w.frames;
     w.samplerate = rate;
-    int samples = sizeof(short)*w.ch*w.frames;
     short *new = malloc(samples);
     SDL_AudioStreamGet(stream, new, samples);
 
@@ -168,10 +168,17 @@ struct wav make_sound(const char *wav)
     return mwav;
 }
 
+struct soundstream *soundstream_make()
+{
+    struct soundstream *new =  malloc(sizeof(*new));
+    new->buf = circbuf_make(sizeof(short), BUF_FRAMES*CHANNELS*2);
+    return new;
+}
+
 struct sound *play_sound(struct wav *wav)
 {
     struct sound *new = calloc(1, sizeof(*new));
-    new.data = wav;
+    new->data = wav;
 
     new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
     new->playing = 1;
@@ -182,12 +189,12 @@ struct sound *play_sound(struct wav *wav)
 
 int sound_playing(const struct sound *s)
 {
-    return s.playing;
+    return s->playing;
 }
 
 int sound_paused(const struct sound *s)
 {
-    return (!s.playing && s.frame < s.data->frames);
+    return (!s->playing && s->frame < s->data->frames);
 }
 void sound_pause(struct sound *s)
 {
@@ -208,14 +215,14 @@ void sound_stop(struct sound *s)
     bus_free(s->bus);
 }
 
-int sound_finished(struct sound *s)
+int sound_finished(const struct sound *s)
 {
     return !s->playing && s->frame == s->data->frames;
 }
 
-int sound_stopped(struct sound *s)
+int sound_stopped(const struct sound *s)
 {
-    return !s->playing && s->frame = 0;
+    return !s->playing && s->frame == 0;
 }
 
 struct music make_music(const char *mp3)
@@ -284,16 +291,11 @@ void mp3_fillbuf(struct sound *s, short *buf, int n)
 
 }
 
-struct soundstream soundstream_make()
-{
-    struct soundstream new;
-    new.buf = circbuf_init(sizeof(short), BUF_FRAMES*CHANNELS*2);
-    return new;
-}
+
 
 void soundstream_fillbuf(struct soundstream *s, short *buf, int n)
 {
-    int max = s->buf.write - s->buf.read;
+    int max = s->buf->write - s->buf->read;
     int lim = (max < n*CHANNELS) ? max : n*CHANNELS;
     for (int i = 0; i < lim; i++) {
         buf[i] = cbuf_shift(&s->buf);

@@ -1,7 +1,8 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include "circbuf.h"
+struct circbuf;
+struct SDL_AudioStream;
 
 struct Mix_Chunk {
     int i;
@@ -18,10 +19,15 @@ enum MUS {
 };
 
 struct soundstream {
-    struct circbuf buf;
+    struct circbuf *buf;
 };
 
-struct soundstream soundstream_make();
+struct soundconvstream {
+ //   SDL_AudioStream *srconv;
+    void *data;
+};
+
+struct soundstream *soundstream_make();
 
 struct sound {
     int loop;
@@ -42,14 +48,9 @@ struct wav {
     void *data;
 };
 
-struct soundstream {
-    SDL_AudioStream *srconv;
-    void *data;
 
-};
 
 struct music {
-
 };
 
 extern const char *audioDriver;
@@ -62,12 +63,12 @@ void sound_fillbuf(struct sound *s, short *buf, int n);
 
 struct wav make_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);
-struct sound play_sound(struct wav *wav);
+struct sound *play_sound(struct wav *wav);
 
-int sound_playing(struct sound *s);
-int sound_paused(struct sound *s);
-int sound_stopped(struct sound *s);
-int sound_finished(struct sound *s);
+int sound_playing(const struct sound *s);
+int sound_paused(const struct sound *s);
+int sound_stopped(const struct sound *s);
+int sound_finished(const struct sound *s);
 void sound_pause(struct sound *s);
 void sound_resume(struct sound *s);
 void sound_stop(struct sound *s);

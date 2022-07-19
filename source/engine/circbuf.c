@@ -3,6 +3,15 @@
 #include "util.h"
 #include "assert.h"
 
+struct circbuf *circbuf_make(size_t size, unsigned int len)
+{
+    struct circbuf *new = malloc(sizeof(*new));
+    new->len = powof2(len);
+    new->data = calloc(sizeof(short), new->len);
+    new->read = new->write = 0;
+    return new;
+}
+
 struct circbuf circbuf_init(size_t size, unsigned int len)
 {
     struct circbuf new;

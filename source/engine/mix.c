@@ -18,6 +18,11 @@ struct bus *first_free_bus(struct dsp_filter in) {
     return NULL;
 }
 
+void bus_free(struct bus *bus)
+{
+    bus->on = 0;
+}
+
 void bus_fill_buffers(short *master, int n) {
     for (int i = 0; i < 256; i++) {
         if (bus[i].on != 1) continue;
