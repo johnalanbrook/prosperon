@@ -97,7 +97,7 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS = -g /usr/lib64/pipewire-0.3/jack/libjack.so.0 #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
-	ELIBS = m c engine editor glfw3 portaudio rt asound pthread SDL2
+	ELIBS = m c engine editor glfw3 portaudio rt asound pthread SDL2 yughc
 	CLIBS =
 	EXT =
 endif
