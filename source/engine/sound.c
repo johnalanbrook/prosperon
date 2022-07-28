@@ -7,6 +7,7 @@
 #include "limits.h"
 #include "time.h"
 #include "music.h"
+#include "stb_vorbis.h"
 
 
 #include "SDL2/SDL.h"

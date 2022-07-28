@@ -70,7 +70,7 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32
 
     w->width = width;
     w->height = height;
-    printf("NUmber of windows: %d.\n", windows.len);
+    YughInfo("Number of windows: %d.\n", windows.len);
     w->id = windows.len-1;
 
     w->window = glfwCreateWindow(width, height, name, NULL, sharewin);

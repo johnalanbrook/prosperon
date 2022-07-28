@@ -87,3 +87,39 @@ void play_song(const char *midi, const char *sf)
     cursong.filter = dsp_midi_fillbuf;
     first_free_bus(cursong);
 }
+
+
+void music_play()
+{
+
+}
+
+void music_stop()
+{
+
+}
+
+void music_volume()
+{
+
+}
+
+void music_resume()
+{
+
+}
+
+void music_paused()
+{
+
+}
+
+void music_pause()
+{
+
+}
+
+void sound_play()
+{
+
+}
