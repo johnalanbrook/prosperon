@@ -12,7 +12,8 @@ UNAME_P != uname -m
 CCACHE = #ccache
 
 #CC specifies which compiler we're using
-CC = $(CCACHE) tcc -DSDL_DISABLE_IMMINTRIN_H
+CC = $(CCACHE) clang -DSDL_DISABLE_IMMINTRIN_H
+CLINK = clang
 
 MUSL = /usr/local/musl/include
 
@@ -96,8 +97,8 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -g /usr/lib64/pipewire-0.3/jack/libjack.so.0 #/usr/local/lib/tcc/bcheck.o /usr/local/lib/tcc/bt-exe.o /usr/local/lib/tcc/bt-log.o
-	ELIBS = m c engine editor glfw3 portaudio rt asound pthread SDL2 yughc
+	LINKER_FLAGS = -g /usr/lib64/pipewire-0.3/jack/libjack.so.0
+	ELIBS = m c engine editor glfw3 portaudio rt asound pthread SDL2 yughc mruby
 	CLIBS =
 	EXT =
 endif
@@ -122,12 +123,12 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
 engine: tags $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	@$(CC) $@ $(LINK)
+	@$(CLINK) $@ $(LINK)
 	@echo Finished build
 
 editor: tags $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
 	@echo Linking editor
-	@$(CC) $^ $(LINK)
+	@$(CLINK) $^ $(LINK)
 	@echo Finished build
 
 $(ENGINE): $(eobjects) bin/libglfw3.a
@@ -142,12 +143,12 @@ $(EDITOR): $(edobjects)
 
 xbrainstorm: $(bsobjects) $(ENGINE) $(EDITOR)
 	@echo Making brainstorm
-	$(CC) $^ $(LINK)
+	$(CLINK) $^ $(LINK)
 	@mv xbrainstorm brainstorm/brainstorm$(EXT)
 
 pinball: tags $(ENGINE) $(pinobjects)
 	@echo Making pinball
-	@$(CC) $(pinobjects) $(LINK) -o $@
+	@$(CLINK) $(pinobjects) $(LINK) -o $@
 	@mv pinball paladin/pinball
 
 bin/libglfw3.a:

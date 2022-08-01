@@ -8,6 +8,8 @@
 
 #include "circbuf.h"
 
+struct dsp_iir;
+
 
 void dsp_rectify(short *in, short *out, int n);
 
