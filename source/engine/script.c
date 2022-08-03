@@ -1,26 +1,21 @@
 #include "script.h"
 
 #include "stdio.h"
+#include "log.h"
 
 #include "mruby.h"
 #include "mruby/compile.h"
+#include "mrbffi.h"
 
-static mrb_state *mrb;
+mrb_value obj;
 
-int fib(int n) {
-    if (n < 2) return n;
-    return fib(n-1) + fib(n-2);
-}
-
-mrb_value mrb_fib(mrb_state *mrb, mrb_value self) {
-    int n;
-    mrb_get_args(mrb, "i", &n);
-    return mrb_fixnum_value(fib(n));
-}
+mrb_state *mrb;
+mrbc_context *c;
 
 void script_init() {
     mrb = mrb_open();
-    mrb_define_method(mrb, mrb->object_class, "fib", mrb_fib, MRB_ARGS_REQ(1));
+    c = mrbc_context_new(mrb);
+    ffi_load();
 }
 
 void script_run(const char *script) {
@@ -29,6 +24,20 @@ void script_run(const char *script) {
 
 void script_dofile(const char *file) {
     FILE *mrbf = fopen(file, "r");
-    mrb_load_file(mrb, mrbf);
+    if (mrbf == NULL) {
+        YughError("Could not find game.rb in root folder.",0);
+        return;
+    }
+    mrbc_filename(mrb, c, file);
+    obj = mrb_load_file_cxt(mrb, mrbf, c);
+    mrb_print_error(mrb);
     fclose(mrbf);
+}
+
+void script_update() {
+    mrb_funcall(mrb, obj, "update", 0);
+}
+
+void script_draw() {
+    mrb_funcall(mrb, obj, "draw", 0);
 }
