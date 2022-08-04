@@ -41,3 +41,7 @@ void script_update() {
 void script_draw() {
     mrb_funcall(mrb, obj, "draw", 0);
 }
+
+void script_editor() {
+    mrb_funcall(mrb, obj, "editor", 0);
+}

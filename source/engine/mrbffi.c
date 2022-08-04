@@ -7,6 +7,9 @@
 
 extern mrb_state *mrb;
 
+#include "nuklear.h"
+extern struct nk_context *ctx;
+
 int fib(int n) {
     if (n < 2) return n;
 
@@ -28,8 +31,16 @@ mrb_value mrb_load(mrb_state *mrb, mrb_value self) {
     return self;
 }
 
+mrb_value mrb_ui_label(mrb_state *mrb, mrb_value self) {
+    char *str;
+    mrb_get_args(mrb, "z", &str);
+    nk_labelf(ctx, NK_TEXT_LEFT, "%s", str);
+    return self;
+}
+
 void ffi_load() {
     mrb_define_method(mrb, mrb->object_class, "fib", mrb_fib, MRB_ARGS_REQ(1));
     mrb_define_method(mrb, mrb->object_class, "load", mrb_load, MRB_ARGS_REQ(1));
+    mrb_define_method(mrb, mrb->object_class, "ui_label", mrb_ui_label, MRB_ARGS_REQ(1));
 }
 

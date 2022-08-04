@@ -421,8 +421,8 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods)
     }
 }
 
-struct nk_context *ctx;
-struct nk_glfw nkglfw = {0};
+static struct nk_context *ctx;
+static struct nk_glfw nkglfw = {0};
 
 void editor_init(struct mSDLWindow *window)
 {
