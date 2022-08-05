@@ -13,7 +13,7 @@ mat4 rec601 = mat4(
     1.16438,  2.01723,  0.00000, -1.08139,
     0, 0, 0, 1
 );
-    
+
 void main() {
     float y = texture2D(texture_y, TexCoords).r;
     float cb = texture2D(texture_cb, TexCoords).r;
