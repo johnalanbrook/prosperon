@@ -36,12 +36,20 @@ void script_dofile(const char *file) {
 
 void script_update() {
     mrb_funcall(mrb, obj, "update", 0);
+    mrb_print_error(mrb);
 }
 
 void script_draw() {
     mrb_funcall(mrb, obj, "draw", 0);
+    mrb_print_error(mrb);
 }
 
 void script_editor() {
     mrb_funcall(mrb, obj, "editor", 0);
+    mrb_print_error(mrb);
+}
+
+void script_call(const char *f) {
+    mrb_funcall(mrb, obj, f, 0);
+    mrb_print_error(mrb);
 }

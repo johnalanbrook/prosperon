@@ -45,6 +45,10 @@ struct mSDLWindow;
 void pickGameObject(int pickID);
 int is_allowed_extension(const char *ext);
 
+void nuk_init(struct mSDLWindow *window);
+
+
+
 void editor_init(struct mSDLWindow *window);
 void editor_input();
 void editor_render();

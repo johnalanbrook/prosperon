@@ -1,19 +1,4 @@
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_IMPLEMENTATION
-#define NK_GLFW_GL3_IMPLEMENTATION
-#define NK_KEYSTATE_BASED_INPUT
-
-#include "nuklear.h"
-#include "nuklear_glfw_gl3.h"
-
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_ELEMENT_BUFFER 128 * 1024
+#include nuke.h
 
 #include "openglrender.h"
 #include "editor.h"
@@ -56,7 +41,6 @@
 struct gameproject *cur_project;
 struct vec *projects;
 static char setpath[MAXPATH];
-
 
 // Menus
 // TODO: Pack this into a bitfield
@@ -421,8 +405,7 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods)
     }
 }
 
-static struct nk_context *ctx;
-static struct nk_glfw nkglfw = {0};
+
 
 void editor_init(struct mSDLWindow *window)
 {
