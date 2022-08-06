@@ -3,7 +3,6 @@
 #include "2dphysics.h"
 #include <editor.h>
 #include "sprite.h"
-#include "pinball.h"
 
 struct component components[MAXNAME] = { 0 };
 
@@ -28,11 +27,6 @@ void registry_init()
     register_component("2D Edge", sizeof(struct phys2d_edge), &Make2DEdge,
 		       &phys2d_dbgdrawedge, &edge_gui, &phys2d_edgeinit,
 		       NULL);
-		       /*
-    register_component("Flipper", sizeof(struct flipper),
-		       &pinball_flipper_make, NULL, &pinball_flipper_gui,
-		       &pinball_flipper_init, &pinball_flipper_update);
-		       */
 }
 
 void register_component(const char *name, size_t size,

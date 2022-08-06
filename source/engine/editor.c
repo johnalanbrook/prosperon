@@ -1,4 +1,4 @@
-#include nuke.h
+#include "nuke.h"
 
 #include "openglrender.h"
 #include "editor.h"
@@ -22,7 +22,6 @@
 #include <chipmunk/chipmunk.h>
 #include "math.h"
 #include <ctype.h>
-#include "pinball.h"
 #include "config.h"
 #include "vec.h"
 #include "debug.h"
@@ -421,13 +420,7 @@ void editor_init(struct mSDLWindow *window)
 	fclose(feditor);
     }
 
-    ctx = nk_glfw3_init(&nkglfw, window->window, NK_GLFW3_INSTALL_CALLBACKS);
-
-
-   struct nk_font_atlas *atlas;
-    nk_glfw3_font_stash_begin(&nkglfw, &atlas);
-    struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "fonts/notosans.tff", 14, 0);
-    nk_glfw3_font_stash_end(&nkglfw);
+    nuke_init(window);
 
     glfwSetKeyCallback(window->window, edit_input_cb);
     glfwSetMouseButtonCallback(window->window, edit_mouse_cb);
@@ -842,7 +835,7 @@ nk_end(ctx);
 
 void editor_render()
 {
-    nk_glfw3_new_frame(&nkglfw);
+    nuke_start();
 
     struct nk_colorf bg;
     bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
@@ -854,7 +847,7 @@ void editor_render()
 
 	editor_project_gui();
 
-    nk_glfw3_render(&nkglfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+    nuke_end();
 }
 
 
@@ -1473,9 +1466,3 @@ void game_pause()
     physOn = 0;
 }
 
-void pinball_flipper_gui(struct flipper *flip)
-{
-    nk_property_float(ctx, "Angle start", 0.f, &flip->angle1, 360.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Angle end", 0.f, &flip->angle2, 360.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Flipper speed", 0.f, &flip->flipspeed, 100.f, 1.f, 0.1f);
-}

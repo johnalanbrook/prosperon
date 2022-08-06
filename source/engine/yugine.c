@@ -2,7 +2,6 @@
 #include "camera.h"
 #include "window.h"
 #include "engine.h"
-#include "editor.h"
 #include "input.h"
 #include "2dphysics.h"
 #include "openglrender.h"

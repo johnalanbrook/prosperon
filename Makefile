@@ -9,13 +9,11 @@ endif
 
 UNAME_P != uname -m
 
-CCACHE = #ccache
+CCACHE = ccache
 
 #CC specifies which compiler we're using
 CC = $(CCACHE) clang -DSDL_DISABLE_IMMINTRIN_H
 CLINK = clang
-
-MUSL = /usr/local/musl/include
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -32,16 +30,8 @@ define make_objs
 	find $(1) -type f -name '*.c' | sed 's|\.c.*|.o|' | sed 's|\.|$(objprefix)|1'
 endef
 
-define make_obj
-	echo $(1) | tr " " "\n" | sed 's|\.c.*|.o|' | sed 's|\.|$(objprefix)|1'
-endef
-
-define find_include
-	find $(1) -type f -name '*.h'  | sed 's|\/[^\/]*\.h$$||' | sort | uniq
-endef
-
 define prefix
-	echo $(1) | tr " " "\n" | sed 's|.*|$(2)&$(3)|'
+	echo $(1) | tr " " "\n" | sed 's/.*/$(2)&$(3)/'
 endef
 
 define rm
@@ -62,31 +52,15 @@ ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine)
 
-eddirs != find ./source/editor -type d
-eddirs += ./source/editor
-edhead != $(call findindir,./source/editor,*.h)
-edobjects != find ./source/editor -maxdepth 1 -type f  -name '*.c'
-edobjects != $(call make_obj,$(edobjects))
+edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include ./source/engine/thirdparty/Nuklear
+includeflag != $(call prefix,$(edirs) $(eddirs),-I)
+COMPINCLUDE = $(edirs) $(eddirs)
 
-bsdirs != find ./source/brainstorm -type d
-bsobjects != $(call make_objs, ./source/brainstorm)
-
-pindirs != find ./source/pinball -type d
-pinobjects != $(call make_objs, ./source/pinball);
-
-edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include
-includeflag != $(call prefix,$(edirs) $(eddirs) $(pindirs) $(bsdirs),-I)
-COMPINCLUDE = $(edirs) $(eddirs) $(pindirs) $(bsdirs)
-
-
-
-WARNING_FLAGS = -Wno #-Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
-
-
+WARNING_FLAGS = -Wno-everything #-Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
 COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 -MD $(WARNING_FLAGS) -c $< -o $@
 
-LIBPATH = -L./bin -L/usr/local/lib -L/usr/local/lib/tcc -L/usr/lib64/pipewire-0.3/jack
+LIBPATH = -L./bin -L/usr/local/lib -L/usr/lib64/pipewire-0.3/jack
 
 ALLFILES != find source/ -name '*.[ch]' -type f
 
@@ -98,7 +72,7 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS = -g /usr/lib64/pipewire-0.3/jack/libjack.so.0
-	ELIBS = m c engine editor glfw3 portaudio rt asound pthread SDL2 yughc mruby
+	ELIBS = m c engine glfw3 portaudio rt asound pthread SDL2 yughc mruby
 	CLIBS =
 	EXT =
 endif
@@ -107,49 +81,26 @@ ELIBS != $(call prefix, $(ELIBS), -l)
 
 LELIBS = $(ELIBS) $(CLIBS)
 
-objects = $(bsobjects) $(eobjects) $(pinobjects)
+objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
 -include $(DEPENDS)
 
 yuginec = ./source/engine/yugine.c
 
 ENGINE = $(BIN)libengine.a
-EDITOR = $(BIN)libeditor.a
 INCLUDE = $(BIN)include
-
-linkinclude = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
 
-engine: tags $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
+engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	@$(CLINK) $@ $(LINK)
-	@echo Finished build
-
-editor: tags $(yuginec:.%.c=$(objprefix)%.o) $(EDITOR) $(ENGINE)
-	@echo Linking editor
-	@$(CLINK) $^ $(LINK)
+	$(CLINK) $< $(LINK)
 	@echo Finished build
 
 $(ENGINE): $(eobjects) bin/libglfw3.a
 	@echo Making library engine.a
 	@ar r $(ENGINE) $(eobjects)
 	@cp -u -r $(ehead) $(INCLUDE)
-
-$(EDITOR): $(edobjects)
-	@echo Making editor library
-	@ar r $(EDITOR) $^
-	@cp -u -r $(edhead) $(INCLUDE)
-
-xbrainstorm: $(bsobjects) $(ENGINE) $(EDITOR)
-	@echo Making brainstorm
-	$(CLINK) $^ $(LINK)
-	@mv xbrainstorm brainstorm/brainstorm$(EXT)
-
-pinball: tags $(ENGINE) $(pinobjects)
-	@echo Making pinball
-	@$(CLINK) $(pinobjects) $(LINK) -o $@
-	@mv pinball paladin/pinball
 
 bin/libglfw3.a:
 	@echo Making GLFW
