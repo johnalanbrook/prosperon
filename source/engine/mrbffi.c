@@ -3,12 +3,14 @@
 #include "mruby.h"
 #include "mruby/compile.h"
 #include "mruby/string.h"
+#include "mruby/hash.h"
 
 #include "font.h"
 
 
 #include "script.h"
 #include "string.h"
+#include "window.h"
 
 extern mrb_state *mrb;
 
@@ -97,6 +99,40 @@ mrb_value mrb_ui_rendertext(mrb_state *mrb, mrb_value self) {
 }
 
 mrb_value mrb_c_reload(mrb_state *mrb, mrb_value self) {
+    return self;
+}
+
+mrb_value mrb_win_make(mrb_state *mrb, mrb_value self) {
+    char name[50] = "New Window";
+    struct mSDLWindow *new = MakeSDLWindow(name, 500, 500, 0);
+    return mrb_float_value(mrb, new->id);
+}
+
+mrb_value mrb_nuke_cb(mrb_state *mrb, mrb_value self) {
+    mrb_float win;
+    mrb_sym cb;
+    mrb_get_args(mrb, "fn", &win, &cb);
+    window_i((int)win)->nuke_cb = cb;
+    return self;
+}
+
+mrb_value mrb_gui_cb(mrb_state *mrb, mrb_value self) {
+    mrb_float win;
+    mrb_sym cb;
+    mrb_get_args(mrb, "fn", &win, &cb);
+    window_i((int)win)->gui_cb = cb;
+    return self;
+}
+
+mrb_value mrb_sound_make(mrb_state *mrb, mrb_value self) {
+    mrb_value vals;
+    mrb_get_args(mrb, "H", &vals);
+    char *name = mrb_str_to_cstr(mrb, mrb_hash_fetch(mrb, vals, mrb_symbol_value(mrb_intern_cstr(mrb, "name")), mrb_str_new_cstr(mrb, "New Window")));
+    printf("Window name is %s.\n", name);
+    return self;
+}
+
+mrb_value mrb_sound_cmd(mrb_state *mrb, mrb_value self) {
 
 }
 
@@ -115,5 +151,12 @@ void ffi_load() {
     mrb_define_method(mrb, mrb->object_class, "ui_rendertext", mrb_ui_rendertext, MRB_ARGS_REQ(5));
 
     mrb_define_method(mrb, mrb->object_class, "c_reload", mrb_c_reload, MRB_ARGS_REQ(1));
+
+    mrb_define_method(mrb, mrb->object_class, "win_make", mrb_win_make, MRB_ARGS_REQ(1));
+    mrb_define_method(mrb, mrb->object_class, "nuke_cb", mrb_nuke_cb, MRB_ARGS_REQ(2));
+    mrb_define_method(mrb, mrb->object_class, "gui_cb", mrb_gui_cb, MRB_ARGS_REQ(2));
+
+    mrb_define_method(mrb, mrb->object_class, "sound_make", mrb_sound_make, MRB_ARGS_REQ(1));
+    mrb_define_method(mrb, mrb->object_class, "sound_cmd", mrb_sound_cmd, MRB_ARGS_REQ(2));
 }
 

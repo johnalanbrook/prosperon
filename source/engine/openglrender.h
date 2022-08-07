@@ -43,7 +43,7 @@ enum RenderMode {
 };
 
 void openglInit();
-void openglRender(struct mSDLWindow *window, struct mCamera *camera);
+void openglRender(struct mSDLWindow *window);
 
 void openglInit3d(struct mSDLWindow *window);
 void openglRender3d(struct mSDLWindow *window, struct mCamera *camera);

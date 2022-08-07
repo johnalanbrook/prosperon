@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "mruby.h"
+
 struct mSDLWindow {
     GLFWwindow *window;
     int id;
@@ -19,6 +21,8 @@ struct mSDLWindow {
     bool iconified;
     bool shown;
     float projection[16];
+    mrb_sym nuke_cb;
+    mrb_sym gui_cb;
 };
 
 struct Texture;
@@ -37,8 +41,9 @@ void window_togglefullscreen(struct mSDLWindow *w);
 void window_swap(struct mSDLWindow *w);
 void window_seticon(struct mSDLWindow *w, struct Texture *icon);
 int window_hasfocus(struct mSDLWindow *w);
+struct mSDLWindow *window_i(int index);
 
-double frame_time();
-int elapsed_time();
+void window_render(struct mSDLWindow *w);
+void window_renderall();
 
 #endif

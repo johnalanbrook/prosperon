@@ -11,7 +11,6 @@ UNAME_P != uname -m
 
 CCACHE = ccache
 
-#CC specifies which compiler we're using
 CC = $(CCACHE) clang -DSDL_DISABLE_IMMINTRIN_H
 CLINK = clang
 

@@ -20,6 +20,11 @@ unsigned char temp_bitmap[512 * 512];
 struct sFont *font;
 static struct mShader *shader;
 
+/*
+    mfont = MakeFont("notosans.ttf", 300);
+    text_settype(mfont);
+*/
+
 void font_init(struct mShader *textshader) {
     shader = textshader;
 

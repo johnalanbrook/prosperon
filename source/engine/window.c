@@ -54,6 +54,34 @@ void window_close_callback(GLFWwindow *w)
     quit = 1;
 }
 
+void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
+{
+    char keystr[50] = {'\0'};
+    strcat(keystr, "input_");
+    strcat(keystr, glfwGetKeyName(key, 0));
+    switch (action) {
+        case GLFW_PRESS:
+            strcat(keystr, "_down");
+            break;
+
+        case GLFW_RELEASE:
+            strcat(keystr, "_up");
+            break;
+
+        case GLFW_REPEAT:
+            strcat(keystr, "_rep");
+            break;
+    }
+    script_call(keystr);
+
+/*    Example callback function
+    if (key == GLFW_KEY_F && action == GLFW_PRESS) {
+        printf("Pressed F.\n");
+        if (w == customerWindow->window) window_togglefullscreen(customerWindow);
+    }
+*/
+}
+
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32_t flags)
 {
      struct mSDLWindow *w;
@@ -91,6 +119,12 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32
     glfwSetWindowSizeCallback(w->window, window_size_callback);
     glfwSetFramebufferSizeCallback(w->window, window_framebuffer_size_cb);
     glfwSetWindowFocusCallback(w->window, window_focus_callback);
+    glfwSetKeyCallback(w->window, win_key_callback);
+
+    nuke_init(w);
+
+    w->nuke_cb = 0;
+    w->gui_cb = 0;
 
     return w;
 }
@@ -106,7 +140,9 @@ void window_destroy(struct mSDLWindow *w)
     vec_delete(&windows, w->id);
 }
 
-
+struct mSDLWindow *window_i(int index) {
+    return vec_get(&windows, index);
+}
 
 void window_handle_event(struct mSDLWindow *w)
 {
@@ -244,20 +280,18 @@ int window_hasfocus(struct mSDLWindow *w)
     return glfwGetWindowAttrib(w->window, GLFW_FOCUSED);
 }
 
-double frame_time()
-{
-    return glfwGetTime();
+void window_render(struct mSDLWindow *w) {
+    window_makecurrent(w);
+    openglRender(w);
+
+    if (script_has_sym(w->nuke_cb)) {
+        nuke_start();
+        script_call_sym(w->nuke_cb);
+        nuke_end();
+    }
+    window_swap(w);
 }
 
-int elapsed_time()
-{
-    static double last_time;
-    double elapsed;
-    elapsed = frame_time() - last_time;
-    last_time = frame_time();
-    //printf("Elapsed: %d.\n", elapsed);
-    return elapsed * 1000;
+void window_renderall() {
+    vec_walk(&windows, window_render);
 }
-
-
-

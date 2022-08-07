@@ -172,33 +172,40 @@ void openglInit()
 
 }
 
-void openglRender(struct mSDLWindow *window, struct mCamera *mcamera)
+
+static struct mCamera mcamera = {0};
+void openglRender(struct mSDLWindow *window)
 {
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.3f, 0.3f, 0.3f, 1.f);
+
+
     //////////// 2D projection
     mfloat_t projection[16] = { 0.f };
-    mat4_ortho(projection, mcamera->transform.position[0],
-	       window->width + mcamera->transform.position[0],
-	       mcamera->transform.position[1],
-	       window->height + mcamera->transform.position[1], -1.f, 1.f);
+    mat4_ortho(projection, mcamera.transform.position[0],
+	       window->width + mcamera.transform.position[0],
+	       mcamera.transform.position[1],
+	       window->height + mcamera.transform.position[1], -1.f, 1.f);
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
-    shader_setmat4(vid_shader, "projection", projection);
+    //shader_setmat4(vid_shader, "projection", projection);
    glEnable(GL_DEPTH_TEST);
 
     // Clear color and depth
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     ////// TEXT && GUI
+    script_call_sym(window->gui_cb);
 
     ///// Sprites
     glDepthFunc(GL_LESS);
     shader_use(spriteShader);
     sprite_draw_all();
 
-          glDepthFunc(GL_ALWAYS);
-       shader_use(textShader);
-       shader_setmat4(textShader, "projection", projection);
+     glDepthFunc(GL_ALWAYS);
+     shader_use(textShader);
+     shader_setmat4(textShader, "projection", projection);
 
 }
 

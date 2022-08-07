@@ -10,6 +10,7 @@
 #define NK_KEYSTATE_BASED_INPUT
 
 #include "nuke.h"
+#include "nuklear_glfw_gl3.h"
 
 #include "window.h"
 

@@ -3,67 +3,47 @@
 #include "window.h"
 #include "engine.h"
 #include "input.h"
-#include "2dphysics.h"
 #include "openglrender.h"
-#include "gameobject.h"
 
 int physOn = 0;
-unsigned int frameCount = 0;
 
-double physMS = sFPS144;
-double physlag = 0;
-double renderMS = sFPS144;
 double renderlag = 0;
 
-struct mCamera camera = {0};
+static double renderMS = 0.033;
 
-int main(int argc, char **args)
-{
-    camera.speed = 500;
-
+int main(int argc, char **args) {
     engine_init();
 
-    struct mSDLWindow *window = MakeSDLWindow("Untitled Game", 1920, 1080, 0);
+    window_set_icon("icon.png");
+
+    script_dofile("game.rb");
 
     openglInit();
 
-    editor_init(window);
+    renderMS = 0.033;
 
-    int quit = 0;
+    double lastTick;
+    double frameTick;
 
-    //While application is running
     while (!quit) {
-	deltaT = elapsed_time();
+         double elapsed;
+         double lastTick;
+         frameTick = glfwGetTime();
+         elapsed = frameTick - lastTick;
+         lastTick = frameTick;
 
-	physlag += deltaT;
-	renderlag += deltaT;
+         renderlag += elapsed;
 
-	input_poll();
+        input_poll();
 
-	if (physlag >= physMS) {
-	    phys2d_update(physMS);
+       window_all_handle_events();
 
-	    physlag -= physMS;
-	}
+       script_update(elapsed);
 
-	if (renderlag >= renderMS) {
-	    if (physOn) {
-		update_gameobjects();
-	    }
+        if (renderlag >= renderMS) {
+            renderlag -= renderMS;
+            window_renderall();
+        }
 
-	    camera_2d_update(&camera, renderMS);
-
-	    openglRender(window, &camera);
-
-	    editor_render();
-
-	    window_swap(window);
-
-	    renderlag -= renderMS;
-	}
     }
-
-    engine_stop();
-
-    return 0;
 }

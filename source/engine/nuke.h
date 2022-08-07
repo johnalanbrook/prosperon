@@ -2,7 +2,7 @@
 #define NUKE_H
 
 #include "nuklear.h"
-#include "nuklear_glfw_gl3.h"
+
 
 extern struct nk_context *ctx;
 

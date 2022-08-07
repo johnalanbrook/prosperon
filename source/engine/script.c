@@ -3,7 +3,7 @@
 #include "stdio.h"
 #include "log.h"
 
-#include "mruby.h"
+
 #include "mruby/compile.h"
 #include "mrbffi.h"
 
@@ -34,8 +34,8 @@ void script_dofile(const char *file) {
     fclose(mrbf);
 }
 
-void script_update() {
-    mrb_funcall(mrb, obj, "update", 0);
+void script_update(double dt) {
+    mrb_funcall(mrb, obj, "update", 1, mrb_float_value(mrb, dt));
     mrb_print_error(mrb);
 }
 
@@ -50,6 +50,16 @@ void script_editor() {
 }
 
 void script_call(const char *f) {
-    mrb_funcall(mrb, obj, f, 0);
+    script_call_sym(mrb_intern_cstr(mrb, f));
+}
+
+void script_call_sym(mrb_sym sym)
+{
+    if (mrb_respond_to(mrb, obj, sym)) mrb_funcall_argv(mrb, obj, sym, 0, NULL);
+
     mrb_print_error(mrb);
+}
+
+int script_has_sym(mrb_sym sym) {
+    return mrb_respond_to(mrb, obj, sym);
 }
