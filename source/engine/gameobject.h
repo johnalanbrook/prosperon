@@ -37,10 +37,7 @@ struct mGameObject {
     float f;			/* friction */
     float e;			/* elasticity */
     struct vec *components;
-    char *start;
-    char *update;
-    char *fixedupdate;
-    char *stop;
+    char *script;
 };
 
 struct mGameObject *MakeGameobject();
@@ -70,5 +67,7 @@ void update_gameobjects();
 
 void gameobject_move(struct mGameObject *go, float xs, float ys);
 void gameobject_rotate(struct mGameObject *go, float as);
+
+void object_gui(struct mGameObject *go);
 
 #endif

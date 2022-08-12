@@ -10,9 +10,9 @@
 #include <string.h>
 #include <chipmunk/chipmunk.h>
 #include "resources.h"
+#include "nuke.h"
 
 struct vec *gameobjects = NULL;
-struct mGameObject *updateGO = NULL;
 
 const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
@@ -174,20 +174,11 @@ void toggleprefab(struct mGameObject *go)
     }
 }
 
-void component_update(struct component *c)
-{
-    if (c->update)
-	c->update(c->data, c->go);
-}
-
 void gameobject_update(struct mGameObject *go)
 {
-    if (go->update) {
-	updateGO = go;
-	script_run(updateGO->update);
+    if (go->script) {
+	script_run(go->script);
     }
-
-    vec_walk(go->components, &component_update);
 }
 
 void gameobject_move(struct mGameObject *go, float xs, float ys)
@@ -207,4 +198,67 @@ void gameobject_rotate(struct mGameObject *go, float as)
 
 void update_gameobjects() {
     vec_walk(gameobjects, &gameobject_update);
+}
+
+
+void object_gui(struct mGameObject *go)
+{
+    float temp_pos[2];
+    temp_pos[0] = cpBodyGetPosition(go->body).x;
+    temp_pos[1] = cpBodyGetPosition(go->body).y;
+
+    draw_point(temp_pos[0], temp_pos[1], 3);
+
+    nk_property_float2(ctx, "Position", 0.f, temp_pos, 1.f, 0.01f, 0.01f);
+
+    cpVect tvect = { temp_pos[0], temp_pos[1] };
+    cpBodySetPosition(go->body, tvect);
+
+    float mtry = cpBodyGetAngle(go->body);
+    float modtry = fmodf(mtry * RAD2DEGS, 360.f);
+    float modtry2 = modtry;
+    nk_property_float(ctx, "Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
+    modtry -= modtry2;
+    cpBodySetAngle(go->body, mtry + (modtry * DEG2RADS));
+
+    nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, 0.001f);
+
+    nk_layout_row_dynamic(ctx, 25, 3);
+    nk_radio_button_label(ctx, "Static", &go->bodytype, CP_BODY_TYPE_STATIC);
+    nk_radio_button_label(ctx, "Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
+    nk_radio_button_label(ctx, "Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
+
+    cpBodySetType(go->body, go->bodytype);
+
+    if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
+         nk_property_float(ctx, "Mass", 0.01f, &go->mass, 1000.f, 0.01f, 0.01f);
+	cpBodySetMass(go->body, go->mass);
+    }
+
+    nk_property_float(ctx, "Friction", 0.f, &go->f, 10.f, 0.01f, 0.01f);
+    nk_property_float(ctx, "Elasticity", 0.f, &go->e, 2.f, 0.01f, 0.01f);
+
+    int n = -1;
+
+    for (int i = 0; i < go->components->len; i++) {
+	struct component *c =
+	    (struct component *) vec_get(go->components, i);
+
+	if (c->draw_debug)
+	    c->draw_debug(c->data);
+
+	if (nk_tree_push(ctx, NK_TREE_NODE, c->name, NK_MINIMIZED)) {
+	    if (nk_button_label(ctx, "Del")) {
+		n = i;
+	    }
+
+	    c->draw_gui(c->data);
+
+	    nk_tree_pop(ctx);
+	}
+    }
+
+    if (n >= 0)
+	gameobject_delcomponent(go, n);
+
 }

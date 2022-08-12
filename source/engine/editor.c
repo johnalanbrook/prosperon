@@ -45,8 +45,6 @@ static char setpath[MAXPATH];
 // TODO: Pack this into a bitfield
 static struct editorVars editor = { 0 };
 
-bool flashlightOn = false;
-
 // Lighting effect flags
 static bool renderAO = true;
 static bool renderDynamicShadows = true;
@@ -59,8 +57,6 @@ static bool debugDrawPhysics = false;
 const char *allowed_extensions[] = { "jpg", "png", "gltf", "glsl" };
 
 static const char *editor_filename = "editor.ini";
-
-//static ImGuiIO *io = NULL;
 
 struct asset {
     char *key;
@@ -426,10 +422,8 @@ void editor_init(struct mSDLWindow *window)
     glfwSetMouseButtonCallback(window->window, edit_mouse_cb);
 }
 
-void editor_input()
-{
-}
 
+// TODO: Implement
 int editor_wantkeyboard()
 {
     return 0;
@@ -835,19 +829,10 @@ nk_end(ctx);
 
 void editor_render()
 {
-    nuke_start();
-
-    struct nk_colorf bg;
-    bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
-
     if (cur_project)
 	editor_project_gui();
     else
 	editor_proj_select_gui();
-
-	editor_project_gui();
-
-    nuke_end();
 }
 
 
@@ -1140,277 +1125,6 @@ void editor_import_project(char *path)
     vec_add(projects, gp);
 }
 
-
-/////// Object GUIs
-#include "light.h"
-#include "transform.h"
-#include "static_actor.h"
-
-
-/*
-void light_gui(struct mLight *light)
-{
-    object_gui(&light->obj);
-
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Light", NK_MINIMIZED)) {
-	nk_property_float(ctx, "Strength", 0.f, &light->strength, 1.f, 0.01f, 0.001f);
-	// ImGui::ColorEdit3("Color", &light->color[0]);
-	nk_checkbox_label(ctx, "Dynamic", (bool *) &light->dynamic);
-	nk_tree_pop(ctx);
-    }
-}
-
-
-void pointlight_gui(struct mPointLight *light)
-{
-    light_gui(&light->light);
-
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Point Light", NK_MINIMIZED)) {
-	nk_property_float(ctx, "Constant", 0.f, &light->constant, 1.f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Linear", 0.f, &light->linear, 0.3f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Quadratic", 0.f, &light->quadratic, 0.3f, 0.01f, 0.001f);
-	nk_tree_pop(ctx);
-    }
-
-}
-
-void spotlight_gui(struct mSpotLight *spot)
-{
-    light_gui(&spot->light);
-
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Spotlight", NK_MINIMIZED)) {
-	nk_property_float(ctx, "Linear", 0.f, &spot->linear, 1.f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Quadratic", 0.f, &spot->quadratic, 1.f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Distance", 0.f, &spot->distance, 200.f, 1.f, 0.1f, 200.f);
-	nk_property_float(ctx, "Cutoff Degrees", 0.f, &spot->cutoff, 0.7f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Outer Cutoff Degrees", 0.f, &spot->outerCutoff, 0.7f, 0.01f, 0.001f);
-	nk_tree_pop(ctx);
-    }
-}
-*/
-
-void staticactor_gui(struct mStaticActor *sa)
-{
-    object_gui(&sa->obj);
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Model", NK_MINIMIZED)) {
-	nk_checkbox_label(ctx, "Cast Shadows", &sa->castShadows);
-	nk_labelf(ctx, NK_TEXT_LEFT, "Model path: %s", sa->currentModelPath);
-
-	//ImGui::SameLine();
-	if (nk_button_label(ctx, "Load model")) {
-	    //asset_command = set_new_model;
-	    curActor = sa;
-	}
-
-    }
-}
-
-void nk_property_float3(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
-    nk_layout_row_dynamic(ctx, 25, 1);
-    nk_label(ctx, label, NK_TEXT_LEFT);
-    nk_layout_row_dynamic(ctx, 25, 3);
-    nk_property_float(ctx, "X", min, &val[0], max, step, dragstep);
-    nk_property_float(ctx, "Y", min, &val[1], max, step, dragstep);
-    nk_property_float(ctx, "Z", min, &val[2], max, step, dragstep);
-}
-
-void nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
-    nk_layout_row_dynamic(ctx, 25, 1);
-    nk_label(ctx, label, NK_TEXT_LEFT);
-    nk_layout_row_dynamic(ctx, 25, 2);
-    nk_property_float(ctx, "X", min, &val[0], max, step, dragstep);
-    nk_property_float(ctx, "Y", min, &val[1], max, step, dragstep);
-}
-
-void trans_drawgui(struct mTransform *T)
-{
-    nk_property_float3(ctx, "Position", -1000.f, T->position, 1000.f, 1.f, 1.f);
-    nk_property_float3(ctx, "Rotation", 0.f, T->rotation, 360.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Scale", 0.f, &T->scale, 1000.f, 0.1f, 0.1f);
-}
-
-void nk_radio_button_label(struct nk_contex *ctx, const char *label, int *val, int cmp) {
-    if (nk_option_label(ctx, label, (bool)*val == cmp)) *val = cmp;
-}
-
-void object_gui(struct mGameObject *go)
-{
-    float temp_pos[2];
-    temp_pos[0] = cpBodyGetPosition(go->body).x;
-    temp_pos[1] = cpBodyGetPosition(go->body).y;
-
-    draw_point(temp_pos[0], temp_pos[1], 3);
-
-    nk_property_float2(ctx, "Position", 0.f, temp_pos, 1.f, 0.01f, 0.01f);
-
-    cpVect tvect = { temp_pos[0], temp_pos[1] };
-    cpBodySetPosition(go->body, tvect);
-
-    float mtry = cpBodyGetAngle(go->body);
-    float modtry = fmodf(mtry * RAD2DEGS, 360.f);
-    float modtry2 = modtry;
-    nk_property_float(ctx, "Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
-    modtry -= modtry2;
-    cpBodySetAngle(go->body, mtry + (modtry * DEG2RADS));
-
-    nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, 0.001f);
-
-    nk_layout_row_dynamic(ctx, 25, 4);
-   if (nk_button_label(ctx, "Start")) {
-
-    }
-
-    if (nk_button_label(ctx, "Update")) {
-
-    }
-
-    if (nk_button_label(ctx, "Fixed Update")) {
-
-    }
-
-    if (nk_button_label(ctx, "End")) {
-
-    }
-
-    nk_layout_row_dynamic(ctx, 25, 3);
-    nk_radio_button_label(ctx, "Static", &go->bodytype, CP_BODY_TYPE_STATIC);
-    nk_radio_button_label(ctx, "Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
-    nk_radio_button_label(ctx, "Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
-
-    cpBodySetType(go->body, go->bodytype);
-
-    if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
-         nk_property_float(ctx, "Mass", 0.01f, &go->mass, 1000.f, 0.01f, 0.01f);
-	cpBodySetMass(go->body, go->mass);
-    }
-
-    nk_property_float(ctx, "Friction", 0.f, &go->f, 10.f, 0.01f, 0.01f);
-    nk_property_float(ctx, "Elasticity", 0.f, &go->e, 2.f, 0.01f, 0.01f);
-
-    int n = -1;
-
-    for (int i = 0; i < go->components->len; i++) {
-	//ImGui::PushID(i);
-
-	struct component *c =
-	    (struct component *) vec_get(go->components, i);
-
-	if (c->draw_debug)
-	    c->draw_debug(c->data);
-
-	if (nk_tree_push(ctx, NK_TREE_NODE, c->name, NK_MINIMIZED)) {
-	    if (nk_button_label(ctx, "Del")) {
-		n = i;
-	    }
-
-	    c->draw_gui(c->data);
-
-	    nk_tree_pop(ctx);
-	}
-
-	//ImGui::PopID();
-    }
-
-    if (n >= 0)
-	gameobject_delcomponent(go, n);
-
-}
-
-
-void sprite_gui(struct mSprite *sprite)
-{
-    nk_labelf(ctx, NK_TEXT_LEFT, "Path %s", sprite->tex->path);
-    //ImGui::SameLine();
-
-    if (nk_button_label(ctx, "Load texture") && selected_asset != NULL) {
-	sprite_loadtex(sprite, selected_asset->filename);
-    }
-
-    if (sprite->tex != NULL) {
-	nk_labelf(ctx, NK_TEXT_LEFT, "%s", sprite->tex->path);
-	nk_labelf(ctx, NK_TEXT_LEFT, "%dx%d", sprite->tex->width, sprite->tex->height);
-	if (nk_button_label(ctx, "Imgbutton")) editor_selectasset_str(sprite->tex->path);
-	// if (ImGui::ImageButton ((void *) (intptr_t) sprite->tex->id, ImVec2(50, 50))) {
-    }
-    nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
-
-    nk_layout_row_dynamic(ctx, 25, 3);
-    if (nk_button_label(ctx, "C")) {
-	sprite->pos[0] = -0.5f;
-	sprite->pos[1] = -0.5f;
-    }
-
-
-    if (nk_button_label(ctx, "U")) {
-	sprite->pos[0] = -0.5f;
-	sprite->pos[1] = -1.f;
-    }
-
-
-    if (nk_button_label(ctx, "D")) {
-	sprite->pos[0] = -0.5f;
-	sprite->pos[1] = 0.f;
-    }
-
-}
-
-void circle_gui(struct phys2d_circle *circle)
-{
-    nk_property_float(ctx, "Radius", 1.f, &circle->radius, 10000.f, 1.f, 1.f);
-    nk_property_float2(ctx, "Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
-
-    phys2d_applycircle(circle);
-}
-
-void segment_gui(struct phys2d_segment *seg)
-{
-    nk_property_float2(ctx, "a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
-    nk_property_float2(ctx, "b", 0.f, seg->b, 1.f, 0.01f, 0.01f);
-
-    phys2d_applyseg(seg);
-}
-
-void box_gui(struct phys2d_box *box)
-{
-    nk_property_float(ctx, "Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
-    nk_property_float(ctx, "Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
-    nk_property_float2(ctx, "Offset", 0.f, &box->offset, 1.f, 0.01f, 0.01f);
-    nk_property_float(ctx, "Radius", 0.f, &box->r, 100.f, 1.f, 0.1f);
-
-    phys2d_applybox(box);
-}
-
-void poly_gui(struct phys2d_poly *poly)
-{
-
-    if (nk_button_label(ctx, "Add Poly Vertex")) phys2d_polyaddvert(poly);
-
-    for (int i = 0; i < poly->n; i++) {
-	//ImGui::PushID(i);
-	nk_property_float2(ctx, "P", 0.f, &poly->points[i*2], 1.f, 0.1f, 0.1f);
-	//ImGui::PopID();
-    }
-
-    nk_property_float(ctx, "Radius", 0.01f, &poly->radius, 1000.f, 1.f, 0.1f);
-
-    phys2d_applypoly(poly);
-}
-
-void edge_gui(struct phys2d_edge *edge)
-{
-    if (nk_button_label(ctx, "Add Edge Vertex")) phys2d_edgeaddvert(edge);
-
-    for (int i = 0; i < edge->n; i++) {
-	//ImGui::PushID(i);
-	nk_property_float2(ctx, "E", 0.f, &edge->points[i*2], 1.f, 0.01f, 0.01f);
-	//ImGui::PopID();
-    }
-
-    nk_property_float(ctx, "Thickness", 0.01f, &edge->thickness, 1.f, 0.01f, 0.01f);
-
-    phys2d_applyedge(edge);
-}
-
 void editor_makenewobject()
 {
 
@@ -1466,3 +1180,43 @@ void game_pause()
     physOn = 0;
 }
 
+
+
+
+
+void sprite_gui(struct mSprite *sprite)
+{
+    nk_labelf(ctx, NK_TEXT_LEFT, "Path %s", sprite->tex->path);
+    //ImGui::SameLine();
+
+    if (nk_button_label(ctx, "Load texture") && selected_asset != NULL) {
+	sprite_loadtex(sprite, selected_asset->filename);
+    }
+
+    if (sprite->tex != NULL) {
+	nk_labelf(ctx, NK_TEXT_LEFT, "%s", sprite->tex->path);
+	nk_labelf(ctx, NK_TEXT_LEFT, "%dx%d", sprite->tex->width, sprite->tex->height);
+	if (nk_button_label(ctx, "Imgbutton")) editor_selectasset_str(sprite->tex->path);
+	// if (ImGui::ImageButton ((void *) (intptr_t) sprite->tex->id, ImVec2(50, 50))) {
+    }
+    nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
+
+    nk_layout_row_dynamic(ctx, 25, 3);
+    if (nk_button_label(ctx, "C")) {
+	sprite->pos[0] = -0.5f;
+	sprite->pos[1] = -0.5f;
+    }
+
+
+    if (nk_button_label(ctx, "U")) {
+	sprite->pos[0] = -0.5f;
+	sprite->pos[1] = -1.f;
+    }
+
+
+    if (nk_button_label(ctx, "D")) {
+	sprite->pos[0] = -0.5f;
+	sprite->pos[1] = 0.f;
+    }
+
+}

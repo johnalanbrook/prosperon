@@ -158,3 +158,45 @@ void spotlight_prepshader(struct mSpotLight *light, struct mShader *shader,
 }
 
 */
+
+/*
+void light_gui(struct mLight *light)
+{
+    object_gui(&light->obj);
+
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Light", NK_MINIMIZED)) {
+	nk_property_float(ctx, "Strength", 0.f, &light->strength, 1.f, 0.01f, 0.001f);
+	// ImGui::ColorEdit3("Color", &light->color[0]);
+	nk_checkbox_label(ctx, "Dynamic", (bool *) &light->dynamic);
+	nk_tree_pop(ctx);
+    }
+}
+
+
+void pointlight_gui(struct mPointLight *light)
+{
+    light_gui(&light->light);
+
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Point Light", NK_MINIMIZED)) {
+	nk_property_float(ctx, "Constant", 0.f, &light->constant, 1.f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Linear", 0.f, &light->linear, 0.3f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Quadratic", 0.f, &light->quadratic, 0.3f, 0.01f, 0.001f);
+	nk_tree_pop(ctx);
+    }
+
+}
+
+void spotlight_gui(struct mSpotLight *spot)
+{
+    light_gui(&spot->light);
+
+    if (nk_tree_push(ctx, NK_TREE_NODE, "Spotlight", NK_MINIMIZED)) {
+	nk_property_float(ctx, "Linear", 0.f, &spot->linear, 1.f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Quadratic", 0.f, &spot->quadratic, 1.f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Distance", 0.f, &spot->distance, 200.f, 1.f, 0.1f, 200.f);
+	nk_property_float(ctx, "Cutoff Degrees", 0.f, &spot->cutoff, 0.7f, 0.01f, 0.001f);
+	nk_property_float(ctx, "Outer Cutoff Degrees", 0.f, &spot->outerCutoff, 0.7f, 0.01f, 0.001f);
+	nk_tree_pop(ctx);
+    }
+}
+*/

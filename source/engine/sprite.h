@@ -24,6 +24,7 @@ struct mSprite {
     mfloat_t size[2];
     float rotation;
     mfloat_t color[3];
+    int index;
 
     struct Anim2D anim;
     struct mGameObject *go;
@@ -45,6 +46,7 @@ struct mSprite *gui_makesprite();
 void gui_init();
 
 void sprite_draw_all();
+
 
 
 #endif

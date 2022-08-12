@@ -11,6 +11,7 @@
 #include <string.h>
 #include "vec.h"
 
+
 static struct mGameObject *gui_go = NULL;
 
 
@@ -41,6 +42,7 @@ struct mSprite *MakeSprite(struct mGameObject *go)
     sprite->size[1] = 1.f;
     sprite->tex = NULL;
     sprite_init(sprite, go);
+    sprite->index = sprites.last;
     return sprite;
 }
 
@@ -220,3 +222,4 @@ struct mSprite *gui_makesprite()
     struct mSprite *new = MakeSprite(gui_go);
     return new;
 }
+

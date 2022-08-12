@@ -12,12 +12,14 @@ extern float deltaT;
 extern int quit;
 
 void input_init();
-void input_poll();
+void input_poll(double wait);
 
 void cursor_hide();
 void cursor_show();
 
 int action_down(int scancode);
+
+void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods);
 
 struct inputaction
 {

@@ -20,7 +20,7 @@ mfloat_t *trans_up(mfloat_t * res, const struct mTransform *trans);
 mfloat_t *trans_down(mfloat_t * res, const struct mTransform *trans);
 mfloat_t *trans_right(mfloat_t * res, const struct mTransform *trans);
 mfloat_t *trans_left(mfloat_t * res, const struct mTransform *trans);
-
+void trans_drawgui(struct mTransform *T);
 
 //extern Serialize *make_transform();
 

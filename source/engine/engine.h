@@ -13,6 +13,10 @@
 #define sFPS144 0.007
 #define sFPS300 0.003
 
+extern double renderMS;
+extern double physMS;
+extern double updateMS;
+
 void engine_init();
 void engine_stop();
 

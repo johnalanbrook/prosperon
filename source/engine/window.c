@@ -54,37 +54,13 @@ void window_close_callback(GLFWwindow *w)
     quit = 1;
 }
 
-void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
-{
-    char keystr[50] = {'\0'};
-    strcat(keystr, "input_");
-    strcat(keystr, glfwGetKeyName(key, 0));
-    switch (action) {
-        case GLFW_PRESS:
-            strcat(keystr, "_down");
-            break;
 
-        case GLFW_RELEASE:
-            strcat(keystr, "_up");
-            break;
-
-        case GLFW_REPEAT:
-            strcat(keystr, "_rep");
-            break;
-    }
-    script_call(keystr);
-
-/*    Example callback function
-    if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-        printf("Pressed F.\n");
-        if (w == customerWindow->window) window_togglefullscreen(customerWindow);
-    }
-*/
-}
 
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32_t flags)
 {
      struct mSDLWindow *w;
+
+
 
     if (windows.data == NULL) {
         windows = vec_init(sizeof(struct mSDLWindow), 5);
@@ -234,8 +210,14 @@ void window_all_handle_events()
 
 void window_makefullscreen(struct mSDLWindow *w)
 {
-    glfwMaximizeWindow(w->window);
-    w->fullscreen = true;
+    if (!w->fullscreen)
+        window_togglefullscreen(w);
+}
+
+void window_unfullscreen(struct mSDLWindow *w)
+{
+    if (w->fullscreen)
+        window_togglefullscreen(w);
 }
 
 void window_togglefullscreen(struct mSDLWindow *w)
@@ -243,7 +225,7 @@ void window_togglefullscreen(struct mSDLWindow *w)
     w->fullscreen = !w->fullscreen;
 
     if (w->fullscreen) {
-	window_makefullscreen(w);
+        glfwMaximizeWindow(w->window);
     } else {
 	glfwRestoreWindow(w->window);
     }
@@ -258,6 +240,8 @@ void window_makecurrent(struct mSDLWindow *w)
     glViewport(0, 0, w->width, w->height);
 
 }
+
+
 
 void window_swap(struct mSDLWindow *w)
 {

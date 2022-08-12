@@ -56,4 +56,8 @@ extern struct mDirectionalLight *dLight;
 
 */
 
+void light_gui(struct mLight *light);
+void pointlight_gui(struct mPointLight *light);
+void spotlight_gui(struct mSpotLight *spot);
+
 #endif

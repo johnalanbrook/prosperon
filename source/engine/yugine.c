@@ -8,8 +8,13 @@
 int physOn = 0;
 
 double renderlag = 0;
+double physlag = 0;
+double updatelag = 0;
 
-static double renderMS = 0.033;
+double renderMS = 1/60.f;
+double physMS = 1/120.f;
+double updateMS = 1/60.f;
+
 
 int main(int argc, char **args) {
     engine_init();
@@ -23,27 +28,24 @@ int main(int argc, char **args) {
     renderMS = 0.033;
 
     double lastTick;
-    double frameTick;
 
     while (!quit) {
          double elapsed;
-         double lastTick;
-         frameTick = glfwGetTime();
-         elapsed = frameTick - lastTick;
-         lastTick = frameTick;
+         elapsed = glfwGetTime() - lastTick;
+         lastTick = glfwGetTime();
 
          renderlag += elapsed;
+         physlag += elapsed;
 
-        input_poll();
-
-       window_all_handle_events();
-
-       script_update(elapsed);
 
         if (renderlag >= renderMS) {
             renderlag -= renderMS;
             window_renderall();
         }
+
+        input_poll(updateMS - elapsed < 0 ? 0 : updateMS - elapsed);
+        window_all_handle_events();
+        script_update(updateMS);
 
     }
 }

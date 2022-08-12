@@ -17,7 +17,7 @@ void staticactor_draw_dbg_color_pick(struct mShader *s);
 void staticactor_draw_models(struct mShader *s);
 void staticactor_draw_shadowcasters(struct mShader *s);
 struct mStaticActor *MakeStaticActor();
-
+void staticactor_gui(struct mStaticActor *sa);
 
 extern struct mStaticActor *curActor;
 

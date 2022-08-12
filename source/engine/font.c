@@ -20,11 +20,6 @@ unsigned char temp_bitmap[512 * 512];
 struct sFont *font;
 static struct mShader *shader;
 
-/*
-    mfont = MakeFont("notosans.ttf", 300);
-    text_settype(mfont);
-*/
-
 void font_init(struct mShader *textshader) {
     shader = textshader;
 
@@ -42,6 +37,10 @@ void font_init(struct mShader *textshader) {
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+
+    // Default font
+    font = MakeFont("notosans.ttf", 300);
 }
 
 void font_frame(struct mSDLWindow *w) {

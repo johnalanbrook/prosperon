@@ -96,6 +96,12 @@ engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	$(CLINK) $< $(LINK)
 	@echo Finished build
 
+bs: engine
+	cp engine brainstorm
+
+ed: engine
+	cp engine editor
+
 $(ENGINE): $(eobjects) bin/libglfw3.a
 	@echo Making library engine.a
 	@ar r $(ENGINE) $(eobjects)

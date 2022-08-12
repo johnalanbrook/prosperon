@@ -3,6 +3,7 @@
 #include "gameobject.h"
 #include <string.h>
 #include "mathc.h"
+#include "nuke.h"
 
 cpBody *ballBody = NULL;
 cpSpace *space = NULL;
@@ -58,6 +59,14 @@ void phys2d_circleinit(struct phys2d_circle *circle,
     init_phys2dshape(&circle->shape, go);
 }
 
+void circle_gui(struct phys2d_circle *circle)
+{
+    nk_property_float(ctx, "Radius", 1.f, &circle->radius, 10000.f, 1.f, 1.f);
+    nk_property_float2(ctx, "Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
+
+    phys2d_applycircle(circle);
+}
+
 struct phys2d_segment *Make2DSegment(struct mGameObject *go)
 {
     struct phys2d_segment *new = malloc(sizeof(struct phys2d_segment));
@@ -79,6 +88,14 @@ void phys2d_seginit(struct phys2d_segment *seg, struct mGameObject *go)
 			cpSegmentShapeNew(go->body, cpvzero, cpvzero,
 					  seg->thickness));
     init_phys2dshape(&seg->shape, go);
+}
+
+void segment_gui(struct phys2d_segment *seg)
+{
+    nk_property_float2(ctx, "a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
+    nk_property_float2(ctx, "b", 0.f, seg->b, 1.f, 0.01f, 0.01f);
+
+    phys2d_applyseg(seg);
 }
 
 struct phys2d_box *Make2DBox(struct mGameObject *go)
@@ -104,6 +121,17 @@ void phys2d_boxinit(struct phys2d_box *box, struct mGameObject *go)
     init_phys2dshape(&box->shape, go);
     phys2d_applybox(box);
 }
+
+void box_gui(struct phys2d_box *box)
+{
+    nk_property_float(ctx, "Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
+    nk_property_float(ctx, "Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
+    nk_property_float2(ctx, "Offset", 0.f, &box->offset, 1.f, 0.01f, 0.01f);
+    nk_property_float(ctx, "Radius", 0.f, &box->r, 100.f, 1.f, 0.1f);
+
+    phys2d_applybox(box);
+}
+
 
 struct phys2d_poly *Make2DPoly(struct mGameObject *go)
 {
@@ -136,6 +164,20 @@ void phys2d_polyaddvert(struct phys2d_poly *poly)
     poly->points = calloc(2 * poly->n, sizeof(float));
     memcpy(poly->points, oldpoints, sizeof(float) * 2 * (poly->n - 1));
     free(oldpoints);
+}
+
+void poly_gui(struct phys2d_poly *poly)
+{
+
+    if (nk_button_label(ctx, "Add Poly Vertex")) phys2d_polyaddvert(poly);
+
+    for (int i = 0; i < poly->n; i++) {
+	nk_property_float2(ctx, "#P", 0.f, &poly->points[i*2], 1.f, 0.1f, 0.1f);
+    }
+
+    nk_property_float(ctx, "Radius", 0.01f, &poly->radius, 1000.f, 1.f, 0.1f);
+
+    phys2d_applypoly(poly);
 }
 
 struct phys2d_edge *Make2DEdge(struct mGameObject *go)
@@ -196,6 +238,21 @@ void phys2d_edgeaddvert(struct phys2d_edge *edge)
 
     free(oldp);
     free(oldshapes);
+}
+
+void edge_gui(struct phys2d_edge *edge)
+{
+    if (nk_button_label(ctx, "Add Edge Vertex")) phys2d_edgeaddvert(edge);
+
+    for (int i = 0; i < edge->n; i++) {
+	//ImGui::PushID(i);
+	nk_property_float2(ctx, "E", 0.f, &edge->points[i*2], 1.f, 0.01f, 0.01f);
+	//ImGui::PopID();
+    }
+
+    nk_property_float(ctx, "Thickness", 0.01f, &edge->thickness, 1.f, 0.01f, 0.01f);
+
+    phys2d_applyedge(edge);
 }
 
 #include "debugdraw.h"

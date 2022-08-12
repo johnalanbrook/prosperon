@@ -42,3 +42,24 @@ void nuke_end()
     nk_end(ctx);
     nk_glfw3_render(&nkglfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }
+
+void nk_property_float3(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+    nk_layout_row_dynamic(ctx, 25, 1);
+    nk_label(ctx, label, NK_TEXT_LEFT);
+    nk_layout_row_dynamic(ctx, 25, 3);
+    nk_property_float(ctx, "X", min, &val[0], max, step, dragstep);
+    nk_property_float(ctx, "Y", min, &val[1], max, step, dragstep);
+    nk_property_float(ctx, "Z", min, &val[2], max, step, dragstep);
+}
+
+void nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+    nk_layout_row_dynamic(ctx, 25, 1);
+    nk_label(ctx, label, NK_TEXT_LEFT);
+    nk_layout_row_dynamic(ctx, 25, 2);
+    nk_property_float(ctx, "X", min, &val[0], max, step, dragstep);
+    nk_property_float(ctx, "Y", min, &val[1], max, step, dragstep);
+}
+
+void nk_radio_button_label(struct nk_context *ctx, const char *label, int *val, int cmp) {
+    if (nk_option_label(ctx, label, (bool)*val == cmp)) *val = cmp;
+}

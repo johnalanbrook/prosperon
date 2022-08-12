@@ -38,6 +38,7 @@ void window_all_handle_events();
 void window_makecurrent(struct mSDLWindow *w);
 void window_makefullscreen(struct mSDLWindow *w);
 void window_togglefullscreen(struct mSDLWindow *w);
+void window_unfullscreen(struct mSDLWindow *w);
 void window_swap(struct mSDLWindow *w);
 void window_seticon(struct mSDLWindow *w, struct Texture *icon);
 int window_hasfocus(struct mSDLWindow *w);

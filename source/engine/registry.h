@@ -13,7 +13,6 @@ struct component {
     struct mGameObject *go;
     void (*draw_debug)(void *data);
     void (*draw_gui)(void *data);
-    void (*update)(void *data, struct mGameObject * go);
     int id;
     int datasize;
     void (*init)(void *data, struct mGameObject * go);
@@ -29,12 +28,9 @@ void comp_update(struct component *c, struct mGameObject *go);
 
 void registry_init();
 void register_component(const char *name, size_t size,
-			void (*make)(struct mGameObject * go,
-				     struct component * c),
+			void (*make)(struct mGameObject * go, struct component * c),
 			void(*draw_debug)(void *data),
 			void(*draw_gui)(void *data),
-			void(*init)(void *data, struct mGameObject * go),
-			void(*update)(void *data,
-				      struct mGameObject * go));
+			void(*init)(void *data, struct mGameObject * go));
 
 #endif

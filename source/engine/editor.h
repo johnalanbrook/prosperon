@@ -5,9 +5,6 @@
 #include <stdbool.h>
 #include "resources.h"
 
-
-struct mCamera;
-
 #define ASSET_TYPE_NULL 0
 #define ASSET_TYPE_IMAGE 1
 #define ASSET_TYPE_TEXT 2
@@ -45,10 +42,6 @@ struct mSDLWindow;
 void pickGameObject(int pickID);
 int is_allowed_extension(const char *ext);
 
-void nuk_init(struct mSDLWindow *window);
-
-
-
 void editor_init(struct mSDLWindow *window);
 void editor_input();
 void editor_render();
@@ -81,37 +74,8 @@ void game_pause();
 
 void get_levels();
 
-struct mLight;
-struct mPointLight;
-struct mSpotLight;
-struct mStaticActor;
-struct mTransform;
-struct mGameObject;
-struct mSprite;
-struct phys2d_circle;
-struct phys2d_segment;
-struct phys2d_box;
-struct phys2d_edge;
-struct phys2d_shape;
-struct phys2d_poly;
-struct flipper;
-
-///////// Object GUIs
-void light_gui(struct mLight *light);
-void pointlight_gui(struct mPointLight *light);
-void spotlight_gui(struct mSpotLight *spot);
-void staticactor_gui(struct mStaticActor *sa);
-void trans_drawgui(struct mTransform *T);
-void object_gui(struct mGameObject *go);
-void sprite_gui(struct mSprite *sprite);
-void circle_gui(struct phys2d_circle *circle);
-void segment_gui(struct phys2d_segment *seg);
-void box_gui(struct phys2d_box *box);
-void poly_gui(struct phys2d_poly *poly);
-void edge_gui(struct phys2d_edge *edge);
-void shape_gui(struct phys2d_shape *shape);
-void pinball_flipper_gui(struct flipper *flip);
-
 int obj_gui_hierarchy(struct mGameObject *selected);
+
+void sprite_gui(struct mSprite *sprite);
 
 #endif
