@@ -32,6 +32,9 @@ int main(int argc, char **args) {
 
     engine_init();
 
+    script_dofile("engine.rb");
+    script_dofile("config.rb");
+
     window_set_icon("icon.png");
 
     if (ed) {
