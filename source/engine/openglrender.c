@@ -93,31 +93,6 @@ struct mSprite *tsprite = NULL;
 
 static unsigned int projUBO;
 
-const char *textvert =
-"#version 330 core\n"
-"layout (location = 0) in vec4 vertex; \n"
-"out vec2 TexCoords;\n"
-
-"uniform mat4 projection;\n"
-
-"void main() {\n"
- "   gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);\n"
-"    TexCoords = vec2(vertex.z, 1.0 - vertex.w);\n"
-"}\n";
-
-const char *textfrag =
-"#version 330 core\n"
-"in vec2 TexCoords;\n"
-"out vec4 color;\n"
-
-"uniform sampler2D text;\n"
-"uniform vec3 textColor;\n"
-
-"void main() {    \n"
-"    vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);\n"
-"    color = vec4(textColor, 1.0) * sampled;\n"
-"}\n";
-
 void openglInit()
 {
     if (!mainwin) {
@@ -126,11 +101,9 @@ void openglInit()
     }
 
     ////// MAKE SHADERS
-    outlineShader = MakeShader("outlinevert.glsl", "outline.glsl");
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
-    //textShader = CreateShader(textverg, textfrag);
 
     shader_use(textShader);
     shader_setint(textShader, "text", 0);
@@ -139,7 +112,7 @@ void openglInit()
 
     font_init(textShader);
     sprite_initialize();
-    //debugdraw_init();
+    debugdraw_init();
 
 
     //glEnable(GL_STENCIL_TEST);
@@ -168,8 +141,6 @@ void openglInit()
     shader_setUBO(spriteShader, "Projection", 0);
     shader_setUBO(textShader, "Projection", 0);
     shader_setUBO(animSpriteShader, "Projection", 0);
-
-
 }
 
 

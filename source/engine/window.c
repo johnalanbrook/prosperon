@@ -272,7 +272,13 @@ void window_render(struct mSDLWindow *w) {
         nuke_start();
         script_call_sym(w->nuke_cb);
         nuke_end();
+    } else if (w->nuke_gui != NULL) {
+        nuke_start();
+        w->nuke_gui();
+        nuke_end();
     }
+
+
     window_swap(w);
 }
 

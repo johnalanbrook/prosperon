@@ -23,6 +23,7 @@ struct mSDLWindow {
     float projection[16];
     mrb_sym nuke_cb;
     mrb_sym gui_cb;
+    void (*nuke_gui)();
 };
 
 struct Texture;

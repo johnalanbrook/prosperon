@@ -39,7 +39,6 @@ void nuke_start()
 
 void nuke_end()
 {
-    nk_end(ctx);
     nk_glfw3_render(&nkglfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }
 

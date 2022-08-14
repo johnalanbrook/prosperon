@@ -5,6 +5,8 @@
 #include "input.h"
 #include "openglrender.h"
 
+#include "string.h"
+
 int physOn = 0;
 
 double renderlag = 0;
@@ -15,13 +17,28 @@ double renderMS = 1/60.f;
 double physMS = 1/120.f;
 double updateMS = 1/60.f;
 
+static int ed = 1;
+
 
 int main(int argc, char **args) {
+    for (int i = 1; i < argc; i++) {
+        if (args[i][0] == '-') {
+            if (strncmp(args[i][1], "play", 4) == 0) {
+                ed = 0;
+            }
+        }
+    }
+
+
     engine_init();
 
     window_set_icon("icon.png");
 
-    script_dofile("game.rb");
+    if (ed) {
+        editor_init(MakeSDLWindow("Editor", 600, 600, 0));
+    } else {
+        script_dofile("game.rb");
+    }
 
     openglInit();
 
@@ -45,7 +62,7 @@ int main(int argc, char **args) {
 
         input_poll(updateMS - elapsed < 0 ? 0 : updateMS - elapsed);
         window_all_handle_events();
-        script_update(updateMS);
+
 
     }
 }

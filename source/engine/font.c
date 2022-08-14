@@ -40,7 +40,7 @@ void font_init(struct mShader *textshader) {
 
 
     // Default font
-    font = MakeFont("notosans.ttf", 300);
+    font = MakeFont("teenytinypixels.ttf", 300);
 }
 
 void font_frame(struct mSDLWindow *w) {

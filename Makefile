@@ -89,18 +89,18 @@ yuginec = ./source/engine/yugine.c
 ENGINE = $(BIN)libengine.a
 INCLUDE = $(BIN)include
 
-LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS) -o $@
+LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
 
 engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
 	@echo Linking engine
-	$(CLINK) $< $(LINK)
+	$(CLINK) $< $(LINK) -o $@
 	@echo Finished build
 
 bs: engine
 	cp engine brainstorm
 
-ed: engine
-	cp engine editor
+pin: engine
+	cp engine pinball
 
 $(ENGINE): $(eobjects) bin/libglfw3.a
 	@echo Making library engine.a

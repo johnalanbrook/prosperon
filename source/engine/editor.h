@@ -31,10 +31,13 @@ struct editorVars {
     bool showLevel;
 };
 
-struct gameproject {
-    char name[127];
-    char path[MAXPATH];
-};
+struct vec;
+struct gameproject;
+struct mSprite;
+
+extern struct gameproject *cur_project;
+extern struct vec *projects;
+
 
 struct Texture;
 struct mSDLWindow;
@@ -50,13 +53,6 @@ void editor_save();
 void editor_makenewobject();
 
 void editor_project_gui();
-
-void editor_init_project(struct gameproject *gp);
-void editor_save_projects();
-void editor_load_projects();
-void editor_proj_select_gui();
-void editor_import_project(char *path);
-void editor_make_project(char *path);
 
 void editor_selectasset(struct fileasset *asset);
 void editor_selectasset_str(char *path);
