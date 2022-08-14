@@ -444,7 +444,7 @@ void editor_project_gui() {
     nk_label(ctx, bbbuf, NK_TEXT_LEFT);
 
     if (nk_menu_begin_label(ctx, "Windows", NK_TEXT_LEFT, nk_vec2(100, 200))) {
-      nk_layout_row_dynamic(ctx, 30, 1);
+      nk_layout_row_dynamic(ctx, 25, 1);
 
       nk_checkbox_label(ctx, "Resources", &editor.showAssetMenu);
       nk_checkbox_label(ctx, "Hierarchy", &editor.showHierarchy);
@@ -459,8 +459,8 @@ void editor_project_gui() {
       nk_menu_end(ctx);
     }
 
-    if (nk_menu_begin_text(ctx, "Levels", 100, 0, nk_vec2(100, 50))) {
-
+    if (nk_menu_begin_label(ctx, "Levels", NK_TEXT_LEFT, nk_vec2(100, 50))) {
+      nk_layout_row_dynamic(ctx,25,3);
       if (nk_button_label(ctx, "New")) {
         new_level();
         current_level[0] = '\0';
@@ -488,9 +488,9 @@ void editor_project_gui() {
   }
   nk_end(ctx);
 
-  if (editor.showExport &&
-      nk_begin(ctx, "Export and Bake", nk_rect_std, nuk_std)) {
-
+  if (editor.showExport) {
+    nk_begin(ctx, "Export and Bake", nk_rect_std, nuk_std);
+    nk_layout_row_dynamic(ctx, 25,2);
     if (nk_button_label(ctx, "Bake")) {
     }
     if (nk_button_label(ctx, "Build")) {
@@ -500,6 +500,7 @@ void editor_project_gui() {
   }
 
   // Shadow map vars
+  if (editor.showLighting) {
   if (nk_begin(ctx, "Lighting options", nk_rect_std, nuk_std)) {
     nk_layout_row_dynamic(ctx, 25, 1);
     nk_label(ctx, "Directional shadow map", NK_TEXT_LEFT);
@@ -512,9 +513,11 @@ void editor_project_gui() {
     nk_property_float(ctx, "Plane size", 0.f, &plane_size, 100.f, 1.f, 0.01f);
   }
   nk_end(ctx);
+  }
 
   if (editor.showGameSettings) {
     nk_begin(ctx, "Game settings", nk_rect_std, nuk_std);
+    nk_layout_row_dynamic(ctx,25,1);
 
     // nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, cur_project->name,
     // 126, nk_filter_default);
@@ -542,6 +545,8 @@ void editor_project_gui() {
   if (editor.showREPL) {
     nk_begin(ctx, "REPL", nk_rect_std, nuk_std);
 
+    nk_layout_row_dynamic(ctx, 300, 1);
+
     nk_flags active;
 
     static char buffer[512] = {'\0'};
@@ -557,6 +562,8 @@ void editor_project_gui() {
 
   if (editor.showViewmode) {
     nk_begin(ctx, "View options", nk_rect_std, nuk_std);
+
+    nk_layout_row_dynamic(ctx, 25, 1);
 
     nk_property_float(ctx, "Camera FOV", 0.1f, &editorFOV, 90.f, 1.f, 0.1f);
     nk_property_float(ctx, "Camera Near Plane", 0.1f, &editorClose, 5.f, 0.1f,
@@ -597,7 +604,7 @@ void editor_project_gui() {
   }
 
   if (editor.showHierarchy) {
-    editor.showHierarchy = nk_begin(ctx, "Objects", nk_rect_std, nuk_std);
+    nk_begin(ctx, "Objects", nk_rect_std, nuk_std);
 
     if (nk_button_label(ctx, "New Object")) {
       MakeGameobject();
@@ -610,6 +617,7 @@ void editor_project_gui() {
 
   if (nk_begin(ctx, "Simulate", nk_rect_std, nuk_std)) {
 
+  nk_layout_row_dynamic(ctx, 25, 2);
   if (physOn) {
     if (nk_button_label(ctx, "Pause"))
       game_pause();
@@ -625,13 +633,15 @@ void editor_project_gui() {
   }
 
   if (nk_begin(ctx, "Prefab Creator", nk_rect_std, nuk_std)) {
+    nk_layout_row_dynamic(ctx, 25, 1);
+
     vec_walk(prefabs, (void (*)(void *)) & editor_prefab_btn);
     nk_end(ctx);
   }
 
   if (editor.showAssetMenu) {
     nk_begin(ctx, "Asset Menu", nk_rect_std, nuk_std);
-
+    nk_layout_row_dynamic(ctx,25,1);
     nk_edit_string_zero_terminated(ctx,
                                    NK_EDIT_BOX | NK_EDIT_NO_HORIZONTAL_SCROLL,
                                    asset_search_buffer, 100, nk_filter_ascii);

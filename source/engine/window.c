@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <vec.h>
 #include "input.h"
+#include "script.h"
+#include "nuke.h"
 
 struct mSDLWindow *mainwin;
 

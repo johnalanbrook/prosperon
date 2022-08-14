@@ -4,6 +4,8 @@
 #include "engine.h"
 #include "input.h"
 #include "openglrender.h"
+#include "script.h"
+#include "editor.h"
 
 #include "string.h"
 
@@ -23,7 +25,7 @@ static int ed = 1;
 int main(int argc, char **args) {
     for (int i = 1; i < argc; i++) {
         if (args[i][0] == '-') {
-            if (strncmp(args[i][1], "play", 4) == 0) {
+            if (strncmp(&args[i][1], "play", 4) == 0) {
                 ed = 0;
             }
         }
