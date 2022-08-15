@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include "resources.h"
 
+#include "nuke.h"
+
 #define ASSET_TYPE_NULL 0
 #define ASSET_TYPE_IMAGE 1
 #define ASSET_TYPE_TEXT 2
@@ -18,18 +20,42 @@ struct fileasset {
     void *data;
 };
 
+typedef struct {
+    bool show;
+    struct nk_rect rect;
+} editor_win;
+
 struct editorVars {
-    bool showStats;
-    bool showHierarchy;
-    bool showLighting;
-    bool showGameSettings;
-    bool showViewmode;
-    bool showDebugMenu;
-    bool showAssetMenu;
-    bool showREPL;
-    bool showExport;
-    bool showLevel;
+    editor_win stats;
+    editor_win hierarchy;
+    editor_win lighting;
+    editor_win gamesettings;
+    editor_win viewmode;
+    editor_win debug;
+    editor_win assets;
+    editor_win repl;
+    editor_win export;
+    editor_win level;
+    editor_win gameobject;
+    editor_win components;
 };
+
+struct mGameObject;
+
+#define NK_MENU_START(VAR) if (editor.VAR.show) { \
+                                                                          if (editor.VAR.rect.w == 0) editor.VAR.rect = nk_rect_std; \
+                                                                          if (nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
+                                                                          editor.VAR.rect = nk_window_get_bounds(ctx);
+
+#define NK_MENU_END() } nk_end(ctx); }
+
+#define NK_FORCE(VAR) if (editor.VAR.rect.w == 0) editor.VAR.rect = nk_rect_std; \
+                                                         if (nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
+                                                         editor.VAR.rect = nk_window_get_bounds(ctx);
+
+#define NK_FORCE_END() } nk_end(ctx);
+
+#define NEGATE(VAR) VAR = ! VAR
 
 struct vec;
 struct gameproject;

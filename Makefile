@@ -55,7 +55,7 @@ edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdpart
 includeflag != $(call prefix,$(edirs) $(eddirs),-I)
 COMPINCLUDE = $(edirs) $(eddirs)
 
-WARNING_FLAGS = -Wno-incompatible-function-pointer-types #-Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+WARNING_FLAGS = -Wno-everything #-Wno-incompatible-function-pointer-types -Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
 COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 -MD $(WARNING_FLAGS) -c $< -o $@
 

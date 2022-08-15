@@ -34,6 +34,13 @@ int main(int argc, char **args) {
 
     engine_init();
 
+    const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    printf("Refresh rate is %d\n", vidmode->refreshRate);
+
+    renderMS = 1.0/vidmode->refreshRate;
+
+    double framet = fmin(fmin(renderMS,physMS),updateMS);
+
     script_dofile("engine.rb");
     script_dofile("config.rb");
 
@@ -56,16 +63,16 @@ int main(int argc, char **args) {
          elapsed = glfwGetTime() - lastTick;
          lastTick = glfwGetTime();
 
-         renderlag += elapsed;
-         physlag += elapsed;
+         //renderlag += elapsed;
+         //physlag += elapsed;
 
 
         if (renderlag >= renderMS) {
             renderlag -= renderMS;
-            window_renderall();
         }
 
-        input_poll(updateMS - elapsed < 0 ? 0 : updateMS - elapsed);
+        window_renderall();
+        input_poll(renderMS- elapsed < 0 ? 0 : renderMS - elapsed);
         window_all_handle_events();
 
 

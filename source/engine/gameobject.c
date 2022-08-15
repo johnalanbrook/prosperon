@@ -102,7 +102,7 @@ void gameobject_saveprefab(struct mGameObject *go)
 {
     char prefabfname[60] = { '\0' };
     strncat(prefabfname, go->editor.prefabName, MAXNAME);
-    strncat(prefabfname, ".yugh", 10);
+    strncat(prefabfname, EXT_PREFAB, 10);
     FILE *pfile = fopen(prefabfname, "w+");
     gameobject_save(go, pfile);
     fclose(pfile);

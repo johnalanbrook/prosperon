@@ -1,4 +1,4 @@
-#include "nuke.h"
+#include "editor.h"
 
 #include "2dphysics.h"
 #include "camera.h"
@@ -6,7 +6,6 @@
 #include "datastream.h"
 #include "debug.h"
 #include "debugdraw.h"
-#include "editor.h"
 #include "editorstate.h"
 #include "gameobject.h"
 #include "input.h"
@@ -290,39 +289,39 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
     break;
 
   case GLFW_KEY_F2:
-    editor.showAssetMenu = !editor.showAssetMenu;
+    NEGATE(editor.assets.show);
     break;
 
   case GLFW_KEY_F3:
-    editor.showStats = !editor.showStats;
+    NEGATE(editor.stats.show);
     break;
 
   case GLFW_KEY_F4:
-    editor.showHierarchy = !editor.showHierarchy;
+    NEGATE(editor.hierarchy.show);
     break;
 
   case GLFW_KEY_F5:
-    editor.showLighting = !editor.showLighting;
+    NEGATE(editor.lighting.show);
     break;
 
   case GLFW_KEY_F6:
-    editor.showGameSettings = !editor.showGameSettings;
+    NEGATE(editor.gamesettings.show);
     break;
 
   case GLFW_KEY_F7:
-    editor.showViewmode = !editor.showViewmode;
+    NEGATE(editor.viewmode.show);
     break;
 
   case GLFW_KEY_F8:
-    editor.showDebugMenu = !editor.showDebugMenu;
+    NEGATE(editor.debug.show);
     break;
 
   case GLFW_KEY_F9:
-    editor.showExport = !editor.showExport;
+    NEGATE(editor.export.show);
     break;
 
   case GLFW_KEY_F10:
-    editor.showLevel = !editor.showLevel;
+    NEGATE(editor.level.show);
     break;
 
   case GLFW_KEY_F11:
@@ -330,7 +329,7 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
     break;
 
   case GLFW_KEY_GRAVE_ACCENT:
-    editor.showREPL = !editor.showREPL;
+    NEGATE(editor.repl.show);
     break;
 
   case GLFW_KEY_K:
@@ -390,6 +389,7 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods) {
 void editor_init(struct mSDLWindow *window) {
   levels = vec_make(MAXNAME, 10);
   editor_load_projects();
+  findPrefabs();
 
   FILE *feditor = fopen(editor_filename, "r");
   if (feditor == NULL) {
@@ -401,8 +401,11 @@ void editor_init(struct mSDLWindow *window) {
 
   nuke_init(window);
   window->nuke_gui = editor_render;
+  window_makefullscreen(window);
   glfwSetKeyCallback(window->window, edit_input_cb);
   glfwSetMouseButtonCallback(window->window, edit_mouse_cb);
+
+
 }
 
 // TODO: Implement
@@ -431,35 +434,24 @@ void editor_project_gui() {
   static int selected_item = 0;
   static int check = 1;
 
-  int i;
-
-  if (nk_begin(ctx, "Menu Demo", nk_rect(600, 350, 275, 250), nuk_std)) {
-    nk_menubar_begin(ctx);
-
-    nk_layout_row_dynamic(ctx, 30, 2);
-
-    char bbbuf[256];
-    snprintf(bbbuf, 256, "Current level: %s", current_level[0] == '\0' ? "Level not saved!" : current_level);
-
-    nk_label(ctx, bbbuf, NK_TEXT_LEFT);
-
+/*
     if (nk_menu_begin_label(ctx, "Windows", NK_TEXT_LEFT, nk_vec2(100, 200))) {
       nk_layout_row_dynamic(ctx, 25, 1);
 
-      nk_checkbox_label(ctx, "Resources", &editor.showAssetMenu);
-      nk_checkbox_label(ctx, "Hierarchy", &editor.showHierarchy);
-      nk_checkbox_label(ctx, "Lighting F5", &editor.showLighting);
-      nk_checkbox_label(ctx, "Game Settings F6", &editor.showGameSettings);
-      nk_checkbox_label(ctx, "View F7", &editor.showViewmode);
-      nk_checkbox_label(ctx, "Debug F8", &editor.showDebugMenu);
-      nk_checkbox_label(ctx, "Export F9", &editor.showExport);
-      nk_checkbox_label(ctx, "Level F10", &editor.showLevel);
-      nk_checkbox_label(ctx, "REPL", &editor.showREPL);
+      nk_checkbox_label(ctx, "Resources", &editor.assets.show);
+      nk_checkbox_label(ctx, "Hierarchy", &editor.hierarchy.show);
+      nk_checkbox_label(ctx, "Lighting F5", &editor.lighting.show);
+      nk_checkbox_label(ctx, "Game Settings F6", &editor.gamesettings.show);
+      nk_checkbox_label(ctx, "View F7", &editor.viewmode.show);
+      nk_checkbox_label(ctx, "Debug F8", &editor.debug.show);
+      nk_checkbox_label(ctx, "Export F9", &editor.export.show);
+      nk_checkbox_label(ctx, "Level F10", &editor.level.show);
+      nk_checkbox_label(ctx, "REPL", &editor.repl.show);
 
       nk_menu_end(ctx);
     }
-
-    if (nk_menu_begin_label(ctx, "Levels", NK_TEXT_LEFT, nk_vec2(100, 50))) {
+*/
+    NK_MENU_START(level)
       nk_layout_row_dynamic(ctx,25,3);
       if (nk_button_label(ctx, "New")) {
         new_level();
@@ -478,18 +470,15 @@ void editor_project_gui() {
         get_levels();
       }
 
-      nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, levelname,
-                                     MAXNAME - 1, nk_filter_default);
+      nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, levelname, MAXNAME - 1, nk_filter_default);
 
-      vec_walk(levels, (void (*)(void *)) & editor_level_btn);
-    }
+    nk_layout_row_dynamic(ctx,25,1);
+      vec_walk(levels, editor_level_btn);
+    NK_MENU_END()
 
-    nk_menubar_end(ctx);
-  }
-  nk_end(ctx);
+  if (editor.export.show) {
+    nk_begin(ctx, "Export and Bake", editor.export.rect, nuk_std);
 
-  if (editor.showExport) {
-    nk_begin(ctx, "Export and Bake", nk_rect_std, nuk_std);
     nk_layout_row_dynamic(ctx, 25,2);
     if (nk_button_label(ctx, "Bake")) {
     }
@@ -500,23 +489,19 @@ void editor_project_gui() {
   }
 
   // Shadow map vars
-  if (editor.showLighting) {
-  if (nk_begin(ctx, "Lighting options", nk_rect_std, nuk_std)) {
+  NK_MENU_START(lighting)
+
     nk_layout_row_dynamic(ctx, 25, 1);
     nk_label(ctx, "Directional shadow map", NK_TEXT_LEFT);
 
-    nk_property_float(ctx, "Near plane", -200.f, &near_plane, 200.f, 1.f,
-                      0.01f);
+    nk_property_float(ctx, "Near plane", -200.f, &near_plane, 200.f, 1.f, 0.01f);
     nk_property_float(ctx, "Far plane", -200.f, &far_plane, 200.f, 1.f, 0.01f);
-    nk_property_float(ctx, "Shadow lookahead", 0.f, &shadowLookahead, 100.f,
-                      1.f, 0.01f);
+    nk_property_float(ctx, "Shadow lookahead", 0.f, &shadowLookahead, 100.f, 1.f, 0.01f);
     nk_property_float(ctx, "Plane size", 0.f, &plane_size, 100.f, 1.f, 0.01f);
-  }
-  nk_end(ctx);
-  }
 
-  if (editor.showGameSettings) {
-    nk_begin(ctx, "Game settings", nk_rect_std, nuk_std);
+  NK_MENU_END()
+
+  NK_MENU_START(gamesettings)
     nk_layout_row_dynamic(ctx,25,1);
 
     // nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, cur_project->name,
@@ -532,18 +517,15 @@ void editor_project_gui() {
     if (nk_tree_push(ctx, NK_TREE_NODE, "Quality", NK_MINIMIZED)) {
       nk_tree_pop(ctx);
     }
-    nk_end(ctx);
-  }
 
-  if (editor.showStats) {
-    nk_begin(ctx, "Stats", nk_rect_std, nuk_std);
+  NK_MENU_END()
+
+  NK_MENU_START(stats)
     nk_labelf(ctx, NK_TEXT_LEFT, "FPS: %2.4f", 1.f / deltaT);
     nk_labelf(ctx, NK_TEXT_LEFT, "Triangles rendered: %llu", triCount);
-    nk_end(ctx);
-  }
+  NK_MENU_END()
 
-  if (editor.showREPL) {
-    nk_begin(ctx, "REPL", nk_rect_std, nuk_std);
+  NK_MENU_START(repl)
 
     nk_layout_row_dynamic(ctx, 300, 1);
 
@@ -557,19 +539,15 @@ void editor_project_gui() {
       buffer[0] = '\0';
     }
 
-    nk_end(ctx);
-  }
+    NK_MENU_END()
 
-  if (editor.showViewmode) {
-    nk_begin(ctx, "View options", nk_rect_std, nuk_std);
+  NK_MENU_START(debug)
 
     nk_layout_row_dynamic(ctx, 25, 1);
 
     nk_property_float(ctx, "Camera FOV", 0.1f, &editorFOV, 90.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Camera Near Plane", 0.1f, &editorClose, 5.f, 0.1f,
-                      0.01f);
-    nk_property_float(ctx, "Camera Far Plane", 50.f, &editorFar, 10000.f, 1.f,
-                      1.f);
+    nk_property_float(ctx, "Camera Near Plane", 0.1f, &editorClose, 5.f, 0.1f, 0.01f);
+    nk_property_float(ctx, "Camera Far Plane", 50.f, &editorFar, 10000.f, 1.f,1.f);
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Shading mode", NK_MINIMIZED)) {
       renderMode =
@@ -600,11 +578,10 @@ void editor_project_gui() {
       nk_tree_pop(ctx);
     }
 
-    nk_end(ctx);
-  }
+    NK_MENU_END()
 
-  if (editor.showHierarchy) {
-    nk_begin(ctx, "Objects", nk_rect_std, nuk_std);
+  NK_MENU_START(hierarchy)
+  nk_layout_row_dynamic(ctx, 25, 1);
 
     if (nk_button_label(ctx, "New Object")) {
       MakeGameobject();
@@ -612,8 +589,7 @@ void editor_project_gui() {
 
     obj_gui_hierarchy(selectedobject);
 
-    nk_end(ctx);
-  }
+    NK_MENU_END()
 
   if (nk_begin(ctx, "Simulate", nk_rect_std, nuk_std)) {
 
@@ -635,16 +611,13 @@ void editor_project_gui() {
   if (nk_begin(ctx, "Prefab Creator", nk_rect_std, nuk_std)) {
     nk_layout_row_dynamic(ctx, 25, 1);
 
-    vec_walk(prefabs, (void (*)(void *)) & editor_prefab_btn);
+    vec_walk(prefabs, editor_prefab_btn);
     nk_end(ctx);
   }
 
-  if (editor.showAssetMenu) {
-    nk_begin(ctx, "Asset Menu", nk_rect_std, nuk_std);
+  NK_MENU_START(assets)
     nk_layout_row_dynamic(ctx,25,1);
-    nk_edit_string_zero_terminated(ctx,
-                                   NK_EDIT_BOX | NK_EDIT_NO_HORIZONTAL_SCROLL,
-                                   asset_search_buffer, 100, nk_filter_ascii);
+    nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
 
     /*
 if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
@@ -687,14 +660,12 @@ NULL) ? false : true;
     }
     nk_group_end(ctx);
 
-    nk_end(ctx);
-  }
+    NK_MENU_END()
 
   if (selected_asset)
     editor_asset_gui(selected_asset);
 
-  if (editor.showDebugMenu) {
-    nk_begin(ctx, "Debug Menu", nk_rect_std, nuk_std);
+  NK_MENU_START(debug)
 
     if (nk_button_label(ctx, "Reload Shaders")) {
       shader_compile_all();
@@ -706,14 +677,11 @@ NULL) ? false : true;
     nk_property_int(ctx, "Grid 2 Span", 10, &grid2_span, 1000, 1, 1);
     nk_checkbox_label(ctx, "Draw", &grid2_draw);
 
-    nk_property_float(ctx, "Grid Opacity", 0.f, &gridOpacity, 1.f, 0.01f,
-                      0.01f);
+    nk_property_float(ctx, "Grid Opacity", 0.f, &gridOpacity, 1.f, 0.01f, 0.01f);
     nk_property_float(ctx, "Small unit", 0.5f, &smallGridUnit, 5.f, 0.1f, 0.1f);
     nk_property_float(ctx, "Big unit", 10.f, &bigGridUnit, 50.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Small thickness", 1.f, &gridSmallThickness, 10.f,
-                      0.1f, 0.1f);
-    nk_property_float(ctx, "Big thickness", 1.f, &gridBigThickness, 10.f, 0.1f,
-                      0.1f);
+    nk_property_float(ctx, "Small thickness", 1.f, &gridSmallThickness, 10.f, 0.1f, 0.1f);
+    nk_property_float(ctx, "Big thickness", 1.f, &gridBigThickness, 10.f, 0.1f, 0.1f);
 
     static struct nk_colorf smgrd;
     static struct nk_colorf lgrd;
@@ -721,8 +689,7 @@ NULL) ? false : true;
     nk_color_pick(ctx, &smgrd, NK_RGBA);
     nk_color_pick(ctx, &lgrd, NK_RGBA);
 
-    nk_end(ctx);
-  }
+    NK_MENU_END()
 
 startobjectgui:
 
@@ -730,7 +697,7 @@ startobjectgui:
     draw_point(selectedobject->transform.position[0],
                selectedobject->transform.position[1], 5);
 
-    nk_begin(ctx, "Object Parameters", nk_rect_std, nuk_std);
+    NK_FORCE(gameobject)
 
     nk_layout_row_dynamic(ctx, 30, 3);
 
@@ -744,35 +711,29 @@ startobjectgui:
       goto startobjectgui;
     }
 
-    if (selectedobject->editor.prefabSync) {
-      if (nk_button_label(ctx, "Revert"))
+    if (selectedobject->editor.prefabSync && nk_button_label(ctx, "Revert"))
         gameobject_revertprefab(selectedobject);
-    }
 
     nk_label(ctx, "Name", NK_TEXT_LEFT);
-    nk_edit_string_zero_terminated(ctx, 0, selectedobject->editor.mname, 50,
-                                   nk_filter_ascii);
+    nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, selectedobject->editor.mname, 50, nk_filter_ascii);
 
     nk_label(ctx, "Prefab", NK_TEXT_LEFT);
-    nk_edit_string_zero_terminated(ctx, 0, selectedobject->editor.prefabName,
-                                   50, nk_filter_ascii);
-    // Disabled if::::: selectedobject->editor.prefabSync ?
-    // ImGuiInputTextFlags_ReadOnly : 0);
+    nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, selectedobject->editor.prefabName, 50, nk_filter_ascii);
 
     object_gui(selectedobject);
 
-    nk_end(ctx);
+    NK_FORCE_END()
 
-    nk_begin(ctx, "Components", nk_rect_std, nuk_std);
-
+    NK_FORCE(components)
+    nk_layout_row_dynamic(ctx,25,1);
     for (int i = 0; i < ncomponent; i++) {
       if (nk_button_label(ctx, components[i].name)) {
         gameobject_addcomponent(selectedobject, &components[i]);
       }
     }
 
-    nk_end(ctx);
-  }
+   NK_FORCE_END()
+   }
 }
 
 void editor_render() { editor_project_gui(); }
