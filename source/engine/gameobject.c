@@ -72,15 +72,13 @@ void gameobject_delcomponent(struct mGameObject *go, int n)
     vec_del_order(go->components, n);
 }
 
-void setup_model_transform(struct mTransform *t, struct mShader *s,
-			   float scale)
+void setup_model_transform(struct mTransform *t, struct mShader *s, float scale)
 {
     mfloat_t modelT[16] = { 0.f };
     mfloat_t matbuff[16] = { 0.f };
     memcpy(modelT, UNITMAT4, sizeof(modelT));
     mat4_translate_vec3(modelT, t->position);
-    mat4_multiply(modelT, modelT,
-		  mat4_rotation_quat(matbuff, t->rotation));
+    mat4_multiply(modelT, modelT, mat4_rotation_quat(matbuff, t->rotation));
     mat4_scale_vec3f(modelT, scale);
     shader_setmat4(s, "model", modelT);
 
@@ -98,30 +96,19 @@ void gameobject_save(struct mGameObject *go, FILE * file)
     }
 }
 
-void gameobject_saveprefab(struct mGameObject *go)
-{
-    char prefabfname[60] = { '\0' };
-    strncat(prefabfname, go->editor.prefabName, MAXNAME);
-    strncat(prefabfname, EXT_PREFAB, 10);
-    FILE *pfile = fopen(prefabfname, "w+");
-    gameobject_save(go, pfile);
-    fclose(pfile);
-
-    findPrefabs();
-}
-
 void gameobject_makefromprefab(char *path)
 {
-    FILE *fprefab = fopen(path, "r");
+    FILE *fprefab = fopen(path, "rb");
     if (fprefab == NULL) {
 	return;
     }
 
     struct mGameObject *new = MakeGameobject();
+    struct vec *hold = new->components;
     fread(new, sizeof(*new), 1, fprefab);
+    new->components = hold;
 
     new->editor.id = gameobjects->len - 1;
-    new->body = cpSpaceAddBody(space, cpBodyNew(new->mass, 1.f));
 
     gameobject_init(new, fprefab);
 
@@ -135,16 +122,30 @@ void gameobject_init(struct mGameObject *go, FILE * fprefab)
     vec_load(go->components, fprefab);
 
     for (int i = 0; i < go->components->len; i++) {
-	struct component *newc =
-	    vec_set(go->components, i,
-		    &components[((struct component *)
-				 vec_get(go->components, i))->id]);
+	struct component *newc = vec_set(go->components, i, &components[((struct component *) vec_get(go->components, i))->id]);
+
 	newc->go = go;
 	newc->data = malloc(newc->datasize);
 	fread(newc->data, newc->datasize, 1, fprefab);
 	newc->init(newc->data, go);
     }
 }
+
+void gameobject_saveprefab(struct mGameObject *go)
+{
+    char prefabfname[60] = { '\0' };
+    strncat(prefabfname, go->editor.prefabName, MAXNAME);
+    strncat(prefabfname, EXT_PREFAB, 10);
+    FILE *pfile = fopen(prefabfname, "wb+");
+    gameobject_save(go, pfile);
+    fclose(pfile);
+
+    findPrefabs();
+}
+
+
+
+
 
 void gameobject_syncprefabs(char *revertPath)
 {

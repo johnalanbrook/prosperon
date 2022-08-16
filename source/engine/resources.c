@@ -56,8 +56,7 @@ char *get_filename_from_path(char *path, int extension)
 	printf("Making without extension ...\n");
     }
 
-    char *filename =
-	(char *) malloc(sizeof(char) * (end - dirpos - offset + 1));
+    char *filename = malloc(sizeof(char) * (end - dirpos - offset + 1));
     strncpy(filename, dirpos, end - dirpos - offset);
     return filename;
 }
@@ -78,8 +77,7 @@ FILE *res_open(char *path, const char *tag)
     return f;
 }
 
-static int ext_check(const char *path, const struct stat *sb, int typeflag,
-		     struct FTW *ftwbuf)
+static int ext_check(const char *path, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
     if (typeflag == FTW_F) {
 	const char *ext = strrchr(path, '.');

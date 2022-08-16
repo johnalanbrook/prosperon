@@ -7,7 +7,7 @@
 
 void save_level(char name[MAXNAME])
 {
-    FILE *lfile = res_open(name, "w+");
+    FILE *lfile = res_open(name, "wb+");
 
     if (!lfile) return;
 
@@ -24,7 +24,7 @@ void save_level(char name[MAXNAME])
 
 void load_level(char name[MAXNAME])
 {
-    FILE *lfile = fopen(name, "r");
+    FILE *lfile = fopen(name, "rb");
 
     if (!lfile) return;
 
@@ -38,6 +38,7 @@ void load_level(char name[MAXNAME])
     for (int i = 0; i < objs; i++) {
 	struct mGameObject *go = vec_add(gameobjects, NULL);
 	fread(go, sizeof(struct mGameObject), 1, lfile);
+	go->components = vec_make(1,1);
 	gameobject_init(go, lfile);
     }
 

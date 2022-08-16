@@ -388,6 +388,7 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods) {
 
 void editor_init(struct mSDLWindow *window) {
   levels = vec_make(MAXNAME, 10);
+  get_levels();
   editor_load_projects();
   findPrefabs();
 
@@ -453,6 +454,8 @@ void editor_project_gui() {
 */
     NK_MENU_START(level)
       nk_layout_row_dynamic(ctx,25,3);
+      nk_labelf(ctx, "Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
+
       if (nk_button_label(ctx, "New")) {
         new_level();
         current_level[0] = '\0';
@@ -464,8 +467,9 @@ void editor_project_gui() {
       }
 
       if (nk_button_label(ctx, "Save as")) {
-        save_level(levelname);
         strcpy(current_level, levelname);
+        strncat(current_level, EXT_LEVEL, MAXNAME);
+        save_level(current_level);
         levelname[0] = '\0';
         get_levels();
       }
@@ -968,8 +972,7 @@ void sprite_gui(struct mSprite *sprite) {
 
   if (sprite->tex != NULL) {
     nk_labelf(ctx, NK_TEXT_LEFT, "%s", sprite->tex->path);
-    nk_labelf(ctx, NK_TEXT_LEFT, "%dx%d", sprite->tex->width,
-              sprite->tex->height);
+    nk_labelf(ctx, NK_TEXT_LEFT, "%dx%d", sprite->tex->width, sprite->tex->height);
     if (nk_button_label(ctx, "Imgbutton"))
       editor_selectasset_str(sprite->tex->path);
     // if (ImGui::ImageButton ((void *) (intptr_t) sprite->tex->id, ImVec2(50,

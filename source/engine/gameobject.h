@@ -46,8 +46,7 @@ void gameobject_delete(int id);
 void clear_gameobjects();
 int number_of_gameobjects();
 void set_n_gameobjects(int n);
-void setup_model_transform(struct mTransform *t, struct mShader *s,
-			   float scale);
+void setup_model_transform(struct mTransform *t, struct mShader *s, float scale);
 void toggleprefab(struct mGameObject *go);
 struct mGameObject *get_gameobject_from_id(int id);
 void gameobject_save(struct mGameObject *go, FILE * file);
