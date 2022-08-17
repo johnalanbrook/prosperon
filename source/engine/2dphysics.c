@@ -5,6 +5,11 @@
 #include "mathc.h"
 #include "nuke.h"
 
+#include "debugdraw.h"
+#include "gameobject.h"
+#include <math.h>
+#include <chipmunk/chipmunk_unsafe.h>
+
 cpBody *ballBody = NULL;
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
@@ -49,13 +54,10 @@ struct phys2d_circle *Make2DCircle(struct mGameObject *go)
     return new;
 }
 
-void phys2d_circleinit(struct phys2d_circle *circle,
-		       struct mGameObject *go)
+void phys2d_circleinit(struct phys2d_circle *circle, struct mGameObject *go)
 {
-    circle->shape.shape =
-	cpSpaceAddShape(space,
-			cpCircleShapeNew(go->body, circle->radius,
-					 cpvzero));
+    printf("Initing a circle\n");
+    circle->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(go->body, circle->radius, cpvzero));
     init_phys2dshape(&circle->shape, go);
 }
 
@@ -65,6 +67,15 @@ void circle_gui(struct phys2d_circle *circle)
     nk_property_float2(ctx, "Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
 
     phys2d_applycircle(circle);
+}
+
+void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
+{
+    cpVect p = cpBodyGetPosition(circle->shape.go->body);
+    cpVect o = cpCircleShapeGetOffset(circle->shape.shape);
+    float d = sqrt(pow(o.x, 2.f) + pow(o.y, 2.f));
+    float a = atan2(o.y, o.x) + cpBodyGetAngle(circle->shape.go->body);
+    draw_circle(p.x + (d * cos(a)), p.y + (d * sin(a)), cpCircleShapeGetRadius(circle->shape.shape), 1);
 }
 
 struct phys2d_segment *Make2DSegment(struct mGameObject *go)
@@ -83,10 +94,7 @@ struct phys2d_segment *Make2DSegment(struct mGameObject *go)
 
 void phys2d_seginit(struct phys2d_segment *seg, struct mGameObject *go)
 {
-    seg->shape.shape =
-	cpSpaceAddShape(space,
-			cpSegmentShapeNew(go->body, cpvzero, cpvzero,
-					  seg->thickness));
+    seg->shape.shape = cpSpaceAddShape(space, cpSegmentShapeNew(go->body, cpvzero, cpvzero, seg->thickness));
     init_phys2dshape(&seg->shape, go);
 }
 
@@ -127,7 +135,6 @@ void box_gui(struct phys2d_box *box)
     nk_property_float(ctx, "Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
     nk_property_float(ctx, "Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
     nk_property_float2(ctx, "Offset", 0.f, &box->offset, 1.f, 0.01f, 0.01f);
-    nk_property_float(ctx, "Radius", 0.f, &box->r, 100.f, 1.f, 0.1f);
 
     phys2d_applybox(box);
 }
@@ -255,10 +262,7 @@ void edge_gui(struct phys2d_edge *edge)
     phys2d_applyedge(edge);
 }
 
-#include "debugdraw.h"
-#include "gameobject.h"
-#include <math.h>
-#include <chipmunk/chipmunk_unsafe.h>
+
 
 void phys2d_applycircle(struct phys2d_circle *circle)
 {
@@ -332,15 +336,7 @@ void phys2d_applyedge(struct phys2d_edge *edge)
     }
 }
 
-void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
-{
-    cpVect p = cpBodyGetPosition(circle->shape.go->body);
-    cpVect o = cpCircleShapeGetOffset(circle->shape.shape);
-    float d = sqrt(pow(o.x, 2.f) + pow(o.y, 2.f));
-    float a = atan2(o.y, o.x) + cpBodyGetAngle(circle->shape.go->body);
-    draw_circle(p.x + (d * cos(a)), p.y + (d * sin(a)),
-		cpCircleShapeGetRadius(circle->shape.shape), 1);
-}
+
 
 void phys2d_dbgdrawseg(struct phys2d_segment *seg)
 {

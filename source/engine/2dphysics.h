@@ -32,8 +32,8 @@ struct phys2d_segment {
 struct phys2d_box {
     float w;
     float h;
-    float r;
     float offset[2];
+    float r;
     struct phys2d_shape shape;
 };
 

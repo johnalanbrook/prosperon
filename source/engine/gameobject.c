@@ -89,10 +89,9 @@ void gameobject_save(struct mGameObject *go, FILE * file)
     fwrite(go, sizeof(*go), 1, file);
 
     vec_store(go->components, file);
-
     for (int i = 0; i < go->components->len; i++) {
 	struct component *c = vec_get(go->components, i);
-	fwrite(c, c->datasize, 1, file);
+	fwrite(c->data, c->datasize, 1, file);
     }
 }
 
@@ -122,8 +121,8 @@ void gameobject_init(struct mGameObject *go, FILE * fprefab)
     vec_load(go->components, fprefab);
 
     for (int i = 0; i < go->components->len; i++) {
-	struct component *newc = vec_set(go->components, i, &components[((struct component *) vec_get(go->components, i))->id]);
-
+	vec_set(go->components, i, &components[((struct component *) vec_get(go->components, i))->id]);
+	struct component *newc = vec_get(go->components, i);
 	newc->go = go;
 	newc->data = malloc(newc->datasize);
 	fread(newc->data, newc->datasize, 1, fprefab);
@@ -210,19 +209,22 @@ void object_gui(struct mGameObject *go)
 
     draw_point(temp_pos[0], temp_pos[1], 3);
 
-    nk_property_float2(ctx, "Position", 0.f, temp_pos, 1.f, 0.01f, 0.01f);
+    nk_property_float2(ctx, "Position", -1000000.f, temp_pos, 1000000.f, 1.f, 0.5f);
 
     cpVect tvect = { temp_pos[0], temp_pos[1] };
     cpBodySetPosition(go->body, tvect);
 
     float mtry = cpBodyGetAngle(go->body);
     float modtry = fmodf(mtry * RAD2DEGS, 360.f);
+    if (modtry < 0.f)
+      modtry += 360.f;
+
     float modtry2 = modtry;
     nk_property_float(ctx, "Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
     modtry -= modtry2;
     cpBodySetAngle(go->body, mtry + (modtry * DEG2RADS));
 
-    nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, 0.001f);
+    nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, go->scale * 0.01f);
 
     nk_layout_row_dynamic(ctx, 25, 3);
     nk_radio_button_label(ctx, "Static", &go->bodytype, CP_BODY_TYPE_STATIC);
@@ -242,8 +244,7 @@ void object_gui(struct mGameObject *go)
     int n = -1;
 
     for (int i = 0; i < go->components->len; i++) {
-	struct component *c =
-	    (struct component *) vec_get(go->components, i);
+	struct component *c = vec_get(go->components, i);
 
 	if (c->draw_debug)
 	    c->draw_debug(c->data);

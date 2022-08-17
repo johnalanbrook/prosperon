@@ -963,8 +963,9 @@ void game_stop() { physOn = 0; }
 void game_pause() { physOn = 0; }
 
 void sprite_gui(struct mSprite *sprite) {
+  nuke_nel(2);
   nk_labelf(ctx, NK_TEXT_LEFT, "Path %s", sprite->tex->path);
-  // ImGui::SameLine();
+
 
   if (nk_button_label(ctx, "Load texture") && selected_asset != NULL) {
     sprite_loadtex(sprite, selected_asset->filename);
@@ -978,10 +979,9 @@ void sprite_gui(struct mSprite *sprite) {
     // if (ImGui::ImageButton ((void *) (intptr_t) sprite->tex->id, ImVec2(50,
     // 50))) {
   }
-  nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f,
-                     0.01f);
+  nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
 
-  nk_layout_row_dynamic(ctx, 25, 3);
+  nuke_nel(3);
   if (nk_button_label(ctx, "C")) {
     sprite->pos[0] = -0.5f;
     sprite->pos[1] = -0.5f;

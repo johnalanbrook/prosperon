@@ -40,7 +40,7 @@ struct mSprite *MakeSprite(struct mGameObject *go)
     sprite->pos[1] = 0.f;
     sprite->size[0] = 1.f;
     sprite->size[1] = 1.f;
-    sprite->tex = NULL;
+    sprite->tex = texture_loadfromfile("ph.png");
     sprite_init(sprite, go);
     sprite->index = sprites.last;
     return sprite;
