@@ -38,11 +38,15 @@ struct editorVars {
     editor_win level;
     editor_win gameobject;
     editor_win components;
+    editor_win simulate;
+    editor_win prefab;
 };
 
 struct mGameObject;
 
-#define NK_MENU_START(VAR) if (editor.VAR.show) { \
+extern int show_desktop;
+
+#define NK_MENU_START(VAR) if (editor.VAR.show && !show_desktop) { \
                                                                           if (editor.VAR.rect.w == 0) editor.VAR.rect = nk_rect_std; \
                                                                           if (nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
                                                                           editor.VAR.rect = nk_window_get_bounds(ctx);
@@ -50,10 +54,10 @@ struct mGameObject;
 #define NK_MENU_END() } nk_end(ctx); }
 
 #define NK_FORCE(VAR) if (editor.VAR.rect.w == 0) editor.VAR.rect = nk_rect_std; \
-                                                         if (nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
+                                                         if (!show_desktop && nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
                                                          editor.VAR.rect = nk_window_get_bounds(ctx);
 
-#define NK_FORCE_END() } nk_end(ctx);
+#define NK_FORCE_END() nk_end(ctx); }
 
 #define NEGATE(VAR) VAR = ! VAR
 

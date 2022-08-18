@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define __USE_XOPEN_EXTENDED 1
 #include "ftw.h"
 
 #include <stb_ds.h>
@@ -67,6 +66,8 @@ struct fileasset *selected_asset;
 
 static int selected_index = -1;
 
+int show_desktop = 0;
+
 static int grid1_width = 1;
 static int grid1_span = 100;
 static int grid2_width = 3;
@@ -88,31 +89,30 @@ static const char *get_extension(const char *filepath) {
   return strrchr(filepath, '.');
 }
 
-static int check_if_resource(const char *fpath, const struct stat *sb,
-                             int typeflag, struct FTW *ftwbuf) {
-  if (typeflag == FTW_F) {
+static int check_if_resource(const char *fpath, const struct stat *sb, int typeflag) {
+  if (typeflag != FTW_F)
+      return 0;
+
     const char *ext = get_extension(fpath);
     if (ext && is_allowed_extension(ext)) {
-      struct fileasset *newasset =
-          (struct fileasset *)calloc(1, sizeof(struct fileasset));
-      newasset->filename = (char *)malloc(sizeof(char) * strlen(fpath) + 1);
+      struct fileasset *newasset = calloc(1, sizeof(struct fileasset));
+      newasset->filename = malloc(sizeof(char) * strlen(fpath) + 1);
       strcpy(newasset->filename, fpath);
       newasset->extension_len = strlen(ext);
       newasset->searched = true;
       shput(assets, newasset->filename, newasset);
     }
-  }
+
 
   return 0;
 }
 
 static void print_files_in_directory(const char *dirpath) {
-  int nflags = 0;
   shfree(assets);
-  nftw(dirpath, &check_if_resource, 10, nflags);
+  ftw(dirpath, check_if_resource, 10);
 }
 
-static void get_all_files() { print_files_in_directory(DATA_PATH); }
+static void get_all_files() { print_files_in_directory("."); }
 
 static int *compute_prefix_function(const char *str) {
   int str_len = strlen(str);
@@ -239,8 +239,14 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
   if (editor_wantkeyboard())
     return;
 
-  if (action != GLFW_PRESS)
+  if (action == GLFW_RELEASE) {
+      switch(key) {
+          case GLFW_KEY_TAB:
+            show_desktop = 0;
+            break;
+      }
       return;
+  }
 
   switch (key) {
   case GLFW_KEY_ESCAPE:
@@ -346,6 +352,10 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
        }
      */
     break;
+
+  case GLFW_KEY_TAB:
+    show_desktop = 1;
+    break;
   }
 }
 
@@ -387,7 +397,7 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods) {
 }
 
 void editor_init(struct mSDLWindow *window) {
-  levels = vec_make(MAXNAME, 10);
+  levels = vec_make(MAXPATH, 10);
   get_levels();
   editor_load_projects();
   findPrefabs();
@@ -595,8 +605,7 @@ void editor_project_gui() {
 
     NK_MENU_END()
 
-  if (nk_begin(ctx, "Simulate", nk_rect_std, nuk_std)) {
-
+  NK_FORCE(simulate)
   nk_layout_row_dynamic(ctx, 25, 2);
   if (physOn) {
     if (nk_button_label(ctx, "Pause"))
@@ -609,15 +618,13 @@ void editor_project_gui() {
       game_start();
   }
 
-  nk_end(ctx);
-  }
+  NK_FORCE_END()
 
-  if (nk_begin(ctx, "Prefab Creator", nk_rect_std, nuk_std)) {
+  NK_FORCE(prefab)
     nk_layout_row_dynamic(ctx, 25, 1);
 
     vec_walk(prefabs, editor_prefab_btn);
-    nk_end(ctx);
-  }
+    NK_FORCE_END()
 
   NK_MENU_START(assets)
     nk_layout_row_dynamic(ctx,25,1);
@@ -653,7 +660,6 @@ NULL) ? false : true;
     if (nk_button_label(ctx, "Reload all files"))
       get_all_files();
 
-    nk_group_begin(ctx, "##scrolling", NK_WINDOW_NO_SCROLLBAR);
     for (int i = 0; i < shlen(assets); i++) {
       if (!assets[i].value->searched)
         continue;
@@ -662,7 +668,6 @@ NULL) ? false : true;
         editor_selectasset(assets[i].value);
       }
     }
-    nk_group_end(ctx);
 
     NK_MENU_END()
 
@@ -753,8 +758,7 @@ void pickGameObject(int pickID) {
 }
 
 int is_allowed_extension(const char *ext) {
-  for (size_t i = 0;
-       i < sizeof(allowed_extensions) / sizeof(allowed_extensions[0]); i++) {
+  for (size_t i = 0; i < sizeof(allowed_extensions) / sizeof(allowed_extensions[0]); i++) {
     if (!strcmp(ext + 1, allowed_extensions[i]))
       return true;
   }
@@ -775,11 +779,10 @@ void editor_selectasset(struct fileasset *asset) {
 
   if (!strcmp(ext + 1, "png") || !strcmp(ext + 1, "jpg")) {
     asset->data = texture_loadfromfile(asset->filename);
-    tex_gui_anim.tex = (struct Texture *)asset->data;
+    tex_gui_anim.tex = asset->data;
     asset->type = ASSET_TYPE_IMAGE;
     tex_anim_set(&tex_gui_anim);
-    // float tex_scale = float((float) ASSET_WIN_SIZE /
-    // tex_gui_anim.tex->width);
+    float tex_scale = (float) ASSET_WIN_SIZE / (float)tex_gui_anim.tex->width;
     if (tex_scale >= 10.f)
       tex_scale = 10.f;
   } else if (!strcmp(ext + 1, "glsl")) {
@@ -906,22 +909,23 @@ void editor_asset_gui(struct fileasset *asset) {
 
   nk_begin(ctx, "Asset Viewer", nk_rect_std, nuk_std);
 
+  nuke_nel(2);
   nk_labelf(ctx, NK_TEXT_LEFT, "%s", selected_asset->filename);
 
-  // ImGui::SameLine();
   if (nk_button_label(ctx, "Close"))
     selected_asset = NULL;
 
+  nuke_nel(1);
   switch (asset->type) {
   case ASSET_TYPE_NULL:
     break;
 
   case ASSET_TYPE_IMAGE:
-    editor_asset_tex_gui((struct Texture *)asset->data);
+    editor_asset_tex_gui(asset->data);
     break;
 
   case ASSET_TYPE_TEXT:
-    editor_asset_text_gui((char *)asset->data);
+    editor_asset_text_gui(asset->data);
     break;
   }
 

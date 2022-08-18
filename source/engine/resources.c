@@ -12,7 +12,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define __USE_XOPEN_EXTENDED 1
 #include <ftw.h>
 
 char *DATA_PATH = NULL;
@@ -33,9 +32,9 @@ char pathbuf[MAXPATH];
 
 void resources_init()
 {
-    DATA_PATH = malloc(256);
-    getcwd(DATA_PATH, 256);
-    strncat(DATA_PATH, "/", 256);
+    DATA_PATH = malloc(MAXPATH);
+    getcwd(DATA_PATH, MAXPATH);
+    strncat(DATA_PATH, "/", MAXPATH);
 
     if (!PREF_PATH)
         PREF_PATH = strdup("./tmp/");
@@ -77,7 +76,7 @@ FILE *res_open(char *path, const char *tag)
     return f;
 }
 
-static int ext_check(const char *path, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+static int ext_check(const char *path, const struct stat *sb, int typeflag)
 {
     if (typeflag == FTW_F) {
 	const char *ext = strrchr(path, '.');
@@ -93,7 +92,7 @@ void fill_extensions(struct vec *vec, const char *path, const char *ext)
     c_vec = vec;
     cur_ext = ext;
     vec_clear(c_vec);
-    nftw(path, &ext_check, 10, 0);
+    ftw(".", ext_check, 10);
 }
 
 void findPrefabs()
