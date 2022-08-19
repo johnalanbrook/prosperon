@@ -60,8 +60,24 @@ void nk_property_float2(struct nk_context *ctx, const char *label, float min, fl
     nk_property_float(ctx, "#Y", min, &val[1], max, step, dragstep);
 }
 
+int nuke_btn(const char *lbl) {
+    return nk_button_label(ctx, lbl);
+}
+
+void nuke_property_int(const char *lbl, int min, int *val, int max, int step) {
+    nk_property_int(ctx, lbl, min, val, max, step, step);
+}
+
 void nk_radio_button_label(struct nk_context *ctx, const char *label, int *val, int cmp) {
     if (nk_option_label(ctx, label, (bool)*val == cmp)) *val = cmp;
+}
+
+void nuke_radio_btn(const char *lbl, int *val, int cmp) {
+    nk_radio_button_label(ctx, lbl, val, cmp);
+}
+
+void nuke_checkbox(const char *lbl, int *val) {
+    nk_checkbox_label(ctx, lbl, val);
 }
 
 void nuke_nel(int cols) {
@@ -69,5 +85,5 @@ void nuke_nel(int cols) {
 }
 
 void nuke_label(const char *s) {
-
+    nk_label(ctx, NK_TEXT_LEFT, s);
 }

@@ -33,6 +33,7 @@ struct editorVars {
     editor_win viewmode;
     editor_win debug;
     editor_win assets;
+    editor_win asset;
     editor_win repl;
     editor_win export;
     editor_win level;
@@ -40,6 +41,8 @@ struct editorVars {
     editor_win components;
     editor_win simulate;
     editor_win prefab;
+    nk_flags text_ed;
+    nk_flags asset_srch;
 };
 
 struct mGameObject;

@@ -49,7 +49,13 @@ static bool renderGizmos = false;
 static bool showGrid = true;
 static bool debugDrawPhysics = false;
 
-const char *allowed_extensions[] = {"jpg", "png", "gltf", "glsl"};
+const char *allowed_extensions[] = {"jpg", "png", "rb", "wav", "mp3", };
+
+void text_ed_cb(GLFWwindow *win, unsigned int codepoint);
+void asset_srch_cb(GLFWwindow *win, unsigned int codepoint)
+{
+    printf("Pushed %d.\n", codepoint);
+}
 
 static const char *editor_filename = "editor.ini";
 
@@ -60,13 +66,15 @@ struct asset {
 
 static struct asset *assets = NULL;
 
-static char asset_search_buffer[100] = {0};
+static char asset_search_buffer[100] = {'\0'};
 
 struct fileasset *selected_asset;
 
 static int selected_index = -1;
 
 int show_desktop = 0;
+
+int tex_view = 0;
 
 static int grid1_width = 1;
 static int grid1_span = 100;
@@ -158,76 +166,22 @@ end:
   return found;
 }
 
-static int MyCallback() {
-  /*
-      if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
-          data->InsertChars(data->CursorPos, "..");
-      } else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
-          if (data->EventKey == ImGuiKey_UpArrow) {
-              data->DeleteChars(0, data->BufTextLen);
-              data->InsertChars(0, "Pressed Up!");
-              data->SelectAll();
-          } else if (data->EventKey == ImGuiKey_DownArrow) {
-              data->DeleteChars(0, data->BufTextLen);
-              data->InsertChars(0, "Pressed Down!");
-              data->SelectAll();
-          }
-      } else if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
-          int i = 0;
-          if (data->Buf[0] == '\0')
-              while (i < shlen(assets))
-                  assets[i].value->searched = true;
-          else
-              while (i < shlen(assets))
-                  assets[i].value->searched =
-                      (strstr(assets[i].value->filename, data->Buf) ==
-                       NULL) ? false : true;
-
-      }
-  */
-  return 0;
-}
-
-static int TextEditCallback() // ImGuiInputTextCallbackData * data)
+void filter_asset_srch()
 {
-  /*
-      static int dirty = 0;
-
-      if (data->EventChar == '\n') {
-          dirty = 1;
-      } else if (data->EventChar == '(') {
-          //data->EventChar = 245;
-          dirty = 2;
-      } else if (data->EventChar == ')') {
-          dirty = 3;
-      }
-
-      if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
-          if (dirty == 1) {
-              dirty = 0;
-              char *c = &data->Buf[data->CursorPos - 2];
-
-
-              while (*c != '\n')
-                  c--;
-
-              c++;
-
-              if (isblank(*c)) {
-                  char *ce = c;
-
-                  while (isblank(*ce))
-                      ce++;
-
-                  data->InsertChars(data->CursorPos, c, ce);
-              }
-
-          }
-      }
-
-  */
-  return 0;
+    if (asset_search_buffer[0] == '\0') {
+        for (int i = 0; i < shlen(assets); i++)
+            assets[i].value->searched = true;
+    } else {
+        for (int i = 0; i < shlen(assets); i++)
+            assets[i].value->searched = (strstr(assets[i].value->filename, asset_search_buffer) == NULL) ? false : true;
+    }
 }
+
+void filter_autoindent()
+{
+
+}
+
 
 void editor_save() {
   FILE *feditor = fopen(editor_filename, "w+");
@@ -236,8 +190,17 @@ void editor_save() {
 }
 
 static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int mods) {
-  if (editor_wantkeyboard())
-    return;
+  if (editor_wantkeyboard()) {
+      if (editor.asset_srch & NK_EDIT_ACTIVE) {
+          filter_asset_srch();
+      }
+
+      if ((editor.text_ed & NK_EDIT_ACTIVE) && key == GLFW_KEY_ENTER) {
+          filter_autoindent();
+      }
+
+      return;
+  }
 
   if (action == GLFW_RELEASE) {
       switch(key) {
@@ -416,14 +379,21 @@ void editor_init(struct mSDLWindow *window) {
   glfwSetKeyCallback(window->window, edit_input_cb);
   glfwSetMouseButtonCallback(window->window, edit_mouse_cb);
 
-
+  //glfwSetCharCallback(window->window, text_ed_cb);
+  //glfwSetCharCallback(window->window, asset_srch_cb);
 }
 
-// TODO: Implement
-int editor_wantkeyboard() { return 0; }
+int editor_wantkeyboard() {
+    if (editor.text_ed & NK_EDIT_ACTIVE)
+        return 1;
 
-const int nuk_std = NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-                    NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE;
+    if (editor.asset_srch & NK_EDIT_ACTIVE)
+        return 1;
+
+    return 0;
+}
+
+const int nuk_std = NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE;
 
 const struct nk_rect nk_rect_std = {250, 250, 250, 250};
 
@@ -438,12 +408,6 @@ void editor_project_gui() {
     // for (int i = 0; i < number_of_gameobjects(); i++)
     // phys2d_dbgdrawcircle(objects[i]->circle);
   }
-
-  static char text[3][64];
-  static int text_len[3];
-  static const char *items[] = {"Item 0", "item 1", "item 2"};
-  static int selected_item = 0;
-  static int check = 1;
 
 /*
     if (nk_menu_begin_label(ctx, "Windows", NK_TEXT_LEFT, nk_vec2(100, 200))) {
@@ -628,37 +592,13 @@ void editor_project_gui() {
 
   NK_MENU_START(assets)
     nk_layout_row_dynamic(ctx,25,1);
-    nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
+    editor.asset_srch = nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
 
-    /*
-if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
-data->InsertChars(data->CursorPos, "..");
-} else if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
-if (data->EventKey == ImGuiKey_UpArrow) {
-data->DeleteChars(0, data->BufTextLen);
-data->InsertChars(0, "Pressed Up!");
-data->SelectAll();
-} else if (data->EventKey == ImGuiKey_DownArrow) {
-data->DeleteChars(0, data->BufTextLen);
-data->InsertChars(0, "Pressed Down!");
-data->SelectAll();
-}
-} else if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
-int i = 0;
-if (data->Buf[0] == '\0')
-while (i < shlen(assets))
-assets[i].value->searched = true;
-else
-while (i < shlen(assets))
-assets[i].value->searched =
-(strstr(assets[i].value->filename, data->Buf) ==
-NULL) ? false : true;
 
-}
-*/
 
     if (nk_button_label(ctx, "Reload all files"))
       get_all_files();
+
 
     for (int i = 0; i < shlen(assets); i++) {
       if (!assets[i].value->searched)
@@ -785,7 +725,7 @@ void editor_selectasset(struct fileasset *asset) {
     float tex_scale = (float) ASSET_WIN_SIZE / (float)tex_gui_anim.tex->width;
     if (tex_scale >= 10.f)
       tex_scale = 10.f;
-  } else if (!strcmp(ext + 1, "glsl")) {
+  } else if (!strcmp(ext + 1, "rb")) {
     asset->type = ASSET_TYPE_TEXT;
 
     FILE *fasset = fopen(asset->filename, "rb");
@@ -801,78 +741,58 @@ void editor_selectasset(struct fileasset *asset) {
 }
 
 void editor_selectasset_str(char *path) {
-  struct fileasset *asset = (struct fileasset *)shget(assets, path);
+  struct fileasset *asset = shget(assets, path);
 
   if (asset)
     editor_selectasset(asset);
 }
 
 void editor_asset_tex_gui(struct Texture *tex) {
+    nuke_labelf("%dx%d", tex->width, tex->height);
+    nuke_prop_float("Zoom", 0.01f, &tex_scale, 10.f, 0.1f, 0.01f);
+    int old_sprite = tex->opts.sprite;
+
+    nuke_checkbox("Sprite", &tex->opts.sprite);
+
+    if (old_sprite != tex->opts.sprite)
+        tex_gpu_load(tex);
+
+    nuke_radio_btn("Raw", &tex_view, 0);
+    nuke_radio_btn("View 1", &tex_view, 1);
+    nuke_radio_btn("View 2", &tex_view, 2);
+
+    nuke_checkbox("Animation", &tex->opts.animation);
+
+    if (tex->opts.animation) {
+        int old_frames = tex->anim.frames;
+        int old_ms = tex->anim.ms;
+
+        nuke_property_int("Frames", 1, &tex->anim.frames, 20, 1);
+        nuke_property_int("FPS", 1, &tex->anim.ms, 24, 1);
+
+        if (tex_gui_anim.playing) {
+            if (nuke_btn("Pause"))
+                anim_pause(&tex_gui_anim);
+            if (tex_gui_anim.playing && nuke_btn("Stop"))
+                anim_stop(&tex_gui_anim);
+        } else {
+            if (nuke_btn("Play"))
+                anim_play(&tex_gui_anim);
+
+            if (nuke_btn("Bkwd"))
+                anim_bkwd(&tex_gui_anim);
+
+            if (nuke_btn("Fwd"))
+                anim_fwd(&tex_gui_anim);
+        }
+
+        nuke_labelf("Frame %d/%d", tex_gui_anim.frame+1, tex_gui_anim.tex->anim.frames);
+
+        if (old_frames != tex->anim.frames || old_ms != tex->anim.ms)
+            tex_anim_set(&tex_gui_anim);
+    }
   /*
-      ImGui::Text("%dx%d", tex->width, tex->height);
 
-      ImGui::SliderFloat("Zoom", &tex_scale, 0.01f, 10.f);
-
-      int old_sprite = tex->opts.sprite;
-      ImGui::Checkbox("Sprite", (bool *) &tex->opts.sprite);
-
-      if (old_sprite != tex->opts.sprite)
-          tex_gpu_load(tex);
-
-
-      ImGui::RadioButton("Raw", &tex_view, 0);
-      ImGui::SameLine(); ImGui::RadioButton("View 1", &tex_view, 1);
-      ImGui::SameLine(); ImGui::RadioButton("View 2", &tex_view, 2);
-
-
-      ImGui::Checkbox("Animation", (bool *) &tex->opts.animation);
-
-      if (tex->opts.animation) {
-          int old_frames = tex->anim.frames;
-          int old_ms = tex->anim.ms;
-          ImGui::SliderInt("Frames", &tex->anim.frames, 1, 20);
-          ImGui::SliderInt("FPS", &tex->anim.ms, 1, 24);
-
-
-
-
-          if (tex_gui_anim.playing) {
-              if (ImGui::Button("Pause"))
-                  anim_pause(&tex_gui_anim);
-              ImGui::SameLine();
-              if (tex_gui_anim.playing && ImGui::Button("Stop"))
-                  anim_stop(&tex_gui_anim);
-          } else {
-              if (ImGui::Button("Play"))
-                  anim_play(&tex_gui_anim);
-
-              ImGui::SameLine();
-              if (ImGui::Button("Bkwd"))
-                  anim_bkwd(&tex_gui_anim);
-
-
-              ImGui::SameLine();
-              if (ImGui::Button("Fwd"))
-                  anim_fwd(&tex_gui_anim);
-          }
-
-
-
-
-
-
-
-
-          ImGui::SameLine();
-          ImGui::Text("Frame %d/%d", tex_gui_anim.frame + 1,
-                      tex_gui_anim.tex->anim.frames);
-
-
-
-
-
-          if (old_frames != tex->anim.frames || old_ms != tex->anim.ms)
-              tex_anim_set(&tex_gui_anim);
 
           ImVec2 uv0 = ImVec2(tex_gui_anim.uv.x, tex_gui_anim.uv.y);
           ImVec2 uv1 = ImVec2(tex_gui_anim.uv.x + tex_gui_anim.uv.w,
@@ -887,27 +807,39 @@ void editor_asset_tex_gui(struct Texture *tex) {
                               tex->height * tex_scale));
       }
       */
+
+      nk_layout_row_static(ctx, tex->height*tex_scale, tex->width*tex_scale, 1);
+      nk_image(ctx, nk_image_id(tex->id));
+}
+
+void text_ed_cb(GLFWwindow *win, unsigned int codepoint)
+{
+    printf("Pressed button %d\n", codepoint);
+    if (editor.text_ed & NK_EDIT_ACTIVE) {
+        if (codepoint == '\n') {
+            printf("Hit newline.\n");
+        }
+    }
 }
 
 void editor_asset_text_gui(char *text) {
-  /*
-      ImGui::InputTextMultiline("File edit", text, ASSET_TEXT_BUF,
-                                ImVec2(600, 500),
-                                ImGuiInputTextFlags_CallbackAlways |
-                                ImGuiInputTextFlags_CallbackCharFilter,
-                                TextEditCallback);
-      if (ImGui::Button("Save")) {
-          FILE *f = fopen(selected_asset->filename, "wd");
-          size_t len = strlen(text);
-          fwrite(text, len, 1, f);
-          fclose(f);
-      }
-      */
+    nk_layout_row_dynamic(ctx, 600, 1);
+    editor.text_ed = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX, text, ASSET_TEXT_BUF, nk_filter_ascii);
+
+    nuke_nel(4);
+    if (nk_button_label(ctx, "Save")) {
+        FILE *f = fopen(selected_asset->filename, "wd");
+        size_t len = strlen(text);
+        fwrite(text, len, 1, f);
+        fclose(f);
+    }
+
+    /* TODO: Nicer formatting for text input. Auto indent. */
 }
 
 void editor_asset_gui(struct fileasset *asset) {
 
-  nk_begin(ctx, "Asset Viewer", nk_rect_std, nuk_std);
+  NK_FORCE(asset)
 
   nuke_nel(2);
   nk_labelf(ctx, NK_TEXT_LEFT, "%s", selected_asset->filename);
@@ -929,7 +861,7 @@ void editor_asset_gui(struct fileasset *asset) {
     break;
   }
 
-  nk_end(ctx);
+  NK_FORCE_END()
 }
 
 void editor_makenewobject() {}
