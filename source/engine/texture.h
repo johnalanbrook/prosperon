@@ -71,7 +71,7 @@ void anim_bkwd(struct TexAnimation *anim);
 void anim_incr(struct TexAnimation  *anim);
 void anim_decr(struct TexAnimation *anim);
 
-unsigned int tex_incr_anim(unsigned int interval, struct TexAnimation *tex_anim);
+void tex_incr_anim(struct TexAnimation *tex_anim);
 void tex_anim_calc_uv(struct TexAnimation *anim);
 void tex_anim_set(struct TexAnimation *anim);
 

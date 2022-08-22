@@ -790,26 +790,19 @@ void editor_asset_tex_gui(struct Texture *tex) {
 
         if (old_frames != tex->anim.frames || old_ms != tex->anim.ms)
             tex_anim_set(&tex_gui_anim);
-    }
-  /*
 
+        nk_layout_row_static(ctx, tex->height*tex_scale*tex_gui_anim.uv.h, tex->width*tex_scale*tex_gui_anim.uv.w, 1);
+        struct nk_rect r;
+        r.x = tex_gui_anim.uv.x*tex->width;
+        r.y = tex_gui_anim.uv.y*tex->height;
+        r.w = tex_gui_anim.uv.w*tex->width;
+        r.h = tex_gui_anim.uv.h*tex->height;
 
-          ImVec2 uv0 = ImVec2(tex_gui_anim.uv.x, tex_gui_anim.uv.y);
-          ImVec2 uv1 = ImVec2(tex_gui_anim.uv.x + tex_gui_anim.uv.w,
-                              tex_gui_anim.uv.y + tex_gui_anim.uv.h);
-          ImGui::Image((void *) (intptr_t) tex->id,
-                       ImVec2(tex->width * tex_gui_anim.uv.w * tex_scale,
-                              tex->height * tex_gui_anim.uv.h * tex_scale),
-                       uv0, uv1);
-      } else {
-          ImGui::Image((void *) (intptr_t) tex->id,
-                       ImVec2(tex->width * tex_scale,
-                              tex->height * tex_scale));
-      }
-      */
-
+        nk_image(ctx, nk_subimage_id(tex->id, tex->width, tex->height, r));
+    } else {
       nk_layout_row_static(ctx, tex->height*tex_scale, tex->width*tex_scale, 1);
       nk_image(ctx, nk_image_id(tex->id));
+    }
 }
 
 void text_ed_cb(GLFWwindow *win, unsigned int codepoint)

@@ -63,6 +63,8 @@ int main(int argc, char **args) {
          elapsed = glfwGetTime() - lastTick;
          lastTick = glfwGetTime();
 
+         timer_update(lastTick);
+
          //renderlag += elapsed;
          //physlag += elapsed;
 
