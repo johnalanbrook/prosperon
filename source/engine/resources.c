@@ -21,6 +21,7 @@ struct vec *prefabs = NULL;
 
 const char *EXT_PREFAB = ".prefab";
 const char *EXT_LEVEL = ".level";
+const char *EXT_ASSET = ".asset";
 int stemlen = 0;
 
 static const char *cur_ext = NULL;
@@ -98,6 +99,16 @@ void fill_extensions(struct vec *vec, const char *path, const char *ext)
 void findPrefabs()
 {
     fill_extensions(prefabs, DATA_PATH, EXT_PREFAB);
+}
+
+char *str_replace_ext(const char *s, const char *newext) {
+    static char ret[256];
+
+    strncpy(ret, s, 256);
+    char *ext = strrchr(ret, '.');
+    strncpy(ext, newext, 10);
+
+    return ret;
 }
 
 FILE *path_open(const char *tag, const char *fmt, ...)

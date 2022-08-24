@@ -17,7 +17,7 @@ struct fileasset {
     short filename_len;
     bool searched;
     short type;
-    void *data;
+    void *data;  // Struct of the underlying asset - Texture struct, etc
 };
 
 typedef struct {

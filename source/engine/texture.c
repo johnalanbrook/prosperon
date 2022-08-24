@@ -19,9 +19,11 @@ struct Texture *texture_pullfromfile(const char *path)
     if (index != -1)
 	return texhash[index].value;
 
+
     struct Texture *tex = calloc(1, sizeof(*tex));
-    tex->path = malloc(strlen(path) + 1);
+ /*   tex->path = malloc(strlen(path) + 1);
     strncpy(tex->path, path, strlen(path) + 1);
+    */
     tex->flipy = 0;
     tex->opts.sprite = 1;
     tex->opts.gamma = 0;
@@ -34,15 +36,24 @@ struct Texture *texture_pullfromfile(const char *path)
 
     if (stbi_failure_reason()) {
 	YughLog(0, 3, "STBI failed to load file %s with message: %s",
-		tex->path, stbi_failure_reason());
+		path, stbi_failure_reason());
 
     }
 
     tex->data = data;
 
-    shput(texhash, tex->path, tex);
+    shput(texhash, path, tex);
 
     return tex;
+}
+
+char *tex_get_path(struct Texture *tex) {
+    for (int i = 0; i < shlen(texhash); i++) {
+        if (tex == texhash[i].value)
+            return texhash[i].key;
+    }
+
+    return NULL;
 }
 
 struct Texture *texture_loadfromfile(const char *path)
@@ -61,12 +72,12 @@ struct Texture *texture_loadfromfile(const char *path)
 void tex_pull(struct Texture *tex)
 {
     int n;
+    char *path = tex_get_path(tex);
     stbi_set_flip_vertically_on_load(0);
-    tex->data = stbi_load(tex->path, &tex->width, &tex->height, &n, 4);
+    tex->data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
     if (stbi_failure_reason())
-	YughLog(0, 3, "STBI failed to load file %s with message: %s",
-		tex->path, stbi_failure_reason());
+	YughLog(0, 3, "STBI failed to load file %s with message: %s", path, stbi_failure_reason());
 }
 
 void tex_flush(struct Texture *tex)
@@ -84,7 +95,7 @@ void tex_gpu_reload(struct Texture *tex)
 void tex_free(struct Texture *tex)
 {
     free(tex->data);
-    free(tex->path);
+    //free(tex->path);
     free(tex);
 }
 

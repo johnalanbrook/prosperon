@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "log.h"
+
 #include "ftw.h"
 
 #include <stb_ds.h>
@@ -121,6 +123,45 @@ static void print_files_in_directory(const char *dirpath) {
 }
 
 static void get_all_files() { print_files_in_directory("."); }
+
+size_t asset_side_size(struct fileasset *asset) {
+    if (asset->type == ASSET_TYPE_IMAGE)
+        return sizeof(struct Texture);
+
+    return 0;
+}
+
+void save_asset() {
+    if (selected_asset == NULL) {
+        YughWarn("No asset to save.", 0);
+        return;
+    }
+
+    if (selected_asset->type != ASSET_TYPE_IMAGE) return;
+
+    FILE *f = res_open(str_replace_ext(selected_asset->filename, EXT_ASSET), "w");
+    fwrite(selected_asset->data, asset_side_size(selected_asset), 1, f);
+    fclose(f);
+}
+
+void load_asset() {
+    if (selected_asset == NULL) {
+        YughWarn("No asset to load.", 0);
+        return;
+    }
+
+    if (selected_asset->type != ASSET_TYPE_IMAGE) return;
+
+    if (selected_asset->data == NULL)
+        selected_asset->data = malloc(asset_side_size(selected_asset));
+
+    FILE *f = res_open(str_replace_ext(selected_asset->filename, EXT_ASSET), "r");
+    if (f == NULL)
+        return;
+
+    fread(selected_asset->data, asset_side_size(selected_asset), 1, f);
+    fclose(f);
+}
 
 static int *compute_prefix_function(const char *str) {
   int str_len = strlen(str);
@@ -736,7 +777,13 @@ void editor_selectasset(struct fileasset *asset) {
     fread(asset->data, 1, length, fasset);
     fclose(fasset);
   }
+
+  if (selected_asset != NULL)
+      save_asset();
+
+
   selected_asset = asset;
+  load_asset();
 }
 
 void editor_selectasset_str(char *path) {
@@ -892,7 +939,7 @@ void game_pause() { physOn = 0; }
 
 void sprite_gui(struct mSprite *sprite) {
   nuke_nel(2);
-  nk_labelf(ctx, NK_TEXT_LEFT, "Path %s", sprite->tex->path);
+  nk_labelf(ctx, NK_TEXT_LEFT, "Path %s", tex_get_path(sprite->tex));
 
 
   if (nk_button_label(ctx, "Load texture") && selected_asset != NULL) {
@@ -900,12 +947,12 @@ void sprite_gui(struct mSprite *sprite) {
   }
 
   if (sprite->tex != NULL) {
-    nk_labelf(ctx, NK_TEXT_LEFT, "%s", sprite->tex->path);
+    nk_labelf(ctx, NK_TEXT_LEFT, "%s", tex_get_path(sprite->tex));
     nk_labelf(ctx, NK_TEXT_LEFT, "%dx%d", sprite->tex->width, sprite->tex->height);
-    if (nk_button_label(ctx, "Imgbutton"))
-      editor_selectasset_str(sprite->tex->path);
-    // if (ImGui::ImageButton ((void *) (intptr_t) sprite->tex->id, ImVec2(50,
-    // 50))) {
+
+    nk_layout_row_static(ctx, sprite->tex->height, sprite->tex->width, 1);
+    if (nk_button_image(ctx, nk_image_id(sprite->tex->id)))
+      editor_selectasset_str(tex_get_path(sprite->tex));
   }
   nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
 
@@ -925,3 +972,4 @@ void sprite_gui(struct mSprite *sprite) {
     sprite->pos[1] = 0.f;
   }
 }
+

@@ -41,11 +41,11 @@ struct TextureOptions {
 struct Texture {
     int type;
     unsigned int id;
-    char *path;
+    //char *path;
     int width;
     int height;
     short flipy;
-    unsigned char *data;
+    unsigned char *data;   // Pixel data of the texture, loaded in at runtime
 
     struct TextureOptions opts;
     struct TexAnim anim;
@@ -62,6 +62,8 @@ void tex_pull(struct Texture *tex);
 void tex_bind(struct Texture *tex);
 unsigned int powof2(unsigned int num);
 int ispow2(int num);
+
+char * tex_get_path(struct Texture *tex);
 
 void anim_play(struct TexAnimation *anim);
 void anim_stop(struct TexAnimation *anim);
