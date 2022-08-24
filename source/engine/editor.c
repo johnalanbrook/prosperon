@@ -707,7 +707,6 @@ int is_allowed_extension(const char *ext) {
 }
 
 void editor_level_btn(char *level) {
-
   if (nk_button_label(ctx, level)) {
     load_level(level);
     strcpy(current_level, level);
