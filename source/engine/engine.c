@@ -62,7 +62,6 @@ void engine_init()
     script_init();
     registry_init();
     init_gameobjects();
-    timer_init();
 
     prefabs = vec_make(MAXNAME, 25);
     stbi_set_flip_vertically_on_load(1);

@@ -243,21 +243,25 @@ void object_gui(struct mGameObject *go)
 
     int n = -1;
 
+
+
     for (int i = 0; i < go->components->len; i++) {
 	struct component *c = vec_get(go->components, i);
 
 	if (c->draw_debug)
 	    c->draw_debug(c->data);
 
-	if (nk_tree_push(ctx, NK_TREE_NODE, c->name, NK_MINIMIZED)) {
-	    if (nk_button_label(ctx, "Del")) {
-		n = i;
-	    }
+
+ nuke_nel(5);
+     if (nk_button_label(ctx, "Del")) n = i;
+	if (nk_tree_push_id(ctx, NK_TREE_NODE, c->name, NK_MINIMIZED, i)) {
 
 	    c->draw_gui(c->data);
 
 	    nk_tree_pop(ctx);
 	}
+
+
     }
 
     if (n >= 0)

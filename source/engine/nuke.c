@@ -69,11 +69,12 @@ void nuke_property_int(const char *lbl, int min, int *val, int max, int step) {
 }
 
 void nk_radio_button_label(struct nk_context *ctx, const char *label, int *val, int cmp) {
-    if (nk_option_label(ctx, label, (bool)*val == cmp)) *val = cmp;
+    if (nk_option_label(ctx, label, *val == cmp)) *val = cmp;
 }
 
 void nuke_radio_btn(const char *lbl, int *val, int cmp) {
-    nk_radio_button_label(ctx, lbl, val, cmp);
+    //nk_radio_button_label(ctx, lbl, val, cmp);
+    if (nk_option_label(ctx, lbl, *val==cmp)) *val = cmp;
 }
 
 void nuke_checkbox(const char *lbl, int *val) {

@@ -61,12 +61,10 @@ void asset_srch_cb(GLFWwindow *win, unsigned int codepoint)
 
 static const char *editor_filename = "editor.ini";
 
-struct asset {
+static struct {
   char *key;
   struct fileasset *value;
-};
-
-static struct asset *assets = NULL;
+} *assets = NULL;
 
 static char asset_search_buffer[100] = {'\0'};
 
@@ -99,31 +97,6 @@ static const char *get_extension(const char *filepath) {
   return strrchr(filepath, '.');
 }
 
-static int check_if_resource(const char *fpath, const struct stat *sb, int typeflag) {
-  if (typeflag != FTW_F)
-      return 0;
-
-    const char *ext = get_extension(fpath);
-    if (ext && is_allowed_extension(ext)) {
-      struct fileasset *newasset = calloc(1, sizeof(struct fileasset));
-      newasset->filename = malloc(sizeof(char) * strlen(fpath) + 1);
-      strcpy(newasset->filename, fpath);
-      newasset->extension_len = strlen(ext);
-      newasset->searched = true;
-      shput(assets, newasset->filename, newasset);
-    }
-
-
-  return 0;
-}
-
-static void print_files_in_directory(const char *dirpath) {
-  shfree(assets);
-  ftw(dirpath, check_if_resource, 10);
-}
-
-static void get_all_files() { print_files_in_directory("."); }
-
 size_t asset_side_size(struct fileasset *asset) {
     if (asset->type == ASSET_TYPE_IMAGE)
         return sizeof(struct Texture);
@@ -131,37 +104,88 @@ size_t asset_side_size(struct fileasset *asset) {
     return 0;
 }
 
-void save_asset() {
-    if (selected_asset == NULL) {
+void save_asset(struct fileasset *asset) {
+    if (asset == NULL) {
         YughWarn("No asset to save.", 0);
         return;
     }
 
-    if (selected_asset->type != ASSET_TYPE_IMAGE) return;
+    if (asset->type != ASSET_TYPE_IMAGE) return;
 
-    FILE *f = res_open(str_replace_ext(selected_asset->filename, EXT_ASSET), "w");
-    fwrite(selected_asset->data, asset_side_size(selected_asset), 1, f);
+    FILE *f = res_open(str_replace_ext(asset->filename, EXT_ASSET), "w");
+    fwrite(asset->data, asset_side_size(asset), 1, f);
     fclose(f);
 }
 
-void load_asset() {
-    if (selected_asset == NULL) {
+void load_asset(struct fileasset *asset) {
+    if (asset == NULL) {
         YughWarn("No asset to load.", 0);
         return;
     }
 
-    if (selected_asset->type != ASSET_TYPE_IMAGE) return;
+    if (asset->type != ASSET_TYPE_IMAGE)
+      return;
 
-    if (selected_asset->data == NULL)
-        selected_asset->data = malloc(asset_side_size(selected_asset));
+    if (asset->data == NULL)
+        asset->data = malloc(asset_side_size(asset));
 
-    FILE *f = res_open(str_replace_ext(selected_asset->filename, EXT_ASSET), "r");
+    FILE *f = res_open(str_replace_ext(asset->filename, EXT_ASSET), "r");
     if (f == NULL)
         return;
 
-    fread(selected_asset->data, asset_side_size(selected_asset), 1, f);
+    struct Texture tex;
+    struct Texture *asset_tex = asset->data;
+
+    fread(&tex, asset_side_size(asset), 1, f);
+
+    asset_tex->opts = tex.opts;
+    asset_tex->anim = tex.anim;
     fclose(f);
 }
+
+
+
+static int check_if_resource(const char *fpath, const struct stat *sb, int typeflag) {
+  if (typeflag != FTW_F)
+      return 0;
+
+    const char *ext = get_extension(fpath);
+    if (ext && is_allowed_extension(ext)) {
+      struct fileasset *newasset = calloc(1, sizeof(struct fileasset));
+      newasset->searched = true;
+
+      if (!strcmp(ext+1, "png") || !strcmp(ext+1, "jpg"))
+          newasset->type = ASSET_TYPE_IMAGE;
+       else if (!strcmp(ext+1, "rb"))
+          newasset->type = ASSET_TYPE_TEXT;
+       else if (!strcmp(ext+1, "wav") || !strcmp(ext+1, "mp3"))
+          newasset->type = ASSET_TYPE_SOUND;
+       else
+          newasset->type = ASSET_TYPE_NULL;
+
+      newasset->filename = strdup(fpath);
+
+      shput(assets, newasset->filename, newasset);
+    }
+
+
+  return 0;
+}
+
+
+static void print_files_in_directory(const char *dirpath) {
+  struct fileasset *n = NULL;
+  for (int i = 0; i < shlen(assets); i++) {
+      free(assets[i].key);
+      free(assets[i].value);
+  }
+
+  shfree(assets);
+  ftw(dirpath, check_if_resource, 10);
+}
+
+static void get_all_files() { print_files_in_directory("."); }
+
 
 static int *compute_prefix_function(const char *str) {
   int str_len = strlen(str);
@@ -422,6 +446,8 @@ void editor_init(struct mSDLWindow *window) {
 
   //glfwSetCharCallback(window->window, text_ed_cb);
   //glfwSetCharCallback(window->window, asset_srch_cb);
+
+  get_all_files();
 }
 
 int editor_wantkeyboard() {
@@ -495,17 +521,14 @@ void editor_project_gui() {
       vec_walk(levels, editor_level_btn);
     NK_MENU_END()
 
-  if (editor.export.show) {
-    nk_begin(ctx, "Export and Bake", editor.export.rect, nuk_std);
-
+  NK_MENU_START(export)
     nk_layout_row_dynamic(ctx, 25,2);
     if (nk_button_label(ctx, "Bake")) {
     }
     if (nk_button_label(ctx, "Build")) {
     }
 
-    nk_end(ctx);
-  }
+  NK_MENU_END()
 
   // Shadow map vars
   NK_MENU_START(lighting)
@@ -645,8 +668,8 @@ void editor_project_gui() {
       if (!assets[i].value->searched)
         continue;
 
-      if (nk_button_label(ctx, assets[i].value->filename + stemlen)) {
-        editor_selectasset(assets[i].value);
+      if (nk_button_label(ctx, assets[i].key)) {
+        editor_selectasset_str(assets[i].key);
       }
     }
 
@@ -712,8 +735,18 @@ startobjectgui:
 
     object_gui(selectedobject);
 
+
+   // nuke_label("Components");
+    nk_layout_row_dynamic(ctx,25,3);
+    for (int i = 0; i < ncomponent; i++) {
+      if (nk_button_label(ctx, components[i].name)) {
+        gameobject_addcomponent(selectedobject, &components[i]);
+      }
+    }
+
     NK_FORCE_END()
 
+/*
     NK_FORCE(components)
     nk_layout_row_dynamic(ctx,25,1);
     for (int i = 0; i < ncomponent; i++) {
@@ -723,6 +756,7 @@ startobjectgui:
     }
 
    NK_FORCE_END()
+   */
    }
 }
 
@@ -754,43 +788,62 @@ void editor_level_btn(char *level) {
   }
 }
 
-void editor_selectasset(struct fileasset *asset) {
-  const char *ext = get_extension(asset->filename);
-
-  if (!strcmp(ext + 1, "png") || !strcmp(ext + 1, "jpg")) {
-    asset->data = texture_loadfromfile(asset->filename);
-    tex_gui_anim.tex = asset->data;
-    asset->type = ASSET_TYPE_IMAGE;
-    tex_anim_set(&tex_gui_anim);
-    float tex_scale = (float) ASSET_WIN_SIZE / (float)tex_gui_anim.tex->width;
-    if (tex_scale >= 10.f)
-      tex_scale = 10.f;
-  } else if (!strcmp(ext + 1, "rb")) {
-    asset->type = ASSET_TYPE_TEXT;
-
-    FILE *fasset = fopen(asset->filename, "rb");
-
-    fseek(fasset, 0, SEEK_END);
-    long length = ftell(fasset);
-    fseek(fasset, 0, SEEK_SET);
-    asset->data = malloc(ASSET_TEXT_BUF);
-    fread(asset->data, 1, length, fasset);
-    fclose(fasset);
-  }
-
-  if (selected_asset != NULL)
-      save_asset();
-
-
-  selected_asset = asset;
-  load_asset();
+struct fileasset *asset_from_path(const char *p)
+{
+    return shget(assets, p);
 }
 
-void editor_selectasset_str(char *path) {
-  struct fileasset *asset = shget(assets, path);
+void editor_selectasset_str(const char *path) {
+  struct fileasset *asset = asset_from_path(path);
 
-  if (asset)
-    editor_selectasset(asset);
+
+
+  FILE *fasset;
+
+  switch (asset->type) {
+      case ASSET_TYPE_IMAGE:
+          if (asset->data == NULL) {
+              asset->data = texture_loadfromfile(path);
+              load_asset(asset);
+          }
+          else
+              tex_pull(asset->data);
+
+          tex_gui_anim.tex = asset->data;
+          tex_anim_set(&tex_gui_anim);
+          anim_setframe(&tex_gui_anim, 0);
+          float tex_scale = (float) ASSET_WIN_SIZE / (float)tex_gui_anim.tex->width;
+          if (tex_scale >= 10.f) {
+             tex_scale = 10.f;
+         }
+
+          break;
+
+       case ASSET_TYPE_TEXT:
+           fasset = fopen(asset->filename, "rb");
+
+            fseek(fasset, 0, SEEK_END);
+            long length = ftell(fasset);
+            fseek(fasset, 0, SEEK_SET);
+            asset->data = malloc(ASSET_TEXT_BUF);
+            fread(asset->data, 1, length, fasset);
+            fclose(fasset);
+            break;
+
+        case ASSET_TYPE_SOUND:
+            break;
+
+        default:
+            break;
+  }
+
+    load_asset(asset);
+
+    if (selected_asset != NULL)
+      save_asset(selected_asset);
+
+   selected_asset = asset;
+
 }
 
 void editor_asset_tex_gui(struct Texture *tex) {
@@ -803,16 +856,19 @@ void editor_asset_tex_gui(struct Texture *tex) {
     if (old_sprite != tex->opts.sprite)
         tex_gpu_load(tex);
 
+    nuke_nel(4);
     nuke_radio_btn("Raw", &tex_view, 0);
     nuke_radio_btn("View 1", &tex_view, 1);
     nuke_radio_btn("View 2", &tex_view, 2);
 
     nuke_checkbox("Animation", &tex->opts.animation);
 
+
     if (tex->opts.animation) {
         int old_frames = tex->anim.frames;
         int old_ms = tex->anim.ms;
 
+        nuke_nel(2);
         nuke_property_int("Frames", 1, &tex->anim.frames, 20, 1);
         nuke_property_int("FPS", 1, &tex->anim.ms, 24, 1);
 
@@ -822,6 +878,7 @@ void editor_asset_tex_gui(struct Texture *tex) {
             if (tex_gui_anim.playing && nuke_btn("Stop"))
                 anim_stop(&tex_gui_anim);
         } else {
+            nuke_nel(3);
             if (nuke_btn("Play"))
                 anim_play(&tex_gui_anim);
 
@@ -832,6 +889,7 @@ void editor_asset_tex_gui(struct Texture *tex) {
                 anim_fwd(&tex_gui_anim);
         }
 
+       nuke_nel(1);
         nuke_labelf("Frame %d/%d", tex_gui_anim.frame+1, tex_gui_anim.tex->anim.frames);
 
         if (old_frames != tex->anim.frames || old_ms != tex->anim.ms)
@@ -876,6 +934,11 @@ void editor_asset_text_gui(char *text) {
     /* TODO: Nicer formatting for text input. Auto indent. */
 }
 
+void editor_asset_sound_gui(struct wav *wav)
+{
+
+}
+
 void editor_asset_gui(struct fileasset *asset) {
 
   NK_FORCE(asset)
@@ -897,6 +960,10 @@ void editor_asset_gui(struct fileasset *asset) {
 
   case ASSET_TYPE_TEXT:
     editor_asset_text_gui(asset->data);
+    break;
+
+  case ASSET_TYPE_SOUND:
+    editor_asset_sound_gui(asset->data);
     break;
   }
 

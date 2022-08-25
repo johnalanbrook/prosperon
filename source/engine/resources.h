@@ -27,4 +27,6 @@ FILE *res_open(char *path, const char *tag);
 FILE *path_open(const char *tag, const char *fmt, ...);
 char *make_path(const char *file);
 
+char *strdup(const char *s);
+
 #endif

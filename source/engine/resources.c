@@ -128,3 +128,10 @@ char *make_path(const char *file)
     strncat(pathbuf, file, MAXPATH);
     return pathbuf;
 }
+
+char *strdup(const char *s)
+{
+    char *new = malloc(sizeof(char)*(strlen(s)+1));
+    strcpy(new, s);
+    return new;
+}

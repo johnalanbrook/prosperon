@@ -41,7 +41,6 @@ struct TextureOptions {
 struct Texture {
     int type;
     unsigned int id;
-    //char *path;
     int width;
     int height;
     short flipy;
@@ -51,21 +50,20 @@ struct Texture {
     struct TexAnim anim;
 };
 
-struct Texture *texture_pullfromfile(const char *path);
-struct Texture *texture_loadfromfile(const char *path);
-void tex_gpu_load(struct Texture *tex);
-void tex_gpu_reload(struct Texture *tex);
-void tex_gpu_free(struct Texture *tex);
-void tex_free(struct Texture *tex);
-void tex_flush(struct Texture *tex);
-void tex_pull(struct Texture *tex);
-void tex_bind(struct Texture *tex);
-unsigned int powof2(unsigned int num);
-int ispow2(int num);
+struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
+struct Texture *texture_loadfromfile(const char *path);    // Create texture & load to gpu
+void tex_gpu_load(struct Texture *tex);       // Send texture data to gpu
+void tex_gpu_reload(struct Texture *tex);    // gpu_free then gpu_load
+void tex_gpu_free(struct Texture *tex);     // Remove texture data from gpu
+void tex_free(struct Texture *tex);    // Delete struct
+void tex_flush(struct Texture *tex);     // Remove pixel data from struct
+void tex_pull(struct Texture *tex);    // Pull pixel data from image
+void tex_bind(struct Texture *tex);    // Bind to gl context
 
-char * tex_get_path(struct Texture *tex);
+char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
 void anim_play(struct TexAnimation *anim);
+void anim_setframe(struct TexAnimation *anim, int frame);
 void anim_stop(struct TexAnimation *anim);
 void anim_pause(struct TexAnimation *anim);
 void anim_fwd(struct TexAnimation *anim);

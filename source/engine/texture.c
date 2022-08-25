@@ -21,9 +21,6 @@ struct Texture *texture_pullfromfile(const char *path)
 
 
     struct Texture *tex = calloc(1, sizeof(*tex));
- /*   tex->path = malloc(strlen(path) + 1);
-    strncpy(tex->path, path, strlen(path) + 1);
-    */
     tex->flipy = 0;
     tex->opts.sprite = 1;
     tex->opts.gamma = 0;
@@ -34,11 +31,8 @@ struct Texture *texture_pullfromfile(const char *path)
     stbi_set_flip_vertically_on_load(0);
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
-    if (stbi_failure_reason()) {
-	YughLog(0, 3, "STBI failed to load file %s with message: %s",
-		path, stbi_failure_reason());
-
-    }
+    if (stbi_failure_reason())
+	YughLog(0, 3, "STBI failed to load file %s with message: %s", path, stbi_failure_reason());
 
     tex->data = data;
 
@@ -71,6 +65,9 @@ struct Texture *texture_loadfromfile(const char *path)
 
 void tex_pull(struct Texture *tex)
 {
+    if (tex->data != NULL)
+        tex_flush(tex);
+
     int n;
     char *path = tex_get_path(tex);
     stbi_set_flip_vertically_on_load(0);
@@ -136,6 +133,12 @@ void anim_incr(struct TexAnimation *anim)
 void anim_decr(struct TexAnimation *anim)
 {
     anim->frame = (anim->frame + anim->tex->anim.frames - 1) % anim->tex->anim.frames;
+    tex_anim_calc_uv(anim);
+}
+
+void anim_setframe(struct TexAnimation *anim, int frame)
+{
+    anim->frame = frame;
     tex_anim_calc_uv(anim);
 }
 

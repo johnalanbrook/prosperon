@@ -10,11 +10,10 @@
 #define ASSET_TYPE_NULL 0
 #define ASSET_TYPE_IMAGE 1
 #define ASSET_TYPE_TEXT 2
+#define ASSET_TYPE_SOUND 3
 
 struct fileasset {
     char *filename;
-    short extension_len;
-    short filename_len;
     bool searched;
     short type;
     void *data;  // Struct of the underlying asset - Texture struct, etc
@@ -88,7 +87,7 @@ void editor_makenewobject();
 void editor_project_gui();
 
 void editor_selectasset(struct fileasset *asset);
-void editor_selectasset_str(char *path);
+void editor_selectasset_str(const char *path);
 void editor_asset_gui(struct fileasset *asset);
 void editor_asset_tex_gui(struct Texture *tex);
 void editor_asset_text_gui(char *text);

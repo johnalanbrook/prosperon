@@ -4,15 +4,15 @@
 struct timer {
     int timerid;
     int on;
-    double fire_time;
-    double interval;
+    double fire_time;    // Time the timer will fire
+    double interval;   // Time of timer
+    double start_time; // Time the timer started this loop
     int repeat;
-    double remain_time;
+    double remain_time;   // How much time until the timer executes
     void (*cb)(void *data);
     void *data;
 };
 
-void timer_init();
 struct timer *timer_make(double interval, void (*callback)(void *param), void *param);
 void timer_remove(struct timer *t);
 void timer_start(struct timer *t);
