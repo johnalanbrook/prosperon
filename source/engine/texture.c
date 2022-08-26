@@ -19,7 +19,6 @@ struct Texture *texture_pullfromfile(const char *path)
     if (index != -1)
 	return texhash[index].value;
 
-
     struct Texture *tex = calloc(1, sizeof(*tex));
     tex->flipy = 0;
     tex->opts.sprite = 1;

@@ -192,10 +192,6 @@ mrb_value mrb_settings_cmd(mrb_state *mrb, mrb_value self) {
     return self;
 }
 
-mrb_value mrb_sprite_make(mrb_state *mrb, mrb_value self) {
-    struct mSprite *new = gui_makesprite();
-}
-
 mrb_value mrb_editor_render(mrb_state *mrb, mrb_value self) {
     editor_render();
     return self;
@@ -215,8 +211,6 @@ void ffi_load() {
 
 
     MRB_FUNC(ui_rendertext, MRB_ARGS_REQ(5));
-
-    MRB_FUNC(sprite_make, MRB_ARGS_REQ(1));
 
     MRB_FUNC(c_reload, MRB_ARGS_REQ(1));
 

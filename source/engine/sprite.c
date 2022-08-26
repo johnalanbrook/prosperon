@@ -11,9 +11,6 @@
 #include <string.h>
 #include "stb_ds.h"
 
-
-static struct mGameObject *gui_go = NULL;
-
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
 struct mSprite *sprites;
@@ -22,6 +19,9 @@ static uint32_t quadVAO;
 
 struct mSprite *MakeSprite(struct mGameObject *go)
 {
+    if (arrcap(sprites) == 0)
+        arrsetcap(sprites, 100);
+
     struct mSprite sprite = {
         .color = {1.f, 1.f, 1.f},
         .size = {1.f, 1.f},
@@ -31,17 +31,20 @@ struct mSprite *MakeSprite(struct mGameObject *go)
     sprite_init(&sprite, go);
     arrput(sprites, sprite);
     return &arrlast(sprites);
+    sprite->go = go;
 }
 
-void sprite_init(struct mSprite *sprite, struct mGameObject *go)
+void sprite_delete(struct mSprite *sprite)
+.3+
 {
-    sprite->go = go;
+
 }
 
 void sprite_draw_all()
 {
     //shader_use(spriteShader);
-    arrwalk(sprites, sprite_draw);
+    for (int i = 0; i < arrlen(sprites); i++)
+        sprite_draw(&sprites[i]);
 }
 
 void sprite_loadtex(struct mSprite *sprite, const char *path)
@@ -197,16 +200,5 @@ void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2
     // TODO: video bind VAO
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
-void gui_init()
-{
-    gui_go = MakeGameobject();
-}
-
-struct mSprite *gui_makesprite()
-{
-    struct mSprite *new = MakeSprite(gui_go);
-    return new;
 }
 

@@ -24,8 +24,6 @@ void save_level(char name[MAXNAME])
 
 void load_level(char name[MAXNAME])
 {
-
-
     FILE *lfile = fopen(name, "rb");
 
     if (!lfile) return;

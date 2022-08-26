@@ -64,7 +64,6 @@ void engine_init()
 
     //stbi_set_flip_vertically_on_load(1);
     phys2d_init();
-    gui_init();
     sound_init();
 }
 

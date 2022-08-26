@@ -21,12 +21,12 @@ void registry_init()
     REGISTER_COMP(2d_edge);
 */
 
-    register_component("Sprite", sizeof(struct mSprite), MakeSprite, NULL, sprite_gui, sprite_init);
-    register_component("2D Circle Collider", sizeof(struct phys2d_circle), Make2DCircle, phys2d_dbgdrawcircle, circle_gui, phys2d_circleinit);
-    register_component("2D Segment", sizeof(struct phys2d_segment), Make2DSegment, phys2d_dbgdrawseg, segment_gui, phys2d_seginit);
-    register_component("2D Box", sizeof(struct phys2d_box), Make2DBox, phys2d_dbgdrawbox, box_gui, phys2d_boxinit);
-    register_component("2D Polygon", sizeof(struct phys2d_poly), Make2DPoly, phys2d_dbgdrawpoly, poly_gui,phys2d_polyinit);
-    register_component("2D Edge", sizeof(struct phys2d_edge), Make2DEdge, phys2d_dbgdrawedge, edge_gui, phys2d_edgeinit);
+    register_component("Sprite", sizeof(struct mSprite), MakeSprite, sprite_delete, NULL, sprite_gui, sprite_init);
+    register_component("2D Circle Collider", sizeof(struct phys2d_circle), Make2DCircle, NULL, phys2d_dbgdrawcircle, circle_gui, phys2d_circleinit);
+    register_component("2D Segment", sizeof(struct phys2d_segment), NULL, Make2DSegment, phys2d_dbgdrawseg, segment_gui, phys2d_seginit);
+    register_component("2D Box", sizeof(struct phys2d_box), Make2DBox, NULL, phys2d_dbgdrawbox, box_gui, phys2d_boxinit);
+    register_component("2D Polygon", sizeof(struct phys2d_poly), Make2DPoly, NULL, phys2d_dbgdrawpoly, poly_gui,phys2d_polyinit);
+    register_component("2D Edge", sizeof(struct phys2d_edge), Make2DEdge, NULL, phys2d_dbgdrawedge, edge_gui, phys2d_edgeinit);
 }
 
 void register_component(const char *name, size_t size,

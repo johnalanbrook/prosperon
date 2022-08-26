@@ -94,7 +94,10 @@ void gameobject_save(struct mGameObject *go, FILE * file)
 {
     fwrite(go, sizeof(*go), 1, file);
 
-    fwrite(arrlen(go->components), sizeof(int), 1, file);
+    printf("Number of components is %d.\n", arrlen(go->components));
+
+    int n = arrlen(go->components);
+    fwrite(&n, sizeof(n), 1, file);
     for (int i = 0; i < arrlen(go->components); i++) {
         fwrite(go->components[i].id, sizeof(int), 1, file);
         fwrite(go->components[i].data, go->components[i].datasize, 1, file);
@@ -131,8 +134,8 @@ void gameobject_init(struct mGameObject *go, FILE * fprefab)
 
     for (int i = 0; i < comp_n; i++) {
         fread(&n, sizeof(int), 1, fprefab);
-        arrput(go->components, components[n]);
-        struct component *newc = &arrlast(go->components);
+        go->components[i] = components[n];
+        struct component *newc = &go->components[i];
         newc->go = go;
         newc->data = malloc(newc->datasize);
         fread(newc->data, newc->datasize, 1, fprefab);
