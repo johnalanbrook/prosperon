@@ -86,3 +86,18 @@ void timer_settime(struct timer *t, double interval) {
     // TODO: timer_settime reacts to elapsed time
 }
 
+void *arrfind(void *arr, int (*valid)(void *arr, void *cmp), void *cmp)
+{
+    for (int i = 0; i < arrlen(arr); i++) {
+        if (valid(&arr[i], cmp))
+            return &arr[i];
+    }
+
+    return NULL;
+}
+
+void arrwalk(void *arr, void (*fn)(void *data))
+{
+    for (int i = 0; i < arrlen(arr); i++)
+        fn(&arr[i]);
+}

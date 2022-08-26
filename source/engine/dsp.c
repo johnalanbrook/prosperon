@@ -6,11 +6,11 @@
 #include "stdlib.h"
 #include "iir.h"
 #include "log.h"
-#include "vec.h"
+#include "stb_ds.h"
 
 #define PI 3.14159265
 
-struct vec filters;
+struct dsp_filter *filters;
 
 struct dsp_filter make_dsp(void *data, void (*in)(void *data, short *out, int n)) {
     struct dsp_filter new;
@@ -19,7 +19,7 @@ struct dsp_filter make_dsp(void *data, void (*in)(void *data, short *out, int n)
 
     return new;
 
-    if (filters.len == 0) {
+    if (arrlen(filters) == 0) {
 
     }
 }

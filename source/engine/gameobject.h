@@ -11,10 +11,6 @@
 struct mShader;
 struct mSprite;
 struct component;
-struct vec;
-
-extern struct mGameObject *updateGO;
-extern struct vec *gameobjects;
 
 struct editor {
     mfloat_t color[3];
@@ -36,9 +32,11 @@ struct mGameObject {
     cpBody *body;
     float f;			/* friction */
     float e;			/* elasticity */
-    struct vec *components;
+    struct component *components;
     char *script;
 };
+
+extern struct mGameObject *gameobjects;
 
 struct mGameObject *MakeGameobject();
 void init_gameobjects();

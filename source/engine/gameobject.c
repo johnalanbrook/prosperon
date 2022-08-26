@@ -5,26 +5,22 @@
 #include "registry.h"
 #include "2dphysics.h"
 #include "script.h"
-#include "vec.h"
 #include "input.h"
 #include <string.h>
 #include <chipmunk/chipmunk.h>
 #include "resources.h"
 #include "nuke.h"
 
-struct vec *gameobjects = NULL;
+#include "stb_ds.h"
+
+struct mGameObject *gameobjects = NULL;
 
 const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
 
-void init_gameobjects()
-{
-    gameobjects = vec_make(sizeof(struct mGameObject), 100);
-}
-
 struct mGameObject *get_gameobject_from_id(int id)
 {
-    return vec_get(gameobjects, id - 1);
+    return &gameobjects[id];
 }
 
 static void gameobject_setpickcolor(struct mGameObject *go)
@@ -40,36 +36,46 @@ static void gameobject_setpickcolor(struct mGameObject *go)
 
 struct mGameObject *MakeGameobject()
 {
-    struct mGameObject *go = vec_add(gameobjects, NULL);
-    go->editor.id = gameobjects->len - 1;
-    go->transform.scale = 1.f;
-    gameobject_setpickcolor(go);
-    strncpy(go->editor.mname, "New object", MAXNAME);
-    go->scale = 1.f;
-    go->bodytype = CP_BODY_TYPE_STATIC;
-    go->mass = 1.f;
-    go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
+    struct mGameObject go = {
+        .editor.id = arrlen(gameobjects),
+        .transform.scale = 1.f,
+        .scale = 1.f,
+        .bodytype = CP_BODY_TYPE_STATIC,
+        .mass = 1.f
+    };
 
-    go->components = vec_make(sizeof(struct component), 10);
+    gameobject_setpickcolor(&go);
+    strncpy(go.editor.mname, "New object", MAXNAME);
+    go.body =  cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
 
-    return go;
+    arrput(gameobjects, go);
+
+    return &arrlast(gameobjects);
 }
 
 void gameobject_addcomponent(struct mGameObject *go, struct component *c)
 {
-    struct component *newc = vec_add(go->components, c);
+    arrput(go->components, *c);
+    struct component *newc = &arrlast(go->components);
     newc->go = go;
     newc->data = newc->make(newc->go);
 }
 
 void gameobject_delete(int id)
 {
-    vec_delete(gameobjects, id);
+    struct mGameObject *go = &gameobjects[id];
+    for (int i = 0; i < arrlen(go->components); i++) {
+        free(go->components[i].data);
+    }
+
+    arrfree(go->components);
+
+    arrdelswap(gameobjects, id);
 }
 
 void gameobject_delcomponent(struct mGameObject *go, int n)
 {
-    vec_del_order(go->components, n);
+    arrdel(go->components, n);
 }
 
 void setup_model_transform(struct mTransform *t, struct mShader *s, float scale)
@@ -88,10 +94,10 @@ void gameobject_save(struct mGameObject *go, FILE * file)
 {
     fwrite(go, sizeof(*go), 1, file);
 
-    vec_store(go->components, file);
-    for (int i = 0; i < go->components->len; i++) {
-	struct component *c = vec_get(go->components, i);
-	fwrite(c->data, c->datasize, 1, file);
+    fwrite(arrlen(go->components), sizeof(int), 1, file);
+    for (int i = 0; i < arrlen(go->components); i++) {
+        fwrite(go->components[i].id, sizeof(int), 1, file);
+        fwrite(go->components[i].data, go->components[i].datasize, 1, file);
     }
 }
 
@@ -103,30 +109,34 @@ void gameobject_makefromprefab(char *path)
     }
 
     struct mGameObject *new = MakeGameobject();
-    struct vec *hold = new->components;
     fread(new, sizeof(*new), 1, fprefab);
-    new->components = hold;
-
-    new->editor.id = gameobjects->len - 1;
+    new->components = NULL;
 
     gameobject_init(new, fprefab);
 
     fclose(fprefab);
+
+    new->editor.id = arrlen(gameobjects);
+    arrput(gameobjects, *new);
 }
 
 void gameobject_init(struct mGameObject *go, FILE * fprefab)
 {
     go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
 
-    vec_load(go->components, fprefab);
+    int comp_n;
+    fread(&comp_n, sizeof(int), 1, fprefab);
+    arrsetlen(go->components, comp_n);
+    int n;
 
-    for (int i = 0; i < go->components->len; i++) {
-	vec_set(go->components, i, &components[((struct component *) vec_get(go->components, i))->id]);
-	struct component *newc = vec_get(go->components, i);
-	newc->go = go;
-	newc->data = malloc(newc->datasize);
-	fread(newc->data, newc->datasize, 1, fprefab);
-	newc->init(newc->data, go);
+    for (int i = 0; i < comp_n; i++) {
+        fread(&n, sizeof(int), 1, fprefab);
+        arrput(go->components, components[n]);
+        struct component *newc = &arrlast(go->components);
+        newc->go = go;
+        newc->data = malloc(newc->datasize);
+        fread(newc->data, newc->datasize, 1, fprefab);
+        newc->init(newc->data, go);
     }
 }
 
@@ -176,9 +186,8 @@ void toggleprefab(struct mGameObject *go)
 
 void gameobject_update(struct mGameObject *go)
 {
-    if (go->script) {
+    if (go->script)
 	script_run(go->script);
-    }
 }
 
 void gameobject_move(struct mGameObject *go, float xs, float ys)
@@ -197,7 +206,8 @@ void gameobject_rotate(struct mGameObject *go, float as)
 }
 
 void update_gameobjects() {
-    vec_walk(gameobjects, &gameobject_update);
+    for (int i = 0; i < arrlen(gameobjects); i++)
+        gameobject_update(&gameobjects[i]);
 }
 
 
@@ -245,8 +255,8 @@ void object_gui(struct mGameObject *go)
 
 
 
-    for (int i = 0; i < go->components->len; i++) {
-	struct component *c = vec_get(go->components, i);
+    for (int i = 0; i < arrlen(go->components); i++) {
+	struct component *c = &go->components[i];
 
 	if (c->draw_debug)
 	    c->draw_debug(c->data);

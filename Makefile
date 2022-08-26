@@ -91,7 +91,7 @@ INCLUDE = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
 
-engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE)
+engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) tags
 	@echo Linking engine
 	$(CLINK) $< $(LINK) -o $@
 	@echo Finished build

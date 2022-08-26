@@ -7,26 +7,24 @@
 #include <stdlib.h>
 #include "log.h"
 #include "resources.h"
-#include "vec.h"
+#include "stb_ds.h"
+#include "timer.h"
 
 #define SHADER_BUF 10000
 
-struct vec shaders;
+static struct mShader *shaders;
 
 struct mShader *MakeShader(const char *vertpath, const char *fragpath)
 {
-    if (shaders.data == NULL) shaders = vec_init(sizeof(struct mShader), 10);
+    if (arrcap(shaders) == 0)
+        arrsetcap(shaders, 20);
 
-    struct mShader init = { 0, vertpath, fragpath };
-    struct mShader *new = vec_add(&shaders, NULL);
-    memcpy(new, &init, sizeof(*new));
-    shader_compile(new);
-    return new;
-}
-
-struct mShader *CreateShader(const char *vert, const char *frag)
-{
-    return NULL;
+    struct mShader init = {
+        .vertpath = vertpath,
+        .fragpath = fragpath };
+    shader_compile(&init);
+    arrput(shaders, init);
+    return &arrlast(shaders);
 }
 
 int shader_compile_error(GLuint shader)
@@ -90,6 +88,8 @@ GLuint load_shader_from_file(const char *path, int type)
 
 void shader_compile(struct mShader *shader)
 {
+    printf("Making shader with %s and %s.\n", shader->vertpath, shader->fragpath);
+
     GLuint vert = load_shader_from_file(shader->vertpath, GL_VERTEX_SHADER);
     GLuint frag = load_shader_from_file(shader->fragpath, GL_FRAGMENT_SHADER);
 
@@ -162,5 +162,5 @@ void shader_setUBO(struct mShader *shader, const char *name, unsigned int index)
 
 void shader_compile_all()
 {
-    vec_walk(&shaders, shader_compile);
+    arrwalk(shaders, shader_compile);
 }

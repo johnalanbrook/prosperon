@@ -32,7 +32,7 @@
 #include "resources.h"
 #include "timer.h"
 #include "script.h"
-#include "vec.h"
+
 #include "sound.h"
 
 // TODO: Init on the heap
@@ -61,10 +61,8 @@ void engine_init()
     resources_init();
     script_init();
     registry_init();
-    init_gameobjects();
 
-    prefabs = vec_make(MAXNAME, 25);
-    stbi_set_flip_vertically_on_load(1);
+    //stbi_set_flip_vertically_on_load(1);
     phys2d_init();
     gui_init();
     sound_init();

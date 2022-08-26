@@ -21,4 +21,10 @@ void timer_stop(struct timer *t);
 void timer_update(double s);
 void timer_settime(struct timer *t, double interval);
 
+
+
+
+void *arrfind(void *arr, int (*valid)(void *arr, void *cmp), void *cmp);
+void arrwalk(void *arr, void (*fn)(void *data));
+
 #endif

@@ -4,14 +4,16 @@
 #include "log.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <vec.h>
 #include "input.h"
 #include "script.h"
 #include "nuke.h"
 
+#include "stb_ds.h"
+
 struct mSDLWindow *mainwin;
 
-static struct vec windows;
+static struct mSDLWindow *windows = NULL;
+
 struct Texture *icon = NULL;
 
 int is_win(struct mSDLWindow *s, GLFWwindow *w)
@@ -26,25 +28,25 @@ void window_size_callback(GLFWwindow *w)
 
 void window_iconify_callback(GLFWwindow *w, int iconified)
 {
-    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    struct mSDLWindow *win = arrfind(windows, is_win, w);
     win->iconified = iconified;
 }
 
 void window_focus_callback(GLFWwindow *w, int focused)
 {
-    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    struct mSDLWindow *win = arrfind(windows, is_win, w);
     win->keyboardFocus = focused;
 }
 
 void window_maximize_callback(GLFWwindow *w, int maximized)
 {
-    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    struct mSDLWindow *win = arrfind(windows, is_win, w);
     win->minimized = !maximized;
 }
 
 void window_framebuffer_size_cb(GLFWwindow *w, int width, int height)
 {
-    struct mSDLWindow *win = vec_find(&windows, is_win, w);
+    struct mSDLWindow *win = arrfind(windows, is_win, w);
     win->width = width;
     win->height = height;
     window_makecurrent(win);
@@ -60,51 +62,46 @@ void window_close_callback(GLFWwindow *w)
 
 struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32_t flags)
 {
-     struct mSDLWindow *w;
+    if (arrcap(windows) == 0)
+        arrsetcap(windows, 5);
+
+    GLFWwindow *sharewin = mainwin == NULL ? NULL : mainwin->window;
+
+     struct mSDLWindow w = {
+         .width = width,
+         .height = height,
+         .id = arrlen(windows),
+         .window = glfwCreateWindow(width, height, name, NULL, sharewin)   };
+
+
+     if (!w.window) {
+         YughError("Couldn't make GLFW window\n", 1);
+         return NULL;
+     }
 
 
 
-    if (windows.data == NULL) {
-        windows = vec_init(sizeof(struct mSDLWindow), 5);
-        w = vec_add(&windows, NULL);
-        mainwin = w;
-    } else {
-        w = vec_add(&windows, NULL);
-    }
+    if (icon) window_seticon(&w, icon);
 
-    GLFWwindow *sharewin = mainwin ? NULL : mainwin->window;
-
-    w->width = width;
-    w->height = height;
-    YughInfo("Number of windows: %d.\n", windows.len);
-    w->id = windows.len-1;
-
-    w->window = glfwCreateWindow(width, height, name, NULL, sharewin);
-
-    if (!w->window) {
-        YughError("Couldn't make GLFW window\n", 1);
-        return w;
-    }
-
-    if (icon) window_seticon(w, icon);
-
-    glfwMakeContextCurrent(w->window);
+    glfwMakeContextCurrent(w.window);
     gladLoadGL(glfwGetProcAddress);
     glfwSwapInterval(1);
 
     // Set callbacks
-    glfwSetWindowCloseCallback(w->window, window_close_callback);
-    glfwSetWindowSizeCallback(w->window, window_size_callback);
-    glfwSetFramebufferSizeCallback(w->window, window_framebuffer_size_cb);
-    glfwSetWindowFocusCallback(w->window, window_focus_callback);
-    glfwSetKeyCallback(w->window, win_key_callback);
+    glfwSetWindowCloseCallback(w.window, window_close_callback);
+    glfwSetWindowSizeCallback(w.window, window_size_callback);
+    glfwSetFramebufferSizeCallback(w.window, window_framebuffer_size_cb);
+    glfwSetWindowFocusCallback(w.window, window_focus_callback);
+    glfwSetKeyCallback(w.window, win_key_callback);
 
-    nuke_init(w);
+    nuke_init(&w);
 
-    w->nuke_cb = 0;
-    w->gui_cb = 0;
+     arrput(windows, w);
 
-    return w;
+     if (arrlen(windows) == 1)
+         mainwin = &windows[0];
+
+    return &arrlast(windows);
 }
 
 void window_set_icon(const char *png)
@@ -115,11 +112,11 @@ void window_set_icon(const char *png)
 void window_destroy(struct mSDLWindow *w)
 {
     glfwDestroyWindow(w->window);
-    vec_delete(&windows, w->id);
+    arrdelswap(windows, w->id);
 }
 
 struct mSDLWindow *window_i(int index) {
-    return vec_get(&windows, index);
+    return &windows[index];
 }
 
 void window_handle_event(struct mSDLWindow *w)
@@ -207,7 +204,7 @@ void window_handle_event(struct mSDLWindow *w)
 
 void window_all_handle_events()
 {
-    vec_walk(&windows, window_handle_event);
+    arrwalk(windows, window_handle_event);
 }
 
 void window_makefullscreen(struct mSDLWindow *w)
@@ -285,5 +282,5 @@ void window_render(struct mSDLWindow *w) {
 }
 
 void window_renderall() {
-    vec_walk(&windows, window_render);
+    arrwalk(windows, window_render);
 }

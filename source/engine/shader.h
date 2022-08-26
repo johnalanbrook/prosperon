@@ -11,7 +11,6 @@ struct mShader {
 
 void shader_compile_all();
 struct mShader *MakeShader(const char *vertpath, const char *fragpath);
-struct mShader *CreateShader(const char *vert, const char *frag);
 void shader_compile(struct mShader *shader);
 void shader_use(struct mShader *shader);
 

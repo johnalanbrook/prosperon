@@ -9,41 +9,28 @@
 #include "datastream.h"
 #include "gameobject.h"
 #include <string.h>
-#include "vec.h"
+#include "stb_ds.h"
 
 
 static struct mGameObject *gui_go = NULL;
 
-
-/*
-static struct mShader *spriteShader = NULL;
-
-static struct mShader *animSpriteShader = NULL;
-*/
-
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
-struct vec sprites;
+struct mSprite *sprites;
 
 static uint32_t quadVAO;
 
 struct mSprite *MakeSprite(struct mGameObject *go)
 {
-    // TODO: Init this once and never check again
-    if (sprites.data == NULL) sprites = vec_init(sizeof(struct mSprite), 10);
+    struct mSprite sprite = {
+        .color = {1.f, 1.f, 1.f},
+        .size = {1.f, 1.f},
+        .tex = texture_loadfromfile("ph.png"),
+        .index = arrlen(sprites)    };
 
-    struct mSprite *sprite = vec_add(&sprites, NULL);
-    sprite->color[0] = 1.f;
-    sprite->color[1] = 1.f;
-    sprite->color[2] = 1.f;
-    sprite->pos[0] = 0.f;
-    sprite->pos[1] = 0.f;
-    sprite->size[0] = 1.f;
-    sprite->size[1] = 1.f;
-    sprite->tex = texture_loadfromfile("ph.png");
-    sprite_init(sprite, go);
-    sprite->index = sprites.last;
-    return sprite;
+    sprite_init(&sprite, go);
+    arrput(sprites, sprite);
+    return &arrlast(sprites);
 }
 
 void sprite_init(struct mSprite *sprite, struct mGameObject *go)
@@ -53,8 +40,8 @@ void sprite_init(struct mSprite *sprite, struct mGameObject *go)
 
 void sprite_draw_all()
 {
-    shader_use(spriteShader);
-    vec_walk(&sprites, sprite_draw);
+    //shader_use(spriteShader);
+    arrwalk(sprites, sprite_draw);
 }
 
 void sprite_loadtex(struct mSprite *sprite, const char *path)

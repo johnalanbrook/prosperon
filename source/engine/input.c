@@ -1,5 +1,6 @@
 #include "input.h"
-#include "vec.h"
+
+#include "stb_ds.h"
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
@@ -11,7 +12,7 @@ int quit = 0;
 static double c_xpos;
 static double c_ypos;
 
-static struct vec downkeys;
+static int *downkeys = NULL;
 
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 {
@@ -55,44 +56,48 @@ void input_poll(double wait)
 
 
     //editor_input(&e);
-    vec_walk(&downkeys, call_input_down);
-}
-
-int same_key(int *key1, int *key2) {
-    return *key1 == *key2;
+    for (int i = 0; i < arrlen(downkeys); i++)
+        call_input_down(downkeys[i]);
 }
 
 void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
 {
-         if (downkeys.data == NULL) {
-         downkeys = vec_init(sizeof(key), 10);
-     }
-
     char keystr[50] = {'\0'};
     strcat(keystr, "input_");
     strcat(keystr, glfwGetKeyName(key, 0));
     switch (action) {
         case GLFW_PRESS:
             strcat(keystr, "_pressed");
-            int *foundkey = vec_find(&downkeys, same_key, &key);
-            if (foundkey == NULL) {
-                vec_add(&downkeys, &key);
+
+            int found = 0;
+
+            for (int i = 0; i < arrlen(downkeys); i++) {
+                if (downkeys[i] == key)
+                    goto SCRIPTCALL;
             }
+
+            arrput(downkeys, key);
 
             break;
 
         case GLFW_RELEASE:
             strcat(keystr, "_released");
-            int found = vec_find_n(&downkeys, same_key, &key);
-            if (found != -1) {
-                vec_delete(&downkeys, found);
+
+            for (int i = 0; i < arrlen(downkeys); i++) {
+                if (downkeys[i] == key) {
+                    arrdelswap(downkeys, i);
+                    goto SCRIPTCALL;
+                }
             }
+
             break;
 
         case GLFW_REPEAT:
             strcat(keystr, "_rep");
             break;
     }
+
+    SCRIPTCALL:
     script_call(keystr);
 }
 
@@ -108,12 +113,23 @@ void cursor_show()
 
 int action_down(int scancode)
 {
-    int *foundkey = vec_find(&downkeys, same_key, &scancode);
-    return foundkey != NULL;
+    for (int i = 0; i < arrlen(downkeys); i++) {
+        if (downkeys[i] == scancode)
+            return 1;
+    }
+
+    return 0;
 }
 
 int action_up(int scancode)
 {
-    int *foundkey = vec_find(&downkeys, same_key, &scancode);
-    return foundkey == NULL;
+    int found = 0;
+    for (int i = 0; i < arrlen(downkeys); i++) {
+        if (downkeys[i] == scancode) {
+            found = 1;
+            break;
+        }
+    }
+
+    return !found;
 }

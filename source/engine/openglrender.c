@@ -105,6 +105,8 @@ void openglInit()
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
 
+
+
     shader_use(textShader);
     shader_setint(textShader, "text", 0);
 
@@ -113,7 +115,6 @@ void openglInit()
     font_init(textShader);
     sprite_initialize();
     debugdraw_init();
-
 
     //glEnable(GL_STENCIL_TEST);
 

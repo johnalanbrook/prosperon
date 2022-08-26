@@ -33,6 +33,8 @@ char pathbuf[MAXPATH];
 
 void resources_init()
 {
+    prefabs = vec_make(MAXNAME, 25);
+
     DATA_PATH = malloc(MAXPATH);
     getcwd(DATA_PATH, MAXPATH);
     strncat(DATA_PATH, "/", MAXPATH);

@@ -763,9 +763,9 @@ startobjectgui:
 void editor_render() { editor_project_gui(); }
 
 void pickGameObject(int pickID) {
-  if (pickID >= 0 && pickID < gameobjects->len) {
+  if (pickID >= 0 && pickID < arrlen(gameobjects)) {
     selected_index = pickID;
-    selectedobject = (struct mGameObject *)vec_get(gameobjects, pickID);
+    selectedobject = &gameobjects[pickID];
   } else {
     selected_index = -1;
     selectedobject = NULL;
@@ -974,8 +974,8 @@ void editor_makenewobject() {}
 
 int obj_gui_hierarchy(struct mGameObject *selected) {
 
-  for (int i = 0; i < gameobjects->len; i++) {
-    struct mGameObject *go = (struct mGameObject *)vec_get(gameobjects, i);
+  for (int i = 0; i < arrlen(gameobjects); i++) {
+    struct mGameObject *go = &gameobjects[i];
 
     if (nk_select_label(ctx, go->editor.mname, NK_TEXT_LEFT, go == selected)) {
       if (go != selected)
