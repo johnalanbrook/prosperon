@@ -36,6 +36,7 @@ static void gameobject_setpickcolor(struct mGameObject *go)
 
 struct mGameObject *MakeGameobject()
 {
+    printf("Making gameobject\n");
     struct mGameObject go = {
         .editor.id = arrlen(gameobjects),
         .transform.scale = 1.f,
@@ -75,6 +76,7 @@ void gameobject_delete(int id)
 
 void gameobject_delcomponent(struct mGameObject *go, int n)
 {
+    go->components[n].delete(go->components[n].data);
     arrdel(go->components, n);
 }
 
@@ -98,9 +100,13 @@ void gameobject_save(struct mGameObject *go, FILE * file)
 
     int n = arrlen(go->components);
     fwrite(&n, sizeof(n), 1, file);
-    for (int i = 0; i < arrlen(go->components); i++) {
-        fwrite(go->components[i].id, sizeof(int), 1, file);
-        fwrite(go->components[i].data, go->components[i].datasize, 1, file);
+    for (int i = 0; i < n; i++) {
+        fwrite(&go->components[i].id, sizeof(int), 1, file);
+
+        if (go->components[i].io == NULL)
+            fwrite(go->components[i].data, go->components[i].datasize, 1, file);
+        else
+            go->components[i].io(go->components[i].data, file, 0);
     }
 }
 
@@ -118,9 +124,6 @@ void gameobject_makefromprefab(char *path)
     gameobject_init(new, fprefab);
 
     fclose(fprefab);
-
-    new->editor.id = arrlen(gameobjects);
-    arrput(gameobjects, *new);
 }
 
 void gameobject_init(struct mGameObject *go, FILE * fprefab)
@@ -138,7 +141,12 @@ void gameobject_init(struct mGameObject *go, FILE * fprefab)
         struct component *newc = &go->components[i];
         newc->go = go;
         newc->data = malloc(newc->datasize);
-        fread(newc->data, newc->datasize, 1, fprefab);
+
+        if (newc->io == NULL)
+            fread(newc->data, newc->datasize, 1, fprefab);
+        else
+            newc->io(newc->data, fprefab, 1);
+
         newc->init(newc->data, go);
     }
 }

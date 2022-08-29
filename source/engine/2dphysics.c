@@ -42,6 +42,11 @@ void init_phys2dshape(struct phys2d_shape *shape, struct mGameObject *go)
     phys2d_shape_apply(shape);
 }
 
+void phys2d_shape_del(struct phys2d_shape *shape)
+{
+    cpSpaceRemoveShape(space, shape->shape);
+}
+
 struct phys2d_circle *Make2DCircle(struct mGameObject *go)
 {
     struct phys2d_circle *new = malloc(sizeof(struct phys2d_circle));
@@ -59,6 +64,11 @@ void phys2d_circleinit(struct phys2d_circle *circle, struct mGameObject *go)
     printf("Initing a circle\n");
     circle->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(go->body, circle->radius, cpvzero));
     init_phys2dshape(&circle->shape, go);
+}
+
+void phys2d_circledel(struct phys2d_circle *c)
+{
+    phys2d_shape_del(&c->shape);
 }
 
 void circle_gui(struct phys2d_circle *circle)
@@ -98,6 +108,11 @@ void phys2d_seginit(struct phys2d_segment *seg, struct mGameObject *go)
     init_phys2dshape(&seg->shape, go);
 }
 
+void phys2d_segdel(struct phys2d_segment *seg)
+{
+    phys2d_shape_del(&seg->shape);
+}
+
 void segment_gui(struct phys2d_segment *seg)
 {
     nk_property_float2(ctx, "a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
@@ -128,6 +143,11 @@ void phys2d_boxinit(struct phys2d_box *box, struct mGameObject *go)
 			cpBoxShapeNew(go->body, box->w, box->h, box->r));
     init_phys2dshape(&box->shape, go);
     phys2d_applybox(box);
+}
+
+void phys2d_boxdel(struct phys2d_box *box)
+{
+    phys2d_shape_del(&box->shape);
 }
 
 void box_gui(struct phys2d_box *box)
@@ -162,6 +182,11 @@ void phys2d_polyinit(struct phys2d_poly *poly, struct mGameObject *go)
 				       poly->radius));
     init_phys2dshape(&poly->shape, go);
     phys2d_applypoly(poly);
+}
+
+void phys2d_polydel(struct phys2d_poly *poly)
+{
+    phys2d_shape_del(&poly->shape);
 }
 
 void phys2d_polyaddvert(struct phys2d_poly *poly)
@@ -213,6 +238,11 @@ void phys2d_edgeinit(struct phys2d_edge *edge, struct mGameObject *go)
 
 
     phys2d_applyedge(edge);
+}
+
+void phys2d_edgedel(struct phys2d_edge *edge)
+{
+    phys2d_shape_del(&edge->shape);
 }
 
 void phys2d_edgeshapeapply(struct phys2d_shape *mshape, cpShape * shape)

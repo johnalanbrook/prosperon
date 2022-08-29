@@ -494,9 +494,10 @@ void editor_project_gui() {
     }
 */
     NK_MENU_START(level)
-      nk_layout_row_dynamic(ctx,25,3);
+      nuke_nel(1);
       nk_labelf(ctx, "Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
 
+      nuke_nel(3);
       if (nk_button_label(ctx, "New")) {
         new_level();
         current_level[0] = '\0';
@@ -514,10 +515,10 @@ void editor_project_gui() {
         levelname[0] = '\0';
         get_levels();
       }
-
+      nuke_nel(1);
       nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, levelname, MAXNAME - 1, nk_filter_default);
 
-    nk_layout_row_dynamic(ctx,25,1);
+
       vec_walk(levels, editor_level_btn);
     NK_MENU_END()
 
@@ -649,13 +650,14 @@ void editor_project_gui() {
   NK_FORCE_END()
 
   NK_FORCE(prefab)
+    nuke_nel(1);
     nk_layout_row_dynamic(ctx, 25, 1);
 
     vec_walk(prefabs, editor_prefab_btn);
     NK_FORCE_END()
 
   NK_MENU_START(assets)
-    nk_layout_row_dynamic(ctx,25,1);
+    nuke_nel(1);
     editor.asset_srch = nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
 
 
@@ -990,6 +992,7 @@ void get_levels() { fill_extensions(levels, DATA_PATH, EXT_LEVEL); }
 
 void editor_prefab_btn(char *prefab) {
   if (nk_button_label(ctx, prefab)) {
+    printf("making prefab\n");
     gameobject_makefromprefab(prefab);
     /*GameObject* newprefab = (GameObject*)createPrefab(*prefab); */
     /*cam_inverse_goto(&camera, &newprefab->transform); */

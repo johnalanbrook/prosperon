@@ -2,6 +2,8 @@
 #define REGISTRY_H
 
 #include <stddef.h>
+#include <stdio.h>
+
 #include "config.h"
 
 struct mGameObject;
@@ -9,6 +11,7 @@ struct mGameObject;
 struct component {
     const char *name;
     void *(*make)(struct mGameObject * go);
+    void (*io)(void *data, FILE *f, int read);
     void *data;
     struct mGameObject *go;
     void (*draw_debug)(void *data);
@@ -31,6 +34,7 @@ void registry_init();
 void register_component(const char *name, size_t size,
 			void (*make)(struct mGameObject * go, struct component * c),
 			void (*delete)(void *data),
+			void (*io)(void *data, FILE *f, int read),
 			void(*draw_debug)(void *data),
 			void(*draw_gui)(void *data),
 			void(*init)(void *data, struct mGameObject * go));

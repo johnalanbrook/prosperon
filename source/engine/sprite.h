@@ -1,6 +1,7 @@
 #ifndef SPRITE_H
 #define SPRITE_H
 
+#include <stdio.h>
 #include "timer.h"
 #include "mathc.h"
 
@@ -19,7 +20,6 @@ struct Anim2D {
 };
 
 struct mSprite {
-    struct Texture *tex;
     mfloat_t pos[2];
     mfloat_t size[2];
     float rotation;
@@ -28,11 +28,13 @@ struct mSprite {
 
     struct Anim2D anim;
     struct mGameObject *go;
+    struct Texture *tex;
 };
 
 struct mSprite *MakeSprite(struct mGameObject *go);
 void sprite_delete(struct mSprite *sprite);
 void sprite_init(struct mSprite *sprite, struct mGameObject *go);
+void sprite_io(struct mSprite *sprite, FILE *f, int read);
 void sprite_loadtex(struct mSprite *sprite, const char *path);
 void sprite_loadanim(struct mSprite *sprite, const char *path, struct Anim2D anim);
 void sprite_settex(struct mSprite *sprite, struct Texture *tex);

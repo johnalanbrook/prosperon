@@ -31,13 +31,33 @@ struct mSprite *MakeSprite(struct mGameObject *go)
     sprite_init(&sprite, go);
     arrput(sprites, sprite);
     return &arrlast(sprites);
+}
+
+void sprite_init(struct mSprite *sprite, struct mGameObject *go)
+{
     sprite->go = go;
 }
 
-void sprite_delete(struct mSprite *sprite)
-.3+
+void sprite_io(struct mSprite *sprite, FILE *f, int read)
 {
+    char path[100];
+    if (read) {
+        fgets(path,100, f);
+        fread(sprite, sizeof(*sprite), 1, f);
+        sprite_loadtex(sprite, path);
+    } else {
+        fputs(tex_get_path(sprite->tex), f);
+        fwrite(sprite, sizeof(*sprite), 1, f);
+    }
+}
 
+void sprite_delete(struct mSprite *sprite)
+{
+    for (int i = 0; i < arrlen(sprites); i++)
+        if (&sprites[i] == sprite) {
+            arrdel(sprites, i);
+            return;
+        }
 }
 
 void sprite_draw_all()
