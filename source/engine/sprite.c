@@ -45,6 +45,7 @@ void sprite_io(struct mSprite *sprite, FILE *f, int read)
         fgets(path,100, f);
         fread(sprite, sizeof(*sprite), 1, f);
         sprite_loadtex(sprite, path);
+        printf("Tex was %s.\n", path);
     } else {
         fputs(tex_get_path(sprite->tex), f);
         fwrite(sprite, sizeof(*sprite), 1, f);

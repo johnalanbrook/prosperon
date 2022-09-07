@@ -53,6 +53,10 @@ struct Texture *texture_loadfromfile(const char *path)
 {
     struct Texture *new = texture_pullfromfile(path);
 
+    if (new == NULL) {
+        YughInfo("Texture not loaded!", 0);
+    }
+
     glGenTextures(1, &new->id);
 
     tex_gpu_load(new);
