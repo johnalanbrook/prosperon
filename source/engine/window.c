@@ -1,4 +1,4 @@
-#include "window.h"
+	#include "window.h"
 #include <string.h>
 #include "texture.h"
 #include "log.h"
@@ -26,27 +26,36 @@ void window_size_callback(GLFWwindow *w)
 
 }
 
+struct mSDLWindow *winfind(GLFWwindow *w)
+{
+    for (int i = 0; i < arrlen(windows); i++) {
+        if (windows[i].window == w)
+          return &windows[i];
+    }
+
+    return NULL;
+}
+
 void window_iconify_callback(GLFWwindow *w, int iconified)
 {
-    struct mSDLWindow *win = arrfind(windows, is_win, w);
+    struct mSDLWindow *win = winfind(w);
     win->iconified = iconified;
 }
 
 void window_focus_callback(GLFWwindow *w, int focused)
 {
-    struct mSDLWindow *win = arrfind(windows, is_win, w);
-    win->keyboardFocus = focused;
-}
+    struct mSDLWindow *win = winfind(w);
+	}
 
 void window_maximize_callback(GLFWwindow *w, int maximized)
 {
-    struct mSDLWindow *win = arrfind(windows, is_win, w);
+    struct mSDLWindow *win = winfind(w);
     win->minimized = !maximized;
 }
 
 void window_framebuffer_size_cb(GLFWwindow *w, int width, int height)
 {
-    struct mSDLWindow *win = arrfind(windows, is_win, w);
+    struct mSDLWindow *win = winfind(w);
     win->width = width;
     win->height = height;
     window_makecurrent(win);
@@ -270,6 +279,7 @@ void window_render(struct mSDLWindow *w) {
     if (script_has_sym(w->nuke_cb)) {
         nuke_start();
         script_call_sym(w->nuke_cb);
+        nk_end(ctx);
         nuke_end();
     } else if (w->nuke_gui != NULL) {
         nuke_start();
@@ -282,5 +292,7 @@ void window_render(struct mSDLWindow *w) {
 }
 
 void window_renderall() {
-    arrwalk(windows, window_render);
+    //arrwalk(windows, window_render);
+    for (int i = 0; i < arrlen(windows); i++)
+      window_render(&windows[i]);
 }
