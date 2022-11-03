@@ -10,13 +10,13 @@
 
 #include "stb_ds.h"
 
-struct mSDLWindow *mainwin;
+struct window *mainwin;
 
-static struct mSDLWindow *windows = NULL;
+static struct window *windows = NULL;
 
 struct Texture *icon = NULL;
 
-int is_win(struct mSDLWindow *s, GLFWwindow *w)
+int is_win(struct window *s, GLFWwindow *w)
 {
     return s->window == w;
 }
@@ -26,7 +26,7 @@ void window_size_callback(GLFWwindow *w)
 
 }
 
-struct mSDLWindow *winfind(GLFWwindow *w)
+struct window *winfind(GLFWwindow *w)
 {
     for (int i = 0; i < arrlen(windows); i++) {
         if (windows[i].window == w)
@@ -38,24 +38,24 @@ struct mSDLWindow *winfind(GLFWwindow *w)
 
 void window_iconify_callback(GLFWwindow *w, int iconified)
 {
-    struct mSDLWindow *win = winfind(w);
+    struct window *win = winfind(w);
     win->iconified = iconified;
 }
 
 void window_focus_callback(GLFWwindow *w, int focused)
 {
-    struct mSDLWindow *win = winfind(w);
+    struct window *win = winfind(w);
 	}
 
 void window_maximize_callback(GLFWwindow *w, int maximized)
 {
-    struct mSDLWindow *win = winfind(w);
+    struct window *win = winfind(w);
     win->minimized = !maximized;
 }
 
 void window_framebuffer_size_cb(GLFWwindow *w, int width, int height)
 {
-    struct mSDLWindow *win = winfind(w);
+    struct window *win = winfind(w);
     win->width = width;
     win->height = height;
     window_makecurrent(win);
@@ -69,14 +69,14 @@ void window_close_callback(GLFWwindow *w)
 
 
 
-struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32_t flags)
+struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t flags)
 {
     if (arrcap(windows) == 0)
         arrsetcap(windows, 5);
 
     GLFWwindow *sharewin = mainwin == NULL ? NULL : mainwin->window;
 
-     struct mSDLWindow w = {
+     struct window w = {
          .width = width,
          .height = height,
          .id = arrlen(windows),
@@ -87,10 +87,6 @@ struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32
          YughError("Couldn't make GLFW window\n", 1);
          return NULL;
      }
-
-
-
-    if (icon) window_seticon(&w, icon);
 
     glfwMakeContextCurrent(w.window);
     gladLoadGL(glfwGetProcAddress);
@@ -118,17 +114,17 @@ void window_set_icon(const char *png)
     icon = texture_pullfromfile(png);
 }
 
-void window_destroy(struct mSDLWindow *w)
+void window_destroy(struct window *w)
 {
     glfwDestroyWindow(w->window);
     arrdelswap(windows, w->id);
 }
 
-struct mSDLWindow *window_i(int index) {
+struct window *window_i(int index) {
     return &windows[index];
 }
 
-void window_handle_event(struct mSDLWindow *w)
+void window_handle_event(struct window *w)
 {
 /*
     if (e->type == SDL_WINDOWEVENT && e->window.windowID == w->id) {	// TODO: Check ptr direct?
@@ -216,19 +212,19 @@ void window_all_handle_events()
     arrwalk(windows, window_handle_event);
 }
 
-void window_makefullscreen(struct mSDLWindow *w)
+void window_makefullscreen(struct window *w)
 {
     if (!w->fullscreen)
         window_togglefullscreen(w);
 }
 
-void window_unfullscreen(struct mSDLWindow *w)
+void window_unfullscreen(struct window *w)
 {
     if (w->fullscreen)
         window_togglefullscreen(w);
 }
 
-void window_togglefullscreen(struct mSDLWindow *w)
+void window_togglefullscreen(struct window *w)
 {
     w->fullscreen = !w->fullscreen;
 
@@ -240,7 +236,7 @@ void window_togglefullscreen(struct mSDLWindow *w)
 
 }
 
-void window_makecurrent(struct mSDLWindow *w)
+void window_makecurrent(struct window *w)
 {
 
     if (w->window != glfwGetCurrentContext())
@@ -251,12 +247,12 @@ void window_makecurrent(struct mSDLWindow *w)
 
 
 
-void window_swap(struct mSDLWindow *w)
+void window_swap(struct window *w)
 {
     glfwSwapBuffers(w->window);
 }
 
-void window_seticon(struct mSDLWindow *w, struct Texture *icon)
+void window_seticon(struct window *w, struct Texture *icon)
 {
 
     static GLFWimage images[1];
@@ -267,12 +263,12 @@ void window_seticon(struct mSDLWindow *w, struct Texture *icon)
 
 }
 
-int window_hasfocus(struct mSDLWindow *w)
+int window_hasfocus(struct window *w)
 {
     return glfwGetWindowAttrib(w->window, GLFW_FOCUSED);
 }
 
-void window_render(struct mSDLWindow *w) {
+void window_render(struct window *w) {
     window_makecurrent(w);
     openglRender(w);
 

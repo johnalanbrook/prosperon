@@ -4,7 +4,7 @@
 #include "render.h"
 
 struct mCamera;
-struct mSDLWindow;
+struct window;
 
 extern struct mShader *spriteShader;
 extern struct mShader *animSpriteShader;
@@ -43,10 +43,10 @@ enum RenderMode {
 };
 
 void openglInit();
-void openglRender(struct mSDLWindow *window);
+void openglRender(struct window *window);
 
-void openglInit3d(struct mSDLWindow *window);
-void openglRender3d(struct mSDLWindow *window, struct mCamera *camera);
+void openglInit3d(struct window *window);
+void openglRender3d(struct window *window, struct mCamera *camera);
 
 void BindUniformBlock(GLuint shaderID, const char *bufferName,
 		      GLuint bufferBind);

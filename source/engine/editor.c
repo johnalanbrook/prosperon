@@ -347,7 +347,7 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
     break;
 
   case GLFW_KEY_F8:
-    NEGATE(editor.debug.show);
+    //NEGATE(editor.debug.show);
     break;
 
   case GLFW_KEY_F9:
@@ -424,7 +424,7 @@ static void edit_mouse_cb(GLFWwindow *w, int button, int action, int mods) {
   }
 }
 
-void editor_init(struct mSDLWindow *window) {
+void editor_init(struct window *window) {
   levels = vec_make(MAXPATH, 10);
   get_levels();
   editor_load_projects();

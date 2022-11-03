@@ -96,14 +96,14 @@ mrb_value mrb_c_reload(mrb_state *mrb, mrb_value self) {
 
 mrb_value mrb_win_make(mrb_state *mrb, mrb_value self) {
     char name[50] = "New Window";
-    struct mSDLWindow *new = MakeSDLWindow(name, 500, 500, 0);
+    struct window *new = MakeSDLWindow(name, 500, 500, 0);
     return mrb_float_value(mrb, new->id);
 }
 
 mrb_value mrb_win_cmd(mrb_state *mrb, mrb_value self) {
     mrb_float win, cmd;
     mrb_get_args(mrb, "ff", &win, &cmd);
-    struct mSDLWindow *new = window_i(win);
+    struct window *new = window_i(win);
 
     switch ((int)cmd)
     {

@@ -146,7 +146,7 @@ void openglInit()
 
 
 static struct mCamera mcamera = {0};
-void openglRender(struct mSDLWindow *window)
+void openglRender(struct window *window)
 {
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.3f, 0.3f, 0.3f, 1.f);
@@ -215,7 +215,7 @@ void openglRender(struct mSDLWindow *window)
 
 
 
-void openglInit3d(struct mSDLWindow *window)
+void openglInit3d(struct window *window)
 {
 /*    TODO: IMG init doesn't work in C++
    int init =(0x00000001 | 0x00000002);
@@ -385,7 +385,7 @@ void openglInit3d(struct mSDLWindow *window)
 
 }
 
-void openglRender3d(struct mSDLWindow *window, struct mCamera *mcamera)
+void openglRender3d(struct window *window, struct mCamera *mcamera)
 {
     //////// SET NEW PROJECTION
     // TODO: Make this not happen every frame

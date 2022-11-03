@@ -9,9 +9,6 @@
 #include "music.h"
 #include "stb_vorbis.h"
 
-
-#include "SDL2/SDL.h"
-
 #include "mix.h"
 #include "dsp.h"
 
@@ -35,10 +32,12 @@ const char *audioDriver;
 
 void new_samplerate(short *in, short *out, int n, int ch, int sr_in, int sr_out)
 {
+/*
     SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, ch, sr_in, AUDIO_S16, ch, sr_out);
     SDL_AudioStreamPut(stream, in, n * ch * sizeof(short));
     SDL_AudioStreamGet(stream, out, n * ch * sizeof(short));
     SDL_FreeAudioStream(stream);
+    */
 }
 
 struct wav change_samplerate(struct wav w, int rate)
@@ -49,19 +48,19 @@ struct wav change_samplerate(struct wav w, int rate)
 
 
 
-    SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
-    SDL_AudioStreamPut(stream, w.data, w.frames*w.ch*sizeof(short));
+    //SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
+    //SDL_AudioStreamPut(stream, w.data, w.frames*w.ch*sizeof(short));
 
     int oldframes = w.frames;
     w.frames *= (float)rate/w.samplerate;
     int samples = sizeof(short) * w.ch * w.frames;
     w.samplerate = rate;
     short *new = malloc(samples);
-    SDL_AudioStreamGet(stream, new, samples);
+    //SDL_AudioStreamGet(stream, new, samples);
 
     free(w.data);
     w.data = new;
-    SDL_FreeAudioStream(stream);
+    //SDL_FreeAudioStream(stream);
 
     return w;
 }

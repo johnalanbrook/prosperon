@@ -4,7 +4,7 @@
 #include "mathc.h"
 
 struct mShader;
-struct mSDLWindow;
+struct window;
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
@@ -23,7 +23,7 @@ struct sFont {
 
 
 void font_init(struct mShader *s);
-void font_frame(struct mSDLWindow *w);
+void font_frame(struct window *w);
 struct sFont *MakeFont(const char *fontfile, int height);
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct mShader *shader, float color[3]);
 void text_settype(struct sFont *font);

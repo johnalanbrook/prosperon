@@ -22,7 +22,7 @@ struct nk_context *ctx;
 static struct nk_glfw nkglfw = {0};
 
 
-void nuke_init(struct mSDLWindow *win) {
+void nuke_init(struct window *win) {
     window_makecurrent(win);
 
     ctx = nk_glfw3_init(&nkglfw, win->window, NK_GLFW3_INSTALL_CALLBACKS);

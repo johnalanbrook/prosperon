@@ -11,8 +11,7 @@ UNAME_P != uname -m
 
 CCACHE = ccache
 
-CC = $(CCACHE) clang -DSDL_DISABLE_IMMINTRIN_H
-CLINK = clang
+CC = $(CCACHE) clang
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -49,7 +48,7 @@ edirs != find ./source/engine -type d -name include
 edirs += ./source/engine
 ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
-eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine)
+eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
 edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include ./source/engine/thirdparty/Nuklear
 includeflag != $(call prefix,$(edirs) $(eddirs),-I)
@@ -59,7 +58,7 @@ WARNING_FLAGS = -Wno-everything #-Wno-incompatible-function-pointer-types -Wall 
 
 COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 -MD $(WARNING_FLAGS) -c $< -o $@
 
-LIBPATH = -L./bin -L/usr/local/lib -L/usr/lib64/pipewire-0.3/jack
+LIBPATH = -L./bin -L/usr/local/lib
 
 ALLFILES != find source/ -name '*.[ch]' -type f
 
@@ -70,15 +69,16 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -g /usr/lib64/pipewire-0.3/jack/libjack.so.0
-	ELIBS = m c engine glfw portaudio rt asound pthread SDL2 yughc mruby
-	CLIBS =
+	LINKER_FLAGS = -g
+	ELIBS =  engine glfw3  pthread yughc mruby portaudio m
+	CLIBS = asound jack  c
 	EXT =
 endif
 
+CLIBS != $(call prefix, $(CLIBS), -l)
 ELIBS != $(call prefix, $(ELIBS), -l)
 
-LELIBS = $(ELIBS) $(CLIBS)
+LELIBS = -Wl,-Bdynamic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
@@ -91,9 +91,9 @@ INCLUDE = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
 
-engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) tags
+engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) tags $(BIN)libportaudio.a $(BIN)libglfw3.a
 	@echo Linking engine
-	$(CLINK) $< $(LINK) -o $@
+	$(CC) $< $(LINK) -o $@
 	@echo Finished build
 
 bs: engine
@@ -110,10 +110,24 @@ $(ENGINE): $(eobjects)
 	@ar r $(ENGINE) $(eobjects)
 	@cp -u -r $(ehead) $(INCLUDE)
 
-bin/libglfw3.a:
+bin/libglfw3.a: source/glfw/build/src/libglfw3.a
+	@cp $< $@
+
+source/glfw/build/src/libglfw3.a:
 	@echo Making GLFW
-	@make glfw/build
-	@cp glfw/build/src/libglfw3.a bin/libglfw3.a
+	@mkdir -p source/glfw/build
+	@cd source/glfw/build; cmake ..; make -j16
+	@cp source/glfw/build/src/libglfw3.a bin
+
+bin/libportaudio.a: source/portaudio/build/libportaudio.a
+	@cp $< $@
+
+source/portaudio/build/libportaudio.a:
+	@echo Making Portaudio
+	@mkdir -p source/portaudio/build
+	@cd source/portaudio/build; cmake ..; make -j16
+	@cp source/portaudio/build/libportaudio.a bin
+
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
@@ -127,3 +141,4 @@ tags: $(ALLFILES)
 clean:
 	@echo Cleaning project
 	@find $(BIN) -type f -delete
+	@rm -rf source/portaudio/build source/glfw/build

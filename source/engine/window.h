@@ -7,7 +7,7 @@
 
 #include "mruby.h"
 
-struct mSDLWindow {
+struct window {
     GLFWwindow *window;
     int id;
     int width;
@@ -28,24 +28,24 @@ struct mSDLWindow {
 
 struct Texture;
 
-extern struct mSDLWindow *mainwin;
+extern struct window *mainwin;
 
 
-struct mSDLWindow *MakeSDLWindow(const char *name, int width, int height, uint32_t flags);
+struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t flags);
 void window_set_icon(const char *png);
-void window_destroy(struct mSDLWindow *w);
-void window_handle_event(struct mSDLWindow *w);
+void window_destroy(struct window *w);
+void window_handle_event(struct window *w);
 void window_all_handle_events();
-void window_makecurrent(struct mSDLWindow *w);
-void window_makefullscreen(struct mSDLWindow *w);
-void window_togglefullscreen(struct mSDLWindow *w);
-void window_unfullscreen(struct mSDLWindow *w);
-void window_swap(struct mSDLWindow *w);
-void window_seticon(struct mSDLWindow *w, struct Texture *icon);
-int window_hasfocus(struct mSDLWindow *w);
-struct mSDLWindow *window_i(int index);
+void window_makecurrent(struct window *w);
+void window_makefullscreen(struct window *w);
+void window_togglefullscreen(struct window *w);
+void window_unfullscreen(struct window *w);
+void window_swap(struct window *w);
+void window_seticon(struct window *w, struct Texture *icon);
+int window_hasfocus(struct window *w);
+struct window *window_i(int index);
 
-void window_render(struct mSDLWindow *w);
+void window_render(struct window *w);
 void window_renderall();
 
 #endif
