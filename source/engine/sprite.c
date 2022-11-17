@@ -13,16 +13,16 @@
 
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
-struct mSprite *sprites;
+struct sprite *sprites;
 
 static uint32_t quadVAO;
 
-struct mSprite *MakeSprite(struct mGameObject *go)
+struct sprite *make_sprite(struct mGameObject *go)
 {
     if (arrcap(sprites) == 0)
         arrsetcap(sprites, 100);
 
-    struct mSprite sprite = {
+    struct sprite sprite = {
         .color = {1.f, 1.f, 1.f},
         .size = {1.f, 1.f},
         .tex = texture_loadfromfile("ph.png"),
@@ -33,26 +33,33 @@ struct mSprite *MakeSprite(struct mGameObject *go)
     return &arrlast(sprites);
 }
 
-void sprite_init(struct mSprite *sprite, struct mGameObject *go)
+void sprite_init(struct sprite *sprite, struct mGameObject *go)
 {
     sprite->go = go;
 }
 
-void sprite_io(struct mSprite *sprite, FILE *f, int read)
+void sprite_io(struct sprite *sprite, FILE *f, int read)
 {
     char path[100];
     if (read) {
-        fgets(path,100, f);
+        //fscanf(f, "%s", &path);
+        for (int i = 0; i < 100; i++) {
+            path[i] = fgetc(f);
+
+            if (path[i] == '\0') break;
+        }
         fread(sprite, sizeof(*sprite), 1, f);
         sprite_loadtex(sprite, path);
-        printf("Tex was %s.\n", path);
     } else {
+       // fprintf(f, "%s", tex_get_path(sprite->tex));
+
         fputs(tex_get_path(sprite->tex), f);
+        fputc('\0', f);
         fwrite(sprite, sizeof(*sprite), 1, f);
     }
 }
 
-void sprite_delete(struct mSprite *sprite)
+void sprite_delete(struct sprite *sprite)
 {
     for (int i = 0; i < arrlen(sprites); i++)
         if (&sprites[i] == sprite) {
@@ -68,12 +75,12 @@ void sprite_draw_all()
         sprite_draw(&sprites[i]);
 }
 
-void sprite_loadtex(struct mSprite *sprite, const char *path)
+void sprite_loadtex(struct sprite *sprite, const char *path)
 {
     sprite->tex = texture_loadfromfile(path);
 }
 
-void sprite_loadanim(struct mSprite *sprite, const char *path, struct Anim2D anim)
+void sprite_loadanim(struct sprite *sprite, const char *path, struct Anim2D anim)
 {
     sprite->tex = texture_loadfromfile(path);
     sprite->anim = anim;
@@ -83,12 +90,12 @@ void sprite_loadanim(struct mSprite *sprite, const char *path, struct Anim2D ani
 */
 }
 
-void sprite_settex(struct mSprite *sprite, struct Texture *tex)
+void sprite_settex(struct sprite *sprite, struct Texture *tex)
 {
     sprite->tex = tex;
 }
 
-unsigned int incrementAnimFrame(unsigned int interval, struct mSprite *sprite)
+unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite)
 {
     sprite->anim.frame = (sprite->anim.frame + 1) % sprite->anim.frames;
     return interval;
@@ -124,7 +131,7 @@ void sprite_initialize()
     glBindVertexArray(0);
 }
 
-void sprite_draw(struct mSprite *sprite)
+void sprite_draw(struct sprite *sprite)
 {
     if (sprite->tex != NULL) {
 
@@ -173,7 +180,7 @@ void sprite_draw(struct mSprite *sprite)
     }
 }
 
-void spriteanim_draw(struct mSprite *sprite)
+void spriteanim_draw(struct sprite *sprite)
 {
     shader_use(animSpriteShader);
 

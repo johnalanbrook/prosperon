@@ -65,7 +65,7 @@ extern int show_desktop;
 
 struct vec;
 struct gameproject;
-struct mSprite;
+struct sprite;
 
 extern struct gameproject *cur_project;
 extern struct vec *projects;
@@ -104,6 +104,6 @@ void get_levels();
 
 int obj_gui_hierarchy(struct mGameObject *selected);
 
-void sprite_gui(struct mSprite *sprite);
+void sprite_gui(struct sprite *sprite);
 
 #endif

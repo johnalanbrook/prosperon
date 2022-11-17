@@ -140,7 +140,7 @@ void gameobject_init(struct mGameObject *go, FILE * fprefab)
         go->components[i] = components[n];
         struct component *newc = &go->components[i];
         newc->go = go;
-        newc->data = malloc(newc->datasize);
+        newc->data = calloc(1, newc->datasize);
 
         if (newc->io == NULL)
             fread(newc->data, newc->datasize, 1, fprefab);

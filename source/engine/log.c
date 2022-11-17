@@ -9,6 +9,10 @@
 
 #define logLevel 0
 
+//char *logstr[] = { "INFO", "WARN", "\x1b[1;31mERROR\x1b[0m", "CRITICAL" };
+char *logstr[] = { "INFO", "WARN", "ERROR", "CRITICAL" };
+char *catstr[] = {"ENGINE"};
+
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
     if (priority >= logLevel) {
@@ -23,8 +27,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	va_end(args);
 
 	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "%s\n[ %s:%d ] %s\n",
-		 msgbuffer, file, line, dt);
+	snprintf(buffer, ERROR_BUFFER, "%s | %s | %s [ %s:%d ] %s\n", logstr[priority], catstr[0], dt, file, line, msgbuffer);
 
 	printf("%s", buffer);
 	fflush(stdout);

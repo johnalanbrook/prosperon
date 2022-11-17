@@ -9,7 +9,7 @@
 #include <chipmunk/chipmunk.h>
 
 struct mShader;
-struct mSprite;
+struct sprite;
 struct component;
 
 struct editor {

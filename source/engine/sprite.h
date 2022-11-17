@@ -19,7 +19,7 @@ struct Anim2D {
     int ms;
 };
 
-struct mSprite {
+struct sprite {
     mfloat_t pos[2];
     mfloat_t size[2];
     float rotation;
@@ -31,19 +31,19 @@ struct mSprite {
     struct Texture *tex;
 };
 
-struct mSprite *MakeSprite(struct mGameObject *go);
-void sprite_delete(struct mSprite *sprite);
-void sprite_init(struct mSprite *sprite, struct mGameObject *go);
-void sprite_io(struct mSprite *sprite, FILE *f, int read);
-void sprite_loadtex(struct mSprite *sprite, const char *path);
-void sprite_loadanim(struct mSprite *sprite, const char *path, struct Anim2D anim);
-void sprite_settex(struct mSprite *sprite, struct Texture *tex);
+struct sprite *make_sprite(struct mGameObject *go);
+void sprite_delete(struct sprite *sprite);
+void sprite_init(struct sprite *sprite, struct mGameObject *go);
+void sprite_io(struct sprite *sprite, FILE *f, int read);
+void sprite_loadtex(struct sprite *sprite, const char *path);
+void sprite_loadanim(struct sprite *sprite, const char *path, struct Anim2D anim);
+void sprite_settex(struct sprite *sprite, struct Texture *tex);
 void sprite_initialize();
-void sprite_draw(struct mSprite *sprite);
-void spriteanim_draw(struct mSprite *sprite);
+void sprite_draw(struct sprite *sprite);
+void spriteanim_draw(struct sprite *sprite);
 void video_draw(struct datastream *ds, mfloat_t pos[2], mfloat_t size[2], float rotate, mfloat_t color[3]);
 void sprite_draw_all();
-unsigned int incrementAnimFrame(unsigned int interval, struct mSprite *sprite);
+unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite);
 
 
 #endif

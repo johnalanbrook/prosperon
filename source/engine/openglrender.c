@@ -88,7 +88,7 @@ GLuint debugColorPickBO = 0;
 GLuint debugColorPickTEX = 0;
 
 
-struct mSprite *tsprite = NULL;
+struct sprite *tsprite = NULL;
 
 
 static unsigned int projUBO;

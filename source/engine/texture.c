@@ -30,20 +30,29 @@ struct Texture *texture_pullfromfile(const char *path)
     stbi_set_flip_vertically_on_load(0);
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
-    if (stbi_failure_reason())
-	YughLog(0, 3, "STBI failed to load file %s with message: %s", path, stbi_failure_reason());
+    while (data == NULL) {
+        YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
+        return NULL;
+    }
 
     tex->data = data;
 
+    if (shlen(texhash) == 0)
+        sh_new_arena(texhash);
+
     shput(texhash, path, tex);
+
+    tex->id = 0;
 
     return tex;
 }
 
 char *tex_get_path(struct Texture *tex) {
     for (int i = 0; i < shlen(texhash); i++) {
-        if (tex == texhash[i].value)
+        if (tex == texhash[i].value) {
+            YughInfo("Found key %s", texhash[i].key);
             return texhash[i].key;
+        }
     }
 
     return NULL;
@@ -54,12 +63,17 @@ struct Texture *texture_loadfromfile(const char *path)
     struct Texture *new = texture_pullfromfile(path);
 
     if (new == NULL) {
-        YughInfo("Texture not loaded!", 0);
+        YughError("Texture not loaded!", 0);
+        return new;
     }
 
-    glGenTextures(1, &new->id);
+    if (new->id == 0) {
+        glGenTextures(1, &new->id);
 
-    tex_gpu_load(new);
+        tex_gpu_load(new);
+
+        YughInfo("Loaded texture path %s", path);
+    }
 
     return new;
 }
@@ -76,8 +90,8 @@ void tex_pull(struct Texture *tex)
     stbi_set_flip_vertically_on_load(0);
     tex->data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
-    if (stbi_failure_reason())
-	YughLog(0, 3, "STBI failed to load file %s with message: %s", path, stbi_failure_reason());
+    if (tex->data == NULL)
+	YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
 }
 
 void tex_flush(struct Texture *tex)

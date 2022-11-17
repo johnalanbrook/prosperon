@@ -12,6 +12,7 @@ int ncomponent = 0;
 
 void registry_init()
 {
+
 /*
     REGISTER_COMP(sprite);
     REGISTER_COMP(2d_circle);
@@ -22,8 +23,8 @@ void registry_init()
 */
 
     register_component("Sprite",
-                                         sizeof(struct mSprite),
-                                         MakeSprite,
+                                         sizeof(struct sprite),
+                                         make_sprite,
                                          sprite_delete,
                                          sprite_io,
                                          NULL,

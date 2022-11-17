@@ -9,7 +9,7 @@ struct window;
 extern struct mShader *spriteShader;
 extern struct mShader *animSpriteShader;
 
-extern struct mSprite *tsprite;
+extern struct sprite *tsprite;
 
 extern int renderMode;
 
