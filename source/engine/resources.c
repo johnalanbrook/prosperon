@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "log.h"
 
 #include <ftw.h>
 
@@ -55,7 +56,7 @@ char *get_filename_from_path(char *path, int extension)
     if (!extension) {
 	char *ext = strrchr(path, '.');
 	offset = end - ext;
-	printf("Making without extension ...\n");
+	YughInfo("Making %s without extension ...");
     }
 
     char *filename = malloc(sizeof(char) * (end - dirpos - offset + 1));

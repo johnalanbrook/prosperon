@@ -61,7 +61,6 @@ struct phys2d_circle *Make2DCircle(struct mGameObject *go)
 
 void phys2d_circleinit(struct phys2d_circle *circle, struct mGameObject *go)
 {
-    printf("Initing a circle\n");
     circle->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(go->body, circle->radius, cpvzero));
     init_phys2dshape(&circle->shape, go);
 }

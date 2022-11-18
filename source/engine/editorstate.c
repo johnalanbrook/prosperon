@@ -6,7 +6,7 @@ void (*asset_command)(char *asset) = print_file;
 
 void print_file(char *file)
 {
-    printf("File path: %s\n", file);
+    YughInfo("File path: %s", file);
 }
 
 void set_new_model(char *modelPath)

@@ -6,6 +6,7 @@
 #include <cgltf.h>
 #include <string.h>
 #include <stdlib.h>
+#include "log.h"
 
 static struct mModel *lastRendered;
 static struct mModel *loadedModels[100];
@@ -69,7 +70,7 @@ void draw_model(struct mModel *model, struct mShader *shader)
 
 void loadmodel(struct mModel *model)
 {
-    printf("Loading model at path %s\n", model->path);
+    YughInfo("Loading model at path %s", model->path);
 /*
     // Load model with cgltf
     cgltf_options options = {0};

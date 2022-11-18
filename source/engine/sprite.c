@@ -29,13 +29,13 @@ struct sprite *make_sprite(struct mGameObject *go)
         .index = arrlen(sprites)    };
 
     sprite_init(&sprite, go);
-    arrput(sprites, sprite);
     return &arrlast(sprites);
 }
 
 void sprite_init(struct sprite *sprite, struct mGameObject *go)
 {
     sprite->go = go;
+    arrput(sprites, *sprite);
 }
 
 void sprite_io(struct sprite *sprite, FILE *f, int read)
@@ -51,8 +51,6 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
         fread(sprite, sizeof(*sprite), 1, f);
         sprite_loadtex(sprite, path);
     } else {
-       // fprintf(f, "%s", tex_get_path(sprite->tex));
-
         fputs(tex_get_path(sprite->tex), f);
         fputc('\0', f);
         fwrite(sprite, sizeof(*sprite), 1, f);

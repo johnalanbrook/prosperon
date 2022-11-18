@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <window.h>
+#include "log.h"
 
 #include <stb_truetype.h>
 
@@ -62,7 +63,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
     stbtt_fontinfo fontinfo;
     if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
-        printf("failed\n");
+        YughError("Failed to make font %s", fontfile);
     }
 
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);

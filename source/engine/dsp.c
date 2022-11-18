@@ -87,7 +87,7 @@ struct wav gen_sine(float amp, float freq, int sr, int ch)
         }
     }
 
-    printf("Made sine with %i frames.\n", new.frames);
+    YughInfo("Made sine with %i frames.", new.frames);
 
     return new;
 }
@@ -318,7 +318,7 @@ struct dsp_filter lpf_make(int poles, float freq)
 
   double sf = sf_bwlp(poles, fcf);
 
-  printf("Making LPF filter, fcf: %f, coeffs: %i, scale %1.15lf\n", fcf, new->n, sf);
+  YughInfo("Making LPF filter, fcf: %f, coeffs: %i, scale %1.15lf", fcf, new->n, sf);
 
   int *ccof = ccof_bwlp(new->n);
   new->dcof = dcof_bwlp(new->n, fcf);
@@ -388,7 +388,6 @@ void dsp_fir_fillbuf(struct dsp_fir *fir, short *out, int n)
 
     for (int i = 0; i < n; i++) {
         short val = fir_filter(fir, out[i*CHANNELS]);
-       // printf("%hd\n", val);
 
         for (int j = 0; j < CHANNELS; j++)
             out[i*CHANNELS + j] = val*5;
@@ -429,7 +428,7 @@ struct dsp_delay dsp_delay_make(unsigned int ms_delay)
     new.buf = circbuf_init(sizeof(short), datasize);
     new.buf.write = datasize;
 
-    printf("Buffer size is %u.\n", new.buf.len);
+    YughInfo("Buffer size is %u.", new.buf.len);
 
     return new;
 }

@@ -79,7 +79,7 @@ GLuint load_shader_from_file(const char *path, int type)
     glShaderSource(id, 1, &code, NULL);
     glCompileShader(id);
     if (shader_compile_error(id)) {
-        printf("Error with shader %s.\n", path);
+        YughError("Error with shader %s.", path);
         return 0;
     }
 
@@ -88,7 +88,7 @@ GLuint load_shader_from_file(const char *path, int type)
 
 void shader_compile(struct mShader *shader)
 {
-    printf("Making shader with %s and %s.\n", shader->vertpath, shader->fragpath);
+    YughInfo("Making shader with %s and %s.", shader->vertpath, shader->fragpath);
 
     GLuint vert = load_shader_from_file(shader->vertpath, GL_VERTEX_SHADER);
     GLuint frag = load_shader_from_file(shader->fragpath, GL_FRAGMENT_SHADER);

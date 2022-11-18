@@ -13,6 +13,7 @@
 #include "window.h"
 #include "editor.h"
 #include "engine.h"
+#include "log.h"
 
 extern mrb_state *mrb;
 
@@ -143,7 +144,7 @@ mrb_value mrb_sound_make(mrb_state *mrb, mrb_value self) {
     mrb_value vals;
     mrb_get_args(mrb, "H", &vals);
     char *name = mrb_str_to_cstr(mrb, mrb_hash_fetch(mrb, vals, mrb_symbol_value(mrb_intern_cstr(mrb, "name")), mrb_str_new_cstr(mrb, "New Window")));
-    printf("Window name is %s.\n", name);
+    YughInfo("Window name is %s.", name);
     return self;
 }
 

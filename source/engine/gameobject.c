@@ -10,6 +10,7 @@
 #include <chipmunk/chipmunk.h>
 #include "resources.h"
 #include "nuke.h"
+#include "log.h"
 
 #include "stb_ds.h"
 
@@ -36,7 +37,7 @@ static void gameobject_setpickcolor(struct mGameObject *go)
 
 struct mGameObject *MakeGameobject()
 {
-    printf("Making gameobject\n");
+    YughInfo("Making new gameobject");
     struct mGameObject go = {
         .editor.id = arrlen(gameobjects),
         .transform.scale = 1.f,
@@ -96,7 +97,7 @@ void gameobject_save(struct mGameObject *go, FILE * file)
 {
     fwrite(go, sizeof(*go), 1, file);
 
-    printf("Number of components is %d.\n", arrlen(go->components));
+    YughInfo("Number of components is %d.", arrlen(go->components));
 
     int n = arrlen(go->components);
     fwrite(&n, sizeof(n), 1, file);

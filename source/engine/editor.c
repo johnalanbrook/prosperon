@@ -56,7 +56,7 @@ const char *allowed_extensions[] = {"jpg", "png", "rb", "wav", "mp3", };
 void text_ed_cb(GLFWwindow *win, unsigned int codepoint);
 void asset_srch_cb(GLFWwindow *win, unsigned int codepoint)
 {
-    printf("Pushed %d.\n", codepoint);
+    YughInfo("Pushed %d.", codepoint);
 }
 
 static const char *editor_filename = "editor.ini";
@@ -913,10 +913,10 @@ void editor_asset_tex_gui(struct Texture *tex) {
 
 void text_ed_cb(GLFWwindow *win, unsigned int codepoint)
 {
-    printf("Pressed button %d\n", codepoint);
+    YughInfo("Pressed button %d", codepoint);
     if (editor.text_ed & NK_EDIT_ACTIVE) {
         if (codepoint == '\n') {
-            printf("Hit newline.\n");
+            YughInfo("Hit newline.");
         }
     }
 }
@@ -992,7 +992,7 @@ void get_levels() { fill_extensions(levels, DATA_PATH, EXT_LEVEL); }
 
 void editor_prefab_btn(char *prefab) {
   if (nk_button_label(ctx, prefab)) {
-    printf("making prefab\n");
+    YughInfo("Making prefab '%s'.", prefab);
     gameobject_makefromprefab(prefab);
     /*GameObject* newprefab = (GameObject*)createPrefab(*prefab); */
     /*cam_inverse_goto(&camera, &newprefab->transform); */

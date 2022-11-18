@@ -6,6 +6,7 @@
 #include "openglrender.h"
 #include "script.h"
 #include "editor.h"
+#include "log.h"
 
 #include "string.h"
 
@@ -35,7 +36,7 @@ int main(int argc, char **args) {
     engine_init();
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    printf("Refresh rate is %d\n", vidmode->refreshRate);
+    YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
     renderMS = 1.0/vidmode->refreshRate;
 
