@@ -6,16 +6,16 @@
 #include "shader.h"
 
 struct mStaticActor {
-    struct mGameObject obj;
-    struct mModel *model;
+    struct gameobject obj;
+    struct model *model;
     char *modelPath;
     char currentModelPath[MAXPATH];
     bool castShadows;
 };
 
-void staticactor_draw_dbg_color_pick(struct mShader *s);
-void staticactor_draw_models(struct mShader *s);
-void staticactor_draw_shadowcasters(struct mShader *s);
+void staticactor_draw_dbg_color_pick(struct shader *s);
+void staticactor_draw_models(struct shader *s);
+void staticactor_draw_shadowcasters(struct shader *s);
 struct mStaticActor *MakeStaticActor();
 void staticactor_gui(struct mStaticActor *sa);
 

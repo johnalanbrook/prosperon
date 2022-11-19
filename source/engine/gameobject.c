@@ -14,17 +14,17 @@
 
 #include "stb_ds.h"
 
-struct mGameObject *gameobjects = NULL;
+struct gameobject *gameobjects = NULL;
 
 const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
 
-struct mGameObject *get_gameobject_from_id(int id)
+struct gameobject *get_gameobject_from_id(int id)
 {
     return &gameobjects[id];
 }
 
-static void gameobject_setpickcolor(struct mGameObject *go)
+static void gameobject_setpickcolor(struct gameobject *go)
 {
     float r = ((go->editor.id & 0x000000FF) >> 0) / 255.f;
     float g = ((go->editor.id & 0x0000FF00) >> 8) / 255.f;
@@ -35,10 +35,10 @@ static void gameobject_setpickcolor(struct mGameObject *go)
     go->editor.color[2] = b;
 }
 
-struct mGameObject *MakeGameobject()
+struct gameobject *MakeGameobject()
 {
     YughInfo("Making new gameobject");
-    struct mGameObject go = {
+    struct gameobject go = {
         .editor.id = arrlen(gameobjects),
         .transform.scale = 1.f,
         .scale = 1.f,
@@ -55,7 +55,7 @@ struct mGameObject *MakeGameobject()
     return &arrlast(gameobjects);
 }
 
-void gameobject_addcomponent(struct mGameObject *go, struct component *c)
+void gameobject_addcomponent(struct gameobject *go, struct component *c)
 {
     arrput(go->components, *c);
     struct component *newc = &arrlast(go->components);
@@ -65,23 +65,25 @@ void gameobject_addcomponent(struct mGameObject *go, struct component *c)
 
 void gameobject_delete(int id)
 {
-    struct mGameObject *go = &gameobjects[id];
+    YughInfo("Deleting gameobject with id %d.", id);
+    struct gameobject *go = &gameobjects[id];
     for (int i = 0; i < arrlen(go->components); i++) {
-        free(go->components[i].data);
+        go->components[i].delete(go->components[i].data);
+        arrdel(go->components, i);
     }
 
-    arrfree(go->components);
+
 
     arrdelswap(gameobjects, id);
 }
 
-void gameobject_delcomponent(struct mGameObject *go, int n)
+void gameobject_delcomponent(struct gameobject *go, int n)
 {
     go->components[n].delete(go->components[n].data);
     arrdel(go->components, n);
 }
 
-void setup_model_transform(struct mTransform *t, struct mShader *s, float scale)
+void setup_model_transform(struct mTransform *t, struct shader *s, float scale)
 {
     mfloat_t modelT[16] = { 0.f };
     mfloat_t matbuff[16] = { 0.f };
@@ -93,7 +95,7 @@ void setup_model_transform(struct mTransform *t, struct mShader *s, float scale)
 
 }
 
-void gameobject_save(struct mGameObject *go, FILE * file)
+void gameobject_save(struct gameobject *go, FILE * file)
 {
     fwrite(go, sizeof(*go), 1, file);
 
@@ -118,7 +120,7 @@ void gameobject_makefromprefab(char *path)
 	return;
     }
 
-    struct mGameObject *new = MakeGameobject();
+    struct gameobject *new = MakeGameobject();
     fread(new, sizeof(*new), 1, fprefab);
     new->components = NULL;
 
@@ -127,21 +129,28 @@ void gameobject_makefromprefab(char *path)
     fclose(fprefab);
 }
 
-void gameobject_init(struct mGameObject *go, FILE * fprefab)
+void gameobject_init(struct gameobject *go, FILE * fprefab)
 {
     go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
 
     int comp_n;
     fread(&comp_n, sizeof(int), 1, fprefab);
-    arrsetlen(go->components, comp_n);
+    arrfree(go->components);
     int n;
 
     for (int i = 0; i < comp_n; i++) {
+    /*
         fread(&n, sizeof(int), 1, fprefab);
         go->components[i] = components[n];
         struct component *newc = &go->components[i];
         newc->go = go;
         newc->data = calloc(1, newc->datasize);
+    */
+        fread(&n, sizeof(int), 1, fprefab);
+        arrput(go->components, components[n]);
+        struct component *newc = &arrlast(go->components);
+        newc->go = go;
+        newc->data = newc->make(newc->go);
 
         if (newc->io == NULL)
             fread(newc->data, newc->datasize, 1, fprefab);
@@ -152,7 +161,7 @@ void gameobject_init(struct mGameObject *go, FILE * fprefab)
     }
 }
 
-void gameobject_saveprefab(struct mGameObject *go)
+void gameobject_saveprefab(struct gameobject *go)
 {
     char prefabfname[60] = { '\0' };
     strncat(prefabfname, go->editor.prefabName, MAXNAME);
@@ -171,7 +180,7 @@ void gameobject_saveprefab(struct mGameObject *go)
 void gameobject_syncprefabs(char *revertPath)
 {
 /*
-   struct mGameObject **go = objects;
+   struct gameobject **go = objects;
    int i = 0;
    while(i != nobjects) {
    	if ((*go)->editor.curPrefabPath && !strcmp((*go)->editor.curPrefabPath, revertPath)) { ; }//objectRevertPrefab(go); //TODO: revertprefab
@@ -179,12 +188,12 @@ void gameobject_syncprefabs(char *revertPath)
 */
 }
 
-void gameobject_revertprefab(struct mGameObject *go)
+void gameobject_revertprefab(struct gameobject *go)
 {
 
 }
 
-void toggleprefab(struct mGameObject *go)
+void toggleprefab(struct gameobject *go)
 {
     go->editor.prefabSync = !go->editor.prefabSync;
 
@@ -196,13 +205,13 @@ void toggleprefab(struct mGameObject *go)
     }
 }
 
-void gameobject_update(struct mGameObject *go)
+void gameobject_update(struct gameobject *go)
 {
     if (go->script)
 	script_run(go->script);
 }
 
-void gameobject_move(struct mGameObject *go, float xs, float ys)
+void gameobject_move(struct gameobject *go, float xs, float ys)
 {
     cpVect p = cpBodyGetPosition(go->body);
     p.x += xs * deltaT;
@@ -210,7 +219,7 @@ void gameobject_move(struct mGameObject *go, float xs, float ys)
     cpBodySetPosition(go->body, p);
 }
 
-void gameobject_rotate(struct mGameObject *go, float as)
+void gameobject_rotate(struct gameobject *go, float as)
 {
     cpFloat a = cpBodyGetAngle(go->body);
     a += as * deltaT;
@@ -223,7 +232,7 @@ void update_gameobjects() {
 }
 
 
-void object_gui(struct mGameObject *go)
+void object_gui(struct gameobject *go)
 {
     float temp_pos[2];
     temp_pos[0] = cpBodyGetPosition(go->body).x;

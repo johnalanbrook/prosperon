@@ -6,15 +6,15 @@
 
 static uint32_t circleVBO;
 static uint32_t circleVAO;
-static struct mShader *circleShader;
+static struct shader *circleShader;
 
 static uint32_t gridVBO;
 static uint32_t gridVAO;
-static struct mShader *gridShader;
+static struct shader *gridShader;
 
 static uint32_t rectVBO;
 static uint32_t rectVAO;
-static struct mShader *rectShader;
+static struct shader *rectShader;
 
 void debugdraw_init()
 {

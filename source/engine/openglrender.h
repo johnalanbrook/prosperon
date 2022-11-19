@@ -6,8 +6,8 @@
 struct mCamera;
 struct window;
 
-extern struct mShader *spriteShader;
-extern struct mShader *animSpriteShader;
+extern struct shader *spriteShader;
+extern struct shader *animSpriteShader;
 
 extern struct sprite *tsprite;
 
@@ -32,7 +32,7 @@ extern float far_plane;
 extern char objectName[];
 extern GLuint debugColorPickBO;
 
-extern struct mGameObject *selectedobject;
+extern struct gameobject *selectedobject;
 
 enum RenderMode {
     LIT,

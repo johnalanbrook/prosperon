@@ -43,7 +43,7 @@ struct mDirectionalLight *MakeDLight()
 }
 
 void dlight_prepshader(struct mDirectionalLight *light,
-		       struct mShader *shader)
+		       struct shader *shader)
 {
     mfloat_t fwd[3] = { 0.f };
     trans_forward(fwd, &light->light.obj.transform);
@@ -79,14 +79,14 @@ static void prepstring(char *buffer, char *prepend, const char *append)
     snprintf(buffer, 100, "%s%s", prepend, append);
 }
 
-void pointlights_prepshader(struct mShader *shader)
+void pointlights_prepshader(struct shader *shader)
 {
     for (int i = 0; i < numLights; i++)
 	pointlight_prepshader(pointLights[i], shader, i);
 }
 
 void pointlight_prepshader(struct mPointLight *light,
-			   struct mShader *shader, int num)
+			   struct shader *shader, int num)
 {
     shader_use(shader);
     char prepend[100] = { '\0' };
@@ -132,13 +132,13 @@ struct mSpotLight *MakeSpotlight()
 
 
 
-void spotlights_prepshader(struct mShader *shader)
+void spotlights_prepshader(struct shader *shader)
 {
     for (int i = 0; i < numSpots; i++)
 	spotlight_prepshader(spotLights[i], shader, i);
 }
 
-void spotlight_prepshader(struct mSpotLight *light, struct mShader *shader,
+void spotlight_prepshader(struct mSpotLight *light, struct shader *shader,
 			  int num)
 {
     mfloat_t fwd[3] = { 0.f };

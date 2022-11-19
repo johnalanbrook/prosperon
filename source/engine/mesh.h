@@ -4,7 +4,7 @@
 #include "mathc.h"
 #include <stdint.h>
 
-struct mShader;
+struct shader;
 struct Texture;
 
 #define MAX_BONE_INFLUENCE 4
@@ -21,7 +21,7 @@ struct Vertex {
     float m_Weights[MAX_BONE_INFLUENCE];
 };
 
-struct mMesh {
+struct mesh {
     struct Vertex *vertices;
     struct Vertex *ve;
     uint32_t *indices;
@@ -31,11 +31,11 @@ struct mMesh {
     uint32_t VAO, VBO, EBO;
 };
 
-struct mMesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
+struct mesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
 		       uint32_t * indices, uint32_t * ie,
 		       struct Texture *textures, struct Texture *te);
-void setupmesh(struct mMesh *mesh);	/* Loads mesh into the GPU */
-void DrawMesh(struct mMesh *mesh, struct mShader *shader);
-void DrawMeshAgain(struct mMesh *mesh);	/* Draws whatever mesh was drawn last */
+void setupmesh(struct mesh *mesh);	/* Loads mesh into the GPU */
+void DrawMesh(struct mesh *mesh, struct shader *shader);
+void DrawMeshAgain(struct mesh *mesh);	/* Draws whatever mesh was drawn last */
 
 #endif

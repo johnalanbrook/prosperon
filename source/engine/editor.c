@@ -974,10 +974,10 @@ void editor_asset_gui(struct fileasset *asset) {
 
 void editor_makenewobject() {}
 
-int obj_gui_hierarchy(struct mGameObject *selected) {
+int obj_gui_hierarchy(struct gameobject *selected) {
 
   for (int i = 0; i < arrlen(gameobjects); i++) {
-    struct mGameObject *go = &gameobjects[i];
+    struct gameobject *go = &gameobjects[i];
 
     if (nk_select_label(ctx, go->editor.mname, NK_TEXT_LEFT, go == selected)) {
       if (go != selected)

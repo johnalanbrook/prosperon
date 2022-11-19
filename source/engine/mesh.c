@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-void DrawMesh(struct mMesh *mesh, struct mShader *shader)
+void DrawMesh(struct mesh *mesh, struct shader *shader)
 {
     // bind appropriate textures
     uint32_t diffuseNr = 1;
@@ -49,17 +49,17 @@ void DrawMesh(struct mMesh *mesh, struct mShader *shader)
 }
 
 
-void DrawMeshAgain(struct mMesh *mesh)
+void DrawMeshAgain(struct mesh *mesh)
 {
     glDrawElements(GL_TRIANGLES, (mesh->ie - mesh->indices),
 		   GL_UNSIGNED_INT, 0);
 }
 
-struct mMesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
+struct mesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
 		       uint32_t * indices, uint32_t * ie,
 		       struct Texture *textures, struct Texture *te)
 {
-    struct mMesh *newmesh = (struct mMesh *) malloc(sizeof(struct mMesh));
+    struct mesh *newmesh = (struct mesh *) malloc(sizeof(struct mesh));
     newmesh->vertices = vertices;
     newmesh->ve = ve;
     newmesh->indices = indices;
@@ -71,7 +71,7 @@ struct mMesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
     return newmesh;
 }
 
-void setupmesh(struct mMesh *mesh)
+void setupmesh(struct mesh *mesh)
 {
     // create buffers/arrays
     glGenVertexArrays(1, &mesh->VAO);

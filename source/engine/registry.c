@@ -47,12 +47,12 @@ void registry_init()
 }
 
 void register_component(const char *name, size_t size,
-			void (*make)(struct mGameObject * go, struct component * c),
+			void (*make)(struct gameobject * go, struct component * c),
 			void (*delete)(void *data),
 			void (*io)(void *data, FILE *f, int read),
 			void(*draw_debug)(void *data),
 			void(*draw_gui)(void *data),
-			void(*init)(void *data, struct mGameObject * go))
+			void(*init)(void *data, struct gameobject * go))
 {
     struct component *c = &components[ncomponent++];
     c->name = name;

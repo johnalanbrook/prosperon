@@ -19,9 +19,9 @@ unsigned char ttf_buffer[1<<25];
 unsigned char temp_bitmap[512 * 512];
 
 struct sFont *font;
-static struct mShader *shader;
+static struct shader *shader;
 
-void font_init(struct mShader *textshader) {
+void font_init(struct shader *textshader) {
     shader = textshader;
 
     shader_use(shader);
@@ -108,7 +108,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     return newfont;
 }
 
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct mShader *shader, float color[3])
+void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
 {
     float w = c.Size[0] * scale;
     float h = c.Size[1] * scale;

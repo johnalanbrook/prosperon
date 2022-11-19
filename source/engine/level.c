@@ -36,8 +36,8 @@ void load_level(char name[MAXNAME])
     arraddn(gameobjects, objs);
 
     for (int i = 0; i < objs; i++) {
-	struct mGameObject *go = &gameobjects[i];
-	fread(go, sizeof(struct mGameObject), 1, lfile);
+	struct gameobject *go = &gameobjects[i];
+	fread(go, sizeof(struct gameobject), 1, lfile);
 	go->components = NULL;
 	gameobject_init(go, lfile);
     }

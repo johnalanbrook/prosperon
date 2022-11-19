@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <chipmunk/chipmunk.h>
 
-struct mShader;
+struct shader;
 struct sprite;
 struct component;
 
@@ -23,7 +23,7 @@ struct editor {
     char rootPrefabName[MAXNAME];
 };
 
-struct mGameObject {
+struct gameobject {
     struct mTransform transform;
     struct editor editor;
     cpBodyType bodytype;
@@ -36,35 +36,35 @@ struct mGameObject {
     char *script;
 };
 
-extern struct mGameObject *gameobjects;
+extern struct gameobject *gameobjects;
 
-struct mGameObject *MakeGameobject();
+struct gameobject *MakeGameobject();
 void init_gameobjects();
 void gameobject_delete(int id);
 void clear_gameobjects();
 int number_of_gameobjects();
 void set_n_gameobjects(int n);
-void setup_model_transform(struct mTransform *t, struct mShader *s, float scale);
-void toggleprefab(struct mGameObject *go);
-struct mGameObject *get_gameobject_from_id(int id);
-void gameobject_save(struct mGameObject *go, FILE * file);
-void gameobject_addcomponent(struct mGameObject *go, struct component *c);
-void gameobject_delcomponent(struct mGameObject *go, int n);
-void gameobject_loadcomponent(struct mGameObject *go, int id);
+void setup_model_transform(struct mTransform *t, struct shader *s, float scale);
+void toggleprefab(struct gameobject *go);
+struct gameobject *get_gameobject_from_id(int id);
+void gameobject_save(struct gameobject *go, FILE * file);
+void gameobject_addcomponent(struct gameobject *go, struct component *c);
+void gameobject_delcomponent(struct gameobject *go, int n);
+void gameobject_loadcomponent(struct gameobject *go, int id);
 
-void gameobject_saveprefab(struct mGameObject *go);
+void gameobject_saveprefab(struct gameobject *go);
 void gameobject_makefromprefab(char *path);
 void gameobject_syncprefabs(char *revertPath);
-void gameobject_revertprefab(struct mGameObject *go);
+void gameobject_revertprefab(struct gameobject *go);
 
-void gameobject_init(struct mGameObject *go, FILE * fprefab);
+void gameobject_init(struct gameobject *go, FILE * fprefab);
 
-void gameobject_update(struct mGameObject *go);
+void gameobject_update(struct gameobject *go);
 void update_gameobjects();
 
-void gameobject_move(struct mGameObject *go, float xs, float ys);
-void gameobject_rotate(struct mGameObject *go, float as);
+void gameobject_move(struct gameobject *go, float xs, float ys);
+void gameobject_rotate(struct gameobject *go, float as);
 
-void object_gui(struct mGameObject *go);
+void object_gui(struct gameobject *go);
 
 #endif

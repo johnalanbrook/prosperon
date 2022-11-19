@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 struct mLight {
-    struct mGameObject *go;
+    struct gameobject *go;
     uint8_t color[3];
     float strength;
     int dynamic;
@@ -21,8 +21,8 @@ struct mPointLight {
 
 struct mPointLight *MakePointlight();
 void pointlight_prepshader(struct mPointLight *light,
-			   struct mShader *shader, int num);
-void pointlights_prepshader(struct mShader *shader);
+			   struct shader *shader, int num);
+void pointlights_prepshader(struct shader *shader);
 
 
 struct mSpotLight {
@@ -38,9 +38,9 @@ struct mSpotLight {
 
 struct mSpotLight *MakeSpotlight();
 void spotlight_gui(struct mSpotLight *light);
-void spotlight_prepshader(struct mSpotLight *light, struct mShader *shader,
+void spotlight_prepshader(struct mSpotLight *light, struct shader *shader,
 			  int num);
-void spotlights_prepshader(struct mShader *shader);
+void spotlights_prepshader(struct shader *shader);
 
 
 
@@ -49,7 +49,7 @@ struct mDirectionalLight {
 };
 
 void dlight_prepshader(struct mDirectionalLight *light,
-		       struct mShader *shader);
+		       struct shader *shader);
 struct mDirectionalLight *MakeDLight();
 
 extern struct mDirectionalLight *dLight;

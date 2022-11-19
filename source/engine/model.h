@@ -1,26 +1,26 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-struct mMesh;
-struct mShader;
+struct mesh;
+struct shader;
 
-struct mModel {
-    struct mMesh *meshes;
-    struct mMesh *mp;
+struct model {
+    struct mesh *meshes;
+    struct mesh *mp;
     char *directory;
     const char *path;
     char *name;
 };
 
 /* Get the model at a path, or create and return if it doesn't exist */
-struct mModel *GetExistingModel(const char *path);
+struct model *GetExistingModel(const char *path);
 
 /* Make a Model struct */
-struct mModel *MakeModel(const char *path);
+struct model *MakeModel(const char *path);
 
 /* Load a model from memory into the GPU */
-void loadmodel(struct mModel *model);
+void loadmodel(struct model *model);
 
-void draw_model(struct mModel *model, struct mShader *shader);
+void draw_model(struct model *model, struct shader *shader);
 
 #endif

@@ -7,7 +7,7 @@ struct mSkybox {
     unsigned int VAO;
     unsigned int VBO;
     unsigned int id;
-    struct mShader *shader;
+    struct shader *shader;
 };
 
 struct mSkybox *MakeSkybox(const char *cubemap);

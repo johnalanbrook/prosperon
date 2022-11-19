@@ -10,6 +10,7 @@
 #include "gameobject.h"
 #include <string.h>
 #include "stb_ds.h"
+#include "log.h"
 
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
@@ -17,7 +18,7 @@ struct sprite *sprites;
 
 static uint32_t quadVAO;
 
-struct sprite *make_sprite(struct mGameObject *go)
+struct sprite *make_sprite(struct gameobject *go)
 {
     if (arrcap(sprites) == 0)
         arrsetcap(sprites, 100);
@@ -27,15 +28,17 @@ struct sprite *make_sprite(struct mGameObject *go)
         .size = {1.f, 1.f},
         .tex = texture_loadfromfile("ph.png"),
         .index = arrlen(sprites)    };
-
     sprite_init(&sprite, go);
+    arrput(sprites, sprite);
+
     return &arrlast(sprites);
 }
 
-void sprite_init(struct sprite *sprite, struct mGameObject *go)
+void sprite_init(struct sprite *sprite, struct gameobject *go)
 {
     sprite->go = go;
-    arrput(sprites, *sprite);
+
+    YughInfo("Added sprite address %p to sprite array %p.", sprite, &arrlast(sprites));
 }
 
 void sprite_io(struct sprite *sprite, FILE *f, int read)
@@ -59,11 +62,16 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
 
 void sprite_delete(struct sprite *sprite)
 {
-    for (int i = 0; i < arrlen(sprites); i++)
+    YughInfo("Attempting to delete sprite, address is %p.", sprite);
+    YughInfo("Number of sprites is %d.", arrlen(sprites));
+    for (int i = 0; i < arrlen(sprites); i++) {
+        YughInfo("Address of try sprite is %p.", &sprites[i]);
         if (&sprites[i] == sprite) {
+            YughInfo("Deleted a sprite.");
             arrdel(sprites, i);
             return;
         }
+    }
 }
 
 void sprite_draw_all()

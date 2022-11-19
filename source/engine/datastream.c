@@ -13,7 +13,7 @@
 #include "limits.h"
 #include "iir.h"
 
-struct mShader *vid_shader;
+struct shader *vid_shader;
 
 static void ds_update_texture(uint32_t unit, uint32_t texture, plm_plane_t * plane)
 {

@@ -36,7 +36,7 @@ void phys2d_shape_apply(struct phys2d_shape *shape)
     cpShapeSetElasticity(shape->shape, shape->go->e);
 }
 
-void init_phys2dshape(struct phys2d_shape *shape, struct mGameObject *go)
+void init_phys2dshape(struct phys2d_shape *shape, struct gameobject *go)
 {
     shape->go = go;
     phys2d_shape_apply(shape);
@@ -47,7 +47,7 @@ void phys2d_shape_del(struct phys2d_shape *shape)
     cpSpaceRemoveShape(space, shape->shape);
 }
 
-struct phys2d_circle *Make2DCircle(struct mGameObject *go)
+struct phys2d_circle *Make2DCircle(struct gameobject *go)
 {
     struct phys2d_circle *new = malloc(sizeof(struct phys2d_circle));
 
@@ -59,7 +59,7 @@ struct phys2d_circle *Make2DCircle(struct mGameObject *go)
     return new;
 }
 
-void phys2d_circleinit(struct phys2d_circle *circle, struct mGameObject *go)
+void phys2d_circleinit(struct phys2d_circle *circle, struct gameobject *go)
 {
     circle->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(go->body, circle->radius, cpvzero));
     init_phys2dshape(&circle->shape, go);
@@ -87,7 +87,7 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
     draw_circle(p.x + (d * cos(a)), p.y + (d * sin(a)), cpCircleShapeGetRadius(circle->shape.shape), 1);
 }
 
-struct phys2d_segment *Make2DSegment(struct mGameObject *go)
+struct phys2d_segment *Make2DSegment(struct gameobject *go)
 {
     struct phys2d_segment *new = malloc(sizeof(struct phys2d_segment));
 
@@ -101,7 +101,7 @@ struct phys2d_segment *Make2DSegment(struct mGameObject *go)
     return new;
 }
 
-void phys2d_seginit(struct phys2d_segment *seg, struct mGameObject *go)
+void phys2d_seginit(struct phys2d_segment *seg, struct gameobject *go)
 {
     seg->shape.shape = cpSpaceAddShape(space, cpSegmentShapeNew(go->body, cpvzero, cpvzero, seg->thickness));
     init_phys2dshape(&seg->shape, go);
@@ -120,7 +120,7 @@ void segment_gui(struct phys2d_segment *seg)
     phys2d_applyseg(seg);
 }
 
-struct phys2d_box *Make2DBox(struct mGameObject *go)
+struct phys2d_box *Make2DBox(struct gameobject *go)
 {
     struct phys2d_box *new = malloc(sizeof(struct phys2d_box));
 
@@ -135,7 +135,7 @@ struct phys2d_box *Make2DBox(struct mGameObject *go)
     return new;
 }
 
-void phys2d_boxinit(struct phys2d_box *box, struct mGameObject *go)
+void phys2d_boxinit(struct phys2d_box *box, struct gameobject *go)
 {
     box->shape.shape =
 	cpSpaceAddShape(space,
@@ -159,7 +159,7 @@ void box_gui(struct phys2d_box *box)
 }
 
 
-struct phys2d_poly *Make2DPoly(struct mGameObject *go)
+struct phys2d_poly *Make2DPoly(struct gameobject *go)
 {
     struct phys2d_poly *new = malloc(sizeof(struct phys2d_poly));
 
@@ -172,7 +172,7 @@ struct phys2d_poly *Make2DPoly(struct mGameObject *go)
     return new;
 }
 
-void phys2d_polyinit(struct phys2d_poly *poly, struct mGameObject *go)
+void phys2d_polyinit(struct phys2d_poly *poly, struct gameobject *go)
 {
     cpTransform T = { 0 };
     poly->shape.shape =
@@ -211,7 +211,7 @@ void poly_gui(struct phys2d_poly *poly)
     phys2d_applypoly(poly);
 }
 
-struct phys2d_edge *Make2DEdge(struct mGameObject *go)
+struct phys2d_edge *Make2DEdge(struct gameobject *go)
 {
     struct phys2d_edge *new = malloc(sizeof(struct phys2d_edge));
 
@@ -225,7 +225,7 @@ struct phys2d_edge *Make2DEdge(struct mGameObject *go)
     return new;
 }
 
-void phys2d_edgeinit(struct phys2d_edge *edge, struct mGameObject *go)
+void phys2d_edgeinit(struct phys2d_edge *edge, struct gameobject *go)
 {
     edge->shapes[0] =
 	cpSpaceAddShape(space,

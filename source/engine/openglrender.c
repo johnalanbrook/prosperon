@@ -27,21 +27,21 @@ static GLuint depthMapFBO = 0;
 static GLuint depthMap = 0;
 const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
 
-static struct mShader *outlineShader;
-static struct mShader *modelShader;
-static struct mShader *shadowShader;
+static struct shader *outlineShader;
+static struct shader *modelShader;
+static struct shader *shadowShader;
 
-struct mShader *spriteShader = NULL;
-struct mShader *animSpriteShader = NULL;
-static struct mShader *textShader;
-static struct mShader *diffuseShader;
+struct shader *spriteShader = NULL;
+struct shader *animSpriteShader = NULL;
+static struct shader *textShader;
+static struct shader *diffuseShader;
 
 struct sFont *stdFont;
 
-static struct mShader *debugDepthQuad;
-static struct mShader *debugColorPickShader;
-static struct mShader *debugGridShader;
-static struct mShader *debugGizmoShader;
+static struct shader *debugDepthQuad;
+static struct shader *debugColorPickShader;
+static struct shader *debugGridShader;
+static struct shader *debugGizmoShader;
 
 struct mStaticActor *gizmo;
 
@@ -81,7 +81,7 @@ bool renderRefraction = true;
 bool renderReflection = true;
 
 ///// for editing
-struct mGameObject *selectedobject = NULL;
+struct gameobject *selectedobject = NULL;
 char objectName[200] = { '\0' };	// object name buffer
 
 GLuint debugColorPickBO = 0;

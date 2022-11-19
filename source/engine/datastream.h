@@ -8,7 +8,7 @@ struct soundstream;
 
 struct datastream {
     plm_t *plm;
-    struct mShader *shader;
+    struct shader *shader;
     double last_time;
     int playing;
     int audio_device;
@@ -20,7 +20,7 @@ struct datastream {
 
 struct Texture;
 
-extern struct mShader *vid_shader;
+extern struct shader *vid_shader;
 
 struct datastream *MakeDatastream();
 void ds_openvideo(struct datastream *ds, const char *path, const char *adriver);

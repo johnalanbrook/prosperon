@@ -8,18 +8,18 @@
 #include <stdlib.h>
 #include "log.h"
 
-static struct mModel *lastRendered;
-static struct mModel *loadedModels[100];
-static struct mModel **lastModel = loadedModels;
+static struct model *lastRendered;
+static struct model *loadedModels[100];
+static struct model **lastModel = loadedModels;
 
 static void processnode();
 static void processmesh();
 static void processtexture();
 
 
-struct mModel *GetExistingModel(const char *path)
+struct model *GetExistingModel(const char *path)
 {
-    struct mModel **model = loadedModels;
+    struct model **model = loadedModels;
 
     while (model++ != lastModel) {
 	if (!strcmp(path, (*model)->path))
@@ -34,7 +34,7 @@ struct mModel *GetExistingModel(const char *path)
 }
 
 /* TODO: Make this a hash compare for speedup */
-struct mModel *MakeModel(const char *path)
+struct model *MakeModel(const char *path)
 {
     char *modelPath =
 	(char *) malloc(sizeof(char) *
@@ -46,8 +46,8 @@ struct mModel *MakeModel(const char *path)
 	("Created new model with modelPath %s, from data_path %s and path %s\n",
 	 modelPath, DATA_PATH, path);
 
-    struct mModel *newmodel =
-	(struct mModel *) malloc(sizeof(struct mModel));
+    struct model *newmodel =
+	(struct model *) malloc(sizeof(struct model));
     newmodel->path = path;
 
     loadmodel(newmodel);
@@ -56,7 +56,7 @@ struct mModel *MakeModel(const char *path)
 }
 
 // TODO: Come back to this; simple optimization
-void draw_model(struct mModel *model, struct mShader *shader)
+void draw_model(struct model *model, struct shader *shader)
 {
     if (lastRendered != model) {
 	lastRendered = model;
@@ -68,7 +68,7 @@ void draw_model(struct mModel *model, struct mShader *shader)
     }
 }
 
-void loadmodel(struct mModel *model)
+void loadmodel(struct model *model)
 {
     YughInfo("Loading model at path %s", model->path);
 /*
@@ -77,7 +77,7 @@ void loadmodel(struct mModel *model)
     cgltf_data *data = NULL;
     cgltf_result result = cgltf_parse_file(&options, model->path, &data);
 
-    meshes = (struct mMesh*)malloc(sizeof(Mesh)*cgltf_data->meshes_count);
+    meshes = (struct mesh*)malloc(sizeof(Mesh)*cgltf_data->meshes_count);
 
     directory = get_directory_from_path(model->path);
 

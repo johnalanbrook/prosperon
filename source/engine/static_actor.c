@@ -9,7 +9,7 @@ static int numShadowCasters = 0;
 
 struct mStaticActor *curActor = NULL;
 
-void staticactor_draw_dbg_color_pick(struct mShader *s)
+void staticactor_draw_dbg_color_pick(struct shader *s)
 {
     for (int i = 0; i < numModels; i++) {
 	shader_setvec3(s, "PickingColor", models[i]->obj.editor.color);
@@ -19,7 +19,7 @@ void staticactor_draw_dbg_color_pick(struct mShader *s)
 
 }
 
-void staticactor_draw_models(struct mShader *s)
+void staticactor_draw_models(struct shader *s)
 {
     for (int i = 0; i < numModels; i++) {
 	setup_model_transform(&models[i]->obj.transform, s, 1.f);
@@ -27,7 +27,7 @@ void staticactor_draw_models(struct mShader *s)
     }
 }
 
-void staticactor_draw_shadowcasters(struct mShader *s)
+void staticactor_draw_shadowcasters(struct shader *s)
 {
     for (int i = 0; i < numShadowCasters; i++) {
 	setup_model_transform(&shadow_casters[i]->obj.transform, s, 1.f);

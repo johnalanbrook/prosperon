@@ -44,7 +44,7 @@ struct editorVars {
     nk_flags asset_srch;
 };
 
-struct mGameObject;
+struct gameobject;
 
 extern int show_desktop;
 
@@ -102,7 +102,7 @@ void game_pause();
 
 void get_levels();
 
-int obj_gui_hierarchy(struct mGameObject *selected);
+int obj_gui_hierarchy(struct gameobject *selected);
 
 void sprite_gui(struct sprite *sprite);
 

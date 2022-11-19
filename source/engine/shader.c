@@ -12,14 +12,14 @@
 
 #define SHADER_BUF 10000
 
-static struct mShader *shaders;
+static struct shader *shaders;
 
-struct mShader *MakeShader(const char *vertpath, const char *fragpath)
+struct shader *MakeShader(const char *vertpath, const char *fragpath)
 {
     if (arrcap(shaders) == 0)
         arrsetcap(shaders, 20);
 
-    struct mShader init = {
+    struct shader init = {
         .vertpath = vertpath,
         .fragpath = fragpath };
     shader_compile(&init);
@@ -86,7 +86,7 @@ GLuint load_shader_from_file(const char *path, int type)
     return id;
 }
 
-void shader_compile(struct mShader *shader)
+void shader_compile(struct shader *shader)
 {
     YughInfo("Making shader with %s and %s.", shader->vertpath, shader->fragpath);
 
@@ -103,57 +103,57 @@ void shader_compile(struct mShader *shader)
     glDeleteShader(frag);
 }
 
-void shader_use(struct mShader *shader)
+void shader_use(struct shader *shader)
 {
     glUseProgram(shader->id);
 }
 
-void shader_setbool(struct mShader *shader, const char *name, int val)
+void shader_setbool(struct shader *shader, const char *name, int val)
 {
     glUniform1i(glGetUniformLocation(shader->id, name), val);
 }
 
-void shader_setint(struct mShader *shader, const char *name, int val)
+void shader_setint(struct shader *shader, const char *name, int val)
 {
     glUniform1i(glGetUniformLocation(shader->id, name), val);
 }
 
-void shader_setfloat(struct mShader *shader, const char *name, float val)
+void shader_setfloat(struct shader *shader, const char *name, float val)
 {
     glUniform1f(glGetUniformLocation(shader->id, name), val);
 }
 
-void shader_setvec2(struct mShader *shader, const char *name, mfloat_t val[2])
+void shader_setvec2(struct shader *shader, const char *name, mfloat_t val[2])
 {
     glUniform2fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setvec3(struct mShader *shader, const char *name, mfloat_t val[3])
+void shader_setvec3(struct shader *shader, const char *name, mfloat_t val[3])
 {
     glUniform3fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setvec4(struct mShader *shader, const char *name, mfloat_t val[4])
+void shader_setvec4(struct shader *shader, const char *name, mfloat_t val[4])
 {
     glUniform4fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setmat2(struct mShader *shader, const char *name, mfloat_t val[4])
+void shader_setmat2(struct shader *shader, const char *name, mfloat_t val[4])
 {
     glUniformMatrix2fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }
 
-void shader_setmat3(struct mShader *shader, const char *name, mfloat_t val[9])
+void shader_setmat3(struct shader *shader, const char *name, mfloat_t val[9])
 {
     glUniformMatrix3fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }
 
-void shader_setmat4(struct mShader *shader, const char *name, mfloat_t val[16])
+void shader_setmat4(struct shader *shader, const char *name, mfloat_t val[16])
 {
     glUniformMatrix4fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }
 
-void shader_setUBO(struct mShader *shader, const char *name, unsigned int index)
+void shader_setUBO(struct shader *shader, const char *name, unsigned int index)
 {
     glUniformBlockBinding(shader->id, glGetUniformBlockIndex(shader->id, name), index);
 }
