@@ -504,16 +504,27 @@ void editor_project_gui() {
       }
 
       if (nk_button_label(ctx, "Save")) {
-        save_level(current_level);
-        get_levels();
+        if (strlen(current_level) == 0) {
+            YughWarn("Can't save level that has no name.");
+        } else {
+            save_level(current_level);
+            get_levels();
+        }
       }
 
       if (nk_button_label(ctx, "Save as")) {
-        strcpy(current_level, levelname);
-        strncat(current_level, EXT_LEVEL, MAXNAME);
-        save_level(current_level);
-        levelname[0] = '\0';
-        get_levels();
+          if (strlen(current_level) == 0) {
+              YughWarn("Can't save level that has no name.");
+          } else {
+                    strcpy(current_level, levelname);
+          strncat(current_level, EXT_LEVEL, MAXNAME);
+              save_level(current_level);
+              levelname[0] = '\0';
+              get_levels();
+
+
+
+        }
       }
       nuke_nel(1);
       nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, levelname, MAXNAME - 1, nk_filter_default);
@@ -994,8 +1005,6 @@ void editor_prefab_btn(char *prefab) {
   if (nk_button_label(ctx, prefab)) {
     YughInfo("Making prefab '%s'.", prefab);
     gameobject_makefromprefab(prefab);
-    /*GameObject* newprefab = (GameObject*)createPrefab(*prefab); */
-    /*cam_inverse_goto(&camera, &newprefab->transform); */
   }
 }
 

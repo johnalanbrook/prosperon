@@ -13,6 +13,8 @@ static struct {
     struct Texture *value;
 } *texhash = NULL;
 
+struct Texture *tex_default;
+
 struct Texture *texture_pullfromfile(const char *path)
 {
     int index = shgeti(texhash, path);
@@ -63,8 +65,8 @@ struct Texture *texture_loadfromfile(const char *path)
     struct Texture *new = texture_pullfromfile(path);
 
     if (new == NULL) {
-        YughError("Texture not loaded!", 0);
-        return new;
+        YughError("Texture %s not loaded! Loading the default instead ...", path);
+        new = texture_pullfromfile("./ph.png");
     }
 
     if (new->id == 0) {
