@@ -100,6 +100,7 @@ bs: engine
 	cp engine brainstorm
 
 pin: engine
+	cp -rf source/shaders pinball
 	cp engine pinball
 
 pal: engine
