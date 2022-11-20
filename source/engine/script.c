@@ -22,16 +22,18 @@ void script_run(const char *script) {
     mrb_load_string(mrb, script);
 }
 
-void script_dofile(const char *file) {
+int script_dofile(const char *file) {
     FILE *mrbf = fopen(file, "r");
     if (mrbf == NULL) {
-        YughError("Could not find game.rb in root folder.",0);
-        return;
+        YughError("Could not find script %s.", file);
+        return 1;
     }
     mrbc_filename(mrb, c, file);
     obj = mrb_load_file_cxt(mrb, mrbf, c);
     mrb_print_error(mrb);
     fclose(mrbf);
+
+    return 0;
 }
 
 void script_update(double dt) {

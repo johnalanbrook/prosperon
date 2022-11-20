@@ -42,7 +42,7 @@ int main(int argc, char **args) {
 
     double framet = fmin(fmin(renderMS,physMS),updateMS);
 
-    script_dofile("engine.rb");
+    script_dofile("scripts/engine.rb");
     script_dofile("config.rb");
 
     window_set_icon("icon.png");

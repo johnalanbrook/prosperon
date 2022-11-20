@@ -101,6 +101,8 @@ bs: engine
 
 pin: engine
 	cp -rf source/shaders pinball
+	cp -rf assets/fonts pinball
+	cp -f assets/scripts/* pinball/scripts
 	cp engine pinball
 
 pal: engine
@@ -109,6 +111,7 @@ pal: engine
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
 	@ar r $(ENGINE) $(eobjects)
+	@mkdir -p $(INCLUDE)
 	@cp -u -r $(ehead) $(INCLUDE)
 
 bin/libglfw3.a: source/glfw/build/src/libglfw3.a
