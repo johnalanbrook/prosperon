@@ -1,6 +1,8 @@
+.git/
 bin/
 build/
 *.o
 *.a
 engine
 tags
+Jenkinsfile

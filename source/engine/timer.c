@@ -1,5 +1,4 @@
 #include "timer.h"
-#include <GLFW/glfw3.h>
 #include <stdlib.h>
 
 #include <stb_ds.h>;

@@ -11,7 +11,7 @@ UNAME_P != uname -m
 
 CCACHE = ccache
 
-CC = $(CCACHE) clang
+CC = $(CCACHE) cc
 
 ifeq ($(DEBUG), 1)
 	DEFFALGS += -DDEBUG
@@ -44,15 +44,15 @@ define findindir
 endef
 
 # All other sources
-edirs != find ./source/engine -type d -name include
+edirs != find ./source -type d -name include
 edirs += ./source/engine
 ehead != $(call findindir,./source/engine,*.h)
 eobjects != $(call make_objs, ./source/engine)
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
 edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include ./source/engine/thirdparty/Nuklear
-includeflag != $(call prefix,$(edirs) $(eddirs),-I)
-COMPINCLUDE = $(edirs) $(eddirs)
+includeflag != $(call prefix,$(edirs),-I)
+COMPINCLUDE = $(edirs)
 
 WARNING_FLAGS = -Wno-everything #-Wno-incompatible-function-pointer-types -Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
@@ -63,22 +63,22 @@ LIBPATH = -L./bin -L/usr/local/lib
 ALLFILES != find source/ -name '*.[ch]' -type f
 
 ifeq ($(UNAME), Windows_NT)
-	LINKER_FLAGS = -static -DSDL_MAIN_HANDLED
+	LINKER_FLAGS = -DSDL_MAIN_HANDLED
 	ELIBS = engine editor mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
 	ELIBS += SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi
 	CLIBS = glew32
 	EXT = .exe
 else
 	LINKER_FLAGS = -g
-	ELIBS =  engine glfw3  pthread yughc mruby portaudio m
-	CLIBS = asound jack  c
+	ELIBS =  engine glfw3 pthread yughc mruby portaudio asound c m dl
+	CLIBS =
 	EXT =
 endif
 
 CLIBS != $(call prefix, $(CLIBS), -l)
 ELIBS != $(call prefix, $(ELIBS), -l)
 
-LELIBS = -Wl,-Bdynamic $(ELIBS) -Wl,-Bdynamic $(CLIBS)
+LELIBS = $(ELIBS)
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
@@ -91,22 +91,23 @@ INCLUDE = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
 
-engine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) tags $(BIN)libportaudio.a $(BIN)libglfw3.a
-	@echo Linking engine
-	$(CC) $< $(LINK) -o $@
+.PHONY: yugine
+
+yugine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) $(BIN)libportaudio.a $(BIN)libglfw3.a
+	@echo Linking yugine
+	$(CC) $< $(LINK) -o yugine
 	@echo Finished build
 
-bs: engine
-	cp engine brainstorm
+install: yugine
+	cp yugine ~/.local/bin
 
-pin: engine
-	cp -rf source/shaders pinball
-	cp -rf assets/fonts pinball
-	cp -f assets/scripts/* pinball/scripts
-	cp engine pinball
-
-pal: engine
-	cp engine paladin
+pin: yugine
+	cp yugine pinball
+	mkdir -p pinball/fonts pinball/scripts pinball/shaders
+	cp -f assets/fonts/* pinball/fonts
+	cp -f source/scripts/* pinball/scripts
+	cp -rf source/shaders/* pinball/shaders
+	
 
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
@@ -137,10 +138,6 @@ $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
 	@$(CC) $(COMPILER_FLAGS)
-
-tags: $(ALLFILES)
-	@echo Making tags
-	@ctags -x -R source > tags
 
 clean:
 	@echo Cleaning project

@@ -89,7 +89,12 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
      }
 
     glfwMakeContextCurrent(w.window);
-    gladLoadGL(glfwGetProcAddress);
+    int version = gladLoadGL(glfwGetProcAddress);
+    if (!version) {
+        YughError("Failed to initialize OpenGL context.");
+        exit(1);
+    }
+    YughInfo("Loaded OpenGL %d.%d", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
     glfwSwapInterval(1);
 
     // Set callbacks

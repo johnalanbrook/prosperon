@@ -50,7 +50,8 @@ void engine_init()
     glfwSetErrorCallback(error_callback);
     /* Initialize GLFW */
     if (!glfwInit()) {
-        printf("Could not init GLFW\n");
+        YughError("Could not init GLFW. Exiting.");
+        exit(1);
     }
 
 
