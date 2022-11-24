@@ -1,6 +1,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <stdio.h>
+
 #define ERROR_BUFFER 2048
 
 #define LOG_INFO 0
@@ -19,5 +21,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 void FlushGLErrors();
 
 int TestSDLError(int sdlErr);
+
+void log_setfile(char *file);
+void log_cat(FILE *f);
 
 #endif

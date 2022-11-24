@@ -7,6 +7,12 @@
 #include "script.h"
 #include "editor.h"
 #include "log.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <execinfo.h>
+#include <signal.h>
+#include <time.h>
 
 #include "string.h"
 
@@ -22,18 +28,77 @@ double updateMS = 1/60.f;
 
 static int ed = 1;
 
+void seghandle(int sig) {
+    void *ents[512];
+    size_t size;
+
+    size = backtrace(ents, 512);
+    if (strsignal(sig)) {
+        YughCritical("CRASH! Signal: %s.", strsignal(sig));
+    }
+    else {
+        YughCritical("CRASH! Signal: %d.", sig);
+    }
+
+    YughCritical("====================BACKTRACE====================");
+    char **stackstr = backtrace_symbols(ents, size);
+
+    for (int i = 0; i < size; i++) {
+        YughCritical(stackstr[i]);
+    }
+
+    exit(1);
+}
 
 int main(int argc, char **args) {
     for (int i = 1; i < argc; i++) {
         if (args[i][0] == '-') {
-            if (strncmp(&args[i][1], "play", 4) == 0) {
-                ed = 0;
+            switch(args[i][1]) {
+                case 'p':
+                    if (strncmp(&args[i][2], "lay", 3))
+                        continue;
+
+                    ed = 0;
+                    break;
+
+                case 'l':
+                    if (i+1 < argc && args[i+1][0] != '-') {
+                        log_setfile(args[i+1]);
+                        i++;
+                        continue;
+                    }
+                    else {
+                        YughError("Expected a file for command line arg '-l'.");
+                        exit(1);
+                    }
+
             }
         }
     }
 
+    if (DBG) {
+        time_t now = time(NULL);
+        char fname[100];
+        snprintf(fname, 100, "yugine-%d.log", now);
+        log_setfile(fname);
+    }
+
+    YughInfo("Starting yugine version %s.", VER);
+
+    signal(SIGSEGV, seghandle);
+
+    FILE *sysinfo = NULL;
+    sysinfo = popen("uname -a", "r");
+    if (!sysinfo) {
+        YughWarn("Failed to get sys info.");
+    } else {
+        log_cat(sysinfo);
+        pclose(sysinfo);
+    }
 
     engine_init();
+
+
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     YughInfo("Refresh rate is %d", vidmode->refreshRate);

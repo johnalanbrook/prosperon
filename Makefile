@@ -56,7 +56,12 @@ COMPINCLUDE = $(edirs)
 
 WARNING_FLAGS = -Wno-everything #-Wno-incompatible-function-pointer-types -Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
-COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -O0 -MD $(WARNING_FLAGS) -c $< -o $@
+
+SEM = 0.0.1
+COM != git rev-parse --short HEAD
+VER = $(SEM)-$(COM)
+
+COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -rdynamic -O0 -MD $(WARNING_FLAGS) -DDBG=1 -DVER=\"$(VER)\" -c $< -o $@
 
 LIBPATH = -L./bin -L/usr/local/lib
 
@@ -69,7 +74,7 @@ ifeq ($(UNAME), Windows_NT)
 	CLIBS = glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -g
+	LINKER_FLAGS = -g -rdynamic
 	ELIBS =  engine pthread yughc mruby c m dl
 	CLIBS =
 	EXT =
@@ -91,6 +96,9 @@ INCLUDE = $(BIN)include
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
 
+
+
+
 .PHONY: yugine
 
 yugine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) $(BIN)libportaudio.a $(BIN)libglfw3.a
@@ -98,17 +106,17 @@ yugine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) $(BIN)libportaudio.a $(BIN)lib
 	$(CC) $< $(LINK) -o yugine
 	@echo Finished build
 
+dist: yugine
+	mkdir -p bin/dist
+	cp yugine bin/dist
+	cp -rf assets/fonts bin/dist
+	cp -rf source/scripts bin/dist
+	cp -rf source/shaders bin/dist
+	tar -czf yugine-$(VER).tar.gz --directory bin/dist .
 
 install: yugine
 	cp yugine ~/.local/bin
 
-pin: yugine
-	cp yugine pinball
-	mkdir -p pinball/fonts pinball/scripts pinball/shaders
-	cp -f assets/fonts/* pinball/fonts
-	cp -f source/scripts/* pinball/scripts
-	cp -rf source/shaders/* pinball/shaders
-	
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
 	@ar r $(ENGINE) $(eobjects)

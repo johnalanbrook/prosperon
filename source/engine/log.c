@@ -5,13 +5,14 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #define logLevel 0
 
 //char *logstr[] = { "INFO", "WARN", "\x1b[1;31mERROR\x1b[0m", "CRITICAL" };
 char *logstr[] = { "INFO", "WARN", "ERROR", "CRITICAL" };
 char *catstr[] = {"ENGINE"};
+
+FILE *fout = NULL;
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
@@ -30,7 +31,26 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	snprintf(buffer, ERROR_BUFFER, "%s | %s | %s [ %s:%d ] %s\n", logstr[priority], catstr[0], dt, file, line, msgbuffer);
 
 	printf("%s", buffer);
-	fflush(stdout);
+        fflush(stdout);
+
+	if (fout) {
+	    fprintf(fout, "%s", buffer);
+	    fflush(fout);
+	}
+    }
+}
+
+void log_setfile(char *file) {
+    YughInfo("Opening output log %s.", file);
+    fout = fopen(file, "w");
+}
+
+void log_cat(FILE *f) {
+    char out[1024];
+
+    while (fgets(out, sizeof(out), f)) {
+        out[strcspn(out, "\n")] = '\0';
+        YughInfo(out);
     }
 }
 
