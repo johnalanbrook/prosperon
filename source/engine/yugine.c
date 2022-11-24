@@ -72,6 +72,12 @@ int main(int argc, char **args) {
                         exit(1);
                     }
 
+		case 'v':
+		    printf("Yugine version %s, %s build.\n", VER, INFO);
+		    printf("Copyright 2022 odplot productions LLC.\n");
+		    exit(1);
+		    break;
+
             }
         }
     }
@@ -95,6 +101,11 @@ int main(int argc, char **args) {
         log_cat(sysinfo);
         pclose(sysinfo);
     }
+
+    FILE *gameinfo = NULL;
+    gameinfo = fopen("game.info", "w");
+    fprintf(gameinfo, "Yugine v. %s, sys %s.", VER, INFO);
+    fclose(gameinfo);
 
     engine_init();
 

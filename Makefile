@@ -1,32 +1,27 @@
-procs != nproc
-MAKEFLAGS = --jobs=$(procs)
+PROCS != nproc
+MAKEFLAGS = --jobs=$(PROCS)
 
 UNAME != uname
 
-ifeq ($(OS),Windows_NT)
-	UNAME = Windows_NT
-endif
+CC := ccache $(CC)
 
-UNAME_P != uname -m
+FLAGS = -DALLOW_SMP_DANGERS
 
-CCACHE = ccache
+QFLAGS = -O3 -DDBG=0
+INFO = rel
+PTYPE != uname -m
 
-CC = $(CCACHE) cc
-
-ifeq ($(DEBUG), 1)
-	DEFFALGS += -DDEBUG
+ifeq ($(DBG), 1)
+	QFLAGS = -O0 -g -DDBG=1
 	INFO = dbg
 endif
 
-BIN = ./bin/
+QFLAGS := $(QFLAGS) $(FLAGS)
+
+BIN = bin/
 objprefix = $(BIN)obj
 
 DIRS = engine editor
-ETP = ./source/engine/thirdparty/
-
-define make_objs
-	find $(1) -type f -name '*.c' | sed 's|\.c.*|.o|' | sed 's|\.|$(objprefix)|1'
-endef
 
 define prefix
 	echo $(1) | tr " " "\n" | sed 's/.*/$(2)&$(3)/'
@@ -44,64 +39,54 @@ define findindir
 endef
 
 # All other sources
-edirs != find ./source -type d -name include
-edirs += ./source/engine
-ehead != $(call findindir,./source/engine,*.h)
-eobjects != $(call make_objs, ./source/engine)
+edirs != find source -type d -name include
+edirs += source/engine source/engine/thirdparty/Nuklear
+ehead != $(call findindir, source/engine,*.h)
+eobjects != find source/engine -type f -name '*.c' | sed -r 's|^(.*)\.c|$(objprefix)/\1.o|'  # Gets all .c files and makes .o refs
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
-edirs += ./source/engine/thirdparty/Chipmunk2D/include ./source/engine/thirdparty/enet/include ./source/engine/thirdparty/Nuklear
 includeflag != $(call prefix,$(edirs),-I)
-COMPINCLUDE = $(edirs)
 
-WARNING_FLAGS = -Wno-everything #-Wno-incompatible-function-pointer-types -Wall -Wwrite-strings -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
-
+WARNING_FLAGS = -Wall -pedantic #-Wno-incompatible-function-pointer-types -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
 
 SEM = 0.0.1
 COM != git rev-parse --short HEAD
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) -I/usr/local/include -g -rdynamic -O0 -MD $(WARNING_FLAGS) -DDBG=1 -DVER=\"$(VER)\" -c $< -o $@
+COMPILER_FLAGS = $(includeflag) -I/usr/local/include $(QFLAGS) -rdynamic -MD $(WARNING_FLAGS) -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
-LIBPATH = -L./bin -L/usr/local/lib
-
-ALLFILES != find source/ -name '*.[ch]' -type f
+LIBPATH = -Lbin -L/usr/local/lib
 
 ifeq ($(UNAME), Windows_NT)
 	LINKER_FLAGS = -DSDL_MAIN_HANDLED
 	ELIBS = engine editor mingw32 SDL2main SDL2 m dinput8 dxguid dxerr8 user32 gdi32 winmm imm32 ole32 oleaut32 shell32 version uuid setupapi opengl32 stdc++ winpthread
-	ELIBS += SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi
-	CLIBS = glew32
+	ELIBS += SDL2_mixer FLAC vorbis vorbisenc vorbisfile mpg123 out123 syn123 opus opusurl opusfile ogg ssp shlwapi glew32
 	EXT = .exe
 else
-	LINKER_FLAGS = -g -rdynamic
+	LINKER_FLAGS = $(QFLAGS) -rdynamic
 	ELIBS =  engine pthread yughc mruby c m dl
-	CLIBS =
 	EXT =
 endif
 
-CLIBS != $(call prefix, $(CLIBS), -l)
 ELIBS != $(call prefix, $(ELIBS), -l)
-
-LELIBS = $(ELIBS) `pkg-config --libs ./source/glfw/build/src/glfw3.pc` `pkg-config --libs ./source/portaudio/build/portaudio-2.0.pc`
+ELIBS := $(ELIBS) `pkg-config --libs source/glfw/build/src/glfw3.pc` `pkg-config --libs source/portaudio/build/portaudio-2.0.pc`
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
 -include $(DEPENDS)
 
-yuginec = ./source/engine/yugine.c
+yuginec = source/engine/yugine.c
 
 ENGINE = $(BIN)libengine.a
 INCLUDE = $(BIN)include
 
-LINK = $(LIBPATH) $(LINKER_FLAGS) $(LELIBS)
+LINK = $(LIBPATH) $(LINKER_FLAGS) $(ELIBS)
 
-
-
+MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
 .PHONY: yugine
 
-yugine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) $(BIN)libportaudio.a $(BIN)libglfw3.a
+yugine: bin/obj/source/engine/yugine.o $(ENGINE) $(BIN)libportaudio.a $(BIN)libglfw3.a
 	@echo Linking yugine
 	$(CC) $< $(LINK) -o yugine
 	@echo Finished build
@@ -112,7 +97,7 @@ dist: yugine
 	cp -rf assets/fonts bin/dist
 	cp -rf source/scripts bin/dist
 	cp -rf source/shaders bin/dist
-	tar -czf yugine-$(VER).tar.gz --directory bin/dist .
+	tar -czf yugine-$(MYTAG).tar.gz --directory bin/dist .
 
 install: yugine
 	cp yugine ~/.local/bin
@@ -129,7 +114,7 @@ bin/libglfw3.a: source/glfw/build/src/libglfw3.a
 source/glfw/build/src/libglfw3.a:
 	@echo Making GLFW
 	@mkdir -p source/glfw/build
-	@cd source/glfw/build; cmake ..; make -j16
+	@cd source/glfw/build; cmake ..; make -j$(PROCS)
 	@cp source/glfw/build/src/libglfw3.a bin
 
 bin/libportaudio.a: source/portaudio/build/libportaudio.a
@@ -138,7 +123,7 @@ bin/libportaudio.a: source/portaudio/build/libportaudio.a
 source/portaudio/build/libportaudio.a:
 	@echo Making Portaudio
 	@mkdir -p source/portaudio/build
-	@cd source/portaudio/build; cmake ..; make -j16
+	@cd source/portaudio/build; cmake ..; make -j$(PROCS)
 	@cp source/portaudio/build/libportaudio.a bin
 
 
