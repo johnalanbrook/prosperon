@@ -21,7 +21,7 @@ endif
 BIN = ./bin/
 objprefix = $(BIN)obj
 
-DIRS = engine pinball editor brainstorm
+DIRS = engine editor
 ETP = ./source/engine/thirdparty/
 
 define make_objs
@@ -70,7 +70,7 @@ ifeq ($(UNAME), Windows_NT)
 	EXT = .exe
 else
 	LINKER_FLAGS = -g
-	ELIBS =  engine glfw3 pthread yughc mruby portaudio asound c m dl
+	ELIBS =  engine pthread yughc mruby c m dl
 	CLIBS =
 	EXT =
 endif
@@ -78,7 +78,7 @@ endif
 CLIBS != $(call prefix, $(CLIBS), -l)
 ELIBS != $(call prefix, $(ELIBS), -l)
 
-LELIBS = $(ELIBS)
+LELIBS = $(ELIBS) `pkg-config --libs ./source/glfw/build/src/glfw3.pc` `pkg-config --libs ./source/portaudio/build/portaudio-2.0.pc`
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
@@ -98,6 +98,7 @@ yugine: $(yuginec:.%.c=$(objprefix)%.o) $(ENGINE) $(BIN)libportaudio.a $(BIN)lib
 	$(CC) $< $(LINK) -o yugine
 	@echo Finished build
 
+
 install: yugine
 	cp yugine ~/.local/bin
 
@@ -108,7 +109,6 @@ pin: yugine
 	cp -f source/scripts/* pinball/scripts
 	cp -rf source/shaders/* pinball/shaders
 	
-
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
 	@ar r $(ENGINE) $(eobjects)
