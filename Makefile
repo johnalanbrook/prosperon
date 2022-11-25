@@ -47,7 +47,8 @@ eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player y
 
 includeflag != $(call prefix,$(edirs),-I)
 
-WARNING_FLAGS = -Wall -pedantic #-Wno-incompatible-function-pointer-types -Wunsupported -Wall -Wextra -Wwrite-strings -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init -pedantic
+WARNING_FLAGS = #-Wall -pedantic -Wunsupported -Wextra -Wwrite-strings 
+NO_WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -Wno-incompatible-function-pointer-types -Wno-gnu-statement-expression -Wno-complex-component-init
 
 SEM = 0.0.1
 COM != git rev-parse --short HEAD
