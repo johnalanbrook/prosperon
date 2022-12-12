@@ -1,7 +1,7 @@
 #include "timer.h"
 #include <stdlib.h>
 
-#include <stb_ds.h>;
+#include <stb_ds.h>
 
 static double time;
 

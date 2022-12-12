@@ -1,6 +1,6 @@
 #ifndef NUKE_H
 #define NUKE_H
-
+#define NK_INCLUDE_FIXED_TYPES
 #include "nuklear.h"
 
 
@@ -22,6 +22,7 @@ void nuke_checkbox(const char *lbl, int *val);
 void nuke_nel(int cols);
 void nuke_label(const char *s);
 void nuke_prop_float(const char *label, float min, float *val, float max, float step, float dragstep);
+void nuke_edit_str(char *str);
 
 int nuke_btn(const char *lbl);
 

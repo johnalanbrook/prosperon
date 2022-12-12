@@ -1,4 +1,5 @@
 #include "editor.h"
+#include "ed_project.h"
 
 #include "2dphysics.h"
 #include "camera.h"
@@ -495,7 +496,7 @@ void editor_project_gui() {
 */
     NK_MENU_START(level)
       nuke_nel(1);
-      nk_labelf(ctx, "Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
+      nuke_labelf(ctx, "Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
 
       nuke_nel(3);
       if (nk_button_label(ctx, "New")) {
@@ -517,7 +518,7 @@ void editor_project_gui() {
               YughWarn("Can't save level that has no name.");
           } else {
                     strcpy(current_level, levelname);
-          strncat(current_level, EXT_LEVEL, MAXNAME);
+          strncat(current_level, EXT_LEVEL, 10);
               save_level(current_level);
               levelname[0] = '\0';
               get_levels();

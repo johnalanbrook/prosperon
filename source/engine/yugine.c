@@ -10,7 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __linux__
 #include <execinfo.h>
+#endif
+
 #include <signal.h>
 #include <time.h>
 

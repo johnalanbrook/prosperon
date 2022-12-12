@@ -3,6 +3,10 @@ bin/
 build/
 *.o
 *.a
-engine
 tags
 Jenkinsfile
+*~
+*.log
+*.gz
+*.tar
+

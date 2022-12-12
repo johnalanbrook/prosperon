@@ -86,5 +86,9 @@ void nuke_nel(int cols) {
 }
 
 void nuke_label(const char *s) {
-    nk_label(ctx, NK_TEXT_LEFT, s);
+    nk_label(ctx, s, NK_TEXT_LEFT);
+}
+
+void nuke_edit_str(char *str) {
+    nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX|NK_EDIT_NO_HORIZONTAL_SCROLL, str, 130, nk_filter_ascii);
 }
