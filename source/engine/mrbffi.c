@@ -1,12 +1,7 @@
 #include "mrbffi.h"
-
-#include "mruby.h"
-#include "mruby/compile.h"
-#include "mruby/string.h"
-#include "mruby/hash.h"
+#include "s7.h"
 
 #include "font.h"
-
 
 #include "script.h"
 #include "string.h"
@@ -15,60 +10,43 @@
 #include "engine.h"
 #include "log.h"
 
-extern mrb_state *mrb;
-
-#include "nuklear.h"
-extern struct nk_context *ctx;
+#include "nuke.h"
 
 /* FFI */
+s7_pointer s7_ui_label(s7_scheme *sc, s7_pointer args) {
+    if (s7_is_string(s7_car(args))) {
+        nuke_label(s7_string(s7_car(args)));
+        return s7_make_boolean(sc, 1);
+    }
 
-mrb_value mrb_load(mrb_state *mrb, mrb_value self) {
-    char *path;
-    mrb_get_args(mrb, "z!", &path);
-    script_dofile(path);
-    return self;
+    return s7_wrong_type_arg_error(sc, "ui_label", 1, args, "Should be a string.");
 }
 
-mrb_value mrb_ui_label(mrb_state *mrb, mrb_value self) {
-    char *str;
-    mrb_get_args(mrb, "z", &str);
-    nk_labelf(ctx, NK_TEXT_LEFT, "%s", str);
-    return self;
+s7_pointer s7_ui_btn(s7_scheme *sc, s7_pointer args) {
+    return s7_make_boolean(sc, nuke_btn(s7_string(s7_car(args))));
 }
 
-mrb_value mrb_ui_btn(mrb_state *mrb, mrb_value self) {
-    char *str;
-    mrb_get_args(mrb, "z", &str);
-    return mrb_bool_value(nk_button_label(ctx, str));
+s7_pointer s7_ui_nel(s7_scheme *sc, s7_pointer args) {
+    nuke_nel(s7_integer(s7_cadr(args)));
+    return s7_make_boolean(sc, 1);
 }
 
-mrb_value mrb_ui_nel(mrb_state *mrb, mrb_value self) {
-    int height, cols;
-    mrb_get_args(mrb, "ii", &height, &cols);
-    nk_layout_row_dynamic(ctx, height, cols);
-    return self;
+s7_pointer s7_ui_prop(s7_scheme *sc, s7_pointer args) {
+    float val = s7_real(s7_cadr(args));
+    nuke_prop_float(s7_string(s7_car(args)), (float)s7_real(s7_caddr(args)), &val, s7_real(s7_cadddr(args)), s7_real(s7_car(s7_cddddr(args))), s7_real(s7_car(s7_cdr(s7_cddddr(args)))));
+    return s7_make_real(sc, val);
 }
 
-mrb_value mrb_ui_prop(mrb_state *mrb, mrb_value self) {
-    mrb_float min, max, step1, step2, val;
-    char *s;
-    mrb_get_args(mrb, "zfffff", &s, &val, &min, &max, &step1, &step2);
-    nk_property_float(ctx, s, min, &val, max, step1, step2);
-    return mrb_float_value(mrb, val);
+s7_pointer s7_ui_text(s7_scheme *sc, s7_pointer args) {
+    const char *s = s7_string(s7_car(args));
+    int len = s7_integer(s7_cadr(args));
+    char str[len+1];
+    strncpy(str,s,len);
+    nuke_edit_str(str);
+    return s7_make_string(sc, str);
 }
 
-mrb_value mrb_ui_text(mrb_state *mrb, mrb_value self) {
-    char *s;
-    mrb_float len;
-
-    mrb_get_args(mrb, "zf", &s, &len);
-
-    char str[(int)len+1];
-    strncpy(str, s,len);
-    nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX|NK_EDIT_NO_HORIZONTAL_SCROLL, str, 130, nk_filter_ascii);
-
-    return mrb_str_new_cstr(mrb, str);
-}
+/*
 
 mrb_value mrb_ui_begin(mrb_state *mrb, mrb_value self) {
     char *title;
@@ -79,6 +57,9 @@ mrb_value mrb_ui_begin(mrb_state *mrb, mrb_value self) {
     return mrb_bool_value(nk_begin(ctx, title, nk_rect(0,0,w,h), NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_MOVABLE|NK_WINDOW_NO_SCROLLBAR));
 }
 
+*/
+
+/*
 mrb_value mrb_ui_rendertext(mrb_state *mrb, mrb_value self) {
     char *s;
     mrb_float pos[2];
@@ -88,10 +69,6 @@ mrb_value mrb_ui_rendertext(mrb_state *mrb, mrb_value self) {
     static float white[3] = {1.f, 1.f, 1.f};
     float fpos[2] = {(float)pos[0], (float)pos[1]};
     renderText(s, fpos, size, white, ol);
-    return self;
-}
-
-mrb_value mrb_c_reload(mrb_state *mrb, mrb_value self) {
     return self;
 }
 
@@ -197,10 +174,20 @@ mrb_value mrb_editor_render(mrb_state *mrb, mrb_value self) {
     editor_render();
     return self;
 }
+*/
 
-#define MRB_FUNC(NAME, ARGS) mrb_define_method(mrb, mrb->object_class, #NAME, mrb_ ## NAME, ARGS)
+//#define MRB_FUNC(NAME, ARGS) mrb_define_method(mrb, mrb->object_class, #NAME, mrb_ ## NAME, ARGS)
+#define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
+//s7_define_function(s7, "ui_label", s7_ui_label, 1, 0, 0, "Draw UI label with given string");
+S7_FUNC(ui_label, 1);
+S7_FUNC(ui_btn, 1);
+S7_FUNC(ui_nel, 1);
+S7_FUNC(ui_prop, 6);
+S7_FUNC(ui_text, 2);
+
+/*
     MRB_FUNC(load, MRB_ARGS_REQ(1));
     MRB_FUNC(ui_label, MRB_ARGS_REQ(1));
     MRB_FUNC(ui_btn, MRB_ARGS_REQ(1));
@@ -227,5 +214,6 @@ void ffi_load() {
     MRB_FUNC(editor_render, MRB_ARGS_REQ(0));
 
     MRB_FUNC(settings_cmd, MRB_ARGS_REQ(2));
+    */
 }
 

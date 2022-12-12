@@ -3,65 +3,45 @@
 #include "stdio.h"
 #include "log.h"
 
-
-#include "mruby/compile.h"
 #include "mrbffi.h"
 
-mrb_value obj;
-
-mrb_state *mrb;
-mrbc_context *c;
+s7_scheme *s7 = NULL;
 
 void script_init() {
-    mrb = mrb_open();
-    c = mrbc_context_new(mrb);
+    s7 = s7_init();
     ffi_load();
 }
 
 void script_run(const char *script) {
-    mrb_load_string(mrb, script);
+    s7_eval_c_string(s7, script);
 }
 
 int script_dofile(const char *file) {
-    FILE *mrbf = fopen(file, "r");
-    if (mrbf == NULL) {
-        YughError("Could not find script %s.", file);
-        return 1;
-    }
-    mrbc_filename(mrb, c, file);
-    obj = mrb_load_file_cxt(mrb, mrbf, c);
-    mrb_print_error(mrb);
-    fclose(mrbf);
-
+    s7_load(s7, file);
     return 0;
 }
 
+/* Call the "update" function in the master game script */
 void script_update(double dt) {
-    mrb_funcall(mrb, obj, "update", 1, mrb_float_value(mrb, dt));
-    mrb_print_error(mrb);
 }
 
+/* Call the "draw" function in master game script */
 void script_draw() {
-    mrb_funcall(mrb, obj, "draw", 0);
-    mrb_print_error(mrb);
 }
 
+/* Call "editor" function in master game script */
 void script_editor() {
-    mrb_funcall(mrb, obj, "editor", 0);
-    mrb_print_error(mrb);
 }
 
 void script_call(const char *f) {
-    script_call_sym(mrb_intern_cstr(mrb, f));
+    s7_call(s7, s7_name_to_value(s7, f), s7_nil(s7));
 }
 
-void script_call_sym(mrb_sym sym)
+void script_call_sym(s7_pointer sym)
 {
-    if (mrb_respond_to(mrb, obj, sym)) mrb_funcall_argv(mrb, obj, sym, 0, NULL);
-
-    mrb_print_error(mrb);
+    s7_call(s7, sym, s7_nil(s7));
 }
 
-int script_has_sym(mrb_sym sym) {
-    return mrb_respond_to(mrb, obj, sym);
+int script_has_sym(s7_pointer sym) {
+    return 1;
 }

@@ -276,7 +276,7 @@ int window_hasfocus(struct window *w)
 void window_render(struct window *w) {
     window_makecurrent(w);
     openglRender(w);
-
+/*
     if (script_has_sym(w->nuke_cb)) {
         nuke_start();
         script_call_sym(w->nuke_cb);
@@ -287,7 +287,7 @@ void window_render(struct window *w) {
         w->nuke_gui();
         nuke_end();
     }
-
+*/
 
     window_swap(w);
 }

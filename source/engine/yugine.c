@@ -10,7 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __linux__
 #include <execinfo.h>
+#endif
+
 #include <signal.h>
 #include <time.h>
 
@@ -29,6 +32,7 @@ double updateMS = 1/60.f;
 static int ed = 1;
 
 void seghandle(int sig) {
+#ifdef __linux__
     void *ents[512];
     size_t size;
 
@@ -48,6 +52,7 @@ void seghandle(int sig) {
     }
 
     exit(1);
+#endif
 }
 
 int main(int argc, char **args) {

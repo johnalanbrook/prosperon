@@ -11,6 +11,7 @@
 #include "resources.h"
 #include "nuke.h"
 #include "log.h"
+#include "debugdraw.h"
 
 #include "stb_ds.h"
 

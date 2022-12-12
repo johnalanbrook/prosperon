@@ -168,7 +168,7 @@ void openglRender(struct window *window)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     ////// TEXT && GUI
-    script_call_sym(window->gui_cb);
+//    script_call_sym(window->gui_cb);
 
     ///// Sprites
     glDepthFunc(GL_LESS);
