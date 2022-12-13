@@ -27,7 +27,6 @@ typedef struct {
 struct editorVars {
     editor_win stats;
     editor_win hierarchy;
-    editor_win lighting;
     editor_win gamesettings;
     editor_win viewmode;
     editor_win debug;

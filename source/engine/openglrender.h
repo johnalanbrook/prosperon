@@ -13,9 +13,6 @@ extern struct sprite *tsprite;
 
 extern int renderMode;
 
-
-extern float editorClose;
-extern float editorFar;
 extern float gridScale;
 extern float smallGridUnit;
 extern float bigGridUnit;
@@ -26,9 +23,6 @@ extern float gridSmallColor[];
 extern float gridOpacity;
 extern float editorFOV;
 extern float shadowLookahead;
-extern float plane_size;
-extern float near_plane;
-extern float far_plane;
 extern char objectName[];
 extern GLuint debugColorPickBO;
 

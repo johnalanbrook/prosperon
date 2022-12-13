@@ -36,14 +36,11 @@ define rm
 	rm $${tmp}
 endef
 
-define findindir
-	find $(1) -maxdepth 1 -type f -name '$(2)'
-endef
-
 # All other sources
 edirs != find source -type d -name include
-edirs += source/engine source/engine/thirdparty/Nuklear
-ehead != $(call findindir, source/engine,*.h)
+subengs = sound debug editor 3d
+edirs += source/engine $(addprefix source/engine/, $(subengs)) source/engine/thirdparty/Nuklear
+ehead != find source/engine source/engine/sound source/engine/debug source/engine/editor -maxdepth 1 -type f -name *.h
 eobjects != find source/engine -type f -name '*.c' | sed -r 's|^(.*)\.c|$(objprefix)/\1.o|'  # Gets all .c files and makes .o refs
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
@@ -88,24 +85,33 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(ELIBS)
 
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
+DIST = yugine-$(MYTAG).tar.gz
+
 .PHONY: yugine
 
-yugine: $(objprefix)/source/engine/yugine.o $(ENGINE)
-	@echo $(CC)
+$(BIN)yugine: $(objprefix)/source/engine/yugine.o $(ENGINE)
 	@echo Linking yugine
-	$(CC) $< $(LINK) -o yugine
+	$(CC) $< $(LINK) -o $(BIN)yugine
 	@echo Finished build
 
-dist: yugine
-	mkdir -p bin/dist
-	cp yugine bin/dist
-	cp -rf assets/fonts bin/dist
-	cp -rf source/scripts bin/dist
-	cp -rf source/shaders bin/dist
-	tar -czf yugine-$(MYTAG).tar.gz --directory bin/dist .
+$(BIN)$(DIST): $(BIN)yugine
+	@echo Creating distribution zip
+	@mkdir -p $(BIN)dist
+	@cp $(BIN)yugine $(BIN)dist
+	@cp -rf assets/fonts $(BIN)dist
+	@cp -rf source/scripts $(BIN)dist
+	@cp -rf source/shaders $(BIN)dist
+	@tar czf $(DIST) --directory $(BIN)dist .
+	@mv $(DIST) $(BIN)
 
-install: yugine
-	cp yugine ~/.local/bin
+
+dist: $(BIN)$(DIST)
+
+install: $(BIN)$(DIST)
+	@echo Unpacking distribution in $(DESTDIR)
+	@cp $(BIN)$(DIST) $(DESTDIR)
+	@tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR)
+	@rm $(DESTDIR)/$(DIST)
 
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
@@ -122,4 +128,4 @@ $(objprefix)/%.o:%.c
 clean:
 	@echo Cleaning project
 	@find $(BIN) -type f -delete
-	@rm -rf source/portaudio/build source/glfw/build
+	@rm -f *.gz

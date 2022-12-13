@@ -103,7 +103,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
 
 void cursor_hide()
 {
-    glfwSetInputMode(mainwin->window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    glfwSetInputMode(mainwin->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void cursor_show()

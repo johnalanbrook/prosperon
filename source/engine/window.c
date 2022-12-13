@@ -1,4 +1,4 @@
-	#include "window.h"
+#include "window.h"
 #include <string.h>
 #include "texture.h"
 #include "log.h"
@@ -282,12 +282,14 @@ void window_render(struct window *w) {
         script_call_sym(w->nuke_cb);
         nk_end(ctx);
         nuke_end();
-    } else if (w->nuke_gui != NULL) {
+    } else
+
+*/if (w->nuke_gui != NULL) {
         nuke_start();
         w->nuke_gui();
         nuke_end();
     }
-*/
+
 
     window_swap(w);
 }

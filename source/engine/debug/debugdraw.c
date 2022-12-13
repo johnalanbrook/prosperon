@@ -37,8 +37,7 @@ void debugdraw_init()
     glGenVertexArrays(1, &gridVAO);
     glBindVertexArray(gridVAO);
     glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(gridverts), &gridverts,
-		 GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(gridverts), &gridverts, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -56,24 +55,12 @@ void draw_line(int x1, int y1, int x2, int y2)
 	x2, y2
     };
 
-    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts, GL_DYNAMIC_DRAW);
-    glBindVertexArray(rectVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-    glDrawArrays(GL_LINE_STRIP, 0, 2);
+    draw_poly(&verts, 2);
 }
 
 void draw_edge(float *points, int n)
 {
-    shader_use(rectShader);
-    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points,
-		 GL_DYNAMIC_DRAW);
-    glBindVertexArray(rectVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-    glDrawArrays(GL_LINE_STRIP, 0, n);
+    draw_poly(points, n);
 }
 
 void draw_circle(int x, int y, float radius, int pixels)
@@ -81,10 +68,10 @@ void draw_circle(int x, int y, float radius, int pixels)
     shader_use(circleShader);
 
     float verts[] = {
-	x - radius, y - radius, -1.f, -1.f,
-	x + radius, y - radius, 1.f, -1.f,
-	x - radius, y + radius, -1.f, 1.f,
-	x + radius, y + radius, 1.f, 1.f
+	x - radius, y - radius,
+	x + radius, y - radius,
+	x - radius, y + radius,
+	x + radius, y + radius,
     };
 
     glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
@@ -95,7 +82,7 @@ void draw_circle(int x, int y, float radius, int pixels)
 
     glBindVertexArray(circleVAO);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
@@ -111,13 +98,7 @@ void draw_rect(int x, int y, int w, int h)
 	x - hw, y + hh
     };
 
-    shader_use(rectShader);
-    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts, GL_DYNAMIC_DRAW);
-    glBindVertexArray(rectVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-    glDrawArrays(GL_LINE_LOOP, 0, 4);
+    draw_poly(&verts, 4);
 }
 
 void draw_grid(int width, int span)
@@ -140,8 +121,7 @@ void draw_poly(float *points, int n)
 {
     shader_use(rectShader);
     glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points,
-		 GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
     glBindVertexArray(rectVAO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);

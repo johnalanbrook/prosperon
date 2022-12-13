@@ -123,15 +123,15 @@ int main(int argc, char **args) {
 
     double framet = fmin(fmin(renderMS,physMS),updateMS);
 
-    script_dofile("scripts/engine.rb");
-    script_dofile("config.rb");
+    script_dofile("scripts/engine.scm");
+    script_dofile("config.scm");
 
     window_set_icon("icon.png");
 
     if (ed) {
         editor_init(MakeSDLWindow("Editor", 600, 600, 0));
     } else {
-        script_dofile("game.rb");
+        script_dofile("game.scm");
     }
 
     openglInit();

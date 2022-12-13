@@ -16,8 +16,7 @@ struct mCamera {
 
 void camera_2d_update(struct mCamera *camera, float deltaT);
 
-mfloat_t *getviewmatrix(mfloat_t view[MAT4_SIZE],
-			const struct mCamera *const camera);
+mfloat_t *getviewmatrix(mfloat_t view[MAT4_SIZE], const struct mCamera *const camera);
 void cam_goto_object(struct mCamera *cam, struct mTransform *transform);
 void cam_inverse_goto(struct mCamera *cam, struct mTransform *transform);
 

@@ -336,7 +336,6 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
     break;
 
   case GLFW_KEY_F5:
-    NEGATE(editor.lighting.show);
     break;
 
   case GLFW_KEY_F6:
@@ -543,19 +542,6 @@ void editor_project_gui() {
 
   NK_MENU_END()
 
-  // Shadow map vars
-  NK_MENU_START(lighting)
-
-    nk_layout_row_dynamic(ctx, 25, 1);
-    nk_label(ctx, "Directional shadow map", NK_TEXT_LEFT);
-
-    nk_property_float(ctx, "Near plane", -200.f, &near_plane, 200.f, 1.f, 0.01f);
-    nk_property_float(ctx, "Far plane", -200.f, &far_plane, 200.f, 1.f, 0.01f);
-    nk_property_float(ctx, "Shadow lookahead", 0.f, &shadowLookahead, 100.f, 1.f, 0.01f);
-    nk_property_float(ctx, "Plane size", 0.f, &plane_size, 100.f, 1.f, 0.01f);
-
-  NK_MENU_END()
-
   NK_MENU_START(gamesettings)
     nk_layout_row_dynamic(ctx,25,1);
 
@@ -597,34 +583,6 @@ void editor_project_gui() {
     NK_MENU_END()
 
   NK_MENU_START(debug)
-
-    nk_layout_row_dynamic(ctx, 25, 1);
-
-    nk_property_float(ctx, "Camera FOV", 0.1f, &editorFOV, 90.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Camera Near Plane", 0.1f, &editorClose, 5.f, 0.1f, 0.01f);
-    nk_property_float(ctx, "Camera Far Plane", 50.f, &editorFar, 10000.f, 1.f,1.f);
-
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Shading mode", NK_MINIMIZED)) {
-      renderMode =
-          nk_option_label(ctx, "Lit", renderMode == LIT) ? LIT : renderMode;
-      renderMode = nk_option_label(ctx, "Unlit", renderMode == UNLIT)
-                       ? UNLIT
-                       : renderMode;
-      renderMode = nk_option_label(ctx, "Wireframe", renderMode == WIREFRAME)
-                       ? WIREFRAME
-                       : renderMode;
-      renderMode = nk_option_label(ctx, "Directional shadow map",
-                                   renderMode == DIRSHADOWMAP)
-                       ? DIRSHADOWMAP
-                       : renderMode;
-      nk_tree_pop(ctx);
-    }
-
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Lighting", NK_MINIMIZED)) {
-      nk_checkbox_label(ctx, "Shadows", &renderDynamicShadows);
-      nk_checkbox_label(ctx, "Ambient Occlusion", &renderAO);
-      nk_tree_pop(ctx);
-    }
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Debug Draws", NK_MINIMIZED)) {
       nk_checkbox_label(ctx, "Gizmos", &renderGizmos);
