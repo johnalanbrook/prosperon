@@ -1,5 +1,8 @@
 #include "ed_project.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <vec.h>
 #include "editor.h"
 
 void editor_init_project(struct gameproject *gp)
@@ -17,8 +20,7 @@ void editor_init_project(struct gameproject *gp)
 void editor_make_project(char *path)
 {
     FILE *f = path_open("w", "%s%s", path, "/project.yugh");
-    cur_project =
-	(struct gameproject *) malloc(sizeof(struct gameproject));
+    cur_project = malloc(sizeof(struct gameproject));
     strncpy(cur_project->name, "New Game", 127);
     strncpy(cur_project->path, path, 2048);
     vec_add(projects, cur_project);
@@ -36,7 +38,7 @@ void editor_import_project(char *path)
     if (!f)
 	return;
 
-    struct gameproject *gp = (struct gameproject *) malloc(sizeof(*gp));
+    struct gameproject *gp = malloc(sizeof(*gp));
     fread(gp, sizeof(*gp), 1, f);
     fclose(f);
 

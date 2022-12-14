@@ -153,7 +153,7 @@ void box_gui(struct phys2d_box *box)
 {
     nk_property_float(ctx, "Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
     nk_property_float(ctx, "Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
-    nk_property_float2(ctx, "Offset", 0.f, &box->offset, 1.f, 0.01f, 0.01f);
+    nk_property_float2(ctx, "Offset", 0.f, box->offset, 1.f, 0.01f, 0.01f);
 
     phys2d_applybox(box);
 }

@@ -104,13 +104,6 @@ void wav_norm_gain(struct wav *w, double lv)
     }
 }
 
-struct osc sin600;
-struct osc sin20;
-struct dsp_ammod dspammod;
-struct dsp_delay dspdel;
-struct wav s600wav;
-struct sound s600wavsound;
-
 void sound_init()
 {
      PaError err = Pa_Initialize();

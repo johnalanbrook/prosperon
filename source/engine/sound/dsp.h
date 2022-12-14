@@ -153,4 +153,6 @@ void dsp_mono(void *p, short *out, int n);
 
 void dsp_bitcrush(void *p, short *out, int n);
 
+void dsp_run(struct dsp_filter filter, short *out, int n);
+
 #endif

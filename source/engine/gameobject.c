@@ -259,9 +259,9 @@ void object_gui(struct gameobject *go)
     nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, go->scale * 0.01f);
 
     nk_layout_row_dynamic(ctx, 25, 3);
-    nk_radio_button_label(ctx, "Static", &go->bodytype, CP_BODY_TYPE_STATIC);
-    nk_radio_button_label(ctx, "Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
-    nk_radio_button_label(ctx, "Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
+    nuke_radio_btn("Static", &go->bodytype, CP_BODY_TYPE_STATIC);
+    nuke_radio_btn("Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
+    nuke_radio_btn("Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
 
     cpBodySetType(go->body, go->bodytype);
 

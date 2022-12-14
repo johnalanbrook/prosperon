@@ -1,5 +1,7 @@
 #include "input.h"
 
+#include <stdio.h>
+#include "script.h"
 #include "stb_ds.h"
 
 int32_t mouseWheelX = 0;
@@ -57,7 +59,7 @@ void input_poll(double wait)
 
     //editor_input(&e);
     for (int i = 0; i < arrlen(downkeys); i++)
-        call_input_down(downkeys[i]);
+        call_input_down(&downkeys[i]);
 }
 
 void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)

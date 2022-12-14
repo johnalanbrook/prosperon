@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 #ifdef __linux__
 #include <execinfo.h>
 #endif
@@ -81,6 +82,13 @@ int main(int argc, char **args) {
 		    printf("Yugine version %s, %s build.\n", VER, INFO);
 		    printf("Copyright 2022 odplot productions LLC.\n");
 		    exit(1);
+		    break;
+
+		case 'h':
+		    printf("-l       Set log file\n");
+		    printf("-play    Launch engine in play mode instead of editor mode\n");
+		    printf("-v       Display engine info\n");
+		    exit(0);
 		    break;
 
             }

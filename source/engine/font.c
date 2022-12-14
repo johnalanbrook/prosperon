@@ -79,7 +79,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 
-    for (unsigned char c = 32; c < 128; c++) {
+    for (unsigned char c = 32; c < 127; c++) {
 	unsigned char *bitmap;
 	int advance, lsb, w, h, x0, y0;
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);

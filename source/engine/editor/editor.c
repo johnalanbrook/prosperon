@@ -27,6 +27,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "nuke.h"
 
 #include "log.h"
 
@@ -48,9 +49,9 @@ static bool renderAO = true;
 static bool renderDynamicShadows = true;
 
 // Debug render modes
-static bool renderGizmos = false;
-static bool showGrid = true;
-static bool debugDrawPhysics = false;
+static int renderGizmos = false;
+static int showGrid = true;
+static int debugDrawPhysics = false;
 
 const char *allowed_extensions[] = {"jpg", "png", "rb", "wav", "mp3", };
 
@@ -81,8 +82,8 @@ static int grid1_width = 1;
 static int grid1_span = 100;
 static int grid2_width = 3;
 static int grid2_span = 1000;
-static bool grid1_draw = true;
-static bool grid2_draw = true;
+static int grid1_draw = true;
+static int grid2_draw = true;
 
 static float tex_scale = 1.f;
 static struct TexAnimation tex_gui_anim = {0};
@@ -495,7 +496,7 @@ void editor_project_gui() {
 */
     NK_MENU_START(level)
       nuke_nel(1);
-      nuke_labelf(ctx, "Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
+      nuke_labelf("Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
 
       nuke_nel(3);
       if (nk_button_label(ctx, "New")) {
@@ -585,9 +586,9 @@ void editor_project_gui() {
   NK_MENU_START(debug)
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Debug Draws", NK_MINIMIZED)) {
-      nk_checkbox_label(ctx, "Gizmos", &renderGizmos);
-      nk_checkbox_label(ctx, "Grid", &showGrid);
-      nk_checkbox_label(ctx, "Physics", &debugDrawPhysics);
+      nuke_checkbox("Gizmos", &renderGizmos);
+      nuke_checkbox("Grid", &showGrid);
+      nuke_checkbox("Physics", &debugDrawPhysics);
       nk_tree_pop(ctx);
     }
 
@@ -596,7 +597,7 @@ void editor_project_gui() {
   NK_MENU_START(hierarchy)
   nk_layout_row_dynamic(ctx, 25, 1);
 
-    if (nk_button_label(ctx, "New Object")) {
+    if (nuke_btn("New Object")) {
       MakeGameobject();
     }
 

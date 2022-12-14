@@ -76,19 +76,3 @@ Serialize *make_staticactor()
 */
 
 #include "nuke.h"
-
-void staticactor_gui(struct mStaticActor *sa)
-{
-    object_gui(&sa->obj);
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Model", NK_MINIMIZED)) {
-	nk_checkbox_label(ctx, "Cast Shadows", &sa->castShadows);
-	nk_labelf(ctx, NK_TEXT_LEFT, "Model path: %s", sa->currentModelPath);
-
-	//ImGui::SameLine();
-	if (nk_button_label(ctx, "Load model")) {
-	    //asset_command = set_new_model;
-	    curActor = sa;
-	}
-
-    }
-}

@@ -14,6 +14,9 @@ PTYPE != uname -m
 
 ifeq ($(DBG), 1)
 	QFLAGS = -O0 -g -DDBG=1 -DED=1
+	ifeq ($(CC), tcc)
+		QFLAGS += -b -bt24
+	endif
 	INFO = dbg
 endif
 
@@ -22,7 +25,7 @@ ifeq 	($(ED), 0)
 	INFO = ed
 endif
 
-BIN = bin/
+BIN = bin/$(CC)/
 objprefix = $(BIN)obj/$(INFO)
 
 define prefix
@@ -46,7 +49,7 @@ eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player y
 
 includeflag != $(call prefix,$(edirs),-I)
 
-WARNING_FLAGS = #-Wall -pedantic -Wextra -Wwrite-strings  -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
+WARNING_FLAGS = -Wall# -pedantic -Wextra -Wwrite-strings  -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
 
 SEM = 0.0.1
 COM != git rev-parse --short HEAD
@@ -54,7 +57,7 @@ VER = $(SEM)-$(COM)
 
 COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
-LIBPATH = -Lbin
+LIBPATH = -L$(BIN)
 
 ifeq ($(OS), WIN32)
 	LINKER_FLAGS = $(QFLAGS)
@@ -88,6 +91,8 @@ MYTAG = $(VER)_$(PTYPE)_$(INFO)
 DIST = yugine-$(MYTAG).tar.gz
 
 .PHONY: yugine
+
+yugine: $(BIN)yugine
 
 $(BIN)yugine: $(objprefix)/source/engine/yugine.o $(ENGINE)
 	@echo Linking yugine
@@ -127,5 +132,5 @@ $(objprefix)/%.o:%.c
 .PHONY: clean
 clean:
 	@echo Cleaning project
-	@find $(BIN) -type f -delete
+	@rm -rf bin/*
 	@rm -f *.gz

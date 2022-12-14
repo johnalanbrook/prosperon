@@ -8,6 +8,8 @@
 #include "script.h"
 #include "nuke.h"
 
+#include "openglrender.h"
+
 #include "stb_ds.h"
 
 struct window *mainwin;
@@ -21,7 +23,7 @@ int is_win(struct window *s, GLFWwindow *w)
     return s->window == w;
 }
 
-void window_size_callback(GLFWwindow *w)
+void window_size_callback(GLFWwindow *w, int width, int height)
 {
 
 }

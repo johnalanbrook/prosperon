@@ -55,7 +55,7 @@ void draw_line(int x1, int y1, int x2, int y2)
 	x2, y2
     };
 
-    draw_poly(&verts, 2);
+    draw_poly(verts, 2);
 }
 
 void draw_edge(float *points, int n)
@@ -98,7 +98,7 @@ void draw_rect(int x, int y, int w, int h)
 	x - hw, y + hh
     };
 
-    draw_poly(&verts, 4);
+    draw_poly(verts, 4);
 }
 
 void draw_grid(int width, int span)

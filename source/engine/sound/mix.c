@@ -2,6 +2,8 @@
 #include "stddef.h"
 #include "time.h"
 #include "sound.h"
+#include "dsp.h"
+#include <string.h>
 
 static struct bus bus[256];
 short mastermix[BUF_FRAMES*CHANNELS];
