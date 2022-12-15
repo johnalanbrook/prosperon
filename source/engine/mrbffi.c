@@ -10,7 +10,11 @@
 #include "engine.h"
 #include "log.h"
 
+#include "s7.h"
+
 #include "nuke.h"
+
+extern s7_scheme *s7;
 
 /* FFI */
 s7_pointer s7_ui_label(s7_scheme *sc, s7_pointer args) {
@@ -46,6 +50,75 @@ s7_pointer s7_ui_text(s7_scheme *sc, s7_pointer args) {
     return s7_make_string(sc, str);
 }
 
+s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    double val = s7_real(s7_cadr(args));
+    YughInfo("Changing a setting.");
+    switch(cmd) {
+        case 0: // render fps
+            renderMS = (double)val;
+            break;
+
+        case 1:
+            updateMS = (double)val;
+            break;
+
+        case 2:
+            physMS = (double)val;
+            break;
+    }
+
+    return args;
+}
+
+s7_pointer s7_log(s7_scheme *sc, s7_pointer args) {
+    int lvl = s7_integer(s7_car(args));
+    const char *msg = s7_string(s7_object_to_string(sc, s7_cadr(args), 0));
+    const char *file = s7_string(s7_caddr(args));
+    int line = s7_integer(s7_cadddr(args));
+    mYughLog(1, lvl, line, file, msg);
+    //YughInfo(s7_string(s7_object_to_string(sc, s7_car(args), 0)));
+
+    return args;
+}
+
+/* Call like (ui_rendertext "string" (xpos ypos) size) */
+s7_pointer s7_ui_rendertext(s7_scheme *sc, s7_pointer args) {
+    const char *s = s7_string(s7_car(args));
+    double pos[2];
+    pos[0] = s7_real(s7_car(s7_cadr(args)));
+    pos[1] = s7_real(s7_cadr(s7_cadr(args)));
+    double size = s7_real(s7_caddr(args));
+    double white[3] = {1.f, 1.f, 1.f};
+
+    renderText(s, pos, size, white, 0);
+
+    return args;
+}
+
+s7_pointer s7_win_cmd(s7_scheme *sc, s7_pointer args) {
+    int win = s7_integer(s7_car(args));
+    int cmd = s7_integer(s7_cadr(args));
+    struct window *w = window_i(win);
+
+    switch (cmd) {
+        case 0:  // toggle fullscreen
+            window_togglefullscreen(w);
+            break;
+
+        case 1: // Fullscreen on
+            window_makefullscreen(w);
+            break;
+
+        case 2: // Fullscreen off
+            window_unfullscreen(w);
+            break;
+    }
+
+    return args;
+}
+
+
 /*
 
 mrb_value mrb_ui_begin(mrb_state *mrb, mrb_value self) {
@@ -60,45 +133,10 @@ mrb_value mrb_ui_begin(mrb_state *mrb, mrb_value self) {
 */
 
 /*
-mrb_value mrb_ui_rendertext(mrb_state *mrb, mrb_value self) {
-    char *s;
-    mrb_float pos[2];
-    mrb_float size, ol;
-    mrb_get_args(mrb, "zffff", &s, &pos[0], &pos[1], &size, &ol);
-
-    static float white[3] = {1.f, 1.f, 1.f};
-    float fpos[2] = {(float)pos[0], (float)pos[1]};
-    renderText(s, fpos, size, white, ol);
-    return self;
-}
-
 mrb_value mrb_win_make(mrb_state *mrb, mrb_value self) {
     char name[50] = "New Window";
     struct window *new = MakeSDLWindow(name, 500, 500, 0);
     return mrb_float_value(mrb, new->id);
-}
-
-mrb_value mrb_win_cmd(mrb_state *mrb, mrb_value self) {
-    mrb_float win, cmd;
-    mrb_get_args(mrb, "ff", &win, &cmd);
-    struct window *new = window_i(win);
-
-    switch ((int)cmd)
-    {
-        case 0:  // toggle fullscreen
-            window_togglefullscreen(new);
-            break;
-
-        case 1: // Fullscreen on
-            window_makefullscreen(new);
-            break;
-
-        case 2: // Fullscreen off
-            window_unfullscreen(new);
-            break;
-    }
-
-    return self;
 }
 
 mrb_value mrb_nuke_cb(mrb_state *mrb, mrb_value self) {
@@ -148,27 +186,6 @@ mrb_value mrb_sound_cmd(mrb_state *mrb, mrb_value self) {
     return self;
 }
 
-mrb_value mrb_settings_cmd(mrb_state *mrb, mrb_value self) {
-    mrb_float cmd, val;
-    mrb_get_args(mrb, "ff", &cmd, &val);
-
-    switch((int)cmd)
-    {
-        case 0: // render fps
-            renderMS = (double)val;
-            break;
-
-        case 1:
-            updateMS = (double)val;
-            break;
-
-        case 2:
-            physMS = (double)val;
-            break;
-    }
-
-    return self;
-}
 
 mrb_value mrb_editor_render(mrb_state *mrb, mrb_value self) {
     editor_render();
@@ -176,44 +193,17 @@ mrb_value mrb_editor_render(mrb_state *mrb, mrb_value self) {
 }
 */
 
-//#define MRB_FUNC(NAME, ARGS) mrb_define_method(mrb, mrb->object_class, #NAME, mrb_ ## NAME, ARGS)
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
-//s7_define_function(s7, "ui_label", s7_ui_label, 1, 0, 0, "Draw UI label with given string");
-S7_FUNC(ui_label, 1);
-S7_FUNC(ui_btn, 1);
-S7_FUNC(ui_nel, 1);
-S7_FUNC(ui_prop, 6);
-S7_FUNC(ui_text, 2);
-
-/*
-    MRB_FUNC(load, MRB_ARGS_REQ(1));
-    MRB_FUNC(ui_label, MRB_ARGS_REQ(1));
-    MRB_FUNC(ui_btn, MRB_ARGS_REQ(1));
-    MRB_FUNC(ui_nel, MRB_ARGS_REQ(2));
-    MRB_FUNC(ui_begin, MRB_ARGS_REQ(3));
-
-    MRB_FUNC(ui_prop, MRB_ARGS_REQ(6));
-    MRB_FUNC(ui_text, MRB_ARGS_REQ(2));
-
-
-    MRB_FUNC(ui_rendertext, MRB_ARGS_REQ(5));
-
-    MRB_FUNC(c_reload, MRB_ARGS_REQ(1));
-
-    MRB_FUNC(win_make, MRB_ARGS_REQ(1));
-    MRB_FUNC(win_cmd, MRB_ARGS_REQ(2));
-
-    MRB_FUNC(nuke_cb, MRB_ARGS_REQ(2));
-    MRB_FUNC(gui_cb, MRB_ARGS_REQ(2));
-
-    MRB_FUNC(sound_make, MRB_ARGS_REQ(1));
-    MRB_FUNC(sound_cmd, MRB_ARGS_REQ(2));
-
-    MRB_FUNC(editor_render, MRB_ARGS_REQ(0));
-
-    MRB_FUNC(settings_cmd, MRB_ARGS_REQ(2));
-    */
+    S7_FUNC(ui_label, 1);
+    S7_FUNC(ui_btn, 1);
+    S7_FUNC(ui_nel, 1);
+    S7_FUNC(ui_prop, 6);
+    S7_FUNC(ui_text, 2);
+    S7_FUNC(settings_cmd, 2);
+    S7_FUNC(win_cmd, 2);
+    S7_FUNC(ui_rendertext, 3);
+    S7_FUNC(log, 4);
 }
 

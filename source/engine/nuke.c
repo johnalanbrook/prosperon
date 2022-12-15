@@ -60,6 +60,10 @@ void nk_property_float2(struct nk_context *ctx, const char *label, float min, fl
     nk_property_float(ctx, "#Y", min, &val[1], max, step, dragstep);
 }
 
+void nuke_property_float(const char *lbl, float min, float *val, float max, float step, float dragstep) {
+    nk_property_float(ctx, lbl, min, val, max, step, dragstep);
+}
+
 int nuke_btn(const char *lbl) {
     return nk_button_label(ctx, lbl);
 }

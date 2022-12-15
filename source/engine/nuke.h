@@ -14,6 +14,7 @@ void nuke_end();
 
 void nk_property_float3(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep);
 void nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep);
+void nuke_property_float(const char *lbl, float min, float *val, float max, float step, float dragstep);
 
 void nuke_property_int(const char *lbl, int min, int *val, int max, int step);
 void nk_radio_button_label(struct nk_context *ctx, const char *label, int *val, int cmp);

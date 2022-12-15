@@ -7,8 +7,22 @@
 
 s7_scheme *s7 = NULL;
 
+static void my_print(s7_scheme *sc, uint8_t c, s7_pointer port) {
+    static char buffer[1024];
+    static char *p = buffer;
+    if (c != '\0' && p != &buffer[1023]) {
+        *p = c;
+        p++;
+    } else {
+        YughInfo(buffer);
+        p = buffer;
+    }
+}
+
 void script_init() {
     s7 = s7_init();
+    s7_set_current_error_port(s7, s7_open_output_string(s7));
+    s7_set_current_output_port(s7, s7_open_output_function(s7, my_print));
     ffi_load();
 }
 
@@ -17,7 +31,21 @@ void script_run(const char *script) {
 }
 
 int script_dofile(const char *file) {
-    s7_load(s7, file);
+/*    static char fload[512];
+    snprintf(fload, 512, "(write (load \"%s\"))", file);
+    s7_eval_c_string(s7, fload);
+    */
+    if (!s7_load(s7, file)) {
+      YughError("Can't find file %s.", file);
+      return 1;
+   }
+
+   const char *errmsg = s7_get_output_string(s7, s7_current_error_port(s7));
+
+   if (errmsg && (*errmsg))
+       mYughLog(1, 2, 0, "script", "Scripting error: %s", errmsg);
+
+
     return 0;
 }
 

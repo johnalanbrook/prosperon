@@ -2,7 +2,6 @@
 #define SCRIPT_H
 
 #include "s7.h"
-extern s7_scheme *s7;
 
 void script_init();
 void script_run(const char *script);

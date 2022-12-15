@@ -57,6 +57,8 @@ void seghandle(int sig) {
 }
 
 int main(int argc, char **args) {
+    int logout = 1;
+
     for (int i = 1; i < argc; i++) {
         if (args[i][0] == '-') {
             switch(args[i][1]) {
@@ -91,11 +93,15 @@ int main(int argc, char **args) {
 		    exit(0);
 		    break;
 
+		case 'c':
+		    logout = 0;
+		    break;
+
             }
         }
     }
 
-    if (DBG) {
+    if (DBG && logout) {
         time_t now = time(NULL);
         char fname[100];
         snprintf(fname, 100, "yugine-%d.log", now);

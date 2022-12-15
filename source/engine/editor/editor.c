@@ -337,6 +337,7 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
     break;
 
   case GLFW_KEY_F5:
+
     break;
 
   case GLFW_KEY_F6:
@@ -348,7 +349,7 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
     break;
 
   case GLFW_KEY_F8:
-    //NEGATE(editor.debug.show);
+    NEGATE(editor.debug.show);
     break;
 
   case GLFW_KEY_F9:
@@ -535,10 +536,10 @@ void editor_project_gui() {
     NK_MENU_END()
 
   NK_MENU_START(export)
-    nk_layout_row_dynamic(ctx, 25,2);
-    if (nk_button_label(ctx, "Bake")) {
+    nuke_nel(2);
+    if (nuke_btn("Bake")) {
     }
-    if (nk_button_label(ctx, "Build")) {
+    if (nuke_btn("Build")) {
     }
 
   NK_MENU_END()
@@ -550,8 +551,7 @@ void editor_project_gui() {
     // 126, nk_filter_default);
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Physics", NK_MINIMIZED)) {
-      nk_property_float(ctx, "2d Gravity", -5000.f, &phys2d_gravity, 0.f, 1.f,
-                        0.1f);
+      nuke_prop_float("2d Gravity", -5000.f, &phys2d_gravity, 0.f, 1.f, 0.1f);
       phys2d_apply();
       nk_tree_pop(ctx);
     }
@@ -563,8 +563,8 @@ void editor_project_gui() {
   NK_MENU_END()
 
   NK_MENU_START(stats)
-    nk_labelf(ctx, NK_TEXT_LEFT, "FPS: %2.4f", 1.f / deltaT);
-    nk_labelf(ctx, NK_TEXT_LEFT, "Triangles rendered: %llu", triCount);
+    nuke_labelf("FPS: %2.4f", 1.f / deltaT);
+    nuke_labelf("Triangles rendered: %llu", triCount);
   NK_MENU_END()
 
   NK_MENU_START(repl)
@@ -584,7 +584,7 @@ void editor_project_gui() {
     NK_MENU_END()
 
   NK_MENU_START(hierarchy)
-  nk_layout_row_dynamic(ctx, 25, 1);
+  nuke_nel(1);
 
     if (nuke_btn("New Object")) {
       MakeGameobject();
@@ -595,15 +595,15 @@ void editor_project_gui() {
     NK_MENU_END()
 
   NK_FORCE(simulate)
-  nk_layout_row_dynamic(ctx, 25, 2);
+  nuke_nel(2);
   if (physOn) {
-    if (nk_button_label(ctx, "Pause"))
+    if (nuke_btn("Pause"))
       game_pause();
 
-    if (nk_button_label(ctx, "Stop"))
+    if (nuke_btn("Stop"))
       game_stop();
   } else {
-    if (nk_button_label(ctx, "Play"))
+    if (nuke_btn("Play"))
       game_start();
   }
 
@@ -611,7 +611,6 @@ void editor_project_gui() {
 
   NK_FORCE(prefab)
     nuke_nel(1);
-    nk_layout_row_dynamic(ctx, 25, 1);
 
     vec_walk(prefabs, editor_prefab_btn);
   NK_FORCE_END()
@@ -648,21 +647,21 @@ void editor_project_gui() {
       nk_tree_pop(ctx);
     }
 
-    if (nk_button_label(ctx, "Reload Shaders")) {
+    if (nuke_btn("Reload Shaders")) {
       shader_compile_all();
     }
 
-    nk_property_int(ctx, "Grid 1 Span", 1, &grid1_span, 500, 1, 1);
-    nk_checkbox_label(ctx, "Draw", &grid1_draw);
+    nuke_property_int("Grid 1 Span", 1, &grid1_span, 500, 1);
+    nuke_checkbox("Draw", &grid1_draw);
 
-    nk_property_int(ctx, "Grid 2 Span", 10, &grid2_span, 1000, 1, 1);
-    nk_checkbox_label(ctx, "Draw", &grid2_draw);
+    nuke_property_int("Grid 2 Span", 10, &grid2_span, 1000, 1);
+    nuke_checkbox("Draw", &grid2_draw);
 
-    nk_property_float(ctx, "Grid Opacity", 0.f, &gridOpacity, 1.f, 0.01f, 0.01f);
-    nk_property_float(ctx, "Small unit", 0.5f, &smallGridUnit, 5.f, 0.1f, 0.1f);
-    nk_property_float(ctx, "Big unit", 10.f, &bigGridUnit, 50.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Small thickness", 1.f, &gridSmallThickness, 10.f, 0.1f, 0.1f);
-    nk_property_float(ctx, "Big thickness", 1.f, &gridBigThickness, 10.f, 0.1f, 0.1f);
+    nuke_property_float("Grid Opacity", 0.f, &gridOpacity, 1.f, 0.01f, 0.01f);
+    nuke_property_float("Small unit", 0.5f, &smallGridUnit, 5.f, 0.1f, 0.1f);
+    nuke_property_float("Big unit", 10.f, &bigGridUnit, 50.f, 1.f, 0.1f);
+    nuke_property_float("Small thickness", 1.f, &gridSmallThickness, 10.f, 0.1f, 0.1f);
+    nuke_property_float("Big thickness", 1.f, &gridBigThickness, 10.f, 0.1f, 0.1f);
 
     static struct nk_colorf smgrd;
     static struct nk_colorf lgrd;
@@ -680,12 +679,13 @@ startobjectgui:
 
     NK_FORCE(gameobject)
 
-    nk_layout_row_dynamic(ctx, 30, 3);
+    nuke_nel(3);
 
-    if (nk_button_label(ctx, "Save"))
+
+    if (nuke_btn("Save"))
       gameobject_saveprefab(selectedobject);
 
-    if (nk_button_label(ctx, "Del")) {
+    if (nuke_btn("Del")) {
       gameobject_delete(selected_index);
       pickGameObject(-1);
       nk_end(ctx);
@@ -695,19 +695,20 @@ startobjectgui:
     if (selectedobject->editor.prefabSync && nk_button_label(ctx, "Revert"))
         gameobject_revertprefab(selectedobject);
 
-    nk_label(ctx, "Name", NK_TEXT_LEFT);
+    nuke_label("Name");
     nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, selectedobject->editor.mname, 50, nk_filter_ascii);
 
-    nk_label(ctx, "Prefab", NK_TEXT_LEFT);
+    nuke_label("Prefab");
     nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, selectedobject->editor.prefabName, 50, nk_filter_ascii);
 
     object_gui(selectedobject);
 
 
    // nuke_label("Components");
-    nk_layout_row_dynamic(ctx,25,3);
+   nuke_nel(3);
+
     for (int i = 0; i < ncomponent; i++) {
-      if (nk_button_label(ctx, components[i].name)) {
+      if (nuke_btn(components[i].name)) {
         gameobject_addcomponent(selectedobject, &components[i]);
       }
     }
@@ -716,9 +717,10 @@ startobjectgui:
 
 /*
     NK_FORCE(components)
-    nk_layout_row_dynamic(ctx,25,1);
+    nuke_nel(1);
+
     for (int i = 0; i < ncomponent; i++) {
-      if (nk_button_label(ctx, components[i].name)) {
+      if (nuke_btn(components[i].name)) {
         gameobject_addcomponent(selectedobject, &components[i]);
       }
     }
@@ -750,7 +752,7 @@ int is_allowed_extension(const char *ext) {
 }
 
 void editor_level_btn(char *level) {
-  if (nk_button_label(ctx, level)) {
+  if (nuke_btn(level)) {
     load_level(level);
     strcpy(current_level, level);
   }
@@ -892,7 +894,7 @@ void editor_asset_text_gui(char *text) {
     editor.text_ed = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX, text, ASSET_TEXT_BUF, nk_filter_ascii);
 
     nuke_nel(4);
-    if (nk_button_label(ctx, "Save")) {
+    if (nuke_btn("Save")) {
         FILE *f = fopen(selected_asset->filename, "wd");
         size_t len = strlen(text);
         fwrite(text, len, 1, f);

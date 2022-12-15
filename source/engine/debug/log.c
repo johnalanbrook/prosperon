@@ -11,9 +11,9 @@
 
 //char *logstr[] = { "INFO", "WARN", "\x1b[1;31mERROR\x1b[0m", "CRITICAL" };
 char *logstr[] = { "INFO", "WARN", "ERROR", "CRITICAL" };
-char *catstr[] = {"ENGINE"};
+char *catstr[] = {"ENGINE", "SCRIPT"};
 
-
+FILE *logfile = NULL;
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
@@ -29,17 +29,23 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	va_end(args);
 
 	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "%s | %s | %s [ %s:%d ] %s\n", logstr[priority], catstr[0], dt, file, line, msgbuffer);
+	snprintf(buffer, ERROR_BUFFER, "%s | %s | %s [ %s:%d ] %s\n", logstr[priority], catstr[category], dt, file, line, msgbuffer);
 
 	fprintf(stderr, "%s", buffer);
-	fprintf(stdout, "%s", buffer);
-         fflush(stdout);
+	fflush(stderr);
+
+	if (logfile) {
+	    fprintf(logfile, "%s", buffer);
+	    fflush(logfile);
+	}
+
+
     }
 }
 
 void log_setfile(char *file) {
-    YughInfo("Opening output log %s.", file);
     freopen(file, "w", stderr);
+    freopen(file, "w", stdout);
 }
 
 void log_cat(FILE *f) {

@@ -62,8 +62,8 @@ COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DVER=\"$(VER)\" 
 LIBPATH = -L$(BIN)
 
 ifeq ($(OS), WIN32)
-	LINKER_FLAGS = $(QFLAGS)
-	ELIBS = engine ucrt pthread yughc portaudio glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
+	LINKER_FLAGS = $(QFLAGS) -static
+	ELIBS = engine ucrt yughc portaudio glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
 	CLIBS =
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib
@@ -72,8 +72,7 @@ else
 endif
 
 ELIBS != $(call prefix, $(ELIBS), -l)
-ELIBS := $(CLIBS) $(ELIBS)
-
+CLIBS != $(call prefix, $(CLIBS), -l);
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
@@ -97,7 +96,7 @@ $(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE)
 	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-$(BIN)$(DIST): $(BIN)$(NAME)
+$(BIN)$(DIST): $(BIN)$(NAME) source/scripts/* source/shaders/*
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(BIN)dist
 	@cp $(BIN)$(NAME) $(BIN)dist
