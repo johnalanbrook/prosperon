@@ -583,17 +583,6 @@ void editor_project_gui() {
 
     NK_MENU_END()
 
-  NK_MENU_START(debug)
-
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Debug Draws", NK_MINIMIZED)) {
-      nuke_checkbox("Gizmos", &renderGizmos);
-      nuke_checkbox("Grid", &showGrid);
-      nuke_checkbox("Physics", &debugDrawPhysics);
-      nk_tree_pop(ctx);
-    }
-
-    NK_MENU_END()
-
   NK_MENU_START(hierarchy)
   nk_layout_row_dynamic(ctx, 25, 1);
 
@@ -625,13 +614,11 @@ void editor_project_gui() {
     nk_layout_row_dynamic(ctx, 25, 1);
 
     vec_walk(prefabs, editor_prefab_btn);
-    NK_FORCE_END()
+  NK_FORCE_END()
 
   NK_MENU_START(assets)
     nuke_nel(1);
     editor.asset_srch = nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
-
-
 
     if (nk_button_label(ctx, "Reload all files"))
       get_all_files();
@@ -641,9 +628,9 @@ void editor_project_gui() {
       if (!assets[i].value->searched)
         continue;
 
-      if (nk_button_label(ctx, assets[i].key)) {
+      if (nk_button_label(ctx, assets[i].key))
         editor_selectasset_str(assets[i].key);
-      }
+
     }
 
     NK_MENU_END()
@@ -651,7 +638,15 @@ void editor_project_gui() {
   if (selected_asset)
     editor_asset_gui(selected_asset);
 
+
   NK_MENU_START(debug)
+      nuke_nel(1);
+  if (nk_tree_push(ctx, NK_TREE_NODE, "Debug Draws", NK_MINIMIZED)) {
+      nuke_checkbox("Gizmos", &renderGizmos);
+      nuke_checkbox("Grid", &showGrid);
+      nuke_checkbox("Physics", &debugDrawPhysics);
+      nk_tree_pop(ctx);
+    }
 
     if (nk_button_label(ctx, "Reload Shaders")) {
       shader_compile_all();
@@ -675,7 +670,7 @@ void editor_project_gui() {
     nk_color_pick(ctx, &smgrd, NK_RGBA);
     nk_color_pick(ctx, &lgrd, NK_RGBA);
 
-    NK_MENU_END()
+  NK_MENU_END()
 
 startobjectgui:
 

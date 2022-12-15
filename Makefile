@@ -11,6 +11,8 @@ PTYPE != uname -m
 # DBG=0,1 --- build with debugging symbols and logging
 # ED=0,1 --- build with or without editor
 
+NAME = yugine
+
 
 ifeq ($(DBG), 1)
 	QFLAGS = -O0 -g -DDBG=1 -DED=1
@@ -25,8 +27,8 @@ ifeq 	($(ED), 0)
 	INFO = ed
 endif
 
-BIN = bin/$(CC)/
-objprefix = $(BIN)obj/$(INFO)
+BIN = bin/$(CC)/$(INFO)/
+objprefix = $(BIN)obj
 
 define prefix
 	echo $(1) | tr " " "\n" | sed 's/.*/$(2)&$(3)/'
@@ -63,12 +65,10 @@ ifeq ($(OS), WIN32)
 	LINKER_FLAGS = $(QFLAGS)
 	ELIBS = engine ucrt pthread yughc portaudio glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
 	CLIBS =
-	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib
 	ELIBS =  engine pthread yughc portaudio asound glfw3 c m dl
 	CLIBS =
-	EXT =
 endif
 
 ELIBS != $(call prefix, $(ELIBS), -l)
@@ -79,8 +79,6 @@ objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
 -include $(DEPENDS)
 
-yuginec = source/engine/yugine.c
-
 ENGINE = $(BIN)libengine.a
 INCLUDE = $(BIN)include
 
@@ -88,21 +86,21 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(ELIBS)
 
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
-DIST = yugine-$(MYTAG).tar.gz
+DIST = $(NAME)-$(MYTAG).tar.gz
 
-.PHONY: yugine
+.PHONY: $(NAME)
 
-yugine: $(BIN)yugine
+$(NAME): $(BIN)$(NAME)
 
-$(BIN)yugine: $(objprefix)/source/engine/yugine.o $(ENGINE)
-	@echo Linking yugine
-	$(CC) $< $(LINK) -o $(BIN)yugine
+$(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE)
+	@echo Linking $(NAME)
+	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-$(BIN)$(DIST): $(BIN)yugine
-	@echo Creating distribution zip
+$(BIN)$(DIST): $(BIN)$(NAME)
+	@echo Creating distribution $(DIST)
 	@mkdir -p $(BIN)dist
-	@cp $(BIN)yugine $(BIN)dist
+	@cp $(BIN)$(NAME) $(BIN)dist
 	@cp -rf assets/fonts $(BIN)dist
 	@cp -rf source/scripts $(BIN)dist
 	@cp -rf source/shaders $(BIN)dist
@@ -113,7 +111,7 @@ $(BIN)$(DIST): $(BIN)yugine
 dist: $(BIN)$(DIST)
 
 install: $(BIN)$(DIST)
-	@echo Unpacking distribution in $(DESTDIR)
+	@echo Unpacking $(DIST) in $(DESTDIR)
 	@cp $(BIN)$(DIST) $(DESTDIR)
 	@tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR)
 	@rm $(DESTDIR)/$(DIST)

@@ -5,8 +5,6 @@
 #define MAXPATH 256		/* 255 chars + null */
 #define MAXNAME 50
 
-
-
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 #define PI 3.14159265358979323846264338327950288f
