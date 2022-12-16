@@ -118,6 +118,7 @@ void gameobject_makefromprefab(char *path)
 {
     FILE *fprefab = fopen(path, "rb");
     if (fprefab == NULL) {
+        YughError("Could not find prefab %s.", path);
 	return;
     }
 

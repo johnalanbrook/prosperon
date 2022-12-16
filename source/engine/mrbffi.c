@@ -179,6 +179,13 @@ s7_pointer s7_sound_cmd(s7_scheme *sc, s7_pointer args) {
     return args;
 }
 
+s7_pointer s7_gui_hook(s7_scheme *sc, s7_pointer args) {
+    s7_pointer cb = s7_car(args);
+    script_call_sym(cb);
+
+    return cb;
+}
+
 /*
 mrb_value mrb_nuke_cb(mrb_state *mrb, mrb_value self) {
     mrb_float win;
@@ -214,5 +221,6 @@ void ffi_load() {
     S7_FUNC(gen_cmd, 2);
     S7_FUNC(sys_cmd, 1);
     S7_FUNC(sound_cmd, 2);
+    S7_FUNC(gui_hook, 1);
 }
 
