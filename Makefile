@@ -87,7 +87,7 @@ MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
 DIST = $(NAME)-$(MYTAG).tar.gz
 
-.PHONY: $(NAME)
+yugine: $(BIN)yugine
 
 $(NAME): $(BIN)$(NAME)
 

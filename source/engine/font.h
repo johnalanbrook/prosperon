@@ -17,7 +17,7 @@ struct Character {
 struct sFont {
     uint32_t fontTexture;
     uint32_t height;
-    struct Character Characters[126];
+    struct Character Characters[127];
 };
 
 
