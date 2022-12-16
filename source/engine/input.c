@@ -104,9 +104,41 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
                 case GLFW_KEY_DOWN:
                     kkey = "down";
                     break;
+<<<<<<< HEAD
             }
 
             strcat(keystr, kkey);
+=======
+
+                case GLFW_KEY_LEFT_SHIFT:
+                    kkey = "lshift";
+                    break;
+
+                case GLFW_KEY_RIGHT_SHIFT:
+                    kkey = "rshift";
+                    break;
+
+                case GLFW_KEY_LEFT_CONTROL:
+                    kkey = "lctrl";
+                    break;
+
+                case GLFW_KEY_LEFT_ALT:
+                    kkey = "lalt";
+                    break;
+
+                case GLFW_KEY_RIGHT_CONTROL:
+                    kkey = "rctrl";
+                    break;
+
+                case GLFW_KEY_RIGHT_ALT:
+                    kkey= "ralt";
+                    break;
+            }
+
+            if (kkey)
+                strcat(keystr, kkey);
+            else
+                YughWarn("Could not get key string for key %d, scancode %d.", key, scancode);
         }
 
 
