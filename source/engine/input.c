@@ -104,11 +104,6 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
                 case GLFW_KEY_DOWN:
                     kkey = "down";
                     break;
-<<<<<<< HEAD
-            }
-
-            strcat(keystr, kkey);
-=======
 
                 case GLFW_KEY_LEFT_SHIFT:
                     kkey = "lshift";
