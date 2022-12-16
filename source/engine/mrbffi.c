@@ -9,6 +9,7 @@
 #include "editor.h"
 #include "engine.h"
 #include "log.h"
+#include "input.h"
 
 #include "s7.h"
 
@@ -56,15 +57,15 @@ s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
     YughInfo("Changing a setting.");
     switch(cmd) {
         case 0: // render fps
-            renderMS = (double)val;
+            renderMS = val;
             break;
 
         case 1:
-            updateMS = (double)val;
+            updateMS = val;
             break;
 
         case 2:
-            physMS = (double)val;
+            physMS = val;
             break;
     }
 
@@ -118,27 +119,67 @@ s7_pointer s7_win_cmd(s7_scheme *sc, s7_pointer args) {
     return args;
 }
 
-
-/*
-
-mrb_value mrb_ui_begin(mrb_state *mrb, mrb_value self) {
-    char *title;
-    mrb_float w, h;
-
-    mrb_get_args(mrb, "zff", &title, &w, &h);
-
-    return mrb_bool_value(nk_begin(ctx, title, nk_rect(0,0,w,h), NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_SCALABLE|NK_WINDOW_MOVABLE|NK_WINDOW_NO_SCROLLBAR));
+s7_pointer s7_win_make(s7_scheme *sc, s7_pointer args) {
+    const char *title = s7_string(s7_car(args));
+    int w = s7_integer(s7_cadr(args));
+    int h = s7_integer(s7_caddr(args));
+    struct window *win = MakeSDLWindow(title, w, h, 0);
+    return s7_make_integer(sc, win->id);
 }
 
-*/
+s7_pointer s7_gen_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    const char *s = s7_string(s7_cadr(args));
 
-/*
-mrb_value mrb_win_make(mrb_state *mrb, mrb_value self) {
-    char name[50] = "New Window";
-    struct window *new = MakeSDLWindow(name, 500, 500, 0);
-    return mrb_float_value(mrb, new->id);
+    /* Branch table for general commands from scheme */
+    /* 0 : load level */
+    /* 1: load prefab */
+
+    switch (cmd) {
+        case 0:
+            load_level(s);
+            break;
+
+        case 1:
+            gameobject_makefromprefab(s);
+            break;
+    }
+
+    return args;
 }
 
+s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+
+    switch (cmd) {
+        case 0:
+            quit();
+            break;
+    }
+}
+
+s7_pointer s7_sound_cmd(s7_scheme *sc, s7_pointer args) {
+    int sound = s7_integer(s7_car(args));
+    int cmd = s7_integer(s7_cadr(args));
+
+    switch (cmd) {
+        case 0: // play
+            break;
+
+        case 1: // pause
+            break;
+
+        case 2: // stop
+            break;
+
+        case 3: // play from beginning
+            break;
+    }
+
+    return args;
+}
+
+/*
 mrb_value mrb_nuke_cb(mrb_state *mrb, mrb_value self) {
     mrb_float win;
     mrb_sym cb;
@@ -155,42 +196,6 @@ mrb_value mrb_gui_cb(mrb_state *mrb, mrb_value self) {
     return self;
 }
 
-mrb_value mrb_sound_make(mrb_state *mrb, mrb_value self) {
-    mrb_value vals;
-    mrb_get_args(mrb, "H", &vals);
-    char *name = mrb_str_to_cstr(mrb, mrb_hash_fetch(mrb, vals, mrb_symbol_value(mrb_intern_cstr(mrb, "name")), mrb_str_new_cstr(mrb, "New Window")));
-    YughInfo("Window name is %s.", name);
-    return self;
-}
-
-mrb_value mrb_sound_cmd(mrb_state *mrb, mrb_value self) {
-    mrb_float sound, cmd;
-    mrb_get_args(mrb, "ff", &sound, &cmd);
-
-
-    switch ((int)cmd)
-    {
-        case 0: // play
-            break;
-
-        case 1: // pause
-            break;
-
-        case 2: // stop
-            break;
-
-        case 3: // play from beginning
-            break;
-    }
-
-    return self;
-}
-
-
-mrb_value mrb_editor_render(mrb_state *mrb, mrb_value self) {
-    editor_render();
-    return self;
-}
 */
 
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
@@ -205,5 +210,9 @@ void ffi_load() {
     S7_FUNC(win_cmd, 2);
     S7_FUNC(ui_rendertext, 3);
     S7_FUNC(log, 4);
+    S7_FUNC(win_make, 3);
+    S7_FUNC(gen_cmd, 2);
+    S7_FUNC(sys_cmd, 1);
+    S7_FUNC(sound_cmd, 2);
 }
 

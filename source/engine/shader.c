@@ -10,6 +10,8 @@
 #include "stb_ds.h"
 #include "timer.h"
 
+#include "time.h"
+
 #define SHADER_BUF 10000
 
 static struct shader *shaders;
@@ -89,6 +91,7 @@ GLuint load_shader_from_file(const char *path, int type)
 void shader_compile(struct shader *shader)
 {
     YughInfo("Making shader with %s and %s.", shader->vertpath, shader->fragpath);
+    clock_t startt = clock();
 
     GLuint vert = load_shader_from_file(shader->vertpath, GL_VERTEX_SHADER);
     GLuint frag = load_shader_from_file(shader->fragpath, GL_FRAGMENT_SHADER);
@@ -101,6 +104,9 @@ void shader_compile(struct shader *shader)
 
     glDeleteShader(vert);
     glDeleteShader(frag);
+
+    startt = clock() - startt;
+    YughInfo("Created shader in %d ticks (%f seconds).", startt, ((float)startt/CLOCKS_PER_SEC));
 }
 
 void shader_use(struct shader *shader)

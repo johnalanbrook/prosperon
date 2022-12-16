@@ -77,12 +77,12 @@ void timer_remove(struct timer *t) {
     timers[i].timerid = i;
 }
 
-void timer_settime(struct timer *t, double interval) {
+void timerr_settime(struct timer *t, double interval) {
     //double elapsed = time - (t->fire_time - t->interval);
     t->interval = interval;
     t->remain_time = t->interval;
 
-    // TODO: timer_settime reacts to elapsed time
+    // TODO: timerr_settime reacts to elapsed time
 }
 
 void *arrfind(void *arr, int (*valid)(void *arr, void *cmp), void *cmp)

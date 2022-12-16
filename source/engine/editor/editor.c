@@ -280,7 +280,7 @@ static void edit_input_cb(GLFWwindow *w, int key, int scancode, int action, int 
 
   switch (key) {
   case GLFW_KEY_ESCAPE:
-    quit = true;
+    quit();
     //editor_save_projects();
     editor_save();
     break;

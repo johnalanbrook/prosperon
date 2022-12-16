@@ -215,7 +215,7 @@ void anim_play(struct TexAnimation *anim)
     if (anim->timer == NULL)
         anim->timer = timer_make(1.f / anim->tex->anim.ms, tex_incr_anim, anim);
     else
-        timer_settime(anim->timer, 1.f/anim->tex->anim.ms);
+        timerr_settime(anim->timer, 1.f/anim->tex->anim.ms);
 
     timer_start(anim->timer);
 }

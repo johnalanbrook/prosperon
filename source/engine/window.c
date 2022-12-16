@@ -66,7 +66,7 @@ void window_framebuffer_size_cb(GLFWwindow *w, int width, int height)
 
 void window_close_callback(GLFWwindow *w)
 {
-    quit = 1;
+    quit();
 }
 
 
@@ -267,7 +267,6 @@ void window_seticon(struct window *w, struct Texture *icon)
     images[0].height = icon->height;
     images[0].pixels = icon->data;
     glfwSetWindowIcon(w->window, 1, images);
-
 }
 
 int window_hasfocus(struct window *w)

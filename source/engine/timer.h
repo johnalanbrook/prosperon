@@ -19,7 +19,7 @@ void timer_start(struct timer *t);
 void timer_pause(struct timer *t);
 void timer_stop(struct timer *t);
 void timer_update(double s);
-void timer_settime(struct timer *t, double interval);
+void timerr_settime(struct timer *t, double interval);
 
 
 

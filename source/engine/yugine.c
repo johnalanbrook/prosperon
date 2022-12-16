@@ -154,7 +154,7 @@ int main(int argc, char **args) {
 
     double lastTick;
 
-    while (!quit) {
+    while (!want_quit()) {
          double elapsed;
          elapsed = glfwGetTime() - lastTick;
          lastTick = glfwGetTime();

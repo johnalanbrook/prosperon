@@ -3,18 +3,21 @@
 #include <stdio.h>
 #include "script.h"
 #include "stb_ds.h"
+#include "log.h"
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
 int ychange = 0;
 int xchange = 0;
 float deltaT = 0;
-int quit = 0;
+
 
 static double c_xpos;
 static double c_ypos;
 
 static int *downkeys = NULL;
+
+static int mquit = 0;
 
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 {
@@ -66,7 +69,51 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
 {
     char keystr[50] = {'\0'};
     strcat(keystr, "input_");
-    strcat(keystr, glfwGetKeyName(key, 0));
+    const char *kkey = glfwGetKeyName(key, scancode);
+
+    if (!kkey) {
+        char keybuf[10];
+        if (key > 289 && key < 302) {
+            sprintf(keybuf, "f%d", key-289);
+        } else {
+            switch(key) {
+                case GLFW_KEY_ENTER:
+                    kkey = "enter";
+                    break;
+
+                case GLFW_KEY_ESCAPE:
+                    kkey = "escape";
+                    break;
+
+                case GLFW_KEY_TAB:
+                    kkey = "tab";
+                    break;
+
+                case GLFW_KEY_RIGHT:
+                    kkey = "right";
+                    break;
+
+                case GLFW_KEY_LEFT:
+                    kkey = "left";
+                    break;
+
+                case GLFW_KEY_UP:
+                    kkey = "up";
+                    break;
+
+                case GLFW_KEY_DOWN:
+                    kkey = "down";
+                    break;
+            }
+
+            strcat(keystr, kkey);
+        }
+
+
+    } else {
+        strcat(keystr, kkey);
+    }
+
     switch (action) {
         case GLFW_PRESS:
             strcat(keystr, "_pressed");
@@ -134,4 +181,13 @@ int action_up(int scancode)
     }
 
     return !found;
+}
+
+int want_quit() {
+    return mquit;
+}
+
+void quit() {
+    YughInfo("Exiting game.");
+    mquit = 1;
 }
