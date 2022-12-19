@@ -31,6 +31,13 @@ void script_init() {
 }
 
 void script_run(const char *script) {
+    s7_pointer old_port = s7_set_current_error_port(s7, s7_open_output_string(s7));
+    int gc_loc = -1;
+    if (old_port != s7_nil(s7)) gc_loc = s7_gc_protect(s7, old_port);
+
+
+
+
     s7_eval_c_string(s7, script);
 
    const char *errmsg = s7_get_output_string(s7, s7_current_error_port(s7));
@@ -38,7 +45,10 @@ void script_run(const char *script) {
    if (errmsg && (*errmsg))
        mYughLog(1, 2, 0, "script", "Scripting error: %s", errmsg);
 
-   s7_flush_output_port(s7, s7_current_error_port(s7));
+   s7_close_output_port(s7, s7_current_error_port(s7));
+   s7_set_current_error_port(s7, old_port);
+   if (gc_loc != -1) s7_gc_unprotect_at(s7, gc_loc);
+
 }
 
 int script_dofile(const char *file) {

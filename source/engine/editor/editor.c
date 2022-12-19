@@ -40,6 +40,8 @@ struct gameproject *cur_project = NULL;
 struct vec *projects = NULL;
 static char setpath[MAXPATH];
 
+
+
 // Menus
 // TODO: Pack this into a bitfield
 static struct editorVars editor = {0};
@@ -577,9 +579,13 @@ void editor_project_gui() {
 
 
 */
+    nk_layout_row_dynamic(ctx, 300, 1);
+    //nk_text(ctx, con, coni, NK_TEXT_ALIGN_TOP|NK_TEXT_ALIGN_LEFT);
+    nk_edit_string_zero_terminated(ctx, NK_EDIT_MULTILINE|NK_EDIT_READ_ONLY|NK_EDIT_GOTO_END_ON_ACTIVATE, lastlog, ERROR_BUFFER, NULL);
+    //nuke_label(lastlog);
     static char buffer[512] = {'\0'};
     nk_layout_row_dynamic(ctx, 25, 2);
-    nk_flags active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX | NK_EDIT_SIG_ENTER, buffer, 512-1, nk_filter_ascii);
+    nk_flags active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX | NK_EDIT_SIG_ENTER|NK_EDIT_AUTO_SELECT, buffer, 512-1, nk_filter_ascii);
     if (active & NK_EDIT_COMMITED || nuke_btn("Submit")) {
       char bigbuf[1024];
       snprintf(bigbuf, 1024, "(loginfo %s)", buffer);

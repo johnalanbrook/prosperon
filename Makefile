@@ -11,7 +11,7 @@ PTYPE != uname -m
 # DBG=0,1 --- build with debugging symbols and logging
 # ED=0,1 --- build with or without editor
 
-NAME = yugine
+
 
 
 ifeq ($(DBG), 1)
@@ -65,11 +65,14 @@ ifeq ($(OS), WIN32)
 	LINKER_FLAGS = $(QFLAGS) -static
 	ELIBS = engine ucrt yughc portaudio glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
 	CLIBS =
+	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib
 	ELIBS =  engine pthread yughc portaudio asound glfw3 c m dl
 	CLIBS =
 endif
+
+NAME = yugine$(EXT)
 
 ELIBS != $(call prefix, $(ELIBS), -l)
 CLIBS != $(call prefix, $(CLIBS), -l);

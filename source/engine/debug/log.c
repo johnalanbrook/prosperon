@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #define logLevel 0
 
@@ -14,6 +15,16 @@ char *logstr[] = { "INFO", "WARN", "ERROR", "CRITICAL" };
 char *catstr[] = {"ENGINE", "SCRIPT"};
 
 FILE *logfile = NULL;
+
+#define CONSOLE_BUF 1024*1024/* 1MB */
+char con[CONSOLE_BUF] = {'\0'};
+int coni = 0;
+
+char lastlog[ERROR_BUFFER] = {'\0'};
+
+const char *console() {
+    return console;
+}
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
@@ -39,6 +50,10 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	    fflush(logfile);
 	}
 
+        snprintf(con+coni, CONSOLE_BUF-coni, "%s\n", buffer);
+        coni += strlen(buffer);
+
+        snprintf(lastlog, ERROR_BUFFER, "%s", buffer);
 
     }
 }
