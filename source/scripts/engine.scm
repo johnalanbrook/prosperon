@@ -13,11 +13,20 @@
 (define-macro (funcsrc func)
     `(funcinfo ,func 'source))
 
+;(define-macro (glog data lvl)
+;    (let ((z (gensym)))
+;        `(begin
+;	    (define (,z) ())
+;	    (log ,lvl ,data (funcinfo ,z 'file) (funcinfo ,z 'line)))))
+
 (define-macro (glog data lvl)
-    (let ((f (gensym)))
-        `(begin
-	    (define (,f) ())
-	    (log ,lvl ,data (funcinfo ,f 'file) (funcinfo ,f 'line)))))
+    `(log ,lvl ,data (port-filename (current-input-port)) (port-line-number (current-input-port))))
+
+(define-macro (flog data lvl)
+    `(log ,lvl ,data (funcinfo (*function*) 'file) (funcinfo (*function*) 'line)))
+
+;(define-macro (glog data lvl)
+;    `(log ,lvl ,data (pair-line-number (cddr (procedure-source 
 
 (define (loginfo data) (glog data 0))
 (define (logwarn data) (glog data 1))
@@ -39,8 +48,20 @@
 (define (quit) (sys_cmd 0))
 (define (exit) (quit))
 
-
 (define (sound_play sound) (sound_cmd sound 0))
 (define (sound_pause sound) (sound_cmd sound 1))
 (define (sound_stop sound) (sound_cmd sound 2))
 (define (sound_restart sound) (sound_cmd sound 3))
+
+(define-macro (update . expr)
+    (let ((f (gensym)))
+        `(begin
+	    (define (,f) (begin . ,expr))
+	    (register 0 ,f))))
+	    
+(define-macro (while condition . body)
+    (let ((loop (gensym)))
+    `(let ,loop ()
+        (cond (,condition
+	(begin . ,body)
+	(,loop))))))

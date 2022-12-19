@@ -161,6 +161,8 @@ int main(int argc, char **args) {
 
          //timer_update(lastTick);
 
+         call_updates();
+
          //renderlag += elapsed;
          //physlag += elapsed;
 

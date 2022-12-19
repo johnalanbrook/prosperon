@@ -5,7 +5,11 @@
 
 #include "mrbffi.h"
 
+#include "stb_ds.h"
+
 s7_scheme *s7 = NULL;
+
+s7_pointer *updates;
 
 static void my_print(s7_scheme *sc, uint8_t c, s7_pointer port) {
     static char buffer[1024];
@@ -28,6 +32,13 @@ void script_init() {
 
 void script_run(const char *script) {
     s7_eval_c_string(s7, script);
+
+   const char *errmsg = s7_get_output_string(s7, s7_current_error_port(s7));
+
+   if (errmsg && (*errmsg))
+       mYughLog(1, 2, 0, "script", "Scripting error: %s", errmsg);
+
+   s7_flush_output_port(s7, s7_current_error_port(s7));
 }
 
 int script_dofile(const char *file) {
@@ -72,4 +83,13 @@ void script_call_sym(s7_pointer sym)
 
 int script_has_sym(s7_pointer sym) {
     return 1;
+}
+
+void register_update(s7_pointer sym) {
+    arrput(updates, sym);
+}
+
+void call_updates() {
+    for (int i = 0; i < arrlen(updates); i++)
+        script_call_sym(updates[i]);
 }

@@ -569,15 +569,21 @@ void editor_project_gui() {
 
   NK_MENU_START(repl)
 
+/*
     nk_layout_row_dynamic(ctx, 300, 1);
 
-    nk_flags active;
+    static char bigbuf[10000] = {\0'};
+    nuke_label(bigbuf);
 
+
+*/
     static char buffer[512] = {'\0'};
-
-    active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX | NK_EDIT_SIG_ENTER, buffer, 512 - 1, nk_filter_ascii);
-    if (active && NK_EDIT_COMMITED) {
-      script_run(buffer);
+    nk_layout_row_dynamic(ctx, 25, 2);
+    nk_flags active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX | NK_EDIT_SIG_ENTER, buffer, 512-1, nk_filter_ascii);
+    if (active & NK_EDIT_COMMITED || nuke_btn("Submit")) {
+      char bigbuf[1024];
+      snprintf(bigbuf, 1024, "(loginfo %s)", buffer);
+      script_run(bigbuf);
       buffer[0] = '\0';
     }
 

@@ -13,4 +13,7 @@ void script_call(const char *f);
 void script_call_sym(s7_pointer sym);
 int script_has_sym(s7_pointer sym);
 
+void register_update(s7_pointer sym);
+void call_updates();
+
 #endif

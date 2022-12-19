@@ -186,6 +186,15 @@ s7_pointer s7_gui_hook(s7_scheme *sc, s7_pointer args) {
     return cb;
 }
 
+s7_pointer s7_register(s7_scheme *sc, s7_pointer args) {
+    int hook = s7_integer(s7_car(args));
+    s7_pointer expr = s7_cadr(args);
+
+    register_update(s7_cadr(args));
+
+    return expr;
+}
+
 /*
 mrb_value mrb_nuke_cb(mrb_state *mrb, mrb_value self) {
     mrb_float win;
@@ -222,5 +231,6 @@ void ffi_load() {
     S7_FUNC(sys_cmd, 1);
     S7_FUNC(sound_cmd, 2);
     S7_FUNC(gui_hook, 1);
+    S7_FUNC(register, 2);
 }
 
