@@ -19,6 +19,13 @@ static int *downkeys = NULL;
 
 static int mquit = 0;
 
+static s7_pointer *pawns = NULL;
+
+void set_pawn(s7_pointer menv) {
+    arrput(pawns, menv);
+    YughInfo("Now controling %d pawns.", arrlen(pawns));
+}
+
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 {
     xchange = (int)xpos - c_xpos;
@@ -174,7 +181,9 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
     }
 
     SCRIPTCALL:
-    script_call(keystr);
+    for (int i = 0; i < arrlen(pawns); i++)
+        script_eval_w_env(keystr, pawns[i]);
+
 }
 
 void cursor_hide()

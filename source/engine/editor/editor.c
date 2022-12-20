@@ -686,8 +686,7 @@ void editor_project_gui() {
 startobjectgui:
 
   if (selectedobject) {
-    draw_point(selectedobject->transform.position[0],
-               selectedobject->transform.position[1], 5);
+    draw_point(selectedobject->transform.position[0], selectedobject->transform.position[1], 5);
 
     NK_FORCE(gameobject)
 

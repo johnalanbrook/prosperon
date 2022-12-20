@@ -13,26 +13,16 @@
 (define-macro (funcsrc func)
     `(funcinfo ,func 'source))
 
-;(define-macro (glog data lvl)
-;    (let ((z (gensym)))
-;        `(begin
-;	    (define (,z) ())
-;	    (log ,lvl ,data (funcinfo ,z 'file) (funcinfo ,z 'line)))))
-
 (define-macro (glog data lvl)
     `(log ,lvl ,data (port-filename (current-input-port)) (port-line-number (current-input-port))))
 
 (define-macro (flog data lvl)
     `(log ,lvl ,data (funcinfo (*function*) 'file) (funcinfo (*function*) 'line)))
 
-;(define-macro (glog data lvl)
-;    `(log ,lvl ,data (pair-line-number (cddr (procedure-source 
-
 (define (loginfo data) (glog data 0))
 (define (logwarn data) (glog data 1))
 (define (logerr data) (glog data 2))
 (define (logcrit data) (glog data 3))
-         
 
 (define (set_fps fps) (settings_cmd 0 (/ 1 fps)))
 (define (set_update fps) (settings_cmd 1 (/ 1 fps)))
@@ -58,10 +48,24 @@
         `(begin
 	    (define (,f) (begin . ,expr))
 	    (register 0 ,f))))
-	    
+
 (define-macro (while condition . body)
     (let ((loop (gensym)))
     `(let ,loop ()
         (cond (,condition
 	(begin . ,body)
 	(,loop))))))
+
+(define (clamp val min max)
+    (cond ((< val min) min)
+          ((> val max) max)
+	  (else val)))
+
+(define (lerp s f dt)
+    (+ s (* (clamp dt 0 1) (- f s))))
+
+(define (deg2rad deg)
+    (* deg 0.01745329252))
+
+(define (body_angle! body angle) (set_body body 0 angle))
+(define (body_pos! body x y) (set_body_pos body x y))

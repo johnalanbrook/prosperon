@@ -25,6 +25,14 @@ struct gameobject *get_gameobject_from_id(int id)
     return &gameobjects[id];
 }
 
+int id_from_gameobject(struct gameobject *go) {
+    for (int i = 0; i < arrlen(gameobjects); i++) {
+        if (&gameobjects[i] == i) return i;
+    }
+
+    return -1;
+}
+
 static void gameobject_setpickcolor(struct gameobject *go)
 {
     float r = ((go->editor.id & 0x000000FF) >> 0) / 255.f;
@@ -114,7 +122,7 @@ void gameobject_save(struct gameobject *go, FILE * file)
     }
 }
 
-void gameobject_makefromprefab(char *path)
+int gameobject_makefromprefab(char *path)
 {
     FILE *fprefab = fopen(path, "rb");
     if (fprefab == NULL) {
@@ -129,6 +137,8 @@ void gameobject_makefromprefab(char *path)
     gameobject_init(new, fprefab);
 
     fclose(fprefab);
+
+    return arrlen(gameobjects)-1;
 }
 
 void gameobject_init(struct gameobject *go, FILE * fprefab)
@@ -226,6 +236,18 @@ void gameobject_rotate(struct gameobject *go, float as)
     cpFloat a = cpBodyGetAngle(go->body);
     a += as * deltaT;
     cpBodySetAngle(go->body, a);
+}
+
+void gameobject_setangle(struct gameobject *go, float angle) {
+    cpBodySetAngle(go->body, angle);
+}
+
+void gameobject_setpos(struct gameobject *go, float x, float y) {
+    if (!go || !go->body) return;
+    cpVect p;
+    p.x = x;
+    p.y = y;
+    cpBodySetPosition(go->body, p);
 }
 
 void update_gameobjects() {

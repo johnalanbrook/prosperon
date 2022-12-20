@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "window.h"
 
+#include "script.h"
+
 extern int32_t mouseWheelX;
 extern int32_t mouseWheelY;
 extern int ychange;
@@ -26,7 +28,8 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
 struct inputaction
 {
     int scancode;
-
 };
+
+void set_pawn(s7_pointer env);
 
 #endif

@@ -10,6 +10,7 @@
 #include "engine.h"
 #include "log.h"
 #include "input.h"
+#include "gameobject.h"
 
 #include "s7.h"
 
@@ -135,17 +136,19 @@ s7_pointer s7_gen_cmd(s7_scheme *sc, s7_pointer args) {
     /* 0 : load level */
     /* 1: load prefab */
 
+    int response = 0;
+
     switch (cmd) {
         case 0:
             load_level(s);
             break;
 
         case 1:
-            gameobject_makefromprefab(s);
+            response = gameobject_makefromprefab(s);
             break;
     }
 
-    return args;
+    return s7_make_integer(sc, response);
 }
 
 s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
@@ -156,6 +159,8 @@ s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
             quit();
             break;
     }
+
+    return args;
 }
 
 s7_pointer s7_sound_cmd(s7_scheme *sc, s7_pointer args) {
@@ -195,24 +200,41 @@ s7_pointer s7_register(s7_scheme *sc, s7_pointer args) {
     return expr;
 }
 
-/*
-mrb_value mrb_nuke_cb(mrb_state *mrb, mrb_value self) {
-    mrb_float win;
-    mrb_sym cb;
-    mrb_get_args(mrb, "fn", &win, &cb);
-    window_i((int)win)->nuke_cb = cb;
-    return self;
+s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
+    s7_pointer pawn = s7_car(args);
+    set_pawn(pawn);
+    return args;
 }
 
-mrb_value mrb_gui_cb(mrb_state *mrb, mrb_value self) {
-    mrb_float win;
-    mrb_sym cb;
-    mrb_get_args(mrb, "fn", &win, &cb);
-    window_i((int)win)->gui_cb = cb;
-    return self;
+s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
+    int id = s7_integer(s7_car(args));
+    int cmd = s7_integer(s7_cadr(args));
+    double val1;
+    double val2;
+
+    switch (cmd) {
+        case 0:
+            val1 = s7_real(s7_caddr(args));
+            gameobject_setangle(get_gameobject_from_id(id), val1);
+            break;
+
+        case 1:
+            val1 = s7_real(s7_car(s7_caddr(args)));
+            val2 = s7_real(s7_cadr(s7_caddr(args)));
+            gameobject_setpos(get_gameobject_from_id(id), val1, val2);
+            break;
+    }
+
+    return args;
 }
 
-*/
+s7_pointer s7_set_body_pos(s7_scheme *sc, s7_pointer args) {
+    int id = s7_integer(s7_car(args));
+    double x = s7_real(s7_cadr(args));
+    double y = s7_real(s7_caddr(args));
+    gameobject_setpos(get_gameobject_from_id(id), x, y);
+    return args;
+}
 
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
@@ -232,5 +254,8 @@ void ffi_load() {
     S7_FUNC(sound_cmd, 2);
     S7_FUNC(gui_hook, 1);
     S7_FUNC(register, 2);
+    S7_FUNC(set_pawn, 1);
+    S7_FUNC(set_body, 3);
+    S7_FUNC(set_body_pos, 3);
 }
 

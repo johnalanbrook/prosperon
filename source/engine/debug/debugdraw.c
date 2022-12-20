@@ -75,7 +75,7 @@ void draw_circle(int x, int y, float radius, int pixels)
     };
 
     glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
 
     shader_setfloat(circleShader, "radius", radius);
     shader_setint(circleShader, "thickness", pixels);

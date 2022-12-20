@@ -46,14 +46,17 @@ int number_of_gameobjects();
 void set_n_gameobjects(int n);
 void setup_model_transform(struct mTransform *t, struct shader *s, float scale);
 void toggleprefab(struct gameobject *go);
+
 struct gameobject *get_gameobject_from_id(int id);
+int id_from_gameobject(struct gameobject *go);
+
 void gameobject_save(struct gameobject *go, FILE * file);
 void gameobject_addcomponent(struct gameobject *go, struct component *c);
 void gameobject_delcomponent(struct gameobject *go, int n);
 void gameobject_loadcomponent(struct gameobject *go, int id);
 
 void gameobject_saveprefab(struct gameobject *go);
-void gameobject_makefromprefab(char *path);
+int gameobject_makefromprefab(char *path);
 void gameobject_syncprefabs(char *revertPath);
 void gameobject_revertprefab(struct gameobject *go);
 
@@ -64,6 +67,8 @@ void update_gameobjects();
 
 void gameobject_move(struct gameobject *go, float xs, float ys);
 void gameobject_rotate(struct gameobject *go, float as);
+void gameobject_setangle(struct gameobject *go, float angle);
+void gameobject_setpos(struct gameobject *go, float x, float y);
 
 void object_gui(struct gameobject *go);
 

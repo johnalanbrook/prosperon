@@ -86,6 +86,12 @@ void script_call(const char *f) {
     s7_call(s7, s7_name_to_value(s7, f), s7_nil(s7));
 }
 
+void script_eval_w_env(const char *s, s7_pointer env) {
+    char buffer[512];
+    snprintf(buffer, 512-1, "(%s)", s);
+    s7_eval_c_string_with_environment(s7, buffer, env);
+}
+
 void script_call_sym(s7_pointer sym)
 {
     s7_call(s7, sym, s7_nil(s7));
