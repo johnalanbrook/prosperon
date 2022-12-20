@@ -2,7 +2,7 @@
 #define TWODPHYSICS_H
 
 #include <chipmunk/chipmunk.h>
-
+#include "s7.h"
 
 struct gameobject;
 
@@ -94,6 +94,8 @@ void edge_gui(struct phys2d_edge *edge);
 void phys2d_init();
 void phys2d_update(float deltaT);
 void phys2d_apply();
+
+void phys2d_add_begin_handler(s7_pointer cb);
 
 void shape_gui(struct phys2d_shape *shape);
 

@@ -49,11 +49,16 @@ void input_init()
 
 }
 
+void call_input_signal(char *signal) {
+    for (int i = 0; i < arrlen(pawns); i++)
+        script_eval_w_env(signal, pawns[i]);
+}
+
 void call_input_down(int *key) {
     const char *keyname = glfwGetKeyName(*key, 0);
     char keystr[50] = {'\0'};
     snprintf(keystr, 50, "input_%s_down", keyname);
-    script_call(keystr);
+    call_input_signal(keystr);
 }
 
 /* This is called once every frame - or more if we want it more! */
@@ -181,9 +186,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
     }
 
     SCRIPTCALL:
-    for (int i = 0; i < arrlen(pawns); i++)
-        script_eval_w_env(keystr, pawns[i]);
-
+    call_input_signal(keystr);
 }
 
 void cursor_hide()

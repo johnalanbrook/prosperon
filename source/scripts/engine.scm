@@ -13,16 +13,21 @@
 (define-macro (funcsrc func)
     `(funcinfo ,func 'source))
 
+(define (objects->string . objs)
+    (apply string-append (map (lambda (obj) (object->string obj #t)) objs)))
+
 (define-macro (glog data lvl)
-    `(log ,lvl ,data (port-filename (current-input-port)) (port-line-number (current-input-port))))
+    (let ((file (*function* (outlet (curlet)) 'file))
+          (line (*function* (outlet (curlet)) 'line)))
+       `(log ,lvl ,data ,file ,line)))
 
 (define-macro (flog data lvl)
     `(log ,lvl ,data (funcinfo (*function*) 'file) (funcinfo (*function*) 'line)))
 
-(define (loginfo data) (glog data 0))
-(define (logwarn data) (glog data 1))
-(define (logerr data) (glog data 2))
-(define (logcrit data) (glog data 3))
+(define (loginfo . data) (glog (objects->string data) 0))
+(define (logwarn . data) (glog (objects->string data) 1))
+(define (logerr . data) (glog (objects->string data) 2))
+(define (logcrit . data) (glog (objects->string data) 3))
 
 (define (set_fps fps) (settings_cmd 0 (/ 1 fps)))
 (define (set_update fps) (settings_cmd 1 (/ 1 fps)))
@@ -68,4 +73,11 @@
     (* deg 0.01745329252))
 
 (define (body_angle! body angle) (set_body body 0 angle))
-(define (body_pos! body x y) (set_body_pos body x y))
+(define (body_pos! body x y) (set_body_pos body 0 x y))
+(define (body_move! body x y) (set_body_pos body 1 x y))
+
+(define-macro (collide . expr)
+    (let ((f (gensym)))
+        `(begin
+	    (define (,f) (begin . ,expr))
+	    (phys_cmd 0 ,f))))

@@ -26,7 +26,7 @@ double renderlag = 0;
 double physlag = 0;
 double updatelag = 0;
 
-double renderMS = 1/60.f;
+double renderMS = 1/165.f;
 double physMS = 1/120.f;
 double updateMS = 1/60.f;
 
@@ -135,8 +135,6 @@ int main(int argc, char **args) {
 
     renderMS = 1.0/vidmode->refreshRate;
 
-    double framet = fmin(fmin(renderMS,physMS),updateMS);
-
     script_dofile("scripts/engine.scm");
     script_dofile("config.scm");
 
@@ -150,32 +148,36 @@ int main(int argc, char **args) {
 
     openglInit();
 
-    renderMS = 0.033;
-
     double lastTick;
 
     while (!want_quit()) {
-         double elapsed;
-         elapsed = glfwGetTime() - lastTick;
+         double elapsed = glfwGetTime() - lastTick;
+         deltaT = elapsed;
          lastTick = glfwGetTime();
 
-         //timer_update(lastTick);
+
+         timer_update(lastTick);
 
          call_updates();
 
-         //renderlag += elapsed;
-         //physlag += elapsed;
+         renderlag += elapsed;
+         physlag += elapsed;
+
+         if (physlag >= physMS) {
+             physlag -= physMS;
+             phys2d_update(physMS);
+         }
 
 
         if (renderlag >= renderMS) {
             renderlag -= renderMS;
+            window_renderall();
         }
 
-        window_renderall();
-        input_poll(renderMS- elapsed < 0 ? 0 : renderMS - elapsed);
+
+        double wait = fmax(0, renderMS-elapsed);
+        input_poll(wait);
         window_all_handle_events();
-
-
     }
 
     return 0;

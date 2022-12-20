@@ -9,6 +9,9 @@
 #include "gameobject.h"
 #include <math.h>
 #include <chipmunk/chipmunk_unsafe.h>
+#include "stb_ds.h"
+
+#include "log.h"
 
 cpBody *ballBody = NULL;
 cpSpace *space = NULL;
@@ -454,7 +457,22 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 	float bd = sqrt(pow(b.x, 2.f) + pow(b.y, 2.f));
 	float aa = atan2(a.y, a.x) + angle;
 	float ba = atan2(b.y, b.x) + angle;
-	draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y,
-		  bd * cos(ba) + p.x, bd * sin(ba) + p.y);
+	draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y);
     }
+}
+
+s7_pointer *cbs;
+
+static cpBool s7_phys_cb(cpArbiter *arb, cpSpace *space, void *data) {
+    s7_pointer *cb = data;
+    script_call_sym(*cb);
+}
+
+void phys2d_add_begin_handler(s7_pointer cb) {
+    arrput(cbs, cb);
+    cpCollisionHandler *handler = cpSpaceAddDefaultCollisionHandler(space);
+    handler->userData = &arrlast(cbs);
+    handler->beginFunc = s7_phys_cb;
+
+    YughInfo("Added a phys collider CB.");
 }

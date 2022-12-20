@@ -75,7 +75,7 @@ s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_log(s7_scheme *sc, s7_pointer args) {
     int lvl = s7_integer(s7_car(args));
-    const char *msg = s7_string(s7_object_to_string(sc, s7_cadr(args), 0));
+    const char *msg = s7_string(s7_cadr(args));
     const char *file = s7_string(s7_caddr(args));
     int line = s7_integer(s7_cadddr(args));
     mYughLog(1, lvl, line, file, msg);
@@ -193,11 +193,9 @@ s7_pointer s7_gui_hook(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_register(s7_scheme *sc, s7_pointer args) {
     int hook = s7_integer(s7_car(args));
-    s7_pointer expr = s7_cadr(args);
-
     register_update(s7_cadr(args));
 
-    return expr;
+    return args;
 }
 
 s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
@@ -230,10 +228,32 @@ s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_set_body_pos(s7_scheme *sc, s7_pointer args) {
     int id = s7_integer(s7_car(args));
-    double x = s7_real(s7_cadr(args));
-    double y = s7_real(s7_caddr(args));
-    gameobject_setpos(get_gameobject_from_id(id), x, y);
+    int cmd = s7_integer(s7_cadr(args));
+    double x = s7_real(s7_caddr(args));
+    double y = s7_real(s7_cadddr(args));
+
+    switch (cmd) {
+        case 0:
+            gameobject_setpos(get_gameobject_from_id(id), x, y);
+            break;
+
+       case 1:
+           gameobject_move(get_gameobject_from_id(id), x, y);
+           break;
+    }
+
     return args;
+}
+
+s7_pointer s7_phys_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    s7_pointer env = s7_cadr(args);
+
+    switch(cmd) {
+        case 0:
+            phys2d_add_begin_handler(env);
+            break;
+    }
 }
 
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
@@ -256,6 +276,7 @@ void ffi_load() {
     S7_FUNC(register, 2);
     S7_FUNC(set_pawn, 1);
     S7_FUNC(set_body, 3);
-    S7_FUNC(set_body_pos, 3);
+    S7_FUNC(set_body_pos, 4);
+    S7_FUNC(phys_cmd, 2);
 }
 

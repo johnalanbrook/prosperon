@@ -11,13 +11,36 @@ s7_scheme *s7 = NULL;
 
 s7_pointer *updates;
 
-static void my_print(s7_scheme *sc, uint8_t c, s7_pointer port) {
+static void null_port(s7_scheme *sc, uint8_t c, s7_pointer port) {
+
+}
+
+static void my_err(s7_scheme *sc, uint8_t c, s7_pointer port) {
     static char buffer[1024];
     static char *p = buffer;
-    if (c != '\0' && p != &buffer[1023]) {
+    if (c != '\n' && p != &buffer[1023]) {
         *p = c;
         p++;
     } else {
+        *p = '\0';
+        if (buffer[0] != '\n')
+            YughError(buffer);
+        p = buffer;
+
+        //YughInfo("File %s, line %d", s7_port_filename(sc, port), s7_port_line_number(sc, port));
+
+        int lost = s7_flush_output_port(sc, port);
+    }
+}
+
+static void my_print(s7_scheme *sc, uint8_t c, s7_pointer port) {
+    static char buffer[1024];
+    static char *p = buffer;
+    if (c != '\n' && p != &buffer[1023]) {
+        *p = c;
+        p++;
+    } else {
+         *p = '\0';
         YughInfo(buffer);
         p = buffer;
     }
@@ -25,48 +48,20 @@ static void my_print(s7_scheme *sc, uint8_t c, s7_pointer port) {
 
 void script_init() {
     s7 = s7_init();
-    s7_set_current_error_port(s7, s7_open_output_string(s7));
+    s7_set_current_error_port(s7, s7_open_output_function(s7, my_err));
     s7_set_current_output_port(s7, s7_open_output_function(s7, my_print));
     ffi_load();
 }
 
 void script_run(const char *script) {
-    s7_pointer old_port = s7_set_current_error_port(s7, s7_open_output_string(s7));
-    int gc_loc = -1;
-    if (old_port != s7_nil(s7)) gc_loc = s7_gc_protect(s7, old_port);
-
-
-
-
     s7_eval_c_string(s7, script);
-
-   const char *errmsg = s7_get_output_string(s7, s7_current_error_port(s7));
-
-   if (errmsg && (*errmsg))
-       mYughLog(1, 2, 0, "script", "Scripting error: %s", errmsg);
-
-   s7_close_output_port(s7, s7_current_error_port(s7));
-   s7_set_current_error_port(s7, old_port);
-   if (gc_loc != -1) s7_gc_unprotect_at(s7, gc_loc);
-
 }
 
 int script_dofile(const char *file) {
-/*    static char fload[512];
-    snprintf(fload, 512, "(write (load \"%s\"))", file);
-    s7_eval_c_string(s7, fload);
-    */
     if (!s7_load(s7, file)) {
       YughError("Can't find file %s.", file);
       return 1;
    }
-
-   const char *errmsg = s7_get_output_string(s7, s7_current_error_port(s7));
-
-   if (errmsg && (*errmsg))
-       mYughLog(1, 2, 0, "script", "Scripting error: %s", errmsg);
-
-
     return 0;
 }
 
@@ -89,7 +84,10 @@ void script_call(const char *f) {
 void script_eval_w_env(const char *s, s7_pointer env) {
     char buffer[512];
     snprintf(buffer, 512-1, "(%s)", s);
+
+    s7_set_current_error_port(s7, s7_open_output_function(s7, null_port));
     s7_eval_c_string_with_environment(s7, buffer, env);
+    s7_set_current_error_port(s7, s7_open_output_function(s7, my_err));
 }
 
 void script_call_sym(s7_pointer sym)

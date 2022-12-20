@@ -50,8 +50,9 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	    fflush(logfile);
 	}
 
-        snprintf(con+coni, CONSOLE_BUF-coni, "%s\n", buffer);
-        coni += strlen(buffer);
+        int add = snprintf(con+coni, CONSOLE_BUF-coni, "%s\n", buffer);
+        coni += add;
+        if (coni > CONSOLE_BUF) coni = CONSOLE_BUF;
 
         snprintf(lastlog, ERROR_BUFFER, "%s", buffer);
 
