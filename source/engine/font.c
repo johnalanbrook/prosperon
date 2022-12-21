@@ -94,8 +94,8 @@ struct sFont *MakeFont(const char *fontfile, int height)
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	newfont->Characters[c].TextureID = ftexture;
 	newfont->Characters[c].Advance = advance * scale;
@@ -123,6 +123,9 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
 	xpos + w, ypos + h, 1.f, 1.f
     };
 
+    glBindTexture(GL_TEXTURE_2D, c.TextureID);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 ////// Outline calculation
     // float outlineWidth = 1.1;
@@ -143,7 +146,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
 
 /////////// Shadow calculation
 
-
+/*
     float shadowOffset = 6.f;
     float sxpos = cursor[0] + c.Bearing[0] * scale + (scale * shadowOffset);
     float sypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale - (scale * shadowOffset);
@@ -156,7 +159,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     };
 
 
-    glBindTexture(GL_TEXTURE_2D, c.TextureID);
+
 
     //// Shadow pass
 
@@ -165,12 +168,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sverts), sverts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-
-    //// Character pass
-    shader_setvec3(shader, "textColor", color);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+*/
 }
 
 void text_settype(struct sFont *mfont)
@@ -180,7 +178,7 @@ void text_settype(struct sFont *mfont)
 
 void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
 {
-    //shader_use(shader);
+    shader_use(shader);
     shader_setvec3(shader, "textColor", color);
 
     mfloat_t cursor[2] = { 0.f };
@@ -230,11 +228,4 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
                 }
         }
     }
-
-
-/*
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    */
 }

@@ -9,7 +9,7 @@
 
 s7_scheme *s7 = NULL;
 
-s7_pointer *updates;
+
 
 static void null_port(s7_scheme *sc, uint8_t c, s7_pointer port) {
 
@@ -99,6 +99,11 @@ int script_has_sym(s7_pointer sym) {
     return 1;
 }
 
+
+s7_pointer *updates;
+s7_pointer *guis;
+s7_pointer *physics;
+
 void register_update(s7_pointer sym) {
     arrput(updates, sym);
 }
@@ -106,4 +111,22 @@ void register_update(s7_pointer sym) {
 void call_updates() {
     for (int i = 0; i < arrlen(updates); i++)
         script_call_sym(updates[i]);
+}
+
+void register_gui(s7_pointer sym) {
+    arrput(guis, sym);
+}
+
+void call_gui() {
+    for (int i = 0; i < arrlen(guis); i++)
+        script_call_sym(guis[i]);
+}
+
+void register_physics(s7_pointer sym) {
+    arrput(physics, sym);
+}
+
+void call_physics() {
+    for (int i = 0; i < arrlen(physics); i++)
+        script_call_sym(physics[i]);
 }

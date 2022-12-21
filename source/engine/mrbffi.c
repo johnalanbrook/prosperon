@@ -52,6 +52,20 @@ s7_pointer s7_ui_text(s7_scheme *sc, s7_pointer args) {
     return s7_make_string(sc, str);
 }
 
+s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
+    const char *s = s7_string(s7_car(args));
+    float pos[2];
+    pos[0] = s7_real(s7_cadr(args));
+    pos[1] = s7_real(s7_caddr(args));
+
+    float size = s7_real(s7_cadddr(args));
+    const float white[3] = {1.f, 1.f, 1.f};
+
+    renderText(s, pos, size, white, 200);
+
+    return s7_car(args);
+}
+
 s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
     int cmd = s7_integer(s7_car(args));
     double val = s7_real(s7_cadr(args));
@@ -79,7 +93,6 @@ s7_pointer s7_log(s7_scheme *sc, s7_pointer args) {
     const char *file = s7_string(s7_caddr(args));
     int line = s7_integer(s7_cadddr(args));
     mYughLog(1, lvl, line, file, msg);
-    //YughInfo(s7_string(s7_object_to_string(sc, s7_car(args), 0)));
 
     return args;
 }
@@ -193,9 +206,27 @@ s7_pointer s7_gui_hook(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_register(s7_scheme *sc, s7_pointer args) {
     int hook = s7_integer(s7_car(args));
-    register_update(s7_cadr(args));
+    s7_pointer sym = s7_cadr(args);
 
-    return args;
+    /* 0 : update */
+    /* 1 : gui */
+    /* 2 : physics */
+
+    switch (hook) {
+        case 0:
+            register_update(sym);
+            break;
+
+        case 1:
+            register_gui(sym);
+            break;
+
+        case 2:
+            register_physics(sym);
+            break;
+    }
+
+    return sym;
 }
 
 s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
@@ -264,6 +295,7 @@ void ffi_load() {
     S7_FUNC(ui_nel, 1);
     S7_FUNC(ui_prop, 6);
     S7_FUNC(ui_text, 2);
+    S7_FUNC(gui_text, 4);
     S7_FUNC(settings_cmd, 2);
     S7_FUNC(win_cmd, 2);
     S7_FUNC(ui_rendertext, 3);

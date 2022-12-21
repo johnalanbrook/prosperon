@@ -17,4 +17,10 @@ void script_eval_w_env(const char *s, s7_pointer env);
 void register_update(s7_pointer sym);
 void call_updates();
 
+void register_gui(s7_pointer sym);
+void call_gui();
+
+void register_physics(s7_pointer sym);
+void call_physics();
+
 #endif

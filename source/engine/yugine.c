@@ -166,6 +166,7 @@ int main(int argc, char **args) {
          if (physlag >= physMS) {
              physlag -= physMS;
              phys2d_update(physMS);
+             call_physics();
          }
 
 

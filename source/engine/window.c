@@ -277,15 +277,9 @@ int window_hasfocus(struct window *w)
 void window_render(struct window *w) {
     window_makecurrent(w);
     openglRender(w);
-/*
-    if (script_has_sym(w->nuke_cb)) {
-        nuke_start();
-        script_call_sym(w->nuke_cb);
-        nk_end(ctx);
-        nuke_end();
-    } else
 
-*/if (w->nuke_gui != NULL) {
+
+    if (w->nuke_gui != NULL) {
         nuke_start();
         w->nuke_gui();
         nuke_end();

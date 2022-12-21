@@ -14,20 +14,26 @@
     `(funcinfo ,func 'source))
 
 (define (objects->string . objs)
-    (apply string-append (map (lambda (obj) (object->string obj #t)) objs)))
+    (apply string-append (map (lambda (obj) (object->string obj #f)) objs)))
 
-(define-macro (glog data lvl)
-    (let ((file (*function* (outlet (curlet)) 'file))
-          (line (*function* (outlet (curlet)) 'line)))
-       `(log ,lvl ,data ,file ,line)))
+(define-bacro (glog data lvl)
+    (let ((file (port-filename))
+          (line (port-line-number)))
+       `(log ,lvl ,data
+           (if (equal? ,file "*stdin*") (*function* (outlet (curlet)) 'file) ,file)
+	   (if (equal? ,file "*stdin*") (*function* (outlet (curlet)) 'line) ,line))))
 
-(define-macro (flog data lvl)
-    `(log ,lvl ,data (funcinfo (*function*) 'file) (funcinfo (*function*) 'line)))
+(define-bacro (loginfo . data)
+    `(glog (objects->string ,@data) 0))
 
-(define (loginfo . data) (glog (objects->string data) 0))
-(define (logwarn . data) (glog (objects->string data) 1))
-(define (logerr . data) (glog (objects->string data) 2))
-(define (logcrit . data) (glog (objects->string data) 3))
+(define-bacro (logwarn . data)
+    `(glog (objects->string ,@data) 1))
+    
+(define-bacro (logerr . data)
+    `(glog (objects->string ,@data) 2))
+    
+(define-bacro (logcrit . data)
+    `(glog (objects->string ,@data) 3))
 
 (define (set_fps fps) (settings_cmd 0 (/ 1 fps)))
 (define (set_update fps) (settings_cmd 1 (/ 1 fps)))
@@ -48,12 +54,20 @@
 (define (sound_stop sound) (sound_cmd sound 2))
 (define (sound_restart sound) (sound_cmd sound 3))
 
-(define-macro (update . expr)
+(define-macro (registertype type . expr)
     (let ((f (gensym)))
         `(begin
 	    (define (,f) (begin . ,expr))
-	    (register 0 ,f))))
+	    (register ,(case type
+	                 ((update) 0)
+			 ((gui) 1)) ,f))))
 
+(define-macro (update . expr)
+    `(registertype update ,@expr))
+
+(define-macro (gui . expr)
+    `(registertype gui ,@expr))
+    
 (define-macro (while condition . body)
     (let ((loop (gensym)))
     `(let ,loop ()

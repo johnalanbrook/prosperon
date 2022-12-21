@@ -127,6 +127,7 @@ void openglRender(struct window *window)
 
     ////// TEXT && GUI
     //script_call_sym(window->gui_cb);
+    call_gui();
 
     ///// Sprites
     glDepthFunc(GL_LESS);
