@@ -90,8 +90,29 @@
 (define (body_pos! body x y) (set_body_pos body 0 x y))
 (define (body_move! body x y) (set_body_pos body 1 x y))
 
-(define-macro (collide . expr)
+(define (b2i val) (if (eq? val #f) 0 1))
+(define (dbg_draw_phys val) (settings_cmd 3 (b2i val)))
+
+(define-macro (register-phys type body . expr)
     (let ((f (gensym)))
         `(begin
 	    (define (,f) (begin . ,expr))
-	    (phys_cmd 0 ,f))))
+	    (phys_cmd ,body ,(case type
+	                  ((collide) 0)
+			  ((separate) 3)) ,f))))
+
+(define (collide . expr)
+    (register-phys collide body expr))
+
+(define-macro (separate . expr)
+    `(register-phys separate body ,@expr))
+
+(define-macro (not! var)
+    `(set! ,var (not ,var)))
+
+(define-macro* (define-script name (lets ()) . expr )
+    `(define* (,name (gameobject -1))
+        (let ((body gameobject)
+	     ,@lets)
+	  ,@expr
+	  (curlet))))

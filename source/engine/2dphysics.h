@@ -11,6 +11,11 @@ extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
 
+struct phys_cbs {
+    s7_pointer begin;
+    s7_pointer separate;
+};
+
 struct phys2d_shape {
     cpShape *shape;
     struct gameobject *go;
@@ -95,8 +100,10 @@ void phys2d_init();
 void phys2d_update(float deltaT);
 void phys2d_apply();
 
-void phys2d_add_begin_handler(s7_pointer cb);
+void phys2d_add_handler_type(int cmd, struct gameobject *go,  s7_pointer cb);
 
 void shape_gui(struct phys2d_shape *shape);
+
+void phys2d_reindex_body(cpBody *body);
 
 #endif

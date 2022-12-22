@@ -62,6 +62,10 @@ struct sprite *tsprite = NULL;
 
 static unsigned int projUBO;
 
+void debug_draw_phys(int draw) {
+    debugDrawPhysics = draw;
+}
+
 void openglInit()
 {
     if (!mainwin) {
@@ -128,6 +132,10 @@ void openglRender(struct window *window)
     ////// TEXT && GUI
     //script_call_sym(window->gui_cb);
     call_gui();
+
+    //// DEBUG
+    if (debugDrawPhysics)
+        gameobject_draw_debugs();
 
     ///// Sprites
     glDepthFunc(GL_LESS);

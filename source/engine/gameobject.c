@@ -57,7 +57,8 @@ struct gameobject *MakeGameobject()
 
     gameobject_setpickcolor(&go);
     strncpy(go.editor.mname, "New object", MAXNAME);
-    go.body =  cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
+    go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
+
 
     arrput(gameobjects, go);
 
@@ -151,13 +152,6 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
     int n;
 
     for (int i = 0; i < comp_n; i++) {
-    /*
-        fread(&n, sizeof(int), 1, fprefab);
-        go->components[i] = components[n];
-        struct component *newc = &go->components[i];
-        newc->go = go;
-        newc->data = calloc(1, newc->datasize);
-    */
         fread(&n, sizeof(int), 1, fprefab);
         arrput(go->components, components[n]);
         struct component *newc = &arrlast(go->components);
@@ -217,18 +211,14 @@ void toggleprefab(struct gameobject *go)
     }
 }
 
-void gameobject_update(struct gameobject *go)
-{
-    if (go->script)
-	script_run(go->script);
-}
-
 void gameobject_move(struct gameobject *go, float xs, float ys)
 {
     cpVect p = cpBodyGetPosition(go->body);
     p.x += xs * deltaT;
     p.y += ys * deltaT;
     cpBodySetPosition(go->body, p);
+
+    phys2d_reindex_body(go->body);
 }
 
 void gameobject_rotate(struct gameobject *go, float as)
@@ -236,10 +226,14 @@ void gameobject_rotate(struct gameobject *go, float as)
     cpFloat a = cpBodyGetAngle(go->body);
     a += as * deltaT;
     cpBodySetAngle(go->body, a);
+
+        phys2d_reindex_body(go->body);
 }
 
 void gameobject_setangle(struct gameobject *go, float angle) {
     cpBodySetAngle(go->body, angle);
+
+        phys2d_reindex_body(go->body);
 }
 
 void gameobject_setpos(struct gameobject *go, float x, float y) {
@@ -248,13 +242,9 @@ void gameobject_setpos(struct gameobject *go, float x, float y) {
     p.x = x;
     p.y = y;
     cpBodySetPosition(go->body, p);
-}
 
-void update_gameobjects() {
-    for (int i = 0; i < arrlen(gameobjects); i++)
-        gameobject_update(&gameobjects[i]);
+    phys2d_reindex_body(go->body);
 }
-
 
 void object_gui(struct gameobject *go)
 {
@@ -322,4 +312,14 @@ void object_gui(struct gameobject *go)
     if (n >= 0)
 	gameobject_delcomponent(go, n);
 
+}
+
+void gameobject_draw_debugs() {
+    for (int i = 0; i < arrlen(gameobjects); i++) {
+        for (int j = 0; j < arrlen(gameobjects[i].components); j++) {
+            struct component *c = &gameobjects[i].components[j];
+
+            if (c->draw_debug) c->draw_debug(c->data);
+        }
+    }
 }

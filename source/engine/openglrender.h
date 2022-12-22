@@ -42,7 +42,8 @@ void openglRender(struct window *window);
 void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, struct mCamera *camera);
 
-void BindUniformBlock(GLuint shaderID, const char *bufferName,
-		      GLuint bufferBind);
+void debug_draw_phys(int draw);
+
+void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind);
 
 #endif

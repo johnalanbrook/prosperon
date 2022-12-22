@@ -11,6 +11,7 @@
 #include "log.h"
 #include "input.h"
 #include "gameobject.h"
+#include "openglrender.h"
 
 #include "s7.h"
 
@@ -69,7 +70,7 @@ s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
 s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
     int cmd = s7_integer(s7_car(args));
     double val = s7_real(s7_cadr(args));
-    YughInfo("Changing a setting.");
+
     switch(cmd) {
         case 0: // render fps
             renderMS = val;
@@ -81,6 +82,10 @@ s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
 
         case 2:
             physMS = val;
+            break;
+
+        case 3:
+            debug_draw_phys(val);
             break;
     }
 
@@ -277,14 +282,13 @@ s7_pointer s7_set_body_pos(s7_scheme *sc, s7_pointer args) {
 }
 
 s7_pointer s7_phys_cmd(s7_scheme *sc, s7_pointer args) {
-    int cmd = s7_integer(s7_car(args));
-    s7_pointer env = s7_cadr(args);
+    int go = s7_integer(s7_car(args));
+    int cmd = s7_integer(s7_cadr(args));
+    s7_pointer env = s7_caddr(args);
 
-    switch(cmd) {
-        case 0:
-            phys2d_add_begin_handler(env);
-            break;
-    }
+    if (go == -1) return;
+
+    phys2d_add_handler_type(cmd, get_gameobject_from_id(go), env);
 }
 
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
@@ -309,6 +313,6 @@ void ffi_load() {
     S7_FUNC(set_pawn, 1);
     S7_FUNC(set_body, 3);
     S7_FUNC(set_body_pos, 4);
-    S7_FUNC(phys_cmd, 2);
+    S7_FUNC(phys_cmd, 3);
 }
 

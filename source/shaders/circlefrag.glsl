@@ -8,12 +8,14 @@ uniform int thickness;
 
 void main()
 {
+
     // int tt = thickness + 1;
     float R1 = 1.f;
     float R2 = 1.f - (thickness / radius);
     float dist = sqrt(dot(coords, coords));
     if (dist <= R2 || dist >= R1)
         discard;
+
 /*
     float smoother = 0.01f -  (radius  * 0.00003f);
     float sm = smoothstep(R1, R1-smoother, dist);

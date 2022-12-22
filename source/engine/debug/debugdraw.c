@@ -3,6 +3,7 @@
 #include "openglrender.h"
 
 #include "shader.h"
+#include "log.h"
 
 static uint32_t circleVBO;
 static uint32_t circleVAO;
@@ -68,10 +69,10 @@ void draw_circle(int x, int y, float radius, int pixels)
     shader_use(circleShader);
 
     float verts[] = {
-	x - radius, y - radius,
-	x + radius, y - radius,
-	x - radius, y + radius,
-	x + radius, y + radius,
+	x - radius, y - radius, -1, -1,
+	x + radius, y - radius, 1, -1,
+	x - radius, y + radius, -1, 1,
+	x + radius, y + radius, 1, 1
     };
 
     glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
@@ -82,7 +83,7 @@ void draw_circle(int x, int y, float radius, int pixels)
 
     glBindVertexArray(circleVAO);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 

@@ -87,6 +87,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
         char keybuf[10];
         if (key > 289 && key < 302) {
             sprintf(keybuf, "f%d", key-289);
+            strcat(keystr, keybuf);
         } else {
             switch(key) {
                 case GLFW_KEY_ENTER:
