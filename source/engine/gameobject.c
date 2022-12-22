@@ -145,6 +145,7 @@ int gameobject_makefromprefab(char *path)
 void gameobject_init(struct gameobject *go, FILE * fprefab)
 {
     go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
+    cpBodySetType(go->body, go->bodytype);
 
     int comp_n;
     fread(&comp_n, sizeof(int), 1, fprefab);
@@ -165,6 +166,8 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
 
         newc->init(newc->data, go);
     }
+
+
 }
 
 void gameobject_saveprefab(struct gameobject *go)

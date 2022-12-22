@@ -19,7 +19,12 @@ float phys2d_gravity = -50.f;
 void phys2d_init()
 {
     space = cpSpaceNew();
+    phys2d_set_gravity(0, phys2d_gravity);
     cpSpaceSetGravity(space, cpv(0, phys2d_gravity));
+}
+
+void phys2d_set_gravity(float x, float y) {
+    cpSpaceSetGravity(space, cpv(x, y));
 }
 
 void phys2d_update(float deltaT)
@@ -29,7 +34,7 @@ void phys2d_update(float deltaT)
 
 void phys2d_apply()
 {
-    cpSpaceSetGravity(space, cpv(0, phys2d_gravity));
+    phys2d_set_gravity(0, phys2d_gravity);
 }
 
 void phys2d_shape_apply(struct phys2d_shape *shape)
@@ -42,7 +47,6 @@ void init_phys2dshape(struct phys2d_shape *shape, struct gameobject *go)
 {
     shape->go = go;
     cpShapeSetCollisionType(shape->shape, go);
-    YughInfo("Added shape type %d", go);
     phys2d_shape_apply(shape);
 }
 
@@ -58,7 +62,6 @@ struct phys2d_circle *Make2DCircle(struct gameobject *go)
     new->radius = 10.f;
     new->offset[0] = 0.f;
     new->offset[1] = 0.f;
-    phys2d_circleinit(new, go);
 
     return new;
 }
@@ -100,7 +103,7 @@ struct phys2d_segment *Make2DSegment(struct gameobject *go)
     new->a[1] = 0.f;
     new->b[0] = 0.f;
     new->b[1] = 0.f;
-    phys2d_seginit(new, go);
+
 
     return new;
 }
@@ -134,8 +137,6 @@ struct phys2d_box *Make2DBox(struct gameobject *go)
     new->offset[0] = 0.f;
     new->offset[1] = 0.f;
 
-    phys2d_boxinit(new, go);
-
     return new;
 }
 
@@ -168,8 +169,6 @@ struct phys2d_poly *Make2DPoly(struct gameobject *go)
     new->n = 0;
     new->points = NULL;
     new->radius = 0.f;
-
-    phys2d_polyinit(new, go);
 
     return new;
 }
@@ -219,8 +218,6 @@ struct phys2d_edge *Make2DEdge(struct gameobject *go)
     new->points = calloc(2 * 2, sizeof(float));
     new->thickness = 0.f;
     new->shapes = malloc(sizeof(cpShape *));
-
-    phys2d_edgeinit(new, go);
 
     return new;
 }
@@ -458,8 +455,6 @@ static cpBool s7_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     struct gameobject *go = data;
     script_call_sym(go->cbs->begin);
 
-    YughInfo("Gameobject %p began collision.", data);
-
     cpBody *body1;
     cpBody *body2;
     cpArbiterGetBodies(arb, &body1, &body2);
@@ -468,8 +463,6 @@ static cpBool s7_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     cpShape *shape2;
     cpArbiterGetShapes(arb, &shape1, &shape2);
 
-    YughInfo("Body %p began collision with body %p.", body1, body2);
-    YughInfo("Shape %p began collision with shape %p.", shape1, shape2);
     return 1;
 }
 
@@ -493,7 +486,6 @@ void phys2d_add_handler_type(int cmd, struct gameobject *go, s7_pointer cb) {
         go->cbs = malloc(sizeof(*go->cbs));
 
     handler->userData = go;
-    YughInfo("Making phys handler %d for type %d", cmd, go);
 
     switch (cmd) {
         case 0:

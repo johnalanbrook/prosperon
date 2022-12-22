@@ -10,6 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "editorstate.h"
+#include "yugine.h"
+#include "2dphysics.h"
+
 
 #ifdef __linux__
 #include <execinfo.h>
@@ -31,6 +35,8 @@ double physMS = 1/120.f;
 double updateMS = 1/60.f;
 
 static int ed = 1;
+static int sim_play = 0;
+static double lastTick;
 
 void seghandle(int sig) {
 #ifdef __linux__
@@ -147,9 +153,7 @@ int main(int argc, char **args) {
     }
 
     openglInit();
-
-    double lastTick;
-
+    sim_stop();
     while (!want_quit()) {
          double elapsed = glfwGetTime() - lastTick;
          deltaT = elapsed;
@@ -158,18 +162,17 @@ int main(int argc, char **args) {
 
          timer_update(lastTick);
 
-         call_updates();
+         if (sim_play) {
+             physlag += elapsed;
+              call_updates();
+              if (physlag >= physMS) {
+                 physlag -= physMS;
+                 phys2d_update(physMS);
+                 call_physics();
+             }
+       }
 
-         renderlag += elapsed;
-         physlag += elapsed;
-
-         if (physlag >= physMS) {
-             physlag -= physMS;
-             phys2d_update(physMS);
-             call_physics();
-         }
-
-
+        renderlag += elapsed;
         if (renderlag >= renderMS) {
             renderlag -= renderMS;
             window_renderall();
@@ -182,4 +185,30 @@ int main(int argc, char **args) {
     }
 
     return 0;
+}
+
+
+
+
+int sim_playing() { return sim_play; }
+void sim_start() {
+    /* Save starting state of everything */
+    sim_play = 1;
+}
+
+void sim_pause() {
+    sim_play = 0;
+}
+
+int sim_paused() {
+    return sim_play;
+}
+
+void sim_stop() {
+    /* Revert starting state of everything from sim_start */
+    sim_play =  0;
+}
+
+void sim_step() {
+
 }

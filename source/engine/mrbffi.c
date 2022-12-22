@@ -12,6 +12,9 @@
 #include "input.h"
 #include "gameobject.h"
 #include "openglrender.h"
+#include "2dphysics.h"
+
+#include "yugine.h"
 
 #include "s7.h"
 
@@ -176,6 +179,29 @@ s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
         case 0:
             quit();
             break;
+
+        case 1:
+            sim_start();
+            break;
+
+        case 2:
+            sim_stop();
+            break;
+
+        case 3:
+            sim_pause();
+            break;
+
+        case 4:
+            sim_step();
+            break;
+
+        case 5:
+            return s7_make_boolean(sc, sim_playing());
+
+        case 6:
+            return s7_make_boolean(sc, sim_paused());
+
     }
 
     return args;
@@ -291,6 +317,26 @@ s7_pointer s7_phys_cmd(s7_scheme *sc, s7_pointer args) {
     phys2d_add_handler_type(cmd, get_gameobject_from_id(go), env);
 }
 
+/* Query physics bodies */
+s7_pointer s7_phys_q(s7_scheme *sc, s7_pointer args) {
+    struct gameobject * go = get_gameobject_from_id(s7_integer(s7_car(args)));
+    int q = s7_integer(s7_cadr(args));
+
+    switch(q) {
+        case 0:
+            return s7_make_integer(sc, cpBodyGetType(go->body));
+
+    }
+}
+
+s7_pointer s7_phys_set(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    double x = s7_real(s7_cadr(args));
+    double y = s7_real(s7_caddr(args));
+
+    phys2d_set_gravity(x, y);
+}
+
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
@@ -314,5 +360,7 @@ void ffi_load() {
     S7_FUNC(set_body, 3);
     S7_FUNC(set_body_pos, 4);
     S7_FUNC(phys_cmd, 3);
+    S7_FUNC(phys_q, 2);
+    S7_FUNC(phys_set, 3);
 }
 

@@ -90,8 +90,18 @@
 (define (body_pos! body x y) (set_body_pos body 0 x y))
 (define (body_move! body x y) (set_body_pos body 1 x y))
 
+(define (gravity! x y) (phys_set 0 x y))
+
 (define (b2i val) (if (eq? val #f) 0 1))
 (define (dbg_draw_phys val) (settings_cmd 3 (b2i val)))
+(define (sim_play) (sys_cmd 1))
+(define (sim_stop) (sys_cmd 2))
+(define (sim_pause) (sys_cmd 3))
+(define (sim_step) (sys_cmd 4))
+(define (sim_play?) (sys_cmd 5))
+(define (sim_pause?) (sys_cmd 6))
+
+(define (bodytype? body) (phys_q body 0))
 
 (define-macro (register-phys type body . expr)
     (let ((f (gensym)))
@@ -101,8 +111,8 @@
 	                  ((collide) 0)
 			  ((separate) 3)) ,f))))
 
-(define (collide . expr)
-    (register-phys collide body expr))
+(define-macro (collide . expr)
+    `(register-phys collide body ,@expr))
 
 (define-macro (separate . expr)
     `(register-phys separate body ,@expr))
