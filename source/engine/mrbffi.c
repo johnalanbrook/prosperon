@@ -90,6 +90,14 @@ s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
         case 3:
             debug_draw_phys(val);
             break;
+
+        case 4:
+            set_timescale(val);
+            break;
+
+        case 5:
+            add_zoom(val);
+            break;
     }
 
     return args;
@@ -201,6 +209,9 @@ s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
 
         case 6:
             return s7_make_boolean(sc, sim_paused());
+
+        case 7:
+            return s7_make_integer(sc, MakeGameobject());
 
     }
 
@@ -337,6 +348,17 @@ s7_pointer s7_phys_set(s7_scheme *sc, s7_pointer args) {
     phys2d_set_gravity(x, y);
 }
 
+s7_pointer s7_int_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    int val = s7_integer(s7_cadr(args));
+
+    switch (cmd) {
+        case 0:
+            set_cam_body(get_gameobject_from_id(val)->body);
+            break;
+    }
+}
+
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
@@ -362,5 +384,6 @@ void ffi_load() {
     S7_FUNC(phys_cmd, 3);
     S7_FUNC(phys_q, 2);
     S7_FUNC(phys_set, 3);
+    S7_FUNC(int_cmd, 2);
 }
 

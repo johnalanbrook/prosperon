@@ -43,7 +43,7 @@ struct gameobject {
 
 extern struct gameobject *gameobjects;
 
-struct gameobject *MakeGameobject();
+int MakeGameobject();
 void init_gameobjects();
 void gameobject_delete(int id);
 void clear_gameobjects();
@@ -75,5 +75,9 @@ void gameobject_setpos(struct gameobject *go, float x, float y);
 void gameobject_draw_debugs();
 
 void object_gui(struct gameobject *go);
+
+void gameobject_saveall();
+void gameobject_loadall();
+int gameobjects_saved();
 
 #endif

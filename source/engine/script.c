@@ -108,9 +108,9 @@ void register_update(s7_pointer sym) {
     arrput(updates, sym);
 }
 
-void call_updates() {
+void call_updates(double dt) {
     for (int i = 0; i < arrlen(updates); i++)
-        script_call_sym(updates[i]);
+        s7_call(s7, updates[i], s7_cons(s7, s7_make_real(s7, dt), s7_nil(s7)));
 }
 
 void register_gui(s7_pointer sym) {
@@ -126,7 +126,7 @@ void register_physics(s7_pointer sym) {
     arrput(physics, sym);
 }
 
-void call_physics() {
+void call_physics(double dt) {
     for (int i = 0; i < arrlen(physics); i++)
-        script_call_sym(physics[i]);
+        s7_call(s7, physics[i], s7_cons(s7, s7_make_real(s7, dt), s7_nil(s7)));
 }

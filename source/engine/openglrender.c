@@ -12,6 +12,8 @@
 #include "log.h"
 #include "datastream.h"
 
+
+
 int renderMode = 0;
 
 static GLuint UBO;
@@ -107,7 +109,18 @@ void openglInit()
 }
 
 
-static struct mCamera mcamera = {0};
+static cpBody *camera = NULL;
+void set_cam_body(cpBody *body) {
+    camera = body;
+}
+
+cpVect cam_pos() {
+    return camera ? cpBodyGetPosition(camera) : cpvzero;
+}
+
+static float zoom = 1.f;
+void add_zoom(float val) { zoom = val; }
+
 void openglRender(struct window *window)
 {
     glClear(GL_COLOR_BUFFER_BIT);
@@ -116,10 +129,12 @@ void openglRender(struct window *window)
 
     //////////// 2D projection
     mfloat_t projection[16] = { 0.f };
-    mat4_ortho(projection, mcamera.transform.position[0],
-	       window->width + mcamera.transform.position[0],
-	       mcamera.transform.position[1],
-	       window->height + mcamera.transform.position[1], -1.f, 1.f);
+    cpVect pos = cam_pos();
+     mat4_ortho(projection, pos.x,
+	   window->width*zoom + pos.x,
+	   pos.y,
+	   window->height*zoom + pos.y, -1.f, 1.f);
+
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
@@ -130,7 +145,6 @@ void openglRender(struct window *window)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     ////// TEXT && GUI
-    //script_call_sym(window->gui_cb);
     call_gui();
 
     //// DEBUG

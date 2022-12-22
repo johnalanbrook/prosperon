@@ -45,8 +45,6 @@ void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);
     glfwSetScrollCallback(mainwin->window, scroll_cb);
-
-
 }
 
 void call_input_signal(char *signal) {
@@ -54,40 +52,15 @@ void call_input_signal(char *signal) {
         script_eval_w_env(signal, pawns[i]);
 }
 
-void call_input_down(int *key) {
-    const char *keyname = glfwGetKeyName(*key, 0);
-    char keystr[50] = {'\0'};
-    snprintf(keystr, 50, "input_%s_down", keyname);
-    call_input_signal(keystr);
-}
-
-/* This is called once every frame - or more if we want it more! */
-void input_poll(double wait)
-{
-    ychange = 0;
-    xchange = 0;
-    mouseWheelX = 0;
-    mouseWheelY = 0;
-
-    glfwWaitEventsTimeout(wait);
-
-
-    //editor_input(&e);
-    for (int i = 0; i < arrlen(downkeys); i++)
-        call_input_down(&downkeys[i]);
-}
-
-void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
-{
-    char keystr[50] = {'\0'};
-    strcat(keystr, "input_");
+const char *keyname_extd(int key, int scancode) {
+    char keybuf[50];
     const char *kkey = glfwGetKeyName(key, scancode);
 
-    if (!kkey) {
-        char keybuf[10];
-        if (key > 289 && key < 302) {
+    if (kkey) return kkey;
+
+    if (key > 289 && key < 302) {
             sprintf(keybuf, "f%d", key-289);
-            strcat(keystr, keybuf);
+            return keybuf;
         } else {
             switch(key) {
                 case GLFW_KEY_ENTER:
@@ -143,20 +116,43 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
                     break;
             }
 
-            if (kkey)
-                strcat(keystr, kkey);
-            else
-                YughWarn("Could not get key string for key %d, scancode %d.", key, scancode);
+            if (kkey) return kkey;
+
         }
 
+    return "NULL";
+}
 
-    } else {
-        strcat(keystr, kkey);
-    }
+void call_input_down(int *key) {
+    char keystr[50] = {'\0'};
+    snprintf(keystr, 50, "input_%s_down", keyname_extd(*key, 0));
+    call_input_signal(keystr);
+}
+
+/* This is called once every frame - or more if we want it more! */
+void input_poll(double wait)
+{
+    ychange = 0;
+    xchange = 0;
+    mouseWheelX = 0;
+    mouseWheelY = 0;
+
+    glfwWaitEventsTimeout(wait);
+
+
+    //editor_input(&e);
+    for (int i = 0; i < arrlen(downkeys); i++)
+        call_input_down(&downkeys[i]);
+}
+
+void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
+{
+    char keystr[50] = {'\0'};
+    const char *kkey = keyname_extd(key, scancode);
 
     switch (action) {
         case GLFW_PRESS:
-            strcat(keystr, "_pressed");
+            snprintf(keystr, 50, "input_%s_pressed", kkey);
 
             int found = 0;
 
@@ -170,7 +166,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
             break;
 
         case GLFW_RELEASE:
-            strcat(keystr, "_released");
+            snprintf(keystr, 50, "input_%s_released", kkey);
 
             for (int i = 0; i < arrlen(downkeys); i++) {
                 if (downkeys[i] == key) {
@@ -182,7 +178,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
             break;
 
         case GLFW_REPEAT:
-            strcat(keystr, "_rep");
+            snprintf(keystr, 50, "input_%s_rep", kkey);
             break;
     }
 

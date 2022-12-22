@@ -38,6 +38,8 @@ static int ed = 1;
 static int sim_play = 0;
 static double lastTick;
 
+static float timescale = 1.f;
+
 void seghandle(int sig) {
 #ifdef __linux__
     void *ents[512];
@@ -164,11 +166,13 @@ int main(int argc, char **args) {
 
          if (sim_play) {
              physlag += elapsed;
-              call_updates();
-              if (physlag >= physMS) {
+             call_updates(elapsed * timescale);
+
+             while (physlag >= physMS) {
                  physlag -= physMS;
-                 phys2d_update(physMS);
-                 call_physics();
+                 phys2d_update(physMS  * timescale);
+                 call_physics(physMS * timescale);
+                 if (sim_play == 2) sim_pause();
              }
        }
 
@@ -191,8 +195,13 @@ int main(int argc, char **args) {
 
 
 int sim_playing() { return sim_play; }
+int sim_paused() { return (!sim_play && gameobjects_saved()); }
+
 void sim_start() {
     /* Save starting state of everything */
+    if (!gameobjects_saved())
+        gameobject_saveall();
+
     sim_play = 1;
 }
 
@@ -200,15 +209,18 @@ void sim_pause() {
     sim_play = 0;
 }
 
-int sim_paused() {
-    return sim_play;
-}
-
 void sim_stop() {
     /* Revert starting state of everything from sim_start */
     sim_play =  0;
+    gameobject_loadall();
 }
 
 void sim_step() {
+    if (sim_paused()) {
+        sim_play = 2;
+    }
+}
 
+void set_timescale(float val) {
+    timescale = val;
 }

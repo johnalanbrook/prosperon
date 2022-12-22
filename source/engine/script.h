@@ -15,12 +15,12 @@ int script_has_sym(s7_pointer sym);
 void script_eval_w_env(const char *s, s7_pointer env);
 
 void register_update(s7_pointer sym);
-void call_updates();
+void call_updates(double dt);
 
 void register_gui(s7_pointer sym);
 void call_gui();
 
 void register_physics(s7_pointer sym);
-void call_physics();
+void call_physics(double dt);
 
 #endif

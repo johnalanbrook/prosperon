@@ -10,6 +10,8 @@
 #include <window.h>
 #include "log.h"
 
+#include "openglrender.h"
+
 #include <stb_truetype.h>
 
 static uint32_t VBO = 0;
@@ -181,9 +183,11 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     shader_use(shader);
     shader_setvec3(shader, "textColor", color);
 
+    cpVect campos = cam_pos();
+
     mfloat_t cursor[2] = { 0.f };
-    cursor[0] = pos[0];
-    cursor[1] = pos[1];
+    cursor[0] = pos[0] + campos.x;
+    cursor[1] = pos[1] + campos.y;
 
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);

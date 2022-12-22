@@ -44,8 +44,10 @@ static void gameobject_setpickcolor(struct gameobject *go)
     go->editor.color[2] = b;
 }
 
-struct gameobject *MakeGameobject()
+int MakeGameobject()
 {
+    if (gameobjects == NULL) arrsetcap(gameobjects, 100);
+
     YughInfo("Making new gameobject");
     struct gameobject go = {
         .editor.id = arrlen(gameobjects),
@@ -62,7 +64,7 @@ struct gameobject *MakeGameobject()
 
     arrput(gameobjects, go);
 
-    return &arrlast(gameobjects);
+    return arrlen(gameobjects)-1;
 }
 
 void gameobject_addcomponent(struct gameobject *go, struct component *c)
@@ -131,7 +133,7 @@ int gameobject_makefromprefab(char *path)
 	return;
     }
 
-    struct gameobject *new = MakeGameobject();
+    struct gameobject *new = get_gameobject_from_id(MakeGameobject());
     fread(new, sizeof(*new), 1, fprefab);
     new->components = NULL;
 
@@ -217,8 +219,8 @@ void toggleprefab(struct gameobject *go)
 void gameobject_move(struct gameobject *go, float xs, float ys)
 {
     cpVect p = cpBodyGetPosition(go->body);
-    p.x += xs * deltaT;
-    p.y += ys * deltaT;
+    p.x += xs;
+    p.y += ys;
     cpBodySetPosition(go->body, p);
 
     phys2d_reindex_body(go->body);
@@ -325,4 +327,35 @@ void gameobject_draw_debugs() {
             if (c->draw_debug) c->draw_debug(c->data);
         }
     }
+}
+
+
+static struct {struct gameobject go; cpVect pos; float angle; } *saveobjects = NULL;
+
+void gameobject_saveall() {
+    arrfree(saveobjects);
+    arrsetlen(saveobjects, arrlen(gameobjects));
+
+    for (int i = 0; i < arrlen(gameobjects); i++) {
+        saveobjects[i].go = gameobjects[i];
+        saveobjects[i].pos = cpBodyGetPosition(gameobjects[i].body);
+        saveobjects[i].angle = cpBodyGetAngle(gameobjects[i].body);
+    }
+}
+
+void gameobject_loadall() {
+    YughInfo("N gameobjects: %d, N saved: %d", arrlen(gameobjects), arrlen(saveobjects));
+    for (int i = 0; i < arrlen(saveobjects); i++) {
+        gameobjects[i] = saveobjects[i].go;
+        cpBodySetPosition(gameobjects[i].body, saveobjects[i].pos);
+        cpBodySetAngle(gameobjects[i].body, saveobjects[i].angle);
+        cpBodySetVelocity(gameobjects[i].body, cpvzero);
+        cpBodySetAngularVelocity(gameobjects[i].body, 0.f);
+    }
+
+    arrfree(saveobjects);
+}
+
+int gameobjects_saved() {
+    return arrlen(saveobjects);
 }

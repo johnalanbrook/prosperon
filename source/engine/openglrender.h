@@ -28,6 +28,8 @@ extern GLuint debugColorPickBO;
 
 extern struct gameobject *selectedobject;
 
+#include <chipmunk/chipmunk.h>
+
 enum RenderMode {
     LIT,
     UNLIT,
@@ -45,5 +47,9 @@ void openglRender3d(struct window *window, struct mCamera *camera);
 void debug_draw_phys(int draw);
 
 void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind);
+
+void set_cam_body(cpBody *body);
+cpVect cam_pos();
+void add_zoom(float val);
 
 #endif

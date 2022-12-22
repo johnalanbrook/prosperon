@@ -38,6 +38,7 @@
 (define (set_fps fps) (settings_cmd 0 (/ 1 fps)))
 (define (set_update fps) (settings_cmd 1 (/ 1 fps)))
 (define (set_phys fps) (settings_cmd 2 (/ 1 fps)))
+(define (zoom! amt) (settings_cmd 5 amt))
 
 (define (win_fulltoggle w) (win_cmd w 0))
 (define (win_fullscreen w) (win_cmd w 1))
@@ -46,6 +47,7 @@
 
 (define (load_level s) (gen_cmd 0 s))
 (define (load_prefab s) (gen_cmd 1 s))
+(define (newobject) (sys_cmd 7))
 (define (quit) (sys_cmd 0))
 (define (exit) (quit))
 
@@ -63,7 +65,10 @@
 			 ((gui) 1)) ,f))))
 
 (define-macro (update . expr)
-    `(registertype update ,@expr))
+    (let ((f (gensym)))
+        `(begin
+	    (define (,f dt) (begin . ,expr))
+	    (register 0 ,f))))
 
 (define-macro (gui . expr)
     `(registertype gui ,@expr))
@@ -94,12 +99,15 @@
 
 (define (b2i val) (if (eq? val #f) 0 1))
 (define (dbg_draw_phys val) (settings_cmd 3 (b2i val)))
+(define (timescale! val) (settings_cmd 4 val))
 (define (sim_play) (sys_cmd 1))
 (define (sim_stop) (sys_cmd 2))
 (define (sim_pause) (sys_cmd 3))
 (define (sim_step) (sys_cmd 4))
 (define (sim_play?) (sys_cmd 5))
 (define (sim_pause?) (sys_cmd 6))
+
+(define (camera! body) (int_cmd 0 body))
 
 (define (bodytype? body) (phys_q body 0))
 
@@ -126,3 +134,15 @@
 	     ,@lets)
 	  ,@expr
 	  (curlet))))
+
+(define-macro (input key . expr)
+    `(define (,(symbol "input_" (symbol->string key))) (begin . ,expr)))
+
+(define-macro (+= var amt)
+    `(set! ,var (+ ,var ,amt)))
+
+(define-macro (-= var amt)
+    `(set! ,var (- ,var ,amt)))
+
+(define (attach-script script object)
+    (let-set! script 'body object))

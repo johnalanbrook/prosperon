@@ -7,6 +7,7 @@ void sim_start();
 void sim_pause();
 void sim_stop();
 void sim_step();
+void set_timescale(float val);
 
 
 #endif
