@@ -5,15 +5,19 @@
 #include "input.h"
 #include "openglrender.h"
 #include "script.h"
-#include "editor.h"
+
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "editorstate.h"
+
 #include "yugine.h"
 #include "2dphysics.h"
 
+
+#if ED
+#include "editor.h"
+#endif
 
 #ifdef __linux__
 #include <execinfo.h>
@@ -109,7 +113,8 @@ int main(int argc, char **args) {
         }
     }
 
-    if (DBG && logout) {
+#if DBG
+    if (logout) {
         time_t now = time(NULL);
         char fname[100];
         snprintf(fname, 100, "yugine-%d.log", now);
@@ -117,8 +122,6 @@ int main(int argc, char **args) {
     }
 
     YughInfo("Starting yugine version %s.", VER);
-
-    signal(SIGSEGV, seghandle);
 
     FILE *sysinfo = NULL;
     sysinfo = popen("uname -a", "r");
@@ -128,6 +131,13 @@ int main(int argc, char **args) {
         log_cat(sysinfo);
         pclose(sysinfo);
     }
+
+
+    signal(SIGSEGV, seghandle);
+
+#endif
+
+
 
     FILE *gameinfo = NULL;
     gameinfo = fopen("game.info", "w");
@@ -190,9 +200,6 @@ int main(int argc, char **args) {
 
     return 0;
 }
-
-
-
 
 int sim_playing() { return sim_play; }
 int sim_paused() { return (!sim_play && gameobjects_saved()); }

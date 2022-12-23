@@ -33,6 +33,8 @@
 
 #include "ftw.h"
 
+extern struct nk_context *ctx;
+
 #include <stb_ds.h>
 #define ASSET_TEXT_BUF 1024 * 1024 /* 1 MB buffer for editing text files */
 
@@ -502,12 +504,12 @@ void editor_project_gui() {
       nuke_labelf("Current level: %s", current_level[0] == '\0' ? "No level loaded." : current_level);
 
       nuke_nel(3);
-      if (nk_button_label(ctx, "New")) {
+      if (nuke_btn("New")) {
         new_level();
         current_level[0] = '\0';
       }
 
-      if (nk_button_label(ctx, "Save")) {
+      if (nuke_btn("Save")) {
         if (strlen(current_level) == 0) {
             YughWarn("Can't save level that has no name.");
         } else {
@@ -516,7 +518,7 @@ void editor_project_gui() {
         }
       }
 
-      if (nk_button_label(ctx, "Save as")) {
+      if (nuke_btn("Save as")) {
           if (strlen(current_level) == 0) {
               YughWarn("Can't save level that has no name.");
           } else {
@@ -552,13 +554,13 @@ void editor_project_gui() {
     // nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, cur_project->name,
     // 126, nk_filter_default);
 
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Physics", NK_MINIMIZED)) {
+    if (nuke_push_tree_id("Physics", 0)) {
       nuke_prop_float("2d Gravity", -5000.f, &phys2d_gravity, 0.f, 1.f, 0.1f);
       phys2d_apply();
       nk_tree_pop(ctx);
     }
 
-    if (nk_tree_push(ctx, NK_TREE_NODE, "Quality", NK_MINIMIZED)) {
+    if (nuke_push_tree_id("Quality", 0)) {
       nk_tree_pop(ctx);
     }
 
@@ -571,18 +573,8 @@ void editor_project_gui() {
 
   NK_MENU_START(repl)
 
-/*
     nk_layout_row_dynamic(ctx, 300, 1);
-
-    static char bigbuf[10000] = {\0'};
-    nuke_label(bigbuf);
-
-
-*/
-    nk_layout_row_dynamic(ctx, 300, 1);
-    //nk_text(ctx, con, coni, NK_TEXT_ALIGN_TOP|NK_TEXT_ALIGN_LEFT);
     nk_edit_string_zero_terminated(ctx, NK_EDIT_MULTILINE|NK_EDIT_READ_ONLY|NK_EDIT_GOTO_END_ON_ACTIVATE, lastlog, ERROR_BUFFER, NULL);
-    //nuke_label(lastlog);
     static char buffer[512] = {'\0'};
     nk_layout_row_dynamic(ctx, 25, 2);
     nk_flags active = nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX | NK_EDIT_SIG_ENTER|NK_EDIT_AUTO_SELECT, buffer, 512-1, nk_filter_ascii);
@@ -631,7 +623,7 @@ void editor_project_gui() {
     nuke_nel(1);
     editor.asset_srch = nk_edit_string_zero_terminated(ctx, NK_EDIT_SIMPLE, asset_search_buffer, 100, nk_filter_ascii);
 
-    if (nk_button_label(ctx, "Reload all files"))
+    if (nuke_btn("Reload all files"))
       get_all_files();
 
 
@@ -639,7 +631,7 @@ void editor_project_gui() {
       if (!assets[i].value->searched)
         continue;
 
-      if (nk_button_label(ctx, assets[i].key))
+      if (nuke_btn(assets[i].key))
         editor_selectasset_str(assets[i].key);
 
     }
@@ -703,7 +695,7 @@ startobjectgui:
       goto startobjectgui;
     }
 
-    if (selectedobject->editor.prefabSync && nk_button_label(ctx, "Revert"))
+    if (selectedobject->editor.prefabSync && nuke_btn("Revert"))
         gameobject_revertprefab(selectedobject);
 
     nuke_label("Name");
@@ -927,7 +919,7 @@ void editor_asset_gui(struct fileasset *asset) {
   nuke_nel(2);
   nk_labelf(ctx, NK_TEXT_LEFT, "%s", selected_asset->filename);
 
-  if (nk_button_label(ctx, "Close"))
+  if (nuke_btn("Close"))
     selected_asset = NULL;
 
   nuke_nel(1);
@@ -970,7 +962,7 @@ int obj_gui_hierarchy(struct gameobject *selected) {
 void get_levels() { fill_extensions(levels, DATA_PATH, EXT_LEVEL); }
 
 void editor_prefab_btn(char *prefab) {
-  if (nk_button_label(ctx, prefab)) {
+  if (nuke_btn(prefab)) {
     YughInfo("Making prefab '%s'.", prefab);
     gameobject_makefromprefab(prefab);
   }
@@ -991,7 +983,7 @@ void sprite_gui(struct sprite *sprite) {
 
 
 
-  if (nk_button_label(ctx, "Load texture") && selected_asset != NULL) {
+  if (nuke_btn("Load texture") && selected_asset != NULL) {
     sprite_loadtex(sprite, selected_asset->filename);
   }
 
@@ -1006,20 +998,20 @@ void sprite_gui(struct sprite *sprite) {
   }
 
 
-  nk_property_float2(ctx, "Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
+  nuke_property_float2("Sprite Position", -1.f, sprite->pos, 0.f, 0.01f, 0.01f);
 
   nuke_nel(3);
-  if (nk_button_label(ctx, "C")) {
+  if (nuke_btn("C")) {
     sprite->pos[0] = -0.5f;
     sprite->pos[1] = -0.5f;
   }
 
-  if (nk_button_label(ctx, "U")) {
+  if (nuke_btn("U")) {
     sprite->pos[0] = -0.5f;
     sprite->pos[1] = -1.f;
   }
 
-  if (nk_button_label(ctx, "D")) {
+  if (nuke_btn("D")) {
     sprite->pos[0] = -0.5f;
     sprite->pos[1] = 0.f;
   }

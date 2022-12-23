@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "resources.h"
 
-#include "nuke.h"
+#include "nuklear.h"
 
 #define ASSET_TYPE_NULL 0
 #define ASSET_TYPE_IMAGE 1
@@ -49,16 +49,16 @@ extern int show_desktop;
 
 #define NK_MENU_START(VAR) if (editor.VAR.show && !show_desktop) { \
                                                                           if (editor.VAR.rect.w == 0) editor.VAR.rect = nk_rect_std; \
-                                                                          if (nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
-                                                                          editor.VAR.rect = nk_window_get_bounds(ctx);
+                                                                          if (nuke_begin(#VAR, editor.VAR.rect, nuk_std)) { \
+                                                                          editor.VAR.rect = nuke_win_get_bounds();
 
-#define NK_MENU_END() } nk_end(ctx); }
+#define NK_MENU_END() } nuke_stop(); }
 
 #define NK_FORCE(VAR) if (editor.VAR.rect.w == 0) editor.VAR.rect = nk_rect_std; \
-                                                         if (!show_desktop && nk_begin(ctx, #VAR, editor.VAR.rect, nuk_std)) { \
-                                                         editor.VAR.rect = nk_window_get_bounds(ctx);
+                                                         if (!show_desktop && nuke_begin(#VAR, editor.VAR.rect, nuk_std)) { \
+                                                         editor.VAR.rect = nuke_win_get_bounds();
 
-#define NK_FORCE_END() nk_end(ctx); }
+#define NK_FORCE_END() nuke_stop(); }
 
 #define NEGATE(VAR) VAR = ! VAR
 

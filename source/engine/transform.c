@@ -47,7 +47,7 @@ mfloat_t *trans_left(mfloat_t * res, const struct mTransform *trans)
 
 void trans_drawgui(struct mTransform *T)
 {
-    nk_property_float3(ctx, "Position", -1000.f, T->position, 1000.f, 1.f, 1.f);
-    nk_property_float3(ctx, "Rotation", 0.f, T->rotation, 360.f, 1.f, 0.1f);
-    nk_property_float(ctx, "Scale", 0.f, &T->scale, 1000.f, 0.1f, 0.1f);
+    nuke_property_float3("Position", -1000.f, T->position, 1000.f, 1.f, 1.f);
+    nuke_property_float3("Rotation", 0.f, T->rotation, 360.f, 1.f, 0.1f);
+    nuke_property_float("Scale", 0.f, &T->scale, 1000.f, 0.1f, 0.1f);
 }

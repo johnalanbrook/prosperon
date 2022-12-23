@@ -259,7 +259,7 @@ void object_gui(struct gameobject *go)
 
     draw_point(temp_pos[0], temp_pos[1], 3);
 
-    nk_property_float2(ctx, "Position", -1000000.f, temp_pos, 1000000.f, 1.f, 0.5f);
+    nuke_property_float2("Position", -1000000.f, temp_pos, 1000000.f, 1.f, 0.5f);
 
     cpVect tvect = { temp_pos[0], temp_pos[1] };
     cpBodySetPosition(go->body, tvect);
@@ -270,13 +270,13 @@ void object_gui(struct gameobject *go)
       modtry += 360.f;
 
     float modtry2 = modtry;
-    nk_property_float(ctx, "Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
+    nuke_property_float("Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
     modtry -= modtry2;
     cpBodySetAngle(go->body, mtry + (modtry * DEG2RADS));
 
-    nk_property_float(ctx, "Scale", 0.f, &go->scale, 1000.f, 0.01f, go->scale * 0.01f);
+    nuke_property_float("Scale", 0.f, &go->scale, 1000.f, 0.01f, go->scale * 0.01f);
 
-    nk_layout_row_dynamic(ctx, 25, 3);
+    nuke_nel(3);
     nuke_radio_btn("Static", &go->bodytype, CP_BODY_TYPE_STATIC);
     nuke_radio_btn("Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
     nuke_radio_btn("Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
@@ -284,12 +284,12 @@ void object_gui(struct gameobject *go)
     cpBodySetType(go->body, go->bodytype);
 
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
-         nk_property_float(ctx, "Mass", 0.01f, &go->mass, 1000.f, 0.01f, 0.01f);
+         nuke_property_float("Mass", 0.01f, &go->mass, 1000.f, 0.01f, 0.01f);
 	cpBodySetMass(go->body, go->mass);
     }
 
-    nk_property_float(ctx, "Friction", 0.f, &go->f, 10.f, 0.01f, 0.01f);
-    nk_property_float(ctx, "Elasticity", 0.f, &go->e, 2.f, 0.01f, 0.01f);
+    nuke_property_float("Friction", 0.f, &go->f, 10.f, 0.01f, 0.01f);
+    nuke_property_float("Elasticity", 0.f, &go->e, 2.f, 0.01f, 0.01f);
 
     int n = -1;
 
@@ -302,13 +302,12 @@ void object_gui(struct gameobject *go)
 	    c->draw_debug(c->data);
 
 
- nuke_nel(5);
-     if (nk_button_label(ctx, "Del")) n = i;
-	if (nk_tree_push_id(ctx, NK_TREE_NODE, c->name, NK_MINIMIZED, i)) {
+     nuke_nel(5);
+     if (nuke_btn("Del")) n = i;
 
+     if (nuke_push_tree_id(c->name, i)) {
 	    c->draw_gui(c->data);
-
-	    nk_tree_pop(ctx);
+	    nuke_tree_pop();
 	}
 
 

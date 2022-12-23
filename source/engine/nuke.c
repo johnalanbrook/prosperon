@@ -10,8 +10,11 @@
 #define NK_GLFW_GL3_IMPLEMENTATION
 #define NK_KEYSTATE_BASED_INPUT
 
+
 #include "nuke.h"
 #include "nuklear_glfw_gl3.h"
+
+#include <stdarg.h>
 
 #include "window.h"
 
@@ -26,6 +29,7 @@ void nuke_init(struct window *win) {
     window_makecurrent(win);
 
     ctx = nk_glfw3_init(&nkglfw, win->window, NK_GLFW3_INSTALL_CALLBACKS);
+
 
     struct nk_font_atlas *atlas;
     nk_glfw3_font_stash_begin(&nkglfw, &atlas);
@@ -43,21 +47,33 @@ void nuke_end()
     nk_glfw3_render(&nkglfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 }
 
-void nk_property_float3(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+
+int nuke_begin(const char *lbl, struct nk_rect rect, int flags) {
+    return nk_begin(ctx, lbl, rect, flags);
+}
+void nuke_stop() {
+    nk_end(ctx);
+}
+
+struct nk_rect nuke_win_get_bounds() {
+    return nk_window_get_bounds(ctx);
+}
+
+void nuke_property_float3(const char *label, float min, float *val, float max, float step, float dragstep) {
     nk_layout_row_dynamic(ctx, 25, 1);
     nk_label(ctx, label, NK_TEXT_LEFT);
     nk_layout_row_dynamic(ctx, 25, 3);
-    nk_property_float(ctx, "#X", min, &val[0], max, step, dragstep);
-    nk_property_float(ctx, "#Y", min, &val[1], max, step, dragstep);
-    nk_property_float(ctx, "#Z", min, &val[2], max, step, dragstep);
+    nuke_property_float("#X", min, &val[0], max, step, dragstep);
+    nuke_property_float("#Y", min, &val[1], max, step, dragstep);
+    nuke_property_float("#Z", min, &val[2], max, step, dragstep);
 }
 
-void nk_property_float2(struct nk_context *ctx, const char *label, float min, float *val, float max, float step, float dragstep) {
+void nuke_property_float2(const char *label, float min, float *val, float max, float step, float dragstep) {
     nk_layout_row_dynamic(ctx, 25, 1);
     nk_label(ctx, label, NK_TEXT_LEFT);
     nk_layout_row_dynamic(ctx, 25, 2);
-    nk_property_float(ctx, "#X", min, &val[0], max, step, dragstep);
-    nk_property_float(ctx, "#Y", min, &val[1], max, step, dragstep);
+    nuke_property_float("#X", min, &val[0], max, step, dragstep);
+    nuke_property_float("#Y", min, &val[1], max, step, dragstep);
 }
 
 void nuke_property_float(const char *lbl, float min, float *val, float max, float step, float dragstep) {
@@ -72,12 +88,7 @@ void nuke_property_int(const char *lbl, int min, int *val, int max, int step) {
     nk_property_int(ctx, lbl, min, val, max, step, step);
 }
 
-void nk_radio_button_label(struct nk_context *ctx, const char *label, int *val, int cmp) {
-    if (nk_option_label(ctx, label, *val == cmp)) *val = cmp;
-}
-
 void nuke_radio_btn(const char *lbl, int *val, int cmp) {
-    //nk_radio_button_label(ctx, lbl, val, cmp);
     if (nk_option_label(ctx, lbl, *val==cmp)) *val = cmp;
 }
 
@@ -95,4 +106,17 @@ void nuke_label(const char *s) {
 
 void nuke_edit_str(char *str) {
     nk_edit_string_zero_terminated(ctx, NK_EDIT_BOX|NK_EDIT_NO_HORIZONTAL_SCROLL, str, 130, nk_filter_ascii);
+}
+
+int nuke_push_tree_id(const char *name, int id) {
+    return nk_tree_push_id(ctx, NK_TREE_NODE, name, NK_MINIMIZED, id);
+}
+
+void nuke_tree_pop() {
+    nk_tree_pop(ctx);
+}
+
+void nuke_labelf(const char *fmt, ...) {
+    va_list args;
+    nk_labelf(ctx, NK_TEXT_LEFT, fmt, args);
 }

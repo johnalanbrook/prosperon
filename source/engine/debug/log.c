@@ -17,14 +17,8 @@ char *catstr[] = {"ENGINE", "SCRIPT"};
 FILE *logfile = NULL;
 
 #define CONSOLE_BUF 1024*1024/* 1MB */
-char con[CONSOLE_BUF] = {'\0'};
-int coni = 0;
 
 char lastlog[ERROR_BUFFER] = {'\0'};
-
-const char *console() {
-    return console;
-}
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
@@ -49,10 +43,6 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	    fprintf(logfile, "%s", buffer);
 	    fflush(logfile);
 	}
-
-        int add = snprintf(con+coni, CONSOLE_BUF-coni, "%s\n", buffer);
-        coni += add;
-        if (coni > CONSOLE_BUF) coni = CONSOLE_BUF;
 
         snprintf(lastlog, ERROR_BUFFER, "%s", buffer);
 

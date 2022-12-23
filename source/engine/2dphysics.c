@@ -79,8 +79,8 @@ void phys2d_circledel(struct phys2d_circle *c)
 
 void circle_gui(struct phys2d_circle *circle)
 {
-    nk_property_float(ctx, "Radius", 1.f, &circle->radius, 10000.f, 1.f, 1.f);
-    nk_property_float2(ctx, "Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
+    nuke_property_float("Radius", 1.f, &circle->radius, 10000.f, 1.f, 1.f);
+    nuke_property_float2("Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
 
     phys2d_applycircle(circle);
 }
@@ -121,8 +121,8 @@ void phys2d_segdel(struct phys2d_segment *seg)
 
 void segment_gui(struct phys2d_segment *seg)
 {
-    nk_property_float2(ctx, "a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
-    nk_property_float2(ctx, "b", 0.f, seg->b, 1.f, 0.01f, 0.01f);
+    nuke_property_float2("a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
+    nuke_property_float2("b", 0.f, seg->b, 1.f, 0.01f, 0.01f);
 
     phys2d_applyseg(seg);
 }
@@ -154,9 +154,9 @@ void phys2d_boxdel(struct phys2d_box *box)
 
 void box_gui(struct phys2d_box *box)
 {
-    nk_property_float(ctx, "Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
-    nk_property_float(ctx, "Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
-    nk_property_float2(ctx, "Offset", 0.f, box->offset, 1.f, 0.01f, 0.01f);
+    nuke_property_float("Width", 0.f, &box->w, 1000.f, 1.f, 1.f);
+    nuke_property_float("Height", 0.f, &box->h, 1000.f, 1.f, 1.f);
+    nuke_property_float2("Offset", 0.f, box->offset, 1.f, 0.01f, 0.01f);
 
     phys2d_applybox(box);
 }
@@ -199,13 +199,13 @@ void phys2d_polyaddvert(struct phys2d_poly *poly)
 void poly_gui(struct phys2d_poly *poly)
 {
 
-    if (nk_button_label(ctx, "Add Poly Vertex")) phys2d_polyaddvert(poly);
+    if (nuke_btn("Add Poly Vertex")) phys2d_polyaddvert(poly);
 
     for (int i = 0; i < poly->n; i++) {
-	nk_property_float2(ctx, "#P", 0.f, &poly->points[i*2], 1.f, 0.1f, 0.1f);
+	nuke_property_float2("#P", 0.f, &poly->points[i*2], 1.f, 0.1f, 0.1f);
     }
 
-    nk_property_float(ctx, "Radius", 0.01f, &poly->radius, 1000.f, 1.f, 0.1f);
+    nuke_property_float("Radius", 0.01f, &poly->radius, 1000.f, 1.f, 0.1f);
 
     phys2d_applypoly(poly);
 }
@@ -271,12 +271,12 @@ void phys2d_edgeaddvert(struct phys2d_edge *edge)
 
 void edge_gui(struct phys2d_edge *edge)
 {
-    if (nk_button_label(ctx, "Add Edge Vertex")) phys2d_edgeaddvert(edge);
+    if (nuke_btn("Add Edge Vertex")) phys2d_edgeaddvert(edge);
 
     for (int i = 0; i < edge->n; i++)
-	nk_property_float2(ctx, "E", 0.f, &edge->points[i*2], 1.f, 0.01f, 0.01f);
+	nuke_property_float2("E", 0.f, &edge->points[i*2], 1.f, 0.01f, 0.01f);
 
-    nk_property_float(ctx, "Thickness", 0.01f, &edge->thickness, 1.f, 0.01f, 0.01f);
+    nuke_property_float("Thickness", 0.01f, &edge->thickness, 1.f, 0.01f, 0.01f);
 
     phys2d_applyedge(edge);
 }

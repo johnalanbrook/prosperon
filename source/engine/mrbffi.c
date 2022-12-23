@@ -280,19 +280,14 @@ s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
 s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
     int id = s7_integer(s7_car(args));
     int cmd = s7_integer(s7_cadr(args));
-    double val1;
-    double val2;
 
     switch (cmd) {
         case 0:
-            val1 = s7_real(s7_caddr(args));
-            gameobject_setangle(get_gameobject_from_id(id), val1);
+            gameobject_setangle(get_gameobject_from_id(id), s7_real(s7_caddr(args)));
             break;
 
         case 1:
-            val1 = s7_real(s7_car(s7_caddr(args)));
-            val2 = s7_real(s7_cadr(s7_caddr(args)));
-            gameobject_setpos(get_gameobject_from_id(id), val1, val2);
+            cpBodySetType(get_gameobject_from_id(id)->body, s7_integer(s7_caddr(args)));
             break;
     }
 
@@ -367,14 +362,19 @@ void ffi_load() {
     S7_FUNC(ui_nel, 1);
     S7_FUNC(ui_prop, 6);
     S7_FUNC(ui_text, 2);
-    S7_FUNC(gui_text, 4);
-    S7_FUNC(settings_cmd, 2);
-    S7_FUNC(win_cmd, 2);
     S7_FUNC(ui_rendertext, 3);
-    S7_FUNC(log, 4);
-    S7_FUNC(win_make, 3);
+
+    S7_FUNC(gui_text, 4);
+
     S7_FUNC(gen_cmd, 2);
     S7_FUNC(sys_cmd, 1);
+    S7_FUNC(settings_cmd, 2);
+
+
+    S7_FUNC(win_cmd, 2);
+    S7_FUNC(win_make, 3);
+
+
     S7_FUNC(sound_cmd, 2);
     S7_FUNC(gui_hook, 1);
     S7_FUNC(register, 2);
@@ -385,5 +385,7 @@ void ffi_load() {
     S7_FUNC(phys_q, 2);
     S7_FUNC(phys_set, 3);
     S7_FUNC(int_cmd, 2);
+
+    S7_FUNC(log, 4);
 }
 

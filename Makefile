@@ -3,29 +3,32 @@ MAKEFLAGS = --jobs=$(PROCS)
 
 UNAME != uname
 
-QFLAGS = -O3 -DDBG=0 -DED=1
-INFO = rel
-PTYPE != uname -m
-
 # Options
 # DBG=0,1 --- build with debugging symbols and logging
 # ED=0,1 --- build with or without editor
 
-
-
+ED ?= 1
+DBG ?= 1
 
 ifeq ($(DBG), 1)
-	QFLAGS = -O0 -g -DDBG=1 -DED=1
-	ifeq ($(CC), tcc)
-		QFLAGS += -b -bt24
-	endif
+	LVL = -O0 -g
 	INFO = dbg
+
+	ifeq ($(CC), tcc)
+		LVL +=
+	endif
+
+else
+	LVL = -O2 -DNDEBUG
+	INFO = rel
 endif
 
-ifeq 	($(ED), 0)
-	QFLAGS = -DED=0
-	INFO = ed
-endif
+
+
+
+QFLAGS = $(LVL) -DDBG=$(DBG) -DED=$(ED)
+
+PTYPE != uname -m
 
 BIN = bin/$(CC)/$(INFO)/
 objprefix = $(BIN)obj
@@ -43,13 +46,26 @@ endef
 
 # All other sources
 edirs != find source -type d -name include
-subengs = sound debug editor 3d
+subengs = sound 3d
+
+ifeq ($(ED), 1)
+	subengs += editor
+endif
+
+ifeq ($(DBG), 1)
+	subengs += debug
+endif
+
+
 edirs += source/engine $(addprefix source/engine/, $(subengs)) source/engine/thirdparty/Nuklear
 ehead != find source/engine source/engine/sound source/engine/debug source/engine/editor -maxdepth 1 -type f -name *.h
 eobjects != find source/engine -type f -name '*.c' | sed -r 's|^(.*)\.c|$(objprefix)/\1.o|'  # Gets all .c files and makes .o refs
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
-includeflag != $(call prefix,$(edirs),-I)
+engincs != find source/engine -maxdepth 1 -type d
+includeflag != find source -type d -name include
+includeflag += engincs
+includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wall# -pedantic -Wextra -Wwrite-strings  -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
 

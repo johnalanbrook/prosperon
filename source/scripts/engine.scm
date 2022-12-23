@@ -92,6 +92,12 @@
     (* deg 0.01745329252))
 
 (define (body_angle! body angle) (set_body body 0 angle))
+(define-macro (body_type! body type)
+    `(set_body ,body 1 ,(case type
+                            ((static) 2)
+			    ((dynamic) 0)
+			    ((kinematic) 1))))
+
 (define (body_pos! body x y) (set_body_pos body 0 x y))
 (define (body_move! body x y) (set_body_pos body 1 x y))
 

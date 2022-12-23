@@ -43,7 +43,7 @@ void font_init(struct shader *textshader) {
 
 
     // Default font
-    font = MakeFont("teenytinypixels.ttf", 300);
+    font = MakeFont("teenytinypixels.ttf", 16);
 }
 
 void font_frame(struct window *w) {
