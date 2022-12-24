@@ -154,9 +154,6 @@ void window_handle_event(struct window *w)
 		    "Changed size of window %d: width %d, height %d.",
 		    w->id, w->width, w->height);
 	    window_makecurrent(w);
-	    w.projection =
-	       glm::ortho(0.f, (float) width, 0.f, (float) height, -1.f,
-	       1.f);
 	    w->render = true;
 	    break;
 

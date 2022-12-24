@@ -64,7 +64,7 @@ eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player y
 
 engincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += engincs
+includeflag += $(engincs) source/engine/thirdparty/Nuklear
 includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wall# -pedantic -Wextra -Wwrite-strings  -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function

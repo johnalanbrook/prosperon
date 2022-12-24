@@ -40,10 +40,11 @@
 (define (set_phys fps) (settings_cmd 2 (/ 1 fps)))
 (define (zoom! amt) (settings_cmd 5 amt))
 
-(define (win_fulltoggle w) (win_cmd w 0))
-(define (win_fullscreen w) (win_cmd w 1))
-(define (win_unfullscreen w) (win_cmd w 2))
-(define (win_title s) (win_cmd 0 3 s))
+(define (win_fulltoggle) (win_cmd 0 0))
+(define (win_fullscreen) (win_cmd 0 1))
+(define (win_unfullscreen) (win_cmd 0 2))
+(define (win_w) (win_cmd 0 3))
+(define (win_h) (win_cmd 0 4))
 
 (define (load_level s) (gen_cmd 0 s))
 (define (load_prefab s) (gen_cmd 1 s))
@@ -71,7 +72,8 @@
 	    (register 0 ,f))))
 
 (define-macro (gui . expr)
-    `(registertype gui ,@expr))
+    `(registertype gui
+      (let ((x 0) (y 0)) ,@expr)))
     
 (define-macro (while condition . body)
     (let ((loop (gensym)))

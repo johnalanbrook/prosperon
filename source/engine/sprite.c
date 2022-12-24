@@ -133,13 +133,7 @@ void sprite_initialize()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
-void sprite_draw(struct sprite *sprite)
-{
-    if (sprite->tex != NULL) {
-
-	//shader_use(spriteShader);
-
-
+void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2]) {
 	mfloat_t model[16] = { 0.f };
 	mfloat_t r_model[16] = { 0.f };
 	mfloat_t s_model[16] = { 0.f };
@@ -147,39 +141,49 @@ void sprite_draw(struct sprite *sprite)
 	memcpy(r_model, UNITMAT4, sizeof(UNITMAT4));
 	memcpy(s_model, UNITMAT4, sizeof(UNITMAT4));
 
+         mfloat_t t_scale[2] = { size[0] * tex->width, size[1] * tex->height };
+         mfloat_t t_offset[2] = { offset[0] * t_scale[0], offset[1] * t_scale[1] };
 
-
-	mfloat_t t_move[2] = { 0.f };
-	mfloat_t t_scale[2] = { 0.f };
-
-	t_scale[0] = sprite->size[0] * sprite->tex->width * sprite->go->scale;
-	t_scale[1] = sprite->size[1] * sprite->tex->height * sprite->go->scale;
-
-	t_move[0] = sprite->pos[0] * t_scale[0];
-	t_move[1] = sprite->pos[1] * t_scale[1];
-
-	mat4_translate_vec2(model, t_move);
+	mat4_translate_vec2(model, t_offset);
 	mat4_scale_vec2(model, t_scale);
-	mat4_rotation_z(r_model, cpBodyGetAngle(sprite->go->body));
+
+	mat4_rotation_z(r_model, angle);
 
 	mat4_multiply(model, r_model, model);
 
-	cpVect pos = cpBodyGetPosition(sprite->go->body);
-	t_move[0] = pos.x;
-	t_move[1] = pos.y;
-	mat4_translate_vec2(model, t_move);
+	mat4_translate_vec2(model, pos);
 
-
+         float white[3] = { 1.f, 1.f, 1.f };
 	shader_setmat4(spriteShader, "model", model);
-	shader_setvec3(spriteShader, "spriteColor", sprite->color);
+	shader_setvec3(spriteShader, "spriteColor", white);
 
 	//tex_bind(sprite->tex);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, sprite->tex->id);
+	glBindTexture(GL_TEXTURE_2D, tex->id);
 
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+void sprite_draw(struct sprite *sprite)
+{
+    if (sprite->tex) {
+        cpVect cpos = cpBodyGetPosition(sprite->go->body);
+        float pos[2] = {cpos.x, cpos.y};
+
+        float size[2] = { sprite->size[0] * sprite->go->scale, sprite->size[1] * sprite->go->scale };
+
+        tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos);
     }
+}
+
+void gui_draw_img(const char *img, float x, float y) {
+    shader_use(spriteShader);
+    struct Texture *tex = texture_loadfromfile(img);
+    float pos[2] = {x, y};
+    float size[2] = {1.f, 1.f};
+    float offset[2] = { 0.f, 0.f };
+    tex_draw(tex, pos, 0.f, size, offset);
 }
 
 void spriteanim_draw(struct sprite *sprite)

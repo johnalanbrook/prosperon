@@ -13,6 +13,7 @@
 #include "gameobject.h"
 #include "openglrender.h"
 #include "2dphysics.h"
+#include "sprite.h"
 
 #include "yugine.h"
 
@@ -68,6 +69,16 @@ s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
     renderText(s, pos, size, white, 200);
 
     return s7_car(args);
+}
+
+s7_pointer s7_gui_img(s7_scheme *sc, s7_pointer args) {
+    const char *img = s7_string(s7_car(args));
+    float x = s7_real(s7_cadr(args));
+    float y = s7_real(s7_caddr(args));
+
+    gui_draw_img(img, x, y);
+
+    return args;
 }
 
 s7_pointer s7_settings_cmd(s7_scheme *sc, s7_pointer args) {
@@ -132,17 +143,31 @@ s7_pointer s7_win_cmd(s7_scheme *sc, s7_pointer args) {
     int cmd = s7_integer(s7_cadr(args));
     struct window *w = window_i(win);
 
+    /*
+        3: return win width
+        4: return win height
+
+    */
+
     switch (cmd) {
-        case 0:  // toggle fullscreen
+        case 0:  /* toggle fullscreen */
             window_togglefullscreen(w);
             break;
 
-        case 1: // Fullscreen on
+        case 1: /* Fullscreen on */
             window_makefullscreen(w);
             break;
 
-        case 2: // Fullscreen off
+        case 2: /* Fullscreen off */
             window_unfullscreen(w);
+            break;
+
+        case 3:
+            return s7_make_integer(sc, w->width);
+            break;
+
+        case 4:
+            return s7_make_integer(sc, w->height);
             break;
     }
 
@@ -365,6 +390,7 @@ void ffi_load() {
     S7_FUNC(ui_rendertext, 3);
 
     S7_FUNC(gui_text, 4);
+    S7_FUNC(gui_img, 3);
 
     S7_FUNC(gen_cmd, 2);
     S7_FUNC(sys_cmd, 1);

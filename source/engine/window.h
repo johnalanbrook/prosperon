@@ -18,7 +18,6 @@ struct window {
     bool minimized;
     bool iconified;
     bool shown;
-    float projection[16];
     void (*nuke_gui)();
 };
 

@@ -123,9 +123,6 @@ void add_zoom(float val) { zoom = val; }
 
 void openglRender(struct window *window)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
-    glClearColor(0.3f, 0.3f, 0.3f, 1.f);
-
 
     //////////// 2D projection
     mfloat_t projection[16] = { 0.f };
@@ -135,31 +132,36 @@ void openglRender(struct window *window)
 	   pos.y,
 	   window->height*zoom + pos.y, -1.f, 1.f);
 
-    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
-
-    //shader_setmat4(vid_shader, "projection", projection);
-   glEnable(GL_DEPTH_TEST);
+    mfloat_t ui_projection[16] = { 0.f };
+    mat4_ortho(ui_projection, 0,
+        window->width,
+        0,
+        window->height, -1.f, 1.f);
 
     // Clear color and depth
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    ////// TEXT && GUI
-    call_gui();
+    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
-    //// DEBUG
-    if (debugDrawPhysics)
-        gameobject_draw_debugs();
 
+    glEnable(GL_DEPTH_TEST);
     ///// Sprites
     glDepthFunc(GL_LESS);
     shader_use(spriteShader);
     sprite_draw_all();
 
-     glDepthFunc(GL_ALWAYS);
-     shader_use(textShader);
-     shader_setmat4(textShader, "projection", projection);
 
+
+    glDisable(GL_DEPTH_TEST);
+    //// DEBUG
+    if (debugDrawPhysics)
+        gameobject_draw_debugs();
+
+    ////// TEXT && GUI
+    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, ui_projection);
+    call_gui();
 }
 
 void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind)

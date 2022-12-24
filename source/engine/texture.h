@@ -76,4 +76,6 @@ void tex_anim_calc_uv(struct TexAnimation *anim);
 void tex_anim_set(struct TexAnimation *anim);
 
 
+
+
 #endif
