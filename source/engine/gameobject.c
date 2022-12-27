@@ -61,8 +61,9 @@ int MakeGameobject()
     strncpy(go.editor.mname, "New object", MAXNAME);
     go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
 
-
     arrput(gameobjects, go);
+
+    cpBodySetUserData(go.body, &arrlast(gameobjects));
 
     return arrlen(gameobjects)-1;
 }
@@ -148,6 +149,7 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
 {
     go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
     cpBodySetType(go->body, go->bodytype);
+    cpBodySetUserData(go->body, go);
 
     int comp_n;
     fread(&comp_n, sizeof(int), 1, fprefab);
@@ -216,11 +218,11 @@ void toggleprefab(struct gameobject *go)
     }
 }
 
-void gameobject_move(struct gameobject *go, float xs, float ys)
+void gameobject_move(struct gameobject *go, cpVect vec)
 {
     cpVect p = cpBodyGetPosition(go->body);
-    p.x += xs;
-    p.y += ys;
+    p.x += vec.x;
+    p.y += vec.y;
     cpBodySetPosition(go->body, p);
 
     phys2d_reindex_body(go->body);
@@ -241,12 +243,9 @@ void gameobject_setangle(struct gameobject *go, float angle) {
         phys2d_reindex_body(go->body);
 }
 
-void gameobject_setpos(struct gameobject *go, float x, float y) {
+void gameobject_setpos(struct gameobject *go, cpVect vec) {
     if (!go || !go->body) return;
-    cpVect p;
-    p.x = x;
-    p.y = y;
-    cpBodySetPosition(go->body, p);
+    cpBodySetPosition(go->body, vec);
 
     phys2d_reindex_body(go->body);
 }

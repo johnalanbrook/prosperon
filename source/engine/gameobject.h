@@ -67,10 +67,10 @@ void gameobject_revertprefab(struct gameobject *go);
 
 void gameobject_init(struct gameobject *go, FILE * fprefab);
 
-void gameobject_move(struct gameobject *go, float xs, float ys);
+void gameobject_move(struct gameobject *go, cpVect vec);
 void gameobject_rotate(struct gameobject *go, float as);
 void gameobject_setangle(struct gameobject *go, float angle);
-void gameobject_setpos(struct gameobject *go, float x, float y);
+void gameobject_setpos(struct gameobject *go, cpVect vec);
 
 void gameobject_draw_debugs();
 

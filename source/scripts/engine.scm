@@ -93,15 +93,17 @@
 (define (deg2rad deg)
     (* deg 0.01745329252))
 
-(define (body_angle! body angle) (set_body body 0 angle))
+
+
 (define-macro (body_type! body type)
     `(set_body ,body 1 ,(case type
                             ((static) 2)
 			    ((dynamic) 0)
 			    ((kinematic) 1))))
 
-(define (body_pos! body x y) (set_body_pos body 0 x y))
-(define (body_move! body x y) (set_body_pos body 1 x y))
+(define (body_angle! body angle) (set_body body 0 angle))
+(define (body_pos! body pos) (set_body body 2 pos))
+(define (body_move! body vec) (set_body body 3 vec))
 
 (define (gravity! x y) (phys_set 0 x y))
 
@@ -119,19 +121,19 @@
 
 (define (bodytype? body) (phys_q body 0))
 
-(define-macro (register-phys type body . expr)
+(define-macro (register-phys type . expr)
     (let ((f (gensym)))
         `(begin
-	    (define (,f) (begin . ,expr))
-	    (phys_cmd ,body ,(case type
+	    (define (,f hit) (begin . ,expr))
+	    (phys_cmd body ,(case type
 	                  ((collide) 0)
 			  ((separate) 3)) ,f))))
 
 (define-macro (collide . expr)
-    `(register-phys collide body ,@expr))
+    `(register-phys collide ,@expr))
 
 (define-macro (separate . expr)
-    `(register-phys separate body ,@expr))
+    `(register-phys separate ,@expr))
 
 (define-macro (not! var)
     `(set! ,var (not ,var)))
@@ -146,10 +148,10 @@
 (define-macro (input key . expr)
     `(define (,(symbol "input_" (symbol->string key))) (begin . ,expr)))
 
-(define-macro (+= var amt)
+(define-macro (+=! var amt)
     `(set! ,var (+ ,var ,amt)))
 
-(define-macro (-= var amt)
+(define-macro (-=! var amt)
     `(set! ,var (- ,var ,amt)))
 
 (define (attach-script script object)

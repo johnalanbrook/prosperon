@@ -21,6 +21,15 @@
 
 #include "nuke.h"
 
+
+cpVect s7tovec2(s7_scheme *sc, s7_pointer s7vec) {
+    cpVect ret;
+    ret.x = s7_vector_ref(sc, s7vec, 0);
+    ret.y = s7_vector_ref(sc, s7vec, 1);
+
+    return ret;
+}
+
 extern s7_scheme *s7;
 
 /* FFI */
@@ -59,11 +68,10 @@ s7_pointer s7_ui_text(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
     const char *s = s7_string(s7_car(args));
-    float pos[2];
-    pos[0] = s7_real(s7_cadr(args));
-    pos[1] = s7_real(s7_caddr(args));
+    s7_pointer s7pos = s7_cadr(args);
+    double pos[2] = { s7_vector_ref(sc, s7pos, 0), s7_vector_ref(sc, s7pos, 1) };
 
-    float size = s7_real(s7_cadddr(args));
+    float size = s7_real(s7_caddr(args));
     const float white[3] = {1.f, 1.f, 1.f};
 
     renderText(s, pos, size, white, 200);
@@ -73,10 +81,10 @@ s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_gui_img(s7_scheme *sc, s7_pointer args) {
     const char *img = s7_string(s7_car(args));
-    float x = s7_real(s7_cadr(args));
-    float y = s7_real(s7_caddr(args));
+    s7_pointer s7pos = s7_cadr(args);
+    double pos[2] = { s7_vector_ref(sc, s7pos, 0), s7_vector_ref(sc, s7pos, 1) };
 
-    gui_draw_img(img, x, y);
+    gui_draw_img(img, pos[0], pos[1]);
 
     return args;
 }
@@ -127,9 +135,8 @@ s7_pointer s7_log(s7_scheme *sc, s7_pointer args) {
 /* Call like (ui_rendertext "string" (xpos ypos) size) */
 s7_pointer s7_ui_rendertext(s7_scheme *sc, s7_pointer args) {
     const char *s = s7_string(s7_car(args));
-    double pos[2];
-    pos[0] = s7_real(s7_car(s7_cadr(args)));
-    pos[1] = s7_real(s7_cadr(s7_cadr(args)));
+    s7_pointer s7pos = s7_cadr(args);
+    double pos[2] = { s7_vector_ref(sc, s7pos, 0), s7_vector_ref(sc, s7pos, 1) };
     double size = s7_real(s7_caddr(args));
     double white[3] = {1.f, 1.f, 1.f};
 
@@ -305,34 +312,24 @@ s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
 s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
     int id = s7_integer(s7_car(args));
     int cmd = s7_integer(s7_cadr(args));
+    struct gameobject *go = get_gameobject_from_id(id);
 
     switch (cmd) {
         case 0:
-            gameobject_setangle(get_gameobject_from_id(id), s7_real(s7_caddr(args)));
+            gameobject_setangle(go, s7_real(s7_caddr(args)));
             break;
 
         case 1:
-            cpBodySetType(get_gameobject_from_id(id)->body, s7_integer(s7_caddr(args)));
-            break;
-    }
-
-    return args;
-}
-
-s7_pointer s7_set_body_pos(s7_scheme *sc, s7_pointer args) {
-    int id = s7_integer(s7_car(args));
-    int cmd = s7_integer(s7_cadr(args));
-    double x = s7_real(s7_caddr(args));
-    double y = s7_real(s7_cadddr(args));
-
-    switch (cmd) {
-        case 0:
-            gameobject_setpos(get_gameobject_from_id(id), x, y);
+            cpBodySetType(go->body, s7_integer(s7_caddr(args)));
             break;
 
-       case 1:
-           gameobject_move(get_gameobject_from_id(id), x, y);
-           break;
+        case 2:
+            cpBodySetPosition(go, s7tovec2(sc, s7_caddr(args)));
+            break;
+
+        case 3:
+            gameobject_move(go, s7tovec2(sc, s7_caddr(args)));
+            break;
     }
 
     return args;
@@ -353,9 +350,25 @@ s7_pointer s7_phys_q(s7_scheme *sc, s7_pointer args) {
     struct gameobject * go = get_gameobject_from_id(s7_integer(s7_car(args)));
     int q = s7_integer(s7_cadr(args));
 
+    s7_pointer ret;
+
+    /* Queries about a body
+        0: body type of static, dynamic, kinematic
+        1: body position
+        2: body rotation
+    */
     switch(q) {
         case 0:
             return s7_make_integer(sc, cpBodyGetType(go->body));
+
+        case 1:
+            ret = s7_make_vector(sc, 2);
+            s7_vector_set(sc, ret, 0, s7_make_real(sc, cpBodyGetPosition(go->body).x));
+            s7_vector_set(sc, ret, 1, s7_make_real(sc, cpBodyGetPosition(go->body).y));
+            return ret;
+
+        case 2:
+            return s7_make_real(sc, cpBodyGetAngle(go->body));
 
     }
 }
@@ -406,7 +419,6 @@ void ffi_load() {
     S7_FUNC(register, 2);
     S7_FUNC(set_pawn, 1);
     S7_FUNC(set_body, 3);
-    S7_FUNC(set_body_pos, 4);
     S7_FUNC(phys_cmd, 3);
     S7_FUNC(phys_q, 2);
     S7_FUNC(phys_set, 3);

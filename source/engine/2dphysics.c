@@ -11,6 +11,8 @@
 #include <chipmunk/chipmunk_unsafe.h>
 #include "stb_ds.h"
 
+#include "script.h"
+
 #include "log.h"
 
 cpSpace *space = NULL;
@@ -453,15 +455,14 @@ void phys2d_reindex_body(cpBody *body) {
 
 static cpBool s7_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     struct gameobject *go = data;
-    script_call_sym(go->cbs->begin);
 
     cpBody *body1;
     cpBody *body2;
     cpArbiterGetBodies(arb, &body1, &body2);
 
-    cpShape *shape1;
-    cpShape *shape2;
-    cpArbiterGetShapes(arb, &shape1, &shape2);
+    struct gameobject *g2 = cpBodyGetUserData(body2);
+
+    script_call_sym_args(go->cbs->begin, s7_make_integer(s7, g2->editor.id));
 
     return 1;
 }
