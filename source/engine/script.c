@@ -97,7 +97,7 @@ void script_call_sym(s7_pointer sym)
 
 void script_call_sym_args(s7_pointer sym, s7_pointer args)
 {
-    s7_call(s7, sym, args);
+    s7_call(s7, sym, s7_cons(s7, args, s7_nil(s7)));
 }
 
 int script_has_sym(s7_pointer sym) {

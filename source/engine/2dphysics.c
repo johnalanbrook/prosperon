@@ -463,6 +463,7 @@ static cpBool s7_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     struct gameobject *g2 = cpBodyGetUserData(body2);
 
     script_call_sym_args(go->cbs->begin, s7_make_integer(s7, g2->editor.id));
+    //script_call_sym(go->cbs->begin);
 
     return 1;
 }

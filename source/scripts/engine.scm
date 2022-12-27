@@ -73,7 +73,7 @@
 
 (define-macro (gui . expr)
     `(registertype gui
-      (let ((x 0) (y 0)) ,@expr)))
+      (let ((pos #(0 0))) ,@expr)))
     
 (define-macro (while condition . body)
     (let ((loop (gensym)))

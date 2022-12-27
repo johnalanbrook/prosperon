@@ -24,8 +24,8 @@
 
 cpVect s7tovec2(s7_scheme *sc, s7_pointer s7vec) {
     cpVect ret;
-    ret.x = s7_vector_ref(sc, s7vec, 0);
-    ret.y = s7_vector_ref(sc, s7vec, 1);
+    ret.x = s7_real(s7_vector_ref(sc, s7vec, 0));
+    ret.y = s7_real(s7_vector_ref(sc, s7vec, 1));
 
     return ret;
 }
@@ -68,23 +68,22 @@ s7_pointer s7_ui_text(s7_scheme *sc, s7_pointer args) {
 
 s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
     const char *s = s7_string(s7_car(args));
-    s7_pointer s7pos = s7_cadr(args);
-    double pos[2] = { s7_vector_ref(sc, s7pos, 0), s7_vector_ref(sc, s7pos, 1) };
+    cpVect pos = s7tovec2(sc, s7_cadr(args));
+    float fpos[2] = {pos.x, pos.y};
 
     float size = s7_real(s7_caddr(args));
     const float white[3] = {1.f, 1.f, 1.f};
 
-    renderText(s, pos, size, white, 200);
+    renderText(s, fpos, size, white, 200);
 
     return s7_car(args);
 }
 
 s7_pointer s7_gui_img(s7_scheme *sc, s7_pointer args) {
     const char *img = s7_string(s7_car(args));
-    s7_pointer s7pos = s7_cadr(args);
-    double pos[2] = { s7_vector_ref(sc, s7pos, 0), s7_vector_ref(sc, s7pos, 1) };
+    cpVect pos = s7tovec2(sc, s7_cadr(args));
 
-    gui_draw_img(img, pos[0], pos[1]);
+    gui_draw_img(img, pos.x, pos.y);
 
     return args;
 }
@@ -324,7 +323,7 @@ s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
             break;
 
         case 2:
-            cpBodySetPosition(go, s7tovec2(sc, s7_caddr(args)));
+            cpBodySetPosition(go->body, s7tovec2(sc, s7_caddr(args)));
             break;
 
         case 3:
@@ -402,8 +401,8 @@ void ffi_load() {
     S7_FUNC(ui_text, 2);
     S7_FUNC(ui_rendertext, 3);
 
-    S7_FUNC(gui_text, 4);
-    S7_FUNC(gui_img, 3);
+    S7_FUNC(gui_text, 3);
+    S7_FUNC(gui_img, 2);
 
     S7_FUNC(gen_cmd, 2);
     S7_FUNC(sys_cmd, 1);
