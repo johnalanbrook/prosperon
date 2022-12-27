@@ -44,6 +44,8 @@ static double lastTick;
 
 static float timescale = 1.f;
 
+static double framems;
+
 void seghandle(int sig) {
 #ifdef __linux__
     void *ents[512];
@@ -191,7 +193,6 @@ int main(int argc, char **args) {
             renderlag -= renderMS;
             window_renderall();
         }
-
 
         double wait = fmax(0, renderMS-elapsed);
         input_poll(wait);

@@ -14,6 +14,7 @@
 #include "openglrender.h"
 #include "2dphysics.h"
 #include "sprite.h"
+#include "anim.h"
 
 #include "yugine.h"
 
@@ -391,6 +392,73 @@ s7_pointer s7_int_cmd(s7_scheme *sc, s7_pointer args) {
     }
 }
 
+s7_pointer s7_yield(s7_scheme *sc, s7_pointer args) {
+    /* arg 1: condition
+         arg 2: function  to run
+    */
+
+
+    s7_pointer cond = s7_car(args);
+    s7_pointer func = s7_cadr(args);
+
+
+}
+
+void timer_s7_call(s7_pointer sym) {
+    s7_call(s7, sym, s7_nil(s7));
+}
+
+s7_pointer s7_timer(s7_scheme *sc, s7_pointer args) {
+    double delay = s7_real(s7_car(args));
+    s7_pointer sym = s7_cadr(args);
+
+    struct timer *timer = timer_make(delay, timer_s7_call, sym);
+    timer_start(timer);
+    return args;
+}
+
+s7_pointer s7_timer_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    int id = s7_integer(s7_cadr(args));
+
+    struct timer *t = NULL;
+
+    switch (cmd) {
+        case 0:
+            timer_pause(t);
+            break;
+        case 1:
+             timer_start(t);
+             break;
+         case 2:
+             timer_stop(t);
+             break;
+    }
+
+    return args;
+}
+
+s7_pointer s7_anim(s7_scheme *sc, s7_pointer args) {
+    s7_pointer prop = s7_car(args);
+    s7_pointer keyframes = s7_cadr(args);
+
+    YughInfo("Animating property %s.", s7_symbol_name(prop));
+
+    struct anim a = make_anim();
+
+    for (int i = 0; i < s7_list_length(sc, keyframes); i++) {
+        struct keyframe k;
+        s7_pointer kf = s7_list_ref(sc, keyframes, i);
+        k.time = s7_real(s7_car(kf));
+        k.val = s7_real(s7_cadr(kf));
+        a = anim_add_keyframe(a, k);
+    }
+
+    for (double i = 0; i < 3.0; i = i + 0.1) {
+        YughInfo("Val is now %f at time %f", anim_val(a, i), i);
+    }
+}
+
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
@@ -424,5 +492,11 @@ void ffi_load() {
     S7_FUNC(int_cmd, 2);
 
     S7_FUNC(log, 4);
+
+    S7_FUNC(yield, 2);
+    S7_FUNC(timer, 2);
+    S7_FUNC(timer_cmd, 2);
+
+    S7_FUNC(anim, 2);
 }
 
