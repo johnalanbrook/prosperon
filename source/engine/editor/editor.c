@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "nuke.h"
+#include "texture.h"
 
 #include "log.h"
 

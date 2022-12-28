@@ -131,7 +131,7 @@ int gameobject_makefromprefab(char *path)
     FILE *fprefab = fopen(path, "rb");
     if (fprefab == NULL) {
         YughError("Could not find prefab %s.", path);
-	return;
+	return -1;
     }
 
     struct gameobject *new = get_gameobject_from_id(MakeGameobject());
@@ -141,6 +141,8 @@ int gameobject_makefromprefab(char *path)
     gameobject_init(new, fprefab);
 
     fclose(fprefab);
+
+    arrlast(gameobjects).editor.id = arrlen(gameobjects)-1;
 
     return arrlen(gameobjects)-1;
 }

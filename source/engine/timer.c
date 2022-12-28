@@ -3,20 +3,20 @@
 
 #include <stb_ds.h>
 
-static double time;
-
 struct timer *timers;
 
-void check_timer(struct timer *t)
+void check_timer(struct timer *t, double dt)
 {
     if (!t->on)
         return;
 
-    if (time >= t->fire_time) {
+    t->remain_time -= dt;
+
+    if (t->remain_time <= 0) {
         t->cb(t->data);
 
         if (t->repeat) {
-            t->fire_time = time + t->interval;
+            t->remain_time = t->interval;
             return;
         }
 
@@ -25,13 +25,9 @@ void check_timer(struct timer *t)
     }
 }
 
-void timer_update(double s) {
-    time = s;
-
-
+void timer_update(double dt) {
     for (int i = 0; i < arrlen(timers); i++)
-        check_timer(&timers[i]);
-
+        check_timer(&timers[i], dt);
 }
 
 struct timer *timer_make(double interval, void (*callback)(void *param), void *param) {
@@ -53,8 +49,6 @@ void timer_pause(struct timer *t) {
     if (!t->on) return;
 
     t->on = 0;
-
-    t->remain_time = t->fire_time - time;
 }
 
 void timer_stop(struct timer *t) {
@@ -68,7 +62,6 @@ void timer_start(struct timer *t) {
     if (t->on) return;
 
     t->on = 1;
-    t->fire_time = time + t->remain_time;
 }
 
 void timer_remove(struct timer *t) {
@@ -78,25 +71,6 @@ void timer_remove(struct timer *t) {
 }
 
 void timerr_settime(struct timer *t, double interval) {
-    //double elapsed = time - (t->fire_time - t->interval);
+    t->remain_time += (interval - t->interval);
     t->interval = interval;
-    t->remain_time = t->interval;
-
-    // TODO: timerr_settime reacts to elapsed time
-}
-
-void *arrfind(void *arr, int (*valid)(void *arr, void *cmp), void *cmp)
-{
-    for (int i = 0; i < arrlen(arr); i++) {
-        if (valid(&arr[i], cmp))
-            return &arr[i];
-    }
-
-    return NULL;
-}
-
-void arrwalk(void *arr, void (*fn)(void *data))
-{
-    for (int i = 0; i < arrlen(arr); i++)
-        fn(&arr[i]);
 }

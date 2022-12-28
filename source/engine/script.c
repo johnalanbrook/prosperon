@@ -9,7 +9,13 @@
 
 s7_scheme *s7 = NULL;
 
+s7_pointer cpvec2s7(cpVect v) {
+    s7_pointer ret = s7_make_vector(s7, 2);
+    s7_vector_set(s7, ret, 0, s7_make_real(s7, v.x));
+    s7_vector_set(s7, ret, 1, s7_make_real(s7, v.y));
 
+    return ret;
+}
 
 static void null_port(s7_scheme *sc, uint8_t c, s7_pointer port) {
 

@@ -168,5 +168,6 @@ void shader_setUBO(struct shader *shader, const char *name, unsigned int index)
 
 void shader_compile_all()
 {
-    arrwalk(shaders, shader_compile);
+    for (int i = 0; i < arrlen(shaders); i++)
+        shader_compile(&shaders[i]);
 }

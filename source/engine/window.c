@@ -213,7 +213,8 @@ void window_handle_event(struct window *w)
 
 void window_all_handle_events()
 {
-    arrwalk(windows, window_handle_event);
+    for (int i = 0; i < arrlen(windows); i++)
+        window_handle_event(&windows[i]);
 }
 
 void window_makefullscreen(struct window *w)

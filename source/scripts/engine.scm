@@ -124,7 +124,7 @@
 (define-macro (register-phys type . expr)
     (let ((f (gensym)))
         `(begin
-	    (define (,f hit) (begin . ,expr))
+	    (define (,f hit norm) (begin . ,expr))
 	    (phys_cmd body ,(case type
 	                  ((collide) 0)
 			  ((separate) 3)) ,f))))

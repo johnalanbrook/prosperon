@@ -9,6 +9,10 @@ struct anim make_anim() {
     return a;
 }
 
+void free_anim(struct anim a) {
+    arrfree(a.frames);
+}
+
 struct anim anim_add_keyframe(struct anim a, struct keyframe key) {
     arrput(a.frames, key);
 
@@ -27,6 +31,8 @@ double near_val(struct anim anim, double t) {
 
         return (interval(anim.frames[i], anim.frames[i+1], t) >= 0.5f ? anim.frames[i+1].val : anim.frames[i].val);
     }
+
+    return arrlast(anim.frames).val;
 }
 
 double lerp_val(struct anim anim, double t) {

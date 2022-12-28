@@ -31,6 +31,8 @@ cpVect s7tovec2(s7_scheme *sc, s7_pointer s7vec) {
     return ret;
 }
 
+
+
 extern s7_scheme *s7;
 
 /* FFI */
@@ -330,6 +332,10 @@ s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
         case 3:
             gameobject_move(go, s7tovec2(sc, s7_caddr(args)));
             break;
+
+        case 4:
+            cpBodyApplyImpulseAtWorldPoint(go->body, s7tovec2(sc, s7_caddr(args)), cpBodyGetPosition(go->body));
+            break;
     }
 
     return args;
@@ -456,7 +462,10 @@ s7_pointer s7_anim(s7_scheme *sc, s7_pointer args) {
 
     for (double i = 0; i < 3.0; i = i + 0.1) {
         YughInfo("Val is now %f at time %f", anim_val(a, i), i);
+        s7_symbol_set_value(sc, prop, s7_make_real(sc, anim_val(a, i)));
     }
+
+    free_anim(a);
 }
 
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")

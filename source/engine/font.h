@@ -6,18 +6,26 @@
 struct shader;
 struct window;
 
+struct glrect {
+    float s0;
+    float s1;
+    float t0;
+    float t1;
+};
+
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
-    uint32_t TextureID;		// ID handle of the glyph texture
     mfloat_t Size[2];		// Size of glyph
     mfloat_t Bearing[2];	// Offset from baseline to left/top of glyph
     unsigned int Advance;	// Horizontal offset to advance to next glyph
+    struct glrect rect;
 };
 
 struct sFont {
     uint32_t fontTexture;
     uint32_t height;
     struct Character Characters[127];
+    uint32_t texID;
 };
 
 

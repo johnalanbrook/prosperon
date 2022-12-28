@@ -13,6 +13,7 @@
 #include "openglrender.h"
 
 #include <stb_truetype.h>
+#include "stb_rect_pack.h"
 
 static uint32_t VBO = 0;
 static uint32_t VAO = 0;
@@ -50,7 +51,6 @@ void font_frame(struct window *w) {
     shader_use(shader);
 }
 
-// Height in pixels
 struct sFont *MakeFont(const char *fontfile, int height)
 {
     shader_use(shader);
@@ -62,6 +62,18 @@ struct sFont *MakeFont(const char *fontfile, int height)
     snprintf(fontpath, 256, "fonts/%s", fontfile);
      fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
 
+     unsigned char *bitmap = malloc(1024*1024);
+
+     stbtt_packedchar glyphs[95];
+
+     stbtt_pack_context pc;
+
+     stbtt_PackBegin(&pc, bitmap, 1024, 1024, 0, 1, NULL);
+     stbtt_PackSetOversampling(&pc, 1, 1);
+     stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
+     stbtt_PackEnd(&pc);
+
+
 
     stbtt_fontinfo fontinfo;
     if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
@@ -69,46 +81,44 @@ struct sFont *MakeFont(const char *fontfile, int height)
     }
 
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
+     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glGenTextures(1, &newfont->texID);
+    glBindTexture(GL_TEXTURE_2D, newfont->texID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    int ascent, descent, linegap;
-
-    stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
-
-    ascent = roundf(ascent*scale);
-    descent = roundf(descent*scale);
-
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 
     for (unsigned char c = 32; c < 127; c++) {
-	unsigned char *bitmap;
+	//unsigned char *bitmap;
 	int advance, lsb, w, h, x0, y0;
 	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
+	stbtt_packedchar glyph = glyphs[c-32];
 
-	bitmap = stbtt_GetCodepointBitmap(&fontinfo, scale, scale, c, &w, &h, &x0, &y0);
+	YughInfo("Packed char is at %d, %d, %d, %d", glyphs[c-32].x0, glyphs[c-32].y0, glyphs[c-32].x1, glyphs[c-32].y1);
 
-	GLuint ftexture;
-	glGenTextures(1, &ftexture);
-	glBindTexture(GL_TEXTURE_2D, ftexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
-
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	newfont->Characters[c].TextureID = ftexture;
+         struct glrect r;
+         r.s0 = glyph.x0 / (float)1024;
+         r.s1 = glyph.x1 / (float) 1024;
+         r.t0 = glyph.y0 / (float) 1024;
+         r.t1 = glyph.y1 / (float) 1024;
+	YughInfo("That is %f %f %f %f", r.s0, r.t0, r.s1, r.t1);
 	newfont->Characters[c].Advance = advance * scale;
-	newfont->Characters[c].Size[0] = w;
-	newfont->Characters[c].Size[1] = h;
+	newfont->Characters[c].Size[0] = glyphs[c-32].x1 - glyphs[c-32].x0;
+	newfont->Characters[c].Size[1] = glyphs[c-32].y1 - glyphs[c-32].y0;
 	newfont->Characters[c].Bearing[0] = x0;
 	newfont->Characters[c].Bearing[1] = y0*-1;
+	newfont->Characters[c].rect = r;
     }
 
     return newfont;
 }
+
+static int curchar = 0;
 
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
 {
@@ -119,58 +129,15 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     float ypos = cursor[1] + (c.Bearing[1] * scale) - h;
 
     float verts[4 * 4] = {
-	xpos, ypos, 0.f, 0.f,
-	xpos+w, ypos, 1.f, 0.f,
-	xpos, ypos + h, 0.f, 1.f,
-	xpos + w, ypos + h, 1.f, 1.f
+	xpos, ypos, c.rect.s0, c.rect.t1,
+	xpos+w, ypos, c.rect.s1, c.rect.t1,
+	xpos, ypos + h, c.rect.s0, c.rect.t0,
+	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
 
-    glBindTexture(GL_TEXTURE_2D, c.TextureID);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBufferSubData(GL_ARRAY_BUFFER, curchar*sizeof(verts), sizeof(verts), verts);
 
-////// Outline calculation
-    // float outlineWidth = 1.1;
-
-    // float ow = c.Size[0] * scale * outlineWidth;
-    // float oh = c.Size[1] * scale * outlineWidth;
-
-    // float oxpos = cursor[0] + c.Bearing[0] * scale * outlineWidth - ((ow-w)/2);
-    // float oypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale * outlineWidth - ((oh-h)/2);
-
-    // float overts[4*4] = {
-    //     oxpos, oypos + oh, 0.f, 0.f,
-    //     oxpos, oypos, 0.f, 1.f,
-    //     oxpos + ow, oypos + oh, 1.f, 0.f,
-    //     oxpos + ow, oypos, 1.f, 1.f
-    // };
-
-
-/////////// Shadow calculation
-
-/*
-    float shadowOffset = 6.f;
-    float sxpos = cursor[0] + c.Bearing[0] * scale + (scale * shadowOffset);
-    float sypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale - (scale * shadowOffset);
-
-    float sverts[4 * 4] = {
-	sxpos, sypos, 0.f, 0.f,
-	sxpos+w, sypos, 1.f, 0.f,
-	sxpos, sypos + h, 0.f, 1.f,
-	sxpos + w, sypos+h, 1.f, 1.f
-    };
-
-
-
-
-    //// Shadow pass
-
-    float black[3] = { 0, 0, 0 };
-    shader_setvec3(shader, "textColor", black);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sverts), sverts);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-*/
+    curchar++;
 }
 
 void text_settype(struct sFont *mfont)
@@ -183,16 +150,23 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     shader_use(shader);
     shader_setvec3(shader, "textColor", color);
 
+    int len = strlen(text);
+
     mfloat_t cursor[2] = { 0.f };
     cursor[0] = pos[0];
     cursor[1] = pos[1];
 
     glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, font->texID);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float), NULL, GL_STREAM_DRAW);
 
     const unsigned char *line, *wordstart;
     line = (unsigned char*)text;
+
+    curchar = 0;
+
 
 
     while (*line != '\0') {
@@ -230,4 +204,6 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
                 }
         }
     }
+
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*curchar);
 }

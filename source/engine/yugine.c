@@ -174,7 +174,7 @@ int main(int argc, char **args) {
          lastTick = glfwGetTime();
 
 
-         timer_update(lastTick);
+         timer_update(elapsed);
 
          if (sim_play) {
              physlag += elapsed;

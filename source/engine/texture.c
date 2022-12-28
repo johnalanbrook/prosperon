@@ -29,7 +29,7 @@ struct Texture *texture_pullfromfile(const char *path)
     tex->anim.ms = 1;
 
     int n;
-    stbi_set_flip_vertically_on_load(1);
+    stbi_set_flip_vertically_on_load(0);
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
     while (data == NULL) {

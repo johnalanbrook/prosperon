@@ -117,6 +117,11 @@ void nuke_tree_pop() {
 }
 
 void nuke_labelf(const char *fmt, ...) {
+    char buf[512];
+
     va_list args;
-    nk_labelf(ctx, NK_TEXT_LEFT, fmt, args);
+    va_start(args, fmt);
+    vsnprintf(buf, 512, fmt, args);
+    nuke_label(buf);
+    va_end(args);
 }

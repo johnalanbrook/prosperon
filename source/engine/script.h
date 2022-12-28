@@ -2,6 +2,7 @@
 #define SCRIPT_H
 
 #include "s7.h"
+#include <chipmunk/chipmunk.h>
 
 extern s7_scheme *s7;
 
@@ -25,5 +26,7 @@ void call_gui();
 
 void register_physics(s7_pointer sym);
 void call_physics(double dt);
+
+s7_pointer cpvec2s7(cpVect v);
 
 #endif

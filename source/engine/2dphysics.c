@@ -47,6 +47,7 @@ void phys2d_shape_apply(struct phys2d_shape *shape)
 
 void init_phys2dshape(struct phys2d_shape *shape, struct gameobject *go)
 {
+    YughInfo("Making shape with GO %p", go);
     shape->go = go;
     cpShapeSetCollisionType(shape->shape, go);
     phys2d_shape_apply(shape);
@@ -462,8 +463,9 @@ static cpBool s7_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
 
     struct gameobject *g2 = cpBodyGetUserData(body2);
 
-    script_call_sym_args(go->cbs->begin, s7_make_integer(s7, g2->editor.id));
-    //script_call_sym(go->cbs->begin);
+    //script_call_sym_args(go->cbs->begin, s7_make_integer(s7, g2->editor.id));
+    s7_call(s7, go->cbs->begin, s7_list(s7, 2, s7_make_integer(s7, g2->editor.id), cpvec2s7(cpArbiterGetNormal(arb))));
+
 
     return 1;
 }
