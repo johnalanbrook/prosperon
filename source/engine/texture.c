@@ -195,6 +195,26 @@ void tex_anim_calc_uv(struct TexAnimation *anim)
 
 
 
+struct glrect tex_get_rect(struct Texture *tex)
+{
+    if (tex->opts.animation) {
+    /*
+        tex_anim_calc_uv(tex->anim);
+        struct glrect ret;
+
+        ret.s0 = tex->anim.uv.x;
+        ret.s1 = tex->anim.uv.x + tex->anim.uv.w;
+        ret.t0 = tex->anim.uv.y;
+        ret.t1 = tex->anim.uv.y + tex->anim.uv.h;
+*/
+        return runit;
+    } else {
+        return runit;
+    }
+
+    return runit;
+}
+
 void tex_bind(struct Texture *tex)
 {
     glActiveTexture(GL_TEXTURE0);

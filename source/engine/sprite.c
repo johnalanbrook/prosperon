@@ -11,12 +11,13 @@
 #include <string.h>
 #include "stb_ds.h"
 #include "log.h"
+#include "font.h"
 
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
 struct sprite *sprites;
 
-static uint32_t quadVAO;
+static uint32_t VBO;
 
 struct sprite *make_sprite(struct gameobject *go)
 {
@@ -111,29 +112,12 @@ unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite)
 // TODO: This should be done once for all sprites
 void sprite_initialize()
 {
-    uint32_t VBO;
-    float vertices[] = {
-	// pos
-	0.f, 0.f,
-	0.0f, 1.0f,
-	1.f, 0.f,
-	1.f, 1.f
-    };
-
-    glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &VBO);
-
-    glBindVertexArray(quadVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
-
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
-void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2]) {
+
+
+void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r) {
 	mfloat_t model[16] = { 0.f };
 	mfloat_t r_model[16] = { 0.f };
 	mfloat_t s_model[16] = { 0.f };
@@ -157,11 +141,20 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 	shader_setmat4(spriteShader, "model", model);
 	shader_setvec3(spriteShader, "spriteColor", white);
 
-	//tex_bind(sprite->tex);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex->id);
+         glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-	glBindVertexArray(quadVAO);
+         float vertices[] = {
+             0.f, 0.f, r.s0, r.t1,
+             1.f, 0.f, r.s1, r.t1,
+             0.f, 1.f, r.s0, r.t0,
+             1.f, 1.f, r.s1, r.t0
+         };
+
+         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
@@ -173,7 +166,7 @@ void sprite_draw(struct sprite *sprite)
 
         float size[2] = { sprite->size[0] * sprite->go->scale, sprite->size[1] * sprite->go->scale };
 
-        tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos);
+        tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
     }
 }
 
@@ -183,7 +176,7 @@ void gui_draw_img(const char *img, float x, float y) {
     float pos[2] = {x, y};
     float size[2] = {1.f, 1.f};
     float offset[2] = { 0.f, 0.f };
-    tex_draw(tex, pos, 0.f, size, offset);
+    tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex));
 }
 
 void spriteanim_draw(struct sprite *sprite)
@@ -207,7 +200,6 @@ void spriteanim_draw(struct sprite *sprite)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D_ARRAY, sprite->tex->id);
 
-    glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
@@ -232,7 +224,6 @@ void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2
     glBindTexture(GL_TEXTURE_2D, stream->texture_cr);
 
     // TODO: video bind VAO
-    glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 

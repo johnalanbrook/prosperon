@@ -28,7 +28,7 @@ struct sFont {
     uint32_t texID;
 };
 
-
+struct glrect runit = { 0.f, 1.f, 0.f, 1.f };
 
 void font_init(struct shader *s);
 void font_frame(struct window *w);
