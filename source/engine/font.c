@@ -14,12 +14,12 @@
 
 #include <stb_truetype.h>
 #include "stb_rect_pack.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 static uint32_t VBO = 0;
-static uint32_t VAO = 0;
 
 unsigned char ttf_buffer[1<<25];
-unsigned char temp_bitmap[512 * 512];
 
 struct sFont *font;
 static struct shader *shader;
@@ -29,22 +29,16 @@ void font_init(struct shader *textshader) {
 
     shader_use(shader);
 
-    // configure VAO/VBO for texture quads
-    glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
 
 
     // Default font
-    font = MakeFont("teenytinypixels.ttf", 16);
+    //font = MakeFont("teenytinypixels.ttf", 30);
+    font = MakeFont("LessPerfectDOSVGA.ttf", 16);
 }
 
 void font_frame(struct window *w) {
@@ -55,6 +49,8 @@ struct sFont *MakeFont(const char *fontfile, int height)
 {
     shader_use(shader);
 
+    int packsize = 128;
+
     struct sFont *newfont = calloc(1, sizeof(struct sFont));
     newfont->height = height;
 
@@ -62,18 +58,17 @@ struct sFont *MakeFont(const char *fontfile, int height)
     snprintf(fontpath, 256, "fonts/%s", fontfile);
      fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
 
-     unsigned char *bitmap = malloc(1024*1024);
+     unsigned char *bitmap = malloc(packsize*packsize);
 
      stbtt_packedchar glyphs[95];
 
      stbtt_pack_context pc;
 
-     stbtt_PackBegin(&pc, bitmap, 1024, 1024, 0, 1, NULL);
-     stbtt_PackSetOversampling(&pc, 1, 1);
+     stbtt_PackBegin(&pc, bitmap, packsize, packsize, 0, 1, NULL);
      stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
      stbtt_PackEnd(&pc);
 
-
+     stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char)*packsize);
 
     stbtt_fontinfo fontinfo;
     if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
@@ -81,11 +76,11 @@ struct sFont *MakeFont(const char *fontfile, int height)
     }
 
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
-     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glGenTextures(1, &newfont->texID);
     glBindTexture(GL_TEXTURE_2D, newfont->texID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1024, 1024, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, packsize, packsize, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+    //glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -94,24 +89,23 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
 
     for (unsigned char c = 32; c < 127; c++) {
-	//unsigned char *bitmap;
-	int advance, lsb, w, h, x0, y0;
-	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
 	stbtt_packedchar glyph = glyphs[c-32];
 
-	YughInfo("Packed char is at %d, %d, %d, %d", glyphs[c-32].x0, glyphs[c-32].y0, glyphs[c-32].x1, glyphs[c-32].y1);
+	YughInfo("Packed char %c is at %d, %d, %d, %d", c, glyphs[c-32].x0, glyphs[c-32].y0, glyphs[c-32].x1, glyphs[c-32].y1);
+
+	YughInfo("Offsets are %f %f %f %f", glyph.xoff, glyph.yoff, glyph.xoff2, glyph.yoff2);
 
          struct glrect r;
-         r.s0 = glyph.x0 / (float)1024;
-         r.s1 = glyph.x1 / (float) 1024;
-         r.t0 = glyph.y0 / (float) 1024;
-         r.t1 = glyph.y1 / (float) 1024;
-	YughInfo("That is %f %f %f %f", r.s0, r.t0, r.s1, r.t1);
-	newfont->Characters[c].Advance = advance * scale;
-	newfont->Characters[c].Size[0] = glyphs[c-32].x1 - glyphs[c-32].x0;
-	newfont->Characters[c].Size[1] = glyphs[c-32].y1 - glyphs[c-32].y0;
-	newfont->Characters[c].Bearing[0] = x0;
-	newfont->Characters[c].Bearing[1] = y0*-1;
+         r.s0 = glyph.x0 / (float) packsize;
+         r.s1 = glyph.x1 / (float) packsize;
+         r.t0 = glyph.y0 / (float) packsize;
+         r.t1 = glyph.y1 / (float) packsize;
+
+	newfont->Characters[c].Advance = glyph.xadvance;
+	newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0;
+	newfont->Characters[c].Size[1] = glyph.y1 - glyph.y0;
+	newfont->Characters[c].Bearing[0] = glyph.xoff;
+	newfont->Characters[c].Bearing[1] = glyph.yoff2;
 	newfont->Characters[c].rect = r;
     }
 
@@ -126,7 +120,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     float h = c.Size[1] * scale;
 
     float xpos = cursor[0] + c.Bearing[0] * scale;
-    float ypos = cursor[1] + (c.Bearing[1] * scale) - h;
+    float ypos = cursor[1] - c.Bearing[1] * scale;
 
     float verts[4 * 4] = {
 	xpos, ypos, c.rect.s0, c.rect.t1,
@@ -134,6 +128,9 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
 	xpos, ypos + h, c.rect.s0, c.rect.t0,
 	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
+
+    if (verts[5] < 0 || verts[10] < 0 || verts[0] > window_i(0)->width || verts[1] > window_i(0)->height)
+        return;
 
     glBufferSubData(GL_ARRAY_BUFFER, curchar*sizeof(verts), sizeof(verts), verts);
 
@@ -158,9 +155,10 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, font->texID);
-    glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float), NULL, GL_STREAM_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
 
     const unsigned char *line, *wordstart;
     line = (unsigned char*)text;

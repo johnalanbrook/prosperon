@@ -9,5 +9,7 @@ void sim_stop();
 void sim_step();
 void set_timescale(float val);
 
+int frame_fps();
+
 
 #endif

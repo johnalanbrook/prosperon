@@ -44,7 +44,10 @@ static double lastTick;
 
 static float timescale = 1.f;
 
-static double framems;
+#define FPSBUF 10
+static double framems[FPSBUF];
+int framei = 0;
+int fps;
 
 void seghandle(int sig) {
 #ifdef __linux__
@@ -172,7 +175,12 @@ int main(int argc, char **args) {
          double elapsed = glfwGetTime() - lastTick;
          deltaT = elapsed;
          lastTick = glfwGetTime();
+        double wait = fmax(0, renderMS-elapsed);
+        input_poll(wait);
+        window_all_handle_events();
 
+         framems[framei++] = elapsed;
+         if (framei  == FPSBUF) framei = 0;
 
          timer_update(elapsed);
 
@@ -194,12 +202,19 @@ int main(int argc, char **args) {
             window_renderall();
         }
 
-        double wait = fmax(0, renderMS-elapsed);
-        input_poll(wait);
-        window_all_handle_events();
     }
 
     return 0;
+}
+
+int frame_fps()
+{
+    double fpsms = 0;
+     for (int i = 0; i < FPSBUF; i++) {
+         fpsms += framems[i];
+     }
+
+     return floor((float)FPSBUF / fpsms);
 }
 
 int sim_playing() { return sim_play; }

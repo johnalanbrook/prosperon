@@ -77,7 +77,7 @@ s7_pointer s7_gui_text(s7_scheme *sc, s7_pointer args) {
     float size = s7_real(s7_caddr(args));
     const float white[3] = {1.f, 1.f, 1.f};
 
-    renderText(s, fpos, size, white, 200);
+    renderText(s, fpos, size, white, 1800);
 
     return s7_car(args);
 }
@@ -138,7 +138,8 @@ s7_pointer s7_log(s7_scheme *sc, s7_pointer args) {
 s7_pointer s7_ui_rendertext(s7_scheme *sc, s7_pointer args) {
     const char *s = s7_string(s7_car(args));
     s7_pointer s7pos = s7_cadr(args);
-    double pos[2] = { s7_vector_ref(sc, s7pos, 0), s7_vector_ref(sc, s7pos, 1) };
+    cpVect cpos = s7tovec2(sc, s7_cadr(args));
+    double pos[2] = { cpos.x, cpos.y };
     double size = s7_real(s7_caddr(args));
     double white[3] = {1.f, 1.f, 1.f};
 
@@ -247,6 +248,9 @@ s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
         case 7:
             return s7_make_integer(sc, MakeGameobject());
 
+        case 8:
+            return s7_make_integer(sc, frame_fps());
+
     }
 
     return args;
@@ -346,7 +350,7 @@ s7_pointer s7_phys_cmd(s7_scheme *sc, s7_pointer args) {
     int cmd = s7_integer(s7_cadr(args));
     s7_pointer env = s7_caddr(args);
 
-    if (go == -1) return;
+    if (go == -1) return s7_nil(sc);
 
     phys2d_add_handler_type(cmd, get_gameobject_from_id(go), env);
 }

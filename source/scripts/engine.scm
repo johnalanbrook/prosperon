@@ -49,6 +49,7 @@
 (define (load_level s) (gen_cmd 0 s))
 (define (load_prefab s) (gen_cmd 1 s))
 (define (newobject) (sys_cmd 7))
+(define (fps) (sys_cmd 8))
 (define (quit) (sys_cmd 0))
 (define (exit) (quit))
 
