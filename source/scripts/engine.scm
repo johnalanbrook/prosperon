@@ -58,6 +58,9 @@
 (define (sound_stop sound) (sound_cmd sound 2))
 (define (sound_restart sound) (sound_cmd sound 3))
 
+(define-macro (anim_play anim)
+    `(anim_cmd 0 body ,anim))
+
 (define-macro (registertype type . expr)
     (let ((f (gensym)))
         `(begin

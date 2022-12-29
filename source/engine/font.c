@@ -18,6 +18,7 @@
 #include "stb_image_write.h"
 
 static uint32_t VBO = 0;
+static uint32_t VAO = 0;
 
 unsigned char ttf_buffer[1<<25];
 
@@ -30,6 +31,15 @@ void font_init(struct shader *textshader) {
     shader_use(shader);
 
     glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &VAO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+
+    glBindVertexArray(0);
 
     // Default font
     //font = MakeFont("teenytinypixels.ttf", 30);
@@ -152,7 +162,8 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     glBindTexture(GL_TEXTURE_2D, font->texID);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float), NULL, GL_STREAM_DRAW);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+
+    glBindVertexArray(VAO);
 
     const unsigned char *line, *wordstart;
     line = (unsigned char*)text;

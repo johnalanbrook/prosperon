@@ -472,6 +472,20 @@ s7_pointer s7_anim(s7_scheme *sc, s7_pointer args) {
     free_anim(a);
 }
 
+s7_pointer s7_anim_cmd(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    int body = s7_integer(s7_cadr(args));
+    s7_pointer sym = s7_caddr(args);
+
+    switch (cmd) {
+        case 0:
+            YughInfo("Playing animation called %s.", s7_symbol_name(sym));
+            break;
+    }
+
+    return args;
+}
+
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
@@ -511,5 +525,6 @@ void ffi_load() {
     S7_FUNC(timer_cmd, 2);
 
     S7_FUNC(anim, 2);
+    S7_FUNC(anim_cmd, 3);
 }
 

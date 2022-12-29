@@ -108,11 +108,18 @@ unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite)
     return interval;
 }
 
+static uint32_t VAO = 0;
 
-// TODO: This should be done once for all sprites
 void sprite_initialize()
 {
     glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &VAO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(0);
 }
 
 
@@ -153,9 +160,11 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
          };
 
          glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 
+         glBindVertexArray(VAO);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	glBindVertexArray(0);
 }
 
 void sprite_draw(struct sprite *sprite)
@@ -178,31 +187,6 @@ void gui_draw_img(const char *img, float x, float y) {
     float offset[2] = { 0.f, 0.f };
     tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex));
 }
-
-void spriteanim_draw(struct sprite *sprite)
-{
-    shader_use(animSpriteShader);
-
-    mfloat_t model[16] = { 0.f };
-    memcpy(model, UNITMAT4, sizeof(UNITMAT4));
-
-    mat4_translate_vec2(model, sprite->pos);
-    mfloat_t msize[2] =
-	{ sprite->size[0] * sprite->anim.dimensions[0],
-	  sprite->size[1] * sprite->anim.dimensions[1] };
-    mat4_scale_vec2(model, msize);
-
-    shader_setmat4(animSpriteShader, "model", model);
-    shader_setvec3(animSpriteShader, "spriteColor", sprite->color);
-    shader_setfloat(animSpriteShader, "frame", sprite->anim.frame);
-
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, sprite->tex->id);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
 
 void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2], float rotate, mfloat_t color[3])
 {
