@@ -2,16 +2,10 @@
 #define FONT_H
 
 #include "mathc.h"
+#include "texture.h"
 
 struct shader;
 struct window;
-
-struct glrect {
-    float s0;
-    float s1;
-    float t0;
-    float t1;
-};
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
@@ -28,7 +22,7 @@ struct sFont {
     uint32_t texID;
 };
 
-struct glrect runit = { 0.f, 1.f, 0.f, 1.f };
+
 
 void font_init(struct shader *s);
 void font_frame(struct window *w);

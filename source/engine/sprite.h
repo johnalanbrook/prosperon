@@ -36,7 +36,6 @@ void sprite_delete(struct sprite *sprite);
 void sprite_init(struct sprite *sprite, struct gameobject *go);
 void sprite_io(struct sprite *sprite, FILE *f, int read);
 void sprite_loadtex(struct sprite *sprite, const char *path);
-void sprite_loadanim(struct sprite *sprite, const char *path, struct Anim2D anim);
 void sprite_settex(struct sprite *sprite, struct Texture *tex);
 void sprite_initialize();
 void sprite_draw(struct sprite *sprite);

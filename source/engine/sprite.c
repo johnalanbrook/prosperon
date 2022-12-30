@@ -1,6 +1,5 @@
 #include "sprite.h"
 
-
 #include "timer.h"
 #include "render.h"
 #include "openglrender.h"
@@ -87,16 +86,6 @@ void sprite_loadtex(struct sprite *sprite, const char *path)
     sprite->tex = texture_loadfromfile(path);
 }
 
-void sprite_loadanim(struct sprite *sprite, const char *path, struct Anim2D anim)
-{
-    sprite->tex = texture_loadfromfile(path);
-    sprite->anim = anim;
-    sprite->anim.timer = timer_make(sprite->anim.ms, &incrementAnimFrame, sprite);
-/*
-    sprite->tex = texture_loadanimfromfile(sprite->tex, path, sprite->anim.frames, sprite->anim.dimensions);
-*/
-}
-
 void sprite_settex(struct sprite *sprite, struct Texture *tex)
 {
     sprite->tex = tex;
@@ -122,7 +111,13 @@ void sprite_initialize()
     glEnableVertexAttribArray(0);
 }
 
+struct glrect sprite_get_rect(struct sprite *sprite) {
+    if (sprite->tex->opts.animation) {
 
+    } else {
+        return tex_get_rect(sprite->tex);
+    }
+}
 
 void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r) {
 	mfloat_t model[16] = { 0.f };
@@ -173,9 +168,18 @@ void sprite_draw(struct sprite *sprite)
         cpVect cpos = cpBodyGetPosition(sprite->go->body);
         float pos[2] = {cpos.x, cpos.y};
 
-        float size[2] = { sprite->size[0] * sprite->go->scale, sprite->size[1] * sprite->go->scale };
+        if (sprite->tex->opts.animation) {
+            float size[2];
+            struct Anim2D *a = &sprite->anim;
+            a->frames = sprite->tex->anim.frames;
+            size[0] = sprite->tex->anim.dimensions[0];
+            size[1] = sprite->tex->anim.dimensions[1];
+            tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
+        } else {
+            float size[2] = { sprite->size[0] * sprite->go->scale, sprite->size[1] * sprite->go->scale };
 
-        tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
+            tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
+        }
     }
 }
 

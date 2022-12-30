@@ -2,30 +2,44 @@
 #define TEXTURE_H
 
 #include "timer.h"
-#include "font.h"
 
 #define TEX_SPEC 0
 #define TEX_NORM 1
 #define TEX_HEIGHT 2
 #define TEX_DIFF 3
 
-
-struct Rect {
-    float x;
-    float y;
-    float w;
-    float h;
+/* Normalized S,T coordinates for rendering */
+struct glrect {
+    float s0;
+    float s1;
+    float t0;
+    float t1;
 };
 
+float st_s_w(struct glrect st);
+float st_s_h(struct glrect st);
+
+#define ST_UNIT (struct glrect) { 0.f, 1.f, 0.f, 1.f }
+
+/* Pixel U,V coordiantes */
+struct uvrect {
+    int u0;
+    int u1;
+    int v0;
+    int v1;
+};
+
+/* Tracks a playing animation */
 struct TexAnimation {
     int frame;
     int playing;
     int pausetime;
     struct timer *timer;
-    struct Rect uv;
+    struct glrect st; /* Current ST coordinates for active frame */
     struct Texture *tex;
 };
 
+/* Describes an animation on a particular texture */
 struct TexAnim {
     int frames;
     int dimensions[2];

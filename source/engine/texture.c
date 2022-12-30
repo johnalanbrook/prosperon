@@ -80,8 +80,6 @@ struct Texture *texture_loadfromfile(const char *path)
     return new;
 }
 
-
-
 void tex_pull(struct Texture *tex)
 {
     if (tex->data != NULL)
@@ -184,35 +182,19 @@ void tex_gpu_free(struct Texture *tex)
 
 void tex_anim_calc_uv(struct TexAnimation *anim)
 {
-    struct Rect uv;
-    uv.w = 1.f / anim->tex->anim.frames;
-    uv.h = 1.f;
-    uv.y = 0.f;
-    uv.x = uv.w * (anim->frame);
+    struct glrect st;
+    float w = 1.f / anim->tex->anim.frames;
+    st.s0 = w * (anim->frame);
+    st.s1 = st.s0 + w;
+    st.t0 = 0.f;
+    st.t1 = 1.f;
 
-    anim->uv = uv;
+    anim->st = st;
 }
-
-
 
 struct glrect tex_get_rect(struct Texture *tex)
 {
-    if (tex->opts.animation) {
-    /*
-        tex_anim_calc_uv(tex->anim);
-        struct glrect ret;
-
-        ret.s0 = tex->anim.uv.x;
-        ret.s1 = tex->anim.uv.x + tex->anim.uv.w;
-        ret.t0 = tex->anim.uv.y;
-        ret.t1 = tex->anim.uv.y + tex->anim.uv.h;
-*/
-        return runit;
-    } else {
-        return runit;
-    }
-
-    return runit;
+    return ST_UNIT;
 }
 
 void tex_bind(struct Texture *tex)
@@ -271,4 +253,12 @@ void anim_bkwd(struct TexAnimation *anim)
     anim_decr(anim);
 }
 
+float st_s_w(struct glrect st)
+{
+    return (st.s1 - st.s0);
+}
 
+float st_s_h(struct glrect st)
+{
+    return (st.t1 - st.t0);
+}
