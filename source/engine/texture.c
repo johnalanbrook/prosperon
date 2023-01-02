@@ -22,14 +22,12 @@ struct Texture *texture_pullfromfile(const char *path)
 	return texhash[index].value;
 
     struct Texture *tex = calloc(1, sizeof(*tex));
-    tex->flipy = 0;
     tex->opts.sprite = 1;
     tex->opts.gamma = 0;
-    tex->anim.frames = 1;
     tex->anim.ms = 1;
 
     int n;
-    stbi_set_flip_vertically_on_load(0);
+
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
     while (data == NULL) {
@@ -37,14 +35,54 @@ struct Texture *texture_pullfromfile(const char *path)
         return NULL;
     }
 
-    tex->data = data;
+         glGenTextures(1, &tex->id);
+
+    	glBindTexture(GL_TEXTURE_2D, tex->id);
+
+    	GLenum fmt;
+
+    	switch (n) {
+    	    case 1:
+    	        fmt = GL_RED;
+    	        break;
+
+    	    case 2:
+    	        fmt = GL_RG;
+    	        break;
+
+    	    case 3:
+    	        fmt = GL_RGB;
+    	        break;
+
+    	    case 4:
+    	        fmt = GL_RGBA;
+    	        break;
+    	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	if (tex->opts.sprite) {
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	} else {
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+
+
+    stbi_image_free(data);
 
     if (shlen(texhash) == 0)
         sh_new_arena(texhash);
 
     shput(texhash, path, tex);
-
-    tex->id = 0;
 
     return tex;
 }
@@ -72,7 +110,7 @@ struct Texture *texture_loadfromfile(const char *path)
     if (new->id == 0) {
         glGenTextures(1, &new->id);
 
-        tex_gpu_load(new);
+        //tex_gpu_load(new);
 
         YughInfo("Loaded texture path %s", path);
     }
@@ -80,94 +118,53 @@ struct Texture *texture_loadfromfile(const char *path)
     return new;
 }
 
-void tex_pull(struct Texture *tex)
-{
-    if (tex->data != NULL)
-        tex_flush(tex);
-
-    int n;
-    char *path = tex_get_path(tex);
-    stbi_set_flip_vertically_on_load(0);
-    tex->data = stbi_load(path, &tex->width, &tex->height, &n, 4);
-
-    if (tex->data == NULL)
-	YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
-}
-
-void tex_flush(struct Texture *tex)
-{
-    free(tex->data);
-}
-
 void tex_gpu_reload(struct Texture *tex)
 {
     tex_gpu_free(tex);
 
-    tex_gpu_load(tex);
-}
-
-void tex_free(struct Texture *tex)
-{
-    free(tex->data);
-    //free(tex->path);
-    free(tex);
-}
-
-void tex_gpu_load(struct Texture *tex)
-{
-	glBindTexture(GL_TEXTURE_2D, tex->id);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex->data);
-
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	if (tex->opts.sprite) {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	} else {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    //tex_gpu_load(tex);
 }
 
 void tex_incr_anim(struct TexAnimation *tex_anim)
 {
     anim_incr(tex_anim);
 
-    if (!tex_anim->tex->anim.loop && tex_anim->frame == tex_anim->tex->anim.frames)
+    if (!tex_anim->loop && tex_anim->frame == arrlen(tex_anim->anim->st_frames))
 	anim_pause(tex_anim);
 }
 
 void anim_incr(struct TexAnimation *anim)
 {
-    anim->frame = (anim->frame + 1) % anim->tex->anim.frames;
-    tex_anim_calc_uv(anim);
+    anim->frame = (anim->frame + 1) % arrlen(anim->anim->st_frames);
+    //tex_anim_calc_uv(anim);
 }
 
 void anim_decr(struct TexAnimation *anim)
 {
-    anim->frame = (anim->frame + anim->tex->anim.frames - 1) % anim->tex->anim.frames;
-    tex_anim_calc_uv(anim);
+    anim->frame = (anim->frame + arrlen(anim->anim->st_frames) - 1) % arrlen(anim->anim->st_frames);
+    //tex_anim_calc_uv(anim);
+}
+
+struct glrect anim_get_rect(struct TexAnimation *anim)
+{
+    return anim->anim->st_frames[anim->frame];
 }
 
 void anim_setframe(struct TexAnimation *anim, int frame)
 {
     anim->frame = frame;
-    tex_anim_calc_uv(anim);
+    //tex_anim_calc_uv(anim);
 }
 
 void tex_anim_set(struct TexAnimation *anim)
 {
     if (anim->playing) {
 	timer_remove(anim->timer);
-	anim->timer = timer_make(1.f / anim->tex->anim.ms, tex_incr_anim, anim);
+	anim->timer = timer_make(1.f / anim->anim->ms, tex_incr_anim, anim);
 
     }
 
-    tex_anim_calc_uv(anim);
+    //tex_anim_calc_uv(anim);
 }
 
 
@@ -180,16 +177,9 @@ void tex_gpu_free(struct Texture *tex)
     }
 }
 
-void tex_anim_calc_uv(struct TexAnimation *anim)
+int anim_frames(struct TexAnim *a)
 {
-    struct glrect st;
-    float w = 1.f / anim->tex->anim.frames;
-    st.s0 = w * (anim->frame);
-    st.s1 = st.s0 + w;
-    st.t0 = 0.f;
-    st.t1 = 1.f;
-
-    anim->st = st;
+    return arrlen(a->st_frames);
 }
 
 struct glrect tex_get_rect(struct Texture *tex)
@@ -209,15 +199,15 @@ void anim_play(struct TexAnimation *anim)
     if (anim->playing)
 	return;
 
-    if (anim->frame == anim->tex->anim.frames)
+    if (anim->frame == anim_frames(anim->anim))
 	anim->frame = 0;
 
     anim->playing = 1;
 
     if (anim->timer == NULL)
-        anim->timer = timer_make(1.f / anim->tex->anim.ms, tex_incr_anim, anim);
+        anim->timer = timer_make(1.f / anim->anim->ms, tex_incr_anim, anim);
     else
-        timerr_settime(anim->timer, 1.f/anim->tex->anim.ms);
+        timerr_settime(anim->timer, 1.f/anim->anim->ms);
 
     timer_start(anim->timer);
 }
@@ -231,7 +221,7 @@ void anim_stop(struct TexAnimation *anim)
     anim->frame = 0;
     anim->pausetime = 0;
     timer_stop(anim->timer);
-    tex_anim_calc_uv(anim);
+    //tex_anim_calc_uv(anim);
 }
 
 void anim_pause(struct TexAnimation *anim)

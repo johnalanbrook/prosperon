@@ -34,9 +34,6 @@
 
 #include "sound.h"
 
-// TODO: Init on the heap
-
-
 #include "engine.h"
 
 void error_callback(int error, const char *description)
@@ -55,20 +52,15 @@ void engine_init()
     }
 
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
-
     resources_init();
+
+    YughInfo("Starting scripts ...");
     script_init();
     registry_init();
 
-    //stbi_set_flip_vertically_on_load(1);
+    YughInfo("Starting physics ...");
     phys2d_init();
-    sound_init();
-}
 
-void engine_stop()
-{
-    glfwTerminate();
+    YughInfo("Starting sound ...");
+    //sound_init();
 }

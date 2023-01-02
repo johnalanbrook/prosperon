@@ -104,37 +104,41 @@ void wav_norm_gain(struct wav *w, double lv)
     }
 }
 
-void sound_init()
+void print_devices()
 {
-     PaError err = Pa_Initialize();
-    check_pa_err(err);
-
     int numDevices = Pa_GetDeviceCount();
     const PaDeviceInfo *deviceInfo;
 
     for (int i = 0; i < numDevices; i++) {
         deviceInfo = Pa_GetDeviceInfo(i);
 
-       // printf("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
+       YughInfo("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
     }
+}
 
-    PaStreamParameters outparams;
+void sound_init()
+{
+
+     PaError err = Pa_Initialize();
+     check_pa_err(err);
 
 
 /*
+    PaStreamParameters outparams;
     outparams.channelCount = 2;
     outparams.device = 19;
     outparams.sampleFormat = paInt16;
     outparams.suggestedLatency = Pa_GetDeviceInfo(outparams.device)->defaultLowOutputLatency;
     outparams.hostApiSpecificStreamInfo = NULL;
-    */
+    err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
+*/
 
-    //err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
     err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, SAMPLERATE, BUF_FRAMES, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
     check_pa_err(err);
+
 }
 
 void audio_open(const char *device)

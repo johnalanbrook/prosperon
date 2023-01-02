@@ -780,13 +780,14 @@ void editor_selectasset_str(const char *path) {
               asset->data = texture_loadfromfile(path);
               load_asset(asset);
           }
-          else
-              tex_pull(asset->data);
+          //else
+              //tex_pull(asset->data);
 
-          tex_gui_anim.tex = asset->data;
+          struct Texture *tex = asset->data;
+          tex_gui_anim.anim = &tex->anim;
           tex_anim_set(&tex_gui_anim);
           anim_setframe(&tex_gui_anim, 0);
-          float tex_scale = (float) ASSET_WIN_SIZE / (float)tex_gui_anim.tex->width;
+          float tex_scale = (float) ASSET_WIN_SIZE / (float)tex_gui_anim.anim->tex->width;
           if (tex_scale >= 10.f) {
              tex_scale = 10.f;
          }
@@ -827,8 +828,8 @@ void editor_asset_tex_gui(struct Texture *tex) {
 
     nuke_checkbox("Sprite", &tex->opts.sprite);
 
-    if (old_sprite != tex->opts.sprite)
-        tex_gpu_load(tex);
+    //if (old_sprite != tex->opts.sprite)
+        //tex_gpu_load(tex);
 
     nuke_nel(4);
     nuke_radio_btn("Raw", &tex_view, 0);
@@ -839,6 +840,7 @@ void editor_asset_tex_gui(struct Texture *tex) {
 
 
     if (tex->opts.animation) {
+    /*
         int old_frames = tex->anim.frames;
         int old_ms = tex->anim.ms;
 
@@ -877,6 +879,7 @@ void editor_asset_tex_gui(struct Texture *tex) {
         r.h = st_s_h(tex_gui_anim.st)*tex->height;
 
         nk_image(ctx, nk_subimage_id(tex->id, tex->width, tex->height, r));
+        */
     } else {
       nk_layout_row_static(ctx, tex->height*tex_scale, tex->width*tex_scale, 1);
       nk_image(ctx, nk_image_id(tex->id));

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "timer.h"
 #include "mathc.h"
+#include "texture.h"
 
 struct datastream;
 struct gameobject;
@@ -11,22 +12,13 @@ struct Texture;
 
 struct timer;
 
-struct Anim2D {
-    int frames;
-    int frame;
-    int dimensions[2];
-    struct timer *timer;
-    int ms;
-};
-
 struct sprite {
     mfloat_t pos[2];
     mfloat_t size[2];
     float rotation;
     mfloat_t color[3];
-    int index;
 
-    struct Anim2D anim;
+    struct TexAnimation anim;
     struct gameobject *go;
     struct Texture *tex;
 };

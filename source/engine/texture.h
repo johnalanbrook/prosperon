@@ -35,16 +35,15 @@ struct TexAnimation {
     int playing;
     int pausetime;
     struct timer *timer;
-    struct glrect st; /* Current ST coordinates for active frame */
-    struct Texture *tex;
+    struct TexAnim *anim;
+    int loop;
 };
 
 /* Describes an animation on a particular texture */
 struct TexAnim {
-    int frames;
-    int dimensions[2];
+    struct glrect *st_frames; /* Dynamic array of frames of animation */
     int ms;
-    int loop;
+    struct Texture *tex;
 };
 
 struct TextureOptions {
@@ -54,12 +53,9 @@ struct TextureOptions {
 };
 
 struct Texture {
-    int type;
-    unsigned int id;
+    unsigned int id; /* ID reference for the GPU memory location of the texture */
     int width;
     int height;
-    short flipy;
-    unsigned char *data;   // Pixel data of the texture, loaded in at runtime
 
     struct TextureOptions opts;
     struct TexAnim anim;
@@ -67,12 +63,8 @@ struct Texture {
 
 struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
 struct Texture *texture_loadfromfile(const char *path);    // Create texture & load to gpu
-void tex_gpu_load(struct Texture *tex);       // Send texture data to gpu
 void tex_gpu_reload(struct Texture *tex);    // gpu_free then gpu_load
 void tex_gpu_free(struct Texture *tex);     // Remove texture data from gpu
-void tex_free(struct Texture *tex);    // Delete struct
-void tex_flush(struct Texture *tex);     // Remove pixel data from struct
-void tex_pull(struct Texture *tex);    // Pull pixel data from image
 void tex_bind(struct Texture *tex);    // Bind to gl context
 
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
@@ -87,10 +79,11 @@ void anim_incr(struct TexAnimation  *anim);
 void anim_decr(struct TexAnimation *anim);
 
 void tex_incr_anim(struct TexAnimation *tex_anim);
-void tex_anim_calc_uv(struct TexAnimation *anim);
 void tex_anim_set(struct TexAnimation *anim);
 
 struct glrect tex_get_rect(struct Texture *tex);
+struct glrect anim_get_rect(struct TexAnimation *anim);
 
+int anim_frames(struct TexAnim *a);
 
 #endif

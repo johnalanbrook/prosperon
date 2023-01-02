@@ -26,8 +26,7 @@ struct sprite *make_sprite(struct gameobject *go)
     struct sprite sprite = {
         .color = {1.f, 1.f, 1.f},
         .size = {1.f, 1.f},
-        .tex = texture_loadfromfile("ph.png"),
-        .index = arrlen(sprites)    };
+        .tex = texture_loadfromfile("ph.png")  };
     sprite_init(&sprite, go);
     arrput(sprites, sprite);
 
@@ -89,12 +88,6 @@ void sprite_loadtex(struct sprite *sprite, const char *path)
 void sprite_settex(struct sprite *sprite, struct Texture *tex)
 {
     sprite->tex = tex;
-}
-
-unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite)
-{
-    sprite->anim.frame = (sprite->anim.frame + 1) % sprite->anim.frames;
-    return interval;
 }
 
 static uint32_t VAO = 0;
@@ -170,11 +163,9 @@ void sprite_draw(struct sprite *sprite)
 
         if (sprite->tex->opts.animation) {
             float size[2];
-            struct Anim2D *a = &sprite->anim;
-            a->frames = sprite->tex->anim.frames;
-            size[0] = sprite->tex->anim.dimensions[0];
-            size[1] = sprite->tex->anim.dimensions[1];
-            tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
+            //size[0] = sprite->tex->anim.dimensions[0] * sprite->go->scale;
+            //size[1] = sprite->tex->anim.dimensions[1] * sprite->go->scale;
+            tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
         } else {
             float size[2] = { sprite->size[0] * sprite->go->scale, sprite->size[1] * sprite->go->scale };
 
@@ -214,4 +205,3 @@ void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2
     // TODO: video bind VAO
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
-

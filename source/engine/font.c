@@ -52,7 +52,7 @@ void font_frame(struct window *w) {
 
 struct sFont *MakeFont(const char *fontfile, int height)
 {
-    shader_use(shader);
+    YughInfo("Making font %s.", fontfile);
 
     int packsize = 128;
 
@@ -81,7 +81,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
     }
 
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
-     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glGenTextures(1, &newfont->texID);
     glBindTexture(GL_TEXTURE_2D, newfont->texID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, packsize, packsize, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
@@ -95,10 +95,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
     for (unsigned char c = 32; c < 127; c++) {
 	stbtt_packedchar glyph = glyphs[c-32];
-
-	YughInfo("Packed char %c is at %d, %d, %d, %d", c, glyphs[c-32].x0, glyphs[c-32].y0, glyphs[c-32].x1, glyphs[c-32].y1);
-
-	YughInfo("Offsets are %f %f %f %f", glyph.xoff, glyph.yoff, glyph.xoff2, glyph.yoff2);
 
          struct glrect r;
          r.s0 = glyph.x0 / (float) packsize;

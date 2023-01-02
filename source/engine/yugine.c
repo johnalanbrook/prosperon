@@ -14,6 +14,7 @@
 #include "yugine.h"
 #include "2dphysics.h"
 
+#include "parson.h"
 
 #if ED
 #include "editor.h"
@@ -151,6 +152,17 @@ int main(int argc, char **args) {
 
     engine_init();
 
+    JSON_Value *rv = json_value_init_object();
+    JSON_Object *ro = json_value_get_object(rv);
+    json_object_set_string(ro, "name", "yugine");
+    json_object_set_number(ro, "age", 30);
+    char *serialized = json_serialize_to_string_pretty(rv);
+
+    FILE *json = fopen("test.json", "w");
+    fputs(serialized, json);
+    json_free_serialized_string(serialized);
+    json_value_free(rv);
+    fclose(json);
 
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());

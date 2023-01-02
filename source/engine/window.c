@@ -263,7 +263,7 @@ void window_seticon(struct window *w, struct Texture *icon)
     static GLFWimage images[1];
     images[0].width = icon->width;
     images[0].height = icon->height;
-    images[0].pixels = icon->data;
+    //images[0].pixels = icon->data;
     glfwSetWindowIcon(w->window, 1, images);
 }
 

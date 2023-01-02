@@ -20,9 +20,8 @@ void DrawMesh(struct mesh *mesh, struct shader *shader)
 	// retrieve texture number (the N in diffuse_textureN)
 	char number = 0;
 	// TODO: malloc every single frame ... nope! Change to stack
-	/*char *name =
-	    (char *) malloc(sizeof(char) *
-			    (strlen(mesh->textures[i].type) + 2));*/
+	/*char *name = malloc(sizeof(char) *(strlen(mesh->textures[i].type) + 2));*/
+	/*
 	if (mesh->textures[i].type == TEX_DIFF)
 	    number = diffuseNr++;
 	else if (mesh->textures[i].type == TEX_SPEC)
@@ -31,7 +30,7 @@ void DrawMesh(struct mesh *mesh, struct shader *shader)
 	    number = normalNr++;
 	else if (mesh->textures[i].type == TEX_HEIGHT)
 	    number = heightNr++;
-
+*/
 
 /*
 	glUniform1i(glGetUniformLocation(shader->id, name), i);
@@ -97,36 +96,29 @@ void setupmesh(struct mesh *mesh)
     // set the vertex attribute pointers
     // vertex Positions
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
     // vertex normals
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) offsetof(struct Vertex, Normal[3]));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Normal[3]));
     // vertex texture coords
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) offsetof(struct Vertex, TexCoords[2]));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, TexCoords[2]));
     // vertex tangent
     glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) offsetof(struct Vertex, Tangent[3]));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Tangent[3]));
     // vertex bitangent
     glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) offsetof(struct Vertex, Bitangent[3]));
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Bitangent[3]));
 
     // Bone ids
     glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_INT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) offsetof(struct Vertex,
+    glVertexAttribPointer(5, 4, GL_INT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex,
 					    m_BoneIDs
 					    [MAX_BONE_INFLUENCE]));
 
     // Weights
     glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex),
-			  (void *) offsetof(struct Vertex, m_Weights));
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, m_Weights));
 
     glBindVertexArray(0);
 }
