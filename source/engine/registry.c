@@ -74,3 +74,7 @@ void comp_draw_debug(struct component *c) {
 void comp_draw_gui(struct component *c) {
     c->draw_gui(c->data);
 }
+
+void c_draw_debug(struct compref *c) {
+    c->ref->draw_debug(c->data);
+}

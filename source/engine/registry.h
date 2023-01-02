@@ -8,6 +8,11 @@
 
 struct gameobject;
 
+struct compref {
+    void *data;
+    struct component *ref;
+};
+
 struct component {
     const char *name;
     void *(*make)(struct gameobject * go);		/* Called to create the component */

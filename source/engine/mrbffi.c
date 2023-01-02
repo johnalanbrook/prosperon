@@ -486,6 +486,64 @@ s7_pointer s7_anim_cmd(s7_scheme *sc, s7_pointer args) {
     return args;
 }
 
+s7_pointer s7_make_gameobject(s7_scheme *sc, s7_pointer args) {
+    int g = MakeGameobject();
+    struct gameobject *go = get_gameobject_from_id(g);
+
+    go->scale = s7_real(s7_car(args));
+    go->bodytype = s7_integer(s7_cadr(args));
+    go->mass = s7_real(s7_caddr(args));
+    go->f = s7_real(s7_cadddr(args));
+    go->e = s7_real(s7_list_ref(sc, args, 4));
+
+    return s7_make_integer(sc, g);
+}
+
+s7_pointer s7_make_sprite(s7_scheme *sc, s7_pointer args) {
+    int go = s7_integer(s7_car(args));
+    const char *path = s7_string(s7_cadr(args));
+    cpVect pos = s7tovec2(sc, s7_caddr(args));
+
+    YughInfo("Using gameid %d.", go);
+
+    struct sprite *sp = make_sprite(get_gameobject_from_id(go));
+
+    sprite_loadtex(sp, path);
+    sp->pos[0] = pos.x;
+    sp->pos[1] = pos.y;
+
+    return args;
+}
+
+s7_pointer s7_make_box2d(s7_scheme *sc, s7_pointer args) {
+    int go = s7_integer(s7_car(args));
+    cpVect size = s7tovec2(sc, s7_cadr(args));
+    cpVect offset = s7tovec2(sc, s7_caddr(args));
+
+    struct phys2d_box *box = Make2DBox(get_gameobject_from_id(go));
+    box->w = size.x;
+    box->h = size.y;
+    box->offset[0] = offset.x;
+    box->offset[1] = offset.y;
+
+    phys2d_boxinit(box, get_gameobject_from_id(go));
+
+    return args;
+}
+
+s7_pointer s7_make_circ2d(s7_scheme *sc, s7_pointer args) {
+    int go = s7_integer(s7_car(args));
+    double radius = s7_real(s7_cadr(args));
+    cpVect offset = s7tovec2(sc, s7_caddr(args));
+
+    struct phys2d_circle *circle = Make2DCircle(get_gameobject_from_id(go));
+    circle->radius = radius;
+    circle->offset[0] = offset.x;
+    circle->offset[1] = offset.y;
+
+    phys2d_applycircle(circle);
+}
+
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")
 
 void ffi_load() {
@@ -526,5 +584,10 @@ void ffi_load() {
 
     S7_FUNC(anim, 2);
     S7_FUNC(anim_cmd, 3);
+
+    S7_FUNC(make_gameobject, 5);
+    S7_FUNC(make_sprite, 3);
+    S7_FUNC(make_box2d, 3);
+    S7_FUNC(make_circ2d, 3);
 }
 

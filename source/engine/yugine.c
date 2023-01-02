@@ -156,13 +156,8 @@ int main(int argc, char **args) {
     JSON_Object *ro = json_value_get_object(rv);
     json_object_set_string(ro, "name", "yugine");
     json_object_set_number(ro, "age", 30);
-    char *serialized = json_serialize_to_string_pretty(rv);
-
-    FILE *json = fopen("test.json", "w");
-    fputs(serialized, json);
-    json_free_serialized_string(serialized);
+    char *serialized = json_serialize_to_file(rv, "test2.json");
     json_value_free(rv);
-    fclose(json);
 
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
