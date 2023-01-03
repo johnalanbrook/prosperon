@@ -76,12 +76,12 @@ void comp_delete(struct component *c)
     c->ref->delete(c->data);
 }
 
-void comp_init(struct component *c)
+void comp_init(struct component *c, struct gameobject *go)
 {
-    c->ref->init(c->data);
+    c->ref->init(c->data, go);
 }
 
-void comp_io(struct component *c, int read)
+void comp_io(struct component *c, FILE *f, int read)
 {
-    c->ref->io(c->data, read);
+    c->ref->io(c->data, f, read);
 }

@@ -679,7 +679,8 @@ void editor_project_gui() {
 startobjectgui:
 
   if (selectedobject) {
-    draw_point(selectedobject->transform.position[0], selectedobject->transform.position[1], 5);
+    cpVect pos = cpBodyGetPosition(selectedobject->body);
+    draw_point(pos.x, pos.y, 5);
 
     NK_FORCE(gameobject)
 
@@ -711,9 +712,9 @@ startobjectgui:
    // nuke_label("Components");
    nuke_nel(3);
 
-    for (int i = 0; i < ncomponent; i++) {
-      if (nuke_btn(components[i].name)) {
-        gameobject_addcomponent(selectedobject, &components[i]);
+    for (int i = 0; i < gameobject_ncomponents(selectedobject); i++) {
+      if (nuke_btn(selectedobject->components[i].ref->name)) {
+        gameobject_addcomponent(selectedobject, &selectedobject->components[i]);
       }
     }
 

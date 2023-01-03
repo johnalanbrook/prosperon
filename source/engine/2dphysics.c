@@ -17,8 +17,6 @@
 
 #include "registry.h"
 
-register_component(0, 0, 0, 0, 0, 0, 0, 0, 0);
-
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
 

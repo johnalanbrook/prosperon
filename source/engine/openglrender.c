@@ -4,7 +4,6 @@
 #include "shader.h"
 #include "font.h"
 #include "config.h"
-#include "static_actor.h"
 #include "gameobject.h"
 #include "camera.h"
 #include "window.h"

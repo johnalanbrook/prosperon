@@ -12,15 +12,13 @@
 
 #include "openglrender.h"
 
-#include <stb_truetype.h>
+#include "stb_truetype.h"
 #include "stb_rect_pack.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 static uint32_t VBO = 0;
 static uint32_t VAO = 0;
-
-unsigned char ttf_buffer[1<<25];
 
 struct sFont *font;
 static struct shader *shader;
@@ -61,7 +59,14 @@ struct sFont *MakeFont(const char *fontfile, int height)
 
     char fontpath[256];
     snprintf(fontpath, 256, "fonts/%s", fontfile);
-     fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
+
+    FILE *f = fopen(fontpath, "rb");
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    unsigned char *ttf_buffer = malloc(fsize+1);
+     fread(ttf_buffer, fsize, 1, f);
+     fclose(f);
 
      unsigned char *bitmap = malloc(packsize*packsize);
 
@@ -73,25 +78,30 @@ struct sFont *MakeFont(const char *fontfile, int height)
      stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
      stbtt_PackEnd(&pc);
 
-     stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char)*packsize);
+     //stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char)*packsize);
 
     stbtt_fontinfo fontinfo;
     if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
         YughError("Failed to make font %s", fontfile);
     }
 
+
+
     float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glGenTextures(1, &newfont->texID);
     glBindTexture(GL_TEXTURE_2D, newfont->texID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, packsize, packsize, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+
+
     //glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-
+    free(ttf_buffer);
+    free(bitmap);
 
     for (unsigned char c = 32; c < 127; c++) {
 	stbtt_packedchar glyph = glyphs[c-32];

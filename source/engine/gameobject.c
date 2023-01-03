@@ -27,7 +27,7 @@ struct gameobject *get_gameobject_from_id(int id)
 
 int id_from_gameobject(struct gameobject *go) {
     for (int i = 0; i < arrlen(gameobjects); i++) {
-        if (&gameobjects[i] == i) return i;
+        if (&gameobjects[i] == go) return i;
     }
 
     return -1;
@@ -51,7 +51,6 @@ int MakeGameobject()
     YughInfo("Making new gameobject");
     struct gameobject go = {
         .editor.id = arrlen(gameobjects),
-        .transform.scale = 1.f,
         .scale = 1.f,
         .bodytype = CP_BODY_TYPE_STATIC,
         .mass = 1.f
@@ -71,10 +70,10 @@ int MakeGameobject()
 void gameobject_addcomponent(struct gameobject *go, struct component_interface *c)
 {
     struct component new;
-    new.interface = c;
+    new.ref = c;
     new.data = c->make(go);
     new.go = go;
-    arrput(go->components, c);
+    arrput(go->components, new);
 }
 
 void gameobject_delete(int id)
@@ -82,7 +81,7 @@ void gameobject_delete(int id)
     YughInfo("Deleting gameobject with id %d.", id);
     struct gameobject *go = &gameobjects[id];
     for (int i = 0; i < arrlen(go->components); i++) {
-        go->components[i].delete(go->components[i].data);
+        comp_delete(&go->components[i]);
         arrdel(go->components, i);
     }
 
@@ -93,24 +92,13 @@ void gameobject_delete(int id)
 
 void gameobject_delcomponent(struct gameobject *go, int n)
 {
-    go->components[n].delete(go->components[n].data);
+    comp_delete(&go->components[n]);
     arrdel(go->components, n);
-}
-
-void setup_model_transform(struct mTransform *t, struct shader *s, float scale)
-{
-    mfloat_t modelT[16] = { 0.f };
-    mfloat_t matbuff[16] = { 0.f };
-    memcpy(modelT, UNITMAT4, sizeof(modelT));
-    mat4_translate_vec3(modelT, t->position);
-    mat4_multiply(modelT, modelT, mat4_rotation_quat(matbuff, t->rotation));
-    mat4_scale_vec3f(modelT, scale);
-    shader_setmat4(s, "model", modelT);
-
 }
 
 void gameobject_save(struct gameobject *go, FILE * file)
 {
+/*
     fwrite(go, sizeof(*go), 1, file);
 
     YughInfo("Number of components is %d.", arrlen(go->components));
@@ -125,6 +113,7 @@ void gameobject_save(struct gameobject *go, FILE * file)
         else
             go->components[i].io(go->components[i].data, file, 0);
     }
+    */
 }
 
 int gameobject_makefromprefab(char *path)
@@ -150,6 +139,7 @@ int gameobject_makefromprefab(char *path)
 
 void gameobject_init(struct gameobject *go, FILE * fprefab)
 {
+/*
     go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
     cpBodySetType(go->body, go->bodytype);
     cpBodySetUserData(go->body, go);
@@ -173,6 +163,7 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
 
         newc->init(newc->data, go);
     }
+    */
 
 
 }
@@ -219,6 +210,11 @@ void toggleprefab(struct gameobject *go)
     } else {
 	go->editor.prefabName[0] = '\0';
     }
+}
+
+int gameobject_ncomponents(struct gameobject *go)
+{
+    return arrlen(go->components);
 }
 
 void gameobject_move(struct gameobject *go, cpVect vec)
@@ -300,15 +296,13 @@ void object_gui(struct gameobject *go)
     for (int i = 0; i < arrlen(go->components); i++) {
 	struct component *c = &go->components[i];
 
-	if (c->draw_debug)
-	    c->draw_debug(c->data);
-
+         comp_draw_debug(c);
 
      nuke_nel(5);
      if (nuke_btn("Del")) n = i;
 
-     if (nuke_push_tree_id(c->name, i)) {
-	    c->draw_gui(c->data);
+     if (nuke_push_tree_id(c->ref->name, i)) {
+	    comp_draw_gui(c);
 	    nuke_tree_pop();
 	}
 
@@ -324,8 +318,7 @@ void gameobject_draw_debugs() {
     for (int i = 0; i < arrlen(gameobjects); i++) {
         for (int j = 0; j < arrlen(gameobjects[i].components); j++) {
             struct component *c = &gameobjects[i].components[j];
-
-            if (c->draw_debug) c->draw_debug(c->data);
+            comp_draw_debug(c);
         }
     }
 }

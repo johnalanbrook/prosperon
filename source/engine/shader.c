@@ -66,12 +66,14 @@ GLuint load_shader_from_file(const char *path, int type)
     if (!path)
         perror(spath), exit(1);
 
-    char buf[SHADER_BUF] = {'\0'};
+    char *buf;
     long int fsize;
     fseek(f, 0, SEEK_END);
     fsize = ftell(f);
+    buf = malloc(fsize+1);
     rewind(f);
-    fread(buf, fsize, 1, f);
+    size_t r = fread(buf, sizeof(char), fsize, f);
+    buf[r] = '\0';
 
     fclose(f);
 
@@ -84,6 +86,8 @@ GLuint load_shader_from_file(const char *path, int type)
         YughError("Error with shader %s.", path);
         return 0;
     }
+
+    free(buf);
 
     return id;
 }
