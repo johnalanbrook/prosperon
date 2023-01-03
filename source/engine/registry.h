@@ -8,30 +8,29 @@
 
 struct gameobject;
 
-struct compref {
-    void *data;
-    struct component *ref;
+struct component_interface {
+    const char *name;
+    void *(*make)(struct gameobject * go);		/* Called to create the component */
+    void (*io)(void *data, FILE *f, int read);
+    void (*draw_debug)(void *data);				/* Draw debugging info in editor */
+    void (*draw_gui)(void *data);
+    void (*init)(void *data, struct gameobject * go);
+    void (*delete)(void *data);
 };
 
 struct component {
-    const char *name;
-    void *(*make)(struct gameobject * go);		/* Called to create the component */
-    void (*io)(void *data, FILE *f, int read);			/* Pulls data from a component file into the component */
     void *data;
     struct gameobject *go;
-    void (*draw_debug)(void *data);				/* Draw debugging info in editor */
-    void (*draw_gui)(void *data);				/* Use to draw GUI for editing the component in editor */
-    void (*delete)(void *data);					/* Deletes and cleans up component */
-    int id;
-    int datasize;
-    void (*init)(void *data, struct gameobject * go);	/* Inits the component */
+    struct component_interface *ref;
 };
 
-extern struct component components[MAXNAME];
-extern int ncomponent;
-
+struct component comp_make(struct component_interface *interface);
 void comp_draw_debug(struct component *c);
 void comp_draw_gui(struct component *c);
+void comp_delete(struct component *c);
+void comp_init(struct component *c);
+void comp_io(struct component *c, int read);
+
 void comp_update(struct component *c, struct gameobject *go);
 
 

@@ -541,7 +541,9 @@ s7_pointer s7_make_circ2d(s7_scheme *sc, s7_pointer args) {
     circle->offset[0] = offset.x;
     circle->offset[1] = offset.y;
 
-    phys2d_applycircle(circle);
+    phys2d_circleinit(circle, get_gameobject_from_id(go));
+
+    return s7_make_integer(sc, get_gameobject_from_id(go));
 }
 
 #define S7_FUNC(NAME, ARGS) s7_define_function(s7, #NAME, s7_ ##NAME, ARGS, 0, 0, "")

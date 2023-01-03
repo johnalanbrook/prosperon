@@ -68,12 +68,13 @@ int MakeGameobject()
     return arrlen(gameobjects)-1;
 }
 
-void gameobject_addcomponent(struct gameobject *go, struct component *c)
+void gameobject_addcomponent(struct gameobject *go, struct component_interface *c)
 {
-    arrput(go->components, *c);
-    struct component *newc = &arrlast(go->components);
-    newc->go = go;
-    newc->data = newc->make(newc->go);
+    struct component new;
+    new.interface = c;
+    new.data = c->make(go);
+    new.go = go;
+    arrput(go->components, c);
 }
 
 void gameobject_delete(int id)

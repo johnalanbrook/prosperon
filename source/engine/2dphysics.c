@@ -15,6 +15,10 @@
 
 #include "log.h"
 
+#include "registry.h"
+
+register_component(0, 0, 0, 0, 0, 0, 0, 0, 0);
+
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
 
@@ -88,13 +92,26 @@ void circle_gui(struct phys2d_circle *circle)
     phys2d_applycircle(circle);
 }
 
+void phys2d_dbgdrawcpcirc(cpCircleShape *c)
+{
+    cpVect pos = cpBodyGetPosition(cpShapeGetBody(c));
+    cpVect offset = cpCircleShapeGetOffset(c);
+    float radius = cpCircleShapeGetRadius(c);
+    float d = sqrt(pow(offset.x, 2.f) + pow(offset.y, 2.f));
+    float a = atan2(offset.y, offset.x) + cpBodyGetAngle(cpShapeGetBody(c));
+    draw_circle(pos.x + (d * cos(a)), pos.y + (d*sin(a)), radius, 1);
+}
+
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
 {
+    phys2d_dbgdrawcpcirc((cpCircleShape *)circle->shape.shape);
+    /*
     cpVect p = cpBodyGetPosition(circle->shape.go->body);
     cpVect o = cpCircleShapeGetOffset(circle->shape.shape);
     float d = sqrt(pow(o.x, 2.f) + pow(o.y, 2.f));
     float a = atan2(o.y, o.x) + cpBodyGetAngle(circle->shape.go->body);
     draw_circle(p.x + (d * cos(a)), p.y + (d * sin(a)), cpCircleShapeGetRadius(circle->shape.shape), 1);
+    */
 }
 
 struct phys2d_segment *Make2DSegment(struct gameobject *go)

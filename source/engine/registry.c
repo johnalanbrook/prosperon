@@ -3,24 +3,13 @@
 #include "2dphysics.h"
 #include "editor.h"
 #include "sprite.h"
+#include "stb_ds.h"
 
-struct component components[MAXNAME] = { 0 };
-
-int ncomponent = 0;
-
-#define REGISTER_COMP(NAME) register_component(#NAME, sizeof(struct NAME), make_NAME, dbgdraw_NAME, NAME_gui, NAME_init,
+struct component *components;
+struct component_interface *interfaces;
 
 void registry_init()
 {
-
-/*
-    REGISTER_COMP(sprite);
-    REGISTER_COMP(2d_circle);
-    REGISTER_COMP(2d_segment);
-    REGISTER_COMP(2d_box);
-    REGISTER_COMP(2d_polygon);
-    REGISTER_COMP(2d_edge);
-*/
 
     register_component("Sprite",
                                          sizeof(struct sprite),
@@ -40,41 +29,59 @@ void registry_init()
                                           circle_gui,
                                           phys2d_circleinit);
 
-    register_component("2D Segment", sizeof(struct phys2d_segment), phys2d_segdel, NULL, Make2DSegment, phys2d_dbgdrawseg, segment_gui, phys2d_seginit);
+    register_component("2D Segment", sizeof(struct phys2d_segment), Make2DSegment, phys2d_segdel, NULL, phys2d_dbgdrawseg, segment_gui, phys2d_seginit);
     register_component("2D Box", sizeof(struct phys2d_box), Make2DBox, phys2d_boxdel, NULL, phys2d_dbgdrawbox, box_gui, phys2d_boxinit);
     register_component("2D Polygon", sizeof(struct phys2d_poly), Make2DPoly, phys2d_polydel, NULL, phys2d_dbgdrawpoly, poly_gui,phys2d_polyinit);
     register_component("2D Edge", sizeof(struct phys2d_edge), Make2DEdge, phys2d_edgedel, NULL, phys2d_dbgdrawedge, edge_gui, phys2d_edgeinit);
 }
 
 void register_component(const char *name, size_t size,
-			void (*make)(struct gameobject * go, struct component * c),
+			void (*make)(struct gameobject * go),
 			void (*delete)(void *data),
 			void (*io)(void *data, FILE *f, int read),
 			void(*draw_debug)(void *data),
 			void(*draw_gui)(void *data),
 			void(*init)(void *data, struct gameobject * go))
 {
-    struct component *c = &components[ncomponent++];
-    c->name = name;
-    c->make = make;
-    c->io = io;
-    c->draw_debug = draw_debug;
-    c->draw_gui = draw_gui;
-    c->init = init;
-    c->data = NULL;
-    c->delete = delete;
-    c->id = ncomponent - 1;
-    c->datasize = size;
+    struct component_interface c;
+    c.name = name;
+    c.make = make;
+    c.io = io;
+    c.draw_debug = draw_debug;
+    c.draw_gui = draw_gui;
+    c.delete = delete;
+    c.init = init;
+    arrput(interfaces, c);
+}
+
+struct component comp_make(struct component_interface *interface)
+{
+    struct component c;
+    c.data = interface->make(NULL);
+    c.ref = interface;
+
+    return c;
 }
 
 void comp_draw_debug(struct component *c) {
-    c->draw_debug(c->data);
+    c->ref->draw_debug(c->data);
 }
 
 void comp_draw_gui(struct component *c) {
-    c->draw_gui(c->data);
+    c->ref->draw_gui(c->data);
 }
 
-void c_draw_debug(struct compref *c) {
-    c->ref->draw_debug(c->data);
+void comp_delete(struct component *c)
+{
+    c->ref->delete(c->data);
+}
+
+void comp_init(struct component *c)
+{
+    c->ref->init(c->data);
+}
+
+void comp_io(struct component *c, int read)
+{
+    c->ref->io(c->data, read);
 }

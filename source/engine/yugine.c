@@ -14,8 +14,6 @@
 #include "yugine.h"
 #include "2dphysics.h"
 
-#include "parson.h"
-
 #if ED
 #include "editor.h"
 #endif
@@ -151,14 +149,6 @@ int main(int argc, char **args) {
     fclose(gameinfo);
 
     engine_init();
-
-    JSON_Value *rv = json_value_init_object();
-    JSON_Object *ro = json_value_get_object(rv);
-    json_object_set_string(ro, "name", "yugine");
-    json_object_set_number(ro, "age", 30);
-    char *serialized = json_serialize_to_file(rv, "test2.json");
-    json_value_free(rv);
-
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     YughInfo("Refresh rate is %d", vidmode->refreshRate);
