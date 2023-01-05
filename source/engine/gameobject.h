@@ -43,6 +43,7 @@ struct gameobject {
 extern struct gameobject *gameobjects;
 
 int MakeGameobject();
+void gameobject_apply(struct gameobject *go);
 void init_gameobjects();
 void gameobject_delete(int id);
 void clear_gameobjects();

@@ -33,6 +33,14 @@ int id_from_gameobject(struct gameobject *go) {
     return -1;
 }
 
+void gameobject_apply(struct gameobject *go)
+{
+    cpBodySetType(go->body, go->bodytype);
+
+    if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
+        cpBodySetMass(go->body, go->mass);
+}
+
 static void gameobject_setpickcolor(struct gameobject *go)
 {
     float r = ((go->editor.id & 0x000000FF) >> 0) / 255.f;
@@ -143,6 +151,8 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
     go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
     cpBodySetType(go->body, go->bodytype);
     cpBodySetUserData(go->body, go);
+
+
 
     int comp_n;
     fread(&comp_n, sizeof(int), 1, fprefab);

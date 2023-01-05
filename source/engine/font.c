@@ -14,7 +14,6 @@
 
 #include "stb_truetype.h"
 #include "stb_rect_pack.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 static uint32_t VBO = 0;

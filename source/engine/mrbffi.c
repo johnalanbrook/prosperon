@@ -251,6 +251,10 @@ s7_pointer s7_sys_cmd(s7_scheme *sc, s7_pointer args) {
         case 8:
             return s7_make_integer(sc, frame_fps());
 
+        case 9: /* Clear the level out */
+            new_level();
+            break;
+
     }
 
     return args;
@@ -495,6 +499,10 @@ s7_pointer s7_make_gameobject(s7_scheme *sc, s7_pointer args) {
     go->mass = s7_real(s7_caddr(args));
     go->f = s7_real(s7_cadddr(args));
     go->e = s7_real(s7_list_ref(sc, args, 4));
+
+    YughInfo("static %d, dynamic %d, kinematic %d", CP_BODY_TYPE_STATIC, CP_BODY_TYPE_DYNAMIC, CP_BODY_TYPE_KINEMATIC);
+
+    gameobject_apply(go);
 
     return s7_make_integer(sc, g);
 }

@@ -1,3 +1,5 @@
+#include "yugine.h"
+
 #include "render.h"
 #include "camera.h"
 #include "window.h"
@@ -11,7 +13,7 @@
 #include <stdlib.h>
 
 
-#include "yugine.h"
+
 #include "2dphysics.h"
 
 #if ED

@@ -13,7 +13,14 @@
 #define MSAA_SAMPLES 2
 
 
-
+/* S7 Scheme defines */
+#define INITIAL_HEAP_SIZE 4096
+#define INITIAL_STACK_SIZE 4096
+#define DEFAULT_BIGNUM_PRECISION 128
+#define WITH_PURE_S7 1
+#define WITH_SYSTEM_EXTRAS 0
+#define WITH_C_LOADER 0
+#define WITH_NUMBER_SEPARATOR 1
 
 
 #endif
