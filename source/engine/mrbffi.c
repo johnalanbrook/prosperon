@@ -344,6 +344,14 @@ s7_pointer s7_set_body(s7_scheme *sc, s7_pointer args) {
         case 4:
             cpBodyApplyImpulseAtWorldPoint(go->body, s7tovec2(sc, s7_caddr(args)), cpBodyGetPosition(go->body));
             break;
+
+        case 5:
+            go->flipx = s7_boolean(sc, s7_caddr(args)) ? -1 : 1;
+            break;
+
+        case 6:
+            go->flipy = s7_boolean(sc, s7_caddr(args)) ?  -1 : 1;
+            break;
     }
 
     return args;
@@ -499,8 +507,8 @@ s7_pointer s7_make_gameobject(s7_scheme *sc, s7_pointer args) {
     go->mass = s7_real(s7_caddr(args));
     go->f = s7_real(s7_cadddr(args));
     go->e = s7_real(s7_list_ref(sc, args, 4));
-
-    YughInfo("static %d, dynamic %d, kinematic %d", CP_BODY_TYPE_STATIC, CP_BODY_TYPE_DYNAMIC, CP_BODY_TYPE_KINEMATIC);
+    go->flipx = s7_boolean(sc, s7_list_ref(sc, args, 5)) ? -1 : 1;
+    go->flipy = s7_boolean(sc, s7_list_ref(sc, args, 6)) ? -1 : 1;
 
     gameobject_apply(go);
 
@@ -511,8 +519,6 @@ s7_pointer s7_make_sprite(s7_scheme *sc, s7_pointer args) {
     int go = s7_integer(s7_car(args));
     const char *path = s7_string(s7_cadr(args));
     cpVect pos = s7tovec2(sc, s7_caddr(args));
-
-    YughInfo("Using gameid %d.", go);
 
     struct sprite *sp = make_sprite(get_gameobject_from_id(go));
 
@@ -595,7 +601,7 @@ void ffi_load() {
     S7_FUNC(anim, 2);
     S7_FUNC(anim_cmd, 3);
 
-    S7_FUNC(make_gameobject, 5);
+    S7_FUNC(make_gameobject, 7);
     S7_FUNC(make_sprite, 3);
     S7_FUNC(make_box2d, 3);
     S7_FUNC(make_circ2d, 3);

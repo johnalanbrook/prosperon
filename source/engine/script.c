@@ -5,6 +5,8 @@
 
 #include "mrbffi.h"
 
+#include "ftw.h"
+
 #include "stb_ds.h"
 
 s7_scheme *s7 = NULL;
@@ -52,11 +54,26 @@ static void my_print(s7_scheme *sc, uint8_t c, s7_pointer port) {
     }
 }
 
+static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
+    if (typeflag != FTW_F)
+        return 0;
+
+    if (!strcmp(".prefab", strrchr(fpath, '.')))
+        s7_load(s7, fpath);
+
+    return 0;
+}
+
 void script_init() {
     s7 = s7_init();
     s7_set_current_error_port(s7, s7_open_output_function(s7, my_err));
     s7_set_current_output_port(s7, s7_open_output_function(s7, my_print));
     ffi_load();
+
+    /* Load all prefabs into memory */
+    script_dofile("scripts/engine.scm");
+    script_dofile("config.scm");
+    ftw(".", load_prefab, 10);
 }
 
 void script_run(const char *script) {

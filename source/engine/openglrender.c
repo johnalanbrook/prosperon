@@ -92,7 +92,7 @@ void openglInit()
 
     glClearColor(editorClearColor[0], editorClearColor[1], editorClearColor[2], editorClearColor[3]);
 
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
     glEnable(GL_BLEND);

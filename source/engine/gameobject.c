@@ -54,9 +54,8 @@ static void gameobject_setpickcolor(struct gameobject *go)
 
 int MakeGameobject()
 {
-    if (gameobjects == NULL) arrsetcap(gameobjects, 100);
+    if (gameobjects == NULL) arrsetcap(gameobjects, 5000);
 
-    YughInfo("Making new gameobject");
     struct gameobject go = {
         .editor.id = arrlen(gameobjects),
         .scale = 1.f,

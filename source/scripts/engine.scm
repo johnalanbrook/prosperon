@@ -109,6 +109,8 @@
 (define (body_angle! body angle) (set_body body 0 angle))
 (define (body_pos! body pos) (set_body body 2 pos))
 (define (body_move! body vec) (set_body body 3 vec))
+(define (body_flipx! body flip) (set_body body 5 flip))
+(define (body_flipy! body flip) (set_body body 6 flip))
 
 (define (gravity! x y) (phys_set 0 x y))
 

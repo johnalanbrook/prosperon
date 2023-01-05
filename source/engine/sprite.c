@@ -36,8 +36,6 @@ struct sprite *make_sprite(struct gameobject *go)
 void sprite_init(struct sprite *sprite, struct gameobject *go)
 {
     sprite->go = go;
-
-    YughInfo("Added sprite address %p to sprite array %p.", sprite, &arrlast(sprites));
 }
 
 void sprite_io(struct sprite *sprite, FILE *f, int read)
@@ -120,7 +118,7 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 	memcpy(r_model, UNITMAT4, sizeof(UNITMAT4));
 	memcpy(s_model, UNITMAT4, sizeof(UNITMAT4));
 
-         mfloat_t t_scale[2] = { size[0] * tex->width, size[1] * tex->height };
+         mfloat_t t_scale[2] = { tex->width, tex->height };
          mfloat_t t_offset[2] = { offset[0] * t_scale[0], offset[1] * t_scale[1] };
 
 	mat4_translate_vec2(model, t_offset);
@@ -142,9 +140,9 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 
          float vertices[] = {
              0.f, 0.f, r.s0, r.t1,
-             1.f, 0.f, r.s1, r.t1,
-             0.f, 1.f, r.s0, r.t0,
-             1.f, 1.f, r.s1, r.t0
+             size[0], 0.f, r.s1, r.t1,
+             0.f, size[1], r.s0, r.t0,
+             size[0], size[1], r.s1, r.t0
          };
 
          glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
@@ -167,7 +165,7 @@ void sprite_draw(struct sprite *sprite)
             //size[1] = sprite->tex->anim.dimensions[1] * sprite->go->scale;
             tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
         } else {
-            float size[2] = { sprite->size[0] * sprite->go->scale, sprite->size[1] * sprite->go->scale };
+            float size[2] = { sprite->size[0] * sprite->go->scale * sprite->go->flipx, sprite->size[1] * sprite->go->scale * sprite->go->flipy };
 
             tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
         }

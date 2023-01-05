@@ -157,9 +157,6 @@ int main(int argc, char **args) {
 
     renderMS = 1.0/vidmode->refreshRate;
 
-    script_dofile("scripts/engine.scm");
-    script_dofile("config.scm");
-
     window_set_icon("icon.png");
 
     if (ed) {

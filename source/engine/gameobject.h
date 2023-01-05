@@ -34,6 +34,8 @@ struct gameobject {
     float mass;
     float f;			/* friction */
     float e;			/* elasticity */
+    int flipx; /* 1 or -1 */
+    int flipy;
     cpBody *body;
     struct component *components;
     struct phys_cbs *cbs;
