@@ -109,7 +109,13 @@ void script_eval_w_env(const char *s, s7_pointer env) {
     snprintf(buffer, 512-1, "(%s)", s);
 
     s7_set_current_error_port(s7, s7_open_output_function(s7, null_port));
-    s7_eval_c_string_with_environment(s7, buffer, env);
+
+    s7_pointer oldenv = s7_curlet(s7);
+    s7_set_curlet(s7, env);
+    s7_eval_c_string(s7, buffer);
+    s7_set_curlet(s7, oldenv);
+
+
     s7_set_current_error_port(s7, s7_open_output_function(s7, my_err));
 }
 
@@ -153,8 +159,10 @@ void call_updates(double dt) {
         s7_call(s7, updates[i], s7_cons(s7, s7_make_real(s7, dt), s7_nil(s7)));
 
     for (int i = 0; i < arrlen(obupdates); i++) {
+        s7_pointer curlet = s7_curlet(s7);
         s7_set_curlet(s7, obupdates[i].obj);
         s7_call(s7, obupdates[i].sym, s7_cons(s7, s7_make_real(s7, dt), s7_nil(s7)));
+        s7_set_curlet(s7, curlet);
     }
 
 }

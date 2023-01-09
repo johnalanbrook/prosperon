@@ -292,6 +292,8 @@ s7_pointer s7_register(s7_scheme *sc, s7_pointer args) {
     int hook = s7_integer(s7_car(args));
     s7_pointer sym = s7_cadr(args);
 
+    s7_gc_protect(sc, sym);
+
     /* 0 : update */
     /* 1 : gui */
     /* 2 : physics */
@@ -318,11 +320,15 @@ s7_pointer s7_obregister(s7_scheme *sc, s7_pointer args) {
     s7_pointer sym = s7_cadr(args);
     s7_pointer env = s7_caddr(args);
 
+    s7_gc_protect(sc, sym);
+    s7_gc_protect(sc, env);
+
     register_obupdate(env, sym);
 }
 
 s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
     s7_pointer pawn = s7_car(args);
+    s7_gc_protect(sc, pawn);
     set_pawn(pawn);
     return args;
 }
