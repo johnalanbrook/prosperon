@@ -132,13 +132,31 @@ s7_pointer *updates;
 s7_pointer *guis;
 s7_pointer *physics;
 
+struct obupdate {
+    s7_pointer obj;
+    s7_pointer sym;
+};
+
+struct obupdate *obupdates = NULL;
+
 void register_update(s7_pointer sym) {
     arrput(updates, sym);
+}
+
+void register_obupdate(s7_pointer obj, s7_pointer sym) {
+    struct obupdate ob = {obj, sym};
+    arrput(obupdates, ob);
 }
 
 void call_updates(double dt) {
     for (int i = 0; i < arrlen(updates); i++)
         s7_call(s7, updates[i], s7_cons(s7, s7_make_real(s7, dt), s7_nil(s7)));
+
+    for (int i = 0; i < arrlen(obupdates); i++) {
+        s7_set_curlet(s7, obupdates[i].obj);
+        s7_call(s7, obupdates[i].sym, s7_cons(s7, s7_make_real(s7, dt), s7_nil(s7)));
+    }
+
 }
 
 void register_gui(s7_pointer sym) {

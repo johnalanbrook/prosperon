@@ -313,6 +313,14 @@ s7_pointer s7_register(s7_scheme *sc, s7_pointer args) {
     return sym;
 }
 
+s7_pointer s7_obregister(s7_scheme *sc, s7_pointer args) {
+    int cmd = s7_integer(s7_car(args));
+    s7_pointer sym = s7_cadr(args);
+    s7_pointer env = s7_caddr(args);
+
+    register_obupdate(env, sym);
+}
+
 s7_pointer s7_set_pawn(s7_scheme *sc, s7_pointer args) {
     s7_pointer pawn = s7_car(args);
     set_pawn(pawn);
@@ -585,6 +593,7 @@ void ffi_load() {
     S7_FUNC(sound_cmd, 2);
     S7_FUNC(gui_hook, 1);
     S7_FUNC(register, 2);
+    S7_FUNC(obregister, 3);
     S7_FUNC(set_pawn, 1);
     S7_FUNC(set_body, 3);
     S7_FUNC(phys_cmd, 3);
