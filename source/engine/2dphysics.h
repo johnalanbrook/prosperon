@@ -2,7 +2,6 @@
 #define TWODPHYSICS_H
 
 #include <chipmunk/chipmunk.h>
-#include "s7.h"
 
 struct gameobject;
 
@@ -12,8 +11,8 @@ extern int physOn;
 extern cpSpace *space;
 
 struct phys_cbs {
-    s7_pointer begin;
-    s7_pointer separate;
+    void *begin;
+    void *separate;
 };
 
 struct phys2d_shape {
@@ -100,7 +99,7 @@ void phys2d_init();
 void phys2d_update(float deltaT);
 void phys2d_apply();
 
-void phys2d_add_handler_type(int cmd, struct gameobject *go,  s7_pointer cb);
+void phys2d_add_handler_type(int cmd, struct gameobject *go,  void *cb);
 void phys2d_set_gravity(float x, float y);
 
 void shape_gui(struct phys2d_shape *shape);

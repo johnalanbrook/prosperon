@@ -120,12 +120,6 @@ int main(int argc, char **args) {
     }
 
 
-    duk_context *duk = duk_create_heap_default();
-    duk_eval_string(duk, "1+2");
-    printf("DUK RESULT: %d", duk_get_int(duk, -1));
-
-
-
 #if DBG
     if (logout) {
         time_t now = time(NULL);
@@ -169,7 +163,7 @@ int main(int argc, char **args) {
     if (ed) {
         editor_init(MakeSDLWindow("Editor", 600, 600, 0));
     } else {
-        script_dofile("game.scm");
+        script_dofile("game.js");
     }
 
     openglInit();

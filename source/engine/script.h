@@ -13,21 +13,21 @@ void script_update(double dt);
 void script_draw();
 void script_editor();
 void script_call(const char *f);
-void script_call_sym(s7_pointer sym);
-void script_call_sym_args(s7_pointer sym, s7_pointer args);
-int script_has_sym(s7_pointer sym);
-void script_eval_w_env(const char *s, s7_pointer env);
+void script_call_sym(void *sym);
+void script_call_sym_args(void *sym, void *args);
+int script_has_sym(void *sym);
+void script_eval_w_env(const char *s, void *env);
 
-void register_update(s7_pointer sym);
-void register_obupdate(s7_pointer obj, s7_pointer sym);
+void register_update(void *sym);
+void register_obupdate(void *obj, void *sym);
 void call_updates(double dt);
 
-void register_gui(s7_pointer sym);
+void register_gui(void *sym);
 void call_gui();
 
-void register_physics(s7_pointer sym);
+void register_physics(void *sym);
 void call_physics(double dt);
 
-s7_pointer cpvec2s7(cpVect v);
+duk_idx_t vec2duk(cpVect v);
 
 #endif

@@ -19,10 +19,10 @@ static int *downkeys = NULL;
 
 static int mquit = 0;
 
-static s7_pointer *pawns = NULL;
+static void **pawns = NULL;
 
-void set_pawn(s7_pointer menv) {
-    arrput(pawns, menv);
+void set_pawn(void *pawn) {
+    arrput(pawns, pawn);
     YughInfo("Now controling %d pawns.", arrlen(pawns));
 }
 

@@ -479,7 +479,7 @@ static cpBool s7_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     struct gameobject *g2 = cpBodyGetUserData(body2);
 
     //script_call_sym_args(go->cbs->begin, s7_make_integer(s7, g2->editor.id));
-    s7_call(s7, go->cbs->begin, s7_list(s7, 2, s7_make_integer(s7, g2->editor.id), cpvec2s7(cpArbiterGetNormal(arb))));
+    //s7_call(s7, go->cbs->begin, s7_list(s7, 2, s7_make_integer(s7, g2->editor.id), cpvec2s7(cpArbiterGetNormal(arb))));
 
 
     return 1;
@@ -494,11 +494,11 @@ static void s7_phys_cb_postsolve(cpArbiter *arb, cpSpace *space, void *data) {
 }
 
 static void s7_phys_cb_separate(cpArbiter *Arb, cpSpace *space, void *data) {
-    struct gameobject *go = data;
-    script_call_sym(go->cbs->separate);
+    //struct gameobject *go = data;
+    //script_call_sym(go->cbs->separate);
 }
 
-void phys2d_add_handler_type(int cmd, struct gameobject *go, s7_pointer cb) {
+void phys2d_add_handler_type(int cmd, struct gameobject *go, void *cb) {
     cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
 
     if (!go->cbs)
@@ -508,8 +508,8 @@ void phys2d_add_handler_type(int cmd, struct gameobject *go, s7_pointer cb) {
 
     switch (cmd) {
         case 0:
-            handler->beginFunc = s7_phys_cb_begin;
-            go->cbs->begin = cb;
+            //handler->beginFunc = s7_phys_cb_begin;
+            //go->cbs->begin = cb;
             break;
 
         case 1:
@@ -519,8 +519,8 @@ void phys2d_add_handler_type(int cmd, struct gameobject *go, s7_pointer cb) {
             break;
 
         case 3:
-            handler->separateFunc = s7_phys_cb_separate;
-            go->cbs->separate = cb;
+            //handler->separateFunc = s7_phys_cb_separate;
+            //go->cbs->separate = cb;
             break;
     }
 }

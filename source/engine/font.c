@@ -22,6 +22,39 @@ static uint32_t VAO = 0;
 struct sFont *font;
 static struct shader *shader;
 
+char *slurp_file(const char *filename) {
+    FILE *f = fopen(filename, "rb");
+
+    if (!f) return NULL;
+
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    unsigned char *slurp = malloc(fsize);
+     size_t r = fread(slurp, fsize, 1, f);
+     fclose(f);
+
+     return slurp;
+}
+
+char *slurp_text(const char *filename) {
+ FILE *f = fopen(filename, "r'");
+ if (!f) return NULL;
+
+    char *buf;
+    long int fsize;
+    fseek(f, 0, SEEK_END);
+    fsize = ftell(f);
+    buf = malloc(fsize+1);
+    rewind(f);
+    size_t r = fread(buf, sizeof(char), fsize, f);
+    buf[r] = '\0';
+
+    fclose(f);
+
+    return buf;
+}
+
 void font_init(struct shader *textshader) {
     shader = textshader;
 

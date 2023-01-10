@@ -30,6 +30,6 @@ struct inputaction
     int scancode;
 };
 
-void set_pawn(s7_pointer env);
+void set_pawn(void *pawn);
 
 #endif
