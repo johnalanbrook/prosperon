@@ -40,6 +40,13 @@ duk_ret_t duk_gui_text(duk_context *duk) {
     return 0;
 }
 
+duk_ret_t duk_gui_img(duk_context *duk) {
+    const char *img = duk_to_string(duk, 0);
+    cpVect pos = duk2vec2(duk, 1);
+    gui_draw_img(img, pos.x, pos.y);
+    return 0;
+}
+
 duk_ret_t duk_win_make(duk_context *duk) {
     const char *title = duk_to_string(duk, 0);
     int w = duk_to_int(duk, 1);
@@ -65,6 +72,31 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 2:
          register_gui(duk_get_heapptr(duk, 1));
          break;
+
+       case 3:
+         set_timescale(duk_get_number(duk,1));
+         break;
+
+       case 4:
+         debug_draw_phys(duk_get_boolean(duk, 1));
+         break;
+
+       case 5:
+         renderMS = duk_get_number(duk, 1);
+         break;
+
+       case 6:
+         updateMS = duk_get_number(duk, 1);
+         break;
+
+       case 7:
+         physMS = duk_get_number(duk, 1);
+         break;
+
+       case 8:
+         phys2d_set_gravity(duk2vec2(duk, 1));
+         break;
+
     }
 
     return 0;
@@ -231,6 +263,75 @@ duk_ret_t duk_q_body(duk_context *duk) {
     return 0;
 }
 
+duk_ret_t duk_make_box2d(duk_context *duk) {
+  int go = duk_to_int(duk, 0);
+  cpVect size = duk2vec2(duk, 1);
+  cpVect offset = duk2vec2(duk, 2);
+
+  struct phys2d_box *box = Make2DBox(get_gameobject_from_id(go));
+  box->w = size.x;
+  box->h = size.y;
+  box->offset[0] = offset.x;
+  box->offset[1] = offset.y;
+  phys2d_boxinit(box, get_gameobject_from_id(go));
+
+  return 0;
+}
+
+duk_ret_t duk_make_circle2d(duk_context *duk) {
+  int go = duk_to_int(duk, 0);
+  double radius = duk2vec2(duk, 1);
+  cpVect offset = duk2vec2(duk, 2);
+
+    struct phys2d_circle *circle = Make2DCircle(get_gameobject_from_id(go));
+    circle->radius = radius;
+    circle->offset[0] = offset.x;
+    circle->offset[1] = offset.y;
+
+    phys2d_circleinit(circle, get_gameobject_from_id(go));
+
+  return 0;
+}
+
+duk_ret_t duk_anim(duk_context *duk) {
+    void *prop = duk_get_heapptr(duk, 0);
+    int keyframes = duk_get_length(duk, 1);
+    YughInfo("Processing %d keyframes.", keyframes);
+
+    struct anim a = make_anim();
+
+    for (int i  = 0; i < keyframes; i++) {
+        struct keyframe k;
+        duk_get_prop_index(duk, 1, i); /* End of stack is now the keyframe */
+        cpVect v = duk2vec2(duk, duk_get_top_index(duk));
+        k.time = v.y;
+        k.val = v.x;
+        a = anim_add_keyframe(a, k);
+    }
+
+    for (double i = 0; i < 3.0; i = i + 0.1) {
+        YughInfo("Val is now %f at time %f", anim_val(a, i), i);
+        duk_push_heapptr(duk, prop);
+        duk_push_number(duk, anim_val(a, i));
+        duk_call(duk, 1);
+        duk_pop(duk);
+    }
+
+    return 0;
+}
+
+duk_ret_t duk_anim_cmd(duk_context *duk) {
+    return 0;
+}
+
+duk_ret_t duk_timer(duk_context *duk) {
+    return 0;
+}
+
+duk_ret_t duk_timer_cmd(duk_context *duk) {
+    return 0;
+}
+
 #define DUK_FUNC(NAME, ARGS) duk_push_c_function(duk, duk_##NAME, ARGS); duk_put_global_string(duk, #NAME);
 
 void ffi_load()
@@ -242,7 +343,18 @@ void ffi_load()
     DUK_FUNC(register, 3);
     DUK_FUNC(sys_cmd, 1);
     DUK_FUNC(win_make, 3);
-    DUK_FUNC(gui_text, 3);
+
     DUK_FUNC(make_sprite, 3);
+    DUK_FUNC(make_box2d, 3);
+    DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd, 2);
+
+    DUK_FUNC(gui_text, 3);
+    DUK_FUNC(gui_img, 2);
+
+    DUK_FUNC(timer, 2);
+    DUK_FUNC(timer_cmd, 2);
+
+    DUK_FUNC(anim, 2);
+    DUK_FUNC(anim_cmd, 3);
 }

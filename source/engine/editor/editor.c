@@ -557,7 +557,7 @@ void editor_project_gui() {
 
     if (nuke_push_tree_id("Physics", 0)) {
       nuke_prop_float("2d Gravity", -5000.f, &phys2d_gravity, 0.f, 1.f, 0.1f);
-      phys2d_apply();
+      //phys2d_apply();
       nk_tree_pop(ctx);
     }
 

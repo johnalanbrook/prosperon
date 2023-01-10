@@ -97,10 +97,9 @@ void edge_gui(struct phys2d_edge *edge);
 
 void phys2d_init();
 void phys2d_update(float deltaT);
-void phys2d_apply();
 
 void phys2d_add_handler_type(int cmd, struct gameobject *go,  void *cb);
-void phys2d_set_gravity(float x, float y);
+void phys2d_set_gravity(cpVect v);
 
 void shape_gui(struct phys2d_shape *shape);
 

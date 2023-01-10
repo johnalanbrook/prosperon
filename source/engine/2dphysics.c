@@ -23,22 +23,18 @@ float phys2d_gravity = -50.f;
 void phys2d_init()
 {
     space = cpSpaceNew();
-    phys2d_set_gravity(0, phys2d_gravity);
+    cpVect grav = {0, phys2d_gravity};
+    phys2d_set_gravity(grav);
     cpSpaceSetGravity(space, cpv(0, phys2d_gravity));
 }
 
-void phys2d_set_gravity(float x, float y) {
-    cpSpaceSetGravity(space, cpv(x, y));
+void phys2d_set_gravity(cpVect v) {
+    cpSpaceSetGravity(space, v);
 }
 
 void phys2d_update(float deltaT)
 {
     cpSpaceStep(space, deltaT);
-}
-
-void phys2d_apply()
-{
-    phys2d_set_gravity(0, phys2d_gravity);
 }
 
 void phys2d_shape_apply(struct phys2d_shape *shape)
