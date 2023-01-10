@@ -89,8 +89,6 @@ void script_eval_w_env(const char *s, void *env) {
     duk_push_heapptr(duk, env);
     duk_push_string(duk, s);
 
-    YughInfo("pressed %s", s);
-
     if (!duk_has_prop(duk, -2)) {
       duk_pop(duk);
       return;

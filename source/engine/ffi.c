@@ -15,6 +15,7 @@
 #include "anim.h"
 #include "yugine.h"
 #include "nuke.h"
+#include "font.h"
 
 cpVect duk2vec2(duk_context *duk, int p) {
     cpVect pos;
@@ -31,13 +32,11 @@ cpVect duk2vec2(duk_context *duk, int p) {
 duk_ret_t duk_gui_text(duk_context *duk) {
     const char *s = duk_to_string(duk, 0);
     cpVect pos = duk2vec2(duk, 1);
-    duk_get_prop_index(duk, 1, 0);
     float fpos[2] = {pos.x, pos.y};
 
     float size = duk_to_number(duk, 2);
     const float white[3] = {1.f, 1.f, 1.f};
     renderText(s, fpos, size, white, 1800);
-
     return 0;
 }
 
@@ -142,8 +141,8 @@ duk_ret_t duk_make_gameobject(duk_context *duk) {
     go->mass = duk_to_number(duk, 2);
     go->f = duk_to_number(duk, 3);
     go->e = duk_to_number(duk, 4);
-    go->flipx = duk_to_boolean(duk, 5);
-    go->flipy = duk_to_boolean(duk, 6);
+    go->flipx = duk_to_boolean(duk, 5) ? -1 : 1;
+    go->flipy = duk_to_boolean(duk, 6) ? -1 : 1;
 
     gameobject_apply(go);
 
