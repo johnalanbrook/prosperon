@@ -1,10 +1,10 @@
 #ifndef SCRIPT_H
 #define SCRIPT_H
 
-#include "s7.h"
+#include "duktape.h"
 #include <chipmunk/chipmunk.h>
 
-extern s7_scheme *s7;
+extern duk_context *duk;
 
 void script_init();
 void script_run(const char *script);

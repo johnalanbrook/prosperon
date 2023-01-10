@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
+#include "duktape.h"
 
 #include "2dphysics.h"
 
@@ -118,6 +118,13 @@ int main(int argc, char **args) {
             }
         }
     }
+
+
+    duk_context *duk = duk_create_heap_default();
+    duk_eval_string(duk, "1+2");
+    printf("DUK RESULT: %d", duk_get_int(duk, -1));
+
+
 
 #if DBG
     if (logout) {

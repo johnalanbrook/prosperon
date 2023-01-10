@@ -9,7 +9,7 @@
 
 #include "stb_ds.h"
 
-s7_scheme *s7 = NULL;
+duk_context *duk = NULL;
 
 s7_pointer cpvec2s7(cpVect v) {
     s7_pointer ret = s7_make_vector(s7, 2);
@@ -65,9 +65,11 @@ static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
 }
 
 void script_init() {
-    s7 = s7_init();
+    duk = duk_create_heap_default();
+    /*
     s7_set_current_error_port(s7, s7_open_output_function(s7, my_err));
     s7_set_current_output_port(s7, s7_open_output_function(s7, my_print));
+    */
     ffi_load();
 
     /* Load all prefabs into memory */
