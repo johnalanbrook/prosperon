@@ -21,7 +21,8 @@ const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
 
 struct gameobject *get_gameobject_from_id(int id)
-{
+{  if (id < 0) return NULL;
+
     return &gameobjects[id];
 }
 
@@ -54,7 +55,7 @@ static void gameobject_setpickcolor(struct gameobject *go)
 
 int MakeGameobject()
 {
-    if (gameobjects == NULL) arrsetcap(gameobjects, 5000);
+    if (gameobjects == NULL) arrsetcap(gameobjects, 50);
 
     struct gameobject go = {
         .editor.id = arrlen(gameobjects),

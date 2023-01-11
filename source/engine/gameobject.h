@@ -24,10 +24,6 @@ struct editor {
     char rootPrefabName[MAXNAME];
 };
 
-struct go_temp {
-    struct phys_cbs phys_cbs;
-};
-
 struct gameobject {
     cpBodyType bodytype;
     float scale;
@@ -38,7 +34,7 @@ struct gameobject {
     int flipy;
     cpBody *body;
     struct component *components;
-    struct phys_cbs *cbs;
+    struct phys_cbs cbs;
     struct editor editor;
 };
 

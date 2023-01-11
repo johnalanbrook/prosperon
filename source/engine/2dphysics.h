@@ -2,6 +2,7 @@
 #define TWODPHYSICS_H
 
 #include <chipmunk/chipmunk.h>
+#include "script.h"
 
 struct gameobject;
 
@@ -9,11 +10,6 @@ extern cpBody *ballBody;
 extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
-
-struct phys_cbs {
-    void *begin;
-    void *separate;
-};
 
 struct phys2d_shape {
     cpShape *shape;
@@ -98,7 +94,13 @@ void edge_gui(struct phys2d_edge *edge);
 void phys2d_init();
 void phys2d_update(float deltaT);
 
-void phys2d_add_handler_type(int cmd, struct gameobject *go,  void *cb);
+struct phys_cbs {
+    struct callee begin;
+    struct callee separate;
+};
+
+void phys2d_add_handler_type(int cmd, struct gameobject *go,  struct callee c);
+void register_collide(void *sym);
 void phys2d_set_gravity(cpVect v);
 
 void shape_gui(struct phys2d_shape *shape);

@@ -111,50 +111,52 @@ void script_call_sym_args(void *sym, void *args)
     //s7_call(s7, sym, s7_cons(s7, args, s7_nil(s7)));
 }
 
-struct obupdate {
-    void *obj;
-    void *sym;
-};
 
-struct obupdate *updates = NULL;
-struct obupdate *physics = NULL;
-void **guis = NULL;
 
-void register_update(void *obj, void *sym) {
-    struct obupdate ob = {obj, sym};
-    arrput(updates, ob);
+struct callee *updates = NULL;
+struct callee *physics = NULL;
+struct callee *guis = NULL;
+
+void register_update(struct callee c) {
+    arrput(updates, c);
+}
+
+void register_gui(struct callee c) {
+    arrput(guis, c);
+}
+
+void register_physics(struct callee c) {
+    arrput(physics, c);
+}
+
+void call_callee(struct callee c) {
+    duk_push_heapptr(duk, c.fn);
+    duk_push_heapptr(duk, c.obj);
+    duk_call_method(duk, 0);
+    duk_pop(duk);
+}
+
+void callee_dbl(struct callee c, double d) {
+    duk_push_heapptr(duk, c.fn);
+    duk_push_heapptr(duk, c.obj);
+    duk_push_number(duk, d);
+    duk_call_method(duk, 1);
+    duk_pop(duk);
 }
 
 void call_updates(double dt) {
     for (int i = 0; i < arrlen(updates); i++) {
-        duk_push_heapptr(duk, updates[i].obj);
-        duk_push_heapptr(duk, updates[i].sym);
-        duk_push_number(duk, dt);
-        duk_call_prop(duk, -3, 1);
-        duk_pop_2(duk);
+        callee_dbl(updates[i], dt);
     }
-}
-
-void register_gui(void *sym) {
-    arrput(guis, sym);
 }
 
 void call_gui() {
     for (int i = 0; i < arrlen(guis); i++)
-        script_call_sym(guis[i]);
-}
-
-void register_physics(void *obj, void *sym) {
-    struct obupdate ob = {obj, sym};
-    arrput(physics, ob);
+        call_callee(guis[i]);
 }
 
 void call_physics(double dt) {
     for (int i = 0; i < arrlen(physics); i++) {
-        duk_push_heapptr(duk, physics[i].obj);
-        duk_push_heapptr(duk, physics[i].sym);
-        duk_push_number(duk, dt);
-        duk_call_prop(duk, -3, 1);
-        duk_pop_2(duk);
+        callee_dbl(updates[i], dt);
     }
 }

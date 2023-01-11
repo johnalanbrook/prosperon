@@ -22,8 +22,6 @@ cpVect duk2vec2(duk_context *duk, int p) {
     duk_get_prop_index(duk, p, 0);
     pos.x = duk_to_number(duk, -1);
     duk_get_prop_index(duk, p, 1);
-
-
     pos.y = duk_to_number(duk, -1);
 
     return pos;
@@ -70,7 +68,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
         break;
 
        case 2:
-         register_gui(duk_get_heapptr(duk, 1));
+
          break;
 
        case 3:
@@ -97,7 +95,57 @@ duk_ret_t duk_cmd(duk_context *duk) {
          phys2d_set_gravity(duk2vec2(duk, 1));
          break;
 
+       case 9:
+
+         break;
+
+       case 10:
+
+         break;
+
+       case 11:
+
+         break;
+
     }
+
+    return 0;
+}
+
+duk_ret_t duk_register(duk_context *duk) {
+    int cmd = duk_to_int(duk, 0);
+    void *fn = duk_get_heapptr(duk, 1);
+    void *obj = duk_get_heapptr(duk, 2);
+
+   struct callee c = {fn, obj};
+
+   switch(cmd) {
+     case 0:
+       register_update(c);
+       break;
+
+     case 1:
+       register_physics(c);
+       break;
+
+     case 2:
+       register_gui(c);
+       break;
+     }
+
+   return 0;
+}
+
+duk_ret_t duk_register_collide(duk_context *duk) {
+    int cmd = duk_to_int(duk, 0);
+    void *fn = duk_get_heapptr(duk, 1);
+    void *obj = duk_get_heapptr(duk, 2);
+    int go = duk_get_int(duk, 3);
+
+    struct callee c = {fn, obj};
+    YughInfo("Registering ...");
+
+    phys2d_add_handler_type(0, get_gameobject_from_id(go), c);
 
     return 0;
 }
@@ -146,24 +194,6 @@ duk_ret_t duk_sys_cmd(duk_context *duk) {
             new_level();
             break;
 
-    }
-
-    return 0;
-}
-
-duk_ret_t duk_register(duk_context *duk) {
-    int cmd = duk_to_int(duk, 0);
-    void *obj = duk_get_heapptr(duk, 1);
-    void *fn = duk_get_heapptr(duk, 2);
-
-    switch (cmd) {
-      case 0:
-        register_update(obj, fn);
-        break;
-
-      case 1:
-        register_physics(obj, fn);
-        break;
     }
 
     return 0;
@@ -251,6 +281,8 @@ duk_ret_t duk_q_body(duk_context *duk) {
     int q = duk_to_int(duk, 0);
     struct gameobject *go = get_gameobject_from_id(duk_to_int(duk, 1));
 
+    if (!go) return 0;
+
     switch(q) {
         case 0:
           duk_push_int(duk, cpBodyGetType(go->body));
@@ -262,6 +294,18 @@ duk_ret_t duk_q_body(duk_context *duk) {
 
         case 2:
           duk_push_number(duk, cpBodyGetAngle(go->body));
+          return 1;
+
+        case 3:
+          vect2duk(cpBodyGetVelocity(go->body));
+          return 1;
+
+        case 4:
+          duk_push_number(duk, cpBodyGetAngularVelocity(go->body));
+          return 1;
+
+        case 5:
+          duk_push_number(duk, cpBodyGetMass(go->body));
           return 1;
     }
 
@@ -284,8 +328,8 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
 }
 
 duk_ret_t duk_make_circle2d(duk_context *duk) {
-  int go = duk_to_int(duk, 0);
-  double radius = duk2vec2(duk, 1);
+   int go = duk_to_int(duk, 0);
+  double radius = duk_to_number(duk, 1);
   cpVect offset = duk2vec2(duk, 2);
 
     struct phys2d_circle *circle = Make2DCircle(get_gameobject_from_id(go));
@@ -345,7 +389,6 @@ void ffi_load()
     DUK_FUNC(make_gameobject, 7);
     DUK_FUNC(set_body, 3);
     DUK_FUNC(q_body, 2);
-    DUK_FUNC(register, 3);
     DUK_FUNC(sys_cmd, 1);
     DUK_FUNC(win_make, 3);
 
@@ -353,6 +396,8 @@ void ffi_load()
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd, 2);
+    DUK_FUNC(register, 3);
+    DUK_FUNC(register_collide, 4);
 
     DUK_FUNC(gui_text, 3);
     DUK_FUNC(gui_img, 2);
