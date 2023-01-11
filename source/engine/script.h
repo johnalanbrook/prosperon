@@ -18,14 +18,13 @@ void script_call_sym_args(void *sym, void *args);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, void *env);
 
-void register_update(void *sym);
-void register_obupdate(void *obj, void *sym);
+void register_update(void *obj, void *sym);
 void call_updates(double dt);
 
 void register_gui(void *sym);
 void call_gui();
 
-void register_physics(void *sym);
+void register_physics(void *obj, void *sym);
 void call_physics(double dt);
 
 duk_idx_t vec2duk(cpVect v);

@@ -153,14 +153,19 @@ duk_ret_t duk_sys_cmd(duk_context *duk) {
 
 duk_ret_t duk_register(duk_context *duk) {
     int cmd = duk_to_int(duk, 0);
-    void *obj = duk_get_pointer(duk, 1);
-    void *fn = duk_get_pointer(duk, 2);
+    void *obj = duk_get_heapptr(duk, 1);
+    void *fn = duk_get_heapptr(duk, 2);
 
+    switch (cmd) {
+      case 0:
+        register_update(obj, fn);
+        break;
 
-    /* Test a call ... */
-    duk_push_pointer(duk, fn);
-    duk_push_pointer(duk, obj);
-    duk_call_method(duk, 0);
+      case 1:
+        register_physics(obj, fn);
+        break;
+    }
+
     return 0;
 }
 

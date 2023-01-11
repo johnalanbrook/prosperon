@@ -111,39 +111,27 @@ void script_call_sym_args(void *sym, void *args)
     //s7_call(s7, sym, s7_cons(s7, args, s7_nil(s7)));
 }
 
-
-void **updates;
-void **guis;
-void **physics;
-
 struct obupdate {
     void *obj;
     void *sym;
 };
 
-struct obupdate *obupdates = NULL;
+struct obupdate *updates = NULL;
+struct obupdate *physics = NULL;
+void **guis = NULL;
 
-void register_update(void *sym) {
-    arrput(updates, sym);
-}
-
-void register_obupdate(void *obj, void *sym) {
+void register_update(void *obj, void *sym) {
     struct obupdate ob = {obj, sym};
-    arrput(obupdates, ob);
+    arrput(updates, ob);
 }
 
 void call_updates(double dt) {
     for (int i = 0; i < arrlen(updates); i++) {
-        duk_push_heapptr(duk, updates[i]);
+        duk_push_heapptr(duk, updates[i].obj);
+        duk_push_heapptr(duk, updates[i].sym);
         duk_push_number(duk, dt);
-        duk_call(duk, 1);
-    }
-
-    for (int i = 0; i < arrlen(obupdates); i++) {
-        duk_push_heapptr(duk, obupdates[i].sym);
-        duk_push_heapptr(duk, obupdates[i].obj);
-        duk_push_number(duk, dt);
-        duk_call_method(duk, 1);
+        duk_call_prop(duk, -3, 1);
+        duk_pop_2(duk);
     }
 }
 
@@ -156,14 +144,17 @@ void call_gui() {
         script_call_sym(guis[i]);
 }
 
-void register_physics(void *sym) {
-    arrput(physics, sym);
+void register_physics(void *obj, void *sym) {
+    struct obupdate ob = {obj, sym};
+    arrput(physics, ob);
 }
 
 void call_physics(double dt) {
     for (int i = 0; i < arrlen(physics); i++) {
-        duk_push_pointer(duk, physics[i]);
+        duk_push_heapptr(duk, physics[i].obj);
+        duk_push_heapptr(duk, physics[i].sym);
         duk_push_number(duk, dt);
-        duk_call(duk, 1);
+        duk_call_prop(duk, -3, 1);
+        duk_pop_2(duk);
     }
 }
