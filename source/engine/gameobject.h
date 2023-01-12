@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <chipmunk/chipmunk.h>
 #include "2dphysics.h"
-#include "registry.h"
 
 struct shader;
 struct sprite;
@@ -25,7 +24,10 @@ struct editor {
 };
 
 struct gameobject {
-    cpBodyType bodytype;
+      union {
+          cpBodyType bodytype;
+          struct gameobject *next;
+     };
     float scale;
     float mass;
     float f;			/* friction */
@@ -33,30 +35,22 @@ struct gameobject {
     int flipx; /* 1 or -1 */
     int flipy;
     cpBody *body;
-    struct component *components;
+    int id;
     struct phys_cbs cbs;
-    struct editor editor;
 };
 
 extern struct gameobject *gameobjects;
 
 int MakeGameobject();
 void gameobject_apply(struct gameobject *go);
-void init_gameobjects();
 void gameobject_delete(int id);
-void clear_gameobjects();
-int number_of_gameobjects();
-void set_n_gameobjects(int n);
 void toggleprefab(struct gameobject *go);
 
 struct gameobject *get_gameobject_from_id(int id);
+struct gameobject *id2go(int id);
 int id_from_gameobject(struct gameobject *go);
 
 void gameobject_save(struct gameobject *go, FILE * file);
-void gameobject_addcomponent(struct gameobject *go, struct component_interface *c);
-void gameobject_delcomponent(struct gameobject *go, int n);
-void gameobject_loadcomponent(struct gameobject *go, int id);
-int gameobject_ncomponents(struct gameobject *go);
 
 void gameobject_saveprefab(struct gameobject *go);
 int gameobject_makefromprefab(char *path);

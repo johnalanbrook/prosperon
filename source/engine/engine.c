@@ -30,7 +30,6 @@
 #include "sprite.h"
 #include "2dphysics.h"
 #include "gameobject.h"
-#include "registry.h"
 #include "log.h"
 #include "resources.h"
 #include "timer.h"
@@ -60,7 +59,6 @@ void engine_init()
 
     YughInfo("Starting scripts ...");
     script_init();
-    registry_init();
 
     YughInfo("Starting physics ...");
     phys2d_init();

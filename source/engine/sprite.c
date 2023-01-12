@@ -15,27 +15,42 @@
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
 struct sprite *sprites;
+struct sprite *first;
 
 static uint32_t VBO;
 
-struct sprite *make_sprite(struct gameobject *go)
+int make_sprite(int go)
 {
-    if (arrcap(sprites) == 0)
-        arrsetcap(sprites, 100);
+    YughInfo("Making sprite with gameobject %d",  go);
 
     struct sprite sprite = {
         .color = {1.f, 1.f, 1.f},
         .size = {1.f, 1.f},
-        .tex = texture_loadfromfile("ph.png")  };
-    sprite_init(&sprite, go);
-    arrput(sprites, sprite);
+        .tex = texture_loadfromfile("ph.png"),
+        .go = go,
+        .next = NULL  };
 
-    return &arrlast(sprites);
+    int ret;
+
+    if (!first) {
+        YughInfo("Making a brand new sprite.");
+        arrput(sprites, sprite);
+        arrlast(sprites).id = arrlen(sprites)-1;
+        return arrlen(sprites)-1;
+    } else {
+        YughInfo("Reusing a sprite slot.");
+        int slot = first->id;
+         struct sprite *next = first->next;
+        *first = sprite;
+        first->id = slot;
+        first = next;
+
+        return slot;
+    }
 }
 
-void sprite_init(struct sprite *sprite, struct gameobject *go)
-{
-    sprite->go = go;
+struct sprite *id2sprite(int id) {
+    return &sprites[id];
 }
 
 void sprite_io(struct sprite *sprite, FILE *f, int read)
@@ -57,25 +72,20 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
     }
 }
 
-void sprite_delete(struct sprite *sprite)
+void sprite_delete(int id)
 {
-    YughInfo("Attempting to delete sprite, address is %p.", sprite);
-    YughInfo("Number of sprites is %d.", arrlen(sprites));
-    for (int i = 0; i < arrlen(sprites); i++) {
-        YughInfo("Address of try sprite is %p.", &sprites[i]);
-        if (&sprites[i] == sprite) {
-            YughInfo("Deleted a sprite.");
-            arrdel(sprites, i);
-            return;
-        }
-    }
+    struct sprite *sp = id2sprite(id);
+    sp->go = -1;
+    sp->next = first;
+    first = sp;
 }
 
 void sprite_draw_all()
 {
     //shader_use(spriteShader);
-    for (int i = 0; i < arrlen(sprites); i++)
-        sprite_draw(&sprites[i]);
+    for (int i = 0; i < arrlen(sprites); i++) {
+        if (sprites[i].go >= 0) sprite_draw(&sprites[i]);
+    }
 }
 
 void sprite_loadtex(struct sprite *sprite, const char *path)
@@ -155,19 +165,21 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 
 void sprite_draw(struct sprite *sprite)
 {
+    struct gameobject *go = id2go(sprite->go);
+
     if (sprite->tex) {
-        cpVect cpos = cpBodyGetPosition(sprite->go->body);
+        cpVect cpos = cpBodyGetPosition(go->body);
         float pos[2] = {cpos.x, cpos.y};
 
         if (sprite->tex->opts.animation) {
             float size[2];
-            //size[0] = sprite->tex->anim.dimensions[0] * sprite->go->scale;
-            //size[1] = sprite->tex->anim.dimensions[1] * sprite->go->scale;
-            tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
+            //size[0] = sprite->tex->anim.dimensions[0] * go->scale;
+            //size[1] = sprite->tex->anim.dimensions[1] * go->scale;
+            tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
         } else {
-            float size[2] = { sprite->size[0] * sprite->go->scale * sprite->go->flipx, sprite->size[1] * sprite->go->scale * sprite->go->flipy };
+            float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
 
-            tex_draw(sprite->tex, pos, cpBodyGetAngle(sprite->go->body), size, sprite->pos, tex_get_rect(sprite->tex));
+            tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, tex_get_rect(sprite->tex));
         }
     }
 }

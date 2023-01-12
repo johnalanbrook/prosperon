@@ -1,3 +1,8 @@
+void editor_init(){}
+
+
+#ifdef GOOGLE
+
 #include "editor.h"
 #include "ed_project.h"
 
@@ -13,7 +18,6 @@
 #include "level.h"
 #include "math.h"
 #include "openglrender.h"
-#include "registry.h"
 #include "resources.h"
 #include "script.h"
 #include "shader.h"
@@ -1023,3 +1027,4 @@ void sprite_gui(struct sprite *sprite) {
 
 }
 
+#endif

@@ -2,7 +2,6 @@
 
 #include "shader.h"
 #include "sprite.h"
-#include "registry.h"
 #include "2dphysics.h"
 #include "script.h"
 #include "input.h"
@@ -16,12 +15,19 @@
 #include "stb_ds.h"
 
 struct gameobject *gameobjects = NULL;
+struct gameobject *first = NULL;
 
 const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
 
 struct gameobject *get_gameobject_from_id(int id)
 {  if (id < 0) return NULL;
+
+    return &gameobjects[id];
+}
+
+struct gameobject *id2go(int id) {
+    if (id < 0) return NULL;
 
     return &gameobjects[id];
 }
@@ -44,6 +50,7 @@ void gameobject_apply(struct gameobject *go)
 
 static void gameobject_setpickcolor(struct gameobject *go)
 {
+/*
     float r = ((go->editor.id & 0x000000FF) >> 0) / 255.f;
     float g = ((go->editor.id & 0x0000FF00) >> 8) / 255.f;
     float b = ((go->editor.id & 0x00FF0000) >> 16) / 255.f;
@@ -51,57 +58,54 @@ static void gameobject_setpickcolor(struct gameobject *go)
     go->editor.color[0] = r;
     go->editor.color[1] = g;
     go->editor.color[2] = b;
+    */
 }
 
 int MakeGameobject()
 {
-    if (gameobjects == NULL) arrsetcap(gameobjects, 50);
-
     struct gameobject go = {
-        .editor.id = arrlen(gameobjects),
         .scale = 1.f,
         .bodytype = CP_BODY_TYPE_STATIC,
         .mass = 1.f
     };
 
-    gameobject_setpickcolor(&go);
-    strncpy(go.editor.mname, "New object", MAXNAME);
     go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
 
-    arrput(gameobjects, go);
+    struct gameobject *tar;
 
-    cpBodySetUserData(go.body, &arrlast(gameobjects));
+    int retid;
 
-    return arrlen(gameobjects)-1;
-}
+    if (!first) {
+        arrput(gameobjects, go);
+        tar = &arrlast(gameobjects);
+        retid = arrlen(gameobjects)-1;
+        tar->id = retid;
+    } else {
 
-void gameobject_addcomponent(struct gameobject *go, struct component_interface *c)
-{
-    struct component new;
-    new.ref = c;
-    new.data = c->make(go);
-    new.go = go;
-    arrput(go->components, new);
+        retid = first->id;
+        struct gameobject *next = first->next;
+        YughInfo("Created in slot %d.", retid);
+        tar = first;
+        *first = go;
+        first->id = retid;
+        first = next;
+    }
+
+    cpBodySetUserData(go.body, tar);
+
+    YughInfo("Made game object with ID ===== %d", retid);
+    return retid;
 }
 
 void gameobject_delete(int id)
 {
     YughInfo("Deleting gameobject with id %d.", id);
-    struct gameobject *go = &gameobjects[id];
-    for (int i = 0; i < arrlen(go->components); i++) {
-        comp_delete(&go->components[i]);
-        arrdel(go->components, i);
-    }
+    struct gameobject *go = id2go(id);
+    cpSpaceRemoveBody(space, go->body);
+    go->next = first;
+    first = go;
 
-
-
-    arrdelswap(gameobjects, id);
-}
-
-void gameobject_delcomponent(struct gameobject *go, int n)
-{
-    comp_delete(&go->components[n]);
-    arrdel(go->components, n);
+   YughInfo("Did it to %d.", first->id);
 }
 
 void gameobject_save(struct gameobject *go, FILE * file)
@@ -126,6 +130,7 @@ void gameobject_save(struct gameobject *go, FILE * file)
 
 int gameobject_makefromprefab(char *path)
 {
+/*
     FILE *fprefab = fopen(path, "rb");
     if (fprefab == NULL) {
         YughError("Could not find prefab %s.", path);
@@ -143,6 +148,7 @@ int gameobject_makefromprefab(char *path)
     arrlast(gameobjects).editor.id = arrlen(gameobjects)-1;
 
     return arrlen(gameobjects)-1;
+    */
 }
 
 void gameobject_init(struct gameobject *go, FILE * fprefab)
@@ -180,6 +186,7 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
 
 void gameobject_saveprefab(struct gameobject *go)
 {
+/*
     char prefabfname[60] = { '\0' };
     strncat(prefabfname, go->editor.prefabName, MAXNAME);
     strncat(prefabfname, EXT_PREFAB, 10);
@@ -188,6 +195,7 @@ void gameobject_saveprefab(struct gameobject *go)
     fclose(pfile);
 
     findPrefabs();
+    */
 }
 
 
@@ -212,6 +220,7 @@ void gameobject_revertprefab(struct gameobject *go)
 
 void toggleprefab(struct gameobject *go)
 {
+/*
     go->editor.prefabSync = !go->editor.prefabSync;
 
     if (go->editor.prefabSync) {
@@ -220,11 +229,7 @@ void toggleprefab(struct gameobject *go)
     } else {
 	go->editor.prefabName[0] = '\0';
     }
-}
-
-int gameobject_ncomponents(struct gameobject *go)
-{
-    return arrlen(go->components);
+    */
 }
 
 void gameobject_move(struct gameobject *go, cpVect vec)
@@ -261,6 +266,7 @@ void gameobject_setpos(struct gameobject *go, cpVect vec) {
 
 void object_gui(struct gameobject *go)
 {
+/*
     float temp_pos[2];
     temp_pos[0] = cpBodyGetPosition(go->body).x;
     temp_pos[1] = cpBodyGetPosition(go->body).y;
@@ -321,16 +327,20 @@ void object_gui(struct gameobject *go)
 
     if (n >= 0)
 	gameobject_delcomponent(go, n);
-
+*/
 }
 
 void gameobject_draw_debugs() {
+/*
+    YughInfo("DRAWING DEBUG");
     for (int i = 0; i < arrlen(gameobjects); i++) {
+        YughInfo("Drawing this many ... %d", arrlen(gameobjects[i].components));
         for (int j = 0; j < arrlen(gameobjects[i].components); j++) {
             struct component *c = &gameobjects[i].components[j];
             comp_draw_debug(c);
         }
     }
+    */
 }
 
 

@@ -68,7 +68,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
         break;
 
        case 2:
-
+         gameobject_delete(duk_get_int(duk, 1));
          break;
 
        case 3:
@@ -96,7 +96,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 9:
-
+         sprite_delete(duk_to_int(duk, 1));
          break;
 
        case 10:
@@ -225,18 +225,7 @@ duk_ret_t duk_loginfo(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_make_sprite(duk_context *duk) {
-  int go = duk_to_int(duk, 0);
-  const char *path = duk_to_string(duk, 1);
-  cpVect pos = duk2vec2(duk, 2);
 
-  struct sprite *sp = make_sprite(get_gameobject_from_id(go));
-  sprite_loadtex(sp, path);
-  sp->pos[0] = pos.x;
-  sp->pos[1] = pos.y;
-
-  return 0;
-}
 
 duk_ret_t duk_set_body(duk_context *duk) {
   int cmd = duk_to_int(duk, 0);
@@ -270,6 +259,10 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 6:
       go->flipy = duk_to_boolean(duk, 2);
+      break;
+
+    case 7:
+      cpBodySetMass(go->body, duk_to_number(duk, 2));
       break;
 
   }
@@ -312,17 +305,44 @@ duk_ret_t duk_q_body(duk_context *duk) {
     return 0;
 }
 
+duk_ret_t duk_sprite(duk_context *duk) {
+    int cmd = duk_to_int(duk, 0);
+    int id = duk_to_int(duk, 1);
+
+    switch (cmd) {
+        case 0:
+
+    }
+}
+
+duk_ret_t duk_make_sprite(duk_context *duk) {
+  int go = duk_to_int(duk, 0);
+  const char *path = duk_to_string(duk, 1);
+  cpVect pos = duk2vec2(duk, 2);
+
+  int sprite = make_sprite(go);
+  struct sprite *sp = id2sprite(sprite);
+  sprite_loadtex(sp, path);
+  sp->pos[0] = pos.x;
+  sp->pos[1] = pos.y;
+
+
+   duk_push_int(duk, sprite);
+  return 1;
+}
+
 duk_ret_t duk_make_box2d(duk_context *duk) {
   int go = duk_to_int(duk, 0);
   cpVect size = duk2vec2(duk, 1);
   cpVect offset = duk2vec2(duk, 2);
 
-  struct phys2d_box *box = Make2DBox(get_gameobject_from_id(go));
+  struct phys2d_box *box = Make2DBox(go);
   box->w = size.x;
   box->h = size.y;
   box->offset[0] = offset.x;
   box->offset[1] = offset.y;
-  phys2d_boxinit(box, get_gameobject_from_id(go));
+
+  phys2d_applybox(box);
 
   return 0;
 }
@@ -332,12 +352,12 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
   double radius = duk_to_number(duk, 1);
   cpVect offset = duk2vec2(duk, 2);
 
-    struct phys2d_circle *circle = Make2DCircle(get_gameobject_from_id(go));
+    struct phys2d_circle *circle = Make2DCircle(go);
     circle->radius = radius;
     circle->offset[0] = offset.x;
     circle->offset[1] = offset.y;
 
-    phys2d_circleinit(circle, get_gameobject_from_id(go));
+    phys2d_applycircle(circle);
 
   return 0;
 }
@@ -369,6 +389,8 @@ duk_ret_t duk_anim(duk_context *duk) {
     return 0;
 }
 
+
+
 duk_ret_t duk_anim_cmd(duk_context *duk) {
     return 0;
 }
@@ -389,6 +411,9 @@ void ffi_load()
     DUK_FUNC(make_gameobject, 7);
     DUK_FUNC(set_body, 3);
     DUK_FUNC(q_body, 2);
+
+    DUK_FUNC(sprite, 3);
+
     DUK_FUNC(sys_cmd, 1);
     DUK_FUNC(win_make, 3);
 
