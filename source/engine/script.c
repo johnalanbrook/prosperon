@@ -10,6 +10,10 @@
 
 #include "stb_ds.h"
 
+#include "time.h"
+#include "sys/stat.h"
+#include "sys/types.h"
+
 duk_context *duk = NULL;
 
 duk_idx_t vect2duk(cpVect v) {
@@ -47,6 +51,12 @@ void script_run(const char *script) {
     duk_eval_string(duk, script);
 }
 
+time_t file_mod_secs(const char *file) {
+    struct stat attr;
+    stat(file, &attr);
+    return attr.st_mtime;
+}
+
 int script_dofile(const char *file) {
     const char *script = slurp_text(file);
     if (!script) {
@@ -62,7 +72,8 @@ int script_dofile(const char *file) {
    duk_pop(duk);
 
 
-   return 0;
+
+   return file_mod_secs(file);
 }
 
 /* Call the "update" function in the master game script */

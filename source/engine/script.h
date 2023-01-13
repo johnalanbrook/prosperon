@@ -23,6 +23,7 @@ void script_call_sym(void *sym);
 void script_call_sym_args(void *sym, void *args);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, void *env);
+time_t file_mod_secs(const char *file);
 
 void register_update(struct callee c);
 void call_updates(double dt);

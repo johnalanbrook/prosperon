@@ -60,7 +60,8 @@ duk_ret_t duk_cmd(duk_context *duk) {
 
     switch(cmd) {
       case 0:
-        script_dofile(duk_to_string(duk, 1));
+        duk_push_int(duk, script_dofile(duk_to_string(duk, 1)));
+        return 1;
         break;
 
       case 1:
@@ -104,7 +105,12 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 11:
+         duk_push_int(duk, file_mod_secs(duk_to_string(duk, 1)));
+         return 1;
+         break;
 
+       case 12:
+         anim2d_delete(duk_to_int(duk, 1));
          break;
 
     }
@@ -232,9 +238,11 @@ duk_ret_t duk_set_body(duk_context *duk) {
   int id = duk_to_int(duk, 1);
   struct gameobject *go = get_gameobject_from_id(id);
 
+  /* TODO: Possible that reindexing shapes only needs done for static shapes? */
   switch (cmd) {
     case 0:
       gameobject_setangle(go, duk_to_number(duk, 2));
+      cpSpaceReindexShapesForBody(space, go->body);
       break;
 
     case 1:
@@ -243,6 +251,7 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 2:
       cpBodySetPosition(go->body, duk2vec2(duk, 2));
+      cpSpaceReindexShapesForBody(space, go->body);
       break;
 
     case 3:
@@ -263,6 +272,14 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 7:
       cpBodySetMass(go->body, duk_to_number(duk, 2));
+      break;
+
+    case 8:
+      cpBodySetAngularVelocity(go->body, duk_to_number(duk, 2));
+      break;
+
+    case 9:
+      cpBodySetVelocity(go->body, duk2vec2(duk, 2));
       break;
 
   }
@@ -305,16 +322,6 @@ duk_ret_t duk_q_body(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_sprite(duk_context *duk) {
-    int cmd = duk_to_int(duk, 0);
-    int id = duk_to_int(duk, 1);
-
-    switch (cmd) {
-        case 0: break;
-
-    }
-}
-
 duk_ret_t duk_make_sprite(duk_context *duk) {
   int go = duk_to_int(duk, 0);
   const char *path = duk_to_string(duk, 1);
@@ -328,6 +335,14 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
 
    duk_push_int(duk, sprite);
   return 1;
+}
+
+duk_ret_t duk_make_anim2d(duk_context *duk) {
+  int go = duk_to_int(duk, 0);
+  const char *path = duk_to_string(duk, 1);
+  cpVect pos = duk2vec2(duk, 2);
+
+
 }
 
 duk_ret_t duk_make_box2d(duk_context *duk) {
@@ -417,6 +432,7 @@ void ffi_load()
     DUK_FUNC(win_make, 3);
 
     DUK_FUNC(make_sprite, 3);
+    DUK_FUNC(make_anim2d, 3);
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd, 2);

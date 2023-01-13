@@ -32,7 +32,7 @@ struct gameobject {
     float e;			/* elasticity */
     int flipx; /* 1 or -1 */
     int flipy;
-    cpBody *body;
+    cpBody *body; /* NULL if this object is dead */
     int id;
     struct phys_cbs cbs;
 };

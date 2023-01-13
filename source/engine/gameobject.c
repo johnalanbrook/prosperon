@@ -91,6 +91,7 @@ void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
     struct phys2d_shape *s = cpShapeGetUserData(shape);
     free(s->data);
     cpSpaceRemoveShape(space, shape);
+    cpShapeFree(shape);
 }
 
 /* Really more of a "mark for deletion" ... */
@@ -101,31 +102,20 @@ void gameobject_delete(int id)
 }
 
 void gameobject_clean(int id) {
-    if (id < 0) {
-        YughError("Tried to clean ID %d.", id);
-        return;
-    }
     struct gameobject *go = id2go(id);
     cpBodyEachShape(go->body, rm_body_shapes, NULL);
     cpSpaceRemoveBody(space, go->body);
+    cpBodyFree(go->body);
     go->body = NULL;
 }
 
-static int last_cleaned = -1;
-
 void gameobjects_cleanup() {
-    if (first < 0) {
-        last_cleaned = first;
-        return;
-    }
-
     int clean = first;
-    while (clean != last_cleaned) {
+
+    while (clean > 0 && id2go(clean)->body) {
         gameobject_clean(clean);
         clean = id2go(clean)->next;
     }
-
-    last_cleaned = first;
 }
 
 void gameobject_save(struct gameobject *go, FILE * file)
