@@ -100,7 +100,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 10:
-
+         remove_pawn(duk_get_heapptr(duk, 1));
          break;
 
        case 11:
@@ -145,7 +145,7 @@ duk_ret_t duk_register_collide(duk_context *duk) {
     struct callee c = {fn, obj};
     YughInfo("Registering ...");
 
-    phys2d_add_handler_type(0, get_gameobject_from_id(go), c);
+    phys2d_add_handler_type(0, go, c);
 
     return 0;
 }
@@ -310,7 +310,7 @@ duk_ret_t duk_sprite(duk_context *duk) {
     int id = duk_to_int(duk, 1);
 
     switch (cmd) {
-        case 0:
+        case 0: break;
 
     }
 }
@@ -325,7 +325,6 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
   sprite_loadtex(sp, path);
   sp->pos[0] = pos.x;
   sp->pos[1] = pos.y;
-
 
    duk_push_int(duk, sprite);
   return 1;

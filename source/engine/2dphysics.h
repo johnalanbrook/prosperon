@@ -4,7 +4,6 @@
 #include <chipmunk/chipmunk.h>
 #include "script.h"
 
-extern cpBody *ballBody;
 extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
@@ -12,6 +11,8 @@ extern cpSpace *space;
 struct phys2d_shape {
     cpShape *shape;
     int go;
+    void *data;
+    void (*debugdraw)(void *data);
 };
 
 struct phys2d_circle {

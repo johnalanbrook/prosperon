@@ -31,5 +31,6 @@ struct inputaction
 };
 
 void set_pawn(void *pawn);
+void remove_pawn(void *pawn);
 
 #endif

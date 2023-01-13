@@ -19,7 +19,7 @@ struct sprite {
     int id;
     struct TexAnimation anim;
     struct Texture *tex;
-    struct sprite *next;
+    int next;
 };
 
 int make_sprite(int go);

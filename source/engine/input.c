@@ -23,7 +23,15 @@ static void **pawns = NULL;
 
 void set_pawn(void *pawn) {
     arrput(pawns, pawn);
-    YughInfo("Now controling %d pawns.", arrlen(pawns));
+}
+
+void remove_pawn(void *pawn) {
+    for (int i = 0; i < arrlen(pawns); i++) {
+        if (pawns[i] == pawn) {
+            pawns[i] = NULL;
+            return;
+        }
+    }
 }
 
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
@@ -48,8 +56,13 @@ void input_init()
 }
 
 void call_input_signal(char *signal) {
-    for (int i = 0; i < arrlen(pawns); i++)
+    for (int i = arrlen(pawns)-1; i >= 0; i--) {
+        if (pawns[i] == NULL) arrdel(pawns, i);
+    }
+
+    for (int i = 0; i < arrlen(pawns); i++) {
         script_eval_w_env(signal, pawns[i]);
+    }
 }
 
 const char *keyname_extd(int key, int scancode) {

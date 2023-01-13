@@ -24,10 +24,8 @@ struct editor {
 };
 
 struct gameobject {
-      union {
-          cpBodyType bodytype;
-          struct gameobject *next;
-     };
+    cpBodyType bodytype;
+    int next;
     float scale;
     float mass;
     float f;			/* friction */
@@ -44,6 +42,7 @@ extern struct gameobject *gameobjects;
 int MakeGameobject();
 void gameobject_apply(struct gameobject *go);
 void gameobject_delete(int id);
+void gameobjects_cleanup();
 void toggleprefab(struct gameobject *go);
 
 struct gameobject *get_gameobject_from_id(int id);

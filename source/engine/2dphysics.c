@@ -41,10 +41,12 @@ void phys2d_shape_apply(struct phys2d_shape *shape)
     cpShapeSetElasticity(shape->shape, id2go(shape->go)->e);
 }
 
-void init_phys2dshape(struct phys2d_shape *shape, int go)
+void init_phys2dshape(struct phys2d_shape *shape, int go, void *data)
 {
     shape->go = go;
-    cpShapeSetCollisionType(shape->shape, id2go(go));
+    shape->data = data;
+    cpShapeSetCollisionType(shape->shape, go);
+    cpShapeSetUserData(shape->shape, shape);
     phys2d_shape_apply(shape);
 }
 
@@ -62,7 +64,8 @@ struct phys2d_circle *Make2DCircle(int go)
     new->offset[1] = 0.f;
 
     new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(id2go(go)->body, new->radius, cpvzero));
-    init_phys2dshape(&new->shape, go);
+    new->shape.debugdraw = phys2d_dbgdrawcircle;
+    init_phys2dshape(&new->shape, go, new);
 
     return new;
 }
@@ -82,7 +85,6 @@ void circle_gui(struct phys2d_circle *circle)
 
 void phys2d_dbgdrawcpcirc(cpCircleShape *c)
 {
-    YughInfo("DRAW CIRCLE");
     cpVect pos = cpBodyGetPosition(cpShapeGetBody(c));
     cpVect offset = cpCircleShapeGetOffset(c);
     float radius = cpCircleShapeGetRadius(c);
@@ -93,7 +95,6 @@ void phys2d_dbgdrawcpcirc(cpCircleShape *c)
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
 {
-    YughInfo("Drawing a circle");
     phys2d_dbgdrawcpcirc((cpCircleShape *)circle->shape.shape);
 
     cpVect p = cpBodyGetPosition(cpShapeGetBody(circle->shape.shape));
@@ -118,7 +119,8 @@ struct phys2d_segment *Make2DSegment(int go)
     new->b[1] = 0.f;
 
     new->shape.shape = cpSpaceAddShape(space, cpSegmentShapeNew(id2go(go)->body, cpvzero, cpvzero, new->thickness));
-    init_phys2dshape(&new->shape, go);
+    new->shape.debugdraw = phys2d_dbgdrawseg;
+    init_phys2dshape(&new->shape, go, new);
 
     return new;
 }
@@ -150,7 +152,8 @@ struct phys2d_box *Make2DBox(int go)
     new->offset[1] = 0.f;
 
     new->shape.shape = cpSpaceAddShape(space, cpBoxShapeNew(id2go(go)->body, new->w, new->h, new->r));
-    init_phys2dshape(&new->shape, go);
+    new->shape.debugdraw = phys2d_dbgdrawbox;
+    init_phys2dshape(&new->shape, go, new);
     phys2d_applybox(new);
 
     return new;
@@ -182,7 +185,8 @@ struct phys2d_poly *Make2DPoly(int go)
 
     cpTransform T = { 0 };
     new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNew(id2go(go)->body, 0, NULL, T, new->radius));
-    init_phys2dshape(&new->shape, go);
+    init_phys2dshape(&new->shape, go, new);
+    new->shape.debugdraw = phys2d_dbgdrawpoly;
     phys2d_applypoly(new);
 
     return new;
@@ -453,16 +457,15 @@ void register_collide(void *sym) {
 }
 
 static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
-    struct gameobject *go = data;
-
     cpBody *body1;
     cpBody *body2;
     cpArbiterGetBodies(arb, &body1, &body2);
 
-    struct gameobject *g2 = cpBodyGetUserData(body2);
+    int g1 = cpBodyGetUserData(body1);
+    int g2 = cpBodyGetUserData(body2);
 
-    duk_push_heapptr(duk, go->cbs.begin.fn);
-    duk_push_heapptr(duk, go->cbs.begin.obj);
+    duk_push_heapptr(duk, id2go(g1)->cbs.begin.fn);
+    duk_push_heapptr(duk, id2go(g1)->cbs.begin.obj);
 
     int obj = duk_push_object(duk);
 
@@ -492,10 +495,9 @@ static void s7_phys_cb_separate(cpArbiter *Arb, cpSpace *space, void *data) {
 }
 
 void phys2d_add_handler_type(int cmd, int go, struct callee c) {
-/*
     cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
 
-    handler->userData = id2go(go);
+    handler->userData = go;
 
     switch (cmd) {
         case 0:
@@ -514,5 +516,5 @@ void phys2d_add_handler_type(int cmd, int go, struct callee c) {
             //go->cbs->separate = cb;
             break;
     }
-    */
+
 }

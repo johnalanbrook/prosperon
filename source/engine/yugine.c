@@ -199,6 +199,8 @@ int main(int argc, char **args) {
             window_renderall();
         }
 
+        gameobjects_cleanup();
+
     }
 
     return 0;

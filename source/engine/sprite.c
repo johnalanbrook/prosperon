@@ -14,39 +14,41 @@
 
 struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 
-struct sprite *sprites;
-struct sprite *first;
+static struct sprite *sprites;
+static int first = -1;
 
 static uint32_t VBO;
 
 int make_sprite(int go)
 {
-    YughInfo("Making sprite with gameobject %d",  go);
-
     struct sprite sprite = {
         .color = {1.f, 1.f, 1.f},
         .size = {1.f, 1.f},
         .tex = texture_loadfromfile("ph.png"),
         .go = go,
-        .next = NULL  };
+        .next = -1  };
 
     int ret;
 
-    if (!first) {
-        YughInfo("Making a brand new sprite.");
+    if (first<0) {
         arrput(sprites, sprite);
         arrlast(sprites).id = arrlen(sprites)-1;
         return arrlen(sprites)-1;
     } else {
-        YughInfo("Reusing a sprite slot.");
-        int slot = first->id;
-         struct sprite *next = first->next;
-        *first = sprite;
-        first->id = slot;
-        first = next;
+        int slot = first;
+        first = id2sprite(first)->next;
+        *id2sprite(slot) = sprite;
 
         return slot;
     }
+}
+
+void sprite_delete(int id)
+{
+    struct sprite *sp = id2sprite(id);
+    sp->go = -1;
+    sp->next = first;
+    first = id;
 }
 
 struct sprite *id2sprite(int id) {
@@ -72,13 +74,7 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
     }
 }
 
-void sprite_delete(int id)
-{
-    struct sprite *sp = id2sprite(id);
-    sp->go = -1;
-    sp->next = first;
-    first = sp;
-}
+
 
 void sprite_draw_all()
 {

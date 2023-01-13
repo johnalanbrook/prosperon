@@ -15,7 +15,7 @@
 #include "stb_ds.h"
 
 struct gameobject *gameobjects = NULL;
-struct gameobject *first = NULL;
+static int first = -1;
 
 const int nameBuf[MAXNAME] = { 0 };
 const int prefabNameBuf[MAXNAME] = { 0 };
@@ -66,46 +66,66 @@ int MakeGameobject()
     struct gameobject go = {
         .scale = 1.f,
         .bodytype = CP_BODY_TYPE_STATIC,
-        .mass = 1.f
+        .mass = 1.f,
+        .next = -1
     };
 
     go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
 
-    struct gameobject *tar;
-
     int retid;
 
-    if (!first) {
+    if (first<0) {
         arrput(gameobjects, go);
-        tar = &arrlast(gameobjects);
-        retid = arrlen(gameobjects)-1;
-        tar->id = retid;
+        retid = arrlast(gameobjects).id = arrlen(gameobjects)-1;
     } else {
-
-        retid = first->id;
-        struct gameobject *next = first->next;
-        YughInfo("Created in slot %d.", retid);
-        tar = first;
-        *first = go;
-        first->id = retid;
-        first = next;
+        retid = first;
+        first = id2go(first)->next;
+        *id2go(retid) = go;
     }
 
-    cpBodySetUserData(go.body, tar);
-
-    YughInfo("Made game object with ID ===== %d", retid);
+    cpBodySetUserData(go.body, retid);
     return retid;
 }
 
+void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
+    struct phys2d_shape *s = cpShapeGetUserData(shape);
+    free(s->data);
+    cpSpaceRemoveShape(space, shape);
+}
+
+/* Really more of a "mark for deletion" ... */
 void gameobject_delete(int id)
 {
-    YughInfo("Deleting gameobject with id %d.", id);
-    struct gameobject *go = id2go(id);
-    cpSpaceRemoveBody(space, go->body);
-    go->next = first;
-    first = go;
+    id2go(id)->next = first;
+    first = id;
+}
 
-   YughInfo("Did it to %d.", first->id);
+void gameobject_clean(int id) {
+    if (id < 0) {
+        YughError("Tried to clean ID %d.", id);
+        return;
+    }
+    struct gameobject *go = id2go(id);
+    cpBodyEachShape(go->body, rm_body_shapes, NULL);
+    cpSpaceRemoveBody(space, go->body);
+    go->body = NULL;
+}
+
+static int last_cleaned = -1;
+
+void gameobjects_cleanup() {
+    if (first < 0) {
+        last_cleaned = first;
+        return;
+    }
+
+    int clean = first;
+    while (clean != last_cleaned) {
+        gameobject_clean(clean);
+        clean = id2go(clean)->next;
+    }
+
+    last_cleaned = first;
 }
 
 void gameobject_save(struct gameobject *go, FILE * file)
@@ -330,17 +350,19 @@ void object_gui(struct gameobject *go)
 */
 }
 
+
+void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
+    struct phys2d_shape *s = cpShapeGetUserData(shape);
+    s->debugdraw(s->data);
+}
+
 void gameobject_draw_debugs() {
-/*
-    YughInfo("DRAWING DEBUG");
     for (int i = 0; i < arrlen(gameobjects); i++) {
-        YughInfo("Drawing this many ... %d", arrlen(gameobjects[i].components));
-        for (int j = 0; j < arrlen(gameobjects[i].components); j++) {
-            struct component *c = &gameobjects[i].components[j];
-            comp_draw_debug(c);
-        }
+        if (!gameobjects[i].body) continue;
+
+        cpBodyEachShape(gameobjects[i].body, body_draw_shapes_dbg, NULL);
     }
-    */
+
 }
 
 
