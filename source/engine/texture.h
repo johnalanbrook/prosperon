@@ -48,6 +48,7 @@ struct TexAnim {
 
 struct TextureOptions {
     int sprite;
+    int mips;
     unsigned int gamma:1;
     int animation;
 };

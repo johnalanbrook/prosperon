@@ -110,7 +110,12 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 12:
-         anim2d_delete(duk_to_int(duk, 1));
+         //anim2d_delete(duk_to_int(duk, 1));
+         break;
+
+
+       case 13:
+         play_song(duk_to_string(duk, 1), duk_to_string(duk, 2));
          break;
 
     }
@@ -149,7 +154,6 @@ duk_ret_t duk_register_collide(duk_context *duk) {
     int go = duk_get_int(duk, 3);
 
     struct callee c = {fn, obj};
-    YughInfo("Registering ...");
 
     phys2d_add_handler_type(0, go, c);
 
@@ -223,10 +227,13 @@ duk_ret_t duk_make_gameobject(duk_context *duk) {
     return 1;
 }
 
-duk_ret_t duk_loginfo(duk_context *duk) {
-    const char *s = duk_to_string(duk,0);
+duk_ret_t duk_yughlog(duk_context *duk) {
+    int cmd = duk_to_int(duk, 0);
+    const char *s = duk_to_string(duk,1);
+    const char *f = duk_to_string(duk, 2);
+    int line = duk_to_int(duk, 3);
 
-    YughInfo("%s", s);
+    mYughLog(1, cmd, line, f, s);
 
     return 0;
 }
@@ -342,7 +349,7 @@ duk_ret_t duk_make_anim2d(duk_context *duk) {
   const char *path = duk_to_string(duk, 1);
   cpVect pos = duk2vec2(duk, 2);
 
-
+  return 0;
 }
 
 duk_ret_t duk_make_box2d(duk_context *duk) {
@@ -421,12 +428,10 @@ duk_ret_t duk_timer_cmd(duk_context *duk) {
 
 void ffi_load()
 {
-    DUK_FUNC(loginfo, 1);
+    DUK_FUNC(yughlog, 4);
     DUK_FUNC(make_gameobject, 7);
     DUK_FUNC(set_body, 3);
     DUK_FUNC(q_body, 2);
-
-    DUK_FUNC(sprite, 3);
 
     DUK_FUNC(sys_cmd, 1);
     DUK_FUNC(win_make, 3);
@@ -435,7 +440,7 @@ void ffi_load()
     DUK_FUNC(make_anim2d, 3);
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(make_circle2d, 3);
-    DUK_FUNC(cmd, 2);
+    DUK_FUNC(cmd, DUK_VARARGS);
     DUK_FUNC(register, 3);
     DUK_FUNC(register_collide, 4);
 

@@ -73,12 +73,7 @@ void sound_pause(struct sound *s);
 void sound_resume(struct sound *s);
 void sound_stop(struct sound *s);
 
-
-
 struct music make_music(const char *ogg);
-
-
-
 
 const char *get_audio_driver();
 

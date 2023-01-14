@@ -7,6 +7,7 @@
 #include "log.h"
 #include <math.h>
 #include "util.h"
+#include "parson.h"
 
 static struct {
     char *key;
@@ -22,7 +23,14 @@ struct Texture *texture_pullfromfile(const char *path)
 	return texhash[index].value;
 
     struct Texture *tex = calloc(1, sizeof(*tex));
-    tex->opts.sprite = 1;
+
+    /* Find texture's asset; otherwise load default asset */
+    JSON_Value *rv = json_parse_file("texture.asset");
+    JSON_Object *ro = json_value_get_object(rv);
+    tex->opts.sprite = json_object_get_boolean(ro, "sprite");
+    tex->opts.mips = json_object_get_boolean(ro, "mips");
+    json_value_free(rv);
+
     tex->opts.gamma = 0;
     tex->anim.ms = 1;
 
@@ -61,7 +69,8 @@ struct Texture *texture_pullfromfile(const char *path)
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
-	glGenerateMipmap(GL_TEXTURE_2D);
+         if (tex->opts.mips)
+             glGenerateMipmap(GL_TEXTURE_2D);
 
 	if (tex->opts.sprite) {
 	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

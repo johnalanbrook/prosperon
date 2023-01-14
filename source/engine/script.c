@@ -57,6 +57,15 @@ time_t file_mod_secs(const char *file) {
     return attr.st_mtime;
 }
 
+void duk_run_err() {
+       duk_get_prop_string(duk, -1, "lineNumber");
+       duk_get_prop_string(duk, -2, "fileName");
+       duk_get_prop_string(duk, -3, "stack");
+       mYughLog(1, 2, duk_get_int(duk, -3), duk_safe_to_string(duk, -2), "%s\n%s", duk_safe_to_string(duk, -4), duk_safe_to_string(duk, -1));
+
+       duk_pop_3(duk);
+}
+
 int script_dofile(const char *file) {
     const char *script = slurp_text(file);
     if (!script) {
@@ -65,13 +74,17 @@ int script_dofile(const char *file) {
    }
    duk_push_string(duk, script);
    free(script);
-   if (duk_peval(duk) != 0) {
-       printf("ERROR: %s\n", duk_safe_to_string(duk, -1));
+   duk_push_string(duk, file);
+
+   if (duk_pcompile(duk, 0) != 0) {
+       duk_run_err();
        return 1;
    }
+
+   if (duk_pcall(duk, 0))
+       duk_run_err();
+
    duk_pop(duk);
-
-
 
    return file_mod_secs(file);
 }
@@ -105,15 +118,18 @@ void script_eval_w_env(const char *s, void *env) {
       return;
     }
     duk_push_string(duk, s);
-    duk_call_prop(duk, -2, 0);
-    duk_pop(duk);
-    duk_pop(duk);
+    if (duk_pcall_prop(duk, -2, 0))
+        duk_run_err();
+
+    duk_pop_2(duk);
 }
 
 void script_call_sym(void *sym)
 {
     duk_push_heapptr(duk, sym);
-    duk_call(duk, 0);
+    if (duk_pcall(duk, 0))
+        duk_run_err();
+
     duk_pop(duk);
 }
 
@@ -143,7 +159,10 @@ void register_physics(struct callee c) {
 void call_callee(struct callee c) {
     duk_push_heapptr(duk, c.fn);
     duk_push_heapptr(duk, c.obj);
-    duk_call_method(duk, 0);
+
+    if (duk_pcall_method(duk, 0))
+        duk_run_err();
+
     duk_pop(duk);
 }
 
@@ -151,7 +170,10 @@ void callee_dbl(struct callee c, double d) {
     duk_push_heapptr(duk, c.fn);
     duk_push_heapptr(duk, c.obj);
     duk_push_number(duk, d);
-    duk_call_method(duk, 1);
+
+    if (duk_pcall_method(duk, 1))
+        duk_run_err();
+
     duk_pop(duk);
 }
 
