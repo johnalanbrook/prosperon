@@ -9,6 +9,8 @@
 #include "music.h"
 #include "stb_vorbis.h"
 
+#include "stb_ds.h"
+
 #include "mix.h"
 #include "dsp.h"
 
@@ -27,6 +29,11 @@
 
 #define TML_IMPLEMENTATION
 #include "tml.h"
+
+static struct {
+    char *key;
+    struct wav *value;
+} *wavhash = NULL;
 
 const char *audioDriver;
 
@@ -150,20 +157,39 @@ void audio_close()
     //Mix_CloseAudio();
 }
 
-static struct wav mwav;
-
 struct wav *make_sound(const char *wav)
 {
+    int index = shgeti(wavhash, wav);
+    if (index != -1) return wavhash[index].value;
+
+    struct wav mwav;
     mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
-    if (mwav.samplerate != SAMPLERATE) {
+    if (mwav->samplerate != SAMPLERATE) {
         YughInfo("Changing samplerate of %s.", wav);
         mwav = change_samplerate(mwav, 48000);
     }
 
     mwav.gain = 1.f;
 
-    return &mwav;
+    struct wav *newwav = malloc(sizeof(*newwav));
+    *newwav = mwav;
+
+    if (shlen(wavhash) == 0) sh_new_arena(wavhash);
+
+    shput(wavhash, wav, newwav);
+
+    return newwav;
+}
+
+void free_sound(const char *wav)
+{
+    struct wav *w = shget(wavhash, wav);
+    if (w == NULL) return;
+
+    free(w->data);
+    free(w);
+    shdel(wavhash, wav);
 }
 
 struct soundstream *soundstream_make()
@@ -171,6 +197,14 @@ struct soundstream *soundstream_make()
     struct soundstream *new =  malloc(sizeof(*new));
     new->buf = circbuf_make(sizeof(short), BUF_FRAMES*CHANNELS*2);
     return new;
+}
+
+void play_oneshot(struct wav *wav) {
+    struct sound *new = calloc(1, sizeof(*new));
+    new->data = wav;
+    new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
+    new->playing=1;
+    new->loop=0;
 }
 
 struct sound *play_sound(struct wav *wav)

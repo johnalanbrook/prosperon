@@ -29,9 +29,10 @@ struct soundconvstream {
 
 struct soundstream *soundstream_make();
 
+/* A playing sound;
 struct sound {
     int loop;
-    int frame;
+    unsigned int frame;
     int playing;
     float gain;
 
@@ -39,6 +40,7 @@ struct sound {
     struct bus *bus;
 };
 
+/* Represents a sound file */
 struct wav {
     unsigned int ch;
     unsigned int samplerate;
@@ -62,6 +64,7 @@ void audio_close();
 void sound_fillbuf(struct sound *s, short *buf, int n);
 
 struct wav *make_sound(const char *wav);
+void free_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);
 struct sound *play_sound(struct wav *wav);
 
@@ -73,7 +76,7 @@ void sound_pause(struct sound *s);
 void sound_resume(struct sound *s);
 void sound_stop(struct sound *s);
 
-struct music make_music(const char *ogg);
+struct music make_music(const char *mp3);
 
 const char *get_audio_driver();
 
