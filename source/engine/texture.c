@@ -134,38 +134,38 @@ void tex_gpu_reload(struct Texture *tex)
     //tex_gpu_load(tex);
 }
 
-void tex_incr_anim(struct TexAnimation *tex_anim)
+void tex_incr_anim(struct anim2d *tex_anim)
 {
     anim_incr(tex_anim);
 
-    if (!tex_anim->loop && tex_anim->frame == arrlen(tex_anim->anim->st_frames))
+    if (!tex_anim->anim->loop && tex_anim->frame == arrlen(tex_anim->anim->st_frames))
 	anim_pause(tex_anim);
 }
 
-void anim_incr(struct TexAnimation *anim)
+void anim_incr(struct anim2d *anim)
 {
     anim->frame = (anim->frame + 1) % arrlen(anim->anim->st_frames);
     //tex_anim_calc_uv(anim);
 }
 
-void anim_decr(struct TexAnimation *anim)
+void anim_decr(struct anim2d *anim)
 {
     anim->frame = (anim->frame + arrlen(anim->anim->st_frames) - 1) % arrlen(anim->anim->st_frames);
     //tex_anim_calc_uv(anim);
 }
 
-struct glrect anim_get_rect(struct TexAnimation *anim)
+struct glrect anim_get_rect(struct anim2d *anim)
 {
     return anim->anim->st_frames[anim->frame];
 }
 
-void anim_setframe(struct TexAnimation *anim, int frame)
+void anim_setframe(struct anim2d *anim, int frame)
 {
     anim->frame = frame;
     //tex_anim_calc_uv(anim);
 }
 
-void tex_anim_set(struct TexAnimation *anim)
+void tex_anim_set(struct anim2d *anim)
 {
     if (anim->playing) {
 	timer_remove(anim->timer);
@@ -203,7 +203,7 @@ void tex_bind(struct Texture *tex)
     glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
 }
 
-void anim_play(struct TexAnimation *anim)
+void anim_play(struct anim2d *anim)
 {
     if (anim->playing)
 	return;
@@ -221,7 +221,7 @@ void anim_play(struct TexAnimation *anim)
     timer_start(anim->timer);
 }
 
-void anim_stop(struct TexAnimation *anim)
+void anim_stop(struct anim2d *anim)
 {
     if (!anim->playing)
 	return;
@@ -233,7 +233,7 @@ void anim_stop(struct TexAnimation *anim)
     //tex_anim_calc_uv(anim);
 }
 
-void anim_pause(struct TexAnimation *anim)
+void anim_pause(struct anim2d *anim)
 {
     if (!anim->playing)
 	return;
@@ -242,12 +242,12 @@ void anim_pause(struct TexAnimation *anim)
     timer_pause(anim->timer);
 }
 
-void anim_fwd(struct TexAnimation *anim)
+void anim_fwd(struct anim2d *anim)
 {
     anim_incr(anim);
 }
 
-void anim_bkwd(struct TexAnimation *anim)
+void anim_bkwd(struct anim2d *anim)
 {
     anim_decr(anim);
 }

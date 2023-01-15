@@ -61,7 +61,7 @@ void audio_close();
 
 void sound_fillbuf(struct sound *s, short *buf, int n);
 
-struct wav make_sound(const char *wav);
+struct wav *make_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);
 struct sound *play_sound(struct wav *wav);
 

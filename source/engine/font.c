@@ -22,7 +22,7 @@ static uint32_t VAO = 0;
 struct sFont *font;
 static struct shader *shader;
 
-char *slurp_file(const char *filename) {
+unsigned char *slurp_file(const char *filename) {
     FILE *f = fopen(filename, "rb");
 
     if (!f) return NULL;
@@ -31,13 +31,12 @@ char *slurp_file(const char *filename) {
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
     unsigned char *slurp = malloc(fsize);
-     size_t r = fread(slurp, fsize, 1, f);
      fclose(f);
 
      return slurp;
 }
 
-char *slurp_text(const char *filename) {
+unsigned char *slurp_text(const char *filename) {
  FILE *f = fopen(filename, "r'");
  if (!f) return NULL;
 
@@ -117,9 +116,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
         YughError("Failed to make font %s", fontfile);
     }
 
-
-
-    float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glGenTextures(1, &newfont->texID);
     glBindTexture(GL_TEXTURE_2D, newfont->texID);

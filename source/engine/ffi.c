@@ -15,6 +15,7 @@
 #include "anim.h"
 #include "yugine.h"
 #include "nuke.h"
+#include "sound.h"
 #include "font.h"
 
 cpVect duk2vec2(duk_context *duk, int p) {
@@ -116,6 +117,22 @@ duk_ret_t duk_cmd(duk_context *duk) {
 
        case 13:
          play_song(duk_to_string(duk, 1), duk_to_string(duk, 2));
+         break;
+
+       case 14:
+         play_sound(make_sound(duk_to_string(duk, 1)));
+         break;
+
+       case 15:
+
+         break;
+
+       case 16:
+
+         break;
+
+       case 17:
+
          break;
 
     }
@@ -347,7 +364,10 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
 duk_ret_t duk_make_anim2d(duk_context *duk) {
   int go = duk_to_int(duk, 0);
   const char *path = duk_to_string(duk, 1);
-  cpVect pos = duk2vec2(duk, 2);
+  int frames = duk_to_int(duk, 2);
+  int fps = duk_to_int(duk, 3);
+
+
 
   return 0;
 }
@@ -437,7 +457,7 @@ void ffi_load()
     DUK_FUNC(win_make, 3);
 
     DUK_FUNC(make_sprite, 3);
-    DUK_FUNC(make_anim2d, 3);
+    DUK_FUNC(make_anim2d, 4);
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd, DUK_VARARGS);

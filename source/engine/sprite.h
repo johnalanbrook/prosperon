@@ -8,7 +8,6 @@
 
 struct datastream;
 struct gameobject;
-struct Texture;
 
 struct sprite {
     mfloat_t pos[2];
@@ -17,10 +16,11 @@ struct sprite {
     mfloat_t color[3];
     int go;
     int id;
-    struct TexAnimation anim;
+    struct anim2d anim;
     struct Texture *tex;
     int next;
 };
+
 
 int make_sprite(int go);
 struct sprite *id2sprite(int id);

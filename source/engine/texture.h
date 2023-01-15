@@ -30,13 +30,13 @@ struct uvrect {
 };
 
 /* Tracks a playing animation */
-struct TexAnimation {
+struct anim2d {
     int frame;
     int playing;
     int pausetime;
     struct timer *timer;
     struct TexAnim *anim;
-    int loop;
+
 };
 
 /* Describes an animation on a particular texture */
@@ -44,6 +44,7 @@ struct TexAnim {
     struct glrect *st_frames; /* Dynamic array of frames of animation */
     int ms;
     struct Texture *tex;
+    int loop;
 };
 
 struct TextureOptions {
@@ -70,20 +71,20 @@ void tex_bind(struct Texture *tex);    // Bind to gl context
 
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
-void anim_play(struct TexAnimation *anim);
-void anim_setframe(struct TexAnimation *anim, int frame);
-void anim_stop(struct TexAnimation *anim);
-void anim_pause(struct TexAnimation *anim);
-void anim_fwd(struct TexAnimation *anim);
-void anim_bkwd(struct TexAnimation *anim);
-void anim_incr(struct TexAnimation  *anim);
-void anim_decr(struct TexAnimation *anim);
+void anim_play(struct anim2d *anim);
+void anim_setframe(struct anim2d *anim, int frame);
+void anim_stop(struct anim2d *anim);
+void anim_pause(struct anim2d *anim);
+void anim_fwd(struct anim2d *anim);
+void anim_bkwd(struct anim2d *anim);
+void anim_incr(struct anim2d  *anim);
+void anim_decr(struct anim2d *anim);
 
-void tex_incr_anim(struct TexAnimation *tex_anim);
-void tex_anim_set(struct TexAnimation *anim);
+void tex_incr_anim(struct anim2d *tex_anim);
+void tex_anim_set(struct anim2d *anim);
 
 struct glrect tex_get_rect(struct Texture *tex);
-struct glrect anim_get_rect(struct TexAnimation *anim);
+struct glrect anim_get_rect(struct anim2d *anim);
 
 int anim_frames(struct TexAnim *a);
 

@@ -481,19 +481,6 @@ static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     return 1;
 }
 
-static cpBool s7_phys_cb_presolve(cpArbiter *arb, cpSpace *space, void *data) {
-
-}
-
-static void s7_phys_cb_postsolve(cpArbiter *arb, cpSpace *space, void *data) {
-
-}
-
-static void s7_phys_cb_separate(cpArbiter *Arb, cpSpace *space, void *data) {
-    //struct gameobject *go = data;
-    //script_call_sym(go->cbs->separate);
-}
-
 void phys2d_add_handler_type(int cmd, int go, struct callee c) {
     cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
 

@@ -95,7 +95,7 @@ static int grid1_draw = true;
 static int grid2_draw = true;
 
 static float tex_scale = 1.f;
-static struct TexAnimation tex_gui_anim = {0};
+static struct anim2d tex_gui_anim = {0};
 
 char current_level[MAXNAME] = {'\0'};
 char levelname[MAXNAME] = {'\0'};

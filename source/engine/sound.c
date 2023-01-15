@@ -118,7 +118,6 @@ void print_devices()
 
 void sound_init()
 {
-
      PaError err = Pa_Initialize();
      check_pa_err(err);
 
@@ -151,18 +150,20 @@ void audio_close()
     //Mix_CloseAudio();
 }
 
-struct wav make_sound(const char *wav)
+static struct wav mwav;
+
+struct wav *make_sound(const char *wav)
 {
-    struct wav mwav;
-    mwav.data = drwav_open_file_and_read_pcm_frames_s16("sounds/alert.wav", &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
+    mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
     if (mwav.samplerate != SAMPLERATE) {
+        YughInfo("Changing samplerate of %s.", wav);
         mwav = change_samplerate(mwav, 48000);
     }
 
     mwav.gain = 1.f;
 
-    return mwav;
+    return &mwav;
 }
 
 struct soundstream *soundstream_make()
