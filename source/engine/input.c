@@ -127,6 +127,10 @@ const char *keyname_extd(int key, int scancode) {
                 case GLFW_KEY_RIGHT_ALT:
                     kkey= "ralt";
                     break;
+
+                case GLFW_KEY_SPACE:
+                   kkey = "space";
+                   break;
             }
 
             if (kkey) return kkey;

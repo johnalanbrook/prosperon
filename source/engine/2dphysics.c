@@ -467,6 +467,11 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
     }
 }
 
+cpShape *id2shape(int id)
+{
+    return NULL;
+}
+
 void phys2d_reindex_body(cpBody *body) {
     cpSpaceReindexShapesForBody(space, body);
 }

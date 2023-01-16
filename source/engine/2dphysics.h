@@ -97,6 +97,8 @@ void phys2d_add_handler_type(int cmd, int go,  struct callee c);
 void register_collide(void *sym);
 void phys2d_set_gravity(cpVect v);
 
+cpShape *id2shape(int id);
+
 struct color {
     unsigned char r;
     unsigned char g;

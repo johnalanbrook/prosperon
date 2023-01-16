@@ -152,6 +152,17 @@ duk_ret_t duk_cmd(duk_context *duk) {
          set_trigger_color(duk2color(duk, 1));
          break;
 
+       case 18:
+         cpShapeSetSensor(id2shape(duk_to_int(duk, 1)), duk_to_boolean(duk, 2));
+         break;
+
+       case 19:
+         if (id2shape(duk_to_int(duk, 1)))
+             duk_push_boolean(duk, cpShapeGetSensor(id2shape(duk_to_int(duk, 1))));
+         else
+             duk_push_undefined(duk);
+
+         return 1;
     }
 
     return 0;

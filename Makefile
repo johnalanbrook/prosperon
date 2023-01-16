@@ -115,7 +115,7 @@ $(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE)
 	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-$(BIN)$(DIST): $(BIN)$(NAME) source/scripts/* source/shaders/*
+$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/*
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(BIN)dist
 	@cp $(BIN)$(NAME) $(BIN)dist
