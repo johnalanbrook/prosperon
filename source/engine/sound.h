@@ -2,7 +2,6 @@
 #define SOUND_H
 
 struct circbuf;
-struct SDL_AudioStream;
 
 struct Mix_Chunk {
     int i;
@@ -23,16 +22,15 @@ struct soundstream {
 };
 
 struct soundconvstream {
-    // SDL_AudioStream *srconv;
     void *data;
 };
 
 struct soundstream *soundstream_make();
 
-/* A playing sound;
+/* A playing sound */
 struct sound {
-    int loop;
-    unsigned int frame;
+    int loop; /* How many times to loop */
+    unsigned int frame; /* Pointing to the current frame on the wav */
     int playing;
     float gain;
 

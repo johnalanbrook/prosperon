@@ -9,6 +9,8 @@
 #include "music.h"
 #include "stb_vorbis.h"
 
+#include "samplerate.h"
+
 #include "stb_ds.h"
 
 #include "mix.h"
@@ -47,27 +49,53 @@ void new_samplerate(short *in, short *out, int n, int ch, int sr_in, int sr_out)
     */
 }
 
-struct wav change_samplerate(struct wav w, int rate)
+static struct wav change_channels(struct wav w, int ch)
 {
-    //int samples = sizeof(short) * w.ch * w.frames;
-    //short *new = malloc(samples);
-    //new_samplerate(w.data, new,
+    short *data = w.data;
+    int samples = ch * w.frames;
+    short *new = malloc(sizeof(short)*samples);
 
+    if (ch > w.ch) {
+        /* Sets all new channels equal to the first one */
+        for (int i = 0; i < w.frames; i++) {
+            for (int j = 0; j < ch; j++)
+                new[i*ch+j] = data[i];
+        }
+    } else {
+        /* Simple method; just use first N channels present in wav */
+        for (int i = 0; i < w.frames; i++)
+            for (int j = 0; j < ch; j++)
+                new[i*ch+j] = data[i*ch+j];
+    }
 
+    free (w.data);
+    w.data = new;
+    return w;
+}
 
-    //SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, w.ch, w.samplerate, AUDIO_S16, w.ch, rate);
-    //SDL_AudioStreamPut(stream, w.data, w.frames*w.ch*sizeof(short));
+static struct wav change_samplerate(struct wav w, int rate)
+{
+    float ratio = (float)rate/w.samplerate;
+    int outframes = w.frames * ratio;
+    SRC_DATA ssrc;
+    float floatdata[w.frames*w.ch];
+    src_short_to_float_array(w.data, floatdata, w.frames*w.ch);
+    float resampled[w.ch*outframes];
 
-    int oldframes = w.frames;
-    w.frames *= (float)rate/w.samplerate;
-    int samples = sizeof(short) * w.ch * w.frames;
-    w.samplerate = rate;
-    short *new = malloc(samples);
-    //SDL_AudioStreamGet(stream, new, samples);
+    ssrc.data_in = floatdata;
+    ssrc.data_out = resampled;
+    ssrc.input_frames = w.frames;
+    ssrc.output_frames = outframes;
+    ssrc.src_ratio = ratio;
+
+    src_simple(&ssrc, SRC_SINC_BEST_QUALITY, w.ch);
+
+    short *newdata = malloc(sizeof(short)*outframes*w.ch);
+    src_float_to_short_array(resampled, newdata, outframes*w.ch);
 
     free(w.data);
-    w.data = new;
-    //SDL_FreeAudioStream(stream);
+    w.data = newdata;
+    w.samplerate = rate;
 
     return w;
 }
@@ -165,9 +193,15 @@ struct wav *make_sound(const char *wav)
     struct wav mwav;
     mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
-    if (mwav->samplerate != SAMPLERATE) {
-        YughInfo("Changing samplerate of %s.", wav);
+
+    if (mwav.samplerate != SAMPLERATE) {
+        YughInfo("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, 48000);
         mwav = change_samplerate(mwav, 48000);
+    }
+
+    if (mwav.ch != CHANNELS) {
+        YughInfo("Changing channels of %s from %d to %d.", wav, mwav.ch, CHANNELS);
+        //mwav = change_channels(mwav, CHANNELS);
     }
 
     mwav.gain = 1.f;
@@ -205,6 +239,7 @@ void play_oneshot(struct wav *wav) {
     new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
     new->playing=1;
     new->loop=0;
+    new->frame = 0;
 }
 
 struct sound *play_sound(struct wav *wav)
@@ -301,9 +336,7 @@ void sound_fillbuf(struct sound *s, short *buf, int n)
 
     short *in = s->data->data;
     for (int i = 0; i < n; i++) {
-        for (int j = 0; j < 2; j++) {
-            buf[i*2+j] = in[s->frame+j] * gainmult;
-        }
+        for (int j = 0; j < CHANNELS; j++) buf[i*CHANNELS+j] = in[s->frame+j] * gainmult;
 
         s->frame++;
         if (s->frame == s->data->frames) {
@@ -313,6 +346,7 @@ void sound_fillbuf(struct sound *s, short *buf, int n)
                 s->frame = 0;
             } else {
                 bus_free(s->bus);
+                return;
             }
         }
     }

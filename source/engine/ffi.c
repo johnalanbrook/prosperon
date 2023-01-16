@@ -120,11 +120,11 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 14:
-         play_sound(make_sound(duk_to_string(duk, 1)));
+         play_oneshot(make_sound(duk_to_string(duk, 1)));
          break;
 
        case 15:
-
+         music_stop();
          break;
 
        case 16:

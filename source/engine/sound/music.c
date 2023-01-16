@@ -61,6 +61,8 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
     dsp_pan(&music_pan, out, n);
 }
 
+struct bus *musicbus;
+
 void play_song(const char *midi, const char *sf)
 {
     gsong.midi = tml_load_filename(midi);
@@ -85,7 +87,7 @@ void play_song(const char *midi, const char *sf)
 
     cursong.data = &gsong;
     cursong.filter = dsp_midi_fillbuf;
-    first_free_bus(cursong);
+    musicbus = first_free_bus(cursong);
 }
 
 
@@ -96,7 +98,7 @@ void music_play()
 
 void music_stop()
 {
-
+    bus_free(musicbus);
 }
 
 void music_volume()

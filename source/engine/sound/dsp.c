@@ -160,6 +160,7 @@ struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, 
     struct dsp_filter new;
     new.data = data;
     new.filter = filter;
+    new.inputs = 0;
     return new;
 }
 
