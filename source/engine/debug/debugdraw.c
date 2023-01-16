@@ -48,7 +48,7 @@ void debugdraw_init()
     glGenVertexArrays(1, &rectVAO);
 }
 
-void draw_line(int x1, int y1, int x2, int y2)
+void draw_line(int x1, int y1, int x2, int y2, float *color)
 {
     shader_use(rectShader);
     float verts[] = {
@@ -56,15 +56,15 @@ void draw_line(int x1, int y1, int x2, int y2)
 	x2, y2
     };
 
-    draw_poly(verts, 2);
+    draw_poly(verts, 2, color);
 }
 
-void draw_edge(float *points, int n)
+void draw_edge(float *points, int n, float *color)
 {
-    draw_poly(points, n);
+    draw_poly(points, n, color);
 }
 
-void draw_circle(int x, int y, float radius, int pixels)
+void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
 {
     shader_use(circleShader);
 
@@ -80,6 +80,8 @@ void draw_circle(int x, int y, float radius, int pixels)
 
     shader_setfloat(circleShader, "radius", radius);
     shader_setint(circleShader, "thickness", pixels);
+    shader_setvec3(circleShader, "dbgColor", color);
+    shader_setbool(circleShader, "fill", fill);
 
     glBindVertexArray(circleVAO);
     glEnableVertexAttribArray(0);
@@ -87,7 +89,7 @@ void draw_circle(int x, int y, float radius, int pixels)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
-void draw_rect(int x, int y, int w, int h)
+void draw_rect(int x, int y, int w, int h, float *color)
 {
     float hw = w / 2.f;
     float hh = h / 2.f;
@@ -99,7 +101,7 @@ void draw_rect(int x, int y, int w, int h)
 	x - hw, y + hh
     };
 
-    draw_poly(verts, 4);
+    draw_poly(verts, 4, color);
 }
 
 void draw_grid(int width, int span)
@@ -113,19 +115,26 @@ void draw_grid(int width, int span)
 
 }
 
-void draw_point(int x, int y, float r)
+void draw_point(int x, int y, float r, float *color)
 {
-    draw_circle(x, y, r, r);
+    draw_circle(x, y, r, r, color, 0);
 }
 
-void draw_poly(float *points, int n)
+void draw_poly(float *points, int n, float *color)
 {
     shader_use(rectShader);
+    shader_setvec3(rectShader, "linecolor", color);
     glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
     glBindVertexArray(rectVAO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+
+    shader_setfloat(rectShader, "alpha", 0.1f);
+    glDrawArrays(GL_POLYGON, 0, n);
+
+    shader_setfloat(rectShader, "alpha", 1.f);
     glDrawArrays(GL_LINE_LOOP, 0, n);
 }
 

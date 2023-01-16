@@ -30,13 +30,14 @@ struct uvrect {
 };
 
 /* Tracks a playing animation */
+/* Objects should keep this, and simple change what TexAnim they are pointing to */
 struct anim2d {
     int frame;
     int playing;
     int pausetime;
     struct timer *timer;
     struct TexAnim *anim;
-
+    float size[2]; /* Current size of animation in pixels*/
 };
 
 /* Describes an animation on a particular texture */
@@ -71,6 +72,9 @@ void tex_bind(struct Texture *tex);    // Bind to gl context
 
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
+void anim_load(struct anim2d *anim, const char *path); /* Load and start new animation */
+void texanim_fromframes(struct TexAnim *anim, int frames);
+void anim_calc(struct anim2d *anim);
 void anim_play(struct anim2d *anim);
 void anim_setframe(struct anim2d *anim, int frame);
 void anim_stop(struct anim2d *anim);
@@ -79,9 +83,6 @@ void anim_fwd(struct anim2d *anim);
 void anim_bkwd(struct anim2d *anim);
 void anim_incr(struct anim2d  *anim);
 void anim_decr(struct anim2d *anim);
-
-void tex_incr_anim(struct anim2d *tex_anim);
-void tex_anim_set(struct anim2d *anim);
 
 struct glrect tex_get_rect(struct Texture *tex);
 struct glrect anim_get_rect(struct anim2d *anim);

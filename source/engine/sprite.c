@@ -166,15 +166,10 @@ void sprite_draw(struct sprite *sprite)
     if (sprite->tex) {
         cpVect cpos = cpBodyGetPosition(go->body);
         float pos[2] = {cpos.x, cpos.y};
-
+        float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
         if (sprite->tex->opts.animation) {
-            float size[2];
-            //size[0] = sprite->tex->anim.dimensions[0] * go->scale;
-            //size[1] = sprite->tex->anim.dimensions[1] * go->scale;
             tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
         } else {
-            float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
-
             tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, tex_get_rect(sprite->tex));
         }
     }

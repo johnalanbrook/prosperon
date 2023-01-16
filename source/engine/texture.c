@@ -32,7 +32,12 @@ struct Texture *texture_pullfromfile(const char *path)
     json_value_free(rv);
 
     tex->opts.gamma = 0;
-    tex->anim.ms = 1;
+
+
+    tex->anim.ms = 2;
+    tex->anim.tex = tex;
+    texanim_fromframes(&tex->anim, 2);
+    tex->anim.loop = 1;
 
     int n;
 
@@ -134,24 +139,26 @@ void tex_gpu_reload(struct Texture *tex)
     //tex_gpu_load(tex);
 }
 
-void tex_incr_anim(struct anim2d *tex_anim)
+void anim_calc(struct anim2d *anim)
 {
-    anim_incr(tex_anim);
-
-    if (!tex_anim->anim->loop && tex_anim->frame == arrlen(tex_anim->anim->st_frames))
-	anim_pause(tex_anim);
+    anim->size[0] = anim->anim->tex->width * st_s_w(anim->anim->st_frames[anim->frame]);
+    anim->size[1] = anim->anim->tex->height * st_s_h(anim->anim->st_frames[anim->frame]);
 }
 
 void anim_incr(struct anim2d *anim)
 {
     anim->frame = (anim->frame + 1) % arrlen(anim->anim->st_frames);
-    //tex_anim_calc_uv(anim);
+
+    if (!anim->anim->loop && anim->frame == arrlen(anim->anim->st_frames))
+        anim_pause(anim);
+
+    anim_calc(anim);
 }
 
 void anim_decr(struct anim2d *anim)
 {
     anim->frame = (anim->frame + arrlen(anim->anim->st_frames) - 1) % arrlen(anim->anim->st_frames);
-    //tex_anim_calc_uv(anim);
+    anim_calc(anim);
 }
 
 struct glrect anim_get_rect(struct anim2d *anim)
@@ -162,21 +169,24 @@ struct glrect anim_get_rect(struct anim2d *anim)
 void anim_setframe(struct anim2d *anim, int frame)
 {
     anim->frame = frame;
-    //tex_anim_calc_uv(anim);
+    anim_calc(anim);
 }
 
-void tex_anim_set(struct anim2d *anim)
+void texanim_fromframes(struct TexAnim *anim, int frames)
 {
-    if (anim->playing) {
-	timer_remove(anim->timer);
-	anim->timer = timer_make(1.f / anim->anim->ms, tex_incr_anim, anim);
+    if (anim->st_frames) free(anim->st_frames);
 
+    anim->st_frames = calloc(frames, sizeof(*anim->st_frames));
+
+    float width = (float)1/frames;
+
+    for (int i = 0; i < frames; i++) {
+        anim->st_frames[i].s0 = width*i;
+        anim->st_frames[i].s1 = width*(i+1);
+        anim->st_frames[i].t0 = 0.f;
+        anim->st_frames[i].t1 = 1.f;
     }
-
-    //tex_anim_calc_uv(anim);
 }
-
-
 
 void tex_gpu_free(struct Texture *tex)
 {
@@ -203,6 +213,16 @@ void tex_bind(struct Texture *tex)
     glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
 }
 
+/********************** ANIM2D ****************/
+
+void anim_load(struct anim2d *anim, const char *path)
+{
+    anim->anim = &texture_pullfromfile(path)->anim;
+    anim->anim->tex->opts.animation = 1;
+    anim_stop(anim);
+    anim_play(anim);
+}
+
 void anim_play(struct anim2d *anim)
 {
     if (anim->playing)
@@ -214,7 +234,7 @@ void anim_play(struct anim2d *anim)
     anim->playing = 1;
 
     if (anim->timer == NULL)
-        anim->timer = timer_make(1.f / anim->anim->ms, tex_incr_anim, anim);
+        anim->timer = timer_make(1.f / anim->anim->ms, anim_incr, anim);
     else
         timerr_settime(anim->timer, 1.f/anim->anim->ms);
 
@@ -230,7 +250,6 @@ void anim_stop(struct anim2d *anim)
     anim->frame = 0;
     anim->pausetime = 0;
     timer_stop(anim->timer);
-    //tex_anim_calc_uv(anim);
 }
 
 void anim_pause(struct anim2d *anim)

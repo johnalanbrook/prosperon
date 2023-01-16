@@ -18,6 +18,20 @@
 #include "sound.h"
 #include "font.h"
 
+struct color duk2color(duk_context *duk, int p)
+{
+    struct color color;
+
+    duk_get_prop_index(duk, p, 0);
+    color.r = duk_to_number(duk, -1);
+    duk_get_prop_index(duk, p, 0);
+    color.b = duk_to_number(duk, -1);
+    duk_get_prop_index(duk, p, 0);
+    color.g = duk_to_number(duk, -1);
+
+    return color;
+}
+
 cpVect duk2vec2(duk_context *duk, int p) {
     cpVect pos;
     duk_get_prop_index(duk, p, 0);
@@ -128,11 +142,11 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 16:
-
+         set_dbg_color(duk2color(duk, 1));
          break;
 
        case 17:
-
+         set_trigger_color(duk2color(duk, 1));
          break;
 
     }
@@ -367,9 +381,17 @@ duk_ret_t duk_make_anim2d(duk_context *duk) {
   int frames = duk_to_int(duk, 2);
   int fps = duk_to_int(duk, 3);
 
+  int sprite = make_sprite(go);
+  struct sprite *sp = id2sprite(sprite);
+  sp->pos[0] = -0.5f;
+  sp->pos[1] = -0.5f;
+  anim_load(&sp->anim, path);
+  sp->tex = sp->anim.anim->tex;
 
+  YughInfo("Made an animation.");
 
-  return 0;
+  duk_push_int(duk, sprite);
+  return 1;
 }
 
 duk_ret_t duk_make_box2d(duk_context *duk) {

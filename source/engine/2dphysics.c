@@ -18,6 +18,24 @@
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
 
+static float dbg_color[3] = {0.836f, 1.f, 0.45f};
+static float trigger_color[3] = {0.278f, 0.953f, 1.f};
+static struct color static_color = {56, 69, 255};
+
+void set_dbg_color(struct color color)
+{
+    dbg_color[0] = (float)color.r/255;
+    dbg_color[1] = (float)color.b/255;
+    dbg_color[2] = (float)color.g/255;
+}
+
+void set_trigger_color(struct color color)
+{
+    trigger_color[0] = (float)color.r/255;
+    trigger_color[1] = (float)color.b/255;
+    trigger_color[2] = (float)color.g/255;
+}
+
 void phys2d_init()
 {
     space = cpSpaceNew();
@@ -55,6 +73,8 @@ void phys2d_shape_del(struct phys2d_shape *shape)
     cpSpaceRemoveShape(space, shape->shape);
 }
 
+
+/***************** CIRCLE2D *****************/
 struct phys2d_circle *Make2DCircle(int go)
 {
     struct phys2d_circle *new = malloc(sizeof(struct phys2d_circle));
@@ -90,19 +110,14 @@ void phys2d_dbgdrawcpcirc(cpCircleShape *c)
     float radius = cpCircleShapeGetRadius(c);
     float d = sqrt(pow(offset.x, 2.f) + pow(offset.y, 2.f));
     float a = atan2(offset.y, offset.x) + cpBodyGetAngle(cpShapeGetBody(c));
-    draw_circle(pos.x + (d * cos(a)), pos.y + (d*sin(a)), radius, 1);
+
+
+    draw_circle(pos.x + (d * cos(a)), pos.y + (d*sin(a)), radius, 2, cpShapeGetSensor(c) ? trigger_color : dbg_color, 1);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
 {
     phys2d_dbgdrawcpcirc((cpCircleShape *)circle->shape.shape);
-
-    cpVect p = cpBodyGetPosition(cpShapeGetBody(circle->shape.shape));
-    cpVect o = cpCircleShapeGetOffset(circle->shape.shape);
-    float d = sqrt(pow(o.x, 2.f) + pow(o.y, 2.f));
-    float a = atan2(o.y, o.x) + cpBodyGetAngle(cpShapeGetBody(circle->shape.shape));
-    draw_circle(p.x + (d * cos(a)), p.y + (d * sin(a)), cpCircleShapeGetRadius(circle->shape.shape), 1);
-
 }
 
 
@@ -375,7 +390,7 @@ void phys2d_dbgdrawseg(struct phys2d_segment *seg)
     float bd = sqrt(pow(b.x, 2.f) + pow(b.y, 2.f));
     float aa = atan2(a.y, a.x) + angle;
     float ba = atan2(b.y, b.x) + angle;
-    draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y);
+    draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y, cpShapeGetSensor(seg->shape.shape) ? trigger_color : dbg_color);
 }
 
 void phys2d_dbgdrawbox(struct phys2d_box *box)
@@ -393,11 +408,13 @@ void phys2d_dbgdrawbox(struct phys2d_box *box)
 	points[i * 2 + 1] = d * sin(a) + b.y;
     }
 
-    draw_poly(points, n);
+    draw_poly(points, n, cpShapeGetSensor(box->shape.shape) ? trigger_color : dbg_color);
 }
 
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 {
+    float *color = cpShapeGetSensor(poly->shape.shape) ? trigger_color : dbg_color;
+
     cpVect b = cpBodyGetPosition(cpShapeGetBody(poly->shape.shape));
     float angle = cpBodyGetAngle(cpShapeGetBody(poly->shape.shape));
 
@@ -405,7 +422,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
     for (int i = 0; i < poly->n; i++) {
 	float d = sqrt(pow(poly->points[i * 2] * s, 2.f) + pow(poly->points[i * 2 + 1] * s, 2.f));
 	float a = atan2(poly->points[i * 2 + 1], poly->points[i * 2]) + angle;
-	draw_point(b.x + d * cos(a), b.y + d * sin(a), 3);
+	draw_point(b.x + d * cos(a), b.y + d * sin(a), 3, color);
     }
 
     if (poly->n >= 3) {
@@ -420,13 +437,15 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 	    points[i * 2 + 1] = d * sin(a) + b.y;
 	}
 
-	draw_poly(points, n);
+	draw_poly(points, n, color);
     }
 
 }
 
 void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 {
+    float *color = cpShapeGetSensor(edge->shape.shape) ? trigger_color : dbg_color;
+
     cpVect p = cpBodyGetPosition(cpShapeGetBody(edge->shape.shape));
     float s = id2go(edge->shape.go)->scale;
     float angle = cpBodyGetAngle(cpShapeGetBody(edge->shape.shape));
@@ -434,7 +453,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
     for (int i = 0; i < edge->n; i++) {
 	float d = sqrt(pow(edge->points[i * 2] * s, 2.f) + pow(edge->points[i * 2 + 1] * s, 2.f));
 	float a = atan2(edge->points[i * 2 + 1], edge->points[i * 2]) + angle;
-	draw_point(p.x + d * cos(a), p.y + d * sin(a), 3);
+	draw_point(p.x + d * cos(a), p.y + d * sin(a), 3, color);
     }
 
     for (int i = 0; i < edge->n - 1; i++) {
@@ -444,7 +463,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 	float bd = sqrt(pow(b.x, 2.f) + pow(b.y, 2.f));
 	float aa = atan2(a.y, a.x) + angle;
 	float ba = atan2(b.y, b.x) + angle;
-	draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y);
+	draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y, color);
     }
 }
 
