@@ -17,6 +17,9 @@
 #include "nuke.h"
 #include "sound.h"
 #include "font.h"
+#include "sound.h"
+#include "music.h"
+#include "level.h"
 
 struct color duk2color(duk_context *duk, int p)
 {
@@ -185,8 +188,7 @@ duk_ret_t duk_register_collide(duk_context *duk) {
     int go = duk_get_int(duk, 3);
 
     struct callee c = {fn, obj};
-
-    phys2d_add_handler_type(0, go, c);
+    phys2d_add_handler_type(cmd, go, c);
 
     return 0;
 }
@@ -378,8 +380,6 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
 duk_ret_t duk_make_anim2d(duk_context *duk) {
   int go = duk_to_int(duk, 0);
   const char *path = duk_to_string(duk, 1);
-  int frames = duk_to_int(duk, 2);
-  int fps = duk_to_int(duk, 3);
 
   int sprite = make_sprite(go);
   struct sprite *sp = id2sprite(sprite);

@@ -12,6 +12,7 @@
 #include "mix.h"
 #include "limits.h"
 #include "iir.h"
+#include "dsp.h"
 
 struct shader *vid_shader;
 
@@ -101,7 +102,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     plm_set_audio_stream(ds->plm, 0);
 
     // Adjust the audio lead time according to the audio_spec buffer size
-    plm_set_audio_lead_time(ds->plm, 4096/48000);
+    plm_set_audio_lead_time(ds->plm, BUF_FRAMES/SAMPLERATE);
 
     ds->playing = true;
 }

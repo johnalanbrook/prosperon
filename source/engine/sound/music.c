@@ -52,7 +52,7 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 
 
         tsf_render_short(song->sf, o, TSF_BLOCK, 0);
-        o += TSF_BLOCK*2;
+        o += TSF_BLOCK*CHANNELS;
        song->time += TSF_BLOCK * (1000.f/SAMPLERATE);
     }
 

@@ -124,7 +124,7 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 	memcpy(r_model, UNITMAT4, sizeof(UNITMAT4));
 	memcpy(s_model, UNITMAT4, sizeof(UNITMAT4));
 
-         mfloat_t t_scale[2] = { tex->width, tex->height };
+         mfloat_t t_scale[2] = { tex->width * st_s_w(r), tex->height * st_s_h(r) };
          mfloat_t t_offset[2] = { offset[0] * t_scale[0], offset[1] * t_scale[1] };
 
 	mat4_translate_vec2(model, t_offset);
@@ -167,6 +167,7 @@ void sprite_draw(struct sprite *sprite)
         cpVect cpos = cpBodyGetPosition(go->body);
         float pos[2] = {cpos.x, cpos.y};
         float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
+
         if (sprite->tex->opts.animation) {
             tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
         } else {

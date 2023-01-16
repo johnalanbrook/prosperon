@@ -2,9 +2,9 @@
 #define DSP_H
 
 #define SAMPLERATE 48000
-#define BUF_FRAMES 4096
+#define BUF_FRAMES 128 /* At 48k, 128 needed for 240fps consistency */
 #define CHANNELS 2
-#define MUSIZE 2
+
 
 #include "circbuf.h"
 

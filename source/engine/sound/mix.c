@@ -12,6 +12,8 @@ static int first = 0; /* First bus available */
 static int first_on = -1; /* First bus to fill buffer with */
 short mastermix[BUF_FRAMES*CHANNELS];
 
+static int initted = 0;
+
 void mixer_init() {
     for (int i = 0; i < 256; i++) {
         bus[i].next = i+1;
@@ -20,9 +22,16 @@ void mixer_init() {
     }
 
     bus[255].next = -1;
+
+    initted = 1;
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {
+    if (!initted) {
+        YughError("Tried to use a mixing bus without calling mixer_init().");
+        return NULL;
+    }
+
     if (first == -1) return NULL;
     int ret = first;
     first = bus[ret].next;

@@ -21,10 +21,6 @@ struct soundstream {
     struct circbuf *buf;
 };
 
-struct soundconvstream {
-    void *data;
-};
-
 struct soundstream *soundstream_make();
 
 /* A playing sound */
@@ -36,24 +32,23 @@ struct sound {
 
     struct wav *data;
     struct bus *bus;
+
+    void (*endcb)(struct sound*);
 };
 
 /* Represents a sound file */
 struct wav {
     unsigned int ch;
     unsigned int samplerate;
-    unsigned int frames;
+    unsigned long long frames;
     float gain; /* In dB */
 
     void *data;
 };
 
+struct mp3 {
 
-
-struct music {
 };
-
-extern const char *audioDriver;
 
 void sound_init();
 void audio_open(const char *device);
@@ -65,6 +60,7 @@ struct wav *make_sound(const char *wav);
 void free_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);
 struct sound *play_sound(struct wav *wav);
+void play_oneshot(struct wav *wav);
 
 int sound_playing(const struct sound *s);
 int sound_paused(const struct sound *s);
@@ -74,7 +70,7 @@ void sound_pause(struct sound *s);
 void sound_resume(struct sound *s);
 void sound_stop(struct sound *s);
 
-struct music make_music(const char *mp3);
+struct mp3 make_mp3(const char *mp3);
 
 const char *get_audio_driver();
 

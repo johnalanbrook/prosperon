@@ -37,18 +37,6 @@ static struct {
     struct wav *value;
 } *wavhash = NULL;
 
-const char *audioDriver;
-
-void new_samplerate(short *in, short *out, int n, int ch, int sr_in, int sr_out)
-{
-/*
-    SDL_AudioStream *stream = SDL_NewAudioStream(AUDIO_S16, ch, sr_in, AUDIO_S16, ch, sr_out);
-    SDL_AudioStreamPut(stream, in, n * ch * sizeof(short));
-    SDL_AudioStreamGet(stream, out, n * ch * sizeof(short));
-    SDL_FreeAudioStream(stream);
-    */
-}
-
 static struct wav change_channels(struct wav w, int ch)
 {
     short *data = w.data;
@@ -102,8 +90,6 @@ static struct wav change_samplerate(struct wav w, int rate)
 
 static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
-    short *out = (short*)outputBuffer;
-
     bus_fill_buffers(outputBuffer, framesPerBuffer);
 
     return 0;
@@ -153,36 +139,16 @@ void print_devices()
 
 void sound_init()
 {
+    mixer_init();
      PaError err = Pa_Initialize();
      check_pa_err(err);
 
-
-/*
-    PaStreamParameters outparams;
-    outparams.channelCount = 2;
-    outparams.device = 19;
-    outparams.sampleFormat = paInt16;
-    outparams.suggestedLatency = Pa_GetDeviceInfo(outparams.device)->defaultLowOutputLatency;
-    outparams.hostApiSpecificStreamInfo = NULL;
-    err = Pa_OpenStream(&stream_def, NULL, &outparams, 48000, 4096, paNoFlag, patestCallback, &data);
-*/
-
-    err = Pa_OpenDefaultStream(&stream_def, 0, 2, paInt16, SAMPLERATE, BUF_FRAMES, patestCallback, NULL);
+    err = Pa_OpenDefaultStream(&stream_def, 0, CHANNELS, paInt16, SAMPLERATE, BUF_FRAMES, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
     check_pa_err(err);
 
-}
-
-void audio_open(const char *device)
-{
-    //Mix_OpenAudioDevice(44100, MIX_DEFAULT_FORMAT, 2, 2048, device, 0);
-}
-
-void audio_close()
-{
-    //Mix_CloseAudio();
 }
 
 struct wav *make_sound(const char *wav)
@@ -195,13 +161,13 @@ struct wav *make_sound(const char *wav)
 
 
     if (mwav.samplerate != SAMPLERATE) {
-        YughInfo("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, 48000);
-        mwav = change_samplerate(mwav, 48000);
+        YughInfo("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);
+        mwav = change_samplerate(mwav, SAMPLERATE);
     }
 
     if (mwav.ch != CHANNELS) {
         YughInfo("Changing channels of %s from %d to %d.", wav, mwav.ch, CHANNELS);
-        //mwav = change_channels(mwav, CHANNELS);
+        mwav = change_channels(mwav, CHANNELS);
     }
 
     mwav.gain = 1.f;
@@ -233,13 +199,19 @@ struct soundstream *soundstream_make()
     return new;
 }
 
+void kill_oneshot(struct sound *s)
+{
+    free(s);
+}
+
 void play_oneshot(struct wav *wav) {
-    struct sound *new = calloc(1, sizeof(*new));
+    struct sound *new = malloc(sizeof(*new));
     new->data = wav;
     new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
     new->playing=1;
     new->loop=0;
     new->frame = 0;
+    new->endcb = kill_oneshot;
 }
 
 struct sound *play_sound(struct wav *wav)
@@ -292,41 +264,23 @@ int sound_stopped(const struct sound *s)
     return !s->playing && s->frame == 0;
 }
 
-struct music make_music(const char *mp3)
+struct mp3 make_music(const char *mp3)
 {
     drmp3 new;
     if (!drmp3_init_file(&new, mp3, NULL)) {
         YughError("Could not open mp3 file %s.", mp3);
     }
+
+    struct mp3 newmp3 = {};
+    return newmp3;
 }
-
-
-void audio_init()
-{
-    //audioDriver = SDL_GetAudioDeviceName(0,0);
-}
-
 
 void close_audio_device(int device)
 {
-    //SDL_CloseAudioDevice(device);
 }
 
 int open_device(const char *adriver)
 {
-
-/*
-    SDL_AudioSpec audio_spec;
-    SDL_memset(&audio_spec, 0, sizeof(audio_spec));
-    audio_spec.freq = SAMPLERATE;
-    audio_spec.format = AUDIO_F32;
-    audio_spec.channels = 2;
-    audio_spec.samples = BUF_FRAMES;
-    int dev = (int) SDL_OpenAudioDevice(adriver, 0, &audio_spec, NULL, 0);
-    SDL_PauseAudioDevice(dev, 0);
-
-    return dev;
-*/
     return 0;
 }
 
@@ -341,13 +295,10 @@ void sound_fillbuf(struct sound *s, short *buf, int n)
         s->frame++;
         if (s->frame == s->data->frames) {
 
-            if (s->loop > 0) {
-                s->loop--;
-                s->frame = 0;
-            } else {
-                bus_free(s->bus);
-                return;
-            }
+            bus_free(s->bus);
+            s->bus = NULL;
+            s->endcb(s);
+            return;
         }
     }
 }
@@ -364,13 +315,13 @@ void soundstream_fillbuf(struct soundstream *s, short *buf, int n)
     int max = s->buf->write - s->buf->read;
     int lim = (max < n*CHANNELS) ? max : n*CHANNELS;
     for (int i = 0; i < lim; i++) {
-        buf[i] = cbuf_shift(&s->buf);
+        buf[i] = cbuf_shift(s->buf);
     }
 }
 
 float short2db(short val)
 {
-    return 20*log10(abs((double)val) / SHRT_MAX);
+    return 20*log10(abs(val) / SHRT_MAX);
 }
 
 short db2short(float db)
