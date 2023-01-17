@@ -120,7 +120,6 @@ $(BIN)$(DIST): $(BIN)$(NAME) source/shaders/*
 	@mkdir -p $(BIN)dist
 	@cp $(BIN)$(NAME) $(BIN)dist
 	@cp -rf assets/fonts $(BIN)dist
-	@cp -rf source/scripts $(BIN)dist
 	@cp -rf source/shaders $(BIN)dist
 	@tar czf $(DIST) --directory $(BIN)dist .
 	@mv $(DIST) $(BIN)
