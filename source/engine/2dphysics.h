@@ -97,10 +97,8 @@ void phys2d_add_handler_type(int cmd, int go,  struct callee c);
 void register_collide(void *sym);
 void phys2d_set_gravity(cpVect v);
 
-void shape_enable(struct phys2d_shape *shape);
-void shape_disable(struct phys2d_shape *shape);
-
-cpShape *id2shape(int id);
+void shape_enabled(struct phys2d_shape *shape, int enabled);
+void shape_set_sensor(struct phys2d_shape *shape, int sensor);
 
 struct color {
     unsigned char r;

@@ -468,19 +468,19 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
     }
 }
 
-cpShape *id2shape(int id)
+void shape_enabled(struct phys2d_shape *shape, int enabled)
 {
-    return NULL;
+    YughInfo("Setting shape %p to enabled? %d.", shape, enabled);
+    if (enabled)
+      cpSpaceAddShape(space, shape->shape);
+    else
+      cpSpaceRemoveShape(space, shape->shape);
 }
 
-void shape_enable(struct phys2d_shape *shape)
+void shape_set_sensor(struct phys2d_shape *shape, int sensor)
 {
-    cpSpaceAddShape(space, shape->shape);
-}
-
-void shape_disable(struct phys2d_shape *shape)
-{
-    cpSpaceRemoveShape(space, shape->shape);
+    YughInfo("Setting shape %p to sensor? %d.", shape, sensor);
+    cpShapeSetSensor(shape->shape, sensor);
 }
 
 void phys2d_reindex_body(cpBody *body) {

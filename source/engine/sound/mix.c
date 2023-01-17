@@ -14,6 +14,14 @@ short mastermix[BUF_FRAMES*CHANNELS];
 
 static int initted = 0;
 
+static float master_volume = 1.f;
+
+void mix_master_vol(float v) {
+    if (v < 0.f) v = 0.f;
+    if (v > 100.f) v = 100.f;
+    master_volume = v / 100.f;
+}
+
 void mixer_init() {
     for (int i = 0; i < 256; i++) {
         bus[i].next = i+1;
@@ -68,7 +76,7 @@ void bus_fill_buffers(short *master, int n) {
         int nextbus = bus[curbus].next; /* Save this in case busses get changed during fill */
         dsp_run(bus[curbus].in, bus[curbus].buf, BUF_FRAMES);
         for (int i = 0; i < BUF_FRAMES*CHANNELS; i++)
-            master[i] += bus[curbus].buf[i];
+            master[i] += bus[curbus].buf[i] * master_volume;
 
         curbus = nextbus;
     }

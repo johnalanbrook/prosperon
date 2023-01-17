@@ -153,30 +153,23 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 18:
-         cpShapeSetSensor(id2shape(duk_to_int(duk, 1)), duk_to_boolean(duk, 2));
+         shape_set_sensor(duk_to_pointer(duk, 1), duk_to_boolean(duk, 2));
          break;
 
        case 19:
-         if (id2shape(duk_to_int(duk, 1)))
-             duk_push_boolean(duk, cpShapeGetSensor(id2shape(duk_to_int(duk, 1))));
-         else
-             duk_push_undefined(duk);
-
-         return 1;
+         mix_master_vol(duk_to_number(duk, 1));
+         break;
 
        case 20:
          sprite_enabled(duk_to_int(duk, 1), duk_to_boolean(duk, 2));
          break;
 
        case 21:
-         duk_push_boolean(duk, id2sprite(duk_to_int(duk, 1))->enabled);
-         return 1;
+         break;
 
        case 22:
-         return 0;
-
-       case 23:
-         return 0;
+         shape_enabled(duk_to_pointer(duk, 1), duk_to_int(duk, 2));
+         break;
     }
 
     return 0;
@@ -432,7 +425,7 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
 
   phys2d_applybox(box);
 
-  duk_push_pointer(duk, box);
+  duk_push_pointer(duk, &box->shape);
 
   return 1;
 }
@@ -458,7 +451,9 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
 
     phys2d_applycircle(circle);
 
-  return 0;
+    duk_push_pointer(duk, &circle->shape);
+
+  return 1;
 }
 
 duk_ret_t duk_anim(duk_context *duk) {
@@ -517,7 +512,6 @@ void ffi_load()
     DUK_FUNC(make_sprite, 3);
     DUK_FUNC(make_anim2d, 4);
     DUK_FUNC(make_box2d, 3);
-    DUK_FUNC(box2d_cmd, DUK_VARARGS);
     DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd, DUK_VARARGS);
     DUK_FUNC(register, 3);
