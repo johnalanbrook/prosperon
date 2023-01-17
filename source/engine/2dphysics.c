@@ -20,6 +20,7 @@ float phys2d_gravity = -50.f;
 
 static float dbg_color[3] = {0.836f, 1.f, 0.45f};
 static float trigger_color[3] = {0.278f, 0.953f, 1.f};
+static float disabled_color[3] = {0.58f, 0.58f, 0.58f};
 static struct color static_color = {56, 69, 255};
 
 void set_dbg_color(struct color color)
@@ -470,6 +471,16 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 cpShape *id2shape(int id)
 {
     return NULL;
+}
+
+void shape_enable(struct phys2d_shape *shape)
+{
+    cpSpaceAddShape(space, shape->shape);
+}
+
+void shape_disable(struct phys2d_shape *shape)
+{
+    cpSpaceRemoveShape(space, shape->shape);
 }
 
 void phys2d_reindex_body(cpBody *body) {

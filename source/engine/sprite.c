@@ -26,7 +26,8 @@ int make_sprite(int go)
         .size = {1.f, 1.f},
         .tex = texture_loadfromfile("ph.png"),
         .go = go,
-        .next = -1  };
+        .next = -1,
+        .enabled = 1  };
 
     int ret;
 
@@ -49,6 +50,11 @@ void sprite_delete(int id)
     sp->go = -1;
     sp->next = first;
     first = id;
+}
+
+void sprite_enabled(int id, int e)
+{
+    sprites[id].enabled = e;
 }
 
 struct sprite *id2sprite(int id) {
@@ -78,9 +84,8 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
 
 void sprite_draw_all()
 {
-    //shader_use(spriteShader);
     for (int i = 0; i < arrlen(sprites); i++) {
-        if (sprites[i].go >= 0) sprite_draw(&sprites[i]);
+        if (sprites[i].go >= 0 && sprites[i].enabled) sprite_draw(&sprites[i]);
     }
 }
 

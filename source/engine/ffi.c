@@ -163,6 +163,20 @@ duk_ret_t duk_cmd(duk_context *duk) {
              duk_push_undefined(duk);
 
          return 1;
+
+       case 20:
+         sprite_enabled(duk_to_int(duk, 1), duk_to_boolean(duk, 2));
+         break;
+
+       case 21:
+         duk_push_boolean(duk, id2sprite(duk_to_int(duk, 1))->enabled);
+         return 1;
+
+       case 22:
+         return 0;
+
+       case 23:
+         return 0;
     }
 
     return 0;
@@ -418,6 +432,17 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
 
   phys2d_applybox(box);
 
+  duk_push_pointer(duk, box);
+
+  return 1;
+}
+
+duk_ret_t duk_box2d_cmd(duk_context *duk) {
+  int cmd = duk_to_int(duk, 0);
+  struct phys2d_box *box = duk_to_pointer(duk, 1);
+
+  YughInfo("Issuing command %d with box %p.", cmd, box);
+
   return 0;
 }
 
@@ -492,6 +517,7 @@ void ffi_load()
     DUK_FUNC(make_sprite, 3);
     DUK_FUNC(make_anim2d, 4);
     DUK_FUNC(make_box2d, 3);
+    DUK_FUNC(box2d_cmd, DUK_VARARGS);
     DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd, DUK_VARARGS);
     DUK_FUNC(register, 3);

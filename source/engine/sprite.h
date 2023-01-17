@@ -19,12 +19,14 @@ struct sprite {
     struct anim2d anim;
     struct Texture *tex;
     int next;
+    int enabled;
 };
 
 
 int make_sprite(int go);
 struct sprite *id2sprite(int id);
 void sprite_delete(int id);
+void sprite_enabled(int id, int e);
 void sprite_io(struct sprite *sprite, FILE *f, int read);
 void sprite_loadtex(struct sprite *sprite, const char *path);
 void sprite_settex(struct sprite *sprite, struct Texture *tex);
