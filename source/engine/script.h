@@ -21,6 +21,7 @@ void script_editor();
 void script_call(const char *f);
 void script_call_sym(void *sym);
 void script_call_sym_args(void *sym, void *args);
+void call_callee(struct callee *c);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, void *env);
 time_t file_mod_secs(const char *file);

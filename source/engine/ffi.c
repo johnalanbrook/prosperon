@@ -174,6 +174,34 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 23:
          duk_push_boolean(duk, shape_is_enabled(duk_to_pointer(duk, 1)));
          return 1;
+
+       case 24:
+         timer_pause(id2timer(duk_to_int(duk, 1)));
+         break;
+
+       case 25:
+         timer_stop(id2timer(duk_to_int(duk, 1)));
+         break;
+
+       case 26:
+         timer_start(id2timer(duk_to_int(duk, 1)));
+         break;
+
+       case 27:
+         timer_remove(id2timer(duk_to_int(duk, 1)));
+         break;
+
+       case 28:
+         timerr_settime(id2timer(duk_to_int(duk, 1)), duk_to_number(duk, 2));
+         break;
+
+       case 29:
+         duk_push_number(duk, id2timer(duk_to_int(duk, 1))->interval);
+         return 1;
+
+       case 30:
+         sprite_setanim(id2sprite(duk_to_int(duk, 1)), duk_to_pointer(duk, 2), duk_to_int(duk, 3));
+         return 0;
     }
 
     return 0;
@@ -401,19 +429,13 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
 
 /* Make anim from texture */
 duk_ret_t duk_make_anim2d(duk_context *duk) {
-  int go = duk_to_int(duk, 0);
-  const char *path = duk_to_string(duk, 1);
-  int frames = duk_to_int(duk, 2);
-  int fps = duk_to_int(duk, 3);
+  const char *path = duk_to_string(duk, 0);
+  int frames = duk_to_int(duk, 1);
+  int fps = duk_to_int(duk, 2);
 
-  int sprite = make_sprite(go);
-  struct sprite *sp = id2sprite(sprite);
-  sp->pos[0] = -0.5f;
-  sp->pos[1] = -0.5f;
-  anim_load(&sp->anim, path);
-  sp->tex = sp->anim.anim->tex;
+  struct TexAnim *anim = anim2d_from_tex(path, frames, fps);
 
-  duk_push_int(duk, sprite);
+  duk_push_pointer(duk, anim);
   return 1;
 }
 
@@ -435,15 +457,6 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
   return 1;
 }
 
-duk_ret_t duk_box2d_cmd(duk_context *duk) {
-  int cmd = duk_to_int(duk, 0);
-  struct phys2d_box *box = duk_to_pointer(duk, 1);
-
-  YughInfo("Issuing command %d with box %p.", cmd, box);
-
-  return 0;
-}
-
 duk_ret_t duk_make_circle2d(duk_context *duk) {
    int go = duk_to_int(duk, 0);
   double radius = duk_to_number(duk, 1);
@@ -461,6 +474,7 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
   return 1;
 }
 
+/* These are anims for controlling properties on an object */
 duk_ret_t duk_anim(duk_context *duk) {
     void *prop = duk_get_heapptr(duk, 0);
     int keyframes = duk_get_length(duk, 1);
@@ -488,18 +502,17 @@ duk_ret_t duk_anim(duk_context *duk) {
     return 0;
 }
 
+duk_ret_t duk_make_timer(duk_context *duk) {
+    void *sym = duk_get_heapptr(duk, 0);
+    double secs = duk_to_number(duk, 1);
+    void *obj = duk_get_heapptr(duk, 2);
+    struct callee *c = malloc(sizeof(*c));
+    c->fn = sym;
+    c->obj = obj;
+    struct timer *timer = timer_make(secs, call_callee, c);
 
-
-duk_ret_t duk_anim_cmd(duk_context *duk) {
-    return 0;
-}
-
-duk_ret_t duk_timer(duk_context *duk) {
-    return 0;
-}
-
-duk_ret_t duk_timer_cmd(duk_context *duk) {
-    return 0;
+    duk_push_int(duk, timer->timerid);
+    return 1;
 }
 
 #define DUK_FUNC(NAME, ARGS) duk_push_c_function(duk, duk_##NAME, ARGS); duk_put_global_string(duk, #NAME);
@@ -515,9 +528,11 @@ void ffi_load()
     DUK_FUNC(win_make, 3);
 
     DUK_FUNC(make_sprite, 3);
-    DUK_FUNC(make_anim2d, 4);
+    DUK_FUNC(make_anim2d, 3);
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(make_circle2d, 3);
+    DUK_FUNC(make_timer, 3);
+
     DUK_FUNC(cmd, DUK_VARARGS);
     DUK_FUNC(register, 3);
     DUK_FUNC(register_collide, 4);
@@ -525,9 +540,7 @@ void ffi_load()
     DUK_FUNC(gui_text, 3);
     DUK_FUNC(gui_img, 2);
 
-    DUK_FUNC(timer, 2);
-    DUK_FUNC(timer_cmd, 2);
+
 
     DUK_FUNC(anim, 2);
-    DUK_FUNC(anim_cmd, 3);
 }

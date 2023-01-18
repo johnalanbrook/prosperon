@@ -1,5 +1,6 @@
 #include "timer.h"
 #include <stdlib.h>
+#include "log.h"
 
 #include <stb_ds.h>
 
@@ -14,7 +15,6 @@ void check_timer(struct timer *t, double dt)
 
     if (t->remain_time <= 0) {
         t->cb(t->data);
-
         if (t->repeat) {
             t->remain_time = t->interval;
             return;
@@ -66,6 +66,7 @@ void timer_start(struct timer *t) {
 
 void timer_remove(struct timer *t) {
     int i = t->timerid;
+    free(t->data);
     arrdelswap(timers, i);
     timers[i].timerid = i;
 }
@@ -73,4 +74,9 @@ void timer_remove(struct timer *t) {
 void timerr_settime(struct timer *t, double interval) {
     t->remain_time += (interval - t->interval);
     t->interval = interval;
+}
+
+struct timer *id2timer(int id)
+{
+    return &timers[id];
 }

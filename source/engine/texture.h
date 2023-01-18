@@ -73,7 +73,7 @@ void tex_bind(struct Texture *tex);    // Bind to gl context
 
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
-struct anim2d *anim2d_from_tex(const char *path, int frames, int fps);
+struct TexAnim *anim2d_from_tex(const char *path, int frames, int fps);
 void texanim_fromframes(struct TexAnim *anim, int frames);
 
 void anim_load(struct anim2d *anim, const char *path); /* Load and start new animation */

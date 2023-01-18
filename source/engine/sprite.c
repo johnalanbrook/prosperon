@@ -174,13 +174,14 @@ void sprite_draw(struct sprite *sprite)
         cpVect cpos = cpBodyGetPosition(go->body);
         float pos[2] = {cpos.x, cpos.y};
         float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
-
-        if (sprite->tex->opts.animation) {
-            tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
-        } else {
-            tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, *sprite->frame);
-        }
+        tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, *sprite->frame);
     }
+}
+
+void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame)
+{
+    sprite->tex = anim->tex;
+    sprite->frame = &anim->st_frames[frame];
 }
 
 void gui_draw_img(const char *img, float x, float y) {

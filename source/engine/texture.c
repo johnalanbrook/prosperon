@@ -174,6 +174,16 @@ void anim_setframe(struct anim2d *anim, int frame)
     anim_calc(anim);
 }
 
+struct TexAnim *anim2d_from_tex(const char *path, int frames, int fps)
+{
+    struct TexAnim *anim = malloc(sizeof(*anim));
+    anim->tex = texture_loadfromfile(path);
+    texanim_fromframes(anim, frames);
+    anim->ms = (float)1/fps;
+
+    return anim;
+}
+
 void texanim_fromframes(struct TexAnim *anim, int frames)
 {
     if (anim->st_frames) free(anim->st_frames);

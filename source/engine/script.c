@@ -156,9 +156,9 @@ void register_physics(struct callee c) {
     arrput(physics, c);
 }
 
-void call_callee(struct callee c) {
-    duk_push_heapptr(duk, c.fn);
-    duk_push_heapptr(duk, c.obj);
+void call_callee(struct callee *c) {
+    duk_push_heapptr(duk, c->fn);
+    duk_push_heapptr(duk, c->obj);
 
     if (duk_pcall_method(duk, 0))
         duk_run_err();
@@ -185,7 +185,7 @@ void call_updates(double dt) {
 
 void call_gui() {
     for (int i = 0; i < arrlen(guis); i++)
-        call_callee(guis[i]);
+        call_callee(&guis[i]);
 }
 
 void call_physics(double dt) {
