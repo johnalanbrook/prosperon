@@ -9,6 +9,8 @@
 #include "util.h"
 #include "parson.h"
 
+struct glrect ST_UNIT = { 0.f, 1.f, 0.f, 1.f };
+
 static struct {
     char *key;
     struct Texture *value;
@@ -176,7 +178,7 @@ void texanim_fromframes(struct TexAnim *anim, int frames)
 {
     if (anim->st_frames) free(anim->st_frames);
 
-    anim->st_frames = calloc(frames, sizeof(*anim->st_frames));
+    arrsetlen(anim->st_frames, frames);
 
     float width = (float)1/frames;
 

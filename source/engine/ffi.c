@@ -128,7 +128,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 12:
-         //anim2d_delete(duk_to_int(duk, 1));
+         sprite_loadtex(id2sprite(duk_to_int(duk, 1)), duk_to_string(duk, 2));
          break;
 
        case 13:
@@ -168,7 +168,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          return 1;
 
        case 22:
-         shape_enabled(duk_to_pointer(duk, 1), duk_to_int(duk, 2));
+         shape_enabled(duk_to_pointer(duk, 1), duk_to_boolean(duk, 2));
          break;
 
        case 23:
@@ -399,9 +399,12 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
   return 1;
 }
 
+/* Make anim from texture */
 duk_ret_t duk_make_anim2d(duk_context *duk) {
   int go = duk_to_int(duk, 0);
   const char *path = duk_to_string(duk, 1);
+  int frames = duk_to_int(duk, 2);
+  int fps = duk_to_int(duk, 3);
 
   int sprite = make_sprite(go);
   struct sprite *sp = id2sprite(sprite);
@@ -409,8 +412,6 @@ duk_ret_t duk_make_anim2d(duk_context *duk) {
   sp->pos[1] = -0.5f;
   anim_load(&sp->anim, path);
   sp->tex = sp->anim.anim->tex;
-
-  YughInfo("Made an animation.");
 
   duk_push_int(duk, sprite);
   return 1;

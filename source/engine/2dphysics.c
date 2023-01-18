@@ -25,8 +25,6 @@ float dynamic_color[3] = {255/255, 70/255, 46/255};
 float kinematic_color[3] = {255/255, 206/255,71/255};
 float static_color[3] = {0.22f, 0.271f, 1.f};
 
-static struct color static_color = {56, 69, 255};
-
 void color2float(struct color color, float *fcolor)
 {
     fcolor[0] = (float)color.r/255;
@@ -47,9 +45,9 @@ int cpshape_enabled(cpShape *c)
 {
     cpShapeFilter filter = cpShapeGetFilter(c);
     if (filter.categories == ~CP_ALL_CATEGORIES && filter.mask == ~CP_ALL_CATEGORIES)
-        return 1;
+        return 0;
 
-    return 0;
+    return 1;
 }
 
 float *shape_outline_color(cpShape *shape)
@@ -70,7 +68,7 @@ float *shape_outline_color(cpShape *shape)
 
 float *shape_color(cpShape *shape)
 {
-    if (cpshape_enabled(shape)) return disabled_color;
+    if (!cpshape_enabled(shape)) return disabled_color;
 
     if (cpShapeGetSensor(shape)) return trigger_color;
 

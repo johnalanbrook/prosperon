@@ -92,11 +92,13 @@ void sprite_draw_all()
 void sprite_loadtex(struct sprite *sprite, const char *path)
 {
     sprite->tex = texture_loadfromfile(path);
+    sprite_setframe(sprite, &ST_UNIT);
 }
 
 void sprite_settex(struct sprite *sprite, struct Texture *tex)
 {
     sprite->tex = tex;
+    sprite_setframe(sprite, &ST_UNIT);
 }
 
 static uint32_t VAO = 0;
@@ -176,7 +178,7 @@ void sprite_draw(struct sprite *sprite)
         if (sprite->tex->opts.animation) {
             tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, anim_get_rect(&sprite->anim));
         } else {
-            tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, tex_get_rect(sprite->tex));
+            tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, *sprite->frame);
         }
     }
 }
@@ -188,6 +190,11 @@ void gui_draw_img(const char *img, float x, float y) {
     float size[2] = {1.f, 1.f};
     float offset[2] = { 0.f, 0.f };
     tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex));
+}
+
+void sprite_setframe(struct sprite *sprite, struct glrect *frame)
+{
+    sprite->frame = frame;
 }
 
 void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2], float rotate, mfloat_t color[3])

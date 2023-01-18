@@ -16,8 +16,8 @@ struct sprite {
     mfloat_t color[3];
     int go;
     int id;
-    struct anim2d anim;
     struct Texture *tex;
+    struct glrect *frame;
     int next;
     int enabled;
 };
@@ -30,6 +30,7 @@ void sprite_enabled(int id, int e);
 void sprite_io(struct sprite *sprite, FILE *f, int read);
 void sprite_loadtex(struct sprite *sprite, const char *path);
 void sprite_settex(struct sprite *sprite, struct Texture *tex);
+void sprite_setframe(struct sprite *sprite, struct glrect *frame);
 void sprite_initialize();
 void sprite_draw(struct sprite *sprite);
 void video_draw(struct datastream *ds, mfloat_t pos[2], mfloat_t size[2], float rotate, mfloat_t color[3]);

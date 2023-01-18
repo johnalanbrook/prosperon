@@ -19,7 +19,7 @@ struct glrect {
 float st_s_w(struct glrect st);
 float st_s_h(struct glrect st);
 
-#define ST_UNIT (struct glrect) { 0.f, 1.f, 0.f, 1.f }
+extern struct glrect ST_UNIT;
 
 /* Pixel U,V coordiantes */
 struct uvrect {
@@ -30,7 +30,7 @@ struct uvrect {
 };
 
 /* Tracks a playing animation */
-/* Objects should keep this, and simple change what TexAnim they are pointing to */
+/* Objects should keep this, and just change what TexAnim they are pointing to */
 struct anim2d {
     int frame;
     int playing;
@@ -42,9 +42,9 @@ struct anim2d {
 
 /* Describes an animation on a particular texture */
 struct TexAnim {
+    struct Texture *tex;
     struct glrect *st_frames; /* Dynamic array of frames of animation */
     int ms;
-    struct Texture *tex;
     int loop;
 };
 
@@ -55,6 +55,7 @@ struct TextureOptions {
     int animation;
 };
 
+/* Represents an actual texture on the GPU */
 struct Texture {
     unsigned int id; /* ID reference for the GPU memory location of the texture */
     int width;
@@ -72,8 +73,10 @@ void tex_bind(struct Texture *tex);    // Bind to gl context
 
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
-void anim_load(struct anim2d *anim, const char *path); /* Load and start new animation */
+struct anim2d *anim2d_from_tex(const char *path, int frames, int fps);
 void texanim_fromframes(struct TexAnim *anim, int frames);
+
+void anim_load(struct anim2d *anim, const char *path); /* Load and start new animation */
 void anim_calc(struct anim2d *anim);
 void anim_play(struct anim2d *anim);
 void anim_setframe(struct anim2d *anim, int frame);
