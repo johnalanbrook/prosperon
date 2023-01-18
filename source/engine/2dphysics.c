@@ -18,48 +18,63 @@
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
 
-static float dbg_color[3] = {0.836f, 1.f, 0.45f};
-static float trigger_color[3] = {0.278f, 0.953f, 1.f};
-static float disabled_color[3] = {0.58f, 0.58f, 0.58f};
+float dbg_color[3] = {0.836f, 1.f, 0.45f};
+float trigger_color[3] = {0.278f, 0.953f, 1.f};
+float disabled_color[3] = {0.58f, 0.58f, 0.58f};
+float dynamic_color[3] = {255/255, 70/255, 46/255};
+float kinematic_color[3] = {255/255, 206/255,71/255};
+float static_color[3] = {0.22f, 0.271f, 1.f};
+
 static struct color static_color = {56, 69, 255};
+
+void color2float(struct color color, float *fcolor)
+{
+    fcolor[0] = (float)color.r/255;
+    fcolor[1] = (float)color.b/255;
+    fcolor[2] = (float)color.g/255;
+}
+
+struct color float2color(float *fcolor)
+{
+    struct color new;
+    new.r = fcolor[0]*255;
+    new.b = fcolor[1]*255;
+    new.g = fcolor[2]*255;
+    return new;
+}
+
+int cpshape_enabled(cpShape *c)
+{
+    cpShapeFilter filter = cpShapeGetFilter(c);
+    if (filter.categories == ~CP_ALL_CATEGORIES && filter.mask == ~CP_ALL_CATEGORIES)
+        return 1;
+
+    return 0;
+}
+
+float *shape_outline_color(cpShape *shape)
+{
+    switch (cpBodyGetType(cpShapeGetBody(shape))) {
+        case CP_BODY_TYPE_DYNAMIC:
+            return dynamic_color;
+
+        case CP_BODY_TYPE_KINEMATIC:
+            return kinematic_color;
+
+        case CP_BODY_TYPE_STATIC:
+            return static_color;
+    }
+
+    return static_color;
+}
 
 float *shape_color(cpShape *shape)
 {
-    cpShapeFilter filter = cpShapeGetFilter(shape);
-    if (filter.categories == ~CP_ALL_CATEGORIES && filter.mask == ~CP_ALL_CATEGORIES)
-        return disabled_color;
+    if (cpshape_enabled(shape)) return disabled_color;
 
     if (cpShapeGetSensor(shape)) return trigger_color;
 
-    switch (cpBodyGetType(cpShapeGetBody(shape))) {
-        case CP_BODY_TYPE_DYNAMIC:
-            return dbg_color;
-            break;
-
-        case CP_BODY_TYPE_KINEMATIC:
-            return dbg_color;
-            break;
-
-        case CP_BODY_TYPE_STATIC:
-            return dbg_color;
-            break;
-    }
-
     return dbg_color;
-}
-
-void set_dbg_color(struct color color)
-{
-    dbg_color[0] = (float)color.r/255;
-    dbg_color[1] = (float)color.b/255;
-    dbg_color[2] = (float)color.g/255;
-}
-
-void set_trigger_color(struct color color)
-{
-    trigger_color[0] = (float)color.r/255;
-    trigger_color[1] = (float)color.b/255;
-    trigger_color[2] = (float)color.g/255;
 }
 
 void phys2d_init()
@@ -495,22 +510,34 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 
 void shape_enabled(struct phys2d_shape *shape, int enabled)
 {
-    YughInfo("Setting shape %p to enabled? %d.", shape, enabled);
     if (enabled)
       cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_ALL);
     else
       cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_NONE);
 }
 
+int shape_is_enabled(struct phys2d_shape *shape)
+{
+    if (cpshape_enabled(shape->shape))
+        return 1;
+
+    return 0;
+}
+
 void shape_set_sensor(struct phys2d_shape *shape, int sensor)
 {
-    YughInfo("Setting shape %p to sensor? %d.", shape, sensor);
     cpShapeSetSensor(shape->shape, sensor);
+}
+
+int shape_get_sensor(struct phys2d_shape *shape)
+{
+    return cpShapeGetSensor(shape->shape);
 }
 
 void phys2d_reindex_body(cpBody *body) {
     cpSpaceReindexShapesForBody(space, body);
 }
+
 
 void register_collide(void *sym) {
 

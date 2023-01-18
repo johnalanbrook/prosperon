@@ -8,6 +8,14 @@ extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
 
+extern float dbg_color[3];
+extern float trigger_color[3];
+extern float disabled_color[3];
+extern float dynamic_color[3];
+extern float kinematic_color[3];
+extern float static_color[3];
+
+
 struct phys2d_shape {
     cpShape *shape;
     int go;
@@ -98,7 +106,9 @@ void register_collide(void *sym);
 void phys2d_set_gravity(cpVect v);
 
 void shape_enabled(struct phys2d_shape *shape, int enabled);
+int shape_is_enabled(struct phys2d_shape *shape);
 void shape_set_sensor(struct phys2d_shape *shape, int sensor);
+int shape_get_sensor(struct phys2d_shape *shape);
 
 struct color {
     unsigned char r;
@@ -106,8 +116,8 @@ struct color {
     unsigned char b;
 };
 
-void set_dbg_color(struct color);
-void set_trigger_color(struct color);
+void color2float(struct color, float *fcolor);
+struct color float2color(float *fcolor);
 
 void shape_gui(struct phys2d_shape *shape);
 

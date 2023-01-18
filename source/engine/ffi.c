@@ -131,7 +131,6 @@ duk_ret_t duk_cmd(duk_context *duk) {
          //anim2d_delete(duk_to_int(duk, 1));
          break;
 
-
        case 13:
          play_song(duk_to_string(duk, 1), duk_to_string(duk, 2));
          break;
@@ -145,11 +144,11 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 16:
-         set_dbg_color(duk2color(duk, 1));
+         color2float(duk2color(duk, 1), dbg_color);
          break;
 
        case 17:
-         set_trigger_color(duk2color(duk, 1));
+         color2float(duk2color(duk, 1), trigger_color);
          break;
 
        case 18:
@@ -165,11 +164,16 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 21:
-         break;
+         duk_push_boolean(duk, shape_get_sensor(duk_to_pointer(duk, 1)));
+         return 1;
 
        case 22:
          shape_enabled(duk_to_pointer(duk, 1), duk_to_int(duk, 2));
          break;
+
+       case 23:
+         duk_push_boolean(duk, shape_is_enabled(duk_to_pointer(duk, 1)));
+         return 1;
     }
 
     return 0;
