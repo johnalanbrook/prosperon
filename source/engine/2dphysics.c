@@ -23,6 +23,31 @@ static float trigger_color[3] = {0.278f, 0.953f, 1.f};
 static float disabled_color[3] = {0.58f, 0.58f, 0.58f};
 static struct color static_color = {56, 69, 255};
 
+float *shape_color(cpShape *shape)
+{
+    cpShapeFilter filter = cpShapeGetFilter(shape);
+    if (filter.categories == ~CP_ALL_CATEGORIES && filter.mask == ~CP_ALL_CATEGORIES)
+        return disabled_color;
+
+    if (cpShapeGetSensor(shape)) return trigger_color;
+
+    switch (cpBodyGetType(cpShapeGetBody(shape))) {
+        case CP_BODY_TYPE_DYNAMIC:
+            return dbg_color;
+            break;
+
+        case CP_BODY_TYPE_KINEMATIC:
+            return dbg_color;
+            break;
+
+        case CP_BODY_TYPE_STATIC:
+            return dbg_color;
+            break;
+    }
+
+    return dbg_color;
+}
+
 void set_dbg_color(struct color color)
 {
     dbg_color[0] = (float)color.r/255;
@@ -113,7 +138,7 @@ void phys2d_dbgdrawcpcirc(cpCircleShape *c)
     float a = atan2(offset.y, offset.x) + cpBodyGetAngle(cpShapeGetBody(c));
 
 
-    draw_circle(pos.x + (d * cos(a)), pos.y + (d*sin(a)), radius, 2, cpShapeGetSensor(c) ? trigger_color : dbg_color, 1);
+    draw_circle(pos.x + (d * cos(a)), pos.y + (d*sin(a)), radius, 2, shape_color(c), 1);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
@@ -391,7 +416,7 @@ void phys2d_dbgdrawseg(struct phys2d_segment *seg)
     float bd = sqrt(pow(b.x, 2.f) + pow(b.y, 2.f));
     float aa = atan2(a.y, a.x) + angle;
     float ba = atan2(b.y, b.x) + angle;
-    draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y, cpShapeGetSensor(seg->shape.shape) ? trigger_color : dbg_color);
+    draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y, shape_color(seg->shape.shape));
 }
 
 void phys2d_dbgdrawbox(struct phys2d_box *box)
@@ -409,12 +434,12 @@ void phys2d_dbgdrawbox(struct phys2d_box *box)
 	points[i * 2 + 1] = d * sin(a) + b.y;
     }
 
-    draw_poly(points, n, cpShapeGetSensor(box->shape.shape) ? trigger_color : dbg_color);
+    draw_poly(points, n, shape_color(box->shape.shape));
 }
 
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 {
-    float *color = cpShapeGetSensor(poly->shape.shape) ? trigger_color : dbg_color;
+    float *color = shape_color(poly->shape.shape);
 
     cpVect b = cpBodyGetPosition(cpShapeGetBody(poly->shape.shape));
     float angle = cpBodyGetAngle(cpShapeGetBody(poly->shape.shape));
@@ -445,7 +470,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 
 void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 {
-    float *color = cpShapeGetSensor(edge->shape.shape) ? trigger_color : dbg_color;
+    float *color =shape_color(edge->shape.shape);
 
     cpVect p = cpBodyGetPosition(cpShapeGetBody(edge->shape.shape));
     float s = id2go(edge->shape.go)->scale;
@@ -472,9 +497,9 @@ void shape_enabled(struct phys2d_shape *shape, int enabled)
 {
     YughInfo("Setting shape %p to enabled? %d.", shape, enabled);
     if (enabled)
-      cpSpaceAddShape(space, shape->shape);
+      cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_ALL);
     else
-      cpSpaceRemoveShape(space, shape->shape);
+      cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_NONE);
 }
 
 void shape_set_sensor(struct phys2d_shape *shape, int sensor)
