@@ -275,15 +275,6 @@ int window_hasfocus(struct window *w)
 void window_render(struct window *w) {
     window_makecurrent(w);
     openglRender(w);
-
-
-    if (w->nuke_gui != NULL) {
-        nuke_start();
-        w->nuke_gui();
-        nuke_end();
-    }
-
-
     window_swap(w);
 }
 

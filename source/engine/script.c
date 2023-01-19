@@ -143,6 +143,7 @@ void script_call_sym_args(void *sym, void *args)
 struct callee *updates = NULL;
 struct callee *physics = NULL;
 struct callee *guis = NULL;
+struct callee *nk_guis = NULL;
 
 void register_update(struct callee c) {
     arrput(updates, c);
@@ -151,6 +152,8 @@ void register_update(struct callee c) {
 void register_gui(struct callee c) {
     arrput(guis, c);
 }
+
+void register_nk_gui(struct callee c) { arrput(nk_guis, c); }
 
 void register_physics(struct callee c) {
     arrput(physics, c);
@@ -186,6 +189,11 @@ void call_updates(double dt) {
 void call_gui() {
     for (int i = 0; i < arrlen(guis); i++)
         call_callee(&guis[i]);
+}
+
+void call_nk_gui() {
+    for (int i = 0; i < arrlen(nk_guis); i++)
+        call_callee(&nk_guis[i]);
 }
 
 void call_physics(double dt) {

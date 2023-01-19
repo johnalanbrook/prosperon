@@ -10,7 +10,6 @@
 #define NK_GLFW_GL3_IMPLEMENTATION
 #define NK_KEYSTATE_BASED_INPUT
 
-
 #include "nuke.h"
 #include "nuklear_glfw_gl3.h"
 
@@ -33,7 +32,7 @@ void nuke_init(struct window *win) {
 
     struct nk_font_atlas *atlas;
     nk_glfw3_font_stash_begin(&nkglfw, &atlas);
-    struct nk_font *noto = nk_font_atlas_add_from_file(atlas, "fonts/notosans.tff", 14, 0);
+    struct nk_font *noto = nk_font_atlas_add_from_file(atlas, "fonts/teenytinypixels.tff", 14, 0);
     nk_glfw3_font_stash_end(&nkglfw);
 }
 
@@ -51,6 +50,12 @@ void nuke_end()
 int nuke_begin(const char *lbl, struct nk_rect rect, int flags) {
     return nk_begin(ctx, lbl, rect, flags);
 }
+
+int nuke_begin_win(const char *lbl)
+{
+  return nk_begin(ctx, lbl, nk_rect(10, 10, 400, 600), NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
+}
+
 void nuke_stop() {
     nk_end(ctx);
 }

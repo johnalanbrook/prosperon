@@ -10,6 +10,7 @@ void nuke_start();
 void nuke_end();
 
 int nuke_begin(const char *lbl, struct nk_rect rect, int flags);
+int nuke_begin_win(const char *lbl);
 void nuke_stop();
 struct nk_rect nuke_win_get_bounds();
 

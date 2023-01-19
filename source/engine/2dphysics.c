@@ -368,6 +368,8 @@ void phys2d_applycircle(struct phys2d_circle *circle)
     float s = go->scale;
     cpVect offset = { circle->offset[0] * s, circle->offset[1] * s };
 
+    YughInfo("Setting radius to %g ...", radius);
+
     cpCircleShapeSetRadius(circle->shape.shape, radius);
     cpCircleShapeSetOffset(circle->shape.shape, offset);
     cpBodySetMoment(go->body, cpMomentForCircle(go->mass, 0, radius, offset));

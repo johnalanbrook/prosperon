@@ -63,6 +63,34 @@ duk_ret_t duk_gui_img(duk_context *duk) {
     return 0;
 }
 
+duk_ret_t duk_nuke(duk_context *duk)
+{
+    int cmd = duk_to_int(duk, 0);
+    float editnum;
+
+    switch(cmd) {
+        case 0:
+          nuke_begin_win(duk_to_string(duk, 1));
+          break;
+
+        case 1:
+          nuke_stop();
+          break;
+
+        case 2:
+          editnum = duk_to_number(duk, 2);
+          nuke_property_float(duk_to_string(duk, 1), 0.f, &editnum, 100.f, 0.01f, 0.01f);
+          duk_push_number(duk, editnum);
+          return 1;
+
+        case 3:
+          nuke_nel(duk_to_number(duk, 1));
+          return 0;
+    }
+
+    return 0;
+}
+
 duk_ret_t duk_win_make(duk_context *duk) {
     const char *title = duk_to_string(duk, 0);
     int w = duk_to_int(duk, 1);
@@ -245,6 +273,10 @@ duk_ret_t duk_register(duk_context *duk) {
 
      case 2:
        register_gui(c);
+       break;
+
+     case 3:
+       register_nk_gui(c);
        break;
      }
 
@@ -504,6 +536,20 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
 
 duk_ret_t duk_cmd_circle2d(duk_context *duk)
 {
+    int cmd = duk_to_int(duk, 0);
+    struct phys2d_circle *circle = duk_to_pointer(duk, 1);
+
+    YughInfo("DOING CIRCLE CMD");
+
+    switch(cmd) {
+        case 0:
+          circle->radius = duk_to_number(duk, 2);
+          phys2d_applycircle(circle);
+          return 0;
+
+    }
+
+
     return 0;
 }
 
@@ -553,6 +599,7 @@ duk_ret_t duk_make_timer(duk_context *duk) {
 void ffi_load()
 {
     DUK_FUNC(yughlog, 4);
+    DUK_FUNC(nuke, DUK_VARARGS);
     DUK_FUNC(make_gameobject, 7);
     DUK_FUNC(set_body, 3);
     DUK_FUNC(q_body, 2);

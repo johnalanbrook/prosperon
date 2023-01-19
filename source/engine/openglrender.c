@@ -162,7 +162,12 @@ void openglRender(struct window *window)
     ////// TEXT && GUI
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, ui_projection);
+
     call_gui();
+
+    nuke_start();
+    call_nk_gui();
+    nuke_end();
 }
 
 void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind)
