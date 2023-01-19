@@ -202,6 +202,26 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 30:
          sprite_setanim(id2sprite(duk_to_int(duk, 1)), duk_to_pointer(duk, 2), duk_to_int(duk, 3));
          return 0;
+
+       case 31:
+         free(duk_to_pointer(duk, 1));
+         break;
+
+       case 32:
+         duk_push_number(duk, id2timer(duk_to_int(duk, 1))->remain_time);
+         return 1;
+
+       case 33:
+         duk_push_boolean(duk, ((struct timer*)duk_to_pointer(duk, 1))->on);
+         return 1;
+
+       case 34:
+         duk_push_boolean(duk, ((struct timer*)duk_to_pointer(duk, 1))->repeat);
+         return 1;
+
+       case 35:
+         ((struct timer*)duk_to_pointer(duk, 1))->repeat = duk_to_boolean(duk, 2);
+         return 0;
     }
 
     return 0;
@@ -457,6 +477,14 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
   return 1;
 }
 
+duk_ret_t duk_cmd_box2d(duk_context *duk)
+{
+    int cmd = duk_to_int(duk, 0);
+    struct phys2d_box *box = duk_to_pointer(duk, 1);
+
+    return 0;
+}
+
 duk_ret_t duk_make_circle2d(duk_context *duk) {
    int go = duk_to_int(duk, 0);
   double radius = duk_to_number(duk, 1);
@@ -472,6 +500,11 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
     duk_push_pointer(duk, &circle->shape);
 
   return 1;
+}
+
+duk_ret_t duk_cmd_circle2d(duk_context *duk)
+{
+    return 0;
 }
 
 /* These are anims for controlling properties on an object */
@@ -509,7 +542,7 @@ duk_ret_t duk_make_timer(duk_context *duk) {
     struct callee *c = malloc(sizeof(*c));
     c->fn = sym;
     c->obj = obj;
-    struct timer *timer = timer_make(secs, call_callee, c);
+    struct timer *timer = timer_make(secs, call_callee, c, 1);
 
     duk_push_int(duk, timer->timerid);
     return 1;
@@ -530,7 +563,9 @@ void ffi_load()
     DUK_FUNC(make_sprite, 3);
     DUK_FUNC(make_anim2d, 3);
     DUK_FUNC(make_box2d, 3);
+    DUK_FUNC(cmd_box2d, DUK_VARARGS);
     DUK_FUNC(make_circle2d, 3);
+    DUK_FUNC(cmd_circle2d, DUK_VARARGS);
     DUK_FUNC(make_timer, 3);
 
     DUK_FUNC(cmd, DUK_VARARGS);

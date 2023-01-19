@@ -348,11 +348,11 @@ void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
 
 void gameobject_draw_debugs() {
     for (int i = 0; i < arrlen(gameobjects); i++) {
+        if (!gameobjects[i].body) continue;
+
         cpVect pos = cpBodyGetPosition(gameobjects[i].body);
         float color[3] = {0.76f, 0.38f, 1.f};
         draw_point(pos.x, pos.y, 3.f, color);
-
-        if (!gameobjects[i].body) continue;
         cpBodyEachShape(gameobjects[i].body, body_draw_shapes_dbg, NULL);
     }
 

@@ -132,11 +132,11 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 	memcpy(s_model, UNITMAT4, sizeof(UNITMAT4));
 
          mfloat_t t_scale[2] = { tex->width * st_s_w(r), tex->height * st_s_h(r) };
-         mfloat_t t_offset[2] = { offset[0] * t_scale[0], offset[1] * t_scale[1] };
+         mfloat_t t_offset[2] = { offset[0] * t_scale[0] * size[0], offset[1] * t_scale[1] * size[1]};
 
 	mat4_translate_vec2(model, t_offset);
-	mat4_scale_vec2(model, t_scale);
 
+mat4_scale_vec2(model, t_scale);
 	mat4_rotation_z(r_model, angle);
 
 	mat4_multiply(model, r_model, model);

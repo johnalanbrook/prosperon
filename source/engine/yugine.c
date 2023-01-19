@@ -179,9 +179,8 @@ int main(int argc, char **args) {
          framems[framei++] = elapsed;
          if (framei  == FPSBUF) framei = 0;
 
-         timer_update(elapsed);
-
          if (sim_play) {
+             timer_update(elapsed);
              physlag += elapsed;
              call_updates(elapsed * timescale);
 

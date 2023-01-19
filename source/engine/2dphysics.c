@@ -227,6 +227,22 @@ void box_gui(struct phys2d_box *box)
     phys2d_applybox(box);
 }
 
+void phys2d_applybox(struct phys2d_box *box)
+{
+    float s = id2go(box->shape.go)->scale;
+    cpTransform T = { 0 };
+    T.a = s;
+    T.d = s;
+    T.tx = box->offset[0] * s;
+    T.ty = box->offset[1] * s;
+    float hh = box->h / 2.f;
+    float hw = box->w / 2.f;
+    cpVect verts[4] =
+	{ { -hw, -hh }, { hw, -hh }, { hw, hh }, { -hw, hh } };
+    cpPolyShapeSetVerts(box->shape.shape, 4, verts, T);
+    cpPolyShapeSetRadius(box->shape.shape, box->r);
+}
+
 /************** POLYGON ************/
 
 struct phys2d_poly *Make2DPoly(int go)
@@ -366,21 +382,7 @@ void phys2d_applyseg(struct phys2d_segment *seg)
     cpSegmentShapeSetRadius(seg->shape.shape, seg->thickness * s);
 }
 
-void phys2d_applybox(struct phys2d_box *box)
-{
-    float s = id2go(box->shape.go)->scale;
-    cpTransform T = { 0 };
-    T.a = s;
-    T.d = s;
-    T.tx = box->offset[0] * s;
-    T.ty = box->offset[1] * s;
-    float hh = box->h / 2.f;
-    float hw = box->w / 2.f;
-    cpVect verts[4] =
-	{ { -hw, -hh }, { hw, -hh }, { hw, hh }, { -hw, hh } };
-    cpPolyShapeSetVerts(box->shape.shape, 4, verts, T);
-    cpPolyShapeSetRadius(box->shape.shape, box->r);
-}
+
 
 void phys2d_applypoly(struct phys2d_poly *poly)
 {

@@ -9,10 +9,10 @@ struct timer {
     double remain_time;   // How much time until the timer executes
     void (*cb)(void *data);
     void *data;
-    int ownd
+    int owndata;
 };
 
-struct timer *timer_make(double interval, void (*callback)(void *param), void *param);
+struct timer *timer_make(double interval, void (*callback)(void *param), void *param, int own);
 struct timer *id2timer(int id);
 void timer_remove(struct timer *t);
 void timer_start(struct timer *t);
