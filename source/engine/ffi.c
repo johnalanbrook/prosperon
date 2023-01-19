@@ -67,6 +67,7 @@ duk_ret_t duk_nuke(duk_context *duk)
 {
     int cmd = duk_to_int(duk, 0);
     float editnum;
+    int editint;
 
     switch(cmd) {
         case 0:
@@ -85,6 +86,16 @@ duk_ret_t duk_nuke(duk_context *duk)
 
         case 3:
           nuke_nel(duk_to_number(duk, 1));
+          return 0;
+
+        case 4:
+          editint = duk_to_boolean(duk, 2);
+          nuke_checkbox(duk_to_string(duk, 1), &editint);
+          duk_push_boolean(duk, editint);
+          return 1;
+
+        case 5:
+          nuke_label(duk_to_string(duk, 1));
           return 0;
     }
 
@@ -529,7 +540,11 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
 
     phys2d_applycircle(circle);
 
+    int idx = duk_push_object(duk);
     duk_push_pointer(duk, &circle->shape);
+    duk_put_prop_string(duk, idx, "id");
+    duk_push_pointer(duk, circle);
+    duk_put_prop_string(duk, idx, "shape");
 
   return 1;
 }
@@ -539,7 +554,7 @@ duk_ret_t duk_cmd_circle2d(duk_context *duk)
     int cmd = duk_to_int(duk, 0);
     struct phys2d_circle *circle = duk_to_pointer(duk, 1);
 
-    YughInfo("DOING CIRCLE CMD");
+    if (!circle) return 0;
 
     switch(cmd) {
         case 0:
