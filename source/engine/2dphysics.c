@@ -119,8 +119,7 @@ struct phys2d_circle *Make2DCircle(int go)
     struct phys2d_circle *new = malloc(sizeof(struct phys2d_circle));
 
     new->radius = 10.f;
-    new->offset[0] = 0.f;
-    new->offset[1] = 0.f;
+    new->offset = cpvzero;
 
     new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(id2go(go)->body, new->radius, cpvzero));
     new->shape.debugdraw = phys2d_dbgdrawcircle;
@@ -137,7 +136,7 @@ void phys2d_circledel(struct phys2d_circle *c)
 void circle_gui(struct phys2d_circle *circle)
 {
     nuke_property_float("Radius", 1.f, &circle->radius, 10000.f, 1.f, 1.f);
-    nuke_property_float2("Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
+    //nuke_property_float2("Offset", 0.f, circle->offset, 1.f, 0.01f, 0.01f);
 
     phys2d_applycircle(circle);
 }
@@ -366,7 +365,7 @@ void phys2d_applycircle(struct phys2d_circle *circle)
 
     float radius = circle->radius * go->scale;
     float s = go->scale;
-    cpVect offset = { circle->offset[0] * s, circle->offset[1] * s };
+    cpVect offset = { circle->offset.x * s, circle->offset.y * s };
 
     cpCircleShapeSetRadius(circle->shape.shape, radius);
     cpCircleShapeSetOffset(circle->shape.shape, offset);

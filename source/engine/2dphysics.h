@@ -25,7 +25,7 @@ struct phys2d_shape {
 
 struct phys2d_circle {
     float radius;
-    float offset[2];
+    cpVect offset;
     struct phys2d_shape shape;
 };
 

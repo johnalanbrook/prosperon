@@ -45,6 +45,12 @@ cpVect duk2vec2(duk_context *duk, int p) {
     return pos;
 }
 
+void vec2float(cpVect v, float *f)
+{
+    f[0] = v.x;
+    f[1] = v.y;
+}
+
 duk_ret_t duk_gui_text(duk_context *duk) {
     const char *s = duk_to_string(duk, 0);
     cpVect pos = duk2vec2(duk, 1);
@@ -80,7 +86,7 @@ duk_ret_t duk_nuke(duk_context *duk)
 
         case 2:
           editnum = duk_to_number(duk, 2);
-          nuke_property_float(duk_to_string(duk, 1), 0.f, &editnum, 100.f, 0.01f, 0.01f);
+          nuke_property_float(duk_to_string(duk, 1), duk_to_number(duk, 3), &editnum, duk_to_number(duk, 4), duk_to_number(duk, 5), duk_to_number(duk, 5));
           duk_push_number(duk, editnum);
           return 1;
 
@@ -261,6 +267,15 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 35:
          ((struct timer*)duk_to_pointer(duk, 1))->repeat = duk_to_boolean(duk, 2);
          return 0;
+
+       case 36:
+         id2go(duk_to_int(duk, 1))->scale = duk_to_number(duk, 2);
+         return 0;
+
+       case 37:
+         if (!id2sprite(duk_to_int(duk, 1))) return 0;
+         vec2float(duk2vec2(duk, 2), id2sprite(duk_to_int(duk, 1))->pos);
+         break;
     }
 
     return 0;
@@ -515,7 +530,11 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
 
   phys2d_applybox(box);
 
-  duk_push_pointer(duk, &box->shape);
+      int idx = duk_push_object(duk);
+    duk_push_pointer(duk, &box->shape);
+    duk_put_prop_string(duk, idx, "id");
+    duk_push_pointer(duk, box);
+    duk_put_prop_string(duk, idx, "shape");
 
   return 1;
 }
@@ -524,19 +543,33 @@ duk_ret_t duk_cmd_box2d(duk_context *duk)
 {
     int cmd = duk_to_int(duk, 0);
     struct phys2d_box *box = duk_to_pointer(duk, 1);
+    cpVect arg = duk2vec2(duk, 2);
 
+    if (!box) return 0;
+
+    switch(cmd) {
+        case 0:
+          box->w = arg.x;
+          box->h = arg.y;
+          break;
+
+        case 1:
+          box->offset[0] = arg.x;
+          box->offset[1] = arg.y;
+          break;
+    }
+
+    phys2d_applybox(box);
     return 0;
 }
 
 duk_ret_t duk_make_circle2d(duk_context *duk) {
    int go = duk_to_int(duk, 0);
   double radius = duk_to_number(duk, 1);
-  cpVect offset = duk2vec2(duk, 2);
 
     struct phys2d_circle *circle = Make2DCircle(go);
     circle->radius = radius;
-    circle->offset[0] = offset.x;
-    circle->offset[1] = offset.y;
+    circle->offset = duk2vec2(duk, 2);
 
     phys2d_applycircle(circle);
 
@@ -559,12 +592,14 @@ duk_ret_t duk_cmd_circle2d(duk_context *duk)
     switch(cmd) {
         case 0:
           circle->radius = duk_to_number(duk, 2);
-          phys2d_applycircle(circle);
-          return 0;
+          break;
 
+        case 1:
+          circle->offset = duk2vec2(duk, 2);
+          break;
     }
 
-
+    phys2d_applycircle(circle);
     return 0;
 }
 

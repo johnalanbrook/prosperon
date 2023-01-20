@@ -58,6 +58,7 @@ void sprite_enabled(int id, int e)
 }
 
 struct sprite *id2sprite(int id) {
+    if (id < 0) return NULL;
     return &sprites[id];
 }
 
@@ -180,6 +181,7 @@ void sprite_draw(struct sprite *sprite)
 
 void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame)
 {
+    if (!sprite) return;
     sprite->tex = anim->tex;
     sprite->frame = &anim->st_frames[frame];
 }

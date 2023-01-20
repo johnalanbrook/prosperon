@@ -124,7 +124,10 @@ void add_zoom(float val) { zoom = val; }
 
 void openglRender(struct window *window)
 {
+    glCullFace(GL_BACK);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //////////// 2D projection
     mfloat_t projection[16] = { 0.f };
     cpVect pos = cam_pos();
