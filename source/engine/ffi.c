@@ -21,6 +21,12 @@
 #include "music.h"
 #include "level.h"
 
+void duk_dump_stack(duk_context *duk)
+{
+    duk_push_context_dump(duk);
+    YughInfo("DUK STACK\n%s", duk_to_string(duk, -1));
+}
+
 struct color duk2color(duk_context *duk, int p)
 {
     struct color color;
@@ -37,6 +43,8 @@ struct color duk2color(duk_context *duk, int p)
 
 cpVect duk2vec2(duk_context *duk, int p) {
     cpVect pos;
+    if (p < 0) p = duk_get_top_index(duk) + p + 1;
+
     duk_get_prop_index(duk, p, 0);
     pos.x = duk_to_number(duk, -1);
     duk_get_prop_index(duk, p, 1);
@@ -125,7 +133,6 @@ duk_ret_t duk_cmd(duk_context *duk) {
       case 0:
         duk_push_int(duk, script_dofile(duk_to_string(duk, 1)));
         return 1;
-        break;
 
       case 1:
         set_pawn(duk_get_heapptr(duk, 1));
@@ -270,12 +277,21 @@ duk_ret_t duk_cmd(duk_context *duk) {
 
        case 36:
          id2go(duk_to_int(duk, 1))->scale = duk_to_number(duk, 2);
+         cpSpaceReindexShapesForBody(space, id2go(duk_to_int(duk, 1))->body);
          return 0;
 
        case 37:
          if (!id2sprite(duk_to_int(duk, 1))) return 0;
          vec2float(duk2vec2(duk, 2), id2sprite(duk_to_int(duk, 1))->pos);
          break;
+
+       case 38:
+         duk_push_string(duk, slurp_text(duk_to_string(duk, 1)));
+         return 1;
+
+       case 39:
+         duk_push_int(duk, slurp_write(duk_to_string(duk, 1), duk_to_string(duk, 2)));
+         return 1;
     }
 
     return 0;
@@ -331,6 +347,7 @@ duk_ret_t duk_sys_cmd(duk_context *duk) {
 
         case 1:
             sim_start();
+            cpSpaceReindexStatic(space);
             break;
 
         case 2:
@@ -410,7 +427,6 @@ duk_ret_t duk_set_body(duk_context *duk) {
   switch (cmd) {
     case 0:
       gameobject_setangle(go, duk_to_number(duk, 2));
-      cpSpaceReindexShapesForBody(space, go->body);
       break;
 
     case 1:
@@ -419,7 +435,6 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 2:
       cpBodySetPosition(go->body, duk2vec2(duk, 2));
-      cpSpaceReindexShapesForBody(space, go->body);
       break;
 
     case 3:
@@ -451,6 +466,8 @@ duk_ret_t duk_set_body(duk_context *duk) {
       break;
 
   }
+
+  cpSpaceReindexShapesForBody(space, go->body);
 
   return 0;
 }
@@ -543,19 +560,25 @@ duk_ret_t duk_cmd_box2d(duk_context *duk)
 {
     int cmd = duk_to_int(duk, 0);
     struct phys2d_box *box = duk_to_pointer(duk, 1);
-    cpVect arg = duk2vec2(duk, 2);
+    cpVect arg;
 
     if (!box) return 0;
 
     switch(cmd) {
         case 0:
+          arg = duk2vec2(duk, 2);
           box->w = arg.x;
           box->h = arg.y;
           break;
 
         case 1:
+          arg = duk2vec2(duk, 2);
           box->offset[0] = arg.x;
           box->offset[1] = arg.y;
+          break;
+
+        case 2:
+          box->rotation = duk_to_number(duk, 2);
           break;
     }
 
@@ -601,6 +624,54 @@ duk_ret_t duk_cmd_circle2d(duk_context *duk)
 
     phys2d_applycircle(circle);
     return 0;
+}
+
+duk_ret_t duk_make_poly2d(duk_context *duk)
+{
+  int go = duk_to_int(duk, 0);
+  struct phys2d_poly *poly = Make2DPoly(go);
+
+  YughInfo("Making polygon.");
+
+  return 0;
+}
+
+duk_ret_t duk_cmd_poly2d(duk_context *duk)
+{
+
+}
+
+duk_ret_t duk_make_edge2d(duk_context *duk)
+{
+  int go = duk_to_int(duk, 0);
+  struct phys2d_edge *edge = Make2DEdge(go);
+
+  int arridx = 1;
+
+  int n = duk_get_length(duk, arridx);
+  cpVect points[n];
+
+  for (int i = 0; i < n; i++) {
+      duk_get_prop_index(duk, arridx, i);
+
+      points[i] = duk2vec2(duk, -1);
+
+      phys2d_edgeaddvert(edge);
+      phys2d_edge_setvert(edge, i, points[i]);
+  }
+
+      int idx = duk_push_object(duk);
+    duk_push_pointer(duk, &edge->shape);
+    duk_put_prop_string(duk, idx, "id");
+    duk_push_pointer(duk, edge);
+    duk_put_prop_string(duk, idx, "shape");
+
+  return 1;
+}
+
+duk_ret_t duk_cmd_edge2d(duk_context *duk)
+{
+
 }
 
 /* These are anims for controlling properties on an object */
@@ -663,6 +734,10 @@ void ffi_load()
     DUK_FUNC(cmd_box2d, DUK_VARARGS);
     DUK_FUNC(make_circle2d, 3);
     DUK_FUNC(cmd_circle2d, DUK_VARARGS);
+    DUK_FUNC(make_poly2d, 2);
+    DUK_FUNC(cmd_poly2d, DUK_VARARGS);
+    DUK_FUNC(make_edge2d, 3);
+    DUK_FUNC(cmd_edge2d, DUK_VARARGS);
     DUK_FUNC(make_timer, 3);
 
     DUK_FUNC(cmd, DUK_VARARGS);

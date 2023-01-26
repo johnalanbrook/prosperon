@@ -4,6 +4,10 @@
 
 #include "shader.h"
 #include "log.h"
+#include <assert.h>
+#include "debug.h"
+
+#include "stb_ds.h"
 
 static uint32_t circleVBO;
 static uint32_t circleVAO;
@@ -59,9 +63,20 @@ void draw_line(int x1, int y1, int x2, int y2, float *color)
     draw_poly(verts, 2, color);
 }
 
-void draw_edge(float *points, int n, float *color)
+void draw_edge(cpVect  *points, int n, float *color)
 {
-    draw_poly(points, n, color);
+    static_assert(sizeof(cpVect) == 2*sizeof(float));
+
+    shader_use(rectShader);
+    shader_setvec3(rectShader, "linecolor", color);
+    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
+    glBindVertexArray(rectVAO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+    shader_setfloat(rectShader, "alpha", 1.f);
+    glDrawArrays(GL_LINE_STRIP, 0, n);
 }
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
@@ -120,6 +135,12 @@ void draw_point(int x, int y, float r, float *color)
     draw_circle(x, y, r, r, color, 0);
 }
 
+void draw_points(struct cpVect *points, int n, float size, float *color)
+{
+    for (int i = 0; i < n; i++)
+        draw_point(points[i].x, points[i].y, size, color);
+}
+
 void draw_poly(float *points, int n, float *color)
 {
     shader_use(rectShader);
@@ -136,6 +157,17 @@ void draw_poly(float *points, int n, float *color)
 
     shader_setfloat(rectShader, "alpha", 1.f);
     glDrawArrays(GL_LINE_LOOP, 0, n);
+}
+
+void draw_polyvec(cpVect *points, int n, float *color)
+{
+    float drawvec[n*2];
+    for (int i = 0; i < n; i++) {
+        drawvec[i*2] = points[i].x;
+        drawvec[i*2+1] = points[i].y;
+    }
+
+    draw_poly(drawvec, n, color);
 }
 
 void debugdraw_flush()

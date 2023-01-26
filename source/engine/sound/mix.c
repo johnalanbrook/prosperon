@@ -6,6 +6,8 @@
 #include <string.h>
 #include "log.h"
 
+#include <assert.h>
+
 static struct bus bus[256];
 static int first = 0; /* First bus available */
 //static struct bus *first_on = NULL;
@@ -35,10 +37,8 @@ void mixer_init() {
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {
-    if (!initted) {
-        YughError("Tried to use a mixing bus without calling mixer_init().");
-        return NULL;
-    }
+    if (!initted) return;
+    assert(initted);
 
     if (first == -1) return NULL;
     int ret = first;

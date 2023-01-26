@@ -10,6 +10,7 @@
 #include <math.h>
 #include <chipmunk/chipmunk_unsafe.h>
 #include "stb_ds.h"
+#include <assert.h>
 
 #include "script.h"
 
@@ -158,39 +159,18 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle)
     phys2d_dbgdrawcpcirc((cpCircleShape *)circle->shape.shape);
 }
 
-
-/*********** SEGMENT2D  **************/
-
-struct phys2d_segment *Make2DSegment(int go)
+void phys2d_applycircle(struct phys2d_circle *circle)
 {
-    struct phys2d_segment *new = malloc(sizeof(struct phys2d_segment));
+    struct gameobject *go = id2go(circle->shape.go);
 
-    new->thickness = 1.f;
-    new->a[0] = 0.f;
-    new->a[1] = 0.f;
-    new->b[0] = 0.f;
-    new->b[1] = 0.f;
+    float radius = circle->radius * go->scale;
+    float s = go->scale;
+    cpVect offset = { circle->offset.x * s, circle->offset.y * s };
 
-    new->shape.shape = cpSpaceAddShape(space, cpSegmentShapeNew(id2go(go)->body, cpvzero, cpvzero, new->thickness));
-    new->shape.debugdraw = phys2d_dbgdrawseg;
-    init_phys2dshape(&new->shape, go, new);
-
-    return new;
+    cpCircleShapeSetRadius(circle->shape.shape, radius);
+    cpCircleShapeSetOffset(circle->shape.shape, offset);
+    //cpBodySetMoment(go->body, cpMomentForCircle(go->mass, 0, radius, offset));
 }
-
-void phys2d_segdel(struct phys2d_segment *seg)
-{
-    phys2d_shape_del(&seg->shape);
-}
-
-void segment_gui(struct phys2d_segment *seg)
-{
-    nuke_property_float2("a", 0.f, seg->a, 1.f, 0.01f, 0.01f);
-    nuke_property_float2("b", 0.f, seg->b, 1.f, 0.01f, 0.01f);
-
-    phys2d_applyseg(seg);
-}
-
 
 /************* BOX2D ************/
 
@@ -230,209 +210,18 @@ void phys2d_applybox(struct phys2d_box *box)
 {
     float s = id2go(box->shape.go)->scale;
     cpTransform T = { 0 };
-    T.a = s;
-    T.d = s;
+    T.a = s * cos(box->rotation);
+    T.b = -sin(box->rotation);
+    T.c = sin(box->rotation);
+    T.d = s * cos(box->rotation);
     T.tx = box->offset[0] * s;
     T.ty = box->offset[1] * s;
     float hh = box->h / 2.f;
     float hw = box->w / 2.f;
-    cpVect verts[4] =
-	{ { -hw, -hh }, { hw, -hh }, { hw, hh }, { -hw, hh } };
+    cpVect verts[4] = { { -hw, -hh }, { hw, -hh }, { hw, hh }, { -hw, hh } };
     cpPolyShapeSetVerts(box->shape.shape, 4, verts, T);
     cpPolyShapeSetRadius(box->shape.shape, box->r);
 }
-
-/************** POLYGON ************/
-
-struct phys2d_poly *Make2DPoly(int go)
-{
-    struct phys2d_poly *new = malloc(sizeof(struct phys2d_poly));
-
-    new->n = 0;
-    new->points = NULL;
-    new->radius = 0.f;
-
-    cpTransform T = { 0 };
-    new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNew(id2go(go)->body, 0, NULL, T, new->radius));
-    init_phys2dshape(&new->shape, go, new);
-    new->shape.debugdraw = phys2d_dbgdrawpoly;
-    phys2d_applypoly(new);
-
-    return new;
-}
-
-void phys2d_polydel(struct phys2d_poly *poly)
-{
-    phys2d_shape_del(&poly->shape);
-}
-
-void phys2d_polyaddvert(struct phys2d_poly *poly)
-{
-    poly->n++;
-    float *oldpoints = poly->points;
-    poly->points = calloc(2 * poly->n, sizeof(float));
-    memcpy(poly->points, oldpoints, sizeof(float) * 2 * (poly->n - 1));
-    free(oldpoints);
-}
-
-void poly_gui(struct phys2d_poly *poly)
-{
-
-    if (nuke_btn("Add Poly Vertex")) phys2d_polyaddvert(poly);
-
-    for (int i = 0; i < poly->n; i++) {
-	nuke_property_float2("#P", 0.f, &poly->points[i*2], 1.f, 0.1f, 0.1f);
-    }
-
-    nuke_property_float("Radius", 0.01f, &poly->radius, 1000.f, 1.f, 0.1f);
-
-    phys2d_applypoly(poly);
-}
-
-
-
-/****************** EDGE 2D**************/
-
-struct phys2d_edge *Make2DEdge(int go)
-{
-    struct phys2d_edge *new = malloc(sizeof(struct phys2d_edge));
-
-    new->n = 2;
-    new->points = calloc(2 * 2, sizeof(float));
-    new->thickness = 0.f;
-    new->shapes = malloc(sizeof(cpShape *));
-
-    new->shapes[0] = cpSpaceAddShape(space, cpSegmentShapeNew(id2go(go)->body, cpvzero, cpvzero, new->thickness));
-    new->shape.go = go;
-    phys2d_edgeshapeapply(&new->shape, new->shapes[0]);
-
-    phys2d_applyedge(new);
-
-    return new;
-}
-
-void phys2d_edgedel(struct phys2d_edge *edge)
-{
-    phys2d_shape_del(&edge->shape);
-}
-
-void phys2d_edgeshapeapply(struct phys2d_shape *mshape, cpShape * shape)
-{
-    cpShapeSetFriction(shape, id2go(mshape->go)->f);
-    cpShapeSetElasticity(shape, id2go(mshape->go)->e);
-}
-
-void phys2d_edgeaddvert(struct phys2d_edge *edge)
-{
-    edge->n++;
-    float *oldp = edge->points;
-    edge->points = calloc(edge->n * 2, sizeof(float));
-    memcpy(edge->points, oldp, sizeof(float) * 2 * (edge->n - 1));
-
-    cpShape **oldshapes = edge->shapes;
-    edge->shapes = malloc(sizeof(cpShape *) * (edge->n - 1));
-    memcpy(edge->shapes, oldshapes, sizeof(cpShape *) * (edge->n - 2));
-    cpVect a =
-	{ edge->points[(edge->n - 2) * 2],
-     edge->points[(edge->n - 2) * 2 + 1] };
-    cpVect b =
-	{ edge->points[(edge->n - 1) * 2],
-     edge->points[(edge->n - 1) * 2 + 1] };
-    edge->shapes[edge->n - 2] = cpSpaceAddShape(space, cpSegmentShapeNew(id2go(edge->shape.go)->body, a, b, edge->thickness));
-    phys2d_edgeshapeapply(&edge->shape, edge->shapes[edge->n - 2]);
-
-    free(oldp);
-    free(oldshapes);
-}
-
-void edge_gui(struct phys2d_edge *edge)
-{
-    if (nuke_btn("Add Edge Vertex")) phys2d_edgeaddvert(edge);
-
-    for (int i = 0; i < edge->n; i++)
-	nuke_property_float2("E", 0.f, &edge->points[i*2], 1.f, 0.01f, 0.01f);
-
-    nuke_property_float("Thickness", 0.01f, &edge->thickness, 1.f, 0.01f, 0.01f);
-
-    phys2d_applyedge(edge);
-}
-
-
-
-void phys2d_applycircle(struct phys2d_circle *circle)
-{
-    struct gameobject *go = id2go(circle->shape.go);
-
-    float radius = circle->radius * go->scale;
-    float s = go->scale;
-    cpVect offset = { circle->offset.x * s, circle->offset.y * s };
-
-    cpCircleShapeSetRadius(circle->shape.shape, radius);
-    cpCircleShapeSetOffset(circle->shape.shape, offset);
-    cpBodySetMoment(go->body, cpMomentForCircle(go->mass, 0, radius, offset));
-}
-
-void phys2d_applyseg(struct phys2d_segment *seg)
-{
-    float s = id2go(seg->shape.go)->scale;
-    cpVect a = { seg->a[0] * s, seg->a[1] * s };
-    cpVect b = { seg->b[0] * s, seg->b[1] * s };
-    cpSegmentShapeSetEndpoints(seg->shape.shape, a, b);
-    cpSegmentShapeSetRadius(seg->shape.shape, seg->thickness * s);
-}
-
-
-
-void phys2d_applypoly(struct phys2d_poly *poly)
-{
-    cpVect verts[poly->n];
-
-    for (int i = 0; i < poly->n; i++) {
-	verts[i].x = poly->points[i * 2];
-	verts[i].y = poly->points[i * 2 + 1];
-    }
-
-    CP_CONVEX_HULL(poly->n, verts, hullCount, hullVerts);
-
-    float s = id2go(poly->shape.go)->scale;
-    cpTransform T = { 0 };
-    T.a = s;
-    T.d = s;
-
-    cpPolyShapeSetVerts(poly->shape.shape, hullCount, hullVerts, T);
-    cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
-}
-
-void phys2d_applyedge(struct phys2d_edge *edge)
-{
-    float s = id2go(edge->shape.go)->scale;
-
-    for (int i = 0; i < edge->n - 1; i++) {
-	cpVect a =
-	    { edge->points[i * 2] * s, edge->points[i * 2 + 1] * s };
-	cpVect b =
-	    { edge->points[i * 2 + 2] * s, edge->points[i * 2 + 3] * s };
-	cpSegmentShapeSetEndpoints(edge->shapes[i], a, b);
-	cpSegmentShapeSetRadius(edge->shapes[i], edge->thickness);
-    }
-}
-
-
-
-void phys2d_dbgdrawseg(struct phys2d_segment *seg)
-{
-    cpVect p = cpBodyGetPosition(cpShapeGetBody(seg->shape.shape));
-    cpVect a = cpSegmentShapeGetA(seg->shape.shape);
-    cpVect b = cpSegmentShapeGetB(seg->shape.shape);
-
-    float angle = cpBodyGetAngle(cpShapeGetBody(seg->shape.shape));
-    float ad = sqrt(pow(a.x, 2.f) + pow(a.y, 2.f));
-    float bd = sqrt(pow(b.x, 2.f) + pow(b.y, 2.f));
-    float aa = atan2(a.y, a.x) + angle;
-    float ba = atan2(b.y, b.x) + angle;
-    draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y, shape_color(seg->shape.shape));
-}
-
 void phys2d_dbgdrawbox(struct phys2d_box *box)
 {
     int n = cpPolyShapeGetCount(box->shape.shape);
@@ -450,22 +239,70 @@ void phys2d_dbgdrawbox(struct phys2d_box *box)
 
     draw_poly(points, n, shape_color(box->shape.shape));
 }
+/************** POLYGON ************/
 
+struct phys2d_poly *Make2DPoly(int go)
+{
+    struct phys2d_poly *new = malloc(sizeof(struct phys2d_poly));
+
+    arrsetlen(new->points, 0);
+    new->radius = 0.f;
+
+    new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(id2go(go)->body, 0, new->points, new->radius));
+    new->shape.debugdraw = phys2d_dbgdrawpoly;
+    init_phys2dshape(&new->shape, go, new);
+    return new;
+}
+
+void phys2d_polydel(struct phys2d_poly *poly)
+{
+    arrfree(poly->points);
+    phys2d_shape_del(&poly->shape);
+}
+
+void phys2d_polyaddvert(struct phys2d_poly *poly)
+{
+    arrput(poly->points, cpvzero);
+}
+
+void poly_gui(struct phys2d_poly *poly)
+{
+}
+
+void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts)
+{
+    arrfree(poly->points);
+    poly->points = verts;
+    phys2d_applypoly(poly);
+}
+
+void phys2d_applypoly(struct phys2d_poly *poly)
+{
+    if (arrlen(poly->points) <= 0) return;
+    float s = id2go(poly->shape.go)->scale;
+    cpTransform T = { 0 };
+    T.a = s;
+    T.d = s;
+
+    cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, T);
+    cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
+}
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 {
     float *color = shape_color(poly->shape.shape);
+    int n = arrlen(poly->points);
 
     cpVect b = cpBodyGetPosition(cpShapeGetBody(poly->shape.shape));
     float angle = cpBodyGetAngle(cpShapeGetBody(poly->shape.shape));
 
     float s = id2go(poly->shape.go)->scale;
-    for (int i = 0; i < poly->n; i++) {
-	float d = sqrt(pow(poly->points[i * 2] * s, 2.f) + pow(poly->points[i * 2 + 1] * s, 2.f));
-	float a = atan2(poly->points[i * 2 + 1], poly->points[i * 2]) + angle;
+    for (int i = 0; i < n; i++) {
+	float d = sqrt(pow(poly->points[i * 2].x * s, 2.f) + pow(poly->points[i * 2].y* s, 2.f));
+	float a = atan2(poly->points[i * 2].y, poly->points[i * 2].x) + angle;
 	draw_point(b.x + d * cos(a), b.y + d * sin(a), 3, color);
     }
 
-    if (poly->n >= 3) {
+    if (arrlen(poly->points) >= 3) {
 	int n = cpPolyShapeGetCount(poly->shape.shape);
 	float points[n * 2];
 
@@ -481,32 +318,111 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
     }
 
 }
+/****************** EDGE 2D**************/
+
+struct phys2d_edge *Make2DEdge(int go)
+{
+    struct phys2d_edge *new = malloc(sizeof(struct phys2d_edge));
+    new->points = NULL;
+    arrsetlen(new->points, 0);
+    new->thickness = 0.f;
+    new->shapes = NULL;
+    arrsetlen(new->shapes, 0);
+    new->shape.go = go;
+    new->shape.data = new;
+    new->shape.debugdraw = phys2d_dbgdrawedge;
+    phys2d_applyedge(new);
+
+    return new;
+}
+
+void phys2d_edgedel(struct phys2d_edge *edge)
+{
+    phys2d_shape_del(&edge->shape);
+}
+
+void phys2d_edgeaddvert(struct phys2d_edge *edge)
+{
+    arrput(edge->points, cpvzero);
+    if (arrlen(edge->points) > 1)
+        arrput(edge->shapes, cpSpaceAddShape(space, cpSegmentShapeNew(id2go(edge->shape.go)->body, cpvzero, cpvzero, edge->thickness)));
+
+    phys2d_applyedge(edge);
+}
+
+void phys2d_edge_rmvert(struct phys2d_edge *edge, int index)
+{
+    assert(arrlen(edge->points) > index && index >= 0);
+
+    arrdel(edge->points, index);
+    cpSegmentShapeSetEndpoints(edge->shapes[index-1], edge->points[index-1], edge->points[index]);
+    cpSpaceRemoveShape(space, edge->shapes[index-1]);
+    arrdel(edge->shapes, index-1);
+
+    phys2d_applyedge(edge);
+}
+
+phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val)
+{
+    assert(arrlen(edge->points) > index && index >= 0);
+    edge->points[index] = val;
+
+    phys2d_applyedge(edge);
+}
+
+void phys2d_applyedge(struct phys2d_edge *edge)
+{
+    float s = id2go(edge->shape.go)->scale;
+
+    for (int i = 0; i < arrlen(edge->shapes); i++) {
+        cpVect a = edge->points[i];
+        cpVect b = edge->points[i+1];
+        a.x *= s;
+        a.y *= s;
+        b.x *= s;
+        b.y *= s;
+	cpSegmentShapeSetEndpoints(edge->shapes[i], a, b);
+	cpSegmentShapeSetRadius(edge->shapes[i], edge->thickness);
+	cpShapeSetUserData(edge->shapes[i], &edge->shape);
+	cpShapeSetCollisionType(edge->shapes[i], edge->shape.go);
+	cpShapeSetFriction(edge->shapes[i], id2go(edge->shape.go)->f);
+	cpShapeSetElasticity(edge->shapes[i], id2go(edge->shape.go)->e);
+    }
+
+    cpSpaceReindexShapesForBody(space, id2go(edge->shape.go)->body);
+}
 
 void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 {
-    float *color =shape_color(edge->shape.shape);
+    edge->draws++;
+    if (edge->draws > 1) {
+        if (edge->draws >= arrlen(edge->shapes))
+            edge->draws = 0;
 
-    cpVect p = cpBodyGetPosition(cpShapeGetBody(edge->shape.shape));
+        return;
+    }
+
+    if (arrlen(edge->shapes) < 1) return;
+
+    cpVect p = cpBodyGetPosition(cpShapeGetBody(edge->shapes[0]));
     float s = id2go(edge->shape.go)->scale;
-    float angle = cpBodyGetAngle(cpShapeGetBody(edge->shape.shape));
+    float angle = cpBodyGetAngle(cpShapeGetBody(edge->shapes[0]));
 
-    for (int i = 0; i < edge->n; i++) {
-	float d = sqrt(pow(edge->points[i * 2] * s, 2.f) + pow(edge->points[i * 2 + 1] * s, 2.f));
-	float a = atan2(edge->points[i * 2 + 1], edge->points[i * 2]) + angle;
-	draw_point(p.x + d * cos(a), p.y + d * sin(a), 3, color);
+    cpVect drawpoints[arrlen(edge->points)];
+
+    for (int i = 0; i < arrlen(edge->points); i++) {
+        float d = sqrt(pow(edge->points[i].x*s, 2.f) + pow(edge->points[i].y*s, 2.f));
+        float a = atan2(edge->points[i].y, edge->points[i].x) + angle;
+        drawpoints[i].x = p.x + d*cos(a);
+        drawpoints[i].y = p.y + d*sin(a);
     }
 
-    for (int i = 0; i < edge->n - 1; i++) {
-	cpVect a = cpSegmentShapeGetA(edge->shapes[i]);
-	cpVect b = cpSegmentShapeGetB(edge->shapes[i]);
-	float ad = sqrt(pow(a.x, 2.f) + pow(a.y, 2.f));
-	float bd = sqrt(pow(b.x, 2.f) + pow(b.y, 2.f));
-	float aa = atan2(a.y, a.x) + angle;
-	float ba = atan2(b.y, b.x) + angle;
-	draw_line(ad * cos(aa) + p.x, ad * sin(aa) + p.y, bd * cos(ba) + p.x, bd * sin(ba) + p.y, color);
-    }
+    draw_edge(drawpoints, arrlen(edge->points), trigger_color);
+    draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 
+
+/************ COLLIDER ****************/
 void shape_enabled(struct phys2d_shape *shape, int enabled)
 {
     if (enabled)

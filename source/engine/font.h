@@ -34,4 +34,6 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
 unsigned char *slurp_file(const char *filename);
 unsigned char *slurp_text(const char *filename);
 
+int slurp_write(const char *txt, const char *filename);
+
 #endif

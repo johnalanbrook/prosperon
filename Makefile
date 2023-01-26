@@ -73,7 +73,7 @@ SEM = 0.0.1
 COM != git rev-parse --short HEAD
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
 LIBPATH = -L$(BIN)
 

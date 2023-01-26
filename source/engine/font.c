@@ -54,6 +54,16 @@ unsigned char *slurp_text(const char *filename) {
     return buf;
 }
 
+int slurp_write(const char *txt, const char *filename)
+{
+   FILE *f = fopen(filename, "w");
+   if (!f) return 1;
+
+   fputs(txt, f);
+   fclose(f);
+   return 0;
+}
+
 void font_init(struct shader *textshader) {
     shader = textshader;
 

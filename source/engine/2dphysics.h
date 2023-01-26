@@ -23,12 +23,14 @@ struct phys2d_shape {
     void (*debugdraw)(void *data);
 };
 
+/* Circles are the fastest collier type */
 struct phys2d_circle {
     float radius;
     cpVect offset;
     struct phys2d_shape shape;
 };
 
+/* A single segment */
 struct phys2d_segment {
     float a[2];
     float b[2];
@@ -36,27 +38,31 @@ struct phys2d_segment {
     struct phys2d_shape shape;
 };
 
+/* A convex polygon; defined as the convex hull around the given set of points */
+struct phys2d_poly {
+    cpVect *points;
+    float radius;
+    struct phys2d_shape shape;
+};
+
+/* A box shape; a type of a polygon collider */
 struct phys2d_box {
     float w;
     float h;
     float offset[2];
+    float rotation;
     float r;
     struct phys2d_shape shape;
 };
 
+/* An edge with no volume. Cannot collide with each other. Join to make levels. */
 struct phys2d_edge {
-    int n;
-    float *points;
+    cpVect *points;
     float thickness;
     cpShape **shapes;
+    int closed; /* True if the first and last points should be connected */
     struct phys2d_shape shape;
-};
-
-struct phys2d_poly {
-    int n;
-    float *points;
-    float radius;
-    struct phys2d_shape shape;
+    int draws;
 };
 
 struct phys2d_circle *Make2DCircle(int go);
@@ -64,12 +70,6 @@ void phys2d_circledel(struct phys2d_circle *c);
 void phys2d_applycircle(struct phys2d_circle *circle);
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle);
 void circle_gui(struct phys2d_circle *circle);
-
-struct phys2d_segment *Make2DSegment(int go);
-void phys2d_segdel(struct phys2d_segment *seg);
-void phys2d_applyseg(struct phys2d_segment *seg);
-void phys2d_dbgdrawseg(struct phys2d_segment *seg);
-void segment_gui(struct phys2d_segment *seg);
 
 struct phys2d_box *Make2DBox(int go);
 void phys2d_boxdel(struct phys2d_box *box);
@@ -82,14 +82,15 @@ void phys2d_polydel(struct phys2d_poly *poly);
 void phys2d_applypoly(struct phys2d_poly *poly);
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly);
 void phys2d_polyaddvert(struct phys2d_poly *poly);
+void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts);
 void poly_gui(struct phys2d_poly *poly);
 
 struct phys2d_edge *Make2DEdge(int go);
 void phys2d_edgedel(struct phys2d_edge *edge);
 void phys2d_applyedge(struct phys2d_edge *edge);
-void phys2d_edgeshapeapply(struct phys2d_shape *mshape, cpShape * shape);
 void phys2d_dbgdrawedge(struct phys2d_edge *edge);
 void phys2d_edgeaddvert(struct phys2d_edge *edge);
+void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
 void edge_gui(struct phys2d_edge *edge);
 
 
