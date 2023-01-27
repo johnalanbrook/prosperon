@@ -20,11 +20,13 @@
 #include "sound.h"
 #include "music.h"
 #include "level.h"
+#include "tinyspline.h"
 
 void duk_dump_stack(duk_context *duk)
 {
     duk_push_context_dump(duk);
     YughInfo("DUK STACK\n%s", duk_to_string(duk, -1));
+    duk_pop(duk);
 }
 
 struct color duk2color(duk_context *duk, int p)
@@ -47,8 +49,12 @@ cpVect duk2vec2(duk_context *duk, int p) {
 
     duk_get_prop_index(duk, p, 0);
     pos.x = duk_to_number(duk, -1);
+    duk_pop(duk);
+
     duk_get_prop_index(duk, p, 1);
     pos.y = duk_to_number(duk, -1);
+
+    duk_pop(duk);
 
     return pos;
 }
@@ -124,6 +130,56 @@ duk_ret_t duk_win_make(duk_context *duk) {
 
     duk_push_int(duk, win->id);
     return 1;
+}
+
+duk_ret_t duk_spline_cmd(duk_context *duk)
+{
+    tsBSpline spline;
+
+    int n = duk_get_length(duk, 4);
+    int d = duk_to_int(duk, 2);
+    cpVect points[n*d];
+
+    ts_bspline_new(n, d, duk_to_int(duk, 1), duk_to_int(duk, 3), &spline, NULL);
+
+
+
+      for (int i = 0; i < n; i++) {
+      duk_get_prop_index(duk, 4, i);
+
+      points[i] = duk2vec2(duk, -1);
+
+      duk_pop(duk);
+  }
+
+  ts_bspline_set_control_points(&spline, points, NULL);
+
+
+  int nsamples = duk_to_int(duk, 5);
+  cpVect samples[nsamples];
+  int rsamples;
+  ts_bspline_sample(&spline, nsamples, &samples, &rsamples, NULL);
+
+    int arridx = duk_push_array(duk);
+
+    duk_require_stack(duk, nsamples*3);
+
+    for (int i = 0; i < nsamples; i++) {
+        int pidx = duk_push_array(duk);
+
+
+            duk_push_number(duk, samples[i].x);
+            duk_put_prop_index(duk, pidx, 0);
+            duk_push_number(duk, samples[i].y);
+            duk_put_prop_index(duk, pidx, 1);
+           duk_put_prop_index(duk, arridx, i);
+    }
+
+    free(samples);
+    ts_bspline_free(&spline);
+
+
+return 1;
 }
 
 duk_ret_t duk_cmd(duk_context *duk) {
@@ -730,6 +786,7 @@ void ffi_load()
 
     DUK_FUNC(make_sprite, 3);
     DUK_FUNC(make_anim2d, 3);
+    DUK_FUNC(spline_cmd, 6);
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(cmd_box2d, DUK_VARARGS);
     DUK_FUNC(make_circle2d, 3);

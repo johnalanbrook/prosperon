@@ -4,6 +4,7 @@
 #include <string.h>
 #include "mathc.h"
 #include "nuke.h"
+#include "debug.h"
 
 #include "debugdraw.h"
 #include "gameobject.h"
@@ -11,6 +12,8 @@
 #include <chipmunk/chipmunk_unsafe.h>
 #include "stb_ds.h"
 #include <assert.h>
+
+#include "tinyspline.h"
 
 #include "script.h"
 
@@ -106,6 +109,9 @@ void init_phys2dshape(struct phys2d_shape *shape, int go, void *data)
     cpShapeSetCollisionType(shape->shape, go);
     cpShapeSetUserData(shape->shape, shape);
     phys2d_shape_apply(shape);
+
+
+
 }
 
 void phys2d_shape_del(struct phys2d_shape *shape)
