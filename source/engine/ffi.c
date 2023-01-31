@@ -175,9 +175,7 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
            duk_put_prop_index(duk, arridx, i);
     }
 
-    free(samples);
     ts_bspline_free(&spline);
-
 
 return 1;
 }

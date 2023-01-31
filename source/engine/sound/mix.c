@@ -10,7 +10,7 @@
 
 static struct bus bus[256];
 static int first = 0; /* First bus available */
-//static struct bus *first_on = NULL;
+
 static int first_on = -1; /* First bus to fill buffer with */
 short mastermix[BUF_FRAMES*CHANNELS];
 
@@ -37,9 +37,9 @@ void mixer_init() {
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {
-    if (!initted) return;
+    if (!initted) return NULL;
     assert(initted);
-
+    
     if (first == -1) return NULL;
     int ret = first;
     first = bus[ret].next;
@@ -80,5 +80,4 @@ void bus_fill_buffers(short *master, int n) {
 
         curbus = nextbus;
     }
-
 }
