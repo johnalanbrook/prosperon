@@ -34,7 +34,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	va_end(args);
 
 	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s |  %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
+	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
 
 	fprintf(stderr, "%s", buffer);
 	fflush(stderr);

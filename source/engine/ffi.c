@@ -21,13 +21,18 @@
 #include "music.h"
 #include "level.h"
 #include "tinyspline.h"
+#include "mix.h"
 
-void duk_dump_stack(duk_context *duk)
-{
-    duk_push_context_dump(duk);
-    YughInfo("DUK STACK\n%s", duk_to_string(duk, -1));
-    duk_pop(duk);
-}
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte) \
+        (byte & 0x80 ? '1' : '0'), \
+        (byte & 0x40 ? '1' : '0'), \
+	(byte & 0x20 ? '1' : '0'), \
+        (byte & 0x10 ? '1' : '0'), \
+        (byte & 0x08 ? '1' : '0'), \
+        (byte & 0x04 ? '1' : '0'), \
+        (byte & 0x02 ? '1' : '0'), \
+        (byte & 0x01 ? '1' : '0')
 
 struct color duk2color(duk_context *duk, int p)
 {
@@ -43,8 +48,10 @@ struct color duk2color(duk_context *duk, int p)
     return color;
 }
 
-cpVect duk2vec2(duk_context *duk, int p) {
+cpVect duk2vec2(duk_context *duk, int p)
+{
     cpVect pos;
+
     if (p < 0) p = duk_get_top_index(duk) + p + 1;
 
     duk_get_prop_index(duk, p, 0);
@@ -59,11 +66,89 @@ cpVect duk2vec2(duk_context *duk, int p) {
     return pos;
 }
 
+cpBitmask duk2bitmask(duk_context *duk, int p)
+{
+    cpBitmask mask = 0;
+
+    if (p < 0) p = duk_get_top_index(duk)+p+1;
+
+    int len = duk_get_length(duk, p);
+
+    for (int i = 0; i < len; i++) {
+      duk_get_prop_index(duk, p, i);
+      int val = duk_to_int(duk, -1);
+      duk_pop(duk);
+
+      if (val > 10) continue;
+      
+      mask |= 1<<val;
+    }
+
+    YughInfo(BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(mask));
+
+    return mask;
+}
+
+void bitmask2duk(duk_context *duk, cpBitmask mask)
+{
+  int arr = duk_push_array(duk);
+  int arridx = 0;
+  for (int i = 0; i < 11; i++) {
+    int on = mask & 1<<i;
+    if (on) {
+      duk_push_int(duk, i);
+      duk_put_prop_index(duk, arr, arridx++);
+    }
+  }
+}
+
 void vec2float(cpVect v, float *f)
 {
     f[0] = v.x;
     f[1] = v.y;
 }
+
+
+duk_idx_t vect2duk(cpVect v) {
+    duk_idx_t arr = duk_push_array(duk);
+    duk_push_number(duk, v.x);
+    duk_put_prop_index(duk, arr, 0);
+    duk_push_number(duk, v.y);
+    duk_put_prop_index(duk, arr, 1);
+
+    return arr;
+}
+
+void duk_dump_stack(duk_context *duk)
+{
+    YughInfo("DUK CALLSTACK");
+    for (int i = -2; ; i--) { /* Start at -2 to skip the invoked C function */
+      duk_inspect_callstack_entry(duk, i);
+      if (duk_is_undefined(duk, -1)) break;
+
+      duk_get_prop_string(duk, -1, "lineNumber");
+      long ln = duk_to_int(duk, -1);
+      duk_pop(duk);
+
+      duk_get_prop_string(duk, -1, "function");
+      duk_get_prop_string(duk, -1, "name");
+      const char *fn = duk_to_string(duk, -1);
+      duk_pop(duk);
+
+      duk_get_prop_string(duk, -1, "fileName");
+      const char *file = duk_to_string(duk, -1);
+      duk_pop(duk);
+      
+      mYughLog(1, 3, ln, file, "function: %s", fn);
+
+      duk_pop_2(duk);
+    }
+
+    duk_push_context_dump(duk);
+    YughInfo("DUK STACK\n%s", duk_to_string(duk, -1));
+    duk_pop(duk);
+}
+
 
 duk_ret_t duk_gui_text(duk_context *duk) {
     const char *s = duk_to_string(duk, 0);
@@ -183,10 +268,10 @@ return 1;
 duk_ret_t duk_cmd(duk_context *duk) {
     int cmd = duk_to_int(duk, 0);
 
-    switch(cmd) {
-      case 0:
-        duk_push_int(duk, script_dofile(duk_to_string(duk, 1)));
-        return 1;
+  switch(cmd) {
+    case 0:
+      duk_push_int(duk, script_dofile(duk_to_string(duk, 1)));
+      return 1;
 
       case 1:
         set_pawn(duk_get_heapptr(duk, 1));
@@ -346,6 +431,32 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 39:
          duk_push_int(duk, slurp_write(duk_to_string(duk, 1), duk_to_string(duk, 2)));
          return 1;
+
+       case 40:
+         id2go(duk_to_int(duk, 1))->filter.categories = duk2bitmask(duk, 2);
+	 gameobject_apply(id2go(duk_to_int(duk, 1)));
+	 break;
+
+       case 41:
+         id2go(duk_to_int(duk, 1))->filter.mask = duk2bitmask(duk, 2);
+	 gameobject_apply(id2go(duk_to_int(duk, 1)));
+	 break;
+
+       case 42:
+         bitmask2duk(duk, id2go(duk_to_int(duk, 1))->filter.categories);
+	 return 1;
+
+       case 43:
+         bitmask2duk(duk, id2go(duk_to_int(duk, 1))->filter.mask);
+	 return 1;
+
+       case 44:
+         duk_push_int(duk, pos2gameobject(duk2vec2(duk, 1)));
+	 return 1;
+
+       case 45:
+         vect2duk(mouse_pos);
+	 return 1;
     }
 
     return 0;
@@ -692,7 +803,7 @@ duk_ret_t duk_make_poly2d(duk_context *duk)
 
 duk_ret_t duk_cmd_poly2d(duk_context *duk)
 {
-
+  return 0;  
 }
 
 duk_ret_t duk_make_edge2d(duk_context *duk)
@@ -725,7 +836,7 @@ duk_ret_t duk_make_edge2d(duk_context *duk)
 
 duk_ret_t duk_cmd_edge2d(duk_context *duk)
 {
-
+  return 0;
 }
 
 /* These are anims for controlling properties on an object */
@@ -785,6 +896,7 @@ void ffi_load()
     DUK_FUNC(make_sprite, 3);
     DUK_FUNC(make_anim2d, 3);
     DUK_FUNC(spline_cmd, 6);
+    
     DUK_FUNC(make_box2d, 3);
     DUK_FUNC(cmd_box2d, DUK_VARARGS);
     DUK_FUNC(make_circle2d, 3);

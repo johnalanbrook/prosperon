@@ -20,6 +20,8 @@ struct Texture *tex_default;
 
 struct Texture *texture_pullfromfile(const char *path)
 {
+    if (!path) { YughError("Tried to pull a texture with a NULL path."); return NULL; }
+
     int index = shgeti(texhash, path);
     if (index != -1)
 	return texhash[index].value;

@@ -3,13 +3,15 @@
 
 #include <stdint.h>
 #include "window.h"
-
+#include <chipmunk/chipmunk.h>
 #include "script.h"
 
 extern int32_t mouseWheelX;
 extern int32_t mouseWheelY;
-extern int ychange;
-extern int xchange;
+
+extern cpVect mouse_pos;
+extern cpVect mouse_delta;
+
 extern float deltaT;
 
 void input_init();
@@ -18,6 +20,7 @@ void input_poll(double wait);
 void cursor_hide();
 void cursor_show();
 
+void call_input_signal(char *signal);
 int action_down(int scancode);
 
 int want_quit();

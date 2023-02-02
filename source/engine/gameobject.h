@@ -32,6 +32,7 @@ struct gameobject {
     float e;			/* elasticity */
     int flipx; /* 1 or -1 */
     int flipy;
+    cpShapeFilter filter;
     cpBody *body; /* NULL if this object is dead */
     int id;
     struct phys_cbs cbs;
@@ -49,12 +50,16 @@ struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);
 int id_from_gameobject(struct gameobject *go);
 
+void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
+
 void gameobject_save(struct gameobject *go, FILE * file);
 
 void gameobject_saveprefab(struct gameobject *go);
-int gameobject_makefromprefab(char *path);
 void gameobject_syncprefabs(char *revertPath);
 void gameobject_revertprefab(struct gameobject *go);
+
+/* Tries a few methods to select a gameobject; if none is selected returns -1 */
+int pos2gameobject(cpVect pos);
 
 void gameobject_init(struct gameobject *go, FILE * fprefab);
 

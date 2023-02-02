@@ -22,8 +22,6 @@ struct sFont {
     uint32_t texID;
 };
 
-
-
 void font_init(struct shader *s);
 void font_frame(struct window *w);
 struct sFont *MakeFont(const char *fontfile, int height);
@@ -32,7 +30,7 @@ void text_settype(struct sFont *font);
 void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw);
 
 unsigned char *slurp_file(const char *filename);
-unsigned char *slurp_text(const char *filename);
+char *slurp_text(const char *filename);
 
 int slurp_write(const char *txt, const char *filename);
 

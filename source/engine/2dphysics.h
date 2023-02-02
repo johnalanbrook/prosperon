@@ -92,10 +92,11 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge);
 void phys2d_edgeaddvert(struct phys2d_edge *edge);
 void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
 void edge_gui(struct phys2d_edge *edge);
-
+void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val);
 
 void phys2d_init();
 void phys2d_update(float deltaT);
+cpShape *phys2d_query_pos(cpVect pos);
 
 struct phys_cbs {
     struct callee begin;

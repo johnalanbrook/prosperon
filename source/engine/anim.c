@@ -49,7 +49,7 @@ double lerp_val(struct anim anim, double t) {
 }
 
 double cubic_val(struct anim anim, double t) {
-
+  return 0.0f;
 }
 
 double anim_val(struct anim anim, double t) {

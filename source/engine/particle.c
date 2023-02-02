@@ -1,4 +1,5 @@
 #include "particle.h"
+#include "stb_ds.h"
 
 struct emitter make_emitter()
 {
@@ -15,6 +16,8 @@ struct emitter set_emitter(struct emitter e)
     for (int i = 0; i < arrlen(e.particles)-1; i++) {
         e.particles[i].next = &e.particles[i+1];
     }
+
+    return e;
 }
 
 void free_emitter(struct emitter e)

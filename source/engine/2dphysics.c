@@ -16,6 +16,7 @@
 #include "tinyspline.h"
 
 #include "script.h"
+#include "ffi.h"
 
 #include "log.h"
 
@@ -43,6 +44,19 @@ struct color float2color(float *fcolor)
     new.b = fcolor[1]*255;
     new.g = fcolor[2]*255;
     return new;
+}
+
+cpShape *phys2d_query_pos(cpVect pos)
+{
+  cpShapeFilter filter;
+  filter.group = 0;
+  filter.mask = CP_ALL_CATEGORIES;
+  filter.categories = CP_ALL_CATEGORIES;
+  cpShape *find = cpSpacePointQueryNearest(space, pos, 0.f, filter, NULL);
+
+  YughInfo("Hit a %p", find);
+
+  return find;
 }
 
 int cpshape_enabled(cpShape *c)
@@ -96,29 +110,19 @@ void phys2d_update(float deltaT)
     cpSpaceStep(space, deltaT);
 }
 
-void phys2d_shape_apply(struct phys2d_shape *shape)
-{
-    cpShapeSetFriction(shape->shape, id2go(shape->go)->f);
-    cpShapeSetElasticity(shape->shape, id2go(shape->go)->e);
-}
-
 void init_phys2dshape(struct phys2d_shape *shape, int go, void *data)
 {
     shape->go = go;
     shape->data = data;
+    go_shape_apply(id2go(go)->body, shape->shape, id2go(go));
     cpShapeSetCollisionType(shape->shape, go);
     cpShapeSetUserData(shape->shape, shape);
-    phys2d_shape_apply(shape);
-
-
-
 }
 
 void phys2d_shape_del(struct phys2d_shape *shape)
 {
     cpSpaceRemoveShape(space, shape->shape);
 }
-
 
 /***************** CIRCLE2D *****************/
 struct phys2d_circle *Make2DCircle(int go)
@@ -368,7 +372,7 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index)
     phys2d_applyedge(edge);
 }
 
-phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val)
+void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val)
 {
     assert(arrlen(edge->points) > index && index >= 0);
     edge->points[index] = val;

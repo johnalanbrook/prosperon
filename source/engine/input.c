@@ -7,13 +7,10 @@
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
-int ychange = 0;
-int xchange = 0;
 float deltaT = 0;
 
-
-static double c_xpos;
-static double c_ypos;
+cpVect mouse_pos = {0,0};
+cpVect mouse_delta = {0,0};
 
 static int *downkeys = NULL;
 
@@ -26,21 +23,28 @@ void set_pawn(void *pawn) {
 }
 
 void remove_pawn(void *pawn) {
-    for (int i = 0; i < arrlen(pawns); i++) {
-        if (pawns[i] == pawn) {
-            pawns[i] = NULL;
-            return;
-        }
+  for (int i = 0; i < arrlen(pawns); i++) {
+    if (pawns[i] == pawn) {
+      pawns[i] = NULL;
+      return;
     }
+  }
 }
 
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 {
-    xchange = (int)xpos - c_xpos;
-    ychange = (int)ypos - c_ypos;
+    mouse_delta.x = xpos - mouse_pos.x;
+    mouse_delta.y = ypos - mouse_pos.y;
 
-    c_xpos = xpos;
-    c_ypos = ypos;
+    mouse_pos.x = xpos;
+    mouse_pos.y = ypos;
+
+    for (int i = 0; i < arrlen(pawns); i++) {
+        if (script_eval_setup("input_mouse_pos", pawns[i])) continue;
+	vect2duk(duk, mouse_pos);
+        script_eval_exec(1);
+    }
+
 }
 
 static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset)
@@ -49,10 +53,49 @@ static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset)
     mouseWheelX = xoffset;
 }
 
+static void mb_cb(GLFWwindow *w, int button, int action, int mods)
+{
+  const char *act = NULL;
+  const char *btn = NULL;
+  switch (action) {
+    case GLFW_PRESS:
+      act = "pressed";
+      break;
+
+    case GLFW_RELEASE:
+      act = "released";
+      break;
+
+    case GLFW_REPEAT:
+      act = "repeat";
+      break;
+  }
+
+  switch (button) {
+    case GLFW_MOUSE_BUTTON_LEFT:
+      btn = "lmouse";
+      break;
+
+    case GLFW_MOUSE_BUTTON_RIGHT:
+      btn = "rmouse";
+      break;
+  }
+
+  if (!act || !btn) {
+    YughError("Tried to call a mouse action that doesn't exist.");
+    return;
+  }
+
+  char keystr[50] = {'\0'};
+  snprintf(keystr, 50, "input_%s_%s", btn, act);
+  call_input_signal(keystr);
+}
+
 void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);
     glfwSetScrollCallback(mainwin->window, scroll_cb);
+    glfwSetMouseButtonCallback(mainwin->window, mb_cb);
 }
 
 void call_input_signal(char *signal) {
@@ -149,8 +192,7 @@ void call_input_down(int *key) {
 /* This is called once every frame - or more if we want it more! */
 void input_poll(double wait)
 {
-    ychange = 0;
-    xchange = 0;
+    mouse_delta = cpvzero;
     mouseWheelX = 0;
     mouseWheelY = 0;
 

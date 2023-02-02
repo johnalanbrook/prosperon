@@ -32,6 +32,26 @@ struct gameobject *id2go(int id) {
     return &gameobjects[id];
 }
 
+
+
+int pos2gameobject(cpVect pos)
+{
+  cpShape *hit = phys2d_query_pos(pos);
+
+  if (hit) {
+    struct phys2d_shape *shape = cpShapeGetUserData(hit);
+    return shape->go;
+  }
+
+  for (int i = 0; i < arrlen(gameobjects); i++) {
+    cpVect gpos = cpBodyGetPosition(gameobjects[i].body);
+    float dist = cpvlength(cpvsub(gpos, pos));
+
+    if (dist <= 25) return i;
+  }
+  return -1;
+}
+
 int id_from_gameobject(struct gameobject *go) {
     for (int i = 0; i < arrlen(gameobjects); i++) {
         if (&gameobjects[i] == go) return i;
@@ -40,12 +60,23 @@ int id_from_gameobject(struct gameobject *go) {
     return -1;
 }
 
+void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
+{
+    cpShapeSetFriction(shape, go->f);
+    cpShapeSetElasticity(shape, go->e);
+//    cpShapeSetFilter(shape, go->filter);
+    
+//    YughLog("Set filter; %d", go->filter.mask);
+}
+
 void gameobject_apply(struct gameobject *go)
 {
     cpBodySetType(go->body, go->bodytype);
 
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
         cpBodySetMass(go->body, go->mass);
+
+    cpBodyEachShape(go->body, go_shape_apply, go);
 }
 
 static void gameobject_setpickcolor(struct gameobject *go)
@@ -82,14 +113,19 @@ int MakeGameobject()
         first = id2go(first)->next;
         *id2go(retid) = go;
     }
-
-    cpBodySetUserData(go.body, retid);
+    go.filter.group = retid;
+    go.filter.mask = CP_ALL_CATEGORIES;
+    go.filter.categories = CP_ALL_CATEGORIES;
+    cpBodySetUserData(go.body, (int)retid);
     return retid;
 }
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
     struct phys2d_shape *s = cpShapeGetUserData(shape);
-    free(s->data);
+    if (s->data) {
+      free(s->data);
+      s->data = NULL;
+    }
     cpSpaceRemoveShape(space, shape);
     cpShapeFree(shape);
 }
@@ -101,6 +137,7 @@ void gameobject_delete(int id)
     first = id;
 }
 
+/* Free this gameobject */
 void gameobject_clean(int id) {
     struct gameobject *go = id2go(id);
     cpBodyEachShape(go->body, rm_body_shapes, NULL);
@@ -138,29 +175,6 @@ void gameobject_save(struct gameobject *go, FILE * file)
     */
 }
 
-int gameobject_makefromprefab(char *path)
-{
-/*
-    FILE *fprefab = fopen(path, "rb");
-    if (fprefab == NULL) {
-        YughError("Could not find prefab %s.", path);
-	return -1;
-    }
-
-    struct gameobject *new = get_gameobject_from_id(MakeGameobject());
-    fread(new, sizeof(*new), 1, fprefab);
-    new->components = NULL;
-
-    gameobject_init(new, fprefab);
-
-    fclose(fprefab);
-
-    arrlast(gameobjects).editor.id = arrlen(gameobjects)-1;
-
-    return arrlen(gameobjects)-1;
-    */
-}
-
 void gameobject_init(struct gameobject *go, FILE * fprefab)
 {
 /*
@@ -190,8 +204,6 @@ void gameobject_init(struct gameobject *go, FILE * fprefab)
         newc->init(newc->data, go);
     }
     */
-
-
 }
 
 void gameobject_saveprefab(struct gameobject *go)
@@ -207,10 +219,6 @@ void gameobject_saveprefab(struct gameobject *go)
     findPrefabs();
     */
 }
-
-
-
-
 
 void gameobject_syncprefabs(char *revertPath)
 {

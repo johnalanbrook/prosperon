@@ -10,12 +10,9 @@
 #include "debugdraw.h"
 #include "log.h"
 #include "datastream.h"
-
-
+#include "nuke.h"
 
 int renderMode = 0;
-
-static GLuint UBO;
 
 struct shader *spriteShader = NULL;
 struct shader *animSpriteShader = NULL;
@@ -79,12 +76,8 @@ void openglInit()
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
 
-
-
     shader_use(textShader);
     shader_setint(textShader, "text", 0);
-
-
 
     font_init(textShader);
     sprite_initialize();

@@ -54,7 +54,6 @@ void engine_init()
         exit(1);
     }
 
-
     resources_init();
 
     YughInfo("Starting scripts ...");

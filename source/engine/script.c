@@ -16,17 +16,6 @@
 
 duk_context *duk = NULL;
 
-duk_idx_t vect2duk(cpVect v) {
-    duk_idx_t arr = duk_push_array(duk);
-    duk_push_number(duk, v.x);
-    duk_put_prop_index(duk, arr, 0);
-    duk_push_number(duk, v.y);
-    duk_put_prop_index(duk, arr, 1);
-
-    return arr;
-}
-
-
 static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
     if (typeflag != FTW_F)
         return 0;
@@ -109,6 +98,9 @@ void script_call(const char *f) {
     //s7_call(s7, s7_name_to_value(s7, f), s7_nil(s7));
 }
 
+/* env is an object in the scripting environment;
+   s is the function to call on that object
+*/
 void script_eval_w_env(const char *s, void *env) {
     duk_push_heapptr(duk, env);
     duk_push_string(duk, s);
@@ -124,6 +116,27 @@ void script_eval_w_env(const char *s, void *env) {
     duk_pop_2(duk);
 }
 
+int script_eval_setup(const char *s, void *env)
+{
+  duk_push_heapptr(duk, env);
+
+  if (!duk_has_prop_string(duk, -1, s)) {
+    duk_pop(duk);
+    return 1;
+  }
+
+  duk_push_string(duk, s);
+  return 0;
+}
+
+void script_eval_exec(int argc)
+{
+  if (duk_pcall_prop(duk, -2 - argc, argc))
+    duk_run_err();
+
+  duk_pop_2(duk);
+}
+
 void script_call_sym(void *sym)
 {
     duk_push_heapptr(duk, sym);
@@ -137,8 +150,6 @@ void script_call_sym_args(void *sym, void *args)
 {
     //s7_call(s7, sym, s7_cons(s7, args, s7_nil(s7)));
 }
-
-
 
 struct callee *updates = NULL;
 struct callee *physics = NULL;
@@ -159,25 +170,38 @@ void register_physics(struct callee c) {
     arrput(physics, c);
 }
 
-void call_callee(struct callee *c) {
-    duk_push_heapptr(duk, c->fn);
-    duk_push_heapptr(duk, c->obj);
+void setup_callee(struct callee c)
+{
+  duk_push_heapptr(duk, c.fn);
+  duk_push_heapptr(duk, c.obj);
+}
 
-    if (duk_pcall_method(duk, 0))
+void exec_callee(int argc)
+{
+    if (duk_pcall_method(duk, argc))
         duk_run_err();
 
     duk_pop(duk);
 }
 
-void callee_dbl(struct callee c, double d) {
-    duk_push_heapptr(duk, c.fn);
-    duk_push_heapptr(duk, c.obj);
-    duk_push_number(duk, d);
+void call_callee(struct callee *c) {
+  setup_callee(*c);
+  exec_callee(0);
+}
 
-    if (duk_pcall_method(duk, 1))
-        duk_run_err();
 
-    duk_pop(duk);
+void callee_dbl(struct callee c, double d)
+{
+  setup_callee(c);
+  duk_push_number(duk, d);
+  exec_callee(1);
+}
+
+void callee_vec2(struct callee c, cpVect vec)
+{
+  setup_callee(c);
+  vect2duk(vec);
+  exec_callee(1);
 }
 
 void call_updates(double dt) {

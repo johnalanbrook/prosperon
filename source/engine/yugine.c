@@ -6,7 +6,12 @@
 #include "engine.h"
 #include "input.h"
 #include "openglrender.h"
+#include "gameobject.h"
+
+#include "timer.h"
+
 #include "script.h"
+#include "ffi.h"
 
 #include "log.h"
 #include <stdio.h>
@@ -66,9 +71,13 @@ void seghandle(int sig) {
     YughCritical("====================BACKTRACE====================");
     char **stackstr = backtrace_symbols(ents, size);
 
+    YughInfo("Stack size is %d.", size);
+
     for (int i = 0; i < size; i++) {
         YughCritical(stackstr[i]);
     }
+
+    duk_dump_stack(duk);
 
     exit(1);
 #endif
@@ -166,6 +175,7 @@ int main(int argc, char **args) {
         script_dofile("game.js");
     }
 
+    input_init();
     openglInit();
     sim_stop();
     while (!want_quit()) {

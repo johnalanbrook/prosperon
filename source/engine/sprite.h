@@ -22,7 +22,6 @@ struct sprite {
     int enabled;
 };
 
-
 int make_sprite(int go);
 struct sprite *id2sprite(int id);
 void sprite_delete(int id);

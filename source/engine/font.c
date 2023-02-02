@@ -36,7 +36,7 @@ unsigned char *slurp_file(const char *filename) {
      return slurp;
 }
 
-unsigned char *slurp_text(const char *filename) {
+char *slurp_text(const char *filename) {
  FILE *f = fopen(filename, "r'");
  if (!f) return NULL;
 

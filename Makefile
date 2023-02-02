@@ -67,7 +67,7 @@ includeflag != find source -type d -name include
 includeflag += $(engincs) source/engine/thirdparty/Nuklear
 includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wall# -pedantic -Wextra -Wwrite-strings  -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
+WARNING_FLAGS = -Wall# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
 
 SEM = 0.0.1
 COM != git rev-parse --short HEAD
@@ -83,7 +83,7 @@ ifeq ($(OS), WIN32)
 	CLIBS =
 	EXT = .exe
 else
-	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib
+	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
 	ELIBS =  engine pthread yughc portaudio asound glfw3 c m dl samplerate
 	CLIBS =
 endif

@@ -116,14 +116,6 @@ void sprite_initialize()
     glEnableVertexAttribArray(0);
 }
 
-struct glrect sprite_get_rect(struct sprite *sprite) {
-    if (sprite->tex->opts.animation) {
-
-    } else {
-        return tex_get_rect(sprite->tex);
-    }
-}
-
 void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r) {
 	mfloat_t model[16] = { 0.f };
 	mfloat_t r_model[16] = { 0.f };
