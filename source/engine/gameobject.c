@@ -149,7 +149,7 @@ void gameobject_clean(int id) {
 void gameobjects_cleanup() {
     int clean = first;
 
-    while (clean > 0 && id2go(clean)->body) {
+    while (clean >= 0 && id2go(clean)->body) {
         gameobject_clean(clean);
         clean = id2go(clean)->next;
     }

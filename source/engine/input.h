@@ -21,6 +21,7 @@ void cursor_hide();
 void cursor_show();
 
 void call_input_signal(char *signal);
+const char *keyname_extd(int key, int scancode);
 int action_down(int scancode);
 
 int want_quit();

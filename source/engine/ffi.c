@@ -202,6 +202,10 @@ duk_ret_t duk_nuke(duk_context *duk)
         case 5:
           nuke_label(duk_to_string(duk, 1));
           return 0;
+
+	case 6:
+	  duk_push_boolean(duk, nuke_btn(duk_to_string(duk, 1)));
+	  return 1;
     }
 
     return 0;

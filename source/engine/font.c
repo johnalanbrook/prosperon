@@ -75,9 +75,10 @@ void font_init(struct shader *textshader) {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
 
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(0);
+ 
     glBindVertexArray(0);
 
     // Default font
@@ -93,7 +94,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
 {
     YughInfo("Making font %s.", fontfile);
 
-    int packsize = 128;
+    int packsize = 128; 
 
     struct sFont *newfont = calloc(1, sizeof(struct sFont));
     newfont->height = height;
@@ -119,7 +120,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
      stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
      stbtt_PackEnd(&pc);
 
-     //stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char)*packsize);
+     stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char) * packsize);
 
     stbtt_fontinfo fontinfo;
     if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
@@ -162,6 +163,7 @@ struct sFont *MakeFont(const char *fontfile, int height)
 }
 
 static int curchar = 0;
+static float *buffdraw;
 
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
 {
@@ -171,13 +173,14 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     float xpos = cursor[0] + c.Bearing[0] * scale;
     float ypos = cursor[1] - c.Bearing[1] * scale;
 
-    float verts[4 * 4] = {
+    float verts[16] = {
 	xpos, ypos, c.rect.s0, c.rect.t1,
 	xpos+w, ypos, c.rect.s1, c.rect.t1,
 	xpos, ypos + h, c.rect.s0, c.rect.t0,
 	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
 
+    /* Check if the vertex is off screen */
     if (verts[5] < 0 || verts[10] < 0 || verts[0] > window_i(0)->width || verts[1] > window_i(0)->height)
         return;
 
@@ -204,17 +207,16 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, font->texID);
+    glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float), NULL, GL_STREAM_DRAW);
 
-    glBindVertexArray(VAO);
+
 
     const unsigned char *line, *wordstart;
     line = (unsigned char*)text;
 
     curchar = 0;
-
-
 
     while (*line != '\0') {
 
@@ -252,5 +254,5 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
         }
     }
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*curchar);
+   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*curchar);
 }

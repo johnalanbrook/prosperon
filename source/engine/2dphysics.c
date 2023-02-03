@@ -54,8 +54,6 @@ cpShape *phys2d_query_pos(cpVect pos)
   filter.categories = CP_ALL_CATEGORIES;
   cpShape *find = cpSpacePointQueryNearest(space, pos, 0.f, filter, NULL);
 
-  YughInfo("Hit a %p", find);
-
   return find;
 }
 

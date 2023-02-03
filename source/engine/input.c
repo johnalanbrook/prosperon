@@ -31,6 +31,21 @@ void remove_pawn(void *pawn) {
   }
 }
 
+void add_downkey(int key) {
+  for (int i = 0; i < arrlen(downkeys); i++)
+    if (downkeys[i] == key) return;
+
+  arrput(downkeys, key);
+}
+
+void rm_downkey(int key) {
+  for (int i = 0; i < arrlen(downkeys); i++)
+    if (downkeys[i] == key) {
+      arrdelswap(downkeys, i);
+      return;
+    }
+}
+
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 {
     mouse_delta.x = xpos - mouse_pos.x;
@@ -60,10 +75,12 @@ static void mb_cb(GLFWwindow *w, int button, int action, int mods)
   switch (action) {
     case GLFW_PRESS:
       act = "pressed";
+      add_downkey(button);
       break;
 
     case GLFW_RELEASE:
       act = "released";
+      rm_downkey(button);
       break;
 
     case GLFW_REPEAT:
@@ -71,15 +88,7 @@ static void mb_cb(GLFWwindow *w, int button, int action, int mods)
       break;
   }
 
-  switch (button) {
-    case GLFW_MOUSE_BUTTON_LEFT:
-      btn = "lmouse";
-      break;
-
-    case GLFW_MOUSE_BUTTON_RIGHT:
-      btn = "rmouse";
-      break;
-  }
+  btn = keyname_extd(button, button);
 
   if (!act || !btn) {
     YughError("Tried to call a mouse action that doesn't exist.");
@@ -174,6 +183,18 @@ const char *keyname_extd(int key, int scancode) {
                 case GLFW_KEY_SPACE:
                    kkey = "space";
                    break;
+		   
+		case GLFW_MOUSE_BUTTON_RIGHT:
+		  kkey = "rmouse";
+		  break;
+
+		case GLFW_MOUSE_BUTTON_LEFT:
+		  kkey = "lmouse";
+		  break;
+
+		case GLFW_MOUSE_BUTTON_MIDDLE:
+		  kkey = "mmouse";
+		  break;
             }
 
             if (kkey) return kkey;
@@ -198,7 +219,6 @@ void input_poll(double wait)
 
     glfwWaitEventsTimeout(wait);
 
-
     //editor_input(&e);
     for (int i = 0; i < arrlen(downkeys); i++)
         call_input_down(&downkeys[i]);
@@ -212,28 +232,12 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
     switch (action) {
         case GLFW_PRESS:
             snprintf(keystr, 50, "input_%s_pressed", kkey);
-
-            int found = 0;
-
-            for (int i = 0; i < arrlen(downkeys); i++) {
-                if (downkeys[i] == key)
-                    goto SCRIPTCALL;
-            }
-
-            arrput(downkeys, key);
-
+	    add_downkey(key);
             break;
 
         case GLFW_RELEASE:
             snprintf(keystr, 50, "input_%s_released", kkey);
-
-            for (int i = 0; i < arrlen(downkeys); i++) {
-                if (downkeys[i] == key) {
-                    arrdelswap(downkeys, i);
-                    goto SCRIPTCALL;
-                }
-            }
-
+	    rm_downkey(key);
             break;
 
         case GLFW_REPEAT:
@@ -241,7 +245,6 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
             break;
     }
 
-    SCRIPTCALL:
     call_input_signal(keystr);
 }
 
