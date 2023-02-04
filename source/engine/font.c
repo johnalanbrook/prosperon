@@ -132,7 +132,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
     glBindTexture(GL_TEXTURE_2D, newfont->texID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, packsize, packsize, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
 
-
     //glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -179,13 +178,15 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
 	xpos, ypos + h, c.rect.s0, c.rect.t0,
 	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
-
+    
     /* Check if the vertex is off screen */
     if (verts[5] < 0 || verts[10] < 0 || verts[0] > window_i(0)->width || verts[1] > window_i(0)->height)
         return;
 
-    glBufferSubData(GL_ARRAY_BUFFER, curchar*sizeof(verts), sizeof(verts), verts);
-
+//    glBufferSubData(GL_ARRAY_BUFFER, curchar*sizeof(verts), sizeof(verts), verts);
+    
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     curchar++;
 }
 
@@ -210,8 +211,6 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float), NULL, GL_STREAM_DRAW);
-
-
 
     const unsigned char *line, *wordstart;
     line = (unsigned char*)text;
@@ -254,5 +253,5 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
         }
     }
 
-   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*curchar);
+//   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*2);
 }

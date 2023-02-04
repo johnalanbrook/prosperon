@@ -32,8 +32,6 @@ struct gameobject *id2go(int id) {
     return &gameobjects[id];
 }
 
-
-
 int pos2gameobject(cpVect pos)
 {
   cpShape *hit = phys2d_query_pos(pos);

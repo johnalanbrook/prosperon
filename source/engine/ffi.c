@@ -153,11 +153,10 @@ void duk_dump_stack(duk_context *duk)
 duk_ret_t duk_gui_text(duk_context *duk) {
     const char *s = duk_to_string(duk, 0);
     cpVect pos = duk2vec2(duk, 1);
-    float fpos[2] = {pos.x, pos.y};
 
     float size = duk_to_number(duk, 2);
     const float white[3] = {1.f, 1.f, 1.f};
-    renderText(s, fpos, size, white, 1800);
+    renderText(s, &pos, size, white, 500);
     return 0;
 }
 

@@ -187,7 +187,8 @@ int main(int argc, char **args) {
         window_all_handle_events();
 
          framems[framei++] = elapsed;
-         if (framei  == FPSBUF) framei = 0;
+
+         if (framei == FPSBUF) framei = 0;
 
          if (sim_play) {
              timer_update(elapsed);
@@ -202,7 +203,31 @@ int main(int argc, char **args) {
              }
        }
 
+
         renderlag += elapsed;
+
+        if (renderlag >= renderMS) {
+            renderlag -= renderMS;
+            window_renderall();
+        }
+
+        gameobjects_cleanup();
+
+    }
+
+        renderlag += elapsed;
+
+        if (renderlag >= renderMS) {
+            renderlag -= renderMS;
+            window_renderall();
+        }
+
+        gameobjects_cleanup();
+
+    }
+
+        renderlag += elapsed;
+
         if (renderlag >= renderMS) {
             renderlag -= renderMS;
             window_renderall();
@@ -218,11 +243,11 @@ int main(int argc, char **args) {
 int frame_fps()
 {
     double fpsms = 0;
-     for (int i = 0; i < FPSBUF; i++) {
-         fpsms += framems[i];
-     }
+    for (int i = 0; i < FPSBUF; i++) {
+      fpsms += framems[i];
+    }
 
-     return floor((float)FPSBUF / fpsms);
+     return FPSBUF / fpsms;
 }
 
 int sim_playing() { return sim_play; }
