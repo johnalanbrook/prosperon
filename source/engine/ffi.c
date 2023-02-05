@@ -22,6 +22,8 @@
 #include "level.h"
 #include "tinyspline.h"
 #include "mix.h"
+#include "debugdraw.h"
+#include "stb_ds.h"
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \
@@ -275,6 +277,16 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
 return 1;
 }
 
+void ints2duk(int *ints)
+{
+  int idx = duk_push_array(duk);
+  
+  for (int i = 0; i < arrlen(ints); i++) {
+    duk_push_int(duk, ints[i]);
+    duk_put_prop_index(duk, idx, i);
+  }
+}
+
 duk_ret_t duk_cmd(duk_context *duk) {
     int cmd = duk_to_int(duk, 0);
 
@@ -483,6 +495,23 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 49:
 	  duk_push_int(duk, mainwin->height);
 	  return 1;
+	  
+	case 50:
+	  duk_push_boolean(duk, action_down(duk_to_int(duk, 1)));
+	  return 1;
+	  
+	case 51:
+	  draw_cppoint(duk2vec2(duk, 1), duk_to_number(duk, 2));
+	  return 0;
+	  
+	case 52:
+	  ints2duk(phys2d_query_box(duk2vec2(duk, 1), duk2vec2(duk, 2)));
+	  return 1;
+	  
+	case 53:
+	  draw_box(duk2vec2(duk, 1), duk2vec2(duk, 2));
+	  return 0;
+	  
     }
 
     return 0;

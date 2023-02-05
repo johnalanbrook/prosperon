@@ -26,10 +26,23 @@ struct gameobject *get_gameobject_from_id(int id)
     return &gameobjects[id];
 }
 
-struct gameobject *id2go(int id) {
+struct gameobject *id2go(int id)
+{
     if (id < 0) return NULL;
 
     return &gameobjects[id];
+}
+
+int body2id(cpBody *body)
+{
+  struct gameobject *go = cpBodyGetUserData(body);
+  return id_from_gameobject(go);
+}
+
+int shape2gameobject(cpShape *shape)
+{
+  struct phys2d_shape *s = cpShapeGetUserData(shape);
+  return s->go;
 }
 
 int pos2gameobject(cpVect pos)
@@ -37,8 +50,7 @@ int pos2gameobject(cpVect pos)
   cpShape *hit = phys2d_query_pos(pos);
 
   if (hit) {
-    struct phys2d_shape *shape = cpShapeGetUserData(hit);
-    return shape->go;
+    return shape2gameobject(hit);
   }
 
   for (int i = 0; i < arrlen(gameobjects); i++) {

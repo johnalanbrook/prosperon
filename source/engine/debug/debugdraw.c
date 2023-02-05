@@ -119,6 +119,12 @@ void draw_rect(int x, int y, int w, int h, float *color)
     draw_poly(verts, 4, color);
 }
 
+void draw_box(struct cpVect c, struct cpVect wh)
+{
+  float white[3] = {1, 1, 1};
+  draw_rect(c.x, c.y, wh.x, wh.y, white);
+}
+
 void draw_grid(int width, int span)
 {
     shader_use(gridShader);
@@ -133,6 +139,12 @@ void draw_grid(int width, int span)
 void draw_point(int x, int y, float r, float *color)
 {
     draw_circle(x, y, r, r, color, 0);
+}
+
+void draw_cppoint(struct cpVect point, float r)
+{
+    float white[3] = {1.f, 1.f, 1.f};
+    draw_point(point.x, point.y, r, white);
 }
 
 void draw_points(struct cpVect *points, int n, float size, float *color)

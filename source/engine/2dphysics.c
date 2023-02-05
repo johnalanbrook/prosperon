@@ -57,6 +57,49 @@ cpShape *phys2d_query_pos(cpVect pos)
   return find;
 }
 
+int *qhits;
+
+void querylist(cpShape *shape, cpContactPointSet *points, void *data)
+{
+  arrput(qhits, shape2gameobject(shape));
+}
+
+void querylistbodies(cpBody *body, void *data)
+{
+  cpBB *bbox = data;
+  if (cpBBContainsVect(*bbox, cpBodyGetPosition(body))) {
+    int go = body2id(body);
+    if (go < 0) return;
+    
+    int in = 0;
+    for (int i = 0; i < arrlen(qhits); i++) {
+      if (qhits[i] == go) {
+        in = 1;
+	break;
+      }
+    }
+    
+    if (!in) arrput(qhits, go);
+  }
+}
+
+int *phys2d_query_box(cpVect pos, cpVect wh)
+{
+  cpBB bbox = cpBBNewForExtents(pos, wh.x, wh.y);
+  cpShape *box = cpBoxShapeNew2(NULL, bbox, 0.f);
+  
+  if (qhits) arrfree(qhits);
+  cpSpaceShapeQuery(space, box, querylist, NULL);
+  
+  YughInfo("FInished query.");
+  
+  cpSpaceEachBody(space, querylistbodies, &bbox);
+  
+  cpShapeFree(box);
+  
+  return qhits;
+}
+
 int cpshape_enabled(cpShape *c)
 {
     cpShapeFilter filter = cpShapeGetFilter(c);
