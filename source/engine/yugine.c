@@ -203,29 +203,6 @@ int main(int argc, char **args) {
              }
        }
 
-
-        renderlag += elapsed;
-
-        if (renderlag >= renderMS) {
-            renderlag -= renderMS;
-            window_renderall();
-        }
-
-        gameobjects_cleanup();
-
-    }
-
-        renderlag += elapsed;
-
-        if (renderlag >= renderMS) {
-            renderlag -= renderMS;
-            window_renderall();
-        }
-
-        gameobjects_cleanup();
-
-    }
-
         renderlag += elapsed;
 
         if (renderlag >= renderMS) {

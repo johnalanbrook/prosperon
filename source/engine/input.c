@@ -100,6 +100,11 @@ static void mb_cb(GLFWwindow *w, int button, int action, int mods)
   call_input_signal(keystr);
 }
 
+void set_mouse_mode(int mousemode)
+{
+  glfwSetInputMode(mainwin->window, GLFW_CURSOR, mousemode);
+}
+
 void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);

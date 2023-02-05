@@ -460,6 +460,10 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 45:
          vect2duk(mouse_pos);
 	 return 1;
+	 
+       case 46:
+         set_mouse_mode(duk_to_int(duk, 1));
+	 return 0;
     }
 
     return 0;
