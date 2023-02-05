@@ -172,6 +172,7 @@ duk_ret_t duk_nuke(duk_context *duk)
     int cmd = duk_to_int(duk, 0);
     float editnum;
     int editint;
+    char textbox[130];
 
     switch(cmd) {
         case 0:
@@ -204,6 +205,12 @@ duk_ret_t duk_nuke(duk_context *duk)
 
 	case 6:
 	  duk_push_boolean(duk, nuke_btn(duk_to_string(duk, 1)));
+	  return 1;
+
+	case 7:
+	  strncpy(textbox, duk_to_string(duk, 1), 130);
+	  nuke_edit_str(textbox);
+	  duk_push_string(duk, textbox);
 	  return 1;
     }
 
@@ -464,6 +471,18 @@ duk_ret_t duk_cmd(duk_context *duk) {
        case 46:
          set_mouse_mode(duk_to_int(duk, 1));
 	 return 0;
+
+	case 47:
+	  draw_grid(duk_to_int(duk, 1), duk_to_int(duk, 2));
+	  return 0;
+
+	case 48:
+	  duk_push_int(duk, mainwin->width);
+	  return 1;
+
+	case 49:
+	  duk_push_int(duk, mainwin->height);
+	  return 1;
     }
 
     return 0;
