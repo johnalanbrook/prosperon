@@ -141,6 +141,14 @@ const char *keyname_extd(int key, int scancode) {
                     kkey = "escape";
                     break;
 
+		case GLFW_KEY_DELETE:
+		  kkey = "delete";
+		  break;
+
+		case GLFW_KEY_INSERT:
+		  kkey = "insert";
+		  break;
+
                 case GLFW_KEY_TAB:
                     kkey = "tab";
                     break;

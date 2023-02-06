@@ -85,14 +85,20 @@ void querylistbodies(cpBody *body, void *data)
 
 int *phys2d_query_box(cpVect pos, cpVect wh)
 {
-  cpBB bbox = cpBBNewForExtents(pos, wh.x, wh.y);
-  cpShape *box = cpBoxShapeNew2(NULL, bbox, 0.f);
+  cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
+  cpTransform T = {0};
+  T.a = 1;
+  T.d = 1;
+  T.tx = pos.x;
+  T.ty = pos.y;
+  cpShapeUpdate(box, T);
   
+  cpBB bbox = cpShapeGetBB(box);
+
   if (qhits) arrfree(qhits);
+  
   cpSpaceShapeQuery(space, box, querylist, NULL);
-  
-  YughInfo("FInished query.");
-  
+
   cpSpaceEachBody(space, querylistbodies, &bbox);
   
   cpShapeFree(box);

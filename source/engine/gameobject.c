@@ -35,8 +35,7 @@ struct gameobject *id2go(int id)
 
 int body2id(cpBody *body)
 {
-  struct gameobject *go = cpBodyGetUserData(body);
-  return id_from_gameobject(go);
+  return cpBodyGetUserData(body);
 }
 
 int shape2gameobject(cpShape *shape)
@@ -74,6 +73,13 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 {
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
+
+    cpTransform T = {0};
+    T.a = go->flipx;
+    T.d = go->flipy;
+    cpShapeUpdate(shape, T);
+
+    if (go->flipx == -1) YughInfo("Flipped one");
 //    cpShapeSetFilter(shape, go->filter);
     
 //    YughLog("Set filter; %d", go->filter.mask);
@@ -123,6 +129,7 @@ int MakeGameobject()
         first = id2go(first)->next;
         *id2go(retid) = go;
     }
+    
     go.filter.group = retid;
     go.filter.mask = CP_ALL_CATEGORIES;
     go.filter.categories = CP_ALL_CATEGORIES;

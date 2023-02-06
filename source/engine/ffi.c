@@ -36,6 +36,11 @@
         (byte & 0x02 ? '1' : '0'), \
         (byte & 0x01 ? '1' : '0')
 
+struct gameobject *duk2go(duk_context *duk, int p)
+{
+  return id2go(duk_to_int(duk, p));
+}
+
 struct color duk2color(duk_context *duk, int p)
 {
     struct color color;
@@ -511,7 +516,28 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 53:
 	  draw_box(duk2vec2(duk, 1), duk2vec2(duk, 2));
 	  return 0;
-	  
+
+	case 54:
+	  gameobject_apply(id2go(duk_to_int(duk, 1)));
+	  return 0;
+
+	case 55:
+	  duk2go(duk, 1)->flipx = duk_to_boolean(duk, 2) ? -1 : 1;
+	  gameobject_apply(duk2go(duk, 1));
+	  return 0;
+
+	case 56:
+	  duk2go(duk, 1)->flipy = duk_to_boolean(duk, 2) ? -1 : 1;
+	  gameobject_apply(duk2go(duk, 1));
+	  return 0;
+
+	case 57:
+	  duk_push_boolean(duk, duk2go(duk, 1)->flipx == -1 ? 1 : 0);
+	  return 1;
+
+	case 58:
+	  duk_push_boolean(duk, duk2go(duk, 1)->flipy == -1 ? 1 : 0);
+	  return 1;
     }
 
     return 0;
@@ -616,8 +642,8 @@ duk_ret_t duk_make_gameobject(duk_context *duk) {
     go->mass = duk_to_number(duk, 2);
     go->f = duk_to_number(duk, 3);
     go->e = duk_to_number(duk, 4);
-    go->flipx = duk_to_boolean(duk, 5) ? -1 : 1;
-    go->flipy = duk_to_boolean(duk, 6) ? -1 : 1;
+    go->flipx = 1.f;
+    go->flipy = 1.f;
 
     gameobject_apply(go);
 
@@ -663,7 +689,7 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 4:
       cpBodyApplyImpulseAtWorldPoint(go->body, duk2vec2(duk, 2), cpBodyGetPosition(go->body));
-      break;
+      return 0;
 
     case 5:
       go->flipx = duk_to_boolean(duk, 2);
