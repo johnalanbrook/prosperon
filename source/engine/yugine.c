@@ -231,27 +231,22 @@ int sim_playing() { return sim_play; }
 int sim_paused() { return (!sim_play && gameobjects_saved()); }
 
 void sim_start() {
-    /* Save starting state of everything */
-    if (!gameobjects_saved())
-        gameobject_saveall();
-
-    sim_play = 1;
+  sim_play = 1;
 }
 
 void sim_pause() {
-    sim_play = 0;
+  sim_play = 0;
 }
 
 void sim_stop() {
     /* Revert starting state of everything from sim_start */
-    sim_play =  0;
-    gameobject_loadall();
+  sim_play =  0;
 }
 
 void sim_step() {
-    if (sim_paused()) {
-        sim_play = 2;
-    }
+  if (sim_paused()) {
+      sim_play = 2;
+  }
 }
 
 void set_timescale(float val) {
