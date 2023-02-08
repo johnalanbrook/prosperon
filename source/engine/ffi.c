@@ -96,6 +96,20 @@ cpBitmask duk2bitmask(duk_context *duk, int p)
     return mask;
 }
 
+cpVect *duk2cpvec2arr(duk_context *duk, int p)
+{
+  int n = duk_get_length(duk, p);
+  cpVect *points = NULL;
+
+  for (int i = 0; i < n; i++) {
+      duk_get_prop_index(duk, p, i);
+
+      arrput(points, duk2vec2(duk, -1));
+  }
+
+  return points;
+}
+
 void bitmask2duk(duk_context *duk, cpBitmask mask)
 {
   int arr = duk_push_array(duk);
@@ -240,11 +254,9 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
 
     int n = duk_get_length(duk, 4);
     int d = duk_to_int(duk, 2);
-    cpVect points[n*d];
+    cpVect points[n*d]; 
 
     ts_bspline_new(n, d, duk_to_int(duk, 1), duk_to_int(duk, 3), &spline, NULL);
-
-
 
       for (int i = 0; i < n; i++) {
       duk_get_prop_index(duk, 4, i);
@@ -268,8 +280,6 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
 
     for (int i = 0; i < nsamples; i++) {
         int pidx = duk_push_array(duk);
-
-
             duk_push_number(duk, samples[i].x);
             duk_put_prop_index(duk, pidx, 0);
             duk_push_number(duk, samples[i].y);
@@ -290,6 +300,48 @@ void ints2duk(int *ints)
     duk_push_int(duk, ints[i]);
     duk_put_prop_index(duk, idx, i);
   }
+}
+
+int point2segindex(cpVect p, cpVect *segs, double slop)
+{
+  float shortest = slop;
+  int best = -1;
+
+  for (int i = 0; i < arrlen(segs)-1; i++)
+  {
+    float a = (segs[i+1].y - segs[i].y) / (segs[i+1].x - segs[i].x);
+    float c = segs[i].y - (a * segs[i].x);
+    float b = -1;
+
+    float dist = abs(a*p.x + b*p.y + c) / sqrt(pow(a,2) + 1);
+
+    if (dist < shortest) {
+      shortest = dist;
+      best = i;
+    }
+  }
+
+  if (best == 0) {
+    cpVect n;
+    n.x = segs[1].x-segs[0].x;
+    n.y = segs[1].y-segs[0].y;
+    n = cpvnormalize(n);
+    if (cpvdot(n, cpvsub(p, segs[0])) < 0 && cpvdist(p, segs[0]) >= slop)
+      best = -1;
+  }
+
+  if (best == arrlen(segs)-1) {
+    cpVect n;
+    n.x = segs[best-1].x-segs[best].x;
+    n.y = segs[best-1].y-segs[best-1].y;
+    n = cpvnormalize(n);
+
+    if (cpvdot(n, cpvsub(p, segs[best])) < 0 && cpvdist(p, segs[best]) >= slop)
+      best = -1;
+  }
+  
+
+  return best;
 }
 
 duk_ret_t duk_cmd(duk_context *duk) {
@@ -537,6 +589,10 @@ duk_ret_t duk_cmd(duk_context *duk) {
 
 	case 58:
 	  duk_push_boolean(duk, duk2go(duk, 1)->flipy == -1 ? 1 : 0);
+	  return 1;
+
+	case 59:
+	  duk_push_int(duk, point2segindex(duk2vec2(duk, 1), duk2cpvec2arr(duk, 2), duk_to_number(duk, 3)));
 	  return 1;
     }
 
@@ -917,6 +973,16 @@ duk_ret_t duk_make_edge2d(duk_context *duk)
 
 duk_ret_t duk_cmd_edge2d(duk_context *duk)
 {
+  int cmd = duk_to_int(duk, 0);
+  struct phys2d_edge *edge = duk_to_pointer(duk, 1);
+
+  switch(cmd) {
+    case 0:
+      phys2d_edge_clearverts(edge);
+      phys2d_edge_addverts(edge, duk2cpvec2arr(duk, 2));
+      break;
+  }
+  
   return 0;
 }
 

@@ -81,6 +81,7 @@ static void mb_cb(GLFWwindow *w, int button, int action, int mods)
     case GLFW_RELEASE:
       act = "released";
       rm_downkey(button);
+      call_input_signal("input_any_released");
       break;
 
     case GLFW_REPEAT:
@@ -124,9 +125,7 @@ void call_input_signal(char *signal) {
 
 const char *keyname_extd(int key, int scancode) {
     char keybuf[50];
-    const char *kkey = glfwGetKeyName(key, scancode);
-
-    if (kkey) return kkey;
+    const char *kkey = NULL;
 
     if (key > 289 && key < 302) {
             sprintf(keybuf, "f%d", key-289);
@@ -208,11 +207,23 @@ const char *keyname_extd(int key, int scancode) {
 		case GLFW_MOUSE_BUTTON_MIDDLE:
 		  kkey = "mmouse";
 		  break;
+
+		case GLFW_KEY_KP_ADD:
+		  kkey = "plus";
+		  break;
+
+		case GLFW_KEY_KP_SUBTRACT:
+		  kkey = "minus";
+		  break;
             }
 
             if (kkey) return kkey;
 
         }
+
+    kkey = glfwGetKeyName(key, scancode);
+
+    if (kkey) return kkey;
 
     return "NULL";
 }
@@ -251,6 +262,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
         case GLFW_RELEASE:
             snprintf(keystr, 50, "input_%s_released", kkey);
 	    rm_downkey(key);
+	    call_input_signal("input_any_released");
             break;
 
         case GLFW_REPEAT:

@@ -17,10 +17,10 @@ static struct {
 } *texhash = NULL;
 
 struct Texture *tex_default;
-
+/* If an empty string or null is put for path, loads default texture */
 struct Texture *texture_pullfromfile(const char *path)
 {
-    if (!path) { YughError("Tried to pull a texture with a NULL path."); return NULL; }
+    if (!path || path[0] == '\0') { return NULL; }
 
     int index = shgeti(texhash, path);
     if (index != -1)
@@ -47,7 +47,7 @@ struct Texture *texture_pullfromfile(const char *path)
 
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
-    while (data == NULL) {
+    if (data == NULL) {
         YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
         return NULL;
     }
@@ -120,10 +120,7 @@ struct Texture *texture_loadfromfile(const char *path)
 {
     struct Texture *new = texture_pullfromfile(path);
 
-    if (new == NULL) {
-        YughError("Texture %s not loaded! Loading the default instead ...", path);
-        new = texture_pullfromfile("./ph.png");
-    }
+    if (new == NULL) { new = texture_pullfromfile("./ph.png"); }
 
     if (new->id == 0) {
         glGenTextures(1, &new->id);
@@ -188,7 +185,9 @@ struct TexAnim *anim2d_from_tex(const char *path, int frames, int fps)
 
 void texanim_fromframes(struct TexAnim *anim, int frames)
 {
-    if (anim->st_frames) free(anim->st_frames);
+    if (anim->st_frames) {
+      free(anim->st_frames);
+    }
 
     arrsetlen(anim->st_frames, frames);
 

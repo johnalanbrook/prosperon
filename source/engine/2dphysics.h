@@ -90,8 +90,11 @@ void phys2d_applyedge(struct phys2d_edge *edge);
 void phys2d_dbgdrawedge(struct phys2d_edge *edge);
 void phys2d_edgeaddvert(struct phys2d_edge *edge);
 void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
+
 void edge_gui(struct phys2d_edge *edge);
 void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val);
+void phys2d_edge_clearverts(struct phys2d_edge *edge);
+void phys2d_edge_addverts(struct phys2d_edge *edge, cpVect *verts);
 
 void phys2d_init();
 void phys2d_update(float deltaT);

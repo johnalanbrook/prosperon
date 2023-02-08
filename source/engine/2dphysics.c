@@ -61,7 +61,16 @@ int *qhits;
 
 void querylist(cpShape *shape, cpContactPointSet *points, void *data)
 {
-  arrput(qhits, shape2gameobject(shape));
+  int go = shape2gameobject(shape);
+  int in = 0;
+  for (int i = 0; i < arrlen(qhits); i++) {
+    if (qhits[i] == go) {
+      in = 1;
+      break;
+    }
+  }
+
+  if (!in) arrput(qhits, go);
 }
 
 void querylistbodies(cpBody *body, void *data)
@@ -412,7 +421,21 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index)
     assert(arrlen(edge->points) > index && index >= 0);
 
     arrdel(edge->points, index);
-    cpSegmentShapeSetEndpoints(edge->shapes[index-1], edge->points[index-1], edge->points[index]);
+
+    if (arrlen(edge->points) == 0) return;
+
+
+    if (index == 0) {
+      cpSpaceRemoveShape(space, edge->shapes[index]);
+      arrdel(edge->shapes, index);
+      phys2d_applyedge(edge);
+      return;
+    }
+
+    if (index != arrlen(edge->points)) {
+      cpSegmentShapeSetEndpoints(edge->shapes[index-1], edge->points[index-1], edge->points[index]);
+    }
+
     cpSpaceRemoveShape(space, edge->shapes[index-1]);
     arrdel(edge->shapes, index-1);
 
@@ -425,6 +448,21 @@ void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val)
     edge->points[index] = val;
 
     phys2d_applyedge(edge);
+}
+
+void phys2d_edge_clearverts(struct phys2d_edge *edge)
+{
+  for (int i = arrlen(edge->points)-1; i>=0; i--) {
+    phys2d_edge_rmvert(edge, i);
+  }
+}
+
+void phys2d_edge_addverts(struct phys2d_edge *edge, cpVect *verts)
+{
+  for (int i = 0; i < arrlen(verts); i++) {
+    phys2d_edgeaddvert(edge);
+    phys2d_edge_setvert(edge, i, verts[i]);
+  }
 }
 
 void phys2d_applyedge(struct phys2d_edge *edge)
