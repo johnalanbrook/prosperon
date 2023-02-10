@@ -55,7 +55,7 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
     mouse_pos.y = ypos;
 
     for (int i = 0; i < arrlen(pawns); i++) {
-        if (script_eval_setup("input_mouse_pos", pawns[i])) continue;
+        if (!pawns[i] || script_eval_setup("input_mouse_pos", pawns[i])) continue;
 	vect2duk(duk, mouse_pos);
         script_eval_exec(1);
     }
@@ -119,7 +119,8 @@ void call_input_signal(char *signal) {
     }
 
     for (int i = 0; i < arrlen(pawns); i++) {
-        script_eval_w_env(signal, pawns[i]);
+      if (!pawns[i]) continue;
+      script_eval_w_env(signal, pawns[i]);
     }
 }
 
@@ -215,6 +216,17 @@ const char *keyname_extd(int key, int scancode) {
 		case GLFW_KEY_KP_SUBTRACT:
 		  kkey = "minus";
 		  break;
+		case GLFW_KEY_GRAVE_ACCENT:
+		  kkey = "backtick";
+		  break;
+
+		case GLFW_KEY_LEFT_BRACKET:
+		  kkey = "lbracket";
+		  break;
+
+		case GLFW_KEY_RIGHT_BRACKET:
+		  kkey = "rbracket";
+		  break;
             }
 
             if (kkey) return kkey;
@@ -257,6 +269,7 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
         case GLFW_PRESS:
             snprintf(keystr, 50, "input_%s_pressed", kkey);
 	    add_downkey(key);
+	    call_input_signal("input_any_pressed");
             break;
 
         case GLFW_RELEASE:

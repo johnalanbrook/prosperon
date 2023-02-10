@@ -27,6 +27,7 @@ int make_sprite(int go)
         .tex = texture_loadfromfile("ph.png"),
         .go = go,
         .next = -1,
+	.layer = 0,
         .enabled = 1  };
 
     int ret;
@@ -81,13 +82,20 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
     }
 }
 
-
-
 void sprite_draw_all()
 {
+    static struct sprite **layers[5];
+    
+    for (int i = 0; i < 5; i++)
+      arrfree(layers[i]);
+      
     for (int i = 0; i < arrlen(sprites); i++) {
-        if (sprites[i].go >= 0 && sprites[i].enabled) sprite_draw(&sprites[i]);
+        if (sprites[i].go >= 0 && sprites[i].enabled) arrpush(layers[sprites[i].layer], &sprites[i]);
     }
+
+    for (int i = 4; i >= 0; i--)
+      for (int j = 0; j < arrlen(layers[i]); j++)
+        sprite_draw(layers[i][j]);
 }
 
 void sprite_loadtex(struct sprite *sprite, const char *path)

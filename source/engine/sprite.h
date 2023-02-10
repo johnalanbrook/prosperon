@@ -20,6 +20,7 @@ struct sprite {
     struct glrect *frame;
     int next;
     int enabled;
+    int layer;
 };
 
 int make_sprite(int go);

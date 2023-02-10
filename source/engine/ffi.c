@@ -256,7 +256,12 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
     int d = duk_to_int(duk, 2);
     cpVect points[n*d]; 
 
-    ts_bspline_new(n, d, duk_to_int(duk, 1), duk_to_int(duk, 3), &spline, NULL);
+    tsStatus status;
+    ts_bspline_new(n, d, duk_to_int(duk, 1), duk_to_int(duk, 3), &spline, &status);
+
+    if (status.code) {
+      YughCritical("Spline creation error %d: %s", status.code, status.message);
+    }
 
       for (int i = 0; i < n; i++) {
       duk_get_prop_index(duk, 4, i);
@@ -626,6 +631,11 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 59:
 	  duk_push_int(duk, point2segindex(duk2vec2(duk, 1), duk2cpvec2arr(duk, 2), duk_to_number(duk, 3)));
 	  return 1;
+	  
+	case 60:
+	  if (!id2sprite(duk_to_int(duk, 1))) return 0;
+          id2sprite(duk_to_int(duk, 1))->layer = duk_to_int(duk, 2);
+	  break;
     }
 
     return 0;
@@ -852,7 +862,7 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
   sp->pos[0] = pos.x;
   sp->pos[1] = pos.y;
 
-   duk_push_int(duk, sprite);
+  duk_push_int(duk, sprite);
   return 1;
 }
 
