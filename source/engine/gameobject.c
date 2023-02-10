@@ -53,6 +53,7 @@ int pos2gameobject(cpVect pos)
   }
 
   for (int i = 0; i < arrlen(gameobjects); i++) {
+    if (!gameobjects[i].body) continue;
     cpVect gpos = cpBodyGetPosition(gameobjects[i].body);
     float dist = cpvlength(cpvsub(gpos, pos));
 

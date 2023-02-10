@@ -302,9 +302,23 @@ void ints2duk(int *ints)
   }
 }
 
+int vec_between(cpVect p, cpVect a, cpVect b)
+{
+  cpVect n;
+  n.x = b.x - a.x;
+  n.y = b.y - a.y;
+  n = cpvnormalize(n);
+
+  return (cpvdot(n, cpvsub(p, a)) > 0 && cpvdot(cpvneg(n), cpvsub(p, b)) > 0);
+}
+
+/* Determines between which two points in 'segs' point 'p' falls.
+   0 indicates 'p' comes before the first point.
+   arrlen(segs) indicates it comes after the last point.
+*/
 int point2segindex(cpVect p, cpVect *segs, double slop)
 {
-  float shortest = slop;
+  float shortest = slop < 0 ? INFINITY : slop;
   int best = -1;
 
   for (int i = 0; i < arrlen(segs)-1; i++)
@@ -315,19 +329,34 @@ int point2segindex(cpVect p, cpVect *segs, double slop)
 
     float dist = abs(a*p.x + b*p.y + c) / sqrt(pow(a,2) + 1);
 
-    if (dist < shortest) {
+    if (dist > shortest) continue;
+
+    int between = vec_between(p, segs[i], segs[i+1]);
+
+    if (between) {
       shortest = dist;
-      best = i;
+      best = i+1;
+    } else {
+      if (i == 0 && cpvdist(p, segs[0]) < slop) {
+        shortest = dist;
+	best = i;
+      } else if (i == arrlen(segs)-2 && cpvdist(p, arrlast(segs)) < slop) {
+        shortest = dist;
+	best = arrlen(segs);
+      }
     }
   }
 
-  if (best == 0) {
+  if (best == 1) {
     cpVect n;
     n.x = segs[1].x-segs[0].x;
     n.y = segs[1].y-segs[0].y;
     n = cpvnormalize(n);
-    if (cpvdot(n, cpvsub(p, segs[0])) < 0 && cpvdist(p, segs[0]) >= slop)
-      best = -1;
+    if (cpvdot(n, cpvsub(p, segs[0])) < 0)
+      if (cpvdist(p, segs[0]) >= slop)
+        best = -1;
+      else
+        best = 0;
   }
 
   if (best == arrlen(segs)-1) {
@@ -336,8 +365,11 @@ int point2segindex(cpVect p, cpVect *segs, double slop)
     n.y = segs[best-1].y-segs[best-1].y;
     n = cpvnormalize(n);
 
-    if (cpvdot(n, cpvsub(p, segs[best])) < 0 && cpvdist(p, segs[best]) >= slop)
-      best = -1;
+    if (cpvdot(n, cpvsub(p, segs[best])) < 0)
+      if (cpvdist(p, segs[best]) >= slop)
+        best = -1;
+      else
+        best = arrlen(segs);
   }
   
 
