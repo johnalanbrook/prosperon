@@ -115,11 +115,24 @@ void set_mouse_mode(int mousemode)
   glfwSetInputMode(mainwin->window, GLFW_CURSOR, mousemode);
 }
 
+void char_cb(GLFWwindow *w, unsigned int codepoint)
+{
+  for (int i = 0; i < arrlen(pawns); i++) {
+    if (!pawns[i] || script_eval_setup("input_text", pawns[i])) continue;
+    char out[2];
+    out[0] = (char)codepoint;
+    out[1] = 0;
+    duk_push_string(duk, out);
+    script_eval_exec(1);
+  }
+}
+
 void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);
     glfwSetScrollCallback(mainwin->window, scroll_cb);
     glfwSetMouseButtonCallback(mainwin->window, mb_cb);
+    glfwSetCharCallback(mainwin->window, char_cb);
 }
 
 void call_input_signal(char *signal) {
@@ -132,6 +145,7 @@ void call_input_signal(char *signal) {
       script_eval_w_env(signal, pawns[i]);
     }
 }
+
 
 const char *keyname_extd(int key, int scancode) {
     char keybuf[50];
@@ -235,6 +249,10 @@ const char *keyname_extd(int key, int scancode) {
 
 		case GLFW_KEY_RIGHT_BRACKET:
 		  kkey = "rbracket";
+		  break;
+
+		case GLFW_KEY_BACKSPACE:
+		  kkey = "backspace";
 		  break;
             }
 
