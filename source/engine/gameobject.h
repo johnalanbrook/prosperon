@@ -50,6 +50,7 @@ struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);
 int id_from_gameobject(struct gameobject *go);
 int body2id(cpBody *body);
+cpBody *id2body(int id);
 
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
 

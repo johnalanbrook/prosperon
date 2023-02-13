@@ -636,6 +636,23 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  if (!id2sprite(duk_to_int(duk, 1))) return 0;
           id2sprite(duk_to_int(duk, 1))->layer = duk_to_int(duk, 2);
 	  break;
+	
+	case 61:
+	  set_cam_body(id2body(duk_to_int(duk, 1)));
+	  break;
+	  
+	case 62:
+	  add_zoom(duk_to_number(duk, 1));
+	  break;
+	  
+	case 63:
+	  duk_push_number(duk, deltaT);
+	  return 1;
+	  
+	case 64:
+	  vect2duk(tex_get_dimensions(texture_pullfromfile(duk_to_string(duk, 1))));
+	  return 1;
+	  
     }
 
     return 0;
@@ -1022,6 +1039,10 @@ duk_ret_t duk_cmd_edge2d(duk_context *duk)
     case 0:
       phys2d_edge_clearverts(edge);
       phys2d_edge_addverts(edge, duk2cpvec2arr(duk, 2));
+      break;
+      
+    case 1:
+      edge->thickness = duk_to_number(duk, 2);
       break;
   }
   

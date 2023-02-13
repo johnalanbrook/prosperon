@@ -38,6 +38,16 @@ int body2id(cpBody *body)
   return cpBodyGetUserData(body);
 }
 
+cpBody *id2body(int id)
+{
+  struct gameobject *go;
+  
+  if (go = id2go(id))
+    return go->body;
+  
+  return NULL;
+}
+
 int shape2gameobject(cpShape *shape)
 {
   struct phys2d_shape *s = cpShapeGetUserData(shape);

@@ -2,6 +2,7 @@
 #define TEXTURE_H
 
 #include "timer.h"
+#include <chipmunk/chipmunk.h>
 
 #define TEX_SPEC 0
 #define TEX_NORM 1
@@ -67,6 +68,7 @@ struct Texture {
 
 struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
 struct Texture *texture_loadfromfile(const char *path);    // Create texture & load to gpu
+struct Texture *str2tex(const char *path);
 void tex_gpu_reload(struct Texture *tex);    // gpu_free then gpu_load
 void tex_gpu_free(struct Texture *tex);     // Remove texture data from gpu
 void tex_bind(struct Texture *tex);    // Bind to gl context
@@ -88,6 +90,7 @@ void anim_incr(struct anim2d  *anim);
 void anim_decr(struct anim2d *anim);
 
 struct glrect tex_get_rect(struct Texture *tex);
+cpVect tex_get_dimensions(struct Texture *tex);
 struct glrect anim_get_rect(struct anim2d *anim);
 
 int anim_frames(struct TexAnim *a);

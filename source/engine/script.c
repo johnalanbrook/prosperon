@@ -197,6 +197,13 @@ void callee_dbl(struct callee c, double d)
   exec_callee(1);
 }
 
+void callee_int(struct callee c, int i)
+{
+  setup_callee(c);
+  duk_push_int(duk, i);
+  exec_callee(1);
+}
+
 void callee_vec2(struct callee c, cpVect vec)
 {
   setup_callee(c);

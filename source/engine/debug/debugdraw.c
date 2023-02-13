@@ -6,6 +6,7 @@
 #include "log.h"
 #include <assert.h>
 #include "debug.h"
+#include "window.h"
 
 #include "stb_ds.h"
 
@@ -69,6 +70,7 @@ void draw_edge(cpVect  *points, int n, float *color)
 
     shader_use(rectShader);
     shader_setvec3(rectShader, "linecolor", color);
+    glLineWidth(20);
     glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
     glBindVertexArray(rectVAO);
@@ -77,6 +79,7 @@ void draw_edge(cpVect  *points, int n, float *color)
 
     shader_setfloat(rectShader, "alpha", 1.f);
     glDrawArrays(GL_LINE_STRIP, 0, n);
+    glLineWidth(1);
 }
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
@@ -130,10 +133,14 @@ void draw_grid(int width, int span)
     shader_use(gridShader);
     shader_setint(gridShader, "thickness", width);
     shader_setint(gridShader, "span", span);
+    
+    cpVect offset = cam_pos();
+    offset.x -= mainwin->width/2;
+    offset.y -= mainwin->height/2;
+    shader_setvec2(gridShader, "offset", &offset);
+    
     glBindVertexArray(gridVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-
 }
 
 void draw_point(int x, int y, float r, float *color)

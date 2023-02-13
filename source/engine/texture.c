@@ -219,6 +219,15 @@ struct glrect tex_get_rect(struct Texture *tex)
     return ST_UNIT;
 }
 
+cpVect tex_get_dimensions(struct Texture *tex)
+{
+  if (!tex) return cpvzero;
+  cpVect d;
+  d.x = tex->width;
+  d.y = tex->height;
+  return d;
+}
+
 void tex_bind(struct Texture *tex)
 {
     glActiveTexture(GL_TEXTURE0);

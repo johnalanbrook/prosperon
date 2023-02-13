@@ -62,6 +62,15 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 
 }
 
+static void pawn_call_keydown(int key)
+{
+  for (int i = 0; i < arrlen(pawns); i++) {
+    if (!pawns[i] || script_eval_setup("input_num_pressed", pawns[i])) continue;
+    duk_push_int(duk, key);
+    script_eval_exec(1);
+  }
+}
+
 static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset)
 {
     mouseWheelY = yoffset;
@@ -260,6 +269,10 @@ void input_poll(double wait)
         call_input_down(&downkeys[i]);
 }
 
+int key_is_num(int key) {
+  return key <= 57 && key >= 48;
+}
+
 void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
 {
     char keystr[50] = {'\0'};
@@ -270,6 +283,11 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
             snprintf(keystr, 50, "input_%s_pressed", kkey);
 	    add_downkey(key);
 	    call_input_signal("input_any_pressed");
+	    
+	    if (key_is_num(key)) {
+	      pawn_call_keydown(key-48);
+	    }
+	    
             break;
 
         case GLFW_RELEASE:

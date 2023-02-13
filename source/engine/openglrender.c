@@ -124,10 +124,11 @@ void openglRender(struct window *window)
     //////////// 2D projection
     mfloat_t projection[16] = { 0.f };
     cpVect pos = cam_pos();
-     mat4_ortho(projection, pos.x,
-	   window->width*zoom + pos.x,
-	   pos.y,
-	   window->height*zoom + pos.y, -1.f, 1.f);
+
+     mat4_ortho(projection, pos.x - zoom*window->width/2,
+	   pos.x + zoom*window->width/2,
+	   pos.y - zoom*window->height/2,
+	   pos.y + zoom*window->height/2, -1.f, 1.f);
 
     mfloat_t ui_projection[16] = { 0.f };
     mat4_ortho(ui_projection, 0,
