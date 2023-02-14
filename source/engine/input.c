@@ -25,7 +25,7 @@ void set_pawn(void *pawn) {
 void remove_pawn(void *pawn) {
   for (int i = 0; i < arrlen(pawns); i++) {
     if (pawns[i] == pawn) {
-      pawns[i] = NULL;
+      arrdel(pawns, i);
       return;
     }
   }

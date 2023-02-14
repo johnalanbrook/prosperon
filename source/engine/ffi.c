@@ -24,6 +24,7 @@
 #include "mix.h"
 #include "debugdraw.h"
 #include "stb_ds.h"
+#include <ftw.h>
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \
@@ -381,6 +382,42 @@ int point2segindex(cpVect p, cpVect *segs, double slop)
   return best;
 }
 
+int file_exists(char *path)
+{
+  FILE *o = fopen(path, "r");
+  if (o) {
+    fclose(o);
+    return 1;
+  }
+
+  return 0;
+}
+
+static char *dukext;
+static int dukarr;
+static int dukidx;
+
+static int duk2path(const char *path, const struct stat *sb, int typeflag)
+{
+  if (typeflag == FTW_F) {
+    char *ext = strrchr(path, '.');
+    if (ext && !strcmp(ext, dukext)) {
+      duk_push_string(duk, path);
+      duk_put_prop_index(duk, dukarr, dukidx++);
+    }
+  }
+  
+  return 0;
+}
+
+void dukext2paths(char *ext)
+{
+  dukext = ext;
+  dukarr = duk_push_array(duk);
+  dukidx = 0;
+  ftw(".", duk2path, 10);
+}
+
 duk_ret_t duk_cmd(duk_context *duk) {
     int cmd = duk_to_int(duk, 0);
 
@@ -653,6 +690,13 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  vect2duk(tex_get_dimensions(texture_pullfromfile(duk_to_string(duk, 1))));
 	  return 1;
 	  
+	case 65:
+	  duk_push_boolean(duk, file_exists(duk_to_string(duk, 1)));
+	  return 1;
+	  
+	case 66:
+	  dukext2paths(duk_to_string(duk, 1));
+	  return 1;
     }
 
     return 0;

@@ -15,6 +15,8 @@
 
 #include <ftw.h>
 
+#include "stb_ds.h"
+
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
 
