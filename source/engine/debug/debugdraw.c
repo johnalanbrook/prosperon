@@ -64,22 +64,51 @@ void draw_line(int x1, int y1, int x2, int y2, float *color)
     draw_poly(verts, 2, color);
 }
 
-void draw_edge(cpVect  *points, int n, float *color)
+cpVect center_of_vects(cpVect *v, int n)
+{
+  cpVect c;
+  for (int i = 0; i < n; i++) {
+    c.x += v[i].x;
+    c.y += v[i].y;
+  }
+
+  c.x /= n;
+  c.y /= n;
+  return c;
+}
+
+float vecs2m(cpVect a, cpVect b)
+{
+  return (b.y-a.y)/(b.x-a.x);
+}
+
+cpVect inflateline(cpVect a, cpVect b, float d)
+{
+  cpVect c;
+  float m = vecs2m(a, b);
+  c.x = d/sqrt(1/(pow(m,2)+1));
+  c.y = d/sqrt(1+pow(m,2));
+  return c;
+}
+
+void draw_edge(cpVect  *points, int n, float *color, int thickness)
 {
     static_assert(sizeof(cpVect) == 2*sizeof(float));
 
     shader_use(rectShader);
     shader_setvec3(rectShader, "linecolor", color);
-    glLineWidth(20);
-    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
-    glBindVertexArray(rectVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+    if (thickness <= 1) {
+      glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
+      glBindVertexArray(rectVAO);
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    shader_setfloat(rectShader, "alpha", 1.f);
-    glDrawArrays(GL_LINE_STRIP, 0, n);
-    glLineWidth(1);
+      shader_setfloat(rectShader, "alpha", 1.f);
+      glDrawArrays(GL_LINE_STRIP, 0, n);
+    } else {
+      
+    }
 }
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)

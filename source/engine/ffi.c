@@ -234,6 +234,10 @@ duk_ret_t duk_nuke(duk_context *duk)
 	  nuke_edit_str(textbox);
 	  duk_push_string(duk, textbox);
 	  return 1;
+
+	case 8:
+	  nuke_img(duk_to_string(duk, 1));
+	  break;
     }
 
     return 0;
@@ -293,7 +297,7 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
            duk_put_prop_index(duk, arridx, i);
     }
 
-    ts_bspline_free(&spline);
+   ts_bspline_free(&spline);
 
 return 1;
 }
@@ -402,7 +406,7 @@ static int duk2path(const char *path, const struct stat *sb, int typeflag)
   if (typeflag == FTW_F) {
     char *ext = strrchr(path, '.');
     if (ext && !strcmp(ext, dukext)) {
-      duk_push_string(duk, path);
+      duk_push_string(duk, &path[2]);
       duk_put_prop_index(duk, dukarr, dukidx++);
     }
   }
@@ -916,7 +920,6 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
   int go = duk_to_int(duk, 0);
   const char *path = duk_to_string(duk, 1);
   cpVect pos = duk2vec2(duk, 2);
-
   int sprite = make_sprite(go);
   struct sprite *sp = id2sprite(sprite);
   sprite_loadtex(sp, path);

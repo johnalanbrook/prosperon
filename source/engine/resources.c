@@ -33,7 +33,6 @@ struct vec *c_vec = NULL;
 
 char pathbuf[MAXPATH];
 
-
 void resources_init()
 {
     prefabs = vec_make(MAXNAME, 25);

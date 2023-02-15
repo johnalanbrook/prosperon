@@ -177,7 +177,9 @@ void init_phys2dshape(struct phys2d_shape *shape, int go, void *data)
 
 void phys2d_shape_del(struct phys2d_shape *shape)
 {
+    if (!shape->shape) return;
     cpSpaceRemoveShape(space, shape->shape);
+    cpShapeFree(shape->shape);
 }
 
 /***************** CIRCLE2D *****************/
@@ -249,14 +251,13 @@ struct phys2d_box *Make2DBox(int go)
     new->r = 0.f;
     new->offset[0] = 0.f;
     new->offset[1] = 0.f;
-
-    new->shape.shape = cpSpaceAddShape(space, cpBoxShapeNew(id2go(go)->body, new->w, new->h, new->r));
-    new->shape.debugdraw = phys2d_dbgdrawbox;
-    init_phys2dshape(&new->shape, go, new);
+    new->shape.go = go;
     phys2d_applybox(new);
+    new->shape.debugdraw = phys2d_dbgdrawbox;
 
     return new;
 }
+
 
 void phys2d_boxdel(struct phys2d_box *box)
 {
@@ -274,19 +275,24 @@ void box_gui(struct phys2d_box *box)
 
 void phys2d_applybox(struct phys2d_box *box)
 {
+    phys2d_boxdel(box);
+    struct gameobject *go = id2go(box->shape.go);
     float s = id2go(box->shape.go)->scale;
     cpTransform T = { 0 };
     T.a = s * cos(box->rotation);
-    T.b = -sin(box->rotation);
-    T.c = sin(box->rotation);
+    T.b = s * -sin(box->rotation);
+    T.c = s * sin(box->rotation);
     T.d = s * cos(box->rotation);
-    T.tx = box->offset[0] * s;
-    T.ty = box->offset[1] * s;
+    T.tx = box->offset[0] * s * go->flipx;
+    T.ty = box->offset[1] * s * go->flipy;
     float hh = box->h / 2.f;
     float hw = box->w / 2.f;
     cpVect verts[4] = { { -hw, -hh }, { hw, -hh }, { hw, hh }, { -hw, hh } };
-    cpPolyShapeSetVerts(box->shape.shape, 4, verts, T);
-    cpPolyShapeSetRadius(box->shape.shape, box->r);
+    box->shape.shape = cpSpaceAddShape(space, cpPolyShapeNew(go->body, 4, verts, T, box->r));
+    init_phys2dshape(&box->shape, box->shape.go, box);
+//    cpPolyShapeSetVerts(box->shape.shape, 4, verts, T);
+//    cpPolyShapeSetRadius(box->shape.shape, box->r);
+    
 }
 void phys2d_dbgdrawbox(struct phys2d_box *box)
 {
@@ -512,7 +518,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
         drawpoints[i].y = p.y + d*sin(a);
     }
 
-    draw_edge(drawpoints, arrlen(edge->points), trigger_color);
+    draw_edge(drawpoints, arrlen(edge->points), trigger_color, edge->thickness*2);
     draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 

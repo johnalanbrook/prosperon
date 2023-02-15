@@ -84,16 +84,7 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 {
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
-
-    cpTransform T = {0};
-    T.a = go->flipx;
-    T.d = go->flipy;
-    cpShapeUpdate(shape, T);
-
-    if (go->flipx == -1) YughInfo("Flipped one");
 //    cpShapeSetFilter(shape, go->filter);
-    
-//    YughLog("Set filter; %d", go->filter.mask);
 }
 
 void gameobject_apply(struct gameobject *go)

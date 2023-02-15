@@ -140,9 +140,12 @@ void call_input_signal(char *signal) {
         if (pawns[i] == NULL) arrdel(pawns, i);
     }
 
-    for (int i = 0; i < arrlen(pawns); i++) {
-      if (!pawns[i]) continue;
-      script_eval_w_env(signal, pawns[i]);
+    int len = arrlen(pawns);
+    void *framepawns[len];
+    memcpy(framepawns, pawns, len*sizeof(*pawns));
+    
+    for (int i = 0; i < len; i++) {
+      script_eval_w_env(signal, framepawns[i]);
     }
 }
 

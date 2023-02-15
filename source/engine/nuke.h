@@ -26,6 +26,7 @@ void nuke_nel(int cols);
 void nuke_label(const char *s);
 void nuke_prop_float(const char *label, float min, float *val, float max, float step, float dragstep);
 void nuke_edit_str(char *str);
+void nuke_img(char *path);
 
 int nuke_push_tree_id(const char *name, int id);
 void nuke_tree_pop();
