@@ -701,6 +701,14 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 66:
 	  dukext2paths(duk_to_string(duk, 1));
 	  return 1;
+
+	case 67:
+	  opengl_rendermode(LIT);
+	  break;
+
+	case 68:
+	  opengl_rendermode(WIREFRAME);
+	  break;
     }
 
     return 0;

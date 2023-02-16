@@ -8,7 +8,5 @@ uniform vec3 spriteColor;
 void main()
 {
     color = vec4(spriteColor, 1.f) * texture(image, texcoords);
-
-    if (color.a <= 0.1f)
-        discard;
+    color.a = 1.f;
 }

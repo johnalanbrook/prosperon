@@ -40,6 +40,7 @@ enum RenderMode {
 
 void openglInit();
 void openglRender(struct window *window);
+void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, struct mCamera *camera);

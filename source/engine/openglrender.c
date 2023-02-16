@@ -12,9 +12,10 @@
 #include "datastream.h"
 #include "nuke.h"
 
-int renderMode = 0;
+int renderMode = LIT;
 
 struct shader *spriteShader = NULL;
+struct shader *wireframeShader = NULL;
 struct shader *animSpriteShader = NULL;
 static struct shader *textShader;
 
@@ -64,6 +65,11 @@ void debug_draw_phys(int draw) {
     debugDrawPhysics = draw;
 }
 
+void opengl_rendermode(enum RenderMode r)
+{
+  renderMode = r;
+}
+
 void openglInit()
 {
     if (!mainwin) {
@@ -73,6 +79,7 @@ void openglInit()
 
     ////// MAKE SHADERS
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
+    wireframeShader = MakeShader("spritevert.glsl", "spritewireframefrag.glsl");
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
 
@@ -117,8 +124,8 @@ void add_zoom(float val) { zoom = val; }
 
 void openglRender(struct window *window)
 {
+    
     glCullFace(GL_BACK);
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //////////// 2D projection
@@ -143,14 +150,25 @@ void openglRender(struct window *window)
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
 
 
+    /* Game sprites */
+    switch (renderMode) {
+      case LIT:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	shader_use(spriteShader);
+	break;
+
+      case WIREFRAME:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	shader_use(wireframeShader);
+	break;
+    };
+    
     glEnable(GL_DEPTH_TEST);
-    ///// Sprites
     glDepthFunc(GL_LESS);
-    shader_use(spriteShader);
     sprite_draw_all();
 
-
-
+    /* UI Elements & Debug elements */
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_DEPTH_TEST);
     //// DEBUG
     if (debugDrawPhysics)
