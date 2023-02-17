@@ -80,10 +80,19 @@ int id_from_gameobject(struct gameobject *go) {
     return -1;
 }
 
+void gameobject_set_sensor(int id, int sensor)
+{
+  id2go(id)->sensor = sensor;
+  gameobject_apply(id2go(id));
+}
+
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 {
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
+    cpShapeSetSensor(shape, go->sensor);
+    if (go->sensor)
+      YughInfo("Enabled a sensor ...");
 //    cpShapeSetFilter(shape, go->filter);
 }
 
@@ -116,7 +125,8 @@ int MakeGameobject()
         .scale = 1.f,
         .bodytype = CP_BODY_TYPE_STATIC,
         .mass = 1.f,
-        .next = -1
+        .next = -1,
+	.sensor = 0,
     };
 
     go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
@@ -236,36 +246,6 @@ void gameobject_saveprefab(struct gameobject *go)
     fclose(pfile);
 
     findPrefabs();
-    */
-}
-
-void gameobject_syncprefabs(char *revertPath)
-{
-/*
-   struct gameobject **go = objects;
-   int i = 0;
-   while(i != nobjects) {
-   	if ((*go)->editor.curPrefabPath && !strcmp((*go)->editor.curPrefabPath, revertPath)) { ; }//objectRevertPrefab(go); //TODO: revertprefab
-   }
-*/
-}
-
-void gameobject_revertprefab(struct gameobject *go)
-{
-
-}
-
-void toggleprefab(struct gameobject *go)
-{
-/*
-    go->editor.prefabSync = !go->editor.prefabSync;
-
-    if (go->editor.prefabSync) {
-	strcpy(go->editor.prefabName, go->editor.rootPrefabName);
-	gameobject_revertprefab(go);	//TODO: object revert prefab
-    } else {
-	go->editor.prefabName[0] = '\0';
-    }
     */
 }
 

@@ -709,6 +709,10 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 68:
 	  opengl_rendermode(WIREFRAME);
 	  break;
+
+	case 69:
+	  gameobject_set_sensor(duk_to_int(duk, 1), duk_to_boolean(duk,2));
+	  break;
     }
 
     return 0;

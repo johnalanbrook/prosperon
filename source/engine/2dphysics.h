@@ -54,7 +54,7 @@ struct phys2d_box {
     struct phys2d_shape shape;
 };
 
-/* An edge with no volume. Cannot collide with each other. Join to make levels. */
+/* An edge with no volume. Cannot collide with each other. Join to make levels. Static only. */
 struct phys2d_edge {
     cpVect *points;
     float thickness;

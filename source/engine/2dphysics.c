@@ -488,6 +488,7 @@ void phys2d_applyedge(struct phys2d_edge *edge)
 	cpShapeSetCollisionType(edge->shapes[i], edge->shape.go);
 	cpShapeSetFriction(edge->shapes[i], id2go(edge->shape.go)->f);
 	cpShapeSetElasticity(edge->shapes[i], id2go(edge->shape.go)->e);
+	cpShapeSetSensor(edge->shapes[i], id2go(edge->shape.go)->sensor);
     }
 
     cpSpaceReindexShapesForBody(space, id2go(edge->shape.go)->body);
@@ -542,11 +543,22 @@ int shape_is_enabled(struct phys2d_shape *shape)
 
 void shape_set_sensor(struct phys2d_shape *shape, int sensor)
 {
-    cpShapeSetSensor(shape->shape, sensor);
+    if (!shape->shape) {
+      struct phys2d_edge *edge = shape->data;
+
+      for (int i = 0; i < arrlen(edge->shapes); i++) {
+        cpShapeSetSensor(edge->shapes[i], sensor);
+      YughInfo("Setting shape %d sensor to %d", i, sensor);	
+      }
+    } else
+      cpShapeSetSensor(shape->shape, sensor);
 }
 
 int shape_get_sensor(struct phys2d_shape *shape)
 {
+    if (!shape->shape) {
+      return cpShapeGetSensor(((struct phys2d_edge *)(shape->data))->shapes[0]);
+    }
     return cpShapeGetSensor(shape->shape);
 }
 
@@ -589,8 +601,6 @@ static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     int g1 = cpBodyGetUserData(body1);
     int g2 = cpBodyGetUserData(body2);
     struct gameobject *go = id2go(g1);
-
-    
 
     for (int i = 0; i < arrlen(go->shape_cbs); i++) {
       if (go->shape_cbs[i].shape != shape1) continue;
