@@ -12,17 +12,6 @@ struct shader;
 struct sprite;
 struct component;
 
-struct editor {
-    mfloat_t color[3];
-    int id;
-    bool active;
-    bool prefabSync;
-    char mname[MAXNAME];
-    char *curPrefabPath;
-    char prefabName[MAXNAME];
-    char rootPrefabName[MAXNAME];
-};
-
 struct gameobject {
     cpBodyType bodytype;
     int next;
@@ -36,6 +25,7 @@ struct gameobject {
     cpBody *body; /* NULL if this object is dead */
     int id;
     struct phys_cbs cbs;
+    struct shape_cb *shape_cbs;
 };
 
 extern struct gameobject *gameobjects;

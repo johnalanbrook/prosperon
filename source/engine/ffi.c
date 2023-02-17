@@ -742,14 +742,30 @@ duk_ret_t duk_register(duk_context *duk) {
    return 0;
 }
 
+void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape *shape)
+{
+  struct shape_cb shapecb;
+  shapecb.shape = shape->shape;
+  shapecb.cbs.begin = c;
+  arrpush(id2go(go)->shape_cbs, shapecb);
+}
+
 duk_ret_t duk_register_collide(duk_context *duk) {
     int cmd = duk_to_int(duk, 0);
     void *fn = duk_get_heapptr(duk, 1);
     void *obj = duk_get_heapptr(duk, 2);
     int go = duk_get_int(duk, 3);
-
     struct callee c = {fn, obj};
-    phys2d_add_handler_type(cmd, go, c);
+
+    switch(cmd) {
+      case 0:
+        phys2d_add_handler_type(cmd, go, c);
+        break;
+
+      case 1:
+        gameobject_add_shape_collider(go, c, duk_get_pointer(duk,4));
+	break;
+    }
 
     return 0;
 }
@@ -832,8 +848,6 @@ duk_ret_t duk_yughlog(duk_context *duk) {
 
     return 0;
 }
-
-
 
 duk_ret_t duk_set_body(duk_context *duk) {
   int cmd = duk_to_int(duk, 0);
@@ -1174,7 +1188,7 @@ void ffi_load()
 
     DUK_FUNC(cmd, DUK_VARARGS);
     DUK_FUNC(register, 3);
-    DUK_FUNC(register_collide, 4);
+    DUK_FUNC(register_collide, DUK_VARARGS);
 
     DUK_FUNC(gui_text, 3);
     DUK_FUNC(gui_img, 2);

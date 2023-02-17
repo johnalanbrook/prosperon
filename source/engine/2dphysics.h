@@ -106,6 +106,11 @@ struct phys_cbs {
     struct callee separate;
 };
 
+struct shape_cb {
+  cpShape *shape;
+  struct phys_cbs cbs;
+};
+
 void phys2d_add_handler_type(int cmd, int go,  struct callee c);
 void register_collide(void *sym);
 void phys2d_set_gravity(cpVect v);

@@ -559,27 +559,45 @@ void register_collide(void *sym) {
 
 }
 
-static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
-    cpBody *body1;
-    cpBody *body2;
-    cpArbiterGetBodies(arb, &body1, &body2);
-
-    int g1 = cpBodyGetUserData(body1);
-    int g2 = cpBodyGetUserData(body2);
-
-    duk_push_heapptr(duk, id2go(g1)->cbs.begin.fn);
-    duk_push_heapptr(duk, id2go(g1)->cbs.begin.obj);
+void duk_call_phys_cb(cpArbiter *arb, struct callee c, int hit)
+{
+    duk_push_heapptr(duk, c.fn);
+    duk_push_heapptr(duk, c.obj);
 
     int obj = duk_push_object(duk);
 
     vect2duk(cpArbiterGetNormal(arb));
     duk_put_prop_literal(duk, obj, "normal");
 
-    duk_push_int(duk, g2);
+    duk_push_int(duk, hit);
     duk_put_prop_literal(duk, obj, "hit");
 
     duk_call_method(duk, 1);
     duk_pop(duk);
+}
+
+static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
+
+    cpBody *body1;
+    cpBody *body2;
+    cpArbiterGetBodies(arb, &body1, &body2);
+
+    cpShape *shape1;
+    cpShape *shape2;
+    cpArbiterGetShapes(arb, &shape1, &shape2);
+
+    int g1 = cpBodyGetUserData(body1);
+    int g2 = cpBodyGetUserData(body2);
+    struct gameobject *go = id2go(g1);
+
+    
+
+    for (int i = 0; i < arrlen(go->shape_cbs); i++) {
+      if (go->shape_cbs[i].shape != shape1) continue;
+      duk_call_phys_cb(arb, go->shape_cbs[i].cbs.begin, g2);
+    }
+
+    duk_call_phys_cb(arb, go->cbs.begin, g2);
 
     return 1;
 }
