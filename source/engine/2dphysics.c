@@ -317,6 +317,7 @@ struct phys2d_poly *Make2DPoly(int go)
 {
     struct phys2d_poly *new = malloc(sizeof(struct phys2d_poly));
 
+    new->points = NULL;
     arrsetlen(new->points, 0);
     new->radius = 0.f;
 
@@ -337,12 +338,9 @@ void phys2d_polyaddvert(struct phys2d_poly *poly)
     arrput(poly->points, cpvzero);
 }
 
-void poly_gui(struct phys2d_poly *poly)
-{
-}
-
 void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts)
 {
+    if (!verts) return;
     arrfree(poly->points);
     poly->points = verts;
     phys2d_applypoly(poly);
@@ -366,13 +364,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 
     cpVect b = cpBodyGetPosition(cpShapeGetBody(poly->shape.shape));
     float angle = cpBodyGetAngle(cpShapeGetBody(poly->shape.shape));
-
     float s = id2go(poly->shape.go)->scale;
-    for (int i = 0; i < n; i++) {
-	float d = sqrt(pow(poly->points[i * 2].x * s, 2.f) + pow(poly->points[i * 2].y* s, 2.f));
-	float a = atan2(poly->points[i * 2].y, poly->points[i * 2].x) + angle;
-	draw_point(b.x + d * cos(a), b.y + d * sin(a), 3, color);
-    }
 
     if (arrlen(poly->points) >= 3) {
 	int n = cpPolyShapeGetCount(poly->shape.shape);
@@ -519,7 +511,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
         drawpoints[i].y = p.y + d*sin(a);
     }
 
-    draw_edge(drawpoints, arrlen(edge->points), trigger_color, edge->thickness*2);
+    draw_edge(drawpoints, arrlen(edge->points), shape_color(edge->shapes[0]), edge->thickness*2);
     draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 

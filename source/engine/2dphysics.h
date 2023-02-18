@@ -82,7 +82,6 @@ void phys2d_applypoly(struct phys2d_poly *poly);
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly);
 void phys2d_polyaddvert(struct phys2d_poly *poly);
 void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts);
-void poly_gui(struct phys2d_poly *poly);
 
 struct phys2d_edge *Make2DEdge(int go);
 void phys2d_edgedel(struct phys2d_edge *edge);

@@ -1064,14 +1064,28 @@ duk_ret_t duk_make_poly2d(duk_context *duk)
 {
   int go = duk_to_int(duk, 0);
   struct phys2d_poly *poly = Make2DPoly(go);
+  phys2d_poly_setverts(poly, duk2cpvec2arr(duk,1));
 
-  YughInfo("Making polygon.");
+  int idx = duk_push_object(duk);
+  duk_push_pointer(duk, poly);
+  duk_put_prop_string(duk, idx, "id");
+  duk_push_pointer(duk, &poly->shape);
+  duk_put_prop_string(duk, idx, "shape");
 
-  return 0;
+  return 1;
 }
 
 duk_ret_t duk_cmd_poly2d(duk_context *duk)
 {
+  int cmd = duk_to_int(duk,0);
+  struct phys2d_poly *poly = duk_to_pointer(duk,1);
+  
+  switch(cmd) {
+    case 0:
+      phys2d_poly_setverts(poly, duk2cpvec2arr(duk,2));
+      break;
+  }
+  
   return 0;  
 }
 
