@@ -86,11 +86,17 @@ void gameobject_set_sensor(int id, int sensor)
   gameobject_apply(id2go(id));
 }
 
+int go2id(struct gameobject *go)
+{
+  id_from_gameobject(go);
+}
+
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 {
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
     cpShapeSetSensor(shape, go->sensor);
+    cpShapeSetCollisionType(shape, go2id(go));
     if (go->sensor)
       YughInfo("Enabled a sensor ...");
 //    cpShapeSetFilter(shape, go->filter);

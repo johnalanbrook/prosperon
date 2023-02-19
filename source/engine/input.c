@@ -4,6 +4,7 @@
 #include "script.h"
 #include "stb_ds.h"
 #include "log.h"
+#include "ffi.h"
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
@@ -56,7 +57,7 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 
     for (int i = 0; i < arrlen(pawns); i++) {
         if (!pawns[i] || script_eval_setup("input_mouse_pos", pawns[i])) continue;
-	vect2duk(duk, mouse_pos);
+	vect2duk(mouse_pos);
         script_eval_exec(1);
     }
 

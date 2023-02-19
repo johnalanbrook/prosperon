@@ -19,6 +19,7 @@ void input_poll(double wait);
 
 void cursor_hide();
 void cursor_show();
+void set_mouse_mode(int mousemode);
 
 void call_input_signal(char *signal);
 const char *keyname_extd(int key, int scancode);
