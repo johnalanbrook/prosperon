@@ -131,5 +131,7 @@ struct color float2color(float *fcolor);
 void shape_gui(struct phys2d_shape *shape);
 
 void phys2d_reindex_body(cpBody *body);
+cpVect world2go(struct gameobject *go, cpVect worldpos);
+cpVect go2world(struct gameobject *go, cpVect gopos);
 
 #endif

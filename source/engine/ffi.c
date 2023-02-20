@@ -713,6 +713,15 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 69:
 	  gameobject_set_sensor(duk_to_int(duk, 1), duk_to_boolean(duk,2));
 	  break;
+	
+	case 70:
+	  vect2duk(world2go(id2go(duk_to_int(duk,1)), duk2vec2(duk,2)));
+	  return 1;
+	  
+	case 71:
+	  vect2duk(go2world(id2go(duk_to_int(duk,1)),duk2vec2(duk,2)));
+	  return 1;
+	  
     }
 
     return 0;

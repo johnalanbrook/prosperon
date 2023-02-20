@@ -202,6 +202,27 @@ void phys2d_circledel(struct phys2d_circle *c)
     phys2d_shape_del(&c->shape);
 }
 
+cpVect world2go(struct gameobject *go, cpVect worldpos)
+{
+  worldpos = cpvsub(worldpos, cpBodyGetPosition(go->body));
+  worldpos = cpvmult(worldpos, 1/go->scale);
+  return worldpos;
+}
+
+cpVect go2world(struct gameobject *go, cpVect gopos)
+{
+  cpVect pos = cpBodyGetPosition(go->body);
+  float angle = cpBodyGetAngle(go->body);
+  cpTransform T = {0};
+  T.a = go->scale * go->flipx * cos(angle);
+  T.b = -sin(angle) * go->scale;
+  T.c = sin(angle) * go->scale;
+  T.d = go->scale * go->flipy * cos(angle);
+  T.tx = pos.x;
+  T.ty = pos.y;
+  return cpTransformPoint(T, gopos);
+}
+
 cpTransform body2transform(cpBody *body)
 {
   cpTransform T = {0};
