@@ -51,6 +51,7 @@ void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind
 
 void set_cam_body(cpBody *body);
 cpVect cam_pos();
+float cam_zoom();
 void add_zoom(float val);
 
 #endif

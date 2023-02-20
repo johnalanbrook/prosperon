@@ -241,8 +241,10 @@ void draw_grid(int width, int span)
     shader_setint(gridShader, "span", span);
     
     cpVect offset = cam_pos();
+        offset = cpvmult(offset, 1/cam_zoom());
     offset.x -= mainwin->width/2;
     offset.y -= mainwin->height/2;
+
     shader_setvec2(gridShader, "offset", &offset);
     
     glBindVertexArray(gridVAO);
@@ -251,7 +253,18 @@ void draw_grid(int width, int span)
 
 void draw_point(int x, int y, float r, float *color)
 {
-    draw_circle(x, y, r, r, color, 0);
+    shader_use(circleShader);
+
+    float verts[] = { x, y };
+
+    glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
+    glPointSize(r);
+
+    glBindVertexArray(circleVAO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+    glDrawArrays(GL_POINTS, 0, 4);
 }
 
 void draw_cppoint(struct cpVect point, float r)

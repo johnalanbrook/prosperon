@@ -204,8 +204,19 @@ void phys2d_circledel(struct phys2d_circle *c)
 
 cpVect world2go(struct gameobject *go, cpVect worldpos)
 {
-  worldpos = cpvsub(worldpos, cpBodyGetPosition(go->body));
-  worldpos = cpvmult(worldpos, 1/go->scale);
+  cpTransform T = {0};
+  cpVect pos = cpBodyGetPosition(go->body);
+  worldpos.x -= pos.x;
+  worldpos.y -= pos.y;
+//  worldpos.x /= go->scale;
+//  worldpos.y /= go->scale;
+  float angle = cpBodyGetAngle(go->body);
+  T.a = go->flipx * cos(-angle) / go->scale;
+  T.b = sin(-angle) / go->scale;
+  T.c = -sin(-angle) / go->scale;
+  T.d = go->flipy * cos(-angle) / go->scale;
+  worldpos = cpTransformPoint(T,worldpos);
+
   return worldpos;
 }
 
@@ -215,27 +226,12 @@ cpVect go2world(struct gameobject *go, cpVect gopos)
   float angle = cpBodyGetAngle(go->body);
   cpTransform T = {0};
   T.a = go->scale * go->flipx * cos(angle);
-  T.b = -sin(angle) * go->scale;
-  T.c = sin(angle) * go->scale;
+  T.b = sin(angle) * go->scale * go->flipx;
+  T.c = -sin(angle) * go->scale * go->flipy;
   T.d = go->scale * go->flipy * cos(angle);
   T.tx = pos.x;
   T.ty = pos.y;
   return cpTransformPoint(T, gopos);
-}
-
-cpTransform body2transform(cpBody *body)
-{
-  cpTransform T = {0};
-  cpVect pos = cpBodyGetPosition(body);
-  float angle = cpBodyGetAngle(body);
-  T.a = cos(angle);
-  T.b = -sin(angle);
-  T.c = sin(angle);
-  T.d = cos(angle);
-  T.tx = pos.x;
-  T.ty = pos.y;
-  
-  return T;
 }
 
 cpVect gotransformpoint(struct gameobject *go, cpVect point)

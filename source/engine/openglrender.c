@@ -118,8 +118,10 @@ void set_cam_body(cpBody *body) {
 cpVect cam_pos() {
     return camera ? cpBodyGetPosition(camera) : cpvzero;
 }
-
 static float zoom = 1.f;
+float cam_zoom() { return zoom; }
+
+
 void add_zoom(float val) { zoom = val; }
 
 void openglRender(struct window *window)
