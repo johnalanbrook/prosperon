@@ -109,7 +109,7 @@ int main(int argc, char **args) {
 
 		case 'v':
 		    printf("Yugine version %s, %s build.\n", VER, INFO);
-		    printf("Copyright 2022 odplot productions LLC.\n");
+		    printf("Copyright 2022-2023 odplot productions LLC.\n");
 		    exit(1);
 		    break;
 
@@ -117,6 +117,7 @@ int main(int argc, char **args) {
 		    printf("-l       Set log file\n");
 		    printf("-play    Launch engine in play mode instead of editor mode\n");
 		    printf("-v       Display engine info\n");
+		    printf("-c       Redirect logging to console\n");
 		    exit(0);
 		    break;
 
@@ -147,13 +148,10 @@ int main(int argc, char **args) {
         log_cat(sysinfo);
         pclose(sysinfo);
     }
-
-
     signal(SIGSEGV, seghandle);
-
+    signal(SIGABRT, seghandle);
+    signal(SIGFPE, seghandle);
 #endif
-
-
 
     FILE *gameinfo = NULL;
     gameinfo = fopen("game.info", "w");

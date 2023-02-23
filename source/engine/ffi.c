@@ -238,6 +238,12 @@ duk_ret_t duk_nuke(duk_context *duk)
 	case 8:
 	  nuke_img(duk_to_string(duk, 1));
 	  break;
+
+	case 9:
+	  editint = duk_to_int(duk,2);
+	  nuke_radio_btn(duk_to_string(duk,1), &editint, duk_to_int(duk, 3));
+	  duk_push_int(duk, editint);
+	  return 1;
     }
 
     return 0;
@@ -991,9 +997,9 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
   phys2d_applybox(box);
 
       int idx = duk_push_object(duk);
-    duk_push_pointer(duk, &box->shape);
-    duk_put_prop_string(duk, idx, "id");
     duk_push_pointer(duk, box);
+    duk_put_prop_string(duk, idx, "id");
+    duk_push_pointer(duk, &box->shape);
     duk_put_prop_string(duk, idx, "shape");
 
   return 1;
@@ -1040,9 +1046,9 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
     phys2d_applycircle(circle);
 
     int idx = duk_push_object(duk);
-    duk_push_pointer(duk, &circle->shape);
-    duk_put_prop_string(duk, idx, "id");
     duk_push_pointer(duk, circle);
+    duk_put_prop_string(duk, idx, "id");
+    duk_push_pointer(duk, &circle->shape);
     duk_put_prop_string(duk, idx, "shape");
 
   return 1;
@@ -1117,10 +1123,10 @@ duk_ret_t duk_make_edge2d(duk_context *duk)
       phys2d_edge_setvert(edge, i, points[i]);
   }
 
-      int idx = duk_push_object(duk);
-    duk_push_pointer(duk, &edge->shape);
-    duk_put_prop_string(duk, idx, "id");
+    int idx = duk_push_object(duk);
     duk_push_pointer(duk, edge);
+    duk_put_prop_string(duk, idx, "id");
+    duk_push_pointer(duk, &edge->shape);
     duk_put_prop_string(duk, idx, "shape");
 
   return 1;

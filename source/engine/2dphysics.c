@@ -409,6 +409,7 @@ struct phys2d_edge *Make2DEdge(int go)
     new->shape.go = go;
     new->shape.data = new;
     new->shape.debugdraw = phys2d_dbgdrawedge;
+    new->shape.shape = NULL;
     phys2d_applyedge(new);
 
     return new;
@@ -439,6 +440,7 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index)
 
     if (index == 0) {
       cpSpaceRemoveShape(space, edge->shapes[index]);
+      cpShapeFree(edge->shapes[index]);
       arrdel(edge->shapes, index);
       phys2d_applyedge(edge);
       return;
@@ -449,6 +451,7 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index)
     }
 
     cpSpaceRemoveShape(space, edge->shapes[index-1]);
+    cpShapeFree(edge->shapes[index-1]);
     arrdel(edge->shapes, index-1);
 
     phys2d_applyedge(edge);
@@ -597,7 +600,6 @@ static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     struct gameobject *go = id2go(g1);
 
     for (int i = 0; i < arrlen(go->shape_cbs); i++) {
-      if (go->shape_cbs[i].shape != shape1) continue;
       duk_call_phys_cb(arb, go->shape_cbs[i].cbs.begin, g2);
     }
 

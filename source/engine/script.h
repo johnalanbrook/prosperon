@@ -18,6 +18,8 @@ int script_dofile(const char *file);
 void script_update(double dt);
 void script_draw();
 
+void duk_run_err();
+
 void script_editor();
 void script_call(const char *f);
 void script_call_sym(void *sym);

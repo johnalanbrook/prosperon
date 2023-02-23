@@ -68,13 +68,11 @@ struct phys2d_circle *Make2DCircle(int go);
 void phys2d_circledel(struct phys2d_circle *c);
 void phys2d_applycircle(struct phys2d_circle *circle);
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle);
-void circle_gui(struct phys2d_circle *circle);
 
 struct phys2d_box *Make2DBox(int go);
 void phys2d_boxdel(struct phys2d_box *box);
 void phys2d_applybox(struct phys2d_box *box);
 void phys2d_dbgdrawbox(struct phys2d_box *box);
-void box_gui(struct phys2d_box *box);
 
 struct phys2d_poly *Make2DPoly(int go);
 void phys2d_polydel(struct phys2d_poly *poly);
@@ -90,10 +88,11 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge);
 void phys2d_edgeaddvert(struct phys2d_edge *edge);
 void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
 
-void edge_gui(struct phys2d_edge *edge);
 void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val);
 void phys2d_edge_clearverts(struct phys2d_edge *edge);
 void phys2d_edge_addverts(struct phys2d_edge *edge, cpVect *verts);
+void phys2d_edge_set_sensor(struct phys2d_edge *edge, int sensor);
+void phys2d_edge_set_enabled(struct phys2d_edge *edge, int enabled);
 
 void phys2d_init();
 void phys2d_update(float deltaT);

@@ -97,8 +97,6 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
     cpShapeSetElasticity(shape, go->e);
     cpShapeSetSensor(shape, go->sensor);
     cpShapeSetCollisionType(shape, go2id(go));
-    if (go->sensor)
-      YughInfo("Enabled a sensor ...");
 //    cpShapeSetFilter(shape, go->filter);
 }
 
@@ -276,8 +274,7 @@ void gameobject_rotate(struct gameobject *go, float as)
 
 void gameobject_setangle(struct gameobject *go, float angle) {
     cpBodySetAngle(go->body, angle);
-
-        phys2d_reindex_body(go->body);
+    phys2d_reindex_body(go->body);
 }
 
 void gameobject_setpos(struct gameobject *go, cpVect vec) {
