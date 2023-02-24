@@ -40,6 +40,7 @@ void register_gui(struct callee c);
 void register_nk_gui(struct callee c);
 void call_gui();
 void call_nk_gui();
+void unregister_obj(void *obj);
 
 void register_physics(struct callee c);
 void call_physics(double dt);

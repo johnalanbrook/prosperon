@@ -659,12 +659,10 @@ duk_ret_t duk_cmd(duk_context *duk) {
 
 	case 55:
 	  duk2go(duk, 1)->flipx = duk_to_boolean(duk, 2) ? -1 : 1;
-	  gameobject_apply(duk2go(duk, 1));
 	  return 0;
 
 	case 56:
 	  duk2go(duk, 1)->flipy = duk_to_boolean(duk, 2) ? -1 : 1;
-	  gameobject_apply(duk2go(duk, 1));
 	  return 0;
 
 	case 57:
@@ -767,6 +765,11 @@ duk_ret_t duk_register(duk_context *duk) {
      case 3:
        register_nk_gui(c);
        break;
+       
+     case 4:
+       unregister_obj(obj);
+       break;
+
      }
 
    return 0;
@@ -795,6 +798,9 @@ duk_ret_t duk_register_collide(duk_context *duk) {
       case 1:
         gameobject_add_shape_collider(go, c, duk_get_pointer(duk,4));
 	break;
+
+      case 2:
+        phys2d_rm_go_handlers(go);
     }
 
     return 0;
@@ -892,7 +898,7 @@ duk_ret_t duk_set_body(duk_context *duk) {
       break;
 
     case 1:
-      cpBodySetType(go->body, duk_to_int(duk, 2));
+      go->bodytype = duk_to_int(duk,2);
       break;
 
     case 2:

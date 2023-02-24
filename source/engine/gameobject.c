@@ -97,17 +97,28 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
     cpShapeSetElasticity(shape, go->e);
     cpShapeSetSensor(shape, go->sensor);
     cpShapeSetCollisionType(shape, go2id(go));
+    
+    float moment = cpBodyGetMoment(go->body);
+    struct phys2d_shape *s = cpShapeGetUserData(shape);
+    if (!s) {
+      cpBodySetMoment(go->body, moment+1);
+      return;
+    }
+     
+    moment += s->moi(s->data, go->mass);
+    cpBodySetMoment(go->body, moment);
 //    cpShapeSetFilter(shape, go->filter);
 }
 
 void gameobject_apply(struct gameobject *go)
 {
     cpBodySetType(go->body, go->bodytype);
-
+    cpBodySetMoment(go->body, 0.f);
+    cpBodyEachShape(go->body, go_shape_apply, go);
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
         cpBodySetMass(go->body, go->mass);
+	
 
-    cpBodyEachShape(go->body, go_shape_apply, go);
 }
 
 static void gameobject_setpickcolor(struct gameobject *go)

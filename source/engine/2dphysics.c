@@ -192,9 +192,15 @@ struct phys2d_circle *Make2DCircle(int go)
 
     new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(id2go(go)->body, new->radius, cpvzero));
     new->shape.debugdraw = phys2d_dbgdrawcircle;
+    new->shape.moi = phys2d_circle_moi;
     init_phys2dshape(&new->shape, go, new);
 
     return new;
+}
+
+float phys2d_circle_moi(struct phys2d_circle *c, float m)
+{
+  return cpMomentForCircle(m, 0, c->radius, c->offset);
 }
 
 void phys2d_circledel(struct phys2d_circle *c)
@@ -288,8 +294,14 @@ struct phys2d_box *Make2DBox(int go)
     new->shape.go = go;
     phys2d_applybox(new);
     new->shape.debugdraw = phys2d_dbgdrawbox;
+    new->shape.moi = phys2d_box_moi;
 
     return new;
+}
+
+float phys2d_box_moi(struct phys2d_box *box, float m)
+{
+  return cpMomentForBox(m, box->w, box->h);
 }
 
 cpTransform go2transform(struct gameobject *go, cpVect offset, float angle)
@@ -346,8 +358,14 @@ struct phys2d_poly *Make2DPoly(int go)
 
     new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(id2go(go)->body, 0, new->points, new->radius));
     new->shape.debugdraw = phys2d_dbgdrawpoly;
+    new->shape.moi = phys2d_poly_moi;
     init_phys2dshape(&new->shape, go, new);
     return new;
+}
+
+float phys2d_poly_moi(struct phys2d_poly *poly, float m)
+{
+  return cpMomentForPoly(m, arrlen(poly->points), poly->points, cpvzero, poly->radius);
 }
 
 void phys2d_polydel(struct phys2d_poly *poly)
@@ -409,10 +427,16 @@ struct phys2d_edge *Make2DEdge(int go)
     new->shape.go = go;
     new->shape.data = new;
     new->shape.debugdraw = phys2d_dbgdrawedge;
+    new->shape.moi = phys2d_edge_moi;
     new->shape.shape = NULL;
     phys2d_applyedge(new);
 
     return new;
+}
+
+float phys2d_edge_moi(struct phys2d_edge *edge, float m)
+{
+  return m;
 }
 
 void phys2d_edgedel(struct phys2d_edge *edge)
@@ -585,8 +609,9 @@ void duk_call_phys_cb(cpArbiter *arb, struct callee c, int hit)
     duk_pop(duk);
 }
 
-static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
-
+static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data)
+{
+    
     cpBody *body1;
     cpBody *body2;
     cpArbiterGetBodies(arb, &body1, &body2);
@@ -602,10 +627,19 @@ static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
     for (int i = 0; i < arrlen(go->shape_cbs); i++) {
       duk_call_phys_cb(arb, go->shape_cbs[i].cbs.begin, g2);
     }
-
-    duk_call_phys_cb(arb, go->cbs.begin, g2);
+    
+    if (go->cbs.begin.obj)
+      duk_call_phys_cb(arb, go->cbs.begin, g2);
 
     return 1;
+}
+
+void phys2d_rm_go_handlers(int go)
+{
+  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
+  handler->userData = NULL;
+  handler->beginFunc = NULL;
+  handler->separateFunc = NULL;
 }
 
 void phys2d_add_handler_type(int cmd, int go, struct callee c) {

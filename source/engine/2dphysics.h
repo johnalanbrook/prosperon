@@ -20,6 +20,7 @@ struct phys2d_shape {
     int go;
     void *data;
     void (*debugdraw)(void *data);
+    float (*moi)(void *data, float mass);
 };
 
 /* Circles are the fastest collier type */
@@ -68,11 +69,13 @@ struct phys2d_circle *Make2DCircle(int go);
 void phys2d_circledel(struct phys2d_circle *c);
 void phys2d_applycircle(struct phys2d_circle *circle);
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle);
+float phys2d_circle_moi(struct phys2d_circle *c, float m);
 
 struct phys2d_box *Make2DBox(int go);
 void phys2d_boxdel(struct phys2d_box *box);
 void phys2d_applybox(struct phys2d_box *box);
 void phys2d_dbgdrawbox(struct phys2d_box *box);
+float phys2d_box_moi(struct phys2d_box *box, float m);
 
 struct phys2d_poly *Make2DPoly(int go);
 void phys2d_polydel(struct phys2d_poly *poly);
@@ -80,6 +83,7 @@ void phys2d_applypoly(struct phys2d_poly *poly);
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly);
 void phys2d_polyaddvert(struct phys2d_poly *poly);
 void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts);
+float phys2d_poly_moi(struct phys2d_poly *poly, float m);
 
 struct phys2d_edge *Make2DEdge(int go);
 void phys2d_edgedel(struct phys2d_edge *edge);
@@ -87,6 +91,7 @@ void phys2d_applyedge(struct phys2d_edge *edge);
 void phys2d_dbgdrawedge(struct phys2d_edge *edge);
 void phys2d_edgeaddvert(struct phys2d_edge *edge);
 void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
+float phys2d_edge_moi(struct phys2d_edge *edge, float m);
 
 void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val);
 void phys2d_edge_clearverts(struct phys2d_edge *edge);
@@ -111,6 +116,7 @@ struct shape_cb {
 
 void phys2d_add_handler_type(int cmd, int go,  struct callee c);
 void register_collide(void *sym);
+void phys2d_rm_go_handlers(int go);
 void phys2d_set_gravity(cpVect v);
 
 void shape_enabled(struct phys2d_shape *shape, int enabled);

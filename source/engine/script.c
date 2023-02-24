@@ -156,6 +156,21 @@ struct callee *physics = NULL;
 struct callee *guis = NULL;
 struct callee *nk_guis = NULL;
 
+void unregister_obj(void *obj)
+{
+  for (int i = arrlen(updates)-1; i >= 0; i--)
+    if (updates[i].obj == obj) arrdel(updates, i);
+    
+  for (int i = arrlen(physics)-1; i >= 0; i--)
+    if (physics[i].obj == obj) arrdel(physics,i);
+    
+  for (int i = arrlen(guis)-1; i >= 0; i--)
+    if (guis[i].obj == obj) arrdel(guis,i);
+    
+  for (int i = arrlen(nk_guis)-1; i >= 0; i--)
+    if (guis[i].obj == obj) arrdel(nk_guis,i);
+}
+
 void register_update(struct callee c) {
     arrput(updates, c);
 }
