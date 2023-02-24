@@ -727,7 +727,18 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 71:
 	  vect2duk(go2world(id2go(duk_to_int(duk,1)),duk2vec2(duk,2)));
 	  return 1;
-	  
+
+	case 72:
+	  vect2duk(cpSpaceGetGravity(space));
+	  return 1;
+
+	case 73:
+	  cpSpaceSetDamping(space, duk_to_number(duk,1));
+	  return 0;
+
+	case 74:
+	  duk_push_number(duk, cpSpaceGetDamping(space));
+	  return 1;
     }
 
     return 0;
@@ -872,6 +883,7 @@ duk_ret_t duk_set_body(duk_context *duk) {
   int cmd = duk_to_int(duk, 0);
   int id = duk_to_int(duk, 1);
   struct gameobject *go = get_gameobject_from_id(id);
+  if (!go) return 0;
 
   /* TODO: Possible that reindexing shapes only needs done for static shapes? */
   switch (cmd) {
@@ -913,6 +925,14 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 9:
       cpBodySetVelocity(go->body, duk2vec2(duk, 2));
+      break;
+
+    case 10:
+      go->e = fmax(duk_to_number(duk,2), 0);
+      break;
+
+    case 11:
+      go->f = fmax(duk_to_number(duk,2),0);
       break;
 
   }
@@ -1094,6 +1114,8 @@ duk_ret_t duk_cmd_poly2d(duk_context *duk)
 {
   int cmd = duk_to_int(duk,0);
   struct phys2d_poly *poly = duk_to_pointer(duk,1);
+
+  if (!poly) return 0;
   
   switch(cmd) {
     case 0:
@@ -1136,6 +1158,8 @@ duk_ret_t duk_cmd_edge2d(duk_context *duk)
 {
   int cmd = duk_to_int(duk, 0);
   struct phys2d_edge *edge = duk_to_pointer(duk, 1);
+
+  if (!edge) return 0;
 
   switch(cmd) {
     case 0:
