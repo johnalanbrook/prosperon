@@ -195,10 +195,19 @@ duk_ret_t duk_nuke(duk_context *duk)
     float editnum;
     int editint;
     char textbox[130];
+    struct nk_rect rect = nk_rect(0,0,0,0);
 
     switch(cmd) {
         case 0:
-          nuke_begin_win(duk_to_string(duk, 1));
+	  duk_get_prop_string(duk, 2, "x");
+	  rect.x = duk_to_number(duk,-1);
+	  duk_get_prop_string(duk, 2, "y");
+	  rect.y = duk_to_number(duk,-1);
+	  duk_get_prop_string(duk,2,"w");
+	  rect.w = duk_to_number(duk,-1);
+	  duk_get_prop_string(duk,2,"h");
+	  rect.h = duk_to_number(duk,-1);
+          nuke_begin(duk_to_string(duk, 1),rect, NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
           break;
 
         case 1:
@@ -243,6 +252,19 @@ duk_ret_t duk_nuke(duk_context *duk)
 	  editint = duk_to_int(duk,2);
 	  nuke_radio_btn(duk_to_string(duk,1), &editint, duk_to_int(duk, 3));
 	  duk_push_int(duk, editint);
+	  return 1;
+	
+	case 10:
+	  rect = nuke_win_get_bounds();
+	  duk_push_object(duk);
+	  duk_push_number(duk, rect.x);
+	  duk_put_prop_string(duk, -2, "x");
+	  duk_push_number(duk,rect.y);
+	  duk_put_prop_string(duk, -2, "y");
+	  duk_push_number(duk,rect.w);
+	  duk_put_prop_string(duk,-2,"w");
+	  duk_push_number(duk,rect.h);
+	  duk_put_prop_string(duk,-2,"h");
 	  return 1;
     }
 

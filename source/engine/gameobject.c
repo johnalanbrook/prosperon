@@ -95,7 +95,7 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 {
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
-    cpShapeSetSensor(shape, go->sensor);
+//    cpShapeSetSensor(shape, go->sensor);
     cpShapeSetCollisionType(shape, go2id(go));
     
     float moment = cpBodyGetMoment(go->body);
@@ -117,8 +117,6 @@ void gameobject_apply(struct gameobject *go)
     cpBodyEachShape(go->body, go_shape_apply, go);
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
         cpBodySetMass(go->body, go->mass);
-	
-
 }
 
 static void gameobject_setpickcolor(struct gameobject *go)
