@@ -60,6 +60,7 @@ struct sprite *tsprite = NULL;
 
 
 static unsigned int projUBO;
+static unsigned int resUBO;
 
 void debug_draw_phys(int draw) {
     debugDrawPhysics = draw;
@@ -107,6 +108,14 @@ void openglInit()
     shader_setUBO(spriteShader, "Projection", 0);
     shader_setUBO(textShader, "Projection", 0);
     shader_setUBO(animSpriteShader, "Projection", 0);
+
+/*
+    glGenBuffers(1,&resUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, resUBO);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(float)*2, NULL, GL_DYNAMIC_DRAW);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, resUBO, 0, sizeof(float)*2);
+    glBindBuffer(GL_UNIFORM_BUFFER,0);
+*/    
 }
 
 
@@ -126,7 +135,6 @@ void add_zoom(float val) { zoom = val; }
 
 void openglRender(struct window *window)
 {
-    
     glCullFace(GL_BACK);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -150,7 +158,11 @@ void openglRender(struct window *window)
 
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
-
+/*
+    float res[2] = {window->width, window->height};
+    glBindBuffer(GL_UNIFORM_BUFFER, resUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(float)*2, res);
+*/
 
     /* Game sprites */
     switch (renderMode) {

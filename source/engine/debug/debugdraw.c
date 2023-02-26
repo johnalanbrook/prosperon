@@ -26,6 +26,7 @@ void debugdraw_init()
 {
     circleShader = MakeShader("circlevert.glsl", "circlefrag.glsl");
     shader_setUBO(circleShader, "Projection", 0);
+    shader_setUBO(circleShader, "Resolution", 0);
     glGenBuffers(1, &circleVBO);
     glGenVertexArrays(1, &circleVAO);
 
