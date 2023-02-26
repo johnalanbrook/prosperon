@@ -164,29 +164,66 @@ struct sFont *MakeFont(const char *fontfile, int height)
 static int curchar = 0;
 static float *buffdraw;
 
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
+void fill_charverts(float *verts, float cursor[2], float scale, struct Character c, float *offset)
 {
-    float w = c.Size[0] * scale;
-    float h = c.Size[1] * scale;
+  float w = c.Size[0] * scale;
+  float h = c.Size[1] * scale;
 
-    float xpos = cursor[0] + c.Bearing[0] * scale;
-    float ypos = cursor[1] - c.Bearing[1] * scale;
-
-    float verts[16] = {
+  float xpos = cursor[0] + (c.Bearing[0]+offset[0]) * scale;
+  float ypos = cursor[1] - (c.Bearing[1]+offset[1]) * scale;
+  
+  float v[16] = {
 	xpos, ypos, c.rect.s0, c.rect.t1,
 	xpos+w, ypos, c.rect.s1, c.rect.t1,
 	xpos, ypos + h, c.rect.s0, c.rect.t0,
 	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
     
-    /* Check if the vertex is off screen */
+  memcpy(verts, v, sizeof(float)*16);
+}
+
+void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
+{
+    float shadowcolor[3] = {0.f, 0.f, 0.f};	
+    float shadowcursor[2];
+    
+    float verts[16];
+    float offset[2] = {-1, 1};
+
+    fill_charverts(verts, cursor, scale, c, offset);
+    
+        /* Check if the vertex is off screen */
     if (verts[5] < 0 || verts[10] < 0 || verts[0] > window_i(0)->width || verts[1] > window_i(0)->height)
         return;
 
-//    glBufferSubData(GL_ARRAY_BUFFER, curchar*sizeof(verts), sizeof(verts), verts);
-    
+    shader_setvec3(shader, "textColor", shadowcolor);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    offset[0] = 1;
+    offset[1] = -1;
+    fill_charverts(verts, cursor, scale, c, offset);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    offset[1] = 1;
+    fill_charverts(verts, cursor, scale, c, offset);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    offset[0] = -1;
+    offset[1] = -1;
+        fill_charverts(verts, cursor, scale, c, offset);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    
+    offset[0] = offset[1] = 0;
+    fill_charverts(verts, cursor, scale, c, offset);
+    shader_setvec3(shader, "textColor", color);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
     curchar++;
 }
 
@@ -210,7 +247,7 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     glBindTexture(GL_TEXTURE_2D, font->texID);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float), NULL, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float)*2, NULL, GL_STREAM_DRAW); /* x2 on the size for the outline pass */
 
     const unsigned char *line, *wordstart;
     line = (unsigned char*)text;

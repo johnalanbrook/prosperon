@@ -207,6 +207,7 @@ void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
     shader_setint(circleShader, "thickness", pixels);
     shader_setvec3(circleShader, "dbgColor", color);
     shader_setbool(circleShader, "fill", fill);
+    shader_setfloat(circleShader, "zoom", cam_zoom());
 
     glBindVertexArray(circleVAO);
     glEnableVertexAttribArray(0);
