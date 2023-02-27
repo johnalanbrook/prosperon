@@ -365,7 +365,13 @@ struct phys2d_poly *Make2DPoly(int go)
 
 float phys2d_poly_moi(struct phys2d_poly *poly, float m)
 {
-  return cpMomentForPoly(m, arrlen(poly->points), poly->points, cpvzero, poly->radius);
+  float moi = cpMomentForPoly(m, arrlen(poly->points), poly->points, cpvzero, poly->radius);
+  if (moi <= 0) {
+    YughError("Polygon MOI is negative. Returning one;");
+    return 1;
+  }
+  
+  return moi;
 }
 
 void phys2d_polydel(struct phys2d_poly *poly)

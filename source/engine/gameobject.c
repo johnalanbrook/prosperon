@@ -117,6 +117,11 @@ void gameobject_apply(struct gameobject *go)
     cpBodyEachShape(go->body, go_shape_apply, go);
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
         cpBodySetMass(go->body, go->mass);
+
+    if (cpBodyGetMoment(go->body) <= 0.f) {
+      YughError("Moment for object %d is zero. Setting to one.", go2id(go));
+      cpBodySetMoment(go->body, 1.f);
+    }
 }
 
 static void gameobject_setpickcolor(struct gameobject *go)
