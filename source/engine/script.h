@@ -36,6 +36,7 @@ time_t file_mod_secs(const char *file);
 void register_update(struct callee c);
 void call_updates(double dt);
 
+void unregister_gui(struct callee c);
 void register_gui(struct callee c);
 void register_nk_gui(struct callee c);
 void call_gui();

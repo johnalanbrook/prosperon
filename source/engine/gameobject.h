@@ -48,14 +48,8 @@ int shape2gameobject(cpShape *shape);
 
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
 
-void gameobject_save(struct gameobject *go, FILE * file);
-
-void gameobject_saveprefab(struct gameobject *go);
-
 /* Tries a few methods to select a gameobject; if none is selected returns -1 */
 int pos2gameobject(cpVect pos);
-
-void gameobject_init(struct gameobject *go, FILE * fprefab);
 
 void gameobject_move(struct gameobject *go, cpVect vec);
 void gameobject_rotate(struct gameobject *go, float as);

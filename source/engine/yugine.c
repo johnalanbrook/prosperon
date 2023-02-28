@@ -55,6 +55,11 @@ static double framems[FPSBUF];
 int framei = 0;
 int fps;
 
+#define SIM_STOP 0
+#define SIM_PLAY 1
+#define SIM_PAUSE 2
+#define SIM_STEP 3
+
 void seghandle(int sig) {
 #ifdef __linux__
     void *ents[512];
@@ -190,7 +195,7 @@ int main(int argc, char **args) {
 
          if (framei == FPSBUF) framei = 0;
 
-         if (sim_play) {
+         if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
              timer_update(elapsed);
              physlag += elapsed;
              call_updates(elapsed * timescale);
@@ -199,7 +204,7 @@ int main(int argc, char **args) {
                  physlag -= physMS;
                  phys2d_update(physMS  * timescale);
                  call_physics(physMS * timescale);
-                 if (sim_play == 2) sim_pause();
+                 if (sim_play == SIM_STEP) sim_pause();
              }
        }
 
@@ -227,25 +232,27 @@ int frame_fps()
      return FPSBUF / fpsms;
 }
 
-int sim_playing() { return sim_play; }
-int sim_paused() { return (!sim_play && gameobjects_saved()); }
+int sim_playing() { return sim_play == SIM_PLAY; }
+int sim_paused() { return sim_play == SIM_PAUSE; }
+int sim_stopped() { return sim_play == SIM_STOP; }
 
 void sim_start() {
-  sim_play = 1;
+  sim_play = SIM_PLAY;
 }
 
 void sim_pause() {
-  sim_play = 0;
+  sim_play = SIM_PAUSE;
 }
 
 void sim_stop() {
     /* Revert starting state of everything from sim_start */
-  sim_play =  0;
+  sim_play =  SIM_STOP;
 }
 
 void sim_step() {
   if (sim_paused()) {
-      sim_play = 2;
+      YughInfo("Step");
+      sim_play = SIM_STEP;
   }
 }
 

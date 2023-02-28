@@ -63,5 +63,5 @@ void engine_init()
     phys2d_init();
 
     YughInfo("Starting sound ...");
-    //sound_init();
+    sound_init();
 }

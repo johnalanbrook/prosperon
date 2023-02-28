@@ -608,20 +608,23 @@ void register_collide(void *sym) {
 
 }
 
-void duk_call_phys_cb(cpArbiter *arb, struct callee c, int hit)
+void duk_call_phys_cb(cpVect norm, struct callee c, int hit)
 {
     duk_push_heapptr(duk, c.fn);
     duk_push_heapptr(duk, c.obj);
 
     int obj = duk_push_object(duk);
 
-    vect2duk(cpArbiterGetNormal(arb));
+    vect2duk(norm);
     duk_put_prop_literal(duk, obj, "normal");
 
     duk_push_int(duk, hit);
     duk_put_prop_literal(duk, obj, "hit");
 
-    duk_call_method(duk, 1);
+    duk_call_method(duk,1);
+
+//    if (duk_pcall_method(duk, 1))
+//      duk_run_err();
     duk_pop(duk);
 }
 
@@ -639,13 +642,27 @@ static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data)
     int g1 = cpBodyGetUserData(body1);
     int g2 = cpBodyGetUserData(body2);
     struct gameobject *go = id2go(g1);
+    struct gameobject *go2 = id2go(g2);
 
-    for (int i = 0; i < arrlen(go->shape_cbs); i++) {
-      duk_call_phys_cb(arb, go->shape_cbs[i].cbs.begin, g2);
-    }
-    
+    cpVect norm1 = cpArbiterGetNormal(arb);
+
+    for (int i = 0; i < arrlen(go->shape_cbs); i++)
+      duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, g2);
+     
     if (go->cbs.begin.obj)
-      duk_call_phys_cb(arb, go->cbs.begin, g2);
+      duk_call_phys_cb(norm1, go->cbs.begin, g2);
+
+    return;
+
+    cpVect norm2 = norm1;
+    norm2.x *= -1;
+    norm2.y *= -1;
+
+    for (int i = 0; i < arrlen(go2->shape_cbs); i++)
+      duk_call_phys_cb(norm2, go2->shape_cbs[i].cbs.begin, g1);
+    
+    if (go2->cbs.begin.obj)
+      duk_call_phys_cb(norm2, go2->cbs.begin, g1);
 
     return 1;
 }

@@ -187,94 +187,49 @@ void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
     cpShapeFree(shape);
 }
 
-/* Really more of a "mark for deletion" ... */
-void gameobject_delete(int id)
-{
-    id2go(id)->next = first;
-    first = id;
-}
+int *go_toclean = NULL;
 
 /* Free this gameobject */
 void gameobject_clean(int id) {
     struct gameobject *go = id2go(id);
+    arrfree(go->shape_cbs);
     cpBodyEachShape(go->body, rm_body_shapes, NULL);
     cpSpaceRemoveBody(space, go->body);
     cpBodyFree(go->body);
     go->body = NULL;
 }
 
+/* Really more of a "mark for deletion" ... */
+void gameobject_delete(int id)
+{
+    id2go(id)->next = first;
+    first = id;
+
+    if (cpSpaceIsLocked(space)) {
+      YughInfo("Space is simulating; adding %d to queue ...", id);
+      arrpush(go_toclean, id);
+    }
+    else
+      gameobject_clean(id);
+}
+
 void gameobjects_cleanup() {
+    for (int i = 0; i < arrlen(go_toclean); i++) {
+      YughInfo("Cleaning object %d", go_toclean[i]);
+      gameobject_clean(go_toclean[i]);
+    }
+
+    arrsetlen(go_toclean, 0);
+    
+    return;
+
     int clean = first;
+    YughInfo("Initiating a clean");
 
     while (clean >= 0 && id2go(clean)->body) {
         gameobject_clean(clean);
         clean = id2go(clean)->next;
     }
-}
-
-void gameobject_save(struct gameobject *go, FILE * file)
-{
-/*
-    fwrite(go, sizeof(*go), 1, file);
-
-    YughInfo("Number of components is %d.", arrlen(go->components));
-
-    int n = arrlen(go->components);
-    fwrite(&n, sizeof(n), 1, file);
-    for (int i = 0; i < n; i++) {
-        fwrite(&go->components[i].id, sizeof(int), 1, file);
-
-        if (go->components[i].io == NULL)
-            fwrite(go->components[i].data, go->components[i].datasize, 1, file);
-        else
-            go->components[i].io(go->components[i].data, file, 0);
-    }
-    */
-}
-
-void gameobject_init(struct gameobject *go, FILE * fprefab)
-{
-/*
-    go->body = cpSpaceAddBody(space, cpBodyNew(go->mass, 1.f));
-    cpBodySetType(go->body, go->bodytype);
-    cpBodySetUserData(go->body, go);
-
-
-
-    int comp_n;
-    fread(&comp_n, sizeof(int), 1, fprefab);
-    arrfree(go->components);
-    int n;
-
-    for (int i = 0; i < comp_n; i++) {
-        fread(&n, sizeof(int), 1, fprefab);
-        arrput(go->components, components[n]);
-        struct component *newc = &arrlast(go->components);
-        newc->go = go;
-        newc->data = newc->make(newc->go);
-
-        if (newc->io == NULL)
-            fread(newc->data, newc->datasize, 1, fprefab);
-        else
-            newc->io(newc->data, fprefab, 1);
-
-        newc->init(newc->data, go);
-    }
-    */
-}
-
-void gameobject_saveprefab(struct gameobject *go)
-{
-/*
-    char prefabfname[60] = { '\0' };
-    strncat(prefabfname, go->editor.prefabName, MAXNAME);
-    strncat(prefabfname, EXT_PREFAB, 10);
-    FILE *pfile = fopen(prefabfname, "wb+");
-    gameobject_save(go, pfile);
-    fclose(pfile);
-
-    findPrefabs();
-    */
 }
 
 void gameobject_move(struct gameobject *go, cpVect vec)

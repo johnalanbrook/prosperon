@@ -792,6 +792,10 @@ duk_ret_t duk_register(duk_context *duk) {
        unregister_obj(obj);
        break;
 
+     case 5:
+       unregister_gui(c);
+       break;
+
      }
 
    return 0;
@@ -845,7 +849,7 @@ duk_ret_t duk_sys_cmd(duk_context *duk) {
             sim_stop();
             break;
 
-        case 3:
+       case 3:
             sim_pause();
             break;
 

@@ -171,6 +171,16 @@ void unregister_obj(void *obj)
     if (guis[i].obj == obj) arrdel(nk_guis,i);
 }
 
+void unregister_gui(struct callee c)
+{
+  for (int i = arrlen(guis)-1; i >= 0; i--) {
+    if (guis[i].obj == c.obj && guis[i].fn == c.fn) {
+      arrdel(guis, i);
+      return;
+    }
+  }
+}
+
 void register_update(struct callee c) {
     arrput(updates, c);
 }

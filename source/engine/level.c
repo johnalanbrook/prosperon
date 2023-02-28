@@ -16,9 +16,6 @@ void save_level(char name[MAXNAME])
     int objs = arrlen(gameobjects);
     fwrite(&objs, sizeof(objs), 1, lfile);
 
-    for (int i = 0; i < objs; i++)
-	gameobject_save(&gameobjects[i], lfile);
-
     fclose(lfile);
 }
 

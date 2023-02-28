@@ -144,7 +144,6 @@ void call_input_signal(char *signal) {
     int len = arrlen(pawns);
     void *framepawns[len];
     memcpy(framepawns, pawns, len*sizeof(*pawns));
-    
     for (int i = 0; i < len; i++) {
       script_eval_w_env(signal, framepawns[i]);
     }
