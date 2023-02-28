@@ -98,6 +98,12 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 //    cpShapeSetSensor(shape, go->sensor);
     cpShapeSetCollisionType(shape, go2id(go));
     
+
+//    cpShapeSetFilter(shape, go->filter);
+}
+
+void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go)
+{
     float moment = cpBodyGetMoment(go->body);
     struct phys2d_shape *s = cpShapeGetUserData(shape);
     if (!s) {
@@ -106,21 +112,25 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
     }
      
     moment += s->moi(s->data, go->mass);
-    cpBodySetMoment(go->body, moment);
-//    cpShapeSetFilter(shape, go->filter);
+    cpBodySetMoment(go->body, moment);  
 }
 
 void gameobject_apply(struct gameobject *go)
 {
     cpBodySetType(go->body, go->bodytype);
-    cpBodySetMoment(go->body, 0.f);
     cpBodyEachShape(go->body, go_shape_apply, go);
-    if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
+    
+    if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
         cpBodySetMass(go->body, go->mass);
-
-    if (cpBodyGetMoment(go->body) <= 0.f) {
-      YughError("Moment for object %d is zero. Setting to one.", go2id(go));
-      cpBodySetMoment(go->body, 1.f);
+	cpBodySetMoment(go->body, 0.f);
+	cpBodyEachShape(go->body, go_shape_moi, go);
+	
+	if (cpBodyGetMoment(go->body) <= 0.f) {
+            YughError("Moment for object %d is zero. Setting to one.", go2id(go));
+            cpBodySetMoment(go->body, 1.f);
+        }
+	
+	return;
     }
 }
 

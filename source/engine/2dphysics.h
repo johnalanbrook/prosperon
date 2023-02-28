@@ -4,6 +4,8 @@
 #include <chipmunk/chipmunk.h>
 #include "script.h"
 
+struct gameobject;
+
 extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;

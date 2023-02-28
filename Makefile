@@ -84,7 +84,7 @@ ifeq ($(OS), WIN32)
 	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
-	ELIBS =  engine pthread yughc portaudio asound glfw3 c m dl samplerate
+	ELIBS =  engine pthread yughc portaudio asound glfw3 c m dl
 	CLIBS =
 endif
 

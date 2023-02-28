@@ -156,8 +156,32 @@ const char *keyname_extd(int key, int scancode) {
     const char *kkey = NULL;
 
     if (key > 289 && key < 302) {
-            sprintf(keybuf, "f%d", key-289);
-            return keybuf;
+      switch(key) {
+        case 290:
+	  return "f1";
+	case 291:
+	  return "f2";
+	case 292:
+	  return "f3";
+	case 293:
+	  return "f4";
+	case 294:
+	  return "f5";
+	case 295:
+	  return "f6";
+	case 296:
+	  return "f7";
+	case 297:
+	  return "f8";
+	case 298:
+	  return "f9";
+	case 299:
+	  return "f10";
+	case 300:
+	  return "f11";
+	case 301:
+	  return "f12";
+      }
         } else {
             switch(key) {
                 case GLFW_KEY_ENTER:
@@ -298,7 +322,8 @@ int key_is_num(int key) {
 void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
 {
     char keystr[50] = {'\0'};
-    const char *kkey = keyname_extd(key, scancode);
+    char kkey[50] = {'\0'};
+    snprintf(kkey, 50, "%s", keyname_extd(key,scancode));
 
     switch (action) {
         case GLFW_PRESS:

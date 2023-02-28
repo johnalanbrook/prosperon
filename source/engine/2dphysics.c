@@ -341,8 +341,11 @@ void phys2d_dbgdrawbox(struct phys2d_box *box)
     int n = cpPolyShapeGetCount(box->shape.shape);
     float points[n * 2];
     
-    for (int i = 0; i < n; i++)
-        points[i] = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i));
+    for (int i = 0; i < n; i++) {
+      cpVect p = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i));
+      points[i*2] = p.x;
+      points[i*2+1] = p.y;
+    }
 
     draw_poly(points, n, shape_color(box->shape.shape));
 }
@@ -413,8 +416,11 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 	int n = cpPolyShapeGetCount(poly->shape.shape);
 	float points[n * 2];
 
-	for (int i = 0; i < n; i++)
-	  points[i*2] = bodytransformpoint(cpShapeGetBody(poly->shape.shape), cpPolyShapeGetVert(poly->shape.shape, i));
+	for (int i = 0; i < n; i++) {
+	  cpVect p = bodytransformpoint(cpShapeGetBody(poly->shape.shape), cpPolyShapeGetVert(poly->shape.shape, i));
+	  points[i*2] = p.x;
+	  points[i*2+1] = p.y;
+	}
 
 	draw_poly(points, n, color);
     }
@@ -442,7 +448,11 @@ struct phys2d_edge *Make2DEdge(int go)
 
 float phys2d_edge_moi(struct phys2d_edge *edge, float m)
 {
-  return m;
+  float moi = 0;
+  for (int i = 0; i < arrlen(edge->points)-1; i++)
+    moi += cpMomentForSegment(m, edge->points[i], edge->points[i+1], edge->thickness);
+
+  return moi;
 }
 
 void phys2d_edgedel(struct phys2d_edge *edge)

@@ -26,6 +26,7 @@ struct Texture *texture_pullfromfile(const char *path)
     if (index != -1)
 	return texhash[index].value;
 
+    YughInfo("Loading texture %s.", path);
     struct Texture *tex = calloc(1, sizeof(*tex));
 
     /* Find texture's asset; otherwise load default asset */

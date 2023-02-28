@@ -129,6 +129,8 @@ int main(int argc, char **args) {
         }
     }
 
+    ed = 0;
+
 
 #if DBG
     if (logout) {
