@@ -582,11 +582,9 @@ void shape_set_sensor(struct phys2d_shape *shape, int sensor)
 {
     if (!shape->shape) {
       struct phys2d_edge *edge = shape->data;
-
-      for (int i = 0; i < arrlen(edge->shapes); i++) {
+      
+      for (int i = 0; i < arrlen(edge->shapes); i++)
         cpShapeSetSensor(edge->shapes[i], sensor);
-      YughInfo("Setting shape %d sensor to %d", i, sensor);	
-      }
     } else
       cpShapeSetSensor(shape->shape, sensor);
 }

@@ -26,7 +26,7 @@
 #endif
 
 #ifdef __linux__
-#include <execinfo.h>
+//#include <execinfo.h>
 #endif
 
 #include <signal.h>
@@ -62,7 +62,7 @@ int fps;
 
 void seghandle(int sig) {
 #ifdef __linux__
-    void *ents[512];
+/*    void *ents[512];
     size_t size;
 
     size = backtrace(ents, 512);
@@ -84,7 +84,7 @@ void seghandle(int sig) {
 
     duk_dump_stack(duk);
 
-    exit(1);
+    exit(1);*/
 #endif
 }
 

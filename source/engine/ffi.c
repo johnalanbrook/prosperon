@@ -266,6 +266,14 @@ duk_ret_t duk_nuke(duk_context *duk)
 	  duk_push_number(duk,rect.h);
 	  duk_put_prop_string(duk,-2,"h");
 	  return 1;
+
+	case 11:
+	  duk_push_boolean(duk, nuke_push_tree_id(duk_to_string(duk, 1), duk_to_int(duk,2)));
+	  return 1;
+
+	case 12:
+	  nuke_tree_pop();
+	  return 0;
     }
 
     return 0;

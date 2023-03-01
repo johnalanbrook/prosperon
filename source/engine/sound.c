@@ -139,6 +139,7 @@ void print_devices()
 
 void sound_init()
 {
+    return;
     mixer_init();
      PaError err = Pa_Initialize();
      check_pa_err(err);

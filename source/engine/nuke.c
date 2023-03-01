@@ -17,6 +17,7 @@
 
 #include "window.h"
 #include "texture.h"
+#include "log.h"
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
