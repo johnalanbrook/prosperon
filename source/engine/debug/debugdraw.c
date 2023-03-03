@@ -7,7 +7,7 @@
 #include <assert.h>
 #include "debug.h"
 #include "window.h"
-
+#include "2dphysics.h"
 #include "stb_ds.h"
 
 static uint32_t circleVBO;
@@ -230,10 +230,10 @@ void draw_rect(int x, int y, int w, int h, float *color)
     draw_poly(verts, 4, color);
 }
 
-void draw_box(struct cpVect c, struct cpVect wh)
+void draw_box(struct cpVect c, struct cpVect wh, struct color color)
 {
-  float white[3] = {1, 1, 1};
-  draw_rect(c.x, c.y, wh.x, wh.y, white);
+  float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
+  draw_rect(c.x, c.y, wh.x, wh.y, col);
 }
 
 void draw_grid(int width, int span)

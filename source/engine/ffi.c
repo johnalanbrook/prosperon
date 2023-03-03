@@ -47,11 +47,11 @@ struct color duk2color(duk_context *duk, int p)
     struct color color;
 
     duk_get_prop_index(duk, p, 0);
-    color.r = duk_to_number(duk, -1);
-    duk_get_prop_index(duk, p, 0);
-    color.b = duk_to_number(duk, -1);
-    duk_get_prop_index(duk, p, 0);
-    color.g = duk_to_number(duk, -1);
+    color.r = duk_to_int(duk, -1);
+    duk_get_prop_index(duk, p, 1);
+    color.g = duk_to_int(duk, -1);
+    duk_get_prop_index(duk, p, 2);
+    color.b = duk_to_int(duk, -1);
 
     return color;
 }
@@ -180,6 +180,19 @@ duk_ret_t duk_gui_text(duk_context *duk) {
     const float white[3] = {1.f, 1.f, 1.f};
     renderText(s, &pos, size, white, 500);
     return 0;
+}
+
+duk_ret_t duk_ui_text(duk_context *duk)
+{
+    const char *s = duk_to_string(duk, 0);
+    cpVect pos = duk2vec2(duk, 1);
+
+    float size = duk_to_number(duk, 2);
+    struct color c = duk2color(duk,3);
+    const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
+    renderText(s, &pos, size, col, 500);
+    return 0;
+
 }
 
 duk_ret_t duk_gui_img(duk_context *duk) {
@@ -680,7 +693,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 1;
 	  
 	case 53:
-	  draw_box(duk2vec2(duk, 1), duk2vec2(duk, 2));
+	  draw_box(duk2vec2(duk, 1), duk2vec2(duk, 2), duk2color(duk,3));
 	  return 0;
 
 	case 54:
@@ -961,11 +974,11 @@ duk_ret_t duk_set_body(duk_context *duk) {
 
     case 8:
       cpBodySetAngularVelocity(go->body, duk_to_number(duk, 2));
-      break;
+      return 0;
 
     case 9:
       cpBodySetVelocity(go->body, duk2vec2(duk, 2));
-      break;
+      return 0;
 
     case 10:
       go->e = fmax(duk_to_number(duk,2), 0);
@@ -974,7 +987,6 @@ duk_ret_t duk_set_body(duk_context *duk) {
     case 11:
       go->f = fmax(duk_to_number(duk,2),0);
       break;
-
   }
 
   cpSpaceReindexShapesForBody(space, go->body);
@@ -1287,7 +1299,8 @@ void ffi_load()
     DUK_FUNC(register, 3);
     DUK_FUNC(register_collide, DUK_VARARGS);
 
-    DUK_FUNC(gui_text, 3);
+    DUK_FUNC(gui_text, DUK_VARARGS);
+    DUK_FUNC(ui_text, 4);
     DUK_FUNC(gui_img, 2);
 
 
