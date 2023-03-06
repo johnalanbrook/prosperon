@@ -5,6 +5,7 @@
 #include <stb_ds.h>
 
 struct timer *timers;
+static int first = -1;
 
 void check_timer(struct timer *t, double dt)
 {
@@ -39,11 +40,18 @@ struct timer *timer_make(double interval, void (*callback)(void *param), void *p
     new.repeat = 1;
     new.timerid = arrlen(timers);
     new.owndata = own;
-
-    timer_start(&new);
-    arrput(timers, new);
-
-    return &arrlast(timers);
+    
+    if (first <0) {
+      timer_start(&new);
+      arrput(timers, new);
+      return &arrlast(timers);
+    } else {
+      int retid = first;
+      first = id2timer(first)->next;
+      *id2timer(retid) = new;
+      timer_start(id2timer(retid));
+      return id2timer(retid);
+    }
 }
 
 void timer_pause(struct timer *t) {
@@ -54,21 +62,19 @@ void timer_pause(struct timer *t) {
 
 void timer_stop(struct timer *t) {
     if (!t->on) return;
-
     t->on = 0;
     t->remain_time = t->interval;
 }
 
 void timer_start(struct timer *t) {
     if (t->on) return;
-
     t->on = 1;
 }
 
 void timer_remove(struct timer *t) {
     int i = t->timerid;
     if (t->owndata) free(t->data);
-    arrdelswap(timers, i);
+    timers[i].timerid = 
     timers[i].timerid = i;
 }
 

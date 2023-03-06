@@ -4,12 +4,13 @@
 struct timer {
     int timerid;
     int on;
-    double interval;   // Time of timer
+    double interval; // Time of timer
     int repeat;
     double remain_time;   // How much time until the timer executes
     void (*cb)(void *data);
     void *data;
     int owndata;
+    int next;
 };
 
 struct timer *timer_make(double interval, void (*callback)(void *param), void *param, int own);

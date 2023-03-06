@@ -42,6 +42,11 @@ struct gameobject *duk2go(duk_context *duk, int p)
   return id2go(duk_to_int(duk, p));
 }
 
+struct timer *duk2timer(duk_context *duk, int p)
+{
+  return id2timer(duk_to_int(duk, p));
+}
+
 struct color duk2color(duk_context *duk, int p)
 {
     struct color color;
@@ -54,6 +59,22 @@ struct color duk2color(duk_context *duk, int p)
     color.b = duk_to_int(duk, -1);
 
     return color;
+}
+
+float duk_get_prop_number(duk_context *duk, int p, const char *str)
+{
+  duk_get_prop_string(duk,p,str);
+  return duk_to_number(duk,-1);
+}
+
+struct glrect duk_to_glrect(duk_context *duk, int p)
+{
+  struct glrect rect;
+  rect.s0 = duk_get_prop_number(duk,p,"s0");
+  rect.s1 = duk_get_prop_number(duk,p,"s1");
+  rect.t0 = duk_get_prop_number(duk,p,"t0");
+  rect.t1 = duk_get_prop_number(duk,p,"t1");
+  return rect;
 }
 
 cpVect duk2vec2(duk_context *duk, int p)
@@ -525,7 +546,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 12:
-         sprite_loadtex(id2sprite(duk_to_int(duk, 1)), duk_to_string(duk, 2));
+         sprite_loadtex(id2sprite(duk_to_int(duk, 1)), duk_to_string(duk, 2), duk_to_glrect(duk, 3));
          break;
 
        case 13:
@@ -573,27 +594,27 @@ duk_ret_t duk_cmd(duk_context *duk) {
          return 1;
 
        case 24:
-         timer_pause(id2timer(duk_to_int(duk, 1)));
+         timer_pause(duk2timer(duk,1));
          break;
 
        case 25:
-         timer_stop(id2timer(duk_to_int(duk, 1)));
+         timer_stop(duk2timer(duk,1));
          break;
 
        case 26:
-         timer_start(id2timer(duk_to_int(duk, 1)));
+         timer_start(duk2timer(duk,1));
          break;
 
        case 27:
-         timer_remove(id2timer(duk_to_int(duk, 1)));
+         timer_remove(duk2timer(duk,1));
          break;
 
        case 28:
-         timerr_settime(id2timer(duk_to_int(duk, 1)), duk_to_number(duk, 2));
+         timerr_settime(duk2timer(duk,1), duk_to_number(duk, 2));
          break;
 
        case 29:
-         duk_push_number(duk, id2timer(duk_to_int(duk, 1))->interval);
+         duk_push_number(duk, duk2timer(duk,1)->interval);
          return 1;
 
        case 30:
@@ -605,19 +626,19 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 32:
-         duk_push_number(duk, id2timer(duk_to_int(duk, 1))->remain_time);
+         duk_push_number(duk, duk2timer(duk,1)->remain_time);
          return 1;
 
        case 33:
-         duk_push_boolean(duk, ((struct timer*)duk_to_pointer(duk, 1))->on);
+         duk_push_boolean(duk, duk2timer(duk, 1)->on);
          return 1;
 
        case 34:
-         duk_push_boolean(duk, ((struct timer*)duk_to_pointer(duk, 1))->repeat);
+         duk_push_boolean(duk, duk2timer(duk,1)->repeat);
          return 1;
 
        case 35:
-         ((struct timer*)duk_to_pointer(duk, 1))->repeat = duk_to_boolean(duk, 2);
+         duk2timer(duk,1)->repeat = duk_to_boolean(duk, 2);
          return 0;
 
        case 36:
@@ -1035,7 +1056,7 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
   cpVect pos = duk2vec2(duk, 2);
   int sprite = make_sprite(go);
   struct sprite *sp = id2sprite(sprite);
-  sprite_loadtex(sp, path);
+  sprite_loadtex(sp, path, ST_UNIT);
   sp->pos[0] = pos.x;
   sp->pos[1] = pos.y;
 

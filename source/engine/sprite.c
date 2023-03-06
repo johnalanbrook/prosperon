@@ -74,7 +74,7 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
             if (path[i] == '\0') break;
         }
         fread(sprite, sizeof(*sprite), 1, f);
-        sprite_loadtex(sprite, path);
+        sprite_loadtex(sprite, path, ST_UNIT);
     } else {
         fputs(tex_get_path(sprite->tex), f);
         fputc('\0', f);
@@ -98,10 +98,10 @@ void sprite_draw_all()
         sprite_draw(layers[i][j]);
 }
 
-void sprite_loadtex(struct sprite *sprite, const char *path)
+void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect frame)
 {
     sprite->tex = texture_loadfromfile(path);
-    sprite_setframe(sprite, &ST_UNIT);
+    sprite_setframe(sprite, &frame);
 }
 
 void sprite_settex(struct sprite *sprite, struct Texture *tex)
@@ -175,7 +175,7 @@ void sprite_draw(struct sprite *sprite)
         cpVect cpos = cpBodyGetPosition(go->body);
         float pos[2] = {cpos.x, cpos.y};
         float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
-        tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, *sprite->frame);
+        tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, sprite->frame);
     }
 }
 
@@ -183,7 +183,7 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame)
 {
     if (!sprite) return;
     sprite->tex = anim->tex;
-    sprite->frame = &anim->st_frames[frame];
+    sprite->frame = anim->st_frames[frame];
 }
 
 void gui_draw_img(const char *img, float x, float y) {
@@ -197,7 +197,7 @@ void gui_draw_img(const char *img, float x, float y) {
 
 void sprite_setframe(struct sprite *sprite, struct glrect *frame)
 {
-    sprite->frame = frame;
+    sprite->frame = *frame;
 }
 
 void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2], float rotate, mfloat_t color[3])

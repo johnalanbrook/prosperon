@@ -6,6 +6,7 @@
 #include "mathc.h"
 #include "texture.h"
 
+
 struct datastream;
 struct gameobject;
 
@@ -17,7 +18,7 @@ struct sprite {
     int go;
     int id;
     struct Texture *tex;
-    struct glrect *frame;
+    struct glrect frame;
     int next;
     int enabled;
     int layer;
@@ -28,7 +29,7 @@ struct sprite *id2sprite(int id);
 void sprite_delete(int id);
 void sprite_enabled(int id, int e);
 void sprite_io(struct sprite *sprite, FILE *f, int read);
-void sprite_loadtex(struct sprite *sprite, const char *path);
+void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect rect);
 void sprite_settex(struct sprite *sprite, struct Texture *tex);
 void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame);
 void sprite_setframe(struct sprite *sprite, struct glrect *frame);
