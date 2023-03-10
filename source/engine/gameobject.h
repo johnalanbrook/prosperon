@@ -22,6 +22,7 @@ struct gameobject {
     int flipx; /* 1 or -1 */
     int flipy;
     int sensor;
+    unsigned int layer;
     cpShapeFilter filter;
     cpBody *body; /* NULL if this object is dead */
     int id;

@@ -31,7 +31,6 @@ void nuke_init(struct window *win) {
 
     ctx = nk_glfw3_init(&nkglfw, win->window, NK_GLFW3_INSTALL_CALLBACKS);
 
-
     struct nk_font_atlas *atlas;
     nk_glfw3_font_stash_begin(&nkglfw, &atlas);
     struct nk_font *noto = nk_font_atlas_add_from_file(atlas, "fonts/teenytinypixels.tff", 14, 0);
@@ -64,6 +63,11 @@ void nuke_stop() {
 
 struct nk_rect nuke_win_get_bounds() {
     return nk_window_get_bounds(ctx);
+}
+
+void nuke_row(int height)
+{
+  nk_layout_row_dynamic(ctx, height, 1);
 }
 
 void nuke_property_float3(const char *label, float min, float *val, float max, float step, float dragstep) {

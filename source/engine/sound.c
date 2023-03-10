@@ -139,17 +139,15 @@ void print_devices()
 
 void sound_init()
 {
-    return;
     mixer_init();
-     PaError err = Pa_Initialize();
-     check_pa_err(err);
+    PaError err = Pa_Initialize();
+    check_pa_err(err);
 
     err = Pa_OpenDefaultStream(&stream_def, 0, CHANNELS, paInt16, SAMPLERATE, BUF_FRAMES, patestCallback, NULL);
     check_pa_err(err);
 
     err = Pa_StartStream(stream_def);
     check_pa_err(err);
-
 }
 
 struct wav *make_sound(const char *wav)
@@ -160,10 +158,9 @@ struct wav *make_sound(const char *wav)
     struct wav mwav;
     mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
-
     if (mwav.samplerate != SAMPLERATE) {
         YughInfo("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);
-        mwav = change_samplerate(mwav, SAMPLERATE);
+//        mwav = change_samplerate(mwav, SAMPLERATE);
     }
 
     if (mwav.ch != CHANNELS) {
@@ -205,10 +202,12 @@ void kill_oneshot(struct sound *s)
     free(s);
 }
 
-void play_oneshot(struct wav *wav) {
+void play_oneshot(struct wav *wav) { 
     struct sound *new = malloc(sizeof(*new));
     new->data = wav;
     new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
+    YughInfo("Playing sound ...");
+    YughInfo("Bus is on? %d", new->bus->on);
     new->playing=1;
     new->loop=0;
     new->frame = 0;
@@ -224,7 +223,6 @@ struct sound *play_sound(struct wav *wav)
     new->playing = 1;
 
     return new;
-
 }
 
 int sound_playing(const struct sound *s)
@@ -292,7 +290,6 @@ void sound_fillbuf(struct sound *s, short *buf, int n)
     short *in = s->data->data;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < CHANNELS; j++) buf[i*CHANNELS+j] = in[s->frame+j] * gainmult;
-
         s->frame++;
         if (s->frame == s->data->frames) {
 
@@ -308,8 +305,6 @@ void mp3_fillbuf(struct sound *s, short *buf, int n)
 {
 
 }
-
-
 
 void soundstream_fillbuf(struct soundstream *s, short *buf, int n)
 {

@@ -164,6 +164,20 @@ struct sFont *MakeFont(const char *fontfile, int height)
 static int curchar = 0;
 static float *buffdraw;
 
+void draw_char_box(struct Character c, float cursor[2], float scale, float color[3])
+{
+  int x, y, w, h;
+
+  x = cursor[0];
+  y = cursor[1];
+  w = 8*scale;
+  h = 14;
+  x += w/2.f;
+  y += h/2.f;
+
+  draw_rect(x,y,w,h,color);
+}
+
 void fill_charverts(float *verts, float cursor[2], float scale, struct Character c, float *offset)
 {
   float w = c.Size[0] * scale;
@@ -182,6 +196,8 @@ void fill_charverts(float *verts, float cursor[2], float scale, struct Character
   memcpy(verts, v, sizeof(float)*16);
 }
 
+static int drawcaret = 0;
+
 void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
 {
     float shadowcolor[3] = {0.f, 0.f, 0.f};	
@@ -191,10 +207,23 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     float offset[2] = {-1, 1};
 
     fill_charverts(verts, cursor, scale, c, offset);
+    curchar++;
     
         /* Check if the vertex is off screen */
     if (verts[5] < 0 || verts[10] < 0 || verts[0] > window_i(0)->width || verts[1] > window_i(0)->height)
         return;
+
+    if (drawcaret == curchar) {
+        draw_char_box(c, cursor, scale, color);
+	    shader_use(shader);
+    shader_setvec3(shader, "textColor", color);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, font->texID);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+      }
+
 
     shader_setvec3(shader, "textColor", shadowcolor);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
@@ -224,7 +253,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    curchar++;
+
 }
 
 void text_settype(struct sFont *mfont)
@@ -232,41 +261,52 @@ void text_settype(struct sFont *mfont)
     font = mfont;
 }
 
-void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
+void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw, int caret)
 {
-    shader_use(shader);
-    shader_setvec3(shader, "textColor", color);
-
     int len = strlen(text);
+    drawcaret = caret;
 
     mfloat_t cursor[2] = { 0.f };
     cursor[0] = pos[0];
     cursor[1] = pos[1];
-
+    shader_use(shader);
+    shader_setvec3(shader, "textColor", color);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, font->texID);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, len*16*sizeof(float)*2, NULL, GL_STREAM_DRAW); /* x2 on the size for the outline pass */
-
-    const unsigned char *line, *wordstart;
-    line = (unsigned char*)text;
+    
+    const unsigned char *line, *wordstart, *drawstart;
+    line = drawstart = (unsigned char*)text;
 
     curchar = 0;
+
+    float *usecolor = color;
+    float caretcolor[3] = {0.4,0.98,0.75};
 
     while (*line != '\0') {
 
         switch (*line) {
             case '\n':
+	        sdrawCharacter(font->Characters[*line], cursor, scale, shader, usecolor);
                 cursor[1] -= scale * font->height;
+		cursor[0] = pos[0];
                 line++;
                 break;
 
             case ' ':
-                sdrawCharacter(font->Characters[*line], cursor, scale, shader, color);
+                sdrawCharacter(font->Characters[*line], cursor, scale, shader, usecolor);
                 cursor[0] += font->Characters[*line].Advance * scale;
                 line++;
                 break;
+		
+	    case '\t':
+	        sdrawCharacter(font->Characters[*line], cursor, scale, shader, usecolor);
+                cursor[0] += font->Characters[*line].Advance * scale;
+                line++;
+                break;
+	      
 
             default:
                 wordstart = line;
@@ -283,7 +323,7 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
                 }
 
                 while (wordstart < line) {
-                    sdrawCharacter(font->Characters[*wordstart], cursor, scale, shader, color);
+                    sdrawCharacter(font->Characters[*wordstart], cursor, scale, shader, usecolor);
                     cursor[0] += font->Characters[*wordstart].Advance * scale;
                     wordstart++;
                 }

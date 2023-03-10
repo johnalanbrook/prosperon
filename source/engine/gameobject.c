@@ -95,11 +95,13 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
 {
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
-//    cpShapeSetSensor(shape, go->sensor);
     cpShapeSetCollisionType(shape, go2id(go));
-    
 
-//    cpShapeSetFilter(shape, go->filter);
+    cpShapeFilter filter;
+    filter.group = go2id(go);
+    filter.categories = 1<<go->layer;
+    filter.mask = category_masks[go->layer];
+    cpShapeSetFilter(shape, filter);
 }
 
 void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go)
@@ -170,10 +172,8 @@ int MakeGameobject()
         *id2go(retid) = go;
     }
     
-    go.filter.group = retid;
-    go.filter.mask = CP_ALL_CATEGORIES;
-    go.filter.categories = CP_ALL_CATEGORIES;
     cpBodySetUserData(go.body, (int)retid);
+    phys2d_setup_handlers(retid);
     return retid;
 }
 
@@ -205,26 +205,21 @@ void gameobject_delete(int id)
     id2go(id)->next = first;
     first = id;
 
-    if (cpSpaceIsLocked(space)) {
-      YughInfo("Space is simulating; adding %d to queue ...", id);
+    if (cpSpaceIsLocked(space))
       arrpush(go_toclean, id);
-    }
     else
       gameobject_clean(id);
 }
 
 void gameobjects_cleanup() {
-    for (int i = 0; i < arrlen(go_toclean); i++) {
-      YughInfo("Cleaning object %d", go_toclean[i]);
+    for (int i = 0; i < arrlen(go_toclean); i++)
       gameobject_clean(go_toclean[i]);
-    }
 
     arrsetlen(go_toclean, 0);
     
     return;
 
     int clean = first;
-    YughInfo("Initiating a clean");
 
     while (clean >= 0 && id2go(clean)->body) {
         gameobject_clean(clean);

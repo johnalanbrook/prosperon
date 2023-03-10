@@ -23,6 +23,7 @@ void nuke_property_int(const char *lbl, int min, int *val, int max, int step);
 void nuke_radio_btn(const char *lbl, int *val, int cmp);
 void nuke_checkbox(const char *lbl, int *val);
 void nuke_nel(int cols);
+void nuke_row(int height);
 void nuke_label(const char *s);
 void nuke_prop_float(const char *label, float min, float *val, float max, float step, float dragstep);
 void nuke_edit_str(char *str);

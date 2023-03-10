@@ -7,6 +7,7 @@ void sim_start();
 void sim_pause();
 void sim_stop();
 void sim_step();
+int phys_stepping();
 void set_timescale(float val);
 
 int frame_fps();

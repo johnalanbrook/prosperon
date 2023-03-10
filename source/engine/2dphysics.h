@@ -112,9 +112,11 @@ struct phys_cbs {
 };
 
 struct shape_cb {
-  cpShape *shape;
+  struct phys2d_shape *shape;
   struct phys_cbs cbs;
 };
+
+void fire_hits();
 
 void phys2d_add_handler_type(int cmd, int go,  struct callee c);
 void register_collide(void *sym);
@@ -136,9 +138,12 @@ void color2float(struct color, float *fcolor);
 struct color float2color(float *fcolor);
 
 void shape_gui(struct phys2d_shape *shape);
+void phys2d_setup_handlers(int go);
 
 void phys2d_reindex_body(cpBody *body);
 cpVect world2go(struct gameobject *go, cpVect worldpos);
 cpVect go2world(struct gameobject *go, cpVect gopos);
+extern unsigned int category_masks[32];
+void set_cat_mask(int cat, unsigned int mask);
 
 #endif

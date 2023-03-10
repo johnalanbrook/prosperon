@@ -38,4 +38,7 @@ struct inputaction
 void set_pawn(void *pawn);
 void remove_pawn(void *pawn);
 
+void input_to_nuke();
+void input_to_game();
+
 #endif

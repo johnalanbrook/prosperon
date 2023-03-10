@@ -13,7 +13,7 @@ void draw_grid(int width, int span);
 void draw_rect(int x, int y, int w, int h, float *color);
 void draw_box(struct cpVect c, struct cpVect wh, struct color color);
 void draw_point(int x, int y, float r, float *color);
-void draw_cppoint(struct cpVect point, float r);
+void draw_cppoint(struct cpVect point, float r, struct color color);
 void draw_poly(float *points, int n, float *color);
 
 

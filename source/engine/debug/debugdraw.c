@@ -255,24 +255,13 @@ void draw_grid(int width, int span)
 
 void draw_point(int x, int y, float r, float *color)
 {
-    shader_use(circleShader);
-
-    float verts[] = { x, y };
-
-    glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
-    glPointSize(r);
-
-    glBindVertexArray(circleVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-    glDrawArrays(GL_POINTS, 0, 4);
+    draw_circle(x,y,r,r,color,1);
 }
 
-void draw_cppoint(struct cpVect point, float r)
+void draw_cppoint(struct cpVect point, float r, struct color color)
 {
-    float white[3] = {1.f, 1.f, 1.f};
-    draw_point(point.x, point.y, r, white);
+    float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
+    draw_point(point.x, point.y, r, col);
 }
 
 void draw_points(struct cpVect *points, int n, float size, float *color)

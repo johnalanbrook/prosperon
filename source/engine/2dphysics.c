@@ -30,6 +30,13 @@ float dynamic_color[3] = {255/255, 70/255, 46/255};
 float kinematic_color[3] = {255/255, 206/255,71/255};
 float static_color[3] = {0.22f, 0.271f, 1.f};
 
+unsigned int category_masks[32];
+
+void set_cat_mask(int cat, unsigned int mask)
+{
+  category_masks[cat] = mask;
+}
+
 void color2float(struct color color, float *fcolor)
 {
     fcolor[0] = (float)color.r/255;
@@ -565,9 +572,9 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge)
 void shape_enabled(struct phys2d_shape *shape, int enabled)
 {
     if (enabled)
-      cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_ALL);
+      cpShapeSetFilter(shape->data, CP_SHAPE_FILTER_ALL);
     else
-      cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_NONE);
+      cpShapeSetFilter(shape->data, CP_SHAPE_FILTER_NONE);
 }
 
 int shape_is_enabled(struct phys2d_shape *shape)
@@ -606,6 +613,15 @@ void register_collide(void *sym) {
 
 }
 
+struct hit_call {
+  cpVect norm;
+  struct callee c;
+  int hit;
+};
+
+struct hit_call *frame_hits;
+
+
 void duk_call_phys_cb(cpVect norm, struct callee c, int hit)
 {
     duk_push_heapptr(duk, c.fn);
@@ -619,6 +635,9 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit)
     duk_push_int(duk, hit);
     duk_put_prop_literal(duk, obj, "hit");
 
+/*    vect2duk(cpArbiterGetSurfaceVelocity(arb));
+    duk_put_prop_literal(duk, obj, "velocity");
+*/
     duk_call_method(duk,1);
 
 //    if (duk_pcall_method(duk, 1))
@@ -626,9 +645,28 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit)
     duk_pop(duk);
 }
 
+void push_phys_cb(cpVect norm, struct callee c, int hit)
+{
+  struct hit_call newhit;
+  newhit.norm = norm;
+  newhit.c = c;
+  newhit.hit = hit;
+
+  arrpush(frame_hits, newhit);
+}
+
+void fire_hits()
+{
+  if (arrlen(frame_hits) == 0) return;
+  
+  for (int i = 0; i < arrlen(frame_hits); i++)
+    duk_call_phys_cb(frame_hits[i].norm, frame_hits[i].c, frame_hits[i].hit);
+
+  arrfree(frame_hits);
+}
+
 static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data)
 {
-    
     cpBody *body1;
     cpBody *body2;
     cpArbiterGetBodies(arb, &body1, &body2);
@@ -642,25 +680,18 @@ static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data)
     struct gameobject *go = id2go(g1);
     struct gameobject *go2 = id2go(g2);
 
+    struct phys2d_shape *pshape1 = cpShapeGetUserData(shape1);
+    struct phys2d_shape *pshape2 = cpShapeGetUserData(shape2);
+
     cpVect norm1 = cpArbiterGetNormal(arb);
+    cpVect vel1 = cpArbiterGetSurfaceVelocity(arb);
 
     for (int i = 0; i < arrlen(go->shape_cbs); i++)
-      duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, g2);
-     
+      if (go->shape_cbs[i].shape == pshape1)
+        duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, g2);
+
     if (go->cbs.begin.obj)
       duk_call_phys_cb(norm1, go->cbs.begin, g2);
-
-    return;
-
-    cpVect norm2 = norm1;
-    norm2.x *= -1;
-    norm2.y *= -1;
-
-    for (int i = 0; i < arrlen(go2->shape_cbs); i++)
-      duk_call_phys_cb(norm2, go2->shape_cbs[i].cbs.begin, g1);
-    
-    if (go2->cbs.begin.obj)
-      duk_call_phys_cb(norm2, go2->cbs.begin, g1);
 
     return 1;
 }
@@ -673,14 +704,16 @@ void phys2d_rm_go_handlers(int go)
   handler->separateFunc = NULL;
 }
 
+void phys2d_setup_handlers(int go)
+{
+  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
+  handler->userData = go;
+  handler->beginFunc = script_phys_cb_begin;
+}
+
 void phys2d_add_handler_type(int cmd, int go, struct callee c) {
-    cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
-
-    handler->userData = go;
-
     switch (cmd) {
         case 0:
-            handler->beginFunc = script_phys_cb_begin;
             id2go(go)->cbs.begin = c;
             break;
 

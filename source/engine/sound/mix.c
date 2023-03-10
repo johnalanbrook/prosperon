@@ -37,8 +37,17 @@ void mixer_init() {
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {
-    if (!initted) return NULL;
     assert(initted);
+
+    for (int i = 0; i < 255; i++)
+      if (!bus[i].on) {
+        bus[i].on = 1;
+	bus[i].in = in;
+	YughInfo("Returning bus %d", i);
+        return &bus[i];
+      }
+	
+    return NULL;
     
     if (first == -1) return NULL;
     int ret = first;
@@ -58,6 +67,10 @@ struct bus *first_free_bus(struct dsp_filter in) {
 
 void bus_free(struct bus *b)
 {
+    YughInfo("Freeing bus %d", b->id);
+    b->on = 0;
+    return;
+    
     if (first_on == b->id) first_on = b->next;
     if (b->next != -1) bus[b->next].prev = b->prev;
     if (b->prev != -1) bus[b->prev].next = b->next;
@@ -69,8 +82,17 @@ void bus_free(struct bus *b)
 
 void bus_fill_buffers(short *master, int n) {
     int curbus = first_on;
-    if (curbus == -1) return;
+//    if (curbus == -1) return;
     memset(master, 0, BUF_FRAMES*CHANNELS*sizeof(short));
+
+    for (int i = 0; i < 255; i++) {
+      if (!bus[i].on) continue;
+      dsp_run(bus[i].in, bus[i].buf, BUF_FRAMES);
+      for (int j = 0; j < BUF_FRAMES*CHANNELS; j++)
+        master[j] += bus[i].buf[j] * master_volume;
+    }
+
+    return;
 
     while (curbus != -1) {
         int nextbus = bus[curbus].next; /* Save this in case busses get changed during fill */

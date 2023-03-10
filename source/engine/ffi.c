@@ -105,15 +105,12 @@ cpBitmask duk2bitmask(duk_context *duk, int p)
 
     for (int i = 0; i < len; i++) {
       duk_get_prop_index(duk, p, i);
-      int val = duk_to_int(duk, -1);
+      int val = duk_to_boolean(duk, -1);
       duk_pop(duk);
+      if (!val) continue;
 
-      if (val > 10) continue;
-      
-      mask |= 1<<val;
+      mask |= 1<<i;
     }
-
-    YughInfo(BYTE_TO_BINARY_PATTERN,BYTE_TO_BINARY(mask));
 
     return mask;
 }
@@ -199,7 +196,7 @@ duk_ret_t duk_gui_text(duk_context *duk) {
 
     float size = duk_to_number(duk, 2);
     const float white[3] = {1.f, 1.f, 1.f};
-    renderText(s, &pos, size, white, 500);
+    renderText(s, &pos, size, white, 500,-1);
     return 0;
 }
 
@@ -211,9 +208,21 @@ duk_ret_t duk_ui_text(duk_context *duk)
     float size = duk_to_number(duk, 2);
     struct color c = duk2color(duk,3);
     const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
-    renderText(s, &pos, size, col, 500);
+    renderText(s, &pos, size, col, 500,-1);
     return 0;
+}
 
+duk_ret_t duk_cursor_text(duk_context *duk)
+{
+    const char *s = duk_to_string(duk, 0);
+    cpVect pos = duk2vec2(duk, 1);
+
+    float size = duk_to_number(duk, 2);
+    struct color c = duk2color(duk,3);
+    const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
+    int cursor = duk_to_int(duk,4);
+    renderText(s, &pos, size, col, 500,cursor);
+    return 0;
 }
 
 duk_ret_t duk_gui_img(duk_context *duk) {
@@ -308,6 +317,10 @@ duk_ret_t duk_nuke(duk_context *duk)
 	case 12:
 	  nuke_tree_pop();
 	  return 0;
+
+	case 13:
+	  nuke_row(duk_to_int(duk,1));
+	  break;
     }
 
     return 0;
@@ -706,7 +719,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 1;
 	  
 	case 51:
-	  draw_cppoint(duk2vec2(duk, 1), duk_to_number(duk, 2));
+	  draw_cppoint(duk2vec2(duk, 1), duk_to_number(duk, 2), duk2color(duk,3));
 	  return 0;
 	  
 	case 52:
@@ -801,6 +814,26 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 74:
 	  duk_push_number(duk, cpSpaceGetDamping(space));
 	  return 1;
+
+	case 75:
+	  id2go(duk_to_int(duk,1))->layer = duk_to_int(duk,2);
+	  return 0;
+
+	case 76:
+	  set_cat_mask(duk_to_int(duk,1), duk2bitmask(duk,2));
+	  return 0;
+
+	case 77:
+	  input_to_game();
+	  break;
+
+	case 78:
+	  input_to_nuke();
+	  break;
+
+	case 79:
+	  duk_push_boolean(duk, phys_stepping());
+	  return 1;
     }
 
     return 0;
@@ -846,7 +879,7 @@ duk_ret_t duk_register(duk_context *duk) {
 void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape *shape)
 {
   struct shape_cb shapecb;
-  shapecb.shape = shape->shape;
+  shapecb.shape = shape;
   shapecb.cbs.begin = c;
   arrpush(id2go(go)->shape_cbs, shapecb);
 }
@@ -860,11 +893,12 @@ duk_ret_t duk_register_collide(duk_context *duk) {
 
     switch(cmd) {
       case 0:
-        phys2d_add_handler_type(cmd, go, c);
+        id2go(go)->cbs.begin = c;
         break;
 
       case 1:
         gameobject_add_shape_collider(go, c, duk_get_pointer(duk,4));
+	YughInfo("Adding gameobject %d shape collider for shape %p", go, duk_get_pointer(duk,4));
 	break;
 
       case 2:
@@ -1045,6 +1079,10 @@ duk_ret_t duk_q_body(duk_context *duk) {
         case 5:
           duk_push_number(duk, cpBodyGetMass(go->body));
           return 1;
+
+	case 6:
+	  duk_push_number(duk, cpBodyGetMoment(go->body));
+	  return 1;
     }
 
     return 0;
@@ -1322,9 +1360,8 @@ void ffi_load()
 
     DUK_FUNC(gui_text, DUK_VARARGS);
     DUK_FUNC(ui_text, 4);
+    DUK_FUNC(cursor_text,5);
     DUK_FUNC(gui_img, 2);
-
-
 
     DUK_FUNC(anim, 2);
 }

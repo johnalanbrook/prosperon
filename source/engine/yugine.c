@@ -47,6 +47,7 @@ double updateMS = 1/60.f;
 static int ed = 1;
 static int sim_play = 0;
 static double lastTick;
+static int phys_step = 0;
 
 static float timescale = 1.f;
 
@@ -174,15 +175,10 @@ int main(int argc, char **args) {
 
     window_set_icon("icon.png");
 
-    if (ed) {
-        editor_init(MakeSDLWindow("Editor", 600, 600, 0));
-    } else {
-        script_dofile("game.js");
-    }
+    script_dofile("game.js");
 
     input_init();
     openglInit();
-    sim_stop();
     while (!want_quit()) {
          double elapsed = glfwGetTime() - lastTick;
          deltaT = elapsed;
@@ -199,12 +195,14 @@ int main(int argc, char **args) {
              timer_update(elapsed);
              physlag += elapsed;
              call_updates(elapsed * timescale);
-
              while (physlag >= physMS) {
+	         phys_step = 1;
                  physlag -= physMS;
                  phys2d_update(physMS  * timescale);
                  call_physics(physMS * timescale);
+		 fire_hits();
                  if (sim_play == SIM_STEP) sim_pause();
+		 phys_step = 0;
              }
        }
 
@@ -216,7 +214,6 @@ int main(int argc, char **args) {
         }
 
         gameobjects_cleanup();
-
     }
 
     return 0;
@@ -248,6 +245,8 @@ void sim_stop() {
     /* Revert starting state of everything from sim_start */
   sim_play =  SIM_STOP;
 }
+
+int phys_stepping() { return phys_step; }
 
 void sim_step() {
   if (sim_paused()) {

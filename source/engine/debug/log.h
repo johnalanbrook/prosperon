@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#define ERROR_BUFFER 2048
+#define ERROR_BUFFER 1024*1024
 
 #define LOG_INFO 0
 #define LOG_WARN 1

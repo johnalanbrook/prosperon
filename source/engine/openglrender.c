@@ -186,7 +186,7 @@ void openglRender(struct window *window)
     glDisable(GL_DEPTH_TEST);
     //// DEBUG
     if (debugDrawPhysics)
-        gameobject_draw_debugs();
+    gameobject_draw_debugs();
 
     ////// TEXT && GUI
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);

@@ -128,12 +128,24 @@ void char_cb(GLFWwindow *w, unsigned int codepoint)
   }
 }
 
+static GLFWcharfun nukechar;
+
 void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);
     glfwSetScrollCallback(mainwin->window, scroll_cb);
     glfwSetMouseButtonCallback(mainwin->window, mb_cb);
-    glfwSetCharCallback(mainwin->window, char_cb);
+    nukechar = glfwSetCharCallback(mainwin->window, char_cb);
+}
+
+void input_to_nuke()
+{
+  glfwSetCharCallback(mainwin->window, nukechar);
+}
+
+void input_to_game()
+{
+  glfwSetCharCallback(mainwin->window, char_cb);
 }
 
 void call_input_signal(char *signal) {
@@ -309,7 +321,6 @@ void input_poll(double wait)
 
     glfwWaitEventsTimeout(wait);
 
-    //editor_input(&e);
     for (int i = 0; i < arrlen(downkeys); i++)
         call_input_down(&downkeys[i]);
 }
