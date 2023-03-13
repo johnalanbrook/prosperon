@@ -122,6 +122,15 @@ int *phys2d_query_box(cpVect pos, cpVect wh)
   return qhits;
 }
 
+int *phys2d_query_shape(struct phys2d_shape *shape)
+{
+  if (qhits) arrfree(qhits);
+  
+  cpSpaceShapeQuery(space, shape->shape, querylist, NULL);
+  
+  return qhits;
+}
+
 int cpshape_enabled(cpShape *c)
 {
     cpShapeFilter filter = cpShapeGetFilter(c);
@@ -728,5 +737,4 @@ void phys2d_add_handler_type(int cmd, int go, struct callee c) {
             //go->cbs->separate = cb;
             break;
     }
-
 }

@@ -834,6 +834,14 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 79:
 	  duk_push_boolean(duk, phys_stepping());
 	  return 1;
+	  
+	case 80:
+	  ints2duk(phys2d_query_shape(duk_get_pointer(duk,1)));
+	  return 1;
+	  
+	case 81:
+	  draw_arrow(duk2vec2(duk,1), duk2vec2(duk,2), duk2color(duk,3));
+	  return 0;
     }
 
     return 0;

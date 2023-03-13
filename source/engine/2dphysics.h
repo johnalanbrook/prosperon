@@ -139,6 +139,7 @@ struct color float2color(float *fcolor);
 
 void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(int go);
+int *phys2d_query_shape(struct phys2d_shape *shape);
 
 void phys2d_reindex_body(cpBody *body);
 cpVect world2go(struct gameobject *go, cpVect worldpos);

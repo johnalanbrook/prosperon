@@ -236,6 +236,14 @@ void draw_box(struct cpVect c, struct cpVect wh, struct color color)
   draw_rect(c.x, c.y, wh.x, wh.y, col);
 }
 
+void draw_arrow(struct cpVect start, struct cpVect end, struct color color)
+{
+  float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
+  draw_line(start.x, start.y, end.x, end.y, col);
+  
+  draw_cppoint(end, 5, color);
+}
+
 void draw_grid(int width, int span)
 {
     shader_use(gridShader);

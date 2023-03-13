@@ -8,6 +8,7 @@ void debugdraw_init();
 void draw_line(int x1, int y1, int x2, int y2, float *color);
 void draw_edge(struct cpVect *points, int n, float *color, int thickness);
 void draw_points(struct cpVect *points, int n, float size, float *color);
+void draw_arrow(struct cpVect start, struct cpVect end, struct color);
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill);
 void draw_grid(int width, int span);
 void draw_rect(int x, int y, int w, int h, float *color);
