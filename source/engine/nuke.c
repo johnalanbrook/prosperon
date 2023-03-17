@@ -113,8 +113,17 @@ void nuke_checkbox(const char *lbl, int *val) {
     nk_checkbox_label(ctx, lbl, val);
 }
 
+void nuke_scrolltext(char *str)
+{
+  nk_edit_string_zero_terminated(ctx, NK_EDIT_MULTILINE|NK_EDIT_GOTO_END_ON_ACTIVATE, str, 1024*1024*5, NULL);
+}
+
 void nuke_nel(int cols) {
     nk_layout_row_dynamic(ctx, 25, cols);
+}
+
+void nuke_nel_h(int cols, int h) {
+    nk_layout_row_dynamic(ctx, h, cols);
 }
 
 void nuke_label(const char *s) {

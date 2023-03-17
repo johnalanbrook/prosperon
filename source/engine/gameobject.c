@@ -127,10 +127,8 @@ void gameobject_apply(struct gameobject *go)
 	cpBodySetMoment(go->body, 0.f);
 	cpBodyEachShape(go->body, go_shape_moi, go);
 	
-	if (cpBodyGetMoment(go->body) <= 0.f) {
-            YughError("Moment for object %d is zero. Setting to one.", go2id(go));
+	if (cpBodyGetMoment(go->body) <= 0.f)
             cpBodySetMoment(go->body, 1.f);
-        }
 	
 	return;
     }
@@ -157,7 +155,11 @@ int MakeGameobject()
         .mass = 1.f,
         .next = -1,
 	.sensor = 0,
+	.shape_cbs = NULL,
     };
+
+    go.cbs.begin.obj = NULL;
+    go.cbs.separate.obj = NULL;
 
     go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
 
@@ -330,16 +332,20 @@ void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
     s->debugdraw(s->data);
 }
 
+void gameobject_draw_debug(int go)
+{
+  struct gameobject *g = id2go(go);
+  if (!g || !g->body) return;
+
+  cpVect pos = cpBodyGetPosition(g->body);
+  float color[3] = {0.76f, 0.38f, 1.f};
+  draw_point(pos.x, pos.y, 3.f, color);
+  cpBodyEachShape(g->body, body_draw_shapes_dbg, NULL);
+}
+
 void gameobject_draw_debugs() {
-    for (int i = 0; i < arrlen(gameobjects); i++) {
-        if (!gameobjects[i].body) continue;
-
-        cpVect pos = cpBodyGetPosition(gameobjects[i].body);
-        float color[3] = {0.76f, 0.38f, 1.f};
-        draw_point(pos.x, pos.y, 3.f, color);
-        cpBodyEachShape(gameobjects[i].body, body_draw_shapes_dbg, NULL);
-    }
-
+    for (int i = 0; i < arrlen(gameobjects); i++)
+      gameobject_draw_debug(i);
 }
 
 

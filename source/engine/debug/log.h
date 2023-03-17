@@ -11,6 +11,7 @@
 #define LOG_CRITICAL 3
 
 extern char lastlog[];
+extern char consolelog[];
 
 #if DBG
 #define YughLog(cat, pri, msg, ...) mYughLog(cat, pri, __LINE__, __FILE__, msg, ##__VA_ARGS__)

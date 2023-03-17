@@ -188,6 +188,8 @@ void openglRender(struct window *window)
     if (debugDrawPhysics)
     gameobject_draw_debugs();
 
+    call_debugs();
+
     ////// TEXT && GUI
     glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, ui_projection);

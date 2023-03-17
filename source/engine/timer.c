@@ -31,32 +31,31 @@ void timer_update(double dt) {
         check_timer(&timers[i], dt);
 }
 
-struct timer *timer_make(double interval, void (*callback)(void *param), void *param, int own) {
+int timer_make(double interval, void (*callback)(void *param), void *param, int own) {
     struct timer new;
     new.remain_time = interval;
     new.interval = interval;
     new.cb = callback;
     new.data = param;
     new.repeat = 1;
-    new.timerid = arrlen(timers);
     new.owndata = own;
+    new.next = -1;
     
-    if (first <0) {
+    if (first < 0) {
       timer_start(&new);
       arrput(timers, new);
-      return &arrlast(timers);
+      return arrlen(timers)-1;
     } else {
       int retid = first;
       first = id2timer(first)->next;
       *id2timer(retid) = new;
       timer_start(id2timer(retid));
-      return id2timer(retid);
+      return retid;
     }
 }
 
 void timer_pause(struct timer *t) {
     if (!t->on) return;
-
     t->on = 0;
 }
 
@@ -71,11 +70,11 @@ void timer_start(struct timer *t) {
     t->on = 1;
 }
 
-void timer_remove(struct timer *t) {
-    int i = t->timerid;
+void timer_remove(int id) {
+    struct timer *t = id2timer(id);
     if (t->owndata) free(t->data);
-    timers[i].timerid = 
-    timers[i].timerid = i;
+    t->next = first;
+    first = id;
 }
 
 void timerr_settime(struct timer *t, double interval) {

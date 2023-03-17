@@ -338,6 +338,9 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
     switch (action) {
         case GLFW_PRESS:
             snprintf(keystr, 50, "input_%s_pressed", kkey);
+	    call_input_signal(keystr);
+	    snprintf(keystr,50,"input_%s_pressrep", kkey);
+	    call_input_signal(keystr);
 	    add_downkey(key);
 	    call_input_signal("input_any_pressed");
 	    
@@ -349,16 +352,18 @@ void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods
 
         case GLFW_RELEASE:
             snprintf(keystr, 50, "input_%s_released", kkey);
+	    call_input_signal(keystr);
 	    rm_downkey(key);
 	    call_input_signal("input_any_released");
             break;
 
         case GLFW_REPEAT:
             snprintf(keystr, 50, "input_%s_rep", kkey);
+	    call_input_signal(keystr);
+	    snprintf(keystr,50,"input_%s_pressrep", kkey);
+	    call_input_signal(keystr);
             break;
     }
-
-    call_input_signal(keystr);
 }
 
 void cursor_hide()

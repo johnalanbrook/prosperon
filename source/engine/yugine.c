@@ -21,14 +21,6 @@
 
 #include "2dphysics.h"
 
-#if ED
-#include "editor.h"
-#endif
-
-#ifdef __linux__
-//#include <execinfo.h>
-#endif
-
 #include <signal.h>
 #include <time.h>
 
@@ -62,8 +54,9 @@ int fps;
 #define SIM_STEP 3
 
 void seghandle(int sig) {
+/*
 #ifdef __linux__
-/*    void *ents[512];
+    void *ents[512];
     size_t size;
 
     size = backtrace(ents, 512);
@@ -85,20 +78,19 @@ void seghandle(int sig) {
 
     duk_dump_stack(duk);
 
-    exit(1);*/
+    exit(1);
 #endif
+*/
 }
 
 int main(int argc, char **args) {
     int logout = 1;
+    ed = 1;
 
     for (int i = 1; i < argc; i++) {
         if (args[i][0] == '-') {
             switch(args[i][1]) {
                 case 'p':
-                    if (strncmp(&args[i][2], "lay", 3))
-                        continue;
-
                     ed = 0;
                     break;
 
@@ -134,9 +126,6 @@ int main(int argc, char **args) {
             }
         }
     }
-
-    ed = 0;
-
 
 #if DBG
     if (logout) {
@@ -175,7 +164,10 @@ int main(int argc, char **args) {
 
     window_set_icon("icon.png");
 
-    script_dofile("game.js");
+    if (ed)
+      script_dofile("editor.js");
+    else
+      script_dofile("game.js");
 
     input_init();
     openglInit();
@@ -192,15 +184,14 @@ int main(int argc, char **args) {
          if (framei == FPSBUF) framei = 0;
 
          if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
-             timer_update(elapsed);
+             timer_update(elapsed * timescale);
              physlag += elapsed;
              call_updates(elapsed * timescale);
              while (physlag >= physMS) {
 	         phys_step = 1;
                  physlag -= physMS;
                  phys2d_update(physMS  * timescale);
-                 call_physics(physMS * timescale);
-		 fire_hits();
+                 call_physics(physMS * timescale); 
                  if (sim_play == SIM_STEP) sim_pause();
 		 phys_step = 0;
              }

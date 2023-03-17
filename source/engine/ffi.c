@@ -162,7 +162,7 @@ duk_idx_t vect2duk(cpVect v) {
 void duk_dump_stack(duk_context *duk)
 {
     YughInfo("DUK CALLSTACK");
-    for (int i = -2; ; i--) { /* Start at -2 to skip the invoked C function */
+    for (int i = -1; ; i--) { /* Start at -2 to skip the invoked C function */
       duk_inspect_callstack_entry(duk, i);
       if (duk_is_undefined(duk, -1)) break;
 
@@ -320,6 +320,14 @@ duk_ret_t duk_nuke(duk_context *duk)
 
 	case 13:
 	  nuke_row(duk_to_int(duk,1));
+	  break;
+
+	case 14:
+	  nuke_scrolltext(duk_to_string(duk,1));
+	  break;
+
+	case 15:
+	  nuke_nel_h(duk_to_int(duk,1), duk_to_int(duk,2));
 	  break;
     }
 
@@ -619,7 +627,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 27:
-         timer_remove(duk2timer(duk,1));
+         timer_remove(duk_to_int(duk,1));
          break;
 
        case 28:
@@ -840,8 +848,24 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 1;
 	  
 	case 81:
-	  draw_arrow(duk2vec2(duk,1), duk2vec2(duk,2), duk2color(duk,3));
+	  draw_arrow(duk2vec2(duk,1), duk2vec2(duk,2), duk2color(duk,3), duk_to_int(duk,4));
 	  return 0;
+
+	case 82:
+	  gameobject_draw_debug(duk_to_int(duk,1));
+	  return 0;
+
+	case 83:
+	  draw_edge(duk2cpvec2arr(duk, 1), 2, duk2color(duk,2), 1);
+	  return 0;
+
+	case 84:
+	  duk_push_string(duk, consolelog);
+	  return 1;
+
+	case 85:
+	  vect2duk(cpvproject(duk2vec2(duk,1), duk2vec2(duk,2)));
+	  return 1;
     }
 
     return 0;
@@ -879,6 +903,9 @@ duk_ret_t duk_register(duk_context *duk) {
        unregister_gui(c);
        break;
 
+     case 6:
+       register_debug(c);
+       break;
      }
 
    return 0;
@@ -906,11 +933,15 @@ duk_ret_t duk_register_collide(duk_context *duk) {
 
       case 1:
         gameobject_add_shape_collider(go, c, duk_get_pointer(duk,4));
-	YughInfo("Adding gameobject %d shape collider for shape %p", go, duk_get_pointer(duk,4));
 	break;
 
       case 2:
         phys2d_rm_go_handlers(go);
+	break;
+
+      case 3:
+        id2go(go)->cbs.separate = c;
+	break;
     }
 
     return 0;
@@ -1050,6 +1081,10 @@ duk_ret_t duk_set_body(duk_context *duk) {
     case 11:
       go->f = fmax(duk_to_number(duk,2),0);
       break;
+
+    case 12:
+      cpBodyApplyForceAtWorldPoint(go->body, duk2vec2(duk, 2), cpBodyGetPosition(go->body));
+      return 0;
   }
 
   cpSpaceReindexShapesForBody(space, go->body);
@@ -1090,6 +1125,10 @@ duk_ret_t duk_q_body(duk_context *duk) {
 
 	case 6:
 	  duk_push_number(duk, cpBodyGetMoment(go->body));
+	  return 1;
+
+	case 7:
+	  duk_push_boolean(duk, phys2d_in_air(go->body));
 	  return 1;
     }
 
@@ -1329,9 +1368,9 @@ duk_ret_t duk_make_timer(duk_context *duk) {
     struct callee *c = malloc(sizeof(*c));
     c->fn = sym;
     c->obj = obj;
-    struct timer *timer = timer_make(secs, call_callee, c, 1);
+    int id = timer_make(secs, call_callee, c, 1);
 
-    duk_push_int(duk, timer->timerid);
+    duk_push_int(duk, id);
     return 1;
 }
 

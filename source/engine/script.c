@@ -154,6 +154,7 @@ void script_call_sym_args(void *sym, void *args)
 struct callee *updates = NULL;
 struct callee *physics = NULL;
 struct callee *guis = NULL;
+struct callee *debugs = NULL;
 struct callee *nk_guis = NULL;
 
 void unregister_obj(void *obj)
@@ -168,7 +169,14 @@ void unregister_obj(void *obj)
     if (guis[i].obj == obj) arrdel(guis,i);
     
   for (int i = arrlen(nk_guis)-1; i >= 0; i--)
-    if (guis[i].obj == obj) arrdel(nk_guis,i);
+    if (nk_guis[i].obj == obj) arrdel(nk_guis,i);
+
+  for (int i = arrlen(debugs)-1; i >= 0; i--)
+    if (debugs[i].obj == obj) arrdel(debugs,i);
+}
+
+void register_debug(struct callee c) {
+  arrput(debugs, c);
 }
 
 void unregister_gui(struct callee c)
@@ -237,14 +245,18 @@ void callee_vec2(struct callee c, cpVect vec)
 }
 
 void call_updates(double dt) {
-    for (int i = 0; i < arrlen(updates); i++) {
+    for (int i = 0; i < arrlen(updates); i++)
         callee_dbl(updates[i], dt);
-    }
 }
 
 void call_gui() {
     for (int i = 0; i < arrlen(guis); i++)
         call_callee(&guis[i]);
+}
+
+void call_debug() {
+  for (int i = 0; i < arrlen(debugs); i++)
+    call_callee(&debugs[i]);
 }
 
 void call_nk_gui() {
@@ -253,7 +265,12 @@ void call_nk_gui() {
 }
 
 void call_physics(double dt) {
-    for (int i = 0; i < arrlen(physics); i++) {
-        callee_dbl(updates[i], dt);
-    }
+    for (int i = 0; i < arrlen(physics); i++)
+        callee_dbl(physics[i], dt);
+}
+
+void call_debugs()
+{
+  for (int i = 0; i < arrlen(debugs); i++)
+    call_callee(&debugs[i]);
 }

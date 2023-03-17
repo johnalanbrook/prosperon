@@ -43,7 +43,6 @@ struct bus *first_free_bus(struct dsp_filter in) {
       if (!bus[i].on) {
         bus[i].on = 1;
 	bus[i].in = in;
-	YughInfo("Returning bus %d", i);
         return &bus[i];
       }
 	
@@ -67,7 +66,6 @@ struct bus *first_free_bus(struct dsp_filter in) {
 
 void bus_free(struct bus *b)
 {
-    YughInfo("Freeing bus %d", b->id);
     b->on = 0;
     return;
     

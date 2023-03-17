@@ -136,6 +136,7 @@ struct color {
 
 void color2float(struct color, float *fcolor);
 struct color float2color(float *fcolor);
+struct color shape_color_s(cpShape *shape);
 
 void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(int go);
@@ -146,5 +147,5 @@ cpVect world2go(struct gameobject *go, cpVect worldpos);
 cpVect go2world(struct gameobject *go, cpVect gopos);
 extern unsigned int category_masks[32];
 void set_cat_mask(int cat, unsigned int mask);
-
+int phys2d_in_air(cpBody *body);
 #endif

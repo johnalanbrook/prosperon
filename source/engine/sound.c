@@ -206,8 +206,6 @@ void play_oneshot(struct wav *wav) {
     struct sound *new = malloc(sizeof(*new));
     new->data = wav;
     new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
-    YughInfo("Playing sound ...");
-    YughInfo("Bus is on? %d", new->bus->on);
     new->playing=1;
     new->loop=0;
     new->frame = 0;

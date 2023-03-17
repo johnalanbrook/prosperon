@@ -16,9 +16,10 @@ char *catstr[] = {"engine", "script"};
 
 FILE *logfile = NULL;
 
-#define CONSOLE_BUF 1024*1024/* 1MB */
+#define CONSOLE_BUF 1024*1024*5/* 5MB */
 
 char lastlog[ERROR_BUFFER] = {'\0'};
+char consolelog[CONSOLE_BUF] = {'\0'};
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
@@ -38,6 +39,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 
 	fprintf(stderr, "%s", buffer);
 	fflush(stderr);
+
+	strncat(consolelog, buffer, CONSOLE_BUF);
 
 	if (logfile) {
 	    fprintf(logfile, "%s", buffer);

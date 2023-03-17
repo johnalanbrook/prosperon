@@ -139,14 +139,18 @@ void inflatepoints(cpVect *r, cpVect *p, float d, int n)
 
 }
 
-void draw_edge(cpVect  *points, int n, float *color, int thickness)
+void draw_edge(cpVect  *points, int n, struct color color, int thickness)
 {
     static_assert(sizeof(cpVect) == 2*sizeof(float));
 
+    float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
+
     shader_use(rectShader);
-    shader_setvec3(rectShader, "linecolor", color);
+    shader_setvec3(rectShader, "linecolor", col);
 
     if (thickness <= 1) {
+//      glLineStipple(1, 0x00FF);
+//      glEnable(GL_LINE_STIPPLE);
       shader_setfloat(rectShader, "alpha", 1.f);
       glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
       glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
@@ -236,12 +240,12 @@ void draw_box(struct cpVect c, struct cpVect wh, struct color color)
   draw_rect(c.x, c.y, wh.x, wh.y, col);
 }
 
-void draw_arrow(struct cpVect start, struct cpVect end, struct color color)
+void draw_arrow(struct cpVect start, struct cpVect end, struct color color, int capsize)
 {
   float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
   draw_line(start.x, start.y, end.x, end.y, col);
   
-  draw_cppoint(end, 5, color);
+  draw_cppoint(end, capsize, color);
 }
 
 void draw_grid(int width, int span)

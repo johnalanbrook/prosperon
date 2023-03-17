@@ -252,8 +252,6 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     shader_setvec3(shader, "textColor", color);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STREAM_DRAW);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-
 }
 
 void text_settype(struct sFont *mfont)
@@ -328,6 +326,10 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
                     wordstart++;
                 }
         }
+    }
+
+    if (caret > curchar) {
+        draw_char_box(font->Characters[69], cursor, scale, color);
     }
 
 //   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*2);

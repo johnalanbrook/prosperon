@@ -13,9 +13,9 @@ struct timer {
     int next;
 };
 
-struct timer *timer_make(double interval, void (*callback)(void *param), void *param, int own);
+int timer_make(double interval, void (*callback)(void *param), void *param, int own);
 struct timer *id2timer(int id);
-void timer_remove(struct timer *t);
+void timer_remove(int id);
 void timer_start(struct timer *t);
 void timer_pause(struct timer *t);
 void timer_stop(struct timer *t);

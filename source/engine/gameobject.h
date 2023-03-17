@@ -58,6 +58,7 @@ void gameobject_setangle(struct gameobject *go, float angle);
 void gameobject_setpos(struct gameobject *go, cpVect vec);
 
 void gameobject_draw_debugs();
+void gameobject_draw_debug(int go);
 
 void object_gui(struct gameobject *go);
 
