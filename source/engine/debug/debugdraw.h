@@ -1,7 +1,7 @@
 #ifndef DEBUGDRAW_H
 #define DEBUGDRAW_H
 
-struct cpVect;
+#include <chipmunk/chipmunk.h>
 struct color;
 
 void debugdraw_init();
@@ -20,5 +20,7 @@ void draw_poly(float *points, int n, float *color);
 
 void debugdraw_flush();		/* This is called once per frame to draw all queued elements */
 
+cpVect inflatepoint(cpVect a, cpVect b, cpVect c, float d);
+void inflatepoints(cpVect *r, cpVect *p, float d, int n);
 
 #endif

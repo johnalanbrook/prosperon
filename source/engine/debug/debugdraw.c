@@ -83,15 +83,6 @@ float vecs2m(cpVect a, cpVect b)
   return (b.y-a.y)/(b.x-a.x);
 }
 
-cpVect inflateline(cpVect a, cpVect b, float d)
-{
-  cpVect c;
-  float m = vecs2m(a, b);
-  c.x = d/sqrt(1/(pow(m,2)+1));
-  c.y = d/sqrt(1+pow(m,2));
-  return c;
-}
-
 cpVect inflatepoint(cpVect a, cpVect b, cpVect c, float d)
 {
   cpVect ba = cpvnormalize(cpvsub(a,b));
@@ -136,7 +127,6 @@ void inflatepoints(cpVect *r, cpVect *p, float d, int n)
 
       for (int i = 0; i < n-2; i++)
         r[i+1] = inflatepoint(p[i],p[i+1],p[i+2], d);
-
 }
 
 void draw_edge(cpVect  *points, int n, struct color color, int thickness)

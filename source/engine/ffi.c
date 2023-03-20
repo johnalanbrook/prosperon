@@ -159,6 +159,18 @@ duk_idx_t vect2duk(cpVect v) {
     return arr;
 }
 
+duk_idx_t vecarr2duk(duk_context *duk, cpVect *points, int n)
+{
+  duk_idx_t arr = duk_push_array(duk);
+  for (int i = 0; i < n; i++) {
+    duk_idx_t varr = vect2duk(points[i]);
+    duk_put_prop_index(duk, arr, i);
+  }
+  
+  return arr;
+}
+
+
 void duk_dump_stack(duk_context *duk)
 {
     YughInfo("DUK CALLSTACK");
@@ -866,6 +878,10 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 85:
 	  vect2duk(cpvproject(duk2vec2(duk,1), duk2vec2(duk,2)));
 	  return 1;
+	  
+	case 86:
+          ints2duk(phys2d_query_box_points(duk2vec2(duk, 1), duk2vec2(duk, 2), duk2cpvec2arr(duk,3), duk_to_int(duk,4)));
+	  return 1;
     }
 
     return 0;
@@ -1333,6 +1349,30 @@ duk_ret_t duk_cmd_edge2d(duk_context *duk)
   return 0;
 }
 
+duk_ret_t duk_inflate_cpv(duk_context *duk)
+{
+  cpVect *points = duk2cpvec2arr(duk,0);
+  int n = duk_to_int(duk,1);
+  float d = duk_to_number(duk,2);
+  
+  cpVect inflate_out[n];
+  cpVect inflate_in[n];
+  
+  inflatepoints(inflate_out, points, d, n);
+  inflatepoints(inflate_in, points, -d, n);
+  
+  vecarr2duk(duk,inflate_out,n);
+  return 1;
+  
+  duk_idx_t arr = duk_push_array(duk);
+  duk_idx_t out = vecarr2duk(duk, inflate_out, n);
+  duk_put_prop_index(duk,arr, out);
+  duk_idx_t in = vecarr2duk(duk, inflate_in, n);
+  duk_put_prop_index(duk,arr,in);
+  
+  return 1;
+}
+
 /* These are anims for controlling properties on an object */
 duk_ret_t duk_anim(duk_context *duk) {
     void *prop = duk_get_heapptr(duk, 0);
@@ -1409,6 +1449,8 @@ void ffi_load()
     DUK_FUNC(ui_text, 4);
     DUK_FUNC(cursor_text,5);
     DUK_FUNC(gui_img, 2);
+    
+    DUK_FUNC(inflate_cpv, 2);
 
     DUK_FUNC(anim, 2);
 }

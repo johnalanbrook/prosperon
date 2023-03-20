@@ -141,6 +141,7 @@ struct color shape_color_s(cpShape *shape);
 void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(int go);
 int *phys2d_query_shape(struct phys2d_shape *shape);
+int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n);
 
 void phys2d_reindex_body(cpBody *body);
 cpVect world2go(struct gameobject *go, cpVect worldpos);

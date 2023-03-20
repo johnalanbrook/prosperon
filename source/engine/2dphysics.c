@@ -100,6 +100,28 @@ void querylistbodies(cpBody *body, void *data)
   }
 }
 
+int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n)
+{
+  cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
+  cpTransform T = {0};
+  T.a = 1;
+  T.d = 1;
+  T.tx = pos.x;
+  T.ty = pos.y;
+  cpShapeUpdate(box, T);
+  
+  cpBB bbox = cpShapeGetBB(box);
+  
+  if (qhits) arrfree(qhits);
+
+  for (int i = 0; i < n; i++) {
+    if (cpBBContainsVect(bbox, points[i]))
+      arrpush(qhits, i);
+  }
+  
+  return qhits;
+}
+
 int *phys2d_query_box(cpVect pos, cpVect wh)
 {
   cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
