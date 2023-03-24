@@ -3,6 +3,7 @@
 #include "script.h"
 
 #include "string.h"
+#include "debug.h"
 #include "window.h"
 #include "editor.h"
 #include "engine.h"
@@ -25,6 +26,8 @@
 #include "debugdraw.h"
 #include "stb_ds.h"
 #include <ftw.h>
+
+#include "miniaudio.h"
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \
@@ -163,7 +166,7 @@ duk_idx_t vecarr2duk(duk_context *duk, cpVect *points, int n)
 {
   duk_idx_t arr = duk_push_array(duk);
   for (int i = 0; i < n; i++) {
-    duk_idx_t varr = vect2duk(points[i]);
+    vect2duk(points[i]);
     duk_put_prop_index(duk, arr, i);
   }
   
@@ -371,38 +374,37 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
       YughCritical("Spline creation error %d: %s", status.code, status.message);
     }
 
-      for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
       duk_get_prop_index(duk, 4, i);
-
       points[i] = duk2vec2(duk, -1);
-
       duk_pop(duk);
-  }
+    }
 
   ts_bspline_set_control_points(&spline, points, NULL);
 
 
-  int nsamples = duk_to_int(duk, 5);
+  size_t nsamples = duk_to_int(duk, 5);
   cpVect samples[nsamples];
-  int rsamples;
+  static_assert(sizeof(tsReal)*2 == sizeof(cpVect));
+  size_t rsamples;
   ts_bspline_sample(&spline, nsamples, &samples, &rsamples, NULL);
 
-    int arridx = duk_push_array(duk);
+  int arridx = duk_push_array(duk);
 
-    duk_require_stack(duk, nsamples*3);
+  duk_require_stack(duk, nsamples*3);
 
-    for (int i = 0; i < nsamples; i++) {
-        int pidx = duk_push_array(duk);
-            duk_push_number(duk, samples[i].x);
-            duk_put_prop_index(duk, pidx, 0);
-            duk_push_number(duk, samples[i].y);
-            duk_put_prop_index(duk, pidx, 1);
-           duk_put_prop_index(duk, arridx, i);
-    }
+  for (int i = 0; i < nsamples; i++) {
+    int pidx = duk_push_array(duk);
+    duk_push_number(duk, samples[i].x);
+    duk_put_prop_index(duk, pidx, 0);
+    duk_push_number(duk, samples[i].y);
+    duk_put_prop_index(duk, pidx, 1);
+    duk_put_prop_index(duk, arridx, i);
+  }
 
-   ts_bspline_free(&spline);
+  ts_bspline_free(&spline);
 
-return 1;
+  return 1;
 }
 
 void ints2duk(int *ints)
@@ -587,7 +589,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 14:
-         play_oneshot(make_sound(duk_to_string(duk, 1)));
+         mini_sound(duk_to_string(duk,1));
          break;
 
        case 15:
@@ -607,7 +609,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 19:
-         mix_master_vol(duk_to_number(duk, 1));
+         mini_master(duk_to_number(duk,1));
          break;
 
        case 20:
@@ -882,6 +884,22 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	case 86:
           ints2duk(phys2d_query_box_points(duk2vec2(duk, 1), duk2vec2(duk, 2), duk2cpvec2arr(duk,3), duk_to_int(duk,4)));
 	  return 1;
+
+        case 87:
+	  mini_music_play(duk_to_string(duk,1));
+	  return 0;
+
+	case 88:
+	  mini_music_pause();
+	  return 0;
+
+	case 89:
+	  mini_music_stop();
+	  return 0;
+
+	case 90:
+	  window_set_icon(duk_to_string(duk,1));
+	  break;
     }
 
     return 0;
@@ -1353,22 +1371,19 @@ duk_ret_t duk_inflate_cpv(duk_context *duk)
 {
   cpVect *points = duk2cpvec2arr(duk,0);
   int n = duk_to_int(duk,1);
-  float d = duk_to_number(duk,2);
-  
+  double d = duk_to_number(duk,2);
+
   cpVect inflate_out[n];
   cpVect inflate_in[n];
   
   inflatepoints(inflate_out, points, d, n);
   inflatepoints(inflate_in, points, -d, n);
   
-  vecarr2duk(duk,inflate_out,n);
-  return 1;
-  
   duk_idx_t arr = duk_push_array(duk);
   duk_idx_t out = vecarr2duk(duk, inflate_out, n);
-  duk_put_prop_index(duk,arr, out);
+  duk_put_prop_index(duk,arr, 0);
   duk_idx_t in = vecarr2duk(duk, inflate_in, n);
-  duk_put_prop_index(duk,arr,in);
+  duk_put_prop_index(duk,arr,1);
   
   return 1;
 }
@@ -1450,7 +1465,7 @@ void ffi_load()
     DUK_FUNC(cursor_text,5);
     DUK_FUNC(gui_img, 2);
     
-    DUK_FUNC(inflate_cpv, 2);
+    DUK_FUNC(inflate_cpv, 3);
 
     DUK_FUNC(anim, 2);
 }

@@ -8,6 +8,10 @@
 #include "openglrender.h"
 #include "gameobject.h"
 
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
+
 #include "timer.h"
 
 #include "script.h"
@@ -161,8 +165,6 @@ int main(int argc, char **args) {
     YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
     renderMS = 1.0/vidmode->refreshRate;
-
-    window_set_icon("icon.png");
 
     if (ed)
       script_dofile("editor.js");

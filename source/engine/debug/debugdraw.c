@@ -98,13 +98,14 @@ cpVect inflatepoint(cpVect a, cpVect b, cpVect c, float d)
 }
 
 void inflatepoints(cpVect *r, cpVect *p, float d, int n)
-{    if (d == 0) {
+{
+  if (d == 0) {
        for (int i = 0; i < n; i++)
          r[i] = p[i];
 
        return;
      }
-     
+
      if (cpveql(p[0], p[n-1])) {
         r[0] = inflatepoint(p[n-2],p[0],p[1],d);
 	r[n-1] = r[0];

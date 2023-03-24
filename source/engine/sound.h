@@ -56,6 +56,12 @@ void audio_close();
 
 void sound_fillbuf(struct sound *s, short *buf, int n);
 
+void mini_sound(char *path);
+void mini_master(float v);
+void mini_music_play(char *path);
+void mini_music_pause();
+void mini_music_stop();
+
 struct wav *make_sound(const char *wav);
 void free_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);

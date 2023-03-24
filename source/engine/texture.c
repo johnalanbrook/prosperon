@@ -52,6 +52,7 @@ struct Texture *texture_pullfromfile(const char *path)
         YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
         return NULL;
     }
+    tex->data = data;
 
          glGenTextures(1, &tex->id);
 
@@ -96,7 +97,7 @@ struct Texture *texture_pullfromfile(const char *path)
 
 
 
-    stbi_image_free(data);
+//    stbi_image_free(data);
 
     if (shlen(texhash) == 0)
         sh_new_arena(texhash);

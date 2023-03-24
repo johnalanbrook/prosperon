@@ -118,7 +118,8 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
 
 void window_set_icon(const char *png)
 {
-    icon = texture_pullfromfile(png);
+  icon = texture_pullfromfile(png);
+  window_seticon(mainwin, icon);
 }
 
 void window_destroy(struct window *w)
@@ -263,7 +264,7 @@ void window_seticon(struct window *w, struct Texture *icon)
     static GLFWimage images[1];
     images[0].width = icon->width;
     images[0].height = icon->height;
-    //images[0].pixels = icon->data;
+    images[0].pixels = icon->data;
     glfwSetWindowIcon(w->window, 1, images);
 }
 

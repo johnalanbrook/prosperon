@@ -10,6 +10,8 @@
 #define LOG_ERROR 2
 #define LOG_CRITICAL 3
 
+#define M_PI 3.14
+
 extern char lastlog[];
 extern char consolelog[];
 

@@ -61,7 +61,7 @@ struct Texture {
     unsigned int id; /* ID reference for the GPU memory location of the texture */
     int width;
     int height;
-
+    unsigned char *data;
     struct TextureOptions opts;
     struct TexAnim anim;
 };

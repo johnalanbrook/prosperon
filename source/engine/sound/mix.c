@@ -37,7 +37,7 @@ void mixer_init() {
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {
-    assert(initted);
+//    assert(initted);
 
     for (int i = 0; i < 255; i++)
       if (!bus[i].on) {

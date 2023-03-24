@@ -73,18 +73,18 @@ SEM = 0.0.1
 COM != git rev-parse --short HEAD
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DDUK_USE_SYMBOL_BUILTIN -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DDUK_USE_SYMBOL_BUILTIN -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -march=native -std=c99 -c $< -o $@
 
 LIBPATH = -L$(BIN)
 
 ifeq ($(OS), WIN32)
 	LINKER_FLAGS = $(QFLAGS) -static
-	ELIBS = engine ucrt yughc portaudio glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
+	ELIBS = engine ucrt yughc glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
 	CLIBS =
 	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
-	ELIBS =  engine pthread yughc portaudio asound glfw3 c m dl
+	ELIBS =  engine pthread yughc glfw3 c m dl
 	CLIBS =
 endif
 

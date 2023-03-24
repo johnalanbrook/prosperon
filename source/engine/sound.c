@@ -16,15 +16,7 @@
 #include "mix.h"
 #include "dsp.h"
 
-#define DR_WAV_IMPLEMENTATION
-#include "dr_wav.h"
-
-#define DR_MP3_IMPLEMENTATION
-#include "dr_mp3.h"
-
-#include "portaudio.h"
-
-#include "circbuf.h"
+#include "miniaudio.h"
 
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
@@ -88,23 +80,6 @@ static struct wav change_samplerate(struct wav w, int rate)
     return w;
 }
 
-static int patestCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
-{
-    bus_fill_buffers(outputBuffer, framesPerBuffer);
-
-    return 0;
-}
-
-void check_pa_err(PaError e)
-{
-    if (e != paNoError) {
-        YughError("PA Error: %s", Pa_GetErrorText(e));
-        exit(1);
-    }
-}
-
-static PaStream *stream_def;
-
 void wav_norm_gain(struct wav *w, double lv)
 {
     short tarmax = db2short(lv);
@@ -125,29 +100,19 @@ void wav_norm_gain(struct wav *w, double lv)
     }
 }
 
-void print_devices()
-{
-    int numDevices = Pa_GetDeviceCount();
-    const PaDeviceInfo *deviceInfo;
-
-    for (int i = 0; i < numDevices; i++) {
-        deviceInfo = Pa_GetDeviceInfo(i);
-
-       YughInfo("Device %i: channels %i, sample rate %f, name %s\n", i, deviceInfo->maxOutputChannels, deviceInfo->defaultSampleRate, deviceInfo->name);
-    }
-}
+static ma_engine *engine;
 
 void sound_init()
 {
-    mixer_init();
-    PaError err = Pa_Initialize();
-    check_pa_err(err);
-
-    err = Pa_OpenDefaultStream(&stream_def, 0, CHANNELS, paInt16, SAMPLERATE, BUF_FRAMES, patestCallback, NULL);
-    check_pa_err(err);
-
-    err = Pa_StartStream(stream_def);
-    check_pa_err(err);
+  ma_result result;
+  engine = malloc(sizeof(*engine));
+  result = ma_engine_init(NULL, engine);
+  if (result != MA_SUCCESS) {
+    return;
+  }
+  return;
+  
+  mixer_init();
 }
 
 struct wav *make_sound(const char *wav)
@@ -197,12 +162,43 @@ struct soundstream *soundstream_make()
     return new;
 }
 
+void mini_sound(char *path)
+{
+  ma_engine_play_sound(engine, path, NULL);
+}
+
+static ma_sound music_sound;
+
+void mini_music_play(char *path)
+{
+  int result = ma_sound_init_from_file(engine, path, MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &music_sound);
+  if (result != MA_SUCCESS) {
+    YughInfo("DID NOT LOAD SOUND!");
+  }
+  ma_sound_start(&music_sound);
+}
+
+void mini_music_pause()
+{
+  ma_sound_stop(&music_sound);
+}
+
+void mini_music_stop()
+{
+  ma_sound_stop(&music_sound);
+}
+
+void mini_master(float v)
+{
+  ma_engine_set_volume(engine, v);
+}
+
 void kill_oneshot(struct sound *s)
 {
     free(s);
 }
 
-void play_oneshot(struct wav *wav) { 
+void play_oneshot(struct wav *wav) {
     struct sound *new = malloc(sizeof(*new));
     new->data = wav;
     new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
@@ -210,6 +206,7 @@ void play_oneshot(struct wav *wav) {
     new->loop=0;
     new->frame = 0;
     new->endcb = kill_oneshot;
+    
 }
 
 struct sound *play_sound(struct wav *wav)
@@ -263,10 +260,10 @@ int sound_stopped(const struct sound *s)
 
 struct mp3 make_music(const char *mp3)
 {
-    drmp3 new;
-    if (!drmp3_init_file(&new, mp3, NULL)) {
-        YughError("Could not open mp3 file %s.", mp3);
-    }
+//    drmp3 new;
+//    if (!drmp3_init_file(&new, mp3, NULL)) {
+//        YughError("Could not open mp3 file %s.", mp3);
+//    }
 
     struct mp3 newmp3 = {};
     return newmp3;
