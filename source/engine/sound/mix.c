@@ -66,6 +66,7 @@ struct bus *first_free_bus(struct dsp_filter in) {
 
 void bus_free(struct bus *b)
 {
+  if (!b) return;
     b->on = 0;
     return;
     

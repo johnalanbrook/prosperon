@@ -171,10 +171,13 @@ static ma_sound music_sound;
 
 void mini_music_play(char *path)
 {
+  ma_sound_uninit(&music_sound);
   int result = ma_sound_init_from_file(engine, path, MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &music_sound);
   if (result != MA_SUCCESS) {
-    YughInfo("DID NOT LOAD SOUND!");
+    YughInfo("Could not load music at path: %s", path);
   }
+
+  YughInfo("Loading %s...", path);
   ma_sound_start(&music_sound);
 }
 

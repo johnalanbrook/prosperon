@@ -173,7 +173,6 @@ duk_idx_t vecarr2duk(duk_context *duk, cpVect *points, int n)
   return arr;
 }
 
-
 void duk_dump_stack(duk_context *duk)
 {
     YughInfo("DUK CALLSTACK");
@@ -204,7 +203,6 @@ void duk_dump_stack(duk_context *duk)
     duk_pop(duk);
 }
 
-
 duk_ret_t duk_gui_text(duk_context *duk) {
     const char *s = duk_to_string(duk, 0);
     cpVect pos = duk2vec2(duk, 1);
@@ -223,8 +221,9 @@ duk_ret_t duk_ui_text(duk_context *duk)
     float size = duk_to_number(duk, 2);
     struct color c = duk2color(duk,3);
     const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
-    renderText(s, &pos, size, col, 500,-1);
-    return 0;
+    int wrap = duk_to_int(duk,4);
+    duk_push_int(duk,renderText(s, &pos, size, col, wrap,-1));
+    return 1;
 }
 
 duk_ret_t duk_cursor_text(duk_context *duk)
@@ -236,7 +235,8 @@ duk_ret_t duk_cursor_text(duk_context *duk)
     struct color c = duk2color(duk,3);
     const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
     int cursor = duk_to_int(duk,4);
-    renderText(s, &pos, size, col, 500,cursor);
+    int wrap = duk_to_int(duk,5);
+    renderText(s, &pos, size, col, wrap,cursor);
     return 0;
 }
 
@@ -1461,7 +1461,7 @@ void ffi_load()
     DUK_FUNC(register_collide, DUK_VARARGS);
 
     DUK_FUNC(gui_text, DUK_VARARGS);
-    DUK_FUNC(ui_text, 4);
+    DUK_FUNC(ui_text, 5);
     DUK_FUNC(cursor_text,5);
     DUK_FUNC(gui_img, 2);
     

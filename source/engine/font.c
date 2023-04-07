@@ -259,7 +259,7 @@ void text_settype(struct sFont *mfont)
     font = mfont;
 }
 
-void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw, int caret)
+int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw, int caret)
 {
     int len = strlen(text);
     drawcaret = caret;
@@ -333,4 +333,6 @@ void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3
     }
 
 //   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4*2);
+
+  return cursor[1] - pos[1];
 }
