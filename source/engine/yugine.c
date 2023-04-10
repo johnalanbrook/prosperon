@@ -117,7 +117,7 @@ int main(int argc, char **args) {
 
 		case 'h':
 		    printf("-l       Set log file\n");
-		    printf("-play    Launch engine in play mode instead of editor mode\n");
+		    printf("-p    Launch engine in play mode instead of editor mode\n");
 		    printf("-v       Display engine info\n");
 		    printf("-c       Redirect logging to console\n");
 		    exit(0);
