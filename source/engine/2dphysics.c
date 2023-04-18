@@ -659,31 +659,16 @@ void register_collide(void *sym) {
 
 void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb)
 {
-    duk_push_heapptr(duk, c.fn);
-    duk_push_heapptr(duk, c.obj);
-
-    int obj = duk_push_object(duk);
-
-    vect2duk(norm);
-    duk_put_prop_literal(duk, obj, "normal");
-
-    duk_push_int(duk, hit);
-    duk_put_prop_literal(duk, obj, "hit");
-
     cpShape *shape1;
     cpShape *shape2;
     cpArbiterGetShapes(arb, &shape1, &shape2);
-    duk_push_boolean(duk, cpShapeGetSensor(shape2));
-    duk_put_prop_literal(duk,obj,"sensor");
-
-    vect2duk(cpArbiterGetSurfaceVelocity(arb));
-    duk_put_prop_literal(duk, obj, "velocity");
-
-    duk_call_method(duk,1);
-
-//    if (duk_pcall_method(duk, 1))
-//      duk_run_err();
-    duk_pop(duk);
+    
+    JSValue obj = JS_NewObject(js);
+    JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
+    JS_SetPropertyStr(js, obj, "hit", JS_NewInt32(js, hit));
+    JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
+    JS_SetPropertyStr(js, obj, "velocity", vec2js(cpArbiterGetSurfaceVelocity(arb)));
+    JS_Call(js, c.fn, c.obj, 1, &obj);
 }
 
 #define CTYPE_BEGIN 0
@@ -707,7 +692,7 @@ static cpBool handle_collision(cpArbiter *arb, int type)
 
     cpVect norm1 = cpArbiterGetNormal(arb);
     cpVect vel1 = cpArbiterGetSurfaceVelocity(arb);
-
+/*
     switch (type) {
       case CTYPE_BEGIN:
         for (int i = 0; i < arrlen(go->shape_cbs); i++)
@@ -726,7 +711,7 @@ static cpBool handle_collision(cpArbiter *arb, int type)
 	break;
         
     }
-
+*/
     return 1;
 }
 

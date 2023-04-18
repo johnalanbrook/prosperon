@@ -14,7 +14,7 @@
 #include "sys/stat.h"
 #include "sys/types.h"
 
-duk_context *duk = NULL;
+JSContext *js = NULL;
 
 static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
     if (typeflag != FTW_F)
@@ -27,7 +27,7 @@ static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
 }
 
 void script_init() {
-    duk = duk_create_heap_default();
+    js = duk_create_heap_default();
     ffi_load();
 
     /* Load all prefabs into memory */
@@ -37,7 +37,7 @@ void script_init() {
 }
 
 void script_run(const char *script) {
-    duk_eval_string(duk, script);
+    duk_eval_string(js, script);
 }
 
 time_t file_mod_secs(const char *file) {
@@ -47,12 +47,12 @@ time_t file_mod_secs(const char *file) {
 }
 
 void duk_run_err() {
-       duk_get_prop_string(duk, -1, "lineNumber");
-       duk_get_prop_string(duk, -2, "fileName");
-       duk_get_prop_string(duk, -3, "stack");
-       mYughLog(1, 2, duk_get_int(duk, -3), duk_safe_to_string(duk, -2), "%s\n%s", duk_safe_to_string(duk, -4), duk_safe_to_string(duk, -1));
+       duk_get_prop_string(js, -1, "lineNumber");
+       duk_get_prop_string(js, -2, "fileName");
+       duk_get_prop_string(js, -3, "stack");
+       mYughLog(1, 2, duk_get_int(js, -3), duk_safe_to_string(js, -2), "%s\n%s", duk_safe_to_string(js, -4), duk_safe_to_string(js, -1));
 
-       duk_pop_3(duk);
+       duk_pop_3(js);
 }
 
 int script_dofile(const char *file) {
@@ -61,19 +61,19 @@ int script_dofile(const char *file) {
       YughError("Can't find file %s.", file);
       return 1;
    }
-   duk_push_string(duk, script);
+   duk_push_string(js, script);
    free(script);
-   duk_push_string(duk, file);
+   duk_push_string(js, file);
 
-   if (duk_pcompile(duk, 0) != 0) {
+   if (duk_pcompile(js, 0) != 0) {
        duk_run_err();
        return 1;
    }
 
-   if (duk_pcall(duk, 0))
+   if (duk_pcall(js, 0))
        duk_run_err();
 
-   duk_pop(duk);
+   duk_pop(js);
 
    return file_mod_secs(file);
 }
@@ -102,48 +102,48 @@ void script_call(const char *f) {
    s is the function to call on that object
 */
 void script_eval_w_env(const char *s, void *env) {
-    duk_push_heapptr(duk, env);
-    duk_push_string(duk, s);
+    duk_push_heapptr(js, env);
+    duk_push_string(js, s);
 
-    if (!duk_has_prop(duk, -2)) {
-      duk_pop(duk);
+    if (!duk_has_prop(js, -2)) {
+      duk_pop(js);
       return;
     }
-    duk_push_string(duk, s);
-    if (duk_pcall_prop(duk, -2, 0))
+    duk_push_string(js, s);
+    if (duk_pcall_prop(js, -2, 0))
         duk_run_err();
 
-    duk_pop_2(duk);
+    duk_pop_2(js);
 }
 
 int script_eval_setup(const char *s, void *env)
 {
-  duk_push_heapptr(duk, env);
+  duk_push_heapptr(js, env);
 
-  if (!duk_has_prop_string(duk, -1, s)) {
-    duk_pop(duk);
+  if (!duk_has_prop_string(js, -1, s)) {
+    duk_pop(js);
     return 1;
   }
 
-  duk_push_string(duk, s);
+  duk_push_string(js, s);
   return 0;
 }
 
 void script_eval_exec(int argc)
 {
-  if (duk_pcall_prop(duk, -2 - argc, argc))
+  if (duk_pcall_prop(js, -2 - argc, argc))
     duk_run_err();
 
-  duk_pop_2(duk);
+  duk_pop_2(js);
 }
 
 void script_call_sym(void *sym)
 {
-    duk_push_heapptr(duk, sym);
-    if (duk_pcall(duk, 0))
+    duk_push_heapptr(js, sym);
+    if (duk_pcall(js, 0))
         duk_run_err();
 
-    duk_pop(duk);
+    duk_pop(js);
 }
 
 void script_call_sym_args(void *sym, void *args)
@@ -157,9 +157,9 @@ struct callee *guis = NULL;
 struct callee *debugs = NULL;
 struct callee *nk_guis = NULL;
 
-void unregister_obj(void *obj)
+void unregister_obj(JSValue obj)
 {
-  for (int i = arrlen(updates)-1; i >= 0; i--)
+/*  for (int i = arrlen(updates)-1; i >= 0; i--)
     if (updates[i].obj == obj) arrdel(updates, i);
     
   for (int i = arrlen(physics)-1; i >= 0; i--)
@@ -173,6 +173,7 @@ void unregister_obj(void *obj)
 
   for (int i = arrlen(debugs)-1; i >= 0; i--)
     if (debugs[i].obj == obj) arrdel(debugs,i);
+*/
 }
 
 void register_debug(struct callee c) {
@@ -182,10 +183,12 @@ void register_debug(struct callee c) {
 void unregister_gui(struct callee c)
 {
   for (int i = arrlen(guis)-1; i >= 0; i--) {
+/*  
     if (guis[i].obj == c.obj && guis[i].fn == c.fn) {
       arrdel(guis, i);
       return;
     }
+    */
   }
 }
 
@@ -205,16 +208,16 @@ void register_physics(struct callee c) {
 
 void setup_callee(struct callee c)
 {
-  duk_push_heapptr(duk, c.fn);
-  duk_push_heapptr(duk, c.obj);
+  duk_push_heapptr(js, c.fn);
+  duk_push_heapptr(js, c.obj);
 }
 
 void exec_callee(int argc)
 {
-    if (duk_pcall_method(duk, argc))
+    if (duk_pcall_method(js, argc))
         duk_run_err();
 
-    duk_pop(duk);
+    duk_pop(js);
 }
 
 void call_callee(struct callee *c) {
@@ -226,14 +229,14 @@ void call_callee(struct callee *c) {
 void callee_dbl(struct callee c, double d)
 {
   setup_callee(c);
-  duk_push_number(duk, d);
+  duk_push_number(js, d);
   exec_callee(1);
 }
 
 void callee_int(struct callee c, int i)
 {
   setup_callee(c);
-  duk_push_int(duk, i);
+  duk_push_int(js, i);
   exec_callee(1);
 }
 

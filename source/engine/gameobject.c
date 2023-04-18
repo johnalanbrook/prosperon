@@ -158,8 +158,8 @@ int MakeGameobject()
 	.shape_cbs = NULL,
     };
 
-    go.cbs.begin.obj = NULL;
-    go.cbs.separate.obj = NULL;
+    go.cbs.begin.obj = JS_NULL;
+    go.cbs.separate.obj = JS_NULL;
 
     go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
 

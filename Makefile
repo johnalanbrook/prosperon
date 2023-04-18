@@ -23,8 +23,7 @@ else
 	INFO = rel
 endif
 
-
-
+# QuickJS options
 
 QFLAGS = $(LVL) -DDBG=$(DBG) -DED=$(ED)
 
@@ -73,7 +72,7 @@ SEM = 0.0.1
 COM != git rev-parse --short HEAD
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DDUK_USE_SYMBOL_BUILTIN -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -march=native -std=c99 -c $< -o $@
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DDUK_USE_SYMBOL_BUILTIN -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -DCONFIG_BIGNUM=y -DCONFIG_VERSION="2020-11-08" -march=native -std=c99 -c $< -o $@
 
 LIBPATH = -L$(BIN)
 
@@ -84,7 +83,7 @@ ifeq ($(OS), WIN32)
 	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
-	ELIBS =  engine pthread yughc glfw3 c m dl
+	ELIBS =  engine pthread yughc glfw3 quickjs c m dl
 	CLIBS =
 endif
 

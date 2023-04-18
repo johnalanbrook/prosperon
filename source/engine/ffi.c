@@ -40,76 +40,73 @@
         (byte & 0x02 ? '1' : '0'), \
         (byte & 0x01 ? '1' : '0')
 
-struct gameobject *duk2go(duk_context *duk, int p)
+int js2int(JSValue v)
 {
-  return id2go(duk_to_int(duk, p));
+  int i;
+  JS_ToInt32(js,&i,v);
+  return i;
 }
 
-struct timer *duk2timer(duk_context *duk, int p)
+struct gameobject *js2go(JSValue v)
 {
-  return id2timer(duk_to_int(duk, p));
+  return id2go(js2int(v));
 }
 
-struct color duk2color(duk_context *duk, int p)
+struct timer *js2timer(JSValue v)
+{
+  return id2timer(js2int(v));
+}
+
+struct color duk2color(JSValue v)
 {
     struct color color;
 
-    duk_get_prop_index(duk, p, 0);
-    color.r = duk_to_int(duk, -1);
-    duk_get_prop_index(duk, p, 1);
-    color.g = duk_to_int(duk, -1);
-    duk_get_prop_index(duk, p, 2);
-    color.b = duk_to_int(duk, -1);
+    JS_ToInt64(js, &color.r, JS_GetPropertyUint32(js,v,0));
+    JS_ToInt64(js, &color.g, JS_GetPropertyUint32(js,v,1));
+    JS_ToInt64(js, &color.b, JS_GetPropertyUint32(js,v,2));
 
     return color;
 }
 
-float duk_get_prop_number(duk_context *duk, int p, const char *str)
+float js_get_prop_number(JSValue v, const char *p)
 {
-  duk_get_prop_string(duk,p,str);
-  return duk_to_number(duk,-1);
+  float num;
+  JS_ToFloat64(js, &num, JS_GetPropertyStr(js, v, p));
+  return num;
 }
 
-struct glrect duk_to_glrect(duk_context *duk, int p)
+struct glrect js_to_glrect(JSValue v)
 {
   struct glrect rect;
-  rect.s0 = duk_get_prop_number(duk,p,"s0");
-  rect.s1 = duk_get_prop_number(duk,p,"s1");
-  rect.t0 = duk_get_prop_number(duk,p,"t0");
-  rect.t1 = duk_get_prop_number(duk,p,"t1");
+  rect.s0 = js_get_prop_number(v,"s0");
+  rect.s1 = js_get_prop_number(v,"s1");
+  rect.t0 = js_get_prop_number(v,"t0");
+  rect.t1 = js_get_prop_number(v,"t1");
   return rect;
 }
 
-cpVect duk2vec2(duk_context *duk, int p)
+int js_arrlen(JSValue v)
 {
-    cpVect pos;
-
-    if (p < 0) p = duk_get_top_index(duk) + p + 1;
-
-    duk_get_prop_index(duk, p, 0);
-    pos.x = duk_to_number(duk, -1);
-    duk_pop(duk);
-
-    duk_get_prop_index(duk, p, 1);
-    pos.y = duk_to_number(duk, -1);
-
-    duk_pop(duk);
-
-    return pos;
+  int len;
+  JS_ToInt32(js, &len, JS_GetProperty(js, v, JS_PROP_LENGTH));
+  return len;
 }
 
-cpBitmask duk2bitmask(duk_context *duk, int p)
+cpVect js2vec2(JSValue v)
+{
+  cpVect vect;
+  JS_ToInt64(js, &vect.x, JS_GetPropertyUint32(js, v, 0));
+  JS_ToInt64(js, &vect.y, JS_GetPropertyUint32(js,v,1));
+  return vect;
+}
+
+cpBitmask js2bitmask(JSValue v)
 {
     cpBitmask mask = 0;
-
-    if (p < 0) p = duk_get_top_index(duk)+p+1;
-
-    int len = duk_get_length(duk, p);
+    int len = js_arrlen(v);
 
     for (int i = 0; i < len; i++) {
-      duk_get_prop_index(duk, p, i);
-      int val = duk_to_boolean(duk, -1);
-      duk_pop(duk);
+      int val = JS_ToBool(js, JS_GetPropertyUint32(js, v, i));
       if (!val) continue;
 
       mask |= 1<<i;
@@ -118,31 +115,26 @@ cpBitmask duk2bitmask(duk_context *duk, int p)
     return mask;
 }
 
-cpVect *duk2cpvec2arr(duk_context *duk, int p)
+cpVect *js2cpvec2arr(JSValue v)
 {
-  int n = duk_get_length(duk, p);
+  int n = js_arrlen(v);
   cpVect *points = NULL;
 
-  for (int i = 0; i < n; i++) {
-      duk_get_prop_index(duk, p, i);
-
-      arrput(points, duk2vec2(duk, -1));
-  }
+  for (int i = 0; i < n; i++)
+    arrput(points, js2vec2(JS_GetPropertyUint32(js, v, i)));
 
   return points;
 }
 
-void bitmask2duk(duk_context *duk, cpBitmask mask)
+JSValue bitmask2js(cpBitmask mask)
 {
-  int arr = duk_push_array(duk);
-  int arridx = 0;
+  JSValue arr = JS_NewObject(js);
   for (int i = 0; i < 11; i++) {
     int on = mask & 1<<i;
-    if (on) {
-      duk_push_int(duk, i);
-      duk_put_prop_index(duk, arr, arridx++);
-    }
+    JS_SetPropertyUint32(js, arr, i, JS_NewBool(js, on));
   }
+
+  return arr;
 }
 
 void vec2float(cpVect v, float *f)
@@ -151,105 +143,70 @@ void vec2float(cpVect v, float *f)
     f[1] = v.y;
 }
 
-
-duk_idx_t vect2duk(cpVect v) {
-    duk_idx_t arr = duk_push_array(duk);
-    duk_push_number(duk, v.x);
-    duk_put_prop_index(duk, arr, 0);
-    duk_push_number(duk, v.y);
-    duk_put_prop_index(duk, arr, 1);
-
-    return arr;
-}
-
-duk_idx_t vecarr2duk(duk_context *duk, cpVect *points, int n)
+JSValue vec2js(cpVect v)
 {
-  duk_idx_t arr = duk_push_array(duk);
-  for (int i = 0; i < n; i++) {
-    vect2duk(points[i]);
-    duk_put_prop_index(duk, arr, i);
-  }
-  
-  return arr;
+  JSValue array = JS_NewObject(js);
+  JS_SetPropertyInt64(js, array, 0, JS_NewFloat64(js,v.x));
+  JS_SetPropertyInt64(js, array, 1, JS_NewFloat64(js,v.y));
+  return array;
 }
 
-void duk_dump_stack(duk_context *duk)
+JSValue vecarr2js(cpVect *points, int n)
 {
-    YughInfo("DUK CALLSTACK");
-    for (int i = -1; ; i--) { /* Start at -2 to skip the invoked C function */
-      duk_inspect_callstack_entry(duk, i);
-      if (duk_is_undefined(duk, -1)) break;
-
-      duk_get_prop_string(duk, -1, "lineNumber");
-      long ln = duk_to_int(duk, -1);
-      duk_pop(duk);
-
-      duk_get_prop_string(duk, -1, "function");
-      duk_get_prop_string(duk, -1, "name");
-      const char *fn = duk_to_string(duk, -1);
-      duk_pop(duk);
-
-      duk_get_prop_string(duk, -1, "fileName");
-      const char *file = duk_to_string(duk, -1);
-      duk_pop(duk);
-      
-      mYughLog(1, 3, ln, file, "function: %s", fn);
-
-      duk_pop_2(duk);
-    }
-
-    duk_push_context_dump(duk);
-    YughInfo("DUK STACK\n%s", duk_to_string(duk, -1));
-    duk_pop(duk);
+  JSValue array = JS_NewObject(js);
+  for (int i = 0; i < n; i++) 
+    JS_SetPropertyInt64(js, array, i, vec2js(points[i]));
+  return array;
 }
 
-duk_ret_t duk_gui_text(duk_context *duk) {
-    const char *s = duk_to_string(duk, 0);
-    cpVect pos = duk2vec2(duk, 1);
+JSValue duk_gui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+    const char *s = JS_ToCString(js, argv[0]);
+    cpVect pos = js2vec2(argv[1]);
 
-    float size = duk_to_number(duk, 2);
+    float size = js_to_number(argv[2]);
     const float white[3] = {1.f, 1.f, 1.f};
     renderText(s, &pos, size, white, 500,-1);
-    return 0;
+    return JS_NULL;
 }
 
-duk_ret_t duk_ui_text(duk_context *duk)
+JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-    const char *s = duk_to_string(duk, 0);
-    cpVect pos = duk2vec2(duk, 1);
+    const char *s = JS_ToCString(js,argv[0]);
+    cpVect pos = js2vec2(argv[1]);
 
-    float size = duk_to_number(duk, 2);
-    struct color c = duk2color(duk,3);
+    float size = js_to_number(argv[2]);
+    struct color c = js2color(duk,3);
     const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
-    int wrap = duk_to_int(duk,4);
-    duk_push_int(duk,renderText(s, &pos, size, col, wrap,-1));
-    return 1;
+    int wrap = js_to_int(argv[4]);
+    return JS_NewInt64(js, renderText(s, &pos, size, col, wrap,-1));
 }
 
-duk_ret_t duk_cursor_text(duk_context *duk)
+JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-    const char *s = duk_to_string(duk, 0);
-    cpVect pos = duk2vec2(duk, 1);
+    const char *s = JS_ToCString(js,argv[0]);
+    cpVect pos = js2vec2(argv[1]);
 
-    float size = duk_to_number(duk, 2);
-    struct color c = duk2color(duk,3);
+    float size = js_to_number(argv[2]);
+    struct color c = js2color(duk,3);
     const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
-    int cursor = duk_to_int(duk,4);
-    int wrap = duk_to_int(duk,5);
+    int wrap = js_to_int(argv[5]);
+    int cursor = js_to_int(argv[4]);
     renderText(s, &pos, size, col, wrap,cursor);
-    return 0;
+    return JS_NULL;
 }
 
-duk_ret_t duk_gui_img(duk_context *duk) {
-    const char *img = duk_to_string(duk, 0);
-    cpVect pos = duk2vec2(duk, 1);
-    gui_draw_img(img, pos.x, pos.y);
-    return 0;
-}
-
-duk_ret_t duk_nuke(duk_context *duk)
+JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-    int cmd = duk_to_int(duk, 0);
+    const char *img = JS_ToCString(js,argv[0]);
+    cpVect pos = js2devc2(argv[1]);
+    gui_draw_img(img, pos.x, pos.y);
+    return JS_NULL;
+}
+
+JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+    int cmd = js_to_int(argv[0]);
     float editnum;
     int editint;
     char textbox[130];
@@ -257,14 +214,10 @@ duk_ret_t duk_nuke(duk_context *duk)
 
     switch(cmd) {
         case 0:
-	  duk_get_prop_string(duk, 2, "x");
-	  rect.x = duk_to_number(duk,-1);
-	  duk_get_prop_string(duk, 2, "y");
-	  rect.y = duk_to_number(duk,-1);
-	  duk_get_prop_string(duk,2,"w");
-	  rect.w = duk_to_number(duk,-1);
-	  duk_get_prop_string(duk,2,"h");
-	  rect.h = duk_to_number(duk,-1);
+	  rect.x = js_to_number(JS_GetPropertyStr(js, argv[1], "x"));
+	  rect.y = js_to_number(JS_GetPropertyStr(js, argv[1], "y"));
+	  rect.w = js_to_number(JS_GetPropertyStr(js, argv[1], "w"));
+	  rect.h = js_to_number(JS_GetPropertyStr(js, argv[1], "h"));
           nuke_begin(duk_to_string(duk, 1),rect, NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
           break;
 
@@ -273,13 +226,13 @@ duk_ret_t duk_nuke(duk_context *duk)
           break;
 
         case 2:
-          editnum = duk_to_number(duk, 2);
-          nuke_property_float(duk_to_string(duk, 1), duk_to_number(duk, 3), &editnum, duk_to_number(duk, 4), duk_to_number(duk, 5), duk_to_number(duk, 5));
+          editnum = js_to_number(argv[2]);
+          nuke_property_float(JS_ToCString(js,argv[1]), js_to_number(argv[3]), &editnum, js_to_number(argv[4]), js_to_number(argv[5]), js_to_number(argv[5]));
           duk_push_number(duk, editnum);
-          return 1;
+	  return JS_NewFloat64(js, editnum);
 
         case 3:
-          nuke_nel(duk_to_number(duk, 1));
+          nuke_nel(js_to_number(argv[1]));
           return 0;
 
         case 4:
@@ -349,7 +302,8 @@ duk_ret_t duk_nuke(duk_context *duk)
     return 0;
 }
 
-duk_ret_t duk_win_make(duk_context *duk) {
+JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     const char *title = duk_to_string(duk, 0);
     int w = duk_to_int(duk, 1);
     int h = duk_to_int(duk, 2);
@@ -359,7 +313,7 @@ duk_ret_t duk_win_make(duk_context *duk) {
     return 1;
 }
 
-duk_ret_t duk_spline_cmd(duk_context *duk)
+JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
     tsBSpline spline;
 
@@ -406,6 +360,7 @@ duk_ret_t duk_spline_cmd(duk_context *duk)
 
   return 1;
 }
+
 
 void ints2duk(int *ints)
 {
@@ -527,7 +482,8 @@ void dukext2paths(char *ext)
   ftw(".", duk2path, 10);
 }
 
-duk_ret_t duk_cmd(duk_context *duk) {
+JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int cmd = duk_to_int(duk, 0);
 
   switch(cmd) {
@@ -597,11 +553,11 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 16:
-         color2float(duk2color(duk, 1), dbg_color);
+         color2float(js2color(duk, 1), dbg_color);
          break;
 
        case 17:
-         color2float(duk2color(duk, 1), trigger_color);
+         color2float(js2color(duk, 1), trigger_color);
          break;
 
        case 18:
@@ -629,15 +585,15 @@ duk_ret_t duk_cmd(duk_context *duk) {
          return 1;
 
        case 24:
-         timer_pause(duk2timer(duk,1));
+         timer_pause(js2timer(duk,1));
          break;
 
        case 25:
-         timer_stop(duk2timer(duk,1));
+         timer_stop(js2timer(duk,1));
          break;
 
        case 26:
-         timer_start(duk2timer(duk,1));
+         timer_start(js2timer(duk,1));
          break;
 
        case 27:
@@ -645,11 +601,11 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 28:
-         timerr_settime(duk2timer(duk,1), duk_to_number(duk, 2));
+         timerr_settime(js2timer(duk,1), js_to_number(argv[2]));
          break;
 
        case 29:
-         duk_push_number(duk, duk2timer(duk,1)->interval);
+         duk_push_number(duk, js2timer(duk,1)->interval);
          return 1;
 
        case 30:
@@ -661,23 +617,23 @@ duk_ret_t duk_cmd(duk_context *duk) {
          break;
 
        case 32:
-         duk_push_number(duk, duk2timer(duk,1)->remain_time);
+         duk_push_number(duk, js2timer(duk,1)->remain_time);
          return 1;
 
        case 33:
-         duk_push_boolean(duk, duk2timer(duk, 1)->on);
+         duk_push_boolean(duk, js2timer(duk, 1)->on);
          return 1;
 
        case 34:
-         duk_push_boolean(duk, duk2timer(duk,1)->repeat);
+         duk_push_boolean(duk, js2timer(duk,1)->repeat);
          return 1;
 
        case 35:
-         duk2timer(duk,1)->repeat = duk_to_boolean(duk, 2);
+         js2timer(duk,1)->repeat = duk_to_boolean(duk, 2);
          return 0;
 
        case 36:
-         id2go(duk_to_int(duk, 1))->scale = duk_to_number(duk, 2);
+         id2go(duk_to_int(duk, 1))->scale = js_to_number(argv[2]);
          cpSpaceReindexShapesForBody(space, id2go(duk_to_int(duk, 1))->body);
          return 0;
 
@@ -741,7 +697,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 1;
 	  
 	case 51:
-	  draw_cppoint(duk2vec2(duk, 1), duk_to_number(duk, 2), duk2color(duk,3));
+	  draw_cppoint(duk2vec2(duk, 1), js_to_number(argv[2]), js2color(duk,3));
 	  return 0;
 	  
 	case 52:
@@ -749,7 +705,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 1;
 	  
 	case 53:
-	  draw_box(duk2vec2(duk, 1), duk2vec2(duk, 2), duk2color(duk,3));
+	  draw_box(duk2vec2(duk, 1), duk2vec2(duk, 2), js2color(duk,3));
 	  return 0;
 
 	case 54:
@@ -786,7 +742,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  break;
 	  
 	case 62:
-	  add_zoom(duk_to_number(duk, 1));
+	  add_zoom(js_to_number(argv[1]));
 	  break;
 	  
 	case 63:
@@ -862,7 +818,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 1;
 	  
 	case 81:
-	  draw_arrow(duk2vec2(duk,1), duk2vec2(duk,2), duk2color(duk,3), duk_to_int(duk,4));
+	  draw_arrow(duk2vec2(duk,1), duk2vec2(duk,2), js2color(duk,3), duk_to_int(duk,4));
 	  return 0;
 
 	case 82:
@@ -870,7 +826,7 @@ duk_ret_t duk_cmd(duk_context *duk) {
 	  return 0;
 
 	case 83:
-	  draw_edge(duk2cpvec2arr(duk, 1), 2, duk2color(duk,2), 1);
+	  draw_edge(duk2cpvec2arr(duk, 1), 2, js2color(duk,2), 1);
 	  return 0;
 
 	case 84:
@@ -905,7 +861,8 @@ duk_ret_t duk_cmd(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_register(duk_context *duk) {
+JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int cmd = duk_to_int(duk, 0);
     void *fn = duk_get_heapptr(duk, 1);
     void *obj = duk_get_heapptr(duk, 2);
@@ -953,7 +910,8 @@ void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape 
   arrpush(id2go(go)->shape_cbs, shapecb);
 }
 
-duk_ret_t duk_register_collide(duk_context *duk) {
+JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int cmd = duk_to_int(duk, 0);
     void *fn = duk_get_heapptr(duk, 1);
     void *obj = duk_get_heapptr(duk, 2);
@@ -981,7 +939,8 @@ duk_ret_t duk_register_collide(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_sys_cmd(duk_context *duk) {
+JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int cmd = duk_to_int(duk, 0);
 
     switch (cmd) {
@@ -1031,13 +990,14 @@ duk_ret_t duk_sys_cmd(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_make_gameobject(duk_context *duk) {
+JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int g = MakeGameobject();
     struct gameobject *go = get_gameobject_from_id(g);
 
     go->scale = duk_to_number(duk, 0);
     go->bodytype = duk_to_int(duk, 1);
-    go->mass = duk_to_number(duk, 2);
+    go->mass = js_to_number(argv[2]);
     go->f = duk_to_number(duk, 3);
     go->e = duk_to_number(duk, 4);
     go->flipx = 1.f;
@@ -1049,7 +1009,8 @@ duk_ret_t duk_make_gameobject(duk_context *duk) {
     return 1;
 }
 
-duk_ret_t duk_yughlog(duk_context *duk) {
+JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int cmd = duk_to_int(duk, 0);
     const char *s = duk_to_string(duk,1);
     const char *f = duk_to_string(duk, 2);
@@ -1060,7 +1021,8 @@ duk_ret_t duk_yughlog(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_set_body(duk_context *duk) {
+JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
   int cmd = duk_to_int(duk, 0);
   int id = duk_to_int(duk, 1);
   struct gameobject *go = get_gameobject_from_id(id);
@@ -1069,7 +1031,7 @@ duk_ret_t duk_set_body(duk_context *duk) {
   /* TODO: Possible that reindexing shapes only needs done for static shapes? */
   switch (cmd) {
     case 0:
-      gameobject_setangle(go, duk_to_number(duk, 2));
+      gameobject_setangle(go, js_to_number(argv[2]));
       break;
 
     case 1:
@@ -1097,11 +1059,11 @@ duk_ret_t duk_set_body(duk_context *duk) {
       break;
 
     case 7:
-      cpBodySetMass(go->body, duk_to_number(duk, 2));
+      cpBodySetMass(go->body, js_to_number(argv[2]));
       break;
 
     case 8:
-      cpBodySetAngularVelocity(go->body, duk_to_number(duk, 2));
+      cpBodySetAngularVelocity(go->body, js_to_number(argv[2]));
       return 0;
 
     case 9:
@@ -1126,7 +1088,8 @@ duk_ret_t duk_set_body(duk_context *duk) {
   return 0;
 }
 
-duk_ret_t duk_q_body(duk_context *duk) {
+JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     int q = duk_to_int(duk, 0);
     struct gameobject *go = get_gameobject_from_id(duk_to_int(duk, 1));
 
@@ -1169,7 +1132,8 @@ duk_ret_t duk_q_body(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_make_sprite(duk_context *duk) {
+JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
   int go = duk_to_int(duk, 0);
   const char *path = duk_to_string(duk, 1);
   cpVect pos = duk2vec2(duk, 2);
@@ -1184,7 +1148,8 @@ duk_ret_t duk_make_sprite(duk_context *duk) {
 }
 
 /* Make anim from texture */
-duk_ret_t duk_make_anim2d(duk_context *duk) {
+JSValue duk_make_anim2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
   const char *path = duk_to_string(duk, 0);
   int frames = duk_to_int(duk, 1);
   int fps = duk_to_int(duk, 2);
@@ -1195,7 +1160,8 @@ duk_ret_t duk_make_anim2d(duk_context *duk) {
   return 1;
 }
 
-duk_ret_t duk_make_box2d(duk_context *duk) {
+JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
   int go = duk_to_int(duk, 0);
   cpVect size = duk2vec2(duk, 1);
   cpVect offset = duk2vec2(duk, 2);
@@ -1217,7 +1183,7 @@ duk_ret_t duk_make_box2d(duk_context *duk) {
   return 1;
 }
 
-duk_ret_t duk_cmd_box2d(duk_context *duk)
+JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
     int cmd = duk_to_int(duk, 0);
     struct phys2d_box *box = duk_to_pointer(duk, 1);
@@ -1239,7 +1205,7 @@ duk_ret_t duk_cmd_box2d(duk_context *duk)
           break;
 
         case 2:
-          box->rotation = duk_to_number(duk, 2);
+          box->rotation = js_to_number(argv[2]);
           break;
     }
 
@@ -1247,9 +1213,10 @@ duk_ret_t duk_cmd_box2d(duk_context *duk)
     return 0;
 }
 
-duk_ret_t duk_make_circle2d(duk_context *duk) {
+JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
    int go = duk_to_int(duk, 0);
-  double radius = duk_to_number(duk, 1);
+  double radius = js_to_number(argv[1]);
 
     struct phys2d_circle *circle = Make2DCircle(go);
     circle->radius = radius;
@@ -1266,7 +1233,7 @@ duk_ret_t duk_make_circle2d(duk_context *duk) {
   return 1;
 }
 
-duk_ret_t duk_cmd_circle2d(duk_context *duk)
+JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
     int cmd = duk_to_int(duk, 0);
     struct phys2d_circle *circle = duk_to_pointer(duk, 1);
@@ -1275,7 +1242,7 @@ duk_ret_t duk_cmd_circle2d(duk_context *duk)
 
     switch(cmd) {
         case 0:
-          circle->radius = duk_to_number(duk, 2);
+          circle->radius = js_to_number(argv[2]);
           break;
 
         case 1:
@@ -1287,7 +1254,7 @@ duk_ret_t duk_cmd_circle2d(duk_context *duk)
     return 0;
 }
 
-duk_ret_t duk_make_poly2d(duk_context *duk)
+JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int go = duk_to_int(duk, 0);
   struct phys2d_poly *poly = Make2DPoly(go);
@@ -1302,7 +1269,7 @@ duk_ret_t duk_make_poly2d(duk_context *duk)
   return 1;
 }
 
-duk_ret_t duk_cmd_poly2d(duk_context *duk)
+JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int cmd = duk_to_int(duk,0);
   struct phys2d_poly *poly = duk_to_pointer(duk,1);
@@ -1318,7 +1285,7 @@ duk_ret_t duk_cmd_poly2d(duk_context *duk)
   return 0;  
 }
 
-duk_ret_t duk_make_edge2d(duk_context *duk)
+JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int go = duk_to_int(duk, 0);
   struct phys2d_edge *edge = Make2DEdge(go);
@@ -1346,7 +1313,7 @@ duk_ret_t duk_make_edge2d(duk_context *duk)
   return 1;
 }
 
-duk_ret_t duk_cmd_edge2d(duk_context *duk)
+JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int cmd = duk_to_int(duk, 0);
   struct phys2d_edge *edge = duk_to_pointer(duk, 1);
@@ -1360,14 +1327,14 @@ duk_ret_t duk_cmd_edge2d(duk_context *duk)
       break;
       
     case 1:
-      edge->thickness = duk_to_number(duk, 2);
+      edge->thickness = js_to_number(argv[2]);
       break;
   }
   
   return 0;
 }
 
-duk_ret_t duk_inflate_cpv(duk_context *duk)
+JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   cpVect *points = duk2cpvec2arr(duk,0);
   int n = duk_to_int(duk,1);
@@ -1389,7 +1356,8 @@ duk_ret_t duk_inflate_cpv(duk_context *duk)
 }
 
 /* These are anims for controlling properties on an object */
-duk_ret_t duk_anim(duk_context *duk) {
+JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     void *prop = duk_get_heapptr(duk, 0);
     int keyframes = duk_get_length(duk, 1);
     YughInfo("Processing %d keyframes.", keyframes);
@@ -1416,9 +1384,10 @@ duk_ret_t duk_anim(duk_context *duk) {
     return 0;
 }
 
-duk_ret_t duk_make_timer(duk_context *duk) {
+JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
     void *sym = duk_get_heapptr(duk, 0);
-    double secs = duk_to_number(duk, 1);
+    double secs = js_to_number(argv[1]);
     void *obj = duk_get_heapptr(duk, 2);
     struct callee *c = malloc(sizeof(*c));
     c->fn = sym;
@@ -1429,7 +1398,7 @@ duk_ret_t duk_make_timer(duk_context *duk) {
     return 1;
 }
 
-#define DUK_FUNC(NAME, ARGS) duk_push_c_function(duk, duk_##NAME, ARGS); duk_put_global_string(duk, #NAME);
+#define DUK_FUNC(NAME, ARGS) JS_CFUNC_DEF(NAME, ARGS, duk_##NAME);
 
 void ffi_load()
 {

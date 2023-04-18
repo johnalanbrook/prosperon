@@ -67,7 +67,7 @@ static void pawn_call_keydown(int key)
 {
   for (int i = 0; i < arrlen(pawns); i++) {
     if (!pawns[i] || script_eval_setup("input_num_pressed", pawns[i])) continue;
-    duk_push_int(duk, key);
+//TODO    duk_push_int(duk, key);
     script_eval_exec(1);
   }
 }
@@ -123,7 +123,7 @@ void char_cb(GLFWwindow *w, unsigned int codepoint)
     char out[2];
     out[0] = (char)codepoint;
     out[1] = 0;
-    duk_push_string(duk, out);
+//TODO    duk_push_string(duk, out);
     script_eval_exec(1);
   }
 }

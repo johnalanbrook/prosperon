@@ -1,20 +1,19 @@
 #ifndef FFI_H
 #define FFI_H
 
-#include "duktape.h"
+#include "quickjs/quickjs.h"
 #include <chipmunk/chipmunk.h>
 
 void ffi_load();
 
+void duk_dump_stack(JSContext *js);
 
-void duk_dump_stack(duk_context *duk);
+JSValue vec2js(cpVect v);
+cpVect js2vec2(JSValue v);
 
-duk_idx_t vect2duk(cpVect v);
-cpVect duk2vec2(duk_context *duk, int p);
+JSValue bitmask2js(cpBitmask mask);
+cpBitmask js2bitmask(JSValue v);
 
-void bitmask2duk(duk_context *duk, cpBitmask mask);
-cpBitmask duk2bitmask(duk_context *duk, int p);
-
-struct color duk2color(duk_context *duk, int p);
+struct color duk2color(JSValue v);
 
 #endif

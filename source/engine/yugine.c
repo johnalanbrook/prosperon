@@ -21,8 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "duktape.h"
-
 #include "2dphysics.h"
 
 #include <signal.h>

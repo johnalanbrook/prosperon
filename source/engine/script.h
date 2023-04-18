@@ -1,15 +1,15 @@
 #ifndef SCRIPT_H
 #define SCRIPT_H
 
-#include "duktape.h"
+#include "quickjs/quickjs.h"
 #include <chipmunk/chipmunk.h>
+#include <time.h>
 
-extern duk_context *duk;
-
+JSContext *js;
 
 struct callee {
-  void *fn;
-  void *obj;
+  JSValue fn;
+  JSValue obj;
 };
 
 void script_init();
@@ -43,7 +43,7 @@ void register_debug(struct callee c);
 void register_nk_gui(struct callee c);
 void call_gui();
 void call_nk_gui();
-void unregister_obj(void *obj);
+void unregister_obj(JSValue obj);
 
 void register_physics(struct callee c);
 void call_physics(double dt);
