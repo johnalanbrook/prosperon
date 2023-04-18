@@ -56,9 +56,8 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
     mouse_pos.y = ypos;
 
     for (int i = 0; i < arrlen(pawns); i++) {
-        if (!pawns[i] || script_eval_setup("input_mouse_pos", pawns[i])) continue;
-	vect2duk(mouse_pos);
-        script_eval_exec(1);
+        if (!pawns[i]) continue;
+	JSValue v = vec2js(mouse_pos);
     }
 
 }
@@ -66,9 +65,9 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
 static void pawn_call_keydown(int key)
 {
   for (int i = 0; i < arrlen(pawns); i++) {
-    if (!pawns[i] || script_eval_setup("input_num_pressed", pawns[i])) continue;
+//    if (!pawns[i] || script_eval_setup("input_num_pressed", pawns[i])) continue;
 //TODO    duk_push_int(duk, key);
-    script_eval_exec(1);
+//    script_eval_exec(1);
   }
 }
 
@@ -119,12 +118,12 @@ void set_mouse_mode(int mousemode)
 void char_cb(GLFWwindow *w, unsigned int codepoint)
 {
   for (int i = 0; i < arrlen(pawns); i++) {
-    if (!pawns[i] || script_eval_setup("input_text", pawns[i])) continue;
+//    if (!pawns[i] || script_eval_setup("input_text", pawns[i])) continue;
     char out[2];
     out[0] = (char)codepoint;
     out[1] = 0;
 //TODO    duk_push_string(duk, out);
-    script_eval_exec(1);
+//    script_eval_exec(1);
   }
 }
 
@@ -157,7 +156,7 @@ void call_input_signal(char *signal) {
     void *framepawns[len];
     memcpy(framepawns, pawns, len*sizeof(*pawns));
     for (int i = 0; i < len; i++) {
-      script_eval_w_env(signal, framepawns[i]);
+//      script_eval_w_env(signal, framepawns[i]);
     }
 }
 

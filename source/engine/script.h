@@ -5,7 +5,7 @@
 #include <chipmunk/chipmunk.h>
 #include <time.h>
 
-JSContext *js;
+extern JSContext *js;
 
 struct callee {
   JSValue fn;
@@ -22,14 +22,10 @@ void duk_run_err();
 
 void script_editor();
 void script_call(const char *f);
-void script_call_sym(void *sym);
-void script_call_sym_args(void *sym, void *args);
+void script_call_sym(JSValue sym);
 void call_callee(struct callee *c);
 int script_has_sym(void *sym);
-void script_eval_w_env(const char *s, void *env);
-
-int script_eval_setup(const char *s, void *env);
-void script_eval_exec(int argc);
+void script_eval_w_env(const char *s, JSValue env);
 
 time_t file_mod_secs(const char *file);
 

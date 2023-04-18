@@ -16,4 +16,7 @@ cpBitmask js2bitmask(JSValue v);
 
 struct color duk2color(JSValue v);
 
+JSValue num2js(double g);
+JSValue int2js(int i);
+
 #endif
