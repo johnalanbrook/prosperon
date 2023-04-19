@@ -91,9 +91,10 @@ void script_eval_w_env(const char *s, JSValue env) {
 
 void script_call_sym(JSValue sym)
 {
-  JSValue v = JS_Call(js, sym, JS_GetGlobalObject(js), 0, NULL);
-  js_print_exception(v);
-  JS_FreeValue(js, v);
+  struct callee c;
+  c.fn = sym;
+  c.obj = JS_GetGlobalObject(js);
+  call_callee(&c);
 }
 
 

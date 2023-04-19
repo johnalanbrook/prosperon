@@ -165,7 +165,7 @@ cpVect *js2cpvec2arr(JSValue v)
 
 JSValue bitmask2js(cpBitmask mask)
 {
-  JSValue arr = JS_NewObject(js);
+  JSValue arr = JS_NewArray(js);
   for (int i = 0; i < 11; i++) {
     int on = mask & 1<<i;
     JS_SetPropertyUint32(js, arr, i, JS_NewBool(js, on));
@@ -190,7 +190,7 @@ JSValue vec2js(cpVect v)
 
 JSValue vecarr2js(cpVect *points, int n)
 {
-  JSValue array = JS_NewObject(js);
+  JSValue array = JS_NewArray(js);
   for (int i = 0; i < n; i++) 
     JS_SetPropertyInt64(js, array, i, vec2js(points[i]));
   return array;
@@ -204,6 +204,7 @@ JSValue duk_gui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     float size = js2number(argv[2]);
     const float white[3] = {1.f, 1.f, 1.f};
     renderText(s, &pos, size, white, 500,-1);
+    JS_FreeCString(js, s);
     return JS_NULL;
 }
 
@@ -216,7 +217,9 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     struct color c = js2color(argv[3]);
     const float col[3] = {(float)c.r/255, (float)c.g/255, (float)c.b/255};
     int wrap = js2int(argv[4]);
-    return JS_NewInt64(js, renderText(s, &pos, size, col, wrap,-1));
+    JSValue ret = JS_NewInt64(js, renderText(s, &pos, size, col, wrap,-1));
+    JS_FreeCString(js,s);
+    return ret;
 }
 
 JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
@@ -230,6 +233,7 @@ JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst
     int wrap = js2int(argv[5]);
     int cursor = js2int(argv[4]);
     renderText(s, &pos, size, col, wrap,cursor);
+    JS_FreeCString(js,s);
     return JS_NULL;
 }
 
@@ -238,6 +242,7 @@ JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     const char *img = JS_ToCString(js,argv[0]);
     cpVect pos = js2vec2(argv[1]);
     gui_draw_img(img, pos.x, pos.y);
+    JS_FreeCString(js,img);
     return JS_NULL;
 }
 
@@ -267,11 +272,18 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
     float editnum;
     int editint;
     char textbox[130];
+    const char *str = NULL;
+
+    if (JS_IsString(argv[1]))
+      str = JS_ToCString(js,argv[1]);
+      
     struct nk_rect rect = nk_rect(0,0,0,0);
+    JSValue ret = JS_NULL;
 
     switch(cmd) {
         case 0:
-          nuke_begin(JS_ToCString(js, argv[1]),js2nk_rect(argv[1]), NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
+	  rect = js2nk_rect(argv[2]);
+          nuke_begin(str,rect, NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
           break;
 
         case 1:
@@ -280,45 +292,52 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
         case 2:
           editnum = js2number(argv[2]);
-          nuke_property_float(JS_ToCString(js,argv[1]), js2number(argv[3]), &editnum, js2number(argv[4]), js2number(argv[5]), js2number(argv[5]));
-	  return JS_NewFloat64(js, editnum);
+          nuke_property_float(str, js2number(argv[3]), &editnum, js2number(argv[4]), js2number(argv[5]), js2number(argv[5]));
+	  ret = JS_NewFloat64(js, editnum);
+	  break;
 
         case 3:
           nuke_nel(js2number(argv[1]));
-          return JS_NULL;
+          break;
 
         case 4:
           editint = JS_ToBool(js, argv[2]);
-          nuke_checkbox(JS_ToCString(js, argv[1]), &editint);
-	  return JS_NewBool(js,editint);
+          nuke_checkbox(str, &editint);
+	  ret = JS_NewBool(js,editint);
+	  break;
 
         case 5:
-          nuke_label(JS_ToCString(js, argv[1]));
-          return JS_NULL;
+          nuke_label(str);
+          break;
 
 	case 6:
-	  return JS_NewBool(js, nuke_btn(JS_ToCString(js, argv[1])));
+	  ret = JS_NewBool(js, nuke_btn(str));
+	  break;
 
 	case 7:
-	  strncpy(textbox, JS_ToCString(js, argv[1]), 1000);
+	  strncpy(textbox, str, 130);
 	  nuke_edit_str(textbox);
-	  return JS_NewString(js,textbox);
+	  ret = JS_NewString(js,textbox);
+	  break;
 
 	case 8:
-	  nuke_img(JS_ToCString(js, argv[1]));
+	  nuke_img(str);
 	  break;
 
 	case 9:
 	  editint = js2int(argv[2]);
-	  nuke_radio_btn(JS_ToCString(js, argv[1]), &editint, js2int(argv[3]));
-	  return JS_NewInt64(js, editint);
+	  nuke_radio_btn(str, &editint, js2int(argv[3]));
+	  ret = JS_NewInt64(js, editint);
+	  break;
 	
 	case 10:
 	  rect = nuke_win_get_bounds();
-	  return nk_rect2js(rect);
+	  ret = nk_rect2js(rect);
+	  break;
 
 	case 11:
-	  return JS_NewBool(js,nuke_push_tree_id(JS_ToCString(js, argv[1]), js2int(argv[2])));
+	  ret = JS_NewBool(js,nuke_push_tree_id(str, js2int(argv[2])));
+	  break;
 
 	case 12:
 	  nuke_tree_pop();
@@ -329,7 +348,7 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 	  break;
 
 	case 14:
-	  nuke_scrolltext(JS_ToCString(js, argv[1]));
+	  nuke_scrolltext(str);
 	  break;
 
 	case 15:
@@ -337,7 +356,10 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 	  break;
     }
 
-    return JS_NULL;
+    if (str)
+      JS_FreeCString(js, str);
+
+    return ret;
 }
 
 JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
@@ -346,6 +368,7 @@ JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     int w = js2int(argv[1]);
     int h = js2int(argv[2]);
     struct window *win = MakeSDLWindow(title, w, h, 0);
+    JS_FreeCString(js,title);
 
     return JS_NewInt64(js, win->id);
 }
@@ -376,7 +399,7 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
   size_t rsamples;
   ts_bspline_sample(&spline, nsamples, &samples, &rsamples, NULL);
 
-  JSValue arr = JS_NewObject(js);
+  JSValue arr = JS_NewArray(js);
 
   for (int i = 0; i < nsamples; i++) {
     JSValue psample;
@@ -393,7 +416,7 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
 JSValue ints2js(int *ints)
 {
-  JSValue arr = JS_NewObject(js);
+  JSValue arr = JS_NewArray(js);
   for (int i = 0; i < arrlen(ints); i++)
     JS_SetPropertyUint32(js, arr, i, int2js(ints[i]));
 
@@ -503,7 +526,7 @@ static int duk2path(const char *path, const struct stat *sb, int typeflag)
 JSValue dukext2paths(char *ext)
 {
   dukext = ext;
-  dukarr = JS_NewObject(js);
+  dukarr = JS_NewArray(js);
   dukidx = 0;
   ftw(".", duk2path, 10);
   return dukarr;
@@ -512,10 +535,15 @@ JSValue dukext2paths(char *ext)
 JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int cmd = js2int(argv[0]);
+  const char *str;
+  JSValue ret = JS_NULL;
 
   switch(cmd) {
     case 0:
-      return JS_NewInt64(js, script_dofile(JS_ToCString(js, argv[1])));
+      str = JS_ToCString(js,argv[1]);
+      ret = JS_NewInt64(js, script_dofile(str));
+      JS_FreeCString(js,str);
+      return ret;
 
       case 1:
         YughWarn("Do not set pawns here anymore; Do it entirely in script.");
@@ -559,13 +587,17 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
          break;
 
        case 11:
-         return JS_NewInt64(js, file_mod_secs(JS_ToCString(js, argv[1])));
+         str = JS_ToCString(js, argv[1]);
+	 ret = JS_NewInt64(js, file_mod_secs(str));
+	 JS_FreeCString(js,str);
+         return ret;
 
        case 12:
          sprite_loadtex(id2sprite(js2int(argv[1])), JS_ToCString(js, argv[2]), js2glrect(argv[3]));
          break;
 
        case 13:
+       
          play_song(JS_ToCString(js, argv[1]), JS_ToCString(js, argv[2]));
          break;
 
@@ -1012,6 +1044,9 @@ JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
     mYughLog(1, cmd, line, f, s);
 
+    JS_FreeCString(js,s);
+    JS_FreeCString(js,f);
+
     return JS_NULL;
 }
 
@@ -1130,6 +1165,8 @@ JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst
   sp->pos[0] = pos.x;
   sp->pos[1] = pos.y;
 
+  JS_FreeCString(js,path);
+
   return JS_NewInt64(js,  sprite);
   
 }
@@ -1142,6 +1179,8 @@ JSValue duk_make_anim2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   int fps = js2int(argv[2]);
 
   struct TexAnim *anim = anim2d_from_tex(path, frames, fps);
+
+  JS_FreeCString(js,path);
 
   return ptr2js(anim);
 }
@@ -1317,7 +1356,7 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
   inflatepoints(inflate_out, points, d, n);
   inflatepoints(inflate_in, points, -d, n);
   
-  JSValue arr = JS_NewObject(js);
+  JSValue arr = JS_NewArray(js);
   JS_SetPropertyUint32(js, arr, 0, vecarr2js(inflate_out, n));
   JS_SetPropertyUint32(js, arr, 1, vecarr2js(inflate_in, n));
   return arr;
