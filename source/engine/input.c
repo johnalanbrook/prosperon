@@ -17,19 +17,11 @@ static int *downkeys = NULL;
 
 static int mquit = 0;
 
-static void **pawns = NULL;
+static struct callee pawn_callee;
 
-void set_pawn(void *pawn) {
-    arrput(pawns, pawn);
-}
-
-void remove_pawn(void *pawn) {
-  for (int i = 0; i < arrlen(pawns); i++) {
-    if (pawns[i] == pawn) {
-      arrdel(pawns, i);
-      return;
-    }
-  }
+void register_pawn(struct callee c)
+{
+  pawn_callee = c;
 }
 
 void add_downkey(int key) {
@@ -55,20 +47,22 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
     mouse_pos.x = xpos;
     mouse_pos.y = ypos;
 
-    for (int i = 0; i < arrlen(pawns); i++) {
-        if (!pawns[i]) continue;
-	JSValue v = vec2js(mouse_pos);
-    }
-
+    JSValue argv[2];
+    argv[0] = JS_NewString(js, "input_mouse_pos");
+    argv[1] = vec2js(mouse_pos);
+    script_callee(pawn_callee, 2, argv);
+    JS_FreeValue(js, argv[0]);
+    JS_FreeValue(js, argv[1]);
 }
 
 static void pawn_call_keydown(int key)
 {
-  for (int i = 0; i < arrlen(pawns); i++) {
-//    if (!pawns[i] || script_eval_setup("input_num_pressed", pawns[i])) continue;
-//TODO    duk_push_int(duk, key);
-//    script_eval_exec(1);
-  }
+  JSValue argv[2];
+  argv[0] = JS_NewString(js, "input_num_pressed");
+  argv[1] = JS_NewInt32(js, key);
+  script_callee(pawn_callee, 2, argv);
+  JS_FreeValue(js, argv[0]);
+  JS_FreeValue(js, argv[1]);
 }
 
 static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset)
@@ -117,14 +111,16 @@ void set_mouse_mode(int mousemode)
 
 void char_cb(GLFWwindow *w, unsigned int codepoint)
 {
-  for (int i = 0; i < arrlen(pawns); i++) {
-//    if (!pawns[i] || script_eval_setup("input_text", pawns[i])) continue;
-    char out[2];
-    out[0] = (char)codepoint;
-    out[1] = 0;
-//TODO    duk_push_string(duk, out);
-//    script_eval_exec(1);
-  }
+  static char out[2] = {0};
+  static JSValue argv[2];
+  
+  out[0] = (char)codepoint;
+  argv[0] = JS_NewString(js, "input_text");
+  argv[1] = JS_NewString(js, out);
+  script_callee(pawn_callee, 2, argv);
+
+  JS_FreeValue(js, argv[0]);
+  JS_FreeValue(js, argv[1]);
 }
 
 static GLFWcharfun nukechar;
@@ -148,18 +144,10 @@ void input_to_game()
 }
 
 void call_input_signal(char *signal) {
-    for (int i = arrlen(pawns)-1; i >= 0; i--) {
-        if (pawns[i] == NULL) arrdel(pawns, i);
-    }
-
-    int len = arrlen(pawns);
-    void *framepawns[len];
-    memcpy(framepawns, pawns, len*sizeof(*pawns));
-    for (int i = 0; i < len; i++) {
-//      script_eval_w_env(signal, framepawns[i]);
-    }
+  JSValue s = JS_NewString(js, signal);
+  JS_Call(js, pawn_callee.fn, pawn_callee.obj, 1, &s);
+  JS_FreeValue(js, s);
 }
-
 
 const char *keyname_extd(int key, int scancode) {
     char keybuf[50];

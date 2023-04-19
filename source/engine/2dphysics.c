@@ -679,8 +679,8 @@ static cpBool handle_collision(cpArbiter *arb, int type)
     cpBody *body1;
     cpBody *body2;
     cpArbiterGetBodies(arb, &body1, &body2);
-    int g1 = cpBodyGetUserData(body1);
-    int g2 = cpBodyGetUserData(body2);
+    int g1 = (int)cpBodyGetUserData(body1);
+    int g2 = (int)cpBodyGetUserData(body2);
     struct gameobject *go = id2go(g1);
     struct gameobject *go2 = id2go(g2);
 
@@ -736,7 +736,7 @@ void phys2d_rm_go_handlers(int go)
 void phys2d_setup_handlers(int go)
 {
   cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
-  handler->userData = go;
+  handler->userData = (void*)go;
   handler->beginFunc = script_phys_cb_begin;
   handler->separateFunc = script_phys_cb_separate;
 }

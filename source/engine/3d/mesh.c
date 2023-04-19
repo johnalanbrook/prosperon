@@ -99,26 +99,26 @@ void setupmesh(struct mesh *mesh)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
     // vertex normals
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Normal[3]));
+//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Normal[3]));
     // vertex texture coords
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, TexCoords[2]));
+//    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, TexCoords[2]));
     // vertex tangent
     glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Tangent[3]));
+//    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Tangent[3]));
     // vertex bitangent
     glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Bitangent[3]));
+//    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, Bitangent[3]));
 
     // Bone ids
     glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_INT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex,
+/*    glVertexAttribPointer(5, 4, GL_INT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex,
 					    m_BoneIDs
 					    [MAX_BONE_INFLUENCE]));
-
+*/
     // Weights
     glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, m_Weights));
+//    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, m_Weights));
 
     glBindVertexArray(0);
 }

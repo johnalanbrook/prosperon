@@ -42,7 +42,7 @@
 
 int js2int(JSValue v)
 {
-  int i;
+  int32_t i;
   JS_ToInt32(js,&i,v);
   return i;
 }
@@ -63,6 +63,7 @@ JSValue float2js(double g)
 {
   return JS_NewFloat64(js,g);
 }
+
 JSValue num2js(double g)
 {
   return float2js(g);
@@ -82,7 +83,7 @@ void *js2ptr(JSValue v)
 
 JSValue ptr2js(void *ptr)
 {
-  return JS_NewInt64(js,ptr);
+  return JS_NewInt64(js,(long)ptr);
 }
 
 struct timer *js2timer(JSValue v)
@@ -90,20 +91,10 @@ struct timer *js2timer(JSValue v)
   return id2timer(js2int(v));
 }
 
-struct color js2color(JSValue v)
+
+double js_get_prop_number(JSValue v, const char *p)
 {
-    struct color color;
-
-    JS_ToInt64(js, &color.r, JS_GetPropertyUint32(js,v,0));
-    JS_ToInt64(js, &color.g, JS_GetPropertyUint32(js,v,1));
-    JS_ToInt64(js, &color.b, JS_GetPropertyUint32(js,v,2));
-
-    return color;
-}
-
-float js_get_prop_number(JSValue v, const char *p)
-{
-  float num;
+  double num;
   JS_ToFloat64(js, &num, JS_GetPropertyStr(js, v, p));
   return num;
 }
@@ -118,18 +109,31 @@ struct glrect js2glrect(JSValue v)
   return rect;
 }
 
+JSValue js_arridx(JSValue v, int idx)
+{
+  return JS_GetPropertyUint32(js,v,idx);
+}
+
 int js_arrlen(JSValue v)
 {
   int len;
-  JS_ToInt32(js, &len, JS_GetProperty(js, v, JS_PROP_LENGTH));
+  JS_ToInt32(js, &len, JS_GetPropertyStr(js, v, "length"));
   return len;
+}
+struct color js2color(JSValue v)
+{
+    struct color color = {0,0,0};
+    color.r = js2int(js_arridx(v,0));
+    color.g = js2int(js_arridx(v,1));
+    color.b = js2int(js_arridx(v,2));
+    return color;
 }
 
 cpVect js2vec2(JSValue v)
 {
   cpVect vect;
-  JS_ToInt64(js, &vect.x, JS_GetPropertyUint32(js, v, 0));
-  JS_ToInt64(js, &vect.y, JS_GetPropertyUint32(js,v,1));
+  vect.x = js2number(js_arridx(v,0));
+  vect.y = js2number(js_arridx(v,1));
   return vect;
 }
 
@@ -178,7 +182,7 @@ void vec2float(cpVect v, float *f)
 
 JSValue vec2js(cpVect v)
 {
-  JSValue array = JS_NewObject(js);
+  JSValue array = JS_NewArray(js);
   JS_SetPropertyInt64(js, array, 0, JS_NewFloat64(js,v.x));
   JS_SetPropertyInt64(js, array, 1, JS_NewFloat64(js,v.y));
   return array;
@@ -853,13 +857,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
     int cmd = js2int(argv[0]);
-    YughWarn("Registration is all handled script side now.");
-    return JS_NULL;
-    /*
-    void *fn = duk_get_heapptr(duk, 1);
-    void *obj = duk_get_heapptr(duk, 2);
 
-   struct callee c = {fn, obj};
+   struct callee c;
+   c.fn = argv[1];
+   c.obj = argv[2];
 
    switch(cmd) {
      case 0:
@@ -879,20 +880,23 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
        break;
        
      case 4:
-       unregister_obj(obj);
+//       unregister_obj(obj);
        break;
 
      case 5:
-       unregister_gui(c);
+//       unregister_gui(c);
        break;
 
      case 6:
        register_debug(c);
        break;
+     case 7:
+       register_pawn(c);
+       break;
      }
 
    return JS_NULL;
-   */
+
 }
 
 void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape *shape)
@@ -905,14 +909,9 @@ void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape 
 
 JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-  YughWarn("Registration is all handled script side now.");
-  return JS_NULL;
-/*
     int cmd = js2int(argv[0]);
-    void *fn = duk_get_heapptr(duk, 1);
-    void *obj = duk_get_heapptr(duk, 2);
     int go = js2int(argv[3]);
-    struct callee c = {fn, obj};
+    struct callee c = {argv[1], argv[2]};
 
     switch(cmd) {
       case 0:
@@ -920,7 +919,7 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
         break;
 
       case 1:
-        gameobject_add_shape_collider(go, c, duk_get_pointer(duk,4));
+        gameobject_add_shape_collider(go, c, js2ptr(argv[4]));
 	break;
 
       case 2:
@@ -933,7 +932,6 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
     }
 
     return JS_NULL;
- */
 }
 
 JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
@@ -1362,11 +1360,10 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
     return JS_NewInt64(js,  id);
 }
 
-#define DUK_FUNC(NAME, ARGS) JS_CFUNC_DEF(#NAME, ARGS, duk_##NAME),
+#define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, JS_GetGlobalObject(js), #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load()
 {
-  JSCFunctionListEntry yugh_funcs[] = {
     DUK_FUNC(yughlog, 4)
     DUK_FUNC(nuke, 6)
     DUK_FUNC(make_gameobject, 7)
@@ -1402,5 +1399,4 @@ void ffi_load()
     DUK_FUNC(inflate_cpv, 3)
 
     DUK_FUNC(anim, 2)
-  };
 }

@@ -121,7 +121,7 @@ struct wav *make_sound(const char *wav)
     if (index != -1) return wavhash[index].value;
 
     struct wav mwav;
-    mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
+//    mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
 
     if (mwav.samplerate != SAMPLERATE) {
         YughInfo("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);

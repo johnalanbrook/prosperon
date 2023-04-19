@@ -25,6 +25,8 @@ void call_input_signal(char *signal);
 const char *keyname_extd(int key, int scancode);
 int action_down(int scancode);
 
+void register_pawn(struct callee c);
+
 int want_quit();
 void quit();
 
@@ -34,9 +36,6 @@ struct inputaction
 {
     int scancode;
 };
-
-void set_pawn(void *pawn);
-void remove_pawn(void *pawn);
 
 void input_to_nuke();
 void input_to_game();

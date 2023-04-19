@@ -6,16 +6,14 @@
 
 void ffi_load();
 
-void duk_dump_stack(JSContext *js);
-
 JSValue vec2js(cpVect v);
 cpVect js2vec2(JSValue v);
 
 JSValue bitmask2js(cpBitmask mask);
 cpBitmask js2bitmask(JSValue v);
 
-struct color duk2color(JSValue v);
-
+struct color js2color(JSValue v);
+double js2number(JSValue v);
 JSValue num2js(double g);
 JSValue int2js(int i);
 

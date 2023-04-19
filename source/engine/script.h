@@ -24,6 +24,7 @@ void script_editor();
 void script_call(const char *f);
 void script_call_sym(JSValue sym);
 void call_callee(struct callee *c);
+void script_callee(struct callee c, int argc, JSValue *argv);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, JSValue env);
 

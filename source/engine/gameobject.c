@@ -35,7 +35,7 @@ struct gameobject *id2go(int id)
 
 int body2id(cpBody *body)
 {
-  return cpBodyGetUserData(body);
+  return (int)cpBodyGetUserData(body);
 }
 
 cpBody *id2body(int id)
@@ -174,7 +174,7 @@ int MakeGameobject()
         *id2go(retid) = go;
     }
     
-    cpBodySetUserData(go.body, (int)retid);
+    cpBodySetUserData(go.body, (void*)retid);
     phys2d_setup_handlers(retid);
     return retid;
 }

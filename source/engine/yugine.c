@@ -140,13 +140,13 @@ int main(int argc, char **args) {
     YughInfo("Starting yugine version %s.", VER);
 
     FILE *sysinfo = NULL;
-    sysinfo = popen("uname -a", "r");
+/*    sysinfo = popen("uname -a", "r");
     if (!sysinfo) {
         YughWarn("Failed to get sys info.");
     } else {
         log_cat(sysinfo);
         pclose(sysinfo);
-    }
+    }*/
     signal(SIGSEGV, seghandle);
     signal(SIGABRT, seghandle);
     signal(SIGFPE, seghandle);

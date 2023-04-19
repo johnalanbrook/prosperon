@@ -258,7 +258,7 @@ void anim_play(struct anim2d *anim)
     anim->playing = 1;
 
     if (anim->timer == NULL)
-        anim->timer = timer_make(1.f / anim->anim->ms, anim_incr, anim, 0);
+        anim->timer = id2timer(timer_make(1.f / anim->anim->ms, anim_incr, anim, 0));
     else
         timerr_settime(anim->timer, 1.f/anim->anim->ms);
 

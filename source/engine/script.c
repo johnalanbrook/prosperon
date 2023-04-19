@@ -39,7 +39,7 @@ void script_init() {
 }
 
 void script_run(const char *script) {
-  JS_Eval(js, script, strlen(script), "script", 0);
+  JS_FreeValue(js, JS_Eval(js, script, strlen(script), "script", 0));
 }
 
 time_t file_mod_secs(const char *file) {
@@ -48,13 +48,34 @@ time_t file_mod_secs(const char *file) {
     return attr.st_mtime;
 }
 
+int js_print_exception(JSValue v)
+{
+   if (JS_IsException(v)) {
+     JSValue exception = JS_GetException(js);
+     JSValue val = JS_GetPropertyStr(js, exception, "stack");
+     if (!JS_IsUndefined(val)) {
+       const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
+       const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
+       const char *stack = JS_ToCString(js, val);
+       YughError("%s :: %s\n%s", name, msg, stack);
+
+       JS_FreeCString(js, name);
+       JS_FreeCString(js, msg);
+       JS_FreeCString(js, stack);
+     }
+   }
+}
+
 int script_dofile(const char *file) {
+   YughInfo("Doing script %s", file);
    const char *script = slurp_text(file);
     if (!script) {
       YughError("Can't find file %s.", file);
       return 1;
    }
-   JS_Eval(js, script, strlen(script), file, 0);
+   JSValue obj = JS_Eval(js, script, strlen(script), file, 0);
+   js_print_exception(obj);
+   JS_FreeValue(js, obj);
 
    return file_mod_secs(file);
 }
@@ -63,123 +84,76 @@ int script_dofile(const char *file) {
    s is the function to call on that object
 */
 void script_eval_w_env(const char *s, JSValue env) {
-  JS_EvalThis(js, env, s, strlen(s), "internal", 0);
+  JSValue v = JS_EvalThis(js, env, s, strlen(s), "internal", 0);
+  js_print_exception(v);
+  JS_FreeValue(js, v);
 }
 
 void script_call_sym(JSValue sym)
 {
-  JS_Call(js, sym, JS_GetGlobalObject(js), 0, NULL);
+  JSValue v = JS_Call(js, sym, JS_GetGlobalObject(js), 0, NULL);
+  js_print_exception(v);
+  JS_FreeValue(js, v);
 }
 
-struct callee *updates = NULL;
-struct callee *physics = NULL;
-struct callee *guis = NULL;
-struct callee *debugs = NULL;
-struct callee *nk_guis = NULL;
-
-void unregister_obj(JSValue obj)
-{
-/*  for (int i = arrlen(updates)-1; i >= 0; i--)
-    if (updates[i].obj == obj) arrdel(updates, i);
-    
-  for (int i = arrlen(physics)-1; i >= 0; i--)
-    if (physics[i].obj == obj) arrdel(physics,i);
-    
-  for (int i = arrlen(guis)-1; i >= 0; i--)
-    if (guis[i].obj == obj) arrdel(guis,i);
-    
-  for (int i = arrlen(nk_guis)-1; i >= 0; i--)
-    if (nk_guis[i].obj == obj) arrdel(nk_guis,i);
-
-  for (int i = arrlen(debugs)-1; i >= 0; i--)
-    if (debugs[i].obj == obj) arrdel(debugs,i);
-*/
-}
-
-void register_debug(struct callee c) {
-  arrput(debugs, c);
-}
-
-void unregister_gui(struct callee c)
-{
-  for (int i = arrlen(guis)-1; i >= 0; i--) {
-/*  
-    if (guis[i].obj == c.obj && guis[i].fn == c.fn) {
-      arrdel(guis, i);
-      return;
-    }
-    */
-  }
-}
-
-void register_update(struct callee c) {
-    arrput(updates, c);
-}
-
-void register_gui(struct callee c) {
-    arrput(guis, c);
-}
-
-void register_nk_gui(struct callee c) { arrput(nk_guis, c); }
-
-void register_physics(struct callee c) {
-    arrput(physics, c);
-}
 
 JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)
 {
-  JS_Call(js, c->obj, c->fn, argc, argv);
+  JSValue ret = JS_Call(js, c->fn, c->obj, argc, argv);
+  js_print_exception(ret);
+  JS_FreeValue(js, ret);
 }
 
 void call_callee(struct callee *c) {
-  JS_Call(js, c->obj, c->fn, 0, NULL);
+  js_callee_exec(c, 0, NULL);
 }
 
 void callee_dbl(struct callee c, double d)
 {
   JSValue v = num2js(d);
   js_callee_exec(&c, 1, &v);
+  JS_FreeValue(js, v);
 }
 
 void callee_int(struct callee c, int i)
 {
   JSValue v = int2js(i);
   js_callee_exec(&c, 1, &v);
+  JS_FreeValue(js, v);
 }
 
 void callee_vec2(struct callee c, cpVect vec)
 {
   JSValue v = vec2js(vec);
   js_callee_exec(&c, 1, &v);
+  JS_FreeValue(js, v);
 }
 
-void call_updates(double dt) {
-    for (int i = 0; i < arrlen(updates); i++)
-        callee_dbl(updates[i], dt);
-}
-
-void call_gui() {
-    for (int i = 0; i < arrlen(guis); i++)
-        call_callee(&guis[i]);
-}
-
-void call_debug() {
-  for (int i = 0; i < arrlen(debugs); i++)
-    call_callee(&debugs[i]);
-}
-
-void call_nk_gui() {
-    for (int i = 0; i < arrlen(nk_guis); i++)
-        call_callee(&nk_guis[i]);
-}
-
-void call_physics(double dt) {
-    for (int i = 0; i < arrlen(physics); i++)
-        callee_dbl(physics[i], dt);
-}
-
-void call_debugs()
+void script_callee(struct callee c, int argc, JSValue *argv)
 {
-  for (int i = 0; i < arrlen(debugs); i++)
-    call_callee(&debugs[i]);
+  js_callee_exec(&c, argc, argv);
 }
+
+static struct callee update_callee;
+void register_update(struct callee c) {
+  update_callee = c;
+}
+void call_updates(double dt) {
+  callee_dbl(update_callee, dt);
+}
+
+static struct callee gui_callee;
+void register_gui(struct callee c) { gui_callee = c; }
+void call_gui() { js_callee_exec(&gui_callee, 0, NULL); }
+
+static struct callee nk_gui_callee;
+void register_nk_gui(struct callee c) { nk_gui_callee = c; }
+void call_nk_gui() { js_callee_exec(&nk_gui_callee, 0, NULL); }
+
+static struct callee physupdate_callee;
+void register_physics(struct callee c) { physupdate_callee = c;}
+void call_physics(double dt) { callee_dbl(physupdate_callee, dt); }
+
+struct callee debug_callee;
+void register_debug(struct callee c) { debug_callee = c; }
+void call_debugs() { JS_Call(js, debug_callee.fn, debug_callee.obj, 0, NULL); }
