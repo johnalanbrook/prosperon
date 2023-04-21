@@ -26,6 +26,7 @@
 #include "debugdraw.h"
 #include "stb_ds.h"
 #include <ftw.h>
+#include <assert.h>
 
 #include "miniaudio.h"
 
@@ -276,6 +277,11 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
     if (JS_IsString(argv[1]))
       str = JS_ToCString(js,argv[1]);
+    else {
+      JSValue tostr = JS_ToString(js,argv[1]);
+      str = JS_ToCString(js,argv[1]);
+      JS_FreeValue(js,tostr);
+    }
       
     struct nk_rect rect = nk_rect(0,0,0,0);
     JSValue ret = JS_NULL;
@@ -375,34 +381,46 @@ JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
+    static_assert(sizeof(tsReal)*2 == sizeof(cpVect));
+        
     tsBSpline spline;
 
-    int n = js_arrlen(argv[4]);
-    int d = js2int(argv[2]);
-    cpVect points[n*d]; 
+    int d = js2int(argv[2]); /* dimensions */
+    int degrees = js2int(argv[1]);
+    int type = js2int(argv[3]);
+    JSValue ctrl_pts = argv[4];
+    int n = js_arrlen(ctrl_pts);
+    size_t nsamples = js2int(argv[5]);
+
+    cpVect points[n]; 
 
     tsStatus status;
-    ts_bspline_new(n, d, js2int(argv[1]), js2int(argv[3]), &spline, &status);
+    ts_bspline_new(n, d, degrees, type, &spline, &status);
 
     if (status.code)
       YughCritical("Spline creation error %d: %s", status.code, status.message);
 
     for (int i = 0; i < n; i++)
-      points[i] = js2vec2(JS_GetPropertyUint32(js, argv[4], i));
+      points[i] = js2vec2(JS_GetPropertyUint32(js, ctrl_pts, i));
 
-  ts_bspline_set_control_points(&spline, points, NULL);
+  ts_bspline_set_control_points(&spline, (tsReal*)points, &status);
 
-
-  size_t nsamples = js2int(argv[5]);
+  if (status.code)
+    YughCritical("Spline creation error %d: %s", status.code, status.message);
+  
   cpVect samples[nsamples];
-  static_assert(sizeof(tsReal)*2 == sizeof(cpVect));
+  
   size_t rsamples;
-  ts_bspline_sample(&spline, nsamples, &samples, &rsamples, NULL);
+  /* TODO: This does not work with Clang/GCC due to UB */
+  ts_bspline_sample(&spline, nsamples, (tsReal**)&samples, &rsamples, &status);
+
+  if (status.code)
+    YughCritical("Spline creation error %d: %s", status.code, status.message);
 
   JSValue arr = JS_NewArray(js);
 
   for (int i = 0; i < nsamples; i++) {
-    JSValue psample;
+    JSValue psample = JS_NewArray(js);
     JS_SetPropertyUint32(js, psample, 0, float2js(samples[i].x));
     JS_SetPropertyUint32(js, psample, 1, float2js(samples[i].y));
     JS_SetPropertyUint32(js, arr, i, psample);
@@ -943,7 +961,9 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
 {
     int cmd = js2int(argv[0]);
     int go = js2int(argv[3]);
-    struct callee c = {argv[1], argv[2]};
+    struct callee c;
+    c.fn = argv[1];
+    c.obj = argv[2];
 
     switch(cmd) {
       case 0:
@@ -1237,14 +1257,14 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
 
 JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-   int go = js2int(argv[0]);
+  int go = js2int(argv[0]);
   double radius = js2number(argv[1]);
 
-    struct phys2d_circle *circle = Make2DCircle(go);
-    circle->radius = radius;
-    circle->offset = js2vec2(argv[2]);
+  struct phys2d_circle *circle = Make2DCircle(go);
+  circle->radius = radius;
+  circle->offset = js2vec2(argv[2]);
 
-    phys2d_applycircle(circle);
+  phys2d_applycircle(circle);
     
   JSValue circleval = JS_NewObject(js);
   JS_SetPropertyStr(js, circleval, "id", ptr2js(circle));
@@ -1305,8 +1325,6 @@ JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 {
   int go = js2int(argv[0]);
   struct phys2d_edge *edge = Make2DEdge(go);
-
-  int arridx = 1;
 
   int n = js_arrlen(argv[1]);
   cpVect points[n];

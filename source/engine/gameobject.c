@@ -96,12 +96,14 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)
     cpShapeSetFriction(shape, go->f);
     cpShapeSetElasticity(shape, go->e);
     cpShapeSetCollisionType(shape, go2id(go));
+    
 
-    cpShapeFilter filter;
+/*    cpShapeFilter filter;
     filter.group = go2id(go);
     filter.categories = 1<<go->layer;
     filter.mask = category_masks[go->layer];
     cpShapeSetFilter(shape, filter);
+*/
 }
 
 void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go)

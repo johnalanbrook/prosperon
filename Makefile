@@ -19,7 +19,7 @@ ifeq ($(DBG), 1)
 	endif
 
 else
-	LVL = -O2 -DNDEBUG
+	LVL = -O2 -DNDEBUG -flto
 	INFO = rel
 endif
 
@@ -72,7 +72,7 @@ SEM = 0.0.1
 COM != git rev-parse --short HEAD
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DDUK_USE_SYMBOL_BUILTIN -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -DCONFIG_BIGNUM=y -DCONFIG_VERSION="2020-11-08" -march=native -std=c99 -c $< -o $@
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -march=native -std=c99 -c $< -o $@
 
 LIBPATH = -L$(BIN)
 

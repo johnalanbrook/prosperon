@@ -83,7 +83,7 @@ void querylist(cpShape *shape, cpContactPointSet *points, void *data)
 
 void querylistbodies(cpBody *body, void *data)
 {
-  cpBB *bbox = data;
+   cpBB *bbox = data;
   if (cpBBContainsVect(*bbox, cpBodyGetPosition(body))) {
     int go = body2id(body);
     if (go < 0) return;
@@ -137,7 +137,6 @@ int *phys2d_query_box(cpVect pos, cpVect wh)
   if (qhits) arrfree(qhits);
   
   cpSpaceShapeQuery(space, box, querylist, NULL);
-
   cpSpaceEachBody(space, querylistbodies, &bbox);
   
   cpShapeFree(box);
@@ -207,6 +206,7 @@ void phys2d_init()
 }
 
 void phys2d_set_gravity(cpVect v) {
+    YughInfo("Set gravity to %g %g", v.x, v.y);
     cpSpaceSetGravity(space, v);
 }
 
@@ -668,7 +668,7 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb)
     JS_SetPropertyStr(js, obj, "hit", JS_NewInt32(js, hit));
     JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
     JS_SetPropertyStr(js, obj, "velocity", vec2js(cpArbiterGetSurfaceVelocity(arb)));
-    JS_Call(js, c.fn, c.obj, 1, &obj);
+    script_callee(c, 1, &obj);
 }
 
 #define CTYPE_BEGIN 0
@@ -692,26 +692,26 @@ static cpBool handle_collision(cpArbiter *arb, int type)
 
     cpVect norm1 = cpArbiterGetNormal(arb);
     cpVect vel1 = cpArbiterGetSurfaceVelocity(arb);
-/*
+
     switch (type) {
       case CTYPE_BEGIN:
         for (int i = 0; i < arrlen(go->shape_cbs); i++)
           if (go->shape_cbs[i].shape == pshape1)
             duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, g2, arb);
 
-        if (go->cbs.begin.obj)
+        if (!JS_IsNull(go->cbs.begin.obj))
           duk_call_phys_cb(norm1, go->cbs.begin, g2, arb);
 
 	break;
 
       case CTYPE_SEP:
-        if (go->cbs.separate.obj)
+        if (!JS_IsNull(go->cbs.separate.obj))
           duk_call_phys_cb(norm1, go->cbs.separate, g2, arb);
 
 	break;
         
     }
-*/
+
     return 1;
 }
 
