@@ -553,7 +553,8 @@ JSValue dukext2paths(char *ext)
 JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int cmd = js2int(argv[0]);
-  const char *str;
+  const char *str = NULL;
+  const char *str2 = NULL;
   JSValue ret = JS_NULL;
 
   switch(cmd) {
@@ -611,16 +612,23 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
          return ret;
 
        case 12:
-         sprite_loadtex(id2sprite(js2int(argv[1])), JS_ToCString(js, argv[2]), js2glrect(argv[3]));
+         str = JS_ToCString(js,argv[2]);
+         sprite_loadtex(id2sprite(js2int(argv[1])), str, js2glrect(argv[3]));
+	 JS_FreeCString(js,str);
          break;
 
        case 13:
-       
-         play_song(JS_ToCString(js, argv[1]), JS_ToCString(js, argv[2]));
+         str = JS_ToCString(js,argv[1]);
+	 str2 = JS_ToCString(js,argv[2]);
+         play_song(str,str2);
+	 JS_FreeCString(js,str);
+	 JS_FreeCString(js,str2);	 
          break;
 
        case 14:
-         mini_sound(JS_ToCString(js, argv[1]));
+         str = JS_ToCString(js, argv[1]);
+         mini_sound(str);
+	 JS_FreeCString(js,str);
          break;
 
        case 15:
@@ -712,10 +720,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
          break;
 
        case 38:
-         return JS_NewString(js, slurp_text(JS_ToCString(js, argv[1])));
+         str = JS_ToCString(js,argv[1]);
+	 ret = JS_NewString(js, slurp_text(str));
+	 JS_FreeCString(js,str);
+         return ret;
 
        case 39:
-         return JS_NewInt64(js, slurp_write(JS_ToCString(js, argv[1]), JS_ToCString(js, argv[2])));
+         str = JS_ToCString(js,argv[1]);
+	 str2 = JS_ToCString(js,argv[2]);
+	 ret = JS_NewInt64(js, slurp_write(str, str2));
+	 JS_FreeCString(js,str);
+	 JS_FreeCString(js,str2);
+         return ret;
 
        case 40:
          id2go(js2int(argv[1]))->filter.categories = js2bitmask(argv[2]);
@@ -805,13 +821,19 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 	  return JS_NewFloat64(js, deltaT);
 	  
 	case 64:
-	  return vec2js(tex_get_dimensions(texture_pullfromfile(JS_ToCString(js, argv[1]))));
+	  str = JS_ToCString(js,argv[1]);
+	  ret = vec2js(tex_get_dimensions(texture_pullfromfile(str)));
+	  break;
 	  
 	case 65:
-	  return JS_NewBool(js, file_exists(JS_ToCString(js, argv[1])));
+	  str = JS_ToCString(js,argv[1]);
+	  ret = JS_NewBool(js, file_exists(str));
+	  break;
 	  
 	case 66:
-	  return dukext2paths(JS_ToCString(js, argv[1]));
+	  str = JS_ToCString(js,argv[1]);
+	  ret = dukext2paths(str);
+	  break;
 
 	case 67:
 	  opengl_rendermode(LIT);
@@ -885,8 +907,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
           return ints2js(phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4])));
 
         case 87:
-	  mini_music_play(JS_ToCString(js, argv[1]));
-	  return JS_NULL;
+	  str = JS_ToCString(js, argv[1]);
+	  mini_music_play(str);
+	  break;
 
 	case 88:
 	  mini_music_pause();
@@ -897,9 +920,19 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 	  return JS_NULL;
 
 	case 90:
-	  window_set_icon(JS_ToCString(js, argv[1]));
+	  str = JS_ToCString(js, argv[1]);
+	  window_set_icon(str);
 	  break;
     }
+
+    if (str)
+      JS_FreeCString(js,str);
+
+    if (str2)
+      JS_FreeCString(js,str2);
+
+    if (!JS_IsNull(ret))
+      return ret;
 
     return JS_NULL;
 }

@@ -38,7 +38,6 @@ void script_init() {
     /* Load all prefabs into memory */
     script_dofile("scripts/engine.js");
     script_dofile("config.js");
-    //ftw(".", load_prefab, 10);
 }
 
 void script_run(const char *script) {

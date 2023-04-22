@@ -114,12 +114,14 @@ $(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE) $(BIN)libquickjs.a
 	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/*
+$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/* source/scripts/* assets/*
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(BIN)dist
 	@cp $(BIN)$(NAME) $(BIN)dist
 	@cp -rf assets/fonts $(BIN)dist
+	@cp -rf assets/icons $(BIN)dist
 	@cp -rf source/shaders $(BIN)dist
+	@cp -r source/scripts $(BIN)dist
 	@tar czf $(DIST) --directory $(BIN)dist .
 	@mv $(DIST) $(BIN)
 

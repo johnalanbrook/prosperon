@@ -187,7 +187,7 @@ int main(int argc, char **args) {
     renderMS = 1.0/vidmode->refreshRate;
 
     if (ed)
-      script_dofile("editor.js");
+      script_dofile("scripts/editor.js");
     else
       script_dofile("game.js");
 

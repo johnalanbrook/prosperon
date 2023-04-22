@@ -1,0 +1,65 @@
+= Yugine Engine
+
+The yugine essentially is made of a sequence of levels. Levels can be
+nested, they can be streamed in, or loaded one at a time. Levels are
+made of levels.
+
+Different "modes" of using the engine has unique sequences of level
+loading orders. Each level has an associated script file. Level
+loading functions call the script file, as well as the level file. The
+level file can be considered to be a container of objects that the
+associated script file can access.
+
+.Game start
+
+* Engine scripts
+* config.js
+* game.lvl & game.js
+
+.Editor
+
+* Engine scripts
+* config.js
+* editor.js
+
+.Editor play
+
+* F5 debug.lvl
+ - Used for custom debug level testing. If doesn't exist, game.lvl is loaded.
+* F6 game.lvl
+* F7 Currently edited level
+
+While playing ...
+* F7 Stop
+
+.Scripting
+
+Levels and objects have certain functions you can use that will be
+called at particular times during the course of the game running.
+
+setup
+  Called once, when the object is created.
+
+start
+  Called once when the gameplay is simulating.
+
+update(dt)
+  Called once per frame, while the game is simulating
+
+physupdate(dt)
+  Called once per physics step
+
+stop
+  Called when the object is destroyed, either by being killed or otherwise.
+
+.Collider functions
+Colliders get special functions to help with collision handling.
+
+collide(hit)
+  Called when an object collides with the object this function is on.
+
+"hit" object
+  normal - A vector in the direction the hit happened
+  hit - Object ID of colliding object
+  sensor - True if the colliding object is a sensor
+  velocity - A vector of the velocity of the collision

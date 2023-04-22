@@ -122,7 +122,7 @@ struct Texture *texture_loadfromfile(const char *path)
 {
     struct Texture *new = texture_pullfromfile(path);
 
-    if (new == NULL) { new = texture_pullfromfile("./ph.png"); }
+    if (new == NULL) { new = texture_pullfromfile("./icons/no_tex.png"); }
 
     if (new->id == 0) {
         glGenTextures(1, &new->id);
