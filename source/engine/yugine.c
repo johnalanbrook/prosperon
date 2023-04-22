@@ -7,12 +7,15 @@
 #include "input.h"
 #include "openglrender.h"
 #include "gameobject.h"
+#include "font.h"
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
 
 #include "timer.h"
+
+#include "quickjs/quickjs.h"
 
 #include "script.h"
 #include "ffi.h"
@@ -85,9 +88,24 @@ void seghandle(int sig) {
 */
 }
 
+void compile_script(const char *file)
+{
+  const char *script = slurp_text(file);
+  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY|JS_EVAL_TYPE_GLOBAL);
+  size_t out_len;
+  uint8_t *out;
+  out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
+
+  FILE *f = fopen("out.jsc", "w");
+  fwrite(out, sizeof out[0], out_len, f);
+  fclose(f);
+}
+
 int main(int argc, char **args) {
     int logout = 1;
     ed = 1;
+
+    script_startup();
 
     for (int i = 1; i < argc; i++) {
         if (args[i][0] == '-') {
@@ -112,6 +130,10 @@ int main(int argc, char **args) {
 		    printf("Copyright 2022-2023 odplot productions LLC.\n");
 		    exit(1);
 		    break;
+
+		case 's':
+		    compile_script(args[2]);
+		    exit(0);
 
 		case 'h':
 		    printf("-l       Set log file\n");

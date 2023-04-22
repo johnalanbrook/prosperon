@@ -55,13 +55,13 @@ void engine_init()
     }
 
     resources_init();
+    
+    YughInfo("Starting physics ...");
+    phys2d_init();
+    
+    YughInfo("Starting sound ...");
+    sound_init();
 
     YughInfo("Starting scripts ...");
     script_init();
-
-    YughInfo("Starting physics ...");
-    phys2d_init();
-
-    YughInfo("Starting sound ...");
-    sound_init();
 }

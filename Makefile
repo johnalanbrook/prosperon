@@ -11,7 +11,7 @@ ED ?= 1
 DBG ?= 1
 
 ifeq ($(DBG), 1)
-	LVL = -O0 -g
+	LVL = -O2 -g
 	INFO = dbg
 
 	ifeq ($(CC), tcc)
@@ -109,7 +109,7 @@ yugine: $(BIN)yugine
 
 $(NAME): $(BIN)$(NAME)
 
-$(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE)
+$(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE) $(BIN)libquickjs.a
 	@echo Linking $(NAME)
 	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
@@ -123,6 +123,10 @@ $(BIN)$(DIST): $(BIN)$(NAME) source/shaders/*
 	@tar czf $(DIST) --directory $(BIN)dist .
 	@mv $(DIST) $(BIN)
 
+$(BIN)libquickjs.a:
+	make -C quickjs clean
+	make -C quickjs libquickjs.a libquickjs.lto.a CC=$(CC)
+	cp quickjs/libquickjs.* $(BIN)
 
 dist: $(BIN)$(DIST)
 

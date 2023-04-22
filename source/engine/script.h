@@ -12,6 +12,7 @@ struct callee {
   JSValue obj;
 };
 
+void script_startup();
 void script_init();
 void script_run(const char *script);
 int script_dofile(const char *file);

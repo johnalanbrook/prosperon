@@ -27,11 +27,14 @@ static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
     return 0;
 }
 
-void script_init() {
+void script_startup()
+{
     rt = JS_NewRuntime();
     js = JS_NewContext(rt);
     ffi_load();
+}
 
+void script_init() {
     /* Load all prefabs into memory */
     script_dofile("scripts/engine.js");
     script_dofile("config.js");
