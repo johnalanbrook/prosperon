@@ -58,19 +58,12 @@ int fps;
 #define SIM_PAUSE 2
 #define SIM_STEP 3
 
-void seghandle(int sig) {
-/*
-#ifdef __linux__
+void print_stacktrace()
+{
     void *ents[512];
     size_t size;
 
     size = backtrace(ents, 512);
-    if (strsignal(sig)) {
-        YughCritical("CRASH! Signal: %s.", strsignal(sig));
-    }
-    else {
-        YughCritical("CRASH! Signal: %d.", sig);
-    }
 
     YughCritical("====================BACKTRACE====================");
     char **stackstr = backtrace_symbols(ents, size);
@@ -81,11 +74,23 @@ void seghandle(int sig) {
         YughCritical(stackstr[i]);
     }
 
-    duk_dump_stack(duk);
+    js_dump_stack();
+
+}
+
+void seghandle(int sig) {
+#ifdef __linux__
+    if (strsignal(sig)) {
+        YughCritical("CRASH! Signal: %s.", strsignal(sig));
+    }
+    else {
+        YughCritical("CRASH! Signal: %d.", sig);
+    }
+
+    print_stacktrace();
 
     exit(1);
 #endif
-*/
 }
 
 void compile_script(const char *file)
@@ -135,6 +140,10 @@ int main(int argc, char **args) {
 		    compile_script(args[2]);
 		    exit(0);
 
+		case 'm':
+		    logLevel = atoi(args[2]);
+		    break;
+
 		case 'h':
 		    printf("-l       Set log file\n");
 		    printf("-p    Launch engine in play mode instead of editor mode\n");
@@ -172,6 +181,8 @@ int main(int argc, char **args) {
     signal(SIGSEGV, seghandle);
     signal(SIGABRT, seghandle);
     signal(SIGFPE, seghandle);
+    signal(SIGBUS, seghandle);
+    
 #endif
 
     FILE *gameinfo = NULL;
@@ -185,14 +196,15 @@ int main(int argc, char **args) {
     YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
     renderMS = 1.0/vidmode->refreshRate;
+    
+    input_init();
+    openglInit();
 
     if (ed)
       script_dofile("scripts/editor.js");
     else
-      script_dofile("game.js");
+      script_dofile("scripts/play.js");
 
-    input_init();
-    openglInit();
     while (!want_quit()) {
          double elapsed = glfwGetTime() - lastTick;
          deltaT = elapsed;

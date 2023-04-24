@@ -14,6 +14,7 @@
 
 extern char lastlog[];
 extern char consolelog[];
+extern int logLevel;
 
 #if DBG
 #define YughLog(cat, pri, msg, ...) mYughLog(cat, pri, __LINE__, __FILE__, msg, ##__VA_ARGS__)
@@ -35,5 +36,6 @@ void FlushGLErrors();
 
 void log_setfile(char *file);
 void log_cat(FILE *f);
+void log_print(const char *str);
 
 #endif

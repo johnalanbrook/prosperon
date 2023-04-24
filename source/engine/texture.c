@@ -20,8 +20,6 @@ struct Texture *tex_default;
 /* If an empty string or null is put for path, loads default texture */
 struct Texture *texture_pullfromfile(const char *path)
 {
-    if (!path || path[0] == '\0') { return NULL; }
-
     int index = shgeti(texhash, path);
     if (index != -1)
 	return texhash[index].value;
@@ -49,8 +47,9 @@ struct Texture *texture_pullfromfile(const char *path)
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
     if (data == NULL) {
-        YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
-        return NULL;
+        YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());
+	print_stacktrace();
+        return texture_pullfromfile("./icons/no_tex.png");
     }
     tex->data = data;
 
@@ -94,11 +93,6 @@ struct Texture *texture_pullfromfile(const char *path)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-
-
-
-//    stbi_image_free(data);
-
     if (shlen(texhash) == 0)
         sh_new_arena(texhash);
 
@@ -121,8 +115,6 @@ char *tex_get_path(struct Texture *tex) {
 struct Texture *texture_loadfromfile(const char *path)
 {
     struct Texture *new = texture_pullfromfile(path);
-
-    if (new == NULL) { new = texture_pullfromfile("./icons/no_tex.png"); }
 
     if (new->id == 0) {
         glGenTextures(1, &new->id);

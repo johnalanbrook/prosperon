@@ -8,7 +8,14 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#define logLevel 0
+int logLevel = 1;
+
+/* Four levels of log:
+   0 info
+   1 warn
+   2 error
+   3 critical
+*/
 
 //char *logstr[] = { "INFO", "WARN", "\x1b[1;31mERROR\x1b[0m", "CRITICAL" };
 char *logstr[] = { "info", "warn", "error", "critical" };
@@ -37,19 +44,23 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	char buffer[ERROR_BUFFER] = { '\0' };
 	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
 
-	fprintf(stderr, "%s", buffer);
-	fflush(stderr);
+	log_print(buffer);
+  }
+}
 
-	strncat(consolelog, buffer, CONSOLE_BUF);
+void log_print(const char *str)
+{
+  fprintf(stderr, "%s", str);
+  fflush(stderr);
 
-	if (logfile) {
-	    fprintf(logfile, "%s", buffer);
-	    fflush(logfile);
-	}
+  strncat(consolelog, str, CONSOLE_BUF);
 
-        snprintf(lastlog, ERROR_BUFFER, "%s", buffer);
+  if (logfile) {
+    fprintf(logfile, "%s", str);
+    fflush(logfile);
+  }
 
-    }
+  snprintf(lastlog, ERROR_BUFFER, "%s", str);
 }
 
 void log_setfile(char *file) {

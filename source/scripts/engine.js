@@ -1,6 +1,68 @@
+
+var Log = {
+  set level(x) { cmd(92,x); },
+  get level() { return cmd(93); },
+  print(msg, lvl) {
+    var lg;
+    if (typeof msg === 'object') {
+      lg = JSON.stringify(msg, null, 2);
+    } else {
+      lg = msg;
+    }
+
+    var stack = (new Error()).stack;
+    var n = stack.next('\n',0)+1;
+    n = stack.next('\n', n)+1;
+    var nnn = stack.slice(n);
+    var fmatch = nnn.match(/\(.*\:/);
+    var file = fmatch ? fmatch[0].shift(1).shift(-1) : "nofile";
+    var lmatch = nnn.match(/\:\d*\)/);
+    var line = lmatch ? lmatch[0].shift(1).shift(-1) : "0";
+
+    yughlog(lvl, lg, file, line);
+  },
+  
+  info(msg) {
+    this.print(msg, 0);
+  },
+
+  warn(msg) {
+    this.print(msg, 1);
+  },
+
+  error(msg) {
+    this.print(msg, 2);
+    this.stack(1);
+  },
+
+  critical(msg) {
+    this.print(msg,3);
+    this.stack(1);
+  },
+
+  write(msg) {
+    cmd(91,msg);
+  },
+
+  stack(skip) {
+    var stack = (new Error()).stack;
+    var n = stack.next('\n',0)+1;
+    for (var i = 0; i < skip; i++)
+      n = stack.next('\n', n)+1;
+
+    this.write(stack.slice(n));
+  },
+  
+};
+
 var files = {};
 function load(file) {
   var modtime = cmd(0, file);
+
+  if (modtime === 0) {
+    Log.stack();
+    return false;
+  }
   files[file] = modtime;
 }
 

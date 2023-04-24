@@ -9,6 +9,7 @@ void sim_stop();
 void sim_step();
 int phys_stepping();
 void set_timescale(float val);
+void print_stacktrace();
 
 int frame_fps();
 

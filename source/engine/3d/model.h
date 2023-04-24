@@ -7,9 +7,6 @@ struct shader;
 struct model {
     struct mesh *meshes;
     struct mesh *mp;
-    char *directory;
-    const char *path;
-    char *name;
 };
 
 /* Get the model at a path, or create and return if it doesn't exist */
@@ -22,5 +19,6 @@ struct model *MakeModel(const char *path);
 void loadmodel(struct model *model);
 
 void draw_model(struct model *model, struct shader *shader);
+void draw_models(struct model *model, struct shader *shader);
 
 #endif

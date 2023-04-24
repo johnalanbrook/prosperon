@@ -20,6 +20,7 @@ void script_update(double dt);
 void script_draw();
 
 void duk_run_err();
+void js_dump_stack();
 
 void script_editor();
 void script_call(const char *f);

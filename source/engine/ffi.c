@@ -608,14 +608,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
        case 11:
          str = JS_ToCString(js, argv[1]);
 	 ret = JS_NewInt64(js, file_mod_secs(str));
-	 JS_FreeCString(js,str);
-         return ret;
+	 break;
 
        case 12:
          str = JS_ToCString(js,argv[2]);
          sprite_loadtex(id2sprite(js2int(argv[1])), str, js2glrect(argv[3]));
-	 JS_FreeCString(js,str);
-         break;
+	 break;
 
        case 13:
          str = JS_ToCString(js,argv[1]);
@@ -722,16 +720,13 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
        case 38:
          str = JS_ToCString(js,argv[1]);
 	 ret = JS_NewString(js, slurp_text(str));
-	 JS_FreeCString(js,str);
-         return ret;
+	 break;
 
        case 39:
          str = JS_ToCString(js,argv[1]);
 	 str2 = JS_ToCString(js,argv[2]);
 	 ret = JS_NewInt64(js, slurp_write(str, str2));
-	 JS_FreeCString(js,str);
-	 JS_FreeCString(js,str2);
-         return ret;
+	 break;
 
        case 40:
          id2go(js2int(argv[1]))->filter.categories = js2bitmask(argv[2]);
@@ -923,6 +918,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 	  str = JS_ToCString(js, argv[1]);
 	  window_set_icon(str);
 	  break;
+
+	case 91:
+	  str = JS_ToCString(js,argv[1]);
+	  log_print(str);
+	  break;
+
+	case 92:
+	  logLevel = js2int(argv[1]);
+	  break;
+
+	case 93:
+	  ret = int2js(logLevel);
     }
 
     if (str)

@@ -169,39 +169,3 @@ var Nuke = {
 Object.defineProperty(Nuke, "curwin", {enumerable:false});
 Object.defineProperty(Nuke, "defaultrect", {enumerable:false});
 
-
-var Log = {
-  print(msg, lvl) {
-    var lg;
-    if (typeof msg === 'object') {
-      lg = JSON.stringify(msg, null, 2);
-    } else {
-      lg = msg;
-    }
-
-    var stack = (new Error()).stack;
-    var n = stack.next('\n',0)+1;
-    n = stack.next('\n', n)+1;
-    var nnn = stack.slice(n);
-    var fmatch = nnn.match(/\(.*\:/);
-    var file = fmatch ? fmatch[0].shift(1).shift(-1) : "nofile";
-    var lmatch = nnn.match(/\:\d*\)/);
-    var line = lmatch ? lmatch[0].shift(1).shift(-1) : "0";
-
-    yughlog(lvl, lg, file, line);
-  },
-  
-  info(msg) {
-    this.print(msg, 0);
-  },
-
-  warn(msg) {
-    this.print(msg, 1);
-  },
-
-  error(msg) {
-    this.print(msg, 2);
-  },
-  
-};
-

@@ -50,6 +50,24 @@ time_t file_mod_secs(const char *file) {
     return attr.st_mtime;
 }
 
+void js_dump_stack()
+{
+  JSValue exception = JS_GetException(js);
+  JSValue val = JS_GetPropertyStr(js, exception, "stack");
+  if (!JS_IsUndefined(val)) {
+    const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
+    const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
+       const char *stack = JS_ToCString(js, val);
+       YughError("%s :: %s\n%s", name, msg, stack);
+
+       JS_FreeCString(js, name);
+       JS_FreeCString(js, msg);
+       JS_FreeCString(js, stack);
+     }
+   
+}
+
+
 int js_print_exception(JSValue v)
 {
    if (JS_IsException(v)) {
@@ -73,7 +91,7 @@ int script_dofile(const char *file) {
    const char *script = slurp_text(file);
     if (!script) {
       YughError("Can't find file %s.", file);
-      return 1;
+      return 0;
    }
    JSValue obj = JS_Eval(js, script, strlen(script), file, 0);
    js_print_exception(obj);
