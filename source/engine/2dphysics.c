@@ -652,11 +652,6 @@ void phys2d_reindex_body(cpBody *body) {
     cpSpaceReindexShapesForBody(space, body);
 }
 
-
-void register_collide(void *sym) {
-
-}
-
 void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb)
 {
     cpShape *shape1;
@@ -699,14 +694,16 @@ static cpBool handle_collision(cpArbiter *arb, int type)
           if (go->shape_cbs[i].shape == pshape1)
             duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, g2, arb);
 
-        if (!JS_IsNull(go->cbs.begin.obj))
+        if (JS_IsObject(go->cbs.begin.obj))
           duk_call_phys_cb(norm1, go->cbs.begin, g2, arb);
 
 	break;
 
       case CTYPE_SEP:
-        if (!JS_IsNull(go->cbs.separate.obj))
+        if (JS_IsObject(go->cbs.separate.obj)) {
+	  YughWarn("Made it here; separate.");
           duk_call_phys_cb(norm1, go->cbs.separate, g2, arb);
+	}
 
 	break;
         
@@ -739,25 +736,6 @@ void phys2d_setup_handlers(int go)
   handler->userData = (void*)go;
   handler->beginFunc = script_phys_cb_begin;
   handler->separateFunc = script_phys_cb_separate;
-}
-
-void phys2d_add_handler_type(int cmd, int go, struct callee c) {
-    switch (cmd) {
-        case 0:
-            id2go(go)->cbs.begin = c;
-            break;
-
-        case 1:
-            break;
-
-        case 2:
-            break;
-
-        case 3:
-            //handler->separateFunc = s7_phys_cb_separate;
-            //go->cbs->separate = cb;
-            break;
-    }
 }
 
 static int airborne = 0;

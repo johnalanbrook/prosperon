@@ -118,8 +118,6 @@ struct shape_cb {
 
 void fire_hits();
 
-void phys2d_add_handler_type(int cmd, int go,  struct callee c);
-void register_collide(void *sym);
 void phys2d_rm_go_handlers(int go);
 void phys2d_set_gravity(cpVect v);
 

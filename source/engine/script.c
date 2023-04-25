@@ -50,6 +50,23 @@ time_t file_mod_secs(const char *file) {
     return attr.st_mtime;
 }
 
+void js_stacktrace()
+{
+  YughWarn("Dumping stack ...");
+  JSValue error = JS_NewError(js);
+  JSValue stack = JS_GetPropertyStr(js, error, "stack");
+  
+  if (JS_IsNull(stack)) return;
+
+  const char *stackstr = JS_ToCString(js,stack);
+
+  log_print(stackstr);
+
+  JS_FreeCString(js,stackstr);
+  JS_FreeValue(js,stack);
+  JS_FreeValue(js, error);
+}
+
 void js_dump_stack()
 {
   JSValue exception = JS_GetException(js);
@@ -64,7 +81,6 @@ void js_dump_stack()
        JS_FreeCString(js, msg);
        JS_FreeCString(js, stack);
      }
-   
 }
 
 

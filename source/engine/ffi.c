@@ -561,8 +561,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
     case 0:
       str = JS_ToCString(js,argv[1]);
       ret = JS_NewInt64(js, script_dofile(str));
-      JS_FreeCString(js,str);
-      return ret;
+      break;
 
       case 1:
         YughWarn("Do not set pawns here anymore; Do it entirely in script.");
@@ -619,14 +618,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
          str = JS_ToCString(js,argv[1]);
 	 str2 = JS_ToCString(js,argv[2]);
          play_song(str,str2);
-	 JS_FreeCString(js,str);
-	 JS_FreeCString(js,str2);	 
          break;
 
        case 14:
          str = JS_ToCString(js, argv[1]);
          mini_sound(str);
-	 JS_FreeCString(js,str);
          break;
 
        case 15:

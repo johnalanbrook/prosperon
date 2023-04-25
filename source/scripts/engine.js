@@ -44,7 +44,7 @@ var Log = {
     cmd(91,msg);
   },
 
-  stack(skip) {
+  stack(skip = 0) {
     var stack = (new Error()).stack;
     var n = stack.next('\n',0)+1;
     for (var i = 0; i < skip; i++)
@@ -52,7 +52,6 @@ var Log = {
 
     this.write(stack.slice(n));
   },
-  
 };
 
 var files = {};
@@ -432,8 +431,13 @@ var Register = {
   pawns: [],
   pawn_input(fn, ...args) {
     this.pawns.forEach(x => {
-      if (fn in x)
-        x[fn].call(x, ...args);
+      if (fn in x) {
+        x[fn](...args);
+	return;
+        var f = x[fn];
+	if (typeof f !== 'function') return;
+	x.f(...args);
+      }
     });
   },
 
@@ -448,7 +452,7 @@ var Register = {
     this.nk_guis = this.nk_guis.filter(x => x[1] !== obj);
     this.pawns = this.pawns.filter(x => x[1] !== obj);
     this.debugs = this.debugs.filter(x => x[1] !== obj);
-    this.physupdates = this.debugs.filter(x => x[1] !== obj);
+    this.physupdates = this.physupdates.filter(x => x[1] !== obj);
   },
 };
 register(0, Register.update, Register);

@@ -70,9 +70,8 @@ void print_stacktrace()
 
     YughInfo("Stack size is %d.", size);
 
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++)
         YughCritical(stackstr[i]);
-    }
 
     js_dump_stack();
 
@@ -80,12 +79,8 @@ void print_stacktrace()
 
 void seghandle(int sig) {
 #ifdef __linux__
-    if (strsignal(sig)) {
+    if (strsignal(sig))
         YughCritical("CRASH! Signal: %s.", strsignal(sig));
-    }
-    else {
-        YughCritical("CRASH! Signal: %d.", sig);
-    }
 
     print_stacktrace();
 

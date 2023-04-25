@@ -95,7 +95,7 @@ var sprite = clone(component, {
   },
 
   load_img(img) {
-    cmd(12, this.id, img);
+    cmd(12, this.id, img, this.rect);
   },
 
   kill() {

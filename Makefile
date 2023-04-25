@@ -83,7 +83,7 @@ ifeq ($(OS), WIN32)
 	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
-	ELIBS =  engine pthread yughc glfw3 quickjs c m dl
+	ELIBS =  engine pthread yughc glfw3 quickjs tcc c m dl
 	CLIBS =
 endif
 
