@@ -1,4 +1,3 @@
-
 var Log = {
   set level(x) { cmd(92,x); },
   get level() { return cmd(93); },
@@ -407,6 +406,22 @@ var physics = {
   },
 };
 
+/* May be a human player; may be an AI player */
+var Player = {
+  pawns: [],
+  input(fn, ...args) {
+    this.pawns.forEach(x => if (fn in x) x[fn](...args));
+  },
+
+  control(pawn) {
+    this.pawns.pushunique(pawn);
+  },
+
+  uncontrol(pawn) {
+    this.pawns = this.pawns.filter(x => x !== pawn);
+  }
+};
+
 var Register = {
   updates: [],
   update(dt) {
@@ -433,13 +448,11 @@ var Register = {
     this.pawns.forEach(x => {
       if (fn in x) {
         x[fn](...args);
-	return;
-        var f = x[fn];
-	if (typeof f !== 'function') return;
-	x.f(...args);
       }
     });
   },
+
+  controller_input(
 
   debugs: [],
   debug() {

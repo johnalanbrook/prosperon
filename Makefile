@@ -118,8 +118,7 @@ $(BIN)$(DIST): $(BIN)$(NAME) source/shaders/* source/scripts/* assets/*
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(BIN)dist
 	@cp $(BIN)$(NAME) $(BIN)dist
-	@cp -rf assets/fonts $(BIN)dist
-	@cp -rf assets/icons $(BIN)dist
+	@cp -rf assets/* $(BIN)dist
 	@cp -rf source/shaders $(BIN)dist
 	@cp -r source/scripts $(BIN)dist
 	@tar czf $(DIST) --directory $(BIN)dist .

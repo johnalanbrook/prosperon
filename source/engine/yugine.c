@@ -184,7 +184,7 @@ int main(int argc, char **args) {
     gameinfo = fopen("game.info", "w");
     fprintf(gameinfo, "Yugine v. %s, sys %s.", VER, INFO);
     fclose(gameinfo);
-
+    
     engine_init();
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -192,7 +192,7 @@ int main(int argc, char **args) {
 
     renderMS = 1.0/vidmode->refreshRate;
     
-    input_init();
+    input_init();    
     openglInit();
 
     if (ed)

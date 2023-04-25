@@ -70,6 +70,7 @@ void js_stacktrace()
 void js_dump_stack()
 {
   JSValue exception = JS_GetException(js);
+  if (JS_IsNull(exception)) return;
   JSValue val = JS_GetPropertyStr(js, exception, "stack");
   if (!JS_IsUndefined(val)) {
     const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));

@@ -1191,7 +1191,7 @@ var editor = {
     if (!Keys.ctrl()) return;
     
     if (this.edit_level.dirty) {
-      Log.warn("Level has changed; save before starting a new one.");
+      Log.info("Level has changed; save before starting a new one.");
       this.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => this.clear_level()));
       return;
     }
@@ -2432,7 +2432,8 @@ var gen_notify = function(val, fn) {
   var panel = Object.create(notifypanel);
   panel.msg = val;
   panel.yes = fn;
-  panel.input_y_pressed = function() { panel.yes(); this.close(); };
+  panel.input_y_pressed = function() { panel.yes(); panel.close(); };
+  panel.input_enter_pressed = function() { panel.close(); };
   return panel;
 };
 

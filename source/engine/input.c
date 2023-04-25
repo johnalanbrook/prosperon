@@ -13,7 +13,13 @@ float deltaT = 0;
 cpVect mouse_pos = {0,0};
 cpVect mouse_delta = {0,0};
 
+struct joystick {
+  int id;
+  GLFWgamepadstate state;
+};
+
 static int *downkeys = NULL;
+static struct joystick *joysticks = NULL;
 
 static int mquit = 0;
 
@@ -125,12 +131,46 @@ void char_cb(GLFWwindow *w, unsigned int codepoint)
 
 static GLFWcharfun nukechar;
 
+void joystick_add(int id)
+{
+  struct joystick joy = {0};
+  joy.id = id;
+  arrpush(joysticks, joy);
+}
+
+void joystick_cb(int jid, int event)
+{
+  YughWarn("IN joystick cb");
+  if (event == GLFW_CONNECTED) {
+    for (int i = 0; i < arrlen(joysticks); i++)
+      if (joysticks[i].id == jid) return;
+      
+    joystick_add(jid);
+  } else if (event == GLFW_DISCONNECTED) {
+    for (int i = 0; i < arrlen(joysticks); i++) {
+      if (joysticks[i].id == jid) {
+        arrdelswap(joysticks,i);
+	return;
+      }
+    }
+  }
+}
+
 void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);
     glfwSetScrollCallback(mainwin->window, scroll_cb);
     glfwSetMouseButtonCallback(mainwin->window, mb_cb);
+    glfwSetJoystickCallback(joystick_cb);
     nukechar = glfwSetCharCallback(mainwin->window, char_cb);
+
+    const char *paddb = slurp_text("data/gamecontrollerdb.txt");
+    glfwUpdateGamepadMappings(paddb);
+    free(paddb);
+
+    /* Grab all joysticks initially present */
+    for (int i = 0; i < 16; i++)
+      if (glfwJoystickPresent(i)) joystick_add(i);
 }
 
 void input_to_nuke()
@@ -154,33 +194,14 @@ const char *keyname_extd(int key, int scancode) {
     const char *kkey = NULL;
 
     if (key > 289 && key < 302) {
-      switch(key) {
-        case 290:
-	  return "f1";
-	case 291:
-	  return "f2";
-	case 292:
-	  return "f3";
-	case 293:
-	  return "f4";
-	case 294:
-	  return "f5";
-	case 295:
-	  return "f6";
-	case 296:
-	  return "f7";
-	case 297:
-	  return "f8";
-	case 298:
-	  return "f9";
-	case 299:
-	  return "f10";
-	case 300:
-	  return "f11";
-	case 301:
-	  return "f12";
-      }
-        } else {
+      int num = key-289;
+      sprintf(keybuf, "f%d", num);
+      return keybuf;
+      } else if (key >= 320 && key <= 329) {
+        int num = key-320;
+	sprintf(keybuf, "kp%d",num);
+	return keybuf;
+      } else {
             switch(key) {
                 case GLFW_KEY_ENTER:
                     kkey = "enter";
@@ -299,6 +320,40 @@ void call_input_down(int *key) {
     call_input_signal(keystr);
 }
 
+const char *gamepad2str(int btn)
+{
+  switch(btn) {
+    case GLFW_GAMEPAD_BUTTON_CROSS: return "cross";
+    case GLFW_GAMEPAD_BUTTON_CIRCLE: return "circle";
+    case GLFW_GAMEPAD_BUTTON_SQUARE: return "square";
+    case GLFW_GAMEPAD_BUTTON_TRIANGLE: return "triangle";
+    case GLFW_GAMEPAD_BUTTON_START: return "start";
+    case GLFW_GAMEPAD_BUTTON_LEFT_BUMPER: return "lbump";
+    case GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER: return "rbump";
+    case GLFW_GAMEPAD_BUTTON_GUIDE: return "guide";
+    case GLFW_GAMEPAD_BUTTON_BACK: return "back";
+    case GLFW_GAMEPAD_BUTTON_DPAD_UP: return "dup";
+    case GLFW_GAMEPAD_BUTTON_DPAD_DOWN: return "ddown";
+    case GLFW_GAMEPAD_BUTTON_DPAD_LEFT: return "dleft";
+    case GLFW_GAMEPAD_BUTTON_DPAD_RIGHT: return "dright";
+    case GLFW_GAMEPAD_BUTTON_LEFT_THUMB: return "lthumb";
+    case GLFW_GAMEPAD_BUTTON_RIGHT_THUMB: return "rthumb";
+  }
+}
+
+const char *axis2str(int axis)
+{
+  switch (axis)
+  {
+    case GLFW_GAMEPAD_AXIS_LEFT_X: return "lx";
+    case GLFW_GAMEPAD_AXIS_LEFT_Y: return "ly";
+    case GLFW_GAMEPAD_AXIS_RIGHT_X: return "rx";
+    case GLFW_GAMEPAD_AXIS_RIGHT_Y: return "ry";
+    case GLFW_GAMEPAD_AXIS_LEFT_TRIGGER: return "ltrigger";
+    case GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER: return "rtrigger";    
+  }
+}
+
 /* This is called once every frame - or more if we want it more! */
 void input_poll(double wait)
 {
@@ -306,10 +361,30 @@ void input_poll(double wait)
     mouseWheelX = 0;
     mouseWheelY = 0;
 
-    glfwWaitEventsTimeout(wait);
+    glfwPollEvents();
+
+//    glfwWaitEventsTimeout(wait);
 
     for (int i = 0; i < arrlen(downkeys); i++)
         call_input_down(&downkeys[i]);
+
+    for (int i = 0; i < arrlen(joysticks); i++) {
+      GLFWgamepadstate state;
+      if (!glfwGetGamepadState(joysticks[i].id, &state)) continue;
+
+      for (int b = 0; b < 15; b++) {
+        if (state.buttons[b]) {
+          
+	  if (!joysticks[i].state.buttons[b])
+  	    YughWarn("Pressed button %s.", gamepad2str(b));
+	}
+	else if (!state.buttons[b] && joysticks[i].state.buttons[b]) {
+	  YughWarn("Released button %s.", gamepad2str(b));
+	}
+      }
+
+      joysticks[i].state = state;
+    }
 }
 
 int key_is_num(int key) {

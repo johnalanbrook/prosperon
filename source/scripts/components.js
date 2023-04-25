@@ -40,6 +40,16 @@ var sprite = clone(component, {
     this._pos = x;
     this.sync();
   },
+
+  input_kp9_pressed() { this.pos = [0,0]; },
+  input_kp8_pressed() { this.pos = [-0.5,0]; },
+  input_kp7_pressed() { this.pos = [-1,0]; },
+  input_kp6_pressed() { this.pos = [0,-0.5]; },
+  input_kp5_pressed() { this.pos = [-0.5,-0.5]; },
+  input_kp4_pressed() { this.pos = [-1,-0.5]; },
+  input_kp3_pressed() { this.pos = [0, -1]; },
+  input_kp2_pressed() { this.pos = [-0.5,-1]; },
+  input_kp1_pressed() { this.pos = [-1,-1]; },
   
   get boundingbox() {
     if (!this.gameobject) return null;
