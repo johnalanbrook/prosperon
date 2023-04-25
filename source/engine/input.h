@@ -26,6 +26,7 @@ const char *keyname_extd(int key, int scancode);
 int action_down(int scancode);
 
 void register_pawn(struct callee c);
+void register_gamepad(struct callee c);
 
 int want_quit();
 void quit();

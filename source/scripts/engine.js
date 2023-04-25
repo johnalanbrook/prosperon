@@ -406,21 +406,51 @@ var physics = {
   },
 };
 
+var Action = {
+  add_new(name) {
+    var action = Object.create(Action);
+    action.name = name;
+    action.inputs = [];
+    this.actions.push(action);
+
+    return action;
+  },
+  actions: [],
+};
+
 /* May be a human player; may be an AI player */
 var Player = {
-  pawns: [],
+  players: [],
   input(fn, ...args) {
-    this.pawns.forEach(x => if (fn in x) x[fn](...args));
+    this.pawns.forEach(x => { if (fn in x) x[fn](...args); });
   },
 
   control(pawn) {
-    this.pawns.pushunique(pawn);
+    this.pawns.push_unique(pawn);
   },
 
   uncontrol(pawn) {
     this.pawns = this.pawns.filter(x => x !== pawn);
-  }
+  },
 };
+
+for (var i = 0; i < 4; i++) {
+  var player1 = Object.create(Player);
+  player1.pawns = [];
+  player1.gamepads = [];
+  Player.players.push(player1);
+}
+
+function state2str(state) {
+  switch (state) {
+    case 0:
+      return "down";
+    case 1:
+      return "pressed";
+    case 2:
+      return "released";
+  }
+}
 
 var Register = {
   updates: [],
@@ -443,16 +473,25 @@ var Register = {
     this.nk_guis.forEach(x => x[0].call(x[1]));
   },
 
-  pawns: [],
-  pawn_input(fn, ...args) {
-    this.pawns.forEach(x => {
-      if (fn in x) {
-        x[fn](...args);
-      }
-    });
+  kbm_input(fn, ...args) {
+    Player.players[0].input(fn, ...args);
   },
 
-  controller_input(
+  gamepad_playermap: [],
+  gamepad_input(pad, btn, state, ...args) {
+    var player = this.gamepad_playermap[pad];
+    if (!player) return;
+
+    var statestr = state2str(state);
+
+    var rawfn = `gamepad_${btn}_${statestr}`;
+    player.input(rawfn, ...args);
+
+    Action.actions.forEach(x => {
+      if (x.inputs.includes(btn))
+        player.input(`action_${x.name}_${statestr}`, ...args);
+    });
+  },
 
   debugs: [],
   debug() {
@@ -463,9 +502,10 @@ var Register = {
     this.updates = this.updates.filter(x => x[1] !== obj);
     this.guis = this.guis.filter(x => x[1] !== obj);
     this.nk_guis = this.nk_guis.filter(x => x[1] !== obj);
-    this.pawns = this.pawns.filter(x => x[1] !== obj);
     this.debugs = this.debugs.filter(x => x[1] !== obj);
     this.physupdates = this.physupdates.filter(x => x[1] !== obj);
+
+    Player.players.forEach(x => x.uncontrol(obj));
   },
 };
 register(0, Register.update, Register);
@@ -473,7 +513,10 @@ register(1, Register.physupdate, Register);
 register(2, Register.gui, Register);
 register(3, Register.nk_gui, Register);
 register(6, Register.debug, Register);
-register(7, Register.pawn_input, Register);
+register(7, Register.kbm_input, Register);
+register(8, Register.gamepad_input, Register);
+
+Register.gamepad_playermap[0] = Player.players[0];
 
 function register_update(fn, obj) {
   Register.updates.push([fn, obj ? obj : null]);
@@ -505,12 +548,13 @@ function unregister_nk_gui(fn, obj) {
 
 register_update(Yugine.exec, Yugine);
 
-function set_pawn(obj) {
-  Register.pawns.push(obj);
+/* These functions are the "defaults", and give control to player0 */
+function set_pawn(obj, player = Player.players[0]) {
+  player.control(obj);
 }
 
-function unset_pawn(obj) {
-  Register.pawns = Register.pawns.filter(x => x !== obj);
+function unset_pawn(obj, player = Player.players[0]) {
+  player.uncontrol(obj);
 }
 
 var Signal = {

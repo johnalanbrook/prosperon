@@ -16,5 +16,6 @@ struct color js2color(JSValue v);
 double js2number(JSValue v);
 JSValue num2js(double g);
 JSValue int2js(int i);
+JSValue str2js(const char *c);
 
 #endif

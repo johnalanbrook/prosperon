@@ -5,6 +5,7 @@
 #include "stb_ds.h"
 #include "log.h"
 #include "ffi.h"
+#include "time.h"
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
@@ -24,10 +25,16 @@ static struct joystick *joysticks = NULL;
 static int mquit = 0;
 
 static struct callee pawn_callee;
+static struct callee gamepad_callee;
 
 void register_pawn(struct callee c)
 {
   pawn_callee = c;
+}
+
+void register_gamepad(struct callee c)
+{
+  gamepad_callee = c;
 }
 
 void add_downkey(int key) {
@@ -372,16 +379,47 @@ void input_poll(double wait)
       GLFWgamepadstate state;
       if (!glfwGetGamepadState(joysticks[i].id, &state)) continue;
 
+      JSValue argv[3];
+      argv[0] = int2js(joysticks[i].id);
+      char inputstr[50];
       for (int b = 0; b < 15; b++) {
+        argv[1] = str2js(gamepad2str(b));
+	
         if (state.buttons[b]) {
-          
-	  if (!joysticks[i].state.buttons[b])
-  	    YughWarn("Pressed button %s.", gamepad2str(b));
+	  argv[2] = int2js(0);
+	  script_callee(gamepad_callee,3,argv);
+	  
+	  if (!joysticks[i].state.buttons[b]) {
+	    argv[2] = int2js(1);
+	    script_callee(gamepad_callee,3,argv);
+	  }
 	}
 	else if (!state.buttons[b] && joysticks[i].state.buttons[b]) {
-	  YughWarn("Released button %s.", gamepad2str(b));
+	  argv[2] = int2js(2);
+	  script_callee(gamepad_callee,3,argv);
 	}
       }
+
+      argv[1] = str2js("axis_ljoy");
+      cpVect v;
+      v.x = state.axes[0];
+      v.y = -state.axes[1];
+      argv[2] = vec2js(v);
+      script_callee(gamepad_callee,3,argv);
+
+      argv[1] = str2js("axis_rjoy");
+      v.x = state.axes[2];
+      v.y = -state.axes[3];
+      argv[2] = vec2js(v);
+      script_callee(gamepad_callee,3,argv);
+
+      argv[1] = str2js("axis_ltrigger");
+      argv[2] = num2js((state.axes[4]+1)/2);
+      script_callee(gamepad_callee,3,argv);
+
+      argv[1] = str2js("axis_rtrigger");
+      argv[2] = num2js((state.axes[5]+1)/2);
+      script_callee(gamepad_callee,3,argv);      
 
       joysticks[i].state = state;
     }

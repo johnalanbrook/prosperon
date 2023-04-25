@@ -53,6 +53,11 @@ JSValue int2js(int i)
   return JS_NewInt64(js, i);
 }
 
+JSValue str2js(const char *c)
+{
+  return JS_NewString(js, c);
+}
+
 double js2number(JSValue v)
 {
   double g;
@@ -978,6 +983,10 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
        break;
      case 7:
        register_pawn(c);
+       break;
+
+     case 8:
+       register_gamepad(c);
        break;
      }
 
