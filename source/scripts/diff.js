@@ -82,11 +82,14 @@ function unmerge(target, source) {
 /* Deeply merge two objects, not clobbering objects on target with objects on source */
 function deep_merge(target, source)
 {
+  Log.warn("Doing a deep merge ...");
   for (var key in source) {
-    if (typeof source[key] === 'object' && !Array.isArray(source[key]))
+    if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
       deep_merge(target[key], source[key]);
-    else
+    }
+    else {
       target[key] = source[key];
+    }
   }
 };
 

@@ -435,6 +435,8 @@ Math.lerp = function (s, f, dt) {
   return s + (Math.clamp(dt, 0, 1) * (f - s));
 };
 
+Math.random_range = function(min,max) { return Math.random() * (max-min) + min; };
+
 Math.snap = function(val, grid) {
   if (!grid || grid === 1) return Math.round(val);
 

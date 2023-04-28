@@ -35,14 +35,14 @@ struct model *MakeModel(const char *path) {
 
   if (!result == cgltf_result_success) {
     YughError("Could not read file %s.", path);
-    return;
+    return NULL;
   }
 
   result = cgltf_load_buffers(&options, data, path);
 
   if (!result == cgltf_result_success) {
     YughError("Could not load buffers for file %s.", path);
-    return;
+    return NULL;
   }
 
   struct model *model = malloc(sizeof(struct model));

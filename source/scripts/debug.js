@@ -48,16 +48,6 @@ var Debug = {
     register_debug(fn,obj);
   },
 
-  print_callstack() {
-    for (var i = -3;; i--) {
-      var t = Duktape.act(i);
-      if (!t) break;
-      var file = t.function ? t.function.fileName : "";
-      var line = t.lineNumber;
-      Log.info(file + ":" + line);
-    }
-  },
-
   line(points, color, type) {
     if (!type)
       type = 0;

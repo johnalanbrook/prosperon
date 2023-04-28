@@ -17,9 +17,17 @@ static struct {
 } *texhash = NULL;
 
 struct Texture *tex_default;
+
+struct Texture *texture_notex()
+{
+  return texture_pullfromfile("./icons/no_tex.png");
+}
+
 /* If an empty string or null is put for path, loads default texture */
 struct Texture *texture_pullfromfile(const char *path)
 {
+    if (!path) return texture_notex();
+    
     int index = shgeti(texhash, path);
     if (index != -1)
 	return texhash[index].value;
@@ -48,8 +56,7 @@ struct Texture *texture_pullfromfile(const char *path)
 
     if (data == NULL) {
         YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());
-	print_stacktrace();
-        return texture_pullfromfile("./icons/no_tex.png");
+        return texture_notex();
     }
     tex->data = data;
 

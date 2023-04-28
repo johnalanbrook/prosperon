@@ -1,3 +1,5 @@
+"use strict";
+
 var Log = {
   set level(x) { cmd(92,x); },
   get level() { return cmd(93); },
@@ -44,6 +46,7 @@ var Log = {
   },
 
   stack(skip = 0) {
+    Log.warn("Printing stack");
     var stack = (new Error()).stack;
     var n = stack.next('\n',0)+1;
     for (var i = 0; i < skip; i++)
@@ -52,6 +55,7 @@ var Log = {
     this.write(stack.slice(n));
   },
 };
+
 
 var files = {};
 function load(file) {
@@ -162,7 +166,7 @@ var Yugine = {
 };
 
 var timer = {
-  make(fn, secs, obj, loop) {
+  make(fn, secs,obj,loop) {
     if (secs === 0) {
       fn.call(obj);
       return;
@@ -170,23 +174,17 @@ var timer = {
       
     var t = clone(this);
     t.id = make_timer(fn, secs, obj);
-
-    if (loop)
-      t.loop = loop;
-    else
-      t.loop = 0;
-    Log.info("Made timer " + t.id);
+    
     return t;
   },
 
-  oneshot(fn, secs, obj) {
-    var t = clone(this);
-    var killfn = function() {
-      fn.call(this);
+  oneshot(fn, secs,obj) {
+    var t = this.make(() => {
+      fn.call();
       t.kill();
-    };
-    t.id = make_timer(killfn,secs,obj);
+    },secs);
     t.loop = 0;
+    t.start();
   },
 
   get remain() { return cmd(32, this.id); },
@@ -508,6 +506,8 @@ var Register = {
     Player.players.forEach(x => x.uncontrol(obj));
   },
 };
+
+Register.unregister_obj(null);
 register(0, Register.update, Register);
 register(1, Register.physupdate, Register);
 register(2, Register.gui, Register);
@@ -515,6 +515,7 @@ register(3, Register.nk_gui, Register);
 register(6, Register.debug, Register);
 register(7, Register.kbm_input, Register);
 register(8, Register.gamepad_input, Register);
+register(9, Log.stack, this);
 
 Register.gamepad_playermap[0] = Player.players[0];
 
@@ -576,7 +577,13 @@ var Signal = {
 
 var IO = {
   exists(file) { return cmd(65, file);},
-  slurp(file) { return cmd(38,file); },
+  slurp(file) {
+    if (!this.exists(file)) {
+      Log.warn(`File ${file} does not exist; can't slurp.`);
+      return "";
+    }
+    return cmd(38,file);
+  },
   slurpwrite(str, file) { return cmd(39, str, file); },
   extensions(ext) { return cmd(66, "." + ext); },
 };
@@ -1442,6 +1449,7 @@ var gameobject = {
   },
 
   kill() {
+    Log.warn(`Killing ${this.toString()}`);
     cmd(2, this.body);
 
     delete Game.objects[this.body];
@@ -1613,7 +1621,7 @@ function add_sync_prop(obj, prop, syncfn) {
 function load_configs(file) {
   var configs = JSON.parse(IO.slurp(file));
   for (var key in configs) {
-    Object.assign(this[key], configs[key]);
+    Object.assign(globalThis[key], configs[key]);
   }
   
   Collision.sync();
@@ -1653,7 +1661,7 @@ function save_game_configs() {
   Game.objects.forEach(function(x) { x.sync(); });
 };
 
-Collision = {
+var Collision = {
   types: {},
   num: 10,
   set_collide(a, b, x) {
@@ -1718,3 +1726,38 @@ var camera2d = gameobject.clone("camera2d", {
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 win_icon("icon.png");
+
+/* Default objects */
+gameobject.clone("polygon2d", {
+  polygon2d: polygon2d.clone(),
+});
+
+gameobject.clone("edge2d", {
+  edge2d: bucket.clone(),
+});
+
+gameobject.clone("sprite", {
+  sprite: sprite.clone(),
+});
+
+load("config.js");
+
+var prototypes = JSON.parse(slurp("proto.json"));
+for (var key in prototypes) {
+  if (key in gameobjects)
+    dainty_assign(gameobjects[key], prototypes[key]);
+  else {
+    /* Create this gameobject fresh */
+    Log.info("Making new prototype: " + key + " from " + prototypes[key].from);
+    var newproto = gameobjects[prototypes[key].from].clone(key);
+    gameobjects[key] = newproto;
+
+    for (var pkey in newproto)
+      if (typeof newproto[pkey] === 'object' && newproto[pkey] && 'clone' in newproto[pkey])
+        newproto[pkey] = newproto[pkey].clone();
+
+    dainty_assign(gameobjects[key], prototypes[key]);
+  }
+}
+
+function save_gameobjects_as_prototypes() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };

@@ -6,6 +6,7 @@
 #include "log.h"
 #include "ffi.h"
 #include "time.h"
+#include "font.h"
 
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
@@ -26,6 +27,27 @@ static int mquit = 0;
 
 static struct callee pawn_callee;
 static struct callee gamepad_callee;
+
+const char *gamepad2str(int btn)
+{
+  switch(btn) {
+    case GLFW_GAMEPAD_BUTTON_CROSS: return "cross";
+    case GLFW_GAMEPAD_BUTTON_CIRCLE: return "circle";
+    case GLFW_GAMEPAD_BUTTON_SQUARE: return "square";
+    case GLFW_GAMEPAD_BUTTON_TRIANGLE: return "triangle";
+    case GLFW_GAMEPAD_BUTTON_START: return "start";
+    case GLFW_GAMEPAD_BUTTON_LEFT_BUMPER: return "lbump";
+    case GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER: return "rbump";
+    case GLFW_GAMEPAD_BUTTON_GUIDE: return "guide";
+    case GLFW_GAMEPAD_BUTTON_BACK: return "back";
+    case GLFW_GAMEPAD_BUTTON_DPAD_UP: return "dup";
+    case GLFW_GAMEPAD_BUTTON_DPAD_DOWN: return "ddown";
+    case GLFW_GAMEPAD_BUTTON_DPAD_LEFT: return "dleft";
+    case GLFW_GAMEPAD_BUTTON_DPAD_RIGHT: return "dright";
+    case GLFW_GAMEPAD_BUTTON_LEFT_THUMB: return "lthumb";
+    case GLFW_GAMEPAD_BUTTON_RIGHT_THUMB: return "rthumb";
+  }
+}
 
 void register_pawn(struct callee c)
 {
@@ -163,6 +185,9 @@ void joystick_cb(int jid, int event)
   }
 }
 
+JSValue jsgamepadstr[15];
+JSValue jsaxesstr[4];
+
 void input_init()
 {
     glfwSetCursorPosCallback(mainwin->window, cursor_pos_cb);
@@ -174,6 +199,14 @@ void input_init()
     const char *paddb = slurp_text("data/gamecontrollerdb.txt");
     glfwUpdateGamepadMappings(paddb);
     free(paddb);
+
+    for (int b = 0; b < 15; b++)
+      jsgamepadstr[b] = str2js(gamepad2str(b));
+
+    jsaxesstr[0] = str2js("axis_ljoy");
+    jsaxesstr[1] = str2js("axis_rjoy");
+    jsaxesstr[2] = str2js("axis_ltrigger");
+    jsaxesstr[3] = str2js("axis_rtrigger");
 
     /* Grab all joysticks initially present */
     for (int i = 0; i < 16; i++)
@@ -327,26 +360,6 @@ void call_input_down(int *key) {
     call_input_signal(keystr);
 }
 
-const char *gamepad2str(int btn)
-{
-  switch(btn) {
-    case GLFW_GAMEPAD_BUTTON_CROSS: return "cross";
-    case GLFW_GAMEPAD_BUTTON_CIRCLE: return "circle";
-    case GLFW_GAMEPAD_BUTTON_SQUARE: return "square";
-    case GLFW_GAMEPAD_BUTTON_TRIANGLE: return "triangle";
-    case GLFW_GAMEPAD_BUTTON_START: return "start";
-    case GLFW_GAMEPAD_BUTTON_LEFT_BUMPER: return "lbump";
-    case GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER: return "rbump";
-    case GLFW_GAMEPAD_BUTTON_GUIDE: return "guide";
-    case GLFW_GAMEPAD_BUTTON_BACK: return "back";
-    case GLFW_GAMEPAD_BUTTON_DPAD_UP: return "dup";
-    case GLFW_GAMEPAD_BUTTON_DPAD_DOWN: return "ddown";
-    case GLFW_GAMEPAD_BUTTON_DPAD_LEFT: return "dleft";
-    case GLFW_GAMEPAD_BUTTON_DPAD_RIGHT: return "dright";
-    case GLFW_GAMEPAD_BUTTON_LEFT_THUMB: return "lthumb";
-    case GLFW_GAMEPAD_BUTTON_RIGHT_THUMB: return "rthumb";
-  }
-}
 
 const char *axis2str(int axis)
 {
@@ -380,46 +393,50 @@ void input_poll(double wait)
       if (!glfwGetGamepadState(joysticks[i].id, &state)) continue;
 
       JSValue argv[3];
-      argv[0] = int2js(joysticks[i].id);
+      argv[0] = num_cache[joysticks[i].id];
       char inputstr[50];
       for (int b = 0; b < 15; b++) {
-        argv[1] = str2js(gamepad2str(b));
+        argv[1] = jsgamepadstr[b];
 	
         if (state.buttons[b]) {
-	  argv[2] = int2js(0);
+	  argv[2] = num_cache[0];
 	  script_callee(gamepad_callee,3,argv);
 	  
 	  if (!joysticks[i].state.buttons[b]) {
-	    argv[2] = int2js(1);
+	    argv[2] = num_cache[1];
 	    script_callee(gamepad_callee,3,argv);
 	  }
 	}
 	else if (!state.buttons[b] && joysticks[i].state.buttons[b]) {
-	  argv[2] = int2js(2);
+	  argv[2] = num_cache[2];
 	  script_callee(gamepad_callee,3,argv);
 	}
       }
 
-      argv[1] = str2js("axis_ljoy");
+      argv[1] = jsaxesstr[0];
       cpVect v;
       v.x = state.axes[0];
       v.y = -state.axes[1];
       argv[2] = vec2js(v);
       script_callee(gamepad_callee,3,argv);
+      JS_FreeValue(js, argv[2]);
 
-      argv[1] = str2js("axis_rjoy");
+      argv[1] = jsaxesstr[1];
       v.x = state.axes[2];
       v.y = -state.axes[3];
       argv[2] = vec2js(v);
       script_callee(gamepad_callee,3,argv);
+      JS_FreeValue(js, argv[2]);      
 
-      argv[1] = str2js("axis_ltrigger");
+      argv[1] = jsaxesstr[2];
       argv[2] = num2js((state.axes[4]+1)/2);
       script_callee(gamepad_callee,3,argv);
+      JS_FreeValue(js, argv[2]);      
 
-      argv[1] = str2js("axis_rtrigger");
+      argv[1] = jsaxesstr[3];
       argv[2] = num2js((state.axes[5]+1)/2);
-      script_callee(gamepad_callee,3,argv);      
+      script_callee(gamepad_callee,3,argv);
+      JS_FreeValue(js, argv[2]);      
 
       joysticks[i].state = state;
     }

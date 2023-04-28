@@ -988,6 +988,10 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
      case 8:
        register_gamepad(c);
        break;
+
+     case 9:
+       stacktrace_callee = c;
+       break;
      }
 
    return JS_NULL;
@@ -1455,8 +1459,8 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
 {
     double secs = js2number(argv[1]);
     struct callee *c = malloc(sizeof(*c));
-    c->fn = argv[0];
-    c->obj = argv[2];
+    c->fn = JS_DupValue(js,argv[0]);
+    c->obj = JS_GetGlobalObject(js);
     int id = timer_make(secs, call_callee, c, 1);
 
     return JS_NewInt64(js,  id);

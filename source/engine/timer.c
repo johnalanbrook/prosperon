@@ -21,7 +21,7 @@ void check_timer(struct timer *t, double dt)
             return;
         }
 
-        t->on = 0;
+	timer_pause(t);
         return;
     }
 }

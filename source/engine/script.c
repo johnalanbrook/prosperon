@@ -30,19 +30,26 @@ static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
 void script_startup()
 {
     rt = JS_NewRuntime();
+    JS_SetMaxStackSize(rt,0);
     js = JS_NewContext(rt);
     ffi_load();
 }
 
+JSValue num_cache[100] = {0};
+
 void script_init() {
     /* Load all prefabs into memory */
     script_dofile("scripts/engine.js");
-    script_dofile("config.js");
+
+    for (int i = 0; i < 100; i++)
+      num_cache[i] = int2js(i);
 }
 
 void script_run(const char *script) {
   JS_FreeValue(js, JS_Eval(js, script, strlen(script), "script", 0));
 }
+
+struct callee stacktrace_callee;
 
 time_t file_mod_secs(const char *file) {
     struct stat attr;
@@ -52,23 +59,15 @@ time_t file_mod_secs(const char *file) {
 
 void js_stacktrace()
 {
-  YughWarn("Dumping stack ...");
-  JSValue error = JS_NewError(js);
-  JSValue stack = JS_GetPropertyStr(js, error, "stack");
-  
-  if (JS_IsNull(stack)) return;
-
-  const char *stackstr = JS_ToCString(js,stack);
-
-  log_print(stackstr);
-
-  JS_FreeCString(js,stackstr);
-  JS_FreeValue(js,stack);
-  JS_FreeValue(js, error);
+  call_callee(&stacktrace_callee);
+  return;
 }
 
 void js_dump_stack()
 {
+  js_stacktrace();
+  return;
+  
   JSValue exception = JS_GetException(js);
   if (JS_IsNull(exception)) return;
   JSValue val = JS_GetPropertyStr(js, exception, "stack");
@@ -94,7 +93,7 @@ int js_print_exception(JSValue v)
        const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
        const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
        const char *stack = JS_ToCString(js, val);
-       YughError("%s :: %s\n%s", name, msg, stack);
+       YughWarn("%s :: %s\n%s", name, msg, stack);
 
        JS_FreeCString(js, name);
        JS_FreeCString(js, msg);

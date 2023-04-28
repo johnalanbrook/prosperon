@@ -3,6 +3,12 @@
   selectable
 */
 
+var required_files = ["proto.json"];
+
+required_files.forEach(x => {
+  if (!IO.exists(x)) slurpwrite("", x);
+});
+
 var editor_level = Level.create();
 var editor_camera = editor_level.spawn(camera2d);
 editor_camera.save = false;
@@ -221,7 +227,7 @@ var editor = {
     if (this.sel_comp) return;
     
     if (!this.selectlist.empty) {
-      this.selectlist.forEach(function(x) { x.draw_layer++; });
+      this.selectlist.forEach(x => x.draw_layer++);
       return;
     }
     
@@ -246,16 +252,21 @@ var editor = {
 
   save_proto() {
     if (this.selectlist.length !== 1) return;
-      var protos = JSON.parse(slurp("proto.json"));
+    Log.warn(`Saving prototype ${this.selectlist[0].toString()}`);
+      var protos = JSON.parse(IO.slurp("proto.json"));
       
       var tobj = this.selectlist[0].prop_obj();
       var pobj = this.selectlist[0].__proto__.prop_obj();
 
+      Log.warn("Going to deep merge.");
       deep_merge(pobj, tobj);
+      Log.warn("Finished deep merge.");
 
       pobj.from = this.selectlist[0].__proto__.from;
 
+
       protos[this.selectlist[0].__proto__.name] = pobj;
+      Log.warn(JSON.stringify(protos));
       slurpwrite(JSON.stringify(protos, null, 2), "proto.json");
       
       /* Save object changes to parent */
@@ -265,11 +276,12 @@ var editor = {
       unmerge(this.selectlist[0], tobj);
 
       /* Now sync all objects */
-      Game.objects.forEach(function(x) { x.sync(); });
+      Game.objects.forEach(x => x.sync());
+      
   },
 
   save_prototypes() {
-    slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json");
+    save_gameobjects_as_prototypes();
   },
   
   /* Save the selected object as a new prototype, extending the chain */
@@ -278,7 +290,6 @@ var editor = {
       Log.info("Already an object with name '" + name + "'. Choose another one.");
       return;
     }
-    
     var newp = this.selectlist[0].__proto__.clone(name);
 
     for (var key in newp)
@@ -535,7 +546,7 @@ var editor = {
   },
     
   input_delete_pressed() {
-    this.selectlist.forEach(function(x) { x.kill(); });
+    this.selectlist.forEach(x => x.kill());
     this.unselect();
   },
 

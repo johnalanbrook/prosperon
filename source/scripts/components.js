@@ -26,7 +26,9 @@ var component = {
 
 var sprite = clone(component, {
   name: "sprite",
-  path: "",
+  _path: "",
+  get path() { return this._path; },
+  set path(x) { this._path = x; this.load_img(x); },
   _pos: [0, 0],
   get layer() {
     if (!this.gameobject)
@@ -101,7 +103,6 @@ var sprite = clone(component, {
     if (!this.hasOwn('id')) return;
     cmd(60, this.id, this.layer);
     cmd(37, this.id, this.pos);
-    cmd(12, this.id, this.path, this.rect);
   },
 
   load_img(img) {
@@ -135,11 +136,10 @@ var char2d = clone(sprite, {
   make(go) {
     var char = clone(this);
     char.curplaying = char.anims.array()[0];
-    Object.defineProperty(char, 'id', {value:make_sprite(go,this.path,this.pos)});
+    Object.defineProperty(char, 'id', {value:make_sprite(go,char.curplaying.path,this.pos)});
     char.frame = 0;
-    char.timer = timer.make(char.advance, 1/char.curplaying.fps, char);
+    char.timer = timer.make(char.advance.bind(char), 1/char.curplaying.fps);
     char.timer.loop = true;
-    char.rect = char.frame2rect(char.curplaying.frames, char.frame);
     char.setsprite();
     return char;
   },
@@ -152,7 +152,10 @@ var char2d = clone(sprite, {
       return;
     }
     
-    if (this.curplaying === this.anims[name]) return;
+    if (this.curplaying === this.anims[name]) {
+      this.timer.start();
+      return;
+    }
     
     this.curplaying = this.anims[name];
     this.timer.time = 1/this.curplaying.fps;
@@ -170,11 +173,19 @@ var char2d = clone(sprite, {
   advance() {
     this.frame = (this.frame + 1) % this.curplaying.frames;
     this.setsprite();
+
+    if (this.frame === 0 && !this.curplaying.loop)
+      this.timer.pause();
   },
 
   devance() {
     this.frame = (this.frame - 1);
     if (this.frame === -1) this.frame = this.curplaying.frames-1;
+    this.setsprite();
+  },
+
+  setframe(frame) {
+    this.frame = frame;
     this.setsprite();
   },
   
@@ -183,9 +194,8 @@ var char2d = clone(sprite, {
   },
 
   stop() {
-    this.frame = 0;
+    this.setframe(0);
     this.timer.stop();
-    this.setsprite();
   },
   
   kill() {

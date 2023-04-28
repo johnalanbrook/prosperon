@@ -28,6 +28,7 @@
 
 #include <signal.h>
 #include <time.h>
+#include <execinfo.h>
 
 #include "string.h"
 
@@ -73,8 +74,7 @@ void print_stacktrace()
     for (int i = 0; i < size; i++)
         YughCritical(stackstr[i]);
 
-    js_dump_stack();
-
+    js_stacktrace();
 }
 
 void seghandle(int sig) {

@@ -24,7 +24,7 @@ int make_sprite(int go)
     struct sprite sprite = {
         .color = {1.f, 1.f, 1.f},
         .size = {1.f, 1.f},
-        .tex = texture_loadfromfile("ph.png"),
+        .tex = texture_loadfromfile(NULL),
         .go = go,
         .next = -1,
 	.layer = 0,
