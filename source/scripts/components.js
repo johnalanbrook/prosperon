@@ -136,10 +136,14 @@ var char2d = clone(sprite, {
   make(go) {
     var char = clone(this);
     char.curplaying = char.anims.array()[0];
+    char.obscure('curplaying');
     Object.defineProperty(char, 'id', {value:make_sprite(go,char.curplaying.path,this.pos)});
+    char.obscure('id');
     char.frame = 0;
     char.timer = timer.make(char.advance.bind(char), 1/char.curplaying.fps);
     char.timer.loop = true;
+    char.obscure('timer');
+    char.obscure('rect');
     char.setsprite();
     return char;
   },

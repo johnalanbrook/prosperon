@@ -24,6 +24,12 @@ Object.defineProperty(Object.prototype, 'getOwnPropertyDescriptors', {
   }
 });
 
+Object.defineProperty(Object.prototype, 'obscure', {
+  value: function(name) {
+    Object.defineProperty(this, name, { enumerable: false });
+  }
+});
+
 Object.defineProperty(Object.prototype, 'hasOwn', {
   value: function(x) { return this.hasOwnProperty(x); }
 });
@@ -609,3 +615,4 @@ function sortpointsccw(points)
   
   return ccw.map(function(x) { return x.add(cm); });
 }
+

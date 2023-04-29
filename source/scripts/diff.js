@@ -85,9 +85,11 @@ function deep_merge(target, source)
   Log.warn("Doing a deep merge ...");
   for (var key in source) {
     if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            Log.warn(`Deeper merge on ${key}`);
       deep_merge(target[key], source[key]);
     }
     else {
+      Log.warn(`Setting key ${key}`);    
       target[key] = source[key];
     }
   }

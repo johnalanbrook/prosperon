@@ -99,6 +99,8 @@ DEPENDS = $(objects:.o=.d)
 ENGINE = $(BIN)libengine.a
 INCLUDE = $(BIN)include
 
+SCRIPTS = $(shell ls source/scripts/*.js)
+
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(ELIBS)
 
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
@@ -114,7 +116,7 @@ $(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE) $(BIN)libquickjs.a
 	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/* source/scripts/* assets/*
+$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/* $(SCRIPTS) assets/*
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(BIN)dist
 	@cp $(BIN)$(NAME) $(BIN)dist

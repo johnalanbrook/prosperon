@@ -1761,3 +1761,5 @@ for (var key in prototypes) {
 }
 
 function save_gameobjects_as_prototypes() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
+
+Resources = {};
