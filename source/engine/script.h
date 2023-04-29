@@ -15,6 +15,7 @@ struct callee {
 extern struct callee stacktrace_callee;
 extern JSValue num_cache[100];
 
+void js_stacktrace();
 void script_startup();
 void script_init();
 void script_run(const char *script);

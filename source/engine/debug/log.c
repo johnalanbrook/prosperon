@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include "script.h"
+
 int logLevel = 1;
 
 /* Four levels of log:
@@ -25,8 +27,8 @@ FILE *logfile = NULL;
 
 #define CONSOLE_BUF 1024*1024*5/* 5MB */
 
-char lastlog[ERROR_BUFFER] = {'\0'};
-char consolelog[CONSOLE_BUF] = {'\0'};
+char lastlog[ERROR_BUFFER+1] = {'\0'};
+char consolelog[CONSOLE_BUF+1] = {'\0'};
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {

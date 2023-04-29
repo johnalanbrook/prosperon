@@ -162,7 +162,6 @@ struct sFont *MakeFont(const char *fontfile, int height)
 }
 
 static int curchar = 0;
-static float *buffdraw;
 
 void draw_char_box(struct Character c, float cursor[2], float scale, float color[3])
 {
@@ -281,7 +280,6 @@ int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3]
     curchar = 0;
 
     float *usecolor = color;
-    float caretcolor[3] = {0.4,0.98,0.75};
 
     while (*line != '\0') {
 

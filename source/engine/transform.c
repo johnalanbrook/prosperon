@@ -1,8 +1,7 @@
 #include "transform.h"
 #include <string.h>
 
-struct mTransform MakeTransform(mfloat_t pos[3], mfloat_t rotation[4],
-				float scale)
+struct mTransform MakeTransform(mfloat_t pos[3], mfloat_t rotation[4], float scale)
 {
     struct mTransform newT;
     memcpy(newT.position, pos, sizeof(*pos));

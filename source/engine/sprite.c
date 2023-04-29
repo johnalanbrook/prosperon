@@ -30,8 +30,6 @@ int make_sprite(int go)
 	.layer = 0,
         .enabled = 1  };
 
-    int ret;
-
     if (first<0) {
         arrput(sprites, sprite);
         arrlast(sprites).id = arrlen(sprites)-1;

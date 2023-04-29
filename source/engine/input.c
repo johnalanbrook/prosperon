@@ -47,6 +47,8 @@ const char *gamepad2str(int btn)
     case GLFW_GAMEPAD_BUTTON_LEFT_THUMB: return "lthumb";
     case GLFW_GAMEPAD_BUTTON_RIGHT_THUMB: return "rthumb";
   }
+  
+  return "NOBTN";
 }
 
 void register_pawn(struct callee c)
@@ -196,7 +198,7 @@ void input_init()
     glfwSetJoystickCallback(joystick_cb);
     nukechar = glfwSetCharCallback(mainwin->window, char_cb);
 
-    const char *paddb = slurp_text("data/gamecontrollerdb.txt");
+    char *paddb = slurp_text("data/gamecontrollerdb.txt");
     glfwUpdateGamepadMappings(paddb);
     free(paddb);
 
@@ -229,8 +231,9 @@ void call_input_signal(char *signal) {
   JS_FreeValue(js, s);
 }
 
+char keybuf[50];
+
 const char *keyname_extd(int key, int scancode) {
-    char keybuf[50];
     const char *kkey = NULL;
 
     if (key > 289 && key < 302) {
@@ -372,6 +375,8 @@ const char *axis2str(int axis)
     case GLFW_GAMEPAD_AXIS_LEFT_TRIGGER: return "ltrigger";
     case GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER: return "rtrigger";    
   }
+  
+  return "NOAXIS";
 }
 
 /* This is called once every frame - or more if we want it more! */
@@ -394,7 +399,6 @@ void input_poll(double wait)
 
       JSValue argv[3];
       argv[0] = num_cache[joysticks[i].id];
-      char inputstr[50];
       for (int b = 0; b < 15; b++) {
         argv[1] = jsgamepadstr[b];
 	

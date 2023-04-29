@@ -99,7 +99,11 @@ int js_print_exception(JSValue v)
        JS_FreeCString(js, msg);
        JS_FreeCString(js, stack);
      }
+     
+     return 1;
    }
+   
+   return 0;
 }
 
 int script_dofile(const char *file) {
@@ -139,6 +143,7 @@ JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)
   JSValue ret = JS_Call(js, c->fn, c->obj, argc, argv);
   js_print_exception(ret);
   JS_FreeValue(js, ret);
+  return JS_NULL;
 }
 
 void call_callee(struct callee *c) {

@@ -7,11 +7,12 @@
 #include "debug.h"
 
 #include "debugdraw.h"
-#include "gameobject.h"
 #include <math.h>
 #include <chipmunk/chipmunk_unsafe.h>
 #include "stb_ds.h"
 #include <assert.h>
+
+#include "2dphysics.h"
 
 #include "tinyspline.h"
 
@@ -459,7 +460,6 @@ void phys2d_applypoly(struct phys2d_poly *poly)
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly)
 {
     float *color = shape_color(poly->shape.shape);
-    int n = arrlen(poly->points);
 
     if (arrlen(poly->points) >= 3) {
 	int n = cpPolyShapeGetCount(poly->shape.shape);
@@ -686,7 +686,6 @@ static cpBool handle_collision(cpArbiter *arb, int type)
     struct phys2d_shape *pshape2 = cpShapeGetUserData(shape2);
 
     cpVect norm1 = cpArbiterGetNormal(arb);
-    cpVect vel1 = cpArbiterGetSurfaceVelocity(arb);
 
     switch (type) {
       case CTYPE_BEGIN:

@@ -60,7 +60,6 @@ struct sprite *tsprite = NULL;
 
 
 static unsigned int projUBO;
-static unsigned int resUBO;
 
 void debug_draw_phys(int draw) {
     debugDrawPhysics = draw;

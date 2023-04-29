@@ -63,7 +63,6 @@ struct Texture *texture_pullfromfile(const char *path)
          glGenTextures(1, &tex->id);
 
     	glBindTexture(GL_TEXTURE_2D, tex->id);
-
     	GLenum fmt;
 
     	switch (n) {
@@ -84,7 +83,7 @@ struct Texture *texture_pullfromfile(const char *path)
     	        break;
     	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, fmt, GL_UNSIGNED_BYTE, data);
 
          if (tex->opts.mips)
              glGenerateMipmap(GL_TEXTURE_2D);

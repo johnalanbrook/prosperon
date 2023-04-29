@@ -47,7 +47,8 @@ void window_iconify_callback(GLFWwindow *w, int iconified)
 void window_focus_callback(GLFWwindow *w, int focused)
 {
     struct window *win = winfind(w);
-	}
+    win->mouseFocus = focused;
+}
 
 void window_maximize_callback(GLFWwindow *w, int maximized)
 {

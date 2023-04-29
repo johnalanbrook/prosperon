@@ -40,9 +40,9 @@ int body2id(cpBody *body)
 
 cpBody *id2body(int id)
 {
-  struct gameobject *go;
+  struct gameobject *go = id2go(id);
   
-  if (go = id2go(id))
+  if (go)
     return go->body;
   
   return NULL;
@@ -88,7 +88,7 @@ void gameobject_set_sensor(int id, int sensor)
 
 int go2id(struct gameobject *go)
 {
-  id_from_gameobject(go);
+  return id_from_gameobject(go);
 }
 
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go)

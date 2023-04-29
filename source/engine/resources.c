@@ -31,7 +31,7 @@ static const char *cur_ext = NULL;
 struct dirent *c_dirent = NULL;
 struct vec *c_vec = NULL;
 
-char pathbuf[MAXPATH];
+char pathbuf[MAXPATH+1];
 
 void resources_init()
 {
