@@ -32,6 +32,24 @@ associated script file can access.
 While playing ...
 * F7 Stop
 
+.Level model
+The game world is made up of objects. Levels are collections of
+objects. The topmost level is called "World". Objects are spawned into
+a specific level. If none are explicitly given, objects are spawned
+into World. Objects in turn are made up of components - sprites,
+colliders, and so on. Accessing an object might go like this:
+
+World.level1.enemy1.sprite.path = "brick.png";
+
+To set the image of enemy1 in level 1's sprite.
+
+.Textures & images
+A sprite is a display of a specific texture in the game world. The
+underlying texture has values associated with it, like how it should
+be rendered: is it a sprite, is it a texture, does it have mipmaps,
+etc. Textures are all file based, and are only accessed through the
+explicit path to their associated image file.
+
 .Scripting
 
 Levels and objects have certain functions you can use that will be

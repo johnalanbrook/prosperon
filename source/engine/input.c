@@ -189,6 +189,7 @@ void joystick_cb(int jid, int event)
 
 JSValue jsgamepadstr[15];
 JSValue jsaxesstr[4];
+JSValue jsaxis;
 
 void input_init()
 {
@@ -205,10 +206,11 @@ void input_init()
     for (int b = 0; b < 15; b++)
       jsgamepadstr[b] = str2js(gamepad2str(b));
 
-    jsaxesstr[0] = str2js("axis_ljoy");
-    jsaxesstr[1] = str2js("axis_rjoy");
-    jsaxesstr[2] = str2js("axis_ltrigger");
-    jsaxesstr[3] = str2js("axis_rtrigger");
+    jsaxesstr[0] = str2js("ljoy");
+    jsaxesstr[1] = str2js("rjoy");
+    jsaxesstr[2] = str2js("ltrigger");
+    jsaxesstr[3] = str2js("rtrigger");
+    jsaxis = str2js("axis");
 
     /* Grab all joysticks initially present */
     for (int i = 0; i < 16; i++)
@@ -397,7 +399,7 @@ void input_poll(double wait)
       GLFWgamepadstate state;
       if (!glfwGetGamepadState(joysticks[i].id, &state)) continue;
 
-      JSValue argv[3];
+      JSValue argv[4];
       argv[0] = num_cache[joysticks[i].id];
       for (int b = 0; b < 15; b++) {
         argv[1] = jsgamepadstr[b];
@@ -417,30 +419,37 @@ void input_poll(double wait)
 	}
       }
 
+      argv[2] = jsaxis;
+
+      float deadzone = 0.05;
+
+      for (int i = 0; i < 4; i++) 
+        state.axes[i] = fabs(state.axes[i]) > deadzone ? state.axes[i] : 0;
+
       argv[1] = jsaxesstr[0];
       cpVect v;
       v.x = state.axes[0];
       v.y = -state.axes[1];
-      argv[2] = vec2js(v);
-      script_callee(gamepad_callee,3,argv);
-      JS_FreeValue(js, argv[2]);
+      argv[3] = vec2js(v);
+      script_callee(gamepad_callee,4,argv);
+      JS_FreeValue(js, argv[3]);
 
       argv[1] = jsaxesstr[1];
       v.x = state.axes[2];
       v.y = -state.axes[3];
-      argv[2] = vec2js(v);
-      script_callee(gamepad_callee,3,argv);
-      JS_FreeValue(js, argv[2]);      
+      argv[3] = vec2js(v);
+      script_callee(gamepad_callee,4,argv);
+      JS_FreeValue(js, argv[3]);      
 
       argv[1] = jsaxesstr[2];
-      argv[2] = num2js((state.axes[4]+1)/2);
-      script_callee(gamepad_callee,3,argv);
-      JS_FreeValue(js, argv[2]);      
+      argv[3] = num2js((state.axes[4]+1)/2);
+      script_callee(gamepad_callee,4,argv);
+      JS_FreeValue(js, argv[3]);      
 
       argv[1] = jsaxesstr[3];
-      argv[2] = num2js((state.axes[5]+1)/2);
-      script_callee(gamepad_callee,3,argv);
-      JS_FreeValue(js, argv[2]);      
+      argv[3] = num2js((state.axes[5]+1)/2);
+      script_callee(gamepad_callee,4,argv);
+      JS_FreeValue(js, argv[3]);      
 
       joysticks[i].state = state;
     }

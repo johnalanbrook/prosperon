@@ -65,6 +65,11 @@ double js2number(JSValue v)
   return g;
 }
 
+int js2bool(JSValue v)
+{
+  return JS_ToBool(js,v);
+}
+
 JSValue float2js(double g)
 {
   return JS_NewFloat64(js,g);
@@ -931,6 +936,23 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
 	case 93:
 	  ret = int2js(logLevel);
+	  break;
+
+	case 94:
+	  str = JS_ToCString(js,argv[1]);
+	  texture_pullfromfile(str)->opts.mips = js2bool(argv[2]);
+	  texture_sync(str);
+	  break;
+
+	case 95:
+	  str = JS_ToCString(js,argv[1]);
+	  texture_pullfromfile(str)->opts.sprite = js2bool(argv[2]);
+	  texture_sync(str);
+	  break;
+
+	case 96:
+	  color2float(js2color(argv[2]), id2sprite(js2int(argv[1]))->color);
+	  break;
     }
 
     if (str)
@@ -1237,7 +1259,6 @@ JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst
   JS_FreeCString(js,path);
 
   return JS_NewInt64(js,  sprite);
-  
 }
 
 /* Make anim from texture */

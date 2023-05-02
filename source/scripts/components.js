@@ -105,6 +105,10 @@ var sprite = clone(component, {
     cmd(37, this.id, this.pos);
   },
 
+  set color(x) {
+    cmd(96, this.id, x);
+  },
+
   load_img(img) {
     cmd(12, this.id, img, this.rect);
   },
@@ -679,3 +683,35 @@ var circle2d = clone(collider2d, {
     this.coll_sync();  
   },
 });
+
+
+/* ASSETS */
+
+var Texture = {
+  mipmaps(path, x) {
+    cmd(94, path, x);
+  },
+
+  sprite(path, x) {
+    cmd(95, path, x);
+  },
+};
+
+var Resources = {
+  load(path) {
+  if (path in this)
+    return this[path];
+
+  var src = {};
+  this[path] = src;
+  src.path = path;
+
+  if (!IO.exists(`${path}.asset`))
+    return this[path];
+
+  var data = JSON.parse(IO.slurp(`${path}.asset`));
+  Object.assign(src,data);
+  return this[path];
+
+  },
+};

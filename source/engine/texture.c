@@ -34,24 +34,11 @@ struct Texture *texture_pullfromfile(const char *path)
 
     YughInfo("Loading texture %s.", path);
     struct Texture *tex = calloc(1, sizeof(*tex));
-
-    /* Find texture's asset; otherwise load default asset */
-    JSON_Value *rv = json_parse_file("texture.asset");
-    JSON_Object *ro = json_value_get_object(rv);
-    tex->opts.sprite = json_object_get_boolean(ro, "sprite");
-    tex->opts.mips = json_object_get_boolean(ro, "mips");
-    json_value_free(rv);
-
+    tex->opts.sprite = 1;
+    tex->opts.mips = 0;
     tex->opts.gamma = 0;
-
-
-    tex->anim.ms = 2;
-    tex->anim.tex = tex;
-    texanim_fromframes(&tex->anim, 2);
-    tex->anim.loop = 1;
-
+    
     int n;
-
     unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
 
     if (data == NULL) {
@@ -89,11 +76,21 @@ struct Texture *texture_pullfromfile(const char *path)
              glGenerateMipmap(GL_TEXTURE_2D);
 
 	if (tex->opts.sprite) {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	    if (tex->opts.mips) {
+   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	    } else {
+   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	    }
 	} else {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	    if (tex->opts.mips) {
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	    } else {
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	    }
 	}
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -105,6 +102,36 @@ struct Texture *texture_pullfromfile(const char *path)
     shput(texhash, path, tex);
 
     return tex;
+}
+
+void texture_sync(const char *path)
+{
+  struct Texture *tex = texture_pullfromfile(path);
+  glBindTexture(GL_TEXTURE_2D, tex->id);
+         if (tex->opts.mips)
+             glGenerateMipmap(GL_TEXTURE_2D);
+
+	if (tex->opts.sprite) {
+	    if (tex->opts.mips) {
+   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	    } else {
+   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	    }
+	} else {
+	    if (tex->opts.mips) {
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	    } else {
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	    }
+	}
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  
 }
 
 char *tex_get_path(struct Texture *tex) {

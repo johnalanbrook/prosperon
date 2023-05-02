@@ -122,7 +122,7 @@ void sprite_initialize()
     glEnableVertexAttribArray(0);
 }
 
-void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r) {
+void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r, mfloat_t color[3]) {
 	mfloat_t model[16] = { 0.f };
 	mfloat_t r_model[16] = { 0.f };
 	mfloat_t s_model[16] = { 0.f };
@@ -142,9 +142,8 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 
 	mat4_translate_vec2(model, pos);
 
-         float white[3] = { 1.f, 1.f, 1.f };
 	shader_setmat4(spriteShader, "model", model);
-	shader_setvec3(spriteShader, "spriteColor", white);
+	shader_setvec3(spriteShader, "spriteColor", color);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex->id);
@@ -173,7 +172,7 @@ void sprite_draw(struct sprite *sprite)
         cpVect cpos = cpBodyGetPosition(go->body);
         float pos[2] = {cpos.x, cpos.y};
         float size[2] = { sprite->size[0] * go->scale * go->flipx, sprite->size[1] * go->scale * go->flipy };
-        tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, sprite->frame);
+        tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, sprite->frame, sprite->color);
     }
 }
 
@@ -190,7 +189,8 @@ void gui_draw_img(const char *img, float x, float y) {
     float pos[2] = {x, y};
     float size[2] = {1.f, 1.f};
     float offset[2] = { 0.f, 0.f };
-    tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex));
+    float white[3] = {1.f,1.f,1.f};
+    tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex), white);
 }
 
 void sprite_setframe(struct sprite *sprite, struct glrect *frame)

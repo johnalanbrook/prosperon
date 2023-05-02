@@ -68,6 +68,7 @@ struct Texture {
 
 struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
 struct Texture *texture_loadfromfile(const char *path);    // Create texture & load to gpu
+void texture_sync(const char *path);
 struct Texture *str2tex(const char *path);
 void tex_gpu_reload(struct Texture *tex);    // gpu_free then gpu_load
 void tex_gpu_free(struct Texture *tex);     // Remove texture data from gpu

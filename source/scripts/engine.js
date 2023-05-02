@@ -420,7 +420,7 @@ var Action = {
 var Player = {
   players: [],
   input(fn, ...args) {
-    this.pawns.forEach(x => { if (fn in x) x[fn](...args); });
+    this.pawns.forEach(x => x[fn]?.(...args));
   },
 
   control(pawn) {
@@ -440,6 +440,7 @@ for (var i = 0; i < 4; i++) {
 }
 
 function state2str(state) {
+  if (typeof state === 'string') return state;
   switch (state) {
     case 0:
       return "down";
@@ -723,6 +724,7 @@ var Game = {
   },
 };
 
+
 var Level = {
   levels: [],
   objects: [],
@@ -922,6 +924,8 @@ var Level = {
     newobj.defn('level', this);
     this.objects.push(newobj);
     Game.register_obj(newobj);
+    newobj.setup?.();
+    newobj.start?.();
     return newobj;
   },
 
@@ -1185,8 +1189,10 @@ var Level = {
   get left() {
     return [-1,0].rotate(Math.deg2rad(this.angle));
   },
-
 };
+
+var World = Level.create();
+World.name = "World";
 
 var gameobjects = {};
 
@@ -1211,7 +1217,13 @@ function grab_from_points(pos, points, slop) {
 
 var gameobject = {
   get scale() { return this._scale; },
-  set scale(x) { this._scale = Math.max(0,x); if (this.body > -1) cmd(36, this.body, this._scale); this.sync(); },
+  set scale(x) {
+    this._scale = Math.max(0,x);
+    if (this.body > -1)
+      cmd(36, this.body, this._scale);
+
+    this.sync();
+  },
   _scale: 1.0,
 
   save: true,
@@ -1309,6 +1321,26 @@ var gameobject = {
   
   body: -1,
   controlled: false,
+
+  get properties() {
+    var keys = [];
+    for (var key of Object.keys(this)) {
+      if (key.startsWith("_"))
+        keys.push(key.substring(1));
+      else
+        keys.push(key);
+    }
+
+    return keys;
+  },
+
+  toJSON() {
+    var obj = {};
+    for (var key of this.properties)
+      obj[key] = this[key];
+
+    return obj;
+  },
   
   set_center(pos) {
     var change = pos.sub(this.pos);
@@ -1515,6 +1547,7 @@ var gameobject = {
   this2world(pos) { return cmd(71, this.body,pos); },
 
   make(props, level) {
+    level ??= World;
     var obj = Object.create(this);
     this.instances.push(obj);
     obj.toString = function() {
@@ -1584,38 +1617,10 @@ var gameobject = {
 }
 
 
-var locks = ['draw_layer', 'friction','elasticity', 'visible', 'body', 'flipx', 'flipy', 'scale', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name'];
+var locks = ['draw_layer', 'friction','elasticity', 'visible', 'body', 'flipx', 'flipy', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
 locks.forEach(function(x) {
   Object.defineProperty(gameobject, x, {enumerable:false});
 });
-
-function private_non_enumerable(obj) {
-  for (var key in obj) {
-    if (key.startsWith('_'))
-      Object.defineProperty(obj, key, {enumerable:false});
-  }
-}
-
-function add_sync_prop(obj, prop, syncfn) {
-  var hidden = "_"+prop;
-  Log.info(hidden);
-  Object.defineProperty(obj, hidden, {
-    value: null,
-    writable: true,
-  });
-
-  Object.defineProperty(obj, prop, {
-    get: function() { return obj[hidden]; },
-    set: function(x) {
-      obj[hidden] = x;
-      syncfn(obj[hidden]);
-    },
-    enumerable: true,
-  });
-
-  return obj;
-
-};
 
 /* Load configs */
 function load_configs(file) {
@@ -1761,5 +1766,3 @@ for (var key in prototypes) {
 }
 
 function save_gameobjects_as_prototypes() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
-
-Resources = {};

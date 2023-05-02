@@ -41,8 +41,8 @@ void set_cat_mask(int cat, unsigned int mask)
 void color2float(struct color color, float *fcolor)
 {
     fcolor[0] = (float)color.r/255;
-    fcolor[1] = (float)color.b/255;
-    fcolor[2] = (float)color.g/255;
+    fcolor[1] = (float)color.g/255;
+    fcolor[2] = (float)color.b/255;
 }
 
 struct color float2color(float *fcolor)
