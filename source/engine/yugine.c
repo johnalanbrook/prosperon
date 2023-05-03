@@ -12,7 +12,6 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
-
 #include "timer.h"
 
 #include "quickjs/quickjs.h"
@@ -58,7 +57,18 @@ int fps;
 #define SIM_PLAY 1
 #define SIM_PAUSE 2
 #define SIM_STEP 3
+/*
+int __builtin_clz(unsigned int a)
+{
+  int to;
+  __asm__ __volatile__(
+    "bsr %edi, %eax\n\t"
+    "xor $31, %eax\n\t"
+    : "=&a"(to));
 
+  return to;
+}
+*/
 void print_stacktrace()
 {
     void *ents[512];
@@ -194,6 +204,8 @@ int main(int argc, char **args) {
     
     input_init();    
     openglInit();
+
+YughWarn("%d", __builtin_clz(500));
 
     if (ed)
       script_dofile("scripts/editor.js");

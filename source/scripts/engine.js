@@ -472,8 +472,9 @@ var Register = {
     this.nk_guis.forEach(x => x[0].call(x[1]));
   },
 
-  kbm_input(fn, ...args) {
-    Player.players[0].input(fn, ...args);
+  kbm_input(src, btn, state, ...args) {
+    var input = `${src}_${btn}_${state}`;
+    Player.players[0].input(input, ...args);
   },
 
   gamepad_playermap: [],

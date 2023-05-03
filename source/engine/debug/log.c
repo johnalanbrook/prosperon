@@ -35,8 +35,12 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 
     if (priority >= logLevel) {
 	time_t now = time(0);
+	char timestr[50];
+//	strftime(timestr,50,"
 	char *dt = ctime(&now);
 	dt[strlen(dt) - 1] = '\0';	// The above time conversion adds a \n; this removes it
+
+	double ticks = (double)clock()/CLOCKS_PER_SEC;
 
 	va_list args;
 	va_start(args, message);
@@ -45,7 +49,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	va_end(args);
 
 	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
+	snprintf(buffer, ERROR_BUFFER, "%g | %s:%d: %s, %s: %s\n", ticks, file, line, logstr[priority], catstr[category], msgbuffer);
 
 	log_print(buffer);
 

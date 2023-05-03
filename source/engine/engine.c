@@ -52,6 +52,8 @@ void engine_init()
     if (!glfwInit()) {
         YughError("Could not init GLFW. Exiting.");
         exit(1);
+    } else {
+      YughInfo("Initted GLFW.");
     }
 
     resources_init();

@@ -8,9 +8,21 @@
 #include "time.h"
 #include "font.h"
 
+#inlcude "stb_ds.h"
+
 int32_t mouseWheelX = 0;
 int32_t mouseWheelY = 0;
 float deltaT = 0;
+
+JSValue jsinput;
+JSValue jsnum;
+JSValue jsgamepadstr[15];
+JSValue jsaxesstr[4];
+JSValue jsinputstate[5];
+JSValue jsaxis;
+JSValue jsany;
+JSValue jsmouse;
+JSValue jspos;
 
 cpVect mouse_pos = {0,0};
 cpVect mouse_delta = {0,0};
@@ -27,6 +39,26 @@ static int mquit = 0;
 
 static struct callee pawn_callee;
 static struct callee gamepad_callee;
+
+static struct {
+  char *key;
+  JSValue value;
+} *jshash = NULL;
+
+JSValue input2js(const char *input)
+{
+  int idx = shgeti(jshash, input);
+  if (idx != -1)
+    return jshash[idx].value;
+
+  if (shlen(jshash) == 0)
+    sh_new_arena(jshash);
+
+  JSValue n = str2js(input);
+  shput(jshash, input, str2js(input));
+
+  return n;
+}
 
 const char *gamepad2str(int btn)
 {
@@ -84,22 +116,25 @@ static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos)
     mouse_pos.x = xpos;
     mouse_pos.y = ypos;
 
-    JSValue argv[2];
-    argv[0] = JS_NewString(js, "input_mouse_pos");
-    argv[1] = vec2js(mouse_pos);
-    script_callee(pawn_callee, 2, argv);
-    JS_FreeValue(js, argv[0]);
-    JS_FreeValue(js, argv[1]);
+    JSValue argv[4];
+    argv[0] = jsinput;
+    argv[1] = jsmouse;
+    argv[2] = jspos;
+    argv[3] = vec2js(mouse_pos);
+    script_callee(pawn_callee, 4, argv);
+    JS_FreeValue(js, argv[3]);
 }
 
 static void pawn_call_keydown(int key)
 {
-  JSValue argv[2];
-  argv[0] = JS_NewString(js, "input_num_pressed");
-  argv[1] = JS_NewInt32(js, key);
-  script_callee(pawn_callee, 2, argv);
-  JS_FreeValue(js, argv[0]);
-  JS_FreeValue(js, argv[1]);
+  JSValue argv[4];
+  argv[0] = jsinput;
+  argv[1] = jsnum;
+  argv[2] = jsinputstate[2];
+  /* TODO: Could cache */
+  argv[3] = JS_NewInt32(js, key);
+  script_callee(pawn_callee, 4, argv);
+  JS_FreeValue(js, argv[3]);
 }
 
 static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset)
@@ -112,33 +147,33 @@ static void mb_cb(GLFWwindow *w, int button, int action, int mods)
 {
   const char *act = NULL;
   const char *btn = NULL;
+  JSValue argv[3];
+  argv[0] = jsinput;
   switch (action) {
     case GLFW_PRESS:
-      act = "pressed";
+      argv[3] = jsinputstate[2];
       add_downkey(button);
       break;
 
     case GLFW_RELEASE:
-      act = "released";
       rm_downkey(button);
-      call_input_signal("input_any_released");
+      argv[2] = jsinputstate[0];
+      argv[1] = jsany;
+      script_callee(pawn_callee,3,argv);
       break;
 
     case GLFW_REPEAT:
-      act = "repeat";
+      argv[2] = jsinputstate[1];
       break;
   }
-
-  btn = keyname_extd(button, button);
 
   if (!act || !btn) {
     YughError("Tried to call a mouse action that doesn't exist.");
     return;
   }
 
-  char keystr[50] = {'\0'};
-  snprintf(keystr, 50, "input_%s_%s", btn, act);
-  call_input_signal(keystr);
+  argv[1] = input2js(keyname_extd(button,button));
+  script_callee(pawn_callee,3,argv);
 }
 
 void set_mouse_mode(int mousemode)
@@ -187,9 +222,6 @@ void joystick_cb(int jid, int event)
   }
 }
 
-JSValue jsgamepadstr[15];
-JSValue jsaxesstr[4];
-JSValue jsaxis;
 
 void input_init()
 {
@@ -215,6 +247,17 @@ void input_init()
     /* Grab all joysticks initially present */
     for (int i = 0; i < 16; i++)
       if (glfwJoystickPresent(i)) joystick_add(i);
+
+    jsinputstate[0] = str2js("released");
+    jsinputstate[1] = str2js("rep");
+    jsinputstate[2] = str2js("pressed");
+    jsinputstate[3] = str2js("pressrep");
+    jsinputstate[4] = str2js("down");
+    jsinput = str2js("input");
+    jsnum = str2js("num");
+    jsany = str2js("any");
+    jsmouse = str2js("mouse");
+    jspos = str2js("pos");
 }
 
 void input_to_nuke()
@@ -360,9 +403,11 @@ const char *keyname_extd(int key, int scancode) {
 }
 
 void call_input_down(int *key) {
-    char keystr[50] = {'\0'};
-    snprintf(keystr, 50, "input_%s_down", keyname_extd(*key, 0));
-    call_input_signal(keystr);
+    JSValue argv[3];
+    argv[0] = jsinput;
+    argv[1] = input2js(keyname_extd(*key, *key));
+    argv[2] = jsinputstate[4];
+    script_callee(pawn_callee,3,argv);
 }
 
 
@@ -461,37 +506,39 @@ int key_is_num(int key) {
 
 void win_key_callback(GLFWwindow *w, int key, int scancode, int action, int mods)
 {
-    char keystr[50] = {'\0'};
-    char kkey[50] = {'\0'};
-    snprintf(kkey, 50, "%s", keyname_extd(key,scancode));
+    JSValue argv[3];
+    argv[0] = jsinput;
+    argv[1] = input2js(keyname_extd(key,scancode));
 
     switch (action) {
         case GLFW_PRESS:
-            snprintf(keystr, 50, "input_%s_pressed", kkey);
-	    call_input_signal(keystr);
-	    snprintf(keystr,50,"input_%s_pressrep", kkey);
-	    call_input_signal(keystr);
+	    argv[2] = jsinputstate[2];
+	    script_callee(pawn_callee, 3, argv);
+	    argv[2] = jsinputstate[3];
+	    script_callee(pawn_callee,3,argv);
 	    add_downkey(key);
-	    call_input_signal("input_any_pressed");
+	    argv[1] = jsany;
+	    argv[2] = jsinputstate[2];
+	    script_callee(pawn_callee,3,argv);	    
 	    
-	    if (key_is_num(key)) {
+	    if (key_is_num(key))
 	      pawn_call_keydown(key-48);
-	    }
 	    
             break;
 
         case GLFW_RELEASE:
-            snprintf(keystr, 50, "input_%s_released", kkey);
-	    call_input_signal(keystr);
+	    argv[2] = jsinputstate[0];
+	    script_callee(pawn_callee,3,argv);
 	    rm_downkey(key);
-	    call_input_signal("input_any_released");
+	    argv[1] = jsany;
+	    script_callee(pawn_callee,3,argv);
             break;
 
         case GLFW_REPEAT:
-            snprintf(keystr, 50, "input_%s_rep", kkey);
-	    call_input_signal(keystr);
-	    snprintf(keystr,50,"input_%s_pressrep", kkey);
-	    call_input_signal(keystr);
+	    argv[2] = jsinputstate[1];
+	    script_callee(pawn_callee,3,argv);
+	    argv[2] = jsinputstate[3];
+	    script_callee(pawn_callee,3,argv);
             break;
     }
 }
