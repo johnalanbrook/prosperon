@@ -145,13 +145,11 @@ static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset)
 
 static void mb_cb(GLFWwindow *w, int button, int action, int mods)
 {
-  const char *act = NULL;
-  const char *btn = NULL;
   JSValue argv[3];
   argv[0] = jsinput;
   switch (action) {
     case GLFW_PRESS:
-      argv[3] = jsinputstate[2];
+      argv[2] = jsinputstate[2];
       add_downkey(button);
       break;
 
@@ -165,11 +163,6 @@ static void mb_cb(GLFWwindow *w, int button, int action, int mods)
     case GLFW_REPEAT:
       argv[2] = jsinputstate[1];
       break;
-  }
-
-  if (!act || !btn) {
-    YughError("Tried to call a mouse action that doesn't exist.");
-    return;
   }
 
   argv[1] = input2js(keyname_extd(button,button));

@@ -2576,6 +2576,7 @@ var limited_editor = {
 };
 
 set_pawn(editor);
+Log.warn(`Total pawn count is ${Player.players[0].pawns.length}`);
 register_gui(editor.ed_gui, editor);
 Debug.register_call(editor.ed_debug, editor);
 

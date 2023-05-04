@@ -1,6 +1,12 @@
 #include "yugine.h"
 
+#define SOKOL_IMPL
+#define SOKOL_GLCORE33
+#include "sokol/sokol_gfx.h"
+
+
 #include "render.h"
+
 #include "camera.h"
 #include "window.h"
 #include "engine.h"
@@ -190,11 +196,6 @@ int main(int argc, char **args) {
     
 #endif
 
-    FILE *gameinfo = NULL;
-    gameinfo = fopen("game.info", "w");
-    fprintf(gameinfo, "Yugine v. %s, sys %s.", VER, INFO);
-    fclose(gameinfo);
-    
     engine_init();
 
     const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -204,8 +205,6 @@ int main(int argc, char **args) {
     
     input_init();    
     openglInit();
-
-YughWarn("%d", __builtin_clz(500));
 
     if (ed)
       script_dofile("scripts/editor.js");
