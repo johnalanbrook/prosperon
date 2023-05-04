@@ -3,6 +3,8 @@
 
 #include "timer.h"
 #include <chipmunk/chipmunk.h>
+#include "sokol/sokol_gfx.h"
+
 
 #define TEX_SPEC 0
 #define TEX_NORM 1
@@ -58,7 +60,7 @@ struct TextureOptions {
 
 /* Represents an actual texture on the GPU */
 struct Texture {
-    unsigned int id; /* ID reference for the GPU memory location of the texture */
+    sg_image id; /* ID reference for the GPU memory location of the texture */
     int width;
     int height;
     unsigned char *data;

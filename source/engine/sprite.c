@@ -19,6 +19,9 @@ static int first = -1;
 
 static uint32_t VBO;
 
+sg_pipeline pip_sprite;
+sg_bindings bind_sprite;
+
 int make_sprite(int go)
 {
     struct sprite sprite = {
@@ -82,6 +85,9 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
 
 void sprite_draw_all()
 {
+    YughWarn("Applying sprite pipeline");
+    sg_apply_pipeline(pip_sprite);
+    
     static struct sprite **layers[5];
     
     for (int i = 0; i < 5; i++)
@@ -108,30 +114,58 @@ void sprite_settex(struct sprite *sprite, struct Texture *tex)
     sprite_setframe(sprite, &ST_UNIT);
 }
 
-static uint32_t VAO = 0;
+sg_shader shader_sprite;
 
 void sprite_initialize()
 {
-    glGenBuffers(1, &VBO);
-    glGenVertexArrays(1, &VAO);
+    shader_sprite = sg_make_shader(&(sg_shader_desc){
+      .vs.source = slurp_text("shaders/spritevert.glsl"),
+      .fs.source = slurp_text("shaders/spritefrag.glsl"),
+      .vs.uniform_blocks[0] = {
+        .size = 64,
+	.layout = SG_UNIFORMLAYOUT_STD140,
+	.uniforms = { [0] = { .name = "mpv", .type = SG_UNIFORMTYPE_MAT4 }}
+      },
 
-    glBindVertexArray(VAO);
+      .fs.images[0] = {
+        .name = "image",
+	.image_type = SG_IMAGETYPE_2D,
+	.sampler_type = SG_SAMPLERTYPE_FLOAT,
+      },
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-    glEnableVertexAttribArray(0);
+      .fs.uniform_blocks[0] = {
+        .size = 12,
+	.uniforms = { [0] = { .name = "spriteColor", .type = SG_UNIFORMTYPE_FLOAT3 }}
+      }
+    });
+
+    pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
+      .shader = shader_sprite,
+      .layout = {
+        .attrs = {
+	  [0].format=SG_VERTEXFORMAT_FLOAT4
+	}
+      },
+      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+      .label = "sprite pipeline"
+    });
+
+    bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+      .size = sizeof(float)*16,
+      .type = SG_BUFFERTYPE_VERTEXBUFFER,
+      .usage = SG_USAGE_STREAM,
+      .label = "sprite vertex buffer",
+    });
 }
 
-void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r, mfloat_t color[3]) {
-	mfloat_t model[16] = { 0.f };
+void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], float offset[2], struct glrect r, float color[3]) {
+	float model[16] = { 0.f };
 	mfloat_t r_model[16] = { 0.f };
-	mfloat_t s_model[16] = { 0.f };
 	memcpy(model, UNITMAT4, sizeof(UNITMAT4));
 	memcpy(r_model, UNITMAT4, sizeof(UNITMAT4));
-	memcpy(s_model, UNITMAT4, sizeof(UNITMAT4));
 
-         mfloat_t t_scale[2] = { tex->width * st_s_w(r), tex->height * st_s_h(r) };
-         mfloat_t t_offset[2] = { offset[0] * t_scale[0] * size[0], offset[1] * t_scale[1] * size[1]};
+        mfloat_t t_scale[2] = { tex->width * st_s_w(r) * size[0], tex->height * st_s_h(r) * size[1] };
+        mfloat_t t_offset[2] = { offset[0] * t_scale[0] * size[0], offset[1] * t_scale[1] * size[1]};
 
 	mat4_translate_vec2(model, t_offset);
 
@@ -141,27 +175,26 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 	mat4_multiply(model, r_model, model);
 
 	mat4_translate_vec2(model, pos);
-
-	shader_setmat4(spriteShader, "model", model);
-	shader_setvec3(spriteShader, "spriteColor", color);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, tex->id);
-         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
+	mat4_multiply(model, projection,model);
+	
          float vertices[] = {
              0.f, 0.f, r.s0, r.t1,
-             size[0], 0.f, r.s1, r.t1,
-             0.f, size[1], r.s0, r.t0,
-             size[0], size[1], r.s1, r.t0
+             1, 0.f, r.s1, r.t1,
+             0.f, 1, r.s0, r.t0,
+             1.f, 1.f, r.s1, r.t0
          };
 
-         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	bind_sprite.fs_images[0] = tex->id;
+	sg_update_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(vertices));
+    sg_apply_bindings(&bind_sprite);
 
-         glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(model));
+        float c[3];
+	for (int i = 0; i < 3; i++) c[i] = color[i];
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(c));
 
-	glBindVertexArray(0);
+  sg_draw(0,4,1);
 }
 
 void sprite_draw(struct sprite *sprite)
@@ -184,12 +217,12 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame)
 }
 
 void gui_draw_img(const char *img, float x, float y) {
-    shader_use(spriteShader);
+    sg_apply_pipeline(pip_sprite);
     struct Texture *tex = texture_loadfromfile(img);
     float pos[2] = {x, y};
     float size[2] = {1.f, 1.f};
     float offset[2] = { 0.f, 0.f };
-    float white[3] = {1.f,1.f,1.f};
+    float white[3] = {0.3f,1.f,1.f};
     tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex), white);
 }
 
@@ -209,7 +242,7 @@ void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2
 
     shader_setmat4(vid_shader, "model", model);
     shader_setvec3(vid_shader, "spriteColor", color);
-
+/*
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, stream->texture_y);
     glActiveTexture(GL_TEXTURE1);
@@ -219,4 +252,6 @@ void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2
 
     // TODO: video bind VAO
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+*/
 }
+

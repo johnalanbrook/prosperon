@@ -18,18 +18,22 @@ struct shader *vid_shader;
 
 static void ds_update_texture(uint32_t unit, uint32_t texture, plm_plane_t * plane)
 {
+/*
     glActiveTexture(unit);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane->width, plane->height, 0, GL_RED, GL_UNSIGNED_BYTE, plane->data);
+*/
 }
 
 static void render_frame(plm_t * mpeg, plm_frame_t * frame, void *user)
 {
     struct datastream *ds = user;
     shader_use(ds->shader);
+/*
     ds_update_texture(GL_TEXTURE0, ds->texture_y, &frame->y);
     ds_update_texture(GL_TEXTURE1, ds->texture_cb, &frame->cb);
     ds_update_texture(GL_TEXTURE2, ds->texture_cr, &frame->cr);
+*/
 }
 
 static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
@@ -45,11 +49,13 @@ static void render_audio(plm_t * mpeg, plm_samples_t * samples, void *user)
 
 struct Texture *ds_maketexture(struct datastream *ds)
 {
+/*
     struct Texture *new = malloc(sizeof(*new));
     new->id = ds->texture_cb;
     new->width = 500;
     new->height = 500;
     return new;
+*/
 }
 
 void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
@@ -110,6 +116,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 struct datastream *MakeDatastream()
 {
     struct datastream *newds = malloc(sizeof(*newds));
+/*    
     if (!vid_shader) vid_shader = MakeShader("videovert.glsl", "videofrag.glsl");
 
     newds->shader = vid_shader;
@@ -137,7 +144,7 @@ struct datastream *MakeDatastream()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     shader_setint(newds->shader, "texture_cr", 2);
-
+*/
     return newds;
 }
 

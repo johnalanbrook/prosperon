@@ -3,6 +3,7 @@
 
 #include "mathc.h"
 #include "texture.h"
+#include "sokol/sokol_gfx.h"
 
 struct shader;
 struct window;
@@ -20,7 +21,7 @@ struct sFont {
     uint32_t fontTexture;
     uint32_t height;
     struct Character Characters[127];
-    uint32_t texID;
+    sg_image texID;
 };
 
 void font_init(struct shader *s);

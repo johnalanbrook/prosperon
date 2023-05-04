@@ -1,11 +1,5 @@
 #include "yugine.h"
 
-#define SOKOL_IMPL
-#define SOKOL_GLCORE33
-#include "sokol/sokol_gfx.h"
-
-
-#include "render.h"
 
 #include "camera.h"
 #include "window.h"
@@ -37,6 +31,13 @@
 
 #include "string.h"
 
+
+#define SOKOL_TRACE_HOOKS
+#define SOKOL_GFX_IMPL
+#define SOKOL_GLCORE33
+#include "sokol/sokol_gfx.h"
+
+
 int physOn = 0;
 
 double renderlag = 0;
@@ -63,18 +64,7 @@ int fps;
 #define SIM_PLAY 1
 #define SIM_PAUSE 2
 #define SIM_STEP 3
-/*
-int __builtin_clz(unsigned int a)
-{
-  int to;
-  __asm__ __volatile__(
-    "bsr %edi, %eax\n\t"
-    "xor $31, %eax\n\t"
-    : "=&a"(to));
 
-  return to;
-}
-*/
 void print_stacktrace()
 {
     void *ents[512];
@@ -115,6 +105,11 @@ void compile_script(const char *file)
   FILE *f = fopen("out.jsc", "w");
   fwrite(out, sizeof out[0], out_len, f);
   fclose(f);
+}
+
+void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data)
+{
+  mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
 }
 
 int main(int argc, char **args) {
@@ -202,6 +197,13 @@ int main(int argc, char **args) {
     YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
     renderMS = 1.0/vidmode->refreshRate;
+
+    sg_setup(&(sg_desc){
+      .logger = {
+        .func = sg_logging,
+	.user_data = NULL,
+      },
+    });
     
     input_init();    
     openglInit();

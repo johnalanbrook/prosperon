@@ -16,7 +16,7 @@ void DrawMesh(struct mesh *mesh, struct shader *shader)
     uint32_t heightNr = 1;
 
     for (int i = 0; i < (mesh->te - mesh->textures); i++) {
-	glActiveTexture(GL_TEXTURE0 + i);	// active proper texture unit before binding
+//	glActiveTexture(GL_TEXTURE0 + i);	// active proper texture unit before binding
 	// retrieve texture number (the N in diffuse_textureN)
 	char number = 0;
 	// TODO: malloc every single frame ... nope! Change to stack
@@ -50,8 +50,6 @@ void DrawMesh(struct mesh *mesh, struct shader *shader)
 
 void DrawMeshAgain(struct mesh *mesh)
 {
-    glDrawElements(GL_TRIANGLES, (mesh->ie - mesh->indices),
-		   GL_UNSIGNED_INT, 0);
 }
 
 struct mesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
@@ -72,6 +70,7 @@ struct mesh *MakeMesh(struct Vertex *vertices, struct Vertex *ve,
 
 void setupmesh(struct mesh *mesh)
 {
+/*
     // create buffers/arrays
     glGenVertexArrays(1, &mesh->VAO);
     glGenBuffers(1, &mesh->VBO);
@@ -112,13 +111,15 @@ void setupmesh(struct mesh *mesh)
 
     // Bone ids
     glEnableVertexAttribArray(5);
-/*    glVertexAttribPointer(5, 4, GL_INT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex,
+    glVertexAttribPointer(5, 4, GL_INT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex,
 					    m_BoneIDs
 					    [MAX_BONE_INFLUENCE]));
-*/
+
     // Weights
     glEnableVertexAttribArray(6);
 //    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), offsetof(struct Vertex, m_Weights));
 
     glBindVertexArray(0);
+
+*/
 }

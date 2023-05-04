@@ -1731,7 +1731,7 @@ var camera2d = gameobject.clone("camera2d", {
 });
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
-win_icon("icon.png");
+//win_icon("icon.png");
 
 /* Default objects */
 gameobject.clone("polygon2d", {

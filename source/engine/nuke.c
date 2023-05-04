@@ -96,9 +96,11 @@ int nuke_btn(const char *lbl) {
 }
 
 void nuke_img(char *path) {
+/*
   struct Texture *t = texture_pullfromfile(path);
   nk_layout_row_static(ctx, t->height, t->width, 1);
   nk_image(ctx, nk_image_id(t->id));
+*/
 }
 
 void nuke_property_int(const char *lbl, int min, int *val, int max, int step) {

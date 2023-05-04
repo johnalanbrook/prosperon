@@ -79,6 +79,13 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
 
     GLFWwindow *sharewin = mainwin == NULL ? NULL : mainwin->window;
 
+    if (sharewin) return sharewin;
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
      struct window w = {
          .width = width,
          .height = height,
@@ -92,12 +99,12 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
      }
 
     glfwMakeContextCurrent(w.window);
-    int version = gladLoadGL(glfwGetProcAddress);
-    if (!version) {
-        YughError("Failed to initialize OpenGL context.");
-        exit(1);
-    }
-    YughInfo("Loaded OpenGL %d.%d", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
+//    int version = gladLoadGL(glfwGetProcAddress);
+//    if (!version) {
+//        YughError("Failed to initialize OpenGL context.");
+//        exit(1);
+//    }
+    YughInfo("Loaded OpenGL %d.%d", 3,3);
     glfwSwapInterval(1);
 
     // Set callbacks
@@ -107,7 +114,7 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
     glfwSetWindowFocusCallback(w.window, window_focus_callback);
     glfwSetKeyCallback(w.window, win_key_callback);
 
-    nuke_init(&w);
+//    nuke_init(&w);
 
      arrput(windows, w);
 

@@ -52,14 +52,7 @@ bool renderReflection = true;
 struct gameobject *selectedobject = NULL;
 char objectName[200] = { '\0' };	// object name buffer
 
-GLuint debugColorPickBO = 0;
-GLuint debugColorPickTEX = 0;
-
-
 struct sprite *tsprite = NULL;
-
-
-static unsigned int projUBO;
 
 void debug_draw_phys(int draw) {
     debugDrawPhysics = draw;
@@ -69,6 +62,9 @@ void opengl_rendermode(enum RenderMode r)
 {
   renderMode = r;
 }
+
+sg_pipeline mainpip;
+sg_pass_action pass_action = {0};
 
 void openglInit()
 {
@@ -83,16 +79,13 @@ void openglInit()
     animSpriteShader = MakeShader("animspritevert.glsl", "animspritefrag.glsl");
     textShader = MakeShader("textvert.glsl", "textfrag.glsl");
 
-    shader_use(textShader);
-    shader_setint(textShader, "text", 0);
-
     font_init(textShader);
     sprite_initialize();
     debugdraw_init();
 
     glClearColor(editorClearColor[0], editorClearColor[1], editorClearColor[2], editorClearColor[3]);
 
-    //glEnable(GL_CULL_FACE);
+/*
     glCullFace(GL_BACK);
 
     glEnable(GL_BLEND);
@@ -107,14 +100,7 @@ void openglInit()
     shader_setUBO(spriteShader, "Projection", 0);
     shader_setUBO(textShader, "Projection", 0);
     shader_setUBO(animSpriteShader, "Projection", 0);
-
-/*
-    glGenBuffers(1,&resUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, resUBO);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(float)*2, NULL, GL_DYNAMIC_DRAW);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, resUBO, 0, sizeof(float)*2);
-    glBindBuffer(GL_UNIFORM_BUFFER,0);
-*/    
+*/
 }
 
 
@@ -132,13 +118,13 @@ float cam_zoom() { return zoom; }
 
 void add_zoom(float val) { zoom = val; }
 
+mfloat_t projection[16] = {0.f};
+
 void openglRender(struct window *window)
 {
-    glCullFace(GL_BACK);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    sg_begin_default_pass(&pass_action, window->width, window->height);
+
     //////////// 2D projection
-    mfloat_t projection[16] = { 0.f };
     cpVect pos = cam_pos();
 
      mat4_ortho(projection, pos.x - zoom*window->width/2,
@@ -152,55 +138,30 @@ void openglRender(struct window *window)
         0,
         window->height, -1.f, 1.f);
 
-    // Clear color and depth
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, projection);
-/*
-    float res[2] = {window->width, window->height};
-    glBindBuffer(GL_UNIFORM_BUFFER, resUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(float)*2, res);
-*/
-
-    /* Game sprites */
-    switch (renderMode) {
-      case LIT:
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	shader_use(spriteShader);
-	break;
-
-      case WIREFRAME:
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	shader_use(wireframeShader);
-	break;
-    };
-    
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    sprite_draw_all();
+//    sprite_draw_all();
+    gui_draw_img("pill1.png", 200, 200);
+//    renderText("TEST RENDER", {100,100}, 1.f, {1.f,1.f,1.f}, 0,-1);
 
     /* UI Elements & Debug elements */
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDisable(GL_DEPTH_TEST);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//    glDisable(GL_DEPTH_TEST);
     //// DEBUG
-    if (debugDrawPhysics)
-    gameobject_draw_debugs();
+//    if (debugDrawPhysics)
+//    gameobject_draw_debugs();
 
-    call_debugs();
+//    call_debugs();
 
     ////// TEXT && GUI
-    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, ui_projection);
+//    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
+//    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, ui_projection);
 
-    call_gui();
+//    call_gui();
 
-    nuke_start();
-    call_nk_gui();
-    nuke_end();
-}
+//    nuke_start();
+//    call_nk_gui();
+//    nuke_end();
 
-void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind)
-{
-    glUniformBlockBinding(shaderID, glGetUniformBlockIndex(shaderID, bufferName), bufferBind);
+
+  sg_end_pass();
+  sg_commit();
 }

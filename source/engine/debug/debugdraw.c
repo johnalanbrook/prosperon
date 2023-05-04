@@ -9,6 +9,7 @@
 #include "window.h"
 #include "2dphysics.h"
 #include "stb_ds.h"
+#include "sokol/sokol_gfx.h"
 
 static uint32_t circleVBO;
 static uint32_t circleVAO;
@@ -22,15 +23,26 @@ static uint32_t rectVBO;
 static uint32_t rectVAO;
 static struct shader *rectShader;
 
+typedef struct {
+  float proj[16];
+  float res[2];
+} circle_ubo;
+
 void debugdraw_init()
 {
-    circleShader = MakeShader("circlevert.glsl", "circlefrag.glsl");
-    shader_setUBO(circleShader, "Projection", 0);
-    shader_setUBO(circleShader, "Resolution", 0);
-    glGenBuffers(1, &circleVBO);
-    glGenVertexArrays(1, &circleVAO);
-
-
+//    circleShader = MakeShader("shaders/circlevert.glsl", "shaders/circlefrag.glsl");
+    sg_shader csg = sg_make_shader(&(sg_shader_desc){
+      .vs.source = slurp_text("shaders/circlevert.glsl"),
+      .fs.source = slurp_text("shaders/circlefrag.glsl"),
+      .vs.uniform_blocks[0] = {
+        .size = sizeof(circle_ubo),
+	.uniforms = {
+	  [0] = { .name = "proj", .type = SG_UNIFORMTYPE_MAT4 },
+	  [1] = { .name = "res", .type = SG_UNIFORMTYPE_FLOAT2 },
+	}
+      }
+    });
+/*        
     float gridverts[] = {
 	-1.f, -1.f,
 	1.f, -1.f,
@@ -52,6 +64,7 @@ void debugdraw_init()
     shader_setUBO(rectShader, "Projection", 0);
     glGenBuffers(1, &rectVBO);
     glGenVertexArrays(1, &rectVAO);
+*/
 }
 
 void draw_line(int x1, int y1, int x2, int y2, float *color)
@@ -138,7 +151,7 @@ void draw_edge(cpVect  *points, int n, struct color color, int thickness)
 
     shader_use(rectShader);
     shader_setvec3(rectShader, "linecolor", col);
-
+/*
     if (thickness <= 1) {
 //      glLineStipple(1, 0x00FF);
 //      glEnable(GL_LINE_STIPPLE);
@@ -182,11 +195,12 @@ void draw_edge(cpVect  *points, int n, struct color color, int thickness)
       glDrawArrays(GL_LINE_LOOP,0,n*2);
       
     }
+*/
 }
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
 {
-    shader_use(circleShader);
+/*    shader_use(circleShader);
 
     float verts[] = {
 	x - radius, y - radius, -1, -1,
@@ -208,6 +222,7 @@ void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+*/
 }
 
 void draw_rect(int x, int y, int w, int h, float *color)
@@ -241,7 +256,7 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct color color, int 
 
 void draw_grid(int width, int span)
 {
-    shader_use(gridShader);
+/*    shader_use(gridShader);
     shader_setint(gridShader, "thickness", width);
     shader_setint(gridShader, "span", span);
     
@@ -254,6 +269,7 @@ void draw_grid(int width, int span)
     
     glBindVertexArray(gridVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+*/
 }
 
 void draw_point(int x, int y, float r, float *color)
@@ -275,7 +291,7 @@ void draw_points(struct cpVect *points, int n, float size, float *color)
 
 void draw_poly(float *points, int n, float *color)
 {
-    shader_use(rectShader);
+/*    shader_use(rectShader);
     shader_setvec3(rectShader, "linecolor", color);
     glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
@@ -289,6 +305,7 @@ void draw_poly(float *points, int n, float *color)
 
     shader_setfloat(rectShader, "alpha", 1.f);
     glDrawArrays(GL_LINE_LOOP, 0, n);
+*/
 }
 
 void draw_polyvec(cpVect *points, int n, float *color)

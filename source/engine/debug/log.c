@@ -86,14 +86,3 @@ void log_cat(FILE *f) {
         YughInfo(out);
     }
 }
-
-void FlushGLErrors()
-{
-    GLenum glErr = GL_NO_ERROR;
-    glErr = glGetError();
-    while (glErr != GL_NO_ERROR) {
-	YughLog(0, 3,
-		"GL Error: %d", glErr);
-	glErr = glGetError();
-    }
-}

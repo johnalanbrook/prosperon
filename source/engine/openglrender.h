@@ -1,8 +1,6 @@
 #ifndef OPENGL_RENDER_H
 #define OPENGL_RENDER_H
 
-#include "render.h"
-
 struct mCamera;
 struct window;
 
@@ -12,6 +10,8 @@ extern struct shader *animSpriteShader;
 extern struct sprite *tsprite;
 
 extern int renderMode;
+
+extern float projection[16];
 
 extern float gridScale;
 extern float smallGridUnit;
@@ -24,7 +24,7 @@ extern float gridOpacity;
 extern float editorFOV;
 extern float shadowLookahead;
 extern char objectName[];
-extern GLuint debugColorPickBO;
+extern int debugColorPickBO;
 
 extern struct gameobject *selectedobject;
 
@@ -46,8 +46,6 @@ void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, struct mCamera *camera);
 
 void debug_draw_phys(int draw);
-
-void BindUniformBlock(GLuint shaderID, const char *bufferName, GLuint bufferBind);
 
 void set_cam_body(cpBody *body);
 cpVect cam_pos();

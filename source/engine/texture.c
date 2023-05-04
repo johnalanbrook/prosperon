@@ -7,7 +7,7 @@
 #include "log.h"
 #include <math.h>
 #include "util.h"
-#include "parson.h"
+#include "sokol/sokol_gfx.h"
 
 struct glrect ST_UNIT = { 0.f, 1.f, 0.f, 1.f };
 
@@ -47,54 +47,32 @@ struct Texture *texture_pullfromfile(const char *path)
     }
     tex->data = data;
 
-         glGenTextures(1, &tex->id);
+    int filter;
+    if (tex->opts.sprite) {
+      if (tex->opts.mips)
+        filter = SG_FILTER_NEAREST_MIPMAP_NEAREST;
+      else
+        filter = SG_FILTER_NEAREST;
+    } else {
+      if (tex->opts.mips)
+        filter = SG_FILTER_LINEAR_MIPMAP_LINEAR;
+      else
+        filter = SG_FILTER_LINEAR;
+    }
 
-    	glBindTexture(GL_TEXTURE_2D, tex->id);
-    	GLenum fmt;
-
-    	switch (n) {
-    	    case 1:
-    	        fmt = GL_RED;
-    	        break;
-
-    	    case 2:
-    	        fmt = GL_RG;
-    	        break;
-
-    	    case 3:
-    	        fmt = GL_RGB;
-    	        break;
-
-    	    case 4:
-    	        fmt = GL_RGBA;
-    	        break;
-    	}
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, fmt, GL_UNSIGNED_BYTE, data);
-
-         if (tex->opts.mips)
-             glGenerateMipmap(GL_TEXTURE_2D);
-
-	if (tex->opts.sprite) {
-	    if (tex->opts.mips) {
-   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-	    } else {
-   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	    }
-	} else {
-	    if (tex->opts.mips) {
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	    } else {
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	    }
-	}
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    tex->id = sg_make_image(&(sg_image_desc){
+      .type = SG_IMAGETYPE_2D,
+      .width = tex->width,
+      .height = tex->height,
+      .usage = SG_USAGE_IMMUTABLE,
+      .min_filter = filter,
+      .mag_filter = filter,
+      .data.subimage[0][0] = {
+        .ptr = data,
+	.size = tex->width*tex->height*4
+      }
+    });
+	
 
     if (shlen(texhash) == 0)
         sh_new_arena(texhash);
@@ -106,32 +84,7 @@ struct Texture *texture_pullfromfile(const char *path)
 
 void texture_sync(const char *path)
 {
-  struct Texture *tex = texture_pullfromfile(path);
-  glBindTexture(GL_TEXTURE_2D, tex->id);
-         if (tex->opts.mips)
-             glGenerateMipmap(GL_TEXTURE_2D);
-
-	if (tex->opts.sprite) {
-	    if (tex->opts.mips) {
-   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-	    } else {
-   	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	    }
-	} else {
-	    if (tex->opts.mips) {
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	    } else {
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	    }
-	}
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  
+  YughWarn("Need to implement texture sync.");
 }
 
 char *tex_get_path(struct Texture *tex) {
@@ -148,7 +101,7 @@ char *tex_get_path(struct Texture *tex) {
 struct Texture *texture_loadfromfile(const char *path)
 {
     struct Texture *new = texture_pullfromfile(path);
-
+/*
     if (new->id == 0) {
         glGenTextures(1, &new->id);
 
@@ -156,7 +109,7 @@ struct Texture *texture_loadfromfile(const char *path)
 
         YughInfo("Loaded texture path %s", path);
     }
-
+*/
     return new;
 }
 
@@ -230,10 +183,12 @@ void texanim_fromframes(struct TexAnim *anim, int frames)
 
 void tex_gpu_free(struct Texture *tex)
 {
+/*
     if (tex->id != 0) {
 	glDeleteTextures(1, &tex->id);
 	tex->id = 0;
     }
+*/
 }
 
 int anim_frames(struct TexAnim *a)
@@ -257,9 +212,10 @@ cpVect tex_get_dimensions(struct Texture *tex)
 
 void tex_bind(struct Texture *tex)
 {
-    glActiveTexture(GL_TEXTURE0);
+/*    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex->id);
     glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
+*/
 }
 
 /********************** ANIM2D ****************/

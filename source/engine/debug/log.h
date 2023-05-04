@@ -32,8 +32,6 @@ extern int logLevel;
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...);
 
-void FlushGLErrors();
-
 void log_setfile(char *file);
 void log_cat(FILE *f);
 void log_print(const char *str);

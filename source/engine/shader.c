@@ -9,6 +9,7 @@
 #include "resources.h"
 #include "stb_ds.h"
 #include "timer.h"
+#include "font.h"
 
 #include "time.h"
 
@@ -29,8 +30,9 @@ struct shader *MakeShader(const char *vertpath, const char *fragpath)
     return &arrlast(shaders);
 }
 
-int shader_compile_error(GLuint shader)
+int shader_compile_error(int shader)
 {
+/*
     GLint success = 0;
     GLchar infoLog[ERROR_BUFFER] = { '\0' };
 
@@ -41,10 +43,12 @@ int shader_compile_error(GLuint shader)
     YughLog(0, LOG_ERROR, "Shader compilation error.\nLog: %s", infoLog);
 
     return 1;
+*/
 }
 
-int shader_link_error(GLuint shader)
+int shader_link_error(int shader)
 {
+/*
     GLint success = 0;
     GLchar infoLog[ERROR_BUFFER] = { '\0' };
 
@@ -55,9 +59,10 @@ int shader_link_error(GLuint shader)
     YughLog(0, LOG_ERROR, "Shader link error.\nLog: %s", infoLog);
 
     return 1;
+*/
 }
 
-GLuint load_shader_from_file(const char *path, int type)
+int load_shader_from_file(const char *path, int type)
 {
     char spath[MAXPATH] = {'\0'};
 
@@ -77,7 +82,7 @@ GLuint load_shader_from_file(const char *path, int type)
 
     fclose(f);
 
-
+/*
     GLuint id = glCreateShader(type);
     const char *code = buf;
     glShaderSource(id, 1, &code, NULL);
@@ -88,32 +93,36 @@ GLuint load_shader_from_file(const char *path, int type)
     }
 
     free(buf);
+    
 
     return id;
+ */
 }
 
 void shader_compile(struct shader *shader)
 {
     YughInfo("Making shader with %s and %s.", shader->vertpath, shader->fragpath);
+    char spath[MAXPATH];
+    sprintf(spath,"%s%s", "shaders/", shader->vertpath);
+    const char *vsrc = slurp_text(spath);
+    sprintf(spath, "%s%s", "shaders/", shader->fragpath);
+    const char *fsrc = slurp_text(spath);
 
-    GLuint vert = load_shader_from_file(shader->vertpath, GL_VERTEX_SHADER);
-    GLuint frag = load_shader_from_file(shader->fragpath, GL_FRAGMENT_SHADER);
-
-    shader->id = glCreateProgram();
-    glAttachShader(shader->id, vert);
-    glAttachShader(shader->id, frag);
-    glLinkProgram(shader->id);
-    shader_link_error(shader->id);
-
-    glDeleteShader(vert);
-    glDeleteShader(frag);
+    shader->shd = sg_make_shader(&(sg_shader_desc){
+      .vs.source = vsrc,
+      .fs.source = fsrc,
+      .label = shader->vertpath,
+    });
+    
+    free(vsrc);
+    free(fsrc);
 }
 
 void shader_use(struct shader *shader)
 {
-    glUseProgram(shader->id);
+//    glUseProgram(shader->id);
 }
-
+/*
 void shader_setbool(struct shader *shader, const char *name, int val)
 {
     glUniform1i(glGetUniformLocation(shader->id, name), val);
@@ -134,10 +143,6 @@ void shader_setvec2(struct shader *shader, const char *name, mfloat_t val[2])
     glUniform2fv(glGetUniformLocation(shader->id, name), 1, val);
 }
 
-void shader_setvec3(struct shader *shader, const char *name, mfloat_t val[3])
-{
-    glUniform3fv(glGetUniformLocation(shader->id, name), 1, val);
-}
 
 void shader_setvec4(struct shader *shader, const char *name, mfloat_t val[4])
 {
@@ -164,10 +169,18 @@ void shader_setUBO(struct shader *shader, const char *name, unsigned int index)
     glUniformBlockBinding(shader->id, glGetUniformBlockIndex(shader->id, name), index);
 }
 
-
+*/
 
 void shader_compile_all()
 {
     for (int i = 0; i < arrlen(shaders); i++)
         shader_compile(&shaders[i]);
+}
+void shader_setvec3(struct shader *shader, const char *name, mfloat_t val[3])
+{
+//    glUniform3fv(glGetUniformLocation(shader->id, name), 1, val);
+}
+void shader_setmat4(struct shader *shader, const char *name, mfloat_t val[16])
+{
+//    glUniformMatrix4fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
 }

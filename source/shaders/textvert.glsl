@@ -2,10 +2,7 @@
 layout (location = 0) in vec4 vertex; // <vec2 pos, vec2 tex>
 out vec2 TexCoords;
 
-layout (std140) uniform Projection
-{
-    mat4 projection;
-};
+uniform mat4 projection;
 
 void main()
 {
