@@ -17,8 +17,6 @@ struct TextureOptions TEX_SPRITE = { 1, 0, 0 };
 static struct sprite *sprites;
 static int first = -1;
 
-static uint32_t VBO;
-
 sg_pipeline pip_sprite;
 sg_bindings bind_sprite;
 

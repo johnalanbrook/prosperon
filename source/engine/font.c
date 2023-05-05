@@ -74,6 +74,7 @@ void font_init(struct shader *textshader) {
       .fs.source = slurp_text("shaders/textfrag.glsl"),
       .vs.uniform_blocks[0] = {
         .size = sizeof(float)*16,
+	.layout = SG_UNIFORMLAYOUT_STD140,
 	.uniforms = {
 	  [0] = { .name = "projection", .type = SG_UNIFORMTYPE_MAT4 }
 	}
@@ -81,10 +82,17 @@ void font_init(struct shader *textshader) {
 
       .fs.uniform_blocks[0] = {
         .size = sizeof(float)*3+sizeof(int),
+	.layout = SG_UNIFORMLAYOUT_STD140,	
 	.uniforms = {
 	  [0] = { .name = "textColor", .type = SG_UNIFORMTYPE_FLOAT3 },
 	  [1] = { .name = "invert", .type = SG_UNIFORMTYPE_INT }
 	}
+      },
+      
+      .fs.images[0] = {
+        .name = "text",
+	.image_type = SG_IMAGETYPE_2D,
+	.sampler_type = SG_SAMPLERTYPE_FLOAT
       }
     });
 
@@ -100,7 +108,8 @@ void font_init(struct shader *textshader) {
     bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
       .size = sizeof(float)*16,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
-      .usage = SG_USAGE_STREAM
+      .usage = SG_USAGE_STREAM,
+      .label = "text buffer"
     });
 
     font = MakeFont("LessPerfectDOSVGA.ttf", 16);
@@ -342,5 +351,7 @@ int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3]
         draw_char_box(font->Characters[69], cursor, scale, color);
     }
 
+ 
+  
   return cursor[1] - pos[1];
 }
