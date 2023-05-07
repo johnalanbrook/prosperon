@@ -31,6 +31,9 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
 void text_settype(struct sFont *font);
 int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw,int caret);
 
+//void text_frame();
+void text_flush();
+
 unsigned char *slurp_file(const char *filename);
 char *slurp_text(const char *filename);
 

@@ -80,15 +80,6 @@ void font_init(struct shader *textshader) {
 	}
       },
 
-      .fs.uniform_blocks[0] = {
-        .size = sizeof(float)*3+sizeof(int),
-	.layout = SG_UNIFORMLAYOUT_STD140,	
-	.uniforms = {
-	  [0] = { .name = "textColor", .type = SG_UNIFORMTYPE_FLOAT3 },
-	  [1] = { .name = "invert", .type = SG_UNIFORMTYPE_INT }
-	}
-      },
-      
       .fs.images[0] = {
         .name = "text",
 	.image_type = SG_IMAGETYPE_2D,
@@ -99,20 +90,35 @@ void font_init(struct shader *textshader) {
     pipe_text = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = fontshader,
       .layout = {
-        .attrs = { [0].format = SG_VERTEXFORMAT_FLOAT4 }
+        .attrs = {
+	  [0].format = SG_VERTEXFORMAT_FLOAT2,
+	  [0].buffer_index = 0,
+	  [1].format = SG_VERTEXFORMAT_FLOAT2,
+	  [1].buffer_index = 0,
+	  [2].format = SG_VERTEXFORMAT_FLOAT3,
+	  [2].buffer_index = 1},
+	.buffers[2].step_func = SG_VERTEXSTEP_PER_INSTANCE,
       },
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "text pipeline"
     });
 
     bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float)*16,
+      .size = sizeof(float)*16*40000,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"
     });
-
+    
+    bind_text.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+      .size = sizeof(float)*3*40000,
+      .type = SG_BUFFERTYPE_VERTEXBUFFER,
+      .usage = SG_USAGE_STREAM,
+      .label = "text color buffer"
+    });
+    
     font = MakeFont("LessPerfectDOSVGA.ttf", 16);
+    bind_text.fs_images[0] = font->texID;    
 }
 
 void font_frame(struct window *w) {
@@ -202,6 +208,19 @@ void draw_char_box(struct Character c, float cursor[2], float scale, float color
   draw_rect(x,y,w,h,color);
 }
 
+void text_flush()
+{
+
+    sg_apply_pipeline(pipe_text);
+    sg_apply_bindings(&bind_text);
+    sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+    
+  YughWarn("Chars: %d", curchar);
+  
+  sg_draw(0,4*curchar,1);  
+  curchar = 0;
+}
+
 void fill_charverts(float *verts, float cursor[2], float scale, struct Character c, float *offset)
 {
   float w = c.Size[0] * scale;
@@ -229,13 +248,22 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     
     float verts[16];
     float offset[2] = {-1, 1};
-
+    
     fill_charverts(verts, cursor, scale, c, offset);
-    curchar++;
     
         /* Check if the vertex is off screen */
     if (verts[5] < 0 || verts[10] < 0 || verts[0] > window_i(0)->width || verts[1] > window_i(0)->height)
         return;
+    
+    curchar++;    
+    /* SET COLOR ? */
+    sg_append_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
+    sg_append_buffer(bind_text.vertex_buffers[1], SG_RANGE_REF(color));
+    
+    return;
+
+//    fill_charverts(verts, cursor, scale, c, offset);
+
 /*
     if (drawcaret == curchar) {
         draw_char_box(c, cursor, scale, color);
@@ -245,37 +273,30 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     glBindTexture(GL_TEXTURE_2D, font->texID);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
       }
-
 */
-    shader_setvec3(shader, "textColor", shadowcolor);
-    
-    sg_update_buffer(bind_text.vertex_buffers[0], verts);
-    sg_draw(0,4,1);
+//    sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(shadowcolor));
+/*    
+    sg_append_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
     
     offset[0] = 1;
     offset[1] = -1;
     fill_charverts(verts, cursor, scale, c, offset);
-    sg_update_buffer(bind_text.vertex_buffers[0], verts);    
-    sg_draw(0,4,1);
+    sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));    
     
     offset[1] = 1;
     fill_charverts(verts, cursor, scale, c, offset);
-    sg_update_buffer(bind_text.vertex_buffers[0], verts);    
-    sg_draw(0,4,1);
+    sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));    
     
     offset[0] = -1;
     offset[1] = -1;
     fill_charverts(verts, cursor, scale, c, offset);
-    sg_update_buffer(bind_text.vertex_buffers[0], verts);    
-    sg_draw(0,4,1);
-    
+    sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
+*/    
     offset[0] = offset[1] = 0;
     fill_charverts(verts, cursor, scale, c, offset);
-    shader_setvec3(shader, "textColor", color);
-    sg_update_buffer(bind_text.vertex_buffers[0], verts);    
-    sg_draw(0,4,1);
+    /* SET COLOR ? */
+    sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
 }
 
 void text_settype(struct sFont *mfont)
@@ -291,14 +312,9 @@ int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3]
     mfloat_t cursor[2] = { 0.f };
     cursor[0] = pos[0];
     cursor[1] = pos[1];
-    sg_apply_pipeline(pipe_text);
-    sg_apply_bindings(&bind_text);
-    sg_apply_uniforms(SG_SHADERSTAGE_FS,0,color);
     
     const unsigned char *line, *wordstart, *drawstart;
     line = drawstart = (unsigned char*)text;
-
-    curchar = 0;
 
     float *usecolor = color;
 
@@ -347,11 +363,11 @@ int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3]
         }
     }
 
-    if (caret > curchar) {
+/*    if (caret > curchar) {
         draw_char_box(font->Characters[69], cursor, scale, color);
     }
+*/
 
- 
   
   return cursor[1] - pos[1];
 }

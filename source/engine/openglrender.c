@@ -139,8 +139,13 @@ void openglRender(struct window *window)
         window->height, -1.f, 1.f);
 
 //    sprite_draw_all();
-    gui_draw_img("pill1.png", 200, 200);
-//    renderText("TEST RENDER", {100,100}, 1.f, {1.f,1.f,1.f}, 0,-1);
+//    gui_draw_img("pill1.png", 200, 200);
+    float a[2] = {100,100};
+    float w[3] = {1.f,1.f,1.f};
+    renderText("TEST RENDER", a, 1.f, w, 0,-1);
+    
+    float b[2] = {50,50};
+    renderText("TEST 2 RENDER", b, 1.f, w, 0,-1);
 
     /* UI Elements & Debug elements */
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -154,6 +159,7 @@ void openglRender(struct window *window)
     ////// TEXT && GUI
 //    glBindBuffer(GL_UNIFORM_BUFFER, projUBO);
 //    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, ui_projection);
+      text_flush();
 
 //    call_gui();
 
