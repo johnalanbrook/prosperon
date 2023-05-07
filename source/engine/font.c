@@ -74,7 +74,7 @@ void font_init(struct shader *textshader) {
       .fs.source = slurp_text("shaders/textfrag.glsl"),
       .vs.uniform_blocks[0] = {
         .size = sizeof(float)*16,
-	.layout = SG_UNIFORMLAYOUT_STD140,
+//	.layout = SG_UNIFORMLAYOUT_STD140,
 	.uniforms = {
 	  [0] = { .name = "projection", .type = SG_UNIFORMTYPE_MAT4 }
 	}
@@ -99,12 +99,12 @@ void font_init(struct shader *textshader) {
 	  [2].buffer_index = 1},
 	.buffers[2].step_func = SG_VERTEXSTEP_PER_INSTANCE,
       },
-      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+ //     .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "text pipeline"
     });
 
     bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float)*16*40000,
+      .size = sizeof(float)*24*3*1024*1024,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"
@@ -214,10 +214,8 @@ void text_flush()
     sg_apply_pipeline(pipe_text);
     sg_apply_bindings(&bind_text);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
-    
-  YughWarn("Chars: %d", curchar);
   
-  sg_draw(0,4*curchar,1);  
+  sg_draw(0,6*curchar,1);  
   curchar = 0;
 }
 
@@ -229,14 +227,16 @@ void fill_charverts(float *verts, float cursor[2], float scale, struct Character
   float xpos = cursor[0] + (c.Bearing[0]+offset[0]) * scale;
   float ypos = cursor[1] - (c.Bearing[1]+offset[1]) * scale;
   
-  float v[16] = {
+  float v[24] = {
 	xpos, ypos, c.rect.s0, c.rect.t1,
 	xpos+w, ypos, c.rect.s1, c.rect.t1,
 	xpos, ypos + h, c.rect.s0, c.rect.t0,
+	xpos, ypos + h, c.rect.s0, c.rect.t0,
+	xpos+w, ypos, c.rect.s1, c.rect.t1,	
 	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
     
-  memcpy(verts, v, sizeof(float)*16);
+  memcpy(verts, v, sizeof(float)*24);
 }
 
 static int drawcaret = 0;
@@ -246,7 +246,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     float shadowcolor[3] = {0.f, 0.f, 0.f};	
     float shadowcursor[2];
     
-    float verts[16];
+    float verts[24];
     float offset[2] = {-1, 1};
     
     fill_charverts(verts, cursor, scale, c, offset);

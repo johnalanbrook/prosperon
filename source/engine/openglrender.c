@@ -54,6 +54,8 @@ char objectName[200] = { '\0' };	// object name buffer
 
 struct sprite *tsprite = NULL;
 
+const char *donquixote;
+
 void debug_draw_phys(int draw) {
     debugDrawPhysics = draw;
 }
@@ -72,6 +74,8 @@ void openglInit()
         YughError("No window to init OpenGL on.", 1);
         exit(1);
     }
+
+    donquixote = slurp_text("quixote.txt");
 
     ////// MAKE SHADERS
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
@@ -142,10 +146,10 @@ void openglRender(struct window *window)
 //    gui_draw_img("pill1.png", 200, 200);
     float a[2] = {100,100};
     float w[3] = {1.f,1.f,1.f};
-    renderText("TEST RENDER", a, 1.f, w, 0,-1);
+//    renderText("TEST RENDER", a, 1.f, w, 0,-1);
     
     float b[2] = {50,50};
-    renderText("TEST 2 RENDER", b, 1.f, w, 0,-1);
+//    renderText(donquixote, b, 1.f, w, 0,-1);
 
     /* UI Elements & Debug elements */
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
