@@ -28,9 +28,13 @@ typedef struct {
   float res[2];
 } circle_ubo;
 
+void debug_flush()
+{
+  
+}
+
 void debugdraw_init()
 {
-//    circleShader = MakeShader("shaders/circlevert.glsl", "shaders/circlefrag.glsl");
     sg_shader csg = sg_make_shader(&(sg_shader_desc){
       .vs.source = slurp_text("shaders/circlevert.glsl"),
       .fs.source = slurp_text("shaders/circlefrag.glsl"),

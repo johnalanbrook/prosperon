@@ -75,7 +75,7 @@ void openglInit()
         exit(1);
     }
 
-    donquixote = slurp_text("quixote.txt");
+//    donquixote = slurp_text("quixote.txt");
 
     ////// MAKE SHADERS
     spriteShader = MakeShader("spritevert.glsl", "spritefrag.glsl");
@@ -142,14 +142,14 @@ void openglRender(struct window *window)
         0,
         window->height, -1.f, 1.f);
 
-//    sprite_draw_all();
-//    gui_draw_img("pill1.png", 200, 200);
+    sprite_draw_all();
+    gui_draw_img("pill1.png", 200, 200);
     float a[2] = {100,100};
     float w[3] = {1.f,1.f,1.f};
-//    renderText("TEST RENDER", a, 1.f, w, 0,-1);
+    renderText("TEST RENDER", a, 1.f, w, 0,-1);
     
     float b[2] = {50,50};
-//    renderText(donquixote, b, 1.f, w, 0,-1);
+    renderText("TEST @@@@ RENDER", b, 1.f, w, 0,-1);
 
     /* UI Elements & Debug elements */
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -174,4 +174,6 @@ void openglRender(struct window *window)
 
   sg_end_pass();
   sg_commit();
+  
+  sprite_flush();
 }

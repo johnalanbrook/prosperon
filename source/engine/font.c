@@ -100,11 +100,12 @@ void font_init(struct shader *textshader) {
 	.buffers[2].step_func = SG_VERTEXSTEP_PER_INSTANCE,
       },
  //     .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-      .label = "text pipeline"
+      .label = "text pipeline",
+      .index_type = SG_INDEXTYPE_UINT16
     });
 
     bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float)*24*3*1024*1024,
+      .size = sizeof(float)*16*500,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"
@@ -115,6 +116,13 @@ void font_init(struct shader *textshader) {
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text color buffer"
+    });
+    
+    bind_text.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+      .size = sizeof(uint16_t)*6*500,
+      .type = SG_BUFFERTYPE_INDEXBUFFER,
+      .usage = SG_USAGE_STREAM,
+      .label = "text index buffer"
     });
     
     font = MakeFont("LessPerfectDOSVGA.ttf", 16);
@@ -210,7 +218,6 @@ void draw_char_box(struct Character c, float cursor[2], float scale, float color
 
 void text_flush()
 {
-
     sg_apply_pipeline(pipe_text);
     sg_apply_bindings(&bind_text);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
@@ -227,16 +234,14 @@ void fill_charverts(float *verts, float cursor[2], float scale, struct Character
   float xpos = cursor[0] + (c.Bearing[0]+offset[0]) * scale;
   float ypos = cursor[1] - (c.Bearing[1]+offset[1]) * scale;
   
-  float v[24] = {
+  float v[16] = {
 	xpos, ypos, c.rect.s0, c.rect.t1,
 	xpos+w, ypos, c.rect.s1, c.rect.t1,
 	xpos, ypos + h, c.rect.s0, c.rect.t0,
-	xpos, ypos + h, c.rect.s0, c.rect.t0,
-	xpos+w, ypos, c.rect.s1, c.rect.t1,	
 	xpos + w, ypos + h, c.rect.s1, c.rect.t0
     };
     
-  memcpy(verts, v, sizeof(float)*24);
+  memcpy(verts, v, sizeof(float)*16);
 }
 
 static int drawcaret = 0;
@@ -246,7 +251,7 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     float shadowcolor[3] = {0.f, 0.f, 0.f};	
     float shadowcursor[2];
     
-    float verts[24];
+    float verts[16];
     float offset[2] = {-1, 1};
     
     fill_charverts(verts, cursor, scale, c, offset);
@@ -257,8 +262,16 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct 
     
     curchar++;    
     /* SET COLOR ? */
+    uint16_t pts[6] = {
+      0, 1, 2,
+      2, 1, 3
+    };
+    
+    for (int i = 0; i < 6; i++) pts[i] += curchar*4;
+    
     sg_append_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
     sg_append_buffer(bind_text.vertex_buffers[1], SG_RANGE_REF(color));
+    sg_append_buffer(bind_text.index_buffer, SG_RANGE_REF(pts));
     
     return;
 

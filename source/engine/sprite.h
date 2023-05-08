@@ -38,7 +38,7 @@ void sprite_draw(struct sprite *sprite);
 void video_draw(struct datastream *ds, mfloat_t pos[2], mfloat_t size[2], float rotate, mfloat_t color[3]);
 void sprite_draw_all();
 unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite);
-
+void sprite_flush();
 
 void gui_draw_img(const char *img, float x, float y);
 

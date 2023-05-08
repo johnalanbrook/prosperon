@@ -17,6 +17,8 @@ void draw_point(int x, int y, float r, float *color);
 void draw_cppoint(struct cpVect point, float r, struct color color);
 void draw_poly(float *points, int n, float *color);
 
+void debug_flush();
+
 
 void debugdraw_flush();		/* This is called once per frame to draw all queued elements */
 

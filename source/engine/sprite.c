@@ -62,6 +62,13 @@ struct sprite *id2sprite(int id) {
     return &sprites[id];
 }
 
+static sprite_count = 0;
+
+void sprite_flush()
+{
+  sprite_count = 0;
+}
+
 void sprite_io(struct sprite *sprite, FILE *f, int read)
 {
     char path[100];
@@ -83,7 +90,6 @@ void sprite_io(struct sprite *sprite, FILE *f, int read)
 
 void sprite_draw_all()
 {
-    YughWarn("Applying sprite pipeline");
     sg_apply_pipeline(pip_sprite);
     
     static struct sprite **layers[5];
@@ -149,7 +155,7 @@ void sprite_initialize()
     });
 
     bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float)*16,
+      .size = sizeof(float)*16*500,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "sprite vertex buffer",
@@ -183,7 +189,8 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
          };
 
 	bind_sprite.fs_images[0] = tex->id;
-	sg_update_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(vertices));
+	sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(vertices));
+
     sg_apply_bindings(&bind_sprite);
 
 	
@@ -192,7 +199,8 @@ void tex_draw(struct Texture *tex, float pos[2], float angle, float size[2], flo
 	for (int i = 0; i < 3; i++) c[i] = color[i];
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(c));
 
-  sg_draw(0,4,1);
+  sg_draw(sprite_count*4,4,1);
+	sprite_count++;	  
 }
 
 void sprite_draw(struct sprite *sprite)
