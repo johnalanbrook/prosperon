@@ -1,8 +1,8 @@
 #ifndef TWODPHYSICS_H
 #define TWODPHYSICS_H
 
-#include <chipmunk/chipmunk.h>
 #include "script.h"
+#include <chipmunk/chipmunk.h>
 
 struct gameobject;
 
@@ -18,53 +18,53 @@ extern float kinematic_color[3];
 extern float static_color[3];
 
 struct phys2d_shape {
-    cpShape *shape;
-    int go;
-    void *data;
-    void (*debugdraw)(void *data);
-    float (*moi)(void *data, float mass);
+  cpShape *shape;
+  int go;
+  void *data;
+  void (*debugdraw)(void *data);
+  float (*moi)(void *data, float mass);
 };
 
 /* Circles are the fastest collier type */
 struct phys2d_circle {
-    float radius;
-    cpVect offset;
-    struct phys2d_shape shape;
+  float radius;
+  cpVect offset;
+  struct phys2d_shape shape;
 };
 
 /* A single segment */
 struct phys2d_segment {
-    float a[2];
-    float b[2];
-    float thickness;
-    struct phys2d_shape shape;
+  float a[2];
+  float b[2];
+  float thickness;
+  struct phys2d_shape shape;
 };
 
 /* A convex polygon; defined as the convex hull around the given set of points */
 struct phys2d_poly {
-    cpVect *points;
-    float radius;
-    struct phys2d_shape shape;
+  cpVect *points;
+  float radius;
+  struct phys2d_shape shape;
 };
 
 /* A box shape; a type of a polygon collider */
 struct phys2d_box {
-    float w;
-    float h;
-    float offset[2];
-    float rotation;
-    float r;
-    struct phys2d_shape shape;
+  float w;
+  float h;
+  float offset[2];
+  float rotation;
+  float r;
+  struct phys2d_shape shape;
 };
 
 /* An edge with no volume. Cannot collide with each other. Join to make levels. Static only. */
 struct phys2d_edge {
-    cpVect *points;
-    float thickness;
-    cpShape **shapes;
-    int closed; /* True if the first and last points should be connected */
-    struct phys2d_shape shape;
-    int draws;
+  cpVect *points;
+  float thickness;
+  cpShape **shapes;
+  int closed; /* True if the first and last points should be connected */
+  struct phys2d_shape shape;
+  int draws;
 };
 
 struct phys2d_circle *Make2DCircle(int go);
@@ -107,8 +107,8 @@ cpShape *phys2d_query_pos(cpVect pos);
 int *phys2d_query_box(cpVect pos, cpVect wh);
 
 struct phys_cbs {
-    struct callee begin;
-    struct callee separate;
+  struct callee begin;
+  struct callee separate;
 };
 
 struct shape_cb {
@@ -127,9 +127,9 @@ void shape_set_sensor(struct phys2d_shape *shape, int sensor);
 int shape_get_sensor(struct phys2d_shape *shape);
 
 struct color {
-    unsigned char r;
-    unsigned char g;
-    unsigned char b;
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
 };
 
 void color2float(struct color, float *fcolor);

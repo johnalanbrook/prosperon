@@ -6,8 +6,8 @@
 #include "transform.h"
 
 struct follow {
-    float distance;
-    mfloat_t target_rot[4];
+  float distance;
+  mfloat_t target_rot[4];
 };
 
 mfloat_t *follow_calccenter();
@@ -31,45 +31,45 @@ class ThirdPersonFollow {
 
   public:
     enum CameraType {
-	STATIONARY,
-	TRANSLATING,
-	ROTATING,
-	SPLINE
+        STATIONARY,
+        TRANSLATING,
+        ROTATING,
+        SPLINE
     };
 
     enum CameraTransition {
-	NONE,
-	CROSSDISSOLVE,
-	WIPE,
-	DIP
+        NONE,
+        CROSSDISSOLVE,
+        WIPE,
+        DIP
     };
 
     enum FrameOfReference {
-	LOCAL,
-	WORLD,
-	EXTERNAL
+        LOCAL,
+        WORLD,
+        EXTERNAL
     };
 
      ThirdPersonFollow() {
-	// Rotation
-	RotationSpeed = 10.0f;
-	LockPitch = LockYaw = LockRoll = true;
+        // Rotation
+        RotationSpeed = 10.0f;
+        LockPitch = LockYaw = LockRoll = true;
 
-	XDirPosts = false;
-	YDirPosts = false;
-	ZDirPosts = false;
+        XDirPosts = false;
+        YDirPosts = false;
+        ZDirPosts = false;
 
 
-	// Translation
-	//FloatWidths = AnchorWidths = CenterVector = glm::vec3(0, 0, 0);
-	PositionSpeeds = glm::vec3(2.f, 2.f, 2.f);
-	//TranslationScales = glm::vec3(1, 1, 1);
+        // Translation
+        //FloatWidths = AnchorWidths = CenterVector = glm::vec3(0, 0, 0);
+        PositionSpeeds = glm::vec3(2.f, 2.f, 2.f);
+        //TranslationScales = glm::vec3(1, 1, 1);
 
-	// Frame settings
-	Offset = glm::vec3(0.f, 0.f, 0.f);
-	Distance = 10;
+        // Frame settings
+        Offset = glm::vec3(0.f, 0.f, 0.f);
+        Distance = 10;
 
-	AnchorSpeed = 80;
+        AnchorSpeed = 80;
     } ~ThirdPersonFollow() {
     }
 
@@ -81,14 +81,14 @@ class ThirdPersonFollow {
 
 
     void SetExternalFrame(Transform * val) {
-	ExternalFrame = val;
+        ExternalFrame = val;
     }
 
     // The target the camera "looks" at, used for calculations
     Transform *Target = nullptr;
 
     void SetTarget(Transform * val) {
-	Target = val;
+        Target = val;
     }
 
     // Offset from the target
@@ -158,25 +158,25 @@ class ThirdPersonFollow {
 
     /// Given a direction and width, find the offsets.
     glm::vec3 GetPostsOffset(const glm::vec3 & DirectionVector,
-			     float AnchorWidth);
+                             float AnchorWidth);
 
     /// Given anchors, what's the anchor width?
     glm::vec3 GetExtentsOffset(const glm::vec3 & DirectionVector,
-			       float AnchorWidth, float TOffset,
-			       float Width);
+                               float AnchorWidth, float TOffset,
+                               float Width);
 
     glm::quat RemoveLockedRotation(const glm::quat & CurrentRotation);
 
     glm::vec3 FrameBasedVectorLerp(const glm::vec3 & From,
-				   const glm::vec3 & To,
-				   const glm::vec3 & Speeds, float Tick);
+                                   const glm::vec3 & To,
+                                   const glm::vec3 & Speeds, float Tick);
 
     glm::vec3 VectorLerpPiecewise(const glm::vec3 & From,
-				  const glm::vec3 & To,
-				  const glm::vec3 & Alpha);
+                                  const glm::vec3 & To,
+                                  const glm::vec3 & Alpha);
 
     bool GetLerpParam(const float Offst, const float AnchorWidth,
-		      const float FloatWidth);
+                      const float FloatWidth);
 
     /// Set to a value that gives good clamping, smoothly. Activates when
     /// the target is out of range.

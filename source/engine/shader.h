@@ -5,9 +5,9 @@
 #include "sokol/sokol_gfx.h"
 
 struct shader {
-    sg_shader shd;
-    const char *vertpath;
-    const char *fragpath;
+  sg_shader shd;
+  const char *vertpath;
+  const char *fragpath;
 };
 
 void shader_compile_all();

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "resources.h"
 
-#include "nuklear.h"
+#include "nuke.h"
 
 #define ASSET_TYPE_NULL 0
 #define ASSET_TYPE_IMAGE 1

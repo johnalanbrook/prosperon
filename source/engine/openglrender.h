@@ -1,15 +1,22 @@
 #ifndef OPENGL_RENDER_H
 #define OPENGL_RENDER_H
 
+#include "sokol/sokol_gfx.h"
+#include "HandmadeMath.h"
+
 struct mCamera;
 struct window;
 
 extern struct shader *spriteShader;
 extern struct shader *animSpriteShader;
 
+extern sg_image ddimg;
+
 extern struct sprite *tsprite;
 
 extern int renderMode;
+
+extern HMM_Vec3 dirl_pos;
 
 extern float projection[16];
 

@@ -8,10 +8,10 @@ extern const float CAMERA_MAXSPEED;
 extern const float CAMERA_ROTATESPEED;
 
 struct mCamera {
-    struct mTransform transform;
-    float speed;
-    float speedMult;
-    mfloat_t frame_move[VEC3_SIZE];
+  struct mTransform transform;
+  float speed;
+  float speedMult;
+  mfloat_t frame_move[VEC3_SIZE];
 };
 
 void camera_2d_update(struct mCamera *camera, float deltaT);

@@ -1,7 +1,6 @@
 #include "light.h"
 #include <stdbool.h>
 
-
 /*
 void Light::serialize(FILE * file)
 {
@@ -30,20 +29,20 @@ struct mDirectionalLight *dLight = NULL;
 struct mDirectionalLight *MakeDLight()
 {
     if (dLight != NULL) {
-	dLight =
-	    (struct mDirectionalLight *)
-	    malloc(sizeof(struct mDirectionalLight));
-	quat_from_euler(dLight->light.obj.transform.rotation,
-			dlight_init_rot);
+        dLight =
+            (struct mDirectionalLight *)
+            malloc(sizeof(struct mDirectionalLight));
+        quat_from_euler(dLight->light.obj.transform.rotation,
+                        dlight_init_rot);
 
-	return dLight;
+        return dLight;
     }
 
     return dLight;
 }
 
 void dlight_prepshader(struct mDirectionalLight *light,
-		       struct shader *shader)
+                       struct shader *shader)
 {
     mfloat_t fwd[3] = { 0.f };
     trans_forward(fwd, &light->light.obj.transform);
@@ -61,14 +60,14 @@ static int numLights = 0;
 struct mPointLight *MakePointlight()
 {
     if (numLights < 4) {
-	struct mPointLight *light =
-	    (struct mPointLight *) malloc(sizeof(struct mPointLight));
-	pointLights[numLights++] = light;
-	light->light.strength = 0.2f;
-	light->constant = 1.f;
-	light->linear = 0.9f;
-	light->quadratic = 0.032f;
-	return light;
+        struct mPointLight *light =
+            (struct mPointLight *) malloc(sizeof(struct mPointLight));
+        pointLights[numLights++] = light;
+        light->light.strength = 0.2f;
+        light->constant = 1.f;
+        light->linear = 0.9f;
+        light->quadratic = 0.032f;
+        return light;
     }
 
     return NULL;
@@ -82,11 +81,11 @@ static void prepstring(char *buffer, char *prepend, const char *append)
 void pointlights_prepshader(struct shader *shader)
 {
     for (int i = 0; i < numLights; i++)
-	pointlight_prepshader(pointLights[i], shader, i);
+        pointlight_prepshader(pointLights[i], shader, i);
 }
 
 void pointlight_prepshader(struct mPointLight *light,
-			   struct shader *shader, int num)
+                           struct shader *shader, int num)
 {
     shader_use(shader);
     char prepend[100] = { '\0' };
@@ -121,10 +120,10 @@ static int numSpots = 0;
 struct mSpotLight *MakeSpotlight()
 {
     if (numSpots < 4) {
-	struct mSpotLight *light =
-	    (struct mSpotLight *) malloc(sizeof(struct mSpotLight));
-	spotLights[numSpots++] = light;
-	return light;
+        struct mSpotLight *light =
+            (struct mSpotLight *) malloc(sizeof(struct mSpotLight));
+        spotLights[numSpots++] = light;
+        return light;
     }
 
     return NULL;
@@ -135,17 +134,17 @@ struct mSpotLight *MakeSpotlight()
 void spotlights_prepshader(struct shader *shader)
 {
     for (int i = 0; i < numSpots; i++)
-	spotlight_prepshader(spotLights[i], shader, i);
+        spotlight_prepshader(spotLights[i], shader, i);
 }
 
 void spotlight_prepshader(struct mSpotLight *light, struct shader *shader,
-			  int num)
+                          int num)
 {
     mfloat_t fwd[3] = { 0.f };
     trans_forward(fwd, &light->light.obj.transform);
     shader_use(shader);
     shader_setvec3(shader, "spotLight.position",
-		   light->light.obj.transform.position);
+                   light->light.obj.transform.position);
     shader_setvec3(shader, "spotLight.direction", fwd);
     shader_setvec3(shader, "spotLight.color", light->light.color);
     shader_setfloat(shader, "spotLight.strength", light->light.strength);
@@ -165,10 +164,10 @@ void light_gui(struct mLight *light)
     object_gui(&light->obj);
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Light", NK_MINIMIZED)) {
-	nk_property_float(ctx, "Strength", 0.f, &light->strength, 1.f, 0.01f, 0.001f);
-	// ImGui::ColorEdit3("Color", &light->color[0]);
-	nk_checkbox_label(ctx, "Dynamic", (bool *) &light->dynamic);
-	nk_tree_pop(ctx);
+        nk_property_float(ctx, "Strength", 0.f, &light->strength, 1.f, 0.01f, 0.001f);
+        // ImGui::ColorEdit3("Color", &light->color[0]);
+        nk_checkbox_label(ctx, "Dynamic", (bool *) &light->dynamic);
+        nk_tree_pop(ctx);
     }
 }
 
@@ -178,10 +177,10 @@ void pointlight_gui(struct mPointLight *light)
     light_gui(&light->light);
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Point Light", NK_MINIMIZED)) {
-	nk_property_float(ctx, "Constant", 0.f, &light->constant, 1.f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Linear", 0.f, &light->linear, 0.3f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Quadratic", 0.f, &light->quadratic, 0.3f, 0.01f, 0.001f);
-	nk_tree_pop(ctx);
+        nk_property_float(ctx, "Constant", 0.f, &light->constant, 1.f, 0.01f, 0.001f);
+        nk_property_float(ctx, "Linear", 0.f, &light->linear, 0.3f, 0.01f, 0.001f);
+        nk_property_float(ctx, "Quadratic", 0.f, &light->quadratic, 0.3f, 0.01f, 0.001f);
+        nk_tree_pop(ctx);
     }
 
 }
@@ -191,12 +190,12 @@ void spotlight_gui(struct mSpotLight *spot)
     light_gui(&spot->light);
 
     if (nk_tree_push(ctx, NK_TREE_NODE, "Spotlight", NK_MINIMIZED)) {
-	nk_property_float(ctx, "Linear", 0.f, &spot->linear, 1.f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Quadratic", 0.f, &spot->quadratic, 1.f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Distance", 0.f, &spot->distance, 200.f, 1.f, 0.1f, 200.f);
-	nk_property_float(ctx, "Cutoff Degrees", 0.f, &spot->cutoff, 0.7f, 0.01f, 0.001f);
-	nk_property_float(ctx, "Outer Cutoff Degrees", 0.f, &spot->outerCutoff, 0.7f, 0.01f, 0.001f);
-	nk_tree_pop(ctx);
+        nk_property_float(ctx, "Linear", 0.f, &spot->linear, 1.f, 0.01f, 0.001f);
+        nk_property_float(ctx, "Quadratic", 0.f, &spot->quadratic, 1.f, 0.01f, 0.001f);
+        nk_property_float(ctx, "Distance", 0.f, &spot->distance, 200.f, 1.f, 0.1f, 200.f);
+        nk_property_float(ctx, "Cutoff Degrees", 0.f, &spot->cutoff, 0.7f, 0.01f, 0.001f);
+        nk_property_float(ctx, "Outer Cutoff Degrees", 0.f, &spot->outerCutoff, 0.7f, 0.01f, 0.001f);
+        nk_tree_pop(ctx);
     }
 }
 */

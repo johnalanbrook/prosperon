@@ -1,33 +1,33 @@
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 
-#include <stdio.h>
-#include "mathc.h"
-#include "config.h"
-#include <stdbool.h>
-#include <chipmunk/chipmunk.h>
 #include "2dphysics.h"
+#include "config.h"
+#include "mathc.h"
+#include <chipmunk/chipmunk.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 struct shader;
 struct sprite;
 struct component;
 
 struct gameobject {
-    cpBodyType bodytype;
-    int next;
-    float scale;
-    float mass;
-    float f;			/* friction */
-    float e;			/* elasticity */
-    int flipx; /* 1 or -1 */
-    int flipy;
-    int sensor;
-    unsigned int layer;
-    cpShapeFilter filter;
-    cpBody *body; /* NULL if this object is dead */
-    int id;
-    struct phys_cbs cbs;
-    struct shape_cb *shape_cbs;
+  cpBodyType bodytype;
+  int next;
+  float scale;
+  float mass;
+  float f;   /* friction */
+  float e;   /* elasticity */
+  int flipx; /* 1 or -1 */
+  int flipy;
+  int sensor;
+  unsigned int layer;
+  cpShapeFilter filter;
+  cpBody *body; /* NULL if this object is dead */
+  int id;
+  struct phys_cbs cbs;
+  struct shape_cb *shape_cbs;
 };
 
 extern struct gameobject *gameobjects;

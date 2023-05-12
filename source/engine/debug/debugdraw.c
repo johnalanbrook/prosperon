@@ -11,75 +11,163 @@
 #include "stb_ds.h"
 #include "sokol/sokol_gfx.h"
 
-static uint32_t circleVBO;
-static uint32_t circleVAO;
-static struct shader *circleShader;
+#include "font.h"
 
-static uint32_t gridVBO;
-static uint32_t gridVAO;
-static struct shader *gridShader;
+static sg_pipeline grid_pipe;
+static sg_bindings grid_bind;
+static sg_shader grid_shader;
+static int grid_c = 0;
 
-static uint32_t rectVBO;
-static uint32_t rectVAO;
-static struct shader *rectShader;
+static sg_pipeline rect_pipe;
+static sg_bindings rect_bind;
+static sg_shader rect_shader;
+static int rect_c = 0;
 
-typedef struct {
-  float proj[16];
-  float res[2];
-} circle_ubo;
+static sg_pipeline circle_pipe;
+static sg_bindings circle_bind;
+static sg_shader csg;
+static int circle_count = 0;
+static int circle_vert_c = 7;
 
 void debug_flush()
 {
-  
+  sg_apply_pipeline(circle_pipe);
+  sg_apply_bindings(&circle_bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
+
+  sg_draw(0,4,circle_count);
+  circle_count = 0;
+
+  sg_apply_pipeline(rect_pipe);
+  sg_apply_bindings(&rect_bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  sg_draw(0,rect_c*2,1);
+  rect_c = 0;
 }
+
+static sg_shader_uniform_block_desc projection_ubo = {
+  .size = sizeof(projection),
+  .uniforms = {
+    [0] = { .name = "proj", .type = SG_UNIFORMTYPE_MAT4 },
+  }
+};
 
 void debugdraw_init()
 {
-    sg_shader csg = sg_make_shader(&(sg_shader_desc){
+    csg = sg_make_shader(&(sg_shader_desc){
       .vs.source = slurp_text("shaders/circlevert.glsl"),
       .fs.source = slurp_text("shaders/circlefrag.glsl"),
-      .vs.uniform_blocks[0] = {
-        .size = sizeof(circle_ubo),
-	.uniforms = {
-	  [0] = { .name = "proj", .type = SG_UNIFORMTYPE_MAT4 },
-	  [1] = { .name = "res", .type = SG_UNIFORMTYPE_FLOAT2 },
-	}
-      }
+      .vs.uniform_blocks[0] = projection_ubo,
     });
-/*        
-    float gridverts[] = {
-	-1.f, -1.f,
-	1.f, -1.f,
-	-1.f, 1.f,
-	1.f, 1.f
-    };
 
-    gridShader = MakeShader("gridvert.glsl", "gridfrag.glsl");
-    shader_setUBO(gridShader, "Projection", 0);
-    glGenBuffers(1, &gridVBO);
-    glGenVertexArrays(1, &gridVAO);
-    glBindVertexArray(gridVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(gridverts), &gridverts, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+    circle_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+      .shader = csg,
+      .layout = {
+        .attrs = {
+	  [0].format = SG_VERTEXFORMAT_FLOAT2,
+	  [0].buffer_index = 1,
+	  [1].format = SG_VERTEXFORMAT_FLOAT3,
+	  [2].format = SG_VERTEXFORMAT_FLOAT2,
+	  [3].format = SG_VERTEXFORMAT_FLOAT
+	},
+      .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE,
+    },
+    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+    .cull_mode = SG_CULLMODE_BACK,
+    .colors[0].blend = {
+      .enabled = true,
+      .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+      .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+      .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
+      .src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
+    },
+    .label = "circle pipeline"
+  });
 
-    rectShader = MakeShader("linevert.glsl", "linefrag.glsl");
-    shader_setUBO(rectShader, "Projection", 0);
-    glGenBuffers(1, &rectVBO);
-    glGenVertexArrays(1, &rectVAO);
-*/
+  circle_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(float)*circle_vert_c*5000,
+    .usage = SG_USAGE_STREAM,
+  });
+
+  float circleverts[8] = {
+    -1,-1,
+    -1,1,
+    1,-1,
+    1,1
+  };
+
+  circle_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+    .data = SG_RANGE(circleverts),
+    .usage = SG_USAGE_IMMUTABLE,
+  });
+
+
+  grid_shader = sg_make_shader(&(sg_shader_desc){
+    .vs.source = slurp_text("shaders/gridvert.glsl"),
+    .fs.source = slurp_text("shaders/gridfrag.glsl"),
+    .vs.uniform_blocks[0] = projection_ubo,
+    .vs.uniform_blocks[1] = {
+      .size = sizeof(float)*2,
+      .uniforms = { [0] = { .name = "offset", .type = SG_UNIFORMTYPE_FLOAT2 } } },
+    .fs.uniform_blocks[0] = {
+      .size = sizeof(float)*5,
+      .uniforms = {
+        [0] = { .name = "thickness", .type = SG_UNIFORMTYPE_FLOAT },
+	[1] = { .name = "span", .type = SG_UNIFORMTYPE_FLOAT },
+	[2] = { .name = "color", .type = SG_UNIFORMTYPE_FLOAT3 },
+     }
+   },
+  });
+
+  grid_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = grid_shader,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT2
+      }
+    },
+    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+//    .cull_mode = SG_CULLMODE_BACK,
+    .label = "grid pipeline",
+    .colors[0] = {
+      .blend = {
+        .enabled = true,
+	.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+	.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+	.op_rgb = SG_BLENDOP_ADD,
+	.src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
+	.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+	.op_alpha = SG_BLENDOP_ADD
+      },
+    },
+  });
+
+  grid_bind.vertex_buffers[0] = circle_bind.vertex_buffers[1];
+
+  rect_shader = sg_make_shader(&(sg_shader_desc){
+    .vs.source = slurp_text("shaders/linevert.glsl"),
+    .fs.source = slurp_text("shaders/linefrag.glsl"),
+    .vs.uniform_blocks[0] = projection_ubo
+  });
+
+  rect_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = rect_shader,
+    .layout = {
+      .attrs = { [0].format = SG_VERTEXFORMAT_FLOAT2 }
+    },
+    .primitive_type = SG_PRIMITIVETYPE_LINES
+  });
+
+  rect_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(float)*2*10000,
+    .usage = SG_USAGE_STREAM
+  });
 }
 
-void draw_line(int x1, int y1, int x2, int y2, float *color)
+void draw_line(cpVect s, cpVect e, float *color)
 {
-    shader_use(rectShader);
-    float verts[] = {
-	x1, y1,
-	x2, y2
-    };
-
-    draw_poly(verts, 2, color);
+  cpVect verts[2] = {s, e};
+  draw_poly(verts, 2, color);
 }
 
 cpVect center_of_vects(cpVect *v, int n)
@@ -153,8 +241,8 @@ void draw_edge(cpVect  *points, int n, struct color color, int thickness)
 
     float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
 
-    shader_use(rectShader);
-    shader_setvec3(rectShader, "linecolor", col);
+//    shader_use(rectShader);
+//    shader_setvec3(rectShader, "linecolor", col);
 /*
     if (thickness <= 1) {
 //      glLineStipple(1, 0x00FF);
@@ -204,29 +292,16 @@ void draw_edge(cpVect  *points, int n, struct color color, int thickness)
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
 {
-/*    shader_use(circleShader);
-
-    float verts[] = {
-	x - radius, y - radius, -1, -1,
-	x + radius, y - radius, 1, -1,
-	x - radius, y + radius, -1, 1,
-	x + radius, y + radius, 1, 1
-    };
-
-    glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
-
-    shader_setfloat(circleShader, "radius", radius);
-    shader_setint(circleShader, "thickness", pixels);
-    shader_setvec3(circleShader, "dbgColor", color);
-    shader_setbool(circleShader, "fill", fill);
-    shader_setfloat(circleShader, "zoom", cam_zoom());
-
-    glBindVertexArray(circleVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-*/
+  float cv[circle_vert_c] = {0};
+  cv[0] = color[0];
+  cv[1] = color[1];
+  cv[2] = color[2];
+  cv[3] = x;
+  cv[4] = y;
+  cv[5] = radius;
+  cv[6] = fill;
+  sg_append_buffer(circle_bind.vertex_buffers[0], SG_RANGE_REF(cv));
+  circle_count++;
 }
 
 void draw_rect(int x, int y, int w, int h, float *color)
@@ -234,13 +309,13 @@ void draw_rect(int x, int y, int w, int h, float *color)
     float hw = w / 2.f;
     float hh = h / 2.f;
 
-    float verts[] = {
-	x - hw, y - hh,
-	x + hw, y - hh,
-	x + hw, y + hh,
-	x - hw, y + hh
+    cpVect verts[4] = {
+      { .x = x-hw, .y = y-hh },
+      { .x = x+hw, .y = y-hh },
+      { .x = x+hw, .y = y+hh },
+      { .x = x-hw, .y = y+hh }
     };
-
+    
     draw_poly(verts, 4, color);
 }
 
@@ -253,27 +328,33 @@ void draw_box(struct cpVect c, struct cpVect wh, struct color color)
 void draw_arrow(struct cpVect start, struct cpVect end, struct color color, int capsize)
 {
   float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
-  draw_line(start.x, start.y, end.x, end.y, col);
+  draw_line(start, end, col);
   
   draw_cppoint(end, capsize, color);
 }
 
 void draw_grid(int width, int span)
 {
-/*    shader_use(gridShader);
-    shader_setint(gridShader, "thickness", width);
-    shader_setint(gridShader, "span", span);
-    
     cpVect offset = cam_pos();
-        offset = cpvmult(offset, 1/cam_zoom());
+    offset = cpvmult(offset, 1/cam_zoom());
     offset.x -= mainwin->width/2;
     offset.y -= mainwin->height/2;
 
-    shader_setvec2(gridShader, "offset", &offset);
-    
-    glBindVertexArray(gridVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-*/
+  sg_apply_pipeline(grid_pipe);
+  sg_apply_bindings(&grid_bind);
+
+  float col[3] = { 0.3, 0.5, 0.8};
+
+  float fubo[5];
+  fubo[0] = width;
+  fubo[1] = span;
+  fubo[2] = col;
+  
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 1, SG_RANGE_REF(offset));
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(fubo));
+
+  sg_draw(0,4,1);
 }
 
 void draw_point(int x, int y, float r, float *color)
@@ -293,8 +374,33 @@ void draw_points(struct cpVect *points, int n, float size, float *color)
         draw_point(points[i].x, points[i].y, size, color);
 }
 
-void draw_poly(float *points, int n, float *color)
+void draw_poly(cpVect *points, int n, float *color)
 {
+  if (n == 2) {
+    sg_range t;
+    t.ptr = points;
+    t.size = sizeof(cpVect)*2;
+    sg_append_buffer(rect_bind.vertex_buffers[0], &t);
+    rect_c += 1;
+    return;
+  } else if (n <= 1) return;
+
+
+  cpVect buffer[2*n];
+  for (int i = 0; i < n; i++) {
+    buffer[i*2] = points[i];
+    buffer[i*2+1] = points[i+1];
+  }
+
+  buffer[2*n-1] = points[0];
+
+  sg_range t;
+  t.ptr = buffer;
+  t.size = sizeof(cpVect)*2*n;
+
+  sg_append_buffer(rect_bind.vertex_buffers[0], &t);
+
+  rect_c += n;
 /*    shader_use(rectShader);
     shader_setvec3(rectShader, "linecolor", color);
     glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
@@ -310,17 +416,6 @@ void draw_poly(float *points, int n, float *color)
     shader_setfloat(rectShader, "alpha", 1.f);
     glDrawArrays(GL_LINE_LOOP, 0, n);
 */
-}
-
-void draw_polyvec(cpVect *points, int n, float *color)
-{
-    float drawvec[n*2];
-    for (int i = 0; i < n; i++) {
-        drawvec[i*2] = points[i].x;
-        drawvec[i*2+1] = points[i].y;
-    }
-
-    draw_poly(drawvec, n, color);
 }
 
 void debugdraw_flush()

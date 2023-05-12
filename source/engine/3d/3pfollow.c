@@ -42,26 +42,26 @@ glm::vec3 ThirdPersonFollow::CalculatePosition()
     glm::vec3 p1 = CalculateCenter();
 
     glm::vec3 p2 =
-	XDirPosts ? GetPostsOffset(TFOR.Right(),
-				   FloatWidths.
-				   x) : GetExtentsOffset(TFOR.Right(),
-							 FloatWidths.x,
-							 TargetOffset.x,
-							 AnchorWidths.x);
+        XDirPosts ? GetPostsOffset(TFOR.Right(),
+                                   FloatWidths.
+                                   x) : GetExtentsOffset(TFOR.Right(),
+                                                         FloatWidths.x,
+                                                         TargetOffset.x,
+                                                         AnchorWidths.x);
     glm::vec3 p3 =
-	YDirPosts ? GetPostsOffset(TFOR.Up(),
-				   FloatWidths.
-				   y) : GetExtentsOffset(TFOR.Up(),
-							 FloatWidths.y,
-							 TargetOffset.y,
-							 AnchorWidths.y);
+        YDirPosts ? GetPostsOffset(TFOR.Up(),
+                                   FloatWidths.
+                                   y) : GetExtentsOffset(TFOR.Up(),
+                                                         FloatWidths.y,
+                                                         TargetOffset.y,
+                                                         AnchorWidths.y);
     glm::vec3 p4 =
-	ZDirPosts ? GetPostsOffset(TFOR.Back(),
-				   FloatWidths.
-				   z) : GetExtentsOffset(TFOR.Back(),
-							 FloatWidths.z,
-							 TargetOffset.z,
-							 AnchorWidths.z);
+        ZDirPosts ? GetPostsOffset(TFOR.Back(),
+                                   FloatWidths.
+                                   z) : GetExtentsOffset(TFOR.Back(),
+                                                         FloatWidths.z,
+                                                         TargetOffset.z,
+                                                         AnchorWidths.z);
 
     return p1 + p2 + p3 + p4;
 }
@@ -69,7 +69,7 @@ glm::vec3 ThirdPersonFollow::CalculatePosition()
 glm::vec3 ThirdPersonFollow::CalculateCenter()
 {
     return Target->get_global_translation() +
-	TFOR.TransformDirection(Offset) + (mytransform->Back() * Distance);
+        TFOR.TransformDirection(Offset) + (mytransform->Back() * Distance);
 }
 
 glm::vec3 ThirdPersonFollow::
@@ -82,37 +82,37 @@ GetPostsOffset(const glm::vec3 & DirectionVector, float AnchorWidth)
 
 glm::vec3 ThirdPersonFollow::
 GetExtentsOffset(const glm::vec3 & DirectionVector, float AnchorWidth,
-		 float TOffset, float Width)
+                 float TOffset, float Width)
 {
 
     float negated_offset_sign = ((0 <= TOffset) - (TOffset < 0)) * -1.f;
     float TotalWidth = AnchorWidth + Width;
 
     if (glm::abs(TOffset) > TotalWidth
-	&& !glm::epsilonEqual(glm::abs(TOffset), TotalWidth, 0.5f))
-	return DirectionVector * TotalWidth * negated_offset_sign;
+        && !glm::epsilonEqual(glm::abs(TOffset), TotalWidth, 0.5f))
+        return DirectionVector * TotalWidth * negated_offset_sign;
     else {
-	if (glm::abs(TOffset) >= AnchorWidth)
-	    return DirectionVector * AnchorWidth * negated_offset_sign;
-	else
-	    return DirectionVector * TOffset * -1.f;
+        if (glm::abs(TOffset) >= AnchorWidth)
+            return DirectionVector * AnchorWidth * negated_offset_sign;
+        else
+            return DirectionVector * TOffset * -1.f;
     }
 
     return glm::vec3(0.f);
 }
 
 glm::vec3 ThirdPersonFollow::FrameBasedVectorLerp(const glm::vec3 & From,
-						  const glm::vec3 & To,
-						  const glm::vec3 & Speeds,
-						  float Tick)
+                                                  const glm::vec3 & To,
+                                                  const glm::vec3 & Speeds,
+                                                  float Tick)
 {
     // Previously "FORTransform.TransformVector(Speeds)
     glm::vec3 TSpeed = glm::abs(TFOR.TransformDirection(Speeds));
     glm::vec3 TOffset = glm::abs(TFOR.TransformDirection(TargetOffset));
     glm::vec3 TAnchorWidths =
-	glm::abs(TFOR.TransformDirection(AnchorWidths));
+        glm::abs(TFOR.TransformDirection(AnchorWidths));
     glm::vec3 TFloatWidths =
-	glm::abs(TFOR.TransformDirection(FloatWidths));
+        glm::abs(TFOR.TransformDirection(FloatWidths));
 
 
 
@@ -124,14 +124,14 @@ glm::vec3 ThirdPersonFollow::FrameBasedVectorLerp(const glm::vec3 & From,
 
 
     float xAlpha =
-	glm::clamp((bUseX ? AnchorSpeed : TSpeed.x) * Tick, 0.f, 1.f);
+        glm::clamp((bUseX ? AnchorSpeed : TSpeed.x) * Tick, 0.f, 1.f);
     float yAlpha =
-	glm::clamp((bUseY ? AnchorSpeed : TSpeed.y) * Tick, 0.f, 1.f);
+        glm::clamp((bUseY ? AnchorSpeed : TSpeed.y) * Tick, 0.f, 1.f);
     float zAlpha =
-	glm::clamp((bUseZ ? AnchorSpeed : TSpeed.z) * Tick, 0.f, 1.f);
+        glm::clamp((bUseZ ? AnchorSpeed : TSpeed.z) * Tick, 0.f, 1.f);
 
     return VectorLerpPiecewise(From, To,
-			       glm::vec3(xAlpha, yAlpha, zAlpha));
+                               glm::vec3(xAlpha, yAlpha, zAlpha));
 }
 
 int float_epsilon(mfloat_t a, mfloat_t b, mfloat_t e)
@@ -165,11 +165,11 @@ void ThirdPersonFollow::CalculateTargets()
     // For rotation
     // TODO: Check of this implementation is the same as UKismetMath FindLookAtRotation
     TargetRotation =
-	RemoveLockedRotation(glm::quat
-			     (mytransform->
-			      get_global_transform()->get_origin() -
-			      Target->
-			      get_global_transform()->get_origin()));
+        RemoveLockedRotation(glm::quat
+                             (mytransform->
+                              get_global_transform()->get_origin() -
+                              Target->
+                              get_global_transform()->get_origin()));
 }
 
 follow_removelockedrot()
@@ -185,11 +185,11 @@ RemoveLockedRotation(const glm::quat & CurrentRotation)
     //
 
     NewRotator.x =
-	LockRoll ? mytransform->get_rotation().x : CurrentRotator.x;
+        LockRoll ? mytransform->get_rotation().x : CurrentRotator.x;
     NewRotator.y =
-	LockPitch ? mytransform->get_rotation().y : CurrentRotator.y;
+        LockPitch ? mytransform->get_rotation().y : CurrentRotator.y;
     NewRotator.z =
-	LockYaw ? mytransform->get_rotation().z : CurrentRotator.z;
+        LockYaw ? mytransform->get_rotation().z : CurrentRotator.z;
 
     return glm::quat(NewRotator);
 }
@@ -199,11 +199,11 @@ RemoveLockedRotation(const glm::quat & CurrentRotation)
 void ThirdPersonFollow::CalculateTargetOffset()
 {
     glm::vec3 p1 =
-	(mytransform->Forward() * Distance) +
-	TFOR.TransformDirection(Offset) +
-	mytransform->get_global_translation();
+        (mytransform->Forward() * Distance) +
+        TFOR.TransformDirection(Offset) +
+        mytransform->get_global_translation();
     glm::vec3 p2 =
-	TFOR.InverseTransformDirection(Target->get_global_translation());
+        TFOR.InverseTransformDirection(Target->get_global_translation());
     glm::vec3 p3 = TFOR.InverseTransformDirection(p1);
 
     TargetOffset = p2 - p3;

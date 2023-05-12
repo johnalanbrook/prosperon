@@ -1,8 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-
-#define MAXPATH 256		/* 255 chars + null */
+#define MAXPATH 256 /* 255 chars + null */
 #define MAXNAME 50
 
 #define SCREEN_WIDTH 1280

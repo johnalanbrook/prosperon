@@ -1,8 +1,6 @@
 #ifndef RESOURCES_H
 #define RESOURCES_H
 
-
-
 #include <stdio.h>
 
 struct vec;

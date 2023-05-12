@@ -1,13 +1,12 @@
 #include "yugine.h"
 
-
 #include "camera.h"
-#include "window.h"
 #include "engine.h"
+#include "font.h"
+#include "gameobject.h"
 #include "input.h"
 #include "openglrender.h"
-#include "gameobject.h"
-#include "font.h"
+#include "window.h"
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
@@ -16,8 +15,8 @@
 
 #include "quickjs/quickjs.h"
 
-#include "script.h"
 #include "ffi.h"
+#include "script.h"
 
 #include "log.h"
 #include <stdio.h>
@@ -25,18 +24,16 @@
 
 #include "2dphysics.h"
 
+#include <execinfo.h>
 #include <signal.h>
 #include <time.h>
-#include <execinfo.h>
 
 #include "string.h"
-
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_GFX_IMPL
 #define SOKOL_GLCORE33
 #include "sokol/sokol_gfx.h"
-
 
 int physOn = 0;
 
@@ -44,9 +41,9 @@ double renderlag = 0;
 double physlag = 0;
 double updatelag = 0;
 
-double renderMS = 1/165.f;
-double physMS = 1/120.f;
-double updateMS = 1/60.f;
+double renderMS = 1 / 165.f;
+double physMS = 1 / 120.f;
+double updateMS = 1 / 60.f;
 
 static int ed = 1;
 static int sim_play = 0;
@@ -65,39 +62,37 @@ int fps;
 #define SIM_PAUSE 2
 #define SIM_STEP 3
 
-void print_stacktrace()
-{
-    void *ents[512];
-    size_t size;
+void print_stacktrace() {
+  void *ents[512];
+  size_t size;
 
-    size = backtrace(ents, 512);
+  size = backtrace(ents, 512);
 
-    YughCritical("====================BACKTRACE====================");
-    char **stackstr = backtrace_symbols(ents, size);
+  YughCritical("====================BACKTRACE====================");
+  char **stackstr = backtrace_symbols(ents, size);
 
-    YughInfo("Stack size is %d.", size);
+  YughInfo("Stack size is %d.", size);
 
-    for (int i = 0; i < size; i++)
-        YughCritical(stackstr[i]);
+  for (int i = 0; i < size; i++)
+    YughCritical(stackstr[i]);
 
-    js_stacktrace();
+  js_stacktrace();
 }
 
 void seghandle(int sig) {
 #ifdef __linux__
-    if (strsignal(sig))
-        YughCritical("CRASH! Signal: %s.", strsignal(sig));
+  if (strsignal(sig))
+    YughCritical("CRASH! Signal: %s.", strsignal(sig));
 
-    print_stacktrace();
+  print_stacktrace();
 
-    exit(1);
+  exit(1);
 #endif
 }
 
-void compile_script(const char *file)
-{
+void compile_script(const char *file) {
   const char *script = slurp_text(file);
-  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY|JS_EVAL_TYPE_GLOBAL);
+  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL);
   size_t out_len;
   uint8_t *out;
   out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
@@ -107,159 +102,157 @@ void compile_script(const char *file)
   fclose(f);
 }
 
-void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data)
-{
+void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
   mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
 }
 
 int main(int argc, char **args) {
-    int logout = 1;
-    ed = 1;
+  int logout = 1;
+  ed = 1;
 
-    script_startup();
+  script_startup();
 
-    for (int i = 1; i < argc; i++) {
-        if (args[i][0] == '-') {
-            switch(args[i][1]) {
-                case 'p':
-                    ed = 0;
-                    break;
+  for (int i = 1; i < argc; i++) {
+    if (args[i][0] == '-') {
+      switch (args[i][1]) {
+      case 'p':
+        ed = 0;
+        break;
 
-                case 'l':
-                    if (i+1 < argc && args[i+1][0] != '-') {
-                        log_setfile(args[i+1]);
-                        i++;
-                        continue;
-                    }
-                    else {
-                        YughError("Expected a file for command line arg '-l'.");
-                        exit(1);
-                    }
-
-		case 'v':
-		    printf("Yugine version %s, %s build.\n", VER, INFO);
-		    printf("Copyright 2022-2023 odplot productions LLC.\n");
-		    exit(1);
-		    break;
-
-		case 's':
-		    compile_script(args[2]);
-		    exit(0);
-
-		case 'm':
-		    logLevel = atoi(args[2]);
-		    break;
-
-		case 'h':
-		    printf("-l       Set log file\n");
-		    printf("-p    Launch engine in play mode instead of editor mode\n");
-		    printf("-v       Display engine info\n");
-		    printf("-c       Redirect logging to console\n");
-		    exit(0);
-		    break;
-
-		case 'c':
-		    logout = 0;
-		    break;
-
-            }
+      case 'l':
+        if (i + 1 < argc && args[i + 1][0] != '-') {
+          log_setfile(args[i + 1]);
+          i++;
+          continue;
+        } else {
+          YughError("Expected a file for command line arg '-l'.");
+          exit(1);
         }
+
+      case 'v':
+        printf("Yugine version %s, %s build.\n", VER, INFO);
+        printf("Copyright 2022-2023 odplot productions LLC.\n");
+        exit(1);
+        break;
+
+      case 's':
+        compile_script(args[2]);
+        exit(0);
+
+      case 'm':
+        logLevel = atoi(args[2]);
+        break;
+
+      case 'h':
+        printf("-l       Set log file\n");
+        printf("-p    Launch engine in play mode instead of editor mode\n");
+        printf("-v       Display engine info\n");
+        printf("-c       Redirect logging to console\n");
+        exit(0);
+        break;
+
+      case 'c':
+        logout = 0;
+        break;
+      }
     }
+  }
 
 #if DBG
-    if (logout) {
-        time_t now = time(NULL);
-        char fname[100];
-        snprintf(fname, 100, "yugine-%d.log", now);
-        log_setfile(fname);
-    }
+  if (logout) {
+    time_t now = time(NULL);
+    char fname[100];
+    snprintf(fname, 100, "yugine-%d.log", now);
+    log_setfile(fname);
+  }
 
-    YughInfo("Starting yugine version %s.", VER);
+  YughInfo("Starting yugine version %s.", VER);
 
-    FILE *sysinfo = NULL;
-/*    sysinfo = popen("uname -a", "r");
-    if (!sysinfo) {
-        YughWarn("Failed to get sys info.");
-    } else {
-        log_cat(sysinfo);
-        pclose(sysinfo);
-    }*/
-    signal(SIGSEGV, seghandle);
-    signal(SIGABRT, seghandle);
-    signal(SIGFPE, seghandle);
-    signal(SIGBUS, seghandle);
-    
+  FILE *sysinfo = NULL;
+  /*    sysinfo = popen("uname -a", "r");
+      if (!sysinfo) {
+          YughWarn("Failed to get sys info.");
+      } else {
+          log_cat(sysinfo);
+          pclose(sysinfo);
+      }*/
+  signal(SIGSEGV, seghandle);
+  signal(SIGABRT, seghandle);
+  signal(SIGFPE, seghandle);
+  signal(SIGBUS, seghandle);
+
 #endif
 
-    engine_init();
+  engine_init();
 
-    const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    YughInfo("Refresh rate is %d", vidmode->refreshRate);
+  const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+  YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
-    renderMS = 1.0/vidmode->refreshRate;
+  renderMS = 1.0 / vidmode->refreshRate;
 
-    sg_setup(&(sg_desc){
+  sg_setup(&(sg_desc){
       .logger = {
-        .func = sg_logging,
-	.user_data = NULL,
+          .func = sg_logging,
+          .user_data = NULL,
       },
-    });
-    
-    input_init();    
-    openglInit();
+      .buffer_pool_size = 1024,
+      .context.sample_count = 1,
+  });
 
-    if (ed)
-      script_dofile("scripts/editor.js");
-    else
-      script_dofile("scripts/play.js");
+  input_init();
+  openglInit();
 
-    while (!want_quit()) {
-         double elapsed = glfwGetTime() - lastTick;
-         deltaT = elapsed;
-         lastTick = glfwGetTime();
-        double wait = fmax(0, renderMS-elapsed);
-        input_poll(wait);
-        window_all_handle_events();
+  if (ed)
+    script_dofile("scripts/editor.js");
+  else
+    script_dofile("scripts/play.js");
 
-         framems[framei++] = elapsed;
+  while (!want_quit()) {
+    double elapsed = glfwGetTime() - lastTick;
+    deltaT = elapsed;
+    lastTick = glfwGetTime();
+    double wait = fmax(0, renderMS - elapsed);
+    input_poll(wait);
+    window_all_handle_events();
 
-         if (framei == FPSBUF) framei = 0;
+    framems[framei++] = elapsed;
 
-         if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
-             timer_update(elapsed * timescale);
-             physlag += elapsed;
-             call_updates(elapsed * timescale);
-             while (physlag >= physMS) {
-	         phys_step = 1;
-                 physlag -= physMS;
-                 phys2d_update(physMS  * timescale);
-                 call_physics(physMS * timescale); 
-                 if (sim_play == SIM_STEP) sim_pause();
-		 phys_step = 0;
-             }
-       }
+    if (framei == FPSBUF) framei = 0;
 
-        renderlag += elapsed;
-
-        if (renderlag >= renderMS) {
-            renderlag -= renderMS;
-            window_renderall();
-        }
-
-        gameobjects_cleanup();
+    if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
+      timer_update(elapsed * timescale);
+      physlag += elapsed;
+      call_updates(elapsed * timescale);
+      while (physlag >= physMS) {
+        phys_step = 1;
+        physlag -= physMS;
+        phys2d_update(physMS * timescale);
+        call_physics(physMS * timescale);
+        if (sim_play == SIM_STEP) sim_pause();
+        phys_step = 0;
+      }
     }
 
-    return 0;
+    renderlag += elapsed;
+
+    if (renderlag >= renderMS) {
+      renderlag -= renderMS;
+      window_renderall();
+    }
+
+    gameobjects_cleanup();
+  }
+
+  return 0;
 }
 
-int frame_fps()
-{
-    double fpsms = 0;
-    for (int i = 0; i < FPSBUF; i++) {
-      fpsms += framems[i];
-    }
+int frame_fps() {
+  double fpsms = 0;
+  for (int i = 0; i < FPSBUF; i++) {
+    fpsms += framems[i];
+  }
 
-     return FPSBUF / fpsms;
+  return FPSBUF / fpsms;
 }
 
 int sim_playing() { return sim_play == SIM_PLAY; }
@@ -275,19 +268,19 @@ void sim_pause() {
 }
 
 void sim_stop() {
-    /* Revert starting state of everything from sim_start */
-  sim_play =  SIM_STOP;
+  /* Revert starting state of everything from sim_start */
+  sim_play = SIM_STOP;
 }
 
 int phys_stepping() { return phys_step; }
 
 void sim_step() {
   if (sim_paused()) {
-      YughInfo("Step");
-      sim_play = SIM_STEP;
+    YughInfo("Step");
+    sim_play = SIM_STEP;
   }
 }
 
 void set_timescale(float val) {
-    timescale = val;
+  timescale = val;
 }
