@@ -7,6 +7,9 @@
 #include <math.h>
 #include <stb_ds.h>
 #include <stb_image.h>
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb_image_resize.h"
 #include <stdio.h>
 
 struct glrect ST_UNIT = {0.f, 1.f, 0.f, 1.f};
@@ -20,6 +23,19 @@ struct Texture *tex_default;
 
 struct Texture *texture_notex() {
   return texture_pullfromfile("./icons/no_tex.png");
+}
+
+int mip_levels(int width, int height)
+{
+	int levels = 0;
+	while ( width > 1 && height > 1 )
+	{
+		width >>= 1;
+		height >>= 1;
+		levels++;
+	}
+	return levels;
+  
 }
 
 /* If an empty string or null is put for path, loads default texture */
@@ -51,18 +67,42 @@ struct Texture *texture_pullfromfile(const char *path) {
   } else {
       filter = SG_FILTER_LINEAR;
   }
+  
+  sg_image_data sg_img_data;
+  
+  int mips = mip_levels(tex->width, tex->height)+1;
+  
+  int mipw, miph;
+  mipw = tex->width;
+  miph = tex->height;
+  
+  sg_img_data.subimage[0][0] = (sg_range){ .ptr = data, .size = mipw*miph*4 };  
+  
+  unsigned char *mipdata[mips];
+  mipdata[0] = data;
+    
+  for (int i = 1; i < mips; i++) {
+    int w, h;
+    w = mipw>>1;
+    h = miph>>1;
+    mipdata[i] = malloc(w * h * 4);
+    stbir_resize_uint8(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
+    sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
+    
+    mipw = w;
+    miph = h;
+  }
 
   tex->id = sg_make_image(&(sg_image_desc){
       .type = SG_IMAGETYPE_2D,
       .width = tex->width,
       .height = tex->height,
       .usage = SG_USAGE_IMMUTABLE,
-      .min_filter = filter,
-      .mag_filter = filter,
-      .max_anisotropy = 16,
-      .data.subimage[0][0] = {
-          .ptr = data,
-          .size = tex->width * tex->height * 4}});
+      .min_filter = SG_FILTER_NEAREST_MIPMAP_NEAREST,
+      .mag_filter = SG_FILTER_NEAREST,
+      .num_mipmaps = mips,
+      .data = sg_img_data
+    });
 
   if (shlen(texhash) == 0)
     sh_new_arena(texhash);

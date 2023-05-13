@@ -11,6 +11,9 @@
 #include "stb_ds.h"
 #include "sokol/sokol_gfx.h"
 
+#define PAR_STREAMLINES_IMPLEMENTATION
+#include "par/par_streamlines.h"
+
 #include "font.h"
 
 static sg_pipeline grid_pipe;
@@ -292,7 +295,7 @@ void draw_edge(cpVect  *points, int n, struct color color, int thickness)
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
 {
-  float cv[circle_vert_c] = {0};
+  float cv[circle_vert_c];
   cv[0] = color[0];
   cv[1] = color[1];
   cv[2] = color[2];
