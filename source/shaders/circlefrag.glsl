@@ -3,9 +3,7 @@ in vec2 coords;
 
 out vec4 color;
 
-//in int thickness;
 in float radius;
-//in bool fill;
 in vec3 fcolor;
 in vec2 pos;
 

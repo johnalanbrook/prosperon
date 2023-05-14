@@ -176,7 +176,7 @@ void openglInit() {
   shadow_desc.pixel_format = SG_PIXELFORMAT_DEPTH;
   ddimg = sg_make_image(&shadow_desc);
 
-    duck = MakeModel("sponza.glb");  
+//    duck = MakeModel("sponza.glb");  
   
   sg_shadow.pass = sg_make_pass(&(sg_pass_desc){
     .color_attachments[0].image = depth_img,
@@ -290,7 +290,9 @@ void openglRender(struct window *window) {
   //// DEBUG
   if (debugDrawPhysics)
     gameobject_draw_debugs();
-
+  
+  float c[3] = {0.3,0.5,0.7};
+  draw_circle(100,100,40,2,c,0);
   call_debugs();
   debug_flush();
  

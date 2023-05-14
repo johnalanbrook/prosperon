@@ -35,7 +35,6 @@ int mip_levels(int width, int height)
 		levels++;
 	}
 	return levels;
-  
 }
 
 /* If an empty string or null is put for path, loads default texture */

@@ -26,6 +26,13 @@ static sg_bindings rect_bind;
 static sg_shader rect_shader;
 static int rect_c = 0;
 
+static sg_pipeline poly_pipe;
+static sg_bindings poly_bind;
+static sg_shader poly_shader;
+static int poly_c = 0;
+static int poly_v = 0;
+static int poly_vc = 7;
+
 static sg_pipeline circle_pipe;
 static sg_bindings circle_bind;
 static sg_shader csg;
@@ -37,7 +44,7 @@ void debug_flush()
   sg_apply_pipeline(circle_pipe);
   sg_apply_bindings(&circle_bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-
+  
   sg_draw(0,4,circle_count);
   circle_count = 0;
 
@@ -46,6 +53,13 @@ void debug_flush()
   sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
   sg_draw(0,rect_c*2,1);
   rect_c = 0;
+  
+  sg_apply_pipeline(poly_pipe);
+  sg_apply_bindings(&poly_bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  sg_draw(0,poly_c,1);
+  poly_c = 0;
+  poly_v = 0;
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
@@ -165,6 +179,41 @@ void debugdraw_init()
     .size = sizeof(float)*2*10000,
     .usage = SG_USAGE_STREAM
   });
+  
+  poly_shader = sg_make_shader(&(sg_shader_desc){
+    .vs.source = slurp_text("shaders/poly_v.glsl"),
+    .fs.source = slurp_text("shaders/poly_f.glsl"),
+    .vs.uniform_blocks[0] = projection_ubo,
+  });
+  
+  poly_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = poly_shader,
+    .layout = {
+      .attrs = { [0].format = SG_VERTEXFORMAT_FLOAT2,
+		 [1].format = SG_VERTEXFORMAT_FLOAT2,
+		 [2].format = SG_VERTEXFORMAT_FLOAT3
+       }
+    },
+    .index_type = SG_INDEXTYPE_UINT32
+  });
+  
+  poly_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(float)*poly_vc*1000,
+    .usage = SG_USAGE_STREAM,
+    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+  });
+  
+/*  poly_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(float)*1000,
+    .usage = SG_USAGE_STREAM,
+  });
+*/
+      
+  poly_bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(uint32_t)*6*1000,
+    .usage = SG_USAGE_STREAM,
+    .type = SG_BUFFERTYPE_INDEXBUFFER
+  });
 }
 
 void draw_line(cpVect s, cpVect e, float *color)
@@ -240,57 +289,66 @@ void inflatepoints(cpVect *r, cpVect *p, float d, int n)
 
 void draw_edge(cpVect  *points, int n, struct color color, int thickness)
 {
+  return;
     static_assert(sizeof(cpVect) == 2*sizeof(float));
 
-    float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
+  float col[3] = {(float)color.r/255, (float)color.g/255, (float)color.b/255};
+  
+  /* TODO: Should be dashed, and filled. Use a texture. */  
+    
+  parsl_position par_v[n];
+  
+  for (int i = 0; i < n; i++) {
+    par_v[i].x = points[i].x;
+    par_v[i].y = points[i].y;
+  }
 
-//    shader_use(rectShader);
-//    shader_setvec3(rectShader, "linecolor", col);
-/*
-    if (thickness <= 1) {
-//      glLineStipple(1, 0x00FF);
-//      glEnable(GL_LINE_STIPPLE);
-      shader_setfloat(rectShader, "alpha", 1.f);
-      glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-      glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
-      glBindVertexArray(rectVAO);
-      glEnableVertexAttribArray(0);
-      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-      shader_setfloat(rectShader, "alpha", 1.f);
-      glDrawArrays(GL_LINE_STRIP, 0, n);
-    } else {
-      shader_setfloat(rectShader, "alpha", 0.1f);
-      thickness /= 2;
-      glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-      glBindVertexArray(rectVAO);
-      glEnableVertexAttribArray(0);
-      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-      cpVect inflate_out[n];
-      cpVect inflate_in[n];
-
-      inflatepoints(inflate_out, points, thickness, n);
-      inflatepoints(inflate_in, points, -thickness, n);
-      cpVect interleaved[n*2];
-      for (int i = 0; i < n; i++) {
-        interleaved[i*2] = inflate_in[i];
-	interleaved[i*2+1] = inflate_out[i];
-      }
-      glBufferData(GL_ARRAY_BUFFER, sizeof(interleaved), interleaved, GL_DYNAMIC_DRAW);
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, n*2);
-
-      shader_setfloat(rectShader, "alpha", 1.f);
-
-      cpVect inlined[n*2];
-      for (int i = 0; i < n; i++)
-        inlined[i] = inflate_out[n-1-i];
-      memcpy(inlined+n,inflate_in,sizeof(inflate_in));
-      glBufferData(GL_ARRAY_BUFFER,sizeof(inlined),inlined,GL_DYNAMIC_DRAW);
-      glDrawArrays(GL_LINE_LOOP,0,n*2);
+  uint16_t spine_lens[] = {n};
+  
+  parsl_context *par_ctx = parsl_create_context((parsl_config){
+    .thickness = thickness
+  });
+  
+  parsl_mesh *mesh = parsl_mesh_from_lines(par_ctx, (parsl_spine_list){
+    .num_vertices = n,
+    .num_spines = 1,
+    .vertices = points,
+    .spine_lengths = spine_lens,
+  });
+  
+  sg_range pt = {
+    .ptr = mesh->positions,
+    .size = sizeof(float)*2*mesh->num_vertices
+  };
+  
+  for (int i = 0; i < mesh->num_triangles*3; i++)
+    mesh->triangle_indices[i] += poly_v;
+    
+  float mesh_colors[3*mesh->num_vertices];
+  
+  for (int i = 0; i < 3*mesh->num_vertices; i+=3)
+    for (int j = 0; j < 3; j++)
+      mesh_colors[i+j] = col[j];
       
-    }
-*/
+      
+  sg_range it = {
+    .ptr = mesh->triangle_indices,
+    .size = sizeof(uint32_t)*mesh->num_triangles*3
+  };
+  
+  sg_range ct = {
+    .ptr = mesh_colors,
+    .size = sizeof(float)*mesh->num_vertices*3
+  };
+  
+  sg_append_buffer(poly_bind.vertex_buffers[0], &pt);
+  sg_append_buffer(poly_bind.index_buffer, &it);
+  sg_append_buffer(poly_bind.vertex_buffers[1], &ct);
+  
+  poly_c += mesh->num_triangles*3;
+  poly_v += mesh->num_vertices;
+  
+  parsl_destroy_context(par_ctx);
 }
 
 void draw_circle(int x, int y, float radius, int pixels, float *color, int fill)
@@ -379,46 +437,62 @@ void draw_points(struct cpVect *points, int n, float size, float *color)
 
 void draw_poly(cpVect *points, int n, float *color)
 {
-  if (n == 2) {
-    sg_range t;
-    t.ptr = points;
-    t.size = sizeof(cpVect)*2;
-    sg_append_buffer(rect_bind.vertex_buffers[0], &t);
-    rect_c += 1;
-    return;
-  } else if (n <= 1) return;
-
-
-  cpVect buffer[2*n];
+  parsl_position par_v[n];
+  
   for (int i = 0; i < n; i++) {
-    buffer[i*2] = points[i];
-    buffer[i*2+1] = points[i+1];
+    par_v[i].x = points[i].x;
+    par_v[i].y = points[i].y;
   }
 
-  buffer[2*n-1] = points[0];
+  uint16_t spine_lens[] = {n};
+  
+  parsl_context *par_ctx = parsl_create_context((parsl_config){
+    .thickness = 1,
+    .flags = PARSL_FLAG_ANNOTATIONS
+  });
+  
+  parsl_mesh *mesh = parsl_mesh_from_lines(par_ctx, (parsl_spine_list){
+    .num_vertices = n,
+    .num_spines = 1,
+    .vertices = par_v,
+    .spine_lengths = spine_lens,
+    .closed = true
+  });
+  
+  for (int i = 0; i < mesh->num_triangles*3; i++)
+    mesh->triangle_indices[i] += poly_v;
+      
+  sg_range it = {
+    .ptr = mesh->triangle_indices,
+    .size = sizeof(uint32_t)*mesh->num_triangles*3
+  };
+  
+  float vertices[poly_vc*mesh->num_vertices];
+  
+  for (int i = 0, vert = 0; i < mesh->num_vertices; i++, vert+=poly_vc) {
+    vertices[vert] = mesh->positions[i].x;
+    vertices[vert+1] = mesh->positions[i].y;
+    vertices[vert+2] = mesh->annotations[i].u_along_curve;
+    vertices[vert+3] = mesh->annotations[i].v_across_curve;
+    vertices[vert+4] = color[0];
+    vertices[vert+5] = color[1];
+    vertices[vert+6] = color[2];
+  }
+  
+  sg_range vvt = {
+    .ptr = vertices,
+    .size = sizeof(float)*poly_vc*mesh->num_vertices
+  };
 
-  sg_range t;
-  t.ptr = buffer;
-  t.size = sizeof(cpVect)*2*n;
-
-  sg_append_buffer(rect_bind.vertex_buffers[0], &t);
-
-  rect_c += n;
-/*    shader_use(rectShader);
-    shader_setvec3(rectShader, "linecolor", color);
-    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * n * 2, points, GL_DYNAMIC_DRAW);
-    glBindVertexArray(rectVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-
-    shader_setfloat(rectShader, "alpha", 0.1f);
-    glDrawArrays(GL_POLYGON, 0, n);
-
-    shader_setfloat(rectShader, "alpha", 1.f);
-    glDrawArrays(GL_LINE_LOOP, 0, n);
-*/
+  sg_append_buffer(poly_bind.vertex_buffers[0], &vvt);  
+  sg_append_buffer(poly_bind.index_buffer, &it);
+  
+  poly_c += mesh->num_triangles*3;
+  poly_v += mesh->num_vertices;
+  
+  parsl_destroy_context(par_ctx);
+  
+  return;
 }
 
 void debugdraw_flush()
