@@ -119,10 +119,10 @@ int js_arrlen(JSValue v) {
 
 struct rgba js2color(JSValue v) {
   struct rgba color = {
-    .r = js2int(js_arridx(v, 0)),
-    .g = js2int(js_arridx(v, 1)),
-    .b = js2int(js_arridx(v, 2)),
-    .a = 255
+    .r = js2int(js_arridx(v,0)),
+    .g = js2int(js_arridx(v,1)),
+    .b = js2int(js_arridx(v,2)),
+    .a = js2int(js_arridx(v,3)),
   };
   return color;
 }
@@ -719,7 +719,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 47:
-    draw_grid(js2int(argv[1]), js2int(argv[2]), color_white);
+    draw_grid(js2int(argv[1]), js2int(argv[2]), js2color(argv[3]));
     return JS_NULL;
 
   case 48:

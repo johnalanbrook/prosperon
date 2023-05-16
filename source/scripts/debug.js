@@ -8,8 +8,9 @@ var Gizmos = {
 
 
 var Debug = {
-  draw_grid(width, span) {
-    cmd(47, width, span);
+  draw_grid(width, span, color) {
+    color = color ? color : Color.green;
+    cmd(47, width, span, color);
   },
   
   point(pos, size, color) {

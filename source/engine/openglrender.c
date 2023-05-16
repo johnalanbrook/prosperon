@@ -291,8 +291,6 @@ void openglRender(struct window *window) {
   if (debugDrawPhysics)
     gameobject_draw_debugs();
   
-  struct rgba c = {100,130,200,255};
-  draw_circle(100,100,40,2,c,0);
   call_debugs();
   debug_flush();
  

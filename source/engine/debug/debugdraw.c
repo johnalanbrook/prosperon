@@ -26,6 +26,18 @@ struct point_vertex {
 };
 static int point_c = 0;
 
+static sg_shader line_shader;
+static sg_pipeline line_pipe;
+static sg_bindings line_bind;
+struct line_vert {
+  cpVect pos;
+  float dist;
+  struct rgba color;
+  float seg_len;
+};
+static int line_c = 0;
+static int line_v = 0;
+
 static sg_pipeline grid_pipe;
 static sg_bindings grid_bind;
 static sg_shader grid_shader;
@@ -74,6 +86,13 @@ void debug_flush()
   sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
   sg_draw(0,point_c,1);
   point_c = 0;
+  
+  sg_apply_pipeline(line_pipe);
+  sg_apply_bindings(&line_bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  sg_draw(0,line_c,1);
+  line_c = 0;
+  line_v = 0;
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
@@ -116,6 +135,38 @@ void debugdraw_init()
   point_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct point_vertex)*5000,
     .usage = SG_USAGE_STREAM
+  });
+  
+  line_shader = sg_make_shader(&(sg_shader_desc){
+    .vs.source = slurp_text("shaders/linevert.glsl"),
+    .fs.source = slurp_text("shaders/linefrag.glsl"),
+    .vs.uniform_blocks[0] = projection_ubo
+  });
+  
+  line_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = line_shader,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
+	[1].format = SG_VERTEXFORMAT_FLOAT, /* dist */
+	[2].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
+	[3].format = SG_VERTEXFORMAT_FLOAT /* seg length */
+      }
+    },
+    .primitive_type = SG_PRIMITIVETYPE_LINES,
+    .index_type = SG_INDEXTYPE_UINT16,
+    .colors[0].blend = blend_trans
+  });
+  
+  line_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(struct line_vert)*5000,
+    .usage = SG_USAGE_STREAM
+  });
+  
+  line_bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(uint16_t)*5000,
+    .usage = SG_USAGE_STREAM,
+    .type = SG_BUFFERTYPE_INDEXBUFFER
   });
   
     csg = sg_make_shader(&(sg_shader_desc){
@@ -223,10 +274,57 @@ void debugdraw_init()
   });
 }
 
-void draw_line(cpVect s, cpVect e, struct rgba color)
+void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len)
 {
-  cpVect verts[2] = {s, e};
-  draw_poly(verts, 2, color);
+  if (a_n < 2) return;
+  int n = a_n+1;
+  cpVect points[n];
+  
+  for (int i = 0; i < n; i++)
+    points[i] = a_points[i];
+    
+  points[n-1] = a_points[0];
+
+  struct line_vert v[n];
+  float dist = 0;
+  
+  for (int i = 0; i < n-1; i++) {
+    v[i].pos = points[i];
+    v[i].dist = dist;
+    v[i].color = color;
+    v[i].seg_len = seg_len;
+    dist += cpvdist(points[i], points[i+1]);
+  }
+  
+  v[n-1].pos = points[n-1];
+  v[n-1].dist = dist;
+  v[n-1].color = color;
+  v[n-1].seg_len = seg_len;
+  
+  int i_c = (n-1)*2;
+  
+  uint16_t idxs[i_c];
+  
+  for (int i = 0, d = 0; i < n-1; i++, d+=2) {
+    idxs[d] = i + line_v;
+    idxs[d+1] = i+1 + line_v;
+  }
+  
+  sg_range vr = {
+    .ptr = v,
+    .size = sizeof(struct line_vert)*n
+  };
+  
+  sg_range ir = {
+    .ptr = idxs,
+    .size = sizeof(uint16_t)*i_c
+  };
+  
+  sg_append_buffer(line_bind.vertex_buffers[0], &vr);
+  sg_append_buffer(line_bind.index_buffer, &ir);
+  
+  line_c += i_c;
+  line_v += n;
 }
 
 cpVect center_of_vects(cpVect *v, int n)
@@ -310,7 +408,8 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   
   parsl_context *par_ctx = parsl_create_context((parsl_config){
     .thickness = 1,
-    .flags = PARSL_FLAG_ANNOTATIONS
+    .flags = PARSL_FLAG_ANNOTATIONS,
+    .u_mode = PAR_U_MODE_DISTANCE,
   });
   
   parsl_mesh *mesh = parsl_mesh_from_lines(par_ctx, (parsl_spine_list){
@@ -385,8 +484,9 @@ void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
 }
 
 void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int capsize)
-{
-  draw_line(start, end, color);
+{ 
+  cpVect points[2] = {start, end};
+  draw_line(points, 2, color, 0);
   draw_cppoint(end, capsize, color);
 }
 
@@ -412,37 +512,27 @@ void draw_grid(int width, int span, struct rgba color)
   sg_draw(0,4,1);
 }
 
-void draw_point(int x, int y, float r, struct rgba color)
-{
-  struct point_vertex p;
-  p.pos.x = x;
-  p.pos.y = y;
-  p.color = color;
-  p.radius = r;
-  
-  sg_range pt = {
-    .ptr = &p,
-    .size = sizeof(p)
-  };
-  
-  sg_append_buffer(point_bind.vertex_buffers[0], &pt);
-  point_c++;
-}
-
 void draw_cppoint(struct cpVect point, float r, struct rgba color)
 {
-  draw_point(point.x, point.y, r, color);
+  struct point_vertex p = {
+    .pos = point,
+    .color = color,
+    .radius = r
+  };
+  
+  sg_append_buffer(point_bind.vertex_buffers[0], SG_RANGE_REF(p));
+  point_c++;
 }
 
 void draw_points(struct cpVect *points, int n, float size, struct rgba color)
 {
     for (int i = 0; i < n; i++)
-        draw_point(points[i].x, points[i].y, size, color);
+        draw_cppoint(points[i], size, color);
 }
 
 void draw_poly(cpVect *points, int n, struct rgba color)
 {
-  draw_edge(points,n,color,1,1,0);
+  draw_line(points, n, color, 10);
   
   color.a = 40;
   

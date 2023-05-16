@@ -249,10 +249,7 @@ void gameobject_setpos(struct gameobject *go, cpVect vec) {
 void object_gui(struct gameobject *go) {
   /*
       float temp_pos[2];
-      temp_pos[0] = cpBodyGetPosition(go->body).x;
-      temp_pos[1] = cpBodyGetPosition(go->body).y;
-
-      draw_point(temp_pos[0], temp_pos[1], 3);
+      draw_cppoint(cpBodyGetPosition(go->body), 3);
 
       nuke_property_float2("Position", -1000000.f, temp_pos, 1000000.f, 1.f, 0.5f);
 
@@ -327,7 +324,7 @@ void gameobject_draw_debug(int go) {
     .g = 255,
     .a = 255
   };
-  draw_point(pos.x, pos.y, 3.f, color);
+  draw_cppoint(pos, 3.f, color);
   cpBodyEachShape(g->body, body_draw_shapes_dbg, NULL);
 }
 
