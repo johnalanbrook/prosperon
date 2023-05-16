@@ -4,7 +4,7 @@ in vec2 coords;
 out vec4 color;
 
 in float radius;
-in vec3 fcolor;
+in vec4 fcolor;
 in vec2 pos;
 
 void main()
@@ -19,9 +19,9 @@ void main()
     float dist = sqrt(dot(coords, coords));
 
     if (dist >= R2 && dist <= R1)
-        color = vec4(fcolor, 1.f);
+        color = fcolor;
     else if (dist < R2)
-        color = vec4(fcolor, 0.1f);
+        color = vec4(fcolor.xyz, 0.1f);
     else
         discard;
 }

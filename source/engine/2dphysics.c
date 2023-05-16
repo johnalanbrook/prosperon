@@ -24,31 +24,45 @@
 cpSpace *space = NULL;
 float phys2d_gravity = -50.f;
 
-float dbg_color[3] = {0.836f, 1.f, 0.45f};
-float trigger_color[3] = {0.278f, 0.953f, 1.f};
-float disabled_color[3] = {0.58f, 0.58f, 0.58f};
-float dynamic_color[3] = {255 / 255, 70 / 255, 46 / 255};
-float kinematic_color[3] = {255 / 255, 206 / 255, 71 / 255};
-float static_color[3] = {0.22f, 0.271f, 1.f};
+struct rgba color_white = {255,255,255,255};
+struct rgba color_black = {0,0,0,255};
+
+struct rgba dbg_color = {
+  .r = 0.836*255,
+  .g = 255,
+  .b = 0.45*255,
+  .a = 255
+};
+struct rgba trigger_color = {
+  .r = 0.278*255,
+  .g = 0.953*255,
+  .b = 255,
+  .a = 255
+};
+struct rgba disabled_color = {
+  .r = 0.58*255,
+  .g = 0.58*255,
+  .b = 0.58*255,
+  .a = 255
+};
+struct rgba dynamic_color = {
+  .r = 255,
+  .g = 70,
+  .b = 46,
+  .a = 255
+};
+struct rgba kinematic_color = {255, 206, 71, 255};
+struct rgba static_color = {
+  .r = 0.22*255,
+  .g = 0.271*255,
+  .b = 255,
+  .a = 255
+};
 
 unsigned int category_masks[32];
 
 void set_cat_mask(int cat, unsigned int mask) {
   category_masks[cat] = mask;
-}
-
-void color2float(struct color color, float *fcolor) {
-  fcolor[0] = (float)color.r / 255;
-  fcolor[1] = (float)color.g / 255;
-  fcolor[2] = (float)color.b / 255;
-}
-
-struct color float2color(float *fcolor) {
-  struct color new;
-  new.r = fcolor[0] * 255;
-  new.b = fcolor[1] * 255;
-  new.g = fcolor[2] * 255;
-  return new;
 }
 
 cpShape *phys2d_query_pos(cpVect pos) {
@@ -153,7 +167,7 @@ int cpshape_enabled(cpShape *c) {
   return 1;
 }
 
-float *shape_outline_color(cpShape *shape) {
+struct rgba shape_outline_color(cpShape *shape) {
   switch (cpBodyGetType(cpShapeGetBody(shape))) {
   case CP_BODY_TYPE_DYNAMIC:
     return dynamic_color;
@@ -168,7 +182,7 @@ float *shape_outline_color(cpShape *shape) {
   return static_color;
 }
 
-float *shape_color(cpShape *shape) {
+struct rgba shape_color(cpShape *shape) {
   if (!cpshape_enabled(shape)) return disabled_color;
 
   if (cpShapeGetSensor(shape)) return trigger_color;
@@ -176,13 +190,8 @@ float *shape_color(cpShape *shape) {
   return dbg_color;
 }
 
-struct color shape_color_s(cpShape *shape) {
-  float *c = shape_color(shape);
-  struct color col;
-  col.r = c[0] * 255;
-  col.g = c[1] * 255;
-  col.b = c[2] * 255;
-  return col;
+struct rgba shape_color_s(cpShape *shape) {
+  return shape_color(shape);
 }
 
 void phys2d_init() {
@@ -416,7 +425,7 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
 }
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
-  float *color = shape_color(poly->shape.shape);
+  struct rgba color = shape_color(poly->shape.shape);
 
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
@@ -549,7 +558,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
     drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i]);
   }
 
-  draw_edge(drawpoints, arrlen(edge->points), shape_color_s(edge->shapes[0]), edge->thickness * 2);
+  draw_edge(drawpoints, arrlen(edge->points), shape_color_s(edge->shapes[0]), edge->thickness * 2, 0,0);
   draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 

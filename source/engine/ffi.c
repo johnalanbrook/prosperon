@@ -116,11 +116,14 @@ int js_arrlen(JSValue v) {
   JS_ToInt32(js, &len, JS_GetPropertyStr(js, v, "length"));
   return len;
 }
-struct color js2color(JSValue v) {
-  struct color color = {0, 0, 0};
-  color.r = js2int(js_arridx(v, 0));
-  color.g = js2int(js_arridx(v, 1));
-  color.b = js2int(js_arridx(v, 2));
+
+struct rgba js2color(JSValue v) {
+  struct rgba color = {
+    .r = js2int(js_arridx(v, 0)),
+    .g = js2int(js_arridx(v, 1)),
+    .b = js2int(js_arridx(v, 2)),
+    .a = 255
+  };
   return color;
 }
 
@@ -189,8 +192,7 @@ JSValue duk_gui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   cpVect pos = js2vec2(argv[1]);
 
   float size = js2number(argv[2]);
-  const float white[3] = {1.f, 1.f, 1.f};
-  renderText(s, &pos, size, white, 500, -1);
+  renderText(s, &pos, size, color_white, 500, -1);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
@@ -200,10 +202,9 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   cpVect pos = js2vec2(argv[1]);
 
   float size = js2number(argv[2]);
-  struct color c = js2color(argv[3]);
-  const float col[3] = {(float)c.r / 255, (float)c.g / 255, (float)c.b / 255};
+  struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[4]);
-  JSValue ret = JS_NewInt64(js, renderText(s, &pos, size, col, wrap, -1));
+  JSValue ret = JS_NewInt64(js, renderText(s, &pos, size, c, wrap, -1));
   JS_FreeCString(js, s);
   return ret;
 }
@@ -213,11 +214,10 @@ JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst
   cpVect pos = js2vec2(argv[1]);
 
   float size = js2number(argv[2]);
-  struct color c = js2color(argv[3]);
-  const float col[3] = {(float)c.r / 255, (float)c.g / 255, (float)c.b / 255};
+  struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[5]);
   int cursor = js2int(argv[4]);
-  renderText(s, &pos, size, col, wrap, cursor);
+  renderText(s, &pos, size, c, wrap, cursor);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
@@ -598,11 +598,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 16:
-    color2float(js2color(argv[1]), dbg_color);
+    dbg_color = js2color(argv[1]);
     break;
 
   case 17:
-    color2float(js2color(argv[1]), trigger_color);
+    trigger_color = js2color(argv[1]);
     break;
 
   case 18:
@@ -719,7 +719,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 47:
-    draw_grid(js2int(argv[1]), js2int(argv[2]));
+    draw_grid(js2int(argv[1]), js2int(argv[2]), color_white);
     return JS_NULL;
 
   case 48:
@@ -853,7 +853,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 83:
-    draw_edge(js2cpvec2arr(argv[1]), 2, js2color(argv[2]), 1);
+    draw_edge(js2cpvec2arr(argv[1]), 2, js2color(argv[2]), 1, 0, 0);
     return JS_NULL;
 
   case 84:
@@ -909,7 +909,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 96:
-    color2float(js2color(argv[2]), id2sprite(js2int(argv[1]))->color);
+//    id2sprite(js2int(argv[1]))->color = js2color(argv[2]);
     break;
 
   case 97:

@@ -1,9 +1,9 @@
 #version 330 core
 in vec2 apos;
 in vec2 auv;
-in vec3 acolor;
+in vec4 acolor;
 
-out vec3 color;
+out vec4 color;
 out vec2 uv;
 
 uniform mat4 proj;

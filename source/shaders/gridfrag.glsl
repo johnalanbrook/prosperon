@@ -2,15 +2,16 @@
 out vec4 frag_color;
 
 in vec2 apos;
-vec2 bpos;
+
 uniform float thickness; /* thickness in pixels */
 uniform float span;
-uniform vec3 color;
+uniform vec4 color;
 
 void main(void)
 {
     float t = thickness / span;
     t /= 2.0;
+    vec2 bpos;
     bpos.x = mod(apos.x, span) / span;
     bpos.y = mod(apos.y, span) / span;
     bpos.x -= t;
@@ -23,5 +24,5 @@ void main(void)
 
     comp += t;
 
-    frag_color = vec4(color, 1.0);
+    frag_color = color;
 }

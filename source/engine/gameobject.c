@@ -321,7 +321,12 @@ void gameobject_draw_debug(int go) {
   if (!g || !g->body) return;
 
   cpVect pos = cpBodyGetPosition(g->body);
-  float color[3] = {0.76f, 0.38f, 1.f};
+  struct rgba color = {
+    .r = 0.76*255,
+    .b = 0.38*255,
+    .g = 255,
+    .a = 255
+  };
   draw_point(pos.x, pos.y, 3.f, color);
   cpBodyEachShape(g->body, body_draw_shapes_dbg, NULL);
 }

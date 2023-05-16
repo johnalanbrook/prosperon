@@ -10,12 +10,24 @@ extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
 
-extern float dbg_color[3];
-extern float trigger_color[3];
-extern float disabled_color[3];
-extern float dynamic_color[3];
-extern float kinematic_color[3];
-extern float static_color[3];
+struct rgba {
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+  unsigned char a;
+};
+
+extern struct rgba color_white;
+extern struct rgba color_black;
+
+
+extern struct rgba dbg_color;
+extern struct rgba trigger_color;
+extern struct rgba disabled_color;
+extern struct rgba dynamic_color;
+extern struct rgba kinematic_color;
+extern struct rgba static_color;
+
 
 struct phys2d_shape {
   cpShape *shape;
@@ -126,15 +138,7 @@ int shape_is_enabled(struct phys2d_shape *shape);
 void shape_set_sensor(struct phys2d_shape *shape, int sensor);
 int shape_get_sensor(struct phys2d_shape *shape);
 
-struct color {
-  unsigned char r;
-  unsigned char g;
-  unsigned char b;
-};
-
-void color2float(struct color, float *fcolor);
-struct color float2color(float *fcolor);
-struct color shape_color_s(cpShape *shape);
+struct rgba shape_color_s(cpShape *shape);
 
 void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(int go);

@@ -4,6 +4,7 @@
 #include "mathc.h"
 #include "sokol/sokol_gfx.h"
 #include "texture.h"
+#include "2dphysics.h"
 
 struct shader;
 struct window;
@@ -25,9 +26,9 @@ struct sFont {
 
 void font_init(struct shader *s);
 struct sFont *MakeFont(const char *fontfile, int height);
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, float color[3]);
+void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct rgba color);
 void text_settype(struct sFont *font);
-int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw, int caret);
+int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color, float lw, int caret);
 
 // void text_frame();
 void text_flush();

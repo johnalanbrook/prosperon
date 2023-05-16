@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <window.h>
+#include <chipmunk/chipmunk.h>
+#include "2dphysics.h"
 
 #include "openglrender.h"
 
@@ -18,6 +20,7 @@
 
 struct sFont *font;
 
+#define max_chars 40000
 
 unsigned char *slurp_file(const char *filename) {
   FILE *f = fopen(filename, "rb");
@@ -36,7 +39,11 @@ unsigned char *slurp_file(const char *filename) {
 
 char *slurp_text(const char *filename) {
   FILE *f = fopen(filename, "r'");
-  if (!f) return NULL;
+  
+  if (!f) {
+    YughWarn("File %s doesn't exist.", filename);
+    return NULL;
+  }
 
   char *buf;
   long int fsize;
@@ -64,10 +71,15 @@ int slurp_write(const char *txt, const char *filename) {
 static sg_shader fontshader;
 static sg_bindings bind_text;
 static sg_pipeline pipe_text;
+struct text_vert {
+  cpVect pos;
+  cpVect wh;
+  struct uv_n uv;
+  struct uv_n st;
+  struct rgba color;
+};
 
-static float text_buffer[16 * 40000];
-static uint16_t text_idx_buffer[6 * 40000];
-static float color_buffer[3 * 40000];
+static struct text_vert text_buffer[max_chars];
 
 void font_init(struct shader *textshader) {
   fontshader = sg_make_shader(&(sg_shader_desc){
@@ -85,34 +97,36 @@ void font_init(struct shader *textshader) {
       .shader = fontshader,
       .layout = {
           .attrs = {
-              [0].format = SG_VERTEXFORMAT_FLOAT2,
-              [0].buffer_index = 0,
-              [1].format = SG_VERTEXFORMAT_FLOAT2,
-              [1].buffer_index = 0,
-              [2].format = SG_VERTEXFORMAT_FLOAT3,
-              [2].buffer_index = 1,
+              [0].format = SG_VERTEXFORMAT_FLOAT2, /* verts */
+	      [0].buffer_index = 1,
+	      [1].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
+	      [2].format = SG_VERTEXFORMAT_FLOAT2, /* width and height */
+              [3].format = SG_VERTEXFORMAT_USHORT2N, /* uv pos */
+	      [4].format = SG_VERTEXFORMAT_USHORT2N, /* uv width and height */
+              [5].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
           },
+	.buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
       },
-      .label = "text pipeline",
-      .index_type = SG_INDEXTYPE_UINT16});
+      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,      
+    });
+    
+  float text_verts[8] = {
+    0,0,
+    0,1,
+    1,0,
+    1,1
+  };
+    
+  bind_text.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+    .data = SG_RANGE(text_verts),
+    .usage = SG_USAGE_IMMUTABLE
+  });
 
   bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float) * 16 * 40000,
+      .size = sizeof(struct text_vert)*max_chars,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"});
-
-  bind_text.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float) * 3 * 4 * 40000,
-      .type = SG_BUFFERTYPE_VERTEXBUFFER,
-      .usage = SG_USAGE_STREAM,
-      .label = "text color buffer"});
-
-  bind_text.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(uint16_t) * 6 * 40000,
-      .type = SG_BUFFERTYPE_INDEXBUFFER,
-      .usage = SG_USAGE_STREAM,
-      .label = "text index buffer"});
 
   font = MakeFont("LessPerfectDOSVGA.ttf", 16);
   bind_text.fs_images[0] = font->texID;
@@ -205,66 +219,31 @@ void text_flush() {
 
   sg_range verts;
   verts.ptr = text_buffer;
-  verts.size = sizeof(float) * 16 * curchar;
+  verts.size = sizeof(struct text_vert) * curchar;
   sg_update_buffer(bind_text.vertex_buffers[0], &verts);
-  
-  sg_range idxs;
-  idxs.ptr = text_idx_buffer;
-  idxs.size = sizeof(uint16_t) * 6 * curchar;
-  sg_update_buffer(bind_text.index_buffer, &idxs);
 
-  sg_range c = {
-      .ptr = color_buffer,
-      .size = sizeof(float) * 3 * 4 * curchar};
-
-  sg_update_buffer(bind_text.vertex_buffers[1], &c);
-
-  sg_draw(0, 6 * curchar, 1);
+  sg_draw(0, 4, curchar);
   curchar = 0;
-}
-
-void fill_charverts(float *verts, float cursor[2], float scale, struct Character c, float *offset) {
-  float w = c.Size[0] * scale;
-  float h = c.Size[1] * scale;
-
-  float xpos = cursor[0] + (c.Bearing[0] + offset[0]) * scale;
-  float ypos = cursor[1] - (c.Bearing[1] + offset[1]) * scale;
-
-  float v[16] = {
-      xpos, ypos, c.rect.s0, c.rect.t1,
-      xpos + w, ypos, c.rect.s1, c.rect.t1,
-      xpos, ypos + h, c.rect.s0, c.rect.t0,
-      xpos + w, ypos + h, c.rect.s1, c.rect.t0};
-
-  memcpy(verts, v, sizeof(float) * 16);
 }
 
 static int drawcaret = 0;
 
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, float color[3]) {
-  float shadowcolor[3] = {0.f, 0.f, 0.f};
-  float shadowcursor[2];
-
-  float verts[16];
+void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct rgba color) {
   float offset[2] = {-1, 1};
+  
+  struct text_vert vert;
+  
+  vert.wh.x = c.Size[0] * scale;
+  vert.wh.y = c.Size[1] * scale;
+  vert.pos.x = cursor[0] - (c.Bearing[0] + offset[0]) * scale;
+  vert.pos.y = cursor[1] - (c.Bearing[1] + offset[1]) * scale;
+  vert.uv.u = c.rect.s0*USHRT_MAX;
+  vert.uv.v = c.rect.t0*USHRT_MAX;
+  vert.st.u = (c.rect.s1-c.rect.s0)*USHRT_MAX;
+  vert.st.v = (c.rect.t1-c.rect.t0)*USHRT_MAX;
+  vert.color = color;
 
-  fill_charverts(verts, cursor, scale, c, offset);
-
-  /* Check if the vertex is off screen */
-  if (verts[5] < -window_i(0)->width / 2.f || verts[9] < -window_i(0)->height / 2.f || verts[0] > window_i(0)->width / 2.f || verts[1] > window_i(0)->height / 2.f)
-    return;
-
-  uint16_t pts[6] = {
-      0, 1, 2,
-      2, 1, 3};
-
-  for (int i = 0; i < 6; i++)
-    pts[i] += curchar * 4;
-
-  memcpy(text_buffer + (16 * curchar), verts, sizeof(verts));
-  for (int i = 0; i < 4; i++)
-    memcpy(color_buffer + (12 * curchar) + (3 * i), color, sizeof(color));
-  memcpy(text_idx_buffer + (6 * curchar), pts, sizeof(pts));
+  memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
   curchar++;
   return;
 
@@ -291,17 +270,13 @@ void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, float c
       fill_charverts(verts, cursor, scale, c, offset);
       sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
   */
-  offset[0] = offset[1] = 0;
-  fill_charverts(verts, cursor, scale, c, offset);
-
-  sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
 }
 
 void text_settype(struct sFont *mfont) {
   font = mfont;
 }
 
-int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw, int caret) {
+int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color, float lw, int caret) {
   int len = strlen(text);
   drawcaret = caret;
 
@@ -312,7 +287,7 @@ int renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3]
   const unsigned char *line, *wordstart, *drawstart;
   line = drawstart = (unsigned char *)text;
 
-  float *usecolor = color;
+  struct rgba usecolor = color;
 
   while (*line != '\0') {
     if (isblank(*line)) {
