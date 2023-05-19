@@ -4,23 +4,22 @@
 #include <pl_mpeg.h>
 #include <stdint.h>
 
+#include "sokol/sokol_gfx.h"
+
 struct soundstream;
 
 struct datastream {
   plm_t *plm;
-  struct shader *shader;
   double last_time;
   int playing;
   int audio_device;
-  uint32_t texture_y;
-  uint32_t texture_cb;
-  uint32_t texture_cr;
+  sg_image img;
+  int width;
+  int height;
   struct soundstream *astream;
 };
 
 struct Texture;
-
-extern struct shader *vid_shader;
 
 struct datastream *MakeDatastream();
 void ds_openvideo(struct datastream *ds, const char *path, const char *adriver);

@@ -14,24 +14,26 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-struct shader *vid_shader;
+#include "sokol/sokol_gfx.h"
 
-static void ds_update_texture(uint32_t unit, uint32_t texture, plm_plane_t *plane) {
-  /*
-      glActiveTexture(unit);
-      glBindTexture(GL_TEXTURE_2D, texture);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane->width, plane->height, 0, GL_RED, GL_UNSIGNED_BYTE, plane->data);
-  */
-}
+sg_shader vid_shader;
+sg_pipeline vid_pipeline;
+sg_bindings vid_bind;
+
+
 
 static void render_frame(plm_t *mpeg, plm_frame_t *frame, void *user) {
   struct datastream *ds = user;
-  shader_use(ds->shader);
-  /*
-      ds_update_texture(GL_TEXTURE0, ds->texture_y, &frame->y);
-      ds_update_texture(GL_TEXTURE1, ds->texture_cb, &frame->cb);
-      ds_update_texture(GL_TEXTURE2, ds->texture_cr, &frame->cr);
-  */
+  uint8_t rgb[frame->height*frame->width*4];
+  plm_frame_to_rgba(frame, rgb, frame->width*4);
+  sg_image_data imgd;
+  sg_range ir = {
+    .ptr = rgb,
+    .size = frame->height*frame->width*4*sizeof(uint8_t)
+  };
+
+  imgd.subimage[0][0] = ir;  
+  sg_update_image(ds->img, &imgd);
 }
 
 static void render_audio(plm_t *mpeg, plm_samples_t *samples, void *user) {
@@ -44,16 +46,6 @@ static void render_audio(plm_t *mpeg, plm_samples_t *samples, void *user) {
   }
 }
 
-struct Texture *ds_maketexture(struct datastream *ds) {
-  /*
-      struct Texture *new = malloc(sizeof(*new));
-      new->id = ds->texture_cb;
-      new->width = 500;
-      new->height = 500;
-      return new;
-  */
-}
-
 void ds_openvideo(struct datastream *ds, const char *video, const char *adriver) {
   // ds_stop(ds);
   char buf[MAXPATH] = {'\0'};
@@ -63,6 +55,11 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
   if (!ds->plm) {
     YughLog(0, 0, "Couldn't open %s", video);
   }
+
+  ds->img = sg_make_image(&(sg_image_desc){
+    .width = plm_get_width(ds->plm),
+    .height = plm_get_height(ds->plm)
+  });  
 
   YughLog(0, 0, "Opened %s - framerate: %f, samplerate: %d, audio streams: %i, duration: %f",
           video,
@@ -107,37 +104,14 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 }
 
 struct datastream *MakeDatastream() {
-  struct datastream *newds = malloc(sizeof(*newds));
-  /*
-      if (!vid_shader) vid_shader = MakeShader("videovert.glsl", "videofrag.glsl");
-
-      newds->shader = vid_shader;
-      shader_use(newds->shader);
-      glGenTextures(1, &newds->texture_y);
-      glBindTexture(GL_TEXTURE_2D, newds->texture_y);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      shader_setint(newds->shader, "texture_y", 0);
-
-      glGenTextures(1, &newds->texture_cb);
-      glBindTexture(GL_TEXTURE_2D, newds->texture_cb);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      shader_setint(newds->shader, "texture_cb", 1);
-
-      glGenTextures(1, &newds->texture_cr);
-      glBindTexture(GL_TEXTURE_2D, newds->texture_cr);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      shader_setint(newds->shader, "texture_cr", 2);
-  */
-  return newds;
+  vid_shader = sg_make_shader(&(sg_shader_desc){
+    .vs.source = slurp_text("shaders/videovert.glsl"),
+    .fs.source = slurp_text("shaders/videofrag.glsl"),
+    .fs.images[0] = {
+      .name = "video",
+      .image_type = SG_IMAGETYPE_2D,
+      .sampler_type = SG_SAMPLERTYPE_FLOAT
+    }});
 }
 
 void ds_advance(struct datastream *ds, double s) {

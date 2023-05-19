@@ -40,6 +40,7 @@ float gridOpacity = 0.3f;
 
 mfloat_t proj[16];
 
+
 // Debug render modes
 bool renderGizmos = false;
 bool showGrid = true;
@@ -233,6 +234,7 @@ float cam_zoom() { return zoom; }
 void add_zoom(float val) { zoom = val; }
 
 mfloat_t projection[16] = {0.f};
+float hudproj[16] = {0.f};
 
 HMM_Vec3 dirl_pos = {4, 100, 20};
 
@@ -281,8 +283,7 @@ void openglRender(struct window *window) {
              pos.y - zoom * window->height / 2,
              pos.y + zoom * window->height / 2, -1.f, 1.f);
 
-  mfloat_t ui_projection[16] = {0.f};
-  mat4_ortho(ui_projection, 0, window->width, 0, window->height, -1.f, 1.f);
+  mat4_ortho(hudproj, 0, window->width, 0, window->height, -1.f, 1.f);
   
   sprite_draw_all();
   sprite_flush();

@@ -75,9 +75,9 @@ void model_init() {
           .attrs = {
               [0].format = SG_VERTEXFORMAT_FLOAT3,
               [0].buffer_index = 0, /* position */
-              [1].format = SG_VERTEXFORMAT_FLOAT2,
+              [1].format = SG_VERTEXFORMAT_USHORT2N,
               [1].buffer_index = 1, /* tex coords */
-              [2].format = SG_VERTEXFORMAT_FLOAT3,
+              [2].format = SG_VERTEXFORMAT_UINT10_N2,
               [2].buffer_index = 2, /* normal */
           },
       },
@@ -105,6 +105,24 @@ cgltf_attribute *get_attr_type(cgltf_primitive p, cgltf_attribute_type t)
   }
 
   return NULL;
+}
+
+unsigned short pack_short_texcoord(float c)
+{
+  return c * USHRT_MAX;
+}
+
+uint32_t pack_int10_n2(float *norm)
+{
+  uint32_t ni[3];
+
+  for (int i = 0; i < 3; i++) {
+    ni[i] = fabs(norm[i]) * 511.0 + 0.5;
+    ni[i] = (ni[i] > 511) ? 511 : ni[i];
+    ni[i] = ( norm[i] < 0.0 ) ? -ni[i] : ni[i];
+  }
+
+  return (ni[0] & 0x3FF) | ( (ni[1] & 0x3FF) << 10) | ( (ni[2] & 0x3FF) << 20) | ( (0 & 0x3) << 30);
 }
 
 struct model *MakeModel(const char *path) {
@@ -189,6 +207,9 @@ struct model *MakeModel(const char *path) {
 
         cgltf_accessor_unpack_floats(attribute.data, vs, n);
 
+	uint32_t *packed_norms;
+	unsigned short *packed_coords;
+
         switch (attribute.type) {
         case cgltf_attribute_type_position:
           model->meshes[j].bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
@@ -198,25 +219,37 @@ struct model *MakeModel(const char *path) {
 
         case cgltf_attribute_type_normal:
 	  has_norm = 1;
+	  packed_norms = malloc(model->meshes[j].face_count * sizeof(uint32_t));;
+	  for (int i = 0; i < model->meshes[j].face_count; i++)
+	    packed_norms[i] = pack_int10_n2(vs + i*3);
+	    
           model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
-              .data.ptr = vs,
-              .data.size = sizeof(float) * n});
+              .data.ptr = packed_norms,
+              .data.size = sizeof(uint32_t) * model->meshes[j].face_count});
+
+	  free (packed_norms);
           break;
 
         case cgltf_attribute_type_tangent:
           break;
 
         case cgltf_attribute_type_texcoord:
+	  packed_coords = malloc(model->meshes[j].face_count * 2 * sizeof(unsigned short));
+	  for (int i = 0; i < model->meshes[j].face_count*2; i++)
+	    packed_coords[i] = pack_short_texcoord(vs[i]);
+	    
           model->meshes[j].bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
               .data.ptr = vs,
-              .data.size = sizeof(float) * n});
+              .data.size = sizeof(unsigned short) * 2 * model->meshes[j].face_count});
+
+	  free(packed_coords);
           break;
         }
       }
 
       if (!has_norm) {
       YughWarn("Model does not have normals. Generating them.");
-      float norms[3 * model->meshes[j].face_count];
+      uint32_t norms[model->meshes[j].face_count];
 
 
       cgltf_attribute *pa = get_attr_type(primitive, cgltf_attribute_type_position);
@@ -224,24 +257,23 @@ struct model *MakeModel(const char *path) {
       float ps[n];
       cgltf_accessor_unpack_floats(pa->data,ps,n);
 
-      for (int i = 0; i < model->meshes[j].face_count/3; i++) {
-        int o = i*9;
+      for (int i = 0, face=0; i < model->meshes[j].face_count/3; i++, face+=9) {
+        int o = face;
         HMM_Vec3 a = {ps[o], ps[o+1],ps[o+2]};
 	o += 3;
 	HMM_Vec3 b = {ps[o], ps[o+1],ps[o+2]};
 	o += 3;
 	HMM_Vec3 c = {ps[o], ps[o+1],ps[o+2]};
 	HMM_Vec3 norm = HMM_NormV3(HMM_Cross(HMM_SubV3(b,a), HMM_SubV3(c,a)));
-	for (int j = 0; j < 3; j++) {
-          norms[i*9+j*3+0] = norm.X;
-	  norms[i*9+j*3+1] = norm.Y;
-	  norms[i*9+j*3+2] = norm.Z;
-	}
+
+	uint32_t packed_norm = pack_int10_n2(norm.Elements);
+	for (int j = 0; j < 3; j++)
+          norms[i*3+j] = packed_norm;
       }
 
       model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
         .data.ptr = norms,
-        .data.size = sizeof(float) * model->meshes[j].face_count * 3
+        .data.size = sizeof(uint32_t) * model->meshes[j].face_count
       });
       }
     }    

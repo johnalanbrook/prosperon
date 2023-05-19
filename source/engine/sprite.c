@@ -217,15 +217,15 @@ void sprite_setframe(struct sprite *sprite, struct glrect *frame) {
 }
 
 void video_draw(struct datastream *stream, mfloat_t position[2], mfloat_t size[2], float rotate, mfloat_t color[3]) {
-  shader_use(vid_shader);
+//  shader_use(vid_shader);
 
   static mfloat_t model[16];
   memcpy(model, UNITMAT4, sizeof(UNITMAT4));
   mat4_translate_vec2(model, position);
   mat4_scale_vec2(model, size);
 
-  shader_setmat4(vid_shader, "model", model);
-  shader_setvec3(vid_shader, "spriteColor", color);
+//  shader_setmat4(vid_shader, "model", model);
+//  shader_setvec3(vid_shader, "spriteColor", color);
   /*
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, stream->texture_y);

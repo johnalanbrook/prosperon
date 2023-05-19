@@ -215,7 +215,7 @@ void text_flush() {
   if (curchar == 0) return;
   sg_apply_pipeline(pipe_text);
   sg_apply_bindings(&bind_text);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
 
   sg_range verts;
   verts.ptr = text_buffer;

@@ -19,6 +19,7 @@ extern int renderMode;
 extern HMM_Vec3 dirl_pos;
 
 extern float projection[16];
+extern float hudproj[16];
 
 extern float gridScale;
 extern float smallGridUnit;
