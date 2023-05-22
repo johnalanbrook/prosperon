@@ -1312,8 +1312,6 @@ var editor = {
 			 "PAUSED" :
 			 "STOPPED", [0, 0], 1);
 
-    gui_text("FPS " + this.fps, [0, 540], 1);
-
     var clvl = this.edit_level;
     var ypos = 200;
     var lvlcolor = Color.white;

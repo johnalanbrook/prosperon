@@ -1,6 +1,7 @@
 #include "debugdraw.h"
 
 #include "openglrender.h"
+#include "render.h"
 
 #include "shader.h"
 #include "log.h"
@@ -25,6 +26,7 @@ struct point_vertex {
   float radius;
 };
 static int point_c = 0;
+static struct point_vertex point_b[1000];
 
 static sg_shader line_shader;
 static sg_pipeline line_pipe;
@@ -37,6 +39,8 @@ struct line_vert {
 };
 static int line_c = 0;
 static int line_v = 0;
+static struct line_vert line_b[1000];
+static uint16_t line_bi[1000];
 
 static sg_pipeline grid_pipe;
 static sg_bindings grid_bind;
@@ -53,6 +57,8 @@ struct poly_vertex {
   float uv[2];
   struct rgba color;
 };
+static struct poly_vertex poly_b[1000];
+static uint32_t poly_bi[1000];
 
 static sg_pipeline circle_pipe;
 static sg_bindings circle_bind;
@@ -64,35 +70,58 @@ struct circle_vertex {
   float radius;
   struct rgba color;
 };
+static struct circle_vertex circle_b[1000];
 
 void debug_flush()
 {
+  if (circle_count != 0) {
   sg_apply_pipeline(circle_pipe);
   sg_apply_bindings(&circle_bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  
+  sg_update_buffer(circle_bind.vertex_buffers[0], &(sg_range){
+    .ptr = circle_b,
+    .size = sizeof(struct circle_vertex)*circle_count
+  });
   sg_draw(0,4,circle_count);
   circle_count = 0;
+  }
 
+  if (poly_c != 0) {
   sg_apply_pipeline(poly_pipe);
   sg_apply_bindings(&poly_bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  sg_update_buffer(poly_bind.vertex_buffers[0], &(sg_range){
+    .ptr = poly_b, .size = sizeof(struct poly_vertex)*poly_v});
+  sg_update_buffer(poly_bind.index_buffer, &(sg_range){
+    .ptr = poly_bi, .size = sizeof(uint32_t)*poly_c});
   sg_draw(0,poly_c,1);
   poly_c = 0;
   poly_v = 0;
+  }
   
+  if (point_c != 0) {
   sg_apply_pipeline(point_pipe);
   sg_apply_bindings(&point_bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  sg_update_buffer(point_bind.vertex_buffers[0], &(sg_range){
+    .ptr = point_b,
+    .size = sizeof(struct point_vertex)*point_c});
   sg_draw(0,point_c,1);
   point_c = 0;
+  }
   
+  if (line_c != 0) {
   sg_apply_pipeline(line_pipe);
   sg_apply_bindings(&line_bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  sg_update_buffer(line_bind.vertex_buffers[0], &(sg_range){
+    .ptr = line_b, .size = sizeof(struct line_vert)*line_v});
+  sg_update_buffer(line_bind.index_buffer, &(sg_range){
+    .ptr = line_bi, .size = sizeof(uint16_t)*line_c});
   sg_draw(0,line_c,1);
   line_c = 0;
   line_v = 0;
+  }
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
@@ -101,15 +130,6 @@ static sg_shader_uniform_block_desc projection_ubo = {
     [0] = { .name = "proj", .type = SG_UNIFORMTYPE_MAT4 },
   }
 };
-
-sg_blend_state blend_trans = {
-  .enabled = true,
-  .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-  .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-  .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
-  .src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
-};
-  
 
 void debugdraw_init()
 {
@@ -320,8 +340,8 @@ void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len)
     .size = sizeof(uint16_t)*i_c
   };
   
-  sg_append_buffer(line_bind.vertex_buffers[0], &vr);
-  sg_append_buffer(line_bind.index_buffer, &ir);
+  memcpy(line_b+line_v, v, sizeof(struct line_vert)*n);
+  memcpy(line_bi+line_c, idxs, sizeof(uint16_t)*i_c);
   
   line_c += i_c;
   line_v += n;
@@ -443,8 +463,8 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
     .size = sizeof(struct poly_vertex)*mesh->num_vertices
   };
 
-  sg_append_buffer(poly_bind.vertex_buffers[0], &vvt);  
-  sg_append_buffer(poly_bind.index_buffer, &it);
+  memcpy(poly_b+poly_v, vertices, sizeof(struct poly_vertex)*mesh->num_vertices);
+  memcpy(poly_bi+poly_c, mesh->triangle_indices, sizeof(uint32_t)*mesh->num_triangles*3);
   
   poly_c += mesh->num_triangles*3;
   poly_v += mesh->num_vertices;    
@@ -459,7 +479,7 @@ void draw_circle(int x, int y, float radius, int pixels, struct rgba color, int 
   cv.pos[1] = y;
   cv.radius = radius;
   cv.color = color;
-  sg_append_buffer(circle_bind.vertex_buffers[0], SG_RANGE_REF(cv));
+  memcpy(circle_b+circle_count, &cv, sizeof(struct circle_vertex));
   circle_count++;
 }
 
@@ -520,7 +540,7 @@ void draw_cppoint(struct cpVect point, float r, struct rgba color)
     .radius = r
   };
   
-  sg_append_buffer(point_bind.vertex_buffers[0], SG_RANGE_REF(p));
+  memcpy(point_b+point_c, &p, sizeof(struct point_vertex));
   point_c++;
 }
 
@@ -572,8 +592,8 @@ void draw_poly(cpVect *points, int n, struct rgba color)
     .size = sizeof(struct poly_vertex)*n
   };
   
-  sg_append_buffer(poly_bind.vertex_buffers[0], &ppp);
-  sg_append_buffer(poly_bind.index_buffer, &trip);
+  memcpy(poly_b+poly_v, polyverts, sizeof(struct poly_vertex)*n);
+  memcpy(poly_bi+poly_c, tridxs, sizeof(uint32_t)*3*tric);
   
   poly_c += tric*3;
   poly_v += n;

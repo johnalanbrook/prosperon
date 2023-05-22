@@ -107,7 +107,8 @@ void font_init(struct shader *textshader) {
           },
 	.buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
       },
-      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,      
+      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+      .colors[0].blend = blend_trans,
     });
     
   float text_verts[8] = {

@@ -2,7 +2,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <vec.h>
 #include "editor.h"
 
 void editor_init_project(struct gameproject *gp)

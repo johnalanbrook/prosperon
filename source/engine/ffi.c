@@ -118,11 +118,13 @@ int js_arrlen(JSValue v) {
 }
 
 struct rgba js2color(JSValue v) {
+  JSValue ja = js_arridx(v,3);
+  unsigned char a = JS_IsUndefined(ja) ? 255 : js2int(ja);
   struct rgba color = {
     .r = js2int(js_arridx(v,0)),
     .g = js2int(js_arridx(v,1)),
     .b = js2int(js_arridx(v,2)),
-    .a = js2int(js_arridx(v,3)),
+    .a = a,
   };
   return color;
 }

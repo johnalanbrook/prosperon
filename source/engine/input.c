@@ -426,9 +426,7 @@ void input_poll(double wait) {
   mouseWheelX = 0;
   mouseWheelY = 0;
 
-  glfwPollEvents();
-
-  //    glfwWaitEventsTimeout(wait);
+  glfwWaitEventsTimeout(wait);
 
   for (int i = 0; i < arrlen(downkeys); i++)
     call_input_down(&downkeys[i]);

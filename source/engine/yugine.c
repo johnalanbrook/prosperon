@@ -211,8 +211,11 @@ int main(int argc, char **args) {
     double elapsed = glfwGetTime() - lastTick;
     deltaT = elapsed;
     lastTick = glfwGetTime();
-    double wait = fmax(0, renderMS - elapsed);
-    input_poll(wait);
+    //double wait = fmax(0, renderMS - elapsed);
+    if (sim_playing())
+      input_poll(fmax(0, renderMS-elapsed));
+    else
+      input_poll(1000);
     window_all_handle_events();
 
     framems[framei++] = elapsed;
