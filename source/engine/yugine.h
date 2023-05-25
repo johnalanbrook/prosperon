@@ -13,5 +13,7 @@ void print_stacktrace();
 
 int frame_fps();
 
+extern double lastTick;
+
 
 #endif

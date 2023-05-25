@@ -32,13 +32,12 @@ char consolelog[CONSOLE_BUF+1] = {'\0'};
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
-
+#ifdef DBG
     if (priority >= logLevel) {
 	time_t now = time(0);
+	struct tm *tinfo = localtime(&now);
 	char timestr[50];
-//	strftime(timestr,50,"
-	char *dt = ctime(&now);
-	dt[strlen(dt) - 1] = '\0';	// The above time conversion adds a \n; this removes it
+	strftime(timestr,50,"%y", tinfo);
 
 	double ticks = (double)clock()/CLOCKS_PER_SEC;
 
@@ -56,6 +55,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	if (priority >= 2)
 	  js_stacktrace();
   }
+#endif
 }
 
 void log_print(const char *str)

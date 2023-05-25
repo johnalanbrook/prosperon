@@ -1,4 +1,20 @@
-"use strict";
+var files = {};
+function load(file) {
+  if (typeof Log !== 'undefined')
+    Log.warn(`doing ${file}`);
+    
+  var modtime = cmd(0, file);
+
+  if (modtime === 0) {
+    Log.stack();
+    return false;
+  }
+  files[file] = modtime;
+}
+
+
+
+load("scripts/base.js");
 
 var Log = {
   set level(x) { cmd(92,x); },
@@ -57,20 +73,8 @@ var Log = {
 };
 
 
-var files = {};
-function load(file) {
-  var modtime = cmd(0, file);
-
-  if (modtime === 0) {
-    Log.stack();
-    return false;
-  }
-  files[file] = modtime;
-}
-
-load("scripts/base.js");
 load("scripts/diff.js");
-load("scripts/debug.js");
+
 
 function win_icon(str) {
   cmd(90, str);
@@ -507,6 +511,11 @@ var Register = {
 
     Player.players.forEach(x => x.uncontrol(obj));
   },
+
+  draws: [],
+  draw() {
+    this.draws.forEach(x => x[0].call(x[1]));
+  },
 };
 
 Register.unregister_obj(null);
@@ -518,6 +527,7 @@ register(6, Register.debug, Register);
 register(7, Register.kbm_input, Register);
 register(8, Register.gamepad_input, Register);
 register(9, Log.stack, this);
+register(10, Register.draw, Register);
 
 Register.gamepad_playermap[0] = Player.players[0];
 
@@ -549,6 +559,10 @@ function unregister_nk_gui(fn, obj) {
   Register.nk_guis = Register.nk_guis.filter(x => x[0] !== fn && x[1] !== obj);
 };
 
+function register_draw(fn,obj) {
+  Register.draws.push([fn, obj ? obj : this]);
+}
+
 register_update(Yugine.exec, Yugine);
 
 /* These functions are the "defaults", and give control to player0 */
@@ -559,6 +573,8 @@ function set_pawn(obj, player = Player.players[0]) {
 function unset_pawn(obj, player = Player.players[0]) {
   player.uncontrol(obj);
 }
+
+
 
 var Signal = {
   signals: [],
@@ -597,6 +613,7 @@ function reloadfiles() {
   Object.keys(files).forEach(function (x) { load(x); });
 }
 
+load("scripts/debug.js");
 
 function Color(from) {
   var color = Object.create(Array);
@@ -760,7 +777,7 @@ var Level = {
 	this[x.varname] = x;
       }
     },this);
-
+    Log.warn("eval script");
     eval(this.script);
 
     if (typeof extern === 'object')
@@ -970,6 +987,8 @@ var Level = {
     if (!file.endsWith(".lvl")) file = file + ".lvl";
     var newlevel = Level.create();
 
+    Log.warn(`MAKING LEVEL ${file}`);
+
     if (IO.exists(file)) {
       newlevel.filejson = IO.slurp(file);
       
@@ -979,6 +998,7 @@ var Level = {
       } catch (e) {
         newlevel.ed_gizmo = function() { GUI.text("Invalid level file: " + newlevel.file, world2screen(newlevel.pos), 1, Color.red); };
 	newlevel.selectable = false;
+	throw e;
       }
       newlevel.file = file;
       newlevel.dirty = false;
@@ -1020,7 +1040,7 @@ var Level = {
    if (typeof objs === 'object')
      objs = objs.array();
 
-    objs.forEach(function(x) {
+    objs.forEach(x => {
       if (x.from === 'group') {
         var loadedlevel = Level.loadfile(x.file);
 	if (!loadedlevel) {
@@ -1054,9 +1074,13 @@ var Level = {
 
       var newobj = this.spawn(gameobjects[x.from]);
 
+      delete x.from;
+
       dainty_assign(newobj, x);
+      
       if (x._pos)
         newobj.pos = x._pos;
+	
 
       if (x._angle)
         newobj.angle = x._angle;
@@ -1066,7 +1090,7 @@ var Level = {
       newobj.sync();
 
       created.push(newobj);
-    }, this);
+    });
 
     created.forEach(function(x) {
       if (x.varname)
@@ -1244,6 +1268,7 @@ var gameobject = {
     if (x < 0) x = 0;
     if (x > 4) x = 4;
     this._draw_layer = x;
+    this.sync();
   },
   _draw_layer_nuke() {
     Nuke.label("Draw layer");
@@ -1500,6 +1525,8 @@ var gameobject = {
       Register.unregister_obj(this.components[key]);
       this.components[key].kill();
     }
+
+    this.stop();
   },
 
   prop_obj() {
@@ -1580,7 +1607,7 @@ var gameobject = {
        }
     };
 
-    if (typeof obj.update !== 'undefined')
+    if (typeof obj.update === 'function')
       register_update(obj.update, obj);
 
     if (typeof obj.physupdate === 'function')
@@ -1591,6 +1618,9 @@ var gameobject = {
 
     if (typeof obj.separate === 'function')
       obj.register_separate(obj.separate, obj);
+
+    if (typeof obj.draw === 'function')
+      register_draw(obj.draw,obj);
 
     obj.components.forEach(function(x) {
       if (typeof x.collide === 'function')

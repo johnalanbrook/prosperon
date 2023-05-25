@@ -6,7 +6,6 @@ var Gizmos = {
   },
 };
 
-
 var Debug = {
   draw_grid(width, span, color) {
     color = color ? color : Color.green;
@@ -160,3 +159,10 @@ var Nuke = {
 Object.defineProperty(Nuke, "curwin", {enumerable:false});
 Object.defineProperty(Nuke, "defaultrect", {enumerable:false});
 
+var DebugControls = {
+  input_f1_pressed() {
+    Debug.draw_phys(!Debug.phys_drawing);
+  },
+};
+
+set_pawn(DebugControls);

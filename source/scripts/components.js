@@ -134,6 +134,7 @@ var char2d = clone(sprite, {
     var frameslice = 1/frames;
     rect.s0 = frameslice*frame;
     rect.s1 = frameslice*(frame+1);
+
     return rect;
   },
   
@@ -147,7 +148,8 @@ var char2d = clone(sprite, {
     char.timer = timer.make(char.advance.bind(char), 1/char.curplaying.fps);
     char.timer.loop = true;
     char.obscure('timer');
-    char.obscure('rect');
+//    char.obscure('rect');
+    char.rect = {};
     char.setsprite();
     return char;
   },

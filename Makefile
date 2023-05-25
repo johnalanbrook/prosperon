@@ -4,28 +4,28 @@ MAKEFLAGS = --jobs=$(PROCS)
 UNAME != uname
 
 # Options
-# DBG=0,1 --- build with debugging symbols and logging
-# ED=0,1 --- build with or without editor
+# DBG --- build with debugging symbols and logging
+# ED --- build with or without editor
+# OPT --- Optimize
 
-ED ?= 1
-DBG ?= 1
+QFLAGS :=
 
-ifeq ($(DBG), 1)
-	LVL = -O2 -g
-	INFO = dbg
-
-	ifeq ($(CC), tcc)
-		LVL +=
-	endif
-
+ifdef DBG
+  QFLAGS += -O0 -g -DDBG 
+  INFO = dbg
 else
-	LVL = -O2 -DNDEBUG -flto
-	INFO = rel
+  QFLAGS += -O2
+  INFO = rel
+  CC = gcc
 endif
 
-# QuickJS options
+ifdef OPT
+  QFLAGS += -flto
+endif
 
-QFLAGS = $(LVL) -DDBG=$(DBG) -DED=$(ED)
+ifdef ED
+  QFLAGS += -DED
+endif
 
 PTYPE != uname -m
 
@@ -83,7 +83,7 @@ ifeq ($(OS), WIN32)
 	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
-	ELIBS =  engine pthread yughc glfw3 tcc quickjs c m dl GL
+	ELIBS =  engine pthread yughc glfw3 quickjs c m dl GL
 	CLIBS =
 endif
 

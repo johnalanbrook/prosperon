@@ -23,13 +23,21 @@ struct shader *wireframeShader = NULL;
 struct shader *animSpriteShader = NULL;
 static struct shader *textShader;
 
-mfloat_t editorClearColor[4] = {0.2f, 0.4f, 0.3f, 1.f};
+struct rgba editorClearColor = {35,60,92,255};
 
 float shadowLookahead = 8.5f;
 
-mfloat_t gridSmallColor[3] = {0.35f, 1.f, 0.9f};
+struct rgba gridSmallColor = {
+  .r = 255 * 0.35f,
+  .g = 255,
+  .b = 255 * 0.9f
+};
 
-mfloat_t gridBigColor[3] = {0.92f, 0.92f, 0.68f};
+struct rgba gridBigColor = {
+  .r = 255 * 0.92f,
+  .g = 255 * 0.92f,
+  .b = 255 * 0.68f
+};
 
 float gridScale = 500.f;
 float smallGridUnit = 1.f;
@@ -37,9 +45,6 @@ float bigGridUnit = 10.f;
 float gridSmallThickness = 2.f;
 float gridBigThickness = 7.f;
 float gridOpacity = 0.3f;
-
-mfloat_t proj[16];
-
 
 // Debug render modes
 bool renderGizmos = false;
@@ -92,6 +97,19 @@ static struct {
   sg_image depth_img;
 } crt_post;
 
+void make_shader(sg_shader_desc *d, sg_shader result, void *data)
+{
+}
+
+void fail_shader(sg_shader id, void *data)
+{
+}
+
+static sg_trace_hooks hooks = {
+  .fail_shader = fail_shader,
+  .make_shader = make_shader
+};
+
 
 void openglInit() {
   if (!mainwin) {
@@ -99,22 +117,21 @@ void openglInit() {
     exit(1);
   }
 
+  sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
+
   font_init(NULL);
   debugdraw_init();
   sprite_initialize();
   nuke_init(mainwin);
 
   model_init();
-//  duck = MakeModel("sponza.glb");
-
+  sg_color c;
+  rgba2floats(&c, editorClearColor);
   pass_action = (sg_pass_action){
-      .colors[0] = {.action = SG_ACTION_CLEAR, .value = {editorClearColor[1], editorClearColor[2], editorClearColor[3], 1.f}},
+    .colors[0] = {.action = SG_ACTION_CLEAR, .value = c}
   };
 
-  crt_post.shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/postvert.glsl"),
-    .fs.source = slurp_text("shaders/crtfrag.glsl"),
-
+  crt_post.shader = sg_compile_shader("shaders/postvert.glsl", "shaders/crtfrag.glsl", &(sg_shader_desc){
     .fs.images[0] = {
       .name = "diffuse_texture",
       .image_type = SG_IMAGETYPE_2D,
@@ -177,8 +194,6 @@ void openglInit() {
   shadow_desc.pixel_format = SG_PIXELFORMAT_DEPTH;
   ddimg = sg_make_image(&shadow_desc);
 
-//    duck = MakeModel("sponza.glb");  
-  
   sg_shadow.pass = sg_make_pass(&(sg_pass_desc){
     .color_attachments[0].image = depth_img,
     .depth_stencil_attachment.image = ddimg,
@@ -187,9 +202,7 @@ void openglInit() {
   sg_shadow.pass_action = (sg_pass_action) {
     .colors[0] = { .action=SG_ACTION_CLEAR, .value = {1,1,1,1} } };
 
-  sg_shadow.shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/shadowvert.glsl"),
-    .fs.source = slurp_text("shaders/shadowfrag.glsl"),
+  sg_shadow.shader = sg_compile_shader("shaders/shadowvert.glsl", "shaders/shadowfrag.glsl", &(sg_shader_desc){
     .vs.uniform_blocks[0] = {
     .size = sizeof(float) * 16 * 2,
     .uniforms = {
@@ -217,6 +230,34 @@ void openglInit() {
   });
     
 */
+
+}
+
+void render_winsize()
+{
+  sg_destroy_image(crt_post.img);
+  sg_destroy_image(crt_post.depth_img);
+  sg_destroy_pass(crt_post.pass);
+  
+  crt_post.img = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width = mainwin->width,
+    .height = mainwin->height
+  });
+
+  crt_post.depth_img = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width = mainwin->width,
+    .height = mainwin->height,
+    .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
+  });
+
+  crt_post.pass = sg_make_pass(&(sg_pass_desc){
+    .color_attachments[0].image = crt_post.img,
+    .depth_stencil_attachment.image = crt_post.depth_img,
+  });
+
+  crt_post.bind.fs_images[0] = crt_post.img;  
 }
 
 static cpBody *camera = NULL;
@@ -233,8 +274,8 @@ float cam_zoom() { return zoom; }
 
 void add_zoom(float val) { zoom = val; }
 
-mfloat_t projection[16] = {0.f};
-float hudproj[16] = {0.f};
+HMM_Mat4 projection = {0.f};
+HMM_Mat4 hudproj = {0.f};
 
 HMM_Vec3 dirl_pos = {4, 100, 20};
 
@@ -278,21 +319,25 @@ void openglRender(struct window *window) {
   //////////// 2D projection
   cpVect pos = cam_pos();
 
-  mat4_ortho(projection, pos.x - zoom * window->width / 2,
+  projection = HMM_Orthographic_RH_NO(
+             pos.x - zoom * window->width / 2,
              pos.x + zoom * window->width / 2,
              pos.y - zoom * window->height / 2,
              pos.y + zoom * window->height / 2, -1.f, 1.f);
 
-  mat4_ortho(hudproj, 0, window->width, 0, window->height, -1.f, 1.f);
+  hudproj = HMM_Orthographic_RH_NO(0, window->width, 0, window->height, -1.f, 1.f);
   
   sprite_draw_all();
   sprite_flush();
-  
+
+  call_draw();
+
   //// DEBUG
-  if (debugDrawPhysics)
+  if (debugDrawPhysics) {
     gameobject_draw_debugs();
-  
-  call_debugs();
+    call_debugs();
+  }
+
   debug_flush();
  
   ////// TEXT && GUI
@@ -314,4 +359,20 @@ void openglRender(struct window *window) {
 
   
   sg_commit();
+}
+
+sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
+{
+  YughWarn("Making shader with %s and %s", v, f);
+  char *vs = slurp_text(v);
+  char *fs = slurp_text(f);
+
+  d->vs.source = vs;
+  d->fs.source = fs;
+
+  sg_shader ret = sg_make_shader(d);
+  free(vs);
+  free(fs);
+
+  return ret;
 }

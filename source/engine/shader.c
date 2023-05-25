@@ -116,62 +116,9 @@ void shader_compile(struct shader *shader) {
 void shader_use(struct shader *shader) {
   //    glUseProgram(shader->id);
 }
-/*
-void shader_setbool(struct shader *shader, const char *name, int val)
-{
-    glUniform1i(glGetUniformLocation(shader->id, name), val);
-}
-
-void shader_setint(struct shader *shader, const char *name, int val)
-{
-    glUniform1i(glGetUniformLocation(shader->id, name), val);
-}
-
-void shader_setfloat(struct shader *shader, const char *name, float val)
-{
-    glUniform1f(glGetUniformLocation(shader->id, name), val);
-}
-
-void shader_setvec2(struct shader *shader, const char *name, mfloat_t val[2])
-{
-    glUniform2fv(glGetUniformLocation(shader->id, name), 1, val);
-}
-
-
-void shader_setvec4(struct shader *shader, const char *name, mfloat_t val[4])
-{
-    glUniform4fv(glGetUniformLocation(shader->id, name), 1, val);
-}
-
-void shader_setmat2(struct shader *shader, const char *name, mfloat_t val[4])
-{
-    glUniformMatrix2fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
-}
-
-void shader_setmat3(struct shader *shader, const char *name, mfloat_t val[9])
-{
-    glUniformMatrix3fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
-}
-
-void shader_setmat4(struct shader *shader, const char *name, mfloat_t val[16])
-{
-    glUniformMatrix4fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
-}
-
-void shader_setUBO(struct shader *shader, const char *name, unsigned int index)
-{
-    glUniformBlockBinding(shader->id, glGetUniformBlockIndex(shader->id, name), index);
-}
-
-*/
 
 void shader_compile_all() {
   for (int i = 0; i < arrlen(shaders); i++)
     shader_compile(&shaders[i]);
 }
-void shader_setvec3(struct shader *shader, const char *name, mfloat_t val[3]) {
-  //    glUniform3fv(glGetUniformLocation(shader->id, name), 1, val);
-}
-void shader_setmat4(struct shader *shader, const char *name, mfloat_t val[16]) {
-  //    glUniformMatrix4fv(glGetUniformLocation(shader->id, name), 1, GL_FALSE, val);
-}
+

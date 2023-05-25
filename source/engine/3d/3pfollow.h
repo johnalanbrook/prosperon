@@ -7,19 +7,19 @@
 
 struct follow {
   float distance;
-  mfloat_t target_rot[4];
+  HMM_Quat target_rot;
 };
 
-mfloat_t *follow_calccenter();
-mfloat_t *follow_postoffset();
-mfloat_t *extentsoffset();
-mfloat_t *framebasedveclerp();
+HMM_Vec3follow_calccenter();
+HMM_Vec3follow_postoffset();
+HMM_Vec3extentsoffset();
+HMM_Vec3framebasedveclerp();
 int lerpparam(float offset, float anchorwidth, float floatwidth);
-mfloat_t *vec3lerp(mfloat_t from[3], mfloat_t to[3], mfloat_t a[3]);
+HMM_Vec3vec3lerp(HMM_Vec3 from, HMM_Vec3 to, HMM_Vec3 a);
 void follow_calctargets();
-mfloat_t *follow_removelockedrot();
+HMM_Vec3follow_removelockedrot();
 void follow_targetoffset(struct follow *follow);
-int float_epsilon(mfloat_t a, mfloat_t b, mfloat_t e);
+int float_epsilon(float a, float b, float e);
 
 /*
 

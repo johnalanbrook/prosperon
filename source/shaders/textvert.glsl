@@ -8,6 +8,7 @@ layout (location = 5) in vec4 vColor;
 
 out vec2 TexCoords;
 out vec4 fColor;
+out vec2 fst;
 
 uniform mat4 projection;
 
@@ -16,6 +17,7 @@ void main()
     gl_Position = projection * vec4(pos + (vert * wh), 0.0, 1.0);
     
     TexCoords = uv + vec2(vert.x*st.x, st.y - vert.y*st.y);
+    fst = st / wh;
     
     fColor = vColor;
 }

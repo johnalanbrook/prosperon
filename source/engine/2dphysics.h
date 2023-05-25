@@ -3,6 +3,7 @@
 
 #include "script.h"
 #include <chipmunk/chipmunk.h>
+#include "render.h"
 
 struct gameobject;
 
@@ -10,23 +11,15 @@ extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
 
-struct rgba {
-  unsigned char r;
-  unsigned char g;
-  unsigned char b;
-  unsigned char a;
-};
 
 extern struct rgba color_white;
 extern struct rgba color_black;
 
-
-extern struct rgba dbg_color;
-extern struct rgba trigger_color;
 extern struct rgba disabled_color;
 extern struct rgba dynamic_color;
 extern struct rgba kinematic_color;
 extern struct rgba static_color;
+extern struct rgba sleep_color;
 
 
 struct phys2d_shape {

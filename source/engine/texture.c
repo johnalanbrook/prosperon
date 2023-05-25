@@ -25,16 +25,43 @@ struct Texture *texture_notex() {
   return texture_pullfromfile("./icons/no_tex.png");
 }
 
+unsigned int next_pow2(unsigned int v)
+{
+  v--;
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  v++;
+  return v;
+}
+
 int mip_levels(int width, int height)
 {
-	int levels = 0;
-	while ( width > 1 && height > 1 )
-	{
-		width >>= 1;
-		height >>= 1;
-		levels++;
-	}
-	return levels;
+  int levels = 0;
+	
+  while (width > 1 || height > 1)
+  {
+    width >>= 1;
+    height >>= 1;
+    levels++;
+  }
+  return levels;
+}
+
+int mip_wh(int w, int h, int *mw, int *mh, int lvl)
+{
+  w >>= lvl;
+  h >>= lvl;
+
+  if (w == 0 && h == 0)
+    return 1;
+
+  *mw = w ? w : 1;
+  *mh = h ? h : 1;
+
+  return 0;
 }
 
 /* If an empty string or null is put for path, loads default texture */
@@ -58,6 +85,10 @@ struct Texture *texture_pullfromfile(const char *path) {
     YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());
     return texture_notex();
   }
+
+  unsigned int nw = next_pow2(tex->width);
+  unsigned int nh = next_pow2(tex->height);
+  
   tex->data = data;
 
   int filter;
@@ -70,6 +101,8 @@ struct Texture *texture_pullfromfile(const char *path) {
   sg_image_data sg_img_data;
   
   int mips = mip_levels(tex->width, tex->height)+1;
+
+  YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
   
   int mipw, miph;
   mipw = tex->width;
@@ -81,9 +114,9 @@ struct Texture *texture_pullfromfile(const char *path) {
   mipdata[0] = data;
     
   for (int i = 1; i < mips; i++) {
-    int w, h;
-    w = mipw>>1;
-    h = miph>>1;
+    int w, h, mipw, miph;
+    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
+    mip_wh(tex->width, tex->height, &w, &h, i);
     mipdata[i] = malloc(w * h * 4);
     stbir_resize_uint8(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
     sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };

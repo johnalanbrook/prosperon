@@ -17,6 +17,12 @@
 JSContext *js = NULL;
 JSRuntime *rt = NULL;
 
+#ifdef DBG
+#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT
+#else
+#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP
+#endif
+
 static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
   if (typeflag != FTW_F)
     return 0;
@@ -38,6 +44,9 @@ JSValue num_cache[100] = {0};
 
 void script_init() {
   /* Load all prefabs into memory */
+//  if (DBG)
+//    script_dofile("scripts/debug.js");
+//  else
   script_dofile("scripts/engine.js");
 
   for (int i = 0; i < 100; i++)
@@ -45,7 +54,19 @@ void script_init() {
 }
 
 void script_run(const char *script) {
-  JS_FreeValue(js, JS_Eval(js, script, strlen(script), "script", 0));
+  JS_FreeValue(js, JS_Eval(js, script, strlen(script), "script", JS_EVAL_FLAGS));
+}
+
+void compile_script(const char *file) {
+  const char *script = slurp_text(file);
+  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
+  size_t out_len;
+  uint8_t *out;
+  out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
+
+  FILE *f = fopen("out.jsc", "w");
+  fwrite(out, sizeof out[0], out_len, f);
+  fclose(f);
 }
 
 struct callee stacktrace_callee;
@@ -57,47 +78,37 @@ time_t file_mod_secs(const char *file) {
 }
 
 void js_stacktrace() {
+#ifdef DBG
   call_callee(&stacktrace_callee);
-  return;
+#endif
 }
 
 void js_dump_stack() {
   js_stacktrace();
-  return;
-
-  JSValue exception = JS_GetException(js);
-  if (JS_IsNull(exception)) return;
-  JSValue val = JS_GetPropertyStr(js, exception, "stack");
-  if (!JS_IsUndefined(val)) {
-    const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
-    const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
-    const char *stack = JS_ToCString(js, val);
-    YughError("%s :: %s\n%s", name, msg, stack);
-
-    JS_FreeCString(js, name);
-    JS_FreeCString(js, msg);
-    JS_FreeCString(js, stack);
-  }
 }
 
 int js_print_exception(JSValue v) {
+#ifdef DBG
   if (JS_IsException(v)) {
     JSValue exception = JS_GetException(js);
+    /* TODO: Does it need freed if null? */
+    if (JS_IsNull(exception))
+      return 0;
     JSValue val = JS_GetPropertyStr(js, exception, "stack");
-    if (!JS_IsUndefined(val)) {
       const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
       const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
       const char *stack = JS_ToCString(js, val);
-      YughWarn("%s :: %s\n%s", name, msg, stack);
+      YughWarn("%s :: %s\n%s", name, msg,stack);
 
       JS_FreeCString(js, name);
       JS_FreeCString(js, msg);
       JS_FreeCString(js, stack);
-    }
+      JS_FreeValue(js,val);
+      JS_FreeValue(js,exception);
 
     return 1;
   }
-
+#endif
   return 0;
 }
 
@@ -108,7 +119,7 @@ int script_dofile(const char *file) {
     YughError("Can't find file %s.", file);
     return 0;
   }
-  JSValue obj = JS_Eval(js, script, strlen(script), file, 0);
+  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
   js_print_exception(obj);
   JS_FreeValue(js, obj);
 
@@ -119,7 +130,7 @@ int script_dofile(const char *file) {
    s is the function to call on that object
 */
 void script_eval_w_env(const char *s, JSValue env) {
-  JSValue v = JS_EvalThis(js, env, s, strlen(s), "internal", 0);
+  JSValue v = JS_EvalThis(js, env, s, strlen(s), "internal", JS_EVAL_FLAGS);
   js_print_exception(v);
   JS_FreeValue(js, v);
 }
@@ -186,4 +197,8 @@ void call_physics(double dt) { callee_dbl(physupdate_callee, dt); }
 
 struct callee debug_callee;
 void register_debug(struct callee c) { debug_callee = c; }
-void call_debugs() { JS_Call(js, debug_callee.fn, debug_callee.obj, 0, NULL); }
+void call_debugs() { call_callee(&debug_callee); }
+
+static struct callee draw_callee;
+void register_draw(struct callee c) { draw_callee = c; }
+void call_draw() { call_callee(&draw_callee); }

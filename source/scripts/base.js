@@ -1,3 +1,18 @@
+
+var fns = [
+() => {
+var ttt = {};
+Object.defineProperty(ttt, 'a', {});
+ttt.a = 5;
+},
+() => { Log.warn("did it"); }
+];
+
+//fns.forEach(x => x());
+
+
+
+
 /* Prototypes out an object and extends with values */
 function clone(proto, binds) {
   var c = Object.create(proto);
@@ -263,6 +278,13 @@ value: function(b) {
   var c = [];
   for (var i = 0; i < this.length; i++) { c[i] = this[i] - b[i]; }
   return c;
+}});
+
+Object.defineProperty(Array.prototype, 'mult', {
+  value: function(arr) {
+    var c = [];
+    for (var i = 0; i < this.length; i++) { c[i] = this[i] * arr[i]; }
+    return c;
 }});
 
 Object.defineProperty(Array.prototype, 'apply', {

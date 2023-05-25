@@ -81,3 +81,13 @@ collide(hit)
   hit - Object ID of colliding object
   sensor - True if the colliding object is a sensor
   velocity - A vector of the velocity of the collision
+
+.Draw functions
+draw()
+  Called during lower rendering
+
+gui()
+  Called for screen space over the top rendering
+
+debug()
+  Called during a debug phase; Will not be called when debug draw is off

@@ -1,18 +1,18 @@
 #ifndef FONT_H
 #define FONT_H
 
-#include "mathc.h"
 #include "sokol/sokol_gfx.h"
 #include "texture.h"
 #include "2dphysics.h"
+#include "HandmadeMath.h"
 
 struct shader;
 struct window;
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
-  mfloat_t Size[2];     // Size of glyph
-  mfloat_t Bearing[2];  // Offset from baseline to left/top of glyph
+  float Size[2];     // Size of glyph
+  float Bearing[2];  // Offset from baseline to left/top of glyph
   unsigned int Advance; // Horizontal offset to advance to next glyph
   struct glrect rect;
 };
@@ -26,9 +26,9 @@ struct sFont {
 
 void font_init(struct shader *s);
 struct sFont *MakeFont(const char *fontfile, int height);
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct rgba color);
+void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
 void text_settype(struct sFont *font);
-int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color, float lw, int caret);
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret);
 
 // void text_frame();
 void text_flush();

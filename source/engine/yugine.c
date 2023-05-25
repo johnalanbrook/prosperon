@@ -42,12 +42,12 @@ double physlag = 0;
 double updatelag = 0;
 
 double renderMS = 1 / 165.f;
-double physMS = 1 / 120.f;
+double physMS = 1 / 240.f;
 double updateMS = 1 / 60.f;
 
 static int ed = 1;
 static int sim_play = 0;
-static double lastTick;
+double lastTick = 0.0;
 static int phys_step = 0;
 
 static float timescale = 1.f;
@@ -90,17 +90,6 @@ void seghandle(int sig) {
 #endif
 }
 
-void compile_script(const char *file) {
-  const char *script = slurp_text(file);
-  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL);
-  size_t out_len;
-  uint8_t *out;
-  out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
-
-  FILE *f = fopen("out.jsc", "w");
-  fwrite(out, sizeof out[0], out_len, f);
-  fclose(f);
-}
 
 void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
   mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
@@ -195,6 +184,7 @@ int main(int argc, char **args) {
           .func = sg_logging,
           .user_data = NULL,
       },
+ 
       .buffer_pool_size = 1024,
       .context.sample_count = 1,
   });
@@ -206,6 +196,7 @@ int main(int argc, char **args) {
     script_dofile("scripts/editor.js");
   else
     script_dofile("scripts/play.js");
+
 
   while (!want_quit()) {
     double elapsed = glfwGetTime() - lastTick;

@@ -13,6 +13,8 @@
 #include "texture.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include "font.h"
+#include "openglrender.h"
 
 #include "sokol/sokol_gfx.h"
 
@@ -104,9 +106,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 }
 
 struct datastream *MakeDatastream() {
-  vid_shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/videovert.glsl"),
-    .fs.source = slurp_text("shaders/videofrag.glsl"),
+  vid_shader = sg_compile_shader("shaders/videovert.glsl", "shaders/videofrag.glsl", &(sg_shader_desc){
     .fs.images[0] = {
       .name = "video",
       .image_type = SG_IMAGETYPE_2D,

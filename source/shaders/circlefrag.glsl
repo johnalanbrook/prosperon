@@ -3,25 +3,36 @@ in vec2 coords;
 
 out vec4 color;
 
+
 in float radius;
 in vec4 fcolor;
 in vec2 pos;
 
+in float segsize;
+in float fill;
+
+#define PI 3.14
+
 void main()
 {
-  int thickness = 1;
-  bool fill = false;
+  float px = 1/radius;
+  float R1 = 1.f;
+  float R2 = 1.0 - fill;
+  float dist = sqrt(pow(coords.x,2) + pow(coords.y,2));
+  color = fcolor;
+    
+//  if (dist < R2 || dist > R1)
+//    discard;
 
-    // int tt = thickness + 1;
-    float R1 = 1.f;
-//    float R2 = 1.f - (thickness*zoom / radius);
-    float R2 = 1.f - (thickness/radius);
-    float dist = sqrt(dot(coords, coords));
+    float sm = 1 - smoothstep(R1-px,R1,dist);
+    float sm2 = smoothstep(R2-px,R2,dist);
+    float a = sm*sm2;
+    color = mix(vec4(0,0,0,0), fcolor, a);
+  if (segsize<0)
+    return;
+    
+  float f = atan(coords.y, coords.x) + PI;
 
-    if (dist >= R2 && dist <= R1)
-        color = fcolor;
-    else if (dist < R2)
-        color = vec4(fcolor.xyz, 0.1f);
-    else
-        discard;
+  if (mod(f, segsize) < segsize/2)
+    discard;
 }

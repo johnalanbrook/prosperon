@@ -51,4 +51,8 @@ void unregister_obj(JSValue obj);
 void register_physics(struct callee c);
 void call_physics(double dt);
 
+void register_draw(struct callee c);
+void call_draw();
+void compile_script(const char *file);
+
 #endif

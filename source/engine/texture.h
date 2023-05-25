@@ -68,6 +68,11 @@ struct Texture {
     struct TexAnim anim;
 };
 
+struct Image {
+  struct Texture *tex;
+  struct glrect frame;
+};
+
 struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
 struct Texture *texture_loadfromfile(const char *path);    // Create texture & load to gpu
 void texture_sync(const char *path);

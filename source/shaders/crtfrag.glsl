@@ -7,10 +7,12 @@ uniform sampler2D diffuse_texture;
 
 void main()
 {
+  vec2 screensize = textureSize(diffuse_texture,0);
+  
   vec4 color = texture(diffuse_texture, TexCoords);
-//  float avg = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
-//  frag_color = vec4(avg,avg,avg,1.0);
-  float lc = 720.0/2.0;
+  float avg = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+  frag_color = vec4(avg,avg,avg,1.0);
+  float lc = screensize.y/2.0;
   float line = TexCoords.y * lc;
   float line_intensity = mod(float(line),2);
 
@@ -22,5 +24,4 @@ void main()
   float b = color.b;
 
   frag_color = vec4(r, g*0.99, b, 1.0) * clamp(line_intensity, 0.85, 1.0);
-  frag_color = texture(diffuse_texture, TexCoords);
 }

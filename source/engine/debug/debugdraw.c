@@ -3,6 +3,8 @@
 #include "openglrender.h"
 #include "render.h"
 
+#include "yugine.h"
+
 #include "shader.h"
 #include "log.h"
 #include <assert.h>
@@ -17,6 +19,8 @@
 
 #include "font.h"
 
+#define v_amt 1000
+
 static sg_shader point_shader;
 static sg_pipeline point_pipe;
 static sg_bindings point_bind;
@@ -26,7 +30,7 @@ struct point_vertex {
   float radius;
 };
 static int point_c = 0;
-static struct point_vertex point_b[1000];
+static struct point_vertex point_b[v_amt];
 
 static sg_shader line_shader;
 static sg_pipeline line_pipe;
@@ -39,8 +43,8 @@ struct line_vert {
 };
 static int line_c = 0;
 static int line_v = 0;
-static struct line_vert line_b[1000];
-static uint16_t line_bi[1000];
+static struct line_vert line_b[v_amt];
+static uint16_t line_bi[v_amt];
 
 static sg_pipeline grid_pipe;
 static sg_bindings grid_bind;
@@ -53,24 +57,26 @@ static sg_shader poly_shader;
 static int poly_c = 0;
 static int poly_v = 0;
 struct poly_vertex {
-  float pos[2];
+  cpVect pos;
   float uv[2];
   struct rgba color;
 };
-static struct poly_vertex poly_b[1000];
-static uint32_t poly_bi[1000];
+static struct poly_vertex poly_b[v_amt];
+static uint32_t poly_bi[v_amt];
 
 static sg_pipeline circle_pipe;
 static sg_bindings circle_bind;
 static sg_shader csg;
 static int circle_count = 0;
-static int circle_vert_c = 7;
 struct circle_vertex {
   float pos[2];
   float radius;
   struct rgba color;
+  float segsize;
+  float fill;
 };
-static struct circle_vertex circle_b[1000];
+
+static struct circle_vertex circle_b[v_amt];
 
 void debug_flush()
 {
@@ -114,6 +120,12 @@ void debug_flush()
   sg_apply_pipeline(line_pipe);
   sg_apply_bindings(&line_bind);
   sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(projection));
+  float time = lastTick;
+  sg_range tr = {
+    .ptr = &time,
+    .size = sizeof(float)
+  };
+  sg_apply_uniforms(SG_SHADERSTAGE_FS,0,&tr);
   sg_update_buffer(line_bind.vertex_buffers[0], &(sg_range){
     .ptr = line_b, .size = sizeof(struct line_vert)*line_v});
   sg_update_buffer(line_bind.index_buffer, &(sg_range){
@@ -131,11 +143,16 @@ static sg_shader_uniform_block_desc projection_ubo = {
   }
 };
 
+static sg_shader_uniform_block_desc time_ubo = {
+  .size = sizeof(float),
+  .uniforms = {
+    [0] = { .name = "time", .type = SG_UNIFORMTYPE_FLOAT },
+  }
+};
+
 void debugdraw_init()
 {
-  point_shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/point_v.glsl"),
-    .fs.source = slurp_text("shaders/point_f.glsl"),
+  point_shader = sg_compile_shader("shaders/point_v.glsl", "shaders/point_f.glsl", &(sg_shader_desc){
     .vs.uniform_blocks[0] = projection_ubo
   });
   
@@ -157,10 +174,9 @@ void debugdraw_init()
     .usage = SG_USAGE_STREAM
   });
   
-  line_shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/linevert.glsl"),
-    .fs.source = slurp_text("shaders/linefrag.glsl"),
-    .vs.uniform_blocks[0] = projection_ubo
+  line_shader = sg_compile_shader("shaders/linevert.glsl", "shaders/linefrag.glsl", &(sg_shader_desc){
+    .vs.uniform_blocks[0] = projection_ubo,
+    .fs.uniform_blocks[0] = time_ubo
   });
   
   line_pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -189,9 +205,7 @@ void debugdraw_init()
     .type = SG_BUFFERTYPE_INDEXBUFFER
   });
   
-    csg = sg_make_shader(&(sg_shader_desc){
-      .vs.source = slurp_text("shaders/circlevert.glsl"),
-      .fs.source = slurp_text("shaders/circlefrag.glsl"),
+    csg = sg_compile_shader("shaders/circlevert.glsl", "shaders/circlefrag.glsl", &(sg_shader_desc){
       .vs.uniform_blocks[0] = projection_ubo,
     });
 
@@ -203,7 +217,9 @@ void debugdraw_init()
 	  [0].buffer_index = 1,
 	  [1].format = SG_VERTEXFORMAT_FLOAT2,
 	  [2].format = SG_VERTEXFORMAT_FLOAT,
-	  [3].format = SG_VERTEXFORMAT_UBYTE4N
+	  [3].format = SG_VERTEXFORMAT_UBYTE4N,
+	  [4].format = SG_VERTEXFORMAT_FLOAT,
+	  [5].format = SG_VERTEXFORMAT_FLOAT
 	},
       .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE,
     },
@@ -214,7 +230,7 @@ void debugdraw_init()
   });
 
   circle_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(float)*circle_vert_c*5000,
+    .size = sizeof(struct circle_vertex)*v_amt,
     .usage = SG_USAGE_STREAM,
   });
 
@@ -230,9 +246,7 @@ void debugdraw_init()
     .usage = SG_USAGE_IMMUTABLE,
   });
   
-  grid_shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/gridvert.glsl"),
-    .fs.source = slurp_text("shaders/gridfrag.glsl"),
+  grid_shader = sg_compile_shader("shaders/gridvert.glsl", "shaders/gridfrag.glsl", &(sg_shader_desc){
     .vs.uniform_blocks[0] = projection_ubo,
     .vs.uniform_blocks[1] = {
       .size = sizeof(float)*2,
@@ -263,9 +277,7 @@ void debugdraw_init()
   
   grid_bind.vertex_buffers[0] = circle_bind.vertex_buffers[1];
   
-  poly_shader = sg_make_shader(&(sg_shader_desc){
-    .vs.source = slurp_text("shaders/poly_v.glsl"),
-    .fs.source = slurp_text("shaders/poly_f.glsl"),
+  poly_shader = sg_compile_shader("shaders/poly_v.glsl", "shaders/poly_f.glsl", &(sg_shader_desc){
     .vs.uniform_blocks[0] = projection_ubo
   });
   
@@ -282,28 +294,28 @@ void debugdraw_init()
   });
   
   poly_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(struct poly_vertex)*1000,
+    .size = sizeof(struct poly_vertex)*v_amt,
     .usage = SG_USAGE_STREAM,
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
   });
   
   poly_bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(uint32_t)*6*1000,
+    .size = sizeof(uint32_t)*6*v_amt,
     .usage = SG_USAGE_STREAM,
     .type = SG_BUFFERTYPE_INDEXBUFFER
   });
 }
 
-void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len)
+void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int closed)
 {
   if (a_n < 2) return;
-  int n = a_n+1;
+
+  int n = closed ? a_n+1 : a_n;
   cpVect points[n];
-  
-  for (int i = 0; i < n; i++)
-    points[i] = a_points[i];
-    
-  points[n-1] = a_points[0];
+
+  memcpy(points, a_points, sizeof(cpVect)*n);
+  if (closed)
+    points[n-1] = a_points[0];
 
   struct line_vert v[n];
   float dist = 0;
@@ -412,11 +424,20 @@ void inflatepoints(cpVect *r, cpVect *p, float d, int n)
         r[i+1] = inflatepoint(p[i],p[i+1],p[i+2], d);
 }
 
-void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int closed, int flags)
+void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
 {
   static_assert(sizeof(cpVect) == 2*sizeof(float));
+  if (thickness == 0) {
+    thickness = 1;
+  }
+
   /* todo: should be dashed, and filled. use a texture. */  
   /* draw polygon outline */
+  if (cpveql(points[0], points[n-1])) {
+    closed = true;
+    n--;
+  }
+
   parsl_position par_v[n];
   
   for (int i = 0; i < n; i++) {
@@ -427,7 +448,7 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   uint16_t spine_lens[] = {n};
   
   parsl_context *par_ctx = parsl_create_context((parsl_config){
-    .thickness = 1,
+    .thickness = thickness,
     .flags = PARSL_FLAG_ANNOTATIONS,
     .u_mode = PAR_U_MODE_DISTANCE,
   });
@@ -443,25 +464,14 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   for (int i = 0; i < mesh->num_triangles*3; i++)
     mesh->triangle_indices[i] += poly_v;
       
-  sg_range it = {
-    .ptr = mesh->triangle_indices,
-    .size = sizeof(uint32_t)*mesh->num_triangles*3
-  };
-  
   struct poly_vertex vertices[mesh->num_vertices];
   
   for (int i = 0; i < mesh->num_vertices; i++) {
-    vertices[i].pos[0] = mesh->positions[i].x;
-    vertices[i].pos[1] = mesh->positions[i].y;
+    vertices[i].pos = (cpVect){ .x = mesh->positions[i].x, .y = mesh->positions[i].y };
     vertices[i].uv[0] = mesh->annotations[i].u_along_curve;
     vertices[i].uv[1] = mesh->annotations[i].v_across_curve;
     vertices[i].color = color;
   }
-
-  sg_range vvt = {
-    .ptr = vertices,
-    .size = sizeof(struct poly_vertex)*mesh->num_vertices
-  };
 
   memcpy(poly_b+poly_v, vertices, sizeof(struct poly_vertex)*mesh->num_vertices);
   memcpy(poly_bi+poly_c, mesh->triangle_indices, sizeof(uint32_t)*mesh->num_triangles*3);
@@ -470,15 +480,35 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   poly_v += mesh->num_vertices;    
   
   parsl_destroy_context(par_ctx);
+
+  /* Now drawing the line outlines */
+  if (thickness == 1) {
+    draw_line(points,n,line_color,line_seg, 0);
+  } else {
+    /* Draw inside and outside lines */
+    cpVect in_p[n];
+    cpVect out_p[n];
+    
+    for (int i = 0, v = 0; i < n*2+1; i+=2, v++)
+      in_p[v] = vertices[i].pos;
+
+    for (int i = 1, v = 0; i < n*2; i+=2,v++)
+      out_p[v] = vertices[i].pos;
+
+    draw_line(in_p,n,line_color,line_seg,1);
+    draw_line(out_p,n,line_color,line_seg,1);
+  }
 }
 
-void draw_circle(int x, int y, float radius, int pixels, struct rgba color, int fill)
+void draw_circle(int x, int y, float radius, float pixels, struct rgba color, float segsize)
 {
   struct circle_vertex cv;
   cv.pos[0] = x;
   cv.pos[1] = y;
   cv.radius = radius;
   cv.color = color;
+  cv.segsize = segsize/radius;
+  cv.fill = pixels/radius;
   memcpy(circle_b+circle_count, &cv, sizeof(struct circle_vertex));
   circle_count++;
 }
@@ -495,7 +525,7 @@ void draw_rect(int x, int y, int w, int h, struct rgba color)
       { .x = x-hw, .y = y+hh }
     };
     
-    draw_poly(verts, 4, color);
+    draw_poly(verts, 4, color, color, 0);
 }
 
 void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
@@ -506,7 +536,7 @@ void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
 void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int capsize)
 { 
   cpVect points[2] = {start, end};
-  draw_line(points, 2, color, 0);
+  draw_line(points, 2, color, 0, 0);
   draw_cppoint(end, capsize, color);
 }
 
@@ -550,11 +580,9 @@ void draw_points(struct cpVect *points, int n, float size, struct rgba color)
         draw_cppoint(points[i], size, color);
 }
 
-void draw_poly(cpVect *points, int n, struct rgba color)
+void draw_poly(cpVect *points, int n, struct rgba color, struct rgba line_color, float line_seg)
 {
-  draw_line(points, n, color, 10);
-  
-  color.a = 40;
+  draw_line(points, n, line_color, line_seg, 1);
   
   /* Find polygon mesh */
   int tric = n - 2;
@@ -580,8 +608,7 @@ void draw_poly(cpVect *points, int n, struct rgba color)
   struct poly_vertex polyverts[n];
   
   for (int i = 0; i < n; i++) {
-    polyverts[i].pos[0] = points[i].x;
-    polyverts[i].pos[1] = points[i].y;
+    polyverts[i].pos = points[i];
     polyverts[i].uv[0] = 0.0;
     polyverts[i].uv[1] = 0.0;
     polyverts[i].color = color;

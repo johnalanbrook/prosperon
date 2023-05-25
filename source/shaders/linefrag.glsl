@@ -9,10 +9,14 @@ float pat = 0.5;
 
 int pp = 0x0C24;
 
+uniform float time;
+
 void main()
 {
     color = fcolor;
-    if (mod(dist,seg_len)/seg_len < 0.5)
+    if (seg_len == 0) return;
+    
+    if (mod(dist+time*seg_len,seg_len)/seg_len < 0.5)
       discard;
 /*    
     int d = int(dist);

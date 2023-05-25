@@ -116,6 +116,22 @@ assets for it.
   - hit.velocity: Velocity of impact
   - hit.normal: Normal of impact
 
+.Colliders
+Colliders visually look different based on their status. Objects can
+be in one of three states
+
+- Dynamic: respond to physics
+- Kinematic: modeled with infinite momentum. An "unstoppable force"
+controlled by a user.
+- Static: modeled with infinite mass. An "immovable object" that
+shouldn't move.
+
+Objects can then have colliders on them, each collider being a sensor,
+or solid. Sensors respond to collision signals, while solid ones also
+do not let objects through.
+
+
+
 .Input
 Input works by adding functions to an object, and then "controlling"
 them. The format for a function is "input_[key]_[action]". [Action]

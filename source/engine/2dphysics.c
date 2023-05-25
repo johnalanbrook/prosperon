@@ -2,7 +2,6 @@
 
 #include "debug.h"
 #include "gameobject.h"
-#include "mathc.h"
 #include "nuke.h"
 #include <string.h>
 
@@ -22,42 +21,17 @@
 #include "log.h"
 
 cpSpace *space = NULL;
-float phys2d_gravity = -50.f;
 
 struct rgba color_white = {255,255,255,255};
 struct rgba color_black = {0,0,0,255};
 
-struct rgba dbg_color = {
-  .r = 0.836*255,
-  .g = 255,
-  .b = 0.45*255,
-  .a = 255
-};
-struct rgba trigger_color = {
-  .r = 0.278*255,
-  .g = 0.953*255,
-  .b = 255,
-  .a = 255
-};
-struct rgba disabled_color = {
-  .r = 0.58*255,
-  .g = 0.58*255,
-  .b = 0.58*255,
-  .a = 255
-};
-struct rgba dynamic_color = {
-  .r = 255,
-  .g = 70,
-  .b = 46,
-  .a = 255
-};
-struct rgba kinematic_color = {255, 206, 71, 255};
-struct rgba static_color = {
-  .r = 0.22*255,
-  .g = 0.271*255,
-  .b = 255,
-  .a = 255
-};
+struct rgba disabled_color = {148,148,148,255};
+struct rgba sleep_color = {255,140,228,255};
+struct rgba dynamic_color = {255,70,46,255};
+struct rgba kinematic_color = {255, 194, 64, 255};
+struct rgba static_color = {73,209,80,255};
+
+static const unsigned char col_alpha = 40;
 
 unsigned int category_masks[32];
 
@@ -167,9 +141,12 @@ int cpshape_enabled(cpShape *c) {
   return 1;
 }
 
-struct rgba shape_outline_color(cpShape *shape) {
+struct rgba shape_color(cpShape *shape) {
   switch (cpBodyGetType(cpShapeGetBody(shape))) {
   case CP_BODY_TYPE_DYNAMIC:
+//    cpBodySleep(cpShapeGetBody(shape));
+    if (cpBodyIsSleeping(cpShapeGetBody(shape)))
+      return sleep_color;
     return dynamic_color;
 
   case CP_BODY_TYPE_KINEMATIC:
@@ -182,23 +159,10 @@ struct rgba shape_outline_color(cpShape *shape) {
   return static_color;
 }
 
-struct rgba shape_color(cpShape *shape) {
-  if (!cpshape_enabled(shape)) return disabled_color;
-
-  if (cpShapeGetSensor(shape)) return trigger_color;
-
-  return dbg_color;
-}
-
-struct rgba shape_color_s(cpShape *shape) {
-  return shape_color(shape);
-}
-
-void phys2d_init() {
+void phys2d_init()
+{
   space = cpSpaceNew();
-  cpVect grav = {0, phys2d_gravity};
-  phys2d_set_gravity(grav);
-  cpSpaceSetGravity(space, cpv(0, phys2d_gravity));
+  cpSpaceSetSleepTimeThreshold(space, 1);
 }
 
 void phys2d_set_gravity(cpVect v) {
@@ -295,7 +259,11 @@ cpVect bodytransformpoint(cpBody *body, cpVect offset) {
 void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
   cpVect pos = bodytransformpoint(cpShapeGetBody(c), cpCircleShapeGetOffset(c));
   float radius = cpCircleShapeGetRadius(c);
-  draw_circle(pos.x, pos.y, radius, 2, shape_color(c), 1);
+  struct rgba color = shape_color(c);
+  float seglen = cpShapeGetSensor(c) ? 5 : -1;
+  draw_circle(pos.x, pos.y, radius, 1, color, seglen);
+  color.a = col_alpha;
+  draw_circle(pos.x,pos.y,radius,radius,color,-1);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
@@ -370,7 +338,7 @@ void phys2d_dbgdrawbox(struct phys2d_box *box) {
   for (int i = 0; i < n; i++)
     points[i] = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i));
 
-  draw_poly(points, n, shape_color(box->shape.shape));
+  draw_poly(points, n, shape_color(box->shape.shape), shape_color(box->shape.shape), 0);
 }
 /************** POLYGON ************/
 
@@ -390,9 +358,9 @@ struct phys2d_poly *Make2DPoly(int go) {
 
 float phys2d_poly_moi(struct phys2d_poly *poly, float m) {
   float moi = cpMomentForPoly(m, arrlen(poly->points), poly->points, cpvzero, poly->radius);
-  if (moi <= 0) {
-    YughError("Polygon MOI is negative. Returning one;");
-    return 1;
+  if (isnan(moi)) {
+//    YughError("Polygon MOI returned an error. Returning 0.");
+    return 0;
   }
 
   return moi;
@@ -426,6 +394,8 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
 }
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
   struct rgba color = shape_color(poly->shape.shape);
+  struct rgba line_color = color;
+  color.a = col_alpha;
 
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
@@ -434,7 +404,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
     for (int i = 0; i < n; i++)
       points[i] = bodytransformpoint(cpShapeGetBody(poly->shape.shape), cpPolyShapeGetVert(poly->shape.shape, i));
 
-    draw_poly(points, n, color);
+    draw_poly(points, n, color, line_color, 0);
   }
 }
 /****************** EDGE 2D**************/
@@ -451,6 +421,7 @@ struct phys2d_edge *Make2DEdge(int go) {
   new->shape.debugdraw = phys2d_dbgdrawedge;
   new->shape.moi = phys2d_edge_moi;
   new->shape.shape = NULL;
+  new->draws = 0;
   phys2d_applyedge(new);
 
   return new;
@@ -558,7 +529,11 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
     drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i]);
   }
 
-  draw_edge(drawpoints, arrlen(edge->points), shape_color_s(edge->shapes[0]), edge->thickness * 2, 0,0);
+  float seglen = cpShapeGetSensor(edge->shapes[0]) ? 10 : 1;
+  struct rgba color = shape_color(edge->shapes[0]);
+  struct rgba line_color = color;
+  color.a = col_alpha;
+  draw_edge(drawpoints, arrlen(edge->points), color, edge->thickness * 2, 0,0, line_color, seglen);
   draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 
@@ -608,6 +583,8 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   JS_SetPropertyStr(js, obj, "hit", JS_NewInt32(js, hit));
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
   JS_SetPropertyStr(js, obj, "velocity", vec2js(cpArbiterGetSurfaceVelocity(arb)));
+  JS_SetPropertyStr(js, obj, "pos", vec2js(cpArbiterGetPointA(arb, 0)));
+  JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   script_callee(c, 1, &obj);
 }
 

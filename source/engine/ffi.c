@@ -2,7 +2,6 @@
 
 #include "script.h"
 
-#include "2dphysics.h"
 #include "anim.h"
 #include "debug.h"
 #include "debugdraw.h"
@@ -27,9 +26,15 @@
 #include <assert.h>
 #include <ftw.h>
 
+#include "render.h"
+
 #include "model.h"
 
+#include "HandmadeMath.h"
+
 #include "miniaudio.h"
+
+static JSValue globalThis;
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
@@ -41,6 +46,20 @@
       (byte & 0x04 ? '1' : '0'), \
       (byte & 0x02 ? '1' : '0'), \
       (byte & 0x01 ? '1' : '0')
+
+JSValue js_getpropstr(JSValue v, const char *str)
+{
+  JSValue p = JS_GetPropertyStr(js,v,str);
+  JS_FreeValue(js,p);
+  return p;
+}
+
+JSValue js_getpropidx(JSValue v, uint32_t i)
+{
+  JSValue p = JS_GetPropertyUint32(js,v,i);
+  JS_FreeValue(js,p);
+  return p;
+}
 
 int js2int(JSValue v) {
   int32_t i;
@@ -94,7 +113,7 @@ struct timer *js2timer(JSValue v) {
 
 double js_get_prop_number(JSValue v, const char *p) {
   double num;
-  JS_ToFloat64(js, &num, JS_GetPropertyStr(js, v, p));
+  JS_ToFloat64(js, &num, js_getpropstr(v,p));
   return num;
 }
 
@@ -108,31 +127,42 @@ struct glrect js2glrect(JSValue v) {
 }
 
 JSValue js_arridx(JSValue v, int idx) {
-  return JS_GetPropertyUint32(js, v, idx);
+  return js_getpropidx( v, idx);
 }
 
 int js_arrlen(JSValue v) {
   int len;
-  JS_ToInt32(js, &len, JS_GetPropertyStr(js, v, "length"));
+  JS_ToInt32(js, &len, js_getpropstr( v, "length"));
   return len;
 }
 
 struct rgba js2color(JSValue v) {
-  JSValue ja = js_arridx(v,3);
-  unsigned char a = JS_IsUndefined(ja) ? 255 : js2int(ja);
+  JSValue c[4];
+  for (int i = 0; i < 4; i++)
+    c[i] = js_arridx(v,i);
+  unsigned char a = JS_IsUndefined(c[3]) ? 255 : js2int(c[3]);
   struct rgba color = {
-    .r = js2int(js_arridx(v,0)),
-    .g = js2int(js_arridx(v,1)),
-    .b = js2int(js_arridx(v,2)),
+    .r = js2int(c[0]),
+    .g = js2int(c[1]),
+    .b = js2int(c[2]),
     .a = a,
   };
+
   return color;
+}
+
+HMM_Vec2 js2hmmv2(JSValue v)
+{
+  HMM_Vec2 v2;
+  v2.X = js2number(js_getpropidx(v,0));
+  v2.Y = js2number(js_getpropidx(v,1));
+  return v2;
 }
 
 cpVect js2vec2(JSValue v) {
   cpVect vect;
-  vect.x = js2number(js_arridx(v, 0));
-  vect.y = js2number(js_arridx(v, 1));
+  vect.x = js2number(js_getpropidx(v,0));
+  vect.y = js2number(js_getpropidx(v,1));
   return vect;
 }
 
@@ -141,7 +171,7 @@ cpBitmask js2bitmask(JSValue v) {
   int len = js_arrlen(v);
 
   for (int i = 0; i < len; i++) {
-    int val = JS_ToBool(js, JS_GetPropertyUint32(js, v, i));
+    int val = JS_ToBool(js, js_getpropidx( v, i));
     if (!val) continue;
 
     mask |= 1 << i;
@@ -155,7 +185,7 @@ cpVect *js2cpvec2arr(JSValue v) {
   cpVect *points = NULL;
 
   for (int i = 0; i < n; i++)
-    arrput(points, js2vec2(JS_GetPropertyUint32(js, v, i)));
+    arrput(points, js2vec2(js_getpropidx( v, i)));
 
   return points;
 }
@@ -191,35 +221,35 @@ JSValue vecarr2js(cpVect *points, int n) {
 
 JSValue duk_gui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *s = JS_ToCString(js, argv[0]);
-  cpVect pos = js2vec2(argv[1]);
+  HMM_Vec2 pos = js2hmmv2(argv[1]);
 
   float size = js2number(argv[2]);
-  renderText(s, &pos, size, color_white, 500, -1);
+  renderText(s, pos, size, color_white, 500, -1);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
 
 JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *s = JS_ToCString(js, argv[0]);
-  cpVect pos = js2vec2(argv[1]);
+  HMM_Vec2 pos = js2hmmv2(argv[1]);
 
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[4]);
-  JSValue ret = JS_NewInt64(js, renderText(s, &pos, size, c, wrap, -1));
+  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, -1));
   JS_FreeCString(js, s);
   return ret;
 }
 
 JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *s = JS_ToCString(js, argv[0]);
-  cpVect pos = js2vec2(argv[1]);
+  HMM_Vec2 pos = js2hmmv2(argv[1]);
 
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[5]);
   int cursor = js2int(argv[4]);
-  renderText(s, &pos, size, c, wrap, cursor);
+  renderText(s, pos, size, c, wrap, cursor);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
@@ -232,12 +262,13 @@ JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   return JS_NULL;
 }
 
+
 struct nk_rect js2nk_rect(JSValue v) {
   struct nk_rect rect;
-  rect.x = js2number(JS_GetPropertyStr(js, v, "x"));
-  rect.y = js2number(JS_GetPropertyStr(js, v, "y"));
-  rect.w = js2number(JS_GetPropertyStr(js, v, "w"));
-  rect.h = js2number(JS_GetPropertyStr(js, v, "h"));
+  rect.x = js2number(js_getpropstr(v, "x"));
+  rect.y = js2number(js_getpropstr(v, "y"));
+  rect.w = js2number(js_getpropstr(v, "w"));
+  rect.h = js2number(js_getpropstr(v, "h"));
   return rect;
 }
 
@@ -381,7 +412,7 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
     YughCritical("Spline creation error %d: %s", status.code, status.message);
 
   for (int i = 0; i < n; i++)
-    points[i] = js2vec2(JS_GetPropertyUint32(js, ctrl_pts, i));
+    points[i] = js2vec2(js_getpropidx( ctrl_pts, i));
 
   ts_bspline_set_control_points(&spline, (tsReal *)points, &status);
 
@@ -600,11 +631,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 16:
-    dbg_color = js2color(argv[1]);
+//    dbg_color = js2color(argv[1]);
     break;
 
   case 17:
-    trigger_color = js2color(argv[1]);
+//    trigger_color = js2color(argv[1]);
     break;
 
   case 18:
@@ -680,7 +711,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 37:
     if (!id2sprite(js2int(argv[1]))) return JS_NULL;
-    vec2float(js2vec2(argv[2]), id2sprite(js2int(argv[1]))->pos);
+    id2sprite(js2int(argv[1]))->pos = js2hmmv2(argv[2]);
     break;
 
   case 38:
@@ -855,7 +886,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 83:
-    draw_edge(js2cpvec2arr(argv[1]), 2, js2color(argv[2]), 1, 0, 0);
+    draw_edge(js2cpvec2arr(argv[1]), 2, js2color(argv[2]), 1, 0, 0, js2color(argv[2]), 10);
     return JS_NULL;
 
   case 84:
@@ -911,7 +942,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 96:
-//    id2sprite(js2int(argv[1]))->color = js2color(argv[2]);
+    id2sprite(js2int(argv[1]))->color = js2color(argv[2]);
     break;
 
   case 97:
@@ -996,6 +1027,10 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 9:
     stacktrace_callee = c;
+    break;
+
+  case 10:
+    register_draw(c);
     break;
   }
 
@@ -1117,6 +1152,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   int cmd = js2int(argv[0]);
   int id = js2int(argv[1]);
   struct gameobject *go = get_gameobject_from_id(id);
+
   if (!go) return JS_NULL;
 
   /* TODO: Possible that reindexing shapes only needs done for static shapes? */
@@ -1217,12 +1253,11 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
 JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int go = js2int(argv[0]);
   const char *path = JS_ToCString(js, argv[1]);
-  cpVect pos = js2vec2(argv[2]);
+  HMM_Vec2 pos = js2hmmv2(argv[2]);
   int sprite = make_sprite(go);
   struct sprite *sp = id2sprite(sprite);
   sprite_loadtex(sp, path, ST_UNIT);
-  sp->pos[0] = pos.x;
-  sp->pos[1] = pos.y;
+  sp->pos = pos;
 
   JS_FreeCString(js, path);
 
@@ -1360,7 +1395,7 @@ JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   cpVect points[n];
 
   for (int i = 0; i < n; i++) {
-    points[i] = js2vec2(JS_GetPropertyUint32(js, argv[1], i));
+    points[i] = js2vec2(js_getpropidx(argv[1],i));
     phys2d_edgeaddvert(edge);
     phys2d_edge_setvert(edge, i, points[i]);
   }
@@ -1418,7 +1453,7 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
   for (int i = 0; i < keyframes; i++) {
     struct keyframe k;
-    cpVect v = js2vec2(JS_GetPropertyUint32(js, argv[1], i));
+    cpVect v = js2vec2(js_getpropidx( argv[1], i));
     k.time = v.y;
     k.val = v.x;
     a = anim_add_keyframe(a, k);
@@ -1427,7 +1462,7 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
   for (double i = 0; i < 3.0; i = i + 0.1) {
     YughInfo("Val is now %f at time %f", anim_val(a, i), i);
     JSValue vv = num2js(anim_val(a, i));
-    JS_Call(js, prop, JS_GetGlobalObject(js), 1, &vv);
+    JS_Call(js, prop, globalThis, 1, &vv);
   }
 
   return JS_NULL;
@@ -1437,15 +1472,17 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
   double secs = js2number(argv[1]);
   struct callee *c = malloc(sizeof(*c));
   c->fn = JS_DupValue(js, argv[0]);
-  c->obj = JS_GetGlobalObject(js);
+  c->obj = JS_DupValue(js, globalThis);
   int id = timer_make(secs, call_callee, c, 1);
 
   return JS_NewInt64(js, id);
 }
 
-#define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, JS_GetGlobalObject(js), #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
+#define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {
+  globalThis = JS_GetGlobalObject(js);
+
   DUK_FUNC(yughlog, 4)
   DUK_FUNC(nuke, 6)
   DUK_FUNC(make_gameobject, 7)

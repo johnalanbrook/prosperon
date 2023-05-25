@@ -1,7 +1,6 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "mathc.h"
 #include "sokol/sokol_gfx.h"
 #include <stdint.h>
 

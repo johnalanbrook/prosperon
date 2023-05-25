@@ -89,12 +89,11 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
   cpShapeSetElasticity(shape, go->e);
   cpShapeSetCollisionType(shape, go2id(go));
 
-  /*    cpShapeFilter filter;
-      filter.group = go2id(go);
-      filter.categories = 1<<go->layer;
-      filter.mask = category_masks[go->layer];
-      cpShapeSetFilter(shape, filter);
-  */
+  cpShapeFilter filter;
+  filter.group = go2id(go);
+  filter.categories = CP_ALL_CATEGORIES;//1<<go->layer;
+  filter.mask = CP_ALL_CATEGORIES;//category_masks[go->layer];
+  cpShapeSetFilter(shape, filter);
 }
 
 void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go) {
@@ -106,6 +105,7 @@ void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go) {
   }
 
   moment += s->moi(s->data, go->mass);
+  if (moment < 0) moment = 0;
   cpBodySetMoment(go->body, moment);
 }
 

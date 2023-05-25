@@ -18,6 +18,8 @@
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
 
+#include "HandmadeMath.h"
+
 struct sFont *font;
 
 #define max_chars 40000
@@ -82,9 +84,7 @@ struct text_vert {
 static struct text_vert text_buffer[max_chars];
 
 void font_init(struct shader *textshader) {
-  fontshader = sg_make_shader(&(sg_shader_desc){
-      .vs.source = slurp_text("shaders/textvert.glsl"),
-      .fs.source = slurp_text("shaders/textfrag.glsl"),
+  fontshader = sg_compile_shader("shaders/textvert.glsl", "shaders/textfrag.glsl", &(sg_shader_desc){
       .vs.uniform_blocks[0] = {
           .size = sizeof(float) * 16,
           //	.layout = SG_UNIFORMLAYOUT_STD140,
@@ -133,6 +133,31 @@ void font_init(struct shader *textshader) {
   bind_text.fs_images[0] = font->texID;
 }
 
+struct sFont *MakeSDFFont(const char *fontfile, int height)
+{
+  YughInfo("Making sdf font %s.", fontfile);
+
+  int packsize = 1024;
+  struct sFont *newfont = calloc(1, sizeof(struct sFont));
+  newfont->height = height;
+
+  char fontpath[256];
+  snprintf(fontpath, 256, "fonts/%s", fontfile);
+
+  unsigned char *ttf_buffer = slurp_file(fontpath);
+  unsigned char *bitmap = malloc(packsize * packsize);
+
+  stbtt_fontinfo fontinfo;
+  if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
+    YughError("Failed to make font %s", fontfile);
+  }
+
+  for (int i = 32; i < 95; i++) {
+    int w, h, xoff, yoff;
+//    unsigned char *stbtt_GetGlyphSDF(&fontinfo, height, i, 1, 0, 1, &w, &h, &xoff, &yoff);
+  }
+}
+
 struct sFont *MakeFont(const char *fontfile, int height) {
   YughInfo("Making font %s.", fontfile);
 
@@ -151,7 +176,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   stbtt_pack_context pc;
 
-  stbtt_PackBegin(&pc, bitmap, packsize, packsize, 0, 1, NULL);
+  int pad = 2;
+
+  stbtt_PackBegin(&pc, bitmap, packsize, packsize, 0, pad, NULL);
   stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
   stbtt_PackEnd(&pc);
 
@@ -181,10 +208,10 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     stbtt_packedchar glyph = glyphs[c - 32];
 
     struct glrect r;
-    r.s0 = glyph.x0 / (float)packsize;
-    r.s1 = glyph.x1 / (float)packsize;
-    r.t0 = glyph.y0 / (float)packsize;
-    r.t1 = glyph.y1 / (float)packsize;
+    r.s0 = (glyph.x0) / (float)packsize;
+    r.s1 = (glyph.x1) / (float)packsize;
+    r.t0 = (glyph.y0) / (float)packsize;
+    r.t1 = (glyph.y1) / (float)packsize;
 
     newfont->Characters[c].Advance = glyph.xadvance;
     newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0;
@@ -229,19 +256,23 @@ void text_flush() {
 
 static int drawcaret = 0;
 
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct rgba color) {
-  float offset[2] = {-1, 1};
+void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+  HMM_Vec2 offset = {0.0};
   
   struct text_vert vert;
+
+  float lsize = 1.0 / 1024.0;
+
+  float oline = 1.0;
   
-  vert.wh.x = c.Size[0] * scale;
-  vert.wh.y = c.Size[1] * scale;
-  vert.pos.x = cursor[0] - (c.Bearing[0] + offset[0]) * scale;
-  vert.pos.y = cursor[1] - (c.Bearing[1] + offset[1]) * scale;
-  vert.uv.u = c.rect.s0*USHRT_MAX;
-  vert.uv.v = c.rect.t0*USHRT_MAX;
-  vert.st.u = (c.rect.s1-c.rect.s0)*USHRT_MAX;
-  vert.st.v = (c.rect.t1-c.rect.t0)*USHRT_MAX;
+  vert.pos.x = cursor.X - (c.Bearing[0] + offset.X) * scale - oline;
+  vert.pos.y = cursor.Y - (c.Bearing[1] + offset.Y) * scale - oline;
+  vert.wh.x = c.Size[0] * scale + (oline*2);
+  vert.wh.y = c.Size[1] * scale + (oline*2);
+  vert.uv.u = (c.rect.s0 - oline*lsize)*USHRT_MAX;
+  vert.uv.v = (c.rect.t0 - oline*lsize)*USHRT_MAX;
+  vert.st.u = (c.rect.s1-c.rect.s0+oline*lsize*2.0)*USHRT_MAX;
+  vert.st.v = (c.rect.t1-c.rect.t0+oline*lsize*2.0)*USHRT_MAX;
   vert.color = color;
 
   memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
@@ -277,13 +308,11 @@ void text_settype(struct sFont *mfont) {
   font = mfont;
 }
 
-int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color, float lw, int caret) {
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret) {
   int len = strlen(text);
   drawcaret = caret;
 
-  mfloat_t cursor[2] = {0.f};
-  cursor[0] = pos[0];
-  cursor[1] = pos[1];
+  HMM_Vec2 cursor = pos;
 
   const unsigned char *line, *wordstart, *drawstart;
   line = drawstart = (unsigned char *)text;
@@ -293,12 +322,12 @@ int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color
   while (*line != '\0') {
     if (isblank(*line)) {
       sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
-      cursor[0] += font->Characters[*line].Advance * scale;
+      cursor.X += font->Characters[*line].Advance * scale;
       line++;
     } else if (isspace(*line)) {
       sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
-      cursor[1] -= scale * font->height;
-      cursor[0] = pos[0];
+      cursor.Y -= scale * font->height;
+      cursor.X = pos.X;
       line++;
 
     } else {
@@ -311,14 +340,14 @@ int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color
         line++;
       }
 
-      if (lw > 0 && (cursor[0] + wordWidth - pos[0]) >= lw) {
-        cursor[0] = pos[0];
-        cursor[1] -= scale * font->height;
+      if (lw > 0 && (cursor.X + wordWidth - pos.X) >= lw) {
+        cursor.X = pos.X;
+        cursor.Y -= scale * font->height;
       }
 
       while (wordstart < line) {
         sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
-        cursor[0] += font->Characters[*wordstart].Advance * scale;
+        cursor.X += font->Characters[*wordstart].Advance * scale;
         wordstart++;
       }
     }
@@ -328,5 +357,5 @@ int renderText(const char *text, mfloat_t pos[2], float scale, struct rgba color
       }
   */
 
-  return cursor[1] - pos[1];
+  return cursor.Y - pos.Y;
 }

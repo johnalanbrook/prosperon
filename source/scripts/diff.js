@@ -64,8 +64,9 @@ function dainty_assign(target, source)
       target[key] = source[key];
     else if (typeof target[key] === 'object')
       dainty_assign(target[key], source[key]);
-    else
+    else {
       target[key] = source[key];
+    }
   }
 };
 

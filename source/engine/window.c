@@ -23,6 +23,7 @@ int is_win(struct window *s, GLFWwindow *w) {
 }
 
 void window_size_callback(GLFWwindow *w, int width, int height) {
+  render_winsize();
 }
 
 struct window *winfind(GLFWwindow *w) {

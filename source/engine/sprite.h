@@ -3,18 +3,19 @@
 
 #include <stdio.h>
 #include "timer.h"
-#include "mathc.h"
 #include "texture.h"
+#include "HandmadeMath.h"
+#include "render.h"
 
 
 struct datastream;
 struct gameobject;
 
 struct sprite {
-    mfloat_t pos[2];
-    mfloat_t size[2];
+    HMM_Vec2 pos;
+    HMM_Vec2 size;
     float rotation;
-    mfloat_t color[3];
+    struct rgba color;
     int go;
     int id;
     struct Texture *tex;
@@ -35,7 +36,7 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame);
 void sprite_setframe(struct sprite *sprite, struct glrect *frame);
 void sprite_initialize();
 void sprite_draw(struct sprite *sprite);
-void video_draw(struct datastream *ds, mfloat_t pos[2], mfloat_t size[2], float rotate, mfloat_t color[3]);
+void video_draw(struct datastream *ds, HMM_Vec2 pos, HMM_Vec2 size, float rotate, struct rgba color);
 void sprite_draw_all();
 unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite);
 void sprite_flush();

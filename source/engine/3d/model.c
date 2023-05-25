@@ -22,8 +22,6 @@
 
 #include "texture.h"
 
-#include "mathc.h"
-
 #include "sokol/sokol_gfx.h"
 
 static struct {
@@ -40,9 +38,7 @@ static sg_pipeline model_pipe;
 
 void model_init() {
   YughWarn("Creating model");
-  model_shader = sg_make_shader(&(sg_shader_desc){
-      .vs.source = slurp_text("shaders/diffuse_v.glsl"),
-      .fs.source = slurp_text("shaders/diffuse_f.glsl"),
+  model_shader = sg_compile_shader("shaders/diffuse_v.glsl", "shaders/diffuse_f.glsl", &(sg_shader_desc){
       .vs.uniform_blocks[0] = {
           .size = sizeof(float) * 16 * 4,
           .uniforms = {

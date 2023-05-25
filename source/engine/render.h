@@ -16,6 +16,22 @@ struct st_n {
   struct uv_n t;
 };
 
+struct rgba {
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+  unsigned char a;
+};
+
+static float *rgba2floats(float *r, struct rgba c)
+{
+  r[0] = c.r / 255.0;
+  r[1] = c.g / 255.0;
+  r[2] = c.b / 255.0;
+  r[3] = c.a / 255.0;
+  return r;
+}
+
 static sg_blend_state blend_trans = {
   .enabled = true,
   .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
@@ -23,6 +39,5 @@ static sg_blend_state blend_trans = {
   .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
   .src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
 };
-
 
 #endif

@@ -3,7 +3,6 @@
 
 #include "2dphysics.h"
 #include "config.h"
-#include "mathc.h"
 #include <chipmunk/chipmunk.h>
 #include <stdbool.h>
 #include <stdio.h>
