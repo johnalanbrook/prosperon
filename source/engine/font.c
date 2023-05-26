@@ -226,17 +226,16 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
 static int curchar = 0;
 
-void draw_char_box(struct Character c, float cursor[2], float scale, float color[3]) {
-  int x, y, w, h;
+void draw_char_box(struct Character c, cpVect cursor, float scale, struct rgba color)
+{
+  cpVect wh;
+ 
+  wh.x = 8 * scale;
+  wh.y = 14;
+  cursor.x += wh.x / 2.f;
+  cursor.y += wh.y / 2.f;
 
-  x = cursor[0];
-  y = cursor[1];
-  w = 8 * scale;
-  h = 14;
-  x += w / 2.f;
-  y += h / 2.f;
-
-  draw_rect(x, y, w, h, color);
+  draw_box(cursor, wh, color);
 }
 
 void text_flush() {

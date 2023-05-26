@@ -32,6 +32,7 @@ struct rgba kinematic_color = {255, 194, 64, 255};
 struct rgba static_color = {73,209,80,255};
 
 static const unsigned char col_alpha = 40;
+static const float sensor_seg = 10;
 
 unsigned int category_masks[32];
 
@@ -338,7 +339,12 @@ void phys2d_dbgdrawbox(struct phys2d_box *box) {
   for (int i = 0; i < n; i++)
     points[i] = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i));
 
-  draw_poly(points, n, shape_color(box->shape.shape), shape_color(box->shape.shape), 0);
+  struct rgba c = shape_color(box->shape.shape);
+  struct rgba cl = c;
+  cl.a = col_alpha;
+  float seglen = cpShapeGetSensor(box->shape.shape) ? sensor_seg : 0;  
+  draw_line(points, n, cl,seglen, 1, 0);
+  draw_poly(points, n, c);
 }
 /************** POLYGON ************/
 
@@ -404,7 +410,9 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
     for (int i = 0; i < n; i++)
       points[i] = bodytransformpoint(cpShapeGetBody(poly->shape.shape), cpPolyShapeGetVert(poly->shape.shape, i));
 
-    draw_poly(points, n, color, line_color, 0);
+    draw_poly(points, n, color);
+    float seglen = cpShapeGetSensor(poly->shape.shape) ? sensor_seg : 0;
+    draw_line(points, n, line_color, seglen, 1, 0);
   }
 }
 /****************** EDGE 2D**************/
@@ -529,7 +537,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
     drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i]);
   }
 
-  float seglen = cpShapeGetSensor(edge->shapes[0]) ? 10 : 1;
+  float seglen = cpShapeGetSensor(edge->shapes[0]) ? sensor_seg : 0;
   struct rgba color = shape_color(edge->shapes[0]);
   struct rgba line_color = color;
   color.a = col_alpha;

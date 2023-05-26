@@ -40,6 +40,7 @@ struct line_vert {
   float dist;
   struct rgba color;
   float seg_len;
+  float seg_speed;
 };
 static int line_c = 0;
 static int line_v = 0;
@@ -186,7 +187,8 @@ void debugdraw_init()
         [0].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
 	[1].format = SG_VERTEXFORMAT_FLOAT, /* dist */
 	[2].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
-	[3].format = SG_VERTEXFORMAT_FLOAT /* seg length */
+	[3].format = SG_VERTEXFORMAT_FLOAT, /* seg length */
+	[4].format = SG_VERTEXFORMAT_FLOAT /* dashed line speed */
       }
     },
     .primitive_type = SG_PRIMITIVETYPE_LINES,
@@ -306,7 +308,7 @@ void debugdraw_init()
   });
 }
 
-void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int closed)
+void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int closed, float seg_speed)
 {
   if (a_n < 2) return;
 
@@ -325,6 +327,7 @@ void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int 
     v[i].dist = dist;
     v[i].color = color;
     v[i].seg_len = seg_len;
+    v[i].seg_speed = seg_speed;
     dist += cpvdist(points[i], points[i+1]);
   }
   
@@ -332,6 +335,7 @@ void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int 
   v[n-1].dist = dist;
   v[n-1].color = color;
   v[n-1].seg_len = seg_len;
+  v[n-1].seg_speed = seg_speed;
   
   int i_c = (n-1)*2;
   
@@ -483,7 +487,7 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
 
   /* Now drawing the line outlines */
   if (thickness == 1) {
-    draw_line(points,n,line_color,line_seg, 0);
+    draw_line(points,n,line_color,line_seg, 0, 0);
   } else {
     /* Draw inside and outside lines */
     cpVect in_p[n];
@@ -495,48 +499,43 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
     for (int i = 1, v = 0; i < n*2; i+=2,v++)
       out_p[v] = vertices[i].pos;
 
-    draw_line(in_p,n,line_color,line_seg,1);
-    draw_line(out_p,n,line_color,line_seg,1);
+    draw_line(in_p,n,line_color,line_seg,1,0);
+    draw_line(out_p,n,line_color,line_seg,1,0);
   }
 }
 
-void draw_circle(int x, int y, float radius, float pixels, struct rgba color, float segsize)
+void draw_circle(int x, int y, float radius, float pixels, struct rgba color, float seg)
 {
   struct circle_vertex cv;
   cv.pos[0] = x;
   cv.pos[1] = y;
   cv.radius = radius;
   cv.color = color;
-  cv.segsize = segsize/radius;
+  cv.segsize = seg/radius;
   cv.fill = pixels/radius;
   memcpy(circle_b+circle_count, &cv, sizeof(struct circle_vertex));
   circle_count++;
 }
 
-void draw_rect(int x, int y, int w, int h, struct rgba color)
-{
-    float hw = w / 2.f;
-    float hh = h / 2.f;
-
-    cpVect verts[4] = {
-      { .x = x-hw, .y = y-hh },
-      { .x = x+hw, .y = y-hh },
-      { .x = x+hw, .y = y+hh },
-      { .x = x-hw, .y = y+hh }
-    };
-    
-    draw_poly(verts, 4, color, color, 0);
-}
-
 void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
 {
-  draw_rect(c.x, c.y, wh.x, wh.y, color);
+    float hw = wh.x / 2.f;
+    float hh = wh.y / 2.f;
+
+    cpVect verts[4] = {
+      { .x = c.x-hw, .y = c.y-hh },
+      { .x = c.x+hw, .y = c.y-hh },
+      { .x = c.x+hw, .y = c.y+hh },
+      { .x = c.x-hw, .y = c.y+hh }
+    };
+    
+    draw_poly(verts, 4, color);
 }
 
 void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int capsize)
 { 
   cpVect points[2] = {start, end};
-  draw_line(points, 2, color, 0, 0);
+  draw_line(points, 2, color, 0, 0,0);
   draw_cppoint(end, capsize, color);
 }
 
@@ -580,10 +579,8 @@ void draw_points(struct cpVect *points, int n, float size, struct rgba color)
         draw_cppoint(points[i], size, color);
 }
 
-void draw_poly(cpVect *points, int n, struct rgba color, struct rgba line_color, float line_seg)
+void draw_poly(cpVect *points, int n, struct rgba color)
 {
-  draw_line(points, n, line_color, line_seg, 1);
-  
   /* Find polygon mesh */
   int tric = n - 2;
   

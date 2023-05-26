@@ -26,25 +26,15 @@ var component = {
 
 var sprite = clone(component, {
   name: "sprite",
-  _path: "",
-  get path() { return this._path; },
-  set path(x) { this._path = x; this.load_img(x); },
-  _pos: [0, 0],
-  get layer() {
-    if (!this.gameobject)
-      return 0;
-    else
-      return this.gameobject.draw_layer;
-  },
+  path: "",
+  layer: 0,
+  pos: [0,0],
+  enabled: true,
+  get visible() { return this.enabled; },
+  set visible(x) { this.enabled = x; },
+  angle: 0,
+  rect: {s0:0, s1: 1, t0: 0, t1: 1},  
   
-  get pos() { return this._pos; },
-  set pos(x) {
-    this._pos = x;
-    this.sync();
-  },
-
-  input_kp9_pressed() { this.pos = [0,0]; },
-  input_kp8_pressed() { this.pos = [-0.5,0]; },
   input_kp7_pressed() { this.pos = [-1,0]; },
   input_kp6_pressed() { this.pos = [0,-0.5]; },
   input_kp5_pressed() { this.pos = [-0.5,-0.5]; },
@@ -64,58 +54,31 @@ var sprite = clone(component, {
     realpos.y += (dim.y/2);
     return cwh2bb(realpos, dim);
   },
-
-  set asset(x) {
-    if (!x) return;
-    if (!x.endsWith(".png")) {
-      Log.error("Can't set texture to a non image.");
-      return;
-    }
-
-    this.path = x;
-    Log.info("path is now " + x);
-    this.sync();
-  },
-
-  _enabled: true,
-  set enabled(x) { this._enabled = x; cmd(20, this.id, x); },
-  get enabled() { return this._enabled; return cmd(21, this.id); },
-  get visible() { return this.enabled; },
-  set visible(x) { this.enabled = x; },
   
-  _angle: 0,
-  get angle() { return this._angle; },
-  set angle(x) {
-    this._angle = x;
-    sync();
-  },
-
   make(go) {
-    var sprite = clone(this);
-    Object.defineProperty(sprite, 'id', {value:make_sprite(go,this.path,this.pos)});
-    sprite.sync();
+    var old = this;
+    var sprite = clone(this, {
+      get enabled() { return cmd(21,this.id); },
+      set enabled(x) { cmd(20,this.id,x); },
+      set color(x) { cmd(96,this.id,x); },
+      set pos(x) { cmd(37,this.id,x); },
+      set layer(x) { cmd(60, this.id, x); },
+      get layer() { return this.gameobject.draw_layer; },
+      set path(x) { cmd(12,this.id,x,this.rect); },
+
+      kill() { cmd(9,this.id); },
+    });
+
+    var id = make_sprite(go,old.path,old.pos);
+    
+    Object.defineProperty(sprite, 'id', {value:id});
+
+    Object.assign(sprite, this);
+
     return sprite;
   },
   
-  rect: {s0:0, s1: 1, t0: 0, t1: 1},
 
-  sync() {
-    if (!this.hasOwn('id')) return;
-    cmd(60, this.id, this.layer);
-    cmd(37, this.id, this.pos);
-  },
-
-  set color(x) {
-    cmd(96, this.id, x);
-  },
-
-  load_img(img) {
-    cmd(12, this.id, img, this.rect);
-  },
-
-  kill() {
-    cmd(9, this.id);
-  },
 });
 
 /* Container to play sprites and anim2ds */
@@ -217,14 +180,7 @@ var char2d = clone(sprite, {
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
 var collider2d = clone(component, {
   name: "collider 2d",
-  
-  _sensor: false,
-  set sensor(x) {
-    this._sensor = x;
-    if (this.shape)
-      cmd(18, this.shape, x);
-  },
-  get sensor() { return this._sensor; },
+  sensor: false,
 
   input_s_pressed() {
     if (!Keys.alt()) return;
@@ -238,25 +194,28 @@ var collider2d = clone(component, {
     this.enabled = !this.enabled;
   },
 
-  coll_sync() {
-    cmd(18, this.shape, this.sensor);
-  },
-
-  _enabled: true,
-  set enabled(x) {this._enabled = x; if (this.id) cmd(22, this.id, x); },
+  enabled: true,
   get enabled() { return this._enabled; },
   kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
 
   register_hit(fn, obj) {
     register_collide(1, fn, obj, this.gameobject.body, this.shape);
   },
+
+  make_fns: {
+    set sensor(x) { cmd(18,this.shape,x); },
+    set enabled(x) { cmd(22,this.id,x); }
+  },
+  
 });
 
 
 var polygon2d = clone(collider2d, {
   name: "polygon 2d",
   points: [],
-  help: "Ctrl-click Add a point\nShift-click Remove a point",
+  mirrorx: false,
+  mirrory: false,
+
   clone(spec) {
     var obj = Object.create(this);
     obj.points = this.points.copy();
@@ -266,6 +225,7 @@ var polygon2d = clone(collider2d, {
 
   make(go) {
     var poly = Object.create(this);
+    complete_assign(poly, this.make_fns);
     Object.assign(poly, make_poly2d(go, this.points));
     Object.defineProperty(poly, 'id', {enumerable:false});
     Object.defineProperty(poly, 'shape', {enumerable:false});
@@ -279,6 +239,8 @@ var polygon2d = clone(collider2d, {
     this.points.forEach(function(x) { scaledpoints.push(x.scale(this.gameobject.scale)); }, this);
     return points2bb(scaledpoints);
   },
+
+  help: "Ctrl-click Add a point\nShift-click Remove a point",  
   
   input_f10_pressed() {
     this.points = sortpointsccw(this.points);
@@ -352,9 +314,6 @@ var polygon2d = clone(collider2d, {
   query() {
     return cmd(80, this.shape);
   },
-  
-  mirrorx: false,
-  mirrory: false,
   
   input_m_pressed() {
     if (Keys.ctrl())
@@ -485,15 +444,24 @@ var bucket = clone(collider2d, {
 
   samples: 10,
   points:[],
+  thickness:0, /* Number of pixels out the edge is */  
   
   make(go) {
     var edge = Object.create(this);
     Object.assign(edge, make_edge2d(go, this.points, this.thickness));
     Object.defineProperty(edge, 'id', {enumerable:false});
     Object.defineProperty(edge, 'shape', {enumerable:false});
+    complete_assign(edge, {
+      set thickness(x) {
+        cmd_edge2d(1,this.id,x);
+      }
+    });
     edge.defn('points', []);
-//    Object.defineProperty(edge, 'points', {enumerable:false});
+    
     edge.sync();
+
+    var synctriggers = ['samples', 'thickness'];
+
     return edge;
   },
   
@@ -519,12 +487,6 @@ var bucket = clone(collider2d, {
     this.sync();
   },
  
-  _thickness:0, /* Number of pixels out the edge is */
-  get thickness() { return this._thickness; },
-  set thickness(x) {
-    this._thickness = Math.max(x, 0);
-    cmd_edge2d(1, this.id, this._thickness);
-  },
 
   input_v_pressrep() {
     if (!Keys.alt()) return;
@@ -638,14 +600,8 @@ var bucket = clone(collider2d, {
 
 var circle2d = clone(collider2d, {
   name: "circle 2d",
-  get radius() {
-    return this.rradius;
-  },
-  rradius: 10,
-  set radius(x) {
-   this.rradius = x;
-   cmd_circle2d(0, this.id, this.rradius);
-  },
+  radius: 10,
+  offset: [0,0],
   
   get boundingbox() {
     if (!this.gameobject) return null;
@@ -656,11 +612,7 @@ var circle2d = clone(collider2d, {
   get scale() { return this.radius; },
   set scale(x) { this.radius = x; },
   
-  ofset: [0,0],
-  get offset() { return this.ofset; },
-  set offset(x) { this.ofset = x; cmd_circle2d(1, this.id, this.ofset); },
-  
-  get pos() { return this.ofset; },
+  get pos() { return this.offset; },
   set pos(x) { this.offset = x; },
     
   make(go) {
@@ -669,6 +621,18 @@ var circle2d = clone(collider2d, {
     Object.assign(circle, circ);
     Object.defineProperty(circle, 'id', {enumerable:false});
     Object.defineProperty(circle, 'shape', {enumerable:false});
+
+    complete_assign(circle, {
+      set radius(x) { cmd_circle2d(0,this.id,x); },
+      get radius() { return cmd_circle2d(3,this.id); },
+
+      set offset(x) { cmd_circle2d(1,this.id,this.offset); },
+      get offset() { return cmd_circle2d(4,this.id); },
+      
+    });
+
+    complete_assign(circle, this.make_fns);
+    
     return circle;
   },
 
@@ -677,12 +641,6 @@ var circle2d = clone(collider2d, {
     Nuke.label("circle2d");
     this.radius = Nuke.pprop("Radius", this.radius);
     this.offset = Nuke.pprop("offset", this.offset);
-  },
-
-  sync() {
-    cmd_circle2d(0, this.id, this.rradius);
-    cmd_circle2d(-1, this.id);
-    this.coll_sync();  
   },
 });
 

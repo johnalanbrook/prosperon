@@ -968,6 +968,29 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   case 102:
     eye = HMM_AddV3(eye,(HMM_Vec3){0,0,0.01});
     break;
+  case 103:
+    return num2js(js2go(argv[1])->scale);
+
+  case 104:
+    return bool2js(js2go(argv[1])->flipx);
+
+  case 105:
+    return bool2js(js2go(argv[1])->flipy);
+
+  case 106:
+    js2go(argv[1])->e = js2num(argv[2]);
+    break;
+
+  case 107:
+    return num2js(js2go(argv[1])->e);
+
+  case 108:
+    js2go(argv[1])->f = js2num(argv[2]);
+    break;
+  case 109:
+    return num2js(js2go(argv[1])->f);
+  case 110:
+    return num2js(js2go(argv[1])
   }
 
   if (str)
@@ -1355,6 +1378,12 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
   case 1:
     circle->offset = js2vec2(argv[2]);
     break;
+
+    case 2:
+      return num2js(circle->radius);
+
+    case 3:
+      return vec2js(circle->offset);
   }
 
   phys2d_applycircle(circle);

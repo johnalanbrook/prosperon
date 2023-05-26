@@ -1311,9 +1311,7 @@ var gameobject = {
     }
   },
 
-  _mass: 1,
-  set mass(x) { this._mass = Math.max(0,x); },
-  get mass() { return this._mass; },
+  mass: 1,
   bodytype: {
     dynamic: 0,
     kinematic: 1,
@@ -1331,19 +1329,11 @@ var gameobject = {
     this.phys = Nuke.radio("kinematic", this.phys, 1);
     this.phys = Nuke.radio("static", this.phys, 2);
   },
-  _friction: 0,
-  set friction(x) { this._friction = Math.max(0,x); },
-  get friction() { return this._friction; },
-  _elasticity: 0,
-  set elasticity(x) { this._elasticity = Math.max(0, x); },
-  get elasticity() { return this._elasticity; },
+  friction: 0,
+  elasticity: 0,
+  flipx: false,
+  flipy: false,
   
-  _flipx: false,
-  _flipy: false,
-  get flipx() { return this._flipx; },
-  set flipx(x) { this._flipx = x; if (this.alive) cmd(55, this.body, x); this.sync(); },
-  get flipy() { return this._flipy; },
-  set flipy(x) { this._flipy = x; if (this.alive) cmd(56, this.body, x); this.sync(); },
   
   body: -1,
   controlled: false,
@@ -1379,15 +1369,8 @@ var gameobject = {
 
   varname: "",
   
-  _pos: [0,0],
-  set pos(x) { this._pos = x; set_body(2, this.body, x); this.sync(); },
-  get pos() {
-    if (this.body !== -1)
-      return q_body(1, this.body);
-    else
-      return this._pos;
-  },
-
+  pos: [0,0],
+  
   set relpos(x) {
     if (!this.level) {
       this.pos = x;
@@ -1404,15 +1387,8 @@ var gameobject = {
     return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
   },
   
-  _angle: 0,
-  set angle(x) { this._angle = x; set_body(0, this.body, Math.deg2rad(x)); this.sync(); },
-  get angle() {
-    if (this.body !== -1)
-      return Math.rad2deg(q_body(2, this.body)) % 360;
-    else
-      return this._angle;
-  },
-
+  angle: 0,
+  
   get relangle() {
     if (!this.level) return this.angle;
 
@@ -1447,9 +1423,6 @@ var gameobject = {
     set_body(1, this.body, this.phys);
     cmd(75,this.body,this.layer);
     cmd(54, this.body);
-    if (this.components)
-      for (var key in this.components)
-        this.components[key].sync();
   },
 
   syncall() {
@@ -1532,8 +1505,6 @@ var gameobject = {
   prop_obj() {
     var obj = JSON.parse(JSON.stringify(this));
     delete obj.name;
-    delete obj._pos;
-    delete obj._angle;
     delete obj.from;
     return obj;
   },
@@ -1598,6 +1569,30 @@ var gameobject = {
     obj.sync();
     obj.defn('components', {});
 
+    complete_assign(obj, {
+      set scale(x) { cmd(36, this.body, x); },
+      get scale() { return cmd(103, this.body); },
+      get flipx() { return cmd(104,this.body); },
+      set flipx(x) { cmd(55, this.body, x); },
+      get flipy() { return cmd(105,this.body); },
+      set flipy(x) { cmd(56, this.body, x); },
+
+      get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
+      set angle(x) { set_body(0,this.body, Math.deg2rad(x)); },
+
+      set pos(x) { set_body(2,this.body,x); },
+      get pos() { return q_body(1,this.body); },
+
+      get elasticity() { return cmd(107,this.body); },
+      set elasticity(x) { cmd(106,this.body,x); },
+
+      get friction() { return cmd(109,this.body); },
+      set friction(x) { cmd(108,this.body,x); },
+
+      set mass(x) { set_body(7,this.body,x); },
+      get mass() { return cmd(
+    });
+
     for (var prop in obj) {
        if (typeof obj[prop] === 'object' && 'make' in obj[prop]) {
 	   if (prop === 'flipper') return;
@@ -1648,7 +1643,7 @@ var gameobject = {
 }
 
 
-var locks = ['draw_layer', 'friction','elasticity', 'visible', 'body', 'flipx', 'flipy', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
+var locks = ['visible', 'body', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
 locks.forEach(function(x) {
   Object.defineProperty(gameobject, x, {enumerable:false});
 });

@@ -3,6 +3,7 @@ out vec4 color;
 
 in float dist;
 in vec4 fcolor;
+in float seg_speed;
 
 in float seg_len;
 float pat = 0.5;
@@ -16,7 +17,7 @@ void main()
     color = fcolor;
     if (seg_len == 0) return;
     
-    if (mod(dist+time*seg_len,seg_len)/seg_len < 0.5)
+    if (mod(dist+(time*seg_speed)*seg_len,seg_len)/seg_len < 0.5)
       discard;
 /*    
     int d = int(dist);
