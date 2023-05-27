@@ -13,8 +13,8 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct rgba, int capsize
 void draw_edge(struct cpVect *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg);
 
 /* pixels - how many pixels thick, segsize - dashed line seg len */
-void draw_circle(int x, int y, float radius, float pixels, struct rgba color, float seg);
-void draw_box(struct cpVect c, struct cpVect wh, struct rgba color);
+void draw_circle(cpVect c, float radius, float pixels, struct rgba color, float seg);
+void draw_box(cpVect c, cpVect wh, struct rgba color);
 void draw_poly(cpVect *points, int n, struct rgba color);
 
 void draw_grid(int width, int span, struct rgba color);

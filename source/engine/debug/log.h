@@ -10,6 +10,10 @@
 #define LOG_ERROR 2
 #define LOG_CRITICAL 3
 
+#define LOG_ENGINE 0
+#define LOG_SCRIPT 1
+#define LOG_RENDER 2
+
 #define M_PI 3.14
 
 extern char lastlog[];

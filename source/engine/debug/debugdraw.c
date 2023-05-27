@@ -70,7 +70,7 @@ static sg_bindings circle_bind;
 static sg_shader csg;
 static int circle_count = 0;
 struct circle_vertex {
-  float pos[2];
+  cpVect pos;
   float radius;
   struct rgba color;
   float segsize;
@@ -507,11 +507,10 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   }
 }
 
-void draw_circle(int x, int y, float radius, float pixels, struct rgba color, float seg)
+void draw_circle(cpVect pos, float radius, float pixels, struct rgba color, float seg)
 {
   struct circle_vertex cv;
-  cv.pos[0] = x;
-  cv.pos[1] = y;
+  cv.pos = pos;
   cv.radius = radius;
   cv.color = color;
   cv.segsize = seg/radius;

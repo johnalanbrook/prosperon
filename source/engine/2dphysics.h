@@ -138,6 +138,8 @@ void phys2d_setup_handlers(int go);
 int *phys2d_query_shape(struct phys2d_shape *shape);
 int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n);
 
+void flush_collide_cbs();
+
 void phys2d_reindex_body(cpBody *body);
 cpVect world2go(struct gameobject *go, cpVect worldpos);
 cpVect go2world(struct gameobject *go, cpVect gopos);

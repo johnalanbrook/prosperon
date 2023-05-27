@@ -6,6 +6,13 @@ var Gizmos = {
   },
 };
 
+var Shape = {
+  circle(pos, radius, color) {
+    
+    cmd(115, pos, radius, color);
+  },
+};
+
 var Debug = {
   draw_grid(width, span, color) {
     color = color ? color : Color.green;

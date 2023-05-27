@@ -12,8 +12,6 @@ function load(file) {
   files[file] = modtime;
 }
 
-
-
 load("scripts/base.js");
 
 var Log = {
@@ -62,7 +60,6 @@ var Log = {
   },
 
   stack(skip = 0) {
-    Log.warn("Printing stack");
     var stack = (new Error()).stack;
     var n = stack.next('\n',0)+1;
     for (var i = 0; i < skip; i++)
@@ -456,18 +453,28 @@ function state2str(state) {
 }
 
 var Register = {
+  inloop: false,
+  loopcbs: [],
+  finloop() {
+    this.loopcbs.forEach(x => x());
+    this.loopcbs = [];
+  },
+
+  wraploop(loop) {
+    this.inloop = true;
+    loop();
+    this.inloop = false;
+    this.finloop();
+  },
+  
   updates: [],
   update(dt) {
-    this.updates.forEach(x => x[0].call(x[1], dt));
+    this.wraploop(() => this.updates.forEach(x => x[0].call(x[1], dt)));
   },
 
   physupdates: [],
-  postphys_cbs: [],
   physupdate(dt) {
-    this.postphys_cbs.forEach(x => x());
-    this.postphys_cbs = [];
-    
-    this.physupdates.forEach(x => x[0].call(x[1], dt));
+    this.wraploop(() => this.physupdates.forEach(x => x[0].call(x[1], dt)));
   },
 
   guis: [],
@@ -519,6 +526,15 @@ var Register = {
   draws: [],
   draw() {
     this.draws.forEach(x => x[0].call(x[1]));
+  },
+
+  endofloop(fn) {
+    if (!this.inloop)
+      fn();
+    else {
+      Log.warn("resgieted ...");
+      this.loopcbs.push(fn);
+    }
   },
 };
 
@@ -1464,26 +1480,26 @@ var gameobject = {
   stop() {},
 
   kill() {
-    Log.warn(`Killing ${this.toString()}`);
-    cmd(2, this.body);
-
-    delete Game.objects[this.body];
+    Register.endofloop(() => {
+      cmd(2, this.body);
+      delete Game.objects[this.body];
     
-    if (this.level)
-      this.level.unregister(this);
+      if (this.level)
+        this.level.unregister(this);
       
-    this.uncontrol();
-    this.instances.remove(this);
-    Register.unregister_obj(this);
-    Signal.clear_obj(this);
+      this.uncontrol();
+      this.instances.remove(this);
+      Register.unregister_obj(this);
+      Signal.clear_obj(this);
     
-    this.body = -1;
-    for (var key in this.components) {
-      Register.unregister_obj(this.components[key]);
-      this.components[key].kill();
-    }
+      this.body = -1;
+      for (var key in this.components) {
+        Register.unregister_obj(this.components[key]);
+        this.components[key].kill();
+      }
 
-    this.stop();
+      this.stop();
+    });
   },
 
   get up() {

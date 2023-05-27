@@ -62,16 +62,33 @@ int fps;
 #define SIM_PAUSE 2
 #define SIM_STEP 3
 
+#ifdef __TINYC__
+int backtrace(void **buffer, int size) {
+    extern uint64_t *__libc_stack_end;
+    uint64_t **p, *bp, *frame;
+    asm ("mov %%rbp, %0;" : "=r" (bp));
+    p = (uint64_t**) bp;
+    int i = 0;
+    while (i < size) {
+        frame = p[0];
+        if (frame < bp || frame > __libc_stack_end) {
+            return i;
+        }
+        buffer[i++] = p[1];
+        p = (uint64_t**) frame;
+    }
+    return i;
+}
+#endif
+
 void print_stacktrace() {
   void *ents[512];
-  size_t size;
-
-  size = backtrace(ents, 512);
+  size_t size = backtrace(ents, 512);
 
   YughCritical("====================BACKTRACE====================");
   char **stackstr = backtrace_symbols(ents, size);
 
-  YughInfo("Stack size is %d.", size);
+  YughCritical("Stack size is %d.", size);
 
   for (int i = 0; i < size; i++)
     YughCritical(stackstr[i]);

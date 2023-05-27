@@ -19,9 +19,8 @@ int logLevel = 1;
    3 critical
 */
 
-//char *logstr[] = { "INFO", "WARN", "\x1b[1;31mERROR\x1b[0m", "CRITICAL" };
 char *logstr[] = { "info", "warn", "error", "critical" };
-char *catstr[] = {"engine", "script"};
+char *catstr[] = {"engine", "script", "render"};
 
 FILE *logfile = NULL;
 
@@ -48,12 +47,12 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	va_end(args);
 
 	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "%g | %s:%d: %s, %s: %s\n", ticks, file, line, logstr[priority], catstr[category], msgbuffer);
+	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
 
 	log_print(buffer);
 
-	if (category == 1 && priority >= 2)
-	  js_stacktrace();
+//	if (category != LOG_SCRIPT && priority >= 2)
+//	  js_stacktrace();
   }
 #endif
 }

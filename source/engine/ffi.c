@@ -1017,6 +1017,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 114:
       return bool2js(js2sprite(argv[1])->enabled);
+
+    case 115:
+      draw_circle(js2vec2(argv[1]), js2number(argv[2]), js2number(argv[2]), js2color(argv[3]), -1);
+      break;
   }
 
   if (str)

@@ -98,7 +98,7 @@ int js_print_exception(JSValue v) {
       const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
       const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
       const char *stack = JS_ToCString(js, val);
-      YughWarn("%s :: %s\n%s", name, msg,stack);
+      YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
 
       JS_FreeCString(js, name);
       JS_FreeCString(js, msg);

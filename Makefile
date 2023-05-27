@@ -13,6 +13,11 @@ QFLAGS :=
 ifdef DBG
   QFLAGS += -O0 -g -DDBG 
   INFO = dbg
+
+  ifeq ($(CC),tcc)
+    QFLAGS += 
+  endif
+  
 else
   QFLAGS += -O2
   INFO = rel

@@ -173,6 +173,7 @@ void phys2d_set_gravity(cpVect v) {
 
 void phys2d_update(float deltaT) {
   cpSpaceStep(space, deltaT);
+  flush_collide_cbs();
 }
 
 void init_phys2dshape(struct phys2d_shape *shape, int go, void *data) {
@@ -262,9 +263,9 @@ void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
   float seglen = cpShapeGetSensor(c) ? 5 : -1;
-  draw_circle(pos.x, pos.y, radius, 1, color, seglen);
+  draw_circle(pos, radius, 1, color, seglen);
   color.a = col_alpha;
-  draw_circle(pos.x,pos.y,radius,radius,color,-1);
+  draw_circle(pos,radius,radius,color,-1);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
@@ -586,6 +587,21 @@ void phys2d_reindex_body(cpBody *body) {
   cpSpaceReindexShapesForBody(space, body);
 }
 
+struct postphys_cb {
+  struct callee c;
+  JSValue send;
+};
+
+static struct postphys_cb begins[512];
+static uint32_t bptr;
+
+void flush_collide_cbs() {
+  for (int i = 0; i < bptr; i++)
+    script_callee(begins[i].c, 1, &begins[i].send);
+
+  bptr = 0;
+}
+
 void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   cpShape *shape1;
   cpShape *shape2;
@@ -599,7 +615,11 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   JS_SetPropertyStr(js, obj, "pos", vec2js(cpArbiterGetPointA(arb, 0)));
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
-  script_callee(c, 1, &obj);
+
+  begins[bptr].c = c;
+  begins[bptr].send = obj;
+  bptr++;
+  return;
 }
 
 #define CTYPE_BEGIN 0
