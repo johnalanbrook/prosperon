@@ -331,6 +331,7 @@ void openglRender(struct window *window) {
   sprite_flush();
 
   call_draw();
+//  debug_flush();
 
   //// DEBUG
   if (debugDrawPhysics) {

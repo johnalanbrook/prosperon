@@ -81,17 +81,6 @@ static struct circle_vertex circle_b[v_amt];
 
 void debug_flush()
 {
-  if (circle_count != 0) {
-  sg_apply_pipeline(circle_pipe);
-  sg_apply_bindings(&circle_bind);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  sg_update_buffer(circle_bind.vertex_buffers[0], &(sg_range){
-    .ptr = circle_b,
-    .size = sizeof(struct circle_vertex)*circle_count
-  });
-  sg_draw(0,4,circle_count);
-  circle_count = 0;
-  }
 
   if (poly_c != 0) {
   sg_apply_pipeline(poly_pipe);
@@ -135,6 +124,19 @@ void debug_flush()
   line_c = 0;
   line_v = 0;
   }
+
+  if (circle_count != 0) {
+  sg_apply_pipeline(circle_pipe);
+  sg_apply_bindings(&circle_bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
+  sg_update_buffer(circle_bind.vertex_buffers[0], &(sg_range){
+    .ptr = circle_b,
+    .size = sizeof(struct circle_vertex)*circle_count
+  });
+  sg_draw(0,4,circle_count);
+  circle_count = 0;
+  }
+  
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
@@ -311,6 +313,7 @@ void debugdraw_init()
 void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int closed, float seg_speed)
 {
   if (a_n < 2) return;
+  seg_speed = 1;
 
   int n = closed ? a_n+1 : a_n;
   cpVect points[n];

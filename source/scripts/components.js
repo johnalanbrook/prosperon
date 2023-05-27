@@ -7,8 +7,7 @@ var component = {
   },
   name: "component",
   component: true,
-  set enabled(x) { },
-  get enabled() { },
+  enabled: true,
   enable() { this.enabled = true; },
   disable() { this.enabled = false; },
   
@@ -29,7 +28,6 @@ var sprite = clone(component, {
   path: "",
   layer: 0,
   pos: [0,0],
-  enabled: true,
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
   angle: 0,
@@ -43,34 +41,34 @@ var sprite = clone(component, {
   input_kp2_pressed() { this.pos = [-0.5,-1]; },
   input_kp1_pressed() { this.pos = [-1,-1]; },
   
-  get boundingbox() {
-    if (!this.gameobject) return null;
-    var dim = cmd(64, this.path);
-    dim = dim.scale(this.gameobject.scale);
-    var realpos = this.pos.copy();
-    realpos.x *= dim.x;
-    realpos.y *= dim.y;
-    realpos.x += (dim.x/2);
-    realpos.y += (dim.y/2);
-    return cwh2bb(realpos, dim);
-  },
-  
   make(go) {
     var old = this;
     var sprite = clone(this, {
-      get enabled() { return cmd(21,this.id); },
+      get enabled() { return cmd(114,this.id); },
       set enabled(x) { cmd(20,this.id,x); },
       set color(x) { cmd(96,this.id,x); },
+      get pos() { return cmd(111, this.id); },
       set pos(x) { cmd(37,this.id,x); },
       set layer(x) { cmd(60, this.id, x); },
       get layer() { return this.gameobject.draw_layer; },
       set path(x) { cmd(12,this.id,x,this.rect); },
 
+      get boundingbox() {
+        var dim = cmd(64,this.path);
+	dim = dim.scale(this.gameobject.scale);
+	var realpos = this.pos.copy();
+	realpos.x = realpos.x * dim.x + (dim.x/2);
+	realpos.y = realpos.y * dim.y + (dim.y/2);
+	return cwh2bb(realpos,dim);
+      },
+
       kill() { cmd(9,this.id); },
     });
 
+    sprite.obscure('boundingbox');
+
     var id = make_sprite(go,old.path,old.pos);
-    
+
     Object.defineProperty(sprite, 'id', {value:id});
 
     Object.assign(sprite, this);
@@ -177,6 +175,23 @@ var char2d = clone(sprite, {
   },
 });
 
+/* Returns points specifying this geometry, with ccw */
+var Geometry = {
+  box(w, h) {
+    w /= 2;
+    h /= 2;
+
+    var points = [
+      [w,h],
+      [-w,h],
+      [-w,-h],
+      [w,-h]
+    ];
+
+    return points;
+  }
+};
+
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
 var collider2d = clone(component, {
   name: "collider 2d",
@@ -194,8 +209,6 @@ var collider2d = clone(component, {
     this.enabled = !this.enabled;
   },
 
-  enabled: true,
-  get enabled() { return this._enabled; },
   kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
 
   register_hit(fn, obj) {
@@ -204,11 +217,22 @@ var collider2d = clone(component, {
 
   make_fns: {
     set sensor(x) { cmd(18,this.shape,x); },
-    set enabled(x) { cmd(22,this.id,x); }
+    get sensor() { return cmd(21,this.shape); },
+    set enabled(x) { cmd(22,this.shape,x); },
+    get enabled() {
+      Log.warn("getting enabled");
+      return cmd(23,this.shape); }
   },
   
 });
 
+var sync_proxy = {
+  set(t,p,v) {
+    t[p] = v;
+    t.sync();
+    return true;
+  }
+};
 
 var polygon2d = clone(collider2d, {
   name: "polygon 2d",
@@ -225,32 +249,35 @@ var polygon2d = clone(collider2d, {
 
   make(go) {
     var poly = Object.create(this);
-    complete_assign(poly, this.make_fns);
     Object.assign(poly, make_poly2d(go, this.points));
+    
+    complete_assign(poly, this.make_fns);
+    complete_assign(poly, {
+      get boundingbox() {
+        return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
+      },
+
+      sync() { cmd_poly2d(0, this.id, this.spoints); }
+    });
+    poly.obscure('boundingbox');
+
+    poly.defn('points', this.points.copy());
+
+    poly = new Proxy(poly, sync_proxy);
+
     Object.defineProperty(poly, 'id', {enumerable:false});
     Object.defineProperty(poly, 'shape', {enumerable:false});
 
     return poly;
   },
-  
-  get boundingbox() {
-    if (!this.gameobject) return null;
-    var scaledpoints = [];
-    this.points.forEach(function(x) { scaledpoints.push(x.scale(this.gameobject.scale)); }, this);
-    return points2bb(scaledpoints);
-  },
 
+  /* EDITOR */  
   help: "Ctrl-click Add a point\nShift-click Remove a point",  
   
   input_f10_pressed() {
     this.points = sortpointsccw(this.points);
   },
 
-  sync() {
-    if (!this.id) return;
-    cmd_poly2d(0, this.id, this.spoints);
-    this.coll_sync();
-  },
   
   input_b_pressed() {
     if (!Keys.ctrl()) return;
@@ -278,7 +305,7 @@ var polygon2d = clone(collider2d, {
 	spoints.push(newpoint);
       });
     }
-    
+
     return spoints;
   },
   
@@ -292,9 +319,6 @@ var polygon2d = clone(collider2d, {
     this.points.forEach(function(x, i) {
       Debug.numbered_point(this.gameobject.this2world(x), i);
     }, this);
-    
-
-    this.sync();
   },
   
   input_lmouse_pressed() {
@@ -325,7 +349,6 @@ var polygon2d = clone(collider2d, {
 
 var bucket = clone(collider2d, {
   name: "bucket",
-  help: "Ctrl-click Add a point\nShift-click Remove a point\n+,- Increase/decrease spline segs\nCtrl-+,- Inc/dec spline degrees\nCtrl-b,v Inc/dec spline thickness",
   clone(spec) {
     var obj = Object.create(this);
     obj.cpoints = this.cpoints.copy(); 
@@ -343,30 +366,11 @@ var bucket = clone(collider2d, {
   */
   type: 3,
   
-  get boundingbox() {
-    if (!this.gameobject) return null;
-    var scaledpoints = [];
-    this.points.forEach(function(x) { scaledpoints.push(x.scale(this.gameobject.scale)); }, this);
-    return points2bb(scaledpoints);
-  },
-  
   mirrorx: false,
   mirrory: false,
   
-  input_m_pressed() {
-    if (Keys.ctrl()) {
-      this.mirrory = !this.mirrory;
-    } else {
-      this.mirrorx = !this.mirrorx;
-    }
-    
-    this.sync();
-  },
-  
   hollow: false,
-  input_h_pressed() {
-    this.hollow = !this.hollow;
-  },
+  hollowt: 0,
   
   get spoints() {
     var spoints = this.cpoints.slice();
@@ -391,8 +395,8 @@ var bucket = clone(collider2d, {
 
     if (this.hollow) {
       var hpoints = [];
-      var inflatep = inflate_cpv(spoints, spoints.length, this.hollowt);
-      inflatep[0].slice().reverse().forEach(function(x) { hpoints.push(x); });
+      var inflatep = inflate_cpv(spoints, spoints.length, this.hollowt); 
+     inflatep[0].slice().reverse().forEach(function(x) { hpoints.push(x); });
       
       inflatep[1].forEach(function(x) { hpoints.push(x); });
       return hpoints;
@@ -401,19 +405,6 @@ var bucket = clone(collider2d, {
     return spoints;
   },
 
-  hollowt: 0,
-
-  input_g_pressed() {
-    if (!Keys.ctrl()) return;
-    this.hollowt--;
-    if (this.hollowt < 0) this.hollowt = 0;
-  },
-
-  input_f_pressed() {
-    if (!Keys.ctrl()) return;
-    this.hollowt++;
-  },
-  
   sample(n) {
     var spoints = this.spoints;
 
@@ -449,30 +440,38 @@ var bucket = clone(collider2d, {
   make(go) {
     var edge = Object.create(this);
     Object.assign(edge, make_edge2d(go, this.points, this.thickness));
-    Object.defineProperty(edge, 'id', {enumerable:false});
-    Object.defineProperty(edge, 'shape', {enumerable:false});
+    edge = new Proxy(edge, sync_proxy);    
     complete_assign(edge, {
       set thickness(x) {
         cmd_edge2d(1,this.id,x);
-      }
-    });
-    edge.defn('points', []);
-    
-    edge.sync();
+      },
+      get thickness() { return cmd(112,this.id); },
 
-    var synctriggers = ['samples', 'thickness'];
+      get boundingbox() {
+        return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
+      },
+
+      sync() {
+        var sensor = this.sensor;
+        this.points = this.sample(this.samples);
+        cmd_edge2d(0,this.id,this.points);
+	this.sensor = sensor;
+      },
+    });
+
+    edge.obscure('boundingbox');
+    
+    complete_assign(edge, this.make_fns);
+
+    Object.defineProperty(edge, 'id', {enumerable:false});
+    Object.defineProperty(edge, 'shape', {enumerable:false});
+
+    edge.defn('points', []);
 
     return edge;
   },
   
-  sync() {
-    if (!this.gameobject) return;
-    this.points = this.sample(this.samples);
-    cmd_edge2d(0, this.id, this.points);
-    cmd_edge2d(1, this.id, this._thickness * this.gameobject.scale);
-    this.coll_sync();
-  },
-
+  /* EDITOR */
   gizmo() {
     if (!this.hasOwn('cpoints')) this.cpoints = this.__proto__.cpoints.copy();
     
@@ -483,10 +482,32 @@ var bucket = clone(collider2d, {
     this.cpoints.forEach(function(x, i) {
       Debug.numbered_point(this.gameobject.this2world(x), i);
     }, this);
-    
-    this.sync();
   },
- 
+  
+  help: "Ctrl-click Add a point\nShift-click Remove a point\n+,- Increase/decrease spline segs\nCtrl-+,- Inc/dec spline degrees\nCtrl-b,v Inc/dec spline thickness",
+  
+  input_h_pressed() {
+    this.hollow = !this.hollow;
+  },
+  
+  input_m_pressed() {
+    if (Keys.ctrl()) {
+      this.mirrory = !this.mirrory;
+    } else {
+      this.mirrorx = !this.mirrorx;
+    }
+  },
+  
+  input_g_pressed() {
+    if (!Keys.ctrl()) return;
+    this.hollowt--;
+    if (this.hollowt < 0) this.hollowt = 0;
+  },
+
+  input_f_pressed() {
+    if (!Keys.ctrl()) return;
+    this.hollowt++;
+  },
 
   input_v_pressrep() {
     if (!Keys.alt()) return;
@@ -505,9 +526,7 @@ var bucket = clone(collider2d, {
   
   finish_center(change) {
     this.cpoints = this.cpoints.map(function(x) { return x.sub(change); });
-    this.sync();
   },
-  
 
   input_plus_pressrep() {
     if (Keys.ctrl())
@@ -602,12 +621,6 @@ var circle2d = clone(collider2d, {
   name: "circle 2d",
   radius: 10,
   offset: [0,0],
-  
-  get boundingbox() {
-    if (!this.gameobject) return null;
-    var radius = this.radius*2*this.gameobject.scale;
-    return cwh2bb(this.offset.scale(this.gameobject.scale), [radius, radius]);
-  },
 
   get scale() { return this.radius; },
   set scale(x) { this.radius = x; },
@@ -628,10 +641,16 @@ var circle2d = clone(collider2d, {
 
       set offset(x) { cmd_circle2d(1,this.id,this.offset); },
       get offset() { return cmd_circle2d(4,this.id); },
-      
+
+      get boundingbox() {
+        var diameter = this.radius*2*this.gameobject.scale;
+        return cwh2bb(this.offset.scale(this.gameobject.scale), [radius,radius]);
+      },
     });
 
     complete_assign(circle, this.make_fns);
+
+    circle.obscure('boundingbox');
     
     return circle;
   },

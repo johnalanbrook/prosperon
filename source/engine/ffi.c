@@ -85,6 +85,11 @@ int js2bool(JSValue v) {
   return JS_ToBool(js, v);
 }
 
+JSValue bool2js(int b)
+{
+  return JS_NewBool(js,b);
+}
+
 JSValue float2js(double g) {
   return JS_NewFloat64(js, g);
 }
@@ -96,6 +101,8 @@ JSValue num2js(double g) {
 struct gameobject *js2go(JSValue v) {
   return id2go(js2int(v));
 }
+
+struct sprite *js2sprite(JSValue v) { return id2go(js2int(v)); }
 
 void *js2ptr(JSValue v) {
   void *p;
@@ -210,6 +217,12 @@ JSValue vec2js(cpVect v) {
   JS_SetPropertyInt64(js, array, 0, JS_NewFloat64(js, v.x));
   JS_SetPropertyInt64(js, array, 1, JS_NewFloat64(js, v.y));
   return array;
+}
+
+JSValue v22js(HMM_Vec2 v)
+{
+  cpVect c = { v.X, v.Y };
+  return vec2js(c);
 }
 
 JSValue vecarr2js(cpVect *points, int n) {
@@ -978,19 +991,32 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return bool2js(js2go(argv[1])->flipy);
 
   case 106:
-    js2go(argv[1])->e = js2num(argv[2]);
+    js2go(argv[1])->e = js2number(argv[2]);
     break;
 
   case 107:
     return num2js(js2go(argv[1])->e);
 
   case 108:
-    js2go(argv[1])->f = js2num(argv[2]);
+    js2go(argv[1])->f = js2number(argv[2]);
     break;
   case 109:
     return num2js(js2go(argv[1])->f);
   case 110:
-    return num2js(js2go(argv[1])
+    return num2js(js2go(argv[1])->e);
+
+    case 111:
+      return v22js(js2sprite(argv[1])->pos);
+
+    case 112:
+      return num2js(((struct phys2d_edge*)js2ptr(argv[1]))->thickness);
+
+    case 113:
+      js2go(argv[1])->ref = JS_DupValue(js,argv[2]);
+      break;
+
+    case 114:
+      return bool2js(js2sprite(argv[1])->enabled);
   }
 
   if (str)
@@ -1186,6 +1212,8 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 1:
     go->bodytype = js2int(argv[2]);
+    cpBodySetType(go->body, go->bodytype);
+    gameobject_apply(go);
     break;
 
   case 2:
@@ -1209,7 +1237,11 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 7:
-    cpBodySetMass(go->body, js2number(argv[2]));
+    if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
+      cpBodySetMass(go->body, js2number(argv[2]));
+    else
+      YughWarn("Cannot set mass of a non dynamic body.");
+      
     break;
 
   case 8:

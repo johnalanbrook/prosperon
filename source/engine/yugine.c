@@ -221,7 +221,7 @@ int main(int argc, char **args) {
         phys_step = 1;
         physlag -= physMS;
         phys2d_update(physMS * timescale);
-        call_physics(physMS * timescale);
+	call_physics(physMS * timescale);
         if (sim_play == SIM_STEP) sim_pause();
         phys_step = 0;
       }

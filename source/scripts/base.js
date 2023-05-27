@@ -71,6 +71,17 @@ Object.defineProperty(Object.prototype, 'nulldef', {
   }
 });
 
+/*Object.defineProperty(Object.prototype, 'writable', {
+  value: function(name) {
+    return Object.getPropertyDescriptor(this, name).writable;
+  }
+});
+*/
+
+Object.defineProperty(Object.prototype, 'prop_obj', {
+  value: function() { return JSON.parse(JSON.stringify(this)); }
+});
+
 /* defc 'define constant'. Defines a value that is not writable. */
 Object.defineProperty(Object.prototype, 'defc', {
   value: function(name, val) {
@@ -80,6 +91,18 @@ Object.defineProperty(Object.prototype, 'defc', {
       enumerable:true,
       configurable:false,
     });
+  }
+});
+
+Object.defineProperty(Object.prototype, 'stick', {
+  value: function(prop) {
+    Object.defineProperty(this, prop, {writable:false});
+  }
+});
+
+Object.defineProperty(Object.prototype, 'harden', {
+  value: function(prop) {
+    Object.defineProperty(this, prop, {writable:false, configurable:false, enumerable: false});
   }
 });
 

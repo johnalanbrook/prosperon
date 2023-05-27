@@ -6,6 +6,7 @@
 #include <chipmunk/chipmunk.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "quickjs/quickjs.h"
 
 struct shader;
 struct sprite;
@@ -27,6 +28,7 @@ struct gameobject {
   int id;
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
+  JSValue ref;
 };
 
 extern struct gameobject *gameobjects;

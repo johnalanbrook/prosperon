@@ -462,7 +462,11 @@ var Register = {
   },
 
   physupdates: [],
+  postphys_cbs: [],
   physupdate(dt) {
+    this.postphys_cbs.forEach(x => x());
+    this.postphys_cbs = [];
+    
     this.physupdates.forEach(x => x[0].call(x[1], dt));
   },
 
@@ -1071,6 +1075,11 @@ var Level = {
 	this.objects.push(loadedlevel);
 	return;
       }
+      var prototype = gameobjects[x.from];
+      if (!prototype) {
+        Log.error(`Prototype for ${x.from} does not exist.`);
+	return;
+      }
 
       var newobj = this.spawn(gameobjects[x.from]);
 
@@ -1263,14 +1272,8 @@ var gameobject = {
       this.layer = Nuke.radio(i, this.layer, i);
   },
 
-  _draw_layer: 1,
-  set draw_layer(x) {
-    if (x < 0) x = 0;
-    if (x > 4) x = 4;
-    this._draw_layer = x;
-    this.sync();
-  },
-  _draw_layer_nuke() {
+  draw_layer: 1,
+  draw_layer_nuke() {
     Nuke.label("Draw layer");
     Nuke.newline(5);
     for (var i = 0; i < 5; i++)
@@ -1280,8 +1283,6 @@ var gameobject = {
   in_air() {
     return q_body(7, this.body);
   },
-
-  get draw_layer() { return this._draw_layer; },
 
   name: "gameobject",
 
@@ -1294,6 +1295,7 @@ var gameobject = {
     obj.defc('name', name);
     obj.from = this.name;
     obj.defn('instances', []);
+    obj.obscure('from');
 	
     return obj;
   },
@@ -1338,26 +1340,6 @@ var gameobject = {
   body: -1,
   controlled: false,
 
-  get properties() {
-    var keys = [];
-    for (var key of Object.keys(this)) {
-      if (key.startsWith("_"))
-        keys.push(key.substring(1));
-      else
-        keys.push(key);
-    }
-
-    return keys;
-  },
-
-  toJSON() {
-    var obj = {};
-    for (var key of this.properties)
-      obj[key] = this[key];
-
-    return obj;
-  },
-  
   set_center(pos) {
     var change = pos.sub(this.pos);
     this.pos = pos;
@@ -1479,6 +1461,8 @@ var gameobject = {
     return bb ? bb : cwh2bb([0,0], [0,0]);
   },
 
+  stop() {},
+
   kill() {
     Log.warn(`Killing ${this.toString()}`);
     cmd(2, this.body);
@@ -1502,13 +1486,6 @@ var gameobject = {
     this.stop();
   },
 
-  prop_obj() {
-    var obj = JSON.parse(JSON.stringify(this));
-    delete obj.name;
-    delete obj.from;
-    return obj;
-  },
-  
   get up() {
     return [0,1].rotate(Math.deg2rad(this.angle));
   },
@@ -1552,7 +1529,7 @@ var gameobject = {
     obj.toString = function() {
       var props = obj.prop_obj();
       for (var key in props)
-        if (typeof props[key] === 'object' && props[key].empty)
+        if (typeof props[key] === 'object' && !props[key] === null && props[key].empty)
 	  delete props[key];
 	  
       var edited = !props.empty;
@@ -1568,6 +1545,8 @@ var gameobject = {
     complete_assign(obj, props);
     obj.sync();
     obj.defn('components', {});
+
+    cmd(113, obj.body, obj);
 
     complete_assign(obj, {
       set scale(x) { cmd(36, this.body, x); },
@@ -1590,7 +1569,10 @@ var gameobject = {
       set friction(x) { cmd(108,this.body,x); },
 
       set mass(x) { set_body(7,this.body,x); },
-      get mass() { return cmd(
+      get mass() { return q_body(5, this.body); },
+
+      set phys(x) { set_body(1, this.body, x); },
+      get phys() { return q_body(0,this.body); },
     });
 
     for (var prop in obj) {

@@ -105,7 +105,7 @@ void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go) {
   }
 
   moment += s->moi(s->data, go->mass);
-  if (moment < 0) moment = 0;
+  if (moment < 0) moment = 1;
   cpBodySetMoment(go->body, moment);
 }
 
@@ -145,6 +145,7 @@ int MakeGameobject() {
       .next = -1,
       .sensor = 0,
       .shape_cbs = NULL,
+      .ref = JS_NULL,
   };
 
   go.cbs.begin.obj = JS_NULL;

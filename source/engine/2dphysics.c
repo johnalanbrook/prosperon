@@ -430,6 +430,7 @@ struct phys2d_edge *Make2DEdge(int go) {
   new->shape.moi = phys2d_edge_moi;
   new->shape.shape = NULL;
   new->draws = 0;
+  new->closed = 0;
   phys2d_applyedge(new);
 
   return new;
@@ -572,8 +573,12 @@ void shape_set_sensor(struct phys2d_shape *shape, int sensor) {
 
 int shape_get_sensor(struct phys2d_shape *shape) {
   if (!shape->shape) {
-    return cpShapeGetSensor(((struct phys2d_edge *)(shape->data))->shapes[0]);
+    struct phys2d_edge *edge = shape->data;
+    if (arrlen(edge->shapes) > 0) return cpShapeGetSensor(edge->shapes[0]);
+	
+    return 0;
   }
+
   return cpShapeGetSensor(shape->shape);
 }
 
@@ -593,6 +598,7 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   JS_SetPropertyStr(js, obj, "velocity", vec2js(cpArbiterGetSurfaceVelocity(arb)));
   JS_SetPropertyStr(js, obj, "pos", vec2js(cpArbiterGetPointA(arb, 0)));
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
+  JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
   script_callee(c, 1, &obj);
 }
 
