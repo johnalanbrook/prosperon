@@ -19,7 +19,6 @@ static int first = -1;
 
 static sg_pipeline pip_sprite;
 static sg_bindings bind_sprite;
-static int sprite_c = 0;
 
 int make_sprite(int go) {
   struct sprite sprite = {

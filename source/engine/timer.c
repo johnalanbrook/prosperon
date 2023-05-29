@@ -73,6 +73,7 @@ void timer_remove(int id) {
   struct timer *t = id2timer(id);
   if (t->owndata) free(t->data);
   t->next = first;
+  t->on = 0;  
   first = id;
 }
 

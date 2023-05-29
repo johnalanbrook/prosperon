@@ -899,7 +899,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 83:
-    draw_edge(js2cpvec2arr(argv[1]), 2, js2color(argv[2]), 1, 0, 0, js2color(argv[2]), 10);
+    draw_edge(js2cpvec2arr(argv[1]), js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, 0, js2color(argv[2]), 10);
     return JS_NULL;
 
   case 84:
@@ -1021,6 +1021,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 115:
       draw_circle(js2vec2(argv[1]), js2number(argv[2]), js2number(argv[2]), js2color(argv[3]), -1);
       break;
+
+    case 116:
+      return str2js(tex_get_path(js2sprite(argv[1])->tex));
+    case 117:
+      str = JS_ToCString(js, argv[1]);
+      ret = JS_NewInt64(js, script_runfile(str));
+      break;
+    
   }
 
   if (str)

@@ -31,7 +31,43 @@ var sprite = clone(component, {
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
   angle: 0,
-  rect: {s0:0, s1: 1, t0: 0, t1: 1},  
+  rect: {s0:0, s1: 1, t0: 0, t1: 1},
+
+  get dimensions() { return cmd(64,this.path); },
+  set dimensions(x) {},
+
+  make(go) {
+    var sprite = Object.create(this);
+    sprite.id = make_sprite(go,this.path,this.pos);
+    complete_assign(sprite, {
+      get enabled() { return cmd(114,this.id); },
+      set enabled(x) { cmd(20,this.id,x); },
+      set color(x) { cmd(96,this.id,x); },
+      get pos() { return cmd(111, this.id); },
+      set pos(x) { cmd(37,this.id,x); },
+      set layer(x) { cmd(60, this.id, x); },
+      get layer() { return this.gameobject.draw_layer; },
+
+      get boundingbox() {
+        var dim = this.dimensions;
+	dim = dim.scale(this.gameobject.scale);
+	var realpos = this.pos.copy();
+	realpos.x = realpos.x * dim.x + (dim.x/2);
+	realpos.y = realpos.y * dim.y + (dim.y/2);
+	return cwh2bb(realpos,dim);
+      },
+
+      sync() {
+        if (this.path)
+          cmd(12,this.id,this.path,this.rect);
+      },
+
+      kill() { cmd(9,this.id); },
+    });
+    sprite = new Proxy(sprite, sync_proxy);
+    sprite.obscure('boundingbox');
+    return sprite;
+  },
   
   input_kp7_pressed() { this.pos = [-1,0]; },
   input_kp6_pressed() { this.pos = [0,-0.5]; },
@@ -40,43 +76,6 @@ var sprite = clone(component, {
   input_kp3_pressed() { this.pos = [0, -1]; },
   input_kp2_pressed() { this.pos = [-0.5,-1]; },
   input_kp1_pressed() { this.pos = [-1,-1]; },
-  
-  make(go) {
-    var old = this;
-    var sprite = clone(this, {
-      get enabled() { return cmd(114,this.id); },
-      set enabled(x) { cmd(20,this.id,x); },
-      set color(x) { cmd(96,this.id,x); },
-      get pos() { return cmd(111, this.id); },
-      set pos(x) { cmd(37,this.id,x); },
-      set layer(x) { cmd(60, this.id, x); },
-      get layer() { return this.gameobject.draw_layer; },
-      set path(x) { cmd(12,this.id,x,this.rect); },
-
-      get boundingbox() {
-        var dim = cmd(64,this.path);
-	dim = dim.scale(this.gameobject.scale);
-	var realpos = this.pos.copy();
-	realpos.x = realpos.x * dim.x + (dim.x/2);
-	realpos.y = realpos.y * dim.y + (dim.y/2);
-	return cwh2bb(realpos,dim);
-      },
-
-      kill() { cmd(9,this.id); },
-    });
-
-    sprite.obscure('boundingbox');
-
-    var id = make_sprite(go,old.path,old.pos);
-
-    Object.defineProperty(sprite, 'id', {value:id});
-
-    Object.assign(sprite, this);
-
-    return sprite;
-  },
-  
-
 });
 
 /* Container to play sprites and anim2ds */
@@ -100,10 +99,39 @@ var char2d = clone(sprite, {
   },
   
   make(go) {
-    var char = clone(this);
+    var char = clone(this, {
+      get enabled() { return cmd(114,this.id); },
+      set enabled(x) { cmd(20,this.id,x); },
+      set color(x) { cmd(96,this.id,x); },
+      get pos() { return cmd(111, this.id); },
+      set pos(x) { cmd(37,this.id,x); },
+      set layer(x) { cmd(60, this.id, x); },
+      get layer() { return this.gameobject.draw_layer; },
+
+      get boundingbox() {
+        var dim = cmd(64,this.path);
+	dim = dim.scale(this.gameobject.scale);	
+	dim.x *= 1/6;
+	var realpos = [0,0];
+//	var realpos = this.pos.slice();
+
+//	realpos.x = realpos.x * dim.x + (dim.x/2);
+//	realpos.y = realpos.y * dim.y + (dim.y/2);
+	return cwh2bb(realpos,dim);
+      },
+
+      sync() {
+        if (this.path)
+	  cmd(12,this.id,this.path,this.rect);
+      },
+
+      kill() { cmd(9,this.id); },
+    });
+
     char.curplaying = char.anims.array()[0];
     char.obscure('curplaying');
-    Object.defineProperty(char, 'id', {value:make_sprite(go,char.curplaying.path,this.pos)});
+    char.id = make_sprite(go, char.curplaying.path, this.pos);    
+
     char.obscure('id');
     char.frame = 0;
     char.timer = timer.make(char.advance.bind(char), 1/char.curplaying.fps);
@@ -254,11 +282,12 @@ var polygon2d = clone(collider2d, {
     complete_assign(poly, this.make_fns);
     complete_assign(poly, {
       get boundingbox() {
-        return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
+        return points2bb(this.spoints);
       },
 
       sync() { cmd_poly2d(0, this.id, this.spoints); }
     });
+    
     poly.obscure('boundingbox');
 
     poly.defn('points', this.points.copy());
@@ -267,6 +296,8 @@ var polygon2d = clone(collider2d, {
 
     Object.defineProperty(poly, 'id', {enumerable:false});
     Object.defineProperty(poly, 'shape', {enumerable:false});
+
+    poly.sync();
 
     return poly;
   },
@@ -278,7 +309,6 @@ var polygon2d = clone(collider2d, {
     this.points = sortpointsccw(this.points);
   },
 
-  
   input_b_pressed() {
     if (!Keys.ctrl()) return;
     

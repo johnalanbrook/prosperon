@@ -156,7 +156,7 @@ char *tex_get_path(struct Texture *tex) {
     }
   }
 
-  return NULL;
+  return "";
 }
 
 struct Texture *texture_loadfromfile(const char *path) {

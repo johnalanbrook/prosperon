@@ -1,14 +1,22 @@
 var files = {};
 function load(file) {
-  if (typeof Log !== 'undefined')
-    Log.warn(`doing ${file}`);
-    
   var modtime = cmd(0, file);
 
   if (modtime === 0) {
     Log.stack();
     return false;
   }
+  files[file] = modtime;
+}
+
+function run(file)
+{
+  var modtime = cmd(117,file);
+  if (modtime === 0) {
+    Log.stack();
+    return false;
+  }
+
   files[file] = modtime;
 }
 
@@ -167,6 +175,16 @@ var Yugine = {
 };
 
 var timer = {
+  guardfn(fn) {
+    if (typeof fn === 'function')
+      fn();
+    else {
+      Log.warn("TIMER TRYING TO EXECUTE WIHTOUT!!!");
+      Log.warn(this);
+      this.kill();
+    }
+  },
+
   make(fn, secs,obj,loop) {
     if (secs === 0) {
       fn.call(obj);
@@ -174,7 +192,7 @@ var timer = {
     }
       
     var t = clone(this);
-    t.id = make_timer(fn, secs, obj);
+    t.id = make_timer(this.guardfn.bind(t,fn), secs, obj);
     
     return t;
   },
@@ -484,6 +502,7 @@ var Register = {
 
   nk_guis: [],
   nk_gui() {
+
     this.nk_guis.forEach(x => x[0].call(x[1]));
   },
 
@@ -514,12 +533,13 @@ var Register = {
   },
 
   unregister_obj(obj) {
+//    Log.warn(`Unregister ${JSON.stringify(obj)}`);  
     this.updates = this.updates.filter(x => x[1] !== obj);
     this.guis = this.guis.filter(x => x[1] !== obj);
     this.nk_guis = this.nk_guis.filter(x => x[1] !== obj);
     this.debugs = this.debugs.filter(x => x[1] !== obj);
     this.physupdates = this.physupdates.filter(x => x[1] !== obj);
-
+    this.draws = this.draws.filter(x => x[1] !== obj);
     Player.players.forEach(x => x.uncontrol(obj));
   },
 
@@ -538,7 +558,6 @@ var Register = {
   },
 };
 
-Register.unregister_obj(null);
 register(0, Register.update, Register);
 register(1, Register.physupdate, Register);
 register(2, Register.gui, Register);
@@ -568,7 +587,7 @@ function register_debug(fn, obj) {
 };
 
 function unregister_gui(fn, obj) {
-  Register.guis = Register.guis.filter(x => x[0] !== fn && x[1] !== obj);
+  Register.guis = Register.guis.filter(x => x[0] !== fn || x[1] !== obj);
 };
 
 function register_nk_gui(fn, obj) {
@@ -608,7 +627,7 @@ var Signal = {
     register_collide(3,fn,obj,go.body);
   },
 
-  clear_obj(obj) {
+  clera_obj(obj) {
     this.signals.filter(function(x) { return x[1] !== obj; });
   },
 };
@@ -635,6 +654,7 @@ function reloadfiles() {
 
 load("scripts/debug.js");
 
+/*
 function Color(from) {
   var color = Object.create(Array);
   Object.defineProperty(color, 'r', setelem(0));
@@ -647,6 +667,7 @@ function Color(from) {
 
   return color;
 };
+*/
 
 load("scripts/components.js");
 
@@ -1266,15 +1287,7 @@ function grab_from_points(pos, points, slop) {
 };
 
 var gameobject = {
-  get scale() { return this._scale; },
-  set scale(x) {
-    this._scale = Math.max(0,x);
-    if (this.body > -1)
-      cmd(36, this.body, this._scale);
-
-    this.sync();
-  },
-  _scale: 1.0,
+  scale: 1.0,
 
   save: true,
   
@@ -1427,11 +1440,11 @@ var gameobject = {
     this.instances.forEach(function(x) { x.sync(); });
   },
   
-  pulse(vec) {
+  pulse(vec) { /* apply impulse */
     set_body(4, this.body, vec);
   },
 
-  push(vec) {
+  push(vec) { /* apply force */
     set_body(12,this.body,vec);
   },
 
@@ -1477,6 +1490,18 @@ var gameobject = {
     return bb ? bb : cwh2bb([0,0], [0,0]);
   },
 
+  set width(x) {},
+  get width() {
+    var bb = this.boundingbox;
+    Log.warn(bb);
+    return bb.r - bb.l;
+  },
+  set height(x) {},
+  get height() {
+    var bb = this.boundingbox;
+    return bb.t-bb.b;
+  },
+
   stop() {},
 
   kill() {
@@ -1490,7 +1515,7 @@ var gameobject = {
       this.uncontrol();
       this.instances.remove(this);
       Register.unregister_obj(this);
-      Signal.clear_obj(this);
+//      Signal.clear_obj(this);
     
       this.body = -1;
       for (var key in this.components) {
@@ -1537,6 +1562,30 @@ var gameobject = {
 
   world2this(pos) { return cmd(70, this.body, pos); },
   this2world(pos) { return cmd(71, this.body,pos); },
+
+  check_registers(obj) {
+    Register.unregister_obj(this);
+  
+    if (typeof obj.update === 'function')
+      register_update(obj.update, obj);
+
+    if (typeof obj.physupdate === 'function')
+      register_physupdate(obj.physupdate, obj);
+
+    if (typeof obj.collide === 'function')
+      obj.register_hit(obj.collide, obj);
+
+    if (typeof obj.separate === 'function')
+      obj.register_separate(obj.separate, obj);
+
+    if (typeof obj.draw === 'function')
+      register_draw(obj.draw,obj);
+
+    obj.components.forEach(function(x) {
+      if (typeof x.collide === 'function')
+        register_collide(1, x.collide, x, obj.body, x.shape);
+    });
+  },
 
   make(props, level) {
     level ??= World;
@@ -1600,25 +1649,7 @@ var gameobject = {
        }
     };
 
-    if (typeof obj.update === 'function')
-      register_update(obj.update, obj);
-
-    if (typeof obj.physupdate === 'function')
-      register_physupdate(obj.physupdate, obj);
-
-    if (typeof obj.collide === 'function')
-      obj.register_hit(obj.collide, obj);
-
-    if (typeof obj.separate === 'function')
-      obj.register_separate(obj.separate, obj);
-
-    if (typeof obj.draw === 'function')
-      register_draw(obj.draw,obj);
-
-    obj.components.forEach(function(x) {
-      if (typeof x.collide === 'function')
-        register_collide(1, x.collide, x, obj.body, x.shape);
-    });
+    obj.check_registers(obj);
 
     if ('begin' in obj) obj.begin();
 
@@ -1641,11 +1672,8 @@ var gameobject = {
 }
 
 
-var locks = ['visible', 'body', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
-locks.forEach(function(x) {
-  Object.defineProperty(gameobject, x, {enumerable:false});
-});
-
+var locks = ['height', 'width', 'visible', 'body', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
+locks.forEach(x => gameobject.obscure(x));
 /* Load configs */
 function load_configs(file) {
   var configs = JSON.parse(IO.slurp(file));
@@ -1790,3 +1818,5 @@ for (var key in prototypes) {
 }
 
 function save_gameobjects_as_prototypes() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
+
+let Gamestate = {};

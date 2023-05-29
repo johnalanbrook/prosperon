@@ -20,7 +20,7 @@ JSRuntime *rt = NULL;
 #ifdef DBG
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT
 #else
-#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP
+#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
 #endif
 
 static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
@@ -53,8 +53,10 @@ void script_init() {
     num_cache[i] = int2js(i);
 }
 
-void script_run(const char *script) {
-  JS_FreeValue(js, JS_Eval(js, script, strlen(script), "script", JS_EVAL_FLAGS));
+void script_run(const char *script, const char *file) {
+  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
+  js_print_exception(obj);
+  JS_FreeValue(js,obj);
 }
 
 void compile_script(const char *file) {
@@ -91,20 +93,22 @@ int js_print_exception(JSValue v) {
 #ifdef DBG
   if (JS_IsException(v)) {
     JSValue exception = JS_GetException(js);
+    
     /* TODO: Does it need freed if null? */
     if (JS_IsNull(exception))
       return 0;
+      
     JSValue val = JS_GetPropertyStr(js, exception, "stack");
-      const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
-      const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
-      const char *stack = JS_ToCString(js, val);
-      YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
+    const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
+    const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
+    const char *stack = JS_ToCString(js, val);
+    YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
 
-      JS_FreeCString(js, name);
-      JS_FreeCString(js, msg);
-      JS_FreeCString(js, stack);
-      JS_FreeValue(js,val);
-      JS_FreeValue(js,exception);
+    JS_FreeCString(js, name);
+    JS_FreeCString(js, msg);
+    JS_FreeCString(js, stack);
+    JS_FreeValue(js,val);
+    JS_FreeValue(js,exception);
 
     return 1;
   }
@@ -112,17 +116,27 @@ int js_print_exception(JSValue v) {
   return 0;
 }
 
+
+
 int script_dofile(const char *file) {
-  YughInfo("Doing script %s", file);
   const char *script = slurp_text(file);
   if (!script) {
     YughError("Can't find file %s.", file);
     return 0;
   }
-  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
-  js_print_exception(obj);
-  JS_FreeValue(js, obj);
+  script_run(script,file);
+  free(script);
+  return file_mod_secs(file);
+}
 
+int script_runfile(const char *file)
+{
+  const char *script = slurp_text(file);
+  int bufsize = strlen(script)+50;
+  char scriptbuffer[bufsize];
+  snprintf(scriptbuffer,bufsize, "(function(){%s})()", script);
+  script_run(scriptbuffer,file);
+  free(script);
   return file_mod_secs(file);
 }
 

@@ -164,6 +164,8 @@ void phys2d_init()
 {
   space = cpSpaceNew();
   cpSpaceSetSleepTimeThreshold(space, 1);
+  cpSpaceSetCollisionSlop(space, 0.01);
+  cpSpaceSetCollisionBias(space, cpfpow(1.0-0.5, 165.f));
 }
 
 void phys2d_set_gravity(cpVect v) {
@@ -613,6 +615,7 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
   JS_SetPropertyStr(js, obj, "velocity", vec2js(cpArbiterGetSurfaceVelocity(arb)));
   JS_SetPropertyStr(js, obj, "pos", vec2js(cpArbiterGetPointA(arb, 0)));
+  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
 

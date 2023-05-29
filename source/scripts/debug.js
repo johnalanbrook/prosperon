@@ -55,7 +55,8 @@ var Debug = {
     register_debug(fn,obj);
   },
 
-  line(points, color, type) {
+  line(points, color, type, thickness) {
+    thickness ??= 1;
     if (!type)
       type = 0;
 
@@ -64,7 +65,7 @@ var Debug = {
       
     switch (type) {
       case 0:
-        cmd(83, points, color);
+        cmd(83, points, color, thickness);
     }
   },
 };

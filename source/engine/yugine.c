@@ -42,8 +42,8 @@ double physlag = 0;
 double updatelag = 0;
 
 double renderMS = 1 / 165.f;
-double physMS = 1 / 240.f;
-double updateMS = 1 / 60.f;
+double physMS = 1 / 165.f;
+double updateMS = 1 / 165.f;
 
 static int ed = 1;
 static int sim_play = 0;
@@ -234,14 +234,14 @@ int main(int argc, char **args) {
       timer_update(elapsed * timescale);
       physlag += elapsed;
       call_updates(elapsed * timescale);
-      while (physlag >= physMS) {
+//      while (physlag >= physMS) {
         phys_step = 1;
         physlag -= physMS;
         phys2d_update(physMS * timescale);
 	call_physics(physMS * timescale);
         if (sim_play == SIM_STEP) sim_pause();
         phys_step = 0;
-      }
+//      }
     }
 
     renderlag += elapsed;

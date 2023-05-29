@@ -81,7 +81,6 @@ static struct circle_vertex circle_b[v_amt];
 
 void debug_flush()
 {
-
   if (poly_c != 0) {
   sg_apply_pipeline(poly_pipe);
   sg_apply_bindings(&poly_bind);
@@ -136,7 +135,6 @@ void debug_flush()
   sg_draw(0,4,circle_count);
   circle_count = 0;
   }
-  
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
@@ -586,7 +584,7 @@ void draw_poly(cpVect *points, int n, struct rgba color)
   /* Find polygon mesh */
   int tric = n - 2;
   
-  if (n < 1) return;
+  if (tric < 1) return;
    
   uint32_t tridxs[tric*3];
   

@@ -3,3 +3,5 @@ if (load("game.js") === false) {
   quit();
 }
 
+sim_start();
+
