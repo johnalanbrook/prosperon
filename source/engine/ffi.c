@@ -293,6 +293,16 @@ JSValue nk_rect2js(struct nk_rect rect) {
   return obj;
 }
 
+JSValue bb2js(struct boundingbox bb)
+{
+  JSValue obj = JS_NewObject(js);
+  JS_SetPropertyStr(js,obj,"t", JS_NewFloat64(js,bb.t));
+  JS_SetPropertyStr(js,obj,"b", JS_NewFloat64(js,bb.b));
+  JS_SetPropertyStr(js,obj,"r", JS_NewFloat64(js,bb.r));
+  JS_SetPropertyStr(js,obj,"l", JS_NewFloat64(js,bb.l));
+  return obj;
+}
+
 JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   float editnum;
@@ -1026,6 +1036,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 117:
       str = JS_ToCString(js, argv[1]);
       ret = JS_NewInt64(js, script_runfile(str));
+      break;
+
+    case 118:
+      str = JS_ToCString(js,argv[1]);
+      return bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3])));
       break;
     
   }

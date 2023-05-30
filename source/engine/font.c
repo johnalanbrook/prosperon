@@ -307,6 +307,47 @@ void text_settype(struct sFont *mfont) {
   font = mfont;
 }
 
+struct boundingbox text_bb(const char *text, float scale, float lw)
+{
+  HMM_Vec2 cursor = {0,0};
+  unsigned char *c = text;
+  unsigned char *wordstart;
+
+  while (*c != '\0') {
+    if (isblank(*c)) {
+      cursor.X += font->Characters[*c].Advance * scale;
+      c++;
+    } else if (isspace(*c)) {
+      cursor.Y -= scale * font->height;
+      cursor.X = 0;
+      c++;
+    } else {
+      wordstart = c;
+      int wordwidth = 0;
+
+      while (!isspace(*c) && *c != '\0') {
+        wordwidth += font->Characters[*c].Advance * scale;
+	c++;
+      }
+
+      if (lw > 0 && (cursor.X + wordwidth) >= lw) {
+        cursor.X = 0;
+	cursor.Y -= scale * font->height;
+      }
+
+      while (wordstart < c) {
+        cursor.X += font->Characters[*wordstart].Advance * scale;
+	wordstart++;
+      }
+    }
+  }
+
+  float height = cursor.Y + (font->height*scale);
+  float width = lw > 0 ? lw : cursor.X;
+
+  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){width,height});
+}
+
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret) {
   int len = strlen(text);
   drawcaret = caret;
@@ -328,9 +369,7 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       cursor.Y -= scale * font->height;
       cursor.X = pos.X;
       line++;
-
     } else {
-
       wordstart = line;
       int wordWidth = 0;
 

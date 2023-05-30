@@ -138,14 +138,22 @@ var GUI = {
   text(str, pos, size, color, wrap) {
     size = size ? size : 1;
     color = color ? color : [255,255,255,255];
-    wrap = wrap ? wrap : 500;
-    var h = ui_text(str, pos, size, color, wrap);
+    wrap = wrap ? wrap : -1;
+
+    var bb = cmd(118, str, size, wrap);
+    var opos = [bb.r, bb.t];
+        
+    var h = ui_text(str, pos.sub(opos), size, color, wrap);
 
     return [wrap,h];
   },
 
   text_cursor(str, pos, size, cursor) {
     cursor_text(str,pos,size,[255,255,255],cursor);
+  },
+
+  column(items) {
+    items.forEach(x => x());
   },
 };
 

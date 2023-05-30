@@ -6,6 +6,8 @@
 
 #include "sokol/sokol_gfx.h"
 
+#include "HandmadeMath.h"
+
 struct uv_n {
   unsigned short u;
   unsigned short v;
@@ -22,6 +24,24 @@ struct rgba {
   unsigned char b;
   unsigned char a;
 };
+
+struct boundingbox {
+  float t;
+  float b;
+  float r;
+  float l;
+};
+
+static struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {
+  struct boundingbox bb = {
+    .t = c.Y + wh.Y/2,
+    .b = c.Y - wh.Y/2,
+    .r = c.X + wh.X/2,
+    .l = c.X - wh.X/2
+  };
+
+  return bb;
+}
 
 static float *rgba2floats(float *r, struct rgba c)
 {
