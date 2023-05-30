@@ -145,15 +145,23 @@ var GUI = {
         
     var h = ui_text(str, pos.sub(opos), size, color, wrap);
 
-    return [wrap,h];
+    return bb;
   },
 
   text_cursor(str, pos, size, cursor) {
     cursor_text(str,pos,size,[255,255,255],cursor);
   },
 
-  column(items) {
-    items.forEach(x => x());
+  image(path,pos) {
+    gui_img(path,screen2world(pos));
+    return cwh2bb([0,0], cmd(64,path));
+  },
+
+  column(items,pos) {
+    items.forEach(function(item) {
+      let bb = item(pos);
+      pos.y += bb.b;
+    });
   },
 };
 
@@ -405,8 +413,8 @@ var Input = {
   setnuke() { cmd(78); },
 };
 
-function screen2world(screenpos) { return editor.camera.view2world(screenpos); }
-function world2screen(worldpos) { return editor.camera.world2view(worldpos); }
+function screen2world(screenpos) { return Yugine.camera.view2world(screenpos); }
+function world2screen(worldpos) { return Yugine.camera.world2view(worldpos); }
 
 var physics = {
   set gravity(x) { cmd(8, x); },
@@ -1792,6 +1800,8 @@ var camera2d = gameobject.clone("camera2d", {
       return pos.sub(this.pos).scale(1/this.zoom).add(Window.dimensions.scale(0.5));
     },
 });
+
+Yugine.camera = World.spawn(camera2d);
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 //win_icon("icon.png");

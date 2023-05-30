@@ -7,6 +7,8 @@ uniform sampler2D diffuse_texture;
 
 void main()
 {
+  frag_color = texture(diffuse_texture, TexCoords);
+  return;
   vec2 screensize = textureSize(diffuse_texture,0);
   
   vec4 color = texture(diffuse_texture, TexCoords);

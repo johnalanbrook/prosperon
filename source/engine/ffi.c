@@ -236,7 +236,7 @@ JSValue duk_gui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   HMM_Vec2 pos = js2hmmv2(argv[1]);
 
   float size = js2number(argv[2]);
-  renderText(s, pos, size, color_white, 500, -1);
+  renderText(s, pos, size, color_white, 500, -1, 1.0);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
@@ -248,7 +248,7 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[4]);
-  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, -1));
+  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, -1, 1.0));
   JS_FreeCString(js, s);
   return ret;
 }
@@ -261,7 +261,7 @@ JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[5]);
   int cursor = js2int(argv[4]);
-  renderText(s, pos, size, c, wrap, cursor);
+  renderText(s, pos, size, c, wrap, cursor, 1.0);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
@@ -1040,7 +1040,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 118:
       str = JS_ToCString(js,argv[1]);
-      return bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3])));
+      return bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
       break;
     
   }

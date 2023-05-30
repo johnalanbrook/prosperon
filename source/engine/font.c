@@ -189,6 +189,10 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     YughError("Failed to make font %s", fontfile);
   }
 
+  stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
+  float emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
+  newfont->linegap = (newfont->ascent - newfont->descent)* 2 * emscale;
+
   newfont->texID = sg_make_image(&(sg_image_desc){
       .type = SG_IMAGETYPE_2D,
       .width = packsize,
@@ -213,8 +217,12 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     r.t0 = (glyph.y0) / (float)packsize;
     r.t1 = (glyph.y1) / (float)packsize;
 
-    newfont->Characters[c].Advance = glyph.xadvance;
-    newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0;
+    stbtt_GetCodepointHMetrics(&fontinfo, c, &newfont->Characters[c].Advance, &newfont->Characters[c].leftbearing);
+    newfont->Characters[c].Advance *= emscale;
+    newfont->Characters[c].leftbearing *= emscale;
+
+//    newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
+    newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0; 
     newfont->Characters[c].Size[1] = glyph.y1 - glyph.y0;
     newfont->Characters[c].Bearing[0] = glyph.xoff;
     newfont->Characters[c].Bearing[1] = glyph.yoff2;
@@ -256,16 +264,14 @@ void text_flush() {
 static int drawcaret = 0;
 
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
-  HMM_Vec2 offset = {0.0};
-  
   struct text_vert vert;
 
   float lsize = 1.0 / 1024.0;
 
   float oline = 1.0;
   
-  vert.pos.x = cursor.X - (c.Bearing[0] + offset.X) * scale - oline;
-  vert.pos.y = cursor.Y - (c.Bearing[1] + offset.Y) * scale - oline;
+  vert.pos.x = cursor.X + c.Bearing[0] * scale + oline;
+  vert.pos.y = cursor.Y - c.Bearing[1] * scale - oline;
   vert.wh.x = c.Size[0] * scale + (oline*2);
   vert.wh.y = c.Size[1] * scale + (oline*2);
   vert.uv.u = (c.rect.s0 - oline*lsize)*USHRT_MAX;
@@ -307,7 +313,7 @@ void text_settype(struct sFont *mfont) {
   font = mfont;
 }
 
-struct boundingbox text_bb(const char *text, float scale, float lw)
+struct boundingbox text_bb(const char *text, float scale, float lw, float tracking)
 {
   HMM_Vec2 cursor = {0,0};
   unsigned char *c = text;
@@ -315,10 +321,10 @@ struct boundingbox text_bb(const char *text, float scale, float lw)
 
   while (*c != '\0') {
     if (isblank(*c)) {
-      cursor.X += font->Characters[*c].Advance * scale;
+      cursor.X += font->Characters[*c].Advance * tracking * scale;
       c++;
     } else if (isspace(*c)) {
-      cursor.Y -= scale * font->height;
+      cursor.Y -= scale * font->linegap;
       cursor.X = 0;
       c++;
     } else {
@@ -326,29 +332,29 @@ struct boundingbox text_bb(const char *text, float scale, float lw)
       int wordwidth = 0;
 
       while (!isspace(*c) && *c != '\0') {
-        wordwidth += font->Characters[*c].Advance * scale;
+        wordwidth += font->Characters[*c].Advance * tracking * scale;
 	c++;
       }
 
       if (lw > 0 && (cursor.X + wordwidth) >= lw) {
         cursor.X = 0;
-	cursor.Y -= scale * font->height;
+	cursor.Y -= scale * font->linegap;
       }
 
       while (wordstart < c) {
-        cursor.X += font->Characters[*wordstart].Advance * scale;
+        cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
 	wordstart++;
       }
     }
   }
 
-  float height = cursor.Y + (font->height*scale);
+  float height = cursor.Y + (font->linegap*scale);
   float width = lw > 0 ? lw : cursor.X;
 
   return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){width,height});
 }
 
-int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret) {
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   int len = strlen(text);
   drawcaret = caret;
 
@@ -362,11 +368,11 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
   while (*line != '\0') {
     if (isblank(*line)) {
       sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
-      cursor.X += font->Characters[*line].Advance * scale;
+      cursor.X += font->Characters[*line].Advance * tracking * scale;
       line++;
     } else if (isspace(*line)) {
       sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
-      cursor.Y -= scale * font->height;
+      cursor.Y -= scale * font->linegap;
       cursor.X = pos.X;
       line++;
     } else {
@@ -374,18 +380,18 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       int wordWidth = 0;
 
       while (!isspace(*line) && *line != '\0') {
-        wordWidth += font->Characters[*line].Advance * scale;
+        wordWidth += font->Characters[*line].Advance * tracking * scale;
         line++;
       }
 
       if (lw > 0 && (cursor.X + wordWidth - pos.X) >= lw) {
         cursor.X = pos.X;
-        cursor.Y -= scale * font->height;
+        cursor.Y -= scale * font->linegap;
       }
 
       while (wordstart < line) {
         sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
-        cursor.X += font->Characters[*wordstart].Advance * scale;
+        cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
       }
     }
