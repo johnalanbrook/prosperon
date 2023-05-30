@@ -42,6 +42,34 @@ void script_startup() {
 
 JSValue num_cache[100] = {0};
 
+int js_print_exception(JSValue v) {
+#ifdef DBG
+  if (JS_IsException(v)) {
+    JSValue exception = JS_GetException(js);
+    
+    /* TODO: Does it need freed if null? */
+    if (JS_IsNull(exception))
+      return 0;
+      
+    JSValue val = JS_GetPropertyStr(js, exception, "stack");
+    const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
+    const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
+    const char *stack = JS_ToCString(js, val);
+    YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
+
+    JS_FreeCString(js, name);
+    JS_FreeCString(js, msg);
+    JS_FreeCString(js, stack);
+    JS_FreeValue(js,val);
+    JS_FreeValue(js,exception);
+
+    return 1;
+  }
+#endif
+  return 0;
+}
+
+
 void script_init() {
   /* Load all prefabs into memory */
 //  if (DBG)
@@ -89,32 +117,6 @@ void js_dump_stack() {
   js_stacktrace();
 }
 
-int js_print_exception(JSValue v) {
-#ifdef DBG
-  if (JS_IsException(v)) {
-    JSValue exception = JS_GetException(js);
-    
-    /* TODO: Does it need freed if null? */
-    if (JS_IsNull(exception))
-      return 0;
-      
-    JSValue val = JS_GetPropertyStr(js, exception, "stack");
-    const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
-    const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
-    const char *stack = JS_ToCString(js, val);
-    YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
-
-    JS_FreeCString(js, name);
-    JS_FreeCString(js, msg);
-    JS_FreeCString(js, stack);
-    JS_FreeValue(js,val);
-    JS_FreeValue(js,exception);
-
-    return 1;
-  }
-#endif
-  return 0;
-}
 
 
 

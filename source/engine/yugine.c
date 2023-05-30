@@ -24,7 +24,10 @@
 
 #include "2dphysics.h"
 
+#ifdef __linux__
 #include <execinfo.h>
+#endif
+
 #include <signal.h>
 #include <time.h>
 
@@ -32,7 +35,7 @@
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_GFX_IMPL
-#define SOKOL_GLCORE33
+#define SOKOL_GLES3
 #include "sokol/sokol_gfx.h"
 
 int physOn = 0;
@@ -81,7 +84,9 @@ int backtrace(void **buffer, int size) {
 }
 #endif
 
+
 void print_stacktrace() {
+#ifdef __linux__
   void *ents[512];
   size_t size = backtrace(ents, 512);
 
@@ -94,6 +99,7 @@ void print_stacktrace() {
     YughCritical(stackstr[i]);
 
   js_stacktrace();
+#endif
 }
 
 void seghandle(int sig) {

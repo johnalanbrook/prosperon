@@ -235,7 +235,7 @@ void draw_char_box(struct Character c, cpVect cursor, float scale, struct rgba c
   cursor.x += wh.x / 2.f;
   cursor.y += wh.y / 2.f;
 
-  draw_box(cursor, wh, color);
+//  draw_box(cursor, wh, color);
 }
 
 void text_flush() {

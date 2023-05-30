@@ -426,10 +426,10 @@ struct dsp_delay dsp_delay_make(unsigned int ms_delay)
 
     /* Circular buffer size is enough to have the delay */
     unsigned int datasize = ms_delay * CHANNELS * (SAMPLERATE / 1000);
-    new.buf = circbuf_init(sizeof(short), datasize);
-    new.buf.write = datasize;
+//    new.buf = circbuf_init(sizeof(short), datasize);
+//    new.buf.write = datasize;
 
-    YughInfo("Buffer size is %u.", new.buf.len);
+//    YughInfo("Buffer size is %u.", new.buf.len);
 
     return new;
 }
@@ -440,8 +440,8 @@ void dsp_delay_filbuf(struct dsp_delay *delay, short *buf, int n)
     dsp_run(delay->in, cache, n);
 
     for (int i = 0; i < n*CHANNELS; i++) {
-        cbuf_push(&delay->buf, cache[i] / 2);
-        buf[i] = cache[i] + cbuf_shift(&delay->buf);
+//        cbuf_push(&delay->buf, cache[i] / 2);
+//        buf[i] = cache[i] + cbuf_shift(&delay->buf);
     }
 }
 

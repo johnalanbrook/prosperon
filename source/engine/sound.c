@@ -151,7 +151,7 @@ void free_sound(const char *wav) {
 
 struct soundstream *soundstream_make() {
   struct soundstream *new = malloc(sizeof(*new));
-  new->buf = circbuf_make(sizeof(short), BUF_FRAMES * CHANNELS * 2);
+//  new->buf = circbuf_make(sizeof(short), BUF_FRAMES * CHANNELS * 2);
   return new;
 }
 
@@ -278,10 +278,10 @@ void mp3_fillbuf(struct sound *s, short *buf, int n) {
 }
 
 void soundstream_fillbuf(struct soundstream *s, short *buf, int n) {
-  int max = s->buf->write - s->buf->read;
+  int max = 1;//s->buf->write - s->buf->read;
   int lim = (max < n * CHANNELS) ? max : n * CHANNELS;
   for (int i = 0; i < lim; i++) {
-    buf[i] = cbuf_shift(s->buf);
+//    buf[i] = cbuf_shift(s->buf);
   }
 }
 

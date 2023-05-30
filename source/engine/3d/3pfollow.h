@@ -4,20 +4,21 @@
 #define THIRDPERSONFOLLOW_H
 
 #include "transform.h"
+#include "HandmadeMath.h"
 
 struct follow {
   float distance;
   HMM_Quat target_rot;
 };
 
-HMM_Vec3follow_calccenter();
-HMM_Vec3follow_postoffset();
-HMM_Vec3extentsoffset();
-HMM_Vec3framebasedveclerp();
+HMM_Vec3 follow_calccenter();
+HMM_Vec3 follow_postoffset();
+HMM_Vec3 extentsoffset();
+HMM_Vec3 framebasedveclerp();
 int lerpparam(float offset, float anchorwidth, float floatwidth);
-HMM_Vec3vec3lerp(HMM_Vec3 from, HMM_Vec3 to, HMM_Vec3 a);
+HMM_Vec3 vec3lerp(HMM_Vec3 from, HMM_Vec3 to, HMM_Vec3 a);
 void follow_calctargets();
-HMM_Vec3follow_removelockedrot();
+HMM_Vec3 follow_removelockedrot();
 void follow_targetoffset(struct follow *follow);
 int float_epsilon(float a, float b, float e);
 

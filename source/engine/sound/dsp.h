@@ -5,8 +5,7 @@
 #define BUF_FRAMES 128 /* At 48k, 128 needed for 240fps consistency */
 #define CHANNELS 2
 
-
-#include "circbuf.h"
+//#include "circbuf.h"
 
 struct dsp_iir;
 
@@ -66,7 +65,7 @@ struct dsp_filter make_adsr(unsigned int atk, unsigned int dec, unsigned int sus
 
 struct dsp_delay {
     unsigned int ms_delay;
-    struct circbuf buf;
+//    struct circbuf buf;
     struct dsp_filter in;
 };
 

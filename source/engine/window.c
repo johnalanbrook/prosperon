@@ -233,6 +233,7 @@ void window_makecurrent(struct window *w) {
 
   if (w->window != glfwGetCurrentContext())
     glfwMakeContextCurrent(w->window);
+    
   glViewport(0, 0, w->width, w->height);
 }
 

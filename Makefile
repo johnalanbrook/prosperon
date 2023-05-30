@@ -71,13 +71,13 @@ includeflag != find source -type d -name include
 includeflag += $(engincs) source/engine/thirdparty/Nuklear
 includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wall -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
+WARNING_FLAGS = -Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
 
 SEM = 0.0.1
 COM != git rev-parse --short HEAD
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -march=native -std=c99 -c $< -o $@
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
 LIBPATH = -L$(BIN)
 
@@ -87,8 +87,8 @@ ifeq ($(OS), WIN32)
 	CLIBS =
 	EXT = .exe
 else
-	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -rdynamic
-	ELIBS =  engine pthread yughc glfw3 quickjs c m dl GL
+	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -pthread -rdynamic
+	ELIBS =  engine pthread yughc quickjs glfw3 GL c m dl 
 	CLIBS =
 endif
 

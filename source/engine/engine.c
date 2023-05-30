@@ -16,10 +16,6 @@
 #define PL_MPEG_IMPLEMENTATION
 #include <pl_mpeg.h>
 
-#ifdef EDITOR
-#include "editor.h"
-#endif
-
 #include "render.h"
 
 #include "2dphysics.h"
@@ -33,9 +29,7 @@
 #include "sprite.h"
 #include "timer.h"
 #include "window.h"
-
 #include "sound.h"
-
 #include "engine.h"
 
 void error_callback(int error, const char *description) {
@@ -44,6 +38,7 @@ void error_callback(int error, const char *description) {
 }
 
 void engine_init() {
+  
   glfwSetErrorCallback(error_callback);
   /* Initialize GLFW */
   if (!glfwInit()) {
