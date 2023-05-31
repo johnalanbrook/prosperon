@@ -173,10 +173,11 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
   };
 
   HMM_Mat2 rot = HMM_RotateM2(angle);
-  
+
   HMM_Vec2 t_scale = {
     tex->width * st_s_w(r) * size.X,
-    tex->height * st_s_h(r) * size.Y};
+    tex->height * st_s_h(r) * size.Y
+  };
   
 
   for (int i = 0; i < 4; i++) {
@@ -184,7 +185,7 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
     sposes[i] = HMM_MulV2(sposes[i], t_scale);
     sposes[i] = HMM_MulM2V2(rot, sposes[i]);
     sposes[i] = HMM_AddV2(sposes[i], pos);
-    verts[i].pos = sposes[0];
+    verts[i].pos = sposes[i];
     verts[i].color = color;
   }
 
@@ -196,7 +197,7 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
   verts[2].uv.v = r.t0 * USHRT_MAX;
   verts[3].uv.u = r.s1 * USHRT_MAX;
   verts[3].uv.v = r.t0 * USHRT_MAX;
-  
+
   bind_sprite.fs_images[0] = tex->id;
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
   sg_apply_bindings(&bind_sprite);

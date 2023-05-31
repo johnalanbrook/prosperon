@@ -154,14 +154,17 @@ var GUI = {
 
   image(path,pos) {
     let wh = cmd(64,path);
-    gui_img(path,screen2world(pos));
-    return cwh2bb([0,0], cmd(64,path));
+    gui_img(path,pos.slice().sub(wh), 1.0, 0.0);
+    return cwh2bb([0,0], wh);
   },
 
-  column(items,pos) {
+  column(items,pos, defn) {
+    defn ??= {};
+    defn.padding ??= 5;
     items.forEach(function(item) {
       let bb = item(pos);
       pos.y += bb.b;
+      pos.y -= defn.padding*2;
     });
   },
 };
