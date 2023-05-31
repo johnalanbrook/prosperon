@@ -960,6 +960,17 @@ static inline HMM_Mat2 HMM_TransposeM2(HMM_Mat2 Matrix) {
   return Result;
 }
 
+static inline HMM_Mat2 HMM_RotateM2(float angle)
+{
+  HMM_Mat2 result;
+  result.Elements[0][0] = cos(angle);
+  result.Elements[0][1] = sin(angle);
+  result.Elements[1][0] = -result.Elements[0][1];
+  result.Elements[1][1] = result.Elements[0][0];
+
+  return result;
+}
+
 static inline HMM_Mat2 HMM_AddM2(HMM_Mat2 Left, HMM_Mat2 Right) {
 
   HMM_Mat2 Result;

@@ -11,6 +11,8 @@
 #include "texture.h"
 #include "timer.h"
 #include <string.h>
+#include <ctype.h>
+#include <limits.h>
 
 struct TextureOptions TEX_SPRITE = {1, 0, 0};
 
@@ -19,6 +21,12 @@ static int first = -1;
 
 static sg_pipeline pip_sprite;
 static sg_bindings bind_sprite;
+
+struct sprite_vert {
+  HMM_Vec2 pos;
+  struct uv_n uv;
+  struct rgba color;
+};
 
 int make_sprite(int go) {
   struct sprite sprite = {
@@ -85,6 +93,7 @@ void sprite_io(struct sprite *sprite, FILE *f, int read) {
 
 void sprite_draw_all() {
   sg_apply_pipeline(pip_sprite);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));  
 
   static struct sprite **layers[5];
 
@@ -116,7 +125,9 @@ void sprite_initialize() {
       .vs.uniform_blocks[0] = {
           .size = 64,
           .layout = SG_UNIFORMLAYOUT_STD140,
-          .uniforms = {[0] = {.name = "mpv", .type = SG_UNIFORMTYPE_MAT4}}},
+          .uniforms = {
+	    [0] = {.name = "proj", .type = SG_UNIFORMTYPE_MAT4},
+	  }},
 
       .fs.images[0] = {
           .name = "image",
@@ -130,7 +141,9 @@ void sprite_initialize() {
       .shader = shader_sprite,
       .layout = {
           .attrs = {
-              [0].format = SG_VERTEXFORMAT_FLOAT4}},
+              [0].format = SG_VERTEXFORMAT_FLOAT2,
+	      [1].format = SG_VERTEXFORMAT_USHORT2N,
+	      [2].format = SG_VERTEXFORMAT_UBYTE4N}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
 /*      .depth = {
@@ -141,53 +154,52 @@ void sprite_initialize() {
   });
 
   bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(float) * 16 * 500,
+      .size = sizeof(struct sprite_vert) * 500,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "sprite vertex buffer",
   });
 }
 
+/* offset given in texture offset, so -0.5,-0.5 results in it being centered */
 void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM_Vec2 offset, struct glrect r, struct rgba color) {
-  HMM_Mat4 model = HMM_M4D(1.0);
-  HMM_Mat4 r_model = HMM_M4D(1.0);
-
-  HMM_Vec3 t_scale = {
-    tex->width * st_s_w(r) * size.X,
-    tex->height * st_s_h(r) * size.Y,
-    t_scale.Z = 1.0};
+  struct sprite_vert verts[4];
   
-  HMM_Vec3 t_offset = {
-    offset.X * t_scale.X,
-    offset.Y * t_scale.Y,
-    0.0};
-
-  HMM_Translate_p(&model, t_offset);
-  HMM_Scale_p(&model, t_scale);
-  r_model = HMM_Rotate_RH(angle, vZ);
-  model = HMM_MulM4(r_model, model);
-  HMM_Translate_p(&model, (HMM_Vec3){pos.X, pos.Y, 0.0});
-
-  model = HMM_MulM4(projection, model);
-
-  float vertices[] = {
-      0.f, 0.f, r.s0, r.t1,
-      1, 0.f, r.s1, r.t1,
-      0.f, 1, r.s0, r.t0,
-      1.f, 1.f, r.s1, r.t0};
-
-  bind_sprite.fs_images[0] = tex->id;
-  sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(vertices));
-  sg_apply_bindings(&bind_sprite);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(model.Elements));
-
-  float cl[3] = {
-    color.r / 255.0,
-    color.g / 255.0,
-    color.b / 255.0
+  HMM_Vec2 sposes[4] = {
+    {0.0,0.0},
+    {1.0,0.0},
+    {0.0,1.0},
+    {1.0,1.0},
   };
 
-  sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(cl));
+  HMM_Mat2 rot = HMM_RotateM2(angle);
+  
+  HMM_Vec2 t_scale = {
+    tex->width * st_s_w(r) * size.X,
+    tex->height * st_s_h(r) * size.Y};
+  
+
+  for (int i = 0; i < 4; i++) {
+    sposes[i] = HMM_AddV2(sposes[i], offset);
+    sposes[i] = HMM_MulV2(sposes[i], t_scale);
+    sposes[i] = HMM_MulM2V2(rot, sposes[i]);
+    sposes[i] = HMM_AddV2(sposes[i], pos);
+    verts[i].pos = sposes[0];
+    verts[i].color = color;
+  }
+
+  verts[0].uv.u = r.s0 * USHRT_MAX;
+  verts[0].uv.v = r.t1 * USHRT_MAX;
+  verts[1].uv.u = r.s1 * USHRT_MAX;
+  verts[1].uv.v = r.t1 * USHRT_MAX;
+  verts[2].uv.u = r.s0 * USHRT_MAX;
+  verts[2].uv.v = r.t0 * USHRT_MAX;
+  verts[3].uv.u = r.s1 * USHRT_MAX;
+  verts[3].uv.v = r.t0 * USHRT_MAX;
+  
+  bind_sprite.fs_images[0] = tex->id;
+  sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
+  sg_apply_bindings(&bind_sprite);
 
   sg_draw(sprite_count * 4, 4, 1);
   sprite_count++;
@@ -212,6 +224,7 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
 
 void gui_draw_img(const char *img, HMM_Vec2 pos, float scale, float angle) {
   sg_apply_pipeline(pip_sprite);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_loadfromfile(img);
   HMM_Vec2 size = {scale, scale};
   HMM_Vec2 offset = {0.f, 0.f};

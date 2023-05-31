@@ -269,7 +269,7 @@ JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst
 JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *img = JS_ToCString(js, argv[0]);
   cpVect pos = js2vec2(argv[1]);
-  gui_draw_img(img, pos.x, pos.y);
+  gui_draw_img(img, js2hmmv2(argv[1]), js2number(argv[2]), js2number(argv[3]));
   JS_FreeCString(js, img);
   return JS_NULL;
 }
