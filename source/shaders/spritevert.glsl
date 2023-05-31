@@ -2,6 +2,7 @@
 layout (location = 0) in vec4 vertex;
 out vec2 texcoords;
 
+uniform mat4 proj;
 uniform mat4 mpv;
 
 void main()

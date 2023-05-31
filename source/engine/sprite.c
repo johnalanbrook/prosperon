@@ -210,11 +210,10 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
   sprite->frame = anim->st_frames[frame];
 }
 
-void gui_draw_img(const char *img, float x, float y) {
+void gui_draw_img(const char *img, HMM_Vec2 pos, float scale, float angle) {
   sg_apply_pipeline(pip_sprite);
   struct Texture *tex = texture_loadfromfile(img);
-  HMM_Vec2 pos = {x, y};
-  HMM_Vec2 size = {1.f, 1.f};
+  HMM_Vec2 size = {scale, scale};
   HMM_Vec2 offset = {0.f, 0.f};
   tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex), color_white);
 }

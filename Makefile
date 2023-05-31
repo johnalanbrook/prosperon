@@ -52,14 +52,9 @@ endef
 edirs != find source -type d -name include
 subengs = sound 3d
 
-ifeq ($(ED), 1)
-	subengs += editor
-endif
-
 ifeq ($(DBG), 1)
 	subengs += debug
 endif
-
 
 edirs += source/engine $(addprefix source/engine/, $(subengs)) source/engine/thirdparty/Nuklear
 ehead != find source/engine source/engine/sound source/engine/debug source/engine/editor -maxdepth 1 -type f -name *.h
