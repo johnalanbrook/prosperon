@@ -153,6 +153,7 @@ var GUI = {
   },
 
   image(path,pos) {
+    let wh = cmd(64,path);
     gui_img(path,screen2world(pos));
     return cwh2bb([0,0], cmd(64,path));
   },
