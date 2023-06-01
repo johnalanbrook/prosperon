@@ -318,6 +318,11 @@ Object.defineProperty(Array.prototype, 'apply', {
 
 Object.defineProperty(Array.prototype, 'scale', {
   value: function(s) {
+    if (Array.isArray(s)) {
+      var c = this.slice();
+      c.forEach(function(x,i) { c[i] = x * s[i]; });
+      return c;
+    }
     return this.map(function(x) { return x*s; });
 }});
 

@@ -1042,7 +1042,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js,argv[1]);
       return bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
       break;
-    
   }
 
   if (str)

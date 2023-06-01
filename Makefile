@@ -57,7 +57,7 @@ ifeq ($(DBG), 1)
 endif
 
 edirs += source/engine $(addprefix source/engine/, $(subengs)) source/engine/thirdparty/Nuklear
-ehead != find source/engine source/engine/sound source/engine/debug source/engine/editor -maxdepth 1 -type f -name *.h
+ehead != find source/engine source/engine/sound source/engine/debug -maxdepth 1 -type f -name *.h
 eobjects != find source/engine -type f -name '*.c' | sed -r 's|^(.*)\.c|$(objprefix)/\1.o|'  # Gets all .c files and makes .o refs
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 

@@ -134,6 +134,10 @@ var Color = {
   gray: [181, 181,181,255],
 };
 
+function bb2wh(bb) {
+  return [bb.r-bb.l, bb.t-bb.b];
+};
+
 var GUI = {
   text(str, pos, size, color, wrap) {
     size = size ? size : 1;
@@ -158,14 +162,86 @@ var GUI = {
     return cwh2bb([0,0], wh);
   },
 
-  column(items,pos, defn) {
-    defn ??= {};
-    defn.padding ??= 5;
-    items.forEach(function(item) {
-      let bb = item(pos);
-      pos.y += bb.b;
-      pos.y -= defn.padding*2;
-    });
+  nodrawbb: {
+    draw() { return cwh2bb([0,0],[0,0]); }
+  },
+
+  image_fn(defn) {
+    var def = Object.create(this.defaults);
+    Object.assign(def,defn);
+
+    if (!def.path) {
+      Log.warn("GUI image needs a path.");
+      return GUI.nodrawbb;
+    }
+
+    return {
+      draw(pos) {
+        var wh = cmd(64,def.path);
+        gui_img(def.path, pos, def.scale, def.angle);
+	this.bb = cwh2bb([0,0],wh);
+      }
+    };
+  },
+
+  defaults: {
+    padding:[0,0],
+    font: "fonts/LessPerfectDOSVGA.ttf",
+    font_size: 1,
+    text_align: "left",
+    scale: 1,
+    angle: 0,
+    anchor: [0,0],
+    text_shadow: {
+      pos: [0,0],
+      color: [255,255,255,255]
+    },
+    text_outline: 1, /* outline in pixels */
+    color: [255,255,255,255],
+    margin: [5,5],
+    width: 0,
+    height: 0,
+  },
+
+  text_fn(str, defn)
+  {
+    var def = Object.create(this.defaults);
+    Object.assign(def,defn);
+
+    return {
+      draw: function(cursor) {
+        var wh = bb2wh(cmd(118,str,def.font_size,def.width));
+	var pos = cursor.sub(wh.scale(def.anchor));
+        ui_text(str, pos, def.font_size, def.color, def.width);
+	this.bb = cwh2bb(pos,wh);
+	return cwh2bb(pos,wh);
+      }
+    };
+  },
+
+  button_fn(str, cb, defn) {
+    
+  },
+
+  column(defn) {
+    var def = Object.create(this.defaults);
+    Object.assign(def,defn);
+
+    if (!def.items) {
+      Log.warn("Columns needs items.");
+      return GUI.nodrawbb;
+    };
+
+    def.draw = function(pos) {
+        def.items.forEach(function(item) {
+	  item.draw(pos);
+          var wh = bb2wh(item.bb);
+          pos.y -= wh.y;
+          pos.y -= def.padding.x*2;
+        });
+    };
+
+    return def;
   },
 };
 
