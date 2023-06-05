@@ -467,14 +467,38 @@ Object.defineProperty(Array.prototype, 'mirrored', {
   }
 });
 
+Object.defineProperty(Array.prototype, 'lerp', {
+  value: function(to, t) {
+    var c = [];
+    this.forEach(function(x,i) {
+      c[i] = (to[i] - x) * t + x;
+    });
+    return c;
+  }
+});
+
+Object.defineProperty(Object.prototype, 'lerp', {
+  value: function(to, t) {
+    var self = this;
+    var obj = {};
+
+    Object.keys(self).forEach(function(key) {
+      obj[key] = self[key].lerp(to[key],t);
+    });
+
+    return obj;
+  }
+});
 
 /* MATH EXTENSIONS */
+Object.defineProperty(Number.prototype, 'lerp', {
+  value: function(to, t) {
+    var s = this;
+    return (to - this) * t + this;
+  }
+});
 
 Math.clamp = function (x, l, h) { return x > h ? h : x < l ? l : x; }
-
-Math.lerp = function (s, f, dt) {
-  return s + (Math.clamp(dt, 0, 1) * (f - s));
-};
 
 Math.random_range = function(min,max) { return Math.random() * (max-min) + min; };
 

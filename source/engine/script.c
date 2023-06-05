@@ -195,6 +195,7 @@ static struct callee update_callee;
 void register_update(struct callee c) {
   update_callee = c;
 }
+
 void call_updates(double dt) {
   callee_dbl(update_callee, dt);
 }

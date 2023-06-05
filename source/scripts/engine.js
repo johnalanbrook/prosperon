@@ -347,27 +347,88 @@ var timer = {
   get pct() { return this.remain / this.time; },
 };
 
+/* Take numbers from 0 to 1 and remap them to easing functions */
+var Ease = {
+  linear(t) { return t; },
+
+  in(t) { return t*t; },
+
+  out(t) {
+    var d = 1-t;
+    return 1 - d*d
+  },
+
+  inout(t) {
+    var d = -2*t + 2;
+    return t < 0.5 ? 2 * t * t : 1 - (d * d) / 2;
+  },
+};
+
+Ease.sine = {
+  in(t) { return 1 - Math.cos((t * Math.PI)/2); },
+
+  out(t) { return Math.sin((t*Math.PI)/2); },
+
+  inout(t) { return -(Math.cos(Math.PI*t) - 1) / 2; }
+};
+
+Ease.elastic = {
+  in(t) {
+    return t === 0 ? 0 : t === 1 ? 1 : -Math.pow(2, 10*t-10) * Math.sin((t * 10 - 10.75) * this.c4);
+  },
+
+  out(t) {
+    return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10*t) * Math.sin((t * 10 - 0.75) * this.c4) + 1;
+  },
+
+  inout(t) {
+    t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ?
+      -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * this.c5)) / 2
+      : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * this.c5)) / 2 + 1;
+  },
+};
+Ease.elastic.c4 = 2*Math.PI/3;
+Ease.elastic.c5 = 2*Math.PI / 4.5;
+
 var Tween = {
   default: {
     ease: "inout", /* easing at end and beginning of tween */
     loop: "restart", /* none, restart, yoyo, increment */
     time: 1, /* seconds to do */
+    ease: Ease.linear
   },
   
-  start(target, start, end, options)
+  start(obj, target, start, end, options)
   {
     var defn = Object.create(this.default);
-    Object.apply(defn, options);
-    
-    var newtimer = timer.make(null, defn.time, null, true);
-    newtimer.pause();
-    
-    var tween_fn = function() {
-      Log.warn(newtimer.pct);
-    };
-    timer.callback = tween_fn;
-    timer.callback();
-    timer.start();
+    Object.assign(defn, options);
+
+    defn.accum = 0;
+
+    if (defn.loop === 'yoyo')
+      defn.fn = function(dt) {
+        defn.accum += dt;
+	defn.pct = (defn.accum % (defn.time*2)) / (defn.time*2);
+
+	if (defn.pct < 0.5)
+	  obj[target] = start.lerp(end, defn.ease(defn.pct/0.5));
+	else
+	  obj[target] = end.lerp(start, defn.ease((defn.pct-0.5)/0.5));
+      };
+    else
+      defn.fn = function(dt) {
+        defn.accum += dt;
+        defn.pct = (defn.accum % defn.time) / defn.time;
+	obj[target] = start.lerp(end, defn.ease(defn.pct));
+      };
+
+    defn.restart = function() { defn.accum = 0; };
+    defn.stop = function() { defn.pause(); defn.restart(); };
+    defn.pause = function() { unregister_update(defn.fn); };
+
+    register_update(defn.fn, defn);
+
+    return defn;
   },
 
   lerp(s, e, t)
@@ -737,6 +798,12 @@ Register.gamepad_playermap[0] = Player.players[0];
 
 function register_update(fn, obj) {
   Register.updates.push([fn, obj ? obj : null]);
+};
+
+function unregister_update(fn) {
+  Register.updates = Register.updates.filter(function(updatefn) {
+    return fn === updatefn;
+  });
 };
 
 function register_physupdate(fn, obj) {
