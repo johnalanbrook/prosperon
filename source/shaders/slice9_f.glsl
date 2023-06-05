@@ -32,6 +32,6 @@ uv9slice(vec2 uv, vec2 s, vec4 b)
 
 void main()
 {
-  uv = uv9slice(uv, scale, border);
+  vec2 nuv = uv9slice(uv, scale, border);
   color = fcolor * texture(image, uv);
 }

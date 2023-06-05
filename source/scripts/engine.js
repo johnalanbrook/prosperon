@@ -124,6 +124,7 @@ var Window = {
   }
 };
 
+
 var Color = {
   white: [255,255,255,255],
   blue: [84,110,255,255],
@@ -311,7 +312,14 @@ var timer = {
     }
       
     var t = clone(this);
-    t.id = make_timer(this.guardfn.bind(t,fn), secs, obj);
+    t.callback = fn;
+    var guardfn = function() {
+      if (typeof t.callback === 'function')
+        t.callback();
+      else
+        Log.warn("Timer trying to execute without a function.");
+    };
+    t.id = make_timer(guardfn, secs, obj);
     
     return t;
   },
@@ -336,7 +344,39 @@ var timer = {
   kill() { cmd(27, this.id); },
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
+  get pct() { return this.remain / this.time; },
 };
+
+var Tween = {
+  default: {
+    ease: "inout", /* easing at end and beginning of tween */
+    loop: "restart", /* none, restart, yoyo, increment */
+    time: 1, /* seconds to do */
+  },
+  
+  start(target, start, end, options)
+  {
+    var defn = Object.create(this.default);
+    Object.apply(defn, options);
+    
+    var newtimer = timer.make(null, defn.time, null, true);
+    newtimer.pause();
+    
+    var tween_fn = function() {
+      Log.warn(newtimer.pct);
+    };
+    timer.callback = tween_fn;
+    timer.callback();
+    timer.start();
+  },
+
+  lerp(s, e, t)
+  {
+    t = Math.clamp(t,0,1);
+    return ((e - s) * t) + s;
+  },
+};
+
 
 var animation = {
   time: 0,
