@@ -162,30 +162,32 @@ var GUI = {
     return cwh2bb([0,0], wh);
   },
 
-  nodrawbb: {
-    draw() { return cwh2bb([0,0],[0,0]); }
-  },
-
   image_fn(defn) {
     var def = Object.create(this.defaults);
     Object.assign(def,defn);
-
     if (!def.path) {
       Log.warn("GUI image needs a path.");
-      return GUI.nodrawbb;
+      def.draw = function(){};
+      return def;
     }
 
-    return {
-      draw(pos) {
-        var wh = cmd(64,def.path);
-        gui_img(def.path, pos, def.scale, def.angle);
-	this.bb = cwh2bb([0,0],wh);
-      }
+    def.draw = function(pos) {
+      def.calc_bb(pos);
+      var wh = cmd(64,def.path);
+      gui_img(def.path, pos.sub(def.anchor.scale(wh)), def.scale, def.angle, def.color);
     };
+
+    def.calc_bb = function(cursor) {
+      var wh = cmd(64,def.path).scale(def.scale);
+      def.bb = cwh2bb(wh.scale([0.5,0.5]), wh);
+      def.bb = movebb(def.bb, cursor.sub(wh.scale(def.anchor)));
+    };
+
+    return def;
   },
 
   defaults: {
-    padding:[0,0],
+    padding:[2,2], /* Each element inset with this padding on all sides */
     font: "fonts/LessPerfectDOSVGA.ttf",
     font_size: 1,
     text_align: "left",
@@ -198,7 +200,7 @@ var GUI = {
     },
     text_outline: 1, /* outline in pixels */
     color: [255,255,255,255],
-    margin: [5,5],
+    margin: [5,5], /* Distance between elements for things like columns */
     width: 0,
     height: 0,
   },
@@ -207,20 +209,33 @@ var GUI = {
   {
     var def = Object.create(this.defaults);
     Object.assign(def,defn);
-
-    return {
-      draw: function(cursor) {
-        var wh = bb2wh(cmd(118,str,def.font_size,def.width));
-	var pos = cursor.sub(wh.scale(def.anchor));
-        ui_text(str, pos, def.font_size, def.color, def.width);
-	this.bb = cwh2bb(pos,wh);
-	return cwh2bb(pos,wh);
-      }
-    };
-  },
-
-  button_fn(str, cb, defn) {
     
+    def.draw = function(cursor) {
+      def.calc_bb(cursor);
+      
+      var old = def;
+      def = Object.create(def);
+
+      if (def.hovered && pointinbb(def.bb, Mouse.screenpos) || def.selected) {
+        Object.assign(def, def.hovered);
+	def.calc_bb(cursor);
+      }
+
+      var pos = cursor.sub(bb2wh(def.bb).scale(def.anchor));
+
+      ui_text(str, pos, def.font_size, def.color, def.width);
+
+      def = old;
+    };
+
+    def.calc_bb = function(cursor) {
+      var bb = cmd(118, str, def.font_size, def.width);
+      var wh = bb2wh(bb);
+      var pos = cursor.sub(wh.scale(def.anchor));
+      def.bb = movebb(bb,pos);
+    };
+
+    return def;
   },
 
   column(defn) {
@@ -229,12 +244,20 @@ var GUI = {
 
     if (!def.items) {
       Log.warn("Columns needs items.");
-      return GUI.nodrawbb;
+      def.draw = function(){};
+      return def;
     };
 
+    def.items.forEach(function(item,idx) {
+      Object.setPrototypeOf(def.items[idx], def);
+    });
+
     def.draw = function(pos) {
+      var c = Color.red.slice();
+      c.a = 100;
         def.items.forEach(function(item) {
-	  item.draw(pos);
+	  item.draw.call(this,pos);
+	  Debug.poly(bb2points(item.bb), c);
           var wh = bb2wh(item.bb);
           pos.y -= wh.y;
           pos.y -= def.padding.x*2;
@@ -455,6 +478,12 @@ var Render = {
 var Mouse = {
   get pos() {
     return cmd(45);
+  },
+
+  get screenpos() {
+    var p = this.pos;
+    p.y = Window.dimensions.y - p.y;
+    return p;
   },
 
   get worldpos() {

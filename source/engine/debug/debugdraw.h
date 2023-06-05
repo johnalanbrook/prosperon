@@ -2,6 +2,7 @@
 #define DEBUGDRAW_H
 
 #include <chipmunk/chipmunk.h>
+#include "HandmadeMath.h"
 struct rgba;
 
 void debugdraw_init();
@@ -19,9 +20,8 @@ void draw_poly(cpVect *points, int n, struct rgba color);
 
 void draw_grid(int width, int span, struct rgba color);
 
-void debug_flush();
-
-void debugdraw_flush();		/* This is called once per frame to draw all queued elements */
+void debug_flush(HMM_Mat4 *view);
+void debug_newframe();
 
 cpVect inflatepoint(cpVect a, cpVect b, cpVect c, float d);
 void inflatepoints(cpVect *r, cpVect *p, float d, int n);

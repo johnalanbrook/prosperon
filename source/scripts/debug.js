@@ -8,7 +8,6 @@ var Gizmos = {
 
 var Shape = {
   circle(pos, radius, color) {
-    
     cmd(115, pos, radius, color);
   },
 };
@@ -29,6 +28,10 @@ var Debug = {
     if (!capsize)
       capsize = 4;
     cmd(81, start, end, color, capsize);
+  },
+
+  poly(points, color) {
+    cmd_points(0,points,color);
   },
   
   box(pos, wh, color) {

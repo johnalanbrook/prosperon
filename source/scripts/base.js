@@ -1,18 +1,3 @@
-
-var fns = [
-() => {
-var ttt = {};
-Object.defineProperty(ttt, 'a', {});
-ttt.a = 5;
-},
-() => { Log.warn("did it"); }
-];
-
-//fns.forEach(x => x());
-
-
-
-
 /* Prototypes out an object and extends with values */
 function clone(proto, binds) {
   var c = Object.create(proto);
@@ -539,6 +524,15 @@ function points2bb(points) {
     return b;
 };
 
+function bb2points(bb)
+{
+  return [
+   [bb.l,bb.t],
+   [bb.r,bb.t],
+   [bb.r,bb.b],
+   [bb.l,bb.b]
+  ];
+}
 
 function bb2cwh(bb) {
   if (!bb) return undefined;
@@ -550,6 +544,23 @@ function bb2cwh(bb) {
   cwh.c = [bb.l + w/2, bb.b + h/2];
   
   return cwh;
+};
+
+function pointinbb(bb, p)
+{
+  if (bb.t < p.y || bb.b > p.y || bb.l > p.x || bb.r < p.x)
+    return false;
+
+  return true;
+}
+
+function movebb(bb, pos) {
+  var newbb = Object.assign({}, bb);
+  newbb.t += pos.y;
+  newbb.b += pos.y;
+  newbb.l += pos.x;
+  newbb.r += pos.x;
+  return newbb;
 };
 
 function bb_expand(oldbb, x) {

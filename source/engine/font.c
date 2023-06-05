@@ -190,8 +190,10 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   }
 
   stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
-  float emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
-  newfont->linegap = (newfont->ascent - newfont->descent)* 2 * emscale;
+  newfont->emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
+  newfont->linegap = (newfont->ascent - newfont->descent)* 2 * newfont->emscale;
+
+  YughWarn("Font ascent descent is %g", (newfont->ascent-newfont->descent)*newfont->emscale);
 
   newfont->texID = sg_make_image(&(sg_image_desc){
       .type = SG_IMAGETYPE_2D,
@@ -218,8 +220,8 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     r.t1 = (glyph.y1) / (float)packsize;
 
     stbtt_GetCodepointHMetrics(&fontinfo, c, &newfont->Characters[c].Advance, &newfont->Characters[c].leftbearing);
-    newfont->Characters[c].Advance *= emscale;
-    newfont->Characters[c].leftbearing *= emscale;
+    newfont->Characters[c].Advance *= newfont->emscale;
+    newfont->Characters[c].leftbearing *= newfont->emscale;
 
 //    newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
     newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0; 
@@ -268,7 +270,7 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
   float lsize = 1.0 / 1024.0;
 
-  float oline = 1.0;
+  float oline = 0.0;
   
   vert.pos.x = cursor.X + c.Bearing[0] * scale + oline;
   vert.pos.y = cursor.Y - c.Bearing[1] * scale - oline;
@@ -348,8 +350,15 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
     }
   }
 
-  float height = cursor.Y + (font->linegap*scale);
+  float height = cursor.Y + (font->height*scale);
   float width = lw > 0 ? lw : cursor.X;
+
+  struct boundingbox bb = {};
+  bb.l = 0;
+  bb.t = font->ascent * font->emscale * scale;
+  bb.b = font->descent * font->emscale * scale;
+  bb.r = cursor.X;
+  return bb;
 
   return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){width,height});
 }

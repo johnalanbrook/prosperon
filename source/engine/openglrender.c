@@ -329,23 +329,23 @@ void openglRender(struct window *window) {
   
   sprite_draw_all();
   sprite_flush();
-
   call_draw();
-//  debug_flush();
 
   //// DEBUG
   if (debugDrawPhysics) {
     gameobject_draw_debugs();
     call_debugs();
   }
+  
+  debug_flush(&projection);
 
-  debug_flush();
- 
   ////// TEXT && GUI
+
+  debug_nextpass();
   call_gui();
 
   text_flush();
-
+  debug_flush(&hudproj);
   nuke_start();
   call_nk_gui();
   nuke_end();
@@ -358,8 +358,9 @@ void openglRender(struct window *window) {
   sg_draw(0,6,1);
   sg_end_pass();
 
-  
   sg_commit();
+
+  debug_newframe();
 }
 
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)

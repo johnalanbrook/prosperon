@@ -24,6 +24,7 @@ struct sFont {
   int ascent;
   int descent;
   int linegap;
+  float emscale;
   struct Character Characters[127];
   sg_image texID;
 };

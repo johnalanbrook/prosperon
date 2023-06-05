@@ -19,12 +19,30 @@ struct TextureOptions TEX_SPRITE = {1, 0, 0};
 static struct sprite *sprites;
 static int first = -1;
 
+static sg_shader shader_sprite;
 static sg_pipeline pip_sprite;
 static sg_bindings bind_sprite;
 
 struct sprite_vert {
   HMM_Vec2 pos;
   struct uv_n uv;
+  struct rgba color;
+};
+
+static sg_shader slice9_shader;
+static sg_pipeline slice9_pipe;
+static sg_bindings slice9_bind;
+static float slice9_points[8] = {
+  0.0, 0.0,
+  0.0, 1.0,
+  1.0, 0.0,
+  1.0, 1.0
+};
+struct slice9_vert {
+  HMM_Vec2 pos;
+  struct uv_n uv;
+  unsigned short border[4];
+  HMM_Vec2 scale;
   struct rgba color;
 };
 
@@ -118,7 +136,7 @@ void sprite_settex(struct sprite *sprite, struct Texture *tex) {
   sprite_setframe(sprite, &ST_UNIT);
 }
 
-sg_shader shader_sprite;
+
 
 void sprite_initialize() {
   shader_sprite = sg_compile_shader("shaders/spritevert.glsl", "shaders/spritefrag.glsl", &(sg_shader_desc){
@@ -134,8 +152,7 @@ void sprite_initialize() {
           .image_type = SG_IMAGETYPE_2D,
           .sampler_type = SG_SAMPLERTYPE_FLOAT,
       },
-
-      .fs.uniform_blocks[0] = {.size = 12, .uniforms = {[0] = {.name = "spriteColor", .type = SG_UNIFORMTYPE_FLOAT3}}}});
+    });
 
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = shader_sprite,
@@ -159,6 +176,40 @@ void sprite_initialize() {
       .usage = SG_USAGE_STREAM,
       .label = "sprite vertex buffer",
   });
+
+  slice9_shader = sg_compile_shader("shaders/slice9_v.glsl", "shaders/slice9_f.glsl", &(sg_shader_desc) {
+    .vs.uniform_blocks[0] = {
+      .size = 64,
+      .layout = SG_UNIFORMLAYOUT_STD140,
+      .uniforms = { [0] = {.name = "projection", .type = SG_UNIFORMTYPE_MAT4},
+    }},
+
+    .fs.images[0] = {
+      .name = "image",
+      .image_type = SG_IMAGETYPE_2D,
+      .sampler_type = SG_SAMPLERTYPE_FLOAT
+    },
+  });
+
+  slice9_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = slice9_shader,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT2,
+	[1].format = SG_VERTEXFORMAT_USHORT4N,
+	[2].format = SG_VERTEXFORMAT_FLOAT2,
+	[3].format = SG_VERTEXFORMAT_UBYTE4N
+      }},
+    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+  });
+
+  slice9_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(struct slice9_vert) * 100,
+    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .usage = SG_USAGE_STREAM,
+  });
+
+  
 }
 
 /* offset given in texture offset, so -0.5,-0.5 results in it being centered */
@@ -178,7 +229,6 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
     tex->width * st_s_w(r) * size.X,
     tex->height * st_s_h(r) * size.Y
   };
-  
 
   for (int i = 0; i < 4; i++) {
     sposes[i] = HMM_AddV2(sposes[i], offset);
@@ -217,6 +267,8 @@ void sprite_draw(struct sprite *sprite) {
   }
 }
 
+
+
 void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
   if (!sprite) return;
   sprite->tex = anim->tex;
@@ -230,6 +282,47 @@ void gui_draw_img(const char *img, HMM_Vec2 pos, float scale, float angle) {
   HMM_Vec2 size = {scale, scale};
   HMM_Vec2 offset = {0.f, 0.f};
   tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex), color_white);
+}
+
+void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)
+{
+  sg_apply_pipeline(slice9_pipe);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
+  struct Texture *tex = texture_loadfromfile(img);
+
+  struct glrect r = tex_get_rect(tex);
+
+  struct slice9_vert verts[4];
+  
+  HMM_Vec2 sposes[4] = {
+    {0.0,0.0},
+    {1.0,0.0},
+    {0.0,1.0},
+    {1.0,1.0},
+  };
+
+  for (int i = 0; i < 4; i++) {
+    verts[i].pos = HMM_MulV2(sposes[i], dimensions);
+    //verts[i].uv =z sposes[i];
+    verts[i].color = color;
+  }
+
+  verts[0].uv.u = r.s0 * USHRT_MAX;
+  verts[0].uv.v = r.t1 * USHRT_MAX;
+  verts[1].uv.u = r.s1 * USHRT_MAX;
+  verts[1].uv.v = r.t1 * USHRT_MAX;
+  verts[2].uv.u = r.s0 * USHRT_MAX;
+  verts[2].uv.v = r.t0 * USHRT_MAX;
+  verts[3].uv.u = r.s1 * USHRT_MAX;
+  verts[3].uv.v = r.t0 * USHRT_MAX;
+
+  bind_sprite.fs_images[0] = tex->id;
+  sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
+  sg_apply_bindings(&bind_sprite);
+
+  sg_draw(sprite_count * 4, 4, 1);
+  sprite_count++;
+  
 }
 
 void sprite_setframe(struct sprite *sprite, struct glrect *frame) {

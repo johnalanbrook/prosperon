@@ -1564,6 +1564,25 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_NewInt64(js, id);
 }
 
+JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  int n = js_arrlen(argv[1]);
+  cpVect points[n];
+
+  for (int i = 0; i < n; i++)
+    points[i] = js2vec2(js_arridx(argv[1], i));
+
+  int cmd = js2int(argv[0]);
+
+  switch(cmd) {
+    case 0:
+      draw_poly(points, n, js2color(argv[2]));
+      break;
+  }
+
+  return JS_NULL;
+}
+
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {
@@ -1591,6 +1610,8 @@ void ffi_load() {
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)
   DUK_FUNC(make_timer, 3)
+
+  DUK_FUNC(cmd_points, 5);
 
   DUK_FUNC(cmd, 6)
   DUK_FUNC(register, 3)
