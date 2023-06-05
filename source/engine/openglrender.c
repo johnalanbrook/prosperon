@@ -344,8 +344,8 @@ void openglRender(struct window *window) {
   debug_nextpass();
   call_gui();
 
-  text_flush();
   debug_flush(&hudproj);
+  text_flush();  
   nuke_start();
   call_nk_gui();
   nuke_end();
