@@ -364,6 +364,66 @@ var Ease = {
   },
 };
 
+function make_easing_fns(num) {
+  var obj = {};
+
+  obj.in = function(t) {
+    return Math.pow(t,num);
+  };
+
+  obj.out = function(t) {
+    return 1 - Math.pow(1 - t, num);
+  };
+
+  var mult = Math.pow(2, num-1);
+
+  obj.inout = function(t) {
+    return t < 0.5 ? mult * Math.pow(t, num) : 1 - Math.pow(-2 * t + 2, num) / 2;
+  };
+
+  return obj;
+};
+
+Ease.quad = make_easing_fns(2);
+Ease.cubic = make_easing_fns(3);
+Ease.quart = make_easing_fns(4);
+Ease.quint = make_easing_fns(5);
+
+Ease.expo = {
+  in(t) {
+    return t === 0 ? 0 : Math.pow(2, 10 * t - 10);
+  },
+
+  out(t) {
+    return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  },
+
+  inout(t) {
+    return t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+  }
+};
+
+Ease.bounce = {
+  in(t) {
+    return 1 - this.out(t - 1);
+  },
+
+  out(t) {
+    var n1 = 7.5625;
+    var d1 = 2.75;
+
+    if (t < 1 / d1) { return n1 * t * t; }
+    else if (t < 2 / d1) { return n1 * (t -= 1.5 / d1) * t + 0.75; }
+    else if (t < 2.5 / d1) { return n1 * (t -= 2.25 / d1) * t + 0.9375; }
+    else
+      return n1 * (t -= 2.625 / d1) * t + 0.984375;
+  },
+
+  inout(t) {
+    return t < 0.5 ? (1 - this.out(1 - 2 * t)) / 2 : (1 + this.out(2 * t - 1)) / 2;
+  }
+};
+
 Ease.sine = {
   in(t) { return 1 - Math.cos((t * Math.PI)/2); },
 
