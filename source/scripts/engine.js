@@ -447,40 +447,53 @@ Ease.elastic = {
       : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * this.c5)) / 2 + 1;
   },
 };
+
 Ease.elastic.c4 = 2*Math.PI/3;
 Ease.elastic.c5 = 2*Math.PI / 4.5;
 
 var Tween = {
   default: {
-    ease: "inout", /* easing at end and beginning of tween */
-    loop: "restart", /* none, restart, yoyo, increment */
+    loop: "restart", /* none, restart, yoyo, circle */ 
     time: 1, /* seconds to do */
-    ease: Ease.linear
+    ease: Ease.linear,
+    whole: true,
   },
-  
-  start(obj, target, start, end, options)
+
+  start(obj, target, tvals, options)
   {
+    var start = tvals[0];
+    var end = tvals[1];
+    
     var defn = Object.create(this.default);
     Object.assign(defn, options);
 
+    if (defn.loop === 'circle')
+      tvals.push(tvals[0]);
+    else if (defn.loop === 'yoyo') {
+      for (var i = tvals.length-2; i >= 0; i--)
+        tvals.push(tvals[i]);
+    }
+
     defn.accum = 0;
 
-    if (defn.loop === 'yoyo')
-      defn.fn = function(dt) {
-        defn.accum += dt;
-	defn.pct = (defn.accum % (defn.time*2)) / (defn.time*2);
+    var slices = tvals.length - 1;
+    var slicelen = 1 / slices;
 
-	if (defn.pct < 0.5)
-	  obj[target] = start.lerp(end, defn.ease(defn.pct/0.5));
-	else
-	  obj[target] = end.lerp(start, defn.ease((defn.pct-0.5)/0.5));
-      };
-    else
-      defn.fn = function(dt) {
-        defn.accum += dt;
-        defn.pct = (defn.accum % defn.time) / defn.time;
-	obj[target] = start.lerp(end, defn.ease(defn.pct));
-      };
+    defn.fn = function(dt) {
+      defn.accum += dt;
+      defn.pct = (defn.accum % defn.time) / defn.time;
+
+      var t = defn.whole ? defn.ease(defn.pct) : defn.pct;
+
+      var nval = t / slicelen;
+      var i = Math.trunc(nval);
+      nval -= i;
+
+      if (!defn.whole)
+        nval = defn.ease(nval);
+
+      obj[target] = tvals[i].lerp(tvals[i+1], nval);
+    };
 
     defn.restart = function() { defn.accum = 0; };
     defn.stop = function() { defn.pause(); defn.restart(); };
@@ -489,12 +502,6 @@ var Tween = {
     register_update(defn.fn, defn);
 
     return defn;
-  },
-
-  lerp(s, e, t)
-  {
-    t = Math.clamp(t,0,1);
-    return ((e - s) * t) + s;
   },
 };
 
