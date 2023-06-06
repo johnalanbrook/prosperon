@@ -268,12 +268,10 @@ JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst
 
 JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *img = JS_ToCString(js, argv[0]);
-  cpVect pos = js2vec2(argv[1]);
-  gui_draw_img(img, js2hmmv2(argv[1]), js2number(argv[2]), js2number(argv[3]));
+  gui_draw_img(img, js2hmmv2(argv[1]), js2hmmv2(argv[2]), js2number(argv[3]), js2bool(argv[4]), js2hmmv2(argv[5]), 1.0, js2color(argv[6]));
   JS_FreeCString(js, img);
   return JS_NULL;
 }
-
 
 struct nk_rect js2nk_rect(JSValue v) {
   struct nk_rect rect;
@@ -1620,7 +1618,7 @@ void ffi_load() {
   DUK_FUNC(gui_text, 6)
   DUK_FUNC(ui_text, 5)
   DUK_FUNC(cursor_text, 5)
-  DUK_FUNC(gui_img, 2)
+  DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)
 

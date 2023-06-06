@@ -33,6 +33,10 @@ var Debug = {
   poly(points, color) {
     cmd_points(0,points,color);
   },
+
+  boundingbox(bb, color) {
+    cmd_points(0, bb2points(bb), color);
+  },
   
   box(pos, wh, color) {
     color = color ? color : Color.white;
@@ -173,6 +177,10 @@ Object.defineProperty(Nuke, "defaultrect", {enumerable:false});
 var DebugControls = {
   input_f1_pressed() {
     Debug.draw_phys(!Debug.phys_drawing);
+  },
+
+  input_f12_pressed() {
+    GUI.defaults.debug = !GUI.defaults.debug;
   },
 };
 

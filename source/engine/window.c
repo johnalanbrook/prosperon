@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ffi.h"
 
 #include "openglrender.h"
 
@@ -51,11 +52,14 @@ void window_maximize_callback(GLFWwindow *w, int maximized) {
 }
 
 void window_framebuffer_size_cb(GLFWwindow *w, int width, int height) {
-  struct window *win = winfind(w);
+  struct window *win = mainwin;
   win->width = width;
   win->height = height;
   window_makecurrent(win);
   win->render = 1;
+
+  JSValue vals[2] = { int2js(width), int2js(height) };
+  send_signal("window_resize", 2, vals);
 }
 
 void window_close_callback(GLFWwindow *w) {
@@ -66,9 +70,8 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
   if (arrcap(windows) == 0)
     arrsetcap(windows, 5);
 
-  GLFWwindow *sharewin = mainwin == NULL ? NULL : mainwin->window;
-
-  if (sharewin) return sharewin;
+  if (mainwin != NULL)
+    return mainwin;
 
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -80,19 +83,17 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
       .width = width,
       .height = height,
       .id = arrlen(windows),
-      .window = glfwCreateWindow(width, height, name, NULL, sharewin)};
+      .window = glfwCreateWindow(width, height, name, NULL, mainwin)};
 
   if (!w.window) {
     YughError("Couldn't make GLFW window\n", 1);
     return NULL;
   }
+  
+  mainwin = malloc(sizeof(struct window));
+  *mainwin = w;  
 
   glfwMakeContextCurrent(w.window);
-  //    int version = gladLoadGL(glfwGetProcAddress);
-  //    if (!version) {
-  //        YughError("Failed to initialize OpenGL context.");
-  //        exit(1);
-  //    }
   YughInfo("Loaded OpenGL %d.%d", 3, 3);
   glfwSwapInterval(1);
 
@@ -107,6 +108,8 @@ struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t f
 
   if (arrlen(windows) == 1)
     mainwin = &windows[0];
+
+  window_framebuffer_size_cb(mainwin, width, height);    
 
   return &arrlast(windows);
 }

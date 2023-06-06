@@ -56,6 +56,8 @@ struct TextureOptions {
     int mips;
     unsigned int gamma:1;
     int animation;
+    int wrapx;
+    int wrapy;
 };
 
 /* Represents an actual texture on the GPU */

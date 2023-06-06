@@ -77,6 +77,8 @@ struct Texture *texture_pullfromfile(const char *path) {
   tex->opts.sprite = 1;
   tex->opts.mips = 0;
   tex->opts.gamma = 0;
+  tex->opts.wrapx = 1;
+  tex->opts.wrapy = 1;
 
   int n;
   unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
@@ -133,6 +135,8 @@ struct Texture *texture_pullfromfile(const char *path) {
       .min_filter = SG_FILTER_NEAREST_MIPMAP_NEAREST,
       .mag_filter = SG_FILTER_NEAREST,
       .num_mipmaps = mips,
+      .wrap_u = SG_WRAP_REPEAT,
+      .wrap_v = SG_WRAP_REPEAT,
       .data = sg_img_data
     });
 

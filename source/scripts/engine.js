@@ -110,20 +110,6 @@ function set_cam(id) {
   cmd(61, id);
 };
 
-var Window = {
-  get width() {
-    return cmd(48);
-  },
-
-  get height() {
-    return cmd(49);
-  },
-  
-  get dimensions() {
-    return [this.width, this.height];
-  }
-};
-
 
 var Color = {
   white: [255,255,255,255],
@@ -172,14 +158,27 @@ var GUI = {
       return def;
     }
 
+    var tex_wh = cmd(64,def.path);
+    var wh = tex_wh.slice();
+
+    if (def.width !== 0)
+      wh.x = def.width;
+
+    if (def.height !== 0)
+      wh.y = def.height;
+
+    wh = wh.scale(def.scale);
+
+    var sendscale = [];
+    sendscale.x = wh.x / tex_wh.x;
+    sendscale.y = wh.y / tex_wh.y;
+
     def.draw = function(pos) {
       def.calc_bb(pos);
-      var wh = cmd(64,def.path);
-      gui_img(def.path, pos.sub(def.anchor.scale(wh)), def.scale, def.angle, def.color);
+      gui_img(def.path, pos.sub(def.anchor.scale(wh)), sendscale, def.angle, def.image_repeat, def.image_repeat_offset, def.color);
     };
 
     def.calc_bb = function(cursor) {
-      var wh = cmd(64,def.path).scale(def.scale);
       def.bb = cwh2bb(wh.scale([0.5,0.5]), wh);
       def.bb = movebb(def.bb, cursor.sub(wh.scale(def.anchor)));
     };
@@ -204,6 +203,9 @@ var GUI = {
     margin: [5,5], /* Distance between elements for things like columns */
     width: 0,
     height: 0,
+    image_repeat: false,
+    image_repeat_offset: [0,0],
+    debug: false, /* set to true to draw debug boxes */
   },
 
   text_fn(str, defn)
@@ -213,6 +215,9 @@ var GUI = {
     
     def.draw = function(cursor) {
       def.calc_bb(cursor);
+
+      if (def.debug)
+        Debug.boundingbox(def.bb, def.debug_colors.bounds);
       
       var old = def;
       def = Object.create(def);
@@ -254,11 +259,8 @@ var GUI = {
     });
 
     def.draw = function(pos) {
-      var c = Color.red.slice();
-      c.a = 100;
         def.items.forEach(function(item) {
 	  item.draw.call(this,pos);
-	  Debug.poly(bb2points(item.bb), c);
           var wh = bb2wh(item.bb);
           pos.y -= wh.y;
           pos.y -= def.padding.x*2;
@@ -268,6 +270,15 @@ var GUI = {
     return def;
   },
 };
+
+GUI.defaults.debug_colors = {
+  bounds: Color.red.slice(),
+  margin: Color.blue.slice(),
+  padding: Color.green.slice()
+};
+
+Object.values(GUI.defaults.debug_colors).forEach(function(v) { v.a = 100; });
+
 
 function listbox(pos, item) {
   pos.y += (item[1] - 20);
@@ -461,9 +472,6 @@ var Tween = {
 
   start(obj, target, tvals, options)
   {
-    var start = tvals[0];
-    var end = tvals[1];
-    
     var defn = Object.create(this.default);
     Object.assign(defn, options);
 
@@ -493,6 +501,8 @@ var Tween = {
         nval = defn.ease(nval);
 
       obj[target] = tvals[i].lerp(tvals[i+1], nval);
+
+      Log.warn(defn.pct);
     };
 
     defn.restart = function() { defn.accum = 0; };
@@ -500,6 +510,48 @@ var Tween = {
     defn.pause = function() { unregister_update(defn.fn); };
 
     register_update(defn.fn, defn);
+
+    return defn;
+  },
+
+  embed(obj, target, tvals, options) {
+    var defn = Object.create(this.default);
+    Object.assign(defn, options);
+
+    defn.update_vals = function(vals) {
+      defn.vals = vals;
+      
+      if (defn.loop === 'circle')
+        defn.vals.push(defn.vals[0]);
+      else if (defn.loop === 'yoyo') {
+        for (var i = defn.vals.length-2; i >= 0; i--)
+          defn.vals.push(defn.vals[i]);
+      }
+
+      defn.slices = defn.vals.length - 1;
+      defn.slicelen = 1 / defn.slices;
+    };
+
+    defn.update_vals(tvals);
+
+    defn.time_s = Date.now();
+
+    Object.defineProperty(obj, target, {
+      get() {
+        defn.accum = (Date.now() - defn.time_s)/1000;
+	defn.pct = (defn.accum % defn.time) / defn.time;
+	var t = defn.whole ? defn.ease(defn.pct) : defn.pct;
+
+	var nval = t / defn.slicelen;
+	var i = Math.trunc(nval);
+	nval -= i;
+
+	if (!defn.whole)
+	  nval = defn.ease(nval);
+
+	return defn.vals[i].lerp(defn.vals[i+1],nval);
+      },
+    });
 
     return defn;
   },
@@ -929,7 +981,32 @@ var Signal = {
   clera_obj(obj) {
     this.signals.filter(function(x) { return x[1] !== obj; });
   },
+
+  c:{},
+  register(name, fn) {
+    if (!this.c[name])
+      this.c[name] = [];
+
+    this.c[name].push(fn);
+  },
+
+  call(name, ...args) {
+    if (this.c[name])
+      this.c[name].forEach(function(fn) { fn.call(this, ...args); });
+  },
 };
+
+var Window = {
+  width: 0,
+  height: 0,
+  dimensions:[0,0],
+};
+
+Signal.register("window_resize", function(w, h) {
+  Window.width = w;
+  Window.height = h;
+  Window.dimensions = [w, h];
+});
 
 var IO = {
   exists(file) { return cmd(65, file);},

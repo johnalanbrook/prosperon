@@ -49,6 +49,8 @@ void call_gui();
 void call_nk_gui();
 void unregister_obj(JSValue obj);
 
+void send_signal(const char *signal, int argc, JSValue *argv);
+
 void register_physics(struct callee c);
 void call_physics(double dt);
 

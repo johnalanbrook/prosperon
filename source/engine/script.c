@@ -191,6 +191,21 @@ void script_callee(struct callee c, int argc, JSValue *argv) {
   js_callee_exec(&c, argc, argv);
 }
 
+
+
+void send_signal(const char *signal, int argc, JSValue *argv)
+{
+  JSValue globalThis = JS_GetGlobalObject(js);
+  JSValue sig = JS_GetPropertyStr(js, globalThis, "Signal");
+  JSValue fn = JS_GetPropertyStr(js, sig, "call");
+  JSValue args[argc+1];
+  args[0] = str2js(signal);
+  for (int i = 0; i < argc; i++)
+    args[1+i] = argv[i];
+    
+  JS_Call(js, fn, sig, argc+1, args);
+}
+
 static struct callee update_callee;
 void register_update(struct callee c) {
   update_callee = c;

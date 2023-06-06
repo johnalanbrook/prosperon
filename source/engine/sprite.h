@@ -41,7 +41,6 @@ void sprite_draw_all();
 unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite);
 void sprite_flush();
 
-void gui_draw_img(const char *img, HMM_Vec2 pos, float scale, float angle);
-
+void gui_draw_img(const char *img, HMM_Vec2 pos, HMM_Vec2 scale, float angle, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
 
 #endif

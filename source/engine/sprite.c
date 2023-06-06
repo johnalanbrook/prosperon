@@ -25,7 +25,7 @@ static sg_bindings bind_sprite;
 
 struct sprite_vert {
   HMM_Vec2 pos;
-  struct uv_n uv;
+  HMM_Vec2 uv;
   struct rgba color;
 };
 
@@ -159,7 +159,7 @@ void sprite_initialize() {
       .layout = {
           .attrs = {
               [0].format = SG_VERTEXFORMAT_FLOAT2,
-	      [1].format = SG_VERTEXFORMAT_USHORT2N,
+	      [1].format = SG_VERTEXFORMAT_FLOAT2,
 	      [2].format = SG_VERTEXFORMAT_UBYTE4N}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
@@ -213,7 +213,7 @@ void sprite_initialize() {
 }
 
 /* offset given in texture offset, so -0.5,-0.5 results in it being centered */
-void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM_Vec2 offset, struct glrect r, struct rgba color) {
+void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM_Vec2 offset, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, float wrapscale) {
   struct sprite_vert verts[4];
   
   HMM_Vec2 sposes[4] = {
@@ -238,15 +238,24 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
     verts[i].pos = sposes[i];
     verts[i].color = color;
   }
+  if (!wrap) {
+    verts[0].uv.X = r.s0;
+    verts[0].uv.Y = r.t1;
+    verts[1].uv.X = r.s1;
+    verts[1].uv.Y = r.t1;
+    verts[2].uv.X = r.s0;
+    verts[2].uv.Y = r.t0;
+    verts[3].uv.X = r.s1;
+    verts[3].uv.Y = r.t0;
+  } else {
+    verts[0].uv = HMM_MulV2((HMM_Vec2){0,0}, size);
+    verts[1].uv = HMM_MulV2((HMM_Vec2){1,0}, size);
+    verts[2].uv = HMM_MulV2((HMM_Vec2){0,1}, size);
+    verts[3].uv = HMM_MulV2((HMM_Vec2){1,1}, size);
 
-  verts[0].uv.u = r.s0 * USHRT_MAX;
-  verts[0].uv.v = r.t1 * USHRT_MAX;
-  verts[1].uv.u = r.s1 * USHRT_MAX;
-  verts[1].uv.v = r.t1 * USHRT_MAX;
-  verts[2].uv.u = r.s0 * USHRT_MAX;
-  verts[2].uv.v = r.t0 * USHRT_MAX;
-  verts[3].uv.u = r.s1 * USHRT_MAX;
-  verts[3].uv.v = r.t0 * USHRT_MAX;
+    for (int i = 0; i < 4; i++)
+      verts[i].uv = HMM_AddV2(verts[i].uv, wrapoffset);
+  }
 
   bind_sprite.fs_images[0] = tex->id;
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
@@ -263,11 +272,9 @@ void sprite_draw(struct sprite *sprite) {
     cpVect cpos = cpBodyGetPosition(go->body);
     HMM_Vec2 pos = {cpos.x, cpos.y};
     HMM_Vec2 size = {sprite->size.X * go->scale * go->flipx, sprite->size.Y * go->scale * go->flipy};
-    tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, sprite->frame, sprite->color);
+    tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, sprite->frame, sprite->color, 0, pos, 0);
   }
 }
-
-
 
 void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
   if (!sprite) return;
@@ -275,13 +282,12 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
   sprite->frame = anim->st_frames[frame];
 }
 
-void gui_draw_img(const char *img, HMM_Vec2 pos, float scale, float angle) {
+void gui_draw_img(const char *img, HMM_Vec2 pos, HMM_Vec2 scale, float angle, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_loadfromfile(img);
-  HMM_Vec2 size = {scale, scale};
   HMM_Vec2 offset = {0.f, 0.f};
-  tex_draw(tex, pos, 0.f, size, offset, tex_get_rect(tex), color_white);
+  tex_draw(tex, pos, angle, scale, offset, tex_get_rect(tex), color, wrap, wrapoffset, wrapscale);
 }
 
 void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)
