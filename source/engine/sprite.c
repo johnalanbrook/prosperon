@@ -29,6 +29,8 @@ struct sprite_vert {
   struct rgba color;
 };
 
+static int num_spriteverts = 5000;
+
 static sg_shader slice9_shader;
 static sg_pipeline slice9_pipe;
 static sg_bindings slice9_bind;
@@ -171,7 +173,7 @@ void sprite_initialize() {
   });
 
   bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(struct sprite_vert) * 500,
+      .size = sizeof(struct sprite_vert) * num_spriteverts,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "sprite vertex buffer",

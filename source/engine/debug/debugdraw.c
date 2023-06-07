@@ -19,7 +19,7 @@
 
 #include "font.h"
 
-#define v_amt 1000
+#define v_amt 5000
 
 static sg_shader point_shader;
 static sg_pipeline point_pipe;

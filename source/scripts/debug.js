@@ -85,6 +85,16 @@ var Gizmos = {
   },
 };
 
+var Profile = {
+  cpu(fn, times) {
+    times ??= 1;
+    var start = Date.now();
+    for (var i = 0; i < times; i++)
+      fn();
+
+    Log.warn(`Profiled in ${(Date.now()-start)/1000} seconds.`);
+  },
+};
 
 var Nuke = {
   newline(cols) { nuke(3, cols ? cols : 1); },

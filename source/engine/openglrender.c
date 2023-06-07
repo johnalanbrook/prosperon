@@ -365,7 +365,7 @@ void openglRender(struct window *window) {
 
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
 {
-  YughWarn("Making shader with %s and %s", v, f);
+  YughInfo("Making shader with %s and %s", v, f);
   char *vs = slurp_text(v);
   char *fs = slurp_text(f);
 
