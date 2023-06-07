@@ -39,7 +39,7 @@ var Debug = {
   },
   
   box(pos, wh, color) {
-    color = color ? color : Color.white;
+    color ??= Color.white;
     cmd(53, pos, wh, color);
   },
 

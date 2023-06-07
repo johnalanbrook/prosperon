@@ -119,6 +119,7 @@ var Color = {
   red: [255,36,20,255],
   teal: [96, 252, 237,255],
   gray: [181, 181,181,255],
+  cyan: [0,255,255],
 };
 
 function bb2wh(bb) {
@@ -1875,7 +1876,6 @@ var gameobject = {
   set width(x) {},
   get width() {
     var bb = this.boundingbox;
-    Log.warn(bb);
     return bb.r - bb.l;
   },
   set height(x) {},
