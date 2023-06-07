@@ -1704,6 +1704,12 @@ var gameobject = {
 	
     return obj;
   },
+
+  instandup() {
+    var dup = World.spawn(gameobjects[this.from]);
+    dup.pos = this.pos;
+    dup.velocity = this.velocity;
+  },
   
   ed_locked: false,
   
@@ -1740,7 +1746,6 @@ var gameobject = {
   elasticity: 0,
   flipx: false,
   flipy: false,
-  
   
   body: -1,
   controlled: false,
@@ -1840,12 +1845,13 @@ var gameobject = {
   get boundingbox() {
     var boxes = [];
     boxes.push({t:0, r:0,b:0,l:0});
+
     for (var key in this.components) {
       if ('boundingbox' in this.components[key])
         boxes.push(this.components[key].boundingbox);
     }
     
-    if (boxes.empty) return;
+    if (boxes.empty) return cwh2bb([0,0], [0,0]);
     
     var bb = boxes[0];
     
@@ -1879,6 +1885,8 @@ var gameobject = {
   },
 
   stop() {},
+
+  
 
   kill() {
     if (this.body === -1) {
@@ -2201,4 +2209,4 @@ for (var key in prototypes) {
 
 function save_gameobjects_as_prototypes() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
-let Gamestate = {};
+var Gamestate = {};

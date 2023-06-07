@@ -522,8 +522,9 @@ Math.angledist = function (a1, a2) {
     return wrap;
 };
 
-Math.deg2rad = function(deg) { return deg * 0.0174533; }
-Math.rad2deg = function(rad) { return rad / 0.0174533; }
+Math.deg2rad = function(deg) { return deg * 0.0174533; };
+Math.rad2deg = function(rad) { return rad / 0.0174533; };
+Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };
 
 /* BOUNDINGBOXES */
 function cwh2bb(c, wh) {
