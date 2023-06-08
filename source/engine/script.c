@@ -131,15 +131,18 @@ int script_dofile(const char *file) {
   return file_mod_secs(file);
 }
 
-int script_runfile(const char *file)
+JSValue script_runfile(const char *file)
 {
   const char *script = slurp_text(file);
   int bufsize = strlen(script)+50;
   char scriptbuffer[bufsize];
   snprintf(scriptbuffer,bufsize, "(function(){%s})()", script);
-  script_run(scriptbuffer,file);
+
+  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
+  js_print_exception(obj);
+  
   free(script);
-  return file_mod_secs(file);
+  return obj;
 }
 
 /* env is an object in the scripting environment;

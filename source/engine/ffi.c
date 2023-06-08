@@ -1033,12 +1033,17 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       return str2js(tex_get_path(js2sprite(argv[1])->tex));
     case 117:
       str = JS_ToCString(js, argv[1]);
-      ret = JS_NewInt64(js, script_runfile(str));
+      ret = script_runfile(str);
       break;
 
     case 118:
       str = JS_ToCString(js,argv[1]);
       return bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
+      break;
+
+    case 119:
+      str = JS_ToCString(js, argv[1]);
+      ret = JS_NewInt64(js, file_mod_secs(str));
       break;
   }
 

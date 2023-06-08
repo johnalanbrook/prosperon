@@ -11,13 +11,17 @@ function load(file) {
 
 function run(file)
 {
-  var modtime = cmd(117,file);
+  var text = IO.slurp(file);
+  eval?.(`"use strict";${text}`);
+  return;
+  var modtime = cmd(119, file);
   if (modtime === 0) {
     Log.stack();
     return false;
   }
 
   files[file] = modtime;
+  return cmd(117, file);
 }
 
 load("scripts/base.js");
@@ -279,11 +283,6 @@ GUI.defaults.debug_colors = {
 };
 
 Object.values(GUI.defaults.debug_colors).forEach(function(v) { v.a = 100; });
-
-
-function listbox(pos, item) {
-  pos.y += (item[1] - 20);
-};
 
 var Yugine = {
   get dt() {
@@ -1195,7 +1194,7 @@ var Level = {
 	this[x.varname] = x;
       }
     },this);
-    Log.warn("eval script");
+
     eval(this.script);
 
     if (typeof extern === 'object')
