@@ -2186,9 +2186,14 @@ gameobject.clone("sprite", {
   sprite: sprite.clone(),
 });
 
-load("config.js");
 
-var prototypes = JSON.parse(slurp("proto.json"));
+if (IO.exists("config.js"))
+  load("config.js");
+
+var prototypes = {};
+if (IO.exists("proto.json"))
+  prototypes = JSON.parse(slurp("proto.json"));
+
 for (var key in prototypes) {
   if (key in gameobjects)
     dainty_assign(gameobjects[key], prototypes[key]);
