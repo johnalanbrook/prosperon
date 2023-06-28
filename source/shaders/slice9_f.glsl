@@ -2,12 +2,12 @@
 
 in vec2 uv; /* image uv */
 in vec4 border; /* uv length of border, normalized to image dimensions; left, bottom, right, top */
-in vec2 scale; /* polygon dimensions / texture dimensions */
+in vec2 scale; /* polygon dimensions ~ texture dimensions */
 in vec4 fcolor;
 
 out vec4 color;
 
-uniform sampler2d image;
+uniform sampler2D image;
 
 float map(float value, float min1, float max1, float min2, float max2)
 {
@@ -24,7 +24,7 @@ float processAxis(float coord, float texBorder, float winBorder)
   return map(coord, 1 - winBorder, 1, 1 - texBorder, 1);
 }
 
-uv9slice(vec2 uv, vec2 s, vec4 b)
+vec2 uv9slice(vec2 uv, vec2 s, vec4 b)
 {
   vec2 t = clamp((s * uv - b.xy) / (s - b.xy - b.zw), 0.0, 1.0);
   return mix(uv * s, 1.0 - s * (1.0 - uv), t);

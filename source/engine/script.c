@@ -87,6 +87,21 @@ void script_run(const char *script, const char *file) {
   JS_FreeValue(js,obj);
 }
 
+void script_evalf(const char *format, ...)
+{
+  char fmtbuf[4096];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(fmtbuf, 4096, format, args);
+  va_end(args);
+
+  YughWarn(fmtbuf);
+
+  JSValue obj = JS_Eval(js, fmtbuf, strlen(fmtbuf), "C eval", JS_EVAL_FLAGS);
+  js_print_exception(obj);
+  JS_FreeValue(js,obj);
+}
+
 void compile_script(const char *file) {
   const char *script = slurp_text(file);
   JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
@@ -161,7 +176,8 @@ void script_call_sym(JSValue sym) {
   call_callee(&c);
 }
 
-JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv) {
+JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)
+{
   JSValue ret = JS_Call(js, c->fn, c->obj, argc, argv);
   js_print_exception(ret);
   JS_FreeValue(js, ret);
@@ -193,8 +209,6 @@ void callee_vec2(struct callee c, cpVect vec) {
 void script_callee(struct callee c, int argc, JSValue *argv) {
   js_callee_exec(&c, argc, argv);
 }
-
-
 
 void send_signal(const char *signal, int argc, JSValue *argv)
 {

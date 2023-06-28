@@ -395,6 +395,12 @@ var bucket = clone(collider2d, {
      looped: 3
   */
   type: 3,
+  typeid: {
+    open: 0,
+    clamped: 1,
+    beziers: 2,
+    looped: 3
+  },
   
   mirrorx: false,
   mirrory: false,
@@ -457,7 +463,7 @@ var bucket = clone(collider2d, {
       assert knots%order != 0
     */
 
-    if (this.type === 3)
+    if (this.type === bucket.typeid.looped)
       return spline_cmd(0, this.degrees, this.dimensions, 0, spoints.wrapped(this.degrees), n);
 
     return spline_cmd(0, this.degrees, this.dimensions, this.type, spoints, n);

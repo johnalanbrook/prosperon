@@ -62,12 +62,6 @@ bool renderReflection = true;
 struct gameobject *selectedobject = NULL;
 char objectName[200] = {'\0'}; // object name buffer
 
-struct sprite *tsprite = NULL;
-
-const char *donquixote;
-
-static struct model *duck;
-
 sg_image ddimg;
 
 void debug_draw_phys(int draw) {
@@ -99,15 +93,25 @@ static struct {
 
 void make_shader(sg_shader_desc *d, sg_shader result, void *data)
 {
+  if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED) {
+    YughWarn("FAILED MAKING A SHADER: %s\n%s\n%s", d->label, d->vs.source, d->fs.source);
+  }
 }
 
 void fail_shader(sg_shader id, void *data)
 {
+  YughWarn("SHADER DID NOT COMPILE");
+}
+
+void destroy_shader(sg_shader shd, void *data)
+{
+  YughWarn("DESTROYED SHADER");
 }
 
 static sg_trace_hooks hooks = {
   .fail_shader = fail_shader,
-  .make_shader = make_shader
+  .make_shader = make_shader,
+  .destroy_shader = destroy_shader,
 };
 
 
@@ -338,6 +342,7 @@ void openglRender(struct window *window) {
   }
   
   debug_flush(&projection);
+//  text_flush(&projection);
 
   ////// TEXT && GUI
 
@@ -345,7 +350,7 @@ void openglRender(struct window *window) {
   call_gui();
 
   debug_flush(&hudproj);
-  text_flush();  
+  text_flush(&hudproj);
   nuke_start();
   call_nk_gui();
   nuke_end();

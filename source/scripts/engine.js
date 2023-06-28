@@ -9,11 +9,50 @@ function load(file) {
   files[file] = modtime;
 }
 
+var Cmdline = {};
+
+Cmdline.cmds = [];
+Cmdline.register_cmd = function(flag, fn, desc) {
+  Cmdline.cmds.push({
+    flag: flag,
+    fn: fn,
+    desc: desc
+  });
+};
+
+function cmd_args(cmdargs)
+{
+  var play = false;
+  var cmds = cmdargs.split(" ");
+
+  Cmdline.play = false;
+
+  for (var i = 0; i < cmds.length; i++) {
+    if (cmds[i][0] !== '-')
+      continue;
+
+    var c = Cmdline.cmds.find(function(cmd) { return cmd.flag === cmds[i].slice(1); });
+    if (c && c.fn)
+      c.fn();
+  }
+
+  if (Cmdline.play)
+    run("scripts/play.js");
+  else
+    run("scripts/editor.js");
+}
+
+Cmdline.register_cmd("p", function() { Cmdline.play = true; }, "Launch engine in play mode.");
+Cmdline.register_cmd("v", function() { Log.warn(cmd(120)); }, "Display engine info.");
+Cmdline.register_cmd("c", null, "Redirect logging to console.");
+Cmdline.register_cmd("l", null, "Set logging file name.");
+Cmdline.register_cmd("h", function() { Log.warn("Helping."); exit();}, "Help.");
+
 function run(file)
 {
-  var text = IO.slurp(file);
-  eval?.(`"use strict";${text}`);
-  return;
+//  var text = IO.slurp(file);
+//  eval?.(`"use strict";${text}`);
+//  return;
   var modtime = cmd(119, file);
   if (modtime === 0) {
     Log.stack();
@@ -84,6 +123,11 @@ var Log = {
 
 load("scripts/diff.js");
 
+var Physics = {
+  dynamic: 0,
+  kinematic: 1,
+  static: 2,
+};
 
 function win_icon(str) {
   cmd(90, str);
@@ -227,7 +271,14 @@ var GUI = {
       var old = def;
       def = Object.create(def);
 
-      if (def.hovered && pointinbb(def.bb, Mouse.screenpos) || def.selected) {
+/*      if (pointinbb(def.bb, Mouse.screenpos)) {
+        Object.assign(def, def.hovered);
+	def.calc_bb(cursor);
+	GUI.selected = def;
+	def.selected = true;
+      }
+*/
+      if (def.selected) {
         Object.assign(def, def.hovered);
 	def.calc_bb(cursor);
       }
@@ -261,6 +312,12 @@ var GUI = {
 
     def.items.forEach(function(item,idx) {
       Object.setPrototypeOf(def.items[idx], def);
+
+      if (def.items[idx-1])
+        def.up = def.items[idx-1];
+
+      if (def.items[idx+1])
+        def.down = def.items[idx+1];
     });
 
     def.draw = function(pos) {
@@ -274,7 +331,36 @@ var GUI = {
 
     return def;
   },
+
+  input_lmouse_pressed() {
+    if (GUI.selected)
+      GUI.selected.action();
+  },
+
+  input_s_pressed() {
+    if (GUI.selected.down) {
+      GUI.selected.selected = false;
+      GUI.selected = GUI.selected.down;
+      GUI.selected.selected = true;
+    }
+  },
+
+  input_w_pressed() {
+    if (GUI.selected.up) {
+      GUI.selected.selected = false;
+      GUI.selected = GUI.selected.up;
+      GUI.selected.selected = true;
+    }
+  },
+
+  input_enter_pressed() {
+    if (GUI.selected) {
+      GUI.selected.action();
+    }
+  }
 };
+
+
 
 GUI.defaults.debug_colors = {
   bounds: Color.red.slice(),
@@ -501,8 +587,6 @@ var Tween = {
         nval = defn.ease(nval);
 
       obj[target] = tvals[i].lerp(tvals[i+1], nval);
-
-      Log.warn(defn.pct);
     };
 
     defn.restart = function() { defn.accum = 0; };
@@ -897,7 +981,6 @@ var Register = {
     if (!this.inloop)
       fn();
     else {
-      Log.warn("resgieted ...");
       this.loopcbs.push(fn);
     }
   },
@@ -964,7 +1047,7 @@ function unset_pawn(obj, player = Player.players[0]) {
   player.uncontrol(obj);
 }
 
-
+Player.players[0].control(GUI);
 
 var Signal = {
   signals: [],
@@ -1689,6 +1772,8 @@ var gameobject = {
     return q_body(7, this.body);
   },
 
+  on_ground() { return !this.in_air(); },
+
   name: "gameobject",
 
   toString() { return this.name; },
@@ -1732,6 +1817,7 @@ var gameobject = {
   },
 
   get moi() { return q_body(6, this.body); },
+  set moi(x) { set_body(13, this.body, x); },
   
   phys: 2,
   phys_nuke() {
@@ -1968,6 +2054,9 @@ var gameobject = {
     if (typeof obj.draw === 'function')
       register_draw(obj.draw,obj);
 
+    if (typeof obj.debug === 'function')
+      register_debug(obj.debug, obj);
+
     obj.components.forEach(function(x) {
       if (typeof x.collide === 'function')
         register_collide(1, x.collide, x, obj.body, x.shape);
@@ -2169,6 +2258,7 @@ var camera2d = gameobject.clone("camera2d", {
 });
 
 Yugine.camera = World.spawn(camera2d);
+cmd(61, Yugine.camera.id);
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 //win_icon("icon.png");

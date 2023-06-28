@@ -246,11 +246,11 @@ void draw_char_box(struct Character c, cpVect cursor, float scale, struct rgba c
 //  draw_box(cursor, wh, color);
 }
 
-void text_flush() {
+void text_flush(HMM_Mat4 *proj) {
   if (curchar == 0) return;
   sg_apply_pipeline(pipe_text);
   sg_apply_bindings(&bind_text);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
 
   sg_range verts;
   verts.ptr = text_buffer;

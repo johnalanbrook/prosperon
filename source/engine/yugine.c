@@ -48,7 +48,6 @@ double renderMS = 1 / 165.f;
 double physMS = 1 / 165.f;
 double updateMS = 1 / 165.f;
 
-static int ed = 1;
 static int sim_play = 0;
 double lastTick = 0.0;
 static int phys_step = 0;
@@ -113,6 +112,12 @@ void seghandle(int sig) {
 #endif
 }
 
+const char *engine_info()
+{
+  char str[100];
+  snprintf(str, 100, "Yugine version %s, %s build.\nCopyright 2022-2023 odplot productions LLC.\n", VER, INFO);
+  return str;
+}
 
 void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
   mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
@@ -120,17 +125,12 @@ void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uin
 
 int main(int argc, char **args) {
   int logout = 1;
-  ed = 1;
 
   script_startup();
 
   for (int i = 1; i < argc; i++) {
     if (args[i][0] == '-') {
       switch (args[i][1]) {
-      case 'p':
-        ed = 0;
-        break;
-
       case 'l':
         if (i + 1 < argc && args[i + 1][0] != '-') {
           log_setfile(args[i + 1]);
@@ -142,8 +142,7 @@ int main(int argc, char **args) {
         }
 
       case 'v':
-        printf("Yugine version %s, %s build.\n", VER, INFO);
-        printf("Copyright 2022-2023 odplot productions LLC.\n");
+        printf(engine_info());
         exit(1);
         break;
 
@@ -153,14 +152,6 @@ int main(int argc, char **args) {
 
       case 'm':
         logLevel = atoi(args[2]);
-        break;
-
-      case 'h':
-        printf("-l       Set log file\n");
-        printf("-p    Launch engine in play mode instead of editor mode\n");
-        printf("-v       Display engine info\n");
-        printf("-c       Redirect logging to console\n");
-        exit(0);
         break;
 
       case 'c':
@@ -215,11 +206,23 @@ int main(int argc, char **args) {
   input_init();
   openglInit();
 
-  if (ed)
-    script_dofile("scripts/editor.js");
-  else
-    script_dofile("scripts/play.js");
+  int argsize = 0;
+  for (int i = 1; i < argc; i++) {
+    argsize += strlen(args[i]);
+    if (argc > i+1) argsize++;
+  }
 
+  char cmdstr[argsize];
+  cmdstr[0] = '\0';
+
+  YughWarn("num is %d", argc);
+  
+  for (int i = 0; i < argc; i++) {
+    strcat(cmdstr, args[i]);
+    if (argc > i+1) strcat(cmdstr, " ");
+  }
+  
+  script_evalf("cmd_args('%s');", cmdstr);
 
   while (!want_quit()) {
     double elapsed = glfwGetTime() - lastTick;

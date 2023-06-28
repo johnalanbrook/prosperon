@@ -1045,6 +1045,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js, argv[1]);
       ret = JS_NewInt64(js, file_mod_secs(str));
       break;
+
+    case 120:
+      ret = str2js(engine_info());
+      break;
   }
 
   if (str)
@@ -1290,6 +1294,10 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 12:
     cpBodyApplyForceAtWorldPoint(go->body, js2vec2(argv[2]), cpBodyGetPosition(go->body));
+    return JS_NULL;
+
+  case 13:
+    cpBodySetMoment(go->body, js2number(argv[2]));
     return JS_NULL;
   }
 

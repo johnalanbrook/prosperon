@@ -85,8 +85,6 @@ struct circle_vertex {
 
 static struct circle_vertex circle_b[v_amt];
 
-
-
 void debug_flush(HMM_Mat4 *view)
 {
   if (poly_c != 0) {

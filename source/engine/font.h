@@ -37,7 +37,7 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
 
 // void text_frame();
-void text_flush();
+void text_flush(HMM_Mat4 *proj);
 
 unsigned char *slurp_file(const char *filename);
 char *slurp_text(const char *filename);

@@ -11,6 +11,8 @@ int phys_stepping();
 void set_timescale(float val);
 void print_stacktrace();
 
+const char *engine_info();
+
 int frame_fps();
 
 extern double lastTick;

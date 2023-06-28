@@ -44,3 +44,5 @@ gui()
 debug()
   Called during a debug phase; Will not be called when debug draw is off
   
+## Important objects
+There are a number of possible ways to create a script in the context of the game world. 
