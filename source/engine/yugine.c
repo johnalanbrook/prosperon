@@ -128,6 +128,8 @@ int main(int argc, char **args) {
 
   script_startup();
 
+  logout = 0;
+
   for (int i = 1; i < argc; i++) {
     if (args[i][0] == '-') {
       switch (args[i][1]) {

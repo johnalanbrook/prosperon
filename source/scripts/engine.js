@@ -962,7 +962,7 @@ var Register = {
   },
 
   unregister_obj(obj) {
-//    Log.warn(`Unregister ${JSON.stringify(obj)}`);  
+    Log.warn(`Unregister ${JSON.stringify(obj.body)}`);  
     this.updates = this.updates.filter(x => x[1] !== obj);
     this.guis = this.guis.filter(x => x[1] !== obj);
     this.nk_guis = this.nk_guis.filter(x => x[1] !== obj);
@@ -2087,33 +2087,36 @@ var gameobject = {
     obj.sync();
     obj.defn('components', {});
 
+    Log.warn(`Made an object with ID ${obj.body}`);
+
     cmd(113, obj.body, obj);
 
     complete_assign(obj, {
-      set scale(x) { cmd(36, this.body, x); },
-      get scale() { return cmd(103, this.body); },
-      get flipx() { return cmd(104,this.body); },
-      set flipx(x) { cmd(55, this.body, x); },
-      get flipy() { return cmd(105,this.body); },
-      set flipy(x) { cmd(56, this.body, x); },
+      set scale(x) {
+        Log.warn(obj.body); cmd(36, obj.body, x); },
+      get scale() { return cmd(103, obj.body); },
+      get flipx() { return cmd(104,obj.body); },
+      set flipx(x) { cmd(55, obj.body, x); },
+      get flipy() { return cmd(105,obj.body); },
+      set flipy(x) { cmd(56, obj.body, x); },
 
-      get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
-      set angle(x) { set_body(0,this.body, Math.deg2rad(x)); },
+      get angle() { return Math.rad2deg(q_body(2,obj.body))%360; },
+      set angle(x) { set_body(0,obj.body, Math.deg2rad(x)); },
 
-      set pos(x) { set_body(2,this.body,x); },
-      get pos() { return q_body(1,this.body); },
+      set pos(x) { set_body(2,obj.body,x); },
+      get pos() { return q_body(1,obj.body); },
 
-      get elasticity() { return cmd(107,this.body); },
-      set elasticity(x) { cmd(106,this.body,x); },
+      get elasticity() { return cmd(107,obj.body); },
+      set elasticity(x) { cmd(106,obj.body,x); },
 
-      get friction() { return cmd(109,this.body); },
-      set friction(x) { cmd(108,this.body,x); },
+      get friction() { return cmd(109,obj.body); },
+      set friction(x) { cmd(108,obj.body,x); },
 
-      set mass(x) { set_body(7,this.body,x); },
-      get mass() { return q_body(5, this.body); },
+      set mass(x) { set_body(7,obj.body,x); },
+      get mass() { return q_body(5, obj.body); },
 
-      set phys(x) { set_body(1, this.body, x); },
-      get phys() { return q_body(0,this.body); },
+      set phys(x) { set_body(1, obj.body, x); },
+      get phys() { return q_body(0,obj.body); },
     });
 
     for (var prop in obj) {
