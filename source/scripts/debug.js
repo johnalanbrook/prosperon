@@ -35,6 +35,7 @@ var Debug = {
   },
 
   boundingbox(bb, color) {
+    color ??= Color.white;
     cmd_points(0, bb2points(bb), color);
   },
   

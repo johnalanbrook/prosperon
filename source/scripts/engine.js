@@ -338,7 +338,7 @@ var GUI = {
   },
 
   input_s_pressed() {
-    if (GUI.selected.down) {
+    if (GUI.selected?.down) {
       GUI.selected.selected = false;
       GUI.selected = GUI.selected.down;
       GUI.selected.selected = true;
@@ -346,7 +346,7 @@ var GUI = {
   },
 
   input_w_pressed() {
-    if (GUI.selected.up) {
+    if (GUI.selected?.up) {
       GUI.selected.selected = false;
       GUI.selected = GUI.selected.up;
       GUI.selected.selected = true;
@@ -1725,6 +1725,7 @@ var World = Level.create();
 World.name = "World";
 
 var gameobjects = {};
+var Prefabs = gameobjects;
 
 /* Returns the index of the smallest element in array, defined by a function that returns a number */
 Object.defineProperty(Array.prototype, 'min', {

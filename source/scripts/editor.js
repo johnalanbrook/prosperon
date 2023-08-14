@@ -1324,7 +1324,7 @@ var editor = {
       GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
 
       lvlcolor = Color.gray;
-      drawarrows = true;
+
       clvl = clvl.level;
       if (clvl) {
         GUI.text("^^^^^^", [0,ypos+5],1);
@@ -1412,7 +1412,9 @@ var editor = {
       wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
       wh[0] /= editor.camera.zoom;
       wh[1] /= editor.camera.zoom;
-      Debug.box(world2screen(c), wh);    
+      var bb = cwh2bb(world2screen(c),wh);
+      Debug.boundingbox(bb, [255,255,255,10]);
+      Debug.line(bb2points(bb).wrapped(1), Color.white);
     }
     
     if (this.curpanel && this.curpanel.on)

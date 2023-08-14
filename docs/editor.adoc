@@ -103,7 +103,7 @@ assets for it.
 .Collider controls
 * Alt-S Toggle sensor
 
-= Yugine Programming
+== Yugine Programming
 
 .Object functions
 

@@ -150,6 +150,10 @@ $(objprefix)/%.o:%.c
 	@echo Making C object $@
 	@$(CC) $(COMPILER_FLAGS)
 
+.PHONY: docs
+docs:
+	asciidoctor docs/*.adoc
+
 .PHONY: clean
 clean:
 	@echo Cleaning project
