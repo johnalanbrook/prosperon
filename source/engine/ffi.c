@@ -1031,6 +1031,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 116:
       return str2js(tex_get_path(js2sprite(argv[1])->tex));
+      
     case 117:
       str = JS_ToCString(js, argv[1]);
       ret = script_runfile(str);

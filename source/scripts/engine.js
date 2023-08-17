@@ -63,6 +63,7 @@ function run(file)
   return cmd(117, file);
 }
 
+
 load("scripts/base.js");
 
 var Log = {
@@ -120,7 +121,6 @@ var Log = {
   },
 };
 
-
 load("scripts/diff.js");
 
 var Physics = {
@@ -129,12 +129,18 @@ var Physics = {
   static: 2,
 };
 
+Physics.stop = function()
+{
+  
+}
+
 function win_icon(str) {
   cmd(90, str);
 };
 
 function sim_start() {
-  sys_cmd(1);
+  Log.warn("Call Game.play() now.");
+  Game.play();
 /*  
   Game.objects.forEach(function(x) {
     if (x.start) x.start(); });
@@ -145,14 +151,17 @@ function sim_start() {
 */
 }
 
-function sim_stop() { sys_cmd(2); }
-function sim_pause() { sys_cmd(3); }
-function sim_step() { sys_cmd(4); }
-function sim_playing() { return sys_cmd(5); }
-function sim_paused() { return sys_cmd(6); }
-function phys_stepping() { return cmd(79); }
+function sim_stop() { Log.warn("Call through Game.stop()"); Game.stop();}
+function sim_pause() { Log.warn("Call Game.pause()"); Game.pause(); }
+function sim_step() { Log.warn("Call Game.step()"); Game.step(); }
+function sim_playing() { Log.warn("Call Game.playing"); return Game.playing(); }
+function sim_paused() { Log.warn("Call Game.paused"); return Game.paused(); }
+function phys_stepping() { Log.warn("Call Game.stepping"); return Game.stepping(); }
 
-function quit() { sys_cmd(0); };
+function quit() {
+  Log.warn("Call through Game.quit() now.");
+  Game.quit();
+};
 
 function set_cam(id) {
   cmd(61, id);
@@ -1240,6 +1249,35 @@ var Game = {
 
     return newgroup;
   },
+
+  quit()
+  {
+    sys_cmd(0);
+  },
+
+  pause()
+  {
+    sys_cmd(3);
+  },
+
+  stop()
+  {
+    sys_cmd(2);
+  },
+
+  step()
+  {
+    sys_cmd(4);
+  },
+
+  playing() { return sys_cmd(5); },
+  paused() { return sys_cmd(6); },
+  stepping() { return cmd(79); },
+
+  play()
+  {
+    sys_cmd(1);
+  }
 };
 
 
@@ -1270,7 +1308,8 @@ var Level = {
     var objs = this.objects.slice();
     var scene = {};
     var self = this;
-        
+
+    // TODO: If an object does not have a varname, give it one based on its parent 
     objs.forEach(function(x) {
       if (x.hasOwn('varname')) {
         scene[x.varname] = x;
@@ -1278,7 +1317,8 @@ var Level = {
       }
     },this);
 
-    eval(this.script);
+    //eval_filename(this.script, this.scriptfile);
+    eval?.(this.script);
 
     if (typeof extern === 'object')
       Object.assign(this, extern);
@@ -1505,8 +1545,10 @@ var Level = {
     }
     
     var scriptfile = file.replace('.lvl', '.js');
-    if (IO.exists(scriptfile))
+    if (IO.exists(scriptfile)) {
       newlevel.script = IO.slurp(scriptfile);
+      newlevel.scriptfile = scriptfile;
+    }
 
     newlevel.run();
 

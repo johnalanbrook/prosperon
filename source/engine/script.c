@@ -132,9 +132,6 @@ void js_dump_stack() {
   js_stacktrace();
 }
 
-
-
-
 int script_dofile(const char *file) {
   const char *script = slurp_text(file);
   if (!script) {
