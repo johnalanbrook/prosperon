@@ -45,8 +45,6 @@ var editor = {
       this.edit_mode = "basic";
       return;
     }
-
-    Debug.draw_phys(!Debug.phys_drawing);
   },
 
   input_f2_pressed() {
@@ -1210,27 +1208,6 @@ var editor = {
     this.clear_level();    
   },
 
-  set timescale(x) { cmd(3, x); },
-  set updateMS(x) { cmd(6, x); },
-  set physMS(x) { cmd(7, x); },
-  set renderMS(x) { cmd(5, x); },
-  set dbg_draw_phys(x) { cmd(4, x); },
-  set dbg_color(x) { cmd(16, x); },
-  set trigger_color(x) { cmd(17, x); },
-  get fps() { return sys_cmd(8); },
-  input_f10_pressed() { this.timescale = 0.1; },
-  input_f10_released() { this.timescale = 1.0; },
-
-  input_1_pressed() {
-    if (!Keys.alt()) return;
-    Render.normal();
-  },
-
-  input_2_pressed() {
-    if (!Keys.alt()) return;
-    Render.wireframe();
-  },
-
   _sel_comp: null,
   get sel_comp() { return this._sel_comp; },
   set sel_comp(x) {
@@ -1263,9 +1240,6 @@ var editor = {
     
   },
 
-  draw_gizmos: true,
-
-  input_f4_pressed() { this.draw_gizmos = !this.draw_gizmos; },
   time: 0,
 
   ed_gui() {
@@ -1301,17 +1275,6 @@ var editor = {
 
     gui_text("0,0", world2screen([0,0]), 1);
     
-    if (this.draw_gizmos)
-      Game.objects.forEach(function(x) {
-        if (!x.icon) return;
-        gui_img(x.icon, world2screen(x.pos));
-      });
-
-    gui_text(sim_playing() ? "PLAYING"
-                         : sim_paused() ?
-			 "PAUSED" :
-			 "STOPPED", [0, 0], 1);
-
     var clvl = this.edit_level;
     var ypos = 200;
     var lvlcolor = Color.white;
@@ -1394,10 +1357,6 @@ var editor = {
     
     Debug.point(world2screen(this.selected_com), 3);
     this.selected_com = find_com(this.selectlist);
-    
-    if (this.draw_bb) {
-      Game.objects.forEach(function(x) { bb_draw(x.boundingbox); });
-    }
 
     /* Draw selection box */
     if (this.sel_start) {
@@ -1614,11 +1573,6 @@ var editor = {
 
   repl: false,
   input_backtick_pressed() { this.repl = !this.repl; },
-  
-  draw_bb: false,
-  input_f3_pressed() {
-    this.draw_bb = !this.draw_bb;
-  },
 }
 
 var inputpanel = {

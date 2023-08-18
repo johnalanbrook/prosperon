@@ -1,4 +1,4 @@
-= Yugine Engine
+= Yugine
 
 The yugine essentially is made of a sequence of levels. Levels can be
 nested, they can be streamed in, or loaded one at a time. Levels are
@@ -136,3 +136,17 @@ be rendered: is it a sprite, is it a texture, does it have mipmaps,
 etc. Textures are all file based, and are only accessed through the
 explicit path to their associated image file.
 
+.Finding & Addressing Objects
+
+
+.Editor & Debugging
+Although intertwined, debugging functions and the editor are separate entities.
+
+..Debugging
+Debugging functions are mapped to the F buttons, and are always available during gameplay in a debug build. Pressing the F button toggles the feature; pressing it with ALT shows a legend for that feature; pressing it with CTRL shows additional info
+
+,===
+F1, Draw physics info
+F3, Draw bounding boxes
+F12, Drawing gui debugging info
+,===

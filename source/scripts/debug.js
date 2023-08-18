@@ -76,6 +76,40 @@ var Debug = {
         cmd(83, points, color, thickness);
     }
   },
+
+  draw_bb: false,
+  draw_gizmos: false,
+  draw_names: false,
+
+  draw() {
+    if (this.draw_bb)
+      Game.objects.forEach(function(x) { bb_draw(x.boundingbox); });
+
+    if (Game.paused()) gui_text("PAUSED", [0,0],1);
+
+    if (this.draw_gizmos)
+      Game.objects.forEach(function(x) {
+        if (!x.icon) return;
+        gui_img(x.icon, world2screen(x.pos));
+      });
+
+    if (this.draw_names)
+      Game.objects.forEach(function(x) {
+        GUI.text(x.fullpath(), world2screen(x.pos).add([0,32]), 1, [84,110,255]);
+      });
+/*
+    gui_text(sim_playing() ? "PLAYING"
+                         : sim_paused() ?
+			 "PAUSED" :
+			 "STOPPED", [0, 0], 1);
+*/			
+  },
+};
+
+Debug.Options = { };
+Debug.Options.Color = {
+  set trigger(x) { cmd(17,x); },
+  set debug(x) { cmd(16, x); },
 };
 
 var Gizmos = {
@@ -95,6 +129,8 @@ var Profile = {
 
     Log.warn(`Profiled in ${(Date.now()-start)/1000} seconds.`);
   },
+
+  get fps() { return sys_cmd(8); },
 };
 
 var Nuke = {
@@ -190,9 +226,56 @@ var DebugControls = {
     Debug.draw_phys(!Debug.phys_drawing);
   },
 
+  input_f3_pressed() {
+    Debug.draw_bb = !Debug.draw_bb;
+  },
+
+  input_f5_pressed() {
+    if (Game.paused())
+      Game.play();
+    else
+      Game.pause();
+  },
+
+  input_f6_pressed() {
+    if (Game.paused())
+      Game.step();
+  },
+
+  /* Toggle physics */
+  input_f7_pressed() {
+
+  },
+  
+  input_1_pressed() {
+    if (!Keys.alt()) return;
+    Render.normal();
+  },
+
+  input_2_pressed() {
+    if (!Keys.alt()) return;
+    Render.wireframe();
+  },
+
+  input_f10_pressed() { Time.timescale = 0.1; },
+  input_f10_released() { Time.timescale = 1.0; },
   input_f12_pressed() {
     GUI.defaults.debug = !GUI.defaults.debug;
   },
+
+
+  input_f4_pressed() {
+    Debug.draw_names = !Debug.draw_names;
+    Debug.draw_gizmos = !Debug.draw_gizmos;
+  },
+};
+
+var Time = {
+  set timescale(x) { cmd(3, x); },
+  set updateMS(x) { cmd(6, x); },
+  set physMS(x) { cmd(7, x); },
+  set renderMS(x) { cmd(5, x); },
 };
 
 set_pawn(DebugControls);
+register_gui(Debug.draw, Debug);

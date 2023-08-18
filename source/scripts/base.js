@@ -604,8 +604,8 @@ function bb_expand(oldbb, x) {
 function bb_draw(bb, color) {
   if (!bb) return;
   var draw = bb2cwh(bb);
-  draw.wh[0] /= editor.camera.zoom;
-  draw.wh[1] /= editor.camera.zoom;
+  draw.wh[0] /= Yugine.camera.zoom;
+  draw.wh[1] /= Yugine.camera.zoom;
   Debug.box(world2screen(draw.c), draw.wh, color);
 };
 

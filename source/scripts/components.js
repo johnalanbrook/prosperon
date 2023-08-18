@@ -673,14 +673,14 @@ var circle2d = clone(collider2d, {
 
     complete_assign(circle, {
       set radius(x) { cmd_circle2d(0,this.id,x); },
-      get radius() { return cmd_circle2d(3,this.id); },
+      get radius() { return cmd_circle2d(2,this.id); },
 
       set offset(x) { cmd_circle2d(1,this.id,this.offset); },
-      get offset() { return cmd_circle2d(4,this.id); },
+      get offset() { return cmd_circle2d(3,this.id); },
 
       get boundingbox() {
         var diameter = this.radius*2*this.gameobject.scale;
-        return cwh2bb(this.offset.scale(this.gameobject.scale), [radius,radius]);
+        return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
       },
     });
 

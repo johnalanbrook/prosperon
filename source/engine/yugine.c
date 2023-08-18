@@ -236,7 +236,6 @@ int main(int argc, char **args) {
     else
       input_poll(1000);
     window_all_handle_events();
-
     framems[framei++] = elapsed;
 
     if (framei == FPSBUF) framei = 0;
@@ -245,6 +244,7 @@ int main(int argc, char **args) {
       timer_update(elapsed * timescale);
       physlag += elapsed;
       call_updates(elapsed * timescale);
+      // TODO: Physics is not independent ...
 //      while (physlag >= physMS) {
         phys_step = 1;
         physlag -= physMS;

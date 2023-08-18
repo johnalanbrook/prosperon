@@ -1292,6 +1292,11 @@ var Level = {
 
     return "Loose level";
   },
+
+  fullpath() {
+    return `${this.level.fullpath()}.${this.name}`;
+  },
+  
   get boundingbox() {
     return bb_from_objects(this.objects);
   },
@@ -1765,6 +1770,7 @@ var Level = {
 
 var World = Level.create();
 World.name = "World";
+World.fullpath = function() { return World.name; };
 
 var gameobjects = {};
 var Prefabs = gameobjects;
@@ -2118,6 +2124,10 @@ var gameobject = {
 	  
       var edited = !props.empty;
       return (edited ? "#" : "") + obj.name + " object " + obj.body + ", layer " + obj.draw_layer + ", phys " + obj.layer;
+    };
+
+    obj.fullpath = function() {
+      return `${obj.level.fullpath()}.${obj.name}`;
     };
     obj.deflock('toString');
     obj.defc('from', this.name);
