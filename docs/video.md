@@ -1,4 +1,4 @@
-.Yugine video playing
+# Yugine video playing
 
 Yugine plays the open source MPEG-TS muxer, using MPEG1 video and MP2 audio.
 

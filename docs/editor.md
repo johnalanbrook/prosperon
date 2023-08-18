@@ -1,89 +1,92 @@
-= Yugine Editor
+# Yugine Editor
 
 The main editor view is made up of objects. Each object can have a
 number of components attached to it. When an object is selected, its
 name, position, and list of components are listed.
 
-.Basic controls
-* Ctrl-Z Undo
-* Ctrl-Shift-Z Redo
-* Ctrl-A Select all
-* Ctrl-S Save
-* Ctrl-N New
-* Ctrl-O Open level
-* Ctrl-X Cut
-* Ctrl-C Copy
-* Ctrl-V Paste
-* Alt-O Add level to current level
-* Alt-A or Alt-P Add a prefab
-* Ctrl-I Objects on the level
-* Ctrl-E Asset viewer. When on a component like a sprite, serves to select that sprite's texture
-* Ctrl-[ Downsize grid
-* Ctrl-] Upsize grid
-* Backtick REPL
-* Ctrl-[1-9] to set camera positions
-* [1-9] to recall camera positions
-* 0 Set camera to home view
-* ESC quit
-* Alt-1 Normal view
-* Alt-2 Wireframe view
-* Shift-Middle Set editor cursor to mouse position (Cursor affects how objects rotate)
-* Shift-Ctrl-Middle Set cursor to object selection
-* Shift-Right Remove cursor
+## Basic controls
+|Ctrl-Z|Undo|
+|Ctrl-Shift-Z|Redo|
+|Ctrl-A|Select all|
+|Ctrl-S|Save|
+|Ctrl-N|New|
+|Ctrl-O|Open level|
+|Ctrl-X|Cut|
+|Ctrl-C|Copy|
+|Ctrl-V|Paste|
+|Alt-O|Add level to current level|
+|Alt-A|or Alt-P Add a prefab|
+|Ctrl-I|Objects on the level|
+|Ctrl-E|Asset viewer. When on a component like a sprite, serves to select that sprite's texture|
+|Ctrl-[|Downsize grid|
+|Ctrl-]|Upsize grid|
+|Backtick|REPL|
+|Ctrl-[1-9]|to set camera positions|
+|[1-9]|to recall camera positions|
+|0|Set camera to home view|
+|ESC|quit|
+|Alt-1|Normal view|
+|Alt-2|Wireframe view|
+|Shift-Middle|Set editor cursor to mouse position (Cursor affects how objects rotate)|
+|Shift-Ctrl-Middle|Set cursor to object selection|
+|Shift-Right|Remove cursor|
 
-.Editor Mode select
-* Alt-F1 Basic mode
-* Alt-F2 Brush mode
+## Editor Mode select
+
+|Alt-F1|Basic mode|
+|Alt-F2|Brush mode|
   - Clicking will place what is on clipboard
 
-.Object controls
-* G Translate
-* Alt-G Snap objects to cursor
-* S Scale
-* R Rotate
-* Ctrl-P Save object changes to prefab
-* Ctrl-shift-P Save object changes as a unique prefab ("Parent")
-* Ctrl-shift-T Save object changes to a side prefab ("Type")
-* Ctrl-J Bake name to expose to level script
-* Alt-J Remove baked name
-* Ctrl-Y Show obj chain
-* Alt-Y Start prototype explorer
-* Ctrl-U Revert object or component to match prototype
-* Alt-U Make object unique. If a level, allows setting of internal object position and rotation.
-* Ctrl-shift-G Save group as a level
-* Arrows Translate 1 px
-* Shift-Arrows Translate 10 px
-* Tab Select component
-* F Zoom to object(s)
-* Ctrl-F Focus on a selected sublevel. Edit and save it in place.
-* Ctrl-Shift-F Go up one level in the editing chain.
-* M Flip horizontally
-* Ctrl-M Flip vertically
-* Ctrl-D Duplicate
-* H Hide
-* Ctrl-H Unhide all
-* T Lock
-* Alt-T Unlock all
-* Q Toggle component help
-* Ctrl-Shift-Alt-Click Set object center
+## Object controls
 
-.Mouse controls
-* Left Select
-* Middle Quick grab
-* Right Unselect
+|G|Translate|
+|Alt-G|Snap objects to cursor|
+|S|Scale|
+|R|Rotate|
+|Ctrl-P|Save object changes to prefab|
+|Ctrl-shift-P|Save object changes as a unique prefab ("Parent")|
+|Ctrl-shift-T|Save object changes to a side prefab ("Type")|
+|Ctrl-J|Bake name to expose to level script|
+|Alt-J|Remove baked name|
+|Ctrl-Y|Show obj chain|
+|Alt-Y|Start prototype explorer|
+|Ctrl-U|Revert object or component to match prototype|
+|Alt-U|Make object unique. If a level, allows setting of internal object position and rotation.|
+|Ctrl-shift-G|Save group as a level|
+|Arrows|Translate 1 px|
+|Shift-Arrows|Translate 10 px|
+|Tab|Select component|
+|F|Zoom to object(s)|
+|Ctrl-F|Focus on a selected sublevel. Edit and save it in place.|
+|Ctrl-Shift-F|Go up one level in the editing chain.|
+|M|Flip horizontally|
+|Ctrl-M|Flip vertically|
+|Ctrl-D|Duplicate|
+|H|Hide|
+|Ctrl-H|Unhide all|
+|T|Lock|
+|Alt-T|Unlock all|
+|Q|Toggle component help|
+|Ctrl-Shift-Alt-Click|Set object center|
 
-.Level controls
-* Ctrl-L Open level script
+## Mouse controls
 
-.Game controls
-* F1 Debug draw
-* F2 Config menu
-* F3 Show bounding boxes
-* F4 Show gizmos
-* F5 Start
-* F6 Pause
-* F7 Stop
-* F10 Toggle slow motion
+|Left|Select|
+|Middle|Quick grab|
+|Right|Unselect|
+
+## Level controls
+|Ctrl-L|Open level script|
+
+## Game controls
+|F1|Debug draw|
+|F2|Config menu|
+|F3|Show bounding boxes|
+|F4|Show gizmos|
+|F5|Start|
+|F6|Pause|
+|F7|Stop|
+|F10|Toggle slow motion|
 
 == Components
 Components all have their own set of controls. Many act similar to
@@ -93,19 +96,19 @@ expected to object grabbing; same with scaling, rotation, and so on.
 If a component uses an asset, the asset viewer will serve to pick new
 assets for it.
 
-.Spline controls
-* Ctrl-click Add a point
-* Shift-click remove a point
-* +,- Increase or decrease spline segments
-* Ctrl-+,- Increase or decrease spline degrees. Put this to 1 for the spline to go point to point
-* Alt-B,V Increase or decrease spline thickness
+## Spline controls
+|Ctrl-click|Add a point|
+|Shift-click|remove a point|
+|+,-|Increase or decrease spline segments|
+|Ctrl-+,-|Increase or decrease spline degrees. Put this to 1 for the spline to go point to point|
+|Alt-B,V|Increase or decrease spline thickness|
 
 .Collider controls
-* Alt-S Toggle sensor
+|Alt-S|Toggle sensor|
 
-== Yugine Programming
+## Yugine Programming
 
-.Object functions
+### Object functions
 
 * start(): Called when the object is created, before the first update is ran
 * update(dt): Called once per frame
@@ -116,7 +119,7 @@ assets for it.
   - hit.velocity: Velocity of impact
   - hit.normal: Normal of impact
 
-.Colliders
+### Colliders
 Colliders visually look different based on their status. Objects can
 be in one of three states
 
@@ -132,7 +135,7 @@ do not let objects through.
 
 
 
-.Input
+### Input
 Input works by adding functions to an object, and then "controlling"
 them. The format for a function is "input_[key]_[action]". [Action]
 can be any of
@@ -144,7 +147,7 @@ can be any of
 For example, "input_p_pressed()" will be called when p is pressed, and not again
 until it is released and pressed again.
 
-.Your game
+### Your game
 
 When the engine runs, it executes config.js, and then game.js. A
 window should be created in config.js, and custom code for prototypes
@@ -152,7 +155,7 @@ should be executed.
 
 game.js is the place to open your first level.
 
-.Levels
+### Levels
 
 A level is a collection of objects. A level has a script associated
 with it. The script is ran when the level is loaded.
