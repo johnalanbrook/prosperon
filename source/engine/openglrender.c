@@ -347,11 +347,15 @@ void openglRender(struct window *window) {
   ////// TEXT && GUI
 
   debug_nextpass();
+
+  nuke_start();
+
   call_gui();
 
   debug_flush(&hudproj);
   text_flush(&hudproj);
-  nuke_start();
+  
+//  nuke_start();
   call_nk_gui();
   nuke_end();
 

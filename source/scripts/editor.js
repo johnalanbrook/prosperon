@@ -128,6 +128,7 @@ var editor = {
 
   input_o_pressed() {
     if (this.sel_comp) return;
+
     if (Keys.ctrl() && Keys.alt()) {
       if (this.selectlist.length === 1 && this.selectlist[0].file) {
         if (this.edit_level.dirty) return;
@@ -145,8 +146,10 @@ var editor = {
     }
     
     if (Keys.ctrl()) {
-      if (this.check_level_nested())
+      if (this.check_level_nested()) {
+        Log.warn("Nested level ...");
         return;
+      }
 
       if (this.edit_level.dirty) {
 	this.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", function() {
@@ -1341,7 +1344,6 @@ var editor = {
     });
 
     Debug.draw_grid(1, editor_config.grid_size/editor_camera.zoom);
-    
     var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); }, this);
     var endgrid = screen2world([Window.width, 0]);
     
@@ -2530,10 +2532,11 @@ var limited_editor = {
 };
 
 set_pawn(editor);
-Log.warn(`Total pawn count is ${Player.players[0].pawns.length}`);
 register_gui(editor.ed_gui, editor);
 Debug.register_call(editor.ed_debug, editor);
 
 if (IO.exists("editor.config"))
   load_configs("editor.config");
 editor.edit_level = Level.create();
+
+Log.warn('bottom of editor');

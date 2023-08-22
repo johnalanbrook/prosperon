@@ -1502,8 +1502,9 @@ var Level = {
 
   dup(level) {
     level ??= this.level;
-
-    Log.warn("Duplicating a level!");
+    var n = level.spawn(this.from);
+    /* TODO: Assign this's properties to the dup */
+    return ;n
   },
 
   create() {
@@ -1569,6 +1570,8 @@ var Level = {
       newlevel.script = IO.slurp(scriptfile);
       newlevel.scriptfile = scriptfile;
     }
+
+    newlevel.from = scriptfile.replace('.js','');
 
     newlevel.run();
 
