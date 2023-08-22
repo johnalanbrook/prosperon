@@ -59,9 +59,9 @@ Objects are things that exist in the game world.
 
 |name| description|
 |---|---|
-|level| the level this object belongs to
+|level| the level this object belongs to|
 |pos| the global position|
-|relpos| the position relative to its level
+|relpos| the position relative to its level|
 angle| the global angle|
 |relangle| angle relative to its level|
 |velocity| velocity of the object|

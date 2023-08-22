@@ -1323,7 +1323,7 @@ var Level = {
     },this);
 
     //eval_filename(this.script, this.scriptfile);
-    eval?.(this.script);
+    eval(this.script);
 
     if (typeof extern === 'object')
       Object.assign(this, extern);
@@ -1406,7 +1406,9 @@ var Level = {
     
     var savereturn = JSON.stringify(this.objects, replacer_empty_nil, 1);
 
-        if (this.flipx) {
+    Log.warn(JSON.stringify(this));
+
+    if (this.flipx) {
       this.objects.forEach(function(obj) {
         this.mirror_x_obj(obj);
       }, this);
@@ -1436,6 +1438,7 @@ var Level = {
     obj.angle = -obj.angle;
   },
 
+  /* TODO: Remove this; make it work without */
   toJSON() {
     var obj = {};
     obj.file = this.file;
@@ -1483,6 +1486,11 @@ var Level = {
   },
 
   spawn(prefab) {
+    if (typeof prefab === 'string') {
+      var newobj = this.addfile(prefab);
+      return newobj;
+    }
+      
     var newobj = prefab.make();
     newobj.defn('level', this);
     this.objects.push(newobj);
@@ -1490,6 +1498,12 @@ var Level = {
     newobj.setup?.();
     newobj.start?.();
     return newobj;
+  },
+
+  dup(level) {
+    level ??= this.level;
+
+    Log.warn("Duplicating a level!");
   },
 
   create() {
@@ -1506,6 +1520,7 @@ var Level = {
   },
 
   addfile(file) {
+    /* TODO: Register this as a prefab for caching */
     var lvl = this.loadfile(file);
     this.objects.push(lvl);
     lvl.level = this;
@@ -2019,8 +2034,6 @@ var gameobject = {
   },
 
   stop() {},
-
-  
 
   kill() {
     if (this.body === -1) {

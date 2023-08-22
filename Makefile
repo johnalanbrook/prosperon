@@ -69,7 +69,7 @@ includeflag := $(addprefix -I, $(includeflag))
 WARNING_FLAGS = -Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
 
 SEM = 0.0.1
-COM != git rev-parse --short HEAD
+COM != fossil describe
 VER = $(SEM)-$(COM)
 
 COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
