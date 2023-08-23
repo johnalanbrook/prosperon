@@ -85,15 +85,16 @@ struct circle_vertex {
 
 static struct circle_vertex circle_b[v_amt];
 
+/* Writes debug data to buffers, and draws */
 void debug_flush(HMM_Mat4 *view)
 {
   if (poly_c != 0) {
     sg_apply_pipeline(poly_pipe);
     sg_apply_bindings(&poly_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(*view));
-    sg_append_buffer(poly_bind.vertex_buffers[0], &(sg_range){
+    int b = sg_append_buffer(poly_bind.vertex_buffers[0], &(sg_range){
       .ptr = poly_b, .size = sizeof(struct poly_vertex)*poly_v});
-    sg_append_buffer(poly_bind.index_buffer, &(sg_range){
+    int bi = sg_append_buffer(poly_bind.index_buffer, &(sg_range){
       .ptr = poly_bi, .size = sizeof(uint32_t)*poly_c});
     sg_draw(poly_sc,poly_c,1);
   }
@@ -106,6 +107,7 @@ void debug_flush(HMM_Mat4 *view)
       .ptr = point_b,
       .size = sizeof(struct point_vertex)*point_c});
     sg_draw(point_sc,point_c,1);
+    YughWarn("DREW %d POINTS", point_c);
   }
   
   if (line_c != 0) {
@@ -163,6 +165,7 @@ void debug_newframe()
   point_c = 0;
   circle_sc = circle_count = line_sv = line_v = line_sc = line_c = poly_sc = poly_c = 0;
   poly_sv = poly_v = 0;
+  
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
@@ -569,16 +572,18 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int c
 
 void draw_grid(int width, int span, struct rgba color)
 {
-    cpVect offset = cam_pos();
-    offset = cpvmult(offset, 1/cam_zoom());
-    offset.x -= mainwin->width/2;
-    offset.y -= mainwin->height/2;
+  cpVect offset = cam_pos();
+  offset = cpvmult(offset, 1/cam_zoom());
+  offset.x -= mainwin->width/2;
+  offset.y -= mainwin->height/2;
+//  offset.x += span/2;
+  offset.y += span/2;
 
   sg_apply_pipeline(grid_pipe);
   sg_apply_bindings(&grid_bind);
-  
+
   float col[4] = { color.r/255.0 ,color.g/255.0 ,color.b/255.0 ,color.a/255.0 };
-  
+
   float fubo[6];
   fubo[0] = 1;
   fubo[1] = span;
@@ -596,7 +601,7 @@ void draw_cppoint(struct cpVect point, float r, struct rgba color)
     .color = color,
     .radius = r
   };
-  
+
   memcpy(point_b+point_c, &p, sizeof(struct point_vertex));
   point_c++;
 }
@@ -604,7 +609,7 @@ void draw_cppoint(struct cpVect point, float r, struct rgba color)
 void draw_points(struct cpVect *points, int n, float size, struct rgba color)
 {
     for (int i = 0; i < n; i++)
-        draw_cppoint(points[i], size, color);
+      draw_cppoint(points[i], size, color);
 }
 
 void draw_poly(cpVect *points, int n, struct rgba color)
@@ -613,7 +618,7 @@ void draw_poly(cpVect *points, int n, struct rgba color)
   int tric = n - 2;
   
   if (tric < 1) return;
-   
+
   uint32_t tridxs[tric*3];
   
   for (int i = 2, ti = 0; i < n; i++, ti+=3) {
@@ -625,11 +630,6 @@ void draw_poly(cpVect *points, int n, struct rgba color)
   for (int i = 0; i < tric*3; i++)
     tridxs[i] += poly_v+poly_sv;
   
-  sg_range trip = {
-    .ptr = tridxs,
-    .size = sizeof(uint32_t)*3*tric
-  };
-  
   struct poly_vertex polyverts[n];
   
   for (int i = 0; i < n; i++) {
@@ -638,11 +638,6 @@ void draw_poly(cpVect *points, int n, struct rgba color)
     polyverts[i].uv[1] = 0.0;
     polyverts[i].color = color;
   }
-  
-  sg_range ppp = {
-    .ptr = polyverts,
-    .size = sizeof(struct poly_vertex)*n
-  };
   
   memcpy(poly_b+poly_v, polyverts, sizeof(struct poly_vertex)*n);
   memcpy(poly_bi+poly_c, tridxs, sizeof(uint32_t)*3*tric);

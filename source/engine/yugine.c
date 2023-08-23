@@ -232,10 +232,12 @@ int main(int argc, char **args) {
     lastTick = glfwGetTime();
     //double wait = fmax(0, renderMS - elapsed);
     nuke_input_begin();
+    
     if (sim_playing())
       input_poll(fmax(0, renderMS-elapsed));
     else
       input_poll(1000);
+      
     window_all_handle_events();
     nuke_input_end();
     framems[framei++] = elapsed;
@@ -259,10 +261,10 @@ int main(int argc, char **args) {
 
     renderlag += elapsed;
 
-    if (renderlag >= renderMS) {
-      renderlag -= renderMS;
+//    if (renderlag >= renderMS) {
+//      renderlag -= renderMS;
       window_renderall();
-    }
+//    }
 
     gameobjects_cleanup();
   }

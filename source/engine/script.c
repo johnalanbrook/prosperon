@@ -246,4 +246,5 @@ void call_debugs() { call_callee(&debug_callee); }
 
 static struct callee draw_callee;
 void register_draw(struct callee c) { draw_callee = c; }
+
 void call_draw() { call_callee(&draw_callee); }

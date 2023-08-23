@@ -163,11 +163,6 @@ function quit() {
   Game.quit();
 };
 
-function set_cam(id) {
-  cmd(61, id);
-};
-
-
 var Color = {
   white: [255,255,255,255],
   blue: [84,110,255,255],
@@ -192,7 +187,7 @@ var GUI = {
     var bb = cmd(118, str, size, wrap);
     var opos = [bb.r, bb.t];
         
-    var h = ui_text(str, pos.sub(opos), size, color, wrap);
+    var h = ui_text(str, pos, size, color, wrap);
 
     return bb;
   },
@@ -1406,8 +1401,6 @@ var Level = {
     
     var savereturn = JSON.stringify(this.objects, replacer_empty_nil, 1);
 
-    Log.warn(JSON.stringify(this));
-
     if (this.flipx) {
       this.objects.forEach(function(obj) {
         this.mirror_x_obj(obj);
@@ -2329,8 +2322,13 @@ var camera2d = gameobject.clone("camera2d", {
     },
 });
 
-Yugine.camera = World.spawn(camera2d);
-cmd(61, Yugine.camera.id);
+Yugine.view_camera = function(cam)
+{
+  Yugine.camera = cam;
+  cmd(61, Yugine.camera.body);
+}
+
+Yugine.view_camera(World.spawn(camera2d));
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 //win_icon("icon.png");

@@ -20,7 +20,8 @@ var Debug = {
   
   point(pos, size, color) {
     color = color ? color : Color.blue;
-    cmd(51, pos, size,color);
+    Shape.circle(pos, size, color);
+//    cmd(51, pos, size,color);
   },
   
   arrow(start, end, color, capsize) {

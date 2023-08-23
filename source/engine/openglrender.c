@@ -266,6 +266,7 @@ void render_winsize()
 
 static cpBody *camera = NULL;
 void set_cam_body(cpBody *body) {
+  YughWarn("Camera body set to %p", body);
   camera = body;
 }
 
@@ -317,7 +318,6 @@ void openglRender(struct window *window) {
   draw_model(duck,model, lsm);  
 */  
 
-//  sg_begin_default_pass(&pass_action, window->width, window->height);
   sg_begin_pass(crt_post.pass, &pass_action);
 
   //////////// 2D projection
@@ -338,24 +338,19 @@ void openglRender(struct window *window) {
   //// DEBUG
   if (debugDrawPhysics) {
     gameobject_draw_debugs();
-    call_debugs();
+    call_debugs();    
   }
-  
+
   debug_flush(&projection);
-//  text_flush(&projection);
+  text_flush(&projection);
 
   ////// TEXT && GUI
-
   debug_nextpass();
-
-  nuke_start();
-
-  call_gui();
-
+  nuke_start();  
+  call_gui();  
   debug_flush(&hudproj);
   text_flush(&hudproj);
-  
-//  nuke_start();
+
   call_nk_gui();
   nuke_end();
 

@@ -12,7 +12,8 @@ required_files.forEach(x => {
 var editor_level = Level.create();
 var editor_camera = editor_level.spawn(camera2d);
 editor_camera.save = false;
-set_cam(editor_camera.body);
+
+Yugine.view_camera(editor_camera);
 
 var editor_config = {
   grid_size: 100,
@@ -1251,12 +1252,12 @@ var editor = {
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
 
-    GUI.text("WORKING LAYER: " + this.working_layer, [0,520], 1);
-    GUI.text("MODE: " + this.edit_mode, [0,500],1);
+    GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
+    GUI.text("MODE: " + this.edit_mode, [0,500]);
 
     Debug.point(world2screen(this.edit_level.pos), 5, Color.yellow);
     if (this.cursor) {
-      Debug.point(world2screen(this.cursor), 5, Color.green);
+      Debug.point(World2screen(this.cursor), 5, Color.green);
 
       this.selectlist.forEach(function(x) {
         var p = [];
@@ -1276,7 +1277,8 @@ var editor = {
       GUI.text(this.sel_comp.help, [100,700],1);
     }
 
-    gui_text("0,0", world2screen([0,0]), 1);
+    GUI.text("0,0", world2screen([0,0]));
+    Debug.point([0,0],3);
     
     var clvl = this.edit_level;
     var ypos = 200;
@@ -1330,7 +1332,7 @@ var editor = {
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].name + "]";
-        gui_text(str, world2screen(this.selectlist[0].pos).add([0,-16*(i++)]), 1);
+        GUI.text(str, world2screen(this.selectlist[0].pos).add([0,-16*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -1348,12 +1350,12 @@ var editor = {
     var endgrid = screen2world([Window.width, 0]);
     
     while(startgrid[0] <= endgrid[0]) {
-      gui_text(startgrid[0], [world2screen([startgrid[0], 0])[0], 1], 1);
+      GUI.text(startgrid[0], [world2screen([startgrid[0], 0])[0],0]);
       startgrid[0] += editor_config.grid_size;
     }
 
     while(startgrid[1] <= endgrid[1]) {
-      gui_text(startgrid[1], [0, world2screen([0, startgrid[1]])[1]], 1);
+      GUI.text(startgrid[1], [0, world2screen([0, startgrid[1]])[1]]);
       startgrid[1] += editor_config.grid_size;
     }
     
@@ -2523,7 +2525,7 @@ var limited_editor = {
       Level.kill();
       Level.clear_all();
       editor.load_json(editor.stash);
-      set_cam(editor_camera.body);
+      Yugine.view_camera(editor_camera);
     }
   },
   input_f8_pressed() { sim_step(); },  

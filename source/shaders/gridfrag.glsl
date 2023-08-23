@@ -1,7 +1,7 @@
 #version 330
 out vec4 frag_color;
 
-in vec2 apos;
+in vec2 apos; /* Drawing coordinates of the grid */
 
 uniform float thickness; /* thickness in pixels */
 uniform float span;

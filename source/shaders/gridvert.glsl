@@ -13,6 +13,7 @@ void main()
 {
 //    vec4 ipos = inverse(projection) * vec4(pos, 0.f, 1.f);
     apos = pos * vec2(600, 360);
+    apos += offset;
 //    apos = pos + offset;
 
 
