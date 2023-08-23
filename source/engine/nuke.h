@@ -27,6 +27,14 @@ void nuke_property_float(const char *lbl, float min, float *val, float max, floa
 void nuke_property_float2(const char *label, float min, float *val, float max, float step, float dragstep);
 void nuke_property_float3(const char *label, float min, float *val, float max, float step, float dragstep);
 
+void nuke_input_begin();
+void nuke_input_end();
+void nuke_input_cursor(int x, int y);
+void nuke_input_key(int key, int down);
+void nuke_input_button(int btn, int x, int y, int down);
+void nuke_input_scroll(float x, float y);
+void nuke_input_char(char c);
+
 void nuke_property_int(const char *lbl, int min, int *val, int max, int step);
 void nuke_radio_btn(const char *lbl, int *val, int cmp);
 void nuke_checkbox(const char *lbl, int *val);

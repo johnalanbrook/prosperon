@@ -2,6 +2,7 @@
 
 #include "ffi.h"
 #include "font.h"
+#include "nuke.h"
 #include "log.h"
 #include "script.h"
 #include "stb_ds.h"
@@ -120,6 +121,8 @@ void rm_downkey(int key) {
 }
 
 static void cursor_pos_cb(GLFWwindow *w, double xpos, double ypos) {
+  nuke_input_cursor(xpos, ypos);
+
   mouse_delta.x = xpos - mouse_pos.x;
   mouse_delta.y = ypos - mouse_pos.y;
 
@@ -149,9 +152,13 @@ static void pawn_call_keydown(int key) {
 static void scroll_cb(GLFWwindow *w, double xoffset, double yoffset) {
   mouseWheelY = yoffset;
   mouseWheelX = xoffset;
+
+  nuke_input_scroll(xoffset, yoffset);
 }
 
 static void mb_cb(GLFWwindow *w, int button, int action, int mods) {
+  nuke_input_button(button, mouse_pos.x, mouse_pos.y, action == GLFW_PRESS);
+
   JSValue argv[3];
   argv[0] = jsinput;
   switch (action) {
@@ -181,6 +188,8 @@ void set_mouse_mode(int mousemode) {
 }
 
 void char_cb(GLFWwindow *w, unsigned int codepoint) {
+  nuke_input_char(codepoint);
+
   static char out[2] = {0};
   static JSValue argv[2];
 

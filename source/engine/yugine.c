@@ -231,11 +231,13 @@ int main(int argc, char **args) {
     deltaT = elapsed;
     lastTick = glfwGetTime();
     //double wait = fmax(0, renderMS - elapsed);
+    nuke_input_begin();
     if (sim_playing())
       input_poll(fmax(0, renderMS-elapsed));
     else
       input_poll(1000);
     window_all_handle_events();
+    nuke_input_end();
     framems[framei++] = elapsed;
 
     if (framei == FPSBUF) framei = 0;
