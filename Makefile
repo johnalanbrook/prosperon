@@ -3,27 +3,40 @@ MAKEFLAGS = --jobs=$(PROCS)
 
 UNAME != uname
 
-QFLAGS = -O3 -DDBG=0 -DED=1
-INFO = rel
+# Options
+# DBG --- build with debugging symbols and logging
+# ED --- build with or without editor
+# OPT --- Optimize
+
+QFLAGS :=
+
+ifdef DBG
+  QFLAGS += -O0 -g -DDBG 
+  INFO = dbg
+
+  ifeq ($(CC),tcc)
+    QFLAGS += 
+  endif
+  
+else
+  QFLAGS += -O2
+  INFO = rel
+  CC = gcc
+endif
+
+ifdef OPT
+  QFLAGS += -flto
+endif
+
+ifdef ED
+  QFLAGS += -DED
+endif
+
 PTYPE != uname -m
 
-# Options
-# DBG=0,1 --- build with debugging symbols and logging
-# ED=0,1 --- build with or without editor
+BIN = bin/$(CC)/$(INFO)/
 
-
-ifeq ($(DBG), 1)
-	QFLAGS = -O0 -g -DDBG=1 -DED=1
-	INFO = dbg
-endif
-
-ifeq 	($(ED), 0)
-	QFLAGS = -DED=0
-	INFO = ed
-endif
-
-BIN = bin/
-objprefix = $(BIN)obj/$(INFO)
+objprefix = $(BIN)obj
 
 define prefix
 	echo $(1) | tr " " "\n" | sed 's/.*/$(2)&$(3)/'
@@ -36,76 +49,96 @@ define rm
 	rm $${tmp}
 endef
 
-define findindir
-	find $(1) -maxdepth 1 -type f -name '$(2)'
-endef
-
 # All other sources
 edirs != find source -type d -name include
-edirs += source/engine source/engine/thirdparty/Nuklear
-ehead != $(call findindir, source/engine,*.h)
+subengs = sound 3d
+
+ifeq ($(DBG), 1)
+	subengs += debug
+endif
+
+edirs += source/engine $(addprefix source/engine/, $(subengs)) source/engine/thirdparty/Nuklear
+ehead != find source/engine source/engine/sound source/engine/debug -maxdepth 1 -type f -name *.h
 eobjects != find source/engine -type f -name '*.c' | sed -r 's|^(.*)\.c|$(objprefix)/\1.o|'  # Gets all .c files and makes .o refs
 eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
-includeflag != $(call prefix,$(edirs),-I)
+engincs != find source/engine -maxdepth 1 -type d
+includeflag != find source -type d -name include
+includeflag += $(engincs) source/engine/thirdparty/Nuklear
+includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wall -pedantic -Wextra -Wwrite-strings  -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
+WARNING_FLAGS = -Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
 
 SEM = 0.0.1
-COM != git rev-parse --short HEAD
+COM != fossil describe
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
-LIBPATH = -Lbin -L/usr/local/lib
+LIBPATH = -L$(BIN)
 
 ifeq ($(OS), WIN32)
-	LINKER_FLAGS = $(QFLAGS)
-	ELIBS = engine pthread mruby glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
+	LINKER_FLAGS = $(QFLAGS) -static
+	ELIBS = engine ucrt yughc glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
 	CLIBS =
 	EXT = .exe
 else
-	LINKER_FLAGS = $(QFLAGS)
-	ELIBS =  engine pthread yughc portaudio asound jack glfw3 c m dl
+	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -pthread -rdynamic
+	ELIBS =  engine pthread yughc quickjs glfw3 GL c m dl 
 	CLIBS =
-	EXT =
 endif
 
-ELIBS != $(call prefix, $(ELIBS), -l)
-ELIBS := $(CLIBS) $(ELIBS)
+NAME = yugine$(EXT)
 
+ELIBS != $(call prefix, $(ELIBS), -l)
+CLIBS != $(call prefix, $(CLIBS), -l);
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)
 -include $(DEPENDS)
 
-yuginec = source/engine/yugine.c
-
 ENGINE = $(BIN)libengine.a
 INCLUDE = $(BIN)include
+
+SCRIPTS = $(shell ls source/scripts/*.js)
 
 LINK = $(LIBPATH) $(LINKER_FLAGS) $(ELIBS)
 
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
-.PHONY: yugine
+DIST = $(NAME)-$(MYTAG).tar.gz
 
-yugine: $(objprefix)/source/engine/yugine.o $(ENGINE)
-	@echo $(CC)
-	@echo Linking yugine
-	$(CC) $< $(LINK) -o yugine
+yugine: $(BIN)yugine
+
+$(NAME): $(BIN)$(NAME)
+
+$(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE) $(BIN)libquickjs.a
+	@echo Linking $(NAME)
+	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-dist: yugine
-	mkdir -p bin/dist
-	cp yugine bin/dist
-	cp -rf assets/fonts bin/dist
-	cp -rf source/scripts bin/dist
-	cp -rf source/shaders bin/dist
-	tar -czf yugine-$(MYTAG).tar.gz --directory bin/dist .
+$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/* $(SCRIPTS) assets/*
+	@echo Creating distribution $(DIST)
+	@mkdir -p $(BIN)dist
+	@cp $(BIN)$(NAME) $(BIN)dist
+	@cp -rf assets/* $(BIN)dist
+	@cp -rf source/shaders $(BIN)dist
+	@cp -r source/scripts $(BIN)dist
+	@tar czf $(DIST) --directory $(BIN)dist .
+	@mv $(DIST) $(BIN)
 
-install: yugine
-	cp yugine ~/.local/bin
+$(BIN)libquickjs.a:
+	make -C quickjs clean
+	make -C quickjs libquickjs.a libquickjs.lto.a CC=$(CC)
+	cp quickjs/libquickjs.* $(BIN)
+
+dist: $(BIN)$(DIST)
+
+install: $(BIN)$(DIST)
+	@echo Unpacking $(DIST) in $(DESTDIR)
+	@cp $(BIN)$(DIST) $(DESTDIR)
+	@tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR)
+	@rm $(DESTDIR)/$(DIST)
 
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
@@ -118,8 +151,12 @@ $(objprefix)/%.o:%.c
 	@echo Making C object $@
 	@$(CC) $(COMPILER_FLAGS)
 
+.PHONY: docs
+docs:
+	asciidoctor docs/*.adoc
+
 .PHONY: clean
 clean:
 	@echo Cleaning project
-	@find $(BIN) -type f -delete
-	@rm -rf source/portaudio/build source/glfw/build
+	@rm -rf bin/*
+	@rm -f *.gz

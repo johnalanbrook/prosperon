@@ -1,70 +1,70 @@
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 
-#include <stdio.h>
-#include "mathc.h"
-#include "transform.h"
+#include "2dphysics.h"
 #include "config.h"
-#include <stdbool.h>
 #include <chipmunk/chipmunk.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include "quickjs/quickjs.h"
 
 struct shader;
 struct sprite;
 struct component;
 
-struct editor {
-    mfloat_t color[3];
-    int id;
-    bool active;
-    bool prefabSync;
-    char mname[MAXNAME];
-    char *curPrefabPath;
-    char prefabName[MAXNAME];
-    char rootPrefabName[MAXNAME];
-};
-
 struct gameobject {
-    struct mTransform transform;
-    struct editor editor;
-    cpBodyType bodytype;
-    float scale;
-    float mass;
-    cpBody *body;
-    float f;			/* friction */
-    float e;			/* elasticity */
-    struct component *components;
-    char *script;
+  cpBodyType bodytype;
+  int next;
+  float scale;
+  float mass;
+  float f;   /* friction */
+  float e;   /* elasticity */
+  int flipx; /* 1 or -1 */
+  int flipy;
+  int sensor;
+  unsigned int layer;
+  cpShapeFilter filter;
+  cpBody *body; /* NULL if this object is dead */
+  int id;
+  struct phys_cbs cbs;
+  struct shape_cb *shape_cbs;
+  JSValue ref;
 };
 
 extern struct gameobject *gameobjects;
 
-struct gameobject *MakeGameobject();
-void init_gameobjects();
+int MakeGameobject();
+void gameobject_apply(struct gameobject *go);
 void gameobject_delete(int id);
-void clear_gameobjects();
-int number_of_gameobjects();
-void set_n_gameobjects(int n);
-void setup_model_transform(struct mTransform *t, struct shader *s, float scale);
-void toggleprefab(struct gameobject *go);
+void gameobjects_cleanup();
+
+void gameobject_set_sensor(int id, int sensor);
+
 struct gameobject *get_gameobject_from_id(int id);
-void gameobject_save(struct gameobject *go, FILE * file);
-void gameobject_addcomponent(struct gameobject *go, struct component *c);
-void gameobject_delcomponent(struct gameobject *go, int n);
-void gameobject_loadcomponent(struct gameobject *go, int id);
+struct gameobject *id2go(int id);
+int id_from_gameobject(struct gameobject *go);
+int go2id(struct gameobject *go);
+int body2id(cpBody *body);
+cpBody *id2body(int id);
+int shape2gameobject(cpShape *shape);
 
-void gameobject_saveprefab(struct gameobject *go);
-void gameobject_makefromprefab(char *path);
-void gameobject_syncprefabs(char *revertPath);
-void gameobject_revertprefab(struct gameobject *go);
+void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
 
-void gameobject_init(struct gameobject *go, FILE * fprefab);
+/* Tries a few methods to select a gameobject; if none is selected returns -1 */
+int pos2gameobject(cpVect pos);
 
-void gameobject_update(struct gameobject *go);
-void update_gameobjects();
-
-void gameobject_move(struct gameobject *go, float xs, float ys);
+void gameobject_move(struct gameobject *go, cpVect vec);
 void gameobject_rotate(struct gameobject *go, float as);
+void gameobject_setangle(struct gameobject *go, float angle);
+void gameobject_setpos(struct gameobject *go, cpVect vec);
+
+void gameobject_draw_debugs();
+void gameobject_draw_debug(int go);
 
 void object_gui(struct gameobject *go);
+
+void gameobject_saveall();
+void gameobject_loadall();
+int gameobjects_saved();
 
 #endif

@@ -1,0 +1,2 @@
+# Yugine Input Guide
+

@@ -10,65 +10,52 @@
 #define STBI_FAILURE_USERMSG
 #include "stb_image.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #define PL_MPEG_IMPLEMENTATION
 #include <pl_mpeg.h>
 
-#ifdef EDITOR
-#include "editor.h"
-#endif
-
 #include "render.h"
 
-#include "openglrender.h"
-#include "window.h"
-#include "camera.h"
-#include "input.h"
-#include "sprite.h"
 #include "2dphysics.h"
+#include "camera.h"
 #include "gameobject.h"
-#include "registry.h"
+#include "input.h"
 #include "log.h"
+#include "openglrender.h"
 #include "resources.h"
-#include "timer.h"
 #include "script.h"
-
+#include "sprite.h"
+#include "timer.h"
+#include "window.h"
 #include "sound.h"
-
-// TODO: Init on the heap
-
-
 #include "engine.h"
 
-void error_callback(int error, const char *description)
-{
-    fprintf(stderr, "Error: %s\n", description);
-    YughError("GLFW Error: %s", description);
+void error_callback(int error, const char *description) {
+  fprintf(stderr, "Error: %s\n", description);
+  YughError("GLFW Error: %s", description);
 }
 
-void engine_init()
-{
-    glfwSetErrorCallback(error_callback);
-    /* Initialize GLFW */
-    if (!glfwInit()) {
-        YughError("Could not init GLFW. Exiting.");
-        exit(1);
-    }
+void engine_init() {
+  
+  glfwSetErrorCallback(error_callback);
+  /* Initialize GLFW */
+  if (!glfwInit()) {
+    YughError("Could not init GLFW. Exiting.");
+    exit(1);
+  } else {
+    YughInfo("Initted GLFW.");
+  }
 
+  resources_init();
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  YughInfo("Starting physics ...");
+  phys2d_init();
 
+  YughInfo("Starting sound ...");
+  sound_init();
 
-    resources_init();
-    script_init();
-    registry_init();
-
-    //stbi_set_flip_vertically_on_load(1);
-    phys2d_init();
-    sound_init();
-}
-
-void engine_stop()
-{
-    glfwTerminate();
+  YughInfo("Starting scripts ...");
+  script_init();
 }

@@ -1,25 +1,23 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
-#include "mathc.h"
+#include "HandmadeMath.h"
 
 struct mTransform {
-    mfloat_t position[3];
-    mfloat_t rotation[4];
+    HMM_Vec3 pos;
+    HMM_Quat rotation;
     float scale;
 };
 
 
-struct mTransform MakeTransform(mfloat_t pos[3], mfloat_t rotation[3],
-				float scale);
+struct mTransform MakeTransform(HMM_Vec3 pos, HMM_Quat rotation, float scale);
 
-mfloat_t *trans_forward(mfloat_t * res,
-			const struct mTransform *const trans);
-mfloat_t *trans_back(mfloat_t * res, const struct mTransform *trans);
-mfloat_t *trans_up(mfloat_t * res, const struct mTransform *trans);
-mfloat_t *trans_down(mfloat_t * res, const struct mTransform *trans);
-mfloat_t *trans_right(mfloat_t * res, const struct mTransform *trans);
-mfloat_t *trans_left(mfloat_t * res, const struct mTransform *trans);
+HMM_Vec3 trans_forward(const struct mTransform *const trans);
+HMM_Vec3 trans_back(const struct mTransform *trans);
+HMM_Vec3 trans_up(const struct mTransform *trans);
+HMM_Vec3 trans_down(const struct mTransform *trans);
+HMM_Vec3 trans_right(const struct mTransform *trans);
+HMM_Vec3 trans_left(const struct mTransform *trans);
 void trans_drawgui(struct mTransform *T);
 
 //extern Serialize *make_transform();

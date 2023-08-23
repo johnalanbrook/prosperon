@@ -1,7 +1,8 @@
 #ifndef OPENGL_RENDER_H
 #define OPENGL_RENDER_H
 
-#include "render.h"
+#include "sokol/sokol_gfx.h"
+#include "HandmadeMath.h"
 
 struct mCamera;
 struct window;
@@ -9,30 +10,33 @@ struct window;
 extern struct shader *spriteShader;
 extern struct shader *animSpriteShader;
 
+extern sg_image ddimg;
+
 extern struct sprite *tsprite;
 
 extern int renderMode;
 
+extern HMM_Vec3 dirl_pos;
 
-extern float editorClose;
-extern float editorFar;
+extern HMM_Mat4 projection;
+extern HMM_Mat4 hudproj;
+
 extern float gridScale;
 extern float smallGridUnit;
 extern float bigGridUnit;
 extern float gridSmallThickness;
 extern float gridBigThickness;
-extern float gridBigColor[];
-extern float gridSmallColor[];
+extern struct rgba gridBigColor;
+extern struct rgba gridSmallColor;
 extern float gridOpacity;
 extern float editorFOV;
 extern float shadowLookahead;
-extern float plane_size;
-extern float near_plane;
-extern float far_plane;
 extern char objectName[];
-extern GLuint debugColorPickBO;
+extern int debugColorPickBO;
 
 extern struct gameobject *selectedobject;
+
+#include <chipmunk/chipmunk.h>
 
 enum RenderMode {
     LIT,
@@ -44,11 +48,20 @@ enum RenderMode {
 
 void openglInit();
 void openglRender(struct window *window);
+void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, struct mCamera *camera);
 
-void BindUniformBlock(GLuint shaderID, const char *bufferName,
-		      GLuint bufferBind);
+void render_winsize();
+
+void debug_draw_phys(int draw);
+
+void set_cam_body(cpBody *body);
+cpVect cam_pos();
+float cam_zoom();
+void add_zoom(float val);
+
+sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d);
 
 #endif

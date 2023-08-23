@@ -4,27 +4,22 @@
 struct timer {
     int timerid;
     int on;
-    double fire_time;    // Time the timer will fire
-    double interval;   // Time of timer
-    double start_time; // Time the timer started this loop
+    double interval; // Time of timer
     int repeat;
     double remain_time;   // How much time until the timer executes
     void (*cb)(void *data);
     void *data;
+    int owndata;
+    int next;
 };
 
-struct timer *timer_make(double interval, void (*callback)(void *param), void *param);
-void timer_remove(struct timer *t);
+int timer_make(double interval, void (*callback)(void *param), void *param, int own);
+struct timer *id2timer(int id);
+void timer_remove(int id);
 void timer_start(struct timer *t);
 void timer_pause(struct timer *t);
 void timer_stop(struct timer *t);
-void timer_update(double s);
-void timer_settime(struct timer *t, double interval);
-
-
-
-
-void *arrfind(void *arr, int (*valid)(void *arr, void *cmp), void *cmp);
-void arrwalk(void *arr, void (*fn)(void *data));
+void timer_update(double dt);
+void timerr_settime(struct timer *t, double interval);
 
 #endif

@@ -1,240 +1,412 @@
 #include "font.h"
 
+#include "log.h"
 #include "render.h"
-#include <shader.h>
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <shader.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <window.h>
-#include "log.h"
+#include <chipmunk/chipmunk.h>
+#include "2dphysics.h"
 
-#include <stb_truetype.h>
+#include "openglrender.h"
 
-static uint32_t VBO = 0;
-static uint32_t VAO = 0;
+#include "stb_image_write.h"
+#include "stb_rect_pack.h"
+#include "stb_truetype.h"
 
-unsigned char ttf_buffer[1<<25];
-unsigned char temp_bitmap[512 * 512];
+#include "HandmadeMath.h"
 
 struct sFont *font;
-static struct shader *shader;
+
+#define max_chars 40000
+
+unsigned char *slurp_file(const char *filename) {
+  FILE *f = fopen(filename, "rb");
+
+  if (!f) return NULL;
+
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  unsigned char *slurp = malloc(fsize + 1);
+  fread(slurp, fsize, 1, f);
+  fclose(f);
+
+  return slurp;
+}
+
+char *slurp_text(const char *filename) {
+  FILE *f = fopen(filename, "r'");
+  
+  if (!f) {
+    YughWarn("File %s doesn't exist.", filename);
+    return NULL;
+  }
+
+  char *buf;
+  long int fsize;
+  fseek(f, 0, SEEK_END);
+  fsize = ftell(f);
+  buf = malloc(fsize + 1);
+  rewind(f);
+  size_t r = fread(buf, sizeof(char), fsize, f);
+  buf[r] = '\0';
+
+  fclose(f);
+
+  return buf;
+}
+
+int slurp_write(const char *txt, const char *filename) {
+  FILE *f = fopen(filename, "w");
+  if (!f) return 1;
+
+  fputs(txt, f);
+  fclose(f);
+  return 0;
+}
+
+static sg_shader fontshader;
+static sg_bindings bind_text;
+static sg_pipeline pipe_text;
+struct text_vert {
+  cpVect pos;
+  cpVect wh;
+  struct uv_n uv;
+  struct uv_n st;
+  struct rgba color;
+};
+
+static struct text_vert text_buffer[max_chars];
 
 void font_init(struct shader *textshader) {
-    shader = textshader;
+  fontshader = sg_compile_shader("shaders/textvert.glsl", "shaders/textfrag.glsl", &(sg_shader_desc){
+      .vs.uniform_blocks[0] = {
+          .size = sizeof(float) * 16,
+          //	.layout = SG_UNIFORMLAYOUT_STD140,
+          .uniforms = {
+              [0] = {.name = "projection", .type = SG_UNIFORMTYPE_MAT4}}},
 
-    shader_use(shader);
+      .fs.images[0] = {.name = "text", .image_type = SG_IMAGETYPE_2D, .sampler_type = SG_SAMPLERTYPE_FLOAT}});
 
-    // configure VAO/VBO for texture quads
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  pipe_text = sg_make_pipeline(&(sg_pipeline_desc){
+      .shader = fontshader,
+      .layout = {
+          .attrs = {
+              [0].format = SG_VERTEXFORMAT_FLOAT2, /* verts */
+	      [0].buffer_index = 1,
+	      [1].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
+	      [2].format = SG_VERTEXFORMAT_FLOAT2, /* width and height */
+              [3].format = SG_VERTEXFORMAT_USHORT2N, /* uv pos */
+	      [4].format = SG_VERTEXFORMAT_USHORT2N, /* uv width and height */
+              [5].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
+          },
+	.buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
+      },
+      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+      .colors[0].blend = blend_trans,
+    });
+    
+  float text_verts[8] = {
+    0,0,
+    0,1,
+    1,0,
+    1,1
+  };
+    
+  bind_text.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+    .data = SG_RANGE(text_verts),
+    .usage = SG_USAGE_IMMUTABLE
+  });
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
+  bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+      .size = sizeof(struct text_vert)*max_chars,
+      .type = SG_BUFFERTYPE_VERTEXBUFFER,
+      .usage = SG_USAGE_STREAM,
+      .label = "text buffer"});
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-
-    // Default font
-    font = MakeFont("teenytinypixels.ttf", 300);
+  font = MakeFont("LessPerfectDOSVGA.ttf", 16);
+  bind_text.fs_images[0] = font->texID;
 }
 
-void font_frame(struct window *w) {
-    shader_use(shader);
-}
-
-// Height in pixels
-struct sFont *MakeFont(const char *fontfile, int height)
+struct sFont *MakeSDFFont(const char *fontfile, int height)
 {
-    shader_use(shader);
+  YughInfo("Making sdf font %s.", fontfile);
 
-    struct sFont *newfont = calloc(1, sizeof(struct sFont));
-    newfont->height = height;
+  int packsize = 1024;
+  struct sFont *newfont = calloc(1, sizeof(struct sFont));
+  newfont->height = height;
 
-    char fontpath[256];
-    snprintf(fontpath, 256, "fonts/%s", fontfile);
-     fread(ttf_buffer, 1, 1<<25, fopen(fontpath, "rb"));
+  char fontpath[256];
+  snprintf(fontpath, 256, "fonts/%s", fontfile);
 
+  unsigned char *ttf_buffer = slurp_file(fontpath);
+  unsigned char *bitmap = malloc(packsize * packsize);
 
-    stbtt_fontinfo fontinfo;
-    if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0))) {
-        YughError("Failed to make font %s", fontfile);
-    }
+  stbtt_fontinfo fontinfo;
+  if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
+    YughError("Failed to make font %s", fontfile);
+  }
 
-    float scale = stbtt_ScaleForPixelHeight(&fontinfo, height);
-
-    int ascent, descent, linegap;
-
-    stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
-
-    ascent = roundf(ascent*scale);
-    descent = roundf(descent*scale);
-
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-
-    for (unsigned char c = 32; c < 128; c++) {
-	unsigned char *bitmap;
-	int advance, lsb, w, h, x0, y0;
-	stbtt_GetCodepointHMetrics(&fontinfo, c, &advance, &lsb);
-
-	bitmap = stbtt_GetCodepointBitmap(&fontinfo, scale, scale, c, &w, &h, &x0, &y0);
-
-	GLuint ftexture;
-	glGenTextures(1, &ftexture);
-	glBindTexture(GL_TEXTURE_2D, ftexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
-
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-	newfont->Characters[c].TextureID = ftexture;
-	newfont->Characters[c].Advance = advance * scale;
-	newfont->Characters[c].Size[0] = w;
-	newfont->Characters[c].Size[1] = h;
-	newfont->Characters[c].Bearing[0] = x0;
-	newfont->Characters[c].Bearing[1] = y0*-1;
-    }
-
-    return newfont;
+  for (int i = 32; i < 95; i++) {
+    int w, h, xoff, yoff;
+//    unsigned char *stbtt_GetGlyphSDF(&fontinfo, height, i, 1, 0, 1, &w, &h, &xoff, &yoff);
+  }
 }
 
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3])
-{
-    float w = c.Size[0] * scale;
-    float h = c.Size[1] * scale;
+struct sFont *MakeFont(const char *fontfile, int height) {
+  YughInfo("Making font %s.", fontfile);
 
-    float xpos = cursor[0] + c.Bearing[0] * scale;
-    float ypos = cursor[1] + (c.Bearing[1] * scale) - h;
+  int packsize = 1024;
 
-    float verts[4 * 4] = {
-	xpos, ypos, 0.f, 0.f,
-	xpos+w, ypos, 1.f, 0.f,
-	xpos, ypos + h, 0.f, 1.f,
-	xpos + w, ypos + h, 1.f, 1.f
-    };
+  struct sFont *newfont = calloc(1, sizeof(struct sFont));
+  newfont->height = height;
 
+  char fontpath[256];
+  snprintf(fontpath, 256, "fonts/%s", fontfile);
 
-////// Outline calculation
-    // float outlineWidth = 1.1;
+  unsigned char *ttf_buffer = slurp_file(fontpath);
+  unsigned char *bitmap = malloc(packsize * packsize);
 
-    // float ow = c.Size[0] * scale * outlineWidth;
-    // float oh = c.Size[1] * scale * outlineWidth;
+  stbtt_packedchar glyphs[95];
 
-    // float oxpos = cursor[0] + c.Bearing[0] * scale * outlineWidth - ((ow-w)/2);
-    // float oypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale * outlineWidth - ((oh-h)/2);
+  stbtt_pack_context pc;
 
-    // float overts[4*4] = {
-    //     oxpos, oypos + oh, 0.f, 0.f,
-    //     oxpos, oypos, 0.f, 1.f,
-    //     oxpos + ow, oypos + oh, 1.f, 0.f,
-    //     oxpos + ow, oypos, 1.f, 1.f
-    // };
+  int pad = 2;
 
+  stbtt_PackBegin(&pc, bitmap, packsize, packsize, 0, pad, NULL);
+  stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
+  stbtt_PackEnd(&pc);
 
-/////////// Shadow calculation
+  stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char) * packsize);
 
+  stbtt_fontinfo fontinfo;
+  if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
+    YughError("Failed to make font %s", fontfile);
+  }
 
-    float shadowOffset = 6.f;
-    float sxpos = cursor[0] + c.Bearing[0] * scale + (scale * shadowOffset);
-    float sypos = cursor[1] - (c.Size[1] - c.Bearing[1]) * scale - (scale * shadowOffset);
+  stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
+  newfont->emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
+  newfont->linegap = (newfont->ascent - newfont->descent)* 2 * newfont->emscale;
 
-    float sverts[4 * 4] = {
-	sxpos, sypos, 0.f, 0.f,
-	sxpos+w, sypos, 1.f, 0.f,
-	sxpos, sypos + h, 0.f, 1.f,
-	sxpos + w, sypos+h, 1.f, 1.f
-    };
+  newfont->texID = sg_make_image(&(sg_image_desc){
+      .type = SG_IMAGETYPE_2D,
+      .width = packsize,
+      .height = packsize,
+      .pixel_format = SG_PIXELFORMAT_R8,
+      .usage = SG_USAGE_IMMUTABLE,
+      .min_filter = SG_FILTER_NEAREST,
+      .mag_filter = SG_FILTER_NEAREST,
+      .data.subimage[0][0] = {
+          .ptr = bitmap,
+          .size = packsize * packsize}});
 
+  free(ttf_buffer);
+  free(bitmap);
 
-    glBindTexture(GL_TEXTURE_2D, c.TextureID);
+  for (unsigned char c = 32; c < 127; c++) {
+    stbtt_packedchar glyph = glyphs[c - 32];
 
-    //// Shadow pass
+    struct glrect r;
+    r.s0 = (glyph.x0) / (float)packsize;
+    r.s1 = (glyph.x1) / (float)packsize;
+    r.t0 = (glyph.y0) / (float)packsize;
+    r.t1 = (glyph.y1) / (float)packsize;
 
-    float black[3] = { 0, 0, 0 };
-    shader_setvec3(shader, "textColor", black);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(sverts), sverts);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    stbtt_GetCodepointHMetrics(&fontinfo, c, &newfont->Characters[c].Advance, &newfont->Characters[c].leftbearing);
+    newfont->Characters[c].Advance *= newfont->emscale;
+    newfont->Characters[c].leftbearing *= newfont->emscale;
 
+//    newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
+    newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0; 
+    newfont->Characters[c].Size[1] = glyph.y1 - glyph.y0;
+    newfont->Characters[c].Bearing[0] = glyph.xoff;
+    newfont->Characters[c].Bearing[1] = glyph.yoff2;
+    newfont->Characters[c].rect = r;
+  }
 
-    //// Character pass
-    shader_setvec3(shader, "textColor", color);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+  return newfont;
 }
 
-void text_settype(struct sFont *mfont)
+static int curchar = 0;
+
+void draw_char_box(struct Character c, cpVect cursor, float scale, struct rgba color)
 {
-    font = mfont;
+  cpVect wh;
+ 
+  wh.x = 8 * scale;
+  wh.y = 14;
+  cursor.x += wh.x / 2.f;
+  cursor.y += wh.y / 2.f;
+
+//  draw_box(cursor, wh, color);
 }
 
-void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw)
-{
-    //shader_use(shader);
-    shader_setvec3(shader, "textColor", color);
+void text_flush(HMM_Mat4 *proj) {
+  if (curchar == 0) return;
+  sg_apply_pipeline(pipe_text);
+  sg_apply_bindings(&bind_text);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
 
-    mfloat_t cursor[2] = { 0.f };
-    cursor[0] = pos[0];
-    cursor[1] = pos[1];
+  sg_range verts;
+  verts.ptr = text_buffer;
+  verts.size = sizeof(struct text_vert) * curchar;
+  sg_update_buffer(bind_text.vertex_buffers[0], &verts);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  sg_draw(0, 4, curchar);
+  curchar = 0;
+}
 
-    const unsigned char *line, *wordstart;
-    line = (unsigned char*)text;
+static int drawcaret = 0;
 
+void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+  struct text_vert vert;
 
-    while (*line != '\0') {
+  float lsize = 1.0 / 1024.0;
 
-        switch (*line) {
-            case '\n':
-                cursor[1] -= scale * font->height;
-                line++;
-                break;
+  float oline = 0.0;
+  
+  vert.pos.x = cursor.X + c.Bearing[0] * scale + oline;
+  vert.pos.y = cursor.Y - c.Bearing[1] * scale - oline;
+  vert.wh.x = c.Size[0] * scale + (oline*2);
+  vert.wh.y = c.Size[1] * scale + (oline*2);
+  vert.uv.u = (c.rect.s0 - oline*lsize)*USHRT_MAX;
+  vert.uv.v = (c.rect.t0 - oline*lsize)*USHRT_MAX;
+  vert.st.u = (c.rect.s1-c.rect.s0+oline*lsize*2.0)*USHRT_MAX;
+  vert.st.v = (c.rect.t1-c.rect.t0+oline*lsize*2.0)*USHRT_MAX;
+  vert.color = color;
 
-            case ' ':
-                sdrawCharacter(font->Characters[*line], cursor, scale, shader, color);
-                cursor[0] += font->Characters[*line].Advance * scale;
-                line++;
-                break;
+  memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
+  curchar++;
+  return;
 
-            default:
-                wordstart = line;
-                int wordWidth = 0;
-
-                while (!isspace(*line) && *line != '\0') {
-                    wordWidth += font->Characters[*line].Advance * scale;
-                    line++;
-                }
-
-                if (lw > 0 && (cursor[0] + wordWidth - pos[0]) >= lw) {
-                    cursor[0] = pos[0];
-                    cursor[1] -= scale * font->height;
-                }
-
-                while (wordstart < line) {
-                    sdrawCharacter(font->Characters[*wordstart], cursor, scale, shader, color);
-                    cursor[0] += font->Characters[*wordstart].Advance * scale;
-                    wordstart++;
-                }
+  /*
+      if (drawcaret == curchar) {
+          draw_char_box(c, cursor, scale, color);
+              shader_use(shader);
         }
+  */
+  /*
+      sg_append_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
+
+      offset[0] = 1;
+      offset[1] = -1;
+      fill_charverts(verts, cursor, scale, c, offset);
+      sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
+
+      offset[1] = 1;
+      fill_charverts(verts, cursor, scale, c, offset);
+      sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
+
+      offset[0] = -1;
+      offset[1] = -1;
+      fill_charverts(verts, cursor, scale, c, offset);
+      sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
+  */
+}
+
+void text_settype(struct sFont *mfont) {
+  font = mfont;
+}
+
+struct boundingbox text_bb(const char *text, float scale, float lw, float tracking)
+{
+  HMM_Vec2 cursor = {0,0};
+  unsigned char *c = text;
+  unsigned char *wordstart;
+
+  while (*c != '\0') {
+    if (isblank(*c)) {
+      cursor.X += font->Characters[*c].Advance * tracking * scale;
+      c++;
+    } else if (isspace(*c)) {
+      cursor.Y -= scale * font->linegap;
+      cursor.X = 0;
+      c++;
+    } else {
+      wordstart = c;
+      int wordwidth = 0;
+
+      while (!isspace(*c) && *c != '\0') {
+        wordwidth += font->Characters[*c].Advance * tracking * scale;
+	c++;
+      }
+
+      if (lw > 0 && (cursor.X + wordwidth) >= lw) {
+        cursor.X = 0;
+	cursor.Y -= scale * font->linegap;
+      }
+
+      while (wordstart < c) {
+        cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
+	wordstart++;
+      }
     }
+  }
 
+  float height = cursor.Y + (font->height*scale);
+  float width = lw > 0 ? lw : cursor.X;
 
-/*
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    */
+  struct boundingbox bb = {};
+  bb.l = 0;
+  bb.t = font->ascent * font->emscale * scale;
+  bb.b = font->descent * font->emscale * scale;
+  bb.r = cursor.X;
+  return bb;
+
+  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){width,height});
+}
+
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
+  int len = strlen(text);
+  drawcaret = caret;
+
+  HMM_Vec2 cursor = pos;
+
+  const unsigned char *line, *wordstart, *drawstart;
+  line = drawstart = (unsigned char *)text;
+
+  struct rgba usecolor = color;
+
+  while (*line != '\0') {
+    if (isblank(*line)) {
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
+      cursor.X += font->Characters[*line].Advance * tracking * scale;
+      line++;
+    } else if (isspace(*line)) {
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
+      cursor.Y -= scale * font->linegap;
+      cursor.X = pos.X;
+      line++;
+    } else {
+      wordstart = line;
+      int wordWidth = 0;
+
+      while (!isspace(*line) && *line != '\0') {
+        wordWidth += font->Characters[*line].Advance * tracking * scale;
+        line++;
+      }
+
+      if (lw > 0 && (cursor.X + wordWidth - pos.X) >= lw) {
+        cursor.X = pos.X;
+        cursor.Y -= scale * font->linegap;
+      }
+
+      while (wordstart < line) {
+        sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
+        cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
+        wordstart++;
+      }
+    }
+  }
+  /*    if (caret > curchar) {
+          draw_char_box(font->Characters[69], cursor, scale, color);
+      }
+  */
+
+  return cursor.Y - pos.Y;
 }

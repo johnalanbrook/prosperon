@@ -1,4 +1,5 @@
 .git/
+.obj/
 bin/
 build/
 *.o

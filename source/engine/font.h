@@ -1,33 +1,47 @@
 #ifndef FONT_H
 #define FONT_H
 
-#include "mathc.h"
+#include "sokol/sokol_gfx.h"
+#include "texture.h"
+#include "2dphysics.h"
+#include "HandmadeMath.h"
 
 struct shader;
 struct window;
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
-    uint32_t TextureID;		// ID handle of the glyph texture
-    mfloat_t Size[2];		// Size of glyph
-    mfloat_t Bearing[2];	// Offset from baseline to left/top of glyph
-    unsigned int Advance;	// Horizontal offset to advance to next glyph
+  float Size[2];     // Size of glyph
+  float Bearing[2];  // Offset from baseline to left/top of glyph
+  int Advance; // Horizontal offset to advance to next glyph
+  int leftbearing;
+  struct glrect rect;
 };
 
 struct sFont {
-    uint32_t fontTexture;
-    uint32_t height;
-    struct Character Characters[127];
+  uint32_t fontTexture;
+  uint32_t height; /* in pixels */
+  int ascent;
+  int descent;
+  int linegap;
+  float emscale;
+  struct Character Characters[127];
+  sg_image texID;
 };
 
-
-
 void font_init(struct shader *s);
-void font_frame(struct window *w);
 struct sFont *MakeFont(const char *fontfile, int height);
-void sdrawCharacter(struct Character c, mfloat_t cursor[2], float scale, struct shader *shader, float color[3]);
+void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
 void text_settype(struct sFont *font);
-void renderText(const char *text, mfloat_t pos[2], float scale, mfloat_t color[3], float lw);
+struct boundingbox text_bb(const char *text, float scale, float lw, float tracking);
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
 
+// void text_frame();
+void text_flush(HMM_Mat4 *proj);
+
+unsigned char *slurp_file(const char *filename);
+char *slurp_text(const char *filename);
+
+int slurp_write(const char *txt, const char *filename);
 
 #endif

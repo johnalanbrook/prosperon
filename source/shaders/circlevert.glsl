@@ -1,15 +1,27 @@
 #version 330 core
-layout (location = 0) in vec4 vertex;
+layout (location = 0) in vec2 vertex; 
+layout (location = 1) in vec2 apos;
+layout (location = 2) in float aradius;
+layout (location = 3) in vec4 acolor;
+layout (location = 4) in float asegsize;
+layout (location = 5) in float afill;
+
 out vec2 coords;
 
-layout (std140) uniform Projection
-{
-    mat4 projection;
-};
+out vec4 fcolor;
+
+out float segsize;
+out float fill;
+out float radius;
+
+uniform mat4 proj;
 
 void main()
 {
-    coords = vertex.zw;
-
-    gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);
+    gl_Position = proj * vec4((vertex * aradius) + apos, 0.0, 1.0);
+    coords = vertex;
+    fcolor = acolor;
+    segsize = asegsize;
+    fill = afill;
+    radius = aradius;
 }

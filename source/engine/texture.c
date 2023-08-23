@@ -1,252 +1,330 @@
 #include "texture.h"
 
-#include "render.h"
-#include <stdio.h>
-#include <stb_image.h>
-#include <stb_ds.h>
 #include "log.h"
-#include <math.h>
+#include "render.h"
+#include "sokol/sokol_gfx.h"
 #include "util.h"
+#include <math.h>
+#include <stb_ds.h>
+#include <stb_image.h>
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb_image_resize.h"
+#include <stdio.h>
+
+struct glrect ST_UNIT = {0.f, 1.f, 0.f, 1.f};
 
 static struct {
-    char *key;
-    struct Texture *value;
+  char *key;
+  struct Texture *value;
 } *texhash = NULL;
 
 struct Texture *tex_default;
 
-struct Texture *texture_pullfromfile(const char *path)
+struct Texture *texture_notex() {
+  return texture_pullfromfile("./icons/no_tex.png");
+}
+
+unsigned int next_pow2(unsigned int v)
 {
-    int index = shgeti(texhash, path);
-    if (index != -1)
-	return texhash[index].value;
+  v--;
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  v++;
+  return v;
+}
 
-    struct Texture *tex = calloc(1, sizeof(*tex));
-    tex->flipy = 0;
-    tex->opts.sprite = 1;
-    tex->opts.gamma = 0;
-    tex->anim.frames = 1;
-    tex->anim.ms = 1;
+int mip_levels(int width, int height)
+{
+  int levels = 0;
+	
+  while (width > 1 || height > 1)
+  {
+    width >>= 1;
+    height >>= 1;
+    levels++;
+  }
+  return levels;
+}
 
-    int n;
-    stbi_set_flip_vertically_on_load(0);
-    unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
+int mip_wh(int w, int h, int *mw, int *mh, int lvl)
+{
+  w >>= lvl;
+  h >>= lvl;
 
-    while (data == NULL) {
-        YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
-        return NULL;
-    }
+  if (w == 0 && h == 0)
+    return 1;
 
-    tex->data = data;
+  *mw = w ? w : 1;
+  *mh = h ? h : 1;
 
-    if (shlen(texhash) == 0)
-        sh_new_arena(texhash);
+  return 0;
+}
 
-    shput(texhash, path, tex);
+/* If an empty string or null is put for path, loads default texture */
+struct Texture *texture_pullfromfile(const char *path) {
+  if (!path) return texture_notex();
 
-    tex->id = 0;
+  int index = shgeti(texhash, path);
+  if (index != -1)
+    return texhash[index].value;
 
-    return tex;
+  YughInfo("Loading texture %s.", path);
+  struct Texture *tex = calloc(1, sizeof(*tex));
+  tex->opts.sprite = 1;
+  tex->opts.mips = 0;
+  tex->opts.gamma = 0;
+  tex->opts.wrapx = 1;
+  tex->opts.wrapy = 1;
+
+  int n;
+  unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
+
+  if (data == NULL) {
+    YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());
+    return texture_notex();
+  }
+
+  unsigned int nw = next_pow2(tex->width);
+  unsigned int nh = next_pow2(tex->height);
+  
+  tex->data = data;
+
+  int filter;
+  if (tex->opts.sprite) {
+      filter = SG_FILTER_NEAREST;
+  } else {
+      filter = SG_FILTER_LINEAR;
+  }
+  
+  sg_image_data sg_img_data;
+  
+  int mips = mip_levels(tex->width, tex->height)+1;
+
+  YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
+  
+  int mipw, miph;
+  mipw = tex->width;
+  miph = tex->height;
+  
+  sg_img_data.subimage[0][0] = (sg_range){ .ptr = data, .size = mipw*miph*4 };  
+  
+  unsigned char *mipdata[mips];
+  mipdata[0] = data;
+    
+  for (int i = 1; i < mips; i++) {
+    int w, h, mipw, miph;
+    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
+    mip_wh(tex->width, tex->height, &w, &h, i);
+    mipdata[i] = malloc(w * h * 4);
+    stbir_resize_uint8(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
+    sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
+    
+    mipw = w;
+    miph = h;
+  }
+
+  tex->id = sg_make_image(&(sg_image_desc){
+      .type = SG_IMAGETYPE_2D,
+      .width = tex->width,
+      .height = tex->height,
+      .usage = SG_USAGE_IMMUTABLE,
+      .min_filter = SG_FILTER_NEAREST_MIPMAP_NEAREST,
+      .mag_filter = SG_FILTER_NEAREST,
+      .num_mipmaps = mips,
+      .wrap_u = SG_WRAP_REPEAT,
+      .wrap_v = SG_WRAP_REPEAT,
+      .data = sg_img_data
+    });
+
+  if (shlen(texhash) == 0)
+    sh_new_arena(texhash);
+
+  shput(texhash, path, tex);
+
+  return tex;
+}
+
+void texture_sync(const char *path) {
+  YughWarn("Need to implement texture sync.");
 }
 
 char *tex_get_path(struct Texture *tex) {
-    for (int i = 0; i < shlen(texhash); i++) {
-        if (tex == texhash[i].value) {
-            YughInfo("Found key %s", texhash[i].key);
-            return texhash[i].key;
-        }
+  for (int i = 0; i < shlen(texhash); i++) {
+    if (tex == texhash[i].value) {
+      YughInfo("Found key %s", texhash[i].key);
+      return texhash[i].key;
     }
+  }
 
-    return NULL;
+  return "";
 }
 
-struct Texture *texture_loadfromfile(const char *path)
-{
-    struct Texture *new = texture_pullfromfile(path);
+struct Texture *texture_loadfromfile(const char *path) {
+  struct Texture *new = texture_pullfromfile(path);
+  /*
+      if (new->id == 0) {
+          glGenTextures(1, &new->id);
 
-    if (new == NULL) {
-        YughError("Texture %s not loaded! Loading the default instead ...", path);
-        new = texture_pullfromfile("./ph.png");
-    }
+          //tex_gpu_load(new);
 
-    if (new->id == 0) {
-        glGenTextures(1, &new->id);
-
-        tex_gpu_load(new);
-
-        YughInfo("Loaded texture path %s", path);
-    }
-
-    return new;
+          YughInfo("Loaded texture path %s", path);
+      }
+  */
+  return new;
 }
 
+void tex_gpu_reload(struct Texture *tex) {
+  tex_gpu_free(tex);
 
-
-void tex_pull(struct Texture *tex)
-{
-    if (tex->data != NULL)
-        tex_flush(tex);
-
-    int n;
-    char *path = tex_get_path(tex);
-    stbi_set_flip_vertically_on_load(0);
-    tex->data = stbi_load(path, &tex->width, &tex->height, &n, 4);
-
-    if (tex->data == NULL)
-	YughError("STBI failed to load file %s with message: %s", path, stbi_failure_reason());
+  // tex_gpu_load(tex);
 }
 
-void tex_flush(struct Texture *tex)
-{
-    free(tex->data);
+void anim_calc(struct anim2d *anim) {
+  anim->size[0] = anim->anim->tex->width * st_s_w(anim->anim->st_frames[anim->frame]);
+  anim->size[1] = anim->anim->tex->height * st_s_h(anim->anim->st_frames[anim->frame]);
 }
 
-void tex_gpu_reload(struct Texture *tex)
-{
-    tex_gpu_free(tex);
+void anim_incr(struct anim2d *anim) {
+  anim->frame = (anim->frame + 1) % arrlen(anim->anim->st_frames);
 
-    tex_gpu_load(tex);
+  if (!anim->anim->loop && anim->frame == arrlen(anim->anim->st_frames))
+    anim_pause(anim);
+
+  anim_calc(anim);
 }
 
-void tex_free(struct Texture *tex)
-{
-    free(tex->data);
-    //free(tex->path);
-    free(tex);
+void anim_decr(struct anim2d *anim) {
+  anim->frame = (anim->frame + arrlen(anim->anim->st_frames) - 1) % arrlen(anim->anim->st_frames);
+  anim_calc(anim);
 }
 
-void tex_gpu_load(struct Texture *tex)
-{
-	glBindTexture(GL_TEXTURE_2D, tex->id);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex->data);
-
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	if (tex->opts.sprite) {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	} else {
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+struct glrect anim_get_rect(struct anim2d *anim) {
+  return anim->anim->st_frames[anim->frame];
 }
 
-void tex_incr_anim(struct TexAnimation *tex_anim)
-{
-    anim_incr(tex_anim);
-
-    if (!tex_anim->tex->anim.loop && tex_anim->frame == tex_anim->tex->anim.frames)
-	anim_pause(tex_anim);
+void anim_setframe(struct anim2d *anim, int frame) {
+  anim->frame = frame;
+  anim_calc(anim);
 }
 
-void anim_incr(struct TexAnimation *anim)
-{
-    anim->frame = (anim->frame + 1) % anim->tex->anim.frames;
-    tex_anim_calc_uv(anim);
+struct TexAnim *anim2d_from_tex(const char *path, int frames, int fps) {
+  struct TexAnim *anim = malloc(sizeof(*anim));
+  anim->tex = texture_loadfromfile(path);
+  texanim_fromframes(anim, frames);
+  anim->ms = (float)1 / fps;
+
+  return anim;
 }
 
-void anim_decr(struct TexAnimation *anim)
-{
-    anim->frame = (anim->frame + anim->tex->anim.frames - 1) % anim->tex->anim.frames;
-    tex_anim_calc_uv(anim);
+void texanim_fromframes(struct TexAnim *anim, int frames) {
+  if (anim->st_frames) {
+    free(anim->st_frames);
+  }
+
+  arrsetlen(anim->st_frames, frames);
+
+  float width = (float)1 / frames;
+
+  for (int i = 0; i < frames; i++) {
+    anim->st_frames[i].s0 = width * i;
+    anim->st_frames[i].s1 = width * (i + 1);
+    anim->st_frames[i].t0 = 0.f;
+    anim->st_frames[i].t1 = 1.f;
+  }
 }
 
-void anim_setframe(struct TexAnimation *anim, int frame)
-{
-    anim->frame = frame;
-    tex_anim_calc_uv(anim);
+void tex_gpu_free(struct Texture *tex) {
+  /*
+      if (tex->id != 0) {
+          glDeleteTextures(1, &tex->id);
+          tex->id = 0;
+      }
+  */
 }
 
-void tex_anim_set(struct TexAnimation *anim)
-{
-    if (anim->playing) {
-	timer_remove(anim->timer);
-	anim->timer = timer_make(1.f / anim->tex->anim.ms, tex_incr_anim, anim);
-
-    }
-
-    tex_anim_calc_uv(anim);
+int anim_frames(struct TexAnim *a) {
+  return arrlen(a->st_frames);
 }
 
-
-
-void tex_gpu_free(struct Texture *tex)
-{
-    if (tex->id != 0) {
-	glDeleteTextures(1, &tex->id);
-	tex->id = 0;
-    }
+struct glrect tex_get_rect(struct Texture *tex) {
+  return ST_UNIT;
 }
 
-void tex_anim_calc_uv(struct TexAnimation *anim)
-{
-    struct Rect uv;
-    uv.w = 1.f / anim->tex->anim.frames;
-    uv.h = 1.f;
-    uv.y = 0.f;
-    uv.x = uv.w * (anim->frame);
-
-    anim->uv = uv;
+cpVect tex_get_dimensions(struct Texture *tex) {
+  if (!tex) return cpvzero;
+  cpVect d;
+  d.x = tex->width;
+  d.y = tex->height;
+  return d;
 }
 
-
-
-void tex_bind(struct Texture *tex)
-{
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex->id);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
+void tex_bind(struct Texture *tex) {
+  /*    glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, tex->id);
+      glBindTexture(GL_TEXTURE_2D_ARRAY, tex->id);
+  */
 }
 
-void anim_play(struct TexAnimation *anim)
-{
-    if (anim->playing)
-	return;
+/********************** ANIM2D ****************/
 
-    if (anim->frame == anim->tex->anim.frames)
-	anim->frame = 0;
-
-    anim->playing = 1;
-
-    if (anim->timer == NULL)
-        anim->timer = timer_make(1.f / anim->tex->anim.ms, tex_incr_anim, anim);
-    else
-        timer_settime(anim->timer, 1.f/anim->tex->anim.ms);
-
-    timer_start(anim->timer);
+void anim_load(struct anim2d *anim, const char *path) {
+  anim->anim = &texture_pullfromfile(path)->anim;
+  anim->anim->tex->opts.animation = 1;
+  anim_stop(anim);
+  anim_play(anim);
 }
 
-void anim_stop(struct TexAnimation *anim)
-{
-    if (!anim->playing)
-	return;
+void anim_play(struct anim2d *anim) {
+  if (anim->playing)
+    return;
 
-    anim->playing = 0;
+  if (anim->frame == anim_frames(anim->anim))
     anim->frame = 0;
-    anim->pausetime = 0;
-    timer_stop(anim->timer);
-    tex_anim_calc_uv(anim);
+
+  anim->playing = 1;
+
+  if (anim->timer == NULL)
+    anim->timer = id2timer(timer_make(1.f / anim->anim->ms, anim_incr, anim, 0));
+  else
+    timerr_settime(anim->timer, 1.f / anim->anim->ms);
+
+  timer_start(anim->timer);
 }
 
-void anim_pause(struct TexAnimation *anim)
-{
-    if (!anim->playing)
-	return;
+void anim_stop(struct anim2d *anim) {
+  if (!anim->playing)
+    return;
 
-    anim->playing = 0;
-    timer_pause(anim->timer);
+  anim->playing = 0;
+  anim->frame = 0;
+  anim->pausetime = 0;
+  timer_stop(anim->timer);
 }
 
-void anim_fwd(struct TexAnimation *anim)
-{
-    anim_incr(anim);
+void anim_pause(struct anim2d *anim) {
+  if (!anim->playing)
+    return;
+
+  anim->playing = 0;
+  timer_pause(anim->timer);
 }
 
-void anim_bkwd(struct TexAnimation *anim)
-{
-    anim_decr(anim);
+void anim_fwd(struct anim2d *anim) {
+  anim_incr(anim);
+}
+
+void anim_bkwd(struct anim2d *anim) {
+  anim_decr(anim);
+}
+
+float st_s_w(struct glrect st) {
+  return (st.s1 - st.s0);
+}
+
+float st_s_h(struct glrect st) {
+  return (st.t1 - st.t0);
 }

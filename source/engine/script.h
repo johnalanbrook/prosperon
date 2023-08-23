@@ -1,17 +1,62 @@
 #ifndef SCRIPT_H
 #define SCRIPT_H
 
-#include "s7.h"
-extern s7_scheme *s7;
+#include "quickjs/quickjs.h"
+#include <chipmunk/chipmunk.h>
+#include <time.h>
 
+extern JSContext *js;
+
+struct callee {
+  JSValue fn;
+  JSValue obj;
+};
+
+extern struct callee stacktrace_callee;
+extern JSValue num_cache[100];
+
+void js_stacktrace();
+void script_startup();
 void script_init();
-void script_run(const char *script);
+void script_run(const char *script, const char *file);
+void script_evalf(const char *format, ...);
 int script_dofile(const char *file);
+JSValue script_runfile(const char *file);
 void script_update(double dt);
 void script_draw();
+
+void duk_run_err();
+void js_dump_stack();
+
 void script_editor();
 void script_call(const char *f);
-void script_call_sym(s7_pointer sym);
-int script_has_sym(s7_pointer sym);
+void script_call_sym(JSValue sym);
+void call_callee(struct callee *c);
+void script_callee(struct callee c, int argc, JSValue *argv);
+int script_has_sym(void *sym);
+void script_eval_w_env(const char *s, JSValue env);
+
+time_t file_mod_secs(const char *file);
+
+void register_update(struct callee c);
+void call_updates(double dt);
+void call_debugs();
+
+void unregister_gui(struct callee c);
+void register_gui(struct callee c);
+void register_debug(struct callee c);
+void register_nk_gui(struct callee c);
+void call_gui();
+void call_nk_gui();
+void unregister_obj(JSValue obj);
+
+void send_signal(const char *signal, int argc, JSValue *argv);
+
+void register_physics(struct callee c);
+void call_physics(double dt);
+
+void register_draw(struct callee c);
+void call_draw();
+void compile_script(const char *file);
 
 #endif

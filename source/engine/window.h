@@ -5,8 +5,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mruby.h"
-
 struct window {
     GLFWwindow *window;
     int id;
@@ -20,9 +18,6 @@ struct window {
     bool minimized;
     bool iconified;
     bool shown;
-    float projection[16];
-    mrb_sym nuke_cb;
-    mrb_sym gui_cb;
     void (*nuke_gui)();
 };
 
