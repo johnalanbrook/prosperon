@@ -38,6 +38,10 @@
 #define SOKOL_GLES3
 #include "sokol/sokol_gfx.h"
 
+#define SOKOL_APP_IMPL
+#define SOKOL_DEBUG
+#include "sokol/sokol_app.h"
+
 int physOn = 0;
 
 double renderlag = 0;
@@ -53,11 +57,6 @@ double lastTick = 0.0;
 static int phys_step = 0;
 
 static float timescale = 1.f;
-
-#define FPSBUF 10
-static double framems[FPSBUF];
-int framei = 0;
-int fps;
 
 #define SIM_STOP 0
 #define SIM_PLAY 1
@@ -123,13 +122,10 @@ void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uin
   mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
 }
 
-int main(int argc, char **args) {
-  int logout = 1;
 
-  script_startup();
-
-  logout = 0;
-
+void c_init() {
+/*
+  int logout = 0;
   for (int i = 1; i < argc; i++) {
     if (args[i][0] == '-') {
       switch (args[i][1]) {
@@ -162,6 +158,7 @@ int main(int argc, char **args) {
       }
     }
   }
+*/
 
 #if DBG
   if (logout) {
@@ -190,11 +187,6 @@ int main(int argc, char **args) {
 
   engine_init();
 
-  const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-  YughInfo("Refresh rate is %d", vidmode->refreshRate);
-
-  renderMS = 1.0 / vidmode->refreshRate;
-
   sg_setup(&(sg_desc){
       .logger = {
           .func = sg_logging,
@@ -207,26 +199,14 @@ int main(int argc, char **args) {
 
   input_init();
   openglInit();
+}
 
-  int argsize = 0;
-  for (int i = 1; i < argc; i++) {
-    argsize += strlen(args[i]);
-    if (argc > i+1) argsize++;
-  }
+int frame_fps() {
+  return 1.0/sapp_frame_duration();
+}
 
-  char cmdstr[argsize];
-  cmdstr[0] = '\0';
-
-  YughWarn("num is %d", argc);
-  
-  for (int i = 0; i < argc; i++) {
-    strcat(cmdstr, args[i]);
-    if (argc > i+1) strcat(cmdstr, " ");
-  }
-  
-  script_evalf("cmd_args('%s');", cmdstr);
-
-  while (!want_quit()) {
+void c_frame()
+{
     double elapsed = glfwGetTime() - lastTick;
     deltaT = elapsed;
     lastTick = glfwGetTime();
@@ -263,18 +243,37 @@ int main(int argc, char **args) {
     }
 
     gameobjects_cleanup();
-  }
-
-  return 0;
 }
 
-int frame_fps() {
-  double fpsms = 0;
-  for (int i = 0; i < FPSBUF; i++) {
-    fpsms += framems[i];
-  }
+void c_clean()
+{
 
-  return FPSBUF / fpsms;
+}
+
+void c_event(const sapp_event *e)
+{
+
+  switch (e->type) {
+    case SAPP_EVENTTYPE_MOUSE_MOVE:
+      input_mouse_moved(e->mouse_x, e->mouse_y);
+      break;
+
+    case SAPP_EVENTTYPE_MOUSE_SCROLL:
+      input_scroll(e->scroll_x, e->scroll_y);
+      break;
+
+    case SAPP_EVENTTYPE_KEY_DOWN:
+      input_key(e->key_code, e->key_repeat ? 2 : 0);
+      break;
+
+    case SAPP_EVENTTYPE_KEY_UP:
+      input_key(e->key_code, 1);
+      break;
+
+    case SAPP_EVENTTYPE_CHAR:
+      input_key(e->char_code);
+      break;
+  }
 }
 
 int sim_playing() { return sim_play == SIM_PLAY; }
@@ -305,4 +304,42 @@ void sim_step() {
 
 void set_timescale(float val) {
   timescale = val;
+}
+
+sapp_desc sokol_main(int argc, char **args) {
+  script_startup();
+
+  int argsize = 0;
+  for (int i = 1; i < argc; i++) {
+    argsize += strlen(args[i]);
+    if (argc > i+1) argsize++;
+  }
+
+  char cmdstr[argsize];
+  cmdstr[0] = '\0';
+
+  for (int i = 0; i < argc; i++) {
+    strcat(cmdstr, args[i]);
+    if (argc > i+1) strcat(cmdstr, " ");
+  }
+  
+  script_evalf("cmd_args('%s');", cmdstr);
+
+  return (sapp_desc){
+    .width = 720,
+    .height = 480,
+    .high_dpi = 0,
+    .sample_count = 8,
+    .fullscreen = 0,
+    .window_title = "Yugine",
+    .enable_clipboard = false,
+    .clipboard_size = 0,
+    .enable_dragndrop = true,
+    .max_dropped_files = 1,
+    .max_dropped_file_path_length = 2048,
+    .init_cb = c_init,
+    .frame_cb = c_frame,
+    .cleanup_cb = c_clean,
+    .event_cb = c_event,
+  };
 }

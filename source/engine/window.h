@@ -1,6 +1,7 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+/*
 #include "render.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -10,7 +11,6 @@ struct window {
     int id;
     int width;
     int height;
-    /* TODO: Bitfield these */
     bool render;
     bool mouseFocus;
     bool keyboardFocus;
@@ -24,9 +24,9 @@ struct window {
 struct Texture;
 
 extern struct window *mainwin;
+*/
 
-
-struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t flags);
+//struct window *MakeSDLWindow(const char *name, int width, int height, uint32_t flags);
 void window_set_icon(const char *png);
 void window_destroy(struct window *w);
 void window_handle_event(struct window *w);
