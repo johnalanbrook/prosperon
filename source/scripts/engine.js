@@ -830,6 +830,14 @@ var Input = {
   setnuke() { cmd(78); },
 };
 
+Input.print_pawn_kbm = function(pawn) {
+  if (!('inputs' in pawn)) return;
+
+  for (var key in pawn.inputs) {
+    Log.warn(`${key} :: ${pawn.inputs[key].doc}`);
+  }
+};
+
 function screen2world(screenpos) { return Yugine.camera.view2world(screenpos); }
 function world2screen(worldpos) { return Yugine.camera.world2view(worldpos); }
 
@@ -873,6 +881,24 @@ var Player = {
   players: [],
   input(fn, ...args) {
     this.pawns.forEach(x => x[fn]?.(...args));
+  },
+
+  raw_input(cmd, ...args) {
+    for (var pawn of this.pawns.reverse()) {
+      if (typeof pawn.inputs?.[cmd] === 'function') {
+        pawn.inputs[cmd](...args);
+	return;
+      }
+    }
+  },
+
+  raw_release(cmd, ...args) {
+    for (var pawn of this.pawns.reverse()) {
+      if (typeof pawn.inputs?.[cmd]?.released === 'function') {
+        pawn.inputs[cmd].released(...args);
+	return;
+      }
+    }
   },
 
   control(pawn) {
@@ -942,6 +968,16 @@ var Register = {
   kbm_input(src, btn, state, ...args) {
     var input = `${src}_${btn}_${state}`;
     Player.players[0].input(input, ...args);
+
+    if (!(state === "pressed" || state === "released")) return;
+    var e_str = "";
+    if (Keys.ctrl()) e_str += "C-";
+    if (Keys.alt()) e_str += "M-";
+    e_str += btn;
+    if (state === "pressed")
+      Player.players[0].raw_input(e_str, ...args);
+    else
+      Player.players[0].raw_release(e_str, ...args);
   },
 
   gamepad_playermap: [],
@@ -1289,7 +1325,7 @@ var Level = {
   },
 
   fullpath() {
-    return `${this.level.fullpath()}.${this.name}`;
+    //return `${this.level.fullpath()}.${this.name}`;
   },
   
   get boundingbox() {

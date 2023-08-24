@@ -107,7 +107,6 @@ void debug_flush(HMM_Mat4 *view)
       .ptr = point_b,
       .size = sizeof(struct point_vertex)*point_c});
     sg_draw(point_sc,point_c,1);
-    YughWarn("DREW %d POINTS", point_c);
   }
   
   if (line_c != 0) {
@@ -573,11 +572,9 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int c
 void draw_grid(int width, int span, struct rgba color)
 {
   cpVect offset = cam_pos();
-  offset = cpvmult(offset, 1/cam_zoom());
   offset.x -= mainwin->width/2;
   offset.y -= mainwin->height/2;
-//  offset.x += span/2;
-  offset.y += span/2;
+  offset = cpvmult(offset, 1/cam_zoom());
 
   sg_apply_pipeline(grid_pipe);
   sg_apply_bindings(&grid_bind);

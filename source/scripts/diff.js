@@ -55,11 +55,14 @@ function complete_assign(target, source) {
 function dainty_assign(target, source)
 {
   for (var key in source) {
+
     if (typeof source[key] === 'function') {
       target[key] = source[key];
       continue;
     }
-    if (!(key in target)) continue;
+    if (!Object.hasOwn(target, key)) continue;
+    if (!Object.getOwnPropertyDescriptor(target, key).writable) continue;
+    
     if (Array.isArray(target[key]))
       target[key] = source[key];
     else if (typeof target[key] === 'object')

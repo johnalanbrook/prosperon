@@ -98,12 +98,12 @@ var Debug = {
       Game.objects.forEach(function(x) {
         GUI.text(x.fullpath(), world2screen(x.pos).add([0,32]), 1, [84,110,255]);
       });
-/*
-    gui_text(sim_playing() ? "PLAYING"
-                         : sim_paused() ?
+
+    gui_text(Game.playing() ? "PLAYING"
+                         : Game.paused() ?
 			 "PAUSED" :
 			 "STOPPED", [0, 0], 1);
-*/			
+			
   },
 };
 
@@ -222,54 +222,41 @@ var Nuke = {
 Object.defineProperty(Nuke, "curwin", {enumerable:false});
 Object.defineProperty(Nuke, "defaultrect", {enumerable:false});
 
-var DebugControls = {
-  input_f1_pressed() {
-    Debug.draw_phys(!Debug.phys_drawing);
-  },
-
-  input_f3_pressed() {
-    Debug.draw_bb = !Debug.draw_bb;
-  },
-
-  input_f5_pressed() {
-    if (Game.paused())
-      Game.play();
-    else
-      Game.pause();
-  },
-
-  input_f6_pressed() {
-    if (Game.paused())
-      Game.step();
-  },
-
-  /* Toggle physics */
-  input_f7_pressed() {
-
-  },
-  
-  input_1_pressed() {
-    if (!Keys.alt()) return;
-    Render.normal();
-  },
-
-  input_2_pressed() {
-    if (!Keys.alt()) return;
-    Render.wireframe();
-  },
-
-  input_f10_pressed() { Time.timescale = 0.1; },
-  input_f10_released() { Time.timescale = 1.0; },
-  input_f12_pressed() {
-    GUI.defaults.debug = !GUI.defaults.debug;
-  },
-
-
-  input_f4_pressed() {
-    Debug.draw_names = !Debug.draw_names;
-    Debug.draw_gizmos = !Debug.draw_gizmos;
-  },
+var DebugControls = {};
+DebugControls.inputs = {};
+DebugControls.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
+DebugControls.inputs.f1.doc = "Draw physics debugging aids.";
+DebugControls.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
+DebugControls.inputs.f3.doc = "Toggle drawing bounding boxes.";
+DebugControls.inputs.f4 = function() {
+  Debug.draw_names = !Debug.draw_names;
+  Debug.draw_gizmos = !Debug.draw_gizmos;
 };
+DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
+DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
+DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
+DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; Log.warn("SET TIMESCALE");};
+DebugControls.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; Log.warn("GUI toggle debug");};
+DebugControls.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
+
+DebugControls.inputs.f5 = function() {
+  if (Game.paused())
+    Game.play();
+  else
+    Game.pause();
+};
+DebugControls.inputs.f5.doc = "Pause or play game simulation."
+
+DebugControls.inputs.f6 = function() {
+  if (Game.paused())
+    Game.step();
+};
+DebugControls.inputs.f6.doc = "Do one step through game while paused.";
+ 
+DebugControls.inputs['M-1'] = Render.normal;
+Render.normal.doc = "Render mode for enabling all shaders and lighting effects.";
+DebugControls.inputs['M-2'] = Render.wireframe;
+Render.wireframe.doc = "Render mode to see wireframes of all models.";
 
 var Time = {
   set timescale(x) { cmd(3, x); },

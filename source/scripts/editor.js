@@ -17,6 +17,7 @@ Yugine.view_camera(editor_camera);
 
 var editor_config = {
   grid_size: 100,
+  grid_color: [99, 255, 128, 100],
 };
 
 var configs = {
@@ -34,7 +35,6 @@ var editor = {
   moveoffset: [0,0],
   startrot: 0,
   rotoffset: 0,
-  obj_panel: false,
   camera: editor_camera,
   edit_level: {}, /* The current level that is being edited */
   working_layer: -1,
@@ -84,23 +84,6 @@ var editor = {
     }
   },
   
-  input_i_pressed() {
-    if (!Keys.ctrl()) return;
-    
-    this.openpanel(levellistpanel, true);
-  },
-  
-  input_y_pressed() {
-    if (Keys.ctrl()) {
-      if (this.selectlist.length !== 1) return;
-      objectexplorer.obj = this.selectlist[0];
-      objectexplorer.on_close = this.save_prototypes;
-      this.openpanel(objectexplorer);
-    } else if (Keys.alt()) {
-      this.openpanel(protoexplorer);
-    }
-  },
-
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
     var go = physics.pos_query(screen2world(Mouse.pos));
     return this.do_select(go);
@@ -127,51 +110,6 @@ var editor = {
   
   curpanel: null,
 
-  input_o_pressed() {
-    if (this.sel_comp) return;
-
-    if (Keys.ctrl() && Keys.alt()) {
-      if (this.selectlist.length === 1 && this.selectlist[0].file) {
-        if (this.edit_level.dirty) return;
-	this.load(this.selectlist[0].file);
-      }
-
-      return;
-    }
-
-    if (Keys.ctrl() && Keys.shift()) {
-      if (!this.edit_level.dirty)
-        this.load_prev();
-
-      return;
-    }
-    
-    if (Keys.ctrl()) {
-      if (this.check_level_nested()) {
-        Log.warn("Nested level ...");
-        return;
-      }
-
-      if (this.edit_level.dirty) {
-	this.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", function() {
-	  this.clear_level();
-	  this.openpanel(openlevelpanel);
-	}.bind(this)));
-	return;
-      }
-
-      this.openpanel(openlevelpanel);
-      return;
-    }
-
-    if (Keys.alt()) {
-      this.openpanel(addlevelpanel);
-      return;
-    }
-    
-    this.obj_panel = !this.obj_panel;
-  },
-
   check_level_nested() {
     if (this.edit_level.level) {
       this.openpanel(gen_notify("Can't close a nested level. Save up to the root before continuing."));
@@ -184,72 +122,11 @@ var editor = {
   levellist: false,
   programmode: false,
 
-  input_l_pressed() {
-    if (this.sel_comp) return;
-    if (Keys.ctrl()) {
-      texteditor.on_close = function() { editor.edit_level.script = texteditor.value;};
-      texteditor.input_s_pressed = function() {
-        if (!Keys.ctrl()) return;
-        editor.edit_level.script = texteditor.value;
-	editor.save_current();
-	texteditor.startbuffer = texteditor.value.slice();
-      };
-      
-      this.openpanel(texteditor);
-      if (!this.edit_level.script)
-        this.edit_level.script = "";
-      texteditor.value = this.edit_level.script;
-      texteditor.start();
-    } else if (Keys.alt()) {
-      this.programmode = !this.programmode;
-    }
-  },
-
   delete_empty_reviver(key, val) {
     if (typeof val === 'object' && val.empty)
       return undefined;
 
     return val;
-  },
-
-
-  input_minus_pressed() {
-    if (this.sel_comp) return;
-    
-    if (!this.selectlist.empty) {
-      this.selectlist.forEach(function(x) { x.draw_layer--; });
-      return;
-    }
-    
-    if (this.working_layer > -1)
-      this.working_layer--;
-  },
-
-  input_plus_pressed() {
-    if (this.sel_comp) return;
-    
-    if (!this.selectlist.empty) {
-      this.selectlist.forEach(x => x.draw_layer++);
-      return;
-    }
-    
-    if (this.working_layer < 4)
-      this.working_layer++;
-  },
-
-  input_p_pressed() {
-    if (Keys.ctrl()) {
-      if (Keys.shift()) {
-        /* Save prototype as */
-	if (this.selectlist.length !== 1) return;
-	this.openpanel(saveprototypeas);
-	return;
-      }
-      else {
-        this.save_proto();
-      }
-    } else if (Keys.alt())
-      this.openpanel(prefabpanel);
   },
 
   save_proto() {
@@ -334,11 +211,6 @@ var editor = {
     this.save_proto();
   },
 
-  /* Makes it so only these objects are editable */
-  focus_objects(objs) {
-
-  },
-
   dup_objects(x) {
     var objs = x.slice();
     var duped = [];
@@ -363,13 +235,6 @@ var editor = {
     return duped.flat();
   },
 
-  input_d_pressed() {
-    if (!Keys.ctrl() || this.selectlist.length === 0) return;
-    var duped = this.dup_objects(this.selectlist);
-    this.unselect();
-    this.selectlist = duped;
-  },
-  
   sel_start: [],
 
   input_lmouse_pressed() {
@@ -560,19 +425,6 @@ var editor = {
 
   sel_comp: null,
 
-  input_m_pressed() {
-    if (this.sel_comp) return;
-    if (Keys.ctrl()) {
-      this.selectlist.forEach(function(x) {
-        x.flipy = !x.flipy;
-      });
-    } else
-      this.selectlist.forEach(function(x) {
-        x.flipx = !x.flipx;
-      });
-    
-  },
-
   input_u_pressed() {
     if (Keys.ctrl()) {
       this.selectlist.forEach(function(x) {
@@ -589,10 +441,6 @@ var editor = {
 
   comp_info: false,
   
-  input_q_pressed() {
-    this.comp_info = !this.comp_info;
-  },
-
   brush_obj: null,
 
   input_b_pressed() {
@@ -654,36 +502,6 @@ var editor = {
     this.camera.zoom = zoom*1.3;    
   },
 
-  input_f_pressed() {
-    if (!Keys.ctrl()) {
-      if (this.selectlist.length === 0) return;
-      var bb = this.selectlist[0].boundingbox;
-      this.selectlist.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox); });
-      this.zoom_to_bb(bb);
-      
-      return;
-    }
-
-    if (Keys.shift()) {
-      if (!this.edit_level.level) return;
-
-      this.edit_level = this.edit_level.level;
-      this.unselect();
-      this.reset_undos();
-      this.curlvl = this.edit_level.save();
-      this.edit_level.filejson = this.edit_level.save();
-      this.edit_level.check_dirty();
-    } else {
-      if (this.selectlist.length === 1) {
-        if (!this.selectlist[0].file) return;
-        this.edit_level = this.selectlist[0];
-	this.unselect();
-	this.reset_undos();
-	this.curlvl = this.edit_level.save();
-      }
-    }
-  },
-  
   input_rmouse_down() {
     if (Keys.ctrl() && Keys.alt())
       this.camera.zoom = this.z_start * (1 + (Mouse.pos[1] - this.mousejoy[1])/500);
@@ -809,35 +627,6 @@ var editor = {
       Register.unregister_obj(this);
   },
    
-  input_f5_pressed() {
-    /* Start debug.lvl */
-    if (!sim_playing()) {
-      this.start_play_ed();
-      Level.loadlevel("debug_start.lvl");
-    }
-  },
-  
-  input_f6_pressed() {
-    /* Start game.lvl */
-    if (!sim_playing()) {
-      this.start_play_ed();
-//      Level.loadlevel(
-      /* Load level of what was being edited */
-    }
-  },
-  
-  input_f7_pressed() {
-    /* Start current level */
-    if (!sim_playing()) {
-      this.start_play_ed();
-      Level.loadlevel("game.lvl");
-    }
-  },
-  
-  input_escape_pressed() {
-    this.openpanel(quitpanel);
-  },
-  
   moveoffsets: [],
 
   input_g_pressed() {
@@ -915,45 +704,6 @@ var editor = {
     this.curpanels = this.curpanels.filter(function(x) { return x.on; });
   },
   
-  input_s_pressed() {
-    if (Keys.ctrl()) {
-      if (Keys.shift()) {
-        this.openpanel(saveaspanel);
-	return;
-      }
-
-      if (this.edit_level.level) {
-        if (!this.edit_level.unique)
-	  this.save_current();
-
-        this.selectlist = [];
-	this.selectlist.push(this.edit_level);
-        this.edit_level = this.edit_level.level;
-
-	return;
-      }
-    
-      this.save_current();
-      return;
-    }
-
-    var offf = this.cursor ? this.cursor : this.selected_com;
-    this.scaleoffset = Vector.length(Mouse.worldpos.sub(offf));
-
-    if (this.sel_comp) {
-      if (!('scale' in this.sel_comp)) return;
-      this.startscales = [];
-      this.startscales.push(this.sel_comp.scale);
-      return;
-    }
-    
-    this.selectlist.forEach(function(x, i) {
-      this.startscales[i] = x.scale;
-      if (this.cursor)
-        this.startoffs[i] = x.pos.sub(this.cursor);
-    }, this);
-  },
-  
   input_s_down() {
     if (!this.scaleoffset) return;
     var offf = this.cursor ? this.cursor : this.selected_com;
@@ -980,35 +730,6 @@ var editor = {
   startrots: [],
   startpos: [],
   startoffs: [],
-  
-  input_r_pressed() {
-    this.startrots = [];
-    
-    if (Keys.ctrl()) {
-      this.selectlist.forEach(function(x) {
-        x.angle = -x.angle;
-      });
-      return;
-    }
-  
-    if (this.sel_comp && 'angle' in this.sel_comp) {
-      var relpos = screen2world(Mouse.pos).sub(this.sel_comp.gameobject.pos);
-      this.startoffset = Math.atan2(relpos.y, relpos.x);
-      this.startrot = this.sel_comp.angle;
-      
-      return;
-    }
-
-    var offf = this.cursor ? this.cursor : this.selected_com;
-    var relpos = screen2world(Mouse.pos).sub(offf);
-    this.startoffset = Math.atan2(relpos[1], relpos[0]);
-    
-    this.selectlist.forEach(function(x, i) {
-      this.startrots[i] = x.angle;
-      this.startpos[i] = x.pos;
-      this.startoffs[i] = x.pos.sub(offf);
-    }, this);
-  },
   
   input_r_down() {
     if (this.sel_comp && 'angle' in this.sel_comp) {
@@ -1141,15 +862,6 @@ var editor = {
     this.restore_level(this.filesnap);
   },
 
-  input_z_pressed() {
-    if (Keys.ctrl()) {
-      if (Keys.shift())
-        this.redo();
-      else
-        this.undo();
-    }
-  },
-
   save_current() {
     if (!this.edit_level.file) {
       this.openpanel(saveaspanel);
@@ -1172,21 +884,6 @@ var editor = {
     Level.sync_file(this.edit_level.file);
   },
   
-  input_t_pressed() {
-    if (Keys.ctrl()) {
-      if (Keys.shift()) {
-        if (this.selectlist.length !== 1) return;
-        this.openpanel(savetypeas);
-        return;
-      }
-    }
-
-    this.selectlist.forEach(function(x) { x.selectable = false; });
-
-    if (Keys.alt())
-      this.edit_level.objects.forEach(function(x) { x.selectable = true; });
-  },
-
   clear_level() {
     Log.info("Closed level.");
 
@@ -1198,18 +895,6 @@ var editor = {
     this.unselect();
     this.edit_level.kill();
     this.edit_level = Level.create();
-  },
-
-  input_n_pressed() {
-    if (!Keys.ctrl()) return;
-    
-    if (this.edit_level.dirty) {
-      Log.info("Level has changed; save before starting a new one.");
-      this.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => this.clear_level()));
-      return;
-    }
-    
-    this.clear_level();    
   },
 
   _sel_comp: null,
@@ -1345,7 +1030,7 @@ var editor = {
         gui_img("icons/icons8-lock-16.png", world2screen(obj.pos));
     });
 
-    Debug.draw_grid(1, editor_config.grid_size/editor_camera.zoom);
+    Debug.draw_grid(1, editor_config.grid_size/editor_camera.zoom, editor_config.grid_color);
     var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); }, this);
     var endgrid = screen2world([Window.width, 0]);
     
@@ -1468,13 +1153,6 @@ var editor = {
     this.paste();
   },
   
-  input_e_pressed() {
-    if (Keys.ctrl()) {
-      this.openpanel(assetexplorer);
-      return;
-    }
-  },
-
   lvl_history: [],
 
   load(file) {
@@ -1549,35 +1227,313 @@ var editor = {
     this.save_current();
   },
   
-  input_h_pressed() {
-    if (this.sel_comp) return;
-    if (Keys.ctrl()) {
-      Game.objects.forEach(function(x) { x.visible = true; });
-    } else {
-      var visible = true;
-      this.selectlist.forEach(function(x) { if (x.visible) visible = false; });
-      this.selectlist.forEach(function(x) { x.visible = visible; });
-    }
-  },
-
-  input_a_pressed() {
-    if (Keys.alt()) {
-      this.openpanel(prefabpanel);
-      return;
-    }
-    if (!Keys.ctrl()) return;
-    if (!this.selectlist.empty) {
-      this.unselect();
-      return;
-    }
-    this.unselect();
-
-    this.selectlist = this.edit_level.objects.slice();
-  },
-
   repl: false,
-  input_backtick_pressed() { this.repl = !this.repl; },
 }
+
+editor.inputs = {};
+editor.inputs['M-a'] = function () { editor.openpanel(prefabpanel); };
+editor.inputs['M-a'].doc = "Open prefab panel.";
+editor.inputs['C-a'] = function() {
+  if (!editor.selectlist.empty) { editor.unselect(); return; }
+  editor.unselect();
+  editor.selectlist = editor.edit_level.objects.slice();
+  Log.warn("C-a pressed.");
+};
+editor.inputs['C-a'].doc = "Select all objects.";
+
+editor.inputs['backtick'] = function() { editor.repl = !editor.repl; };
+editor.inputs['backtick'].doc = "Open or close the repl.";
+
+/* Return if selected component. */
+editor.inputs['h'] = function() {
+  var visible = true;
+  editor.selectlist.forEach(function(x) { if (x.visible) visible = false; });
+  editor.selectlist.forEach(function(x) { x.visible = visible; });
+};
+editor.inputs['h'].doc = "Toggle object hidden.";
+
+editor.inputs['C-h'] = function() { Game.objects.forEach(function(x) { x.visible = true; }); };
+editor.inputs['C-h'].doc = "Unhide all objects.";
+
+editor.inputs['C-e'] = function() { editor.openpanel(assetexplorer); };
+editor.inputs['C-e'].doc = "Open asset explorer.";
+
+editor.inputs['C-i'] = function() { editor.openpanel(levellistpanel, true); };
+editor.inputs['C-i'].doc = "Open level list.";
+
+editor.inputs['C-y'] = function() {
+  if (editor.selectlist.length !== 1) return;
+  objectexplorer.obj = editor.selectlist[0];
+  objectexplorer.on_close = editor.save_prototypes;
+  editor.openpanel(objectexplorer);
+};
+editor.inputs['C-y'].doc = "Open the object explorer for a selected object.";
+
+editor.inputs['M-y'] = function() { editor.openpanel(protoexplorer); };
+editor.inputs['M-y'].doc = "Open the prototype explorer.";
+
+editor.inputs['C-S-p'] = function() {
+  if (editor.selectlist.length !== 1) return;
+  editor.openpanel(saveprototypeas);
+};
+editor.inputs['C-S-p'].doc = "Save prototype as. Ie, to a new prototype.";
+
+editor.inputs['C-p'] = function() { editor.save_proto(); };
+editor.inputs['C-p'].doc = "Save the selected prototype to disk.";
+
+editor.inputs['M-p'] = function() { editor.openpanel(prefabpanel); };
+editor.inputs['M-p'].doc = "Open the prefab panel.";
+
+editor.inputs['C-d'] = function() {
+  if (editor.selectlist.length === 0) return;
+  var duped = editor.dup_objects(editor.selectlist);
+  editor.unselect();
+  editor.selectlist = duped;
+};
+editor.inputs['C-d'].doc = "Duplicate all selected objects.";
+
+editor.inputs['C-m'] = function() {
+  editor.selectlist.forEach(function(x) { x.flipy = !x.flipy; });
+};
+editor.inputs['C-m'].doc = "Mirror selected objects on the Y axis.";
+
+editor.inputs.m = function() { editor.selectlist.forEach(function(x) { x.flipx = !x.flipx; }); };
+editor.inputs.m.doc = "Mirror selected objects on the X axis.";
+
+editor.inputs.q = function() { editor.comp_info = !editor.comp_info; };
+editor.inputs.q.doc = "Toggle help for the selected component.";
+
+editor.inputs.f = function() {
+  if (editor.selectlist.length === 0) return;
+  var bb = editor.selectlist[0].boundingbox;
+  editor.selectlist.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox); });
+  editor.zoom_to_bb(bb);
+};
+editor.inputs.f.doc = "Find the selected objects.";
+
+editor.inputs['C-f'] = function() {
+  if (editor.selectlist.length !== 1) return;
+  if (!editor.selectlist[0].file) return;
+  editor.edit_level = editor.selectlist[0];
+  editor.unselect();
+  editor.reset_undos();
+  editor.curlvl = editor.edit_level.save();
+};
+editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
+
+editor.inputs['C-S-f'] = function() {
+  if (!editor.edit_level.level) return;
+
+  editor.edit_level = editor.edit_level.level;
+  editor.unselect();
+  editor.reset_undos();
+  editor.curlvl = editor.edit_level.save();
+  editor.edit_level.filejson = editor.edit_level.save();
+  editor.edit_level.check_dirty();
+};
+editor.inputs['C-S-f'].doc = "Tunnel out of the level you are editing, saving it in the process.";
+
+editor.inputs['C-r'] = function() { editor.selectlist.forEach(function(x) { x.angle = -x.angle; }); };
+editor.inputs['C-r'].doc = "Negate the selected's angle.";
+
+editor.inputs.r = function() {
+  editor.startrots = [];
+
+  if (editor.sel_comp && 'angle' in editor.sel_comp) {
+    var relpos = screen2world(Mouse.pos).sub(editor.sel_comp.gameobject.pos);
+    editor.startoffset = Math.atan2(relpos.y, relpos.x);
+    editor.startrot = editor.sel_comp.angle;
+
+    return;
+  }
+
+  var offf = editor.cursor ? editor.cursor : editor.selected_com;
+  var relpos = screen2world(Mouse.pos).sub(offf);
+  editor.startoffset = Math.atan2(relpos[1], relpos[0]);
+
+  editor.selectlist.forEach(function(x, i) {
+    editor.startrots[i] = x.angle;
+    editor.startpos[i] = x.pos;
+    editor.startoffs[i] = x.pos.sub(offf);
+  }, editor);
+};
+editor.inputs.r.doc = "Rotate selected using the mouse while held down.";
+
+editor.inputs.f5 = function() {
+  if (!Game.playing()) {
+    editor.start_play_ed();
+    Level.loadlevel("debug_start.lvl");
+  }
+};
+editor.inputs.f5.doc = "Start level 'debug_start.lvl'.";
+
+editor.inputs.f6 = function() {
+  if (Game.playing()) return;
+
+//  Level.loadlevel
+};
+editor.inputs.f6.doc = "Load game from currently edited level.";
+
+editor.inputs.f7 = function() {
+  if (Game.playing()) return;
+  Level.loadlevel("game.lvl");
+};
+editor.inputs.f7.doc = "Start game from the beginning.";
+
+editor.inputs.escape = function() { editor.openpanel(quitpanel); }
+editor.inputs.escape.doc = "Quit editor.";
+
+editor.inputs.f12 = function() { Log.warn("Editor F12 pressed."); };
+
+editor.inputs['C-s'] = function() {
+  if (editor.edit_level.level) {
+    if (!editor.edit_level.unique)
+      editor.save_current();
+
+    editor.selectlist = [];
+    editor.selectlist.push(editor.edit_level);
+    editor.edit_level = editor.edit_level.level;
+
+    return;
+  }
+
+  editor.save_current();
+};
+editor.inputs['C-s'].doc = "Save selected.";
+
+editor.inputs['C-S-s'] = function() {
+  editor.openpanel(saveaspanel);
+};
+editor.inputs['C-S-s'].doc = "Save selected as.";
+
+editor.inputs['C-z'] = function() { editor.undo(); };
+editor.inputs['C-z'].doc = "Undo the last change made.";
+
+editor.inputs['C-S-z'] = function() { editor.redo(); };
+editor.inputs['C-S-z'].doc = "Redo the last undo.";
+
+editor.inputs['C-S-t'] = function() {
+  if (editor.selectlist.length !== 1) return;
+  editor.openpanel(savetypeas);
+};
+editor.inputs['C-S-t'].doc = "Save type as.";
+
+editor.inputs.t = function() { editor.selectlist.forEach(function(x) { x.selectable = false; }); };
+editor.inputs.t.doc = "Lock selected objects to make them non selectable.";
+
+editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x) { x.selectable = true; }); };
+editor.inputs['M-t'].doc = "Unlock all objects in current level.";
+
+editor.inputs['C-n'] = function() {
+  if (editor.edit_level.dirty) {
+    Log.info("Level has changed; save before starting a new one.");
+    editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => editor.clear_level()));
+    return;
+  }
+
+  editor.clear_level();    
+};
+editor.inputs['C-n'].doc = "Open a new level.";
+
+editor.inputs['C-o'] = function() {
+  if (editor.check_level_nested()) {
+    Log.warn("Nested level ...");
+    return;
+  }
+
+  if (editor.edit_level.dirty) {
+    editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", function() {
+      editor.clear_level();
+      editor.openpanel(openlevelpanel);
+    }.bind(editor)));
+    return;
+  }
+
+  editor.openpanel(openlevelpanel);
+};
+editor.inputs['C-o'].doc = "Open a level.";
+
+editor.inputs['M-o'] = function() {
+   editor.openpanel(addlevelpanel);
+};
+editor.inputs['M-o'].doc = "Select a level to add to the current level.";
+
+editor.inputs['C-M-o'] = function() {
+  if (editor.selectlist.length === 1 && editor.selectlist[0].file) {
+    if (editor.edit_level.dirty) return;
+    editor.load(editor.selectlist[0].file);
+  }
+};
+editor.inputs['C-M-o'].doc = "Revert opened level back to its disk form.";
+
+editor.inputs['C-S-o'] = function() {
+  if (!editor.edit_level.dirty)
+    editor.load_prev();
+};
+editor.inputs['C-S-o'].doc = "Open previous level.";
+
+editor.inputs['C-l'] = function() {
+  texteditor.on_close = function() { editor.edit_level.script = texteditor.value;};
+  texteditor.input_s_pressed = function() {
+    if (!Keys.ctrl()) return;
+    editor.edit_level.script = texteditor.value;
+    editor.save_current();
+    texteditor.startbuffer = texteditor.value.slice();
+  };
+
+  editor.openpanel(texteditor);
+  if (!editor.edit_level.script)
+    editor.edit_level.script = "";
+  texteditor.value = editor.edit_level.script;
+  texteditor.start();
+};
+editor.inputs['C-l'].doc = "Open script editor for the level.";
+
+editor.inputs['M-l'] = function() { editor.programmode = !editor.programmode; };
+editor.inputs['M-l'].doc = "Toggle program mode.";
+
+editor.inputs.minus = function() {
+  if (!editor.selectlist.empty) {
+    editor.selectlist.forEach(function(x) { x.draw_layer--; });
+    return;
+  }
+
+  if (editor.working_layer > -1)
+    editor.working_layer--;
+};
+editor.inputs.minus.doc = "Go down one working layer, or, move selected objects down one layer.";
+
+editor.inputs.plus = function() {
+  if (!editor.selectlist.empty) {
+    editor.selectlist.forEach(x => x.draw_layer++);
+    return;
+  }
+
+  if (editor.working_layer < 4)
+    editor.working_layer++;
+};
+
+editor.inputs.plus.doc = "Go up one working layer, or, move selected objects down one layer.";
+
+editor.inputs.s = function() {
+  var offf = editor.cursor ? editor.cursor : editor.selected_com;
+  editor.scaleoffset = Vector.length(Mouse.worldpos.sub(offf));
+
+  if (editor.sel_comp) {
+    if (!('scale' in editor.sel_comp)) return;
+    editor.startscales = [];
+    editor.startscales.push(editor.sel_comp.scale);
+    return;
+  }
+
+  editor.selectlist.forEach(function(x, i) {
+    editor.startscales[i] = x.scale;
+    if (editor.cursor)
+      editor.startoffs[i] = x.pos.sub(editor.cursor);
+  }, editor);
+
+};
+editor.inputs.s.doc = "Scale selected.";
 
 var inputpanel = {
   title: "untitled",
@@ -2540,5 +2496,3 @@ Debug.register_call(editor.ed_debug, editor);
 if (IO.exists("editor.config"))
   load_configs("editor.config");
 editor.edit_level = Level.create();
-
-Log.warn('bottom of editor');

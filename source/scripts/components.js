@@ -30,6 +30,7 @@ var sprite = clone(component, {
   pos: [0,0],
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
+  set asset(str) { this.path = str; Log.warn(`SET ${str} ON THE SPRITE`); this.sync();},
   angle: 0,
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
 
@@ -68,7 +69,9 @@ var sprite = clone(component, {
     sprite.obscure('boundingbox');
     return sprite;
   },
-  
+
+  input_kp9_pressed() { this.pos = [0,0]; },
+  input_kp8_pressed() { this.pos = [-0.5, 0]; },
   input_kp7_pressed() { this.pos = [-1,0]; },
   input_kp6_pressed() { this.pos = [0,-0.5]; },
   input_kp5_pressed() { this.pos = [-0.5,-0.5]; },
@@ -247,9 +250,7 @@ var collider2d = clone(component, {
     set sensor(x) { cmd(18,this.shape,x); },
     get sensor() { return cmd(21,this.shape); },
     set enabled(x) { cmd(22,this.shape,x); },
-    get enabled() {
-      Log.warn("getting enabled");
-      return cmd(23,this.shape); }
+    get enabled() { return cmd(23,this.shape); }
   },
   
 });

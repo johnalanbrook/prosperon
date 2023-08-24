@@ -233,10 +233,10 @@ int main(int argc, char **args) {
     //double wait = fmax(0, renderMS - elapsed);
     nuke_input_begin();
     
-    if (sim_playing())
+//    if (sim_playing())
       input_poll(fmax(0, renderMS-elapsed));
-    else
-      input_poll(1000);
+//    else
+//      input_poll(1000);
       
     window_all_handle_events();
     nuke_input_end();
