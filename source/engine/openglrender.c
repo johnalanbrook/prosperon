@@ -266,7 +266,6 @@ void render_winsize()
 
 static cpBody *camera = NULL;
 void set_cam_body(cpBody *body) {
-  YughWarn("Camera body set to %p", body);
   camera = body;
 }
 

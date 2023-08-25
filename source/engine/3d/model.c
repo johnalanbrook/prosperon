@@ -37,7 +37,6 @@ static sg_shader model_shader;
 static sg_pipeline model_pipe;
 
 void model_init() {
-  YughWarn("Creating model");
   model_shader = sg_compile_shader("shaders/diffuse_v.glsl", "shaders/diffuse_f.glsl", &(sg_shader_desc){
       .vs.uniform_blocks[0] = {
           .size = sizeof(float) * 16 * 4,

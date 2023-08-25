@@ -376,7 +376,7 @@ const char *keyname_extd(int key, int scancode) {
       kkey = "minus";
       break;
     case GLFW_KEY_GRAVE_ACCENT:
-      kkey = "backtick";
+      kkey = "`";
       break;
 
     case GLFW_KEY_LEFT_BRACKET:
@@ -575,6 +575,6 @@ int want_quit() {
 }
 
 void quit() {
-  YughInfo("Exiting game.");
+  exit(0);
   mquit = 1;
 }

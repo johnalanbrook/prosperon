@@ -190,6 +190,22 @@ int main(int argc, char **args) {
 
   engine_init();
 
+  int argsize = 0;
+  for (int i = 1; i < argc; i++) {
+    argsize += strlen(args[i]);
+    if (argc > i+1) argsize++;
+  }
+
+  char cmdstr[argsize];
+  cmdstr[0] = '\0';
+
+  for (int i = 0; i < argc; i++) {
+    strcat(cmdstr, args[i]);
+    if (argc > i+1) strcat(cmdstr, " ");
+  }
+  
+  script_evalf("cmd_args('%s');", cmdstr);
+
   const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
   YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
@@ -208,23 +224,6 @@ int main(int argc, char **args) {
   input_init();
   openglInit();
 
-  int argsize = 0;
-  for (int i = 1; i < argc; i++) {
-    argsize += strlen(args[i]);
-    if (argc > i+1) argsize++;
-  }
-
-  char cmdstr[argsize];
-  cmdstr[0] = '\0';
-
-  YughWarn("num is %d", argc);
-  
-  for (int i = 0; i < argc; i++) {
-    strcat(cmdstr, args[i]);
-    if (argc > i+1) strcat(cmdstr, " ");
-  }
-  
-  script_evalf("cmd_args('%s');", cmdstr);
 
   while (!want_quit()) {
     double elapsed = glfwGetTime() - lastTick;

@@ -32,8 +32,12 @@ function cmd_args(cmdargs)
       continue;
 
     var c = Cmdline.cmds.find(function(cmd) { return cmd.flag === cmds[i].slice(1); });
-    if (c && c.fn)
-      c.fn();
+    if (c && c.fn) {
+      if (cmds[i+1] && cmds[i+1][0] !== '-')
+        c.fn(cmds[i+1]);
+      else
+        c.fn();
+    }
   }
 
   if (Cmdline.play)
@@ -43,10 +47,19 @@ function cmd_args(cmdargs)
 }
 
 Cmdline.register_cmd("p", function() { Cmdline.play = true; }, "Launch engine in play mode.");
-Cmdline.register_cmd("v", function() { Log.warn(cmd(120)); }, "Display engine info.");
+Cmdline.register_cmd("v", function() { Log.say(cmd(120)); }, "Display engine info.");
 Cmdline.register_cmd("c", null, "Redirect logging to console.");
 Cmdline.register_cmd("l", null, "Set logging file name.");
-Cmdline.register_cmd("h", function() { Log.warn("Helping."); exit();}, "Help.");
+Cmdline.register_cmd("h", function() {
+  Game.quit();
+},
+"Help.");
+
+Cmdline.register_cmd("e", function(pawn) {
+  run("scripts/editor.js");
+  eval(`Log.write(Input.print_md_kbm(${pawn}));`);
+  Game.quit();
+}, "Print input documentation for a given object." );
 
 function run(file)
 {
@@ -109,6 +122,10 @@ var Log = {
 
   write(msg) {
     cmd(91,msg);
+  },
+
+  say(msg) {
+    cmd(91, `${msg}\n`);
   },
 
   stack(skip = 0) {
@@ -832,10 +849,25 @@ var Input = {
 
 Input.print_pawn_kbm = function(pawn) {
   if (!('inputs' in pawn)) return;
+  var str = "";
+  for (var key in pawn.inputs) {
+    str += `${key} | ${pawn.inputs[key].doc}\n`;
+  }
+  return str;
+};
+
+Input.print_md_kbm = function(pawn) {
+  if (!('inputs' in pawn)) return;
+
+  var str = "";
+  str += "|control|description|\n|---|---|\n";
 
   for (var key in pawn.inputs) {
-    Log.warn(`${key} :: ${pawn.inputs[key].doc}`);
+    str += `|${key}|${pawn.inputs[key].doc}|`;
+    str += "\n";
   }
+
+  return str;
 };
 
 function screen2world(screenpos) { return Yugine.camera.view2world(screenpos); }
@@ -883,24 +915,29 @@ var Player = {
     this.pawns.forEach(x => x[fn]?.(...args));
   },
 
-  raw_input(cmd, ...args) {
+  raw_input(cmd, state, ...args) {
     for (var pawn of this.pawns.reverse()) {
-      if (typeof pawn.inputs?.[cmd] === 'function') {
-        pawn.inputs[cmd](...args);
-	return;
+      if (!pawn.inputs?.[cmd]) continue;
+
+      var fn = null;
+
+      switch (state) {
+        case 'pressed':
+	  fn = pawn.inputs[cmd];
+	  break;
+	case 'rep':
+	  fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
+	  break;
+	case 'released':
+	  fn = pawn.inputs[cmd].released;
+	  break;
       }
+
+      if (typeof fn === 'function')
+        fn.call(pawn, ... args);
     }
   },
-
-  raw_release(cmd, ...args) {
-    for (var pawn of this.pawns.reverse()) {
-      if (typeof pawn.inputs?.[cmd]?.released === 'function') {
-        pawn.inputs[cmd].released(...args);
-	return;
-      }
-    }
-  },
-
+  
   control(pawn) {
     this.pawns.push_unique(pawn);
   },
@@ -969,15 +1006,17 @@ var Register = {
     var input = `${src}_${btn}_${state}`;
     Player.players[0].input(input, ...args);
 
-    if (!(state === "pressed" || state === "released")) return;
+    if (!(state === "pressed" || state === "released" || state === "rep")) return;
+    if (btn === 'lmouse')
+      btn = 'lm';
+
+    if (btn === 'rmouse')
+      btn = 'rm';
     var e_str = "";
     if (Keys.ctrl()) e_str += "C-";
     if (Keys.alt()) e_str += "M-";
     e_str += btn;
-    if (state === "pressed")
-      Player.players[0].raw_input(e_str, ...args);
-    else
-      Player.players[0].raw_release(e_str, ...args);
+    Player.players[0].raw_input(e_str, state, ...args);
   },
 
   gamepad_playermap: [],
@@ -1002,7 +1041,6 @@ var Register = {
   },
 
   unregister_obj(obj) {
-    Log.warn(`Unregister ${JSON.stringify(obj.body)}`);  
     this.updates = this.updates.filter(x => x[1] !== obj);
     this.guis = this.guis.filter(x => x[1] !== obj);
     this.nk_guis = this.nk_guis.filter(x => x[1] !== obj);
@@ -2184,8 +2222,6 @@ var gameobject = {
     complete_assign(obj, props);
     obj.sync();
     obj.defn('components', {});
-
-    Log.warn(`Made an object with ID ${obj.body}`);
 
     cmd(113, obj.body, obj);
 

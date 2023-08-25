@@ -228,18 +228,6 @@ var collider2d = clone(component, {
   name: "collider 2d",
   sensor: false,
 
-  input_s_pressed() {
-    if (!Keys.alt()) return;
-
-    this.sensor = !this.sensor;
-  },
-
-  input_t_pressed() {
-    if (!Keys.alt()) return;
-
-    this.enabled = !this.enabled;
-  },
-
   kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
 
   register_hit(fn, obj) {
@@ -255,6 +243,13 @@ var collider2d = clone(component, {
   
 });
 
+collider2d.inputs = {};
+collider2d.inputs['M-s'] = function() { this.sensor = !this.sensor; }
+collider2d.inputs['M-s'].doc = "Toggle if this collider is a sensor.";
+
+collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
+collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
+
 var sync_proxy = {
   set(t,p,v) {
     t[p] = v;
@@ -266,8 +261,8 @@ var sync_proxy = {
 var polygon2d = clone(collider2d, {
   name: "polygon 2d",
   points: [],
-  mirrorx: false,
-  mirrory: false,
+  flipx: false,
+  flipy: false,
 
   clone(spec) {
     var obj = Object.create(this);
@@ -304,24 +299,10 @@ var polygon2d = clone(collider2d, {
   },
 
   /* EDITOR */  
-  help: "Ctrl-click Add a point\nShift-click Remove a point",  
-  
-  input_f10_pressed() {
-    this.points = sortpointsccw(this.points);
-  },
-
-  input_b_pressed() {
-    if (!Keys.ctrl()) return;
-    
-    this.points = this.spoints;
-    this.mirrorx = false;
-    this.mirrory = false;
-  },
-  
   get spoints() {
     var spoints = this.points.slice();
     
-    if (this.mirrorx) {
+    if (this.flipx) {
       spoints.forEach(function(x) {
         var newpoint = x.slice();
 	newpoint.x = -newpoint.x;
@@ -329,7 +310,7 @@ var polygon2d = clone(collider2d, {
       });
     }
     
-    if (this.mirrory) {
+    if (this.flipy) {
       spoints.forEach(function(x) {
         var newpoint = x.slice();
 	newpoint.y = -newpoint.y;
@@ -351,16 +332,6 @@ var polygon2d = clone(collider2d, {
       Debug.numbered_point(this.gameobject.this2world(x), i);
     }, this);
   },
-  
-  input_lmouse_pressed() {
-    if (Keys.ctrl()) {
-      this.points.push(this.gameobject.world2this(Mouse.worldpos));
-    } else if (Keys.shift()) {
-      var idx = grab_from_points(screen2world(Mouse.pos), this.points.map(this.gameobject.this2world,this.gameobject), 25);
-      if (idx === -1) return;
-      this.points.splice(idx, 1);
-    }
-  },
 
   pick(pos) {
     return Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
@@ -369,14 +340,32 @@ var polygon2d = clone(collider2d, {
   query() {
     return cmd(80, this.shape);
   },
-  
-  input_m_pressed() {
-    if (Keys.ctrl())
-      this.mirrory = !this.mirrory;
-    else
-      this.mirrorx = !this.mirrorx;
-  },
 });
+
+polygon2d.inputs = {};
+polygon2d.inputs.f10 = function() {
+  this.points = sortpointsccw(this.points);
+};
+polygon2d.inputs.f10.doc = "Sort all points to be CCW order.";
+
+polygon2d.inputs['C-lm'] = function() {
+  this.points.push(this.gameobject.world2this(Mouse.worldpos));
+};
+polygon2d.inputs['C-lm'].doc = "Add a point to location of mouse.";
+
+polygon2d.inputs['S-lm'] = function() {
+  var idx = grab_from_points(screen2world(Mouse.pos), this.points.map(this.gameobject.this2world,this.gameobject), 25);
+  if (idx === -1) return;
+  this.points.splice(idx, 1);
+};
+polygon2d.inputs['S-lm'].doc = "Remove point under mouse.";
+
+polygon2d.inputs['C-b'] = function() {
+  this.points = this.spoints;
+  this.flipx = false;
+  this.flipy = false;
+};
+polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 
 var bucket = clone(collider2d, {
   name: "bucket",
@@ -403,8 +392,8 @@ var bucket = clone(collider2d, {
     looped: 3
   },
   
-  mirrorx: false,
-  mirrory: false,
+  flipx: false,
+  flipy: false,
   
   hollow: false,
   hollowt: 0,
@@ -412,7 +401,7 @@ var bucket = clone(collider2d, {
   get spoints() {
     var spoints = this.cpoints.slice();
     
-    if (this.mirrorx) {
+    if (this.flipx) {
       for (var i = spoints.length-1; i >= 0; i--) {
         var newpoint = spoints[i].slice();
 	newpoint.x = -newpoint.x;
@@ -420,7 +409,7 @@ var bucket = clone(collider2d, {
       }
     }
     
-    if (this.mirrory) {
+    if (this.flipy) {
       for (var i = spoints.length-1; i >= 0; i--) {
         var newpoint = spoints[i].slice();
 	newpoint.y = -newpoint.y;
@@ -521,138 +510,125 @@ var bucket = clone(collider2d, {
     }, this);
   },
   
-  help: "Ctrl-click Add a point\nShift-click Remove a point\n+,- Increase/decrease spline segs\nCtrl-+,- Inc/dec spline degrees\nCtrl-b,v Inc/dec spline thickness",
-  
-  input_h_pressed() {
-    this.hollow = !this.hollow;
-  },
-  
-  input_m_pressed() {
-    if (Keys.ctrl()) {
-      this.mirrory = !this.mirrory;
-    } else {
-      this.mirrorx = !this.mirrorx;
-    }
-  },
-  
-  input_g_pressed() {
-    if (!Keys.ctrl()) return;
-    this.hollowt--;
-    if (this.hollowt < 0) this.hollowt = 0;
-  },
-
-  input_f_pressed() {
-    if (!Keys.ctrl()) return;
-    this.hollowt++;
-  },
-
-  input_v_pressrep() {
-    if (!Keys.alt()) return;
-    this.thickness--;
-  },
-
-  input_b_pressrep() {
-    if (Keys.alt()) {
-      this.thickness++;
-    } else if (Keys.ctrl()) {
-      this.cpoints = this.spoints;
-      this.mirrorx = false;
-      this.mirrory = false;
-    }
-  },
-  
   finish_center(change) {
     this.cpoints = this.cpoints.map(function(x) { return x.sub(change); });
   },
 
-  input_plus_pressrep() {
-    if (Keys.ctrl())
-      this.degrees++;
-    else
-      this.samples += 1;
-  },
-  
-  input_minus_pressrep() {
-    if (Keys.ctrl())
-      this.degrees--;
-    else {
-      this.samples -= 1;
-      if (this.samples < 1) this.samples = 1;
-    }
-  },
-
-  input_r_pressed() {
-    if (!Keys.ctrl()) return;
-
-    this.cpoints = this.cpoints.reverse();
-  },
-
-  input_l_pressed() {
-    if (!Keys.ctrl()) return;
-    this.type = 3;
-  },
-
-  input_c_pressed() {
-    if (!Keys.ctrl()) return;
-    this.type = 1;
-  }, 
-
-  input_o_pressed() {
-    if (!Keys.ctrl()) return;
-    this.type = 0;
-  },
-
-  input_lmouse_pressed() {
-    if (Keys.ctrl()) {
-      if (Keys.alt()) {
-        var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(this.gameobject.world2this,this.gameobject), 25);
-	if (idx === -1) return;
-
-	this.cpoints = this.cpoints.newfirst(idx);
-	return;
-      }
-      var idx = 0;
-
-      if (this.cpoints.length >= 2) {
-        idx = cmd(59, screen2world(Mouse.pos).sub(this.gameobject.pos), this.cpoints, 1000);
-	if (idx === -1) return;
-      }
-
-      if (idx === this.cpoints.length)
-        this.cpoints.push(this.gameobject.world2this(screen2world(Mouse.pos)));
-      else
-        this.cpoints.splice(idx, 0, this.gameobject.world2this(screen2world(Mouse.pos)));
-      return;
-    } else if (Keys.shift()) {
-      var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.add(this.gameobject.pos); }, this), 25);
-      if (idx === -1) return;
-
-      this.cpoints.splice(idx, 1);
-    }
-  },
-
   pick(pos) { return Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints); },
-
-  input_lbracket_pressrep() {
-    var np = [];
-
-    this.cpoints.forEach(function(c) {
-      np.push(Vector.rotate(c, Math.deg2rad(-1)));
-    });
-
-    this.cpoints = np;
-  },
-
-  input_rbracket_pressrep() {
-    var np = [];
-
-    this.cpoints.forEach(function(c) {
-      np.push(Vector.rotate(c, Math.deg2rad(1)));
-    });
-
-    this.cpoints = np;
-  },
 });
+
+bucket.inputs = {};
+bucket.inputs.h = function() { this.hollow = !this.hollow; };
+bucket.inputs.h.doc = "Toggle hollow.";
+
+bucket.inputs['C-g'] = function() {
+  this.hollowt--;
+  if (this.hollowt < 0) this.hollowt = 0;
+};
+bucket.inputs['C-g'].doc = "Thin the hollow thickness.";
+
+bucket.inputs['C-f'] = function() { this.hollowt++; };
+bucket.inputs['C-f'].doc = "Increase the hollow thickness.";
+
+bucket.inputs['M-v'] = function() { this.thickness--; };
+bucket.inputs['M-v'].doc = "Decrease spline thickness.";
+bucket.inputs['M-v'].rep = true;
+
+bucket.inputs['C-b'] = function() {
+  this.cpoints = this.spoints;
+  this.flipx = false;
+  this.flipy = false;
+};
+bucket.inputs['C-b'].doc = "Freeze mirroring,";
+bucket.inputs['M-b'] = function() { this.thickness++; };
+bucket.inputs['M-b'].doc = "Increase spline thickness.";
+bucket.inputs['M-b'].rep = true;
+
+bucket.inputs['C-plus'] = function() { this.degrees++; };
+bucket.inputs['C-plus'].doc = "Increase the degrees of this spline.";
+bucket.inputs['C-plus'].rep = true;
+
+bucket.inputs.plus = function() { this.samples++; };
+bucket.inputs.plus.doc = "Increase the number of samples of this spline.";
+bucket.inputs.plus.rep = true;
+
+bucket.inputs.minus = function() {
+  this.samples--;
+  if (this.samples < 1) this.samples = 1;
+};
+bucket.inputs.minus.doc = "Decrease the number of samples on this spline.";
+bucket.inputs.minus.rep = true;
+
+bucket.inputs['C-minus'] = function() { this.degrees--; };
+bucket.inputs['C-minus'].doc = "Decrease the number of degrees of this spline.";
+bucket.inputs['C-minus'].rep = true;
+
+bucket.inputs['C-r'] = function() { this.cpoints = this.cpoints.reverse(); };
+bucket.inputs['C-r'].doc = "Reverse the order of the spline's points.";
+
+bucket.inputs['C-l'] = function() { this.type = 3; };
+bucket.inputs['C-l'].doc = "Set type of spline to clamped.";
+
+bucket.inputs['C-c'] = function() { this.type = 1; };
+bucket.inputs['C-c'].doc = "Set type of spline to closed.";
+
+bucket.inputs['C-o'] = function() { this.type = 0; };
+bucket.inputs['C-o'].doc = "Set spline to open.";
+
+bucket.inputs['C-M-lm'] = function() {
+  var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(this.gameobject.world2this,this.gameobject), 25);
+  if (idx === -1) return;
+
+  this.cpoints = this.cpoints.newfirst(idx);
+};
+bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
+
+bucket.inputs['C-lm'] = function() {
+  var idx = 0;
+
+  if (this.cpoints.length >= 2) {
+    idx = cmd(59, screen2world(Mouse.pos).sub(this.gameobject.pos), this.cpoints, 1000);
+    if (idx === -1) return;
+  }
+
+  if (idx === this.cpoints.length)
+    this.cpoints.push(this.gameobject.world2this(screen2world(Mouse.pos)));
+  else
+    this.cpoints.splice(idx, 0, this.gameobject.world2this(screen2world(Mouse.pos)));
+};
+bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
+
+bucket.inputs['S-lm'] = function() {
+  var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.add(this.gameobject.pos); }, this), 25);
+  if (idx === -1) return;
+
+  this.cpoints.splice(idx, 1);
+};
+bucket.inputs['S-lm'].doc = "Remove point from the spline.";
+
+bucket.inputs.lb = function() {
+  var np = [];
+
+  this.cpoints.forEach(function(c) {
+    np.push(Vector.rotate(c, Math.deg2rad(-1)));
+  });
+
+  this.cpoints = np;
+};
+bucket.inputs.lb.doc = "Rotate the points CCW.";
+bucket.inputs.lb.rep = true;
+
+bucket.inputs.rb = function() {
+  var np = [];
+
+  this.cpoints.forEach(function(c) {
+    np.push(Vector.rotate(c, Math.deg2rad(1)));
+  });
+
+  this.cpoints = np;
+};
+bucket.inputs.rb.doc = "Rotate the points CW.";
+bucket.inputs.rb.rep = true;
 
 var circle2d = clone(collider2d, {
   name: "circle 2d",

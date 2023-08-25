@@ -41,49 +41,6 @@ var editor = {
   cursor: null,
   edit_mode: "basic",
 
-  input_f1_pressed() {
-    if (Keys.ctrl()) {
-      this.edit_mode = "basic";
-      return;
-    }
-  },
-
-  input_f2_pressed() {
-    if (Keys.ctrl()) {
-      this.edit_mode = "brush";
-      return;
-    }
-    
-    objectexplorer.on_close = save_configs;
-    objectexplorer.obj = configs;
-    this.openpanel(objectexplorer);
-  },
-
-  input_j_pressed() {
-    if (Keys.alt()) {
-      var varmakes = this.selectlist.filter(function(x) { return x.hasOwn('varname'); });
-      varmakes.forEach(function(x) { delete x.varname; });
-    } else if (Keys.ctrl()) {
-      var varmakes = this.selectlist.filter(function(x) { return !x.hasOwn('varname'); });
-      varmakes.forEach(function(x) {
-        var allvnames = [];
-        this.edit_level.objects.forEach(function(x) {
-          if (x.varname)
-            allvnames.push(x.varname);
-        });
-      
-        var vname = x.from.replace(/ /g, '_').replace(/_object/g, '').replace(/\..*$/g, '');
-	var tnum = 1;
-        var testname = vname + "_" + tnum;
-        while (allvnames.includes(testname)) {
-          tnum++;
-          testname = vname + "_" + tnum;
-        }
-        x.varname = testname;
-     },this);
-    }
-  },
-  
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
     var go = physics.pos_query(screen2world(Mouse.pos));
     return this.do_select(go);
@@ -237,22 +194,6 @@ var editor = {
 
   sel_start: [],
 
-  input_lmouse_pressed() {
-    if (this.sel_comp) return;
-
-    if (this.edit_mode === "brush") {
-      this.paste();
-      return;
-    }
-    
-    if (this.selectlist.length === 1 && Keys.ctrl() && Keys.shift() && Keys.alt()) {
-      this.selectlist[0].set_center(screen2world(Mouse.pos));
-      return;
-    }
-    
-    this.sel_start = screen2world(Mouse.pos);
-  },
-  
   points2cwh(start, end) {
     var c = [];
     c[0] = (end[0] - start[0]) / 2;
@@ -339,7 +280,6 @@ var editor = {
     this.edit_level.check_dirty();
   },
 
-
   step_amt() { return Keys.shift() ? 10 : 1; },
 
   on_grid(pos) {
@@ -412,11 +352,6 @@ var editor = {
     }
   },
     
-  input_delete_pressed() {
-    this.selectlist.forEach(x => x.kill());
-    this.unselect();
-  },
-
   unselect() {
     this.selectlist = [];
     this.grabselect = null;
@@ -424,36 +359,8 @@ var editor = {
   },
 
   sel_comp: null,
-
-  input_u_pressed() {
-    if (Keys.ctrl()) {
-      this.selectlist.forEach(function(x) {
-        x.revert();
-      });
-    }
-
-    if (Keys.alt()) {
-      this.selectlist.forEach(function(x) {
-        x.unique = true;
-      });
-    }
-  },
-
   comp_info: false,
-  
   brush_obj: null,
-
-  input_b_pressed() {
-    if (this.sel_comp) return;
-    if (this.brush_obj) {
-      this.brush_obj = null;
-      return;
-    }
-
-    if (this.selectlist.length !== 1) return;
-    this.brush_obj = this.selectlist[0];
-    this.unselect();
-  },
   
   camera_recalls: {},
   
@@ -629,36 +536,15 @@ var editor = {
    
   moveoffsets: [],
 
-  input_g_pressed() {
-    if (Keys.ctrl() && Keys.shift()) {
-      Log.info("Saving as level...");
-      this.openpanel(groupsaveaspanel);
-      return;
-    }
-
-    if (Keys.alt() && this.cursor) {
-      var com = find_com(this.selectlist);
-      this.selectlist.forEach(function(x) {
-        x.pos = x.pos.sub(com).add(this.cursor);
-      },this);
-    }
-    
+  // TODO: Unify so this works
+/*  input_g_pressed() {
     if (this.sel_comp) {
       if ('pos' in this.sel_comp)
         this.moveoffset = this.sel_comp.pos.sub(screen2world(Mouse.pos));
-	
       return;
     }
-  
-    if (Keys.ctrl()) {
-      this.selectlist = this.dup_objects(this.selectlist);
-    }
-    
-    this.selectlist.forEach(function(x,i) {
-      this.moveoffsets[i] = x.pos.sub(screen2world(Mouse.pos));
-    }, this);
   },
-  
+*/  
   input_g_down() {
     if (Keys.alt()) return;
     if (this.sel_comp) {
@@ -673,10 +559,6 @@ var editor = {
     }, this);
   },
 
-  input_g_released() {
-    this.moveoffsets = [];
-  },
-  
   scaleoffset: 0,
   startscales: [],
   selected_com: [0,0],
@@ -911,28 +793,9 @@ var editor = {
     }
   },
 
-  input_tab_pressed() {
-    if (!this.selectlist.length === 1) return;
-    if (!this.selectlist[0].components) return;
-
-    var sel = this.selectlist[0].components;
-
-    if (!this.sel_comp)
-      this.sel_comp = sel.nth(0);
-    else {
-      var idx = sel.findIndex(this.sel_comp) + 1;
-      if (idx >= Object.keys(sel).length)
-        this.sel_comp = null;
-      else
-        this.sel_comp = sel.nth(idx);
-    }
-    
-  },
-
   time: 0,
 
   ed_gui() {
-
     this.time = Date.now();
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
@@ -958,8 +821,8 @@ var editor = {
       });
     }
 
-    if (this.comp_info && this.sel_comp && 'help' in this.sel_comp) {
-      GUI.text(this.sel_comp.help, [100,700],1);
+    if (this.comp_info && this.sel_comp) {
+      GUI.text(Input.print_pawn_kbm(this.sel_comp), [100,700],1);
     }
 
     GUI.text("0,0", world2screen([0,0]));
@@ -1084,22 +947,6 @@ var editor = {
     
   },
 
-  input_lbracket_pressed() {
-    if (!Keys.ctrl()) return;
-    editor_config.grid_size -= Keys.shift() ? 10 : 1;
-    if (editor_config.grid_size <= 0) editor_config.grid_size = 1;
-  },
-  input_lbracket_rep() { this.input_lbracket_pressed(); },
-
-  input_rbracket_pressed() {
-    if (!Keys.ctrl()) return;
-    editor_config.grid_size += Keys.shift() ? 10 : 1;
-  },
-
-  input_rbracket_rep() { this.input_rbracket_pressed(); },
-
-  grid_size: 100,
-
   ed_debug() {
     if (!Debug.phys_drawing)
       this.selectlist.forEach(function(x) { Debug.draw_obj_phys(x); });
@@ -1119,26 +966,6 @@ var editor = {
   killring: [],
   killcom: [],
 
-  input_c_pressed() {
-    if (this.sel_comp) return;
-    if (!Keys.ctrl()) return;
-    this.killring = [];
-    this.killcom = [];
-
-    this.selectlist.forEach(function(x) {
-      this.killring.push(x);
-    },this);
-
-    this.killcom = find_com(this.killring);
-  },
-
-  input_x_pressed() {
-    if (!Keys.ctrl()) return;
-
-    this.input_c_pressed();
-    this.killring.forEach(function(x) { x.kill(); });
-  },
-
   paste() {
     this.selectlist = this.dup_objects(this.killring);
 
@@ -1148,11 +975,6 @@ var editor = {
     },this);
   },
 
-  input_v_pressed() {
-    if (!Keys.ctrl()) return;
-    this.paste();
-  },
-  
   lvl_history: [],
 
   load(file) {
@@ -1241,8 +1063,8 @@ editor.inputs['C-a'] = function() {
 };
 editor.inputs['C-a'].doc = "Select all objects.";
 
-editor.inputs['backtick'] = function() { editor.repl = !editor.repl; };
-editor.inputs['backtick'].doc = "Open or close the repl.";
+editor.inputs['`'] = function() { editor.repl = !editor.repl; };
+editor.inputs['`'].doc = "Open or close the repl.";
 
 /* Return if selected component. */
 editor.inputs['h'] = function() {
@@ -1293,11 +1115,27 @@ editor.inputs['C-d'] = function() {
 editor.inputs['C-d'].doc = "Duplicate all selected objects.";
 
 editor.inputs['C-m'] = function() {
+  if (editor.sel_comp) {
+    if (editor.sel_comp.flipy)
+      editor.sel_comp.flipy = !editor.sel_comp.flipy;
+
+    return;
+  }
+  
   editor.selectlist.forEach(function(x) { x.flipy = !x.flipy; });
 };
 editor.inputs['C-m'].doc = "Mirror selected objects on the Y axis.";
 
-editor.inputs.m = function() { editor.selectlist.forEach(function(x) { x.flipx = !x.flipx; }); };
+editor.inputs.m = function() {
+  if (editor.sel_comp) {
+    if (editor.sel_comp.flipx)
+      editor.sel_comp.flipx = !editor.sel_comp.flipx;
+
+    return;
+  }
+  
+  editor.selectlist.forEach(function(x) { x.flipx = !x.flipx; });
+};
 editor.inputs.m.doc = "Mirror selected objects on the X axis.";
 
 editor.inputs.q = function() { editor.comp_info = !editor.comp_info; };
@@ -1382,8 +1220,6 @@ editor.inputs.f7.doc = "Start game from the beginning.";
 
 editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
-
-editor.inputs.f12 = function() { Log.warn("Editor F12 pressed."); };
 
 editor.inputs['C-s'] = function() {
   if (editor.edit_level.level) {
@@ -1514,6 +1350,169 @@ editor.inputs.plus = function() {
 };
 
 editor.inputs.plus.doc = "Go up one working layer, or, move selected objects down one layer.";
+
+editor.inputs['C-f1'] = function() { editor.edit_mode = "basic"; };
+editor.inputs['C-f1'].doc = "Enter basic edit mode.";
+editor.inputs['C-f2'] = function() { editor.edit_mode = "brush"; };
+editor.inputs['C-f2'].doc = "Enter brush mode.";
+
+editor.inputs.f2 = function() {
+  objectexplorer.on_close = save_configs;
+  objectexplorer.obj = configs;
+  this.openpanel(objectexplorer);
+};
+editor.inputs.f2.doc = "Open configurations object.";
+
+editor.inputs['C-j'] = function() {
+   var varmakes = this.selectlist.filter(function(x) { return !x.hasOwn('varname'); });
+   varmakes.forEach(function(x) {
+     var allvnames = [];
+     this.edit_level.objects.forEach(function(x) {
+       if (x.varname)
+	 allvnames.push(x.varname);
+     });
+
+     var vname = x.from.replace(/ /g, '_').replace(/_object/g, '').replace(/\..*$/g, '');
+     var tnum = 1;
+     var testname = vname + "_" + tnum;
+     while (allvnames.includes(testname)) {
+       tnum++;
+       testname = vname + "_" + tnum;
+     }
+     x.varname = testname;
+  },this);
+};
+editor.inputs['C-j'].doc = "Give selected objects a variable name.";
+
+editor.inputs['M-j'] = function() {
+  var varmakes = this.selectlist.filter(function(x) { return x.hasOwn('varname'); });
+  varmakes.forEach(function(x) { delete x.varname; });
+};
+editor.inputs['M-j'].doc = "Remove variable names from selected objects.";
+
+editor.inputs.lm = function() { editor.sel_start = screen2world(Mouse.pos); };
+editor.inputs.lm.doc = "Selection box.";
+
+editor.inputs['C-M-S-lm'] = function() { editor.selectlist[0].set_center(screen2world(Mouse.pos)); };
+editor.inputs['C-M-S-lm'].doc = "Set world center to mouse position.";
+
+editor.inputs.delete = function() {
+  this.selectlist.forEach(x => x.kill());
+  this.unselect();
+};
+editor.inputs.delete.doc = "Delete selected objects.";
+
+editor.inputs['C-u'] = function() {
+  this.selectlist.forEach(function(x) {
+    x.revert();
+  });
+};
+editor.inputs['C-u'].doc = "Revert selected objects back to their prefab form.";
+
+editor.inputs['M-u'] = function() {
+  this.selectlist.forEach(function(x) {
+    x.unique = true;
+  });
+};
+editor.inputs['M-u'].doc = "Make selected objects unique.";
+
+editor.inputs['C-S-g'] = function() { editor.openpanel(groupsaveaspanel); };
+editor.inputs['C-S-g'].doc = "Save selected objects as a new level.";
+
+editor.inputs.g = function() {
+  this.selectlist.forEach(function(x,i) {
+    this.moveoffsets[i] = x.pos.sub(screen2world(Mouse.pos));
+  }, this);
+};
+editor.inputs.g.doc = "Move selected objects.";
+editor.inputs.g.released = function() { editor.moveoffsets = []; };
+
+editor.inputs.tab = function() {
+  if (!this.selectlist.length === 1) return;
+  if (!this.selectlist[0].components) return;
+
+  var sel = this.selectlist[0].components;
+
+  if (!this.sel_comp)
+    this.sel_comp = sel.nth(0);
+  else {
+    var idx = sel.findIndex(this.sel_comp) + 1;
+    if (idx >= Object.keys(sel).length)
+      this.sel_comp = null;
+    else
+      this.sel_comp = sel.nth(idx);
+  }
+};
+editor.inputs.tab.doc = "Cycle through selected object's components.";
+
+editor.inputs['C-g'] = function() {
+  this.selectlist = this.dup_objects(this.selectlist);
+  editor.inputs.g();
+};
+editor.inputs['C-g'].doc = "Duplicate selected objects, then move them.";
+
+editor.inputs['C-lb'] = function() {
+  editor_config.grid_size -= Keys.shift() ? 10 : 1;
+  if (editor_config.grid_size <= 0) editor_config.grid_size = 1;
+};
+editor.inputs['C-lb'].doc = "Decrease grid size. Hold shift to decrease it more.";
+editor.inputs['C-lb'].rep = true;
+
+editor.inputs['C-rb'] = function() { editor_config.grid_size += Keys.shift() ? 10 : 1; };
+editor.inputs['C-rb'].doc = "Increase grid size. Hold shift to increase it more.";
+editor.inputs['C-rb'].rep = true;
+
+editor.inputs['C-c'] = function() {
+  this.killring = [];
+  this.killcom = [];
+
+  this.selectlist.forEach(function(x) {
+    this.killring.push(x);
+  },this);
+
+  this.killcom = find_com(this.killring);
+};
+editor.inputs['C-c'].doc = "Copy selected objects to killring.";
+
+editor.inputs['C-x'] = function() {
+  editor.inputs['C-c']();
+  this.killring.forEach(function(x) { x.kill(); });
+};
+editor.inputs['C-x'].doc = "Cut objects to killring.";
+
+editor.inputs['C-v'] = function() { editor.paste(); };
+editor.inputs['C-v'].doc = "Pull objects from killring to world.";
+
+editor.inputs['M-g'] = function() {
+  if (this.cursor) return;
+  var com = find_com(this.selectlist);
+  this.selectlist.forEach(function(x) {
+    x.pos = x.pos.sub(com).add(this.cursor);
+  },this);
+};
+editor.inputs['M-g'].doc = "Set cursor to the center of selected objects.";
+
+var brushmode = {};
+brushmode.inputs = {};
+brushmode.inputs.lm = function() { editor.paste(); };
+brushmode.inputs.lm.doc = "Paste selected brush.";
+
+brushmode.inputs.b = function() {
+  if (editor.brush_obj) {
+    editor.brush_obj = null;
+    return;
+  }
+
+  if (editor.selectlist.length !== 1) return;
+  editor.brush_obj = editor.seliectlist[0];
+  editor.unselect();
+};
+brushmode.inputs.b.doc = "Clear brush, or set a new one.";
+
+var compmode = {};
+compmode.inputs = {};
+compmode.inputs['C-c'] = function() {}; /* Simply a blocker */
+compmode.inputs['C-x'] = function() {};
 
 editor.inputs.s = function() {
   var offf = editor.cursor ? editor.cursor : editor.selected_com;
@@ -1699,33 +1698,8 @@ var texteditor = clone(inputpanel, {
     this.cursor = this.cursor;
   },
 
-  input_s_pressed() {
-    if (!Keys.ctrl()) return;
-    Log.info("SAVING");
-    editor.save_current();
-  },
-
-  input_u_pressrep() {
-    if (!Keys.ctrl()) return;
-    this.popstate();
-  },
-
   copy(start, end) {
     return this.value.slice(start,end);
-  },
-
-  input_q_pressed() {
-    if (!Keys.ctrl()) return;
-
-    var ws = this.prev_word(this.cursor);
-    var we = this.end_of_word(this.cursor)+1;
-    var find = this.copy(ws, we);
-    var obj = editor.edit_level.varname2obj(find);
-
-    if (obj) {
-      editor.unselect();
-      editor.selectlist.push(obj);
-    }
   },
 
   delete_line(p) {
@@ -1743,20 +1717,6 @@ var texteditor = clone(inputpanel, {
       return true;
     else
       return false;
-  },
-
-  input_o_pressed() {
-    if (Keys.alt()) {
-      /* Delete all surrounding blank lines */
-      while (this.line_blank(this.next_line(this.cursor)))
-        this.delete_line(this.next_line(this.cursor));
-
-      while (this.line_blank(this.prev_line(this.cursor)))
-        this.delete_line(this.prev_line(this.cursor));
-    } else if (Keys.ctrl()) {
-      this.insert_char('\n');
-      this.cursor--;
-    }
   },
 
   get_line() {
@@ -1802,29 +1762,9 @@ var texteditor = clone(inputpanel, {
     this.keycb();
   },
 
-  input_d_pressrep() {
-    if (Keys.ctrl())
-      this.value = this.value.slice(0,this.cursor) + this.value.slice(this.cursor+1);
-    else if (Keys.alt())
-      this.cut_span(this.cursor, this.end_of_word(this.cursor)+1);
-  },
-
   input_backspace_pressrep() {
     this.value = this.value.slice(0,this.cursor-1) + this.value.slice(this.cursor);
     this.cursor--;
-  },
-
-  input_a_pressed() {
-    if (Keys.ctrl()) {
-      this.to_line_start();
-      this.desired_inset = this.inset;
-    }
-  },
-
-  input_y_pressed() {
-    if (!Keys.ctrl()) return;
-    if (this.killring.length === 0) return;
-    this.insert_char(this.killring.pop());
   },
 
   line_starting_whitespace(p) {
@@ -1837,48 +1777,6 @@ var texteditor = clone(inputpanel, {
     }
 
     return white;
-  },
-
-  input_e_pressed() {
-    if (Keys.ctrl()) {
-      this.to_line_end();
-      this.desired_inset = this.inset;
-    }
-  },
-
-  input_k_pressrep() {
-    if (Keys.ctrl()) {
-      if (this.cursor === this.value.length-1) return;
-      var killamt = this.value.next('\n', this.cursor) - this.cursor;
-      var killed = this.cut_span(this.cursor-1, this.cursor+killamt);
-      this.killring.push(killed);
-    } else if (Keys.alt()) {
-      var prevn = this.value.prev('\n', this.cursor);
-      var killamt = this.cursor - prevn;
-      var killed = this.cut_span(prevn+1, prevn+killamt);
-      this.killring.push(killed);
-      this.to_line_start();
-    }
-  },
-
-  input_b_pressrep() {
-    if (Keys.ctrl()) {
-      this.cursor--;
-    } else if (Keys.alt()) {
-      this.cursor = this.prev_word(this.cursor-2);
-    }
-
-    this.desired_inset = this.inset;
-  },
-
-  input_f_pressrep() {
-    if (Keys.ctrl()) {
-      this.cursor++;
-    } else if (Keys.alt()) {
-      this.cursor = this.next_word(this.cursor);
-    }
-
-    this.desired_inset = this.inset;
   },
 
   cut_span(start, end) {
@@ -1957,45 +1855,151 @@ var texteditor = clone(inputpanel, {
   to_file_start() { this.cursor = 0; },
 
   desired_inset: 0,
-
-  input_p_pressrep() {
-    if (Keys.ctrl()) {
-      if (this.cursor === 0) return;
-      this.desired_inset = Math.max(this.desired_inset, this.inset);
-      this.cursor = this.prev_line(this.cursor);
-      var newlinew = this.line_width(this.cursor);
-      this.cursor += Math.min(this.desired_inset, newlinew);
-    } else if (Keys.alt()) {
-      while (this.line_blank(this.cursor))
-        this.cursor = this.prev_line(this.cursor);
-
-      while (!this.line_blank(this.cursor))
-        this.cursor = this.prev_line(this.cursor);
-    }
-  },
-
-  input_n_pressrep() {
-    if (Keys.ctrl()) {
-      if (this.cursor === this.value.length-1) return;
-      if (this.value.next('\n', this.cursor) === -1) {
-        this.to_file_end();
-        return;
-      }
-
-      this.desired_inset = Math.max(this.desired_inset, this.inset);
-      this.cursor = this.next_line(this.cursor);
-      var newlinew = this.line_width(this.cursor);
-      this.cursor += Math.min(this.desired_inset, newlinew);
-    } else if (Keys.alt()) {
-      while (this.line_blank(this.cursor))
-        this.cursor = this.next_line(this.cursor);
-
-      while (!this.line_blank(this.cursor))
-        this.cursor = this.next_line(this.cursor);
-    }
-  },
-
 });
+
+texteditor.inputs = {};
+texteditor.inputs['C-s'] = function() { editor.save_current(); };
+texteditor.inputs['C-s'].doc = "Save script to file.";
+
+texteditor.inputs['C-u'] = function() { this.popstate(); };
+texteditor.inputs['C-u'].doc = "Undo.";
+
+texteditor.inputs['C-q'] = function() {
+  var ws = this.prev_word(this.cursor);
+  var we = this.end_of_word(this.cursor)+1;
+  var find = this.copy(ws, we);
+  var obj = editor.edit_level.varname2obj(find);
+
+  if (obj) {
+    editor.unselect();
+    editor.selectlist.push(obj);
+  }
+};
+texteditor.inputs['C-q'].doc = "Select object of selected word.";
+
+texteditor.inputs['C-o'] = function() {
+  this.insert_char('\n');
+  this.cursor--;
+};
+texteditor.inputs['C-o'].doc = "Insert newline.";
+texteditor.inputs['C-o'].rep = true;
+
+texteditor.inputs['M-o'] = function() {
+  while (this.line_blank(this.next_line(this.cursor)))
+    this.delete_line(this.next_line(this.cursor));
+
+  while (this.line_blank(this.prev_line(this.cursor)))
+    this.delete_line(this.prev_line(this.cursor));
+};
+texteditor.inputs['M-o'].doc = "Delete surround blank lines.";
+
+texteditor.inputs['C-d'] = function () { this.value = this.value.slice(0,this.cursor) + this.value.slice(this.cursor+1); };
+texteditor.inputs['C-d'].doc = "Delete character.";
+
+texteditor.inputs['M-d'] = function() { this.cut_span(this.cursor, this.end_of_word(this.cursor)+1); };
+texteditor.inputs['M-d'].doc = "Delete word.";
+
+texteditor.inputs['C-a'] = function() {
+  this.to_line_start();
+  this.desired_inset = this.inset;
+};
+texteditor.inputs['C-a'].doc = "To start of line.";
+
+texteditor.inputs['C-y'] = function() {
+  if (this.killring.length === 0) return;
+  this.insert_char(this.killring.pop());
+};
+texteditor.inputs['C-y'].doc = "Insert from killring.";
+
+texteditor.inputs['C-e'] = function() {
+  this.to_line_end();
+  this.desired_inset = this.inset;
+};
+texteditor.inputs['C-e'].doc = "To line end.";
+
+texteditor.inputs['C-k'] = function() {
+  if (this.cursor === this.value.length-1) return;
+  var killamt = this.value.next('\n', this.cursor) - this.cursor;
+  var killed = this.cut_span(this.cursor-1, this.cursor+killamt);
+  this.killring.push(killed);
+};
+texteditor.inputs['C-k'].doc = "Kill from cursor to end of line.";
+
+texteditor.inputs['M-k'] = function() {
+  var prevn = this.value.prev('\n', this.cursor);
+  var killamt = this.cursor - prevn;
+  var killed = this.cut_span(prevn+1, prevn+killamt);
+  this.killring.push(killed);
+  this.to_line_start();
+};
+texteditor.inputs['M-k'].doc = "Kill entire line the cursor is on.";
+
+texteditor.inputs['C-b'] = function() {
+  this.cursor--;
+  this.desired_inset = this.inset;
+};
+texteditor.inputs['C-b'].rep = true;
+texteditor.inputs['M-b'] = function() {
+  this.cursor = this.prev_word(this.cursor-2);
+  this.desired_inset = this.inset;
+};
+texteditor.inputs['M-b'].rep = true;
+
+texteditor.inputs['C-f'] = function() {
+  this.cursor++;
+  this.desired_inset = this.inset;
+};
+texteditor.inputs['C-f'].rep = true;
+texteditor.inputs['M-f'] = function() {
+  this.cursor = this.next_word(this.cursor);
+  this.desired_inset = this.inset;
+};
+texteditor.inputs['M-f'].rep = true;
+
+texteditor.inputs['C-p'] = function() {
+  if (this.cursor === 0) return;
+  this.desired_inset = Math.max(this.desired_inset, this.inset);
+  this.cursor = this.prev_line(this.cursor);
+  var newlinew = this.line_width(this.cursor);
+  this.cursor += Math.min(this.desired_inset, newlinew);
+};
+texteditor.inputs['C-p'].rep = true;
+
+texteditor.inputs['M-p'] = function() {
+  while (this.line_blank(this.cursor))
+    this.cursor = this.prev_line(this.cursor);
+
+  while (!this.line_blank(this.cursor))
+    this.cursor = this.prev_line(this.cursor);
+};
+texteditor.inputs['M-p'].doc = "Go up to next line with text on it.";
+texteditor.inputs['M-p'].rep = true;
+
+texteditor.inputs['C-n'] = function() {
+  if (this.cursor === this.value.length-1) return;
+  if (this.value.next('\n', this.cursor) === -1) {
+    this.to_file_end();
+    return;
+  }
+
+  this.desired_inset = Math.max(this.desired_inset, this.inset);
+  this.cursor = this.next_line(this.cursor);
+  var newlinew = this.line_width(this.cursor);
+  this.cursor += Math.min(this.desired_inset, newlinew);
+};
+texteditor.inputs['C-n'].rep = true;
+
+texteditor.inputs['M-n'] = function() {
+  while (this.line_blank(this.cursor))
+    this.cursor = this.next_line(this.cursor);
+
+  while (!this.line_blank(this.cursor))
+    this.cursor = this.next_line(this.cursor);
+};
+texteditor.inputs['M-n'].doc = "Go down to next line with text on it.";
+texteditor.inputs['M-n'].rep = true;
+
+
 
 var protoexplorer = copy(inputpanel, {
   title: "prototype explorer",

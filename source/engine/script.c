@@ -94,8 +94,6 @@ void script_evalf(const char *format, ...)
   vsnprintf(fmtbuf, 4096, format, args);
   va_end(args);
 
-  YughWarn(fmtbuf);
-
   JSValue obj = JS_Eval(js, fmtbuf, strlen(fmtbuf), "C eval", JS_EVAL_FLAGS);
   js_print_exception(obj);
   JS_FreeValue(js,obj);
