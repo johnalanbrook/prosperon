@@ -1039,7 +1039,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 118:
       str = JS_ToCString(js,argv[1]);
-      return bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
+      ret = bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
       break;
 
     case 119:
@@ -1049,6 +1049,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 120:
       ret = str2js(engine_info());
+      break;
+    case 121:
+      return num2js(get_timescale());
       break;
   }
 

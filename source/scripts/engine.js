@@ -146,40 +146,6 @@ var Physics = {
   static: 2,
 };
 
-Physics.stop = function()
-{
-  
-}
-
-function win_icon(str) {
-  cmd(90, str);
-};
-
-function sim_start() {
-  Log.warn("Call Game.play() now.");
-  Game.play();
-/*  
-  Game.objects.forEach(function(x) {
-    if (x.start) x.start(); });
-
-  Level.levels.forEach(function(lvl) {
-    lvl.run();
-  });
-*/
-}
-
-function sim_stop() { Log.warn("Call through Game.stop()"); Game.stop();}
-function sim_pause() { Log.warn("Call Game.pause()"); Game.pause(); }
-function sim_step() { Log.warn("Call Game.step()"); Game.step(); }
-function sim_playing() { Log.warn("Call Game.playing"); return Game.playing(); }
-function sim_paused() { Log.warn("Call Game.paused"); return Game.paused(); }
-function phys_stepping() { Log.warn("Call Game.stepping"); return Game.stepping(); }
-
-function quit() {
-  Log.warn("Call through Game.quit() now.");
-  Game.quit();
-};
-
 var Color = {
   white: [255,255,255,255],
   blue: [84,110,255,255],
@@ -612,9 +578,9 @@ var Tween = {
 
     defn.restart = function() { defn.accum = 0; };
     defn.stop = function() { defn.pause(); defn.restart(); };
-    defn.pause = function() { unregister_update(defn.fn); };
+    defn.pause = function() { Register.update.unregister(defn.fn); };
 
-    register_update(defn.fn, defn);
+    Register.update.register(defn.fn, defn);
 
     return defn;
   },
@@ -662,7 +628,6 @@ var Tween = {
   },
 };
 
-
 var animation = {
   time: 0,
   loop: false,
@@ -672,7 +637,7 @@ var animation = {
 
   create() {
     var anim = Object.create(animation);
-    register_update(anim.update, anim);
+    Register.update.register(anim.update, anim);
     return anim;
   },
 
@@ -736,16 +701,6 @@ var animation = {
   },
 };
 
-var sound = {
-  play() {
-    this.id = cmd(14,this.path);
-  },
-
-  stop() {
-
-  },
-};
-
 var Music = {
   play(path) {
     Log.info("Playing " + path);
@@ -769,6 +724,7 @@ var Sound = {
     var s = Object.create(sound);
     s.path = file;
     s.play();
+    // this.id = cmd(14,file);
     return s;
   },
   
@@ -850,6 +806,18 @@ var Input = {
   setgame() { cmd(77); },
   setnuke() { cmd(78); },
 };
+
+Input.state2str = function(state) {
+  if (typeof state === 'string') return state;
+  switch (state) {
+    case 0:
+      return "down";
+    case 1:
+      return "pressed";
+    case 2:
+      return "released";
+  }
+}
 
 Input.print_pawn_kbm = function(pawn) {
   if (!('inputs' in pawn)) return;
@@ -957,6 +925,15 @@ var Player = {
   uncontrol(pawn) {
     this.pawns = this.pawns.filter(x => x !== pawn);
   },
+
+  obj_controlled(obj) {
+    for (var p in Player.players) {
+      if (p.pawns.contains(obj))
+        return true;
+    }
+
+    return false;
+  },
 };
 
 for (var i = 0; i < 4; i++) {
@@ -964,18 +941,6 @@ for (var i = 0; i < 4; i++) {
   player1.pawns = [];
   player1.gamepads = [];
   Player.players.push(player1);
-}
-
-function state2str(state) {
-  if (typeof state === 'string') return state;
-  switch (state) {
-    case 0:
-      return "down";
-    case 1:
-      return "pressed";
-    case 2:
-      return "released";
-  }
 }
 
 var Register = {
@@ -991,27 +956,6 @@ var Register = {
     loop();
     this.inloop = false;
     this.finloop();
-  },
-  
-  updates: [],
-  update(dt) {
-    this.wraploop(() => this.updates.forEach(x => x[0].call(x[1], dt)));
-  },
-
-  physupdates: [],
-  physupdate(dt) {
-    this.wraploop(() => this.physupdates.forEach(x => x[0].call(x[1], dt)));
-  },
-
-  guis: [],
-  gui() {
-    this.guis.forEach(x => x[0].call(x[1]));
-  },
-
-  nk_guis: [],
-  nk_gui() {
-
-    this.nk_guis.forEach(x => x[0].call(x[1]));
   },
 
   kbm_input(src, btn, state, ...args) {
@@ -1038,7 +982,7 @@ var Register = {
     var player = this.gamepad_playermap[pad];
     if (!player) return;
 
-    var statestr = state2str(state);
+    var statestr = Input.state2str(state);
 
     var rawfn = `gamepad_${btn}_${statestr}`;
     player.input(rawfn, ...args);
@@ -1048,25 +992,12 @@ var Register = {
         player.input(`action_${x.name}_${statestr}`, ...args);
     });
   },
-
-  debugs: [],
-  debug() {
-    this.debugs.forEach(x => x[0].call(x[1]));
-  },
-
+  
   unregister_obj(obj) {
-    this.updates = this.updates.filter(x => x[1] !== obj);
-    this.guis = this.guis.filter(x => x[1] !== obj);
-    this.nk_guis = this.nk_guis.filter(x => x[1] !== obj);
-    this.debugs = this.debugs.filter(x => x[1] !== obj);
-    this.physupdates = this.physupdates.filter(x => x[1] !== obj);
-    this.draws = this.draws.filter(x => x[1] !== obj);
+    Register.registries.forEach(function(x) {
+      x.clear();
+    });
     Player.players.forEach(x => x.uncontrol(obj));
-  },
-
-  draws: [],
-  draw() {
-    this.draws.forEach(x => x[0].call(x[1]));
   },
 
   endofloop(fn) {
@@ -1076,68 +1007,57 @@ var Register = {
       this.loopcbs.push(fn);
     }
   },
+
+  clear() {
+    Register.registries.forEach(function(n) {
+      n.entries = [];
+    });
+  },
+
+  registries: [],
+
+  add_cb(idx, name) {
+    var entries = [];
+    var n = {};
+    n.register = function(fn, obj) {
+      entries.push([fn, obj ? obj : null]);
+    }
+
+    n.unregister = function(fn) {
+      entries = entries.filter(function(f) { return fn === f; });
+    }
+
+    n.broadcast = function() {
+      entries.forEach(x => x[0].call(x[1]));
+    }
+
+    n.clear = function() {
+      entries = [];
+    }
+
+    register(idx, n.broadcast, n);
+
+    Register[name] = n;
+    Register.registries.push(n);
+    
+    return n;
+  },
 };
 
-register(0, Register.update, Register);
-register(1, Register.physupdate, Register);
-register(2, Register.gui, Register);
-register(3, Register.nk_gui, Register);
-register(6, Register.debug, Register);
+Register.add_cb(0, "update").doc = "Called once per frame.";
+Register.add_cb(1, "physupdate");
+Register.add_cb(2, "gui");
+Register.add_cb(3, "nk_gui");
+Register.add_cb(6, "debug");
 register(7, Register.kbm_input, Register);
-register(8, Register.gamepad_input, Register);
+Register.add_cb(8, "gamepad_input");
+Register.add_cb(10, "draw");
+
 register(9, Log.stack, this);
-register(10, Register.draw, Register);
 
 Register.gamepad_playermap[0] = Player.players[0];
 
-function register_update(fn, obj) {
-  Register.updates.push([fn, obj ? obj : null]);
-};
-
-function unregister_update(fn) {
-  Register.updates = Register.updates.filter(function(updatefn) {
-    return fn === updatefn;
-  });
-};
-
-function register_physupdate(fn, obj) {
-  Register.physupdates.push([fn, obj ? obj : null]);
-};
-
-function register_gui(fn, obj) {
-  Register.guis.push([fn, obj ? obj : this]);
-};
-
-function register_debug(fn, obj) {
-  Register.debugs.push([fn, obj ? obj : this]);
-};
-
-function unregister_gui(fn, obj) {
-  Register.guis = Register.guis.filter(x => x[0] !== fn || x[1] !== obj);
-};
-
-function register_nk_gui(fn, obj) {
-  Register.nk_guis.push([fn, obj ? obj : this]);
-};
-
-function unregister_nk_gui(fn, obj) {
-  Register.nk_guis = Register.nk_guis.filter(x => x[0] !== fn && x[1] !== obj);
-};
-
-function register_draw(fn,obj) {
-  Register.draws.push([fn, obj ? obj : this]);
-}
-
-register_update(Yugine.exec, Yugine);
-
-/* These functions are the "defaults", and give control to player0 */
-function set_pawn(obj, player = Player.players[0]) {
-  player.control(obj);
-}
-
-function unset_pawn(obj, player = Player.players[0]) {
-  player.uncontrol(obj);
-}
+Register.update.register(Yugine.exec, Yugine);
 
 Player.players[0].control(GUI);
 
@@ -1177,6 +1097,9 @@ var Window = {
   dimensions:[0,0],
 };
 
+Window.icon = function(path) { cmd(90, path); };
+Window.icon.doc = "Set the icon of the window using the PNG image at path.";
+
 Signal.register("window_resize", function(w, h) {
   Window.width = w;
   Window.height = h;
@@ -1195,9 +1118,6 @@ var IO = {
   slurpwrite(str, file) { return cmd(39, str, file); },
   extensions(ext) { return cmd(66, "." + ext); },
 };
-
-function slurp(file) { return IO.slurp(file);}
-function slurpwrite(str, file) { return IO.slurpwrite(str, file); }
 
 function reloadfiles() {
   Object.keys(files).forEach(function (x) { load(x); });
@@ -1413,7 +1333,7 @@ var Level = {
       Object.assign(this, extern);
       
     if (typeof update === 'function')
-      register_update(update, this);
+      Register.update.register(update, this);
 
     if (typeof gui === 'function')
       register_gui(gui, this);
@@ -1620,7 +1540,7 @@ var Level = {
 
   loadlevel(file) {
     var lvl = Level.loadfile(file);
-    if (lvl && sim_playing())
+    if (lvl && Game.playing())
       lvl.start();
 
     return lvl;
@@ -1983,7 +1903,9 @@ var gameobject = {
   flipy: false,
   
   body: -1,
-  controlled: false,
+  get controlled() {
+    return Player.obj_controlled(this);
+  },
 
   set_center(pos) {
     var change = pos.sub(this.pos);
@@ -2065,16 +1987,6 @@ var gameobject = {
   },
 
   gizmo: "", /* Path to an image to draw for this gameobject */
-
-  set_pawn() {
-    this.controlled = true;
-    set_pawn(this);
-  },
-
-  uncontrol() {
-    if (!this.controlled) return;
-    unset_pawn(this);
-  },
 
   /* Bounding box of the object in world dimensions */
   get boundingbox() {
@@ -2187,10 +2099,10 @@ var gameobject = {
     Register.unregister_obj(this);
   
     if (typeof obj.update === 'function')
-      register_update(obj.update, obj);
+      Register.update.register(obj.update, obj);
 
     if (typeof obj.physupdate === 'function')
-      register_physupdate(obj.physupdate, obj);
+      Register.physupdate.register(obj.physupdate, obj);
 
     if (typeof obj.collide === 'function')
       obj.register_hit(obj.collide, obj);
@@ -2199,10 +2111,10 @@ var gameobject = {
       obj.register_separate(obj.separate, obj);
 
     if (typeof obj.draw === 'function')
-      register_draw(obj.draw,obj);
+      Register.draw.register(obj.draw,obj);
 
     if (typeof obj.debug === 'function')
-      register_debug(obj.debug, obj);
+      Register.debug.register(obj.debug, obj);
 
     obj.components.forEach(function(x) {
       if (typeof x.collide === 'function')
@@ -2418,7 +2330,6 @@ Yugine.view_camera = function(cam)
 Yugine.view_camera(World.spawn(camera2d));
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
-//win_icon("icon.png");
 
 /* Default objects */
 gameobject.clone("polygon2d", {
@@ -2439,7 +2350,7 @@ if (IO.exists("config.js"))
 
 var prototypes = {};
 if (IO.exists("proto.json"))
-  prototypes = JSON.parse(slurp("proto.json"));
+  prototypes = JSON.parse(IO.slurp("proto.json"));
 
 for (var key in prototypes) {
   if (key in gameobjects)

@@ -25,9 +25,17 @@ associated script file can access.
   * F6 game.lvl
   * F7 Currently edited level
 
-While playing ...
+## Playing, editing, debugging
 
-* F7 Stop
+Playing is playing your game. Controls are what are specified for your game.
+
+In debug builds, additional debug controls are available. For example, F12 brings up GUI debug boxes. C-M-f puts you into a flying camera mode, without pausing your game.
+
+The game can be paused to edit it. Most editor controls are available here, all of them essentially except for loading new levels, clearing the level, etc. An object can be clicked on and edited, objects can be moved, etc.
+
+A prefab can be opened up to edit on its own, without breaking the currently played level.
+
+In edit mode, there are no running scripts; only editing them.
 
 ## Level model
 The game world is made up of objects. Levels are collections of

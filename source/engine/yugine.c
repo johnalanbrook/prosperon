@@ -309,3 +309,8 @@ void sim_step() {
 void set_timescale(float val) {
   timescale = val;
 }
+
+double get_timescale()
+{
+  return timescale;
+}

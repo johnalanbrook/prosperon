@@ -701,4 +701,3 @@ function sortpointsccw(points)
   
   return ccw.map(function(x) { return x.add(cm); });
 }
-

@@ -531,8 +531,8 @@ var editor = {
       this.edit_level.kill();
       load_configs("game.config");
       Game.play();
-      unset_pawn(this);
-      set_pawn(limited_editor);
+      Player.players[0].uncontrol(this);
+      Player.players[0].control(limited_editor);
       Register.unregister_obj(this);
   },
    
@@ -785,13 +785,13 @@ var editor = {
   get sel_comp() { return this._sel_comp; },
   set sel_comp(x) {
     if (this._sel_comp)
-      unset_pawn(this._sel_comp);
+      Player.players[0].uncontrol(this._sel_comp);
     
     this._sel_comp = x;
 
     if (this._sel_comp) {
       Log.info("sel comp is now " + this._sel_comp);
-      set_pawn(this._sel_comp);
+      Player.players[0].control(this._sel_comp);
     }
   },
 
@@ -1241,7 +1241,7 @@ editor.inputs['C-space'] = function() {
 editor.inputs['C-space'].doc = "Search to execute a specific command.";
 
 editor.inputs['M-m'] = function() {
-//  set_pawn(rebinder);
+//  Player.players[0].control(rebinder);
 };
 editor.inputs['M-m'].doc = "Rebind a shortcut. Usage: M-m SHORTCUT TARGET";
 
@@ -1593,8 +1593,8 @@ var inputpanel = {
     this.value = "";
     if (steal) {
       this.stolen = steal;
-      unset_pawn(this.stolen);
-      set_pawn(this);
+      Player.players[0].uncontrol(this.stolen);
+      Player.players[0].control(this);
     }
     this.start();
     this.keycb();
@@ -1604,9 +1604,9 @@ var inputpanel = {
 
   
   close() {
-    unset_pawn(this);
+    Player.players[0].uncontrol(this);
     if (this.stolen) {
-      set_pawn(this.stolen);
+      Player.players[0].control(this.stolen);
       this.stolen = null;
     }
 
@@ -2457,7 +2457,7 @@ var texgui = clone(inputpanel, {
 });
 
 var levellistpanel = copy(inputpanel, {
-  title: "Level list",
+  title: "Level object list",
   level: {},
   start() {
     this.level = editor.edit_level;
@@ -2521,8 +2521,8 @@ limited_editor.inputs['C-q'] = function()
   Game.stop();
   game.stop();
   Sound.killall();
-  unset_pawn(limited_editor);
-  set_pawn(editor);
+  Player.players[0].uncontrol(limited_editor);
+  Player.players[0].control(editor);
   register_gui(editor.ed_gui, editor);
   Debug.register_call(editor.ed_debug, editor);
   World.kill();
@@ -2531,8 +2531,12 @@ limited_editor.inputs['C-q'] = function()
   Yugine.view_camera(editor_camera);
 }
 
-set_pawn(editor);
-register_gui(editor.ed_gui, editor);
+/* This is used for editing during a paused game */
+var limited_editing = {};
+limited_editing.inputs = {};
+
+Player.players[0].control(editor);
+Register.gui.register(editor.ed_gui, editor);
 Debug.register_call(editor.ed_debug, editor);
 
 if (IO.exists("editor.config"))

@@ -1,4 +1,4 @@
-sim_start();
+Game.play();
 
 
 if (!IO.exists("game.js"))

@@ -61,7 +61,7 @@ var Debug = {
   },
 
   register_call(fn, obj) {
-    register_debug(fn,obj);
+    Register.debug.register(fn,obj);
   },
 
   line(points, color, type, thickness) {
@@ -103,8 +103,8 @@ var Debug = {
                          : Game.stepping() ?
 			 "STEP" :
 			 Game.paused() ?
-			 "PAUSED" : 
-			 "STOPPED", [0, 0], 1);
+			 "PAUSED; EDITING" : 
+			 "EDIT", [0, 0], 1);
   },
 };
 
@@ -223,6 +223,7 @@ var Nuke = {
 Object.defineProperty(Nuke, "curwin", {enumerable:false});
 Object.defineProperty(Nuke, "defaultrect", {enumerable:false});
 
+/* These controls are available during editing, and during play of debug builds */
 var DebugControls = {};
 DebugControls.inputs = {};
 DebugControls.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
@@ -245,12 +246,16 @@ Render.normal.doc = "Render mode for enabling all shaders and lighting effects."
 DebugControls.inputs['M-2'] = Render.wireframe;
 Render.wireframe.doc = "Render mode to see wireframes of all models.";
 
+DebugControls.inputs['C-M-f'] = function() {};
+DebugControls.inputs['C-M-f'].doc = "Enter camera fly mode.";
+
 var Time = {
   set timescale(x) { cmd(3, x); },
+  get timescale() { return cmd(121); },
   set updateMS(x) { cmd(6, x); },
   set physMS(x) { cmd(7, x); },
   set renderMS(x) { cmd(5, x); },
 };
 
-set_pawn(DebugControls);
-register_gui(Debug.draw, Debug);
+Player.players[0].control(DebugControls);
+Register.gui.register(Debug.draw, Debug);
