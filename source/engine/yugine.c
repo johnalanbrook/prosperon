@@ -35,7 +35,7 @@
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_GFX_IMPL
-#define SOKOL_GLES3
+#define SOKOL_GLCORE33
 #include "sokol/sokol_gfx.h"
 
 int physOn = 0;
@@ -297,7 +297,7 @@ void sim_stop() {
   sim_play = SIM_STOP;
 }
 
-int phys_stepping() { return phys_step; }
+int phys_stepping() { return sim_play == SIM_STEP; }
 
 void sim_step() {
   if (sim_paused()) {

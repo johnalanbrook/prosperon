@@ -78,13 +78,13 @@ COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUB
 LIBPATH = -L$(BIN)
 
 ifeq ($(OS), WIN32)
-	LINKER_FLAGS = $(QFLAGS) -static
-	ELIBS = engine ucrt yughc glfw3 opengl32 gdi32 ws2_32 ole32 winmm setupapi m
+	LINKER_FLAGS = $(QFLAGS) -static 
+	ELIBS = engine glfw3 opengl32 quickjs gdi32 ws2_32 ole32 winmm setupapi m
 	CLIBS =
 	EXT = .exe
 else
 	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -pthread -rdynamic
-	ELIBS =  engine pthread yughc quickjs glfw3 GL c m dl 
+	ELIBS =  engine pthread quickjs glfw3 GL c m dl 
 	CLIBS =
 endif
 

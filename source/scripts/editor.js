@@ -264,7 +264,7 @@ var editor = {
       return;
     }
     
-    this.selectlist = [];
+    editor.selectlist = [];
     selects.forEach(function(x) {
       if (x !== null)
         this.selectlist.push(x);
@@ -353,7 +353,7 @@ var editor = {
   },
     
   unselect() {
-    this.selectlist = [];
+    editor.selectlist = [];
     this.grabselect = null;
     this.sel_comp = null;
   },
@@ -363,6 +363,22 @@ var editor = {
   brush_obj: null,
   
   camera_recalls: {},
+  camera_recall_stack: [],
+
+  camera_recall_store() {
+    this.camera_recall_stack.push({
+      pos:this.camera.pos,
+      zoom:this.camera.zoom
+    });
+  },
+
+  camera_recall_pop() {
+    Object.assign(this.camera, this.camera_recalls.pop());
+  },
+
+  camera_recall_clear() {
+    this.camera_recall_stack = [];
+  },
   
   input_num_pressed(num) {
     if (Keys.ctrl()) {
@@ -370,20 +386,6 @@ var editor = {
         pos:this.camera.pos,
 	zoom:this.camera.zoom
       };
-      return;
-    }
-    
-    if (Keys.alt()) {
-      switch(num) {
-        case 0:
-	  Render.normal();
-	  break;
-	  
-	case 2:
-	  Render.wireframe();
-	  break;
-      }
-    
       return;
     }
     
@@ -490,8 +492,8 @@ var editor = {
     this.grabselect = grabobj;
 
     if (!this.selectlist.includes(grabobj)) {
-      this.selectlist = [];
-      this.selectlist.push(grabobj);
+      editor.selectlist = [];
+      editor.selectlist.push(grabobj);
     }
 
     this.moveoffset = this.grabselect.pos.sub(screen2world(Mouse.pos));
@@ -528,7 +530,7 @@ var editor = {
       this.stash = this.edit_level.save();
       this.edit_level.kill();
       load_configs("game.config");
-      game.start();
+      Game.play();
       unset_pawn(this);
       set_pawn(limited_editor);
       Register.unregister_obj(this);
@@ -997,8 +999,8 @@ var editor = {
     Log.info("adding file " + file + " at pos " + pos);
     var newlvl = this.edit_level.addfile(file);
     newlvl.pos = pos;
-    this.selectlist = [];
-    this.selectlist.push(newlvl);
+    editor.selectlist = [];
+    editor.selectlist.push(newlvl);
     return;
   },
 
@@ -1094,14 +1096,14 @@ editor.inputs['C-y'].doc = "Open the object explorer for a selected object.";
 editor.inputs['M-y'] = function() { editor.openpanel(protoexplorer); };
 editor.inputs['M-y'].doc = "Open the prototype explorer.";
 
-editor.inputs['C-S-p'] = function() {
+editor.inputs['C-S-t'] = function() {
   if (editor.selectlist.length !== 1) return;
   editor.openpanel(saveprototypeas);
 };
-editor.inputs['C-S-p'].doc = "Save prototype as. Ie, to a new prototype.";
+editor.inputs['C-S-t'].doc = "Save prototype as. Ie, to a new prototype.";
 
-editor.inputs['C-p'] = function() { editor.save_proto(); };
-editor.inputs['C-p'].doc = "Save the selected prototype to disk.";
+editor.inputs['C-t'] = function() { editor.save_proto(); };
+editor.inputs['C-t'].doc = "Save the selected prototype to disk.";
 
 editor.inputs['M-p'] = function() { editor.openpanel(prefabpanel); };
 editor.inputs['M-p'].doc = "Open the prefab panel.";
@@ -1197,26 +1199,56 @@ editor.inputs.r = function() {
 };
 editor.inputs.r.doc = "Rotate selected using the mouse while held down.";
 
-editor.inputs.f5 = function() {
+editor.inputs['C-p'] = function() {
   if (!Game.playing()) {
     editor.start_play_ed();
-    Level.loadlevel("debug_start.lvl");
+//    if (!Level.loadlevel("debug"))
+      World.loadlevel("game");
+  } else {
+    Game.pause();
   }
 };
-editor.inputs.f5.doc = "Start level 'debug_start.lvl'.";
+editor.inputs['C-p'].doc = "Start game from 'debug' if it exists; otherwise, from 'game'.";
 
-editor.inputs.f6 = function() {
-  if (Game.playing()) return;
+editor.inputs['M-p'] = function() {
+  if (Game.playing())
+    Game.pause();
 
-//  Level.loadlevel
+  Game.step();
+}
+editor.inputs['M-p'].doc = "Do one time step, pausing if necessary.";
+
+editor.inputs['C-M-p'] = function() {
+  Log.warn(`Starting edited level ...`);
 };
-editor.inputs.f6.doc = "Load game from currently edited level.";
+editor.inputs['C-M-p'].doc = "Start game from currently edited level.";
 
-editor.inputs.f7 = function() {
-  if (Game.playing()) return;
-  Level.loadlevel("game.lvl");
+editor.inputs['C-q'] = function() {
+  
 };
-editor.inputs.f7.doc = "Start game from the beginning.";
+editor.inputs['C-q'].doc = "Quit simulation and return to editor.";
+
+
+var rebinder = {};
+rebinder.inputs = {};
+rebinder.inputs.any = function(cmd) {
+  
+};
+
+editor.inputs['C-space'] = function() {
+  
+};
+editor.inputs['C-space'].doc = "Search to execute a specific command.";
+
+editor.inputs['M-m'] = function() {
+//  set_pawn(rebinder);
+};
+editor.inputs['M-m'].doc = "Rebind a shortcut. Usage: M-m SHORTCUT TARGET";
+
+editor.inputs['M-S-8'] = function() {
+  editor.camera_recall_pop();
+};
+editor.inputs['M-S-8'].doc = "Jump to last location.";
 
 editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
@@ -1310,12 +1342,6 @@ editor.inputs['C-S-o'].doc = "Open previous level.";
 
 editor.inputs['C-l'] = function() {
   texteditor.on_close = function() { editor.edit_level.script = texteditor.value;};
-  texteditor.input_s_pressed = function() {
-    if (!Keys.ctrl()) return;
-    editor.edit_level.script = texteditor.value;
-    editor.save_current();
-    texteditor.startbuffer = texteditor.value.slice();
-  };
 
   editor.openpanel(texteditor);
   if (!editor.edit_level.script)
@@ -1858,7 +1884,11 @@ var texteditor = clone(inputpanel, {
 });
 
 texteditor.inputs = {};
-texteditor.inputs['C-s'] = function() { editor.save_current(); };
+texteditor.inputs['C-s'] = function() {
+  editor.edit_level.script = texteditor.value;
+  editor.save_current();
+  texteditor.startbuffer = texteditor.value.slice();
+};
 texteditor.inputs['C-s'].doc = "Save script to file.";
 
 texteditor.inputs['C-u'] = function() { this.popstate(); };
@@ -1998,8 +2028,6 @@ texteditor.inputs['M-n'] = function() {
 };
 texteditor.inputs['M-n'].doc = "Go down to next line with text on it.";
 texteditor.inputs['M-n'].rep = true;
-
-
 
 var protoexplorer = copy(inputpanel, {
   title: "prototype explorer",
@@ -2361,8 +2389,11 @@ var gen_notify = function(val, fn) {
   var panel = Object.create(notifypanel);
   panel.msg = val;
   panel.yes = fn;
-  panel.input_y_pressed = function() { panel.yes(); panel.close(); };
-  panel.input_enter_pressed = function() { panel.close(); };
+  panel.inputs = {};
+  panel.inputs.y = function() { panel.yes(); panel.close(); };
+  panel.inputs.y.doc = "Confirm yes.";
+  panel.inputs.enter = function() { panel.close(); };
+  panel.inputs.enter.doc = "Close.";
   return panel;
 };
 
@@ -2467,31 +2498,38 @@ var prefabpanel = copy(openlevelpanel, {
   },
 });
 
-var limited_editor = {
-  input_f1_pressed() { editor.input_f1_pressed(); },
+var limited_editor = {};
 
-  input_f5_pressed() {
-    /* Pause, and resume editor */
-  },
-  input_f7_pressed() {
-    if (sim_playing()) {
-      sim_stop();
-      game.stop();
-      Sound.killall();
-      unset_pawn(limited_editor);
-      set_pawn(editor);
-      register_gui(editor.ed_gui, editor);
-      Debug.register_call(editor.ed_debug, editor);
-      Level.kill();
-      Level.clear_all();
-      editor.load_json(editor.stash);
-      Yugine.view_camera(editor_camera);
-    }
-  },
-  input_f8_pressed() { sim_step(); },  
-  input_f10_pressed() { editor.input_f10_pressed(); },
-  input_f10_released() { editor.input_f10_released(); },
-};
+limited_editor.inputs = {};
+
+limited_editor.inputs['C-p'] = function()
+{
+  if (Game.playing())
+    Game.pause();
+  else
+    Game.play();
+}
+
+limited_editor.inputs['M-p'] = function()
+{
+  Game.pause();
+  Game.step();
+}
+
+limited_editor.inputs['C-q'] = function()
+{
+  Game.stop();
+  game.stop();
+  Sound.killall();
+  unset_pawn(limited_editor);
+  set_pawn(editor);
+  register_gui(editor.ed_gui, editor);
+  Debug.register_call(editor.ed_debug, editor);
+  World.kill();
+  World.clear_all();
+  editor.load_json(editor.stash);
+  Yugine.view_camera(editor_camera);
+}
 
 set_pawn(editor);
 register_gui(editor.ed_gui, editor);

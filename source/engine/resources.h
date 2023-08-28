@@ -3,8 +3,6 @@
 
 #include <stdio.h>
 
-struct vec;
-
 extern char *DATA_PATH;
 extern char *PREF_PATH;
 
@@ -15,9 +13,9 @@ extern int stemlen;
 
 void resources_init();
 
-extern struct vec *prefabs;
+extern char *prefabs;
 void findPrefabs();
-void fill_extensions(struct vec *vec, const char *path, const char *ext);
+void fill_extensions(char *paths, const char *path, const char *ext);
 char *get_filename_from_path(char *path, int extension);
 char *get_directory_from_path(char *path);
 char *str_replace_ext(const char *s, const char *newext);

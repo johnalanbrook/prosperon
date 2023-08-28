@@ -840,6 +840,10 @@ var Keys = {
   alt() {
     return cmd(50, 342) || cmd(50, 346);
   },
+
+  super() {
+    return cmd(50, 343) || cmd(50, 347);
+  },
 };
 
 var Input = {
@@ -868,6 +872,10 @@ Input.print_md_kbm = function(pawn) {
   }
 
   return str;
+};
+
+Input.has_bind = function(pawn, bind) {
+  return (typeof pawn.inputs?.[bind] === 'function');
 };
 
 function screen2world(screenpos) { return Yugine.camera.view2world(screenpos); }
@@ -917,6 +925,10 @@ var Player = {
 
   raw_input(cmd, state, ...args) {
     for (var pawn of this.pawns.reverse()) {
+      if (typeof pawn.inputs?.any === 'function') {
+        pawn.inputs.any(cmd);
+        return;
+      }
       if (!pawn.inputs?.[cmd]) continue;
 
       var fn = null;
@@ -1012,9 +1024,11 @@ var Register = {
 
     if (btn === 'rmouse')
       btn = 'rm';
+      
     var e_str = "";
     if (Keys.ctrl()) e_str += "C-";
     if (Keys.alt()) e_str += "M-";
+    if (Keys.super()) e_str += "Sp-";
     e_str += btn;
     Player.players[0].raw_input(e_str, state, ...args);
   },
@@ -1341,7 +1355,8 @@ var Game = {
 
   playing() { return sys_cmd(5); },
   paused() { return sys_cmd(6); },
-  stepping() { return cmd(79); },
+  stepping() {
+  return cmd(79); },
 
   play()
   {

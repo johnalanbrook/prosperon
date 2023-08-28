@@ -100,10 +100,11 @@ var Debug = {
       });
 
     gui_text(Game.playing() ? "PLAYING"
-                         : Game.paused() ?
-			 "PAUSED" :
+                         : Game.stepping() ?
+			 "STEP" :
+			 Game.paused() ?
+			 "PAUSED" : 
 			 "STOPPED", [0, 0], 1);
-			
   },
 };
 
@@ -235,24 +236,10 @@ DebugControls.inputs.f4 = function() {
 DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
 DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
-DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; Log.warn("SET TIMESCALE");};
+DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; };
 DebugControls.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; Log.warn("GUI toggle debug");};
 DebugControls.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
 
-DebugControls.inputs.f5 = function() {
-  if (Game.paused())
-    Game.play();
-  else
-    Game.pause();
-};
-DebugControls.inputs.f5.doc = "Pause or play game simulation."
-
-DebugControls.inputs.f6 = function() {
-  if (Game.paused())
-    Game.step();
-};
-DebugControls.inputs.f6.doc = "Do one step through game while paused.";
- 
 DebugControls.inputs['M-1'] = Render.normal;
 Render.normal.doc = "Render mode for enabling all shaders and lighting effects.";
 DebugControls.inputs['M-2'] = Render.wireframe;

@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "log.h"
-#include "vec.h"
 #include <dirent.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -20,7 +19,7 @@
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
 
-struct vec *prefabs = NULL;
+char *prefabs;
 
 const char *EXT_PREFAB = ".prefab";
 const char *EXT_LEVEL = ".level";
@@ -29,13 +28,10 @@ int stemlen = 0;
 
 static const char *cur_ext = NULL;
 struct dirent *c_dirent = NULL;
-struct vec *c_vec = NULL;
 
 char pathbuf[MAXPATH + 1];
 
 void resources_init() {
-  prefabs = vec_make(MAXNAME, 25);
-
   DATA_PATH = malloc(MAXPATH);
   getcwd(DATA_PATH, MAXPATH);
   strncat(DATA_PATH, "/", MAXPATH);
@@ -80,17 +76,19 @@ FILE *res_open(char *path, const char *tag) {
 static int ext_check(const char *path, const struct stat *sb, int typeflag) {
   if (typeflag == FTW_F) {
     const char *ext = strrchr(path, '.');
-    if (ext != NULL && !strcmp(ext, cur_ext))
-      vec_add(c_vec, path);
+    if (ext != NULL && !strcmp(ext, cur_ext)) {
+      char newstr[255];
+      strncpy(newstr, path, 255);
+      arrput(prefabs, newstr);      
+    }
   }
 
   return 0;
 }
 
-void fill_extensions(struct vec *vec, const char *path, const char *ext) {
-  c_vec = vec;
+void fill_extensions(char *paths, const char *path, const char *ext) {
   cur_ext = ext;
-  vec_clear(c_vec);
+  arrfree(paths);
   ftw(".", ext_check, 10);
 }
 

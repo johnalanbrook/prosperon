@@ -3,7 +3,6 @@
 #include "log.h"
 #include "render.h"
 #include "sokol/sokol_gfx.h"
-#include "util.h"
 #include <math.h>
 #include <stb_ds.h>
 #include <stb_image.h>

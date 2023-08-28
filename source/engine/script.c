@@ -1,5 +1,7 @@
 #include "script.h"
 
+#include "stdarg.h"
+
 #include "log.h"
 #include "stdio.h"
 
