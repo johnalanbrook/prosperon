@@ -157,9 +157,9 @@ JSValue script_compile(const char *file)
 {
   const char *script = slurp_text(file);
   char strbuf[strlen(script)+50];
-  sprintf(strbuf, "(function(){%s})", script);
+  sprintf(strbuf, "(function(){\n%s\n})", script);
 
-  JSValue fn = JS_Eval(js, strbuf, strlen(script), file, JS_EVAL_FLAGS);
+  JSValue fn = JS_Eval(js, strbuf, strlen(strbuf), file, JS_EVAL_FLAGS);
 
   free(script);
   return fn;

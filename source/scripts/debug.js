@@ -255,6 +255,18 @@ var Time = {
   set updateMS(x) { cmd(6, x); },
   set physMS(x) { cmd(7, x); },
   set renderMS(x) { cmd(5, x); },
+
+  pause() {
+    Time.timescale = 0;
+  },
+
+  play() {
+    if (!Time.stash) {
+      Log.warn("Tried to resume time without calling Time.pause first.");
+      return;
+    }
+    Time.timescale = Time.stash;
+  },
 };
 
 Player.players[0].control(DebugControls);

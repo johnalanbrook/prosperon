@@ -12,9 +12,7 @@ static struct bus bus[256];
 static int first = 0; /* First bus available */
 
 static int first_on = -1; /* First bus to fill buffer with */
-short mastermix[BUF_FRAMES*CHANNELS];
-
-static int initted = 0;
+soundbyte mastermix[BUF_FRAMES*CHANNELS];
 
 static float master_volume = 1.f;
 
@@ -32,13 +30,9 @@ void mixer_init() {
     }
 
     bus[255].next = -1;
-
-    initted = 1;
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {
-//    assert(initted);
-
     for (int i = 0; i < 255; i++)
       if (!bus[i].on) {
         bus[i].on = 1;
@@ -79,10 +73,10 @@ void bus_free(struct bus *b)
     b->on = 0;
 }
 
-void bus_fill_buffers(short *master, int n) {
+void bus_fill_buffers(soundbyte *master, int n) {
     int curbus = first_on;
 //    if (curbus == -1) return;
-    memset(master, 0, BUF_FRAMES*CHANNELS*sizeof(short));
+    memset(master, 0, BUF_FRAMES*CHANNELS*sizeof(soundbyte));
 
     for (int i = 0; i < 255; i++) {
       if (!bus[i].on) continue;

@@ -16,49 +16,43 @@ float music_pan = 0.f;
 
 void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 {
-    short *o = (short*)out;
-    tml_message *midi = song->midi;
+  soundbyte *o = (soundbyte*)out;
+  tml_message *midi = song->midi;
 
-    for (int i = 0; i < n; i += TSF_BLOCK) {
+  for (int i = 0; i < n; i += TSF_BLOCK) {
+    while (midi && song->time >= midi->time) {
+      switch (midi->type) {
+	 case TML_PROGRAM_CHANGE:
+	   tsf_channel_set_presetnumber(song->sf, midi->channel, midi->program, (midi->channel == 9));
+	   break;
 
-        while (midi && song->time >= midi->time) {
+	 case TML_NOTE_ON:
+	   tsf_channel_note_on(song->sf, midi->channel, midi->key, midi->velocity / 127.f);
+	   break;
 
-            switch (midi->type)
-            {
-                case TML_PROGRAM_CHANGE:
-                    tsf_channel_set_presetnumber(song->sf, midi->channel, midi->program, (midi->channel == 9));
-                    break;
+	 case TML_NOTE_OFF:
+	   tsf_channel_note_off(song->sf, midi->channel, midi->key);
+	   break;
 
-                case TML_NOTE_ON:
-                    tsf_channel_note_on(song->sf, midi->channel, midi->key, midi->velocity / 127.f);
-                    break;
+	 case TML_PITCH_BEND:
+	   tsf_channel_set_pitchwheel(song->sf, midi->channel, midi->pitch_bend);
+	   break;
 
-                case TML_NOTE_OFF:
-                    tsf_channel_note_off(song->sf, midi->channel, midi->key);
-                    break;
+	 case TML_CONTROL_CHANGE:
+	   tsf_channel_midi_control(song->sf, midi->channel, midi->control, midi->control_value);
+	   break;
+       }
 
-                case TML_PITCH_BEND:
-                    tsf_channel_set_pitchwheel(song->sf, midi->channel, midi->pitch_bend);
-                    break;
-
-                case TML_CONTROL_CHANGE:
-                    tsf_channel_midi_control(song->sf, midi->channel, midi->control, midi->control_value);
-                    break;
-            }
-
-
-             midi = midi->next;
-        }
-
-
-        tsf_render_short(song->sf, o, TSF_BLOCK, 0);
-        o += TSF_BLOCK*CHANNELS;
-       song->time += TSF_BLOCK * (1000.f/SAMPLERATE);
+      midi = midi->next;
     }
+    tsf_render_float(song->sf, o, TSF_BLOCK, 0);
+    o += TSF_BLOCK*CHANNELS;
+    song->time += TSF_BLOCK * (1000.f/SAMPLERATE);
+  }
 
-    song->midi = midi;
+  song->midi = midi;
 
-    dsp_pan(&music_pan, out, n);
+//  dsp_pan(&music_pan, out, n);
 }
 
 struct bus *musicbus;
@@ -88,8 +82,8 @@ void play_song(const char *midi, const char *sf)
     cursong.data = &gsong;
     cursong.filter = dsp_midi_fillbuf;
     musicbus = first_free_bus(cursong);
+    YughWarn("DID IT");
 }
-
 
 void music_play()
 {

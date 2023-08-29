@@ -2,13 +2,11 @@
 #define MIX_H
 
 #include "dsp.h"
-
-struct sound;
-
+#include "sound.h"
 
 struct bus {
     struct dsp_filter in;
-    short buf[BUF_FRAMES*CHANNELS];
+    soundbyte buf[BUF_FRAMES*CHANNELS];
     float gain;
     int on;
     int next; /* Next available bus */
@@ -16,12 +14,12 @@ struct bus {
     int id;
 };
 
-extern short mastermix[BUF_FRAMES*CHANNELS];
+extern soundbyte mastermix[BUF_FRAMES*CHANNELS];
 
 void mixer_init();
 
 struct bus *first_free_bus(struct dsp_filter in);
-void bus_fill_buffers(short *master, int n);
+void bus_fill_buffers(soundbyte *master, int n);
 
 /* Set volume between 0 and 100% */
 void mix_master_vol(float v);

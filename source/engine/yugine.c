@@ -48,7 +48,7 @@ double renderMS = 1 / 165.f;
 double physMS = 1 / 165.f;
 double updateMS = 1 / 165.f;
 
-static int sim_play = 0;
+
 double lastTick = 0.0;
 static int phys_step = 0;
 
@@ -59,10 +59,11 @@ static double framems[FPSBUF];
 int framei = 0;
 int fps;
 
-#define SIM_STOP 0
-#define SIM_PLAY 1
-#define SIM_PAUSE 2
-#define SIM_STEP 3
+#define SIM_PLAY 0
+#define SIM_PAUSE 1
+#define SIM_STEP 2
+
+static int sim_play = SIM_PLAY;
 
 #ifdef __TINYC__
 int backtrace(void **buffer, int size) {
@@ -282,7 +283,6 @@ int frame_fps() {
 
 int sim_playing() { return sim_play == SIM_PLAY; }
 int sim_paused() { return sim_play == SIM_PAUSE; }
-int sim_stopped() { return sim_play == SIM_STOP; }
 
 void sim_start() {
   sim_play = SIM_PLAY;
@@ -290,11 +290,6 @@ void sim_start() {
 
 void sim_pause() {
   sim_play = SIM_PAUSE;
-}
-
-void sim_stop() {
-  /* Revert starting state of everything from sim_start */
-  sim_play = SIM_STOP;
 }
 
 int phys_stepping() { return sim_play == SIM_STEP; }

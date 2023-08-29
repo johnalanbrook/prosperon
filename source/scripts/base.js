@@ -477,8 +477,7 @@ Object.defineProperty(Array.prototype, 'lerp', {
   }
 });
 
-Object.defineProperty(Object.prototype, 'lerp', {
-  value: function(to, t) {
+Object.lerp = function(to, t) {
     var self = this;
     var obj = {};
 
@@ -487,8 +486,7 @@ Object.defineProperty(Object.prototype, 'lerp', {
     });
 
     return obj;
-  }
-});
+};
 
 /* MATH EXTENSIONS */
 Object.defineProperty(Number.prototype, 'lerp', {
@@ -497,6 +495,12 @@ Object.defineProperty(Number.prototype, 'lerp', {
     return (to - this) * t + this;
   }
 });
+
+Math.lerp = function(from, to, t) {
+  var v = (to - from) * t + from;
+  v = Math.clamp(v, from, to);
+  return v;
+}
 
 Math.clamp = function (x, l, h) { return x > h ? h : x < l ? l : x; }
 
@@ -521,6 +525,7 @@ Math.angledist = function (a1, a2) {
 
     return wrap;
 };
+Math.angledist.doc = "Find the shortest angle between two angles.";
 
 Math.deg2rad = function(deg) { return deg * 0.0174533; };
 Math.rad2deg = function(rad) { return rad / 0.0174533; };

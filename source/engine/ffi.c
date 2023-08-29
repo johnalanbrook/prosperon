@@ -31,8 +31,6 @@
 
 #include "HandmadeMath.h"
 
-#include "miniaudio.h"
-
 static JSValue globalThis;
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
@@ -1179,7 +1177,7 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     break;
 
   case 2:
-    sim_stop();
+    sim_pause();
     break;
 
   case 3:

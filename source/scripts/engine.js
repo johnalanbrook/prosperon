@@ -702,6 +702,10 @@ var animation = {
   },
 };
 
+var Audio = {
+  
+};
+
 var Music = {
   play(path) {
     Log.info("Playing " + path);
@@ -721,12 +725,13 @@ var Music = {
 };
 
 var Sound = {
+  sounds: [],
   play(file) {
-    var s = Object.create(sound);
-    s.path = file;
-    s.play();
-    // this.id = cmd(14,file);
-    return s;
+//    var s = Object.create(Sound);
+//    s.path = file;
+//    s.play();
+     this.id = cmd(14,file);
+    //return s;
   },
   
   music(midi, sf) {
@@ -1033,8 +1038,8 @@ var Register = {
       entries = entries.filter(function(f) { return fn === f; });
     }
 
-    n.broadcast = function() {
-      entries.forEach(x => x[0].call(x[1]));
+    n.broadcast = function(...args) {
+      entries.forEach(x => x[0].call(x[1], ...args));
     }
 
     n.clear = function() {
@@ -1271,7 +1276,9 @@ var Game = {
 
   stop()
   {
-    sys_cmd(2);
+    Game.pause();
+    /* And return to editor .. */
+    Log.warn("Stopping not implemented. Paused, and go to editor.");
   },
 
   step()
@@ -1320,20 +1327,19 @@ var Level = {
   },
 
   run() {
-    var objs = this.objects.slice();
     var scene = {};
-    var self = this;
 
     // TODO: If an object does not have a varname, give it one based on its parent 
-    objs.forEach(function(x) {
+    this.objects.forEach(function(x) {
       if (x.hasOwn('varname')) {
         scene[x.varname] = x;
 	this[x.varname] = x;
       }
     },this);
     
-    cmd(123, this.scriptfile, self);
-      
+    var fn = compile(this.scriptfile);
+    fn.call(this);
+
     if (typeof this.update === 'function')
       Register.update.register(this.update, this);
 
@@ -1801,6 +1807,7 @@ World.load = function(lvl) {
     World.loaded.kill();
 
   World.loaded = World.spawn(lvl);
+  return World.loaded;
 };
 
 var gameobjects = {};

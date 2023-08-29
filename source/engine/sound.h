@@ -3,6 +3,8 @@
 
 struct circbuf;
 
+typedef float soundbyte;
+
 struct Mix_Chunk {
     int i;
 };

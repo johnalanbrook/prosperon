@@ -16,7 +16,8 @@
 #include "dsp.h"
 #include "mix.h"
 
-#include "miniaudio.h"
+#define SOKOL_AUDIO_IMPL
+#include "sokol/sokol_audio.h"
 
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
@@ -97,17 +98,18 @@ void wav_norm_gain(struct wav *w, double lv) {
   }
 }
 
-static ma_engine *engine;
+void push_sound(float *buffer, int frames, int chan)
+{
+  bus_fill_buffers(buffer, frames*chan);
+}
 
 void sound_init() {
-  ma_result result;
-  engine = malloc(sizeof(*engine));
-  result = ma_engine_init(NULL, engine);
-  if (result != MA_SUCCESS) {
-    return;
-  }
-  return;
-
+  saudio_setup(&(saudio_desc){
+    .stream_cb = push_sound,
+    .sample_rate = SAMPLERATE,
+    .num_channels = CHANNELS,
+    .buffer_frames = BUF_FRAMES,
+  });
   mixer_init();
 }
 
@@ -156,32 +158,31 @@ struct soundstream *soundstream_make() {
 }
 
 void mini_sound(char *path) {
-  ma_engine_play_sound(engine, path, NULL);
+  
+  //ma_engine_play_sound(engine, path, NULL);
 }
 
-static ma_sound music_sound;
-
 void mini_music_play(char *path) {
-  ma_sound_uninit(&music_sound);
-  int result = ma_sound_init_from_file(engine, path, MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &music_sound);
+/*  int result = ma_sound_init_from_file(engine, path, MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &music_sound);
   if (result != MA_SUCCESS) {
     YughInfo("Could not load music at path: %s", path);
   }
 
   YughInfo("Loading %s...", path);
   ma_sound_start(&music_sound);
+*/  
 }
 
 void mini_music_pause() {
-  ma_sound_stop(&music_sound);
+//  ma_sound_stop(&music_sound);
 }
 
 void mini_music_stop() {
-  ma_sound_stop(&music_sound);
+//  ma_sound_stop(&music_sound);
 }
 
 void mini_master(float v) {
-  ma_engine_set_volume(engine, v);
+//  ma_engine_set_volume(engine, v);
 }
 
 void kill_oneshot(struct sound *s) {
