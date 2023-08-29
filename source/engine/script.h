@@ -19,6 +19,7 @@ void js_stacktrace();
 void script_startup();
 void script_init();
 void script_run(const char *script, const char *file);
+JSValue script_compile(const char *file);
 void script_evalf(const char *format, ...);
 int script_dofile(const char *file);
 JSValue script_runfile(const char *file);
@@ -35,6 +36,7 @@ void call_callee(struct callee *c);
 void script_callee(struct callee c, int argc, JSValue *argv);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, JSValue env);
+void file_eval_env(const char *file, JSValue env);
 
 time_t file_mod_secs(const char *file);
 

@@ -9,6 +9,10 @@ function load(file) {
   files[file] = modtime;
 }
 
+function compile(file) {
+  return cmd(122, file);
+}
+
 var Cmdline = {};
 
 Cmdline.cmds = [];
@@ -63,9 +67,6 @@ Cmdline.register_cmd("e", function(pawn) {
 
 function run(file)
 {
-//  var text = IO.slurp(file);
-//  eval?.(`"use strict";${text}`);
-//  return;
   var modtime = cmd(119, file);
   if (modtime === 0) {
     Log.stack();
@@ -99,7 +100,7 @@ var Log = {
     var lmatch = nnn.match(/\:\d*\)/);
     var line = lmatch ? lmatch[0].shift(1).shift(-1) : "0";
 
-    yughlog(lvl, lg, file, line);
+    yughlog(lvl, msg, file, line);
   },
   
   info(msg) {
@@ -918,12 +919,10 @@ var Player = {
     }
   },
   
-  control(pawn) {
-    this.pawns.push_unique(pawn);
-  },
-
   uncontrol(pawn) {
-    this.pawns = this.pawns.filter(x => x !== pawn);
+    this.players.forEach(function(p) {
+      p.pawns = p.pawns.filter(x => x !== pawn);
+    });
   },
 
   obj_controlled(obj) {
@@ -934,13 +933,20 @@ var Player = {
 
     return false;
   },
+
+  create() {
+    var n = Object.create(this);
+    n.pawns = [];
+    n.gamepads = [];
+    n.control = function(pawn) { n.pawns.push_unique(pawn); };
+    n.uncontrol = function(pawn) { n.pawns = n.pawns.filter(x => x !== pawn); };
+    this.players.push(n);
+    return n;
+  },
 };
 
 for (var i = 0; i < 4; i++) {
-  var player1 = Object.create(Player);
-  player1.pawns = [];
-  player1.gamepads = [];
-  Player.players.push(player1);
+  Player.create();
 }
 
 var Register = {
@@ -997,7 +1003,7 @@ var Register = {
     Register.registries.forEach(function(x) {
       x.clear();
     });
-    Player.players.forEach(x => x.uncontrol(obj));
+    Player.uncontrol(obj);
   },
 
   endofloop(fn) {
@@ -1325,21 +1331,21 @@ var Level = {
 	this[x.varname] = x;
       }
     },this);
-
-    //eval_filename(this.script, this.scriptfile);
-    eval(this.script);
-
-    if (typeof extern === 'object')
-      Object.assign(this, extern);
+    
+    cmd(123, this.scriptfile, self);
       
-    if (typeof update === 'function')
-      Register.update.register(update, this);
+    if (typeof this.update === 'function')
+      Register.update.register(this.update, this);
 
-    if (typeof gui === 'function')
-      register_gui(gui, this);
+    if (typeof this.gui === 'function')
+      Register.gui.register(this.gui, this);
 
-    if (typeof nk_gui === 'function')
-      register_nk_gui(nk_gui, this);
+    if (typeof this.nk_gui === 'function')
+      register_nk_gui(this.nk_gui, this);
+
+    if (typeof this.inputs === 'object') {
+      Player.players[0].control(this);
+    }
   },
 
   revert() {
@@ -1515,9 +1521,10 @@ var Level = {
     newlevel._pos = [0,0];
     newlevel._angle = 0;
     newlevel.color = Color.green;
-    newlevel.toString = function() {
+/*    newlevel.toString = function() {
       return (newlevel.unique ? "#" : "") + newlevel.file;
     };
+ */
     newlevel.filejson = newlevel.save();
     return newlevel;
   },
@@ -1550,8 +1557,6 @@ var Level = {
     if (!file.endsWith(".lvl")) file = file + ".lvl";
     var newlevel = Level.create();
 
-    Log.warn(`MAKING LEVEL ${file}`);
-
     if (IO.exists(file)) {
       newlevel.filejson = IO.slurp(file);
       
@@ -1574,7 +1579,7 @@ var Level = {
     }
 
     newlevel.from = scriptfile.replace('.js','');
-
+    newlevel.file = newlevel.from;
     newlevel.run();
 
     return newlevel;
@@ -1791,6 +1796,12 @@ var Level = {
 var World = Level.create();
 World.name = "World";
 World.fullpath = function() { return World.name; };
+World.load = function(lvl) {
+  if (World.loaded)
+    World.loaded.kill();
+
+  World.loaded = World.spawn(lvl);
+};
 
 var gameobjects = {};
 var Prefabs = gameobjects;
@@ -2044,7 +2055,7 @@ var gameobject = {
       if (this.level)
         this.level.unregister(this);
       
-      this.uncontrol();
+      Player.uncontrol(this);
       this.instances.remove(this);
       Register.unregister_obj(this);
 //      Signal.clear_obj(this);
@@ -2218,6 +2229,7 @@ locks.forEach(x => gameobject.obscure(x));
 function load_configs(file) {
   var configs = JSON.parse(IO.slurp(file));
   for (var key in configs) {
+    if (typeof globalThis[key] !== "object") continue;
     Object.assign(globalThis[key], configs[key]);
   }
   

@@ -2523,9 +2523,9 @@ limited_editor.inputs['C-q'] = function()
   Sound.killall();
   Player.players[0].uncontrol(limited_editor);
   Player.players[0].control(editor);
-  register_gui(editor.ed_gui, editor);
+  Register.gui.register(editor.ed_gui, editor);
   Debug.register_call(editor.ed_debug, editor);
-  World.kill();
+//  World.kill();
   World.clear_all();
   editor.load_json(editor.stash);
   Yugine.view_camera(editor_camera);

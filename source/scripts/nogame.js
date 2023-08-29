@@ -10,5 +10,5 @@ function nogamegui()
   }).draw(Window.dimensions.scale(0.5));
 }
 
-register_gui(nogamegui);
+Register.gui.register(nogamegui);
 

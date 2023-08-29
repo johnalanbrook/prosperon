@@ -1053,6 +1053,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 121:
       return num2js(get_timescale());
       break;
+    case 122:
+      str = JS_ToCString(js, argv[1]);
+      return script_compile(str);
+
+    case 123:
+      str = JS_ToCString(js, argv[1]);
+      file_eval_env(str, argv[2]);
+      break;
   }
 
   if (str)

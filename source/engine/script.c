@@ -145,15 +145,24 @@ int script_dofile(const char *file) {
 JSValue script_runfile(const char *file)
 {
   const char *script = slurp_text(file);
-  int bufsize = strlen(script)+50;
-  char scriptbuffer[bufsize];
-  snprintf(scriptbuffer,bufsize, "(function(){%s})()", script);
 
   JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
   js_print_exception(obj);
   
   free(script);
   return obj;
+}
+
+JSValue script_compile(const char *file)
+{
+  const char *script = slurp_text(file);
+  char strbuf[strlen(script)+50];
+  sprintf(strbuf, "(function(){%s})", script);
+
+  JSValue fn = JS_Eval(js, strbuf, strlen(script), file, JS_EVAL_FLAGS);
+
+  free(script);
+  return fn;
 }
 
 /* env is an object in the scripting environment;
@@ -163,6 +172,15 @@ void script_eval_w_env(const char *s, JSValue env) {
   JSValue v = JS_EvalThis(js, env, s, strlen(s), "internal", JS_EVAL_FLAGS);
   js_print_exception(v);
   JS_FreeValue(js, v);
+}
+
+void file_eval_env(const char *file, JSValue env)
+{
+  char *script = slurp_text(file);
+  JSValue v = JS_EvalThis(js, env, script, strlen(script), file, JS_EVAL_FLAGS);
+  free(script);
+  js_print_exception(v);
+  JS_FreeValue(js,v);
 }
 
 void script_call_sym(JSValue sym) {
