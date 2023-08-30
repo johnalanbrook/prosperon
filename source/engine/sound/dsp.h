@@ -5,25 +5,27 @@
 #define BUF_FRAMES 128 /* At 48k, 128 needed for 240fps consistency */
 #define CHANNELS 2
 
+#include "sound.h"
+
 //#include "circbuf.h"
 
 struct dsp_iir;
 
 
-void dsp_rectify(short *in, short *out, int n);
+void dsp_rectify(soundbyte *in, soundbyte *out, int n);
 
 struct dsp_filter {
-    void (*filter)(void *data, short *out, int samples);
+    void (*filter)(void *data, soundbyte *out, int samples);
     void *data;
 
     int inputs;
     struct dsp_filter *in[6];
 
-    short cache[CHANNELS*BUF_FRAMES];
+    soundbyte cache[CHANNELS*BUF_FRAMES];
     int dirty;
 };
 
-struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, int samples));
+struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, soundbyte *out, int samples));
 
 struct dsp_fir {
     float freq;
@@ -39,7 +41,7 @@ void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter *in);
 
 struct dsp_filter lp_fir_make(float freq);
 
-void dsp_iir_fillbuf(struct dsp_iir *iir, short *out, int n);
+void dsp_iir_fillbuf(struct dsp_iir *iir, soundbyte *out, int n);
 struct dsp_filter hpf_make(int poles, float freq);
 struct dsp_filter lpf_make(int poles, float freq);
 struct dsp_filter bpf_make(int poles, float freq1, float freq2);
@@ -60,7 +62,7 @@ struct dsp_adsr {
     float out;
 };
 
-void dsp_adsr_fillbuf(struct dsp_adsr *adsr, short *out, int n);
+void dsp_adsr_fillbuf(struct dsp_adsr *adsr, soundbyte *out, int n);
 struct dsp_filter make_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigned int rls);
 
 struct dsp_delay {
@@ -70,13 +72,13 @@ struct dsp_delay {
 };
 
 struct dsp_delay dsp_delay_make(unsigned int ms_delay);
-void dsp_delay_filbuf(struct dsp_delay *delay, short *buf, int n);
+void dsp_delay_filbuf(struct dsp_delay *delay, soundbyte *buf, int n);
 
 struct dsp_ammod {
     struct dsp_filter ina;
     struct dsp_filter inb;
-    short abuf[BUF_FRAMES*CHANNELS];
-    short bbuf[BUF_FRAMES*CHANNELS];
+    soundbyte abuf[BUF_FRAMES*CHANNELS];
+    soundbyte bbuf[BUF_FRAMES*CHANNELS];
 };
 
 struct dsp_compressor {
@@ -90,14 +92,14 @@ struct dsp_compressor {
 };
 
 struct dsp_filter dsp_make_compressor();
-void dsp_compressor_fillbuf(struct dsp_compressor *comp, short *out, int n);
+void dsp_compressor_fillbuf(struct dsp_compressor *comp, soundbyte *out, int n);
 
 struct dsp_limiter {
 
 };
 
 struct dsp_filter dsp_make_limiter();
-void dsp_limiter_fillbuf(struct dsp_limiter *lim, short *out, int n);
+void dsp_limiter_fillbuf(struct dsp_limiter *lim, soundbyte *out, int n);
 
 
 struct phasor {
@@ -116,7 +118,7 @@ struct osc {
     struct phasor p;
     unsigned int frames;
     unsigned int frame;
-    short *cache;
+    soundbyte *cache;
 };
 
 struct wav;
@@ -126,8 +128,8 @@ struct wav gen_square(float amp, float freq, int sr, int ch);
 struct wav gen_triangle(float amp, float freq, int sr, int ch);
 struct wav gen_saw(float amp, float freq, int sr, int ch);
 
-void gen_whitenoise(void *data, short *out, int n);
-void gen_pinknoise(void *data, short *out, int n);
+void gen_whitenoise(void *data, soundbyte *out, int n);
+void gen_pinknoise(void *data, soundbyte *out, int n);
 
 
 float sin_phasor(float p);
@@ -135,23 +137,23 @@ float square_phasor(float p);
 float saw_phasor(float p);
 float tri_phasor(float p);
 
-void osc_fillbuf(struct osc *osc, short *buf, int n);
+void osc_fillbuf(struct osc *osc, soundbyte *buf, int n);
 
-void am_mod(struct dsp_ammod *mod, short *c, int n);
+void am_mod(struct dsp_ammod *mod, soundbyte *c, int n);
 
 struct dsp_reverb {
     unsigned int time; /* Time in miliseconds for the sound to decay out */
 };
 
 struct dsp_filter make_reverb();
-void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n);
+void dsp_reverb_fillbuf(struct dsp_reverb *r, soundbyte *out, int n);
 
-void dsp_pan(float *deg, short *out, int n);
+void dsp_pan(float *deg, soundbyte *out, int n);
 
-void dsp_mono(void *p, short *out, int n);
+void dsp_mono(void *p, soundbyte *out, int n);
 
-void dsp_bitcrush(void *p, short *out, int n);
+void dsp_bitcrush(void *p, soundbyte *out, int n);
 
-void dsp_run(struct dsp_filter filter, short *out, int n);
+void dsp_run(struct dsp_filter filter, soundbyte *out, int n);
 
 #endif

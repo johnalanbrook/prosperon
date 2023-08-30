@@ -16,13 +16,14 @@
 #include "font.h"
 #include "openglrender.h"
 
+#define CBUF_IMPLEMENT
+#include "cbuf.h"
+
 #include "sokol/sokol_gfx.h"
 
 sg_shader vid_shader;
 sg_pipeline vid_pipeline;
 sg_bindings vid_bind;
-
-
 
 static void render_frame(plm_t *mpeg, plm_frame_t *frame, void *user) {
   struct datastream *ds = user;
@@ -49,26 +50,25 @@ static void render_audio(plm_t *mpeg, plm_samples_t *samples, void *user) {
 }
 
 void ds_openvideo(struct datastream *ds, const char *video, const char *adriver) {
-  // ds_stop(ds);
-  char buf[MAXPATH] = {'\0'};
-  sprintf(buf, "%s%s", "video/", video);
-  ds->plm = plm_create_with_filename(buf);
+  ds->plm = plm_create_with_filename(video);
 
   if (!ds->plm) {
-    YughLog(0, 0, "Couldn't open %s", video);
+    YughError("Couldn't open %s", video);
   }
+
+  YughWarn("Opened %s - framerate: %f, samplerate: %d, audio streams: %i, duration: %f",
+          video,
+          plm_get_framerate(ds->plm),
+          plm_get_samplerate(ds->plm),
+
+          plm_get_duration(ds->plm));
+
 
   ds->img = sg_make_image(&(sg_image_desc){
     .width = plm_get_width(ds->plm),
     .height = plm_get_height(ds->plm)
   });  
 
-  YughLog(0, 0, "Opened %s - framerate: %f, samplerate: %d, audio streams: %i, duration: %f",
-          video,
-          plm_get_framerate(ds->plm),
-          plm_get_samplerate(ds->plm),
-          plm_get_num_audio_streams(ds->plm),
-          plm_get_duration(ds->plm));
 
   ds->astream = soundstream_make();
   struct dsp_filter astream_filter;

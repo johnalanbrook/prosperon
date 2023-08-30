@@ -641,7 +641,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 14:
     str = JS_ToCString(js, argv[1]);
-    mini_sound(str);
+    play_oneshot(make_sound(str));
     break;
 
   case 15:
@@ -661,7 +661,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 19:
-    mini_master(js2number(argv[1]));
+//    mini_master(js2number(argv[1]));
     break;
 
   case 20:
@@ -918,15 +918,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 87:
     str = JS_ToCString(js, argv[1]);
-    mini_music_play(str);
+//    mini_music_play(str);
     break;
 
   case 88:
-    mini_music_pause();
+//    mini_music_pause();
     return JS_NULL;
 
   case 89:
-    mini_music_stop();
+//    mini_music_stop();
     return JS_NULL;
 
   case 90:

@@ -8,8 +8,7 @@
 #include "openglrender.h"
 #include "window.h"
 
-#define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#include "datastream.h"
 
 #include "timer.h"
 
@@ -128,7 +127,7 @@ int main(int argc, char **args) {
   int logout = 1;
 
   script_startup();
-
+  
   logout = 0;
 
   for (int i = 1; i < argc; i++) {
@@ -224,7 +223,10 @@ int main(int argc, char **args) {
 
   input_init();
   openglInit();
-
+  
+  MakeDatastream();
+  struct datastream v;
+  ds_openvideo(&v, "bjork.mpg", NULL);
 
   while (!want_quit()) {
     double elapsed = glfwGetTime() - lastTick;

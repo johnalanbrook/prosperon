@@ -32,6 +32,9 @@ ifdef ED
   QFLAGS += -DED
 endif
 
+QFLAGS += -DHAVE_CEIL -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF
+
+
 PTYPE != uname -m
 
 BIN = bin/$(CC)/$(INFO)/

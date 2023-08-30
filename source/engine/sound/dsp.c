@@ -12,7 +12,7 @@
 
 struct dsp_filter *filters;
 
-struct dsp_filter make_dsp(void *data, void (*in)(void *data, short *out, int n)) {
+struct dsp_filter make_dsp(void *data, void (*in)(void *data, soundbyte *out, int n)) {
     struct dsp_filter new;
     new.data = data;
     new.filter = in;
@@ -24,7 +24,7 @@ struct dsp_filter make_dsp(void *data, void (*in)(void *data, short *out, int n)
     }
 }
 
-void dsp_run(struct dsp_filter filter, short *out, int n) {
+void dsp_run(struct dsp_filter filter, soundbyte *out, int n) {
     filter.dirty = 1; // Always on for testing
 
     if (!filter.dirty)
@@ -45,13 +45,13 @@ void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter *in)
     filter.in[filter.inputs++] = in;
 }
 
-void am_mod(struct dsp_ammod *mod, short *c, int n)
+void am_mod(struct dsp_ammod *mod, soundbyte *c, int n)
 {
     dsp_run(mod->ina, mod->abuf, n);
     dsp_run(mod->inb, mod->bbuf, n);
 
-    for (int i = 0; i < n*CHANNELS; i++)
-        c[i] = (mod->abuf[i]*mod->bbuf[i])>>15;
+//    for (int i = 0; i < n*CHANNELS; i++)
+//        c[i] = (mod->abuf[i]*mod->bbuf[i])>>15;
 }
 
 void fm_mod(float *in1, float *in2, float *out, int n)
@@ -64,7 +64,7 @@ static struct wav make_wav(float freq, int sr, int ch) {
     new.ch = ch;
     new.samplerate = sr;
     new.frames = sr/freq;
-    new.data = calloc(new.frames*new.ch, sizeof(short));
+    new.data = calloc(new.frames*new.ch, sizeof(soundbyte));
 
     return new;
 }
@@ -75,12 +75,12 @@ struct wav gen_sine(float amp, float freq, int sr, int ch)
 
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
-    short samp = amp*SHRT_MAX;
+    soundbyte samp = amp*SHRT_MAX;
 
-    short *data = (short*)new.data;
+    soundbyte *data = (soundbyte*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
-        short val = samp * sin(2*PI*((float)i / new.frames));
+        soundbyte val = samp * sin(2*PI*((float)i / new.frames));
 
         for (int j = 0; j < new.ch; j++) {
             data[i*new.ch+j] = val;
@@ -101,12 +101,12 @@ struct wav gen_square(float amp, float freq, int sr, int ch)
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
 
-    short samp = amp * SHRT_MAX;
+    soundbyte samp = amp * SHRT_MAX;
 
-    short *data = (short*)new.data;
+    soundbyte *data = (soundbyte*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
-        short val = -2 * floor(2 * i / new.frames) + 1;
+        soundbyte val = -2 * floor(2 * i / new.frames) + 1;
         for (int j = 0; j < new.ch; j++) {
             data[i*new.frames+j] = val;
         }
@@ -122,10 +122,10 @@ struct wav gen_triangle(float amp, float freq, int sr, int ch)
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
 
-    short *data = (short*)new.data;
+    soundbyte *data = (soundbyte*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
-        short val = 2 * abs( (i/new.frames) - floor( (i/new.frames) + 0.5));
+        soundbyte val = 2 * abs( (i/new.frames) - floor( (i/new.frames) + 0.5));
         for (int j = 0; j < new.ch; j++) {
             data[i+j] = val;
         }
@@ -141,12 +141,12 @@ struct wav gen_saw(float amp, float freq, int sr, int ch)
     if (amp > 1) amp = 1;
     if (amp < 0) amp = 0;
 
-    short samp = amp*SHRT_MAX;
+    soundbyte samp = amp*SHRT_MAX;
 
-    short *data = (short*)new.data;
+    soundbyte *data = (soundbyte*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
-        short val = samp * 2 * i/sr - samp;
+        soundbyte val = samp * 2 * i/sr - samp;
         for (int j = 0; j < new.ch; j++) {
             data[i+j] = val;
         }
@@ -155,7 +155,7 @@ struct wav gen_saw(float amp, float freq, int sr, int ch)
     return new;
 }
 
-struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, int samples))
+struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, soundbyte *out, int samples))
 {
     struct dsp_filter new;
     new.data = data;
@@ -164,7 +164,7 @@ struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, short *out, 
     return new;
 }
 
-void dsp_rectify(short *in, short *out, int n)
+void dsp_rectify(soundbyte *in, soundbyte *out, int n)
 {
     for (int i = 0; i < n; i++)
         out[i] = abs(in[i]);
@@ -215,15 +215,15 @@ float tri_phasor(float p)
     return 4*(p * 0.5f ? p : (1-p)) - 1;
 }
 
-void osc_fillbuf(struct osc *osc, short *buf, int n)
+void osc_fillbuf(struct osc *osc, soundbyte *buf, int n)
 {
     for (int i = 0; i < n; i++) {
-        short val = SHRT_MAX * osc->f(phasor_step(&osc->p));
+        soundbyte val = SHRT_MAX * osc->f(phasor_step(&osc->p));
         buf[i*CHANNELS] = buf[i*CHANNELS+1] = val;
     }
 }
 
-void gen_whitenoise(void *data, short *out, int n)
+void gen_whitenoise(void *data, soundbyte *out, int n)
 {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < CHANNELS; j++) {
@@ -232,7 +232,7 @@ void gen_whitenoise(void *data, short *out, int n)
     }
 }
 
-void gen_pinknoise(void *data, short *out, int n)
+void gen_pinknoise(void *data, soundbyte *out, int n)
 {
     gen_whitenoise(NULL, out, n);
 
@@ -270,7 +270,7 @@ void gen_pinknoise(void *data, short *out, int n)
     */
 }
 
-short iir_filter(struct dsp_iir *miir, short val)
+soundbyte iir_filter(struct dsp_iir *miir, soundbyte val)
 {
     struct dsp_iir iir = *miir;
 
@@ -297,12 +297,12 @@ short iir_filter(struct dsp_iir *miir, short val)
     return a * SHRT_MAX;
 }
 
-void dsp_iir_fillbuf(struct dsp_iir *iir, short *out, int n)
+void dsp_iir_fillbuf(struct dsp_iir *iir, soundbyte *out, int n)
 {
     dsp_run(iir->in, out, n);
 
     for (int i = 0; i < n; i++) {
-        short v = iir_filter(iir, out[i*CHANNELS]);
+        soundbyte v = iir_filter(iir, out[i*CHANNELS]);
 
         for (int j = 0; j < CHANNELS; j++) {
            out[i*CHANNELS+j] = v;
@@ -369,7 +369,7 @@ struct dsp_filter hpf_make(int poles, float freq)
   return hpf;
 }
 
-short fir_filter(struct dsp_fir *fir, short val)
+soundbyte fir_filter(struct dsp_fir *fir, soundbyte val)
 {
     float ret = 0.f;
     fir->dx[fir->head] = (float)val/SHRT_MAX;
@@ -383,12 +383,12 @@ short fir_filter(struct dsp_fir *fir, short val)
     return ret * SHRT_MAX;
 }
 
-void dsp_fir_fillbuf(struct dsp_fir *fir, short *out, int n)
+void dsp_fir_fillbuf(struct dsp_fir *fir, soundbyte *out, int n)
 {
     dsp_run(fir->in, out, n);
 
     for (int i = 0; i < n; i++) {
-        short val = fir_filter(fir, out[i*CHANNELS]);
+        soundbyte val = fir_filter(fir, out[i*CHANNELS]);
 
         for (int j = 0; j < CHANNELS; j++)
             out[i*CHANNELS + j] = val*5;
@@ -426,7 +426,7 @@ struct dsp_delay dsp_delay_make(unsigned int ms_delay)
 
     /* Circular buffer size is enough to have the delay */
     unsigned int datasize = ms_delay * CHANNELS * (SAMPLERATE / 1000);
-//    new.buf = circbuf_init(sizeof(short), datasize);
+//    new.buf = circbuf_init(sizeof(soundbyte), datasize);
 //    new.buf.write = datasize;
 
 //    YughInfo("Buffer size is %u.", new.buf.len);
@@ -434,9 +434,9 @@ struct dsp_delay dsp_delay_make(unsigned int ms_delay)
     return new;
 }
 
-void dsp_delay_filbuf(struct dsp_delay *delay, short *buf, int n)
+void dsp_delay_filbuf(struct dsp_delay *delay, soundbyte *buf, int n)
 {
-    static short cache[BUF_FRAMES*2];
+    static soundbyte cache[BUF_FRAMES*2];
     dsp_run(delay->in, cache, n);
 
     for (int i = 0; i < n*CHANNELS; i++) {
@@ -452,9 +452,9 @@ double tau2pole(double tau)
     return exp(-1/(tau*SAMPLERATE));
 }
 
-void dsp_adsr_fillbuf(struct dsp_adsr *adsr, short *out, int n)
+void dsp_adsr_fillbuf(struct dsp_adsr *adsr, soundbyte *out, int n)
 {
-    short val;
+    soundbyte val;
 
     for (int i = 0; i < n; i++) {
         if (adsr->time > adsr->rls) {
@@ -524,7 +524,7 @@ struct dsp_filter make_reverb()
 
 }
 
-void dsp_reverb_fillbuf(struct dsp_reverb *r, short *out, int n)
+void dsp_reverb_fillbuf(struct dsp_reverb *r, soundbyte *out, int n)
 {
 
 }
@@ -551,7 +551,7 @@ struct dsp_filter dsp_make_compressor()
     return filter;
 }
 
-void dsp_compressor_fillbuf(struct dsp_compressor *comp, short *out, int n)
+void dsp_compressor_fillbuf(struct dsp_compressor *comp, soundbyte *out, int n)
 {
     float val;
     float db;
@@ -578,7 +578,7 @@ void dsp_compressor_fillbuf(struct dsp_compressor *comp, short *out, int n)
     }
 }
 
-void dsp_pan(float *deg, short *out, int n)
+void dsp_pan(float *deg, soundbyte *out, int n)
 {
     if (*deg < -100) *deg = -100.f;
     else if (*deg > 100) *deg = 100.f;
@@ -599,8 +599,8 @@ void dsp_pan(float *deg, short *out, int n)
 
     for (int i = 0; i < n; i++) {
         double pct = *deg / 100.f;
-        short L = out[i*CHANNELS];
-        short R = out[i*CHANNELS +1];
+        soundbyte L = out[i*CHANNELS];
+        soundbyte R = out[i*CHANNELS +1];
 
         if (*deg > 0) {
             out[i*CHANNELS] = short_gain(L, db1);
@@ -614,20 +614,22 @@ void dsp_pan(float *deg, short *out, int n)
     }
 }
 
-void dsp_mono(void *p, short *out, int n)
+void dsp_mono(void *p, soundbyte *out, int n)
 {
     for (int i = 0; i < n; i++) {
-        short val = (out[i*CHANNELS] + out[i*CHANNELS+1]) / 2;
+        soundbyte val = (out[i*CHANNELS] + out[i*CHANNELS+1]) / 2;
 
         for (int j = 0; j < CHANNELS; j++)
             out[i*CHANNELS+j] = val;
     }
 }
 
-void dsp_bitcrush(void *p, short *out, int n)
+void dsp_bitcrush(void *p, soundbyte *out, int n)
 {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < CHANNELS; j++)
-            out[i*CHANNELS+j] = (out[i*CHANNELS+j] | 0xFF); /* Mask out the lower 8 bits */
-    }
+
+//    for (int i = 0; i < n; i++) {
+//        for (int j = 0; j < CHANNELS; j++)
+//            out[i*CHANNELS+j] = (out[i*CHANNELS+j] | 0xFF); /* Mask out the lower 8 bits */
+//    }
+
 }

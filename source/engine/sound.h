@@ -1,7 +1,7 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-struct circbuf;
+#include "cbuf.h"
 
 typedef float soundbyte;
 
@@ -25,7 +25,7 @@ struct soundstream {
 
 struct soundstream *soundstream_make();
 
-/* A playing sound */
+/* A bookmark into a wav, actually playing the sound */
 struct sound {
     int loop; /* How many times to loop */
     unsigned int frame; /* Pointing to the current frame on the wav */
@@ -45,7 +45,7 @@ struct wav {
     unsigned long long frames;
     float gain; /* In dB */
 
-    void *data;
+    soundbyte *data;
 };
 
 struct mp3 {
@@ -56,7 +56,7 @@ void sound_init();
 void audio_open(const char *device);
 void audio_close();
 
-void sound_fillbuf(struct sound *s, short *buf, int n);
+void sound_fillbuf(struct sound *s, soundbyte *buf, int n);
 
 void mini_sound(char *path);
 void mini_master(float v);
@@ -82,7 +82,7 @@ struct mp3 make_mp3(const char *mp3);
 
 const char *get_audio_driver();
 
-void soundstream_fillbuf(struct soundstream *stream, short *buf, int n);
+void soundstream_fillbuf(struct soundstream *stream, soundbyte *buf, int n);
 
 void close_audio_device(int device);
 int open_device(const char *adriver);

@@ -725,7 +725,7 @@ var Music = {
 };
 
 var Sound = {
-  sounds: [],
+  sounds: [], /* array of loaded sound files */
   play(file) {
 //    var s = Object.create(Sound);
 //    s.path = file;

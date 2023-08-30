@@ -25,15 +25,24 @@
 #define TML_IMPLEMENTATION
 #include "tml.h"
 
+#define DR_WAV_IMPLEMENTATION
+#include "dr_wav.h"
+
+#define DR_FLAC_IMPLEMENTATION
+#include "dr_flac.h"
+
+#define DR_MP3_IMPLEMENTATION
+#include "dr_mp3.h"
+
 static struct {
   char *key;
   struct wav *value;
 } *wavhash = NULL;
 
 static struct wav change_channels(struct wav w, int ch) {
-  short *data = w.data;
+  soundbyte *data = w.data;
   int samples = ch * w.frames;
-  short *new = malloc(sizeof(short) * samples);
+  soundbyte *new = malloc(sizeof(soundbyte) * samples);
 
   if (ch > w.ch) {
     /* Sets all new channels equal to the first one */
@@ -57,23 +66,24 @@ static struct wav change_samplerate(struct wav w, int rate) {
   float ratio = (float)rate / w.samplerate;
   int outframes = w.frames * ratio;
   SRC_DATA ssrc;
-  float floatdata[w.frames * w.ch];
-  src_short_to_float_array(w.data, floatdata, w.frames * w.ch);
-  float resampled[w.ch * outframes];
+  soundbyte *resampled = calloc(w.ch*outframes,sizeof(soundbyte));
 
-  ssrc.data_in = floatdata;
+  ssrc.data_in = w.data;
   ssrc.data_out = resampled;
   ssrc.input_frames = w.frames;
   ssrc.output_frames = outframes;
   ssrc.src_ratio = ratio;
 
-  src_simple(&ssrc, SRC_SINC_BEST_QUALITY, w.ch);
-
-  short *newdata = malloc(sizeof(short) * outframes * w.ch);
-  src_float_to_short_array(resampled, newdata, outframes * w.ch);
-
+  int err = src_simple(&ssrc, SRC_LINEAR, w.ch);
+  if (err) {
+    YughError("Resampling error code %d: %s", err, src_strerror(err));
+    free(resampled);
+    return w;
+  }
+  
   free(w.data);
-  w.data = newdata;
+  w.data = resampled;
+  w.frames = outframes;
   w.samplerate = rate;
 
   return w;
@@ -98,7 +108,7 @@ void wav_norm_gain(struct wav *w, double lv) {
   }
 }
 
-void push_sound(float *buffer, int frames, int chan)
+void push_sound(soundbyte *buffer, int frames, int chan)
 {
   bus_fill_buffers(buffer, frames*chan);
 }
@@ -115,30 +125,52 @@ void sound_init() {
 
 struct wav *make_sound(const char *wav) {
   int index = shgeti(wavhash, wav);
-  if (index != -1) return wavhash[index].value;
+  if (index != -1) {
+    YughWarn("%s was cached ...", wav);
+    return wavhash[index].value;
+  }
+  char *ext = strrchr(wav, '.')+1;
+  
+  if(!ext) {
+    YughWarn("No extension detected for %s.", wav);
+    return NULL;
+  }
 
   struct wav mwav;
-  //    mwav.data = drwav_open_file_and_read_pcm_frames_s16(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
+
+  if (!strcmp(ext, "wav")) {
+    mwav.data = drwav_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
+  } else if (!strcmp(ext, "flac")) {
+    mwav.data = drflac_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
+    YughWarn("Flac opened with %d ch, %d samplerate", mwav.ch, mwav.samplerate);
+  } else if (!strcmp(ext, "mp3")) {
+    drmp3_config cnf;
+    mwav.data = drmp3_open_file_and_read_pcm_frames_f32(wav, &cnf, &mwav.frames, NULL);
+    mwav.ch = cnf.channels;
+    mwav.samplerate = cnf.sampleRate;
+  } else {
+    YughWarn("Cannot process file type '%s'.", ext);
+    return NULL;
+  }
 
   if (mwav.samplerate != SAMPLERATE) {
-    YughInfo("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);
-    //        mwav = change_samplerate(mwav, SAMPLERATE);
+    YughWarn("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);
+    mwav = change_samplerate(mwav, SAMPLERATE);
   }
 
   if (mwav.ch != CHANNELS) {
-    YughInfo("Changing channels of %s from %d to %d.", wav, mwav.ch, CHANNELS);
+    YughWarn("Changing channels of %s from %d to %d.", wav, mwav.ch, CHANNELS);
     mwav = change_channels(mwav, CHANNELS);
   }
 
   mwav.gain = 1.f;
-
   struct wav *newwav = malloc(sizeof(*newwav));
   *newwav = mwav;
-
   if (shlen(wavhash) == 0) sh_new_arena(wavhash);
-
   shput(wavhash, wav, newwav);
 
+  YughWarn("Channels %d, sr %d", newwav->ch,newwav->samplerate);
+  
   return newwav;
 }
 
@@ -153,37 +185,10 @@ void free_sound(const char *wav) {
 
 struct soundstream *soundstream_make() {
   struct soundstream *new = malloc(sizeof(*new));
-//  new->buf = circbuf_make(sizeof(short), BUF_FRAMES * CHANNELS * 2);
+  new->buf = circbuf_make(sizeof(short), BUF_FRAMES * CHANNELS * 2);
   return new;
 }
 
-void mini_sound(char *path) {
-  
-  //ma_engine_play_sound(engine, path, NULL);
-}
-
-void mini_music_play(char *path) {
-/*  int result = ma_sound_init_from_file(engine, path, MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &music_sound);
-  if (result != MA_SUCCESS) {
-    YughInfo("Could not load music at path: %s", path);
-  }
-
-  YughInfo("Loading %s...", path);
-  ma_sound_start(&music_sound);
-*/  
-}
-
-void mini_music_pause() {
-//  ma_sound_stop(&music_sound);
-}
-
-void mini_music_stop() {
-//  ma_sound_stop(&music_sound);
-}
-
-void mini_master(float v) {
-//  ma_engine_set_volume(engine, v);
-}
 
 void kill_oneshot(struct sound *s) {
   free(s);
@@ -257,16 +262,16 @@ int open_device(const char *adriver) {
   return 0;
 }
 
-void sound_fillbuf(struct sound *s, short *buf, int n) {
+void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
   float gainmult = pct2mult(s->data->gain);
 
-  short *in = s->data->data;
+  soundbyte *in = s->data->data;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < CHANNELS; j++)
-      buf[i * CHANNELS + j] = in[s->frame + j] * gainmult;
+      buf[i * CHANNELS + j] = in[s->frame*CHANNELS + j] * gainmult;
     s->frame++;
+    
     if (s->frame == s->data->frames) {
-
       bus_free(s->bus);
       s->bus = NULL;
       s->endcb(s);
@@ -275,10 +280,10 @@ void sound_fillbuf(struct sound *s, short *buf, int n) {
   }
 }
 
-void mp3_fillbuf(struct sound *s, short *buf, int n) {
+void mp3_fillbuf(struct sound *s, soundbyte *buf, int n) {
 }
 
-void soundstream_fillbuf(struct soundstream *s, short *buf, int n) {
+void soundstream_fillbuf(struct soundstream *s, soundbyte *buf, int n) {
   int max = 1;//s->buf->write - s->buf->read;
   int lim = (max < n * CHANNELS) ? max : n * CHANNELS;
   for (int i = 0; i < lim; i++) {
