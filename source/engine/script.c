@@ -16,6 +16,8 @@
 #include "sys/types.h"
 #include "time.h"
 
+#include <stdarg.h>
+
 JSContext *js = NULL;
 JSRuntime *rt = NULL;
 

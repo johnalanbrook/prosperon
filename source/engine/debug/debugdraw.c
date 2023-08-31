@@ -113,7 +113,7 @@ void debug_flush(HMM_Mat4 *view)
     sg_apply_pipeline(line_pipe);
     sg_apply_bindings(&line_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(*view));
-    float time = lastTick;
+    float time = appTime;
     sg_range tr = {
       .ptr = &time,
       .size = sizeof(float)
@@ -572,8 +572,8 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int c
 void draw_grid(int width, int span, struct rgba color)
 {
   cpVect offset = cam_pos();
-  offset.x -= mainwin->width/2;
-  offset.y -= mainwin->height/2;
+  offset.x -= mainwin.width/2;
+  offset.y -= mainwin.height/2;
   offset = cpvmult(offset, 1/cam_zoom());
 
   sg_apply_pipeline(grid_pipe);

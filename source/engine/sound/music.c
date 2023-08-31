@@ -82,7 +82,6 @@ void play_song(const char *midi, const char *sf)
     cursong.data = &gsong;
     cursong.filter = dsp_midi_fillbuf;
     musicbus = first_free_bus(cursong);
-    YughWarn("DID IT");
 }
 
 void music_play()

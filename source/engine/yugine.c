@@ -33,9 +33,11 @@
 #include "string.h"
 
 #define SOKOL_TRACE_HOOKS
-#define SOKOL_GFX_IMPL
+#define SOKOL_IMPL
 #define SOKOL_GLCORE33
 #include "sokol/sokol_gfx.h"
+#include "sokol/sokol_app.h"
+#include "sokol/sokol_audio.h"
 
 int physOn = 0;
 
@@ -48,15 +50,11 @@ double physMS = 1 / 165.f;
 double updateMS = 1 / 165.f;
 
 
-double lastTick = 0.0;
 static int phys_step = 0;
 
-static float timescale = 1.f;
+double appTime = 0;
 
-#define FPSBUF 10
-static double framems[FPSBUF];
-int framei = 0;
-int fps;
+static float timescale = 1.f;
 
 #define SIM_PLAY 0
 #define SIM_PAUSE 1
@@ -123,46 +121,11 @@ void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uin
   mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
 }
 
-int main(int argc, char **args) {
-  int logout = 1;
+static int argc;
+static char **args;
 
-  script_startup();
-  
-  logout = 0;
-
-  for (int i = 1; i < argc; i++) {
-    if (args[i][0] == '-') {
-      switch (args[i][1]) {
-      case 'l':
-        if (i + 1 < argc && args[i + 1][0] != '-') {
-          log_setfile(args[i + 1]);
-          i++;
-          continue;
-        } else {
-          YughError("Expected a file for command line arg '-l'.");
-          exit(1);
-        }
-
-      case 'v':
-        printf(engine_info());
-        exit(1);
-        break;
-
-      case 's':
-        compile_script(args[2]);
-        exit(0);
-
-      case 'm':
-        logLevel = atoi(args[2]);
-        break;
-
-      case 'c':
-        logout = 0;
-        break;
-      }
-    }
-  }
-
+void c_init() {
+int logout = 0;
 #if DBG
   if (logout) {
     time_t now = time(NULL);
@@ -206,10 +169,9 @@ int main(int argc, char **args) {
   
   script_evalf("cmd_args('%s');", cmdstr);
 
-  const GLFWvidmode *vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-  YughInfo("Refresh rate is %d", vidmode->refreshRate);
 
-  renderMS = 1.0 / vidmode->refreshRate;
+  mainwin.width = sapp_width();
+  mainwin.height = sapp_height();
 
   sg_setup(&(sg_desc){
       .logger = {
@@ -223,16 +185,17 @@ int main(int argc, char **args) {
 
   input_init();
   openglInit();
-  
-  MakeDatastream();
-  struct datastream v;
-  ds_openvideo(&v, "bjork.mpg", NULL);
+}
 
-  while (!want_quit()) {
-    double elapsed = glfwGetTime() - lastTick;
-    deltaT = elapsed;
-    lastTick = glfwGetTime();
-    //double wait = fmax(0, renderMS - elapsed);
+int frame_fps() {
+  return 1.0/sapp_frame_duration();
+}
+
+void c_frame()
+{
+    double elapsed = sapp_frame_duration();
+    appTime += elapsed;
+
     nuke_input_begin();
     
 //    if (sim_playing())
@@ -240,12 +203,6 @@ int main(int argc, char **args) {
 //    else
 //      input_poll(1000);
       
-    window_all_handle_events();
-    nuke_input_end();
-    framems[framei++] = elapsed;
-
-    if (framei == FPSBUF) framei = 0;
-
     if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
       timer_update(elapsed * timescale);
       physlag += elapsed;
@@ -265,22 +222,76 @@ int main(int argc, char **args) {
 
 //    if (renderlag >= renderMS) {
 //      renderlag -= renderMS;
-      window_renderall();
+      window_render(&mainwin);
 //    }
 
     gameobjects_cleanup();
-  }
-
-  return 0;
 }
 
-int frame_fps() {
-  double fpsms = 0;
-  for (int i = 0; i < FPSBUF; i++) {
-    fpsms += framems[i];
-  }
+void c_clean()
+{
 
-  return FPSBUF / fpsms;
+}
+
+void c_event(const sapp_event *e)
+{
+  switch (e->type) {
+    case SAPP_EVENTTYPE_MOUSE_MOVE:
+      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);
+      break;
+
+    case SAPP_EVENTTYPE_MOUSE_SCROLL:
+      input_mouse_scroll(e->scroll_x, e->scroll_y);
+      break;
+
+    case SAPP_EVENTTYPE_KEY_DOWN:
+      input_btn(e->key_code, e->key_repeat ? INPUT_REPEAT : INPUT_DOWN, e->modifiers);
+      break;
+
+    case SAPP_EVENTTYPE_KEY_UP:
+      input_btn(e->key_code, INPUT_UP, e->modifiers);
+      break;
+
+    case SAPP_EVENTTYPE_MOUSE_UP:
+      input_mouse(e->mouse_button, INPUT_UP);
+      break;
+
+    case SAPP_EVENTTYPE_MOUSE_DOWN:
+      input_mouse(e->mouse_button, INPUT_DOWN);
+      break;
+
+    case SAPP_EVENTTYPE_CHAR:
+      input_key(e->char_code, e->modifiers);
+      break;
+
+    case SAPP_EVENTTYPE_RESIZED:
+      window_resize(e->window_width, e->window_height);
+      break;
+
+    case SAPP_EVENTTYPE_ICONIFIED:
+      window_iconified(1);
+      break;
+
+    case SAPP_EVENTTYPE_RESTORED:
+      window_iconified(0);
+      break;
+
+    case SAPP_EVENTTYPE_FOCUSED:
+      window_focused(1);
+      break;
+
+    case SAPP_EVENTTYPE_UNFOCUSED:
+      window_focused(0);
+      break;
+
+    case SAPP_EVENTTYPE_SUSPENDED:
+      window_suspended(1);
+      break;
+
+    case SAPP_EVENTTYPE_QUIT_REQUESTED:
+      window_quit();
+      break;
+  }
 }
 
 int sim_playing() { return sim_play == SIM_PLAY; }
@@ -310,4 +321,29 @@ void set_timescale(float val) {
 double get_timescale()
 {
   return timescale;
+}
+
+sapp_desc sokol_main(int sargc, char **sargs) {
+  argc = sargc;
+  args = sargs;
+  
+  script_startup();
+
+  return (sapp_desc){
+    .width = 720,
+    .height = 480,
+    .high_dpi = 0,
+    .sample_count = 8,
+    .fullscreen = 0,
+    .window_title = "Yugine",
+    .enable_clipboard = false,
+    .clipboard_size = 0,
+    .enable_dragndrop = true,
+    .max_dropped_files = 1,
+    .max_dropped_file_path_length = 2048,
+    .init_cb = c_init,
+    .frame_cb = c_frame,
+    .cleanup_cb = c_clean,
+    .event_cb = c_event,
+  };
 }

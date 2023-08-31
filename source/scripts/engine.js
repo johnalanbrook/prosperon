@@ -792,19 +792,19 @@ var Mouse = {
 
 var Keys = {
   shift() {
-    return cmd(50, 340) || cmd(50, 344);
+    return cmd(50, 340);// || cmd(50, 344);
   },
   
   ctrl() {
-    return cmd(50, 341) || cmd(50, 344);
+    return cmd(50, 341);// || cmd(50, 344);
   },
   
   alt() {
-    return cmd(50, 342) || cmd(50, 346);
+    return cmd(50, 342);// || cmd(50, 346);
   },
 
   super() {
-    return cmd(50, 343) || cmd(50, 347);
+    return cmd(50, 343);// || cmd(50, 347);
   },
 };
 
@@ -969,10 +969,10 @@ var Register = {
     this.finloop();
   },
 
-  kbm_input(src, btn, state, ...args) {
-    var input = `${src}_${btn}_${state}`;
+  kbm_input(btn, state, ...args) {
+/*    var input = `${src}_${btn}_${state}`;
     Player.players[0].input(input, ...args);
-
+*/
     if (!(state === "pressed" || state === "released" || state === "rep")) return;
     if (btn === 'lmouse')
       btn = 'lm';

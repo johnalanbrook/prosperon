@@ -20,9 +20,6 @@ short cbuf_shift(struct circbuf *buf);
 
 #ifdef CBUF_IMPLEMENT
 
-#include "circbuf.h"
-
-#include "util.h"
 #include "assert.h"
 #include "stdlib.h"
 

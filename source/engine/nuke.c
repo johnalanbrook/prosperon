@@ -10,9 +10,8 @@
 #define SOKOL_GLCORE33
 #include "sokol/sokol_gfx.h"
 
-#define SOKOL_NUKLEAR_NO_SOKOL_APP
 #define SOKOL_NUKLEAR_IMPL
-
+#include "sokol/sokol_app.h"
 #include "sokol/sokol_nuklear.h"
 
 #include <stdarg.h>
@@ -28,8 +27,6 @@ struct nk_context *ctx;
 //static struct nk_glfw nkglfw = {0};
 
 void nuke_init(struct window *win) {
-  window_makecurrent(win);
-  
   snk_setup(&(snk_desc_t){
     .no_default_font = false
   });
