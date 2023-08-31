@@ -5,7 +5,6 @@
 #include "anim.h"
 #include "debug.h"
 #include "debugdraw.h"
-#include "engine.h"
 #include "font.h"
 #include "gameobject.h"
 #include "input.h"

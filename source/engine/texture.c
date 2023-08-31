@@ -11,6 +11,9 @@
 #include "stb_image_resize.h"
 #include <stdio.h>
 
+#define QOI_IMPLEMENTATION
+#include "qoi.h"
+
 struct glrect ST_UNIT = {0.f, 1.f, 0.f, 1.f};
 
 static struct {
@@ -72,6 +75,8 @@ struct Texture *texture_pullfromfile(const char *path) {
     return texhash[index].value;
 
   YughInfo("Loading texture %s.", path);
+
+
   struct Texture *tex = calloc(1, sizeof(*tex));
   tex->opts.sprite = 1;
   tex->opts.mips = 0;
@@ -80,7 +85,20 @@ struct Texture *texture_pullfromfile(const char *path) {
   tex->opts.wrapy = 1;
 
   int n;
-  unsigned char *data = stbi_load(path, &tex->width, &tex->height, &n, 4);
+
+  unsigned char *data;
+
+  char *ext = strrchr(path, '.')+1;
+
+  if (!strcmp(ext, "qoi")) {
+    qoi_desc qoi;
+    data = qoi_read(path, &qoi, 4);
+    tex->width = qoi.width;
+    tex->height = qoi.height;
+    n = qoi.channels;
+  } else {
+    data = stbi_load(path, &tex->width, &tex->height, &n, 4);
+  }
 
   if (data == NULL) {
     YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());

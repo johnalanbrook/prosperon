@@ -426,7 +426,7 @@ void
 src_short_to_float_array (const short *in, float *out, int len)
 {
 	for (int i = 0 ; i < len ; i++)
-	{	out [i] = (float) (in [i] / (1.0 * 0x8000)) ;
+	{	out [i] = (float) (in [i] / ((float)0x8000)) ;
 		} ;
 
 	return ;

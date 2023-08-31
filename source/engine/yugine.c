@@ -1,7 +1,6 @@
 #include "yugine.h"
 
 #include "camera.h"
-#include "engine.h"
 #include "font.h"
 #include "gameobject.h"
 #include "input.h"
@@ -38,6 +37,23 @@
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
+
+#define STB_DS_IMPLEMENTATION
+#include <stb_ds.h>
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include <stb_truetype.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_FAILURE_USERMSG
+#include "stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+#define PL_MPEG_IMPLEMENTATION
+#include <pl_mpeg.h>
+
 
 int physOn = 0;
 
@@ -117,15 +133,12 @@ const char *engine_info()
   return str;
 }
 
-void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
-  mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, msg);
-}
 
 static int argc;
 static char **args;
 
 void c_init() {
-int logout = 0;
+  int logout = 0;
 #if DBG
   if (logout) {
     time_t now = time(NULL);
@@ -150,8 +163,12 @@ int logout = 0;
   signal(SIGBUS, seghandle);
 
 #endif
-
-  engine_init();
+  resources_init();
+  phys2d_init();
+  sound_init();
+  script_init();
+  input_init();
+  openglInit();
 
   int argsize = 0;
   for (int i = 1; i < argc; i++) {
@@ -168,23 +185,6 @@ int logout = 0;
   }
   
   script_evalf("cmd_args('%s');", cmdstr);
-
-
-  mainwin.width = sapp_width();
-  mainwin.height = sapp_height();
-
-  sg_setup(&(sg_desc){
-      .logger = {
-          .func = sg_logging,
-          .user_data = NULL,
-      },
- 
-      .buffer_pool_size = 1024,
-      .context.sample_count = 1,
-  });
-
-  input_init();
-  openglInit();
 }
 
 int frame_fps() {

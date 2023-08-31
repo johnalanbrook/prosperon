@@ -16,6 +16,8 @@ const char *engine_info();
 int frame_fps();
 
 extern double appTime;
-
+extern double renderMS;
+extern double physMS;
+extern double updateMS;
 
 #endif

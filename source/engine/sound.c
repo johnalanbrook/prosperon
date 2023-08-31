@@ -33,6 +33,9 @@
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 
+#define QOA_IMPLEMENTATION
+#include "qoa.h"
+
 static struct {
   char *key;
   struct wav *value;
@@ -141,16 +144,33 @@ struct wav *make_sound(const char *wav) {
     mwav.data = drwav_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
   } else if (!strcmp(ext, "flac")) {
     mwav.data = drflac_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-    YughWarn("Flac opened with %d ch, %d samplerate", mwav.ch, mwav.samplerate);
   } else if (!strcmp(ext, "mp3")) {
     drmp3_config cnf;
     mwav.data = drmp3_open_file_and_read_pcm_frames_f32(wav, &cnf, &mwav.frames, NULL);
     mwav.ch = cnf.channels;
     mwav.samplerate = cnf.sampleRate;
+  } else if (!strcmp(ext, "qoa")) {
+    unsigned char header[QOA_MIN_FILESIZE];
+    FILE *f = fopen(wav, "rb");
+    fread(header, QOA_MIN_FILESIZE, 1, f);
+    qoa_desc qoa;
+    unsigned int ff_pos = qoa_decode_header(header, QOA_MIN_FILESIZE, &qoa);
+    mwav.ch = qoa.channels;
+    mwav.samplerate = qoa.samplerate;
+    mwav.frames = qoa.samples;
+
+    short *qoa_data = qoa_read(wav, &qoa);
+    mwav.data = malloc(sizeof(soundbyte) * mwav.frames * mwav.ch);
+    src_short_to_float_array(qoa_data, mwav.data, mwav.frames*mwav.ch);
+    
+    fclose(f);
+    free(qoa_data);
   } else {
     YughWarn("Cannot process file type '%s'.", ext);
     return NULL;
   }
+
+  YughWarn("%s opened with %d ch, %d samplerate, %d frames", ext, mwav.ch, mwav.samplerate, mwav.frames);
 
   if (mwav.samplerate != SAMPLERATE) {
     YughWarn("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);
