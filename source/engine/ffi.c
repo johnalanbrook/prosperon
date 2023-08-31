@@ -402,6 +402,7 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 }
 
 JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+/*
   const char *title = JS_ToCString(js, argv[0]);
   int w = js2int(argv[1]);
   int h = js2int(argv[2]);
@@ -409,6 +410,8 @@ JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   JS_FreeCString(js, title);
 
   return JS_NewInt64(js, win->id);
+*/
+  return JS_NULL;
 }
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -776,10 +779,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 48:
-    return JS_NewInt64(js, mainwin->width);
+    return JS_NewInt64(js, mainwin.width);
 
   case 49:
-    return JS_NewInt64(js, mainwin->height);
+    return JS_NewInt64(js, mainwin.height);
 
   case 50:
     return JS_NewBool(js, action_down(js2int(argv[1])));
@@ -884,11 +887,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 77:
-    input_to_game();
     break;
 
   case 78:
-    input_to_nuke();
     break;
 
   case 79:

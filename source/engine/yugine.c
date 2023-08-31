@@ -34,12 +34,10 @@
 #include "string.h"
 
 #define SOKOL_TRACE_HOOKS
-#define SOKOL_GFX_IMPL
-#define SOKOL_GLES3
-#include "sokol/sokol_gfx.h"
+#define SOKOL_IMPL
+#define SOKOL_GLCORE33
 
-#define SOKOL_APP_IMPL
-#define SOKOL_DEBUG
+#include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
 
 int physOn = 0;
@@ -53,8 +51,9 @@ double physMS = 1 / 165.f;
 double updateMS = 1 / 165.f;
 
 static int sim_play = 0;
-double lastTick = 0.0;
 static int phys_step = 0;
+
+double appTime = 0;
 
 static float timescale = 1.f;
 
@@ -159,7 +158,7 @@ void c_init() {
     }
   }
 */
-
+int logout = 0;
 #if DBG
   if (logout) {
     time_t now = time(NULL);
@@ -187,6 +186,9 @@ void c_init() {
 
   engine_init();
 
+  mainwin.width = sapp_width();
+  mainwin.height = sapp_height();
+
   sg_setup(&(sg_desc){
       .logger = {
           .func = sg_logging,
@@ -207,18 +209,13 @@ int frame_fps() {
 
 void c_frame()
 {
-    double elapsed = glfwGetTime() - lastTick;
-    deltaT = elapsed;
-    lastTick = glfwGetTime();
-    //double wait = fmax(0, renderMS - elapsed);
+    double elapsed = sapp_frame_duration();
+    appTime += elapsed;
+
     if (sim_playing())
       input_poll(fmax(0, renderMS-elapsed));
     else
       input_poll(1000);
-    window_all_handle_events();
-    framems[framei++] = elapsed;
-
-    if (framei == FPSBUF) framei = 0;
 
     if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
       timer_update(elapsed * timescale);
@@ -239,7 +236,7 @@ void c_frame()
 
     if (renderlag >= renderMS) {
       renderlag -= renderMS;
-      window_renderall();
+      window_render(&mainwin);
     }
 
     gameobjects_cleanup();
@@ -252,26 +249,61 @@ void c_clean()
 
 void c_event(const sapp_event *e)
 {
-
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
-      input_mouse_moved(e->mouse_x, e->mouse_y);
+      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
-      input_scroll(e->scroll_x, e->scroll_y);
+      input_mouse_scroll(e->scroll_x, e->scroll_y);
       break;
 
     case SAPP_EVENTTYPE_KEY_DOWN:
-      input_key(e->key_code, e->key_repeat ? 2 : 0);
+      input_btn(e->key_code, e->key_repeat ? INPUT_REPEAT : INPUT_DOWN, e->modifiers);
       break;
 
     case SAPP_EVENTTYPE_KEY_UP:
-      input_key(e->key_code, 1);
+      input_btn(e->key_code, INPUT_UP, e->modifiers);
+      break;
+
+    case SAPP_EVENTTYPE_MOUSE_UP:
+      input_mouse(e->mouse_button, INPUT_UP);
+      break;
+
+    case SAPP_EVENTTYPE_MOUSE_DOWN:
+      input_mouse(e->mouse_button, INPUT_DOWN);
       break;
 
     case SAPP_EVENTTYPE_CHAR:
       input_key(e->char_code);
+      break;
+
+    case SAPP_EVENTTYPE_RESIZED:
+      window_resize(e->window_width, e->window_height);
+      break;
+
+    case SAPP_EVENTTYPE_ICONIFIED:
+      window_iconified(1);
+      break;
+
+    case SAPP_EVENTTYPE_RESTORED:
+      window_iconified(0);
+      break;
+
+    case SAPP_EVENTTYPE_FOCUSED:
+      window_focused(1);
+      break;
+
+    case SAPP_EVENTTYPE_UNFOCUSED:
+      window_focused(0);
+      break;
+
+    case SAPP_EVENTTYPE_SUSPENDED:
+      window_suspended(1);
+      break;
+
+    case SAPP_EVENTTYPE_QUIT_REQUESTED:
+      window_quit();
       break;
   }
 }

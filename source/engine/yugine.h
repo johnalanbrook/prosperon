@@ -15,7 +15,7 @@ const char *engine_info();
 
 int frame_fps();
 
-extern double lastTick;
+extern double appTime;
 
 
 #endif

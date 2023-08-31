@@ -116,17 +116,12 @@ static sg_trace_hooks hooks = {
 
 
 void openglInit() {
-  if (!mainwin) {
-    YughError("No window to init OpenGL on.", 1);
-    exit(1);
-  }
-
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
 
   font_init(NULL);
   debugdraw_init();
   sprite_initialize();
-  nuke_init(mainwin);
+  nuke_init(&mainwin);
 
   model_init();
   sg_color c;
@@ -245,14 +240,14 @@ void render_winsize()
   
   crt_post.img = sg_make_image(&(sg_image_desc){
     .render_target = true,
-    .width = mainwin->width,
-    .height = mainwin->height
+    .width = mainwin.width,
+    .height = mainwin.height
   });
 
   crt_post.depth_img = sg_make_image(&(sg_image_desc){
     .render_target = true,
-    .width = mainwin->width,
-    .height = mainwin->height,
+    .width = mainwin.width,
+    .height = mainwin.height,
     .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
   });
 
@@ -315,7 +310,7 @@ void openglRender(struct window *window) {
   sg_end_pass();
 
   draw_model(duck,model, lsm);  
-*/  
+*/
 
 //  sg_begin_default_pass(&pass_action, window->width, window->height);
   sg_begin_pass(crt_post.pass, &pass_action);
@@ -330,7 +325,7 @@ void openglRender(struct window *window) {
              pos.y + zoom * window->height / 2, -1.f, 1.f);
 
   hudproj = HMM_Orthographic_RH_NO(0, window->width, 0, window->height, -1.f, 1.f);
-  
+
   sprite_draw_all();
   sprite_flush();
   call_draw();

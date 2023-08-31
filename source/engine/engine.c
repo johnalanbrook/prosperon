@@ -38,16 +38,6 @@ void error_callback(int error, const char *description) {
 }
 
 void engine_init() {
-  
-  glfwSetErrorCallback(error_callback);
-  /* Initialize GLFW */
-  if (!glfwInit()) {
-    YughError("Could not init GLFW. Exiting.");
-    exit(1);
-  } else {
-    YughInfo("Initted GLFW.");
-  }
-
   resources_init();
 
   YughInfo("Starting physics ...");
