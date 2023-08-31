@@ -8,6 +8,7 @@
 #include "stb_ds.h"
 #include "time.h"
 #include <stdio.h>
+#include <ctype.h>
 
 #include "stb_ds.h"
 

@@ -14,6 +14,7 @@ void print_stacktrace();
 const char *engine_info();
 
 int frame_fps();
+double get_timescale();
 
 extern double appTime;
 extern double renderMS;

@@ -19,7 +19,7 @@
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
 
-char *prefabs;
+char **prefabs;
 
 const char *EXT_PREFAB = ".prefab";
 const char *EXT_LEVEL = ".level";
@@ -89,7 +89,7 @@ static int ext_check(const char *path, const struct stat *sb, int typeflag) {
 void fill_extensions(char *paths, const char *path, const char *ext) {
   cur_ext = ext;
   arrfree(paths);
-  ftw(".", ext_check, 10);
+  nftw(".", ext_check, 10, 0);
 }
 
 void findPrefabs() {

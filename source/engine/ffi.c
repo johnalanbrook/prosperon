@@ -568,7 +568,7 @@ JSValue dukext2paths(char *ext) {
   dukext = ext;
   dukarr = JS_NewArray(js);
   dukidx = 0;
-  ftw(".", duk2path, 10);
+  nftw(".", duk2path, 10,0);
   return dukarr;
 }
 

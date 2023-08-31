@@ -13,7 +13,7 @@ extern int stemlen;
 
 void resources_init();
 
-extern char *prefabs;
+extern char **prefabs;
 void findPrefabs();
 void fill_extensions(char *paths, const char *path, const char *ext);
 char *get_filename_from_path(char *path, int extension);

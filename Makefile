@@ -7,6 +7,7 @@ UNAME != uname
 # DBG --- build with debugging symbols and logging
 # ED --- build with or without editor
 # OPT --- Optimize
+# OS --- Set to WIN, WEB, MAC, IOS, LINUX
 
 QFLAGS :=
 
@@ -17,7 +18,6 @@ ifdef DBG
   ifeq ($(CC),tcc)
     QFLAGS += 
   endif
-  
 else
   QFLAGS += -O2
   INFO = rel
@@ -34,8 +34,24 @@ endif
 
 QFLAGS += -DHAVE_CEIL -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF
 
-
 PTYPE != uname -m
+
+ifeq ($(OS), WIN)
+	LINKER_FLAGS += $(QFLAGS) -static 
+	ELIBS = engine d3d11 dxgi quickjs gdi32 ws2_32 ole32 winmm setupapi m
+	CLIBS =
+	EXT = .exe
+	CC = x86_64-w64-mingw32-gcc
+else ifeq ($(OS), WEB)
+	LINKER_FLAGS += $(QFLAGS) -static -sFULL_ES3
+	ELIBS =  engine pthread quickjs GL c m dl
+	CLIBS =
+	CC = emcc
+else
+	LINKER_FLAGS += $(QFLAGS) -L/usr/local/lib -pthread -rdynamic
+	ELIBS =  engine pthread quickjs GL c m dl X11 Xi Xcursor EGL asound
+	CLIBS =
+endif
 
 BIN = bin/$(CC)/$(INFO)/
 
@@ -70,7 +86,7 @@ includeflag != find source -type d -name include
 includeflag += $(engincs) source/engine/thirdparty/Nuklear
 includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function
+WARNING_FLAGS = -Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-int-conversion
 
 SEM = 0.0.1
 COM != fossil describe
@@ -79,17 +95,6 @@ VER = $(SEM)-$(COM)
 COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
 LIBPATH = -L$(BIN)
-
-ifeq ($(OS), WIN32)
-	LINKER_FLAGS = $(QFLAGS) -static 
-	ELIBS = engine glfw3 opengl32 quickjs gdi32 ws2_32 ole32 winmm setupapi m
-	CLIBS =
-	EXT = .exe
-else
-	LINKER_FLAGS = $(QFLAGS) -L/usr/local/lib -pthread -rdynamic
-	ELIBS =  engine pthread yughc quickjs GL c m dl X11 Xi Xcursor EGL asound
-	CLIBS =
-endif
 
 NAME = yugine$(EXT)
 
@@ -153,10 +158,6 @@ $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
 	@$(CC) $(COMPILER_FLAGS)
-
-.PHONY: docs
-docs:
-	asciidoctor docs/*.adoc
 
 .PHONY: clean
 clean:

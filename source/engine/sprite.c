@@ -87,7 +87,7 @@ struct sprite *id2sprite(int id) {
   return &sprites[id];
 }
 
-static sprite_count = 0;
+static int sprite_count = 0;
 
 void sprite_flush() {
   sprite_count = 0;

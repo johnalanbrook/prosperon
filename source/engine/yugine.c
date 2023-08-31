@@ -6,6 +6,8 @@
 #include "input.h"
 #include "openglrender.h"
 #include "window.h"
+#include "sound.h"
+#include "resources.h"
 
 #include "datastream.h"
 
@@ -33,7 +35,15 @@
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
-#define SOKOL_GLCORE33
+
+#if defined __linux__
+  #define SOKOL_GLCORE33
+#elif __EMSCRIPTEN__
+  #define SOKOL_GLES3
+#elif __WIN32
+  #define SOKOL_D3D11
+#endif
+
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
@@ -140,6 +150,7 @@ static char **args;
 void c_init() {
   int logout = 0;
 #if DBG
+  #if __linux
   if (logout) {
     time_t now = time(NULL);
     char fname[100];
@@ -161,8 +172,9 @@ void c_init() {
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
   signal(SIGBUS, seghandle);
-
+  #endif
 #endif
+
   resources_init();
   phys2d_init();
   sound_init();
@@ -196,8 +208,6 @@ void c_frame()
     double elapsed = sapp_frame_duration();
     appTime += elapsed;
 
-    nuke_input_begin();
-    
 //    if (sim_playing())
       input_poll(fmax(0, renderMS-elapsed));
 //    else

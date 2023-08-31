@@ -14,6 +14,8 @@
 #include "model.h"
 #include "stb_ds.h"
 
+#include "sokol/sokol_app.h"
+
 #include "HandmadeMath.h"
 
 int renderMode = LIT;
