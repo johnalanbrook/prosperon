@@ -7,7 +7,6 @@ UNAME != uname
 # DBG --- build with debugging symbols and logging
 # ED --- build with or without editor
 # OPT --- Optimize
-# OS --- Set to WIN, WEB, MAC, IOS, LINUX
 
 QFLAGS :=
 
@@ -21,7 +20,7 @@ ifdef DBG
 else
   QFLAGS += -O2
   INFO = rel
-  CC = gcc
+  CC = clang
 endif
 
 ifdef OPT
@@ -36,21 +35,21 @@ QFLAGS += -DHAVE_CEIL -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF
 
 PTYPE != uname -m
 
-ifeq ($(OS), WIN)
-	LINKER_FLAGS += $(QFLAGS) -static 
-	ELIBS = engine d3d11 dxgi quickjs gdi32 ws2_32 ole32 winmm setupapi m
-	CLIBS =
+LINKER_FLAGS = $(QFLAGS)
+
+ifeq ($(OS), Windows_NT)
+	QFLAGS += -mwin32
+	LINKER_FLAGS += 
+	ELIBS = engine kernel32 user32 shell32 dxgi quickjs gdi32 ws2_32 ole32 winmm setupapi m
 	EXT = .exe
-	CC = x86_64-w64-mingw32-gcc
 else ifeq ($(OS), WEB)
-	LINKER_FLAGS += $(QFLAGS) -static -sFULL_ES3
+	LINKER_FLAGS += -sFULL_ES3
 	ELIBS =  engine pthread quickjs GL c m dl
-	CLIBS =
 	CC = emcc
+	EXT = .html
 else
-	LINKER_FLAGS += $(QFLAGS) -L/usr/local/lib -pthread -rdynamic
+	LINKER_FLAGS += -L/usr/local/lib -pthread -rdynamic
 	ELIBS =  engine pthread quickjs GL c m dl X11 Xi Xcursor EGL asound
-	CLIBS =
 endif
 
 BIN = bin/$(CC)/$(INFO)/
@@ -79,7 +78,6 @@ endif
 edirs += source/engine $(addprefix source/engine/, $(subengs)) source/engine/thirdparty/Nuklear
 ehead != find source/engine source/engine/sound source/engine/debug -maxdepth 1 -type f -name *.h
 eobjects != find source/engine -type f -name '*.c' | sed -r 's|^(.*)\.c|$(objprefix)/\1.o|'  # Gets all .c files and makes .o refs
-eobjects != $(call rm,$(eobjects),sqlite pl_mpeg_extract_frames pl_mpeg_player yugine nuklear)
 
 engincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
@@ -99,7 +97,6 @@ LIBPATH = -L$(BIN)
 NAME = yugine$(EXT)
 
 ELIBS != $(call prefix, $(ELIBS), -l)
-CLIBS != $(call prefix, $(CLIBS), -l);
 
 objects = $(eobjects)
 DEPENDS = $(objects:.o=.d)

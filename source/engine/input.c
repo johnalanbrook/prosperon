@@ -124,15 +124,33 @@ void input_mouse_scroll(float x, float y)
   mouseWheelX = x;
 }
 
-void input_btn(int btn, int state, int mod)
+void input_btn(int btn, int state, uint32_t mod)
 {
   char *keystr = keyname_extd(btn);
 
-  JSValue argv[2];
-  argv[0] = JS_NewString(js, keystr);
-  argv[1] = jsinputstate[state];
-  script_callee(pawn_callee, 2, argv);
+  if (strlen(keystr) == 1 && mod & SAPP_MODIFIER_SHIFT)
+    keystr[0] = toupper(keystr[0]);
+
+  char out[16] = {0};
+  snprintf(out, 16, "%s%s%s%s",
+    mod & SAPP_MODIFIER_CTRL ? "C-" : "",
+    mod & SAPP_MODIFIER_ALT ? "M-" : "",
+    mod & SAPP_MODIFIER_SUPER ? "S-" : "",
+    keystr
+  );
+
+  JSValue argv[3];
+  argv[1] = JS_NewString(js, out);  
+  argv[2] = jsinputstate[state];
+  
+  argv[0] = JS_NewString(js, "emacs");
+  script_callee(pawn_callee, 3, argv);
   JS_FreeValue(js, argv[0]);
+
+  argv[0] = JS_NewString(js, "action");
+  script_callee(pawn_callee, 3, argv);
+  JS_FreeValue(js, argv[0]);  
+  JS_FreeValue(js, argv[1]);
 
   if (state == INPUT_DOWN) {
     key_states[btn] = INPUT_DOWN;
@@ -146,10 +164,9 @@ void input_btn(int btn, int state, int mod)
 
 void input_key(int key, uint32_t mod)
 {
+  JSValue argv[2];
   char out[2] = {0};
   out[0] = (char)key;
-  
-  JSValue argv[3];
   argv[0] = JS_NewString(js, "char");
   argv[1] = JS_NewString(js, out);
   script_callee(pawn_callee, 2, argv);
@@ -339,8 +356,8 @@ void input_poll(double wait) {
   mouseWheelX = 0;
   mouseWheelY = 0;
 
-  for (int i = 0; i < arrlen(downkeys); i++)
-    call_input_down(&downkeys[i]);
+//  for (int i = 0; i < arrlen(downkeys); i++)
+//    call_input_down(&downkeys[i]);
 }
 
 int key_is_num(int key) {

@@ -30,7 +30,7 @@ void set_mouse_mode(int mousemode);
 void input_mouse(int btn, int state);
 void input_mouse_move(float x, float y, float dx, float dy);
 void input_mouse_scroll(float x, float y);
-void input_btn(int btn, int state, int mod);
+void input_btn(int btn, int state, uint32_t mod);
 void input_key(int key, uint32_t mod);
 
 const char *keyname_extd(int key);

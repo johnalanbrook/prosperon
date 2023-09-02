@@ -10,7 +10,7 @@
 
 #include "script.h"
 
-int logLevel = 1;
+int logLevel = 0;
 
 /* Four levels of log:
    0 info
@@ -45,6 +45,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	char msgbuffer[ERROR_BUFFER] = { '\0' };
 	vsnprintf(msgbuffer, ERROR_BUFFER, message, args);
 	va_end(args);
+
 
 	char buffer[ERROR_BUFFER] = { '\0' };
 	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
@@ -84,4 +85,8 @@ void log_cat(FILE *f) {
         out[strcspn(out, "\n")] = '\0';
         YughInfo(out);
     }
+}
+
+void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
+  mYughLog(lvl, 1, line, file, "tag: %d, msg: %s", tag, msg);
 }

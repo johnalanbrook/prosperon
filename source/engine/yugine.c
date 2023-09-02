@@ -34,6 +34,10 @@
 #include "string.h"
 
 #define SOKOL_TRACE_HOOKS
+#ifdef DBG
+#define SOKOL_DEBUG
+#endif
+
 #define SOKOL_IMPL
 
 #if defined __linux__
@@ -41,12 +45,14 @@
 #elif __EMSCRIPTEN__
   #define SOKOL_GLES3
 #elif __WIN32
-  #define SOKOL_D3D11
+  #define SOKOL_GLCORE33
+  #define SOKOL_WIN32_FORCE_MAIN
 #endif
 
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
+#include "sokol/sokol_time.h"
 
 #define STB_DS_IMPLEMENTATION
 #include <stb_ds.h>
@@ -56,6 +62,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_FAILURE_USERMSG
+#define STBI_NO_SIMD
 #include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -64,6 +71,12 @@
 #define PL_MPEG_IMPLEMENTATION
 #include <pl_mpeg.h>
 
+#include "debug.h"
+
+static struct d_prof prof_draw;
+static struct d_prof prof_update;
+static struct d_prof prof_input;
+static struct d_prof prof_physics;
 
 int physOn = 0;
 
@@ -107,7 +120,6 @@ int backtrace(void **buffer, int size) {
 }
 #endif
 
-
 void print_stacktrace() {
 #ifdef __linux__
   void *ents[512];
@@ -142,7 +154,6 @@ const char *engine_info()
   snprintf(str, 100, "Yugine version %s, %s build.\nCopyright 2022-2023 odplot productions LLC.\n", VER, INFO);
   return str;
 }
-
 
 static int argc;
 static char **args;
@@ -208,34 +219,39 @@ void c_frame()
     double elapsed = sapp_frame_duration();
     appTime += elapsed;
 
-//    if (sim_playing())
-      input_poll(fmax(0, renderMS-elapsed));
-//    else
-//      input_poll(1000);
+    input_poll(fmax(0, renderMS-elapsed));
       
     if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
+      prof_start(&prof_update);
       timer_update(elapsed * timescale);
-      physlag += elapsed;
       call_updates(elapsed * timescale);
-      // TODO: Physics is not independent ...
-//      while (physlag >= physMS) {
+      prof(&prof_update);
+
+      physlag += elapsed;
+      while (physlag >= physMS) {
+        prof_start(&prof_physics);
         phys_step = 1;
         physlag -= physMS;
         phys2d_update(physMS * timescale);
 	call_physics(physMS * timescale);
         if (sim_play == SIM_STEP) sim_pause();
         phys_step = 0;
-//      }
+	prof(&prof_physics);
+      }
     }
 
     renderlag += elapsed;
 
 //    if (renderlag >= renderMS) {
 //      renderlag -= renderMS;
+      prof_start(&prof_draw);
       window_render(&mainwin);
+      prof(&prof_draw);
 //    }
 
     gameobjects_cleanup();
+
+    
 }
 
 void c_clean()
@@ -336,6 +352,8 @@ double get_timescale()
 sapp_desc sokol_main(int sargc, char **sargs) {
   argc = sargc;
   args = sargs;
+
+  stm_setup();
   
   script_startup();
 
@@ -355,5 +373,6 @@ sapp_desc sokol_main(int sargc, char **sargs) {
     .frame_cb = c_frame,
     .cleanup_cb = c_clean,
     .event_cb = c_event,
+    .logger.func = sg_logging,
   };
 }

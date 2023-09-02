@@ -116,11 +116,6 @@ static sg_trace_hooks hooks = {
   .destroy_shader = destroy_shader,
 };
 
-void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
-//  mYughLog(0, 1, line, file, "tag: %s, msg: %s", tag, sg);
-}
-
-
 void openglInit() {
   mainwin.width = sapp_width();
   mainwin.height = sapp_height();

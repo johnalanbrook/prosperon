@@ -2,8 +2,9 @@
 #define LOG_H
 
 #include <stdio.h>
+#include <stdint.h>
 
-#define ERROR_BUFFER 1024*1024
+#define ERROR_BUFFER 1024
 
 #define LOG_INFO 0
 #define LOG_WARN 1
@@ -13,8 +14,6 @@
 #define LOG_ENGINE 0
 #define LOG_SCRIPT 1
 #define LOG_RENDER 2
-
-#define M_PI 3.14
 
 extern char lastlog[];
 extern char consolelog[];
@@ -35,6 +34,7 @@ extern int logLevel;
 #endif
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...);
+void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data);
 
 void log_setfile(char *file);
 void log_cat(FILE *f);

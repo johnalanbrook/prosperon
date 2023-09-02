@@ -121,16 +121,15 @@ void sound_init() {
     .sample_rate = SAMPLERATE,
     .num_channels = CHANNELS,
     .buffer_frames = BUF_FRAMES,
+    .logger.func = sg_logging,
   });
   mixer_init();
 }
 
 struct wav *make_sound(const char *wav) {
   int index = shgeti(wavhash, wav);
-  if (index != -1) {
-    YughWarn("%s was cached ...", wav);
-    return wavhash[index].value;
-  }
+  if (index != -1) return wavhash[index].value;
+  
   char *ext = strrchr(wav, '.')+1;
   
   if(!ext) {
@@ -207,7 +206,6 @@ struct soundstream *soundstream_make() {
   new->buf = circbuf_make(sizeof(short), BUF_FRAMES * CHANNELS * 2);
   return new;
 }
-
 
 void kill_oneshot(struct sound *s) {
   free(s);

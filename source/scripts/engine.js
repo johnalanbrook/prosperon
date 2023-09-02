@@ -969,23 +969,18 @@ var Register = {
     this.finloop();
   },
 
-  kbm_input(btn, state, ...args) {
-/*    var input = `${src}_${btn}_${state}`;
-    Player.players[0].input(input, ...args);
-*/
-    if (!(state === "pressed" || state === "released" || state === "rep")) return;
+  kbm_input(mode, btn, state, ...args) {
+    switch(mode) {
+      case "emacs":
+        Player.players[0].raw_input(btn, state, ...args);
+        break;
+    };
+
     if (btn === 'lmouse')
       btn = 'lm';
 
     if (btn === 'rmouse')
       btn = 'rm';
-      
-    var e_str = "";
-    if (Keys.ctrl()) e_str += "C-";
-    if (Keys.alt()) e_str += "M-";
-    if (Keys.super()) e_str += "Sp-";
-    e_str += btn;
-    Player.players[0].raw_input(e_str, state, ...args);
   },
 
   gamepad_playermap: [],
