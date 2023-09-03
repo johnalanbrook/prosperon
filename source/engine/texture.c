@@ -88,9 +88,9 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   unsigned char *data;
 
-  char *ext = strrchr(path, '.')+1;
+  char *ext = strrchr(path, '.');
 
-  if (!strcmp(ext, "qoi")) {
+  if (ext && !strcmp(ext, ".qoi")) {
     qoi_desc qoi;
     data = qoi_read(path, &qoi, 4);
     tex->width = qoi.width;

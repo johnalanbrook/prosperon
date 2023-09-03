@@ -21,7 +21,7 @@
 JSContext *js = NULL;
 JSRuntime *rt = NULL;
 
-#ifdef DBG
+#ifndef NDEBUG
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT
 #else
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
@@ -47,7 +47,7 @@ void script_startup() {
 JSValue num_cache[100] = {0};
 
 int js_print_exception(JSValue v) {
-#ifdef DBG
+#ifndef NDEBUG
   if (JS_IsException(v)) {
     JSValue exception = JS_GetException(js);
     
@@ -124,7 +124,7 @@ time_t file_mod_secs(const char *file) {
 }
 
 void js_stacktrace() {
-#ifdef DBG
+#ifndef NDEBUG
   call_callee(&stacktrace_callee);
 #endif
 }

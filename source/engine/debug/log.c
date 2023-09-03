@@ -31,7 +31,7 @@ char consolelog[CONSOLE_BUF+1] = {'\0'};
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
-#ifdef DBG
+#ifndef NDEBUG
     if (priority >= logLevel) {
 	time_t now = time(0);
 	struct tm *tinfo = localtime(&now);
@@ -51,9 +51,6 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
 
 	log_print(buffer);
-
-//	if (category != LOG_SCRIPT && priority >= 2)
-//	  js_stacktrace();
   }
 #endif
 }

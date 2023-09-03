@@ -17,13 +17,13 @@
 #define CPU_IS_LITTLE_ENDIAN 1
 
 /* Enable sinc best converter. */
-#define ENABLE_SINC_BEST_CONVERTER 1
+#define ENABLE_SINC_BEST_CONVERTER 0
 
 /* Enable sinc fast converter. */
-#define ENABLE_SINC_FAST_CONVERTER 1
+#define ENABLE_SINC_FAST_CONVERTER 0
 
 /* Enable sinc balanced converter. */
-#define ENABLE_SINC_MEDIUM_CONVERTER 1
+#define ENABLE_SINC_MEDIUM_CONVERTER 0
 
 /* Define to 1 if you have the `alarm' function. */
 #define HAVE_ALARM 1

@@ -19,7 +19,7 @@ extern char lastlog[];
 extern char consolelog[];
 extern int logLevel;
 
-#ifdef DBG
+#ifndef NDEBUG
 #define YughLog(cat, pri, msg, ...) mYughLog(cat, pri, __LINE__, __FILE__, msg, ##__VA_ARGS__)
 #define YughInfo(msg, ...) mYughLog(0, 0, __LINE__, __FILE__, msg, ##__VA_ARGS__);
 #define YughWarn(msg, ...) mYughLog(0, 1, __LINE__, __FILE__, msg, ##__VA_ARGS__);

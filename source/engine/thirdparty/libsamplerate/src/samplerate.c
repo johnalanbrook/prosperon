@@ -6,8 +6,6 @@
 ** file at : https://github.com/libsndfile/libsamplerate/blob/master/COPYING
 */
 
-#include	"config.h"
-
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	<string.h>

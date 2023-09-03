@@ -18,6 +18,11 @@
 #include <immintrin.h>
 #endif
 
+/* Uncomment to enable specific converters */
+//#define ENABLE_SINC_BEST_CONVERTER
+//#define ENABLE_SINC_FAST_CONVERTER
+//#define ENABLE_SINC_MEDIUM_CONVERTER
+
 #include <math.h>
 
 #ifdef HAVE_VISIBILITY

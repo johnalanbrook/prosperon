@@ -24,7 +24,7 @@
 
 #include "2dphysics.h"
 
-#ifdef __linux__
+#ifdef __GLIBC__
 #include <execinfo.h>
 #endif
 
@@ -34,13 +34,9 @@
 #include "string.h"
 
 #define SOKOL_TRACE_HOOKS
-#ifdef DBG
-#define SOKOL_DEBUG
-#endif
-
 #define SOKOL_IMPL
 
-#if defined __linux__
+#if defined __GLIBC__
   #define SOKOL_GLCORE33
 #elif __EMSCRIPTEN__
   #define SOKOL_GLES3
@@ -121,7 +117,7 @@ int backtrace(void **buffer, int size) {
 #endif
 
 void print_stacktrace() {
-#ifdef __linux__
+#ifdef __GLIBC__
   void *ents[512];
   size_t size = backtrace(ents, 512);
 
@@ -138,7 +134,7 @@ void print_stacktrace() {
 }
 
 void seghandle(int sig) {
-#ifdef __linux__
+#ifdef __GLIBC__
   if (strsignal(sig))
     YughCritical("CRASH! Signal: %s.", strsignal(sig));
 

@@ -5,51 +5,73 @@ UNAME != uname
 
 # Options
 # DBG --- build with debugging symbols and logging
-# ED --- build with or without editor
-# OPT --- Optimize
+
+# Temp to strip long emcc paths to just emcc
+CC := $(notdir $(CC))
+
+DBG ?= 1
 
 QFLAGS :=
 
-ifdef DBG
-  QFLAGS += -O0 -g -DDBG 
+INFO :=
+
+ifeq ($(DBG),1)
+  QFLAGS += -g
   INFO = dbg
 
   ifeq ($(CC),tcc)
     QFLAGS += 
   endif
 else
-  QFLAGS += -O2
+  QFLAGS += -DNDEBUG -s
   INFO = rel
-  CC = clang
-endif
-
-ifdef OPT
-  QFLAGS += -flto
-endif
-
-ifdef ED
-  QFLAGS += -DED
 endif
 
 QFLAGS += -DHAVE_CEIL -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF
+
+# Uncomment for smallest binary
+# QFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections -fno-stack-protector -fomit-frame-pointer -fno-math-errno -fno-unroll-loops -fmerge-all-constants -fno-ident -mfpmath=387 -fsingle-precision-constant -ffast-math
 
 PTYPE != uname -m
 
 LINKER_FLAGS = $(QFLAGS)
 
+ELIBS = engine quickjs
+
+PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" --exclude="./include" -czf $(DISTDIR)/$(DIST) .
+ZIP = .tar.gz
+
+ARCH = x64
+
 ifeq ($(OS), Windows_NT)
-	QFLAGS += -mwin32
-	LINKER_FLAGS += 
-	ELIBS = engine kernel32 user32 shell32 dxgi quickjs gdi32 ws2_32 ole32 winmm setupapi m
-	EXT = .exe
-else ifeq ($(OS), WEB)
-	LINKER_FLAGS += -sFULL_ES3
-	ELIBS =  engine pthread quickjs GL c m dl
-	CC = emcc
-	EXT = .html
+  LINKER_FLAGS += -mwin32 -static
+  ELIBS += kernel32 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
+  EXT = .exe
+  PLAT = w64
+  PKGCMD = zip -r $(DISTDIR)/$(DIST) $(BIN) --exclude "./*.a" --exclude="./obj" --exclude="./include"
+  ZIP = .zip
+else ifeq ($(CC), emcc)
+  LINKER_FLAGS += -sFULL_ES3
+  ELIBS +=  pthread quickjs GL c m dl
+  CC = emcc
+  EXT = .html
+  PLAT = html5
 else
-	LINKER_FLAGS += -L/usr/local/lib -pthread -rdynamic
-	ELIBS =  engine pthread quickjs GL c m dl X11 Xi Xcursor EGL asound
+  UNAME != uname -s
+  ifeq ($(UNAME), Linux)
+    LINKER_FLAGS += -pthread -rdynamic
+    ELIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
+    PLAT = linux-$(ARCH)
+  endif
+
+  ifeq ($(UNAME), Darwin)
+    ifeq ($(PLATFORM), macosx)
+      ELIBS = Coca QuartzCore OpenGL
+      PLAT = mac-$(ARCH)
+    else ifeq ($(PLATFORM), iphoneos)
+      ELIBS = Foundation UIKit OpenGLES GLKit
+    endif
+  endif
 endif
 
 BIN = bin/$(CC)/$(INFO)/
@@ -103,7 +125,6 @@ DEPENDS = $(objects:.o=.d)
 -include $(DEPENDS)
 
 ENGINE = $(BIN)libengine.a
-INCLUDE = $(BIN)include
 
 SCRIPTS = $(shell ls source/scripts/*.js)
 
@@ -111,53 +132,48 @@ LINK = $(LIBPATH) $(LINKER_FLAGS) $(ELIBS)
 
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
-DIST = $(NAME)-$(MYTAG).tar.gz
+DIST = yugine-$(PLAT)-$(COM)$(ZIP)
+DISTDIR = ./dist
 
-yugine: $(BIN)yugine
+.DEFAULT_GOAL := all
+all: $(DISTDIR)/$(DIST)
 
-$(NAME): $(BIN)$(NAME)
+DESTDIR ?= ~/.bin
+
+install: $(DISTDIR)/$(DIST)
+	@echo Unpacking $(DIST) in $(DESTDIR)
+#	@unzip $(DISTDIR)/$(DIST) -d $(DESTDIR)
+	@cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
 
 $(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE) $(BIN)libquickjs.a
 	@echo Linking $(NAME)
 	$(CC) $< $(LINK) -o $(BIN)$(NAME)
 	@echo Finished build
 
-$(BIN)$(DIST): $(BIN)$(NAME) source/shaders/* $(SCRIPTS) assets/*
+$(DISTDIR)/$(DIST): $(BIN)$(NAME) source/shaders/* $(SCRIPTS) assets/*
 	@echo Creating distribution $(DIST)
-	@mkdir -p $(BIN)dist
-	@cp $(BIN)$(NAME) $(BIN)dist
-	@cp -rf assets/* $(BIN)dist
-	@cp -rf source/shaders $(BIN)dist
-	@cp -r source/scripts $(BIN)dist
-	@tar czf $(DIST) --directory $(BIN)dist .
-	@mv $(DIST) $(BIN)
+	@mkdir -p $(DISTDIR)
+	@cp -rf assets/* $(BIN)
+	@cp -rf source/shaders $(BIN)
+	@cp -r source/scripts $(BIN)
+	@$(PKGCMD)
 
 $(BIN)libquickjs.a:
 	make -C quickjs clean
 	make -C quickjs libquickjs.a libquickjs.lto.a CC=$(CC)
 	cp quickjs/libquickjs.* $(BIN)
 
-dist: $(BIN)$(DIST)
-
-install: $(BIN)$(DIST)
-	@echo Unpacking $(DIST) in $(DESTDIR)
-	@cp $(BIN)$(DIST) $(DESTDIR)
-	@tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR)
-	@rm $(DESTDIR)/$(DIST)
-
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
-	@ar r $(ENGINE) $(eobjects)
-	@mkdir -p $(INCLUDE)
-	@cp -u -r $(ehead) $(INCLUDE)
+	@llvm-ar r $(ENGINE) $(eobjects)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
-	@echo Making C object $@
+	@echo Making C object $@ OS $(OS)
 	@$(CC) $(COMPILER_FLAGS)
 
-.PHONY: clean
 clean:
 	@echo Cleaning project
 	@rm -rf bin/*
 	@rm -f *.gz
+	@rm -rf dist/*
