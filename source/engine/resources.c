@@ -89,7 +89,7 @@ static int ext_check(const char *path, const struct stat *sb, int typeflag) {
 void fill_extensions(char *paths, const char *path, const char *ext) {
   cur_ext = ext;
   arrfree(paths);
-  nftw(".", ext_check, 10, 0);
+  ftw(".", ext_check, 10);
 }
 
 void findPrefabs() {

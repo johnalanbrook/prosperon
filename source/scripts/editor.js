@@ -6,7 +6,7 @@
 var required_files = ["proto.json"];
 
 required_files.forEach(x => {
-  if (!IO.exists(x)) slurpwrite("", x);
+  if (!IO.exists(x)) IO.slurpwrite("", x);
 });
 
 var editor_level = Level.create();

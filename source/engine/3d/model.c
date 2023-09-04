@@ -1,11 +1,11 @@
 #include "model.h"
 
 #include "log.h"
-#include "mesh.h"
 #include "resources.h"
 #include "shader.h"
 #include "stb_ds.h"
 #include "font.h"
+#include "window.h"
 
 #include "openglrender.h"
 
@@ -26,7 +26,7 @@
 
 static struct {
   char *key;
-  struct Texture *value;
+  struct model *value;
 } *modelhash = NULL;
 
 static void processnode();
@@ -126,15 +126,15 @@ struct model *MakeModel(const char *path) {
   cgltf_data *data = NULL;
   cgltf_result result = cgltf_parse_file(&options, path, &data);
 
-  if (!result == cgltf_result_success) {
-    YughError("Could not read file %s.", path);
+  if (result) {
+    YughError("CGLTF could not parse file %s, err %d.", path, result);
     return NULL;
   }
 
   result = cgltf_load_buffers(&options, data, path);
 
-  if (!result == cgltf_result_success) {
-    YughError("Could not load buffers for file %s.", path);
+  if (result) {
+    YughError("CGLTF could not load buffers for file %s, err %d.", path, result);
     return NULL;
   }
 
@@ -280,7 +280,7 @@ struct model *MakeModel(const char *path) {
 HMM_Vec3 eye = {50,10,5};
 
 void draw_model(struct model *model, HMM_Mat4 amodel, HMM_Mat4 lsm) {
-  HMM_Mat4 proj = HMM_Perspective_RH_ZO(45, 1200.f / 720, 0.1, 10000);
+  HMM_Mat4 proj = HMM_Perspective_RH_ZO(45, (float)mainwin.width / mainwin.height, 0.1, 10000);
   HMM_Vec3 center = {0.f, 0.f, 0.f};
   HMM_Vec3 up = {0.f, 1.f, 0.f};
   HMM_Mat4 view = HMM_LookAt_RH(eye, center, up);

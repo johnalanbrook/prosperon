@@ -40,7 +40,7 @@ unsigned char *slurp_file(const char *filename) {
 }
 
 char *slurp_text(const char *filename) {
-  FILE *f = fopen(filename, "r'");
+  FILE *f = fopen(filename, "r");
   
   if (!f) {
     YughWarn("File %s doesn't exist.", filename);
@@ -156,6 +156,8 @@ struct sFont *MakeSDFFont(const char *fontfile, int height)
     int w, h, xoff, yoff;
 //    unsigned char *stbtt_GetGlyphSDF(&fontinfo, height, i, 1, 0, 1, &w, &h, &xoff, &yoff);
   }
+
+  return newfont;
 }
 
 struct sFont *MakeFont(const char *fontfile, int height) {
@@ -316,8 +318,8 @@ void text_settype(struct sFont *mfont) {
 struct boundingbox text_bb(const char *text, float scale, float lw, float tracking)
 {
   HMM_Vec2 cursor = {0,0};
-  unsigned char *c = text;
-  unsigned char *wordstart;
+  const unsigned char *c = text;
+  const unsigned char *wordstart;
 
   while (*c != '\0') {
     if (isblank(*c)) {

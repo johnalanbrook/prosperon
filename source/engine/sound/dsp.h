@@ -2,7 +2,7 @@
 #define DSP_H
 
 #define SAMPLERATE 44100
-#define BUF_FRAMES 128 /* At 48k, 128 needed for 240fps consistency */
+#define BUF_FRAMES 2048 /* At 48k, 128 needed for 240fps consistency */
 #define CHANNELS 2
 
 #include "sound.h"

@@ -461,7 +461,7 @@ void inflatepoints(cpVect *r, cpVect *p, float d, int n)
 
 void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
 {
-  static_assert(sizeof(cpVect) == 2*sizeof(float));
+  static_assert(sizeof(cpVect) == 2*sizeof(float), "Size of cpVect is not 2 floats.");
   if (thickness == 0) {
     thickness = 1;
   }

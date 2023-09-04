@@ -36,7 +36,7 @@
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
 
-#if defined __GLIBC__
+#if defined __linux__
   #define SOKOL_GLCORE33
 #elif __EMSCRIPTEN__
   #define SOKOL_GLES3
@@ -83,7 +83,6 @@ double updatelag = 0;
 double renderMS = 1 / 165.f;
 double physMS = 1 / 165.f;
 double updateMS = 1 / 165.f;
-
 
 static int phys_step = 0;
 
@@ -146,7 +145,7 @@ void seghandle(int sig) {
 
 const char *engine_info()
 {
-  char str[100];
+  static char str[100];
   snprintf(str, 100, "Yugine version %s, %s build.\nCopyright 2022-2023 odplot productions LLC.\n", VER, INFO);
   return str;
 }
@@ -353,9 +352,12 @@ sapp_desc sokol_main(int sargc, char **sargs) {
   
   script_startup();
 
+  mainwin.width = 1200;
+  mainwin.height = 700;
+
   return (sapp_desc){
-    .width = 720,
-    .height = 480,
+    .width = mainwin.width,
+    .height = mainwin.height,
     .high_dpi = 0,
     .sample_count = 8,
     .fullscreen = 0,

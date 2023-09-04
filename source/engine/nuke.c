@@ -5,9 +5,19 @@
 
 #define STBTT_STATIC
 
+#include "config.h"
+
 #include "nuke.h"
 
-#define SOKOL_GLCORE33
+#if defined __linux__
+  #define SOKOL_GLCORE33
+#elif __EMSCRIPTEN__
+  #define SOKOL_GLES3
+#elif __WIN32
+  #define SOKOL_GLCORE33
+  #define SOKOL_WIN32_FORCE_MAIN
+#endif
+
 #include "sokol/sokol_gfx.h"
 
 #define SOKOL_NUKLEAR_IMPL
@@ -38,36 +48,8 @@ void nuke_start() {
   ctx = snk_new_frame();
 }
 
-void nuke_input_cursor(int x, int y)
-{
-  nk_input_motion(ctx, x, y);
-}
-
-void nuke_input_key(int key, int down)
-{
-  nk_input_key(ctx, key, down);
-}
-
-void nuke_input_button(int btn, int x, int y, int down)
-{
-  nk_input_button(ctx, btn, x, y, down);
-}
-
-void nuke_input_scroll(float x, float y)
-{
-  nk_input_scroll(ctx, nk_vec2(x, y));
-}
-
-void nuke_input_char(char c)
-{
-  nk_input_char(ctx, c);
-}
-
-void nuke_input_begin() { nk_input_begin(ctx); }
-void nuke_input_end() { nk_input_end(ctx); }
-
 void nuke_end() {
-  snk_render(1200,720);
+  snk_render(mainwin.width,mainwin.height);
 }
 
 int nuke_begin(const char *lbl, struct nk_rect rect, int flags) {

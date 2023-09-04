@@ -105,7 +105,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
   ds->playing = true;
 }
 
-struct datastream *MakeDatastream() {
+void MakeDatastream() {
   vid_shader = sg_compile_shader("shaders/videovert.glsl", "shaders/videofrag.glsl", &(sg_shader_desc){
     .fs.images[0] = {
       .name = "video",

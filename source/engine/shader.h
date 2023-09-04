@@ -12,5 +12,4 @@ struct shader {
 void shader_compile_all();
 struct shader *MakeShader(const char *vertpath, const char *fragpath);
 void shader_compile(struct shader *shader);
-void shader_use(struct shader *shader);
 #endif

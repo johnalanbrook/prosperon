@@ -29,72 +29,6 @@ struct shader *MakeShader(const char *vertpath, const char *fragpath) {
   return &arrlast(shaders);
 }
 
-int shader_compile_error(int shader) {
-  /*
-      GLint success = 0;
-      GLchar infoLog[ERROR_BUFFER] = { '\0' };
-
-      glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-      if (success) return 0;
-
-      glGetShaderInfoLog(shader, ERROR_BUFFER, NULL, infoLog);
-      YughLog(0, LOG_ERROR, "Shader compilation error.\nLog: %s", infoLog);
-
-      return 1;
-  */
-}
-
-int shader_link_error(int shader) {
-  /*
-      GLint success = 0;
-      GLchar infoLog[ERROR_BUFFER] = { '\0' };
-
-      glGetProgramiv(shader, GL_LINK_STATUS, &success);
-      if (success) return 0;
-
-      glGetProgramInfoLog(shader, ERROR_BUFFER, NULL, infoLog);
-      YughLog(0, LOG_ERROR, "Shader link error.\nLog: %s", infoLog);
-
-      return 1;
-  */
-}
-
-int load_shader_from_file(const char *path, int type) {
-  char spath[MAXPATH] = {'\0'};
-
-  sprintf(spath, "%s%s", "shaders/", path);
-  FILE *f = fopen(make_path(spath), "r'");
-  if (!path)
-    perror(spath), exit(1);
-
-  char *buf;
-  long int fsize;
-  fseek(f, 0, SEEK_END);
-  fsize = ftell(f);
-  buf = malloc(fsize + 1);
-  rewind(f);
-  size_t r = fread(buf, sizeof(char), fsize, f);
-  buf[r] = '\0';
-
-  fclose(f);
-
-  /*
-      GLuint id = glCreateShader(type);
-      const char *code = buf;
-      glShaderSource(id, 1, &code, NULL);
-      glCompileShader(id);
-      if (shader_compile_error(id)) {
-          YughError("Error with shader %s.", path);
-          return 0;
-      }
-
-      free(buf);
-
-
-      return id;
-   */
-}
-
 void shader_compile(struct shader *shader) {
   YughInfo("Making shader with %s and %s.", shader->vertpath, shader->fragpath);
   char spath[MAXPATH];
@@ -111,10 +45,6 @@ void shader_compile(struct shader *shader) {
 
   free(vsrc);
   free(fsrc);
-}
-
-void shader_use(struct shader *shader) {
-  //    glUseProgram(shader->id);
 }
 
 void shader_compile_all() {

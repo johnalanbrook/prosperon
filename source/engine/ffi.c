@@ -412,7 +412,7 @@ JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 }
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  static_assert(sizeof(tsReal) * 2 == sizeof(cpVect));
+  static_assert(sizeof(tsReal) * 2 == sizeof(cpVect), "Size of tsRealx2 is not cpVect");
 
   tsBSpline spline;
 
@@ -492,7 +492,7 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
     float c = segs[i].y - (a * segs[i].x);
     float b = -1;
 
-    float dist = abs(a * p.x + b * p.y + c) / sqrt(pow(a, 2) + 1);
+    float dist = fabsf(a * p.x + b * p.y + c) / sqrt(pow(a, 2) + 1);
 
     if (dist > shortest) continue;
 
@@ -517,11 +517,12 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
     n.x = segs[1].x - segs[0].x;
     n.y = segs[1].y - segs[0].y;
     n = cpvnormalize(n);
-    if (cpvdot(n, cpvsub(p, segs[0])) < 0)
+    if (cpvdot(n, cpvsub(p, segs[0])) < 0) {
       if (cpvdist(p, segs[0]) >= slop)
         best = -1;
       else
         best = 0;
+     }
   }
 
   if (best == arrlen(segs) - 1) {
@@ -530,11 +531,12 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
     n.y = segs[best - 1].y - segs[best - 1].y;
     n = cpvnormalize(n);
 
-    if (cpvdot(n, cpvsub(p, segs[best])) < 0)
+    if (cpvdot(n, cpvsub(p, segs[best])) < 0) {
       if (cpvdist(p, segs[best]) >= slop)
         best = -1;
       else
         best = arrlen(segs);
+     }
   }
 
   return best;
@@ -568,7 +570,7 @@ JSValue dukext2paths(char *ext) {
   dukext = ext;
   dukarr = JS_NewArray(js);
   dukidx = 0;
-  nftw(".", duk2path, 10,0);
+  ftw(".", duk2path, 10);
   return dukarr;
 }
 

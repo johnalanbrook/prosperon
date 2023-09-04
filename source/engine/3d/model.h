@@ -1,11 +1,17 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include "mesh.h"
 #include "HandmadeMath.h"
+
+#include "sokol/sokol_gfx.h"
 
 extern HMM_Vec3 eye;
 struct shader;
+
+struct mesh {
+  sg_bindings bind;
+  uint32_t face_count;
+};
 
 struct model {
   struct mesh *meshes;

@@ -164,14 +164,14 @@ void openglInit() {
 
   crt_post.img = sg_make_image(&(sg_image_desc){
     .render_target = true,
-    .width = 1200,
-    .height = 720,
+    .width = mainwin.width,
+    .height = mainwin.height,
   });
 
   crt_post.depth_img = sg_make_image(&(sg_image_desc){
     .render_target = true,
-    .width = 1200,
-    .height = 720,
+    .width = mainwin.width,
+    .height = mainwin.height,
     .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
   });
 
@@ -387,6 +387,5 @@ sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
   sg_shader ret = sg_make_shader(d);
   free(vs);
   free(fs);
-
   return ret;
 }

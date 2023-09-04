@@ -2,6 +2,7 @@ PROCS != nproc
 MAKEFLAGS = --jobs=$(PROCS)
 
 UNAME != uname
+MAKEDIR != pwd
 
 # Options
 # DBG --- build with debugging symbols and logging
@@ -40,19 +41,26 @@ ELIBS = engine quickjs
 
 PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" --exclude="./include" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
+UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
 
 ARCH = x64
 
+COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
+
+
 ifeq ($(OS), Windows_NT)
   LINKER_FLAGS += -mwin32 -static
-  ELIBS += kernel32 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
+  COMPILER_FLAGS += -mwin32
+  ELIBS += mingw32 kernel32 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   PLAT = w64
-  PKGCMD = zip -r $(DISTDIR)/$(DIST) $(BIN) --exclude "./*.a" --exclude="./obj" --exclude="./include"
+  PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
+  UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
-  LINKER_FLAGS += -sFULL_ES3
-  ELIBS +=  pthread quickjs GL c m dl
+  LINKER_FLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread
+  COMPILER_FLAGS += -pthread
+  ELIBS +=  pthread quickjs GL openal c m dl
   CC = emcc
   EXT = .html
   PLAT = html5
@@ -106,13 +114,12 @@ includeflag != find source -type d -name include
 includeflag += $(engincs) source/engine/thirdparty/Nuklear
 includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-int-conversion
+WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types #-Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-int-conversion
 
 SEM = 0.0.1
 COM != fossil describe
 VER = $(SEM)-$(COM)
 
-COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
 LIBPATH = -L$(BIN)
 
@@ -143,7 +150,7 @@ DESTDIR ?= ~/.bin
 install: $(DISTDIR)/$(DIST)
 	@echo Unpacking $(DIST) in $(DESTDIR)
 #	@unzip $(DISTDIR)/$(DIST) -d $(DESTDIR)
-	@cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
+	@$(UNZIP)
 
 $(BIN)$(NAME): $(objprefix)/source/engine/yugine.o $(ENGINE) $(BIN)libquickjs.a
 	@echo Linking $(NAME)
@@ -165,7 +172,7 @@ $(BIN)libquickjs.a:
 
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
-	@llvm-ar r $(ENGINE) $(eobjects)
+	@ar r $(ENGINE) $(eobjects)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)

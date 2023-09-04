@@ -125,7 +125,7 @@ struct wav gen_triangle(float amp, float freq, int sr, int ch)
     soundbyte *data = (soundbyte*)new.data;
 
     for (int i = 0; i < new.frames; i++) {
-        soundbyte val = 2 * abs( (i/new.frames) - floor( (i/new.frames) + 0.5));
+        soundbyte val = 2 * fabsf( (i/new.frames) - floor( (i/new.frames) + 0.5));
         for (int j = 0; j < new.ch; j++) {
             data[i+j] = val;
         }

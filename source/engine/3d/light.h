@@ -2,7 +2,7 @@
 #define LIGHT_H
 
 #include <stdint.h>
-
+/*
 struct mLight {
   struct gameobject *go;
   uint8_t color[3];
@@ -11,7 +11,7 @@ struct mLight {
   int on;
 };
 
-/*
+
 struct mPointLight {
     struct mLight light;
     float constant;
@@ -54,10 +54,10 @@ struct mDirectionalLight *MakeDLight();
 
 extern struct mDirectionalLight *dLight;
 
-*/
+
 
 void light_gui(struct mLight *light);
 void pointlight_gui(struct mPointLight *light);
 void spotlight_gui(struct mSpotLight *spot);
-
+*/
 #endif

@@ -105,6 +105,7 @@ struct mSkybox *MakeSkybox(const char *cubemap) {
 
       return newskybox;
   */
+  return NULL;
 }
 
 void skybox_draw(const struct mSkybox *skybox,
