@@ -15,6 +15,7 @@
 #include "sys/stat.h"
 #include "sys/types.h"
 #include "time.h"
+#include "resources.h"
 
 #include <stdarg.h>
 
@@ -42,6 +43,11 @@ void script_startup() {
   JS_SetMaxStackSize(rt, 0);
   js = JS_NewContext(rt);
   ffi_load();
+
+  for (int i = 0; i < 100; i++)
+    num_cache[i] = int2js(i);
+
+  script_dofile("scripts/engine.js");
 }
 
 JSValue num_cache[100] = {0};
@@ -71,17 +77,6 @@ int js_print_exception(JSValue v) {
   }
 #endif
   return 0;
-}
-
-void script_init() {
-  /* Load all prefabs into memory */
-//  if (DBG)
-//    script_dofile("scripts/debug.js");
-//  else
-  script_dofile("scripts/engine.js");
-
-  for (int i = 0; i < 100; i++)
-    num_cache[i] = int2js(i);
 }
 
 void script_run(const char *script, const char *file) {

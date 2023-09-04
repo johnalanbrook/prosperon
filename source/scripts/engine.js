@@ -58,6 +58,7 @@ Cmdline.register_cmd("h", function() {
   Game.quit();
 },
 "Help.");
+Cmdline.register_cmd("b", function() { cmd(124); Game.quit(); }, "Pack the game into the given name.");
 
 Cmdline.register_cmd("e", function(pawn) {
   run("scripts/editor.js");
@@ -1098,8 +1099,10 @@ var Signal = {
 };
 
 var Window = {
-  width: 0,
-  height: 0,
+  set width(w) { cmd(125, w); },
+  set height(h) { cmd(126, h); },
+  get width() { return cmd(48); },
+  get height() { return cmd(49); },
   dimensions:[0,0],
 };
 
@@ -2229,6 +2232,7 @@ var locks = ['height', 'width', 'visible', 'body', 'controlled', 'selectable', '
 locks.forEach(x => gameobject.obscure(x));
 /* Load configs */
 function load_configs(file) {
+  Log.info(`Loading config file ${file}.`);
   var configs = JSON.parse(IO.slurp(file));
   for (var key in configs) {
     if (typeof globalThis[key] !== "object") continue;
@@ -2359,8 +2363,8 @@ gameobject.clone("sprite", {
 });
 
 
-if (IO.exists("config.js"))
-  load("config.js");
+//if (IO.exists("config.js"))
+//  load("config.js");
 
 var prototypes = {};
 if (IO.exists("proto.json"))

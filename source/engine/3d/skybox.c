@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "openglrender.h"
+#include "render.h"
 
 static const float skyboxVertices[216] = {
     -1.0f, 1.0f, -1.0f,

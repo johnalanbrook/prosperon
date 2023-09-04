@@ -6,7 +6,6 @@
 #include "limits.h"
 #include "log.h"
 #include "mix.h"
-#include "render.h"
 #include "resources.h"
 #include "shader.h"
 #include "sound.h"
@@ -14,7 +13,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "font.h"
-#include "openglrender.h"
+#include "render.h"
 
 #define CBUF_IMPLEMENT
 #include "cbuf.h"

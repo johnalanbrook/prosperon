@@ -29,7 +29,7 @@ struct sFont {
   sg_image texID;
 };
 
-void font_init(struct shader *s);
+void font_init();
 struct sFont *MakeFont(const char *fontfile, int height);
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
 void text_settype(struct sFont *font);
@@ -38,10 +38,5 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
 
 // void text_frame();
 void text_flush(HMM_Mat4 *proj);
-
-unsigned char *slurp_file(const char *filename);
-char *slurp_text(const char *filename);
-
-int slurp_write(const char *txt, const char *filename);
 
 #endif

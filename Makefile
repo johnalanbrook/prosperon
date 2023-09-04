@@ -11,21 +11,24 @@ MAKEDIR != pwd
 CC := $(notdir $(CC))
 
 DBG ?= 1
-
-QFLAGS :=
+OPT ?= 0
 
 INFO :=
 
 ifeq ($(DBG),1)
   QFLAGS += -g
   INFO = dbg
-
-  ifeq ($(CC),tcc)
-    QFLAGS += 
-  endif
 else
   QFLAGS += -DNDEBUG -s
   INFO = rel
+endif
+
+ifeq ($(OPT),1)
+  QFLAGS += -O2 -flto
+  AR = llvm-ar
+  INFO = opt
+else
+  QFLAGS += -O0
 endif
 
 QFLAGS += -DHAVE_CEIL -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF
@@ -47,7 +50,6 @@ ARCH = x64
 
 COMPILER_FLAGS = $(includeflag) $(QFLAGS) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" -c $< -o $@
 
-
 ifeq ($(OS), Windows_NT)
   LINKER_FLAGS += -mwin32 -static
   COMPILER_FLAGS += -mwin32
@@ -58,7 +60,7 @@ ifeq ($(OS), Windows_NT)
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
-  LINKER_FLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread
+  LINKER_FLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread --preload-file test.db -s ALLOW_MEMORY_GROWTH=1
   COMPILER_FLAGS += -pthread
   ELIBS +=  pthread quickjs GL openal c m dl
   CC = emcc
@@ -172,11 +174,11 @@ $(BIN)libquickjs.a:
 
 $(ENGINE): $(eobjects)
 	@echo Making library engine.a
-	@ar r $(ENGINE) $(eobjects)
+	@$(AR) r $(ENGINE) $(eobjects)
 
 $(objprefix)/%.o:%.c
 	@mkdir -p $(@D)
-	@echo Making C object $@ OS $(OS)
+	@echo Making C object $@
 	@$(CC) $(COMPILER_FLAGS)
 
 clean:

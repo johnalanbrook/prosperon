@@ -11,8 +11,7 @@
 #include <window.h>
 #include <chipmunk/chipmunk.h>
 #include "2dphysics.h"
-
-#include "openglrender.h"
+#include "resources.h"
 
 #include "stb_image_write.h"
 #include "stb_rect_pack.h"
@@ -24,51 +23,6 @@ struct sFont *font;
 
 #define max_chars 40000
 
-unsigned char *slurp_file(const char *filename) {
-  FILE *f = fopen(filename, "rb");
-
-  if (!f) return NULL;
-
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  unsigned char *slurp = malloc(fsize + 1);
-  fread(slurp, fsize, 1, f);
-  fclose(f);
-
-  return slurp;
-}
-
-char *slurp_text(const char *filename) {
-  FILE *f = fopen(filename, "r");
-  
-  if (!f) {
-    YughWarn("File %s doesn't exist.", filename);
-    return NULL;
-  }
-
-  char *buf;
-  long int fsize;
-  fseek(f, 0, SEEK_END);
-  fsize = ftell(f);
-  buf = malloc(fsize + 1);
-  rewind(f);
-  size_t r = fread(buf, sizeof(char), fsize, f);
-  buf[r] = '\0';
-
-  fclose(f);
-
-  return buf;
-}
-
-int slurp_write(const char *txt, const char *filename) {
-  FILE *f = fopen(filename, "w");
-  if (!f) return 1;
-
-  fputs(txt, f);
-  fclose(f);
-  return 0;
-}
 
 static sg_shader fontshader;
 static sg_bindings bind_text;
@@ -83,7 +37,7 @@ struct text_vert {
 
 static struct text_vert text_buffer[max_chars];
 
-void font_init(struct shader *textshader) {
+void font_init() {
   fontshader = sg_compile_shader("shaders/textvert.glsl", "shaders/textfrag.glsl", &(sg_shader_desc){
       .vs.uniform_blocks[0] = {
           .size = sizeof(float) * 16,
@@ -129,7 +83,7 @@ void font_init(struct shader *textshader) {
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"});
 
-  font = MakeFont("LessPerfectDOSVGA.ttf", 16);
+  font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
   bind_text.fs_images[0] = font->texID;
 }
 
@@ -144,7 +98,7 @@ struct sFont *MakeSDFFont(const char *fontfile, int height)
   char fontpath[256];
   snprintf(fontpath, 256, "fonts/%s", fontfile);
 
-  unsigned char *ttf_buffer = slurp_file(fontpath);
+  unsigned char *ttf_buffer = slurp_file(fontpath, NULL);
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_fontinfo fontinfo;
@@ -170,8 +124,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   char fontpath[256];
   snprintf(fontpath, 256, "fonts/%s", fontfile);
-
-  unsigned char *ttf_buffer = slurp_file(fontpath);
+  
+  unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
+  YughWarn("TTF BUFFER P IS %p", ttf_buffer);
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_packedchar glyphs[95];

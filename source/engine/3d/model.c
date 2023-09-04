@@ -7,7 +7,7 @@
 #include "font.h"
 #include "window.h"
 
-#include "openglrender.h"
+#include "render.h"
 
 // #define HANDMADE_MATH_USE_TURNS
 #include "HandmadeMath.h"

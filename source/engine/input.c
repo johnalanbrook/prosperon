@@ -9,6 +9,7 @@
 #include "time.h"
 #include <stdio.h>
 #include <ctype.h>
+#include "resources.h"
 
 #include "stb_ds.h"
 
@@ -201,9 +202,6 @@ static void pawn_call_keydown(int key) {
 void set_mouse_mode(int mousemode) { sapp_lock_mouse(mousemode); }
 
 void input_init() {
-  char *paddb = slurp_text("data/gamecontrollerdb.txt");
-  free(paddb);
-
   jsaxesstr[0] = str2js("ljoy");
   jsaxesstr[1] = str2js("rjoy");
   jsaxesstr[2] = str2js("ltrigger");

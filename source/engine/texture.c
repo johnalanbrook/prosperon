@@ -76,7 +76,6 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   YughInfo("Loading texture %s.", path);
 
-
   struct Texture *tex = calloc(1, sizeof(*tex));
   tex->opts.sprite = 1;
   tex->opts.mips = 0;

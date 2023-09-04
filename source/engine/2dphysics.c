@@ -169,7 +169,6 @@ void phys2d_init()
 }
 
 void phys2d_set_gravity(cpVect v) {
-  YughInfo("Set gravity to %g %g", v.x, v.y);
   cpSpaceSetGravity(space, v);
 }
 
@@ -632,8 +631,8 @@ static cpBool handle_collision(cpArbiter *arb, int type) {
   cpBody *body1;
   cpBody *body2;
   cpArbiterGetBodies(arb, &body1, &body2);
-  int g1 = *(int*)cpBodyGetUserData(body1);
-  int g2 = *(int*)cpBodyGetUserData(body2);
+  int g1 = (int)cpBodyGetUserData(body1);
+  int g2 = (int)cpBodyGetUserData(body2);
   struct gameobject *go = id2go(g1);
   struct gameobject *go2 = id2go(g2);
 

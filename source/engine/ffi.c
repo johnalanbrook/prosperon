@@ -13,7 +13,6 @@
 #include "mix.h"
 #include "music.h"
 #include "nuke.h"
-#include "openglrender.h"
 #include "sound.h"
 #include "sprite.h"
 #include "stb_ds.h"
@@ -22,7 +21,7 @@
 #include "window.h"
 #include "yugine.h"
 #include <assert.h>
-#include <ftw.h>
+#include "resources.h"
 
 #include "render.h"
 
@@ -412,7 +411,7 @@ JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 }
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  static_assert(sizeof(tsReal) * 2 == sizeof(cpVect), "Size of tsRealx2 is not cpVect");
+  static_assert(sizeof(tsReal) * 2 == sizeof(cpVect));
 
   tsBSpline spline;
 
@@ -552,10 +551,7 @@ int file_exists(char *path) {
   return 0;
 }
 
-static char *dukext;
-static JSValue dukarr;
-static int dukidx;
-
+/*
 static int duk2path(const char *path, const struct stat *sb, int typeflag) {
   if (typeflag == FTW_F) {
     char *ext = strrchr(path, '.');
@@ -565,13 +561,13 @@ static int duk2path(const char *path, const struct stat *sb, int typeflag) {
 
   return 0;
 }
-
+*/
 JSValue dukext2paths(char *ext) {
-  dukext = ext;
-  dukarr = JS_NewArray(js);
-  dukidx = 0;
-  ftw(".", duk2path, 10);
-  return dukarr;
+  char *paths = NULL;
+  
+  fill_extensions(paths, ".", ext);
+//  return dukarr;
+  return JS_NULL;
 }
 
 JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1060,6 +1056,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 123:
       str = JS_ToCString(js, argv[1]);
       file_eval_env(str, argv[2]);
+      break;
+
+    case 124:
+      pack_engine();
+      break;
+
+    case 125:
+      mainwin.width = js2int(argv[1]);
+      break;
+
+    case 126:
+      mainwin.height = js2int(argv[2]);
       break;
   }
 

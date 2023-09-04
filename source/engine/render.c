@@ -1,4 +1,4 @@
-#include "openglrender.h"
+#include "render.h"
 
 #include "camera.h"
 #include "config.h"
@@ -13,6 +13,7 @@
 #include "window.h"
 #include "model.h"
 #include "stb_ds.h"
+#include "resources.h"
 
 #include "sokol/sokol_app.h"
 
@@ -93,30 +94,29 @@ static struct {
   sg_image depth_img;
 } crt_post;
 
-void make_shader(sg_shader_desc *d, sg_shader result, void *data)
+void trace_make_shader(sg_shader_desc *d, sg_shader result, void *data)
 {
-  if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED) {
-    YughWarn("FAILED MAKING A SHADER: %s\n%s\n%s", d->label, d->vs.source, d->fs.source);
-  }
+  if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED)
+    YughError("FAILED MAKING A SHADER: %s\n%s\n%s", d->label);
 }
 
-void fail_shader(sg_shader id, void *data)
+void trace_fail_shader(sg_shader id, void *data)
 {
   YughWarn("SHADER DID NOT COMPILE");
 }
 
-void destroy_shader(sg_shader shd, void *data)
+void trace_destroy_shader(sg_shader shd, void *data)
 {
   YughWarn("DESTROYED SHADER");
 }
 
 static sg_trace_hooks hooks = {
-  .fail_shader = fail_shader,
-  .make_shader = make_shader,
-  .destroy_shader = destroy_shader,
+  .fail_shader = trace_fail_shader,
+  .make_shader = trace_make_shader,
+  .destroy_shader = trace_destroy_shader,
 };
 
-void openglInit() {
+void render_init() {
   mainwin.width = sapp_width();
   mainwin.height = sapp_height();
 
@@ -132,7 +132,7 @@ void openglInit() {
 
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
 
-  font_init(NULL);
+  font_init();
   debugdraw_init();
   sprite_initialize();
   nuke_init(&mainwin);
@@ -383,8 +383,10 @@ sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
 
   d->vs.source = vs;
   d->fs.source = fs;
+  d->label = v;
 
   sg_shader ret = sg_make_shader(d);
+  
   free(vs);
   free(fs);
   return ret;

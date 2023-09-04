@@ -9,7 +9,7 @@
 #include <string.h>
 #include "ffi.h"
 
-#include "openglrender.h"
+#include "render.h"
 
 #include "stb_ds.h"
 

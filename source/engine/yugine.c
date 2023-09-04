@@ -4,7 +4,7 @@
 #include "font.h"
 #include "gameobject.h"
 #include "input.h"
-#include "openglrender.h"
+#include "render.h"
 #include "window.h"
 #include "sound.h"
 #include "resources.h"
@@ -154,55 +154,7 @@ static int argc;
 static char **args;
 
 void c_init() {
-  int logout = 0;
-#if DBG
-  #if __linux
-  if (logout) {
-    time_t now = time(NULL);
-    char fname[100];
-    snprintf(fname, 100, "yugine-%d.log", now);
-    log_setfile(fname);
-  }
-
-  YughInfo("Starting yugine version %s.", VER);
-
-  FILE *sysinfo = NULL;
-  /*    sysinfo = popen("uname -a", "r");
-      if (!sysinfo) {
-          YughWarn("Failed to get sys info.");
-      } else {
-          log_cat(sysinfo);
-          pclose(sysinfo);
-      }*/
-  signal(SIGSEGV, seghandle);
-  signal(SIGABRT, seghandle);
-  signal(SIGFPE, seghandle);
-  signal(SIGBUS, seghandle);
-  #endif
-#endif
-
-  resources_init();
-  phys2d_init();
-  sound_init();
-  script_init();
-  input_init();
-  openglInit();
-
-  int argsize = 0;
-  for (int i = 1; i < argc; i++) {
-    argsize += strlen(args[i]);
-    if (argc > i+1) argsize++;
-  }
-
-  char cmdstr[argsize];
-  cmdstr[0] = '\0';
-
-  for (int i = 0; i < argc; i++) {
-    strcat(cmdstr, args[i]);
-    if (argc > i+1) strcat(cmdstr, " ");
-  }
-  
-  script_evalf("cmd_args('%s');", cmdstr);
+  render_init();
 }
 
 int frame_fps() {
@@ -345,15 +297,62 @@ double get_timescale()
 }
 
 sapp_desc sokol_main(int sargc, char **sargs) {
-  argc = sargc;
-  args = sargs;
+#ifndef NDEBUG
+  #ifdef __linux__
+  int logout = 0;
+  if (logout) {
+    time_t now = time(NULL);
+    char fname[100];
+    snprintf(fname, 100, "yugine-%d.log", now);
+    log_setfile(fname);
+  }
 
-  stm_setup();
-  
+  YughInfo("Starting yugine version %s.", VER);
+
+  FILE *sysinfo = NULL;
+  /*    sysinfo = popen("uname -a", "r");
+      if (!sysinfo) {
+          YughWarn("Failed to get sys info.");
+      } else {
+          log_cat(sysinfo);
+          pclose(sysinfo);
+      }*/
+  signal(SIGSEGV, seghandle);
+  signal(SIGABRT, seghandle);
+  signal(SIGFPE, seghandle);
+  signal(SIGBUS, seghandle);
+  #endif
+#endif
+
+
+  stm_setup(); /* time */
+  resources_init(); 
+
+  phys2d_init();
+
   script_startup();
+  
+  int argsize = 0;
+  for (int i = 1; i < argc; i++) {
+    argsize += strlen(args[i]);
+    if (argc > i+1) argsize++;
+  }
 
-  mainwin.width = 1200;
-  mainwin.height = 700;
+  char cmdstr[argsize];
+  cmdstr[0] = '\0';
+
+  for (int i = 0; i < argc; i++) {
+    strcat(cmdstr, args[i]);
+    if (argc > i+1) strcat(cmdstr, " ");
+  }
+  
+  script_evalf("cmd_args('%s');", cmdstr);
+
+  YughWarn("Width, height %d %d", mainwin.width, mainwin.height);
+  
+  sound_init();
+  input_init();
+  
 
   return (sapp_desc){
     .width = mainwin.width,
