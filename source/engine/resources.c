@@ -318,7 +318,7 @@ void pack_engine()
   sqlite3_close(db);
 }
 #else
-void packengine(){
+void pack_engine(){
   YughError("Cannot pack engine on a web build.");
 }
 #endif
