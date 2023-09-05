@@ -324,7 +324,6 @@ sapp_desc sokol_main(int sargc, char **sargs) {
   #endif
 #endif
 
-
   stm_setup(); /* time */
   resources_init(); 
 

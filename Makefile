@@ -16,6 +16,10 @@ OPT ?= 0
 INFO :=
 LD = $(CC)
 
+ifeq ($(CC), clang)
+  AR = llvm-ar
+endif
+
 ifeq ($(DBG),1)
   CFLAGS += -g
   INFO += dbg
@@ -26,7 +30,7 @@ else
 endif
 
 ifeq ($(OPT),small)
-  CFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables 
+  CFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
   LDFLAGS += -flto
   INFO := $(addsuffix _small,$(INFO))
 else
@@ -94,7 +98,7 @@ OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/Nuklear
+includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb-0.78
 includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types #-Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-int-conversion
@@ -126,9 +130,9 @@ install: $(DISTDIR)/$(DIST)
 #	@unzip $(DISTDIR)/$(DIST) -d $(DESTDIR)
 	@$(UNZIP)
 
-$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.lto.a
+$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
 	@echo Linking $(NAME)
-	$(LD) $^ $(LDFLAGS) $(LDLIBS) -o $@
+	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
 	@echo Finished build
 
 $(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
@@ -142,7 +146,7 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
 $(BIN)/libengine.a: $(OBJS)
 	@$(AR) r $@ $^
 
-$(BIN)/libquickjs.lto.a:
+$(BIN)/libquickjs.a:
 	make -C quickjs clean
 	make -C quickjs libquickjs.a libquickjs.lto.a CC=$(CC)
 	cp quickjs/libquickjs.* $(BIN)
@@ -150,7 +154,7 @@ $(BIN)/libquickjs.lto.a:
 $(OBJDIR)/%.o:%.c
 	@mkdir -p $(@D)
 	@echo Making C object $@
-	@$(CC) $(CFLAGS) -c $^ -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	@echo Cleaning project

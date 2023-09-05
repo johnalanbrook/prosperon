@@ -1,7 +1,5 @@
 #include "script.h"
 
-#include "stdarg.h"
-
 #include "log.h"
 #include "stdio.h"
 
@@ -42,6 +40,7 @@ void script_startup() {
   rt = JS_NewRuntime();
   JS_SetMaxStackSize(rt, 0);
   js = JS_NewContext(rt);
+
   ffi_load();
 
   for (int i = 0; i < 100; i++)
@@ -98,16 +97,12 @@ void script_evalf(const char *format, ...)
   JS_FreeValue(js,obj);
 }
 
-void compile_script(const char *file) {
+uint8_t *compile_script(const char *file) {
   const char *script = slurp_text(file);
   JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
   size_t out_len;
   uint8_t *out;
-  out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
-
-  FILE *f = fopen("out.jsc", "w");
-  fwrite(out, sizeof out[0], out_len, f);
-  fclose(f);
+  return JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
 }
 
 struct callee stacktrace_callee;

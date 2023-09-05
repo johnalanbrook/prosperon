@@ -58,6 +58,6 @@ void call_physics(double dt);
 
 void register_draw(struct callee c);
 void call_draw();
-void compile_script(const char *file);
+uint8_t *compile_script(const char *file);
 
 #endif

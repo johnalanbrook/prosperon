@@ -13,7 +13,8 @@
 #include <unistd.h>
 #include "font.h"
 
-#include <sqlite3.h>
+#include <fcntl.h>
+#include "cdb.h"
 
 #ifndef __EMSCRIPTEN__
 #include <ftw.h>
@@ -34,10 +35,9 @@ struct dirent *c_dirent = NULL;
 char pathbuf[MAXPATH + 1];
 
 const char *DB_NAME = "test.db";
-static sqlite3 *game_db = NULL;
-static sqlite3_stmt *fopen_stmt;
 
-#define sqlite_perr(db) YughError("Database error code %d, %s: %s", sqlite3_errcode(db), sqlite3_errstr(sqlite3_errcode(db)), sqlite3_errmsg(db));
+static struct cdb game_cdb;
+static int loaded_cdb = 0;
 
 void resources_init() {
   DATA_PATH = malloc(MAXPATH);
@@ -47,17 +47,10 @@ void resources_init() {
   if (!PREF_PATH)
     PREF_PATH = strdup("./tmp/");
 
-  if (sqlite3_open_v2("test.db", &game_db, SQLITE_OPEN_READONLY, NULL)) {
-    sqlite_perr(game_db);
-    sqlite3_close(game_db);
-    game_db = NULL;
-    return;
-  }
-
-  if (sqlite3_prepare_v2(game_db, "select data from files where path=?1", -1, &fopen_stmt, NULL)) {
-    sqlite_perr(game_db);
-  }
-  
+  int fd;
+  fd = open("test.cdb", O_RDONLY);
+  cdb_init(&game_cdb, fd);
+  loaded_cdb = 1;
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -155,25 +148,15 @@ char *strdup(const char *s) {
 
 unsigned char *slurp_file(const char *filename, long *size)
 {
-  if (game_db) {
-    sqlite3_reset(fopen_stmt);
-    
-    if (sqlite3_bind_text(fopen_stmt, 1, filename, -1, NULL)) {
-      sqlite_perr(game_db);
-      goto jump;
-    }
-
-    if (sqlite3_step(fopen_stmt) == SQLITE_ERROR) {
-      sqlite_perr(game_db);
-      goto jump;
-    }
-
-    char *data = sqlite3_column_blob(fopen_stmt,0);
-    if (!data)
-      goto jump;
-    
+  if (cdb_find(&game_cdb, filename, strlen(filename))) {
+    unsigned vlen, vpos;
+    vpos = cdb_datapos(&game_cdb);
+    vlen = cdb_datalen(&game_cdb);
+    char *data = malloc(vlen);
+    cdb_read(&game_cdb, data, vlen, vpos);
     return strdup(data);
   }
+  
   FILE *f;
 
   jump:
@@ -193,27 +176,14 @@ unsigned char *slurp_file(const char *filename, long *size)
   return slurp;
 }
 
-char *slurp_text(const char *filename) {
-  if (game_db) {
-    if (sqlite3_reset(fopen_stmt)) {
-      sqlite_perr(game_db);
-      goto jump;
-    }
-    
-    if (sqlite3_bind_text(fopen_stmt, 1, filename, -1, NULL)) {
-      sqlite_perr(game_db);
-      goto jump;
-    }
-
-    if (sqlite3_step(fopen_stmt) == SQLITE_ERROR) {
-      sqlite_perr(game_db);
-      goto jump;
-    }
-
-    char *data = sqlite3_column_text(fopen_stmt,0);
-    if (!data)
-      goto jump;
-    
+char *slurp_text(const char *filename)
+{
+  if (cdb_find(&game_cdb, filename, strlen(filename))) {
+    unsigned vlen, vpos;
+    vpos = cdb_datapos(&game_cdb);
+    vlen = cdb_datalen(&game_cdb);
+    char *data = malloc(vlen);
+    cdb_read(&game_cdb, data, vlen, vpos);
     return strdup(data);
   }
   
@@ -251,8 +221,7 @@ int slurp_write(const char *txt, const char *filename) {
 }
 
 #ifndef __EMSCRIPTEN__
-static sqlite3 *pack_db = NULL;
-static sqlite3_stmt *pack_stmt;
+static struct cdb_make cdbm;
 
 static const char *pack_ext[] = {".qoi", ".qoa", ".js", ".wav", ".mp3", ".png", ".sf2", ".midi", ".lvl", ".glsl"};
 
@@ -274,48 +243,26 @@ static int ftw_pack(const char *path, const struct stat *sb, int flag)
   }
 
   if (!pack) return 0;
+  printf("Packing file %s\n", path);
 
   long len;
   void *file = slurp_file(path, &len);
-  if (sqlite3_bind_text(pack_stmt, 1, &path[2], -1, NULL))
-    sqlite_perr(pack_db);
-    
-  if (sqlite3_bind_blob(pack_stmt, 2, file, len, NULL))
-    sqlite_perr(pack_db);
-    
-  if (sqlite3_step(pack_stmt) != SQLITE_DONE)
-    sqlite_perr(pack_db);
+  cdb_make_add(&cdbm, &path[2], strlen(&path[2]), file, len);
     
   free(file);
-
-  if (sqlite3_reset(pack_stmt))
-    sqlite_perr(pack_db);
 
   return 0;
 }
 
 void pack_engine()
 {
-  sqlite3 *db;
-  char *zErr = 0;
-  if (sqlite3_open("test.db", &db)) {
-    sqlite_perr(db);
-    sqlite3_close(db);
-    return;
-  }
-
-  if(sqlite3_exec(db, "create table files ( path text, data blob);", NULL, NULL, NULL))
-    sqlite_perr(db);
-
-  pack_db = db;
-  if(sqlite3_prepare_v2(db, "insert into files (path, data) values (?1, ?2)", -1, &pack_stmt, NULL)) {
-    sqlite_perr(db);
-    sqlite3_close(db);
-    return;
-  }
+  int fd;
+  char *key, *va;
+  unsigned klen, vlen;
+  fd = open("test.cdb", O_RDWR|O_CREAT);
+  cdb_make_start(&cdbm, fd);
   ftw(".", ftw_pack, 20);
-
-  sqlite3_close(db);
+  cdb_make_finish(&cdbm);
 }
 #else
 void pack_engine(){
