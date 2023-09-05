@@ -20,6 +20,6 @@ unsigned char *slurp_file(const char *filename, long *size);
 char *slurp_text(const char *filename);
 int slurp_write(const char *txt, const char *filename);
 
-void pack_engine();
+void pack_engine(const char *fname);
 
 #endif

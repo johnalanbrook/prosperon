@@ -1059,7 +1059,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 124:
-      pack_engine();
+      str = JS_ToCString(js, argv[1]);
+      pack_engine(str);
       break;
 
     case 125:

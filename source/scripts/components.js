@@ -65,7 +65,6 @@ var sprite = clone(component, {
 
       kill() { cmd(9,this.id); },
     });
-    sprite = new Proxy(sprite, sync_proxy);
     sprite.obscure('boundingbox');
     return sprite;
   },
@@ -250,14 +249,6 @@ collider2d.inputs['M-s'].doc = "Toggle if this collider is a sensor.";
 collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
-var sync_proxy = {
-  set(t,p,v) {
-    t[p] = v;
-    t.sync();
-    return true;
-  }
-};
-
 var polygon2d = clone(collider2d, {
   name: "polygon 2d",
   points: [],
@@ -287,8 +278,6 @@ var polygon2d = clone(collider2d, {
     poly.obscure('boundingbox');
 
     poly.defn('points', this.points.copy());
-
-    poly = new Proxy(poly, sync_proxy);
 
     Object.defineProperty(poly, 'id', {enumerable:false});
     Object.defineProperty(poly, 'shape', {enumerable:false});
@@ -466,7 +455,6 @@ var bucket = clone(collider2d, {
   make(go) {
     var edge = Object.create(this);
     Object.assign(edge, make_edge2d(go, this.points, this.thickness));
-    edge = new Proxy(edge, sync_proxy);    
     complete_assign(edge, {
       set thickness(x) {
         cmd_edge2d(1,this.id,x);

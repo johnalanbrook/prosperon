@@ -16,11 +16,11 @@ function compile(file) {
 var Cmdline = {};
 
 Cmdline.cmds = [];
-Cmdline.register_cmd = function(flag, fn, desc) {
+Cmdline.register_cmd = function(flag, fn, doc) {
   Cmdline.cmds.push({
     flag: flag,
     fn: fn,
-    desc: desc
+    doc: doc
   });
 };
 
@@ -31,18 +31,36 @@ function cmd_args(cmdargs)
 
   Cmdline.play = false;
 
-  for (var i = 0; i < cmds.length; i++) {
-    if (cmds[i][0] !== '-')
+  for (var i = 1; i < cmds.length; i++) {
+    if (cmds[i][0] !== '-') {
+      Log.warn(`Command '${cmds[i]}' should start with a '-'.`);
       continue;
+    }
 
     var c = Cmdline.cmds.find(function(cmd) { return cmd.flag === cmds[i].slice(1); });
-    if (c && c.fn) {
-      if (cmds[i+1] && cmds[i+1][0] !== '-')
-        c.fn(cmds[i+1]);
-      else
-        c.fn();
+    if (!c) {
+      Log.warn(`Command ${cmds[i]} not recognized.`);
+      continue;
     }
-  }
+
+      var sendstr = [];
+      var j = i+1;
+      while (cmds[j] && cmds[j][0] !== '-') {
+        sendstr.push(cmds[j]);
+	j++;
+      }
+
+      c.fn(sendstr);
+      i = j-1;
+    }
+}
+
+function initialize()
+{
+  if (IO.exists("config.js"))
+    load("config.js");
+
+  prototypes.load_all();
 
   if (Cmdline.play)
     run("scripts/play.js");
@@ -51,20 +69,40 @@ function cmd_args(cmdargs)
 }
 
 Cmdline.register_cmd("p", function() { Cmdline.play = true; }, "Launch engine in play mode.");
-Cmdline.register_cmd("v", function() { Log.say(cmd(120)); }, "Display engine info.");
-Cmdline.register_cmd("c", null, "Redirect logging to console.");
-Cmdline.register_cmd("l", null, "Set logging file name.");
-Cmdline.register_cmd("h", function() {
+Cmdline.register_cmd("v", function() { Log.say(cmd(120)); Game.quit(); }, "Display engine info.");
+Cmdline.register_cmd("c", function() {}, "Redirect logging to console.");
+Cmdline.register_cmd("l", function(n) {
+  Log.level = n;
+}, "Set log level.");
+Cmdline.register_cmd("h", function(str) {
+  for (var cmd of Cmdline.cmds) {
+    Log.say(`-${cmd.flag}:  ${cmd.doc}`);
+  }
+
   Game.quit();
 },
 "Help.");
-Cmdline.register_cmd("b", function() { cmd(124); Game.quit(); }, "Pack the game into the given name.");
+Cmdline.register_cmd("b", function(str) {
+  var packname;
+  if (str.length === 0)
+    packname = "test.cdb";
+  else if (str.length > 1) {
+    Log.warn("Give me a single filename for the pack.");
+    Game.quit();
+  } else
+    packname = str[0];
+
+  Log.warn(`Packing into ${packname}`);
+    
+  cmd(124, packname);
+  Game.quit();
+}, "Pack the game into the given name.");
 
 Cmdline.register_cmd("e", function(pawn) {
   run("scripts/editor.js");
   eval(`Log.write(Input.print_md_kbm(${pawn}));`);
   Game.quit();
-}, "Print input documentation for a given object." );
+}, "Print input documentation for a given object in a markdown table." );
 
 function run(file)
 {
@@ -141,6 +179,7 @@ var Log = {
 };
 
 load("scripts/diff.js");
+Log.level = 1;
 
 var Physics = {
   dynamic: 0,
@@ -2361,12 +2400,6 @@ gameobject.clone("edge2d", {
 gameobject.clone("sprite", {
   sprite: sprite.clone(),
 });
-
-
-//if (IO.exists("config.js"))
-//  load("config.js");
-
-
 
 var prototypes = {};
 prototypes.load_all = function()

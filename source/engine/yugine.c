@@ -146,6 +146,8 @@ static char **args;
 
 void c_init() {
   render_init();
+
+  script_evalf("initialize();");
 }
 
 int frame_fps() {

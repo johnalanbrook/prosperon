@@ -254,18 +254,18 @@ static int ftw_pack(const char *path, const struct stat *sb, int flag)
   return 0;
 }
 
-void pack_engine()
+void pack_engine(const char *fname)
 {
   int fd;
   char *key, *va;
   unsigned klen, vlen;
-  fd = open("test.cdb", O_RDWR|O_CREAT);
+  fd = open(fname, O_RDWR|O_CREAT);
   cdb_make_start(&cdbm, fd);
   ftw(".", ftw_pack, 20);
   cdb_make_finish(&cdbm);
 }
 #else
-void pack_engine(){
+void pack_engine(const char *fname){
   YughError("Cannot pack engine on a web build.");
 }
 #endif
