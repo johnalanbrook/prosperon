@@ -58,7 +58,7 @@ Cmdline.register_cmd("h", function() {
   Game.quit();
 },
 "Help.");
-Cmdline.register_cmd("b", function() { cmd(124); Game.quit(); }, "Pack the game into the given name.");
+Cmdline.register_cmd("b", function() { Log.warn("PACKING");cmd(124); Game.quit(); }, "Pack the game into the given name.");
 
 Cmdline.register_cmd("e", function(pawn) {
   run("scripts/editor.js");

@@ -14,6 +14,7 @@ DBG ?= 1
 OPT ?= 0
 
 INFO :=
+LD = $(CC)
 
 ifeq ($(DBG),1)
   CFLAGS += -g
@@ -25,13 +26,13 @@ else
 endif
 
 ifeq ($(OPT),small)
-  CFLAGS += -Os
-  AR = ar
+  CFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables 
+  LDFLAGS += -flto
   INFO := $(addsuffix _small,$(INFO))
 else
   ifeq ($(OPT), 1)
     CFLAGS += -O2 -flto
-    AR = llvm-ar
+    LDFLAGS += -flto
     INFO := $(addsuffix _opt,$(INFO))
   else
     CFLAGS += -O0
@@ -125,9 +126,9 @@ install: $(DISTDIR)/$(DIST)
 #	@unzip $(DISTDIR)/$(DIST) -d $(DESTDIR)
 	@$(UNZIP)
 
-$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
+$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.lto.a
 	@echo Linking $(NAME)
-	$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
+	$(LD) $^ $(LDFLAGS) $(LDLIBS) -o $@
 	@echo Finished build
 
 $(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
@@ -141,7 +142,7 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
 $(BIN)/libengine.a: $(OBJS)
 	@$(AR) r $@ $^
 
-$(BIN)/libquickjs.a:
+$(BIN)/libquickjs.lto.a:
 	make -C quickjs clean
 	make -C quickjs libquickjs.a libquickjs.lto.a CC=$(CC)
 	cp quickjs/libquickjs.* $(BIN)
