@@ -58,7 +58,7 @@ Cmdline.register_cmd("h", function() {
   Game.quit();
 },
 "Help.");
-Cmdline.register_cmd("b", function() { Log.warn("PACKING");cmd(124); Game.quit(); }, "Pack the game into the given name.");
+Cmdline.register_cmd("b", function() { cmd(124); Game.quit(); }, "Pack the game into the given name.");
 
 Cmdline.register_cmd("e", function(pawn) {
   run("scripts/editor.js");
@@ -2366,7 +2366,11 @@ gameobject.clone("sprite", {
 //if (IO.exists("config.js"))
 //  load("config.js");
 
+
+
 var prototypes = {};
+prototypes.load_all = function()
+{
 if (IO.exists("proto.json"))
   prototypes = JSON.parse(IO.slurp("proto.json"));
 
@@ -2386,7 +2390,8 @@ for (var key in prototypes) {
     dainty_assign(gameobjects[key], prototypes[key]);
   }
 }
+}
 
-function save_gameobjects_as_prototypes() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
+prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
 var Gamestate = {};

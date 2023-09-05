@@ -269,8 +269,8 @@ JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   return JS_NULL;
 }
 
-struct nk_rect js2nk_rect(JSValue v) {
-  struct nk_rect rect;
+struct rect js2rect(JSValue v) {
+  struct rect rect;
   rect.x = js2number(js_getpropstr(v, "x"));
   rect.y = js2number(js_getpropstr(v, "y"));
   rect.w = js2number(js_getpropstr(v, "w"));
@@ -278,7 +278,7 @@ struct nk_rect js2nk_rect(JSValue v) {
   return rect;
 }
 
-JSValue nk_rect2js(struct nk_rect rect) {
+JSValue rect2js(struct rect rect) {
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "x", JS_NewFloat64(js, rect.x));
   JS_SetPropertyStr(js, obj, "y", JS_NewFloat64(js, rect.y));
@@ -312,13 +312,13 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
     JS_FreeValue(js, tostr);
   }
 
-  struct nk_rect rect = nk_rect(0, 0, 0, 0);
+  struct rect rect = (struct rect){0, 0, 0, 0};
   JSValue ret = JS_NULL;
 
   switch (cmd) {
   case 0:
-    rect = js2nk_rect(argv[2]);
-    nuke_begin(str, rect, NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
+    rect = js2rect(argv[2]);
+    nuke_begin(str, rect);
     break;
 
   case 1:
@@ -367,7 +367,7 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
   case 10:
     rect = nuke_win_get_bounds();
-    ret = nk_rect2js(rect);
+    ret = rect2js(rect);
     break;
 
   case 11:

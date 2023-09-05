@@ -1,26 +1,17 @@
 #ifndef NUKE_H
 #define NUKE_H
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_INCLUDE_STANDARD_BOOL
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 
-#include "nuklear.h"
-
+#include "render.h"
 struct window;
 
 void nuke_init(struct window *win);
 void nuke_start();
 void nuke_end();
 
-int nuke_begin(const char *lbl, struct nk_rect rect, int flags);
+int nuke_begin(const char *lbl, struct rect rect);
 int nuke_begin_win(const char *lbl);
 void nuke_stop();
-struct nk_rect nuke_win_get_bounds();
+struct rect nuke_win_get_bounds();
 
 void nuke_property_float(const char *lbl, float min, float *val, float max, float step, float dragstep);
 #define nuke_prop_float nuke_property_float

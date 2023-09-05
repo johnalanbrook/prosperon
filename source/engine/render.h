@@ -1,6 +1,15 @@
 #ifndef OPENGL_RENDER_H
 #define OPENGL_RENDER_H
 
+#if defined __linux__
+  #define SOKOL_GLCORE33
+#elif __EMSCRIPTEN__
+  #define SOKOL_GLES3
+#elif __WIN32
+  #define SOKOL_GLCORE33
+  #define SOKOL_WIN32_FORCE_MAIN
+#endif
+
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
 
@@ -86,6 +95,10 @@ struct boundingbox {
   float b;
   float r;
   float l;
+};
+
+struct rect {
+  float h, w, x, y;
 };
 
 static struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {

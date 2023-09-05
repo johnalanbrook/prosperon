@@ -1,28 +1,27 @@
+#include "nuke.h"
 #define NK_INCLUDE_STANDARD_IO
-
 #define NK_IMPLEMENTATION
 #define NK_KEYSTATE_BASED_INPUT
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_STANDARD_BOOL
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 
 #define STBTT_STATIC
 
 #include "config.h"
 
-#include "nuke.h"
-
-#if defined __linux__
-  #define SOKOL_GLCORE33
-#elif __EMSCRIPTEN__
-  #define SOKOL_GLES3
-#elif __WIN32
-  #define SOKOL_GLCORE33
-  #define SOKOL_WIN32_FORCE_MAIN
-#endif
-
 #include "sokol/sokol_gfx.h"
 
 #define SOKOL_NUKLEAR_IMPL
+#include "nuklear.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_nuklear.h"
+
 
 #include <stdarg.h>
 
@@ -34,7 +33,6 @@
 #define MAX_ELEMENT_BUFFER 128 * 1024
 
 struct nk_context *ctx;
-//static struct nk_glfw nkglfw = {0};
 
 void nuke_init(struct window *win) {
   snk_setup(&(snk_desc_t){
@@ -42,6 +40,26 @@ void nuke_init(struct window *win) {
   });
 
   ctx = snk_new_frame();
+}
+
+struct rect nk2rect(struct nk_rect rect)
+{
+  struct rect r;
+  r.x = rect.x;
+  r.y = rect.y;
+  r.w = rect.w;
+  r.h = rect.h;
+  return r;
+}
+
+struct nk_rect rect2nk(struct rect rect)
+{
+  struct nk_rect r;
+  r.x = rect.x;
+  r.y = rect.y;
+  r.w = rect.w;
+  r.h = rect.h;
+  return r;
 }
 
 void nuke_start() {
@@ -52,8 +70,8 @@ void nuke_end() {
   snk_render(mainwin.width,mainwin.height);
 }
 
-int nuke_begin(const char *lbl, struct nk_rect rect, int flags) {
-  return nk_begin(ctx, lbl, rect, flags);
+int nuke_begin(const char *lbl, struct rect rect) {
+  return nk_begin(ctx, lbl, rect2nk(rect), NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_TITLE);
 }
 
 int nuke_begin_win(const char *lbl) {
@@ -64,8 +82,8 @@ void nuke_stop() {
   nk_end(ctx);
 }
 
-struct nk_rect nuke_win_get_bounds() {
-  return nk_window_get_bounds(ctx);
+struct rect nuke_win_get_bounds() {
+  return nk2rect(nk_window_get_bounds(ctx));
 }
 
 void nuke_row(int height) {

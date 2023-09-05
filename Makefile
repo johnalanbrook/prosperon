@@ -32,6 +32,11 @@ endif
 ifeq ($(OPT),small)
   CFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
   LDFLAGS += -flto
+
+  ifeq ($(CC), emcc)
+    LDFLAGS += --closure 1
+  endif
+
   INFO := $(addsuffix _small,$(INFO))
 else
   ifeq ($(OPT), 1)
@@ -63,7 +68,7 @@ ifeq ($(OS), Windows_NT)
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -s ALLOW_MEMORY_GROWTH=1
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread
   CFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
   CC = emcc

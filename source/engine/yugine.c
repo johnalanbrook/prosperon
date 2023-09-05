@@ -36,15 +36,6 @@
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
 
-#if defined __linux__
-  #define SOKOL_GLCORE33
-#elif __EMSCRIPTEN__
-  #define SOKOL_GLES3
-#elif __WIN32
-  #define SOKOL_GLCORE33
-  #define SOKOL_WIN32_FORCE_MAIN
-#endif
-
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
@@ -296,7 +287,7 @@ double get_timescale()
   return timescale;
 }
 
-sapp_desc sokol_main(int sargc, char **sargs) {
+sapp_desc sokol_main(int argc, char **argv) {
 #ifndef NDEBUG
   #ifdef __linux__
   int logout = 0;
@@ -333,7 +324,7 @@ sapp_desc sokol_main(int sargc, char **sargs) {
   
   int argsize = 0;
   for (int i = 1; i < argc; i++) {
-    argsize += strlen(args[i]);
+    argsize += strlen(argv[i]);
     if (argc > i+1) argsize++;
   }
 
@@ -341,17 +332,14 @@ sapp_desc sokol_main(int sargc, char **sargs) {
   cmdstr[0] = '\0';
 
   for (int i = 0; i < argc; i++) {
-    strcat(cmdstr, args[i]);
+    strcat(cmdstr, argv[i]);
     if (argc > i+1) strcat(cmdstr, " ");
   }
-  
+
   script_evalf("cmd_args('%s');", cmdstr);
 
-  YughWarn("Width, height %d %d", mainwin.width, mainwin.height);
-  
   sound_init();
   input_init();
-  
 
   return (sapp_desc){
     .width = mainwin.width,

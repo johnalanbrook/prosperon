@@ -232,6 +232,7 @@ static int ftw_pack(const char *path, const struct stat *sb, int flag)
   int pack = 0;
 
   char *ext = strrchr(path, '.');
+
   if (!ext)
     return 0;
 
@@ -243,7 +244,6 @@ static int ftw_pack(const char *path, const struct stat *sb, int flag)
   }
 
   if (!pack) return 0;
-  printf("Packing file %s\n", path);
 
   long len;
   void *file = slurp_file(path, &len);
