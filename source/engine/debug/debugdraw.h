@@ -18,7 +18,7 @@ void draw_circle(cpVect c, float radius, float pixels, struct rgba color, float 
 void draw_box(cpVect c, cpVect wh, struct rgba color);
 void draw_poly(cpVect *points, int n, struct rgba color);
 
-void draw_grid(int width, int span, struct rgba color);
+void draw_grid(float width, float span, struct rgba color);
 
 void debug_flush(HMM_Mat4 *view);
 void debug_newframe();

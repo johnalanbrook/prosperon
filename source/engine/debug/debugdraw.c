@@ -278,8 +278,9 @@ void debugdraw_init()
   grid_shader = sg_compile_shader("shaders/gridvert.glsl", "shaders/gridfrag.glsl", &(sg_shader_desc){
     .vs.uniform_blocks[0] = projection_ubo,
     .vs.uniform_blocks[1] = {
-      .size = sizeof(float)*2,
-      .uniforms = { [0] = { .name = "offset", .type = SG_UNIFORMTYPE_FLOAT2 } } },
+      .size = sizeof(float)*4,
+      .uniforms = { [0] = { .name = "offset", .type = SG_UNIFORMTYPE_FLOAT2 },
+      		    [1] = { .name = "dimen", .type = SG_UNIFORMTYPE_FLOAT2 } } },
     .fs.uniform_blocks[0] = {
       .size = sizeof(float)*6,
       .uniforms = {
@@ -566,12 +567,18 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int c
   draw_cppoint(end, capsize, color);
 }
 
-void draw_grid(int width, int span, struct rgba color)
+void draw_grid(float width, float span, struct rgba color)
 {
   cpVect offset = cam_pos();
   offset.x -= mainwin.width/2;
   offset.y -= mainwin.height/2;
   offset = cpvmult(offset, 1/cam_zoom());
+
+  float ubo[4];
+  ubo[0] = offset.x;
+  ubo[1] = offset.y;
+  ubo[2] = mainwin.width;
+  ubo[3] = mainwin.height;
 
   sg_apply_pipeline(grid_pipe);
   sg_apply_bindings(&grid_bind);
@@ -579,11 +586,11 @@ void draw_grid(int width, int span, struct rgba color)
   float col[4] = { color.r/255.0 ,color.g/255.0 ,color.b/255.0 ,color.a/255.0 };
 
   float fubo[6];
-  fubo[0] = 1;
+  fubo[0] = (float)width;
   fubo[1] = span;
   memcpy(&fubo[2], col, sizeof(float)*4);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 1, SG_RANGE_REF(offset));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 1, SG_RANGE_REF(ubo));
   sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(fubo));
   sg_draw(0,4,1);
 }

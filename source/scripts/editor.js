@@ -895,7 +895,7 @@ var editor = {
         gui_img("icons/icons8-lock-16.png", world2screen(obj.pos));
     });
 
-    Debug.draw_grid(1, editor_config.grid_size/editor_camera.zoom, editor_config.grid_color);
+    Debug.draw_grid(2, editor_config.grid_size/editor_camera.zoom, editor_config.grid_color);
     var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); }, this);
     var endgrid = screen2world([Window.width, 0]);
     
@@ -2542,3 +2542,6 @@ Debug.register_call(editor.ed_debug, editor);
 if (IO.exists("editor.config"))
   load_configs("editor.config");
 editor.edit_level = Level.create();
+
+Game.stop();
+Game.render();

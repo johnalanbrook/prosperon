@@ -8,12 +8,13 @@ layout (std140) uniform Projection {
 };
 
 uniform vec2 offset;
+uniform vec2 dimen;
 
 void main()
 {
 //    vec4 ipos = inverse(projection) * vec4(pos, 0.f, 1.f);
-    apos = pos * vec2(600, 360);
-    apos += offset;
+    apos = pos * dimen;
+//    apos += offset;
 //    apos = pos + offset;
 
 

@@ -342,10 +342,12 @@ const char *keyname_extd(int key) {
 }
 
 void call_input_down(int *key) {
-  JSValue argv[2];
-  argv[0] = input2js(keyname_extd(*key));
-  argv[1] = jsinputstate[4];
-  script_callee(pawn_callee, 2, argv);
+  JSValue argv[3];
+  argv[0] = JS_NewString(js, "emacs");
+  argv[1] = input2js(keyname_extd(*key));
+  argv[2] = jsinputstate[4];
+  script_callee(pawn_callee, 3, argv);
+  JS_FreeValue(js, argv[0]);
 }
 
 /* This is called once every frame - or more if we want it more! */
@@ -354,8 +356,8 @@ void input_poll(double wait) {
   mouseWheelX = 0;
   mouseWheelY = 0;
 
-//  for (int i = 0; i < arrlen(downkeys); i++)
-//    call_input_down(&downkeys[i]);
+  for (int i = 0; i < arrlen(downkeys); i++)
+    call_input_down(&downkeys[i]);
 }
 
 int key_is_num(int key) {

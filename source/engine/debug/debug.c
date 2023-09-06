@@ -8,13 +8,17 @@ unsigned long long triCount = 0;
 
 void prof_start(struct d_prof *prof)
 {
+#ifndef NDEBUG
   prof->lap = stm_now();
+#endif
 }
 
 void prof(struct d_prof *prof)
 {
+#ifndef NDEBUG
   uint64_t t = stm_since(prof->lap);
   arrput(prof->ms, stm_sec(t));
+#endif
 }
 
 void resetTriangles()

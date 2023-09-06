@@ -65,15 +65,10 @@ static struct d_prof prof_update;
 static struct d_prof prof_input;
 static struct d_prof prof_physics;
 
-int physOn = 0;
-
-double renderlag = 0;
 double physlag = 0;
-double updatelag = 0;
+int render_dirty = 0;
 
-double renderMS = 1 / 165.f;
-double physMS = 1 / 165.f;
-double updateMS = 1 / 165.f;
+double physMS = 1 / 60.f;
 
 static int phys_step = 0;
 
@@ -86,7 +81,6 @@ static float timescale = 1.f;
 #define SIM_STEP 2
 
 static int sim_play = SIM_PLAY;
-
 
 #ifdef __TINYC__
 int backtrace(void **buffer, int size) {
@@ -149,8 +143,6 @@ void c_init() {
   render_init();
 
   script_evalf("initialize();");
-
-  
 }
 
 int frame_fps() {
@@ -162,7 +154,7 @@ void c_frame()
     double elapsed = sapp_frame_duration();
     appTime += elapsed;
 
-    input_poll(fmax(0, renderMS-elapsed));
+    input_poll(0);
       
     if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
       prof_start(&prof_update);
@@ -181,29 +173,29 @@ void c_frame()
         phys_step = 0;
 	prof(&prof_physics);
       }
+
+      if (sim_play == SIM_STEP) {
+        sim_pause();
+	render_dirty = 1;
+      }
     }
 
-    renderlag += elapsed;
-
-//    if (renderlag >= renderMS) {
-//      renderlag -= renderMS;
+    if (sim_play == SIM_PLAY || render_dirty) {
       prof_start(&prof_draw);
       window_render(&mainwin);
       prof(&prof_draw);
-//    }
-
-    gameobjects_cleanup();
-
+      render_dirty = 0;
+    }
     
+    gameobjects_cleanup();
 }
 
-void c_clean()
-{
+void c_clean() {};
 
-}
 
 void c_event(const sapp_event *e)
 {
+  render_dirty = 1;
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
       input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);
@@ -277,10 +269,7 @@ void sim_pause() {
 int phys_stepping() { return sim_play == SIM_STEP; }
 
 void sim_step() {
-  if (sim_paused()) {
-    YughInfo("Step");
-    sim_play = SIM_STEP;
-  }
+  sim_play = SIM_STEP;
 }
 
 void set_timescale(float val) {
@@ -349,7 +338,7 @@ sapp_desc sokol_main(int argc, char **argv) {
   script_dofile("scripts/engine.js");
   
   int argsize = 0;
-  for (int i = 1; i < argc; i++) {
+  for (int i = 0; i < argc; i++) {
     argsize += strlen(argv[i]);
     if (argc > i+1) argsize++;
   }

@@ -962,6 +962,8 @@ var Player = {
 	case 'released':
 	  fn = pawn.inputs[cmd].released;
 	  break;
+	case 'down':
+	  fn = pawn.inputs[cmd].down;
       }
 
       if (typeof fn === 'function')
@@ -1046,7 +1048,7 @@ var Register = {
   
   unregister_obj(obj) {
     Register.registries.forEach(function(x) {
-      x.clear();
+      x.unregister_obj(obj);
     });
     Player.uncontrol(obj);
   },
@@ -1071,11 +1073,19 @@ var Register = {
     var entries = [];
     var n = {};
     n.register = function(fn, obj) {
+      if (!obj) {
+        Log.warn("Refusing to register a function without a destroying object.");
+	return;
+      }
       entries.push([fn, obj ? obj : null]);
     }
 
     n.unregister = function(fn) {
-      entries = entries.filter(function(f) { return fn === f; });
+      entries = entries.filter(function(f) { return fn !== f; });
+    }
+
+    n.unregister_obj = function(obj) {
+      entries = entries.filter(function(o) { return o !== obj; });
     }
 
     n.broadcast = function(...args) {
@@ -1322,6 +1332,8 @@ var Game = {
     sys_cmd(4);
   },
 
+  render() { sys_cmd(10); },
+
   playing() { return sys_cmd(5); },
   paused() { return sys_cmd(6); },
   stepping() {
@@ -1547,6 +1559,8 @@ var Level = {
     Game.register_obj(newobj);
     newobj.setup?.();
     newobj.start?.();
+    if (newobj.update)
+      Register.update.register(newobj.update, newobj);
     return newobj;
   },
 

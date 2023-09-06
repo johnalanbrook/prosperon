@@ -20,5 +20,6 @@ extern double appTime;
 extern double renderMS;
 extern double physMS;
 extern double updateMS;
+extern int render_dirty;
 
 #endif

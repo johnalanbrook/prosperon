@@ -66,6 +66,7 @@ var Debug = {
 
   line(points, color, type, thickness) {
     thickness ??= 1;
+    
     if (!type)
       type = 0;
 

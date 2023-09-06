@@ -600,11 +600,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 5:
-    renderMS = js2number(argv[1]);
+//    renderMS = js2number(argv[1]);
     break;
 
   case 6:
-    updateMS = js2number(argv[1]);
+//    updateMS = js2number(argv[1]);
     break;
 
   case 7:
@@ -770,7 +770,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return JS_NULL;
 
   case 47:
-    draw_grid(js2int(argv[1]), js2int(argv[2]), js2color(argv[3]));
+    draw_grid(js2number(argv[1]), js2number(argv[2]), js2color(argv[3]));
     return JS_NULL;
 
   case 48:
@@ -1213,6 +1213,10 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
   case 9: /* Clear the level out */
     new_level();
+    break;
+
+  case 10:
+    render_dirty = 1;
     break;
   }
 

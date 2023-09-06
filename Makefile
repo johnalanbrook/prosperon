@@ -22,12 +22,11 @@ endif
 
 ifeq ($(DBG),1)
   CFLAGS += -g
-  INFO += dbg
+  INFO += _dbg
   LDFLAGS += -g
 else
   CFLAGS += -DNDEBUG
   LDFLAGS += -s
-  INFO += rel
 endif
 
 ifeq ($(OPT),small)
@@ -80,13 +79,13 @@ else
   ifeq ($(UNAME), Linux)
     LDFLAGS += -pthread -rdynamic
     LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
-    PLAT = linux-$(ARCH)
+    PLAT = linux-$(ARCH)$(INFO)
   endif
 
   ifeq ($(UNAME), Darwin)
     ifeq ($(PLATFORM), macosx)
       LDLIBS += Coca QuartzCore OpenGL
-      PLAT = mac-$(ARCH)
+      PLAT = mac-$(ARCH)$(INFO)
     else ifeq ($(PLATFORM), iphoneos)
       LDLIBS += Foundation UIKit OpenGLES GLKit
     endif
@@ -133,7 +132,6 @@ DESTDIR ?= ~/.bin
 
 install: $(DISTDIR)/$(DIST)
 	@echo Unpacking $(DIST) in $(DESTDIR)
-#	@unzip $(DISTDIR)/$(DIST) -d $(DESTDIR)
 	@$(UNZIP)
 
 $(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
@@ -146,7 +144,7 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
 	@mkdir -p $(DISTDIR)
 	@cp -rf assets/* $(BIN)
 	@cp -rf source/shaders $(BIN)
-	@cp -r source/scripts $(BIN)
+	@cp -rf source/scripts $(BIN)
 	@$(PKGCMD)
 
 $(BIN)/libengine.a: $(OBJS)
