@@ -87,6 +87,7 @@ static float timescale = 1.f;
 
 static int sim_play = SIM_PLAY;
 
+
 #ifdef __TINYC__
 int backtrace(void **buffer, int size) {
     extern uint64_t *__libc_stack_end;
@@ -148,6 +149,8 @@ void c_init() {
   render_init();
 
   script_evalf("initialize();");
+
+  
 }
 
 int frame_fps() {
@@ -289,6 +292,25 @@ double get_timescale()
   return timescale;
 }
 
+static sapp_desc start_desc = {
+    .width = 720,
+    .height = 1080,
+    .high_dpi = 0,
+    .sample_count = 1,
+    .fullscreen = 1,
+    .window_title = "Yugine",
+    .enable_clipboard = false,
+    .clipboard_size = 0,
+    .enable_dragndrop = true,
+    .max_dropped_files = 1,
+    .max_dropped_file_path_length = 2048,
+    .init_cb = c_init,
+    .frame_cb = c_frame,
+    .cleanup_cb = c_clean,
+    .event_cb = c_event,
+    .logger.func = sg_logging,
+};
+
 sapp_desc sokol_main(int argc, char **argv) {
 #ifndef NDEBUG
   #ifdef __linux__
@@ -323,6 +345,8 @@ sapp_desc sokol_main(int argc, char **argv) {
   phys2d_init();
 
   script_startup();
+
+  script_dofile("scripts/engine.js");
   
   int argsize = 0;
   for (int i = 1; i < argc; i++) {
@@ -343,22 +367,9 @@ sapp_desc sokol_main(int argc, char **argv) {
   sound_init();
   input_init();
 
-  return (sapp_desc){
-    .width = mainwin.width,
-    .height = mainwin.height,
-    .high_dpi = 0,
-    .sample_count = 8,
-    .fullscreen = 0,
-    .window_title = "Yugine",
-    .enable_clipboard = false,
-    .clipboard_size = 0,
-    .enable_dragndrop = true,
-    .max_dropped_files = 1,
-    .max_dropped_file_path_length = 2048,
-    .init_cb = c_init,
-    .frame_cb = c_frame,
-    .cleanup_cb = c_clean,
-    .event_cb = c_event,
-    .logger.func = sg_logging,
-  };
+  start_desc.width = mainwin.width;
+  start_desc.height = mainwin.height;
+  start_desc.fullscreen = 0;
+
+  return start_desc;
 }

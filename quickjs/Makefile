@@ -110,7 +110,7 @@ endif
 CFLAGS+=$(DEFINES)
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
-CFLAGS_OPT=$(CFLAGS) -Oz
+CFLAGS_OPT=$(CFLAGS) -O2
 CFLAGS_NOLTO:=$(CFLAGS_OPT)
 LDFLAGS=-g
 ifdef CONFIG_LTO
@@ -130,6 +130,14 @@ ifdef CONFIG_WIN32
 LDEXPORT=
 else
 LDEXPORT=-rdynamic
+endif
+
+ifeq ($(OPT), small)
+  USEFLAGS = $(CFLAGS_SMALL)
+else ifeq ($(OPT), 1)
+  USEFLAGS = $(CFLAGS_OPT)
+else
+  USEFLAGS = $(CFLAGS_DEBUG)
 endif
 
 PROGS=qjs$(EXE) qjsc$(EXE) run-test262

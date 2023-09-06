@@ -45,8 +45,6 @@ void script_startup() {
 
   for (int i = 0; i < 100; i++)
     num_cache[i] = int2js(i);
-
-  script_dofile("scripts/engine.js");
 }
 
 JSValue num_cache[100] = {0};

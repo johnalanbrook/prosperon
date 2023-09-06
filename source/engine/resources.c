@@ -146,7 +146,7 @@ char *strdup(const char *s) {
   return new;
 }
 
-unsigned char *slurp_file(const char *filename, long *size)
+unsigned char *slurp_file(const char *filename, size_t *size)
 {
   if (cdb_find(&game_cdb, filename, strlen(filename))) {
     unsigned vlen, vpos;
@@ -154,6 +154,7 @@ unsigned char *slurp_file(const char *filename, long *size)
     vlen = cdb_datalen(&game_cdb);
     char *data = malloc(vlen);
     cdb_read(&game_cdb, data, vlen, vpos);
+    if (size) *size = vlen;
     return strdup(data);
   }
   
@@ -165,9 +166,9 @@ unsigned char *slurp_file(const char *filename, long *size)
   if (!f) return NULL;
 
   fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  unsigned char *slurp = malloc(fsize + 1);
+  size_t fsize = ftell(f);
+  rewind(f);
+  void *slurp = malloc(fsize);
   fread(slurp, fsize, 1, f);
   fclose(f);
 
@@ -178,37 +179,13 @@ unsigned char *slurp_file(const char *filename, long *size)
 
 char *slurp_text(const char *filename)
 {
-  if (cdb_find(&game_cdb, filename, strlen(filename))) {
-    unsigned vlen, vpos;
-    vpos = cdb_datapos(&game_cdb);
-    vlen = cdb_datalen(&game_cdb);
-    char *data = malloc(vlen);
-    cdb_read(&game_cdb, data, vlen, vpos);
-    return strdup(data);
-  }
-  
-  FILE *f;
-  char *buf;
-
-  jump:
-  f = fopen(filename, "r");
-  
-  if (!f) {
-    YughWarn("File %s doesn't exist.", filename);
-    return NULL;
-  }
-
-  long int fsize;
-  fseek(f, 0, SEEK_END);
-  fsize = ftell(f);
-  buf = malloc(fsize + 1);
-  rewind(f);
-  size_t r = fread(buf, sizeof(char), fsize, f);
-  buf[r] = '\0';
-
-  fclose(f);
-
-  return buf;
+  size_t len;
+  char *str = slurp_file(filename, &len);
+  char *retstr = malloc(len+1);
+  memcpy(retstr, str, len);
+  retstr[len] = 0;
+  free(str);
+  return retstr;
 }
 
 int slurp_write(const char *txt, const char *filename) {
@@ -245,7 +222,7 @@ static int ftw_pack(const char *path, const struct stat *sb, int flag)
 
   if (!pack) return 0;
 
-  long len;
+  size_t len;
   void *file = slurp_file(path, &len);
   cdb_make_add(&cdbm, &path[2], strlen(&path[2]), file, len);
     

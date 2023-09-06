@@ -477,7 +477,8 @@ Object.defineProperty(Array.prototype, 'lerp', {
   }
 });
 
-Object.lerp = function(to, t) {
+Object.defineProperty(Object.prototype, 'lerp',{
+  value: function(to, t) {
     var self = this;
     var obj = {};
 
@@ -486,7 +487,7 @@ Object.lerp = function(to, t) {
     });
 
     return obj;
-};
+}});
 
 /* MATH EXTENSIONS */
 Object.defineProperty(Number.prototype, 'lerp', {
@@ -495,12 +496,6 @@ Object.defineProperty(Number.prototype, 'lerp', {
     return (to - this) * t + this;
   }
 });
-
-Math.lerp = function(from, to, t) {
-  var v = (to - from) * t + from;
-  v = Math.clamp(v, from, to);
-  return v;
-}
 
 Math.clamp = function (x, l, h) { return x > h ? h : x < l ? l : x; }
 

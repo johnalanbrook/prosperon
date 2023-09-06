@@ -126,7 +126,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   snprintf(fontpath, 256, "fonts/%s", fontfile);
   
   unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
-  YughWarn("TTF BUFFER P IS %p", ttf_buffer);
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_packedchar glyphs[95];

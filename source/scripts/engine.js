@@ -104,6 +104,11 @@ Cmdline.register_cmd("e", function(pawn) {
   Game.quit();
 }, "Print input documentation for a given object in a markdown table." );
 
+Cmdline.register_cmd("t", function() {
+  Log.warn("Testing not implemented yet.");
+  Game.quit();
+}, "Test suite.");
+
 function run(file)
 {
   var modtime = cmd(119, file);
@@ -1142,17 +1147,11 @@ var Window = {
   set height(h) { cmd(126, h); },
   get width() { return cmd(48); },
   get height() { return cmd(49); },
-  dimensions:[0,0],
+  get dimensions() { return [this.width, this.height]; },
 };
 
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
-
-Signal.register("window_resize", function(w, h) {
-  Window.width = w;
-  Window.height = h;
-  Window.dimensions = [w, h];
-});
 
 var IO = {
   exists(file) { return cmd(65, file);},

@@ -23,6 +23,7 @@ endif
 ifeq ($(DBG),1)
   CFLAGS += -g
   INFO += dbg
+  LDFLAGS += -g
 else
   CFLAGS += -DNDEBUG
   LDFLAGS += -s
@@ -149,11 +150,11 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
 	@$(PKGCMD)
 
 $(BIN)/libengine.a: $(OBJS)
-	@$(AR) r $@ $^
+	@$(AR) rcs $@ $^
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
-	make -C quickjs libquickjs.a libquickjs.lto.a CC=$(CC)
+	make -C quickjs OPT=$(OPT) libquickjs.a libquickjs.lto.a CC=$(CC)
 	cp quickjs/libquickjs.* $(BIN)
 
 $(OBJDIR)/%.o:%.c
