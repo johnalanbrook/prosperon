@@ -17,7 +17,7 @@ char *make_path(const char *file);
 char *strdup(const char *s);
 
 unsigned char *slurp_file(const char *filename, size_t *size);
-char *slurp_text(const char *filename);
+char *slurp_text(const char *filename, size_t *size);
 int slurp_write(const char *txt, const char *filename);
 
 void pack_engine(const char *fname);

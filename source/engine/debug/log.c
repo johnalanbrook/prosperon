@@ -51,6 +51,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
 
 	log_print(buffer);
+	if (category != LOG_SCRIPT && priority >= 2)
+	  js_stacktrace();
   }
 #endif
 }

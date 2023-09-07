@@ -96,8 +96,9 @@ void script_evalf(const char *format, ...)
 }
 
 uint8_t *compile_script(const char *file) {
-  const char *script = slurp_text(file);
-  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
+  size_t len;
+  const char *script = slurp_text(file, &len);
+  JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
   size_t out_len;
   uint8_t *out;
   return JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
@@ -122,52 +123,36 @@ void js_dump_stack() {
 }
 
 int script_dofile(const char *file) {
-  const char *script = slurp_text(file);
-  if (!script) {
-    YughError("Can't find file %s.", file);
-    return 0;
-  }
-  script_run(script,file);
-  free(script);
+  script_runfile(file);
   return file_mod_secs(file);
 }
 
 JSValue script_runfile(const char *file)
 {
-  const char *script = slurp_text(file);
+  size_t len;
+  const char *script = slurp_text(file, &len);
 
-  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
+  JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAGS);
   js_print_exception(obj);
   
   free(script);
   return obj;
 }
 
-JSValue script_compile(const char *file)
-{
-  const char *script = slurp_text(file);
-  char strbuf[strlen(script)+50];
-  sprintf(strbuf, "(function(){\n%s\n})", script);
-
-  JSValue fn = JS_Eval(js, strbuf, strlen(strbuf), file, JS_EVAL_FLAGS);
-
-  free(script);
-  return fn;
-}
-
 /* env is an object in the scripting environment;
    s is the function to call on that object
 */
-void script_eval_w_env(const char *s, JSValue env) {
-  JSValue v = JS_EvalThis(js, env, s, strlen(s), "internal", JS_EVAL_FLAGS);
+void script_eval_w_env(const char *s, JSValue env, const char *file) {
+  JSValue v = JS_EvalThis(js, env, s, strlen(s), file, JS_EVAL_FLAGS);
   js_print_exception(v);
   JS_FreeValue(js, v);
 }
 
 void file_eval_env(const char *file, JSValue env)
 {
-  char *script = slurp_text(file);
-  JSValue v = JS_EvalThis(js, env, script, strlen(script), file, JS_EVAL_FLAGS);
+  size_t len;
+  char *script = slurp_text(file, &len);
+  JSValue v = JS_EvalThis(js, env, script, len, file, JS_EVAL_FLAGS);
   free(script);
   js_print_exception(v);
   JS_FreeValue(js,v);

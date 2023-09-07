@@ -177,7 +177,7 @@ unsigned char *slurp_file(const char *filename, size_t *size)
   return slurp;
 }
 
-char *slurp_text(const char *filename)
+char *slurp_text(const char *filename, size_t *size)
 {
   size_t len;
   char *str = slurp_file(filename, &len);
@@ -185,6 +185,7 @@ char *slurp_text(const char *filename)
   memcpy(retstr, str, len);
   retstr[len] = 0;
   free(str);
+  if (size) *size = len;
   return retstr;
 }
 

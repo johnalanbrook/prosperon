@@ -33,9 +33,9 @@ void shader_compile(struct shader *shader) {
   YughInfo("Making shader with %s and %s.", shader->vertpath, shader->fragpath);
   char spath[MAXPATH];
   sprintf(spath, "%s%s", "shaders/", shader->vertpath);
-  const char *vsrc = slurp_text(spath);
+  const char *vsrc = slurp_text(spath, NULL);
   sprintf(spath, "%s%s", "shaders/", shader->fragpath);
-  const char *fsrc = slurp_text(spath);
+  const char *fsrc = slurp_text(spath, NULL);
 
   shader->shd = sg_make_shader(&(sg_shader_desc){
       .vs.source = vsrc,

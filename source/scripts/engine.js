@@ -9,105 +9,20 @@ function load(file) {
   files[file] = modtime;
 }
 
-function compile(file) {
-  return cmd(122, file);
-}
-
-var Cmdline = {};
-
-Cmdline.cmds = [];
-Cmdline.register_cmd = function(flag, fn, doc) {
-  Cmdline.cmds.push({
-    flag: flag,
-    fn: fn,
-    doc: doc
-  });
-};
-
-function cmd_args(cmdargs)
-{
-  var play = false;
-  var cmds = cmdargs.split(" ");
-
-  Cmdline.play = false;
-
-  for (var i = 1; i < cmds.length; i++) {
-    if (cmds[i][0] !== '-') {
-      Log.warn(`Command '${cmds[i]}' should start with a '-'.`);
-      continue;
-    }
-
-    var c = Cmdline.cmds.find(function(cmd) { return cmd.flag === cmds[i].slice(1); });
-    if (!c) {
-      Log.warn(`Command ${cmds[i]} not recognized.`);
-      continue;
-    }
-
-      var sendstr = [];
-      var j = i+1;
-      while (cmds[j] && cmds[j][0] !== '-') {
-        sendstr.push(cmds[j]);
-	j++;
-      }
-
-      c.fn(sendstr);
-      i = j-1;
-    }
-}
+load("scripts/std.js");
 
 function initialize()
 {
   if (IO.exists("config.js"))
     load("config.js");
 
-  prototypes.load_all();
+//  prototypes.load_all();
 
   if (Cmdline.play)
     run("scripts/play.js");
   else
     run("scripts/editor.js");
 }
-
-Cmdline.register_cmd("p", function() { Cmdline.play = true; }, "Launch engine in play mode.");
-Cmdline.register_cmd("v", function() { Log.say(cmd(120)); Game.quit(); }, "Display engine info.");
-Cmdline.register_cmd("c", function() {}, "Redirect logging to console.");
-Cmdline.register_cmd("l", function(n) {
-  Log.level = n;
-}, "Set log level.");
-Cmdline.register_cmd("h", function(str) {
-  for (var cmd of Cmdline.cmds) {
-    Log.say(`-${cmd.flag}:  ${cmd.doc}`);
-  }
-
-  Game.quit();
-},
-"Help.");
-Cmdline.register_cmd("b", function(str) {
-  var packname;
-  if (str.length === 0)
-    packname = "test.cdb";
-  else if (str.length > 1) {
-    Log.warn("Give me a single filename for the pack.");
-    Game.quit();
-  } else
-    packname = str[0];
-
-  Log.warn(`Packing into ${packname}`);
-    
-  cmd(124, packname);
-  Game.quit();
-}, "Pack the game into the given name.");
-
-Cmdline.register_cmd("e", function(pawn) {
-  run("scripts/editor.js");
-  eval(`Log.write(Input.print_md_kbm(${pawn}));`);
-  Game.quit();
-}, "Print input documentation for a given object in a markdown table." );
-
-Cmdline.register_cmd("t", function() {
-  Log.warn("Testing not implemented yet.");
-  Game.quit();
-}, "Test suite.");
 
 function run(file)
 {
@@ -124,73 +39,8 @@ function run(file)
 
 load("scripts/base.js");
 
-var Log = {
-  set level(x) { cmd(92,x); },
-  get level() { return cmd(93); },
-  print(msg, lvl) {
-    var lg;
-    if (typeof msg === 'object') {
-      lg = JSON.stringify(msg, null, 2);
-    } else {
-      lg = msg;
-    }
-
-    var stack = (new Error()).stack;
-    var n = stack.next('\n',0)+1;
-    n = stack.next('\n', n)+1;
-    var nnn = stack.slice(n);
-    var fmatch = nnn.match(/\(.*\:/);
-    var file = fmatch ? fmatch[0].shift(1).shift(-1) : "nofile";
-    var lmatch = nnn.match(/\:\d*\)/);
-    var line = lmatch ? lmatch[0].shift(1).shift(-1) : "0";
-
-    yughlog(lvl, msg, file, line);
-  },
-  
-  info(msg) {
-    this.print(msg, 0);
-  },
-
-  warn(msg) {
-    this.print(msg, 1);
-  },
-
-  error(msg) {
-    this.print(msg, 2);
-    this.stack(1);
-  },
-
-  critical(msg) {
-    this.print(msg,3);
-    this.stack(1);
-  },
-
-  write(msg) {
-    cmd(91,msg);
-  },
-
-  say(msg) {
-    cmd(91, `${msg}\n`);
-  },
-
-  stack(skip = 0) {
-    var stack = (new Error()).stack;
-    var n = stack.next('\n',0)+1;
-    for (var i = 0; i < skip; i++)
-      n = stack.next('\n', n)+1;
-
-    this.write(stack.slice(n));
-  },
-};
-
 load("scripts/diff.js");
 Log.level = 1;
-
-var Physics = {
-  dynamic: 0,
-  kinematic: 1,
-  static: 2,
-};
 
 var Color = {
   white: [255,255,255,255],
@@ -207,222 +57,7 @@ function bb2wh(bb) {
   return [bb.r-bb.l, bb.t-bb.b];
 };
 
-var GUI = {
-  text(str, pos, size, color, wrap) {
-    size = size ? size : 1;
-    color = color ? color : [255,255,255,255];
-    wrap = wrap ? wrap : -1;
-
-    var bb = cmd(118, str, size, wrap);
-    var opos = [bb.r, bb.t];
-        
-    var h = ui_text(str, pos, size, color, wrap);
-
-    return bb;
-  },
-
-  text_cursor(str, pos, size, cursor) {
-    cursor_text(str,pos,size,[255,255,255],cursor);
-  },
-
-  image(path,pos) {
-    let wh = cmd(64,path);
-    gui_img(path,pos.slice().sub(wh), 1.0, 0.0);
-    return cwh2bb([0,0], wh);
-  },
-
-  image_fn(defn) {
-    var def = Object.create(this.defaults);
-    Object.assign(def,defn);
-    if (!def.path) {
-      Log.warn("GUI image needs a path.");
-      def.draw = function(){};
-      return def;
-    }
-
-    var tex_wh = cmd(64,def.path);
-    var wh = tex_wh.slice();
-
-    if (def.width !== 0)
-      wh.x = def.width;
-
-    if (def.height !== 0)
-      wh.y = def.height;
-
-    wh = wh.scale(def.scale);
-
-    var sendscale = [];
-    sendscale.x = wh.x / tex_wh.x;
-    sendscale.y = wh.y / tex_wh.y;
-
-    def.draw = function(pos) {
-      def.calc_bb(pos);
-      gui_img(def.path, pos.sub(def.anchor.scale(wh)), sendscale, def.angle, def.image_repeat, def.image_repeat_offset, def.color);
-    };
-
-    def.calc_bb = function(cursor) {
-      def.bb = cwh2bb(wh.scale([0.5,0.5]), wh);
-      def.bb = movebb(def.bb, cursor.sub(wh.scale(def.anchor)));
-    };
-
-    return def;
-  },
-
-  defaults: {
-    padding:[2,2], /* Each element inset with this padding on all sides */
-    font: "fonts/LessPerfectDOSVGA.ttf",
-    font_size: 1,
-    text_align: "left",
-    scale: 1,
-    angle: 0,
-    anchor: [0,0],
-    text_shadow: {
-      pos: [0,0],
-      color: [255,255,255,255]
-    },
-    text_outline: 1, /* outline in pixels */
-    color: [255,255,255,255],
-    margin: [5,5], /* Distance between elements for things like columns */
-    width: 0,
-    height: 0,
-    image_repeat: false,
-    image_repeat_offset: [0,0],
-    debug: false, /* set to true to draw debug boxes */
-  },
-
-  text_fn(str, defn)
-  {
-    var def = Object.create(this.defaults);
-    Object.assign(def,defn);
-    
-    def.draw = function(cursor) {
-      def.calc_bb(cursor);
-
-      if (def.debug)
-        Debug.boundingbox(def.bb, def.debug_colors.bounds);
-      
-      var old = def;
-      def = Object.create(def);
-
-/*      if (pointinbb(def.bb, Mouse.screenpos)) {
-        Object.assign(def, def.hovered);
-	def.calc_bb(cursor);
-	GUI.selected = def;
-	def.selected = true;
-      }
-*/
-      if (def.selected) {
-        Object.assign(def, def.hovered);
-	def.calc_bb(cursor);
-      }
-
-      var pos = cursor.sub(bb2wh(def.bb).scale(def.anchor));
-
-      ui_text(str, pos, def.font_size, def.color, def.width);
-
-      def = old;
-    };
-
-    def.calc_bb = function(cursor) {
-      var bb = cmd(118, str, def.font_size, def.width);
-      var wh = bb2wh(bb);
-      var pos = cursor.sub(wh.scale(def.anchor));
-      def.bb = movebb(bb,pos);
-    };
-
-    return def;
-  },
-
-  column(defn) {
-    var def = Object.create(this.defaults);
-    Object.assign(def,defn);
-
-    if (!def.items) {
-      Log.warn("Columns needs items.");
-      def.draw = function(){};
-      return def;
-    };
-
-    def.items.forEach(function(item,idx) {
-      Object.setPrototypeOf(def.items[idx], def);
-
-      if (def.items[idx-1])
-        def.up = def.items[idx-1];
-
-      if (def.items[idx+1])
-        def.down = def.items[idx+1];
-    });
-
-    def.draw = function(pos) {
-        def.items.forEach(function(item) {
-	  item.draw.call(this,pos);
-          var wh = bb2wh(item.bb);
-          pos.y -= wh.y;
-          pos.y -= def.padding.x*2;
-        });
-    };
-
-    return def;
-  },
-
-  input_lmouse_pressed() {
-    if (GUI.selected)
-      GUI.selected.action();
-  },
-
-  input_s_pressed() {
-    if (GUI.selected?.down) {
-      GUI.selected.selected = false;
-      GUI.selected = GUI.selected.down;
-      GUI.selected.selected = true;
-    }
-  },
-
-  input_w_pressed() {
-    if (GUI.selected?.up) {
-      GUI.selected.selected = false;
-      GUI.selected = GUI.selected.up;
-      GUI.selected.selected = true;
-    }
-  },
-
-  input_enter_pressed() {
-    if (GUI.selected) {
-      GUI.selected.action();
-    }
-  }
-};
-
-
-
-GUI.defaults.debug_colors = {
-  bounds: Color.red.slice(),
-  margin: Color.blue.slice(),
-  padding: Color.green.slice()
-};
-
-Object.values(GUI.defaults.debug_colors).forEach(function(v) { v.a = 100; });
-
-var Yugine = {
-  get dt() {
-    return cmd(63);
-  },
-
-  wait_fns: [],
-
-  wait_exec(fn) {
-    if (!phys_stepping())
-      fn();
-    else
-      this.wait_fns.push(fn);
-  },
-
-  exec() {
-    this.wait_fns.forEach(function(x) { x(); });
-
-    this.wait_fns = [];
-  },
-};
+load("scripts/gui.js");
 
 var timer = {
   guardfn(fn) {
@@ -475,203 +110,6 @@ var timer = {
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
   get pct() { return this.remain / this.time; },
-};
-
-/* Take numbers from 0 to 1 and remap them to easing functions */
-var Ease = {
-  linear(t) { return t; },
-
-  in(t) { return t*t; },
-
-  out(t) {
-    var d = 1-t;
-    return 1 - d*d
-  },
-
-  inout(t) {
-    var d = -2*t + 2;
-    return t < 0.5 ? 2 * t * t : 1 - (d * d) / 2;
-  },
-};
-
-function make_easing_fns(num) {
-  var obj = {};
-
-  obj.in = function(t) {
-    return Math.pow(t,num);
-  };
-
-  obj.out = function(t) {
-    return 1 - Math.pow(1 - t, num);
-  };
-
-  var mult = Math.pow(2, num-1);
-
-  obj.inout = function(t) {
-    return t < 0.5 ? mult * Math.pow(t, num) : 1 - Math.pow(-2 * t + 2, num) / 2;
-  };
-
-  return obj;
-};
-
-Ease.quad = make_easing_fns(2);
-Ease.cubic = make_easing_fns(3);
-Ease.quart = make_easing_fns(4);
-Ease.quint = make_easing_fns(5);
-
-Ease.expo = {
-  in(t) {
-    return t === 0 ? 0 : Math.pow(2, 10 * t - 10);
-  },
-
-  out(t) {
-    return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-  },
-
-  inout(t) {
-    return t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
-  }
-};
-
-Ease.bounce = {
-  in(t) {
-    return 1 - this.out(t - 1);
-  },
-
-  out(t) {
-    var n1 = 7.5625;
-    var d1 = 2.75;
-
-    if (t < 1 / d1) { return n1 * t * t; }
-    else if (t < 2 / d1) { return n1 * (t -= 1.5 / d1) * t + 0.75; }
-    else if (t < 2.5 / d1) { return n1 * (t -= 2.25 / d1) * t + 0.9375; }
-    else
-      return n1 * (t -= 2.625 / d1) * t + 0.984375;
-  },
-
-  inout(t) {
-    return t < 0.5 ? (1 - this.out(1 - 2 * t)) / 2 : (1 + this.out(2 * t - 1)) / 2;
-  }
-};
-
-Ease.sine = {
-  in(t) { return 1 - Math.cos((t * Math.PI)/2); },
-
-  out(t) { return Math.sin((t*Math.PI)/2); },
-
-  inout(t) { return -(Math.cos(Math.PI*t) - 1) / 2; }
-};
-
-Ease.elastic = {
-  in(t) {
-    return t === 0 ? 0 : t === 1 ? 1 : -Math.pow(2, 10*t-10) * Math.sin((t * 10 - 10.75) * this.c4);
-  },
-
-  out(t) {
-    return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10*t) * Math.sin((t * 10 - 0.75) * this.c4) + 1;
-  },
-
-  inout(t) {
-    t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ?
-      -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * this.c5)) / 2
-      : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * this.c5)) / 2 + 1;
-  },
-};
-
-Ease.elastic.c4 = 2*Math.PI/3;
-Ease.elastic.c5 = 2*Math.PI / 4.5;
-
-var Tween = {
-  default: {
-    loop: "restart", /* none, restart, yoyo, circle */ 
-    time: 1, /* seconds to do */
-    ease: Ease.linear,
-    whole: true,
-  },
-
-  start(obj, target, tvals, options)
-  {
-    var defn = Object.create(this.default);
-    Object.assign(defn, options);
-
-    if (defn.loop === 'circle')
-      tvals.push(tvals[0]);
-    else if (defn.loop === 'yoyo') {
-      for (var i = tvals.length-2; i >= 0; i--)
-        tvals.push(tvals[i]);
-    }
-
-    defn.accum = 0;
-
-    var slices = tvals.length - 1;
-    var slicelen = 1 / slices;
-
-    defn.fn = function(dt) {
-      defn.accum += dt;
-      defn.pct = (defn.accum % defn.time) / defn.time;
-
-      var t = defn.whole ? defn.ease(defn.pct) : defn.pct;
-
-      var nval = t / slicelen;
-      var i = Math.trunc(nval);
-      nval -= i;
-
-      if (!defn.whole)
-        nval = defn.ease(nval);
-
-      obj[target] = tvals[i].lerp(tvals[i+1], nval);
-    };
-
-    defn.restart = function() { defn.accum = 0; };
-    defn.stop = function() { defn.pause(); defn.restart(); };
-    defn.pause = function() { Register.update.unregister(defn.fn); };
-
-    Register.update.register(defn.fn, defn);
-
-    return defn;
-  },
-
-  embed(obj, target, tvals, options) {
-    var defn = Object.create(this.default);
-    Object.assign(defn, options);
-
-    defn.update_vals = function(vals) {
-      defn.vals = vals;
-      
-      if (defn.loop === 'circle')
-        defn.vals.push(defn.vals[0]);
-      else if (defn.loop === 'yoyo') {
-        for (var i = defn.vals.length-2; i >= 0; i--)
-          defn.vals.push(defn.vals[i]);
-      }
-
-      defn.slices = defn.vals.length - 1;
-      defn.slicelen = 1 / defn.slices;
-    };
-
-    defn.update_vals(tvals);
-
-    defn.time_s = Date.now();
-
-    Object.defineProperty(obj, target, {
-      get() {
-        defn.accum = (Date.now() - defn.time_s)/1000;
-	defn.pct = (defn.accum % defn.time) / defn.time;
-	var t = defn.whole ? defn.ease(defn.pct) : defn.pct;
-
-	var nval = t / defn.slicelen;
-	var i = Math.trunc(nval);
-	nval -= i;
-
-	if (!defn.whole)
-	  nval = defn.ease(nval);
-
-	return defn.vals[i].lerp(defn.vals[i+1],nval);
-      },
-    });
-
-    return defn;
-  },
 };
 
 var animation = {
@@ -747,56 +185,6 @@ var animation = {
   },
 };
 
-var Audio = {
-  
-};
-
-var Music = {
-  play(path) {
-    Log.info("Playing " + path);
-    cmd(87,path);
-  },
-
-  stop() {
-    cmd(89);
-  },
-
-  pause() {
-    cmd(88);
-  },
-
-  set volume(x) {
-  },
-};
-
-var Sound = {
-  sounds: [], /* array of loaded sound files */
-  play(file) {
-//    var s = Object.create(Sound);
-//    s.path = file;
-//    s.play();
-     this.id = cmd(14,file);
-    //return s;
-  },
-  
-  music(midi, sf) {
-    cmd(13, midi, sf);
-  },
-
-  musicstop() {
-    cmd(15);
-  },
-
-  /* Between 0 and 100 */
-  set volume(x) { cmd(19, x); },
-
-  killall() {
-    Music.stop();
-    this.musicstop();
-    /* TODO: Kill all sound effects that may still be running */
-  },
-};
-
 var Render = {
   normal() {
     cmd(67);
@@ -853,153 +241,11 @@ var Keys = {
   },
 };
 
-var Input = {
-  setgame() { cmd(77); },
-  setnuke() { cmd(78); },
-};
+load("scripts/physics.js");
+load("scripts/input.js");
 
-Input.state2str = function(state) {
-  if (typeof state === 'string') return state;
-  switch (state) {
-    case 0:
-      return "down";
-    case 1:
-      return "pressed";
-    case 2:
-      return "released";
-  }
-}
-
-Input.print_pawn_kbm = function(pawn) {
-  if (!('inputs' in pawn)) return;
-  var str = "";
-  for (var key in pawn.inputs) {
-    str += `${key} | ${pawn.inputs[key].doc}\n`;
-  }
-  return str;
-};
-
-Input.print_md_kbm = function(pawn) {
-  if (!('inputs' in pawn)) return;
-
-  var str = "";
-  str += "|control|description|\n|---|---|\n";
-
-  for (var key in pawn.inputs) {
-    str += `|${key}|${pawn.inputs[key].doc}|`;
-    str += "\n";
-  }
-
-  return str;
-};
-
-Input.has_bind = function(pawn, bind) {
-  return (typeof pawn.inputs?.[bind] === 'function');
-};
-
-function screen2world(screenpos) { return Yugine.camera.view2world(screenpos); }
-function world2screen(worldpos) { return Yugine.camera.world2view(worldpos); }
-
-var physics = {
-  set gravity(x) { cmd(8, x); },
-  get gravity() { return cmd(72); },
-  set damping(x) { cmd(73,Math.clamp(x,0,1)); },
-  get damping() { return cmd(74); },
-  pos_query(pos) {
-    return cmd(44, pos);
-  },
-  
-  /* Returns a list of body ids that a box collides with */
-  box_query(box) {
-    var pts = cmd(52,box.pos,box.wh);
-    return cmd(52, box.pos, box.wh);
-  },
-  
-  box_point_query(box, points) {
-    if (!box || !points)
-      return [];
-
-    return cmd(86, box.pos, box.wh, points, points.length);
-  },
-};
-
-var Action = {
-  add_new(name) {
-    var action = Object.create(Action);
-    action.name = name;
-    action.inputs = [];
-    this.actions.push(action);
-
-    return action;
-  },
-  actions: [],
-};
-
-/* May be a human player; may be an AI player */
-var Player = {
-  players: [],
-  input(fn, ...args) {
-    this.pawns.forEach(x => x[fn]?.(...args));
-  },
-
-  raw_input(cmd, state, ...args) {
-    for (var pawn of this.pawns.reverse()) {
-      if (typeof pawn.inputs?.any === 'function') {
-        pawn.inputs.any(cmd);
-        return;
-      }
-      if (!pawn.inputs?.[cmd]) continue;
-
-      var fn = null;
-
-      switch (state) {
-        case 'pressed':
-	  fn = pawn.inputs[cmd];
-	  break;
-	case 'rep':
-	  fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
-	  break;
-	case 'released':
-	  fn = pawn.inputs[cmd].released;
-	  break;
-	case 'down':
-	  fn = pawn.inputs[cmd].down;
-      }
-
-      if (typeof fn === 'function')
-        fn.call(pawn, ... args);
-    }
-  },
-  
-  uncontrol(pawn) {
-    this.players.forEach(function(p) {
-      p.pawns = p.pawns.filter(x => x !== pawn);
-    });
-  },
-
-  obj_controlled(obj) {
-    for (var p in Player.players) {
-      if (p.pawns.contains(obj))
-        return true;
-    }
-
-    return false;
-  },
-
-  create() {
-    var n = Object.create(this);
-    n.pawns = [];
-    n.gamepads = [];
-    n.control = function(pawn) { n.pawns.push_unique(pawn); };
-    n.uncontrol = function(pawn) { n.pawns = n.pawns.filter(x => x !== pawn); };
-    this.players.push(n);
-    return n;
-  },
-};
-
-for (var i = 0; i < 4; i++) {
-  Player.create();
-}
+function screen2world(screenpos) { return Game.camera.view2world(screenpos); }
+function world2screen(worldpos) { return Game.camera.world2view(worldpos); }
 
 var Register = {
   inloop: false,
@@ -1074,22 +320,25 @@ var Register = {
     var n = {};
     n.register = function(fn, obj) {
       if (!obj) {
-        Log.warn("Refusing to register a function without a destroying object.");
+        Log.error("Refusing to register a function without a destroying object.");
 	return;
       }
-      entries.push([fn, obj ? obj : null]);
+      entries.push({
+        fn: fn,
+	obj: obj
+      });
     }
 
     n.unregister = function(fn) {
-      entries = entries.filter(function(f) { return fn !== f; });
+      entries = entries.filter(function(e) { return e.fn !== f; });
     }
 
     n.unregister_obj = function(obj) {
-      entries = entries.filter(function(o) { return o !== obj; });
+      entries = entries.filter(function(e) { return e.obj !== obj; });
     }
 
     n.broadcast = function(...args) {
-      entries.forEach(x => x[0].call(x[1], ...args));
+      entries.forEach(x => x.fn.call(x.obj, ...args));
     }
 
     n.clear = function() {
@@ -1118,7 +367,7 @@ register(9, Log.stack, this);
 
 Register.gamepad_playermap[0] = Player.players[0];
 
-Register.update.register(Yugine.exec, Yugine);
+
 
 Player.players[0].control(GUI);
 
@@ -1163,18 +412,6 @@ var Window = {
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
 
-var IO = {
-  exists(file) { return cmd(65, file);},
-  slurp(file) {
-    if (!this.exists(file)) {
-      Log.warn(`File ${file} does not exist; can't slurp.`);
-      return "";
-    }
-    return cmd(38,file);
-  },
-  slurpwrite(str, file) { return cmd(39, str, file); },
-  extensions(ext) { return cmd(66, "." + ext); },
-};
 
 function reloadfiles() {
   Object.keys(files).forEach(function (x) { load(x); });
@@ -1342,512 +579,31 @@ var Game = {
   play()
   {
     sys_cmd(1);
-  }
-};
-
-
-var Level = {
-  levels: [],
-  objects: [],
-  alive: true,
-  selectable: true,
-  toString() {
-    if (this.file)
-      return this.file;
-
-    return "Loose level";
   },
 
-  fullpath() {
-    //return `${this.level.fullpath()}.${this.name}`;
-  },
-  
-  get boundingbox() {
-    return bb_from_objects(this.objects);
+  get dt() {
+    return cmd(63);
   },
 
-  varname2obj(varname) {
-    for (var i = 0; i < this.objects.length; i++)
-      if (this.objects[i].varname === varname)
-        return this.objects[i];
+  wait_fns: [],
 
-    return null;
-  },
-
-  run() {
-    var scene = {};
-
-    // TODO: If an object does not have a varname, give it one based on its parent 
-    this.objects.forEach(function(x) {
-      if (x.hasOwn('varname')) {
-        scene[x.varname] = x;
-	this[x.varname] = x;
-      }
-    },this);
-    
-    var fn = compile(this.scriptfile);
-    fn.call(this);
-
-    if (typeof this.update === 'function')
-      Register.update.register(this.update, this);
-
-    if (typeof this.gui === 'function')
-      Register.gui.register(this.gui, this);
-
-    if (typeof this.nk_gui === 'function')
-      register_nk_gui(this.nk_gui, this);
-
-    if (typeof this.inputs === 'object') {
-      Player.players[0].control(this);
-    }
-  },
-
-  revert() {
-    delete this.unique;
-    this.load(this.filelvl);
-  },
-
-  /* Returns how many objects this level created are still alive */
-  object_count() {
-    return objects.length();
-  },
-
-  /* Save a list of objects into file, with pos acting as the relative placement */
-  saveas(objects, file, pos) {
-    if (!pos) pos = find_com(objects);
-
-    objects.forEach(function(obj) {
-      obj.pos = obj.pos.sub(pos);
-    });
-
-    var newlvl = Level.create();
-
-    objects.forEach(function(x) { newlvl.register(x); });
-
-    var save = newlvl.save();
-    slurpwrite(save, file);
-  },
-
-  clean() {
-    for (var key in this.objects)
-      clean_object(this.objects[key]);
-
-    for (var key in gameobjects)
-      clean_object(gameobjects[key]);
-  },
-  
-  sync_file(file) {
-    var openlvls = this.levels.filter(function(x) { return x.file === file && x !== editor.edit_level; });
-
-    openlvls.forEach(function(x) {
-      x.clear();
-      x.load(IO.slurp(x.file));
-      x.flipdirty = true;
-      x.sync();
-      x.flipdirty = false;
-      x.check_dirty();
-    });    
-  },
-
-  save() {
-    this.clean();
-    var pos = this.pos;
-    var angle = this.angle;
-
-    this.pos = [0,0];
-    this.angle = 0;
-    if (this.flipx) {
-      this.objects.forEach(function(obj) {
-        this.mirror_x_obj(obj);
-      }, this);
-    }
-
-    if (this.flipy) {
-      this.objects.forEach(function(obj) {
-        this.mirror_y_obj(obj);
-      }, this);
-    }
-    
-    var savereturn = JSON.stringify(this.objects, replacer_empty_nil, 1);
-
-    if (this.flipx) {
-      this.objects.forEach(function(obj) {
-        this.mirror_x_obj(obj);
-      }, this);
-    }
-
-    if (this.flipy) {
-      this.objects.forEach(function(obj) {
-        this.mirror_y_obj(obj);
-      }, this);
-    }
-
-    this.pos = pos;
-    this.angle = angle;
-    return savereturn;
-  },
-
-  mirror_x_obj(obj) {
-    obj.flipx = !obj.flipx;
-    var rp = obj.relpos;
-    obj.pos = [-rp.x, rp.y].add(this.pos);
-    obj.angle = -obj.angle;
-  },
-
-  mirror_y_obj(obj) {
-    var rp = obj.relpos;
-    obj.pos = [rp.x, -rp.y].add(this.pos);
-    obj.angle = -obj.angle;
-  },
-
-  /* TODO: Remove this; make it work without */
-  toJSON() {
-    var obj = {};
-    obj.file = this.file;
-    obj.pos = this._pos;
-    obj.angle = this._angle;
-    obj.from = "group";
-    obj.flipx = this.flipx;
-    obj.flipy = this.flipy;
-    obj.scale = this.scale;
-
-    if (this.varname)
-      obj.varname = this.varname;
-
-    if (!this.unique)
-      return obj;
-
-    obj.objects = {};
-
-    this.objects.forEach(function(x,i) {
-      obj.objects[i] = {};
-      var adiff = Math.abs(x.relangle - this.filelvl[i]._angle) > 1e-5;
-      if (adiff)
-        obj.objects[i].angle = x.relangle;
-
-      var pdiff = Vector.equal(x.relpos, this.filelvl[i]._pos, 1e-5);
-      if (!pdiff)
-        obj.objects[i].pos = x._pos.sub(this.pos);
-
-      if (obj.objects[i].empty)
-        delete obj.objects[i];
-    }, this);
-
-    return obj;
-  },
-
-  register(obj) {
-    if (obj.level)
-      obj.level.unregister(obj);
-      
-    this.objects.push(obj);
-  },
-
-  make() {
-    return Level.loadfile(this.file, this.pos);
-  },
-
-  spawn(prefab) {
-    if (typeof prefab === 'string') {
-      var newobj = this.addfile(prefab);
-      return newobj;
-    }
-      
-    var newobj = prefab.make();
-    newobj.defn('level', this);
-    this.objects.push(newobj);
-    Game.register_obj(newobj);
-    newobj.setup?.();
-    newobj.start?.();
-    if (newobj.update)
-      Register.update.register(newobj.update, newobj);
-    return newobj;
-  },
-
-  dup(level) {
-    level ??= this.level;
-    var n = level.spawn(this.from);
-    /* TODO: Assign this's properties to the dup */
-    return ;n
-  },
-
-  create() {
-    var newlevel = Object.create(this);
-    newlevel.objects = [];
-    newlevel._pos = [0,0];
-    newlevel._angle = 0;
-    newlevel.color = Color.green;
-/*    newlevel.toString = function() {
-      return (newlevel.unique ? "#" : "") + newlevel.file;
-    };
- */
-    newlevel.filejson = newlevel.save();
-    return newlevel;
-  },
-
-  addfile(file) {
-    /* TODO: Register this as a prefab for caching */
-    var lvl = this.loadfile(file);
-    this.objects.push(lvl);
-    lvl.level = this;
-    return lvl;
-  },
-
-  check_dirty() {
-    this.dirty = this.save() !== this.filejson;
-  },
-
-  start() {
-    this.objects.forEach(function(x) { if ('start' in x) x.start(); });
-  },
-
-  loadlevel(file) {
-    var lvl = Level.loadfile(file);
-    if (lvl && Game.playing())
-      lvl.start();
-
-    return lvl;
-  },
-
-  loadfile(file) {
-    if (!file.endsWith(".lvl")) file = file + ".lvl";
-    var newlevel = Level.create();
-
-    if (IO.exists(file)) {
-      newlevel.filejson = IO.slurp(file);
-      
-      try {
-	newlevel.filelvl = JSON.parse(newlevel.filejson);
-	newlevel.load(newlevel.filelvl);
-      } catch (e) {
-        newlevel.ed_gizmo = function() { GUI.text("Invalid level file: " + newlevel.file, world2screen(newlevel.pos), 1, Color.red); };
-	newlevel.selectable = false;
-	throw e;
-      }
-      newlevel.file = file;
-      newlevel.dirty = false;
-    }
-    
-    var scriptfile = file.replace('.lvl', '.js');
-    if (IO.exists(scriptfile)) {
-      newlevel.script = IO.slurp(scriptfile);
-      newlevel.scriptfile = scriptfile;
-    }
-
-    newlevel.from = scriptfile.replace('.js','');
-    newlevel.file = newlevel.from;
-    newlevel.run();
-
-    return newlevel;
-  },
-
-  /* Spawns all objects specified in the lvl json object */
-  load(lvl) {
-    this.clear();
-    this.levels.push_unique(this);
-    
-    if (!lvl) {
-      Log.warn("Level is " + lvl + ". Need a better formed one.");
-
-      return;
-    }
-
-    var opos = this.pos;
-    var oangle = this.angle;
-    this.pos = [0,0];
-    this.angle = 0;
-
-    var objs;
-    var created = [];
-
-    if (typeof lvl === 'string')
-      objs = JSON.parse(lvl);
+  wait_exec(fn) {
+    if (!phys_stepping())
+      fn();
     else
-      objs = lvl;
-
-   if (typeof objs === 'object')
-     objs = objs.array();
-
-    objs.forEach(x => {
-      if (x.from === 'group') {
-        var loadedlevel = Level.loadfile(x.file);
-	if (!loadedlevel) {
-          Log.error("Error loading level: file " + x.file + " not found.");
-	  return;
-	}
-	if (!IO.exists(x.file)) {
-	  loadedlevel.ed_gizmo = function() { GUI.text("MISSING LEVEL " + x.file, world2screen(loadedlevel.pos) ,1, Color.red) };
-	}
-	var objs = x.objects;
-	delete x.objects;
-	Object.assign(loadedlevel, x);
-
-	if (objs) {
-   	  objs.array().forEach(function(x, i) {
-	    if (x.pos)
-  	      loadedlevel.objects[i].pos = x.pos.add(loadedlevel.pos);
-
-	    if (x.angle)
-	      loadedlevel.objects[i].angle = x.angle + loadedlevel.angle;
-	  });
-
-	  loadedlevel.unique = true;
-	}
-	loadedlevel.level = this;
-	loadedlevel.sync();
-	created.push(loadedlevel);
-	this.objects.push(loadedlevel);
-	return;
-      }
-      var prototype = gameobjects[x.from];
-      if (!prototype) {
-        Log.error(`Prototype for ${x.from} does not exist.`);
-	return;
-      }
-
-      var newobj = this.spawn(gameobjects[x.from]);
-
-      delete x.from;
-
-      dainty_assign(newobj, x);
-      
-      if (x._pos)
-        newobj.pos = x._pos;
-	
-
-      if (x._angle)
-        newobj.angle = x._angle;
-      for (var key in newobj.components)
-        if ('sync' in newobj.components[key]) newobj.components[key].sync();
-
-      newobj.sync();
-
-      created.push(newobj);
-    });
-
-    created.forEach(function(x) {
-      if (x.varname)
-        this[x.varname] = x;
-    },this);
-
-    this.pos = opos;
-    this.angle = oangle;
-
-    return created;
+      this.wait_fns.push(fn);
   },
 
-  clear() {
-    for (var i = this.objects.length-1; i >= 0; i--)
-      if (this.objects[i].alive)
-        this.objects[i].kill();
+  exec() {
+    this.wait_fns.forEach(function(x) { x(); });
 
-    this.levels.remove(this);
-  },
-
-  clear_all() {
-    this.levels.forEach(function(x) { x.kill(); });
-  },
-
-  kill() {
-    if (this.level)
-      this.level.unregister(this);
-    
-    Register.unregister_obj(this);
-      
-    this.clear();
-  },
-  
-  unregister(obj) {
-    var removed = this.objects.remove(obj);
-
-    if (removed && obj.varname)
-      delete this[obj.varname];
-  },
-
-  get pos() { return this._pos; },
-  set pos(x) {
-    var diff = x.sub(this._pos);
-    this.objects.forEach(function(x) { x.pos = x.pos.add(diff); });
-    this._pos = x;
-  },
-
-  get angle() { return this._angle; },
-  set angle(x) {
-    var diff = x - this._angle;
-    this.objects.forEach(function(x) {
-      x.angle = x.angle + diff;
-      var pos = x.pos.sub(this.pos);
-      var r = Vector.length(pos);
-      var p = Math.rad2deg(Math.atan2(pos.y, pos.x));
-      p += diff;
-      p = Math.deg2rad(p);
-      x.pos = this.pos.add([r*Math.cos(p), r*Math.sin(p)]);
-    },this);
-    this._angle = x;
-  },
-
-  flipdirty: false,
-  
-  sync() {
-    this.flipx = this.flipx;
-    this.flipy = this.flipy;
-  },
-
-  _flipx: false,
-  get flipx() { return this._flipx; },
-  set flipx(x) {
-    if (this._flipx === x && (!x || !this.flipdirty)) return;
-    this._flipx = x;
-    
-    this.objects.forEach(function(obj) {
-      obj.flipx = !obj.flipx;
-      var rp = obj.relpos;
-      obj.pos = [-rp.x, rp.y].add(this.pos);
-      obj.angle = -obj.angle;
-    },this);
-  },
-  
-  _flipy: false,
-  get flipy() { return this._flipy; },
-  set flipy(x) {
-    if (this._flipy === x && (!x || !this.flipdirty)) return;
-    this._flipy = x;
-    
-    this.objects.forEach(function(obj) {
-      var rp = obj.relpos;
-      obj.pos = [rp.x, -rp.y].add(this.pos);
-      obj.angle = -obj.angle;
-    },this);
-  },
-
-  _scale: 1.0,
-  get scale() { return this._scale; },
-  set scale(x) {
-    var diff = (x - this._scale) + 1;
-    this._scale = x;
-
-    this.objects.forEach(function(obj) {
-      obj.scale *= diff;
-      obj.relpos = obj.relpos.scale(diff);
-    }, this);
-  },
-  
-  get up() {
-    return [0,1].rotate(Math.deg2rad(this.angle));
-  },
-  
-  get down() {
-    return [0,-1].rotate(Math.deg2rad(this.angle));
-  },
-  
-  get right() {
-    return [1,0].rotate(Math.deg2rad(this.angle));
-  },
-  
-  get left() {
-    return [-1,0].rotate(Math.deg2rad(this.angle));
+    this.wait_fns = [];
   },
 };
+
+Register.update.register(Game.exec, Game);
+
+load("scripts/level.js");
 
 var World = Level.create();
 World.name = "World";
@@ -1862,13 +618,6 @@ World.load = function(lvl) {
 
 var gameobjects = {};
 var Prefabs = gameobjects;
-
-/* Returns the index of the smallest element in array, defined by a function that returns a number */
-Object.defineProperty(Array.prototype, 'min', {
-  value: function(fn) {
-    
-  },
-});
 
 function grab_from_points(pos, points, slop) {
   var shortest = slop;
@@ -1925,6 +674,12 @@ var gameobject = {
     obj.obscure('from');
 	
     return obj;
+  },
+
+  dup(diff) {
+    var dup = World.spawn(gameobjects[this.from]);
+    Object.assign(dup, diff);
+    return dup;
   },
 
   instandup() {
@@ -2279,7 +1034,6 @@ var gameobject = {
   },
 }
 
-
 var locks = ['height', 'width', 'visible', 'body', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
 locks.forEach(x => gameobject.obscure(x));
 /* Load configs */
@@ -2305,6 +1059,9 @@ var local_conf = {
   mouse: true,
 };
 
+if (IO.exists("game.config"))
+  load_configs("game.config");
+
 /* Save configs */
 function save_configs() {
     Log.info("saving configs");
@@ -2328,44 +1085,7 @@ function save_game_configs() {
   Game.objects.forEach(function(x) { x.sync(); });
 };
 
-var Collision = {
-  types: {},
-  num: 10,
-  set_collide(a, b, x) {
-    this.types[a][b] = x;
-    this.types[b][a] = x;
-  },
-  sync() {
-    for (var i = 0; i < this.num; i++)
-      cmd(76,i,this.types[i]);
-  },
-  types_nuke() {
-    Nuke.newline(this.num+1);
-    Nuke.label("");
-    for (var i = 0; i < this.num; i++) Nuke.label(i);
-    
-    for (var i = 0; i < this.num; i++) {
-      Nuke.label(i);
-      for (var j = 0; j < this.num; j++) {
-        if (j < i)
-	  Nuke.label("");
-	else {
-          this.types[i][j] = Nuke.checkbox(this.types[i][j]);
-  	  this.types[j][i] = this.types[i][j];
-	}
-      }
-    }
-  },
-};
-
-for (var i = 0; i < Collision.num; i++) {
-  Collision.types[i] = [];
-  for (var j = 0; j < Collision.num; j++)
-    Collision.types[i][j] = false;
-};
-
-if (IO.exists("game.config"))
-  load_configs("game.config");
+load("scripts/physics.js");
 
 var camera2d = gameobject.clone("camera2d", {
     phys: gameobject.bodytype.kinematic,
@@ -2391,13 +1111,13 @@ var camera2d = gameobject.clone("camera2d", {
     },
 });
 
-Yugine.view_camera = function(cam)
+Game.view_camera = function(cam)
 {
-  Yugine.camera = cam;
-  cmd(61, Yugine.camera.body);
+  Game.camera = cam;
+  cmd(61, Game.camera.body);
 }
 
-Yugine.view_camera(World.spawn(camera2d));
+Game.view_camera(World.spawn(camera2d));
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 
@@ -2439,5 +1159,18 @@ for (var key in prototypes) {
 }
 
 prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
+
+prototypes.from_file = function(file)
+{
+  if (!IO.exists(file)) {
+    Log.error(`File ${file} does not exist.`);
+    return;
+  }
+
+  var newobj = gameobject.clone(file, {});
+  var script = IO.slurp(file);
+  compile_env(`var self = this;${script}`, newobj, file);
+  return newobj;
+}
 
 var Gamestate = {};

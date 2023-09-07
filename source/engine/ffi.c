@@ -734,7 +734,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 38:
     str = JS_ToCString(js, argv[1]);
-    ret = JS_NewString(js, slurp_text(str));
+    ret = JS_NewString(js, slurp_text(str, NULL));
     break;
 
   case 39:
@@ -1050,12 +1050,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       return num2js(get_timescale());
       break;
     case 122:
-      str = JS_ToCString(js, argv[1]);
-      return script_compile(str);
+      break;
 
     case 123:
       str = JS_ToCString(js, argv[1]);
-      file_eval_env(str, argv[2]);
+      str2 = JS_ToCString(js, argv[3]);
+      script_eval_w_env(str, argv[2], str2);
       break;
 
     case 124:

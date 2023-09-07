@@ -13,7 +13,7 @@ var editor_level = Level.create();
 var editor_camera = editor_level.spawn(camera2d);
 editor_camera.save = false;
 
-Yugine.view_camera(editor_camera);
+Game.view_camera(editor_camera);
 
 var editor_config = {
   grid_size: 100,
@@ -2528,7 +2528,7 @@ limited_editor.inputs['C-q'] = function()
 //  World.kill();
   World.clear_all();
   editor.load_json(editor.stash);
-  Yugine.view_camera(editor_camera);
+  Game.view_camera(editor_camera);
 }
 
 /* This is used for editing during a paused game */

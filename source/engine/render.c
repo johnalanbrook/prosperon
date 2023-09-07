@@ -378,8 +378,8 @@ void openglRender(struct window *window) {
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
 {
   YughInfo("Making shader with %s and %s", v, f);
-  char *vs = slurp_text(v);
-  char *fs = slurp_text(f);
+  char *vs = slurp_text(v, NULL);
+  char *fs = slurp_text(f, NULL);
 
   d->vs.source = vs;
   d->fs.source = fs;
