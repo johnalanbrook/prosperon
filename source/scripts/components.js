@@ -78,6 +78,8 @@ var sprite = clone(component, {
   input_kp3_pressed() { this.pos = [0, -1]; },
   input_kp2_pressed() { this.pos = [-0.5,-1]; },
   input_kp1_pressed() { this.pos = [-1,-1]; },
+
+  POS_MID: [-0.5, -0.5],
 });
 
 /* Container to play sprites and anim2ds */

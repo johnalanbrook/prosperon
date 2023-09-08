@@ -247,6 +247,12 @@ var Level = {
     this.dirty = this.save() !== this.filejson;
   },
 
+  add_child(obj) {
+    obj.unparent();
+    this.objects.push(obj);
+    obj.level = this;
+  },
+
   start() {
     this.objects.forEach(function(x) { if ('start' in x) x.start(); });
   },
@@ -412,6 +418,10 @@ var Level = {
 
     if (removed && obj.varname)
       delete this[obj.varname];
+  },
+
+  remove_child(child) {
+    this.objects.remove(child);
   },
 
   get pos() { return this._pos; },

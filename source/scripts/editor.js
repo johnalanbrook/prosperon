@@ -9,8 +9,9 @@ required_files.forEach(x => {
   if (!IO.exists(x)) IO.slurpwrite("", x);
 });
 
-var editor_level = Level.create();
-var editor_camera = editor_level.spawn(camera2d);
+/* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
+var editor_level = gameobject.make(Primum);
+var editor_camera = camera2d.make(editor_level);
 editor_camera.save = false;
 
 Game.view_camera(editor_camera);
@@ -2541,7 +2542,8 @@ Debug.register_call(editor.ed_debug, editor);
 
 if (IO.exists("editor.config"))
   load_configs("editor.config");
-editor.edit_level = Level.create();
+
+editor.edit_level = editor_level;
 
 Game.stop();
 Game.render();

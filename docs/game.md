@@ -44,27 +44,42 @@ There are three distinct hierarchies of object-existence.
 ### Components
 The most "bare metal" are the components. These are essentially hooks into the engine that tell it how to do particular things. For example, to render a sprite, Javascript does no rendering, but rather tells the engine to create an image and render it in a particular spot.
 
-Components are rendered in an "ECS" style. To work, components must be installed on an entity.
+Components are rendered in an "ECS" style. To work, components must be installed on an entity. They have no meaning outside of a physical object in the world.
+
+AI would be components. You could have a "sensor" AI component that detects the world around it, and a locomotion AI component, etc, and reserve scripting for hooking them up, etc. Or do it all in scripting.
+
+Components cannot be scripted; they are essentially a hardwired thing that you set different flags and values on, and then can query it for information.
 
 ### Entity
 Entities are holders of components. Anything that needs a component will be an entity. Components rely on entites to render correctly. For example, the engine knows where to draw a sprite wherever its associated entity is.
 
-### Levels
-Levels are nothing more than groups of entities However, levels can also have a script on them. This level of scripting is the least efficient.
+Entities can be composed of other entities. When that is the case, an entity "under" a different entity will move when the above entity moves.
 
-Levels do not have an associated gameobject inside the engine, and so are what you want if you just want to run some code.
+The outermost entity that all other entities must exist in is the Primum. It always exists and cannot be removed.
+
+## Traits
+It is better to think of Primum as trait-based, intead of object-based. Any thing in your game that has particular properties can be used as a particular sort of object.
 
 ## Prototyping model
 All objects follow the prototyping model of inheritence. This makes it trivial to change huge swathes of the game, or make tiny adjustments to single objects, in a natural and intuitive way.
 
-Components cannot be prototyped. They are tied directly to the entity they are bound to.
+Components cannot be prototyped. They are fundamentally tied to the entity they are bound to.
 
 Entities can be prototyped out. What this means is that, when you select an object in the game, you can either make a "subtype" of it, where changes to the object trickle down to the created one, or a "sidetype" of it, which is a total duplicate of the object.
+
+entity.clone(parent) -> create a subtyped version of the entity
+entity.dup(parent) -> create a copy of the entity.
+entity.promote() -> promote the entity to a new Ur-type, as it currently exists.
+entity.revert() -> remove all changes of this entity so it again matches its Ur-type.
+entity.push() -> push changes to this entity to its Ur-type to it matches.
 
 ### Ur-types
 An Ur-type is a thing which cannot be seen but which can stamp out copies of itself. Objects can be promoted to an ur-type, so if it is deleted, another one can later be made.
 
 Levels can be subtyped, sidetyped, and urtyped, just like entities.
+
+## Resources
+Assets can generally be used just with their filename. It will be loaded with default values. However, how the engine interprets it can be altered with a sidecar file, named "filename.asset", so "ball.png" will be modified via "ball.png.asset". These are typical JSON files. For images, specify gamma, if it's a sprite or texture, etc, for sound, specify its gain, etc.
 
 ## Level model
 The game world is made up of objects. Levels are collections of
