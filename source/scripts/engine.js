@@ -16,8 +16,6 @@ function initialize()
   if (IO.exists("config.js"))
     load("config.js");
 
-//  prototypes.load_all();
-
   if (Cmdline.play)
     run("scripts/play.js");
   else
@@ -243,6 +241,7 @@ var Keys = {
 
 load("scripts/physics.js");
 load("scripts/input.js");
+load("scripts/sound.js");
 
 function screen2world(screenpos) { return Game.camera.view2world(screenpos); }
 function world2screen(worldpos) { return Game.camera.world2view(worldpos); }
@@ -1122,19 +1121,9 @@ Game.view_camera(World.spawn(camera2d));
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 
 /* Default objects */
-gameobject.clone("polygon2d", {
-  polygon2d: polygon2d.clone(),
-});
-
-gameobject.clone("edge2d", {
-  edge2d: bucket.clone(),
-});
-
-gameobject.clone("sprite", {
-  sprite: sprite.clone(),
-});
 
 var prototypes = {};
+prototypes.ur = {};
 prototypes.load_all = function()
 {
 if (IO.exists("proto.json"))
@@ -1170,7 +1159,57 @@ prototypes.from_file = function(file)
   var newobj = gameobject.clone(file, {});
   var script = IO.slurp(file);
   compile_env(`var self = this;${script}`, newobj, file);
+  prototypes.ur[file.name()] = newobj;
+  return newobj;
+}
+prototypes.from_file.doc = "Create a new ur-type from a given script file.";
+
+prototypes.from_obj = function(name, obj)
+{
+  var newobj = gameobject.clone(name, obj);
+  prototypes.ur[name] = newobj;
   return newobj;
 }
 
+prototypes.load_config = function(name)
+{
+  if (!prototypes.config) {
+    prototypes.config = {};
+
+    if (IO.exists("proto.json"))
+      prototypes.config = JSON.parse(IO.slurp("proto.json"));
+  }
+
+  Log.warn(`Loading a config for ${name}`);
+    
+  if (!prototypes.ur[name])
+    prototypes.ur[name] = gameobject.clone(name);
+
+  return prototypes.ur[name];
+}
+
+prototypes.get_ur = function(name)
+{
+  if (!prototypes.ur[name]) {
+    if (IO.exists(name + ".js"))
+      prototypes.from_file(name + ".js");
+
+    prototypes.load_config(name);
+    return prototypes.ur[name];
+  } else
+    return prototypes.ur[name];
+}
+
 var Gamestate = {};
+
+prototypes.from_obj("polygon2d", {
+  polygon2d: polygon2d.clone(),
+});
+
+prototypes.from_obj("edge2d", {
+  edge2d: bucket.clone(),
+});
+
+prototypes.from_obj("sprite", {
+  sprite: sprite.clone(),
+});

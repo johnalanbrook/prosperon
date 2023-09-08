@@ -37,6 +37,35 @@ A prefab can be opened up to edit on its own, without breaking the currently pla
 
 In edit mode, there are no running scripts; only editing them.
 
+## Components, objects, and levels
+
+There are three distinct hierarchies of object-existence.
+
+### Components
+The most "bare metal" are the components. These are essentially hooks into the engine that tell it how to do particular things. For example, to render a sprite, Javascript does no rendering, but rather tells the engine to create an image and render it in a particular spot.
+
+Components are rendered in an "ECS" style. To work, components must be installed on an entity.
+
+### Entity
+Entities are holders of components. Anything that needs a component will be an entity. Components rely on entites to render correctly. For example, the engine knows where to draw a sprite wherever its associated entity is.
+
+### Levels
+Levels are nothing more than groups of entities However, levels can also have a script on them. This level of scripting is the least efficient.
+
+Levels do not have an associated gameobject inside the engine, and so are what you want if you just want to run some code.
+
+## Prototyping model
+All objects follow the prototyping model of inheritence. This makes it trivial to change huge swathes of the game, or make tiny adjustments to single objects, in a natural and intuitive way.
+
+Components cannot be prototyped. They are tied directly to the entity they are bound to.
+
+Entities can be prototyped out. What this means is that, when you select an object in the game, you can either make a "subtype" of it, where changes to the object trickle down to the created one, or a "sidetype" of it, which is a total duplicate of the object.
+
+### Ur-types
+An Ur-type is a thing which cannot be seen but which can stamp out copies of itself. Objects can be promoted to an ur-type, so if it is deleted, another one can later be made.
+
+Levels can be subtyped, sidetyped, and urtyped, just like entities.
+
 ## Level model
 The game world is made up of objects. Levels are collections of
 objects. The topmost level is called "World". Objects are spawned into

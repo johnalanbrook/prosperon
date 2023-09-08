@@ -198,6 +198,34 @@ Object.defineProperty(String.prototype, 'shift', {
 });
 
 
+Object.defineProperty(String.prototype, 'ext', {
+  value: function() {
+    return this.slice(this.lastIndexOf('.'));
+  }
+});
+
+Object.defineProperty(String.prototype, 'name', {
+  value: function() {
+    var s = this.lastIndexOf('/');
+    var e = this.lastIndexOf('.');
+    return this.slice(s+1,e);
+  }
+});
+
+Object.defineProperty(String.prototype, 'base', {
+  value: function() {
+    return this.slice(this.lastIndexOf('/')+1);
+  }
+});
+
+Object.defineProperty(String.prototype, 'dir', {
+  value: function() {
+    var e = this.lastIndexOf('/');
+    return this.slice(0, e);
+  }
+});
+
+
 /* ARRAY DEFS */
 
 Object.defineProperty(Array.prototype, 'copy', {
