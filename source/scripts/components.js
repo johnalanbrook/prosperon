@@ -35,7 +35,8 @@ var sprite = clone(component, {
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
 
   get dimensions() { return cmd(64,this.path); },
-  set dimensions(x) {},
+  get width() { return cmd(64,this.path).x; },
+  get height() { return cmd(64,this.path).y; },
 
   make(go) {
     var sprite = Object.create(this);

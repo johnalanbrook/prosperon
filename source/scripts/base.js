@@ -200,7 +200,15 @@ Object.defineProperty(String.prototype, 'shift', {
 
 Object.defineProperty(String.prototype, 'ext', {
   value: function() {
-    return this.slice(this.lastIndexOf('.'));
+    var idx = this.lastIndexOf('.');
+    if (idx === -1) return undefined;
+    return this.slice(idx);
+  }
+});
+
+Object.defineProperty(String.prototype, 'set_ext', {
+  value: function(val) {
+    return this.name() + val;
   }
 });
 
@@ -208,6 +216,7 @@ Object.defineProperty(String.prototype, 'name', {
   value: function() {
     var s = this.lastIndexOf('/');
     var e = this.lastIndexOf('.');
+    if (e === -1) e = this.length;
     return this.slice(s+1,e);
   }
 });
@@ -504,6 +513,8 @@ Object.defineProperty(Array.prototype, 'lerp', {
     return c;
   }
 });
+
+Math.lerp = function(s,f,t) { return (f-s)*t + s; };
 
 Object.defineProperty(Object.prototype, 'lerp',{
   value: function(to, t) {

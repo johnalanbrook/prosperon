@@ -3,11 +3,7 @@
   selectable
 */
 
-var required_files = ["proto.json"];
-
-required_files.forEach(x => {
-  if (!IO.exists(x)) IO.slurpwrite("", x);
-});
+prototypes.generate_ur('.');
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
 var editor_level = gameobject.make(Primum);

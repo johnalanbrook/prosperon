@@ -1,6 +1,3 @@
-var gameobjects = {};
-var Prefabs = gameobjects;
-
 function grab_from_points(pos, points, slop) {
   var shortest = slop;
   var idx = -1;
@@ -15,14 +12,13 @@ function grab_from_points(pos, points, slop) {
 
 var gameobject = {
   scale: 1.0,
-
   save: true,
-  
   selectable: true,
 
   spawn(ur) {
-    Log.warn("DEPRECIATED");
-    return ur.make(this);
+    if (typeof ur === 'string')
+      ur = prototypes.get_ur(ur);
+    return ur.type.make(this);
   },
 
   layer: 0, /* Collision layer; should probably have been called "mask" */
@@ -54,12 +50,6 @@ var gameobject = {
   clone(name, ext) {
     var obj = Object.create(this);
     complete_assign(obj, ext);
-    gameobjects[name] = obj;
-    obj.defc('name', name);
-    obj.from = this.name;
-    obj.defn('instances', []);
-    obj.obscure('from');
-	
     return obj;
   },
 
@@ -430,7 +420,7 @@ var gameobject = {
 
     obj.check_registers(obj);
 
-    if ('begin' in obj) obj.begin();
+    if (typeof obj.start === 'function') obj.start();
 
     return obj;
   },

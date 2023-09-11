@@ -68,7 +68,7 @@ ifeq ($(OS), Windows_NT)
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sALLOW_MEMORY_GROWTH -sTOTAL_MEMORY=450MB --embed-file $(BIN)@
   CFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
   CC = emcc

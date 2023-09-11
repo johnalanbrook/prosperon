@@ -13,9 +13,6 @@ load("scripts/std.js");
 
 function initialize()
 {
-  if (IO.exists("config.js"))
-    load("config.js");
-
   if (Cmdline.play)
     run("scripts/play.js");
   else
@@ -629,24 +626,6 @@ World.unparent = function() { }
 
 World.name = "World";
 World.fullpath = function() { return World.name; };
-World.load = function(lvl) {
-  if (World.loaded)
-    World.loaded.kill();
-
-  World.loaded = World.spawn(lvl);
-  return World.loaded;
-};
-
-World.run = function(file)
-{
-  var newobject = {};
-  newobject.kill = function() {
-    Register.unregister_obj(newobject);
-  }
-  var script = IO.slurp(file);
-  compile_env(`var self = this;${script}`, newobject, file);
-}
-
 
 /* Load configs */
 function load_configs(file) {
@@ -734,7 +713,6 @@ Game.view_camera(camera2d.make(World));
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 
 /* Default objects */
-
 var prototypes = {};
 prototypes.ur = {};
 prototypes.load_all = function()
@@ -771,37 +749,52 @@ prototypes.from_file = function(file)
 
   var newobj = gameobject.clone(file, {});
   var script = IO.slurp(file);
-  compile_env(`var self = this;${script}`, newobj, file);
-  prototypes.ur[file.name()] = newobj;
-  return newobj;
+
+  newobj.$ = {};
+  var json = {};
+  if (IO.exists(file.name() + ".json")) {
+    json = JSON.parse(IO.slurp(file.name() + ".json"));
+    Object.assign(newobj.$, json.$);
+    delete json.$;
+  }
+
+  compile_env(`var self = this; var $ = self.$; ${script}`, newobj, file);
+  dainty_assign(newobj, json);
+
+  var path = file.replaceAll('/', '.');
+  path = path.name().split('.');
+  var nested_access = function(base, names) {
+    for (var i = 0; i < names.length; i++)
+      base = base[names[i]] = base[names[i]] || {};
+
+    return base;
+  };
+  var a = nested_access(ur, path);
+  
+  a.tag = path.at(-1);
+  a.type = newobj;
+  a.instances = [];
+
+  return a;
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
 
 prototypes.from_obj = function(name, obj)
 {
   var newobj = gameobject.clone(name, obj);
-  prototypes.ur[name] = newobj;
-  return newobj;
+  prototypes.ur[name] = {
+    tag: name,
+    type: newobj
+  };
+  return prototypes.ur[name];
 }
 
 prototypes.load_config = function(name)
 {
-  if (!prototypes.config) {
-    prototypes.config = {};
-
-    if (IO.exists("proto.json"))
-      prototypes.config = JSON.parse(IO.slurp("proto.json"));
-  }
-
-  Log.warn(`Loading a config for ${name}`);
-    
   if (!prototypes.ur[name])
     prototypes.ur[name] = gameobject.clone(name);
 
-  if (prototypes.config[name]) {
-    Log.warn(`Assigning ${name} from config.`);
-    dainty_assign(prototypes.config[name], prototypes.ur[name]);
-  }
+  Log.warn(`Made new ur of name ${name}`);
 
   return prototypes.ur[name];
 }
@@ -831,3 +824,19 @@ prototypes.from_obj("edge2d", {
 prototypes.from_obj("sprite", {
   sprite: sprite.clone(),
 });
+
+prototypes.generate_ur = function(path)
+{
+  var ob = IO.glob("*.js");
+  ob = ob.concat(IO.glob("**/*.js"));
+  ob = ob.filter(function(str) { return !str.startsWith("scripts"); });
+
+  ob.forEach(function(name) {
+    if (name === "game.js") return;
+    if (name === "play.js") return;
+
+    prototypes.from_file(name);
+  });
+}
+
+var ur = prototypes.ur;

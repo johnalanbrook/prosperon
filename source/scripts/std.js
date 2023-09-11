@@ -1,4 +1,3 @@
-
 function compile_env(str, env, file)
 {
   file ??= "unknown";
@@ -80,6 +79,7 @@ var IO = {
   },
   slurpwrite(str, file) { return cmd(39, str, file); },
   extensions(ext) { return cmd(66, "." + ext); },
+  glob(pat) { return cmd(122, pat); },
 };
 
 var Cmdline = {};

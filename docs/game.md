@@ -53,12 +53,9 @@ Components cannot be scripted; they are essentially a hardwired thing that you s
 ### Entity
 Entities are holders of components. Anything that needs a component will be an entity. Components rely on entites to render correctly. For example, the engine knows where to draw a sprite wherever its associated entity is.
 
-Entities can be composed of other entities. When that is the case, an entity "under" a different entity will move when the above entity moves.
+Entities can be composed of other entities. When that is the case, an entity "under" a different entity will move when the above entity moves, as if it were attached. 
 
 The outermost entity that all other entities must exist in is the Primum. It always exists and cannot be removed.
-
-## Traits
-It is better to think of Primum as trait-based, intead of object-based. Any thing in your game that has particular properties can be used as a particular sort of object.
 
 ## Prototyping model
 All objects follow the prototyping model of inheritence. This makes it trivial to change huge swathes of the game, or make tiny adjustments to single objects, in a natural and intuitive way.
@@ -76,21 +73,103 @@ entity.push() -> push changes to this entity to its Ur-type to it matches.
 ### Ur-types
 An Ur-type is a thing which cannot be seen but which can stamp out copies of itself. Objects can be promoted to an ur-type, so if it is deleted, another one can later be made.
 
-Levels can be subtyped, sidetyped, and urtyped, just like entities.
+Ur-types have a lineage going back to the original gameobject. The ur-type lineage can be as deep as you want it to be; but it should probably be shallow.
+
+Only first Ur-types can have components. Every inherited thing after it can only edit the original's components, not add or subtract. Original Ur-types must currently be defined in code.
+
+Ur-types also remember the list of entities that compose the given Ur.
+
+### Loading traits
+Traits are defined by code and a data file. When an Ur-type is extended with a trait, the code is run, and then the data file contains modifications and
+
+### Creating entities
+Entities are like real world representations of an Ur-type. Ur-types exist only theoretically, but can then be spawned into a true entity in the game world.
+
+An entity can diverge from its ur-type. When this happens, you can either revert the entity, copy how it's changed to its ur-type, or promote it to its own ur-type.
+
+### Efficiency of all this
+It is extremely cheap and fast to create entities. Ur-types work as a defined way for the engine to make an object, and can even cache deleted copies of them.
 
 ## Resources
 Assets can generally be used just with their filename. It will be loaded with default values. However, how the engine interprets it can be altered with a sidecar file, named "filename.asset", so "ball.png" will be modified via "ball.png.asset". These are typical JSON files. For images, specify gamma, if it's a sprite or texture, etc, for sound, specify its gain, etc.
 
-## Level model
-The game world is made up of objects. Levels are collections of
-objects. The topmost level is called "World". Objects are spawned into
-a specific level. If none are explicitly given, objects are spawned
-into World. Objects in turn are made up of components - sprites,
-colliders, and so on. Accessing an object might go like this:
+Ur-types are directly related to your file directory hierarchy. In a pinball game where you have a flipper, and then a flipper that is left ...
 
-World.level1.enemy1.sprite.path = "brick.png";
+@/
+  /bumper
+    hit.wav
+    bumper.js
+  /ball
+    hit.wav
+    ball.js
+  /flipper
+    flipper.js
+    flipper.json <-- Modifications applied to the flipper ur-type
+    t1.json <-- A variant of flipper.js. Cannot be subtyped.
+    flip.wav
+    flipper.img
+    left/
+      flip.wav
+      left.js <-- This will load as an extension to flipper.js
 
-To set the image of enemy1 in level 1's sprite.
+This is how resources are loaded in any given ur-type. Relative file paths work. So, in 'ball.js', it can reference 'hit.wav', and will play that file when it does; when bumper.js loads 'hit.wav', it will load the one located in its folder.
+
+The left flipper can use the root flipper flip sound by loading "../flip.wav".
+
+Absolute paths can be specified using a leading slash. The absolute path the bumper's hit sound is "/bumper/hit.wav".
+
+When you attempt to load the "flipper.left" ur-type, if flipper is not loaded, the engine will load it first, and then load left.
+
+Unloading an ur-type unloads everything below it, necessarily. flipper.left means nothing without flipper.
+
+Computer systems have a user configuration folder specified, where you are allowed to write data to and from. This is good for save games and configurations. It is specified with a leading "@" sign. So "@1.save" will load the file "1.save" from the folder allotted to your game by the platform.
+
+Links can be specified using the "#" sign. This is simply defined as, for example, with "trees:/world/assets/nature/trees" specified, you can easily make the ur-type "fern" with "Primum.spawn("#trees/fern")", instead of "Primum.spawn('#trees.fern')"
+
+Primum will attempt to solve most resolution ambiguities automatically. There are numerous valid directory layouts you can have. Examining flipper.left ...
+
+@/
+  flipper.js
+  flipper/
+    left.js
+
+@/
+  flipper/
+    _.js
+    left.js
+
+@/
+  flipper/
+    flipper.js
+    left/
+      left.js
+
+In sum, a file that is a single underscore _.js is assumed to be the given folder's ur-type. When populating the ur-type hierarchy, the _ is replaced with the name of the containing folder. if there is a folder with the same name as *.js present, the items in the folder are assumed to be ur-types of the *.js.
+
+Asset links always follow the directory hierarchy, however, so if you want to reference an asset with a relative path, the .js file must actually be present in the same path as the asset.
+
+prototypes.generate_ur(path) will generate all ur-types for a given path. You can preload specific levels this way, or the entire game if it is small enough.
+
+### Spawning
+The outmost sphere of the game is the Primum, the first entity. Your first entity  must be spawned in the Primum. Subsequent entities can be spawned in any entity in the game.
+
+Ur-types can remember configurations of entities spawned inside of them.
+
+Once entities are created in the world, they are mostly interested now in addressing actual other objects in the world. Let's look at an example.
+
+Primum
+  Level 1
+    Orc
+    Goblin
+    Human
+      Sword
+  UI
+
+When a script is running, it is completely contained. If "Human" has a "health" parameter, it can only be access through "self.health", not directly through "health". This makes it easy to run a script without fear of overwriting any parameters on accident.
+
+The "$" is populated with an object's children. $.sword.damage will properly get the damage of the human's sword, and will be undefined for Goblin and Orc.
+
+To access the entity's owner, it is through _. For example, the human can access the orc via _.Orc.
 
 ### Level functions
 |name| description|

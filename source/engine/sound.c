@@ -169,17 +169,11 @@ struct wav *make_sound(const char *wav) {
     return NULL;
   }
 
-  YughWarn("%s opened with %d ch, %d samplerate, %d frames", ext, mwav.ch, mwav.samplerate, mwav.frames);
-
-  if (mwav.samplerate != SAMPLERATE) {
-    YughWarn("Changing samplerate of %s from %d to %d.", wav, mwav.samplerate, SAMPLERATE);
+  if (mwav.samplerate != SAMPLERATE)
     mwav = change_samplerate(mwav, SAMPLERATE);
-  }
 
-  if (mwav.ch != CHANNELS) {
-    YughWarn("Changing channels of %s from %d to %d.", wav, mwav.ch, CHANNELS);
+  if (mwav.ch != CHANNELS)
     mwav = change_channels(mwav, CHANNELS);
-  }
 
   mwav.gain = 1.f;
   struct wav *newwav = malloc(sizeof(*newwav));
@@ -187,8 +181,6 @@ struct wav *make_sound(const char *wav) {
   if (shlen(wavhash) == 0) sh_new_arena(wavhash);
   shput(wavhash, wav, newwav);
 
-  YughWarn("Channels %d, sr %d", newwav->ch,newwav->samplerate);
-  
   return newwav;
 }
 

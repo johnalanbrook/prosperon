@@ -124,13 +124,18 @@ var Gizmos = {
 };
 
 var Profile = {
-  cpu(fn, times) {
+  tick_now() { return cmd(127); },
+  ns(ticks) { return cmd(128, ticks); },
+  us(ticks) { return cmd(129, ticks); },
+  ms(ticks) { return cmd(130, ticks); },
+  cpu(fn, times, q) {
     times ??= 1;
-    var start = Date.now();
+    q ??= "ns";
+    var start = Profile.tick_now();
     for (var i = 0; i < times; i++)
       fn();
-
-    Log.warn(`Profiled in ${(Date.now()-start)/1000} seconds.`);
+    var elapsed = Profile.tick_now() - start;
+    Log.say(`Profiled in ${Profile[q](elapsed)/times} avg ${q}.`);
   },
 
   get fps() { return sys_cmd(8); },

@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include "font.h"
 
+#include <glob.h>
+
 #include <fcntl.h>
 #include "cdb.h"
 
@@ -155,7 +157,7 @@ unsigned char *slurp_file(const char *filename, size_t *size)
     char *data = malloc(vlen);
     cdb_read(&game_cdb, data, vlen, vpos);
     if (size) *size = vlen;
-    return strdup(data);
+    return data;
   }
   
   FILE *f;
@@ -183,7 +185,7 @@ char *slurp_text(const char *filename, size_t *size)
   char *str = slurp_file(filename, &len);
   char *retstr = malloc(len+1);
   memcpy(retstr, str, len);
-  retstr[len] = 0;
+  retstr[len] = '\0';
   free(str);
   if (size) *size = len;
   return retstr;
@@ -198,23 +200,26 @@ int slurp_write(const char *txt, const char *filename) {
   return 0;
 }
 
+static int glob_err(const char *epath, int errno)
+{
+  return 0;
+}
+
 #ifndef __EMSCRIPTEN__
 static struct cdb_make cdbm;
 
-static const char *pack_ext[] = {".qoi", ".qoa", ".js", ".wav", ".mp3", ".png", ".sf2", ".midi", ".lvl", ".glsl"};
+static const char *pack_ext[] = {".qoi", ".qoa", ".js", ".wav", ".mp3", ".png", ".sf2", ".midi", ".lvl", ".glsl", ".ttf"};
 
 static int ftw_pack(const char *path, const struct stat *sb, int flag)
 {
   if (flag != FTW_F) return 0;
-
   int pack = 0;
-
   char *ext = strrchr(path, '.');
 
   if (!ext)
     return 0;
 
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 11; i++) {
     if (!strcmp(ext, pack_ext[i])) {
       pack = 1;
       break;

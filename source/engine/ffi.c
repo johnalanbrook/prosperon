@@ -22,6 +22,9 @@
 #include "yugine.h"
 #include <assert.h>
 #include "resources.h"
+#include <sokol/sokol_time.h>
+
+#include <glob.h>
 
 #include "render.h"
 
@@ -56,6 +59,14 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
   return p;
 }
 
+uint64_t js2uint64(JSValue v)
+{
+  int64_t i;
+  JS_ToInt64(js, &i, v);
+  uint64_t n = i;
+  return n;
+}
+
 int js2int(JSValue v) {
   int32_t i;
   JS_ToInt32(js, &i, v);
@@ -68,6 +79,24 @@ JSValue int2js(int i) {
 
 JSValue str2js(const char *c) {
   return JS_NewString(js, c);
+}
+
+JSValue strarr2js(const char **c, int len)
+{
+  JSValue arr = JS_NewArray(js);
+  for (int i = 0; i < len; i++)
+    JS_SetPropertyUint32(js, arr, i, JS_NewString(js, c[i]));
+
+  return arr;
+}
+
+JSValue glob2js(char *pat)
+{
+  glob_t mglob;
+  glob(pat, GLOB_NOSORT, NULL, &mglob);
+  JSValue arr = strarr2js(mglob.gl_pathv, mglob.gl_pathc);
+  globfree(&mglob);
+  return arr;
 }
 
 double js2number(JSValue v) {
@@ -1050,6 +1079,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       return num2js(get_timescale());
       break;
     case 122:
+      str = JS_ToCString(js, argv[1]);
+      ret = glob2js(str);
+      
       break;
 
     case 123:
@@ -1069,6 +1101,23 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 126:
       mainwin.height = js2int(argv[2]);
+      break;
+
+    case 127:
+      ret = JS_NewInt64(js, stm_now());
+      break;
+
+    case 128:
+      YughWarn("%g",stm_ms(9737310));
+      ret = JS_NewFloat64(js, stm_ns(js2uint64(argv[1])));
+      break;
+
+    case 129:
+      ret = JS_NewFloat64(js, stm_us(js2uint64(argv[1])));
+      break;
+
+    case 130:
+      ret = JS_NewFloat64(js, stm_ms(js2uint64(argv[1])));
       break;
   }
 
