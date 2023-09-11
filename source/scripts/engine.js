@@ -190,51 +190,6 @@ var Render = {
   },
 };
 
-var Mouse = {
-  get pos() {
-    return cmd(45);
-  },
-
-  get screenpos() {
-    var p = this.pos;
-    p.y = Window.dimensions.y - p.y;
-    return p;
-  },
-
-  get worldpos() {
-    return screen2world(cmd(45));
-  },
-  
-  disabled() {
-    cmd(46, 212995);
-  },
-  
-  hidden() {
-    cmd(46, 212994);
-  },
-  
-  normal() {
-    cmd(46, 212993);
-  },
-};
-
-var Keys = {
-  shift() {
-    return cmd(50, 340);// || cmd(50, 344);
-  },
-  
-  ctrl() {
-    return cmd(50, 341);// || cmd(50, 344);
-  },
-  
-  alt() {
-    return cmd(50, 342);// || cmd(50, 346);
-  },
-
-  super() {
-    return cmd(50, 343);// || cmd(50, 347);
-  },
-};
 
 load("scripts/physics.js");
 load("scripts/input.js");
@@ -259,17 +214,17 @@ var Register = {
   },
 
   kbm_input(mode, btn, state, ...args) {
+    if (btn === 'lmouse') btn = 'lm';
+
+    if (btn === 'rmouse') btn = 'rm';
+
+    if (btn === 'mmouse') btn = 'mm';
+  
     switch(mode) {
       case "emacs":
         Player.players[0].raw_input(btn, state, ...args);
         break;
     };
-
-    if (btn === 'lmouse')
-      btn = 'lm';
-
-    if (btn === 'rmouse')
-      btn = 'rm';
   },
 
   gamepad_playermap: [],
@@ -775,6 +730,7 @@ prototypes.from_file = function(file)
   prototypes.list.push(a.tag);
   a.type = newobj;
   a.instances = [];
+  newobj.ur = a;
 
   return a;
 }

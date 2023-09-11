@@ -34,7 +34,7 @@ struct gameobject *id2go(int id) {
 }
 
 int body2id(cpBody *body) {
-  return *(int*)cpBodyGetUserData(body);
+  return (int)cpBodyGetUserData(body);
 }
 
 cpBody *id2body(int id) {

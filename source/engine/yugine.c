@@ -152,10 +152,14 @@ int frame_fps() {
   return 1.0/sapp_frame_duration();
 }
 
+static double low_fps = 1/24.0; /* Chosen because of apple's 24 hz mode */
+static double low_fps_c = 0.0;
+
 void c_frame()
 {
     double elapsed = sapp_frame_duration();
     appTime += elapsed;
+    low_fps_c += elapsed;
 
     input_poll(0);
       
@@ -181,9 +185,10 @@ void c_frame()
         sim_pause();
 	render_dirty = 1;
       }
+      low_fps_c = 0.0f;
     }
 
-    if (sim_play == SIM_PLAY || render_dirty) {
+    if (sim_play == SIM_PLAY || render_dirty || low_fps_c >= low_fps) {
       prof_start(&prof_draw);
       window_render(&mainwin);
       prof(&prof_draw);

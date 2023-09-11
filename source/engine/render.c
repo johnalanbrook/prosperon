@@ -413,9 +413,6 @@ void openglRender(struct window *window) {
 
   sg_end_pass();
 
-  sg_begin_default_pass(&pass_action, gif_w, gif_h);
-  sg_apply_pipeline(
-
   sg_begin_default_pass(&pass_action, window->width, window->height);
   sg_apply_pipeline(crt_post.pipe);
   sg_apply_bindings(&crt_post.bind);

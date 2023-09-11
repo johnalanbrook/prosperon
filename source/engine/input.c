@@ -98,10 +98,11 @@ char *mb2str(int btn)
 
 void input_mouse(int btn, int state)
 {
-  JSValue argv[2];
-  argv[0] = input2js(mb2str(btn));
-  argv[1] = jsinputstate[btn];
-  script_callee(pawn_callee, 2, argv);  
+  JSValue argv[3];
+  argv[0] = JS_NewString(js, "emacs");  
+  argv[1] = input2js(mb2str(btn));
+  argv[2] = jsinputstate[state];
+  script_callee(pawn_callee, 3, argv);  
 }
 
 void input_mouse_move(float x, float y, float dx, float dy)

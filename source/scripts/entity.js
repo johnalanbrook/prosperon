@@ -334,7 +334,8 @@ var gameobject = {
 	  delete props[key];
 	  
       var edited = !props.empty;
-      return (edited ? "#" : "") + obj.name + " object " + obj.body + ", layer " + obj.draw_layer + ", phys " + obj.layer;
+//      return (edited ? "#" : "") + obj.name + " object " + obj.body + ", layer " + obj.draw_layer + ", phys " + obj.layer;
+      return obj.ur.tag;
     };
 
     obj.fullpath = function() {
@@ -349,6 +350,7 @@ var gameobject = {
                            this.elasticity) );
     obj.sync();
     obj.defn('components', {});
+    Game.register_obj(obj);
 
     var objects = [];
     obj.objects = objects;

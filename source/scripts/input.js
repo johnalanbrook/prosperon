@@ -1,7 +1,52 @@
-
 var Input = {
   setgame() { cmd(77); },
   setnuke() { cmd(78); },
+};
+
+var Mouse = {
+  get pos() {
+    return cmd(45);
+  },
+
+  get screenpos() {
+    var p = this.pos;
+    p.y = Window.dimensions.y - p.y;
+    return p;
+  },
+
+  get worldpos() {
+    return screen2world(cmd(45));
+  },
+  
+  disabled() {
+    cmd(46, 1);
+  },
+  
+  hidden() {
+    cmd(46, 1);
+  },
+  
+  normal() {
+    cmd(46, 0);
+  },
+};
+
+var Keys = {
+  shift() {
+    return cmd(50, 340);// || cmd(50, 344);
+  },
+  
+  ctrl() {
+    return cmd(50, 341);// || cmd(50, 344);
+  },
+  
+  alt() {
+    return cmd(50, 342);// || cmd(50, 346);
+  },
+
+  super() {
+    return cmd(50, 343);// || cmd(50, 347);
+  },
 };
 
 Input.state2str = function(state) {
