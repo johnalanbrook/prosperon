@@ -73,6 +73,9 @@ void add_zoom(float val);
 
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d);
 
+void gif_rec_start();
+void gif_rec_end(char *path);
+
 struct uv_n {
   unsigned short u;
   unsigned short v;

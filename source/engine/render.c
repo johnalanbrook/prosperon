@@ -13,7 +13,56 @@
 #include "window.h"
 #include "model.h"
 #include "stb_ds.h"
+#include "stb_image_resize.h";
 #include "resources.h"
+
+#define SOKOL_GFX_IMPL
+#include "sokol/sokol_gfx.h"
+
+#define MSF_GIF_IMPL
+#include "msf_gif.h"
+
+static int gif_w = 480, gif_h = 320, cpf = 1, bitDepth = 16;
+static int gif_rec = 0;
+static char gif_buf[480*320*4];
+static char frame_buf[1920*1080*4];
+MsfGifState gif_state = {};
+void gif_rec_start()
+{
+  msf_gif_begin(&gif_state, gif_w, gif_h);
+  gif_rec = 1;
+}
+
+void gif_rec_end(char *path)
+{
+  MsfGifResult gif = msf_gif_end(&gif_state);
+  if (gif.data) {
+    FILE *f = fopen(path, "wb");
+    fwrite(gif.data, gif.dataSize, 1, f);
+    fclose(f);
+  }
+  msf_gif_free(gif);
+  gif_rec = 0;
+}
+
+static void *read_texture_data(sg_image id, void *pixels)
+{
+#ifdef _SOKOL_ANY_GL
+  sg_image_desc desc = sg_query_image_desc(id);
+  int w = desc.width, h = desc.height;
+  _sg_image_t *img = _sg_lookup_image(&_sg.pools, id.id);
+  const GLenum gl_img_format = _sg_gl_teximage_format(img->cmn.pixel_format);
+  const GLenum gl_img_type = _sg_gl_teximage_type(img->cmn.pixel_format);
+  GLenum gl_img_target = img->gl.target;
+  GLuint gl_img_level = 0;
+  glGetTexImage(gl_img_target, 0, gl_img_format, gl_img_type, pixels);
+  return pixels;
+#else
+  YughWarn("NO GL");
+  return NULL;
+#endif
+
+}
 
 #include "sokol/sokol_app.h"
 
@@ -364,10 +413,20 @@ void openglRender(struct window *window) {
 
   sg_end_pass();
 
+  sg_begin_default_pass(&pass_action, gif_w, gif_h);
+  sg_apply_pipeline(
+
   sg_begin_default_pass(&pass_action, window->width, window->height);
   sg_apply_pipeline(crt_post.pipe);
   sg_apply_bindings(&crt_post.bind);
   sg_draw(0,6,1);
+
+  if (gif_rec) {
+    read_texture_data(crt_post.img, frame_buf);
+//    stbir_resize_uint8(frame_buf, mainwin.width, mainwin.height, 0, gif_buf, gif_w, gif_h, 0, 4);
+    msf_gif_frame(&gif_state, frame_buf, cpf, 16, gif_w * -4);
+  }
+
   sg_end_pass();
 
   sg_commit();

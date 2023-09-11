@@ -37,9 +37,9 @@ A prefab can be opened up to edit on its own, without breaking the currently pla
 
 In edit mode, there are no running scripts; only editing them.
 
-## Components, objects, and levels
+## The ECS system
 
-There are three distinct hierarchies of object-existence.
+There are two distinct items in the Primum Machina: the Entity, and the Component. Components give qualities to Entities. An Entity is any real, tangible thing in the universe, and so every entity has a position. Components do not necessarily have a position; they can be things like the image that draws where the entity is located, and colliders that allow the entity to respond with the world.
 
 ### Components
 The most "bare metal" are the components. These are essentially hooks into the engine that tell it how to do particular things. For example, to render a sprite, Javascript does no rendering, but rather tells the engine to create an image and render it in a particular spot.
@@ -171,22 +171,8 @@ The "$" is populated with an object's children. $.sword.damage will properly get
 
 To access the entity's owner, it is through _. For example, the human can access the orc via _.Orc.
 
-### Level functions
-|name| description|
-|---|---|
-|levels| a list of all levels loaded in this one|
-|objects| a list of all objects belonging to this level (objects + levels)|
-|object_count| objects.length()|
-|spawn(type)| creates an object from the supplied type in the level|
-|create()| creates an empty level inside of this one|
-|loadfile(file)| loads file as a level inside of this one; returns it. Mainly for editor|
-|loadlevel(file)| loads file as a level and does running required for gameplay|
-|load(level_json)| clears this level and spawns all objects specified in the level_json|
-|clear()| kills all objects in this level|
-|kill()| cleans up the level and kills it|
-
-## Objects
-Objects are things that exist in the game world.
+## Entities
+Entities are things that exist in the game world.
 
 |name| description|
 |---|---|

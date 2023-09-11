@@ -761,8 +761,8 @@ prototypes.from_file = function(file)
   compile_env(`var self = this; var $ = self.$; ${script}`, newobj, file);
   dainty_assign(newobj, json);
 
-  var path = file.replaceAll('/', '.');
-  path = path.name().split('.');
+  file = file.replaceAll('/', '.');
+  var path = file.name().split('.');
   var nested_access = function(base, names) {
     for (var i = 0; i < names.length; i++)
       base = base[names[i]] = base[names[i]] || {};
@@ -771,13 +771,15 @@ prototypes.from_file = function(file)
   };
   var a = nested_access(ur, path);
   
-  a.tag = path.at(-1);
+  a.tag = file.name();
+  prototypes.list.push(a.tag);
   a.type = newobj;
   a.instances = [];
 
   return a;
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
+prototypes.list = [];
 
 prototypes.from_obj = function(name, obj)
 {
@@ -799,6 +801,26 @@ prototypes.load_config = function(name)
   return prototypes.ur[name];
 }
 
+
+prototypes.list_ur = function()
+{
+  var list = [];
+  function list_obj(obj, prefix)
+  {
+    prefix ??= "";
+    var list = [];
+    for (var e in obj) {
+      list.push(prefix + e);
+      Log.warn("Descending into " + e);
+      list.concat(list_obj(obj[e], e + "."));
+    }
+
+    return list;
+  }
+  
+  return list_obj(ur);
+}
+
 prototypes.get_ur = function(name)
 {
   if (!prototypes.ur[name]) {
@@ -810,8 +832,6 @@ prototypes.get_ur = function(name)
   } else
     return prototypes.ur[name];
 }
-
-var Gamestate = {};
 
 prototypes.from_obj("polygon2d", {
   polygon2d: polygon2d.clone(),

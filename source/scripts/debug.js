@@ -241,6 +241,8 @@ DebugControls.inputs.f4 = function() {
   Debug.draw_gizmos = !Debug.draw_gizmos;
 };
 DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
+DebugControls.inputs.f8 = function() { cmd(131); };
+DebugControls.inputs.f9 = function() { cmd(132, "out.gif"); };
 DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
 DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
 DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; };

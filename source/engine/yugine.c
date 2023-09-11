@@ -33,10 +33,13 @@
 
 #include "string.h"
 
+#include "nuklear.h"
+#include "sokol/sokol_nuklear.h"
+
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
 
-#include "sokol/sokol_gfx.h"
+
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"
@@ -196,6 +199,7 @@ void c_clean() {};
 void c_event(const sapp_event *e)
 {
   render_dirty = 1;
+  snk_handle_event(e);
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
       input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);

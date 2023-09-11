@@ -73,7 +73,6 @@ var editor = {
     return false;
   },
 
-  levellist: false,
   programmode: false,
 
   delete_empty_reviver(key, val) {
@@ -1052,8 +1051,6 @@ var editor = {
 }
 
 editor.inputs = {};
-editor.inputs['M-a'] = function () { editor.openpanel(prefabpanel); };
-editor.inputs['M-a'].doc = "Open prefab panel.";
 editor.inputs['C-a'] = function() {
   if (!editor.selectlist.empty) { editor.unselect(); return; }
   editor.unselect();
@@ -1079,31 +1076,16 @@ editor.inputs['C-h'].doc = "Unhide all objects.";
 editor.inputs['C-e'] = function() { editor.openpanel(assetexplorer); };
 editor.inputs['C-e'].doc = "Open asset explorer.";
 
-editor.inputs['C-i'] = function() { editor.openpanel(levellistpanel, true); };
-editor.inputs['C-i'].doc = "Open level list.";
+editor.inputs['C-l'] = function() { editor.openpanel(entitylistpanel, true); };
+editor.inputs['C-l'].doc = "Open list of spawned entities.";
 
-editor.inputs['C-y'] = function() {
+editor.inputs['C-i'] = function() {
   if (editor.selectlist.length !== 1) return;
   objectexplorer.obj = editor.selectlist[0];
   objectexplorer.on_close = editor.save_prototypes;
   editor.openpanel(objectexplorer);
 };
-editor.inputs['C-y'].doc = "Open the object explorer for a selected object.";
-
-editor.inputs['M-y'] = function() { editor.openpanel(protoexplorer); };
-editor.inputs['M-y'].doc = "Open the prototype explorer.";
-
-editor.inputs['C-S-t'] = function() {
-  if (editor.selectlist.length !== 1) return;
-  editor.openpanel(saveprototypeas);
-};
-editor.inputs['C-S-t'].doc = "Save prototype as. Ie, to a new prototype.";
-
-editor.inputs['C-t'] = function() { editor.save_proto(); };
-editor.inputs['C-t'].doc = "Save the selected prototype to disk.";
-
-editor.inputs['M-p'] = function() { editor.openpanel(prefabpanel); };
-editor.inputs['M-p'].doc = "Open the prefab panel.";
+editor.inputs['C-i'].doc = "Open the object explorer for a selected object.";
 
 editor.inputs['C-d'] = function() {
   if (editor.selectlist.length === 0) return;
@@ -1225,7 +1207,6 @@ editor.inputs['C-q'] = function() {
 };
 editor.inputs['C-q'].doc = "Quit simulation and return to editor.";
 
-
 var rebinder = {};
 rebinder.inputs = {};
 rebinder.inputs.any = function(cmd) {
@@ -1276,12 +1257,6 @@ editor.inputs['C-z'].doc = "Undo the last change made.";
 
 editor.inputs['C-S-z'] = function() { editor.redo(); };
 editor.inputs['C-S-z'].doc = "Redo the last undo.";
-
-editor.inputs['C-S-t'] = function() {
-  if (editor.selectlist.length !== 1) return;
-  editor.openpanel(savetypeas);
-};
-editor.inputs['C-S-t'].doc = "Save type as.";
 
 editor.inputs.t = function() { editor.selectlist.forEach(function(x) { x.selectable = false; }); };
 editor.inputs.t.doc = "Lock selected objects to make them non selectable.";
@@ -1337,7 +1312,7 @@ editor.inputs['C-S-o'] = function() {
 };
 editor.inputs['C-S-o'].doc = "Open previous level.";
 
-editor.inputs['C-l'] = function() {
+editor.inputs['C-y'] = function() {
   texteditor.on_close = function() { editor.edit_level.script = texteditor.value;};
 
   editor.openpanel(texteditor);
@@ -1346,10 +1321,10 @@ editor.inputs['C-l'] = function() {
   texteditor.value = editor.edit_level.script;
   texteditor.start();
 };
-editor.inputs['C-l'].doc = "Open script editor for the level.";
+editor.inputs['C-y'].doc = "Open script editor for the level.";
 
-editor.inputs['M-l'] = function() { editor.programmode = !editor.programmode; };
-editor.inputs['M-l'].doc = "Toggle program mode.";
+editor.inputs['M-y'] = function() { editor.programmode = !editor.programmode; };
+editor.inputs['M-y'].doc = "Toggle program mode.";
 
 editor.inputs.minus = function() {
   if (!editor.selectlist.empty) {
@@ -2026,72 +2001,6 @@ texteditor.inputs['M-n'] = function() {
 texteditor.inputs['M-n'].doc = "Go down to next line with text on it.";
 texteditor.inputs['M-n'].rep = true;
 
-var protoexplorer = copy(inputpanel, {
-  title: "prototype explorer",
-  waitclose:false,
-  
-  guibody() {
-    var treeleaf = function(name) {
-      for (var key in gameobjects) {
-        if (gameobjects[key].from === name) {
-	  var goname = gameobjects[key].name;
-          if (Nuke.tree(goname)) {
-	    var lvluses = proto_total_use(goname);
-	    var childcount = proto_children(goname).length;
-	    if (lvluses === 0 && childcount === 0 && gameobjects[key].from !== 'gameobject') {
-              if (Nuke.button("delete")) {
-	        Log.info("Deleting the prototype " + goname);
-		delete gameobjects[goname];
-		editor.save_prototypes();
-	      }
-	    } else {
-	      if (Nuke.tree("Occurs " + lvluses + " times in levels.")) {
-	        var occs = proto_count_lvls(goname);
-                for (var lvl in occs) {
-		  if (occs[lvl] === 0) continue;
-		  Nuke.label(lvl + ": " + occs[lvl]);
-		}
-
-		Nuke.tree_pop();
-	      }
-   	      Nuke.label("Has " + proto_children(goname).length + " descendents.");
-
-	      if (Nuke.button("spawn")) {
-	        var proto = gameobjects[goname];
-	        var obj = this.edit_level.spawn(proto);
-                obj.pos = Mouse.worldpos;
-                editor.unselect();
-                editor.selectlist.push(obj);
-		this.waitclose = true;
-	      }
-
-	      if (Nuke.button("view")) {
-	        objectexplorer.obj = gameobjects[goname];
-                editor.openpanel(objectexplorer);
-	      }
-            }
-	    
-            treeleaf(goname);
-	    Nuke.tree_pop();
-	  }
-	}
-      }
-    }
-
-    treeleaf = treeleaf.bind(this);
-    
-    if (Nuke.tree("gameobject")) {
-      treeleaf("gameobject");
-      Nuke.tree_pop();
-    }
-
-    if (this.waitclose) {
-      this.waitclose = false;
-      this.close();
-    }
-  },
-});
-
 var objectexplorer = copy(inputpanel, {
   title: "object explorer",
   obj: null,
@@ -2259,14 +2168,13 @@ var helppanel = copy(inputpanel, {
 });
 
 var openlevelpanel = copy(inputpanel,  {
-  title: "open level",
+  title: "open entity",
   action() {
     editor.load(this.value);
   },
   
   assets: [],
   allassets: [],
-  extensions: ["lvl"],
 
   submit_check() {
     if (this.assets.length === 1) {
@@ -2278,14 +2186,7 @@ var openlevelpanel = copy(inputpanel,  {
   },
   
   start() {
-    this.allassets = [];
-    
-    if (this.allassets.empty) {
-      this.extensions.forEach(function(x) {
-        this.allassets.push(cmd(66, "." + x));
-      }, this);
-    }
-    this.allassets = this.allassets.flat().sort();
+    this.allassets = prototypes.list.sort();
     this.assets = this.allassets.slice();
   },
   
@@ -2453,7 +2354,7 @@ var texgui = clone(inputpanel, {
   },
 });
 
-var levellistpanel = copy(inputpanel, {
+var entitylistpanel = copy(inputpanel, {
   title: "Level object list",
   level: {},
   start() {
@@ -2477,21 +2378,6 @@ var levellistpanel = copy(inputpanel, {
       
       if (editor.selectlist.includes(x)) Nuke.label("T"); else Nuke.label("F");
     });
-  },
-});
-
-var prefabpanel = copy(openlevelpanel, {
-  title: "prefabs",
-  allassets: Object.keys(gameobjects),
-  start() {
-    this.allassets = Object.keys(gameobjects).sort();
-    this.assets = this.allassets.slice();
-  },
-  action() {
-    var obj = editor.edit_level.spawn(gameobjects[this.value]);
-    obj.pos = Mouse.worldpos;
-    editor.unselect();
-    editor.selectlist.push(obj);
   },
 });
 

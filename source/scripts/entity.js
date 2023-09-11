@@ -324,7 +324,7 @@ var gameobject = {
   instances: [],
 
   make(level) {
-    level ??= World;
+    level ??= Primum;
     var obj = Object.create(this);
     this.instances.push(obj);
     obj.toString = function() {
@@ -419,6 +419,12 @@ var gameobject = {
     };
 
     obj.check_registers(obj);
+
+    /* Spawn subobjects defined */
+    if (obj.$) {
+      for (var e in obj.$)
+        obj.$[e] = obj.spawn(prototypes.get_ur(obj.$[e].ur));
+    }
 
     if (typeof obj.start === 'function') obj.start();
 
