@@ -1121,7 +1121,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 131:
-      gif_rec_start(480, 320, 4, 8);
+      gif_rec_start(js2int(argv[1]), js2int(argv[2]), js2int(argv[3]), js2int(argv[4]));
       break;
     case 132:
       str = JS_ToCString(js, argv[1]);

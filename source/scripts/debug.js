@@ -246,9 +246,9 @@ DebugControls.inputs.f4 = function() {
 DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 
 Debug.Options.gif = {
-  w: 480,
-  h: 320,
-  cpf: 4,
+  w: 640,
+  h: 480,
+  cpf: 2,
   depth: 8,
   file: "out.gif",
   rec: false,

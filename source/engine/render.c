@@ -37,21 +37,30 @@ static struct {
 } sg_gif;
 
 
-static int gif_w = 359, gif_h = 320, cpf = 4, gif_depth = 4;
-static int gif_rec = 0;
-static double gif_timer = 0, gif_spf;
-static char gif_buf[480*320*4];
-static char frame_buf[1920*1080*4];
+static struct {
+  int w;
+  int h;
+  int cpf;
+  int depth;
+  double timer;
+  double spf;
+  int rec;
+  char *buffer;
+} gif;
+
 MsfGifState gif_state = {};
 void gif_rec_start(int w, int h, int cpf, int bitdepth)
 {
-  gif_w = w;
-  gif_h = h;
-  gif_depth = bitdepth;
-  msf_gif_begin(&gif_state, gif_w, gif_h);
-  gif_spf = cpf/100.0;
-  gif_rec = 1;
-  gif_timer = appTime;
+  gif.w = w;
+  gif.h = h;
+  gif.depth = bitdepth;
+  msf_gif_begin(&gif_state, gif.w, gif.h);
+  gif.cpf = cpf;
+  gif.spf = cpf/100.0;
+  gif.rec = 1;
+  gif.timer = appTime;
+  if (gif.buffer) free(gif.buffer);
+  gif.buffer = malloc(gif.w*gif.h*4);
 
   sg_destroy_image(sg_gif.img);
   sg_destroy_image(sg_gif.depth);
@@ -59,14 +68,14 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
 
   sg_gif.img = sg_make_image(&(sg_image_desc){
     .render_target = true,
-    .width = gif_w,
-    .height = gif_h,
+    .width = gif.w,
+    .height = gif.h,
   });
 
   sg_gif.depth = sg_make_image(&(sg_image_desc){
     .render_target = true,
-    .width = gif_w,
-    .height = gif_h,
+    .width = gif.w,
+    .height = gif.h,
     .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
   });
   
@@ -78,32 +87,14 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
 
 void gif_rec_end(char *path)
 {
-  MsfGifResult gif = msf_gif_end(&gif_state);
-  if (gif.data) {
+  MsfGifResult gif_res = msf_gif_end(&gif_state);
+  if (gif_res.data) {
     FILE *f = fopen(path, "wb");
-    fwrite(gif.data, gif.dataSize, 1, f);
+    fwrite(gif_res.data, gif_res.dataSize, 1, f);
     fclose(f);
   }
-  msf_gif_free(gif);
-  gif_rec = 0;
-}
-
-static void *read_texture_data(sg_image id, void *pixels)
-{
-#ifdef _SOKOL_ANY_GL
-  sg_image_desc desc = sg_query_image_desc(id);
-  int w = desc.width, h = desc.height;
-  _sg_image_t *img = _sg_lookup_image(&_sg.pools, id.id);
-  const GLenum gl_img_format = _sg_gl_teximage_format(img->cmn.pixel_format);
-  const GLenum gl_img_type = _sg_gl_teximage_type(img->cmn.pixel_format);
-  GLenum gl_img_target = img->gl.target;
-  GLuint gl_img_level = 0;
-  glGetTexImage(gl_img_target, 0, gl_img_format, gl_img_type, pixels);
-  return pixels;
-#else
-  YughWarn("NO GL");
-  return NULL;
-#endif
+  msf_gif_free(gif_res);
+  gif.rec = 0;
 }
 
 #include "sokol/sokol_app.h"
@@ -471,17 +462,16 @@ void openglRender(struct window *window) {
   sg_end_pass();
 
 
-  if (gif_rec && (appTime - gif_timer) > gif_spf) {
+  if (gif.rec && (appTime - gif.timer) > gif.spf) {
     sg_begin_pass(sg_gif.pass, &pass_action);
     sg_apply_pipeline(sg_gif.pipe);
     sg_apply_bindings(&crt_post.bind);
     sg_draw(0,6,1);
     sg_end_pass();
 
-    gif_timer = appTime;
-    //read_texture_data(sg_gif.img, gif_buf);
-    sg_query_image_pixels(sg_gif.img, gif_buf, gif_w*gif_h*4);
-    msf_gif_frame(&gif_state, gif_buf, cpf, gif_depth, gif_w * -4);
+    gif.timer = appTime;
+    sg_query_image_pixels(sg_gif.img, gif.buffer, gif.w*gif.h*4);
+    msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }
 
   sg_begin_default_pass(&pass_action, window->width, window->height);
@@ -489,7 +479,10 @@ void openglRender(struct window *window) {
   sg_apply_bindings(&crt_post.bind);
   sg_draw(0,6,1);
 
+
+
   sg_end_pass();  
+
 
   sg_commit();
 
