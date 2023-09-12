@@ -1127,6 +1127,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js, argv[1]);
       gif_rec_end(str);
       break;
+    case 133:
+      ret = JS_NewFloat64(js, appTime);
+      break;
   }
 
   if (str)

@@ -4,6 +4,8 @@ The main editor view is made up of objects. Each object can have a
 number of components attached to it. When an object is selected, its
 name, position, and list of components are listed.
 
+The editor edits either entities or components. When it is started, there is no edited level.
+
 ## Basic controls
 |Ctrl-Z|Undo|
 |Ctrl-Shift-Z|Redo|

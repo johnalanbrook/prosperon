@@ -100,8 +100,10 @@ var Debug = {
         GUI.text(x.fullpath(), world2screen(x.pos).add([0,32]), 1, [84,110,255]);
       });
 
-    if (Debug.Options.gif.rec)
+    if (Debug.Options.gif.rec) {
       gui_text("REC", [0,40], 1);
+      gui_text(Time.seconds_to_timecode(Time.time - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
+    }
 
     gui_text(Game.playing() ? "PLAYING"
                          : Game.stepping() ?
@@ -246,22 +248,45 @@ DebugControls.inputs.f4 = function() {
 DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 
 Debug.Options.gif = {
-  w: 640,
-  h: 480,
+  w: 640, /* Max width */
+  h: 480, /* Max height */
+  stretch: false, /* True if you want to stretch */
   cpf: 2,
   depth: 8,
   file: "out.gif",
   rec: false,
+  secs: 6,
+  start_time: 0,
+  fps: 0,
+  start() {
+    var w = this.w;
+    var h = this.h;
+    if (!this.stretch) {
+      var win = Window.height / Window.width;    
+      var gif = h/w;
+      if (gif > win)
+        h = w * win;
+      else
+        w = h / win;
+    }
+
+    cmd(131, w, h, this.cpf, this.depth);
+    this.rec = true;
+    this.fps = (1/this.cpf)*100;
+    this.start_time = Time.time;
+
+    timer.oneshot(this.stop.bind(this), this.secs, this);
+  },
+
+  stop() {
+    if (!this.rec) return;
+    cmd(132, this.file);
+    this.rec = false;
+  },
 };
-DebugControls.inputs.f8 = function() {
-  var gif = Debug.Options.gif;
-  cmd(131, gif.w, gif.h, gif.cpf, gif.depth);
-  gif.rec = true;
-};
-DebugControls.inputs.f9 = function() {
-  cmd(132, Debug.Options.gif.file);
-  Debug.Options.gif.rec = false;
-};
+
+DebugControls.inputs.f8 = Debug.Options.gif.start.bind(Debug.Options.gif);
+DebugControls.inputs.f9 = Debug.Options.gif.stop.bind(Debug.Options.gif);
 
 DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
 DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
@@ -283,6 +308,16 @@ var Time = {
   set updateMS(x) { cmd(6, x); },
   set physMS(x) { cmd(7, x); },
   set renderMS(x) { cmd(5, x); },
+
+  get time() { return cmd(133); },
+
+  seconds_to_timecode(secs, fps)
+  {
+    var s = Math.trunc(secs);
+    secs -= s;
+    var f = Math.trunc(fps * secs);
+    return `${s}:${f}`;
+  },
 
   pause() {
     Time.timescale = 0;
