@@ -56,6 +56,7 @@
 #include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBIR_DEFAULT_FILTER_DOWNSAMPLE STBIR_FILTER_BOX
 #include "stb_image_write.h"
 
 #define PL_MPEG_IMPLEMENTATION

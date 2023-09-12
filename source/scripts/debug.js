@@ -100,6 +100,9 @@ var Debug = {
         GUI.text(x.fullpath(), world2screen(x.pos).add([0,32]), 1, [84,110,255]);
       });
 
+    if (Debug.Options.gif.rec)
+      gui_text("REC", [0,40], 1);
+
     gui_text(Game.playing() ? "PLAYING"
                          : Game.stepping() ?
 			 "STEP" :
@@ -241,8 +244,25 @@ DebugControls.inputs.f4 = function() {
   Debug.draw_gizmos = !Debug.draw_gizmos;
 };
 DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
-DebugControls.inputs.f8 = function() { cmd(131); };
-DebugControls.inputs.f9 = function() { cmd(132, "out.gif"); };
+
+Debug.Options.gif = {
+  w: 480,
+  h: 320,
+  cpf: 4,
+  depth: 8,
+  file: "out.gif",
+  rec: false,
+};
+DebugControls.inputs.f8 = function() {
+  var gif = Debug.Options.gif;
+  cmd(131, gif.w, gif.h, gif.cpf, gif.depth);
+  gif.rec = true;
+};
+DebugControls.inputs.f9 = function() {
+  cmd(132, Debug.Options.gif.file);
+  Debug.Options.gif.rec = false;
+};
+
 DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
 DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
 DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; };

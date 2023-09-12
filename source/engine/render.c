@@ -15,22 +15,65 @@
 #include "stb_ds.h"
 #include "stb_image_resize.h";
 #include "resources.h"
+#include "yugine.h"
 
 #define SOKOL_GFX_IMPL
 #include "sokol/sokol_gfx.h"
 
+#define SOKOL_GFX_EXT_IMPL
+#include "sokol/sokol_gfx_ext.h"
+
 #define MSF_GIF_IMPL
 #include "msf_gif.h"
 
-static int gif_w = 480, gif_h = 320, cpf = 1, bitDepth = 16;
+static struct {
+  sg_pass pass;
+  sg_pass_action pa;
+  sg_pipeline pipe;
+  sg_bindings bind;
+  sg_shader shader;
+  sg_image img;
+  sg_image depth;
+} sg_gif;
+
+
+static int gif_w = 359, gif_h = 320, cpf = 4, gif_depth = 4;
 static int gif_rec = 0;
+static double gif_timer = 0, gif_spf;
 static char gif_buf[480*320*4];
 static char frame_buf[1920*1080*4];
 MsfGifState gif_state = {};
-void gif_rec_start()
+void gif_rec_start(int w, int h, int cpf, int bitdepth)
 {
+  gif_w = w;
+  gif_h = h;
+  gif_depth = bitdepth;
   msf_gif_begin(&gif_state, gif_w, gif_h);
+  gif_spf = cpf/100.0;
   gif_rec = 1;
+  gif_timer = appTime;
+
+  sg_destroy_image(sg_gif.img);
+  sg_destroy_image(sg_gif.depth);
+  sg_destroy_pass(sg_gif.pass);
+
+  sg_gif.img = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width = gif_w,
+    .height = gif_h,
+  });
+
+  sg_gif.depth = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width = gif_w,
+    .height = gif_h,
+    .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
+  });
+  
+  sg_gif.pass = sg_make_pass(&(sg_pass_desc){
+    .color_attachments[0].image = sg_gif.img,
+    .depth_stencil_attachment.image = sg_gif.depth
+  });
 }
 
 void gif_rec_end(char *path)
@@ -61,7 +104,6 @@ static void *read_texture_data(sg_image id, void *pixels)
   YughWarn("NO GL");
   return NULL;
 #endif
-
 }
 
 #include "sokol/sokol_app.h"
@@ -143,6 +185,7 @@ static struct {
   sg_image depth_img;
 } crt_post;
 
+
 void trace_make_shader(sg_shader_desc *d, sg_shader result, void *data)
 {
   if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED)
@@ -201,6 +244,24 @@ void render_init() {
     }
   });
 
+  sg_gif.shader = sg_compile_shader("shaders/postvert.glsl", "shaders/box.glsl", &(sg_shader_desc){
+    .fs.images[0] = {
+      .name = "diffuse_texture",
+      .image_type = SG_IMAGETYPE_2D,
+      .sampler_type = SG_SAMPLERTYPE_FLOAT
+    }
+  });
+
+  sg_gif.pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = sg_gif.shader,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT2,
+	[1].format = SG_VERTEXFORMAT_FLOAT2
+      }
+    }
+  });
+
   crt_post.pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = crt_post.shader,
     .layout = {
@@ -229,6 +290,11 @@ void render_init() {
     .depth_stencil_attachment.image = crt_post.depth_img,
   });
 
+  sg_gif.pass = sg_make_pass(&(sg_pass_desc){
+    .color_attachments[0].image = sg_gif.img,
+    .depth_stencil_attachment.image = sg_gif.depth
+  });
+   
   float crt_quad[] = {
     -1, 1, 0, 1,
     -1, -1, 0, 0,
@@ -244,7 +310,6 @@ void render_init() {
   });
 
   crt_post.bind.fs_images[0] = crt_post.img;
-
 /*
   sg_image_desc shadow_desc = {
     .render_target = true,
@@ -341,42 +406,8 @@ HMM_Mat4 hudproj = {0.f};
 
 HMM_Vec3 dirl_pos = {4, 100, 20};
 
-void openglRender(struct window *window) {
-/*
-  HMM_Mat4 model = HMM_M4D(1.f);
-  float scale = 0.08;
-  model = HMM_MulM4(model, HMM_Scale((HMM_Vec3){scale,scale,scale}));
-
-
-  // Shadow pass
-  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
-  sg_apply_pipeline(sg_shadow.pipe);
-
-  HMM_Mat4 light_proj = HMM_Orthographic_RH_ZO(-100.f, 100.f, -100.f, 100.f, 1.f, 100.f);
-  HMM_Mat4 light_view = HMM_LookAt_RH(dirl_pos, (HMM_Vec3){0,0,0}, (HMM_Vec3){0,1,0});
-
-  HMM_Mat4 lsm = HMM_MulM4(light_proj, light_view);
-
-  HMM_Mat4 subo[2];
-  subo[0] = lsm;
-  subo[1] = model;
-
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(subo));
-  
-  for (int i = 0; i < arrlen(duck->meshes); i++) {
-    sg_bindings sbind = {0};
-    sbind.vertex_buffers[0] = duck->meshes[i].bind.vertex_buffers[0];
-    sbind.index_buffer = duck->meshes[i].bind.index_buffer;
-    sg_apply_bindings(&sbind);
-    sg_draw(0,duck->meshes[i].face_count,1);
-  }
-  sg_end_pass();
-
-  draw_model(duck,model, lsm);  
-*/
-
-  sg_begin_pass(crt_post.pass, &pass_action);
-
+void full_2d_pass(struct window *window)
+{
   //////////// 2D projection
   cpVect pos = cam_pos();
 
@@ -410,21 +441,55 @@ void openglRender(struct window *window) {
 
   call_nk_gui();
   nuke_end();
+}
 
+void full_3d_pass(struct window *window)
+{
+  HMM_Mat4 model = HMM_M4D(1.f);
+  float scale = 0.08;
+  model = HMM_MulM4(model, HMM_Scale((HMM_Vec3){scale,scale,scale}));
+
+  // Shadow pass
+  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
+  sg_apply_pipeline(sg_shadow.pipe);
+
+  HMM_Mat4 light_proj = HMM_Orthographic_RH_ZO(-100.f, 100.f, -100.f, 100.f, 1.f, 100.f);
+  HMM_Mat4 light_view = HMM_LookAt_RH(dirl_pos, (HMM_Vec3){0,0,0}, (HMM_Vec3){0,1,0});
+
+  HMM_Mat4 lsm = HMM_MulM4(light_proj, light_view);
+
+  HMM_Mat4 subo[2];
+  subo[0] = lsm;
+  subo[1] = model;
+
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(subo));
+}
+
+void openglRender(struct window *window) {
+  sg_begin_pass(crt_post.pass, &pass_action);
+  full_2d_pass(window);
   sg_end_pass();
+
+
+  if (gif_rec && (appTime - gif_timer) > gif_spf) {
+    sg_begin_pass(sg_gif.pass, &pass_action);
+    sg_apply_pipeline(sg_gif.pipe);
+    sg_apply_bindings(&crt_post.bind);
+    sg_draw(0,6,1);
+    sg_end_pass();
+
+    gif_timer = appTime;
+    //read_texture_data(sg_gif.img, gif_buf);
+    sg_query_image_pixels(sg_gif.img, gif_buf, gif_w*gif_h*4);
+    msf_gif_frame(&gif_state, gif_buf, cpf, gif_depth, gif_w * -4);
+  }
 
   sg_begin_default_pass(&pass_action, window->width, window->height);
   sg_apply_pipeline(crt_post.pipe);
   sg_apply_bindings(&crt_post.bind);
   sg_draw(0,6,1);
 
-  if (gif_rec) {
-    read_texture_data(crt_post.img, frame_buf);
-//    stbir_resize_uint8(frame_buf, mainwin.width, mainwin.height, 0, gif_buf, gif_w, gif_h, 0, 4);
-    msf_gif_frame(&gif_state, frame_buf, cpf, 16, gif_w * -4);
-  }
-
-  sg_end_pass();
+  sg_end_pass();  
 
   sg_commit();
 
