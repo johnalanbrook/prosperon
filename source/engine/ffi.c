@@ -126,7 +126,7 @@ struct gameobject *js2go(JSValue v) {
   return id2go(js2int(v));
 }
 
-struct sprite *js2sprite(JSValue v) { return id2go(js2int(v)); }
+struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
 
 void *js2ptr(JSValue v) {
   void *p;
@@ -1100,7 +1100,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 126:
-      mainwin.height = js2int(argv[2]);
+      mainwin.height = js2int(argv[1]);
       break;
 
     case 127:

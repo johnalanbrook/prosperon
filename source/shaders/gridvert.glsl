@@ -12,11 +12,7 @@ uniform vec2 dimen;
 
 void main()
 {
-//    vec4 ipos = inverse(projection) * vec4(pos, 0.f, 1.f);
-    apos = pos * dimen;
-//    apos += offset;
-//    apos = pos + offset;
-
+    apos = ((pos*0.5)*dimen) + offset;
 
     gl_Position = vec4(pos, 0.f, 1.f);
 }

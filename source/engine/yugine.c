@@ -199,8 +199,9 @@ void c_frame()
     gameobjects_cleanup();
 }
 
-void c_clean() {};
-
+void c_clean() {
+  gif_rec_end("crash.gif");
+};
 
 void c_event(const sapp_event *e)
 {
@@ -224,11 +225,11 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_MOUSE_UP:
-      input_mouse(e->mouse_button, INPUT_UP);
+      input_mouse(e->mouse_button, INPUT_UP, e->modifiers);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_DOWN:
-      input_mouse(e->mouse_button, INPUT_DOWN);
+      input_mouse(e->mouse_button, INPUT_DOWN, e->modifiers);
       break;
 
     case SAPP_EVENTTYPE_CHAR:

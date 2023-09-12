@@ -214,16 +214,18 @@ var Register = {
   },
 
   kbm_input(mode, btn, state, ...args) {
-    if (btn === 'lmouse') btn = 'lm';
-
-    if (btn === 'rmouse') btn = 'rm';
-
-    if (btn === 'mmouse') btn = 'mm';
-  
+    if (state === 'released') {
+      btn = btn.split('-').last;
+    }
+   
     switch(mode) {
       case "emacs":
         Player.players[0].raw_input(btn, state, ...args);
         break;
+
+      case "mouse":
+        Player.players[0].mouse_input(btn, state, ...args);
+	break;
     };
   },
 
@@ -556,16 +558,17 @@ Register.update.register(Game.exec, Game);
 
 //load("scripts/level.js");
 
-
-
 load("scripts/entity.js");
 
 var World = Object.create(gameobject);
 var Primum = World;
-var objects = [];
+Primum.tag = "PRIMUM";
+Primum.selectable = false;
+Primum.ur = { tag: "Primum" };
+Primum.objects = [];
 
 World.remove_child = function(child) {
-  objects.remove(child);
+  this.objects.remove(child);
 }
 
 World.add_child = function(child) {
@@ -633,29 +636,6 @@ function save_game_configs() {
 
 load("scripts/physics.js");
 
-var camera2d = gameobject.clone("camera2d", {
-    phys: gameobject.bodytype.kinematic,
-    speed: 300,
-    
-    get zoom() { return this._zoom; },
-    set zoom(x) {
-      if (x <= 0) return;
-      this._zoom = x;
-      cmd(62, this._zoom);
-    },
-    _zoom: 1.0,
-    speedmult: 1.0,
-    
-    selectable: false,
-    
-    view2world(pos) {
-      return pos.mapc(mult, [1,-1]).add([-Window.width,Window.height].scale(0.5)).scale(this.zoom).add(this.pos);
-    },
-    
-    world2view(pos) {
-      return pos.sub(this.pos).scale(1/this.zoom).add(Window.dimensions.scale(0.5));
-    },
-});
 
 Game.view_camera = function(cam)
 {
@@ -663,156 +643,9 @@ Game.view_camera = function(cam)
   cmd(61, Game.camera.body);
 }
 
-Game.view_camera(camera2d.make(World));
+Game.view_camera(Primum.spawn(ur.camera2d));
 
 win_make(Game.title, Game.resolution[0], Game.resolution[1]);
 
-/* Default objects */
-var prototypes = {};
-prototypes.ur = {};
-prototypes.load_all = function()
-{
-if (IO.exists("proto.json"))
-  prototypes = JSON.parse(IO.slurp("proto.json"));
-
-for (var key in prototypes) {
-  if (key in gameobjects)
-    dainty_assign(gameobjects[key], prototypes[key]);
-  else {
-    /* Create this gameobject fresh */
-    Log.info("Making new prototype: " + key + " from " + prototypes[key].from);
-    var newproto = gameobjects[prototypes[key].from].clone(key);
-    gameobjects[key] = newproto;
-
-    for (var pkey in newproto)
-      if (typeof newproto[pkey] === 'object' && newproto[pkey] && 'clone' in newproto[pkey])
-        newproto[pkey] = newproto[pkey].clone();
-
-    dainty_assign(gameobjects[key], prototypes[key]);
-  }
-}
-}
-
-prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
-
-prototypes.from_file = function(file)
-{
-  if (!IO.exists(file)) {
-    Log.error(`File ${file} does not exist.`);
-    return;
-  }
-
-  var newobj = gameobject.clone(file, {});
-  var script = IO.slurp(file);
-
-  newobj.$ = {};
-  var json = {};
-  if (IO.exists(file.name() + ".json")) {
-    json = JSON.parse(IO.slurp(file.name() + ".json"));
-    Object.assign(newobj.$, json.$);
-    delete json.$;
-  }
-
-  compile_env(`var self = this; var $ = self.$; ${script}`, newobj, file);
-  dainty_assign(newobj, json);
-
-  file = file.replaceAll('/', '.');
-  var path = file.name().split('.');
-  var nested_access = function(base, names) {
-    for (var i = 0; i < names.length; i++)
-      base = base[names[i]] = base[names[i]] || {};
-
-    return base;
-  };
-  var a = nested_access(ur, path);
-  
-  a.tag = file.name();
-  prototypes.list.push(a.tag);
-  a.type = newobj;
-  a.instances = [];
-  newobj.ur = a;
-
-  return a;
-}
-prototypes.from_file.doc = "Create a new ur-type from a given script file.";
-prototypes.list = [];
-
-prototypes.from_obj = function(name, obj)
-{
-  var newobj = gameobject.clone(name, obj);
-  prototypes.ur[name] = {
-    tag: name,
-    type: newobj
-  };
-  return prototypes.ur[name];
-}
-
-prototypes.load_config = function(name)
-{
-  if (!prototypes.ur[name])
-    prototypes.ur[name] = gameobject.clone(name);
-
-  Log.warn(`Made new ur of name ${name}`);
-
-  return prototypes.ur[name];
-}
-
-
-prototypes.list_ur = function()
-{
-  var list = [];
-  function list_obj(obj, prefix)
-  {
-    prefix ??= "";
-    var list = [];
-    for (var e in obj) {
-      list.push(prefix + e);
-      Log.warn("Descending into " + e);
-      list.concat(list_obj(obj[e], e + "."));
-    }
-
-    return list;
-  }
-  
-  return list_obj(ur);
-}
-
-prototypes.get_ur = function(name)
-{
-  if (!prototypes.ur[name]) {
-    if (IO.exists(name + ".js"))
-      prototypes.from_file(name + ".js");
-
-    prototypes.load_config(name);
-    return prototypes.ur[name];
-  } else
-    return prototypes.ur[name];
-}
-
-prototypes.from_obj("polygon2d", {
-  polygon2d: polygon2d.clone(),
-});
-
-prototypes.from_obj("edge2d", {
-  edge2d: bucket.clone(),
-});
-
-prototypes.from_obj("sprite", {
-  sprite: sprite.clone(),
-});
-
-prototypes.generate_ur = function(path)
-{
-  var ob = IO.glob("*.js");
-  ob = ob.concat(IO.glob("**/*.js"));
-  ob = ob.filter(function(str) { return !str.startsWith("scripts"); });
-
-  ob.forEach(function(name) {
-    if (name === "game.js") return;
-    if (name === "play.js") return;
-
-    prototypes.from_file(name);
-  });
-}
-
-var ur = prototypes.ur;
+Window.width = 1280;
+Window.height = 720;

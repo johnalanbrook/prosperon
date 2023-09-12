@@ -112,7 +112,7 @@ void sprite_io(struct sprite *sprite, FILE *f, int read) {
 
 void sprite_draw_all() {
   sg_apply_pipeline(pip_sprite);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));  
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
 
   static struct sprite **layers[5];
 

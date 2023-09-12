@@ -27,7 +27,7 @@ void cursor_hide();
 void cursor_show();
 void set_mouse_mode(int mousemode);
 
-void input_mouse(int btn, int state);
+void input_mouse(int btn, int state, uint32_t mod);
 void input_mouse_move(float x, float y, float dx, float dy);
 void input_mouse_scroll(float x, float y);
 void input_btn(int btn, int state, uint32_t mod);
@@ -39,7 +39,6 @@ int action_down(int key);
 void register_pawn(struct callee c);
 void register_gamepad(struct callee c);
 
-int want_quit();
 void quit();
 
 #endif

@@ -87,6 +87,8 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
 
 void gif_rec_end(char *path)
 {
+  if (!gif.rec) return;
+  
   MsfGifResult gif_res = msf_gif_end(&gif_state);
   if (gif_res.data) {
     FILE *f = fopen(path, "wb");
@@ -432,6 +434,7 @@ void full_2d_pass(struct window *window)
 
   call_nk_gui();
   nuke_end();
+
 }
 
 void full_3d_pass(struct window *window)
@@ -479,10 +482,7 @@ void openglRender(struct window *window) {
   sg_apply_bindings(&crt_post.bind);
   sg_draw(0,6,1);
 
-
-
   sg_end_pass();  
-
 
   sg_commit();
 

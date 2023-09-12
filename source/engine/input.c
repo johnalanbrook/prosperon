@@ -29,6 +29,7 @@ JSValue jsaxis;
 JSValue jsany;
 JSValue jsmouse;
 JSValue jspos;
+JSValue jsmove;
 
 cpVect mouse_pos = {0, 0};
 cpVect mouse_delta = {0, 0};
@@ -84,25 +85,35 @@ char *mb2str(int btn)
 {
   switch(btn) {
     case 0:
-      return "lmouse";
+      return "lm";
       break;
     case 1:
-      return "rmouse";
+      return "rm";
       break;
     case 2:
-      return "mmouse";
+      return "mm";
       break;
   }
   return "NULLMOUSE";
 }
 
-void input_mouse(int btn, int state)
+void input_mouse(int btn, int state, uint32_t mod)
 {
+  char out[16] = {0};
+  snprintf(out, 16, "%s%s%s%s",
+    mod & SAPP_MODIFIER_CTRL ? "C-" : "",
+    mod & SAPP_MODIFIER_ALT ? "M-" : "",
+    mod & SAPP_MODIFIER_SUPER ? "S-" : "",
+    mb2str(btn)
+  );
+
   JSValue argv[3];
   argv[0] = JS_NewString(js, "emacs");  
-  argv[1] = input2js(mb2str(btn));
+  argv[1] = JS_NewString(js, out);
   argv[2] = jsinputstate[state];
-  script_callee(pawn_callee, 3, argv);  
+  script_callee(pawn_callee, 3, argv);
+  JS_FreeValue(js, argv[0]);
+  JS_FreeValue(js, argv[1]);
 }
 
 void input_mouse_move(float x, float y, float dx, float dy)
@@ -114,10 +125,12 @@ void input_mouse_move(float x, float y, float dx, float dy)
   
   JSValue argv[3];
   argv[0] = jsmouse;
-  argv[1] = jspos;
+  argv[1] = jsmove;
   argv[2] = vec2js(mouse_pos);
-  script_callee(pawn_callee, 3, argv);
+  argv[3] = vec2js(mouse_delta);
+  script_callee(pawn_callee, 4, argv);
   JS_FreeValue(js, argv[2]);
+  JS_FreeValue(js, argv[3]);
 }
 
 void input_mouse_scroll(float x, float y)
@@ -218,6 +231,7 @@ void input_init() {
   jsany = str2js("any");
   jsmouse = str2js("mouse");
   jspos = str2js("pos");
+  jsmove = str2js("move");
 
   for (int i = 0; i < 512; i++)
     key_states[i] = INPUT_UP;
@@ -371,11 +385,6 @@ void cursor_show() { sapp_show_mouse(1); }
 int action_down(int key) { return key_states[key] == INPUT_DOWN; }
 int action_up(int key) { return key_states[key] == INPUT_UP; }
 
-int want_quit() {
-  return mquit;
-}
-
 void quit() {
-  exit(0);
-  mquit = 1;
+  sapp_quit();
 }

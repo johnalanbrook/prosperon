@@ -108,6 +108,15 @@ var Player = {
     this.pawns.forEach(x => x[fn]?.(...args));
   },
 
+  mouse_input(type, ...args) {
+    for (var pawn of this.pawns.reverse()) {
+      if (typeof pawn.inputs?.mouse?.[type] === 'function') {
+        pawn.inputs.mouse[type].call(pawn,...args);
+	return;
+      }
+    }
+  },
+
   raw_input(cmd, state, ...args) {
     for (var pawn of this.pawns.reverse()) {
       if (typeof pawn.inputs?.any === 'function') {

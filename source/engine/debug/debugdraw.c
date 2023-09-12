@@ -570,8 +570,6 @@ void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int c
 void draw_grid(float width, float span, struct rgba color)
 {
   cpVect offset = cam_pos();
-  offset.x -= mainwin.width/2;
-  offset.y -= mainwin.height/2;
   offset = cpvmult(offset, 1/cam_zoom());
 
   float ubo[4];
