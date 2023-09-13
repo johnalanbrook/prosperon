@@ -1,4 +1,7 @@
 #include "nuke.h"
+
+#ifndef NO_EDITOR
+
 #define NK_INCLUDE_STANDARD_IO
 #define NK_IMPLEMENTATION
 #define NK_KEYSTATE_BASED_INPUT
@@ -172,3 +175,5 @@ void nuke_labelf(const char *fmt, ...) {
   nuke_label(buf);
   va_end(args);
 }
+
+#endif

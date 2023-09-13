@@ -27,11 +27,16 @@
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
 
+
+#ifndef NFLAC
 #define DR_FLAC_IMPLEMENTATION
 #include "dr_flac.h"
+#endif
 
+#ifndef NMP3
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
+#endif
 
 #define QOA_IMPLEMENTATION
 #include "qoa.h"
@@ -141,14 +146,21 @@ struct wav *make_sound(const char *wav) {
 
   if (!strcmp(ext, "wav")) {
     mwav.data = drwav_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-  } else if (!strcmp(ext, "flac")) {
+  }
+  #ifndef NFLAC
+  else if (!strcmp(ext, "flac")) {
     mwav.data = drflac_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-  } else if (!strcmp(ext, "mp3")) {
+  }
+  #endif
+  #ifndef NMP3
+  else if (!strcmp(ext, "mp3")) {
     drmp3_config cnf;
     mwav.data = drmp3_open_file_and_read_pcm_frames_f32(wav, &cnf, &mwav.frames, NULL);
     mwav.ch = cnf.channels;
     mwav.samplerate = cnf.sampleRate;
-  } else if (!strcmp(ext, "qoa")) {
+  }
+  #endif
+  else if (!strcmp(ext, "qoa")) {
     unsigned char header[QOA_MIN_FILESIZE];
     FILE *f = fopen(wav, "rb");
     fread(header, QOA_MIN_FILESIZE, 1, f);

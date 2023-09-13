@@ -31,7 +31,6 @@ void nuke_img(char *path);
 
 void nuke_scrolltext(char *str);
 
-
 int nuke_push_tree_id(const char *name, int id);
 void nuke_tree_pop();
 

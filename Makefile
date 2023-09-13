@@ -20,6 +20,18 @@ ifeq ($(CC), clang)
   AR = llvm-ar
 endif
 
+ifdef NEDITOR
+  CFLAGS += -DNO_EDITOR
+endif
+
+ifdef NFLAC
+  CFLAGS += -DNFLAC
+endif
+
+ifdef NMP3
+  CFLAGS += -DNMP3
+endif
+
 ifeq ($(DBG),1)
   CFLAGS += -g
   INFO += _dbg
@@ -61,7 +73,7 @@ ARCH = x64
 ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static
   CFLAGS += -mwin32
-  LDLIBS += mingw32 kernel32 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
+  LDLIBS += mingw32 kernel32 opengl32 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   PLAT = w64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*

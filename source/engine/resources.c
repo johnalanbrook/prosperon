@@ -13,8 +13,6 @@
 #include <unistd.h>
 #include "font.h"
 
-#include <glob.h>
-
 #include <fcntl.h>
 #include "cdb.h"
 
@@ -197,11 +195,6 @@ int slurp_write(const char *txt, const char *filename) {
 
   fputs(txt, f);
   fclose(f);
-  return 0;
-}
-
-static int glob_err(const char *epath, int errno)
-{
   return 0;
 }
 

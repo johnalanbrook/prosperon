@@ -13,7 +13,6 @@
 #include "window.h"
 #include "model.h"
 #include "stb_ds.h"
-#include "stb_image_resize.h";
 #include "resources.h"
 #include "yugine.h"
 
@@ -220,8 +219,11 @@ void render_init() {
   font_init();
   debugdraw_init();
   sprite_initialize();
-  nuke_init(&mainwin);
 
+  #ifndef NO_EDITOR
+  nuke_init(&mainwin);
+  #endif
+  
   model_init();
   sg_color c;
   rgba2floats(&c, editorClearColor);
@@ -427,14 +429,18 @@ void full_2d_pass(struct window *window)
 
   ////// TEXT && GUI
   debug_nextpass();
-  nuke_start();  
+  #ifndef NO_EDITOR
+  nuke_start();
+  #endif
+  
   call_gui();  
   debug_flush(&hudproj);
   text_flush(&hudproj);
 
+  #ifndef NO_EDITOR
   call_nk_gui();
   nuke_end();
-
+  #endif
 }
 
 void full_3d_pass(struct window *window)

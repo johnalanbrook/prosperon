@@ -3513,6 +3513,7 @@ inline int sg_append_buffer(sg_buffer buf_id, const sg_range& data) { return sg_
         #define GL_MAX_VERTEX_UNIFORM_VECTORS 0x8DFB
         #define GL_UNPACK_ALIGNMENT 0x0CF5
         #define GL_FRAMEBUFFER_SRGB 0x8DB9
+        #define GL_VIEWPORT 0x0BA2
     #endif
 
     #ifndef GL_UNSIGNED_INT_2_10_10_10_REV

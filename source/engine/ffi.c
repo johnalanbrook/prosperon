@@ -12,7 +12,7 @@
 #include "log.h"
 #include "mix.h"
 #include "music.h"
-#include "nuke.h"
+
 #include "sound.h"
 #include "sprite.h"
 #include "stb_ds.h"
@@ -23,8 +23,6 @@
 #include <assert.h>
 #include "resources.h"
 #include <sokol/sokol_time.h>
-
-#include <glob.h>
 
 #include "render.h"
 
@@ -87,15 +85,6 @@ JSValue strarr2js(const char **c, int len)
   for (int i = 0; i < len; i++)
     JS_SetPropertyUint32(js, arr, i, JS_NewString(js, c[i]));
 
-  return arr;
-}
-
-JSValue glob2js(char *pat)
-{
-  glob_t mglob;
-  glob(pat, GLOB_NOSORT, NULL, &mglob);
-  JSValue arr = strarr2js(mglob.gl_pathv, mglob.gl_pathc);
-  globfree(&mglob);
   return arr;
 }
 
@@ -326,6 +315,10 @@ JSValue bb2js(struct boundingbox bb)
   return obj;
 }
 
+
+#ifndef NO_EDITOR
+
+#include "nuke.h"
 JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   float editnum;
@@ -425,6 +418,8 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
   return ret;
 }
+
+#endif
 
 JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
 /*
@@ -1079,9 +1074,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       return num2js(get_timescale());
       break;
     case 122:
-      str = JS_ToCString(js, argv[1]);
-      ret = glob2js(str);
-      
       break;
 
     case 123:
@@ -1685,7 +1677,11 @@ void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
 
   DUK_FUNC(yughlog, 4)
+
+  #ifndef NO_EDITOR
   DUK_FUNC(nuke, 6)
+  #endif
+  
   DUK_FUNC(make_gameobject, 7)
   DUK_FUNC(set_body, 3)
   DUK_FUNC(q_body, 2)
