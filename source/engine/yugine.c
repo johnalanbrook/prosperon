@@ -310,6 +310,11 @@ static sapp_desc start_desc = {
     .logger.func = sg_logging,
 };
 
+void app_name(char *name)
+{
+  start_desc.window_title = strdup(name);
+}
+
 sapp_desc sokol_main(int argc, char **argv) {
 #ifndef NDEBUG
   #ifdef __linux__
@@ -365,6 +370,8 @@ sapp_desc sokol_main(int argc, char **argv) {
 
   sound_init();
   input_init();
+
+  script_dofile("warmup.js");
 
   start_desc.width = mainwin.width;
   start_desc.height = mainwin.height;

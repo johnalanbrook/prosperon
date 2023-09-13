@@ -13,7 +13,7 @@ load("scripts/std.js");
 
 function initialize()
 {
-  if (Cmdline.play)
+  if (!Game.edit)
     run("scripts/play.js");
   else
     run("scripts/editor.js");
@@ -360,6 +360,7 @@ var Window = {
   get width() { return cmd(48); },
   get height() { return cmd(49); },
   get dimensions() { return [this.width, this.height]; },
+  set name(str) { cmd(134, str); },
 };
 
 Window.icon = function(path) { cmd(90, path); };
@@ -447,6 +448,7 @@ var Game = {
   objects: [],
   resolution: [1200,720],
   name: "Untitled",
+  edit: true,
   register_obj(obj) {
     this.objects[obj.body] = obj;
   },
@@ -645,7 +647,6 @@ Game.view_camera = function(cam)
 
 Game.view_camera(Primum.spawn(ur.camera2d));
 
-win_make(Game.title, Game.resolution[0], Game.resolution[1]);
-
+Window.name = "Primum Machinam (V0.1)";
 Window.width = 1280;
 Window.height = 720;

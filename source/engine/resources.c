@@ -109,6 +109,29 @@ void fill_extensions(char *paths, const char *path, const char *ext) {
   ext_paths = paths;
   ftw(".", ext_check, 10);
 }
+
+static char **ls_paths = NULL;
+
+static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
+{
+  if (typeflag == FTW_F && strlen(path) > 2)
+    arrpush(ls_paths, strdup(&path[2]));
+
+  return 0;
+}
+
+char **ls(char *path)
+{
+  if (ls_paths) {
+    for (int i = 0; i < arrlen(ls_paths); i++)
+      free(ls_paths[i]);
+
+    arrfree(ls_paths);
+  }
+  ftw(".", ls_ftw, 10);
+  return ls_paths;
+}
+
 #else
 void fill_extensions(char *paths, const char *path, const char *ext)
 {};
@@ -138,12 +161,6 @@ char *make_path(const char *file) {
   strncpy(pathbuf, DATA_PATH, MAXPATH);
   strncat(pathbuf, file, MAXPATH);
   return pathbuf;
-}
-
-char *strdup(const char *s) {
-  char *new = malloc(sizeof(char) * (strlen(s) + 1));
-  strcpy(new, s);
-  return new;
 }
 
 unsigned char *slurp_file(const char *filename, size_t *size)
@@ -181,6 +198,7 @@ char *slurp_text(const char *filename, size_t *size)
 {
   size_t len;
   char *str = slurp_file(filename, &len);
+  if (!str) return NULL;
   char *retstr = malloc(len+1);
   memcpy(retstr, str, len);
   retstr[len] = '\0';

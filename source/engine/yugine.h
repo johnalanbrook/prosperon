@@ -12,6 +12,7 @@ void set_timescale(float val);
 void print_stacktrace();
 
 const char *engine_info();
+void app_name(char *name);
 
 int frame_fps();
 double get_timescale();

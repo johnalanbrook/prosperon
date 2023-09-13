@@ -78,8 +78,22 @@ var IO = {
     return cmd(38,file);
   },
   slurpwrite(str, file) { return cmd(39, str, file); },
-  extensions(ext) { return cmd(66, "." + ext); },
-  glob(pat) { return cmd(122, pat); },
+  extensions(ext) {
+    var paths = IO.ls();
+    paths = paths.filter(function(str) { return str.ext() === ext; });
+    return paths;
+  },
+  ls() { return cmd(66); },
+  glob(pat) {
+    var paths = IO.ls();
+    pat = pat.replaceAll(/([\[\]\(\)\^\$\.\|\+])/g, "\\$1");
+    pat = pat.replaceAll('**', '.*');
+    pat = pat.replaceAll(/[^\.]\*/g, '[^\\/]*');
+    pat = pat.replaceAll('?', '.');
+    
+    var regex = new RegExp("^"+pat+"$", "");
+    return paths.filter(str => str.match(regex));
+  },
 };
 
 var Cmdline = {};
@@ -97,8 +111,6 @@ function cmd_args(cmdargs)
 {
   var play = false;
   var cmds = cmdargs.split(" ");
-
-  Cmdline.play = false;
 
   for (var i = 1; i < cmds.length; i++) {
     if (cmds[i][0] !== '-') {
@@ -125,7 +137,7 @@ function cmd_args(cmdargs)
 }
 
 
-Cmdline.register_cmd("p", function() { Cmdline.play = true; }, "Launch engine in play mode.");
+Cmdline.register_cmd("p", function() { Game.edit = false; }, "Launch engine in play mode.");
 Cmdline.register_cmd("v", function() { Log.say(cmd(120)); Game.quit(); }, "Display engine info.");
 Cmdline.register_cmd("c", function() {}, "Redirect logging to console.");
 Cmdline.register_cmd("l", function(n) {

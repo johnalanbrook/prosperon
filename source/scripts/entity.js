@@ -588,8 +588,7 @@ prototypes.from_obj("sprite", {
 
 prototypes.generate_ur = function(path)
 {
-  var ob = IO.glob("*.js");
-  ob = ob.concat(IO.glob("**/*.js"));
+  var ob = IO.glob("**.js");
   ob = ob.filter(function(str) { return !str.startsWith("scripts"); });
 
   ob.forEach(function(name) {

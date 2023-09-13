@@ -79,10 +79,10 @@ JSValue str2js(const char *c) {
   return JS_NewString(js, c);
 }
 
-JSValue strarr2js(const char **c, int len)
+JSValue strarr2js(const char **c)
 {
   JSValue arr = JS_NewArray(js);
-  for (int i = 0; i < len; i++)
+  for (int i = 0; i < arrlen(c); i++)
     JS_SetPropertyUint32(js, arr, i, JS_NewString(js, c[i]));
 
   return arr;
@@ -421,19 +421,6 @@ JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
 #endif
 
-JSValue duk_win_make(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-/*
-  const char *title = JS_ToCString(js, argv[0]);
-  int w = js2int(argv[1]);
-  int h = js2int(argv[2]);
-  struct window *win = MakeSDLWindow(title, w, h, 0);
-  JS_FreeCString(js, title);
-
-  return JS_NewInt64(js, win->id);
-*/
-  return JS_NULL;
-}
-
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   static_assert(sizeof(tsReal) * 2 == sizeof(cpVect));
 
@@ -573,25 +560,6 @@ int file_exists(char *path) {
   }
 
   return 0;
-}
-
-/*
-static int duk2path(const char *path, const struct stat *sb, int typeflag) {
-  if (typeflag == FTW_F) {
-    char *ext = strrchr(path, '.');
-    if (ext && !strcmp(ext, dukext))
-      JS_SetPropertyUint32(js, dukarr, dukidx++, JS_NewString(js, &path[2]));
-  }
-
-  return 0;
-}
-*/
-JSValue dukext2paths(char *ext) {
-  char *paths = NULL;
-  
-  fill_extensions(paths, ".", ext);
-//  return dukarr;
-  return JS_NULL;
 }
 
 JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -865,8 +833,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 66:
-    str = JS_ToCString(js, argv[1]);
-    ret = dukext2paths(str);
+    ret = strarr2js(ls(","));
     break;
 
   case 67:
@@ -1121,6 +1088,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 133:
       ret = JS_NewFloat64(js, appTime);
+      break;
+
+    case 134:
+      str = JS_ToCString(js,argv[1]);
+      app_name(str);
       break;
   }
 
@@ -1687,7 +1659,6 @@ void ffi_load() {
   DUK_FUNC(q_body, 2)
 
   DUK_FUNC(sys_cmd, 1)
-  DUK_FUNC(win_make, 3)
 
   DUK_FUNC(make_sprite, 3)
   DUK_FUNC(make_anim2d, 3)
