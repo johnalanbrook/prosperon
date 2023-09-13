@@ -251,7 +251,7 @@ Debug.Options.gif = {
   w: 640, /* Max width */
   h: 480, /* Max height */
   stretch: false, /* True if you want to stretch */
-  cpf: 2,
+  cpf: 4,
   depth: 8,
   file: "out.gif",
   rec: false,
@@ -275,10 +275,11 @@ Debug.Options.gif = {
     this.fps = (1/this.cpf)*100;
     this.start_time = Time.time;
 
-    timer.oneshot(this.stop.bind(this), this.secs, this);
+    timer.oneshot(this.stop.bind(this), this.secs, this, true);
   },
 
   stop() {
+    Log.warn("STOPPED");
     if (!this.rec) return;
     cmd(132, this.file);
     this.rec = false;

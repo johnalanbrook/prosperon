@@ -55,17 +55,8 @@ function bb2wh(bb) {
 load("scripts/gui.js");
 
 var timer = {
-  guardfn(fn) {
-    if (typeof fn === 'function')
-      fn();
-    else {
-      Log.warn("TIMER TRYING TO EXECUTE WIHTOUT!!!");
-      Log.warn(this);
-      this.kill();
-    }
-  },
-
-  make(fn, secs,obj,loop) {
+  make(fn, secs,obj,loop,app) {
+    app ??= false;
     if (secs === 0) {
       fn.call(obj);
       return;
@@ -79,17 +70,14 @@ var timer = {
       else
         Log.warn("Timer trying to execute without a function.");
     };
-    t.id = make_timer(guardfn, secs, obj);
+    t.id = make_timer(guardfn, secs, app);
     
     return t;
   },
 
-  oneshot(fn, secs,obj) {
-    var t = this.make(() => {
-      fn.call();
-      t.kill();
-    },secs);
-    t.loop = 0;
+  oneshot(fn, secs,obj, app) {
+    app ??= false;
+    var t = this.make(fn, secs, obj, 0, app);
     t.start();
   },
 

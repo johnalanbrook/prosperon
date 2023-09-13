@@ -5,14 +5,16 @@
 #include "dsp.h"
 #include <string.h>
 #include "log.h"
+#include "stdlib.h"
 
 #include <assert.h>
 
-static struct bus bus[256];
+#define BUS_N 256
+static struct bus *bus;
 static int first = 0; /* First bus available */
 
 static int first_on = -1; /* First bus to fill buffer with */
-soundbyte mastermix[BUF_FRAMES*CHANNELS];
+soundbyte *mastermix = NULL;
 
 static float master_volume = 1.f;
 
@@ -23,13 +25,15 @@ void mix_master_vol(float v) {
 }
 
 void mixer_init() {
-    for (int i = 0; i < 256; i++) {
+  bus = malloc(sizeof(struct bus)*BUS_N);
+  mastermix = malloc(BUF_FRAMES*CHANNELS);
+    for (int i = 0; i < BUS_N; i++) {
         bus[i].next = i+1;
         bus[i].on = 0;
         bus[i].id = i;
     }
 
-    bus[255].next = -1;
+    bus[BUS_N-1].next = -1;
 }
 
 struct bus *first_free_bus(struct dsp_filter in) {

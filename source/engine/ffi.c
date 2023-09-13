@@ -1619,7 +1619,7 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
   struct callee *c = malloc(sizeof(*c));
   c->fn = JS_DupValue(js, argv[0]);
   c->obj = JS_DupValue(js, globalThis);
-  int id = timer_make(secs, call_callee, c, 1);
+  int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
 
   return JS_NewInt64(js, id);
 }

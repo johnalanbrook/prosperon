@@ -9,7 +9,6 @@
 
 #define TSF_BLOCK 32
 
-struct dsp_filter cursong;
 struct dsp_midi_song gsong;
 
 float music_pan = 0.f;
@@ -79,6 +78,7 @@ void play_song(const char *midi, const char *sf)
     // Preset on 10th MIDI channel to use percussion sound bank if possible
     tsf_channel_set_bank_preset(gsong.sf, 9, 128, 0);
 
+    struct dsp_filter cursong;
     cursong.data = &gsong;
     cursong.filter = dsp_midi_fillbuf;
     musicbus = first_free_bus(cursong);

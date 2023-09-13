@@ -15,9 +15,11 @@
 #define LOG_SCRIPT 1
 #define LOG_RENDER 2
 
-extern char lastlog[];
-extern char consolelog[];
+extern char *lastlog;
+extern char *consolelog;
 extern int logLevel;
+
+void log_init();
 
 #ifndef NDEBUG
 #define YughLog(cat, pri, msg, ...) mYughLog(cat, pri, __LINE__, __FILE__, msg, ##__VA_ARGS__)

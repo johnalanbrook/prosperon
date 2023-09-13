@@ -436,7 +436,7 @@ struct dsp_delay dsp_delay_make(unsigned int ms_delay)
 
 void dsp_delay_filbuf(struct dsp_delay *delay, soundbyte *buf, int n)
 {
-    static soundbyte cache[BUF_FRAMES*2];
+    soundbyte cache[BUF_FRAMES*2];
     dsp_run(delay->in, cache, n);
 
     for (int i = 0; i < n*CHANNELS; i++) {

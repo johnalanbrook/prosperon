@@ -14,7 +14,7 @@ struct bus {
     int id;
 };
 
-extern soundbyte mastermix[BUF_FRAMES*CHANNELS];
+extern soundbyte *mastermix;
 
 void mixer_init();
 

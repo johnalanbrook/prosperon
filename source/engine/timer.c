@@ -25,12 +25,16 @@ void check_timer(struct timer *t, double dt) {
   }
 }
 
-void timer_update(double dt) {
+void timer_update(double dt, double scale) {
+  double sdt = dt*scale;
   for (int i = 0; i < arrlen(timers); i++)
-    check_timer(&timers[i], dt);
+    if (timers[i].app)
+      check_timer(&timers[i], dt);
+    else
+       check_timer(&timers[i], sdt);
 }
 
-int timer_make(double interval, void (*callback)(void *param), void *param, int own) {
+int timer_make(double interval, void (*callback)(void *param), void *param, int own, int app) {
   struct timer new;
   new.remain_time = interval;
   new.interval = interval;
@@ -39,6 +43,7 @@ int timer_make(double interval, void (*callback)(void *param), void *param, int 
   new.repeat = 1;
   new.owndata = own;
   new.next = -1;
+  new.app = app;
 
   if (first < 0) {
     timer_start(&new);

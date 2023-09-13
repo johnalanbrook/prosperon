@@ -158,10 +158,11 @@ void c_frame()
     low_fps_c += elapsed;
 
     input_poll(0);
+    timer_update(elapsed, timescale);    
       
     if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
       prof_start(&prof_update);
-      timer_update(elapsed * timescale);
+
       call_updates(elapsed * timescale);
       prof(&prof_update);
 
@@ -317,6 +318,7 @@ void app_name(char *name)
 
 sapp_desc sokol_main(int argc, char **argv) {
 #ifndef NDEBUG
+  log_init();
   #ifdef __linux__
   int logout = 0;
   if (logout) {

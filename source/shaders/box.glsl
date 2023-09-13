@@ -26,5 +26,5 @@ void main()
     }
   }
   
-//  frag_color = vec4(acc,1);
+  frag_color = vec4(acc,1);
 }

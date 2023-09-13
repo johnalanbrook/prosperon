@@ -593,14 +593,13 @@ struct postphys_cb {
   JSValue send;
 };
 
-static struct postphys_cb begins[512];
-static uint32_t bptr;
+static struct postphys_cb *begins = NULL;
 
 void flush_collide_cbs() {
-  for (int i = 0; i < bptr; i++)
+  for (int i = 0; i < arrlen(begins); i++)
     script_callee(begins[i].c, 1, &begins[i].send);
 
-  bptr = 0;
+  arrsetlen(begins,0);
 }
 
 void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
@@ -618,10 +617,10 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
 
-  begins[bptr].c = c;
-  begins[bptr].send = obj;
-  bptr++;
-  return;
+  struct postphys_cb cb;
+  cb.c = c;
+  cb.send = obj;
+  arrput(begins, cb);  
 }
 
 #define CTYPE_BEGIN 0

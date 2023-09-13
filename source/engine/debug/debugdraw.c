@@ -46,7 +46,6 @@ static int line_sc = 0;
 static int line_sv = 0;
 static struct line_vert line_b[v_amt];
 static uint16_t line_bi[v_amt];
-
 static sg_pipeline grid_pipe;
 static sg_bindings grid_bind;
 static sg_shader grid_shader;
