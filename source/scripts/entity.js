@@ -18,6 +18,7 @@ var gameobject = {
   spawn(ur) {
     if (typeof ur === 'string')
       ur = prototypes.get_ur(ur);
+
     return ur.type.make(this);
   },
 
@@ -328,21 +329,11 @@ var gameobject = {
     var obj = Object.create(this);
     this.instances.push(obj);
     obj.toString = function() {
-      var props = obj.prop_obj();
-      for (var key in props)
-        if (typeof props[key] === 'object' && !props[key] === null && props[key].empty)
-	  delete props[key];
-	  
-      var edited = !props.empty;
-//      return (edited ? "#" : "") + obj.name + " object " + obj.body + ", layer " + obj.draw_layer + ", phys " + obj.layer;
-      return obj.ur.tag;
-    };
+      if (obj.ur)
+        return obj.ur.tag;
 
-    obj.fullpath = function() {
-      return obj.ur.tag;
-    };
-    obj.deflock('toString');
-    obj.defc('from', this.name);
+      return "NO UR"};
+
     obj.defn('body', make_gameobject(this.scale,
                            this.phys,
                            this.mass,
@@ -350,33 +341,8 @@ var gameobject = {
                            this.elasticity) );
     obj.sync();
     obj.defn('components', {});
+    
     Game.register_obj(obj);
-
-    var objects = [];
-    obj.objects = objects;
-
-    obj.remove_child = function(child) {
-      objects.remove(child);
-    }
-
-    obj.add_child = function(child) {
-      child.unparent();
-      objects.push(child);
-      child.level = obj;
-    }
-
-    /* Reparent this object to a new one */
-    obj.reparent = function(parent) {
-      if (parent === obj.level)
-        return;
-
-      parent.add_child(obj);
-    }
-
-    obj.unparent = function() {
-      if (!obj.level) return;
-      obj.level.remove_child(obj);
-    }
 
     cmd(113, obj.body, obj);
 
@@ -394,7 +360,7 @@ var gameobject = {
 
       set pos(x) {
         var diff = x.sub(this.pos);
-	objects.forEach(function(x) { x.pos = x.pos.add(diff); });
+	this.objects.forEach(function(x) { x.pos = x.pos.add(diff); });
         set_body(2,obj.body,x); },
       get pos() { return q_body(1,obj.body); },
 
@@ -413,7 +379,6 @@ var gameobject = {
 
     for (var prop in obj) {
        if (typeof obj[prop] === 'object' && 'make' in obj[prop]) {
-	   if (prop === 'flipper') return;
            obj[prop] = obj[prop].make(obj.body);
 	   obj[prop].defn('gameobject', obj);
 	   obj.components[prop] = obj[prop];
@@ -421,6 +386,8 @@ var gameobject = {
     };
 
     obj.check_registers(obj);
+    
+    gameobject.make_parentable(obj);
 
     /* Spawn subobjects defined */
     if (obj.$) {
@@ -429,6 +396,8 @@ var gameobject = {
     }
 
     if (typeof obj.start === 'function') obj.start();
+
+    level.add_child(obj);
 
     return obj;
   },
@@ -446,6 +415,33 @@ var gameobject = {
 
     Signal.obj_separate(fn,obj,this);
   },
+}
+
+gameobject.make_parentable = function(obj) {
+  var objects = [];
+
+  obj.remove_child = function(child) {
+    objects.remove(child);
+  }
+
+  obj.add_child = function(child) {
+    child.unparent();
+    objects.push(child);
+  }
+
+  /* Reparent this object to a new one */
+  obj.reparent = function(parent) {
+    if (parent === obj.level)
+      return;
+
+    parent.add_child(obj);
+  }
+
+  obj.unparent = function() {
+    if (!obj.level) return;
+    obj.level.remove_child(obj);
+  }
+  obj.objects = objects;
 }
 
 var locks = ['height', 'width', 'visible', 'body', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
@@ -529,6 +525,7 @@ prototypes.from_obj = function(name, obj)
     tag: name,
     type: newobj
   };
+  newobj.ur = prototypes.ur[name];
   return prototypes.ur[name];
 }
 

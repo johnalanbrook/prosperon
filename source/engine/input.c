@@ -329,7 +329,7 @@ const char *keyname_extd(int key) {
       return "minus";
       break;
     case SAPP_KEYCODE_GRAVE_ACCENT:
-      return "backtick";
+      return "`";
       break;
 
     case SAPP_KEYCODE_LEFT_BRACKET:

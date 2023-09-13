@@ -326,7 +326,7 @@ void gameobject_draw_debug(int go) {
     .g = 255,
     .a = 255
   };
-  draw_cppoint(pos, 3.f, color);
+
   cpBodyEachShape(g->body, body_draw_shapes_dbg, NULL);
 }
 

@@ -30,7 +30,7 @@ var sprite = clone(component, {
   pos: [0,0],
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
-  set asset(str) { this.path = str; Log.warn(`SET ${str} ON THE SPRITE`); this.sync();},
+  set asset(str) { this.path = str; this.sync();},
   angle: 0,
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
 
@@ -48,7 +48,6 @@ var sprite = clone(component, {
       get pos() { return cmd(111, this.id); },
       set pos(x) { cmd(37,this.id,x); },
       set layer(x) { cmd(60, this.id, x); },
-      get layer() { return this.gameobject.draw_layer; },
 
       get boundingbox() {
         var dim = this.dimensions;
@@ -67,21 +66,24 @@ var sprite = clone(component, {
       kill() { cmd(9,this.id); },
     });
     sprite.obscure('boundingbox');
+    sprite.layer = 1;
     return sprite;
   },
 
-  input_kp9_pressed() { this.pos = [0,0]; },
-  input_kp8_pressed() { this.pos = [-0.5, 0]; },
-  input_kp7_pressed() { this.pos = [-1,0]; },
-  input_kp6_pressed() { this.pos = [0,-0.5]; },
-  input_kp5_pressed() { this.pos = [-0.5,-0.5]; },
-  input_kp4_pressed() { this.pos = [-1,-0.5]; },
-  input_kp3_pressed() { this.pos = [0, -1]; },
-  input_kp2_pressed() { this.pos = [-0.5,-1]; },
-  input_kp1_pressed() { this.pos = [-1,-1]; },
-
   POS_MID: [-0.5, -0.5],
 });
+
+sprite.inputs = {};
+sprite.inputs.kp9 = function() { this.pos = [0,0]; };
+sprite.inputs.kp8 = function() { this.pos = [-0.5, 0]; };
+sprite.inputs.kp7 = function() { this.pos = [-1,0]; };
+sprite.inputs.kp6 = function() { this.pos = [0,-0.5]; };
+sprite.inputs.kp5 = function() { this.pos = [-0.5,-0.5]; };
+sprite.inputs.kp4 = function() { this.pos = [-1,-0.5]; };
+sprite.inputs.kp3 = function() { this.pos = [0, -1]; };
+sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
+sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
+
 
 /* Container to play sprites and anim2ds */
 var char2d = clone(sprite, {
@@ -335,6 +337,7 @@ var polygon2d = clone(collider2d, {
 });
 
 polygon2d.inputs = {};
+polygon2d.inputs.post = function() { this.sync(); };
 polygon2d.inputs.f10 = function() {
   this.points = sortpointsccw(this.points);
 };
@@ -346,7 +349,7 @@ polygon2d.inputs['C-lm'] = function() {
 polygon2d.inputs['C-lm'].doc = "Add a point to location of mouse.";
 
 polygon2d.inputs['S-lm'] = function() {
-  var idx = grab_from_points(screen2world(Mouse.pos), this.points.map(this.gameobject.this2world,this.gameobject), 25);
+  var idx = grab_from_points(Mouse.worldpos, this.points.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
   this.points.splice(idx, 1);
 };

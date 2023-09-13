@@ -4,10 +4,6 @@
 */
 prototypes.generate_ur('.');
 
-/* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
-var editor_level = Primum.spawn(ur.arena);
-var editor_camera = Game.camera;
-
 var editor_config = {
   grid_size: 100,
   grid_color: [99, 255, 128, 100],
@@ -28,8 +24,8 @@ var editor = {
   moveoffset: [0,0],
   startrot: 0,
   rotoffset: 0,
-  camera: editor_camera,
-  edit_level: {}, /* The current level that is being edited */
+  camera: undefined,
+  edit_level: undefined, /* The current level that is being edited */
   working_layer: 0,
   cursor: undefined,
   edit_mode: "basic",
@@ -535,7 +531,6 @@ var editor = {
     }
 
     GUI.text("0,0", world2screen([0,0]));
-    Debug.point([0,0],3);
     
     var clvl = this.edit_level;
     var ypos = 200;
@@ -597,12 +592,12 @@ var editor = {
       }
     }
 
-    Game.objects.forEach(function(obj) {
+    editor.edit_level.objects.forEach(function(obj) {
       if (!obj.selectable)
-        gui_img("icons/icons8-lock-16.png", world2screen(obj.pos));
+        GUI.image("icons/icons8-lock-16.png", world2screen(obj.pos));
     });
 
-    Debug.draw_grid(1, editor_config.grid_size/editor_camera.zoom, editor_config.grid_color);
+    Debug.draw_grid(1, editor_config.grid_size/editor.camera.zoom, editor_config.grid_color);
     var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); }, this);
     var endgrid = screen2world([Window.width, 0]);
     
@@ -650,11 +645,12 @@ var editor = {
       var log = cmd(84);
       var f = log.prev('\n', 0, 10);
       Nuke.scrolltext(log.slice(f));
-
+      this.replstr = Nuke.textbox(this.replstr);
       Nuke.end();
     }
-    
   },
+  
+  replstr: "",
 
   ed_debug() {
     if (!Debug.phys_drawing)
@@ -687,11 +683,12 @@ var editor = {
   lvl_history: [],
 
   load(file) {
-    if (this.edit_level) this.lvl_history.push(this.edit_level.ur);
+//    if (this.edit_level) this.lvl_history.push(this.edit_level.ur);
 //    this.edit_level.kill();
 //    this.edit_level = Level.loadfile(file);
 //    this.curlvl = this.edit_level.save();
-    Primum.spawn(prototypes.get_ur(file));
+//    Primum.spawn(prototypes.get_ur(file));
+    editor.edit_level.spawn(prototypes.get_ur(file));
 
     this.unselect();
   },
@@ -2035,7 +2032,7 @@ limited_editor.inputs['C-q'] = function()
 //  World.kill();
   World.clear_all();
   editor.load_json(editor.stash);
-  Game.view_camera(editor_camera);
+  Game.view_camera(editor.camera);
 }
 
 /* This is used for editing during a paused game */
@@ -2049,6 +2046,10 @@ Debug.register_call(editor.ed_debug, editor);
 if (IO.exists("editor.config"))
   load_configs("editor.config");
 
-editor.edit_level = editor_level;
+/* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
+editor.edit_level = Primum.spawn(ur.arena);
+editor.edit_level.selectable = false;
+editor.camera = Game.camera;
+
 
 Game.stop();

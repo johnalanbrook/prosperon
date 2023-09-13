@@ -415,7 +415,6 @@ void full_2d_pass(struct window *window)
   hudproj = HMM_Orthographic_RH_NO(0, window->width, 0, window->height, -1.f, 1.f);
 
   sprite_draw_all();
-  sprite_flush();
   call_draw();
 
   //// DEBUG
@@ -436,6 +435,7 @@ void full_2d_pass(struct window *window)
   call_gui();  
   debug_flush(&hudproj);
   text_flush(&hudproj);
+  sprite_flush();
 
   #ifndef NO_EDITOR
   call_nk_gui();

@@ -112,6 +112,7 @@ var Player = {
     for (var pawn of this.pawns.reverse()) {
       if (typeof pawn.inputs?.mouse?.[type] === 'function') {
         pawn.inputs.mouse[type].call(pawn,...args);
+	pawn.inputs.post?.call(pawn);
 	return;
       }
     }
@@ -141,8 +142,10 @@ var Player = {
 	  fn = pawn.inputs[cmd].down;
       }
 
-      if (typeof fn === 'function')
+      if (typeof fn === 'function') {
         fn.call(pawn, ... args);
+	pawn.inputs.post?.call(pawn);
+      }
     }
   },
   

@@ -17,8 +17,8 @@ var GUI = {
   },
 
   image(path,pos) {
-    let wh = cmd(64,path);
-    gui_img(path,pos.slice().sub(wh), 1.0, 0.0);
+    var wh = cmd(64,path);
+    gui_img(path,pos, [1.0,1.0], 0.0, 0.0, [0.0,0.0], 0.0, Color.black);
     return cwh2bb([0,0], wh);
   },
 

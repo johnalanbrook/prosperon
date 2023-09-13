@@ -39,6 +39,7 @@ Log.level = 1;
 
 var Color = {
   white: [255,255,255,255],
+  black: [0,0,0,255],
   blue: [84,110,255,255],
   green: [120,255,10,255],
   yellow: [251,255,43,255],
@@ -552,27 +553,13 @@ load("scripts/entity.js");
 
 var World = Object.create(gameobject);
 var Primum = World;
+gameobject.make_parentable(Primum);
 Primum.tag = "PRIMUM";
 Primum.selectable = false;
 Primum.ur = { tag: "Primum" };
-Primum.objects = [];
-
-World.remove_child = function(child) {
-  this.objects.remove(child);
-}
-
-World.add_child = function(child) {
-  child.unparent();
-  objects.push(child);
-  child.level = World;
-}
-
 /* Reparent this object to a new one */
-World.reparent = function(parent) { }
-
-World.unparent = function() { }
-
-World.name = "World";
+World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
+World.unparent = function() { Log.warn("The Primum has no parent, always."); }
 World.fullpath = function() { return World.name; };
 
 /* Load configs */
