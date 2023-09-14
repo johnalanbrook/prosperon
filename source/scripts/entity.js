@@ -22,6 +22,12 @@ var gameobject = {
     return ur.type.make(this);
   },
 
+  clone(name, ext) {
+    var obj = Object.create(this);
+    complete_assign(obj, ext);
+    return obj;
+  },
+
   layer: 0, /* Collision layer; should probably have been called "mask" */
   layer_nuke() {
     Nuke.label("Collision layer");
@@ -38,21 +44,7 @@ var gameobject = {
       this.draw_layer = Nuke.radio(i, this.draw_layer, i);
   },
 
-  in_air() {
-    return q_body(7, this.body);
-  },
 
-  on_ground() { return !this.in_air(); },
-
-  name: "gameobject",
-
-  toString() { return this.name; },
-
-  clone(name, ext) {
-    var obj = Object.create(this);
-    complete_assign(obj, ext);
-    return obj;
-  },
 
   dup(diff) {
     var dup = World.spawn(gameobjects[this.from]);
@@ -60,12 +52,6 @@ var gameobject = {
     return dup;
   },
 
-  instandup() {
-    var dup = World.spawn(gameobjects[this.from]);
-    dup.pos = this.pos;
-    dup.velocity = this.velocity;
-  },
-  
   ed_locked: false,
   
   _visible:  true,
@@ -85,9 +71,6 @@ var gameobject = {
     kinematic: 1,
     static: 2
   },
-
-  get moi() { return q_body(6, this.body); },
-  set moi(x) { set_body(13, this.body, x); },
   
   phys: 2,
   phys_nuke() {
@@ -103,11 +86,6 @@ var gameobject = {
   flipx: false,
   flipy: false,
   
-  body: -1,
-  get controlled() {
-    return Player.obj_controlled(this);
-  },
-
   set_center(pos) {
     var change = pos.sub(this.pos);
     this.pos = pos;
@@ -138,65 +116,24 @@ var gameobject = {
   },
   
   angle: 0,
-  
   get relangle() {
     if (!this.level) return this.angle;
-
     return this.angle - this.level.angle;
   },
+
+  velocity: [0,0],
+  angularvelocity: 0,
   
-  get velocity() { return q_body(3, this.body); },
-  set velocity(x) { set_body(9, this.body, x); },
-  get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
-  set angularvelocity(x) { if (this.alive) set_body(8, this.body, Math.deg2rad(x)); },
-
-  get alive() { return this.body >= 0; },
-
-  disable() {
-    this.components.forEach(function(x) { x.disable(); });
-    
-  },
-
-  enable() {
-    this.components.forEach(function(x) { x.enable(); });
-  },
-  
-  sync() {
-    if (this.body === -1) return;
-    cmd(55, this.body, this.flipx);
-    cmd(56, this.body, this.flipy);
-    set_body(2, this.body, this.pos);
-    set_body(0, this.body, Math.deg2rad(this.angle));
-    cmd(36, this.body, this.scale);
-    set_body(10,this.body,this.elasticity);
-    set_body(11,this.body,this.friction);
-    set_body(1, this.body, this.phys);
-    cmd(75,this.body,this.layer);
-    cmd(54, this.body);
-  },
-
-  syncall() {
-    this.instances.forEach(function(x) { x.sync(); });
-  },
-  
-  pulse(vec) { /* apply impulse */
-    set_body(4, this.body, vec);
-  },
-
-  push(vec) { /* apply force */
-    set_body(12,this.body,vec);
-  },
-
   gizmo: "", /* Path to an image to draw for this gameobject */
 
   /* Bounding box of the object in world dimensions */
-  get boundingbox() {
+  boundingbox() {
     var boxes = [];
     boxes.push({t:0, r:0,b:0,l:0});
 
     for (var key in this.components) {
       if ('boundingbox' in this.components[key])
-        boxes.push(this.components[key].boundingbox);
+        boxes.push(this.components[key].boundingbox());
     }
     
     if (boxes.empty) return cwh2bb([0,0], [0,0]);
@@ -220,71 +157,21 @@ var gameobject = {
     return bb ? bb : cwh2bb([0,0], [0,0]);
   },
 
-  set width(x) {},
-  get width() {
-    var bb = this.boundingbox;
+  width() {
+    var bb = this.boundingbox();
     return bb.r - bb.l;
   },
-  set height(x) {},
-  get height() {
-    var bb = this.boundingbox;
+
+  height() {
+    var bb = this.boundingbox();
     return bb.t-bb.b;
   },
 
   stop() {},
 
-  kill() {
-    if (this.body === -1) {
-      Log.warn(`Object is already dead!`);
-      return;
-    }
-
-
-  
-    Register.endofloop(() => {
-      cmd(2, this.body);
-      delete Game.objects[this.body];
-    
-      if (this.level)
-        this.level.unregister(this);
-      
-      Player.uncontrol(this);
-      this.instances.remove(this);
-      Register.unregister_obj(this);
-//      Signal.clear_obj(this);
-    
-      this.body = -1;
-      for (var key in this.components) {
-        Register.unregister_obj(this.components[key]);
-        this.components[key].kill();
-      }
-
-      this.objects.forEach(x => x.kill());
-
-      this.stop();
-    });
-  },
-
-  get up() {
-    return [0,1].rotate(Math.deg2rad(this.angle));
-  },
-  
-  get down() {
-    return [0,-1].rotate(Math.deg2rad(this.angle));
-  },
-  
-  get right() {
-    return [1,0].rotate(Math.deg2rad(this.angle));
-  },
-  
-  get left() {
-    return [-1,0].rotate(Math.deg2rad(this.angle));
-  },
-
   /* Make a unique object the same as its prototype */
   revert() {
-    unmerge(this, this.prop_obj());
-    this.sync();
+//    unmerge(this, this.prop_obj());
   },
 
   gui() {
@@ -298,8 +185,6 @@ var gameobject = {
     }
   },
 
-  world2this(pos) { return cmd(70, this.body, pos); },
-  this2world(pos) { return cmd(71, this.body,pos); },
 
   check_registers(obj) {
     Register.unregister_obj(this);
@@ -344,7 +229,7 @@ var gameobject = {
                            this.mass,
                            this.friction,
                            this.elasticity) );
-    obj.sync();
+
     obj.defn('components', {});
     
     Game.register_obj(obj);
@@ -353,33 +238,101 @@ var gameobject = {
 
     /* Now that it's concrete in the engine, these functions update to return engine data */
     complete_assign(obj, {
-      set scale(x) { cmd(36, obj.body, x); },
-      get scale() { return cmd(103, obj.body); },
-      get flipx() { return cmd(104,obj.body); },
-      set flipx(x) { cmd(55, obj.body, x); },
-      get flipy() { return cmd(105,obj.body); },
-      set flipy(x) { cmd(56, obj.body, x); },
+      set scale(x) { cmd(36, this.body, x); },
+      get scale() { return cmd(103, this.body); },
+      get flipx() { return cmd(104,this.body); },
+      set flipx(x) { cmd(55, this.body, x); },
+      get flipy() { return cmd(105,this.body); },
+      set flipy(x) { cmd(56, this.body, x); },
 
-      get angle() { return Math.rad2deg(q_body(2,obj.body))%360; },
-      set angle(x) { set_body(0,obj.body, Math.deg2rad(x)); },
+      get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
+      set angle(x) { set_body(0,this.body, Math.deg2rad(x)); },
 
       set pos(x) {
         var diff = x.sub(this.pos);
 	this.objects.forEach(function(x) { x.pos = x.pos.add(diff); });
-        set_body(2,obj.body,x); },
-      get pos() { return q_body(1,obj.body); },
+        set_body(2,this.body,x); },
+      get pos() { return q_body(1,this.body); },
 
-      get elasticity() { return cmd(107,obj.body); },
-      set elasticity(x) { cmd(106,obj.body,x); },
+      get elasticity() { return cmd(107,this.body); },
+      set elasticity(x) { cmd(106,this.body,x); },
 
-      get friction() { return cmd(109,obj.body); },
-      set friction(x) { cmd(108,obj.body,x); },
+      get friction() { return cmd(109,this.body); },
+      set friction(x) { cmd(108,this.body,x); },
 
-      set mass(x) { set_body(7,obj.body,x); },
-      get mass() { return q_body(5, obj.body); },
+      set mass(x) { set_body(7,this.body,x); },
+      get mass() { return q_body(5, this.body); },
 
-      set phys(x) { set_body(1, obj.body, x); },
-      get phys() { return q_body(0,obj.body); },
+      set phys(x) { set_body(1, this.body, x); },
+      get phys() { return q_body(0,this.body); },
+      get velocity() { return q_body(3, this.body); },
+      set velocity(x) { set_body(9, this.body, x); },
+      get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
+      set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
+      pulse(vec) { set_body(4, this.body, vec);},
+
+      push(vec) { set_body(12,this.body,vec);},
+      world2this(pos) { return cmd(70, this.body, pos); },
+      this2world(pos) { return cmd(71, this.body,pos); },
+      set layer(x) { cmd(75,this.body,x); },
+      get layer() { return 0; },
+      alive() { return this.body >= 0; },
+      in_air() { return q_body(7, this.body);},
+      on_ground() { return !this.in_air(); },
+
+      disable() { this.components.forEach(function(x) { x.disable(); });},
+      enable() { this.components.forEach(function(x) { x.enable(); });},
+      sync() { },
+      
+      kill() {
+	if (this.body === -1) {
+	  Log.warn(`Object is already dead!`);
+	  return;
+	}
+
+	Register.endofloop(() => {
+	  cmd(2, this.body);
+	  delete Game.objects[this.body];
+
+	  if (this.level)
+	    this.level.unregister(this);
+
+	  Player.uncontrol(this);
+	  this.instances.remove(this);
+	  Register.unregister_obj(this);
+    //      Signal.clear_obj(this);
+
+	  this.body = -1;
+	  for (var key in this.components) {
+	    Register.unregister_obj(this.components[key]);
+	    this.components[key].kill();
+	  }
+
+	  this.objects.forEach(x => x.kill());
+
+	  this.stop();
+	});
+      },
+
+      up() { return [0,1].rotate(Math.deg2rad(this.angle));},
+      down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
+      right() { return [1,0].rotate(Math.deg2rad(this.angle));},
+      left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
+      
+      toJSON() {
+        var ret = {};
+	for (var key in this) {
+	  var prop = Object.getOwnPropertyDescriptor(this, key);
+	  if (!prop) continue;
+	  if (prop.get) {
+	    if (prop.get() !== Object.getPrototypeOf(this)[key])
+  	      ret[key] = prop.get();
+	  }
+	  else
+	    ret[key] = this[key];
+	}
+	return ret;
+      },
     });
 
     for (var prop in obj) {
@@ -448,10 +401,6 @@ gameobject.make_parentable = function(obj) {
   }
   obj.objects = objects;
 }
-
-var locks = ['height', 'width', 'visible', 'body', 'controlled', 'selectable', 'save', 'velocity', 'angularvelocity', 'alive', 'boundingbox', 'name', 'scale', 'angle', 'properties', 'moi', 'relpos', 'relangle', 'up', 'down', 'right', 'left', 'bodytype', 'gizmo', 'pos'];
-locks.forEach(x => gameobject.obscure(x));
-
 
 /* Default objects */
 var prototypes = {};

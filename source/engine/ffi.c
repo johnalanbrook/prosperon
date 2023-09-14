@@ -979,10 +979,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return num2js(js2go(argv[1])->scale);
 
   case 104:
-    return bool2js(js2go(argv[1])->flipx);
+    return bool2js(js2go(argv[1])->flipx == -1 ? 1 : 0);
 
   case 105:
-    return bool2js(js2go(argv[1])->flipy);
+    return bool2js(js2go(argv[1])->flipy == -1 ? 1 : 0);
 
   case 106:
     js2go(argv[1])->e = js2number(argv[2]);

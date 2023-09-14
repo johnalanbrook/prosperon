@@ -166,7 +166,8 @@ var editor = {
 
     objs.forEach(function(x) {
       var newobj = this.edit_level.spawn(x.ur);
-      dainty_assign(newobj, x);
+      //dainty_assign(newobj, x);
+      Object.assign(newobj,x);
       newobj.pos = x.pos;
       newobj.angle = x.angle;
       duped.push(newobj);
@@ -545,7 +546,7 @@ var editor = {
       var color = x.color ? x.color : [255,255,255];
       GUI.text(x.toString(), world2screen(x.pos).add([0, 16]), 1, color);
       GUI.text(x.pos.map(function(x) { return Math.round(x); }), world2screen(x.pos), 1, color);
-      Debug.arrow(world2screen(x.pos), world2screen(x.pos.add(x.up.scale(40))), Color.yellow, 1);
+      Debug.arrow(world2screen(x.pos), world2screen(x.pos.add(x.up().scale(40))), Color.yellow, 1);
       if (x.hasOwn('varname')) GUI.text(x.varname, world2screen(x.pos).add([0,32]), 1, [84,110,255]);
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
@@ -763,6 +764,8 @@ editor.inputs['C-d'] = function() {
 };
 editor.inputs['C-d'].doc = "Duplicate all selected objects.";
 
+editor.inputs.f3 = function() { editor.selectlist.forEach(x => Log.say(JSON.stringify(x,null,2))); };
+
 editor.inputs['C-m'] = function() {
   if (editor.sel_comp) {
     if (editor.sel_comp.flipy)
@@ -792,8 +795,8 @@ editor.inputs.q.doc = "Toggle help for the selected component.";
 
 editor.inputs.f = function() {
   if (editor.selectlist.length === 0) return;
-  var bb = editor.selectlist[0].boundingbox;
-  editor.selectlist.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox); });
+  var bb = editor.selectlist[0].boundingbox();
+  editor.selectlist.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox()); });
   editor.zoom_to_bb(bb);
 };
 editor.inputs.f.doc = "Find the selected objects.";

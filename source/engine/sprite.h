@@ -7,22 +7,20 @@
 #include "HandmadeMath.h"
 #include "render.h"
 
-
 struct datastream;
 struct gameobject;
 
 struct sprite {
-    HMM_Vec2 pos;
-    HMM_Vec2 size;
-    float rotation;
-    struct rgba color;
-    int go;
-    int id;
-    struct Texture *tex;
-    struct glrect frame;
-    int next;
-    int enabled;
-    int layer;
+  HMM_Vec2 pos;
+  HMM_Vec2 size;
+  float rotation;
+  struct rgba color;
+  int go; /* id of gameobject */
+  struct Texture *tex;
+  struct glrect frame;
+  int enabled;
+  int layer;
+  int next;
 };
 
 int make_sprite(int go);

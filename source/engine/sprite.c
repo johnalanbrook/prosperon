@@ -57,22 +57,23 @@ int make_sprite(int go) {
       .layer = 0,
       .enabled = 1};
 
+  int slot = 0;
   if (first < 0) {
     arrput(sprites, sprite);
-    arrlast(sprites).id = arrlen(sprites) - 1;
-    return arrlen(sprites) - 1;
+    slot = arrlen(sprites)-1;
   } else {
-    int slot = first;
+    slot = first;
     first = id2sprite(first)->next;
     *id2sprite(slot) = sprite;
-
-    return slot;
   }
+
+  return slot;
 }
 
 void sprite_delete(int id) {
   struct sprite *sp = id2sprite(id);
   sp->go = -1;
+  sp->enabled = 0;
   sp->next = first;
   first = id;
 }
@@ -121,6 +122,7 @@ void sprite_draw_all() {
 
   for (int i = 0; i < arrlen(sprites); i++)
     if (sprites[i].go >= 0 && sprites[i].enabled) arrpush(layers[sprites[i].layer], &sprites[i]);
+  
 
   for (int i = 4; i >= 0; i--)
     for (int j = 0; j < arrlen(layers[i]); j++)
@@ -136,8 +138,6 @@ void sprite_settex(struct sprite *sprite, struct Texture *tex) {
   sprite->tex = tex;
   sprite_setframe(sprite, &ST_UNIT);
 }
-
-
 
 void sprite_initialize() {
   shader_sprite = sg_compile_shader("shaders/spritevert.glsl", "shaders/spritefrag.glsl", &(sg_shader_desc){
