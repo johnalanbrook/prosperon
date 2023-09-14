@@ -238,6 +238,9 @@ var gameobject = {
       Log.warn(`Object is already dead!`);
       return;
     }
+
+
+  
     Register.endofloop(() => {
       cmd(2, this.body);
       delete Game.objects[this.body];
@@ -255,6 +258,8 @@ var gameobject = {
         Register.unregister_obj(this.components[key]);
         this.components[key].kill();
       }
+
+      this.objects.forEach(x => x.kill());
 
       this.stop();
     });

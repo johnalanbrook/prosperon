@@ -252,7 +252,7 @@ Debug.Options.gif = {
   h: 480, /* Max height */
   stretch: false, /* True if you want to stretch */
   cpf: 4,
-  depth: 8,
+  depth: 16,
   file: "out.gif",
   rec: false,
   secs: 6,
@@ -279,7 +279,6 @@ Debug.Options.gif = {
   },
 
   stop() {
-    Log.warn("STOPPED");
     if (!this.rec) return;
     cmd(132, this.file);
     this.rec = false;

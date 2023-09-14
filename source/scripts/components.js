@@ -63,7 +63,7 @@ var sprite = clone(component, {
           cmd(12,this.id,this.path,this.rect);
       },
 
-      kill() { cmd(9,this.id); },
+      kill() { cmd(9,sprite.id); },
     });
     sprite.obscure('boundingbox');
     sprite.layer = 1;
@@ -646,7 +646,7 @@ var circle2d = clone(collider2d, {
       set radius(x) { cmd_circle2d(0,this.id,x); },
       get radius() { return cmd_circle2d(2,this.id); },
 
-      set offset(x) { cmd_circle2d(1,this.id,this.offset); },
+      set offset(x) { cmd_circle2d(1,this.id,x); },
       get offset() { return cmd_circle2d(3,this.id); },
 
       get boundingbox() {

@@ -598,6 +598,19 @@ function bb2points(bb)
   ];
 }
 
+function points2cwh(start,end)
+{
+    var c = [];
+    c[0] = (end[0] - start[0]) / 2;
+    c[0] += start[0];
+    c[1] = (end[1] - start[1]) / 2; 
+    c[1] += start[1];
+    var wh = [];
+    wh[0] = Math.abs(end[0] - start[0]);
+    wh[1] = Math.abs(end[1] - start[1]);
+    return {c: c, wh: wh};
+}
+
 function bb2cwh(bb) {
   if (!bb) return undefined;
   var cwh = {};

@@ -215,6 +215,10 @@ var Register = {
       case "mouse":
         Player.players[0].mouse_input(btn, state, ...args);
 	break;
+
+      case "char":
+        Player.players[0].char_input(btn);
+	break;
     };
   },
 

@@ -118,6 +118,16 @@ var Player = {
     }
   },
 
+  char_input(c) {
+    for (var pawn of this.pawns.reverse()) {
+      if (typeof pawn.inputs?.char === 'function') {
+        pawn.inputs.char.call(pawn, c);
+	pawn.inputs.post?.call(pawn);
+	return;
+      }
+    };
+  },
+
   raw_input(cmd, state, ...args) {
     for (var pawn of this.pawns.reverse()) {
       if (typeof pawn.inputs?.any === 'function') {

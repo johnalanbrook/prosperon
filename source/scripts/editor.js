@@ -21,17 +21,20 @@ var editor = {
   dbgdraw: false,
   selected: undefined,
   selectlist: [],
-  moveoffset: [0,0],
-  startrot: 0,
-  rotoffset: 0,
+  grablist: [],
+  scalelist: [],
+  rotlist: [],
   camera: undefined,
   edit_level: undefined, /* The current level that is being edited */
   working_layer: 0,
-  cursor: undefined,
+  get cursor() {
+    if (this.selectlist.length === 0 ) return Mouse.worldpos;
+    return find_com(this.selectlist);
+  },
   edit_mode: "basic",
 
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
-    var go = physics.pos_query(screen2world(Mouse.pos));
+    var go = physics.pos_query(Mouse.worldpos);
     return this.do_select(go);
   },
     
@@ -174,25 +177,8 @@ var editor = {
 
   sel_start: [],
 
-  points2cwh(start, end) {
-    var c = [];
-    c[0] = (end[0] - start[0]) / 2;
-    c[0] += start[0];
-    c[1] = (end[1] - start[1]) / 2; 
-    c[1] += start[1];
-    var wh = [];
-    wh[0] = Math.abs(end[0] - start[0]);
-    wh[1] = Math.abs(end[1] - start[1]);
-    return {c: c, wh: wh};
-  },
-
   mover(amt, snap) {
     return function(go) { go.pos = go.pos.add(amt)};
-  },
-
-  input_any_released() {
-    this.check_snapshot();
-    this.edit_level.check_dirty();
   },
 
   step_amt() { return Keys.shift() ? 10 : 1; },
@@ -237,7 +223,9 @@ var editor = {
     
   unselect() {
     editor.selectlist = [];
-    this.grabselect = undefined;
+    this.grabselect = [];
+    this.scalelist = [];
+    this.rotlist = [];
     this.sel_comp = undefined;
   },
 
@@ -311,12 +299,6 @@ var editor = {
       Register.unregister_obj(this);
   },
    
-  moveoffsets: [],
-
-  scaleoffset: 0,
-  startscales: [],
-  selected_com: [0,0],
-  
   openpanel(panel, dontsteal) {
     if (this.curpanel)
       this.curpanel.close();
@@ -339,11 +321,6 @@ var editor = {
   cleanpanels(panel) {
     this.curpanels = this.curpanels.filter(function(x) { return x.on; });
   },
-  
-  
-  startrots: [],
-  startpos: [],
-  startoffs: [],
   
   snapshots: [],
   curlvl: {}, /* What the level currently looks like on file */
@@ -471,18 +448,20 @@ var editor = {
 
     Level.sync_file(this.edit_level.file);
   },
+
   
   clear_level() {
-    Log.info("Closed level.");
-
-    if (this.edit_level.level) {
-      this.openpanel(gen_notify("Can't close a nested level. Save up to the root before continuing."));
-      return;
+    if (this.edit_level) {
+      if (this.edit_level.level) {
+        this.openpanel(gen_notify("Can't close a nested level. Save up to the root before continuing."));
+        return;
+      }
+      this.unselect();
+      this.edit_level.kill();
     }
     
-    this.unselect();
-    this.edit_level.kill();
-    this.edit_level = Level.create();
+    this.edit_level = Primum.spawn(ur.arena);
+    editor.edit_level.selectable = false;
   },
 
   _sel_comp: undefined,
@@ -509,16 +488,15 @@ var editor = {
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
 
-    if (this.cursor) {
-      Debug.point(World2screen(this.cursor), 5, Color.green);
-
+    Debug.point(world2screen(this.cursor), 2, Color.green);
+/*
       this.selectlist.forEach(function(x) {
         var p = [];
 	p.push(world2screen(this.cursor));
 	p.push(world2screen(x.pos));
         Debug.line(p, Color.green);
       },this);
-    }
+ */
 
     if (this.programmode) {
       this.edit_level.objects.forEach(function(x) {
@@ -611,12 +589,9 @@ var editor = {
       startgrid[1] += editor_config.grid_size;
     }
     
-    Debug.point(world2screen(this.selected_com), 3);
-    this.selected_com = find_com(this.selectlist);
-
     /* Draw selection box */
     if (this.sel_start) {
-      var endpos = screen2world(Mouse.pos);
+      var endpos = Mouse.worldpos;
       var c = [];
       c[0] = (endpos[0] - this.sel_start[0]) / 2;
       c[0] += this.sel_start[0];
@@ -674,23 +649,17 @@ var editor = {
   paste() {
     this.selectlist = this.dup_objects(this.killring);
 
-    var setpos = this.cursor ? this.cursor : Mouse.worldpos;
     this.selectlist.forEach(function(x) {
-      x.pos = x.pos.sub(this.killcom).add(setpos);
+      x.pos = x.pos.sub(this.killcom).add(this.cursor);
     },this);
   },
 
   lvl_history: [],
 
   load(file) {
-//    if (this.edit_level) this.lvl_history.push(this.edit_level.ur);
-//    this.edit_level.kill();
-//    this.edit_level = Level.loadfile(file);
-//    this.curlvl = this.edit_level.save();
-//    Primum.spawn(prototypes.get_ur(file));
-    editor.edit_level.spawn(prototypes.get_ur(file));
-
-    this.unselect();
+    var obj = editor.edit_level.spawn(prototypes.get_ur(file));
+    obj.pos = Mouse.worldpos;
+    this.selectlist = [obj];
   },
 
   load_prev() {
@@ -698,21 +667,6 @@ var editor = {
 
     var file = this.lvl_history.pop();
     this.edit_level = Level.loadfile(file);
-    this.unselect();
-  },
-
-  addlevel(file, pos) {
-    Log.info("adding file " + file + " at pos " + pos);
-    var newlvl = this.edit_level.addfile(file);
-    newlvl.pos = pos;
-    editor.selectlist = [];
-    editor.selectlist.push(newlvl);
-    return;
-  },
-
-  load_json(json) {
-    this.edit_level.load(json);
-    this.curlvl = this.edit_level.save();
     this.unselect();
   },
   
@@ -761,6 +715,10 @@ var editor = {
 }
 
 editor.inputs = {};
+editor.inputs.release_post = function() {
+  editor.check_snapshot();
+  editor.edit_level.check_dirty();
+};
 editor.inputs['C-a'] = function() {
   if (!editor.selectlist.empty) { editor.unselect(); return; }
   editor.unselect();
@@ -866,53 +824,29 @@ editor.inputs['C-r'] = function() { editor.selectlist.forEach(function(x) { x.an
 editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
 editor.inputs.r = function() {
-  editor.startrots = [];
-
   if (editor.sel_comp && 'angle' in editor.sel_comp) {
-    var relpos = screen2world(Mouse.pos).sub(editor.sel_comp.gameobject.pos);
+    var relpos = Mouse.worldpos.sub(editor.sel_comp.gameobject.pos);
     editor.startoffset = Math.atan2(relpos.y, relpos.x);
     editor.startrot = editor.sel_comp.angle;
 
     return;
   }
 
-  var offf = editor.cursor ? editor.cursor : editor.selected_com;
-  var relpos = screen2world(Mouse.pos).sub(offf);
-  editor.startoffset = Math.atan2(relpos[1], relpos[0]);
-
-  editor.selectlist.forEach(function(x, i) {
-    editor.startrots[i] = x.angle;
-    editor.startpos[i] = x.pos;
-    editor.startoffs[i] = x.pos.sub(offf);
-  }, editor);
+  editor.rotlist = [];
+  editor.selectlist.forEach(function(x) {
+    var relpos = Mouse.worldpos.sub(editor.cursor);
+    editor.rotlist.push({
+      obj: x,
+      angle: x.angle,
+      pos: x.pos,
+      offset: x.pos.sub(editor.cursor),
+      rotoffset: Math.atan2(relpos.y, relpos.x),
+    });
+  });
 };
 editor.inputs.r.doc = "Rotate selected using the mouse while held down.";
 
-editor.inputs.r.down = function() {
-    if (this.sel_comp && 'angle' in this.sel_comp) {
-      if (!('angle' in this.sel_comp)) return;
-      var relpos = screen2world(Mouse.pos).sub(this.sel_comp.gameobject.pos);
-      var anglediff = Math.rad2deg(Math.atan2(relpos.y, relpos.x)) - this.startoffset;
-      this.sel_comp.angle = this.startrot + anglediff;
-      return;
-    }
-    if (this.startrots.empty) return;
-
-    var offf = this.cursor ? this.cursor : this.selected_com;
-    var relpos = screen2world(Mouse.pos).sub(offf);
-    var anglediff = Math.rad2deg(Math.atan2(relpos[1], relpos[0]) - this.startoffset);
-
-    if (this.cursor) {
-      this.selectlist.forEach(function(x, i) {
-        x.angle = this.startrots[i] + anglediff;
-        x.pos = offf.add(this.startoffs[i].rotate(Math.deg2rad(anglediff)));
-      }, this);
-    } else {
-      this.selectlist.forEach(function(x,i) {
-        x.angle = this.startrots[i]+anglediff;
-      }, this);
-    }
-};
+editor.inputs.r.released = function() { editor.rotlist = []; }
 
 editor.inputs['C-p'] = function() {
   if (!Game.playing()) {
@@ -1029,11 +963,6 @@ editor.inputs['C-o'] = function() {
 };
 editor.inputs['C-o'].doc = "Open a level.";
 
-editor.inputs['M-o'] = function() {
-   editor.openpanel(addlevelpanel);
-};
-editor.inputs['M-o'].doc = "Select a level to add to the current level.";
-
 editor.inputs['C-M-o'] = function() {
   if (editor.selectlist.length === 1 && editor.selectlist[0].file) {
     if (editor.edit_level.dirty) return;
@@ -1124,7 +1053,7 @@ editor.inputs['M-j'] = function() {
 };
 editor.inputs['M-j'].doc = "Remove variable names from selected objects.";
 
-editor.inputs.lm = function() { editor.sel_start = screen2world(Mouse.pos); };
+editor.inputs.lm = function() { editor.sel_start = Mouse.worldpos; };
 editor.inputs.lm.doc = "Selection box.";
 
 editor.inputs.lm.released = function() {
@@ -1140,11 +1069,11 @@ editor.inputs.lm.released = function() {
     var selects = [];
     
     /* TODO: selects somehow gets undefined objects in here */
-    if (screen2world(Mouse.pos).equal(editor.sel_start)) {
+    if (Mouse.worldpos.equal(editor.sel_start)) {
       var sel = editor.try_select();
       if (sel) selects.push(sel);
     } else {
-      var box = editor.points2cwh(editor.sel_start, screen2world(Mouse.pos));
+      var box = points2cwh(editor.sel_start, Mouse.worldpos);
     
       box.pos = box.c;
     
@@ -1194,11 +1123,6 @@ editor.inputs.lm.released = function() {
 };
 
 editor.inputs.rm = function() {
-    if (Keys.shift()) {
-      editor.cursor = undefined;
-      return;
-    }
-    
     if (editor.brush_obj)
       editor.brush_obj = undefined;
   
@@ -1213,40 +1137,29 @@ editor.inputs.rm = function() {
 editor.inputs.mm = function() {
     if (editor.brush_obj) {
       editor.selectlist = editor.dup_objects([editor.brush_obj]);
-      editor.selectlist[0].pos = screen2world(Mouse.pos);
+      editor.selectlist[0].pos = Mouse.worldpos;
       editor.grabselect = editor.selectlist[0];
       return;
     }
     
     if (editor.sel_comp && 'pick' in editor.sel_comp) {
-      editor.grabselect = editor.sel_comp.pick(screen2world(Mouse.pos));
+      editor.grabselect = editor.sel_comp.pick(Mouse.worldpos);
       if (!editor.grabselect) return;
       
-      editor.moveoffset = editor.sel_comp.gameobject.editor2world(editor.grabselect).sub(screen2world(Mouse.pos));
+//      editor.moveoffset = editor.sel_comp.gameobject.editor2world(editor.grabselect).sub(Mouse.worldpos);
       return;
     }
-  
+
     var grabobj = editor.try_select();
-/*    if (Array.isArray(grabobj)) {
-      editor.selectlist = grabobj;
-      return;
-    }
-*/
-    editor.grabselect = undefined;
+    editor.grabselect = [];
     if (!grabobj) return;
     
     if (Keys.ctrl()) {
       grabobj = editor.dup_objects([grabobj])[0];
     }
 
-    editor.grabselect = grabobj;
-
-    if (!editor.selectlist.includes(grabobj)) {
-      editor.selectlist = [];
-      editor.selectlist.push(grabobj);
-    }
-
-    editor.moveoffset = editor.grabselect.pos.sub(screen2world(Mouse.pos));
+    editor.grabselect = [grabobj];
+    editor.selectlist = [grabobj];
 };
 editor.inputs['C-mm'] = editor.inputs.mm;
 
@@ -1261,19 +1174,15 @@ editor.inputs['C-M-rm'] = function() {
   Mouse.disabled();
 };
 
-editor.inputs['C-S-mm'] = function() { editor.cursor = find_com(editor.selectlist); };
-
 editor.inputs.rm.released = function() {
   editor.mousejoy = undefined;
   editor.z_start = undefined;
   Mouse.normal();
 };
 
-editor.inputs['S-mm'] = function() { this.cursor = Mouse.worldpos; };
-
 editor.inputs.mm.released = function () {
   Mouse.normal();
-  this.grabselect = undefined;
+  this.grabselect = [];
   editor.mousejoy = undefined;
   editor.joystart = undefined;
 };
@@ -1282,20 +1191,33 @@ editor.inputs.mouse.move = function(pos, dpos)
 {
   if (editor.mousejoy) {
     if (editor.z_start)
-      editor.camera.zoom += dpos.y/500;
+      editor.camera.zoom -= dpos.y/500;
     else if (editor.joystart)
-      editor.camera.pos = editor.camera.pos.add(dpos.scale(editor.camera.zoom).mapc(mult,[-1,1]));
+      editor.camera.pos = editor.camera.pos.sub(dpos.scale(editor.camera.zoom));
   }
+
+  editor.grabselect?.forEach(x => x.pos = x.pos.add(dpos.scale(editor.camera.zoom)));
   
-  if (this.grabselect) {
-    if ('pos' in this.grabselect)
-      this.grabselect.pos = this.moveoffset.add(screen2world(Mouse.pos));
-    else
-      this.grabselect.set(this.selectlist[0].world2this(this.moveoffset.add(screen2world(Mouse.pos))));
-  }
+  var relpos = Mouse.worldpos.sub(editor.cursor);
+  var dist = Vector.length(relpos);
+
+  editor.scalelist?.forEach(function(x) {
+    var scalediff = dist / x.scaleoffset;
+    x.obj.scale = x.scale * scalediff;
+    if (x.offset)
+      x.obj.pos = editor.cursor.add(x.offset.scale(scalediff));
+  });
+
+  editor.rotlist?.forEach(function(x) {
+    var anglediff = Math.atan2(relpos.y, relpos.x) - x.rotoffset;
+    
+    x.obj.angle = x.angle + Math.rad2deg(anglediff);
+    if (x.pos)
+      x.obj.pos = x.pos.sub(x.offset).add(x.offset.rotate(anglediff));
+  });
 }
 
-editor.inputs['C-M-S-lm'] = function() { editor.selectlist[0].set_center(screen2world(Mouse.pos)); };
+editor.inputs['C-M-S-lm'] = function() { editor.selectlist[0].set_center(Mouse.worldpos); };
 editor.inputs['C-M-S-lm'].doc = "Set world center to mouse position.";
 
 editor.inputs.delete = function() {
@@ -1322,29 +1244,19 @@ editor.inputs['C-S-g'] = function() { editor.openpanel(groupsaveaspanel); };
 editor.inputs['C-S-g'].doc = "Save selected objects as a new level.";
 
 editor.inputs.g = function() {
-    if (this.sel_comp) {
-      if ('pos' in this.sel_comp)
-        this.moveoffset = this.sel_comp.pos.sub(screen2world(Mouse.pos));
-      return;
-    }
+  editor.grabselect = [];
   
-  editor.selectlist.forEach(function(x,i) { editor.moveoffsets[i] = x.pos.sub(screen2world(Mouse.pos)); } );
+  if (this.sel_comp) {
+    if ('pos' in this.sel_comp)
+      editor.grabselect = [this.sel_comp];
+  } else     
+    editor.grabselect = editor.selectlist.slice();
+
+  if (!editor.grabselect.empty)
+    Mouse.disabled();
 };
 editor.inputs.g.doc = "Move selected objects.";
-editor.inputs.g.released = function() { editor.moveoffsets = []; };
-
-editor.inputs.g.down = function() {
-    if (this.sel_comp) {
-      this.sel_comp.pos = this.moveoffset.add(screen2world(Mouse.pos));
-      return;
-    }
-
-    if (this.moveoffsets.length === 0) return;
-
-    this.selectlist.forEach(function(x,i) {
-      x.pos = this.moveoffsets[i].add(screen2world(Mouse.pos));
-    }, this);
-};
+editor.inputs.g.released = function() { editor.grabselect = []; Mouse.normal(); };
 
 editor.inputs.up = function() { this.key_move([0,1]); };
 editor.inputs.up.rep = true;
@@ -1415,14 +1327,9 @@ editor.inputs['C-x'].doc = "Cut objects to killring.";
 editor.inputs['C-v'] = function() { editor.paste(); };
 editor.inputs['C-v'].doc = "Pull objects from killring to world.";
 
-editor.inputs['M-g'] = function() {
-  if (this.cursor) return;
-  var com = find_com(this.selectlist);
-  this.selectlist.forEach(function(x) {
-    x.pos = x.pos.sub(com).add(this.cursor);
-  },this);
+editor.inputs.char = function(c) {
+  
 };
-editor.inputs['M-g'].doc = "Set cursor to the center of selected objects.";
 
 var brushmode = {};
 brushmode.inputs = {};
@@ -1446,46 +1353,33 @@ compmode.inputs = {};
 compmode.inputs['C-c'] = function() {}; /* Simply a blocker */
 compmode.inputs['C-x'] = function() {};
 
+editor.scalelist = [];
 editor.inputs.s = function() {
-  var offf = editor.cursor ? editor.cursor : editor.selected_com;
-  editor.scaleoffset = Vector.length(Mouse.worldpos.sub(offf));
-
+  var scaleoffset = Vector.length(Mouse.worldpos.sub(editor.cursor));
+  editor.scalelist = [];
+  
   if (editor.sel_comp) {
     if (!('scale' in editor.sel_comp)) return;
-    editor.startscales = [];
-    editor.startscales.push(editor.sel_comp.scale);
+    editor.scalelist.push({
+      obj: editor.sel_comp,
+      scale: editor.sel_comp.scale,
+      scaleoffset: scaleoffset,
+    });
     return;
   }
 
-  editor.selectlist.forEach(function(x, i) {
-    editor.startscales[i] = x.scale;
-    if (editor.cursor)
-      editor.startoffs[i] = x.pos.sub(editor.cursor);
-  }, editor);
-
+  editor.selectlist.forEach(function(x) {
+    editor.scalelist.push({
+      obj: x,
+      scale: x.scale,
+      offset: x.pos.sub(editor.cursor),
+      scaleoffset: scaleoffset,
+    });
+  });
 };
 editor.inputs.s.doc = "Scale selected.";
 
-editor.inputs.s.down = function() {
-    if (!this.scaleoffset) return;
-    var offf = this.cursor ? this.cursor : this.selected_com;
-    var dist = Vector.length(screen2world(Mouse.pos).sub(offf));
-    var scalediff = dist/this.scaleoffset;
-    
-    if (this.sel_comp) {
-      if (!('scale' in this.sel_comp)) return;
-      this.sel_comp.scale = this.startscales[0] * scalediff;
-      return;
-    }
-    
-    this.selectlist.forEach(function(x, i) {
-      x.scale = this.startscales[i] * scalediff;
-      if (this.cursor)
-        x.pos = this.cursor.add(this.startoffs[i].scale(scalediff));
-    }, this);
-};
-
-editor.inputs.s.released = function() { this.scaleoffset = undefined; };
+editor.inputs.s.released = function() { this.scalelist = []; };
 
 var inputpanel = {
   title: "untitled",
@@ -1555,27 +1449,21 @@ var inputpanel = {
   },
 
   submit_check() { return true; },
-  
-  input_enter_pressed() {
-    this.submit();
-  },
 
-  input_text(char) {
-    this.value += char;
-    this.keycb();
-  },
-  
   keycb() {},
   
   input_backspace_pressrep() {
     this.value = this.value.slice(0,-1);
     this.keycb();
   },
-  
-  input_escape_pressed() {
-    this.close();
-  },
 };
+
+inputpanel.inputs = {};
+inputpanel.inputs.char = function(c) { this.value += c; this.keycb(); }
+inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); }
+inputpanel.inputs.escape = function() { this.close(); }
+inputpanel.inputs.backspace = function() { this.value = this.value.slice(0,-1); this.keycb(); };
+inputpanel.inputs.enter = function() { this.submit(); }
 
 function proto_count_lvls(name)
 {
@@ -1641,14 +1529,6 @@ var objectexplorer = copy(inputpanel, {
     this.obj = obj;
   },
 
-  input_lmouse_pressed() {
-    Mouse.disabled();
-  },
-
-  input_lmouse_released() {
-    Mouse.normal();
-  },
-  
   guibody() {
     Nuke.label("Examining " + this.obj);
       
@@ -1798,26 +1678,18 @@ var openlevelpanel = copy(inputpanel,  {
   allassets: [],
 
   submit_check() {
-    if (this.assets.length === 1) {
-      this.value = this.assets[0];
-      return true;
-    } else {
-      return this.assets.includes(this.value);
-    }
+    if (this.assets.length === 0) return false;
+
+    this.value = this.assets[0];
+    return true;
   },
   
   start() {
     this.allassets = prototypes.list.sort();
     this.assets = this.allassets.slice();
   },
-  
-  keycb() {
-    this.assets = this.allassets.filter(x => x.search(this.value) !== -1);
-  },
-  
-  input_tab_pressed() {
-    this.value = tab_complete(this.value, this.assets);
-  },
+
+  keycb() { this.assets = this.allassets.filter(x => x.search(this.value) !== -1); },
   
   guibody() {
     this.value = Nuke.textbox(this.value);
@@ -1835,11 +1707,6 @@ var openlevelpanel = copy(inputpanel,  {
       this.submit();
     }
   },
-});
-
-var addlevelpanel = copy(openlevelpanel, {
-  title: "add level",
-  action() { editor.addlevel(this.value, Mouse.worldpos); },
 });
 
 var saveaspanel = copy(inputpanel, {
@@ -2047,9 +1914,7 @@ if (IO.exists("editor.config"))
   load_configs("editor.config");
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
-editor.edit_level = Primum.spawn(ur.arena);
-editor.edit_level.selectable = false;
+editor.clear_level();
 editor.camera = Game.camera;
-
 
 Game.stop();

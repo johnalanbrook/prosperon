@@ -2,7 +2,6 @@
 
 #include "ffi.h"
 #include "font.h"
-#include "nuke.h"
 #include "log.h"
 #include "script.h"
 #include "stb_ds.h"
@@ -121,7 +120,7 @@ void input_mouse_move(float x, float y, float dx, float dy)
   mouse_pos.x = x;
   mouse_pos.y = y;
   mouse_delta.x = dx;
-  mouse_delta.y = dy;
+  mouse_delta.y = -dy;
   
   JSValue argv[3];
   argv[0] = jsmouse;
@@ -179,6 +178,7 @@ void input_btn(int btn, int state, uint32_t mod)
 
 void input_key(int key, uint32_t mod)
 {
+  if (mod != 0) return;
   JSValue argv[2];
   char out[2] = {0};
   out[0] = (char)key;
