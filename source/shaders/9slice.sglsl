@@ -1,5 +1,29 @@
-#version 330
+@vs vs9
+in vec2 vert;
+in vec2 vuv;
+in vec4 vborder;
+in vec2 vscale;
+in vec4 vcolor;
 
+out vec2 uv;
+out vec4 border;
+out vec2 scale;
+out vec4 fcolor;
+
+uniform vs9_params { mat4 projection; };
+
+void main()
+{
+  gl_Position = projection * vec4(vert, 0.0, 1.0);
+  
+  uv = vuv;
+  border = vborder;
+  scale = vscale;
+  fcolor = vcolor;
+}
+@end
+
+@fs fs9
 in vec2 uv; /* image uv */
 in vec4 border; /* uv length of border, normalized to image dimensions; left, bottom, right, top */
 in vec2 scale; /* polygon dimensions ~ texture dimensions */
@@ -7,7 +31,8 @@ in vec4 fcolor;
 
 out vec4 color;
 
-uniform sampler2D image;
+uniform texture2D image;
+uniform sampler smp;
 
 float map(float value, float min1, float max1, float min2, float max2)
 {
@@ -33,5 +58,8 @@ vec2 uv9slice(vec2 uv, vec2 s, vec4 b)
 void main()
 {
   vec2 nuv = uv9slice(uv, scale, border);
-  color = fcolor * texture(image, uv);
+  color = fcolor * texture(sampler2D(image,smp), uv);
 }
+@end
+
+@program slice9 vs9 fs9

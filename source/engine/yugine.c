@@ -1,5 +1,4 @@
 #include "yugine.h"
-
 #include "camera.h"
 #include "font.h"
 #include "gameobject.h"
@@ -33,8 +32,13 @@
 
 #include "string.h"
 
+#include "nuklear.h"
+#include "sokol/sokol_gfx.h"
+#include "sokol/sokol_nuklear.h"
+
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
+
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"

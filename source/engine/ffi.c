@@ -12,6 +12,7 @@
 #include "log.h"
 #include "mix.h"
 #include "music.h"
+#include "2dphysics.h"
 
 #include "sound.h"
 #include "sprite.h"

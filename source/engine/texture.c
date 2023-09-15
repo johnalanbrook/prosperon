@@ -149,11 +149,7 @@ struct Texture *texture_pullfromfile(const char *path) {
       .width = tex->width,
       .height = tex->height,
       .usage = SG_USAGE_IMMUTABLE,
-      .min_filter = SG_FILTER_NEAREST_MIPMAP_NEAREST,
-      .mag_filter = SG_FILTER_NEAREST,
       .num_mipmaps = mips,
-      .wrap_u = SG_WRAP_REPEAT,
-      .wrap_v = SG_WRAP_REPEAT,
       .data = sg_img_data
     });
 

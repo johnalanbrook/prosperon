@@ -13,6 +13,9 @@
 #include <ctype.h>
 #include <limits.h>
 
+#include "sprite.sglsl.h"
+#include "9slice.sglsl.h"
+
 struct TextureOptions TEX_SPRITE = {1, 0, 0};
 
 static struct sprite *sprites;
@@ -140,20 +143,7 @@ void sprite_settex(struct sprite *sprite, struct Texture *tex) {
 }
 
 void sprite_initialize() {
-  shader_sprite = sg_compile_shader("shaders/spritevert.glsl", "shaders/spritefrag.glsl", &(sg_shader_desc){
-      .vs.uniform_blocks[0] = {
-          .size = 64,
-          .layout = SG_UNIFORMLAYOUT_STD140,
-          .uniforms = {
-	    [0] = {.name = "proj", .type = SG_UNIFORMTYPE_MAT4},
-	  }},
-
-      .fs.images[0] = {
-          .name = "image",
-          .image_type = SG_IMAGETYPE_2D,
-          .sampler_type = SG_SAMPLERTYPE_FLOAT,
-      },
-    });
+  shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
 
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = shader_sprite,
@@ -177,20 +167,9 @@ void sprite_initialize() {
       .usage = SG_USAGE_STREAM,
       .label = "sprite vertex buffer",
   });
+  bind_sprite.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 
-  slice9_shader = sg_compile_shader("shaders/slice9_v.glsl", "shaders/slice9_f.glsl", &(sg_shader_desc) {
-    .vs.uniform_blocks[0] = {
-      .size = 64,
-      .layout = SG_UNIFORMLAYOUT_STD140,
-      .uniforms = { [0] = {.name = "projection", .type = SG_UNIFORMTYPE_MAT4},
-    }},
-
-    .fs.images[0] = {
-      .name = "image",
-      .image_type = SG_IMAGETYPE_2D,
-      .sampler_type = SG_SAMPLERTYPE_FLOAT
-    },
-  });
+  slice9_shader = sg_make_shader(slice9_shader_desc(sg_query_backend()));
 
   slice9_pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = slice9_shader,
@@ -209,8 +188,6 @@ void sprite_initialize() {
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
     .usage = SG_USAGE_STREAM,
   });
-
-  
 }
 
 /* offset given in texture offset, so -0.5,-0.5 results in it being centered */
@@ -258,7 +235,8 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
       verts[i].uv = HMM_AddV2(verts[i].uv, wrapoffset);
   }
 
-  bind_sprite.fs_images[0] = tex->id;
+  bind_sprite.fs.images[0] = tex->id;
+
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
   sg_apply_bindings(&bind_sprite);
 
@@ -323,7 +301,7 @@ void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba
   verts[3].uv.u = r.s1 * USHRT_MAX;
   verts[3].uv.v = r.t0 * USHRT_MAX;
 
-  bind_sprite.fs_images[0] = tex->id;
+  bind_sprite.fs.images[0] = tex->id;
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
   sg_apply_bindings(&bind_sprite);
 

@@ -1,6 +1,4 @@
-PROCS != nproc
-MAKEFLAGS = --jobs=$(PROCS)
-
+MAKEFLAGS = --jobs=8
 UNAME != uname
 MAKEDIR != pwd
 
@@ -62,7 +60,7 @@ endif
 
 PTYPE != uname -m
 
-CFLAGS += -DHAVE_CEIL -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
+CFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
 
 PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
@@ -95,12 +93,11 @@ else
   endif
 
   ifeq ($(UNAME), Darwin)
-    ifeq ($(PLATFORM), macosx)
-      LDLIBS += Coca QuartzCore OpenGL
-      PLAT = mac-$(ARCH)$(INFO)
-    else ifeq ($(PLATFORM), iphoneos)
-      LDLIBS += Foundation UIKit OpenGLES GLKit
-    endif
+    CFLAGS += -x objective-c
+#    LDLIBS += Cocoa QuartzCore OpenGL
+    LDFLAGS += -framework Cocoa -framework QuartzCore -framework OpenGL -framework AudioToolbox
+    PLAT = mac-$(ARCH)$(INFO)
+    #LDLIBS += Foundation UIKit OpenGLES GLKit
   endif
 endif
 
@@ -115,7 +112,7 @@ OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb-0.78
+includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb-0.78 source/shaders
 includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types #-Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-int-conversion
@@ -142,6 +139,9 @@ all: $(DISTDIR)/$(DIST)
 
 DESTDIR ?= ~/.bin
 
+SHADERS = $(shell ls source/shaders/*.sglsl)
+SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
+
 install: $(DISTDIR)/$(DIST)
 	@echo Unpacking $(DIST) in $(DESTDIR)
 	@$(UNZIP)
@@ -151,16 +151,15 @@ $(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
 	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
 	@echo Finished build
 
-$(DISTDIR)/$(DIST): $(BIN)/$(NAME) source/shaders/* $(SCRIPTS) assets/*
+$(DISTDIR)/$(DIST): $(BIN)/$(NAME) $(SCRIPTS) assets/*
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(DISTDIR)
 	@cp -rf assets/* $(BIN)
-	@cp -rf source/shaders $(BIN)
 	@cp -rf source/scripts $(BIN)
 	@$(PKGCMD)
 
-$(BIN)/libengine.a: $(OBJS)
-	@$(AR) rcs $@ $^
+$(BIN)/libengine.a: $(SHADERS) $(OBJS)
+	@$(AR) rcs $@ $(OBJS)
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
@@ -172,8 +171,24 @@ $(OBJDIR)/%.o:%.c
 	@echo Making C object $@
 	@$(CC) $(CFLAGS) -c $< -o $@
 
+%.c: $(SHADERS)
+
+shaders: $(SHADERS)
+	@echo Making shaders
+
+%.sglsl.h:%.sglsl
+	@echo Creating shader $^
+	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos -o $@
+
 clean:
 	@echo Cleaning project
 	@rm -rf bin/*
 	@rm -f *.gz
+	@rm source/shaders/*.sglsl.h
+	@rm source/shaders/*.metal
 	@rm -rf dist/*
+
+TAGINC != find . -name "*.[chj]"
+tags: $(TAGINC)
+	@echo Making tags.
+	@etags $(TAGINC)

@@ -13,6 +13,8 @@
 #include "2dphysics.h"
 #include "resources.h"
 
+#include "text.sglsl.h"
+
 #include "stb_image_write.h"
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
@@ -21,15 +23,14 @@
 
 struct sFont *font;
 
-#define max_chars 40000
-
+#define max_chars 400
 
 static sg_shader fontshader;
 static sg_bindings bind_text;
 static sg_pipeline pipe_text;
 struct text_vert {
-  cpVect pos;
-  cpVect wh;
+  struct draw_p pos;
+  struct draw_p wh;
   struct uv_n uv;
   struct uv_n st;
   struct rgba color;
@@ -38,15 +39,7 @@ struct text_vert {
 static struct text_vert text_buffer[max_chars];
 
 void font_init() {
-  fontshader = sg_compile_shader("shaders/textvert.glsl", "shaders/textfrag.glsl", &(sg_shader_desc){
-      .vs.uniform_blocks[0] = {
-          .size = sizeof(float) * 16,
-          //	.layout = SG_UNIFORMLAYOUT_STD140,
-          .uniforms = {
-              [0] = {.name = "projection", .type = SG_UNIFORMTYPE_MAT4}}},
-
-      .fs.images[0] = {.name = "text", .image_type = SG_IMAGETYPE_2D, .sampler_type = SG_SAMPLERTYPE_FLOAT}});
-
+  fontshader = sg_make_shader(text_shader_desc(sg_query_backend()));
   pipe_text = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = fontshader,
       .layout = {
@@ -81,10 +74,12 @@ void font_init() {
       .size = sizeof(struct text_vert)*max_chars,
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
-      .label = "text buffer"});
+      .label = "text buffer"
+    });
 
   font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
-  bind_text.fs_images[0] = font->texID;
+  bind_text.fs.images[0] = font->texID;
+  bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 }
 
 struct sFont *MakeSDFFont(const char *fontfile, int height)
@@ -155,8 +150,8 @@ struct sFont *MakeFont(const char *fontfile, int height) {
       .height = packsize,
       .pixel_format = SG_PIXELFORMAT_R8,
       .usage = SG_USAGE_IMMUTABLE,
-      .min_filter = SG_FILTER_NEAREST,
-      .mag_filter = SG_FILTER_NEAREST,
+//      .min_filter = SG_FILTER_NEAREST,
+//      .mag_filter = SG_FILTER_NEAREST,
       .data.subimage[0][0] = {
           .ptr = bitmap,
           .size = packsize * packsize}});

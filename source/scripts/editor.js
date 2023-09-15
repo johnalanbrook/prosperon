@@ -482,7 +482,6 @@ var editor = {
   time: 0,
 
   ed_gui() {
-    this.time = Date.now();
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
 
@@ -604,7 +603,7 @@ var editor = {
       wh[0] /= editor.camera.zoom;
       wh[1] /= editor.camera.zoom;
       var bb = cwh2bb(world2screen(c),wh);
-      Debug.boundingbox(bb, [255,255,255,10]);
+      Debug.boundingbox(bb, [255,255,55,10]);
       Debug.line(bb2points(bb).wrapped(1), Color.white);
     }
     

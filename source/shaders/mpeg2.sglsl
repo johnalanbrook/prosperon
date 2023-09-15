@@ -1,0 +1,40 @@
+@vs vs
+in vec4 vertex;
+
+out vec2 TexCoords;
+
+uniform vs_p { mat4 model; mat4 projection; };
+
+void main()
+{
+  TexCoords = vec2(vertex.x, 1.0 - vertex.y);
+  gl_Position = projection * model * vec4(vertex.xy, 0.0, 1.0);
+}
+@end
+
+@fs fs
+in vec2 TexCoords;
+out vec4 color;
+
+uniform texture2D texture_y;
+uniform texture2D texture_cb;
+uniform texture2D texture_cr;
+uniform sampler smp;
+
+mat4 rec601 = mat4(
+    1.16438,  0.00000,  1.59603, -0.87079,
+    1.16438, -0.39176, -0.81297,  0.52959,
+    1.16438,  2.01723,  0.00000, -1.08139,
+    0, 0, 0, 1
+);
+
+void main()
+{
+  float y = texture(sampler2D(texture_y,smp), TexCoords).r;
+  float cb = texture(sampler2D(texture_cb,smp), TexCoords).r;
+  float cr = texture(sampler2D(texture_cr,smp), TexCoords).r;
+  color = vec4(y, cb, cr, 1.f) * rec601;
+}
+@end
+
+@program mpeg2 vs fs

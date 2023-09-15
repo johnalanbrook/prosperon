@@ -11,6 +11,12 @@
 #include "stb_ds.h"
 #include "sokol/sokol_gfx.h"
 
+#include "point.sglsl.h"
+#include "poly.sglsl.h"
+#include "circle.sglsl.h"
+#include "line.sglsl.h"
+#include "grid.sglsl.h"
+
 #define PAR_STREAMLINES_IMPLEMENTATION
 #include "par/par_streamlines.h"
 
@@ -22,7 +28,7 @@ static sg_shader point_shader;
 static sg_pipeline point_pipe;
 static sg_bindings point_bind;
 struct point_vertex {
-  cpVect pos;
+  struct draw_p pos;
   struct rgba color;
   float radius;
 };
@@ -34,7 +40,7 @@ static sg_shader line_shader;
 static sg_pipeline line_pipe;
 static sg_bindings line_bind;
 struct line_vert {
-  cpVect pos;
+  struct draw_p pos;
   float dist;
   struct rgba color;
   float seg_len;
@@ -59,7 +65,7 @@ static int poly_v = 0;
 static int poly_sc = 0;
 static int poly_sv = 0;
 struct poly_vertex {
-  cpVect pos;
+  struct draw_p pos;
   float uv[2];
   struct rgba color;
 };
@@ -72,7 +78,7 @@ static sg_shader csg;
 static int circle_count = 0;
 static int circle_sc = 0;
 struct circle_vertex {
-  cpVect pos;
+  struct draw_p pos;
   float radius;
   struct rgba color;
   float segsize;
@@ -94,7 +100,7 @@ void debug_flush(HMM_Mat4 *view)
       .ptr = poly_bi, .size = sizeof(uint32_t)*poly_c});
     sg_draw(poly_sc,poly_c,1);
   }
-  
+
   if (point_c != 0) {
     sg_apply_pipeline(point_pipe);
     sg_apply_bindings(&point_bind);
@@ -104,17 +110,14 @@ void debug_flush(HMM_Mat4 *view)
       .size = sizeof(struct point_vertex)*point_c});
     sg_draw(point_sc,point_c,1);
   }
-  
+
   if (line_c != 0) {
     sg_apply_pipeline(line_pipe);
     sg_apply_bindings(&line_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(*view));
-    float time = appTime;
-    sg_range tr = {
-      .ptr = &time,
-      .size = sizeof(float)
-    };
-    sg_apply_uniforms(SG_SHADERSTAGE_FS,0,&tr);
+    lfs_params_t lt;
+    lt.time = appTime;
+    sg_apply_uniforms(SG_SHADERSTAGE_FS,0,SG_RANGE_REF(lt));
     sg_append_buffer(line_bind.vertex_buffers[0], &(sg_range){
       .ptr = line_b, .size = sizeof(struct line_vert)*line_v});
     sg_append_buffer(line_bind.index_buffer, &(sg_range){
@@ -179,9 +182,7 @@ static sg_shader_uniform_block_desc time_ubo = {
 
 void debugdraw_init()
 {
-  point_shader = sg_compile_shader("shaders/point_v.glsl", "shaders/point_f.glsl", &(sg_shader_desc){
-    .vs.uniform_blocks[0] = projection_ubo
-  });
+  point_shader = sg_make_shader(point_shader_desc(sg_query_backend()));
   
   point_pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = point_shader,
@@ -201,10 +202,7 @@ void debugdraw_init()
     .usage = SG_USAGE_STREAM
   });
   
-  line_shader = sg_compile_shader("shaders/linevert.glsl", "shaders/linefrag.glsl", &(sg_shader_desc){
-    .vs.uniform_blocks[0] = projection_ubo,
-    .fs.uniform_blocks[0] = time_ubo
-  });
+  line_shader = sg_make_shader(line_shader_desc(sg_query_backend()));
   
   line_pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = line_shader,
@@ -232,10 +230,8 @@ void debugdraw_init()
     .usage = SG_USAGE_STREAM,
     .type = SG_BUFFERTYPE_INDEXBUFFER
   });
-  
-    csg = sg_compile_shader("shaders/circlevert.glsl", "shaders/circlefrag.glsl", &(sg_shader_desc){
-      .vs.uniform_blocks[0] = projection_ubo,
-    });
+
+  csg = sg_make_shader(circle_shader_desc(sg_query_backend()));
 
     circle_pipe = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = csg,
@@ -273,24 +269,9 @@ void debugdraw_init()
     .data = SG_RANGE(circleverts),
     .usage = SG_USAGE_IMMUTABLE,
   });
-  
-  grid_shader = sg_compile_shader("shaders/gridvert.glsl", "shaders/gridfrag.glsl", &(sg_shader_desc){
-    .vs.uniform_blocks[0] = projection_ubo,
-    .vs.uniform_blocks[1] = {
-      .size = sizeof(float)*4,
-      .uniforms = { [0] = { .name = "offset", .type = SG_UNIFORMTYPE_FLOAT2 },
-      		    [1] = { .name = "dimen", .type = SG_UNIFORMTYPE_FLOAT2 } } },
-    .fs.uniform_blocks[0] = {
-      .size = sizeof(float)*6,
-      .uniforms = {
-        [0] = { .name = "thickness", .type = SG_UNIFORMTYPE_FLOAT },
-	[1] = { .name = "span", .type = SG_UNIFORMTYPE_FLOAT },
-	[2] = { .name = "color", .type = SG_UNIFORMTYPE_FLOAT4 },
-     }
-   },
-  });
-  
 
+  grid_shader = sg_make_shader(grid_shader_desc(sg_query_backend()));
+  
   grid_pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = grid_shader,
     .layout = {
@@ -306,9 +287,7 @@ void debugdraw_init()
   
   grid_bind.vertex_buffers[0] = circle_bind.vertex_buffers[1];
   
-  poly_shader = sg_compile_shader("shaders/poly_v.glsl", "shaders/poly_f.glsl", &(sg_shader_desc){
-    .vs.uniform_blocks[0] = projection_ubo
-  });
+  poly_shader = sg_make_shader(poly_shader_desc(sg_query_backend()));
   
   poly_pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = poly_shader,
@@ -351,7 +330,8 @@ void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int 
   float dist = 0;
   
   for (int i = 0; i < n-1; i++) {
-    v[i].pos = points[i];
+    v[i].pos.x = points[i].x;
+    v[i].pos.y = points[i].y;
     v[i].dist = dist;
     v[i].color = color;
     v[i].seg_len = seg_len;
@@ -359,7 +339,8 @@ void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int 
     dist += cpvdist(points[i], points[i+1]);
   }
   
-  v[n-1].pos = points[n-1];
+  v[n-1].pos.x = points[n-1].x;
+  v[n-1].pos.y = points[n-1].y;
   v[n-1].dist = dist;
   v[n-1].color = color;
   v[n-1].seg_len = seg_len;
@@ -458,7 +439,7 @@ void inflatepoints(cpVect *r, cpVect *p, float d, int n)
 
 void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
 {
-  static_assert(sizeof(cpVect) == 2*sizeof(float));
+//  static_assert(sizeof(cpVect) == 2*sizeof(float));
   if (thickness == 0) {
     thickness = 1;
   }
@@ -499,7 +480,7 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   struct poly_vertex vertices[mesh->num_vertices];
   
   for (int i = 0; i < mesh->num_vertices; i++) {
-    vertices[i].pos = (cpVect){ .x = mesh->positions[i].x, .y = mesh->positions[i].y };
+    vertices[i].pos = (struct draw_p){ .x = mesh->positions[i].x, .y = mesh->positions[i].y };
     vertices[i].uv[0] = mesh->annotations[i].u_along_curve;
     vertices[i].uv[1] = mesh->annotations[i].v_across_curve;
     vertices[i].color = color;
@@ -518,8 +499,8 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
     draw_line(points,n,line_color,line_seg, 0, 0);
   } else {
     /* Draw inside and outside lines */
-    cpVect in_p[n];
-    cpVect out_p[n];
+    struct draw_p in_p[n];
+    struct draw_p out_p[n];
     
     for (int i = 0, v = 0; i < n*2+1; i+=2, v++)
       in_p[v] = vertices[i].pos;
@@ -535,7 +516,8 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
 void draw_circle(cpVect pos, float radius, float pixels, struct rgba color, float seg)
 {
   struct circle_vertex cv;
-  cv.pos = pos;
+  cv.pos.x = pos.x;
+  cv.pos.y = pos.y;
   cv.radius = radius;
   cv.color = color;
   cv.segsize = seg/radius;
@@ -555,7 +537,7 @@ void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
       { .x = c.x+hw, .y = c.y+hh },
       { .x = c.x-hw, .y = c.y+hh }
     };
-    
+
     draw_poly(verts, 4, color);
 }
 
@@ -582,23 +564,23 @@ void draw_grid(float width, float span, struct rgba color)
 
   float col[4] = { color.r/255.0 ,color.g/255.0 ,color.b/255.0 ,color.a/255.0 };
 
-  float fubo[6];
-  fubo[0] = (float)width;
-  fubo[1] = span;
-  memcpy(&fubo[2], col, sizeof(float)*4);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 1, SG_RANGE_REF(ubo));
-  sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(fubo));
+  fs_params_t pt;
+  pt.thickness = (float)width;
+  pt.span = span;
+  memcpy(&pt.color, col, sizeof(float)*4);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(ubo));
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(pt));
   sg_draw(0,4,1);
 }
 
 void draw_cppoint(struct cpVect point, float r, struct rgba color)
 {
   struct point_vertex p = {
-    .pos = point,
     .color = color,
     .radius = r
   };
+  p.pos.x = point.x;
+  p.pos.y = point.y;
 
   memcpy(point_b+point_c, &p, sizeof(struct point_vertex));
   point_c++;
@@ -631,7 +613,7 @@ void draw_poly(cpVect *points, int n, struct rgba color)
   struct poly_vertex polyverts[n];
   
   for (int i = 0; i < n; i++) {
-    polyverts[i].pos = points[i];
+    polyverts[i].pos = (struct draw_p) { .x = points[i].x, .y = points[i].y};
     polyverts[i].uv[0] = 0.0;
     polyverts[i].uv[1] = 0.0;
     polyverts[i].color = color;

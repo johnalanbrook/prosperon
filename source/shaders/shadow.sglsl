@@ -1,0 +1,25 @@
+@vs svs
+in vec3 aPos;
+
+uniform vs_p {
+  mat4 lightSpaceMatrix;
+  mat4 model;
+};
+
+void main()
+{
+    gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);
+}
+@end
+
+@fs sfs
+out float frag_color;
+
+void main()
+{
+//  frag_color = encode_depth(gl_FragCoord.z);
+  frag_color = gl_FragCoord.z;
+}  
+@end
+
+@program shadow svs sfs

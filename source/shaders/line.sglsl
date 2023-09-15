@@ -1,16 +1,40 @@
-#version 330
+@vs lvs
+in vec2 apos;
+in float adist;
+in vec4 acolor;
+in float aseglen;
+in float asegspeed;
+
+out float dist;
+out vec4 fcolor;
+out float seg_len;
+out float seg_speed;
+
+uniform lvs_params { mat4 proj; };
+
+void main()
+{
+  gl_Position = proj * vec4(apos, 0.0, 1.0);
+  fcolor = acolor;
+  dist = adist;
+  seg_len = aseglen;
+  seg_speed = asegspeed;
+}
+@end
+
+@fs lfs
 out vec4 color;
 
 in float dist;
 in vec4 fcolor;
+in float seg_len;
 in float seg_speed;
 
-in float seg_len;
 float pat = 0.5;
 
 int pp = 0x0C24;
 
-uniform float time;
+uniform lfs_params { uniform float time; };
 
 void main()
 {
@@ -34,3 +58,6 @@ void main()
       discard;
  */
 }
+@end
+
+@program line lvs lfs

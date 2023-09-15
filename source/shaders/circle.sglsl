@@ -1,15 +1,39 @@
-#version 330
-in vec2 coords;
+@vs circle_vs
+in vec2 vertex;
+in vec2 apos;
+in float aradius;
+in vec4 acolor;
+in float asegsize;
+in float afill;
+
+out vec2 coords;
+out vec4 fcolor;
+out float segsize;
+out float fill;
+out float radius;
+
+uniform cvs_params { mat4 proj; };
+
+void main()
+{
+  gl_Position = proj * vec4((vertex * aradius) + apos, 0.0, 1.0);
+  coords = vertex;
+  fcolor = acolor;
+  segsize = asegsize;
+  fill = afill;
+  radius = aradius;
+}
+@end
+
+@fs circle_fs
 
 out vec4 color;
 
-
-in float radius;
+in vec2 coords;
 in vec4 fcolor;
-in vec2 pos;
-
 in float segsize;
 in float fill;
+in float radius;
 
 #define PI 3.14
 
@@ -36,3 +60,7 @@ void main()
   if (mod(f, segsize) < segsize/2)
     discard;
 }
+
+@end
+
+@program circle circle_vs circle_fs

@@ -1,4 +1,4 @@
-#version 330 core
+@vs pvs
 in vec2 apos;
 in vec2 auv;
 in vec4 acolor;
@@ -6,7 +6,7 @@ in vec4 acolor;
 out vec4 color;
 out vec2 uv;
 
-uniform mat4 proj;
+uniform pvs_params { mat4 proj; };
 
 void main()
 {
@@ -14,3 +14,17 @@ void main()
   color = acolor;
   uv = auv;
 }
+@end
+
+@fs pfs
+in vec4 color;
+in vec2 uv;
+out vec4 fcolor;
+
+void main()
+{
+  fcolor = color;
+}
+@end
+
+@program poly pvs pfs

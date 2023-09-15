@@ -1,0 +1,27 @@
+@vs bvs
+in vec2 aPos;
+in vec2 aTexCoords;
+
+out vec2 TexCoords;
+
+void main()
+{
+  gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
+  TexCoords = aTexCoords;
+}
+@end
+
+@fs bfs
+in vec2 TexCoords;
+out vec4 frag_color;
+
+uniform texture2D diffuse;
+uniform sampler smp;
+
+void main()
+{
+  frag_color = texture(sampler2D(diffuse,smp), TexCoords);
+}
+@end
+
+@program box bvs bfs

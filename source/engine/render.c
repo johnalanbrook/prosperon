@@ -16,11 +16,16 @@
 #include "resources.h"
 #include "yugine.h"
 
+#include "crt.sglsl.h"
+#include "box.sglsl.h"
+#include "shadow.sglsl.h"
+
+#define SOKOL_TRACE_HOOKS
 #define SOKOL_GFX_IMPL
 #include "sokol/sokol_gfx.h"
 
-#define SOKOL_GFX_EXT_IMPL
-#include "sokol/sokol_gfx_ext.h"
+//#define SOKOL_GFX_EXT_IMPL
+//#include "sokol/sokol_gfx_ext.h"
 
 #define MSF_GIF_IMPL
 #include "msf_gif.h"
@@ -34,7 +39,6 @@ static struct {
   sg_image img;
   sg_image depth;
 } sg_gif;
-
 
 static struct {
   int w;
@@ -228,24 +232,11 @@ void render_init() {
   sg_color c;
   rgba2floats(&c, editorClearColor);
   pass_action = (sg_pass_action){
-    .colors[0] = {.action = SG_ACTION_CLEAR, .value = c}
+    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c}
   };
 
-  crt_post.shader = sg_compile_shader("shaders/postvert.glsl", "shaders/crtfrag.glsl", &(sg_shader_desc){
-    .fs.images[0] = {
-      .name = "diffuse_texture",
-      .image_type = SG_IMAGETYPE_2D,
-      .sampler_type = SG_SAMPLERTYPE_FLOAT
-    }
-  });
-
-  sg_gif.shader = sg_compile_shader("shaders/postvert.glsl", "shaders/box.glsl", &(sg_shader_desc){
-    .fs.images[0] = {
-      .name = "diffuse_texture",
-      .image_type = SG_IMAGETYPE_2D,
-      .sampler_type = SG_SAMPLERTYPE_FLOAT
-    }
-  });
+  crt_post.shader = sg_make_shader(crt_shader_desc(sg_query_backend()));
+  sg_gif.shader = sg_make_shader(box_shader_desc(sg_query_backend()));
 
   sg_gif.pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = sg_gif.shader,
@@ -285,11 +276,6 @@ void render_init() {
     .depth_stencil_attachment.image = crt_post.depth_img,
   });
 
-  sg_gif.pass = sg_make_pass(&(sg_pass_desc){
-    .color_attachments[0].image = sg_gif.img,
-    .depth_stencil_attachment.image = sg_gif.depth
-  });
-   
   float crt_quad[] = {
     -1, 1, 0, 1,
     -1, -1, 0, 0,
@@ -304,7 +290,8 @@ void render_init() {
     .data = crt_quad
   });
 
-  crt_post.bind.fs_images[0] = crt_post.img;
+  crt_post.bind.fs.images[0] = crt_post.img;
+  crt_post.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 /*
   sg_image_desc shadow_desc = {
     .render_target = true,
@@ -324,15 +311,7 @@ void render_init() {
   sg_shadow.pass_action = (sg_pass_action) {
     .colors[0] = { .action=SG_ACTION_CLEAR, .value = {1,1,1,1} } };
 
-  sg_shadow.shader = sg_compile_shader("shaders/shadowvert.glsl", "shaders/shadowfrag.glsl", &(sg_shader_desc){
-    .vs.uniform_blocks[0] = {
-    .size = sizeof(float) * 16 * 2,
-    .uniforms = {
-      [0] = {.name = "lightSpaceMatrix", .type = SG_UNIFORMTYPE_MAT4},
-      [1] = {.name = "model", .type = SG_UNIFORMTYPE_MAT4},
-      }
-    }
-    });
+  sg_shadow.shader = sg_make_shader(shadow_shader_desc(sg_query_backend()));
 
   sg_shadow.pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = sg_shadow.shader,
@@ -379,7 +358,7 @@ void render_winsize()
     .depth_stencil_attachment.image = crt_post.depth_img,
   });
 
-  crt_post.bind.fs_images[0] = crt_post.img;  
+  crt_post.bind.fs.images[0] = crt_post.img;  
 }
 
 static cpBody *camera = NULL;
@@ -414,6 +393,7 @@ void full_2d_pass(struct window *window)
 
   hudproj = HMM_Orthographic_RH_NO(0, window->width, 0, window->height, -1.f, 1.f);
 
+
   sprite_draw_all();
   call_draw();
 
@@ -422,7 +402,6 @@ void full_2d_pass(struct window *window)
     gameobject_draw_debugs();
     call_debugs();    
   }
-
   debug_flush(&projection);
   text_flush(&projection);
 
@@ -432,7 +411,7 @@ void full_2d_pass(struct window *window)
   nuke_start();
   #endif
   
-  call_gui();  
+  call_gui();
   debug_flush(&hudproj);
   text_flush(&hudproj);
   sprite_flush();
@@ -479,7 +458,7 @@ void openglRender(struct window *window) {
     sg_end_pass();
 
     gif.timer = appTime;
-    sg_query_image_pixels(sg_gif.img, gif.buffer, gif.w*gif.h*4);
+//    sg_query_image_pixels(sg_gif.img, gif.buffer, gif.w*gif.h*4);
     msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }
 

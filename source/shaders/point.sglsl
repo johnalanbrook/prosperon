@@ -1,0 +1,34 @@
+@vs pointvs
+
+in vec2 apos;
+in vec4 acolor;
+in float aradius;
+
+uniform pvs_p { mat4 proj; };
+
+out vec4 fcolor;
+
+void main()
+{
+  gl_Position = proj * vec4(apos, 0.0, 1.0);
+  fcolor = acolor;
+  gl_PointSize = aradius;
+}
+@end
+
+@fs pointfs
+out vec4 color;
+
+in vec4 fcolor;
+
+void main()
+{
+  float d = length(gl_FragCoord.xy - vec2(0.5,0.5)); /* Should really pointcoord, normalized */
+  if (d >= 0.47)
+    discard;
+    
+  color = fcolor;
+}
+@end
+
+@program point pointvs pointfs

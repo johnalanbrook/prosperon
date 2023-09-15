@@ -8,6 +8,8 @@
 #elif __WIN32
   #define SOKOL_GLCORE33
   #define SOKOL_WIN32_FORCE_MAIN
+#elif __APPLE__
+  #define SOKOL_GLCORE33
 #endif
 
 #include "sokol/sokol_gfx.h"
@@ -29,6 +31,11 @@ extern HMM_Vec3 dirl_pos;
 
 extern HMM_Mat4 projection;
 extern HMM_Mat4 hudproj;
+
+struct draw_p {
+  float x;
+  float y;
+};
 
 extern float gridScale;
 extern float smallGridUnit;

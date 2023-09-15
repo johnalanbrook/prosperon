@@ -21,6 +21,7 @@
 #include "sokol/sokol_gfx.h"
 
 #define SOKOL_NUKLEAR_IMPL
+#define SOKOL_METAL
 #include "nuklear.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_nuklear.h"

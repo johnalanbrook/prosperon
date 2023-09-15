@@ -15,6 +15,8 @@
 #include "font.h"
 #include "render.h"
 
+#include "mpeg2.sglsl.h"
+
 #define CBUF_IMPLEMENT
 #include "cbuf.h"
 
@@ -105,13 +107,7 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
 }
 
 void MakeDatastream() {
-  vid_shader = sg_compile_shader("shaders/videovert.glsl", "shaders/videofrag.glsl", &(sg_shader_desc){
-    .fs.images[0] = {
-      .name = "video",
-      .image_type = SG_IMAGETYPE_2D,
-      .sampler_type = SG_SAMPLERTYPE_FLOAT
-    }});
-}
+  vid_shader = sg_make_shader(mpeg2_shader_desc(sg_query_backend()));}
 
 void ds_advance(struct datastream *ds, double s) {
   if (ds->playing) {

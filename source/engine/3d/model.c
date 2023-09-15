@@ -7,6 +7,8 @@
 #include "font.h"
 #include "window.h"
 
+#include "diffuse.sglsl.h"
+
 #include "render.h"
 
 // #define HANDMADE_MATH_USE_TURNS
@@ -37,32 +39,7 @@ static sg_shader model_shader;
 static sg_pipeline model_pipe;
 
 void model_init() {
-  model_shader = sg_compile_shader("shaders/diffuse_v.glsl", "shaders/diffuse_f.glsl", &(sg_shader_desc){
-      .vs.uniform_blocks[0] = {
-          .size = sizeof(float) * 16 * 4,
-          .uniforms = {
-              [0] = {.name = "vp", .type = SG_UNIFORMTYPE_MAT4},
-              [1] = {.name = "model", .type = SG_UNIFORMTYPE_MAT4},
-              [2] = {.name = "proj", .type = SG_UNIFORMTYPE_MAT4},
-	      [3] = {.name = "lsm", .type = SG_UNIFORMTYPE_MAT4},
-          }},
-
-      .fs.uniform_blocks[0] = {
-          .size = sizeof(float) * 3 * 5,
-          .uniforms = {
-              [0] = {.name = "point_pos", .type = SG_UNIFORMTYPE_FLOAT3},
-              [1] = {.name = "dir_dir", .type = SG_UNIFORMTYPE_FLOAT3},
-              [2] = {.name = "view_pos", .type = SG_UNIFORMTYPE_FLOAT3},
-              [3] = {.name = "spot_pos", .type = SG_UNIFORMTYPE_FLOAT3},
-              [4] = {.name = "spot_dir", .type = SG_UNIFORMTYPE_FLOAT3},
-          },
-      },
-
-      .fs.images[0] = {.name = "diffuse", .image_type = SG_IMAGETYPE_2D, .sampler_type = SG_SAMPLERTYPE_FLOAT},
-      .fs.images[1] = { .name = "normmap", .image_type = SG_IMAGETYPE_2D, .sampler_type = SG_SAMPLERTYPE_FLOAT},
-      .fs.images[2] = {.name = "shadow_map", .image_type = SG_IMAGETYPE_2D, .sampler_type = SG_SAMPLERTYPE_FLOAT},
-
-  });
+  model_shader = sg_make_shader(diffuse_shader_desc(sg_query_backend()));
 
   model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = model_shader,
@@ -181,17 +158,17 @@ struct model *MakeModel(const char *path) {
       if (primitive.material->has_pbr_metallic_roughness && primitive.material->pbr_metallic_roughness.base_color_texture.texture) {
 //        YughWarn("Texture is %s.", primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri);
  
-        model->meshes[j].bind.fs_images[0] = texture_pullfromfile(primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri)->id;
+        model->meshes[j].bind.fs.images[0] = texture_pullfromfile(primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri)->id;
       } else
-        model->meshes[j].bind.fs_images[0] = texture_pullfromfile("k")->id;
+        model->meshes[j].bind.fs.images[0] = texture_pullfromfile("k")->id;
 
       cgltf_texture *tex;
       if (tex = primitive.material->normal_texture.texture) {
-        model->meshes[j].bind.fs_images[1] = texture_pullfromfile(tex->image->uri)->id;
+        model->meshes[j].bind.fs.images[1] = texture_pullfromfile(tex->image->uri)->id;
       } else
-        model->meshes[j].bind.fs_images[1] = texture_pullfromfile("k")->id;
+        model->meshes[j].bind.fs.images[1] = texture_pullfromfile("k")->id;
 
-      model->meshes[j].bind.fs_images[2] = ddimg;
+      model->meshes[j].bind.fs.images[2] = ddimg;
 
       int has_norm = 0;
 

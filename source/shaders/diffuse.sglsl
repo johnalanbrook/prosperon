@@ -1,4 +1,31 @@
-#version 330 core
+@vs vs
+in vec3 a_pos;
+in vec2 a_tex_coords;
+in vec3 a_norm;
+
+out vec2 tex_coords;
+out vec3 normal;
+out vec3 frag_pos;
+out vec4 frag_pos_light;
+
+
+uniform vs_p {
+uniform mat4 vp;
+uniform mat4 model;
+uniform mat4 proj;
+uniform mat4 lsm;
+};
+
+void main() {
+  frag_pos = vec3(model * vec4(a_pos, 1.0));
+  gl_Position = proj * vp * vec4(frag_pos, 1.0);  
+  tex_coords = a_tex_coords;
+  normal = mat3(transpose(inverse(model))) * a_norm;
+  frag_pos_light = lsm * vec4(frag_pos, 1.0);
+}
+@end
+
+@fs fs
 in vec2 tex_coords;
 in vec3 normal;
 in vec3 frag_pos;
@@ -6,16 +33,19 @@ in vec4 frag_pos_light;
 
 out vec4 frag_color;
 
-uniform sampler2D diffuse;
-uniform sampler2D normmap;
-uniform sampler2D shadow_map;
+uniform texture2D diffuse;
+uniform texture2D normmap;
+uniform texture2D shadow_map;
+uniform sampler smp;
 
+uniform fs_p {
 uniform vec3 point_pos;
 uniform vec3 dir_dir;
 uniform vec3 view_pos;
 uniform vec3 spot_pos;
 uniform vec3 spot_dir;
-
+uniform vec2 shadow_dim;
+};
 /* Ambient light */
 float amb_str = 0.3;
 
@@ -52,7 +82,7 @@ float shadow_calc(vec4 fg)
   if (pc.z > 1.0)
     return 0.0;
 
-  float closest_depth = texture(shadow_map, pc.xy).r;
+  float closest_depth = texture(sampler2D(shadow_map,smp), pc.xy).r;
   float cur_depth = pc.z;
 
   vec3 light_dir = normalize(vec3(4,100,20) - frag_pos); /* light pos */
@@ -61,11 +91,11 @@ float shadow_calc(vec4 fg)
   return cur_depth - bias > closest_depth ? 1.0 : 0.0;
 
   float s;
-  vec2 texel_size = 1 / textureSize(shadow_map, 0);
+  vec2 texel_size = 1 / shadow_dim;
 
   for (int x = -1; x <= 1; ++x) {
     for (int y = -1; y <= 1; ++y) {
-      float pcf_depth = texture(shadow_map, pc.xy + vec2(x,y) * texel_size).r;
+      float pcf_depth = texture(sampler2D(shadow_map,smp), pc.xy + vec2(x,y) * texel_size).r;
       s += cur_depth - bias > pcf_depth ? 1.0 : 0.0;
     }
   }
@@ -97,8 +127,11 @@ void main() {
     spot_amt = light_str(spot_dir) * intensity;
   }
 
-  vec4 mm = texture(diffuse,tex_coords);
+  vec4 mm = texture(sampler2D(diffuse,smp),tex_coords);
   float shadow = shadow_calc(frag_pos_light);
   vec3 res = mm.rgb * (amb_str + (point_amt + dir_amt) * (1 - shadow));
   frag_color = vec4(res, mm.a);
 }
+@end
+
+@program diffuse vs fs

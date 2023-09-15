@@ -122,7 +122,7 @@ void input_mouse_move(float x, float y, float dx, float dy)
   mouse_delta.x = dx;
   mouse_delta.y = -dy;
   
-  JSValue argv[3];
+  JSValue argv[4];
   argv[0] = jsmouse;
   argv[1] = jsmove;
   argv[2] = vec2js(mouse_pos);
