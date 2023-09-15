@@ -52,7 +52,7 @@ var sprite = clone(component, {
       get layer() { return undefined; },
 
       boundingbox() {
-        var dim = this.dimensions;
+        var dim = this.dimensions();
 	dim = dim.scale(this.gameobject.scale);
 	var realpos = this.pos.copy();
 	realpos.x = realpos.x * dim.x + (dim.x/2);

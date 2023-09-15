@@ -58,7 +58,7 @@ vec2 uv9slice(vec2 uv, vec2 s, vec4 b)
 void main()
 {
   vec2 nuv = uv9slice(uv, scale, border);
-  color = fcolor * texture(sampler2D(image,smp), uv);
+  color = fcolor * texture(sampler2D(image,smp), nuv);
 }
 @end
 

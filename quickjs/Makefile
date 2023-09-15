@@ -70,6 +70,7 @@ ifdef CONFIG_CLANG
   CFLAGS += -Wextra
   CFLAGS += -Wno-sign-compare
   CFLAGS += -Wno-missing-field-initializers
+  CFLAGS += -Wno-unused-function -Wno-unused-const-variable
   CFLAGS += -Wundef -Wuninitialized
   CFLAGS += -Wunused -Wno-unused-parameter
   CFLAGS += -Wwrite-strings
@@ -89,6 +90,7 @@ else
   CC=$(CROSS_PREFIX)gcc
   CFLAGS=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
   CFLAGS += -Wno-array-bounds -Wno-format-truncation
+  CFLAGS += -Wno-unused-function -Wno-unused-const-variable
   ifdef CONFIG_LTO
     AR=$(CROSS_PREFIX)gcc-ar
   else

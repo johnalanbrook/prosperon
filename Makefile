@@ -94,10 +94,8 @@ else
 
   ifeq ($(UNAME), Darwin)
     CFLAGS += -x objective-c
-#    LDLIBS += Cocoa QuartzCore OpenGL
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework OpenGL -framework AudioToolbox
-    PLAT = mac-$(ARCH)$(INFO)
-    #LDLIBS += Foundation UIKit OpenGLES GLKit
+    PLAT = osx-$(ARCH)$(INFO)
   endif
 endif
 
@@ -115,7 +113,7 @@ includeflag != find source -type d -name include
 includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb-0.78 source/shaders
 includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types #-Wall -Wno-incompatible-function-pointer-types -Wno-unused-function# -pedantic -Wextra -Wwrite-strings -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-int-conversion
+WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable
 
 NAME = yugine$(EXT)
 SEM = 0.0.1
@@ -158,20 +156,19 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME) $(SCRIPTS) assets/*
 	@cp -rf source/scripts $(BIN)
 	@$(PKGCMD)
 
-$(BIN)/libengine.a: $(SHADERS) $(OBJS)
+$(BIN)/libengine.a: $(OBJS)
 	@$(AR) rcs $@ $(OBJS)
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
-	make -C quickjs OPT=$(OPT) libquickjs.a libquickjs.lto.a CC=$(CC)
-	cp quickjs/libquickjs.* $(BIN)
+	make -C quickjs OPT=$(OPT) HOST_CC=$(CC) libquickjs.a libquickjs.lto.a CC=$(CC)
+	@mkdir -p $(BIN)
+	cp -rf quickjs/libquickjs.* $(BIN)
 
-$(OBJDIR)/%.o:%.c
+$(OBJDIR)/%.o: %.c $(SHADERS)
 	@mkdir -p $(@D)
 	@echo Making C object $@
 	@$(CC) $(CFLAGS) -c $< -o $@
-
-%.c: $(SHADERS)
 
 shaders: $(SHADERS)
 	@echo Making shaders
@@ -184,9 +181,10 @@ clean:
 	@echo Cleaning project
 	@rm -rf bin/*
 	@rm -f *.gz
-	@rm source/shaders/*.sglsl.h
-	@rm source/shaders/*.metal
+	@rm -f source/shaders/*.sglsl.h
+	@rm -f source/shaders/*.metal
 	@rm -rf dist/*
+	@rm TAGS
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

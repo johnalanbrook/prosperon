@@ -85,7 +85,7 @@ var Debug = {
 
   draw() {
     if (this.draw_bb)
-      Game.objects.forEach(function(x) { bb_draw(x.boundingbox()); });
+      Game.objects.forEach(function(x) { Debug.boundingbox(x.boundingbox(), [255,255,255,10]); });
 
     if (Game.paused()) gui_text("PAUSED", [0,0],1);
 

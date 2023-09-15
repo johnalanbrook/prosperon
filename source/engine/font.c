@@ -23,7 +23,7 @@
 
 struct sFont *font;
 
-#define max_chars 400
+#define max_chars 4000
 
 static sg_shader fontshader;
 static sg_bindings bind_text;
@@ -36,9 +36,10 @@ struct text_vert {
   struct rgba color;
 };
 
-static struct text_vert text_buffer[max_chars];
+static struct text_vert *text_buffer;
 
 void font_init() {
+  text_buffer = malloc(sizeof(*text_buffer)*max_chars);
   fontshader = sg_make_shader(text_shader_desc(sg_query_backend()));
   pipe_text = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = fontshader,
@@ -215,6 +216,9 @@ void text_flush(HMM_Mat4 *proj) {
 static int drawcaret = 0;
 
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+  if (curchar == max_chars)
+    return;
+    
   struct text_vert vert;
 
   float lsize = 1.0 / 1024.0;

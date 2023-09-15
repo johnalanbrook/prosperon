@@ -286,9 +286,8 @@ void debugdraw_init()
   });
   
   grid_bind.vertex_buffers[0] = circle_bind.vertex_buffers[1];
-  
+
   poly_shader = sg_make_shader(poly_shader_desc(sg_query_backend()));
-  
   poly_pipe = sg_make_pipeline(&(sg_pipeline_desc){
     .shader = poly_shader,
     .layout = {
@@ -300,7 +299,6 @@ void debugdraw_init()
     .index_type = SG_INDEXTYPE_UINT32,
     .colors[0].blend = blend_trans,
   });
-  
   poly_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct poly_vertex)*v_amt,
     .usage = SG_USAGE_STREAM,

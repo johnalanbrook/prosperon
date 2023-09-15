@@ -24,8 +24,8 @@
 #define SOKOL_GFX_IMPL
 #include "sokol/sokol_gfx.h"
 
-//#define SOKOL_GFX_EXT_IMPL
-//#include "sokol/sokol_gfx_ext.h"
+#define SOKOL_GFX_EXT_IMPL
+#include "sokol/sokol_gfx_ext.h"
 
 #define MSF_GIF_IMPL
 #include "msf_gif.h"
@@ -458,7 +458,7 @@ void openglRender(struct window *window) {
     sg_end_pass();
 
     gif.timer = appTime;
-//    sg_query_image_pixels(sg_gif.img, gif.buffer, gif.w*gif.h*4);
+    sg_query_image_pixels(sg_gif.img, crt_post.bind.fs.samplers[0], gif.buffer, gif.w*gif.h*4);
     msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }
 

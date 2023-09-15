@@ -653,14 +653,6 @@ function bb_expand(oldbb, x) {
   return bb;
 };
 
-function bb_draw(bb, color) {
-  if (!bb) return;
-  var draw = bb2cwh(bb);
-  draw.wh[0] /= Game.camera.zoom;
-  draw.wh[1] /= Game.camera.zoom;
-  Debug.box(world2screen(draw.c), draw.wh, color);
-};
-
 function bb_from_objects(objs) {
   var bb = objs[0].boundingbox;
   objs.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox); });
