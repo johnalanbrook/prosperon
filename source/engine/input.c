@@ -12,8 +12,6 @@
 
 #include "stb_ds.h"
 
-int32_t mouseWheelX = 0;
-int32_t mouseWheelY = 0;
 float deltaT = 0;
 
 static int mouse_states[3] = {INPUT_UP};
@@ -29,7 +27,9 @@ JSValue jsany;
 JSValue jsmouse;
 JSValue jspos;
 JSValue jsmove;
+JSValue jsscroll;
 
+cpVect mousewheel = {0,0};
 cpVect mouse_pos = {0, 0};
 cpVect mouse_delta = {0, 0};
 
@@ -115,7 +115,7 @@ void input_mouse(int btn, int state, uint32_t mod)
   JS_FreeValue(js, argv[1]);
 }
 
-void input_mouse_move(float x, float y, float dx, float dy)
+void input_mouse_move(float x, float y, float dx, float dy, uint32_t mod)
 {
   mouse_pos.x = x;
   mouse_pos.y = y;
@@ -132,10 +132,24 @@ void input_mouse_move(float x, float y, float dx, float dy)
   JS_FreeValue(js, argv[3]);
 }
 
-void input_mouse_scroll(float x, float y)
+void input_mouse_scroll(float x, float y, uint32_t mod)
 {
-  mouseWheelY = y;
-  mouseWheelX = x;
+  mousewheel.x = x;
+  mousewheel.y = y;
+
+  JSValue argv[4];
+  argv[0] = jsmouse;
+  char out[16] = {0};
+  snprintf(out, 16, "%s%s%sscroll",
+    mod & SAPP_MODIFIER_CTRL ? "C-" : "",
+    mod & SAPP_MODIFIER_ALT ? "M-" : "",
+    mod & SAPP_MODIFIER_SUPER ? "S-" : ""
+  );
+  argv[1] = JS_NewString(js,out);
+  argv[2] = vec2js(mousewheel);
+  script_callee(pawn_callee, 3, argv);
+  JS_FreeValue(js, argv[1]);
+  JS_FreeValue(js, argv[2]);
 }
 
 void input_btn(int btn, int state, uint32_t mod)
@@ -232,6 +246,7 @@ void input_init() {
   jsmouse = str2js("mouse");
   jspos = str2js("pos");
   jsmove = str2js("move");
+  jsscroll = str2js("scroll");
 
   for (int i = 0; i < 512; i++)
     key_states[i] = INPUT_UP;
@@ -368,8 +383,7 @@ void call_input_down(int *key) {
 /* This is called once every frame - or more if we want it more! */
 void input_poll(double wait) {
   mouse_delta = cpvzero;
-  mouseWheelX = 0;
-  mouseWheelY = 0;
+  mousewheel = cpvzero;
 
   for (int i = 0; i < arrlen(downkeys); i++)
     call_input_down(&downkeys[i]);

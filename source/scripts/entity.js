@@ -44,14 +44,6 @@ var gameobject = {
       this.draw_layer = Nuke.radio(i, this.draw_layer, i);
   },
 
-
-
-  dup(diff) {
-    var dup = World.spawn(gameobjects[this.from]);
-    Object.assign(dup, diff);
-    return dup;
-  },
-
   ed_locked: false,
   
   _visible:  true,
@@ -66,11 +58,6 @@ var gameobject = {
   },
 
   mass: 1,
-  bodytype: {
-    dynamic: 0,
-    kinematic: 1,
-    static: 2
-  },
   
   phys: 2,
   phys_nuke() {
@@ -283,6 +270,13 @@ var gameobject = {
       disable() { this.components.forEach(function(x) { x.disable(); });},
       enable() { this.components.forEach(function(x) { x.enable(); });},
       sync() { },
+      dirty() { return false; },
+
+      dup(diff) {
+	var dup = Primum.spawn(this.ur);
+	Object.assign(dup, this);
+	return dup;
+      },
       
       kill() {
 	if (this.body === -1) {
@@ -385,6 +379,7 @@ gameobject.make_parentable = function(obj) {
   obj.add_child = function(child) {
     child.unparent();
     objects.push(child);
+    child.level = obj;
   }
 
   /* Reparent this object to a new one */
@@ -393,11 +388,13 @@ gameobject.make_parentable = function(obj) {
       return;
 
     parent.add_child(obj);
+    obj.level = parent;
   }
 
   obj.unparent = function() {
     if (!obj.level) return;
     obj.level.remove_child(obj);
+    obj.parent = undefined;
   }
   obj.objects = objects;
 }
@@ -553,22 +550,22 @@ prototypes.generate_ur = function(path)
 var ur = prototypes.ur;
 
 prototypes.from_obj("camera2d", {
-    phys: gameobject.bodytype.kinematic,
+    phys: Physics.kinematic,
     speed: 300,
     
-    get zoom() { return this._zoom; },
+    get zoom() { return cmd(135); },
     set zoom(x) {
-      if (x <= 0) return;
-      this._zoom = x;
-      cmd(62, this._zoom);
+      x = Math.clamp(x,0.1,10);
+      cmd(62, x);
     },
-    _zoom: 1.0,
+    
     speedmult: 1.0,
     
     selectable: false,
     
     view2world(pos) {
-      return pos.mapc(mult, [1,-1]).add([-Window.width,Window.height].scale(0.5)).scale(this.zoom).add(this.pos);
+      pos.y *= -1;
+      return pos.add([-Window.width,Window.height].scale(0.5)).scale(this.zoom).add(this.pos);
     },
     
     world2view(pos) {

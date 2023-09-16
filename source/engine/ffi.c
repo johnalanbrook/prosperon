@@ -1095,6 +1095,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js,argv[1]);
       app_name(str);
       break;
+      
+    case 135:
+      ret = float2js(cam_zoom());
+      break;
   }
 
   if (str)

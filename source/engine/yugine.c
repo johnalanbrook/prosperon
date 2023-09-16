@@ -213,11 +213,11 @@ void c_event(const sapp_event *e)
 
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
-      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);
+      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
-      input_mouse_scroll(e->scroll_x, e->scroll_y);
+      input_mouse_scroll(e->scroll_x, e->scroll_y, e->modifiers);
       break;
 
     case SAPP_EVENTTYPE_KEY_DOWN:

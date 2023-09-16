@@ -6,6 +6,7 @@ prototypes.generate_ur('.');
 
 var editor_config = {
   grid_size: 100,
+  ruler_mark_px: 100,
   grid_color: [99, 255, 128, 100],
 };
 
@@ -164,16 +165,8 @@ var editor = {
     var objs = x.slice();
     var duped = [];
 
-    objs.forEach(function(x) {
-      var newobj = this.edit_level.spawn(x.ur);
-      //dainty_assign(newobj, x);
-      Object.assign(newobj,x);
-      newobj.pos = x.pos;
-      newobj.angle = x.angle;
-      duped.push(newobj);
-    } ,this);
-
-    return duped.flat();
+    objs.forEach(function(x) { duped.push(x.dup()); } );
+    return duped;
   },
 
   sel_start: [],
@@ -576,17 +569,23 @@ var editor = {
     });
 
     Debug.draw_grid(1, editor_config.grid_size/editor.camera.zoom, editor_config.grid_color);
-    var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); }, this);
+    var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); });
     var endgrid = screen2world([Window.width, 0]);
+    
+    var w_step = Math.round(editor_config.ruler_mark_px/Window.width * (endgrid.x-startgrid.x)/editor_config.grid_size)*editor_config.grid_size;
+    if (w_step === 0) w_step = editor_config.grid_size;
+    
+    var h_step = Math.round(editor_config.ruler_mark_px/Window.height * (endgrid.y-startgrid.y)/editor_config.grid_size)*editor_config.grid_size;
+    if (h_step === 0) h_step = editor_config.grid_size;
     
     while(startgrid[0] <= endgrid[0]) {
       GUI.text(startgrid[0], [world2screen([startgrid[0], 0])[0],0]);
-      startgrid[0] += editor_config.grid_size;
+      startgrid[0] += w_step;
     }
 
     while(startgrid[1] <= endgrid[1]) {
       GUI.text(startgrid[1], [0, world2screen([0, startgrid[1]])[1]]);
-      startgrid[1] += editor_config.grid_size;
+      startgrid[1] += h_step;
     }
     
     /* Draw selection box */
@@ -948,12 +947,7 @@ editor.inputs['C-n'] = function() {
 editor.inputs['C-n'].doc = "Open a new level.";
 
 editor.inputs['C-o'] = function() {
-  if (editor.check_level_nested()) {
-    Log.warn("Nested level ...");
-    return;
-  }
-
-  if (editor.edit_level.dirty) {
+  if (editor.edit_level.dirty()) {
     editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", function() {
       editor.clear_level();
       editor.openpanel(openlevelpanel);
@@ -1219,6 +1213,16 @@ editor.inputs.mouse.move = function(pos, dpos)
   });
 }
 
+editor.inputs.mouse['C-scroll'] = function(scroll)
+{
+  editor.camera.pos = editor.camera.pos.sub(scroll.scale(editor.camera.zoom * 3).scale([1,-1]));  
+}
+
+editor.inputs.mouse['C-M-scroll'] = function(scroll)
+{
+  editor.camera.zoom += scroll.y/100;
+}
+
 editor.inputs['C-M-S-lm'] = function() { editor.selectlist[0].set_center(Mouse.worldpos); };
 editor.inputs['C-M-S-lm'].doc = "Set world center to mouse position.";
 
@@ -1424,7 +1428,6 @@ var inputpanel = {
   },
   
   start() {},
-
   
   close() {
     Player.players[0].uncontrol(this);
@@ -1918,5 +1921,4 @@ if (IO.exists("editor.config"))
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
 editor.clear_level();
 editor.camera = Game.camera;
-
 Game.stop();
