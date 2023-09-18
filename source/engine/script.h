@@ -20,6 +20,7 @@ void script_startup();
 void script_run(const char *script, const char *file);
 void script_evalf(const char *format, ...);
 int script_dofile(const char *file);
+time_t jso_file(const char *file);
 JSValue script_runfile(const char *file);
 void script_update(double dt);
 void script_draw();
@@ -57,6 +58,6 @@ void call_physics(double dt);
 
 void register_draw(struct callee c);
 void call_draw();
-uint8_t *compile_script(const char *file);
+uint8_t *compile_script(const char *file, size_t *len);
 
 #endif

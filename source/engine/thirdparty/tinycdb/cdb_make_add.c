@@ -1,6 +1,6 @@
 /* cdb_make_add.c: basic cdb_make_add routine
  *
- * This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+ * This file is a part of tinycdb package by Michael Tokarev, mjt+cdb@corpit.ru.
  * Public domain.
  */
 

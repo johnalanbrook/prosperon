@@ -382,9 +382,6 @@ void call_input_down(int *key) {
 
 /* This is called once every frame - or more if we want it more! */
 void input_poll(double wait) {
-  mouse_delta = cpvzero;
-  mousewheel = cpvzero;
-
   for (int i = 0; i < arrlen(downkeys); i++)
     call_input_down(&downkeys[i]);
 }

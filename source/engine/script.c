@@ -45,6 +45,9 @@ void script_startup() {
 
   for (int i = 0; i < 100; i++)
     num_cache[i] = int2js(i);
+
+  script_dofile("scripts/engine.js");
+//  jso_file("scripts/engine.js");
 }
 
 JSValue num_cache[100] = {0};
@@ -95,13 +98,13 @@ void script_evalf(const char *format, ...)
   JS_FreeValue(js,obj);
 }
 
-uint8_t *compile_script(const char *file) {
-  size_t len;
-  const char *script = slurp_text(file, &len);
-  JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
+uint8_t *compile_script(const char *file, size_t *len) {
+  const char *script = slurp_text(file, len);
+  JSValue obj = JS_Eval(js, script, *len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
+  free(script);
   size_t out_len;
-  uint8_t *out;
-  return JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
+  uint8_t *out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE); 
+  return out;
 }
 
 struct callee stacktrace_callee;
@@ -124,6 +127,25 @@ void js_dump_stack() {
 
 int script_dofile(const char *file) {
   script_runfile(file);
+  return file_mod_secs(file);
+}
+
+JSValue script_runjso(const uint8_t *buf, size_t len)
+{
+  JSValue obj = JS_ReadObject(js, buf, len, JS_EVAL_FLAGS);
+  JSValue ret = JS_EvalFunction(js, obj);
+  js_print_exception(ret);
+  return ret;
+}
+
+time_t jso_file(const char *file)
+{
+  size_t len;
+  uint8_t *byte = compile_script(file, &len);
+  JSValue obj = JS_ReadObject(js, byte, len, JS_READ_OBJ_BYTECODE);
+  JSValue ret = JS_EvalFunction(js, obj);
+  js_print_exception(ret);
+  free(byte);
   return file_mod_secs(file);
 }
 

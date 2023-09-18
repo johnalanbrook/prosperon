@@ -15,6 +15,10 @@
 #include "stb_ds.h"
 #include "resources.h"
 #include "yugine.h"
+#include "sokol/sokol_app.h"
+
+#define SOKOL_GLUE_IMPL
+#include "sokol/sokol_glue.h"
 
 #include "crt.sglsl.h"
 #include "box.sglsl.h"
@@ -209,6 +213,8 @@ void render_init() {
   mainwin.height = sapp_height();
 
   sg_setup(&(sg_desc){
+      .context = sapp_sgcontext(),
+      .mtl_force_managed_storage_mode = 1,
       .logger = {
           .func = sg_logging,
           .user_data = NULL,
@@ -372,8 +378,22 @@ cpVect cam_pos() {
 
 static float zoom = 1.f;
 float cam_zoom() { return zoom; }
-
 void add_zoom(float val) { zoom = val; }
+
+HMM_Vec2 world2screen(HMM_Vec2 pos)
+{
+  pos = HMM_SubV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
+  pos = HMM_ScaleV2(pos, 1.0/zoom);
+  pos = HMM_AddV2(pos, HMM_V2(mainwin.width/2.0, mainwin.height/2.0));
+  return pos;
+}
+
+HMM_Vec2 screen2world(HMM_Vec2 pos)
+{
+  pos = HMM_AddV2(pos, HMM_V2(mainwin.width/2.0, mainwin.height/2.0));
+  pos = HMM_MulV2(pos, HMM_V2(zoom,zoom));
+  return HMM_AddV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
+}
 
 HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};

@@ -1,4 +1,4 @@
-MAKEFLAGS = --jobs=8
+MAKEFLAGS = --jobs=4
 UNAME != uname
 MAKEDIR != pwd
 
@@ -94,7 +94,9 @@ else
 
   ifeq ($(UNAME), Darwin)
     CFLAGS += -x objective-c
-    LDFLAGS += -framework Cocoa -framework QuartzCore -framework OpenGL -framework AudioToolbox
+    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox
+#    LDFLAGS += -framework Metal -framework MetalKit
+    LDFLAGS += -framework OpenGL
     PLAT = osx-$(ARCH)$(INFO)
   endif
 endif
@@ -110,7 +112,7 @@ OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb-0.78 source/shaders
+includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb source/shaders
 includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable
@@ -125,7 +127,6 @@ LDLIBS := $(addprefix -l, $(LDLIBS))
 DEPENDS = $(OBJS:.o=.d)
 -include $(DEPENDS)
 
-SCRIPTS = $(shell ls source/scripts/*.js)
 
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
@@ -133,31 +134,34 @@ DIST = yugine-$(PLAT)-$(COM)$(ZIP)
 DISTDIR = ./dist
 
 .DEFAULT_GOAL := all
-all: $(DISTDIR)/$(DIST)
+all: $(BIN)/$(NAME)
 
 DESTDIR ?= ~/.bin
+
+CDB = source/engine/thirdparty/tinycdb
 
 SHADERS = $(shell ls source/shaders/*.sglsl)
 SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 
-install: $(DISTDIR)/$(DIST)
-	@echo Unpacking $(DIST) in $(DESTDIR)
-	@$(UNZIP)
+install: $(BIN)/$(NAME)
+	cp $(BIN)/$(NAME) $(DESTDIR)
 
-$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
+$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a $(BIN)/libcdb.a
 	@echo Linking $(NAME)
 	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
 	@echo Finished build
 
-$(DISTDIR)/$(DIST): $(BIN)/$(NAME) $(SCRIPTS) assets/*
+$(DISTDIR)/$(DIST): $(BIN)/$(NAME)
 	@echo Creating distribution $(DIST)
 	@mkdir -p $(DISTDIR)
-	@cp -rf assets/* $(BIN)
-	@cp -rf source/scripts $(BIN)
 	@$(PKGCMD)
 
 $(BIN)/libengine.a: $(OBJS)
 	@$(AR) rcs $@ $(OBJS)
+
+$(BIN)/libcdb.a:
+	make -C $(CDB) libcdb.a
+	cp $(CDB)/libcdb.a $(BIN)
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
@@ -177,14 +181,36 @@ shaders: $(SHADERS)
 	@echo Creating shader $^
 	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos -o $@
 
+cdb: tools/cdb.c $(BIN)/libcdb.a
+	$(CC) $^ -I$(CDB) -o cdb
+
+source/engine/core.cdb.h: core.cdb
+	xxd -i $< > $@
+
+SCRIPTS := $(shell ls scripts/*.js)
+SCRIPT_O := $(addsuffix o, $(SCRIPTS))
+CORE != (ls icons/* fonts/*)
+CORE := $(CORE) $(SCRIPTS)
+
+core.cdb: packer $(CORE)
+	./packer $(CORE)
+	chmod 644 out.cdb
+	mv out.cdb core.cdb
+
+packer: tools/packer.c $(BIN)/libcdb.a
+	cc $^ -Isource/engine/thirdparty/tinycdb -o packer
+
+jso: tools/jso.c quickjs/libquickjs.a
+	cc tools/jso.c -lquickjs -Lquickjs -Iquickjs -o jso
+
+%.jso: %.js jso
+	@echo Making $@ from $<
+	./jso $< > $@
+
 clean:
 	@echo Cleaning project
-	@rm -rf bin/*
-	@rm -f *.gz
-	@rm -f source/shaders/*.sglsl.h
-	@rm -f source/shaders/*.metal
-	@rm -rf dist/*
-	@rm TAGS
+	@rm -rf bin/* dist/*
+	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

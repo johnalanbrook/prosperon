@@ -22,6 +22,8 @@
 
 #include "stb_ds.h"
 
+#include "core.cdb.h"
+
 char *DATA_PATH = NULL;
 char *PREF_PATH = NULL;
 
@@ -36,8 +38,8 @@ char pathbuf[MAXPATH + 1];
 
 const char *DB_NAME = "test.db";
 
+static struct cdb corecdb;
 static struct cdb game_cdb;
-static int loaded_cdb = 0;
 
 void resources_init() {
   DATA_PATH = malloc(MAXPATH);
@@ -47,10 +49,9 @@ void resources_init() {
   if (!PREF_PATH)
     PREF_PATH = strdup("./tmp/");
 
-  int fd;
-  fd = open("test.cdb", O_RDONLY);
+  int fd = open("test.cdb", O_RDONLY);
   cdb_init(&game_cdb, fd);
-  loaded_cdb = 1;
+  cdb_initf(&corecdb, core_cdb, core_cdb_len);
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -84,6 +85,21 @@ FILE *res_open(char *path, const char *tag) {
   strncat(pathbuf, path, MAXPATH);
   FILE *f = fopen(pathbuf, tag);
   return f;
+}
+
+char *seprint(char *fmt, ...)
+{
+  va_list args;
+  va_start (args, fmt);
+  char test[128];
+  int len = vsnprintf(test, 128, fmt, args);
+  if (len > 128) {
+    char test = malloc(len+1);
+    vsnprintf(test, len+1, fmt, args);
+    return strdup(test);
+  }
+  
+  return strdup(test);
 }
 
 static char *ext_paths = NULL;
@@ -163,17 +179,23 @@ char *make_path(const char *file) {
   return pathbuf;
 }
 
-unsigned char *slurp_file(const char *filename, size_t *size)
+void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)
 {
-  if (cdb_find(&game_cdb, filename, strlen(filename))) {
     unsigned vlen, vpos;
-    vpos = cdb_datapos(&game_cdb);
-    vlen = cdb_datalen(&game_cdb);
+    vpos = cdb_datapos(cdb);
+    vlen = cdb_datalen(cdb);
     char *data = malloc(vlen);
-    cdb_read(&game_cdb, data, vlen, vpos);
+    cdb_read(cdb, data, vlen, vpos);
     if (size) *size = vlen;
     return data;
-  }
+}
+
+unsigned char *slurp_file(const char *filename, size_t *size)
+{
+  if (cdb_find(&game_cdb, filename, strlen(filename)))
+    return cdb_slurp(&game_cdb, filename, size);
+  else if (cdb_find(&corecdb, filename, strlen(filename)))
+    return cdb_slurp(&corecdb, filename, size);
   
   FILE *f;
 
@@ -197,7 +219,7 @@ unsigned char *slurp_file(const char *filename, size_t *size)
 char *slurp_text(const char *filename, size_t *size)
 {
   size_t len;
-  char *str = slurp_file(filename, &len);
+  unsigned char *str = slurp_file(filename, &len);
   if (!str) return NULL;
   char *retstr = malloc(len+1);
   memcpy(retstr, str, len);

@@ -1,11 +1,11 @@
 /* cdb.h: public cdb include file
  *
- * This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+ * This file is a part of tinycdb package by Michael Tokarev, mjt+cdb@corpit.ru.
  * Public domain.
  */
 
 #ifndef TINYCDB_VERSION
-#define TINYCDB_VERSION 0.78
+#define TINYCDB_VERSION 0.80
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +37,7 @@ struct cdb {
 #define cdb_fileno(c) ((c)->cdb_fd)
 
 int cdb_init(struct cdb *cdbp, int fd);
+int cdb_initf(struct cdb *cdbp, void *p, unsigned len);
 void cdb_free(struct cdb *cdbp);
 
 int cdb_read(const struct cdb *cdbp,

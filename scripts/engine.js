@@ -14,9 +14,9 @@ load("scripts/std.js");
 function initialize()
 {
   if (!Game.edit)
-    run("scripts/play.js");
+    load("scripts/play.js");
   else
-    run("scripts/editor.js");
+    load("scripts/editor.js");
 }
 
 function run(file)
@@ -629,3 +629,5 @@ Game.view_camera(Primum.spawn(ur.camera2d));
 Window.name = "Primum Machinam (V0.1)";
 Window.width = 1280;
 Window.height = 720;
+
+Log.warn("AMDE IT");

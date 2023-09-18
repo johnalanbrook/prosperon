@@ -1,6 +1,6 @@
 /* cdb_seek.c: old interface for reading cdb file
  *
- * This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+ * This file is a part of tinycdb package by Michael Tokarev, mjt+cdb@corpit.ru.
  * Public domain.
  */
 

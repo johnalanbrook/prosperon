@@ -1,5 +1,35 @@
 User-visible news.  Latest at the top.
 
+tinycdb-0.80 2023-09-17
+
+ - bugfix: cdb utility: check return value from close() too,
+   when creating the cdb file
+
+ - portability: cdb utility: ignore SIGXFSZ signal if defined,
+   to be able to clean up when exceeding file limit
+
+ - robustness: let cdb_make_start to lseek() to the zero position
+   of file. This ensures the file is seekable right at the start
+   instead of at the very end, too
+
+ - robustness: cdb utility: remove temporary file in case create
+   operation fails
+
+ - portability use SEE_SET macro instead of 0 for lseek()
+
+ - split out cdb_pack() into its own .c file
+
+tinycdb-0.79 2023-09-17
+
+ - bugfix: call fsync() at the end of cdb_make_finish()
+   to ensure data does not stay in some kernel buffer
+
+ - bugfix: clean tests.out in `make distclean' too
+
+ - `make dist' makes tarball in the parent dir
+
+ - stop shipping debian/* - it is not a native debian package
+
 tinycdb-0.78 2012-05-11
 
  - bugfix release:

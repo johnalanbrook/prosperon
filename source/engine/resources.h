@@ -19,6 +19,8 @@ unsigned char *slurp_file(const char *filename, size_t *size);
 char *slurp_text(const char *filename, size_t *size);
 int slurp_write(const char *txt, const char *filename);
 
+char *seprint(char *fmt, ...);
+
 void pack_engine(const char *fname);
 
 #endif

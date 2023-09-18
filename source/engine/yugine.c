@@ -8,6 +8,8 @@
 #include "sound.h"
 #include "resources.h"
 
+#include <stdio.h>
+
 #include "datastream.h"
 
 #include "timer.h"
@@ -42,6 +44,7 @@
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"
+#include "sokol/sokol_args.h"
 
 #define STB_DS_IMPLEMENTATION
 #include <stb_ds.h>
@@ -152,7 +155,7 @@ int frame_fps() {
   return 1.0/sapp_frame_duration();
 }
 
-static double low_fps = 1/24.0; /* Chosen because of apple's 24 hz mode */
+static double low_fps = 1/24.0;
 static double low_fps_c = 0.0;
 
 void c_frame()
@@ -355,8 +358,6 @@ sapp_desc sokol_main(int argc, char **argv) {
   phys2d_init();
 
   script_startup();
-
-  script_dofile("scripts/engine.js");
   
   int argsize = 0;
   for (int i = 0; i < argc; i++) {

@@ -1,6 +1,6 @@
 /* cdb_make.c: basic cdb creation routines
  *
- * This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+ * This file is a part of tinycdb package by Michael Tokarev, mjt+cdb@corpit.ru.
  * Public domain.
  */
 
@@ -9,15 +9,6 @@
 #include <string.h>
 #include "cdb_int.h"
 
-void
-cdb_pack(unsigned num, unsigned char buf[4])
-{
-  buf[0] = num & 255; num >>= 8;
-  buf[1] = num & 255; num >>= 8;
-  buf[2] = num & 255;
-  buf[3] = num >> 8;
-}
-
 int
 cdb_make_start(struct cdb_make *cdbmp, int fd)
 {
@@ -25,7 +16,7 @@ cdb_make_start(struct cdb_make *cdbmp, int fd)
   cdbmp->cdb_fd = fd;
   cdbmp->cdb_dpos = 2048;
   cdbmp->cdb_bpos = cdbmp->cdb_buf + 2048;
-  return 0;
+  return lseek(fd, 0, SEEK_SET);
 }
 
 int internal_function
@@ -152,11 +143,11 @@ cdb_make_finish_internal(struct cdb_make *cdbmp)
     cdb_pack(hpos[t], p + (t << 3));
     cdb_pack(hcnt[t], p + (t << 3) + 4);
   }
-  if (lseek(cdbmp->cdb_fd, 0, 0) != 0 ||
+  if (lseek(cdbmp->cdb_fd, 0, SEEK_SET) != 0 ||
       _cdb_make_fullwrite(cdbmp->cdb_fd, p, 2048) != 0)
     return -1;
 
-  return 0;
+  return fsync(cdbmp->cdb_fd);
 }
 
 static void

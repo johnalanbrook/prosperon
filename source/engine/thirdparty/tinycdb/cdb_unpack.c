@@ -1,6 +1,6 @@
-/* cdb_unpack.c: unpack 32bit integer
+/* cdb_unpack.c: unpack a 32bit integer from network byte order
  *
- * This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+ * This file is a part of tinycdb package by Michael Tokarev, mjt+cdb@corpit.ru.
  * Public domain.
  */
 

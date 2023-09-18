@@ -1,6 +1,6 @@
 /* cdb_init.c: cdb_init, cdb_free and cdb_read routines
  *
- * This file is a part of tinycdb package by Michael Tokarev, mjt@corpit.ru.
+ * This file is a part of tinycdb package by Michael Tokarev, mjt+cdb@corpit.ru.
  * Public domain.
  */
 
@@ -15,6 +15,27 @@
 #endif
 #include <sys/stat.h>
 #include "cdb_int.h"
+
+int cdb_initf(struct cdb *cdbp, void *p, unsigned len)
+{
+  /* get file size */
+  if (len < 0)
+    return -1;
+    
+  cdbp->cdb_fd = -1;
+  cdbp->cdb_fsize = len;
+  cdbp->cdb_mem = p;
+  cdbp->cdb_vpos = cdbp->cdb_vlen = 0;
+  cdbp->cdb_kpos = cdbp->cdb_klen = 0;
+  unsigned dend;
+  unsigned fsize = len;
+  dend = cdb_unpack(p);
+  if (dend < 2048) dend = 2048;
+  else if (dend >= fsize) dend = fsize;
+  cdbp->cdb_dend = dend;
+
+  return 0;
+}
 
 int
 cdb_init(struct cdb *cdbp, int fd)

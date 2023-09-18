@@ -1099,6 +1099,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 135:
       ret = float2js(cam_zoom());
       break;
+
+    case 136:
+      ret = v22js(world2screen(js2hmmv2(argv[1])));
+      break;
+
+    case 137:
+      ret = v22js(screen2world(js2hmmv2(argv[1])));
+      break;
   }
 
   if (str)

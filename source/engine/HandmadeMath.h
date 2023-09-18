@@ -646,6 +646,11 @@ static inline HMM_Vec4 HMM_SubV4(HMM_Vec4 Left, HMM_Vec4 Right) {
   return Result;
 }
 
+  static inline HMM_Vec2 HMM_ScaleV2(HMM_Vec2 v, double s)
+  {
+    return HMM_V2(v.X*s, v.Y*s);    
+  }
+
 static inline HMM_Vec2 HMM_MulV2(HMM_Vec2 Left, HMM_Vec2 Right) {
 
   HMM_Vec2 Result;

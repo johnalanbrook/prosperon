@@ -9,6 +9,7 @@
   #define SOKOL_GLCORE33
   #define SOKOL_WIN32_FORCE_MAIN
 #elif __APPLE__
+//  #define SOKOL_METAL
   #define SOKOL_GLCORE33
 #endif
 
@@ -77,6 +78,8 @@ void set_cam_body(cpBody *body);
 cpVect cam_pos();
 float cam_zoom();
 void add_zoom(float val);
+HMM_Vec2 world2screen(HMM_Vec2 pos);
+HMM_Vec2 screen2world(HMM_Vec2 pos);
 
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d);
 
