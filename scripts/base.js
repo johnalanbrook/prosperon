@@ -208,7 +208,7 @@ Object.defineProperty(String.prototype, 'ext', {
 
 Object.defineProperty(String.prototype, 'set_ext', {
   value: function(val) {
-    return this.name() + val;
+    return this.dir() + "/" + this.name() + val;
   }
 });
 

@@ -34,10 +34,6 @@
 
 #include "string.h"
 
-#include "nuklear.h"
-#include "sokol/sokol_gfx.h"
-#include "sokol/sokol_nuklear.h"
-
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
 

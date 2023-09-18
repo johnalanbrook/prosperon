@@ -94,7 +94,7 @@ char *seprint(char *fmt, ...)
   char test[128];
   int len = vsnprintf(test, 128, fmt, args);
   if (len > 128) {
-    char test = malloc(len+1);
+    char *test = malloc(len+1);
     vsnprintf(test, len+1, fmt, args);
     return strdup(test);
   }
@@ -188,6 +188,18 @@ void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)
     cdb_read(cdb, data, vlen, vpos);
     if (size) *size = vlen;
     return data;
+}
+
+int fexists(char *path)
+{
+  return !access(path,R_OK);
+  
+  int len = strlen(path);
+  if (cdb_find(&game_cdb, path,len)) return 1;
+  else if (cdb_find(&core_cdb, path, len)) return 1;
+  else if (!access(path, R_OK)) return 1;
+
+  return 0;
 }
 
 unsigned char *slurp_file(const char *filename, size_t *size)

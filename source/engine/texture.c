@@ -25,7 +25,7 @@ static struct {
 struct Texture *tex_default;
 
 struct Texture *texture_notex() {
-  return texture_pullfromfile("./icons/no_tex.png");
+  return texture_pullfromfile("icons/no_tex.png");
 }
 
 unsigned int next_pow2(unsigned int v)
@@ -86,19 +86,22 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   int n;
 
+  long rawlen;
+  unsigned char *raw = slurp_file(path, &rawlen);
   unsigned char *data;
 
   char *ext = strrchr(path, '.');
 
   if (ext && !strcmp(ext, ".qoi")) {
     qoi_desc qoi;
-    data = qoi_read(path, &qoi, 4);
+    data = qoi_decode(raw, rawlen, &qoi, 4);
     tex->width = qoi.width;
     tex->height = qoi.height;
     n = qoi.channels;
   } else {
-    data = stbi_load(path, &tex->width, &tex->height, &n, 4);
+    data = stbi_load_from_memory(raw, rawlen, &tex->width, &tex->height, &n, 4);
   }
+  free(raw);
 
   if (data == NULL) {
     YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());

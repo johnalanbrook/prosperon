@@ -127,7 +127,6 @@ LDLIBS := $(addprefix -l, $(LDLIBS))
 DEPENDS = $(OBJS:.o=.d)
 -include $(DEPENDS)
 
-
 MYTAG = $(VER)_$(PTYPE)_$(INFO)
 
 DIST = yugine-$(PLAT)-$(COM)$(ZIP)
@@ -156,10 +155,12 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
 	@mkdir -p $(DISTDIR)
 	@$(PKGCMD)
 
-$(BIN)/libengine.a: $(OBJS)
+$(BIN)/libengine.a: $(SHADERS) source/engine/core.cdb.h .WAIT $(OBJS)
 	@$(AR) rcs $@ $(OBJS)
 
 $(BIN)/libcdb.a:
+	mkdir -p $(BIN)
+	rm -f $(CDB)/libcdb.a
 	make -C $(CDB) libcdb.a
 	cp $(CDB)/libcdb.a $(BIN)
 
@@ -169,7 +170,7 @@ $(BIN)/libquickjs.a:
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 
-$(OBJDIR)/%.o: %.c $(SHADERS)
+$(OBJDIR)/%.o: %.c 
 	@mkdir -p $(@D)
 	@echo Making C object $@
 	@$(CC) $(CFLAGS) -c $< -o $@
@@ -182,7 +183,7 @@ shaders: $(SHADERS)
 	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos -o $@
 
 cdb: tools/cdb.c $(BIN)/libcdb.a
-	$(CC) $^ -I$(CDB) -o cdb
+	$(CC) $< -lcdb -L$(BIN) -I$(CDB) -o cdb
 
 source/engine/core.cdb.h: core.cdb
 	xxd -i $< > $@
@@ -200,8 +201,8 @@ core.cdb: packer $(CORE)
 packer: tools/packer.c $(BIN)/libcdb.a
 	cc $^ -Isource/engine/thirdparty/tinycdb -o packer
 
-jso: tools/jso.c quickjs/libquickjs.a
-	cc tools/jso.c -lquickjs -Lquickjs -Iquickjs -o jso
+jso: tools/jso.c $(BIN)/libquickjs.a
+	$(CC) $< -lquickjs -lm -L$(BIN) -Iquickjs -o $@
 
 %.jso: %.js jso
 	@echo Making $@ from $<
@@ -209,8 +210,10 @@ jso: tools/jso.c quickjs/libquickjs.a
 
 clean:
 	@echo Cleaning project
-	@rm -rf bin/* dist/*
+	@rm -rf bin dist
 	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS
+	@make -C $(CDB) clean
+	@make -C quickjs clean
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

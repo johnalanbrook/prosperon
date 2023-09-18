@@ -553,16 +553,6 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
   return best;
 }
 
-int file_exists(char *path) {
-  FILE *o = fopen(path, "r");
-  if (o) {
-    fclose(o);
-    return 1;
-  }
-
-  return 0;
-}
-
 JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   const char *str = NULL;
@@ -830,7 +820,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 65:
     str = JS_ToCString(js, argv[1]);
-    ret = JS_NewBool(js, file_exists(str));
+    ret = JS_NewBool(js, fexists(str));
     break;
 
   case 66:
@@ -1107,6 +1097,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 137:
       ret = v22js(screen2world(js2hmmv2(argv[1])));
       break;
+
+    case 138:
+      str = JS_ToCString(js, argv[1]);
+      ret = JS_NewInt64(js, jso_file(str));
+      break;
+
   }
 
   if (str)

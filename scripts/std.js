@@ -177,3 +177,4 @@ Cmdline.register_cmd("t", function() {
   Log.warn("Testing not implemented yet.");
   Game.quit();
 }, "Test suite.");
+

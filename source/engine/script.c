@@ -45,8 +45,8 @@ void script_startup() {
 
   for (int i = 0; i < 100; i++)
     num_cache[i] = int2js(i);
-
-  script_dofile("scripts/engine.js");
+    
+  script_dofile("scripts/engine.js");  
 //  jso_file("scripts/engine.js");
 }
 
@@ -141,7 +141,7 @@ JSValue script_runjso(const uint8_t *buf, size_t len)
 time_t jso_file(const char *file)
 {
   size_t len;
-  uint8_t *byte = compile_script(file, &len);
+  uint8_t *byte = slurp_file(file, &len);
   JSValue obj = JS_ReadObject(js, byte, len, JS_READ_OBJ_BYTECODE);
   JSValue ret = JS_EvalFunction(js, obj);
   js_print_exception(ret);

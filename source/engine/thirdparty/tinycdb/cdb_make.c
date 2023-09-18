@@ -147,7 +147,14 @@ cdb_make_finish_internal(struct cdb_make *cdbmp)
       _cdb_make_fullwrite(cdbmp->cdb_fd, p, 2048) != 0)
     return -1;
 
+/* TODO: Windows doesn't support fsync; simple workaround is to not do it!
+   It does not seem that the lower level open(), read(), write() require it anyway.
+*/
+#ifdef _WIN32
+  return 0;
+#else
   return fsync(cdbmp->cdb_fd);
+#endif
 }
 
 static void

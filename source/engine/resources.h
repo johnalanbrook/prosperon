@@ -14,6 +14,7 @@ FILE *res_open(char *path, const char *tag);
 FILE *path_open(const char *tag, const char *fmt, ...);
 char *make_path(const char *file);
 char **ls(char *path);
+int fexists(char *path);
 
 unsigned char *slurp_file(const char *filename, size_t *size);
 char *slurp_text(const char *filename, size_t *size);

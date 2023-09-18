@@ -1,14 +1,10 @@
 var files = {};
 function load(file) {
-  var modtime = cmd(0, file);
-
-  if (modtime === 0) {
-    Log.stack();
-    return false;
-  }
+   var modtime = cmd(0, file);
   files[file] = modtime;
-}
+} 
 
+load("scripts/base.js");
 load("scripts/std.js");
 
 function initialize()
@@ -30,9 +26,6 @@ function run(file)
   files[file] = modtime;
   return cmd(117, file);
 }
-
-
-load("scripts/base.js");
 
 load("scripts/diff.js");
 Log.level = 1;
@@ -629,5 +622,3 @@ Game.view_camera(Primum.spawn(ur.camera2d));
 Window.name = "Primum Machinam (V0.1)";
 Window.width = 1280;
 Window.height = 720;
-
-Log.warn("AMDE IT");
