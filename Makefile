@@ -1,6 +1,6 @@
 MAKEFLAGS = --jobs=4
 UNAME != uname
-MAKEDIR != pwd
+nMAKEDIR != pwd
 
 # Options
 # DBG --- build with debugging symbols and logging
@@ -78,7 +78,7 @@ ifeq ($(OS), Windows_NT)
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sALLOW_MEMORY_GROWTH -sTOTAL_MEMORY=450MB --embed-file $(BIN)@
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=450MB
   CFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
   CC = emcc
@@ -166,7 +166,7 @@ $(BIN)/libcdb.a:
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
-	make -C quickjs OPT=$(OPT) HOST_CC=$(CC) libquickjs.a libquickjs.lto.a CC=$(CC)
+	make -C quickjs OPT=$(OPT) HOST_CC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 
@@ -180,7 +180,7 @@ shaders: $(SHADERS)
 
 %.sglsl.h:%.sglsl
 	@echo Creating shader $^
-	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos -o $@
+	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:glsl300es -o $@
 
 cdb: tools/cdb.c $(BIN)/libcdb.a
 	$(CC) $< -lcdb -L$(BIN) -I$(CDB) -o cdb

@@ -16,7 +16,7 @@ char *make_path(const char *file);
 char **ls(char *path);
 int fexists(char *path);
 
-unsigned char *slurp_file(const char *filename, size_t *size);
+void *slurp_file(const char *filename, size_t *size);
 char *slurp_text(const char *filename, size_t *size);
 int slurp_write(const char *txt, const char *filename);
 

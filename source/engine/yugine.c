@@ -34,6 +34,10 @@
 
 #include "string.h"
 
+#ifndef NO_EDITOR
+#include "nuke.h"
+#endif
+
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
 
@@ -46,11 +50,15 @@
 #include <stb_ds.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
+#define STB_TRUETYPE_NO_STDIO
 #include <stb_truetype.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_FAILURE_USERMSG
+#define STBI_NO_STDIO
+#ifdef __TINYC__
 #define STBI_NO_SIMD
+#endif
 #include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION

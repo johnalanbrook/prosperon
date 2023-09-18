@@ -6,6 +6,8 @@
 #include "mix.h"
 #include "sound.h"
 #include "log.h"
+#include "resources.h"
+#include <stdlib.h>
 
 #define TSF_BLOCK 32
 
@@ -58,18 +60,26 @@ struct bus *musicbus;
 
 void play_song(const char *midi, const char *sf)
 {
-    gsong.midi = tml_load_filename(midi);
+    long rawlen;
+    void *raw = slurp_file(midi, &rawlen);
+    
+    gsong.midi = tml_load_memory(raw, rawlen);
     if (gsong.midi == NULL) {
         YughWarn("Midi %s not found.", midi);
+	free(raw);
         return;
     }
-
-    gsong.sf = tsf_load_filename(sf);
+    free(raw);
+    
+    raw = slurp_file(sf, &rawlen);
+    gsong.sf = tsf_load_memory(raw, rawlen);
 
     if (gsong.sf == NULL) {
         YughWarn("SF2 %s not found.", sf);
+	free(raw);
         return;
     }
+    free(raw);
 
     gsong.time = 0.f;
 

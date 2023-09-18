@@ -7,6 +7,8 @@
 #include <stb_ds.h>
 #include <stb_image.h>
 
+#include "resources.h"
+
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize.h"
 

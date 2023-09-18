@@ -51,7 +51,11 @@ static void render_audio(plm_t *mpeg, plm_samples_t *samples, void *user) {
 }
 
 void ds_openvideo(struct datastream *ds, const char *video, const char *adriver) {
-  ds->plm = plm_create_with_filename(video);
+  long rawlen;
+  void *raw;
+  raw = slurp_file(video, &rawlen);
+  ds->plm = plm_create_with_memory(raw, rawlen, 0);
+  free(raw);
 
   if (!ds->plm) {
     YughError("Couldn't open %s", video);

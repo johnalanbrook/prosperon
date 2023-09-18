@@ -2,7 +2,7 @@ var files = {};
 function load(file) {
    var modtime = cmd(0, file);
   files[file] = modtime;
-} 
+}
 
 load("scripts/base.js");
 load("scripts/std.js");

@@ -18,26 +18,32 @@
 
 #include "sokol/sokol_audio.h"
 
+#define TSF_NO_STDIO
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
 
+#define TML_NO_STDIO
 #define TML_IMPLEMENTATION
 #include "tml.h"
 
+#define DR_WAV_NO_STDIO
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
 
-
 #ifndef NFLAC
+
 #define DR_FLAC_IMPLEMENTATION
+#define DR_FLAC_NO_STDIO
 #include "dr_flac.h"
 #endif
 
 #ifndef NMP3
+#define DR_MP3_NO_STDIO
 #define DR_MP3_IMPLEMENTATION
 #include "dr_mp3.h"
 #endif
 
+#define QOA_NO_STDIO
 #define QOA_IMPLEMENTATION
 #include "qoa.h"
 
@@ -143,43 +149,38 @@ struct wav *make_sound(const char *wav) {
   }
 
   struct wav mwav;
+  long rawlen;
+  void *raw = slurp_file(wav, &rawlen);
 
-  if (!strcmp(ext, "wav")) {
-    mwav.data = drwav_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-  }
+  if (!strcmp(ext, "wav"))
+    mwav.data = drwav_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
   #ifndef NFLAC
-  else if (!strcmp(ext, "flac")) {
-    mwav.data = drflac_open_file_and_read_pcm_frames_f32(wav, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-  }
+  else if (!strcmp(ext, "flac"))
+    mwav.data = drflac_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
   #endif
   #ifndef NMP3
   else if (!strcmp(ext, "mp3")) {
     drmp3_config cnf;
-    mwav.data = drmp3_open_file_and_read_pcm_frames_f32(wav, &cnf, &mwav.frames, NULL);
+    mwav.data = drmp3_open_memory_and_read_pcm_frames_f32(raw, rawlen, &cnf, &mwav.frames, NULL);
     mwav.ch = cnf.channels;
     mwav.samplerate = cnf.sampleRate;
   }
   #endif
   else if (!strcmp(ext, "qoa")) {
-    unsigned char header[QOA_MIN_FILESIZE];
-    FILE *f = fopen(wav, "rb");
-    fread(header, QOA_MIN_FILESIZE, 1, f);
     qoa_desc qoa;
-    unsigned int ff_pos = qoa_decode_header(header, QOA_MIN_FILESIZE, &qoa);
+    short *qoa_data = qoa_decode(raw, rawlen, &qoa);
     mwav.ch = qoa.channels;
     mwav.samplerate = qoa.samplerate;
     mwav.frames = qoa.samples;
-
-    short *qoa_data = qoa_read(wav, &qoa);
     mwav.data = malloc(sizeof(soundbyte) * mwav.frames * mwav.ch);
     src_short_to_float_array(qoa_data, mwav.data, mwav.frames*mwav.ch);
-    
-    fclose(f);
     free(qoa_data);
   } else {
     YughWarn("Cannot process file type '%s'.", ext);
+    free (raw);
     return NULL;
   }
+  free(raw);
 
   if (mwav.samplerate != SAMPLERATE)
     mwav = change_samplerate(mwav, SAMPLERATE);

@@ -202,7 +202,7 @@ int fexists(char *path)
   return 0;
 }
 
-unsigned char *slurp_file(const char *filename, size_t *size)
+void *slurp_file(const char *filename, size_t *size)
 {
   if (cdb_find(&game_cdb, filename, strlen(filename)))
     return cdb_slurp(&game_cdb, filename, size);
@@ -296,4 +296,6 @@ void pack_engine(const char *fname)
 void pack_engine(const char *fname){
   YughError("Cannot pack engine on a web build.");
 }
+
+char **ls(char *path) { return NULL; }
 #endif

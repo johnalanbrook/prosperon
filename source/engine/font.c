@@ -111,8 +111,6 @@ struct sFont *MakeSDFFont(const char *fontfile, int height)
 }
 
 struct sFont *MakeFont(const char *fontfile, int height) {
-  YughInfo("Making font %s.", fontfile);
-
   int packsize = 1024;
 
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
@@ -133,8 +131,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   stbtt_PackBegin(&pc, bitmap, packsize, packsize, 0, pad, NULL);
   stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 32, 95, glyphs);
   stbtt_PackEnd(&pc);
-
-  stbi_write_png("packedfont.png", packsize, packsize, 1, bitmap, sizeof(char) * packsize);
 
   stbtt_fontinfo fontinfo;
   if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {

@@ -2,6 +2,22 @@
 #define NUKE_H
 
 #include "render.h"
+
+#define NK_INCLUDE_STANDARD_IO
+#define NK_KEYSTATE_BASED_INPUT
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_STANDARD_BOOL
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#include "nuklear.h"
+#include "sokol/sokol_app.h"
+#include "sokol/sokol_gfx.h"
+#include "sokol/sokol_nuklear.h"
+
 struct window;
 
 void nuke_init(struct window *win);

@@ -2,30 +2,17 @@
 
 #ifndef NO_EDITOR
 
-#define NK_INCLUDE_STANDARD_IO
-#define NK_IMPLEMENTATION
-#define NK_KEYSTATE_BASED_INPUT
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_INCLUDE_STANDARD_BOOL
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-
 #define STBTT_STATIC
 
 #include "config.h"
 
 #include "sokol/sokol_gfx.h"
 
+#define NK_IMPLEMENTATION
 #define SOKOL_NUKLEAR_IMPL
-#define SOKOL_METAL
 #include "nuklear.h"
 #include "sokol/sokol_app.h"
 #include "sokol/sokol_nuklear.h"
-
 
 #include <stdarg.h>
 
