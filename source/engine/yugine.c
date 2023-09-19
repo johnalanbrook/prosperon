@@ -58,7 +58,6 @@ static struct d_prof prof_input;
 static struct d_prof prof_physics;
 
 double physlag = 0;
-int render_dirty = 0;
 
 double physMS = 1 / 60.f;
 
@@ -73,6 +72,8 @@ static float timescale = 1.f;
 #define SIM_STEP 2
 
 static int sim_play = SIM_PLAY;
+
+static int editor_mode = 0;
 
 #ifdef __TINYC__
 int backtrace(void **buffer, int size) {
@@ -168,25 +169,21 @@ static void process_frame()
 	prof(&prof_physics);
       }
 
-      if (sim_play == SIM_STEP) {
+      if (sim_play == SIM_STEP)
         sim_pause();
-	render_dirty = 1;
-      }
     }
 
-    if (sim_play == SIM_PLAY || render_dirty) {
-      prof_start(&prof_draw);
-      window_render(&mainwin);
-      prof(&prof_draw);
-      render_dirty = 0;
-    }
+    prof_start(&prof_draw);
+    window_render(&mainwin);
+    prof(&prof_draw);
+
     
     gameobjects_cleanup();
 }
 
 void c_frame()
 {
-  if (sim_play != SIM_PLAY) return;
+  if (editor_mode) return;
   process_frame();
 }
 
@@ -196,8 +193,6 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
-  render_dirty = 1;
-
   #ifndef NO_EDITOR
   snk_handle_event(e);
   #endif
@@ -260,7 +255,7 @@ void c_event(const sapp_event *e)
       break;
   }
 
-  if (sim_play != SIM_PLAY)
+  if (editor_mode)
     process_frame();
 }
 

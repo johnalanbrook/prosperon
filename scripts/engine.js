@@ -510,7 +510,7 @@ var Game = {
     sys_cmd(4);
   },
 
-  render() { sys_cmd(10); },
+  editor_mode(m) { sys_cmd(10, m); },
 
   playing() { return sys_cmd(5); },
   paused() { return sys_cmd(6); },
@@ -554,6 +554,13 @@ gameobject.make_parentable(Primum);
 Primum.tag = "PRIMUM";
 Primum.selectable = false;
 Primum.ur = { tag: "Primum" };
+Primum.spawn =       function(ur) {
+	if (typeof ur === 'string')
+	  ur = prototypes.get_ur(ur);
+
+	return ur.type.make(this);
+      };
+
 /* Reparent this object to a new one */
 World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 World.unparent = function() { Log.warn("The Primum has no parent, always."); }

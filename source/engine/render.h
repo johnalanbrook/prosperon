@@ -6,7 +6,7 @@
 #elif __EMSCRIPTEN__
   #define SOKOL_GLES3
 #elif __WIN32
-  #define SOKOL_GLCORE33
+  #define SOKOL_D3D11
   #define SOKOL_WIN32_FORCE_MAIN
 #elif __APPLE__
   #define SOKOL_METAL

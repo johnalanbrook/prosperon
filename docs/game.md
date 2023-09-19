@@ -42,7 +42,7 @@ In edit mode, there are no running scripts; only editing them.
 There are two distinct items in the Primum Machina: the Entity, and the Component. Components give qualities to Entities. An Entity is any real, tangible thing in the universe, and so every entity has a position. Components do not necessarily have a position; they can be things like the image that draws where the entity is located, and colliders that allow the entity to respond with the world.
 
 ### Components
-The most "bare metal" are the components. These are essentially hooks into the engine that tell it how to do particular things. For example, to render a sprite, Javascript does no rendering, but rather tells the engine to create an image and render it in a particular spot.
+The most "bare metal" are the components. These are essentially hooks into the engine that tell it how to do particular things. For example, to render a sprite, Javascript does no rendering, but rather tells the engine to create an image and render it in a particular spot. Javascript does the accounting to make or destroy the sprite as needed - but besides that initial startup, no scripting is done.
 
 Components are rendered in an "ECS" style. To work, components must be installed on an entity. They have no meaning outside of a physical object in the world.
 
@@ -62,7 +62,7 @@ All objects follow the prototyping model of inheritence. This makes it trivial t
 
 Components cannot be prototyped. They are fundamentally tied to the entity they are bound to.
 
-Entities can be prototyped out. What this means is that, when you select an object in the game, you can either make a "subtype" of it, where changes to the object trickle down to the created one, or a "sidetype" of it, which is a total duplicate of the object.
+Entities can be prototyped out. What this means is that, when you select an object in the game, you can either make a "subtype" of it, where changes to the object trickle down to the created one, or a "sidetype" of it, which is a total duplicate of the object. Javascript handled creating entites with components that have your saved values.
 
 entity.clone(parent) -> create a subtyped version of the entity
 entity.dup(parent) -> create a copy of the entity.
@@ -78,6 +78,17 @@ Ur-types have a lineage going back to the original gameobject. The ur-type linea
 Only first Ur-types can have components. Every inherited thing after it can only edit the original's components, not add or subtract. Original Ur-types must currently be defined in code.
 
 Ur-types also remember the list of entities that compose the given Ur.
+
+Visually it looks like this:
+
+Ur-ur, the thing all Ur-types derive from
+ - Ur-type 1, defined in script, with components
+   - Variant 1, same component combination but different values
+   - Variant 2, other different values
+     - Variant 2A, overwritten values from Variant 2
+ - Ur-type 2
+
+All ur-types and variants can be created in the world, where they become a true blue ENTITY. Entities can be under entities infinitely.
 
 ### Loading traits
 Traits are defined by code and a data file. When an Ur-type is extended with a trait, the code is run, and then the data file contains modifications and

@@ -15,13 +15,7 @@ var gameobject = {
   save: true,
   selectable: true,
 
-  spawn(ur) {
-    if (typeof ur === 'string')
-      ur = prototypes.get_ur(ur);
-
-    return ur.type.make(this);
-  },
-
+  /* Make a duplicate of this exact object */
   clone(name, ext) {
     var obj = Object.create(this);
     complete_assign(obj, ext);
@@ -113,36 +107,11 @@ var gameobject = {
   
   gizmo: "", /* Path to an image to draw for this gameobject */
 
-  /* Bounding box of the object in world dimensions */
+  /* Bounding box of the ur, if it were to be spawned */
   boundingbox() {
-    var boxes = [];
-    boxes.push({t:0, r:0,b:0,l:0});
 
-    for (var key in this.components) {
-      if ('boundingbox' in this.components[key])
-        boxes.push(this.components[key].boundingbox());
-    }
-    
-    if (boxes.empty) return cwh2bb([0,0], [0,0]);
-    
-    var bb = boxes[0];
-    
-    boxes.forEach(function(x) {
-      bb = bb_expand(bb, x);
-    });
-    
-    var cwh = bb2cwh(bb);
-    
-    if (!bb) return;
-    
-    if (this.flipx) cwh.c.x *= -1;
-    if (this.flipy) cwh.c.y *= -1;
-    
-    cwh.c = cwh.c.add(this.pos);
-    bb = cwh2bb(cwh.c, cwh.wh);
-    
-    return bb ? bb : cwh2bb([0,0], [0,0]);
   },
+
 
   width() {
     var bb = this.boundingbox();
@@ -204,7 +173,8 @@ var gameobject = {
   make(level) {
     level ??= Primum;
     var obj = Object.create(this);
-    this.instances.push(obj);
+//    this.instances.push(obj);
+//    obj.ur = this;
     obj.toString = function() {
       if (obj.ur)
         return obj.ur.tag;
@@ -272,6 +242,45 @@ var gameobject = {
       sync() { },
       dirty() { return false; },
 
+      spawn(ur) {
+	if (typeof ur === 'string')
+	  ur = prototypes.get_ur(ur);
+
+	return ur.type.make(this);
+      },
+
+
+      /* Bounding box of the object in world dimensions */
+      boundingbox() {
+	var boxes = [];
+	boxes.push({t:0, r:0,b:0,l:0});
+
+	for (var key in this.components) {
+	  if ('boundingbox' in this.components[key])
+	    boxes.push(this.components[key].boundingbox());
+	}
+
+	if (boxes.empty) return cwh2bb([0,0], [0,0]);
+
+	var bb = boxes[0];
+
+	boxes.forEach(function(x) {
+	  bb = bb_expand(bb, x);
+	});
+
+	var cwh = bb2cwh(bb);
+
+	if (!bb) return;
+
+	if (this.flipx) cwh.c.x *= -1;
+	if (this.flipy) cwh.c.y *= -1;
+
+	cwh.c = cwh.c.add(this.pos);
+	bb = cwh2bb(cwh.c, cwh.wh);
+
+	return bb ? bb : cwh2bb([0,0], [0,0]);
+      },
+
       dup(diff) {
 	var dup = Primum.spawn(this.ur);
 	Object.assign(dup, this);
@@ -312,7 +321,9 @@ var gameobject = {
       down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
       right() { return [1,0].rotate(Math.deg2rad(this.angle));},
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
-      
+
+      /* Given an ur-type, spawn one attached to us */
+
       toJSON() {
         var ret = {};
 	for (var key in this) {
@@ -371,6 +382,7 @@ var gameobject = {
 
 gameobject.make_parentable = function(obj) {
   var objects = [];
+  Object.defHidden(obj, 'level');
 
   obj.remove_child = function(child) {
     objects.remove(child);
@@ -434,19 +446,20 @@ prototypes.from_file = function(file)
     return;
   }
 
-  var newobj = gameobject.clone(file, {});
+  var newur = gameobject.clone(file, {});
   var script = IO.slurp(file);
 
-  newobj.$ = {};
+  Object.defHidden(newur, '$');
+  newur.$ = {};
   var json = {};
   if (IO.exists(file.name() + ".json")) {
     json = JSON.parse(IO.slurp(file.name() + ".json"));
-    Object.assign(newobj.$, json.$);
+    Object.assign(newur.$, json.$);
     delete json.$;
   }
 
-  compile_env(`var self = this; var $ = self.$; ${script}`, newobj, file);
-  dainty_assign(newobj, json);
+  compile_env(`var self = this; var $ = self.$; ${script}`, newur, file);
+  dainty_assign(newur, json);
 
   file = file.replaceAll('/', '.');
   var path = file.name().split('.');
@@ -457,12 +470,13 @@ prototypes.from_file = function(file)
     return base;
   };
   var a = nested_access(ur, path);
-  
+  Object.defHidden(a, 'instances');
+  a.instances = [];
   a.tag = file.name();
   prototypes.list.push(a.tag);
-  a.type = newobj;
+  a.type = newur;
   a.instances = [];
-  newobj.ur = a;
+//  newur.ur = a;
 
   return a;
 }

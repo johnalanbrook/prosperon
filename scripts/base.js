@@ -24,6 +24,11 @@ Object.defineProperty(Object.prototype, 'getOwnPropertyDescriptors', {
   }
 });
 
+Object.defHidden = function(obj, prop)
+{
+  Object.defineProperty(obj, prop, {enumerable:false, writable:true});
+}
+
 Object.defineProperty(Object.prototype, 'obscure', {
   value: function(name) {
     Object.defineProperty(this, name, { enumerable: false });

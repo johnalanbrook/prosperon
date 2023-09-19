@@ -1249,7 +1249,7 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     break;
 
   case 10:
-    render_dirty = 1;
+    editor_mode = js2bool(argv[1]);
     break;
   }
 

@@ -430,15 +430,6 @@ void full_2d_pass(struct window *window)
   //////////// 2D projection
   cpVect pos = cam_pos();
 
-#if defined SOKOL_GLCORE33 || defined SOKOL_GLES3
-  projection = HMM_Orthographic_RH_ZO(
-             pos.x - zoom * window->rwidth / 2,
-             pos.x + zoom * window->rwidth / 2,
-             pos.y + zoom * window->rheight / 2,
-             pos.y - zoom * window->rheight / 2, -1.f, 1.f);
-
-  hudproj = HMM_Orthographic_RH_ZO(0, window->width, window->height, 0, -1.f, 1.f);
-#else
   projection = HMM_Orthographic_LH_ZO(
              pos.x - zoom * window->rwidth / 2,
              pos.x + zoom * window->rwidth / 2,
@@ -446,7 +437,6 @@ void full_2d_pass(struct window *window)
              pos.y + zoom * window->rheight / 2, -1.f, 1.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, window->rwidth, 0, window->rheight, -1.f, 1.f);
-#endif
 
   sprite_draw_all();
   call_draw();

@@ -1,6 +1,6 @@
 MAKEFLAGS = --jobs=4
 UNAME != uname
-nMAKEDIR != pwd
+MAKEDIR != pwd
 
 # Options
 # DBG --- build with debugging symbols and logging
@@ -71,7 +71,7 @@ ARCH = x64
 ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static
   CFLAGS += -mwin32
-  LDLIBS += mingw32 kernel32 opengl32 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
+  LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   PLAT = w64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
@@ -142,11 +142,12 @@ SHADERS = $(shell ls source/shaders/*.sglsl)
 SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 
 install: $(BIN)/$(NAME)
-	cp $(BIN)/$(NAME) $(DESTDIR)
+	cp -f $(BIN)/$(NAME) $(DESTDIR)
 
 $(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a $(BIN)/libcdb.a
 	@echo Linking $(NAME)
 	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
+	cp $(BIN)/$(NAME) .
 	@echo Finished build
 
 $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
@@ -206,6 +207,11 @@ jso: tools/jso.c $(BIN)/libquickjs.a
 %.jso: %.js jso
 	@echo Making $@ from $<
 	./jso $< > $@
+
+WINCC = x86_64-w64-mingw32-gcc
+.PHONY: crosswin
+crosswin: 
+	make CC=$(WINCC) OS=Windows_NT
 
 clean:
 	@echo Cleaning project

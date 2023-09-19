@@ -762,7 +762,15 @@ editor.inputs['C-d'] = function() {
 };
 editor.inputs['C-d'].doc = "Duplicate all selected objects.";
 
-editor.inputs.f3 = function() { editor.selectlist.forEach(x => Log.say(JSON.stringify(x,null,2))); };
+editor.inputs.f3 = function() {
+  Log.say("Selected JSON ...");
+  editor.selectlist.forEach(x => Log.say(JSON.stringify(x,null,2)));
+  Log.say("UR JSON ...");
+  for (var key of Object.keys(editor.selectlist[0].ur.type))
+    Log.say(key);
+  
+  editor.selectlist.forEach(x => Log.say(JSON.stringify(x.ur.type,null,2)));
+};
 
 editor.inputs['C-m'] = function() {
   if (editor.sel_comp) {
@@ -1922,3 +1930,4 @@ if (IO.exists("editor.config"))
 editor.clear_level();
 editor.camera = Game.camera;
 Game.stop();
+Game.editor_mode(false);
