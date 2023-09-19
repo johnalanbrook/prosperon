@@ -90,6 +90,17 @@ Ur-ur, the thing all Ur-types derive from
 
 All ur-types and variants can be created in the world, where they become a true blue ENTITY. Entities can be under entities infinitely.
 
+Ur-types have a specific combination of components. When a component is removed from an entity, the link to its ur-type breaks.
+
+Entities have access to their ur-type through their .ur parameter. Each ur-type and variant likewise stores a list of entities that have been created from them.
+
+When an entity changes from its ur-type, it can be saved as its own variant, or merged up to its ur type. Brand new entities can be spawned via duping an already existing one (which retains its differences), or by requesting one from an ur type. Ur types are accessed through dot notation - ur.urtype.var1.vara. The 'ur' global object stores all ur types.
+
+the "ur" object has a few fields.
+ur.type : the actual object
+ur.instances : instances of it
+ur.tag : the full name of it
+
 ### Loading traits
 Traits are defined by code and a data file. When an Ur-type is extended with a trait, the code is run, and then the data file contains modifications and
 

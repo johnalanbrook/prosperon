@@ -548,23 +548,13 @@ Register.update.register(Game.exec, Game);
 
 load("scripts/entity.js");
 
-var World = Object.create(gameobject);
+var preprimum = {};
+preprimum.add_child = function() {};
+var World = gameobject.make(preprimum);
 var Primum = World;
-gameobject.make_parentable(Primum);
-Primum.tag = "PRIMUM";
 Primum.selectable = false;
-Primum.ur = { tag: "Primum" };
-Primum.spawn =       function(ur) {
-	if (typeof ur === 'string')
-	  ur = prototypes.get_ur(ur);
-
-	return ur.type.make(this);
-      };
-
-/* Reparent this object to a new one */
 World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 World.unparent = function() { Log.warn("The Primum has no parent, always."); }
-World.fullpath = function() { return World.name; };
 
 /* Load configs */
 function load_configs(file) {

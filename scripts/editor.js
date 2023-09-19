@@ -93,7 +93,6 @@ var editor = {
 
       pobj.from = this.selectlist[0].__proto__.from;
 
-
       protos[this.selectlist[0].__proto__.name] = pobj;
       Log.warn(JSON.stringify(protos));
       slurpwrite(JSON.stringify(protos, undefined, 2), "proto.json");
@@ -482,20 +481,6 @@ var editor = {
     GUI.text("MODE: " + this.edit_mode, [0,500]);
 
     Debug.point(world2screen(this.cursor), 2, Color.green);
-/*
-      this.selectlist.forEach(function(x) {
-        var p = [];
-	p.push(world2screen(this.cursor));
-	p.push(world2screen(x.pos));
-        Debug.line(p, Color.green);
-      },this);
- */
-
-    if (this.programmode) {
-      this.edit_level.objects.forEach(function(x) {
-        if (x.hasOwn('varname')) GUI.text(x.varname, world2screen(x.pos).add([0,32]), 1, [84,110,255]);
-      });
-    }
 
     if (this.comp_info && this.sel_comp) {
       GUI.text(Input.print_pawn_kbm(this.sel_comp), [100,700],1);
@@ -539,7 +524,7 @@ var editor = {
       GUI.text(x.toString(), world2screen(x.pos).add([0, 16]), 1, color);
       GUI.text(x.pos.map(function(x) { return Math.round(x); }), world2screen(x.pos), 1, color);
       Debug.arrow(world2screen(x.pos), world2screen(x.pos.add(x.up().scale(40))), Color.yellow, 1);
-      if (x.hasOwn('varname')) GUI.text(x.varname, world2screen(x.pos).add([0,32]), 1, [84,110,255]);
+
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
       
@@ -1029,33 +1014,6 @@ editor.inputs.f2 = function() {
   this.openpanel(objectexplorer);
 };
 editor.inputs.f2.doc = "Open configurations object.";
-
-editor.inputs['C-j'] = function() {
-   var varmakes = this.selectlist.filter(function(x) { return !x.hasOwn('varname'); });
-   varmakes.forEach(function(x) {
-     var allvnames = [];
-     this.edit_level.objects.forEach(function(x) {
-       if (x.varname)
-	 allvnames.push(x.varname);
-     });
-
-     var vname = x.from.replace(/ /g, '_').replace(/_object/g, '').replace(/\..*$/g, '');
-     var tnum = 1;
-     var testname = vname + "_" + tnum;
-     while (allvnames.includes(testname)) {
-       tnum++;
-       testname = vname + "_" + tnum;
-     }
-     x.varname = testname;
-  },this);
-};
-editor.inputs['C-j'].doc = "Give selected objects a variable name.";
-
-editor.inputs['M-j'] = function() {
-  var varmakes = this.selectlist.filter(function(x) { return x.hasOwn('varname'); });
-  varmakes.forEach(function(x) { delete x.varname; });
-};
-editor.inputs['M-j'].doc = "Remove variable names from selected objects.";
 
 editor.inputs.lm = function() { editor.sel_start = Mouse.worldpos; };
 editor.inputs.lm.doc = "Selection box.";
@@ -1930,4 +1888,6 @@ if (IO.exists("editor.config"))
 editor.clear_level();
 editor.camera = Game.camera;
 Game.stop();
-Game.editor_mode(false);
+Game.editor_mode(true);
+
+load("editorconfig.js");

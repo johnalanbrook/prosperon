@@ -76,8 +76,6 @@ var gameobject = {
     }
   },
 
-  varname: "",
-  
   pos: [0,0],
   
   set relpos(x) {
@@ -111,7 +109,6 @@ var gameobject = {
   boundingbox() {
 
   },
-
 
   width() {
     var bb = this.boundingbox();
@@ -173,14 +170,6 @@ var gameobject = {
   make(level) {
     level ??= Primum;
     var obj = Object.create(this);
-//    this.instances.push(obj);
-//    obj.ur = this;
-    obj.toString = function() {
-      if (obj.ur)
-        return obj.ur.tag;
-
-      return "NO UR"};
-
     obj.defn('body', make_gameobject(this.scale,
                            this.phys,
                            this.mass,
@@ -195,6 +184,7 @@ var gameobject = {
 
     /* Now that it's concrete in the engine, these functions update to return engine data */
     complete_assign(obj, {
+      make() { Log.error("Cannot make from an entity.") },
       set scale(x) { cmd(36, this.body, x); },
       get scale() { return cmd(103, this.body); },
       get flipx() { return cmd(104,this.body); },
@@ -245,8 +235,9 @@ var gameobject = {
       spawn(ur) {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
-
-	return ur.type.make(this);
+        if (!ur) Log.warn("Failed to make UR from " + ur);
+	
+	return ur.make(this);
       },
 
 
@@ -282,7 +273,7 @@ var gameobject = {
       },
 
       dup(diff) {
-	var dup = Primum.spawn(this.ur);
+	var dup = Primum.spawn(this.__proto__);
 	Object.assign(dup, this);
 	return dup;
       },
@@ -330,7 +321,7 @@ var gameobject = {
 	  var prop = Object.getOwnPropertyDescriptor(this, key);
 	  if (!prop) continue;
 	  if (prop.get) {
-	    if (prop.get() !== Object.getPrototypeOf(this)[key])
+	    if (prop.get() !== this.__proto__[key])
   	      ret[key] = prop.get();
 	  }
 	  else
@@ -469,16 +460,16 @@ prototypes.from_file = function(file)
 
     return base;
   };
-  var a = nested_access(ur, path);
-  Object.defHidden(a, 'instances');
-  a.instances = [];
-  a.tag = file.name();
-  prototypes.list.push(a.tag);
-  a.type = newur;
-  a.instances = [];
-//  newur.ur = a;
 
-  return a;
+  var instances = [];
+  var tag = file.name();
+  prototypes.list.push(tag);
+  
+  newur.toString = function() { return tag; };
+  Object.assign(nested_access(ur,path), newur);
+  nested_access(ur,path).__proto__ = newur.__proto__;
+  
+  return nested_access(ur,path);
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
 prototypes.list = [];
@@ -486,11 +477,8 @@ prototypes.list = [];
 prototypes.from_obj = function(name, obj)
 {
   var newobj = gameobject.clone(name, obj);
-  prototypes.ur[name] = {
-    tag: name,
-    type: newobj
-  };
-  newobj.ur = prototypes.ur[name];
+  prototypes.ur[name] = newobj;
+  newobj.toString = function() { return name; };
   return prototypes.ur[name];
 }
 

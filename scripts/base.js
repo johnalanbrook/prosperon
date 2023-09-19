@@ -1,3 +1,22 @@
+/* Removing crud I don't like */
+/* Functions that lead to bloated error prone javascript */
+/* It is EMCA6 but without a lot of builtin objects and various functions. There are no:
+   * Promises and so on (Generators, async)
+   * WeakMaps and so on (weakset, weakref)
+   * Typed arrays
+   * Proxys
+   * Modules
+   * Symbols (use closures)
+   In addition to the removal of a bunch of stuff as seen here.
+   Access prototypes through __proto__ instead of the long-winded Object.getProtoTypeOf.
+*/
+var FNRM = function() { Log.error("removed"); };
+Object.getPrototypeOf = FNRM;
+Object.setPrototypeOf = FNRM;
+Reflect = {};
+Symbol = {};
+URIError = {};
+
 /* Prototypes out an object and extends with values */
 function clone(proto, binds) {
   var c = Object.create(proto);
@@ -13,17 +32,6 @@ function copy(proto, binds) {
 };
 
 /* OBJECT DEFININTIONS */
-Object.defineProperty(Object.prototype, 'getOwnPropertyDescriptors', {
-  value: function() {
-    var obj = {};
-    for (var key in this) {
-      obj[key] = Object.getOwnPropertyDescriptor(this, key);
-    }
-
-    return obj;
-  }
-});
-
 Object.defHidden = function(obj, prop)
 {
   Object.defineProperty(obj, prop, {enumerable:false, writable:true});

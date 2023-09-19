@@ -73,7 +73,7 @@ static float timescale = 1.f;
 
 static int sim_play = SIM_PLAY;
 
-static int editor_mode = 0;
+int editor_mode = 0;
 
 #ifdef __TINYC__
 int backtrace(void **buffer, int size) {
