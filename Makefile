@@ -95,8 +95,7 @@ else
   ifeq ($(UNAME), Darwin)
     CFLAGS += -x objective-c
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox
-#    LDFLAGS += -framework Metal -framework MetalKit
-    LDFLAGS += -framework OpenGL
+    LDFLAGS += -framework Metal -framework MetalKit
     PLAT = osx-$(ARCH)$(INFO)
   endif
 endif
@@ -117,7 +116,7 @@ includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable
 
-NAME = yugine$(EXT)
+NAME = primum$(EXT)
 SEM = 0.0.1
 COM != fossil describe
 VER = $(SEM)-$(COM)

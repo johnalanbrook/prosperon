@@ -24,8 +24,12 @@ struct Texture *icon = NULL;
 
 void window_resize(int width, int height)
 {
-  mainwin.width = width;
-  mainwin.height = height;
+  mainwin.dpi = sapp_dpi_scale();
+  mainwin.width = sapp_width();
+  mainwin.height = sapp_height();
+  mainwin.rwidth = mainwin.width/mainwin.dpi;
+  mainwin.rheight = mainwin.height/mainwin.dpi;
+  
   render_winsize();
 
   JSValue vals[2] = { int2js(width), int2js(height) };

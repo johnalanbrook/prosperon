@@ -176,9 +176,10 @@ void sprite_initialize() {
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2,
-	[1].format = SG_VERTEXFORMAT_USHORT4N,
-	[2].format = SG_VERTEXFORMAT_FLOAT2,
-	[3].format = SG_VERTEXFORMAT_UBYTE4N
+	[1].format = SG_VERTEXFORMAT_FLOAT2,
+	[2].format = SG_VERTEXFORMAT_USHORT4N,
+	[3].format = SG_VERTEXFORMAT_FLOAT2,
+	[4].format = SG_VERTEXFORMAT_UBYTE4N
       }},
     .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
   });

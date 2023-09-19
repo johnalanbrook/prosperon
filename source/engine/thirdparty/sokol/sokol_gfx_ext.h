@@ -292,13 +292,7 @@ static void _sg_metal_encode_texture_pixels(int x, int y, int w, int h, bool ori
     [cmd_buffer waitUntilCompleted];
 
     MTLRegion mtl_region = MTLRegionMake2D(0, 0, w, h);
-    void* temp_pixels = malloc(w * 4 * h);
-    SOKOL_ASSERT(temp_pixels);
-    [mtl_dst_texture getBytes:temp_pixels bytesPerRow:w * 4 fromRegion:mtl_region mipmapLevel:0];
-    //    int res = SDL_ConvertPixels(w, h, _sg_metal_texture_format_to_sdl_pixel_format(mtl_dst_texture_desc.pixelFormat), temp_pixels, w * 4, SDL_PIXELFORMAT_RGBA32, pixels, w * 4);
-    free(temp_pixels);
-    //    SOKOL_ASSERT(res == 0);
-    //    _SOKOL_UNUSED(res);
+    [mtl_dst_texture getBytes:pixels bytesPerRow:w * 4 fromRegion:mtl_region mipmapLevel:0];
 }
 
 static void _sg_metal_query_image_pixels(_sg_image_t* img, void* pixels) {

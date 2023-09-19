@@ -1,17 +1,14 @@
 #include "nuke.h"
 
 #ifndef NO_EDITOR
-
-#define STBTT_STATIC
-
 #include "config.h"
 
-#include "sokol/sokol_gfx.h"
-
+#define NK_PRIVATE
+#define STB_IMAGE_STATIC
+#define STBTT_STATIC
 #define NK_IMPLEMENTATION
-#define SOKOL_NUKLEAR_IMPL
 #include "nuklear.h"
-#include "sokol/sokol_app.h"
+#define SOKOL_NUKLEAR_IMPL
 #include "sokol/sokol_nuklear.h"
 
 #include <stdarg.h>
@@ -27,7 +24,8 @@ struct nk_context *ctx;
 
 void nuke_init(struct window *win) {
   snk_setup(&(snk_desc_t){
-    .no_default_font = false
+    .no_default_font = false,
+    .dpi_scale = sapp_dpi_scale(),
   });
 
   ctx = snk_new_frame();
@@ -58,7 +56,7 @@ void nuke_start() {
 }
 
 void nuke_end() {
-  snk_render(mainwin.width,mainwin.height);
+  snk_render(sapp_width(), sapp_height());
 }
 
 int nuke_begin(const char *lbl, struct rect rect) {

@@ -10,6 +10,9 @@ struct window {
   int id;
   int width;
   int height;
+  double dpi;
+  int rwidth;
+  int rheight;
   bool render;
   bool mouseFocus;
   bool keyboardFocus;

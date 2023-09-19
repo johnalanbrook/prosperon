@@ -16,22 +16,15 @@
 #include "resources.h"
 #include "yugine.h"
 #include "sokol/sokol_app.h"
-
-#define SOKOL_GLUE_IMPL
 #include "sokol/sokol_glue.h"
 
 #include "crt.sglsl.h"
 #include "box.sglsl.h"
 #include "shadow.sglsl.h"
 
-#define SOKOL_TRACE_HOOKS
-#define SOKOL_GFX_IMPL
 #include "sokol/sokol_gfx.h"
-
-#define SOKOL_GFX_EXT_IMPL
 #include "sokol/sokol_gfx_ext.h"
 
-#define MSF_GIF_IMPL
 #include "msf_gif.h"
 
 static struct {
@@ -77,6 +70,7 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
     .render_target = true,
     .width = gif.w,
     .height = gif.h,
+    .pixel_format = SG_PIXELFORMAT_RGBA8
   });
 
   sg_gif.depth = sg_make_image(&(sg_image_desc){
@@ -251,7 +245,8 @@ void render_init() {
         [0].format = SG_VERTEXFORMAT_FLOAT2,
 	[1].format = SG_VERTEXFORMAT_FLOAT2
       }
-    }
+    },
+    .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8
   });
 
   crt_post.pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -282,6 +277,7 @@ void render_init() {
     .depth_stencil_attachment.image = crt_post.depth_img,
   });
 
+#if defined SOKOL_GLCORE33 || defined SOKOL_GLES3
   float crt_quad[] = {
     -1, 1, 0, 1,
     -1, -1, 0, 0,
@@ -290,6 +286,31 @@ void render_init() {
     1, -1, 1, 0,
     1, 1, 1, 1
   };
+#else
+  float crt_quad[] = {
+    -1, 1, 0, 0,
+    -1, -1, 0, 1,
+    1, -1, 1, 1,
+    -1, 1, 0, 0,
+    1, -1, 1, 1,
+    1, 1, 1, 0
+  };
+#endif
+  float gif_quad[] = {
+    -1, 1, 0, 1,
+    -1, -1, 0, 0,
+    1, -1, 1, 0,
+    -1, 1, 0, 1,
+    1, -1, 1, 0,
+    1, 1, 1, 1
+  };
+
+  sg_gif.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(gif_quad),
+    .data = gif_quad,
+  });
+  sg_gif.bind.fs.images[0] = crt_post.img;
+  sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 
   crt_post.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(crt_quad),
@@ -364,7 +385,8 @@ void render_winsize()
     .depth_stencil_attachment.image = crt_post.depth_img,
   });
 
-  crt_post.bind.fs.images[0] = crt_post.img;  
+  crt_post.bind.fs.images[0] = crt_post.img;
+  sg_gif.bind.fs.images[0] = crt_post.img;
 }
 
 static cpBody *camera = NULL;
@@ -384,15 +406,18 @@ HMM_Vec2 world2screen(HMM_Vec2 pos)
 {
   pos = HMM_SubV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
   pos = HMM_ScaleV2(pos, 1.0/zoom);
-  pos = HMM_AddV2(pos, HMM_V2(mainwin.width/2.0, mainwin.height/2.0));
+  pos = HMM_AddV2(pos, HMM_V2(mainwin.rwidth/2.0, mainwin.rheight/2.0));
   return pos;
 }
 
 HMM_Vec2 screen2world(HMM_Vec2 pos)
 {
-  pos = HMM_AddV2(pos, HMM_V2(mainwin.width/2.0, mainwin.height/2.0));
-  pos = HMM_MulV2(pos, HMM_V2(zoom,zoom));
-  return HMM_AddV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
+  pos.Y *= -1;
+  pos = HMM_ScaleV2(pos, 1/mainwin.dpi);
+  pos = HMM_AddV2(pos, HMM_V2(-mainwin.rwidth/2.0, mainwin.rheight/2.0));
+  pos = HMM_ScaleV2(pos, zoom);
+  pos = HMM_AddV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
+  return pos;
 }
 
 HMM_Mat4 projection = {0.f};
@@ -405,14 +430,23 @@ void full_2d_pass(struct window *window)
   //////////// 2D projection
   cpVect pos = cam_pos();
 
-  projection = HMM_Orthographic_RH_NO(
-             pos.x - zoom * window->width / 2,
-             pos.x + zoom * window->width / 2,
-             pos.y - zoom * window->height / 2,
-             pos.y + zoom * window->height / 2, -1.f, 1.f);
+#if defined SOKOL_GLCORE33 || defined SOKOL_GLES3
+  projection = HMM_Orthographic_RH_ZO(
+             pos.x - zoom * window->rwidth / 2,
+             pos.x + zoom * window->rwidth / 2,
+             pos.y + zoom * window->rheight / 2,
+             pos.y - zoom * window->rheight / 2, -1.f, 1.f);
 
-  hudproj = HMM_Orthographic_RH_NO(0, window->width, 0, window->height, -1.f, 1.f);
+  hudproj = HMM_Orthographic_RH_ZO(0, window->width, window->height, 0, -1.f, 1.f);
+#else
+  projection = HMM_Orthographic_LH_ZO(
+             pos.x - zoom * window->rwidth / 2,
+             pos.x + zoom * window->rwidth / 2,
+             pos.y - zoom * window->rheight / 2,
+             pos.y + zoom * window->rheight / 2, -1.f, 1.f);
 
+  hudproj = HMM_Orthographic_LH_ZO(0, window->rwidth, 0, window->rheight, -1.f, 1.f);
+#endif
 
   sprite_draw_all();
   call_draw();
@@ -473,7 +507,7 @@ void openglRender(struct window *window) {
   if (gif.rec && (appTime - gif.timer) > gif.spf) {
     sg_begin_pass(sg_gif.pass, &pass_action);
     sg_apply_pipeline(sg_gif.pipe);
-    sg_apply_bindings(&crt_post.bind);
+    sg_apply_bindings(&sg_gif.bind);
     sg_draw(0,6,1);
     sg_end_pass();
 

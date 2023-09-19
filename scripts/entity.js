@@ -562,14 +562,17 @@ prototypes.from_obj("camera2d", {
     speedmult: 1.0,
     
     selectable: false,
+
+    world2this(pos) { return cmd(70, this.body, pos); },
+    this2world(pos) { return cmd(71, this.body,pos); },
+
     
     view2world(pos) {
-      pos.y *= -1;
-      return pos.add([-Window.width,Window.height].scale(0.5)).scale(this.zoom).add(this.pos);
+      return cmd(137,pos);
     },
     
     world2view(pos) {
-      return pos.sub(this.pos).scale(1/this.zoom).add(Window.dimensions.scale(0.5));
+      return cmd(136,pos);
     },
 });
 

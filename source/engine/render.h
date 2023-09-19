@@ -9,8 +9,7 @@
   #define SOKOL_GLCORE33
   #define SOKOL_WIN32_FORCE_MAIN
 #elif __APPLE__
-//  #define SOKOL_METAL
-  #define SOKOL_GLCORE33
+  #define SOKOL_METAL
 #endif
 
 #include "sokol/sokol_gfx.h"

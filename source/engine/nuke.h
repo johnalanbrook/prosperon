@@ -13,9 +13,10 @@
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#include "nuklear.h"
-#include "sokol/sokol_app.h"
+
 #include "sokol/sokol_gfx.h"
+#include "sokol/sokol_app.h"
+#include "nuklear.h"
 #include "sokol/sokol_nuklear.h"
 
 struct window;
