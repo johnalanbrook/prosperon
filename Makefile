@@ -210,7 +210,7 @@ jso: tools/jso.c $(BIN)/libquickjs.a
 clean:
 	@echo Cleaning project
 	@rm -rf bin dist
-	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS
+	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS scripts/*.jso
 	@make -C $(CDB) clean
 	@make -C quickjs clean
 

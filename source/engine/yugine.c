@@ -133,6 +133,7 @@ static char **args;
 
 void c_init() {
   render_init();
+  window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
   script_evalf("initialize();");
 }
@@ -141,14 +142,10 @@ int frame_fps() {
   return 1.0/sapp_frame_duration();
 }
 
-static double low_fps = 1/24.0;
-static double low_fps_c = 0.0;
-
-void c_frame()
+static void process_frame()
 {
     double elapsed = sapp_frame_duration();
     appTime += elapsed;
-    low_fps_c += elapsed;
 
     input_poll(0);
     timer_update(elapsed, timescale);    
@@ -175,10 +172,9 @@ void c_frame()
         sim_pause();
 	render_dirty = 1;
       }
-      low_fps_c = 0.0f;
     }
 
-    if (sim_play == SIM_PLAY || render_dirty || low_fps_c >= low_fps) {
+    if (sim_play == SIM_PLAY || render_dirty) {
       prof_start(&prof_draw);
       window_render(&mainwin);
       prof(&prof_draw);
@@ -186,6 +182,12 @@ void c_frame()
     }
     
     gameobjects_cleanup();
+}
+
+void c_frame()
+{
+  if (sim_play != SIM_PLAY) return;
+  process_frame();
 }
 
 void c_clean() {
@@ -257,6 +259,9 @@ void c_event(const sapp_event *e)
       window_quit();
       break;
   }
+
+  if (sim_play != SIM_PLAY)
+    process_frame();
 }
 
 int sim_playing() { return sim_play == SIM_PLAY; }
@@ -370,5 +375,6 @@ sapp_desc sokol_main(int argc, char **argv) {
   start_desc.height = mainwin.height;
   start_desc.fullscreen = 0;
 
+  
   return start_desc;
 }

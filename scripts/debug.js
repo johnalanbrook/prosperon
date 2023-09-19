@@ -97,7 +97,7 @@ var Debug = {
 
     if (this.draw_names)
       Game.objects.forEach(function(x) {
-        GUI.text(x.fullpath(), world2screen(x.pos).add([0,32]), 1, [84,110,255]);
+        GUI.text(x, world2screen(x.pos).add([0,32]), 1, [84,110,255]);
       });
 
     if (Debug.Options.gif.rec) {
