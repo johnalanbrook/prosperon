@@ -98,7 +98,7 @@ var editor = {
       slurpwrite(JSON.stringify(protos, undefined, 2), "proto.json");
       
       /* Save object changes to parent */
-      dainty_assign(this.selectlist[0].__proto__, tobj);
+      Object.dainty_assign(this.selectlist[0].__proto__, tobj);
 
       /* Remove the local from this object */
       unmerge(this.selectlist[0], tobj);
@@ -124,7 +124,7 @@ var editor = {
       if (typeof newp[key] === 'object' && 'clone' in newp[key])
         newp[key] = newp[key].clone();
 
-    dainty_assign(newp, this.selectlist[0].prop_obj());
+    Object.dainty_assign(newp, this.selectlist[0].prop_obj());
     this.selectlist[0].kill();
     var gopos = this.selectlist[0].pos;
     this.unselect();
@@ -152,7 +152,7 @@ var editor = {
     deep_merge(pobj, tobj);
     
 
-    dainty_assign(newp, pobj);
+    Object.dainty_assign(newp, pobj);
     this.selectlist[0].kill();
     this.unselect();
     var proto = this.edit_level.spawn(gameobjects[name]);
@@ -620,7 +620,7 @@ var editor = {
     Log.info(path);
     var fn = function(x) { return path.endsWith(x); };
     if (images.any(fn)) {
-      var newtex = copy(texgui, { path: path });
+      var newtex = Object.copy(texgui, { path: path });
       this.addpanel(newtex);
     }
     else if (sounds.any(fn))
@@ -1479,7 +1479,7 @@ function proto_children(name) {
 
 load("scripts/textedit.js");
 
-var objectexplorer = copy(inputpanel, {
+var objectexplorer = Object.copy(inputpanel, {
   title: "object explorer",
   obj: undefined,
   previous: [],
@@ -1625,7 +1625,7 @@ var objectexplorer = copy(inputpanel, {
 
 });
 
-var helppanel = copy(inputpanel, {
+var helppanel = Object.copy(inputpanel, {
   title: "help",
   
   start() {
@@ -1637,7 +1637,7 @@ var helppanel = copy(inputpanel, {
   },
 });
 
-var openlevelpanel = copy(inputpanel,  {
+var openlevelpanel = Object.copy(inputpanel,  {
   title: "open entity",
   action() {
     editor.load(this.value);
@@ -1678,33 +1678,33 @@ var openlevelpanel = copy(inputpanel,  {
   },
 });
 
-var saveaspanel = copy(inputpanel, {
+var saveaspanel = Object.copy(inputpanel, {
   title: "save level as",
   action() {
     editor.saveas_check(this.value);
   },
 });
 
-var groupsaveaspanel = copy(inputpanel, {
+var groupsaveaspanel = Object.copy(inputpanel, {
   title: "group save as",
   action() { editor.groupsaveas(editor.selectlist, this.value); }
 });
 
-var saveprototypeas = copy(inputpanel, {
+var saveprototypeas = Object.copy(inputpanel, {
   title: "save prototype as",
   action() {
     editor.save_proto_as(this.value);
   },
 });
 
-var savetypeas = copy(inputpanel, {
+var savetypeas = Object.copy(inputpanel, {
   title: "save type as",
   action() {
     editor.save_type_as(this.value);
   },
 });
 
-var quitpanel = copy(inputpanel, {
+var quitpanel = Object.copy(inputpanel, {
   title: "really quit?",
   action() {
     quit();
@@ -1718,7 +1718,7 @@ var quitpanel = copy(inputpanel, {
   },
 });
 
-var notifypanel = copy(inputpanel, {
+var notifypanel = Object.copy(inputpanel, {
   title: "notification",
   msg: "Refusing to save. File already exists.",
   action() {
@@ -1759,7 +1759,7 @@ var allfiles = [];
 allfiles.push(scripts, images, sounds);
 allfiles = allfiles.flat();
 
-var assetexplorer = copy(openlevelpanel, {
+var assetexplorer = Object.copy(openlevelpanel, {
   title: "asset explorer",
   extensions: allfiles,
   closeonsubmit: false,
@@ -1798,7 +1798,7 @@ function tab_complete(val, list) {
     return ret;
 }
 
-var texgui = clone(inputpanel, {
+var texgui = Object.copy(inputpanel, {
   get path() { return this._path; },
   set path(x) {
     this._path = x;
@@ -1811,7 +1811,7 @@ var texgui = clone(inputpanel, {
   },
 });
 
-var entitylistpanel = copy(inputpanel, {
+var entitylistpanel = Object.copy(inputpanel, {
   title: "Level object list",
   level: {},
   start() {

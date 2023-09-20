@@ -577,7 +577,7 @@ load("scripts/entity.js");
 
 var preprimum = {};
 preprimum.add_child = function() {};
-var World = gameobject.make(preprimum);
+var World = gameobject.make(gameobject.ur, preprimum);
 var Primum = World;
 Primum.selectable = false;
 World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }

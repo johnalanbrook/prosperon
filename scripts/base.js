@@ -17,12 +17,48 @@ Reflect = {};
 Symbol = {};
 URIError = {};
 
-/* Prototypes out an object and extends with values */
-function clone(proto, binds) {
-  var c = Object.create(proto);
-  complete_assign(c, binds);
-  return c;
+Object.complete_assign = function(target, source)
+{
+var descriptors = {};
+  var assigns = {};
+  if (typeof source === 'undefined') return target;
+  Object.keys(source).forEach(function (k) {
+    var desc = Object.getOwnPropertyDescriptor(source, k);
+
+    if (desc.value) {
+      if (typeof desc.value === 'object' && desc.value.hasOwn('value'))
+        descriptors[k] = desc.value;
+      else
+        assigns[k] = desc.value;
+    } else
+      descriptors[k] = desc;
+  });
+
+  Object.defineProperties(target, descriptors);
+  Object.assign(target, assigns);
+  return target;
 };
+
+Object.dainty_assign = function(target, source)
+{
+  for (var key in source) {
+
+    if (typeof source[key] === 'function') {
+      target[key] = source[key];
+      continue;
+    }
+    if (!Object.hasOwn(target, key)) continue;
+    if (!Object.getOwnPropertyDescriptor(target, key).writable) continue;
+    
+    if (Array.isArray(target[key]))
+      target[key] = source[key];
+    else if (typeof target[key] === 'object')
+      Object.dainty_assign(target[key], source[key]);
+    else {
+      target[key] = source[key];
+    }
+  }
+}
 
 Object.totalassign = function(to, from)
 {
@@ -31,11 +67,13 @@ Object.totalassign = function(to, from)
 }
 
 /* Prototypes out an object and assigns values */
-function copy(proto, binds) {
+Object.copy = function(proto, ...objs)
+{
   var c = Object.create(proto);
-  Object.assign(c, binds);
+  for (var obj of objs)
+    Object.complete_assign(c, obj);
   return c;
-};
+}
 
 /* OBJECT DEFININTIONS */
 Object.defHidden = function(obj, prop)

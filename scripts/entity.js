@@ -14,13 +14,6 @@ var gameobject = {
   save: true,
   selectable: true,
 
-  /* Make a duplicate of this exact object */
-  clone(name, ext) {
-    var obj = Object.create(this);
-    complete_assign(obj, ext);
-    return obj;
-  },
-
   layer_nuke() {
     Nuke.label("Collision layer");
     Nuke.newline(Collision.num);
@@ -198,8 +191,8 @@ var gameobject = {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
         if (!ur) Log.warn("Failed to make UR from " + ur);
-	
-	return ur.make(this);
+
+        return gameobject.make(ur, this);
       },
 
 
@@ -275,35 +268,44 @@ var gameobject = {
 //      right() { return [1,0].rotate(Math.deg2rad(this.angle));},
 //      left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
 
-  make(level) {
+  make(ur, level) {
     level ??= Primum;
     var obj = Object.create(this);
     obj.defn('body', make_gameobject());
     obj.defn('components', {});
     
     Game.register_obj(obj);
+    gameobject.make_parentable(obj);    
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
+    Object.totalassign(obj, ur);
+
     for (var prop in obj) {
-       if (typeof obj[prop] === 'object' && 'make' in obj[prop]) {
-           obj[prop] = obj[prop].make(obj.body);
-	   obj[prop].defn('gameobject', obj);
-	   obj.components[prop] = obj[prop];
+       if (typeof obj[prop] === 'object' && 'comp' in obj[prop]) {
+         var newcomp = component[obj[prop].comp].make(obj.body);
+	 Object.assign(newcomp, obj[prop]);
+	 newcomp.sync?.();
+         obj[prop] = newcomp;
+	 obj[prop].defn('gameobject', obj);
+	 obj.components[prop] = obj[prop];
        }
     };
 
     obj.check_registers(obj);
-    
-    gameobject.make_parentable(obj);
 
     /* Spawn subobjects defined */
-    if (obj.$) {
-      for (var e in obj.$)
-        obj.$[e] = obj.spawn(prototypes.get_ur(obj.$[e].ur));
-    }
 
-    Object.totalassign(obj, obj.ur);
+    if (obj.$) {
+      for (var e in obj.$) {
+	var newobj = obj.spawn(prototypes.get_ur(obj.$[e].ur));
+	Object.assign(newobj, obj.$[e].diff);
+        obj.$[e] = newobj;
+      }
+    }
+    
+
+
 
     if (typeof obj.start === 'function') obj.start();
 
@@ -386,7 +388,7 @@ if (IO.exists("proto.json"))
 
 for (var key in prototypes) {
   if (key in gameobjects)
-    dainty_assign(gameobjects[key], prototypes[key]);
+    Object.dainty_assign(gameobjects[key], prototypes[key]);
   else {
     /* Create this gameobject fresh */
     Log.info("Making new prototype: " + key + " from " + prototypes[key].from);
@@ -397,13 +399,14 @@ for (var key in prototypes) {
       if (typeof newproto[pkey] === 'object' && newproto[pkey] && 'clone' in newproto[pkey])
         newproto[pkey] = newproto[pkey].clone();
 
-    dainty_assign(gameobjects[key], prototypes[key]);
+    Object.dainty_assign(gameobjects[key], prototypes[key]);
   }
 }
 }
 
 prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
+/* Makes a new ur-type from a file. The file can define components. */
 prototypes.from_file = function(file)
 {
   if (!IO.exists(file)) {
@@ -411,20 +414,20 @@ prototypes.from_file = function(file)
     return;
   }
 
-  var newur = gameobject.clone(file, {});
+  var newur = Object.create(gameobject.ur);
   var script = IO.slurp(file);
 
-  Object.defHidden(newur, '$');
-  newur.$ = {};
-  var json = {};
+//  Object.defHidden(newur, '$');
+//  newur.$ = {};
+/*  var json = {};
   if (IO.exists(file.name() + ".json")) {
     json = JSON.parse(IO.slurp(file.name() + ".json"));
     Object.assign(newur.$, json.$);
     delete json.$;
   }
-
-  compile_env(`var self = this; var $ = self.$; ${script}`, newur, file);
-  dainty_assign(newur, json);
+*/
+  compile_env(`var self = this; ${script}`, newur, file);
+//  Object.dainty_assign(newur, json);
 
   file = file.replaceAll('/', '.');
   var path = file.name().split('.');
@@ -450,8 +453,9 @@ prototypes.list = [];
 
 prototypes.from_obj = function(name, obj)
 {
-  var newobj = gameobject.clone(name, obj);
+  var newobj = Object.copy(gameobject.ur, obj);
   prototypes.ur[name] = newobj;
+  Log.say(Object.keys(newobj));
   newobj.toString = function() { return name; };
   return prototypes.ur[name];
 }
@@ -498,18 +502,6 @@ prototypes.get_ur = function(name)
     return prototypes.ur[name];
 }
 
-prototypes.from_obj("polygon2d", {
-  polygon2d: polygon2d.clone(),
-});
-
-prototypes.from_obj("edge2d", {
-  edge2d: bucket.clone(),
-});
-
-prototypes.from_obj("sprite", {
-  sprite: sprite.clone(),
-});
-
 prototypes.generate_ur = function(path)
 {
   var ob = IO.glob("**.js");
@@ -541,7 +533,6 @@ prototypes.from_obj("camera2d", {
 
     world2this(pos) { return cmd(70, this.body, pos); },
     this2world(pos) { return cmd(71, this.body,pos); },
-
     
     view2world(pos) {
       return cmd(137,pos);

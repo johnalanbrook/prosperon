@@ -1,4 +1,4 @@
-var texteditor = clone(inputpanel, {
+var texteditor = Object.copy(inputpanel, {
   title: "text editor",
   _cursor:0, /* Text cursor: [char,line] */
   get cursor() { return this._cursor; },

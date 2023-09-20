@@ -29,50 +29,6 @@ var walk_up_get_prop = function(obj, prop, endobj) {
   return props;
 };
 
-
-function complete_assign(target, source) {
-  var descriptors = {};
-  var assigns = {};
-  if (typeof source === 'undefined') return target;
-  Object.keys(source).forEach(function (k) {
-    var desc = Object.getOwnPropertyDescriptor(source, k);
-
-    if (desc.value) {
-      if (typeof desc.value === 'object' && desc.value.hasOwn('value'))
-        descriptors[k] = desc.value;
-      else
-        assigns[k] = desc.value;
-    } else
-      descriptors[k] = desc;
-  });
-
-  Object.defineProperties(target, descriptors);
-  Object.assign(target, assigns);
-  return target;
-};
-
-/* Assigns properties from source to target, only if they exist in target */
-function dainty_assign(target, source)
-{
-  for (var key in source) {
-
-    if (typeof source[key] === 'function') {
-      target[key] = source[key];
-      continue;
-    }
-    if (!Object.hasOwn(target, key)) continue;
-    if (!Object.getOwnPropertyDescriptor(target, key).writable) continue;
-    
-    if (Array.isArray(target[key]))
-      target[key] = source[key];
-    else if (typeof target[key] === 'object')
-      dainty_assign(target[key], source[key]);
-    else {
-      target[key] = source[key];
-    }
-  }
-};
-
 /* Deeply remove source keys from target, not removing objects */
 function unmerge(target, source) {
   for (var key in source) {

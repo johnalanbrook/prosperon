@@ -1,4 +1,5 @@
 var component = {
+  components: [],
   toString() {
     if ('gameobject' in this)
       return this.name + " on " + this.gameobject;
@@ -18,14 +19,14 @@ var component = {
   
   prepare_center() {},
   finish_center() {},
-  clone(spec) {
-    return clone(this, spec);
+  extend(spec) {
+    return Object.copy(this, spec);
   },
 };
 
 component.toJSON = ur_json;
 
-var sprite = clone(component, {
+component.sprite = Object.copy(component, {
   name: "sprite",
   path: "",
   layer: 0,
@@ -36,30 +37,30 @@ var sprite = clone(component, {
   angle: 0,
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
 
-get enabled() { return cmd(114,this.id); },
-set enabled(x) { cmd(20,this.id,x); },
-set color(x) { cmd(96,this.id,x); },
-get color() {return undefined; },
-get pos() { return cmd(111, this.id); },
-set pos(x) { cmd(37,this.id,x); },
-set layer(x) { cmd(60, this.id, x); },
-get layer() { return undefined; },
+  get enabled() { return cmd(114,this.id); },
+  set enabled(x) { cmd(20,this.id,x); },
+  set color(x) { cmd(96,this.id,x); },
+  get color() {return undefined; },
+  get pos() { return cmd(111, this.id); },
+  set pos(x) { cmd(37,this.id,x); },
+  set layer(x) { cmd(60, this.id, x); },
+  get layer() { return undefined; },
 
-boundingbox() {
-  var dim = this.dimensions();
-  dim = dim.scale(this.gameobject.scale);
-  var realpos = this.pos.copy();
-  realpos.x = realpos.x * dim.x + (dim.x/2);
-  realpos.y = realpos.y * dim.y + (dim.y/2);
-  return cwh2bb(realpos,dim);
-},
+  boundingbox() {
+    var dim = this.dimensions();
+    dim = dim.scale(this.gameobject.scale);
+    var realpos = this.pos.copy();
+    realpos.x = realpos.x * dim.x + (dim.x/2);
+    realpos.y = realpos.y * dim.y + (dim.y/2);
+    return cwh2bb(realpos,dim);
+  },
 
-sync() {
-  if (this.path)
-    cmd(12,this.id,this.path,this.rect);
-},
+  sync() {
+    if (this.path)
+      cmd(12,this.id,this.path,this.rect);
+  },
 
-kill() { cmd(9,this.id); },
+  kill() { cmd(9,this.id); },
   dimensions() { return cmd(64,this.path); },
   width() { return cmd(64,this.path).x; },
   height() { return cmd(64,this.path).y; },
@@ -67,19 +68,20 @@ kill() { cmd(9,this.id); },
   make(go) {
     var sprite = Object.create(this);
     sprite.id = make_sprite(go);
-    sprite.layer = 1;
-    Log.say(`made sprite with pos ${sprite.pos}`);
+    sprite.sync();
     return sprite;
   },
 
   POS_MID: [-0.5, -0.5],
 });
 
-sprite.ur = {
+var sprite = component.sprite;
+
+component.sprite.ur = {
   pos:[0,0],
   color:[1,1,1],
   layer:0,
-  enabled:true
+  enabled:true,
 };
 
 sprite.inputs = {};
@@ -93,15 +95,8 @@ sprite.inputs.kp3 = function() { this.pos = [0, -1]; };
 sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
 sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
 
-
 /* Container to play sprites and anim2ds */
-var char2d = clone(sprite, {
-  clone(anims) {
-    var char = clone(this);
-    char.anims = anims;
-    return char;
-  },
-  
+component.char2d = Object.copy(sprite, {
   name: "char 2d",
   
   frame2rect(frames, frame) {
@@ -115,7 +110,7 @@ var char2d = clone(sprite, {
   },
   
   make(go) {
-    var char = clone(this, {
+    var char = Object.copy(this, {
       get enabled() { return cmd(114,this.id); },
       set enabled(x) { cmd(20,this.id,x); },
       set color(x) { cmd(96,this.id,x); },
@@ -237,7 +232,7 @@ var Geometry = {
 };
 
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
-var collider2d = clone(component, {
+var collider2d = Object.copy(component, {
   name: "collider 2d",
   sensor: false,
 
@@ -260,25 +255,18 @@ collider2d.inputs['M-s'].doc = "Toggle if this collider is a sensor.";
 collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
-var polygon2d = clone(collider2d, {
+component.polygon2d = Object.copy(collider2d, {
   name: "polygon 2d",
   points: [],
   flipx: false,
   flipy: false,
 
-  clone(spec) {
-    var obj = Object.create(this);
-    obj.points = this.points.copy();
-    Object.assign(obj, spec);
-    return obj;
-  },
-
   make(go) {
     var poly = Object.create(this);
     Object.assign(poly, make_poly2d(go, this.points));
     
-    complete_assign(poly, this.make_fns);
-    complete_assign(poly, {
+    Object.assign(poly, this.make_fns);
+    Object.assign(poly, {
       boundingbox() {
         return points2bb(this.spoints);
       },
@@ -340,6 +328,8 @@ var polygon2d = clone(collider2d, {
   },
 });
 
+var polygon2d = component.polygon2d;
+
 polygon2d.inputs = {};
 polygon2d.inputs.post = function() { this.sync(); };
 polygon2d.inputs.f10 = function() {
@@ -366,15 +356,10 @@ polygon2d.inputs['C-b'] = function() {
 };
 polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 
-var bucket = clone(collider2d, {
-  name: "bucket",
-  clone(spec) {
-    var obj = Object.create(this);
-    obj.cpoints = this.cpoints.copy(); 
-    dainty_assign(obj, spec);
-    return obj;
-  },
+Object.freeze(polygon2d);
 
+component.bucket = Object.copy(collider2d, {
+  name: "bucket",
   cpoints:[],
   degrees:2,
   dimensions:2,
@@ -465,7 +450,7 @@ var bucket = clone(collider2d, {
   make(go) {
     var edge = Object.create(this);
     Object.assign(edge, make_edge2d(go, this.points, this.thickness));
-    complete_assign(edge, {
+    Object.assign(edge, {
       set thickness(x) {
         cmd_edge2d(1,this.id,x);
       },
@@ -483,7 +468,7 @@ var bucket = clone(collider2d, {
       },
     });
 
-    complete_assign(edge, this.make_fns);
+    Object.assign(edge, this.make_fns);
 
     Object.defineProperty(edge, 'id', {enumerable:false});
     Object.defineProperty(edge, 'shape', {enumerable:false});
@@ -513,6 +498,7 @@ var bucket = clone(collider2d, {
   pick(pos) { return Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints); },
 });
 
+var bucket = component.bucket;
 bucket.inputs = {};
 bucket.inputs.h = function() { this.hollow = !this.hollow; };
 bucket.inputs.h.doc = "Toggle hollow.";
@@ -626,7 +612,7 @@ bucket.inputs.rb = function() {
 bucket.inputs.rb.doc = "Rotate the points CW.";
 bucket.inputs.rb.rep = true;
 
-var circle2d = clone(collider2d, {
+component.circle2d = Object.copy(collider2d, {
   name: "circle 2d",
   set radius(x) { cmd_circle2d(0,this.id,x); },
   get radius() { return cmd_circle2d(2,this.id); },
@@ -654,12 +640,12 @@ var circle2d = clone(collider2d, {
     this.radius = Nuke.pprop("Radius", this.radius);
     this.offset = Nuke.pprop("offset", this.offset);
   },
-});
 
-circle2d.ur = {
-  radius:10,
-  offset:[0,0],
-};
+  ur: {
+    radius:10,
+    offset:[0,0],
+  },
+});
 
 /* ASSETS */
 
@@ -691,3 +677,5 @@ var Resources = {
 
   },
 };
+
+Log.warn("bottom of components");
