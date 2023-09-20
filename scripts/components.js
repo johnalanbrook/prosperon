@@ -34,40 +34,39 @@ var sprite = clone(component, {
   angle: 0,
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
 
+get enabled() { return cmd(114,this.id); },
+set enabled(x) { cmd(20,this.id,x); },
+set color(x) { cmd(96,this.id,x); },
+get color() {return undefined; },
+get pos() { return cmd(111, this.id); },
+set pos(x) { cmd(37,this.id,x); },
+set layer(x) { cmd(60, this.id, x); },
+get layer() { return undefined; },
+
+boundingbox() {
+  var dim = this.dimensions();
+  dim = dim.scale(this.gameobject.scale);
+  var realpos = this.pos.copy();
+  realpos.x = realpos.x * dim.x + (dim.x/2);
+  realpos.y = realpos.y * dim.y + (dim.y/2);
+  return cwh2bb(realpos,dim);
+},
+
+sync() {
+  if (this.path)
+    cmd(12,this.id,this.path,this.rect);
+},
+
+kill() { cmd(9,this.id); },
+
+
   dimensions() { return cmd(64,this.path); },
   width() { return cmd(64,this.path).x; },
   height() { return cmd(64,this.path).y; },
 
   make(go) {
     var sprite = Object.create(this);
-    var id = make_sprite(go,this.path,this.pos);
-    complete_assign(sprite, {
-      get enabled() { return cmd(114,id); },
-      set enabled(x) { cmd(20,id,x); },
-      set color(x) { cmd(96,id,x); },
-      get color() {return undefined; },
-      get pos() { return cmd(111, id); },
-      set pos(x) { cmd(37,id,x); },
-      set layer(x) { cmd(60, id, x); },
-      get layer() { return undefined; },
-
-      boundingbox() {
-        var dim = this.dimensions();
-	dim = dim.scale(this.gameobject.scale);
-	var realpos = this.pos.copy();
-	realpos.x = realpos.x * dim.x + (dim.x/2);
-	realpos.y = realpos.y * dim.y + (dim.y/2);
-	return cwh2bb(realpos,dim);
-      },
-
-      sync() {
-        if (this.path)
-          cmd(12,id,this.path,this.rect);
-      },
-
-      kill() { cmd(9,id); },
-    });
-    
+    sprite.id = make_sprite(go);
     sprite.layer = 1;
     return sprite;
   },
@@ -634,27 +633,11 @@ var circle2d = clone(collider2d, {
   set pos(x) { this.offset = x; },
     
   make(go) {
-    var circle = clone(this);
+    var circle = Object.create(this.made);
     var circ = make_circle2d(go, circle.radius, circle.offset);
     Object.assign(circle, circ);
     Object.defineProperty(circle, 'id', {enumerable:false});
     Object.defineProperty(circle, 'shape', {enumerable:false});
-
-    complete_assign(circle, {
-      set radius(x) { cmd_circle2d(0,this.id,x); },
-      get radius() { return cmd_circle2d(2,this.id); },
-
-      set offset(x) { cmd_circle2d(1,this.id,x); },
-      get offset() { return cmd_circle2d(3,this.id); },
-
-      boundingbox() {
-        var diameter = this.radius*2*this.gameobject.scale;
-        return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
-      },
-    });
-
-    complete_assign(circle, this.make_fns);
-
     return circle;
   },
 
@@ -665,6 +648,22 @@ var circle2d = clone(collider2d, {
     this.offset = Nuke.pprop("offset", this.offset);
   },
 });
+
+circle2d.made = Object.create(circle2d);
+complete_assign(circle2d.made, collider2d.make_fns);
+complete_assign(circle2d.made, {
+  set radius(x) { cmd_circle2d(0,this.id,x); },
+  get radius() { return cmd_circle2d(2,this.id); },
+
+  set offset(x) { cmd_circle2d(1,this.id,x); },
+  get offset() { return cmd_circle2d(3,this.id); },
+
+  boundingbox() {
+    var diameter = this.radius*2*this.gameobject.scale;
+    return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
+  },
+});
+
 
 
 /* ASSETS */

@@ -1400,17 +1400,7 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
 }
 
 JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = js2int(argv[0]);
-  const char *path = JS_ToCString(js, argv[1]);
-  HMM_Vec2 pos = js2hmmv2(argv[2]);
-  int sprite = make_sprite(go);
-  struct sprite *sp = id2sprite(sprite);
-  sprite_loadtex(sp, path, ST_UNIT);
-  sp->pos = pos;
-
-  JS_FreeCString(js, path);
-
-  return JS_NewInt64(js, sprite);
+  return JS_NewInt64(js, make_sprite(js2int(argv[0])));
 }
 
 /* Make anim from texture */
@@ -1669,7 +1659,7 @@ void ffi_load() {
 
   DUK_FUNC(sys_cmd, 1)
 
-  DUK_FUNC(make_sprite, 3)
+  DUK_FUNC(make_sprite, 1)
   DUK_FUNC(make_anim2d, 3)
   DUK_FUNC(spline_cmd, 6)
 

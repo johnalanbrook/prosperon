@@ -239,8 +239,8 @@ var DebugControls = {};
 DebugControls.inputs = {};
 DebugControls.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
 DebugControls.inputs.f1.doc = "Draw physics debugging aids.";
-DebugControls.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
-DebugControls.inputs.f3.doc = "Toggle drawing bounding boxes.";
+//DebugControls.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
+//DebugControls.inputs.f3.doc = "Toggle drawing bounding boxes.";
 DebugControls.inputs.f4 = function() {
   Debug.draw_names = !Debug.draw_names;
   Debug.draw_gizmos = !Debug.draw_gizmos;

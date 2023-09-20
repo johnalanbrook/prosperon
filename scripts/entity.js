@@ -313,21 +313,28 @@ var gameobject = {
       right() { return [1,0].rotate(Math.deg2rad(this.angle));},
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
 
-      /* Given an ur-type, spawn one attached to us */
-
       toJSON() {
-        var ret = {};
-	for (var key in this) {
-	  var prop = Object.getOwnPropertyDescriptor(this, key);
-	  if (!prop) continue;
-	  if (prop.get) {
-	    if (prop.get() !== this.__proto__[key])
-  	      ret[key] = prop.get();
+        function objdiff(from, to) {
+	  if (!to) return from; /* Everything on from is unique */
+	  var ret = {};
+	  for (var key of Object.keys(from)) {
+	    if (typeof from[key] === 'object') {
+	      var diff = objdiff(from[key], to[key]);
+	      if (diff && !diff.empty) ret[key] = diff;
+	      continue;
+	    }
+	    if (from[key] !== to[key])
+	      ret[key] = from[key];
 	  }
-	  else
-	    ret[key] = this[key];
+	  Log.say("Returning a obj with values ...");
+	  for (var key in ret)
+	    Log.say(key);
+
+	  if (ret.empty) return undefined;
+	  return ret;
 	}
-	return ret;
+	
+        return objdiff(this, this.__proto__);
       },
     });
 
@@ -338,6 +345,8 @@ var gameobject = {
 	   obj.components[prop] = obj[prop];
        }
     };
+
+    dainty_assign(obj, this);
 
     obj.check_registers(obj);
     
@@ -401,6 +410,8 @@ gameobject.make_parentable = function(obj) {
   }
   obj.objects = objects;
 }
+
+gameobject.entity = {};
 
 /* Default objects */
 var prototypes = {};
@@ -468,7 +479,7 @@ prototypes.from_file = function(file)
   newur.toString = function() { return tag; };
   Object.assign(nested_access(ur,path), newur);
   nested_access(ur,path).__proto__ = newur.__proto__;
-  
+
   return nested_access(ur,path);
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
