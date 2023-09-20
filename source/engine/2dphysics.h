@@ -129,7 +129,7 @@ void phys2d_set_gravity(cpVect v);
 void shape_enabled(struct phys2d_shape *shape, int enabled);
 int shape_is_enabled(struct phys2d_shape *shape);
 void shape_set_sensor(struct phys2d_shape *shape, int sensor);
-int shape_get_sensor(struct phys2d_shape *shape);
+int shape_get_sensor(struct phys2d_shape *shape); 
 
 struct rgba shape_color_s(cpShape *shape);
 

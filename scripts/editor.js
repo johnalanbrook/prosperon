@@ -750,10 +750,8 @@ editor.inputs['C-d'].doc = "Duplicate all selected objects.";
 editor.inputs.f3 = function() {
 
   editor.selectlist.forEach(function(x) {
-    Log.say("Selected JSON ...");  
     Log.say(JSON.stringify(x,null,2));
-    Log.say("UR JSON");
-    Log.say(JSON.stringify(x.__proto__,null,2))
+//    x.components.forEach(function(x) { Log.say(JSON.stringify(x,null,2)); Log.say(JSON.stringify(x.ur,null,2));});
   });
 };
 

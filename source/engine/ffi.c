@@ -1257,20 +1257,7 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 }
 
 JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int g = MakeGameobject();
-  struct gameobject *go = get_gameobject_from_id(g);
-
-  go->scale = js2number(argv[0]);
-  go->bodytype = js2int(argv[1]);
-  go->mass = js2number(argv[2]);
-  go->f = js2number(argv[3]);
-  go->e = js2number(argv[4]);
-  go->flipx = 1.f;
-  go->flipy = 1.f;
-
-  gameobject_apply(go);
-
-  return JS_NewInt64(js, g);
+  return JS_NewInt64(js, MakeGameobject());
 }
 
 JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1653,7 +1640,7 @@ void ffi_load() {
   DUK_FUNC(nuke, 6)
   #endif
   
-  DUK_FUNC(make_gameobject, 7)
+  DUK_FUNC(make_gameobject, 0)
   DUK_FUNC(set_body, 3)
   DUK_FUNC(q_body, 2)
 

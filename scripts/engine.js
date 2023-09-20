@@ -172,7 +172,6 @@ var Render = {
   },
 };
 
-
 load("scripts/physics.js");
 load("scripts/input.js");
 load("scripts/sound.js");
@@ -374,6 +373,36 @@ function Color(from) {
 };
 */
 
+var ur_json = function()
+{
+  function objdiff(from, to) {
+    if (!to) return from; // Everything on from is unique
+    var ret = {};
+    for (var key in from) {
+      if (from[key]?.ur) {
+	ret[key] = objdiff(from[key], from[key].ur);
+	continue;
+      }
+
+      if (!(key in to)) continue;
+
+      if (typeof from[key] === 'object') {
+	var diff = objdiff(from[key], to[key]);
+	if (diff && !diff.empty) ret[key] = diff;
+	continue;
+      }
+      
+      if (from[key] !== to[key])
+	ret[key] = from[key];
+    }
+    if (ret.empty) return undefined;
+    return ret;
+  }
+
+  return objdiff(this, this.ur); 
+}
+
+
 load("scripts/components.js");
 
 function replacer_empty_nil(key, val) {
@@ -543,8 +572,6 @@ var Game = {
 };
 
 Register.update.register(Game.exec, Game);
-
-//load("scripts/level.js");
 
 load("scripts/entity.js");
 

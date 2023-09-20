@@ -11,7 +11,6 @@ function grab_from_points(pos, points, slop) {
 };
 
 var gameobject = {
-  scale: 1.0,
   save: true,
   selectable: true,
 
@@ -22,7 +21,6 @@ var gameobject = {
     return obj;
   },
 
-  layer: 0, /* Collision layer; should probably have been called "mask" */
   layer_nuke() {
     Nuke.label("Collision layer");
     Nuke.newline(Collision.num);
@@ -51,9 +49,6 @@ var gameobject = {
     }
   },
 
-  mass: 1,
-  
-  phys: 2,
   phys_nuke() {
     Nuke.newline(1);
     Nuke.label("phys");
@@ -62,10 +57,6 @@ var gameobject = {
     this.phys = Nuke.radio("kinematic", this.phys, 1);
     this.phys = Nuke.radio("static", this.phys, 2);
   },
-  friction: 0,
-  elasticity: 0,
-  flipx: false,
-  flipy: false,
   
   set_center(pos) {
     var change = pos.sub(this.pos);
@@ -76,9 +67,7 @@ var gameobject = {
     }
   },
 
-  pos: [0,0],
-  
-  set relpos(x) {
+  set_relpos(x) {
     if (!this.level) {
       this.pos = x;
       return;
@@ -87,28 +76,19 @@ var gameobject = {
     this.pos = Vector.rotate(x, Math.deg2rad(this.level.angle)).add(this.level.pos);
   },
 
-  get relpos() {
+  get_relpos() {
     if (!this.level) return this.pos;
 
     var offset = this.pos.sub(this.level.pos);
     return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
   },
   
-  angle: 0,
-  get relangle() {
+  get_relangle() {
     if (!this.level) return this.angle;
     return this.angle - this.level.angle;
   },
 
-  velocity: [0,0],
-  angularvelocity: 0,
-  
   gizmo: "", /* Path to an image to draw for this gameobject */
-
-  /* Bounding box of the ur, if it were to be spawned */
-  boundingbox() {
-
-  },
 
   width() {
     var bb = this.boundingbox();
@@ -167,24 +147,6 @@ var gameobject = {
   },
   instances: [],
 
-  make(level) {
-    level ??= Primum;
-    var obj = Object.create(this);
-    obj.defn('body', make_gameobject(this.scale,
-                           this.phys,
-                           this.mass,
-                           this.friction,
-                           this.elasticity) );
-
-    obj.defn('components', {});
-    
-    Game.register_obj(obj);
-
-    cmd(113, obj.body, obj);
-
-    /* Now that it's concrete in the engine, these functions update to return engine data */
-    complete_assign(obj, {
-      make() { Log.error("Cannot make from an entity.") },
       set scale(x) { cmd(36, this.body, x); },
       get scale() { return cmd(103, this.body); },
       get flipx() { return cmd(104,this.body); },
@@ -288,8 +250,8 @@ var gameobject = {
 	  cmd(2, this.body);
 	  delete Game.objects[this.body];
 
-	  if (this.level)
-	    this.level.unregister(this);
+//	  if (this.level)
+//	    this.level.unregister(this);
 
 	  Player.uncontrol(this);
 	  this.instances.remove(this);
@@ -309,34 +271,19 @@ var gameobject = {
       },
 
       up() { return [0,1].rotate(Math.deg2rad(this.angle));},
-      down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
-      right() { return [1,0].rotate(Math.deg2rad(this.angle));},
-      left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
+//      down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
+//      right() { return [1,0].rotate(Math.deg2rad(this.angle));},
+//      left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
 
-      toJSON() {
-        function objdiff(from, to) {
-	  if (!to) return from; /* Everything on from is unique */
-	  var ret = {};
-	  for (var key of Object.keys(from)) {
-	    if (typeof from[key] === 'object') {
-	      var diff = objdiff(from[key], to[key]);
-	      if (diff && !diff.empty) ret[key] = diff;
-	      continue;
-	    }
-	    if (from[key] !== to[key])
-	      ret[key] = from[key];
-	  }
-	  Log.say("Returning a obj with values ...");
-	  for (var key in ret)
-	    Log.say(key);
+  make(level) {
+    level ??= Primum;
+    var obj = Object.create(this);
+    obj.defn('body', make_gameobject());
+    obj.defn('components', {});
+    
+    Game.register_obj(obj);
 
-	  if (ret.empty) return undefined;
-	  return ret;
-	}
-	
-        return objdiff(this, this.__proto__);
-      },
-    });
+    cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
     for (var prop in obj) {
        if (typeof obj[prop] === 'object' && 'make' in obj[prop]) {
@@ -345,8 +292,6 @@ var gameobject = {
 	   obj.components[prop] = obj[prop];
        }
     };
-
-    dainty_assign(obj, this);
 
     obj.check_registers(obj);
     
@@ -357,6 +302,8 @@ var gameobject = {
       for (var e in obj.$)
         obj.$[e] = obj.spawn(prototypes.get_ur(obj.$[e].ur));
     }
+
+    Object.totalassign(obj, obj.ur);
 
     if (typeof obj.start === 'function') obj.start();
 
@@ -379,6 +326,22 @@ var gameobject = {
     Signal.obj_separate(fn,obj,this);
   },
 }
+
+gameobject.toJSON = ur_json;
+
+gameobject.ur = {
+  pos: [0,0],
+  scale:1,
+  flipx:false,
+  flipy:false,
+  angle:0,
+  elasticity:0.5,
+  friction:1,
+  mass:1,
+  velocity:[0,0],
+  angularvelocity:0,
+  layer: 0,
+};
 
 gameobject.make_parentable = function(obj) {
   var objects = [];

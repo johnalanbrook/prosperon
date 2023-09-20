@@ -24,6 +24,12 @@ function clone(proto, binds) {
   return c;
 };
 
+Object.totalassign = function(to, from)
+{
+  for (var key in from)
+    to[key] = from[key];
+}
+
 /* Prototypes out an object and assigns values */
 function copy(proto, binds) {
   var c = Object.create(proto);
