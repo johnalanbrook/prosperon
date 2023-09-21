@@ -378,15 +378,15 @@ var ur_json = function()
   function objdiff(from, to) {
     if (!to) return from; // Everything on from is unique
     var ret = {};
+    ret.ur = to.toString();
     for (var key in from) {
-      if (from[key]?.ur) {
-	ret[key] = objdiff(from[key], from[key].ur);
-	continue;
-      }
-
       if (!(key in to)) continue;
 
       if (typeof from[key] === 'object') {
+        if ('ur' in from[key]) {
+	  ret[key] = objdiff(from[key],from[key].ur);
+	  continue;
+	}
 	var diff = objdiff(from[key], to[key]);
 	if (diff && !diff.empty) ret[key] = diff;
 	continue;

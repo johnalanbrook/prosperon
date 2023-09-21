@@ -82,6 +82,7 @@ component.sprite.ur = {
   color:[1,1,1],
   layer:0,
   enabled:true,
+  toString() { return "sprite"; },
 };
 
 sprite.inputs = {};
@@ -644,6 +645,7 @@ component.circle2d = Object.copy(collider2d, {
   ur: {
     radius:10,
     offset:[0,0],
+    toString() { return "circle2d"; },
   },
 });
 

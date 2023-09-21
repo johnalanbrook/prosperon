@@ -1195,6 +1195,7 @@ editor.inputs.delete = function() {
   this.unselect();
 };
 editor.inputs.delete.doc = "Delete selected objects.";
+editor.inputs['S-d'] = editor.inputs.delete;
 
 editor.inputs['C-u'] = function() {
   this.selectlist.forEach(function(x) {

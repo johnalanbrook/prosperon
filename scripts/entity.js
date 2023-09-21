@@ -140,21 +140,61 @@ var gameobject = {
   },
   instances: [],
 
-      set scale(x) { cmd(36, this.body, x); },
       get scale() { return cmd(103, this.body); },
+      set scale(x) {
+	var pct = x/this.scale;
+        cmd(36, this.body, x);	
+
+	this.objects.forEach(function(obj) {
+	  obj.scale *= pct;
+	  obj.set_relpos(obj.get_relpos().scale(pct));
+	}, this);      
+      },
+
       get flipx() { return cmd(104,this.body); },
-      set flipx(x) { cmd(55, this.body, x); },
+      set flipx(x) {
+        cmd(55, this.body, x);
+        return;
+	this.objects.forEach(function(obj) {
+	  obj.flipx = !obj.flipx;
+	  var rp = obj.get_relpos();
+	  obj.pos = [-rp.x, rp.y].add(this.pos);
+	  obj.angle = -obj.angle;
+	},this);	
+      },
+      
       get flipy() { return cmd(105,this.body); },
-      set flipy(x) { cmd(56, this.body, x); },
-
-      get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
-      set angle(x) { set_body(0,this.body, Math.deg2rad(x)); },
-
+      set flipy(x) {
+        cmd(56, this.body, x);
+	return;
+	this.objects.forEach(function(obj) {
+	  var rp = obj.get_relpos();
+	  obj.pos = [rp.x, -rp.y].add(this.pos);
+	  obj.angle = -obj.angle;
+	},this);	
+      },
+      
       set pos(x) {
         var diff = x.sub(this.pos);
 	this.objects.forEach(function(x) { x.pos = x.pos.add(diff); });
         set_body(2,this.body,x); },
       get pos() { return q_body(1,this.body); },
+
+      get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
+      set angle(x) {
+        var diff = x - this.angle;
+	this.objects.forEach(function(x) {
+	  x.angle = x.angle + diff;
+	  var pos = x.pos.sub(this.pos);
+	  var r = Vector.length(pos);
+	  var p = Math.rad2deg(Math.atan2(pos.y, pos.x));
+	  p += diff;
+	  p = Math.deg2rad(p);
+	  x.pos = this.pos.add([r*Math.cos(p), r*Math.sin(p)]);
+	}, this);
+	  
+        set_body(0,this.body, Math.deg2rad(x));
+      },
 
       get elasticity() { return cmd(107,this.body); },
       set elasticity(x) { cmd(106,this.body,x); },
@@ -270,7 +310,7 @@ var gameobject = {
 
   make(ur, level) {
     level ??= Primum;
-    var obj = Object.create(this);
+    var obj = Object.create(gameobject);
     obj.defn('body', make_gameobject());
     obj.defn('components', {});
     
@@ -280,6 +320,7 @@ var gameobject = {
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
     Object.totalassign(obj, ur);
+    obj.ur = ur;
 
     for (var prop in obj) {
        if (typeof obj[prop] === 'object' && 'comp' in obj[prop]) {
@@ -292,10 +333,7 @@ var gameobject = {
        }
     };
 
-    obj.check_registers(obj);
-
     /* Spawn subobjects defined */
-
     if (obj.$) {
       for (var e in obj.$) {
 	var newobj = obj.spawn(prototypes.get_ur(obj.$[e].ur));
@@ -304,9 +342,8 @@ var gameobject = {
       }
     }
     
-
-
-
+    obj.check_registers(obj);    
+    
     if (typeof obj.start === 'function') obj.start();
 
     level.add_child(obj);
@@ -415,19 +452,18 @@ prototypes.from_file = function(file)
   }
 
   var newur = Object.create(gameobject.ur);
+  newur.$ = {};
   var script = IO.slurp(file);
 
-//  Object.defHidden(newur, '$');
-//  newur.$ = {};
-/*  var json = {};
+  var json = {};
   if (IO.exists(file.name() + ".json")) {
-    json = JSON.parse(IO.slurp(file.name() + ".json"));
+    var json = JSON.parse(IO.slurp(file.name() + ".json"));
     Object.assign(newur.$, json.$);
     delete json.$;
   }
-*/
-  compile_env(`var self = this; ${script}`, newur, file);
-//  Object.dainty_assign(newur, json);
+  
+  compile_env(script, newur, file);  
+  Object.dainty_assign(newur, json);    
 
   file = file.replaceAll('/', '.');
   var path = file.name().split('.');
@@ -445,6 +481,8 @@ prototypes.from_file = function(file)
   newur.toString = function() { return tag; };
   Object.assign(nested_access(ur,path), newur);
   nested_access(ur,path).__proto__ = newur.__proto__;
+
+  Log.warn(`Made ur from script ${file}: ${JSON.stringify(newur)}`);
 
   return nested_access(ur,path);
 }

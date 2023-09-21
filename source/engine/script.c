@@ -38,7 +38,6 @@ static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
 
 void script_startup() {
   rt = JS_NewRuntime();
-  JS_SetMaxStackSize(rt, 0);
   js = JS_NewContext(rt);
 
   ffi_load();
