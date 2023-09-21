@@ -43,10 +43,7 @@ var editor = {
   do_select(go) {
     var obj = go >= 0 ? Game.object(go) : undefined;
     if (!obj || !obj.selectable) return undefined;
-    return obj;
-
-    if (this.working_layer > -1 && obj.draw_layer !== this.working_layer) return undefined;
-
+    
     if (obj.level !== this.edit_level) {
       var testlevel = obj.level;
       while (testlevel && testlevel.level !== this.edit_level) {
@@ -55,6 +52,10 @@ var editor = {
       
       return testlevel;
     }
+    
+    return obj;
+
+    if (this.working_layer > -1 && obj.draw_layer !== this.working_layer) return undefined;
 
     return obj;
   },
@@ -520,8 +521,14 @@ var editor = {
       });
 
     this.selectlist.forEach(function(x) {
-      var color = x.color ? x.color : [255,255,255];
-      GUI.text(x.toString(), world2screen(x.pos).add([0, 16]), 1, color);
+      var color = x.color ? x.color : Color.white;
+      GUI.text(x.ur.toString(), world2screen(x.pos).add([0, 16]), 1, Color.purple);
+      for (var key in x.$) {
+        var o = x.$[key];
+        GUI.text(o.ur.toString(), world2screen(o.pos).add([0,16]),1,Color.purple);
+        GUI.text(key, world2screen(o.pos), 1, Color.green);
+      }
+      
       GUI.text(x.pos.map(function(x) { return Math.round(x); }), world2screen(x.pos), 1, color);
       Debug.arrow(world2screen(x.pos), world2screen(x.pos.add(x.up().scale(40))), Color.yellow, 1);
 
@@ -597,20 +604,8 @@ var editor = {
     this.curpanels.forEach(function(x) {
       if (x.on) x.gui();
     });
-
-    if (this.repl) {
-      Nuke.window("repl");
-      Nuke.newrow(500);
-      var log = cmd(84);
-      var f = log.prev('\n', 0, 10);
-      Nuke.scrolltext(log.slice(f));
-      this.replstr = Nuke.textbox(this.replstr);
-      Nuke.end();
-    }
   },
   
-  replstr: "",
-
   ed_debug() {
     if (!Debug.phys_drawing)
       this.selectlist.forEach(function(x) { Debug.draw_obj_phys(x); });
@@ -694,8 +689,6 @@ var editor = {
     this.edit_level.file = file;
     this.save_current();
   },
-  
-  repl: false,
 }
 
 editor.inputs = {};
@@ -711,7 +704,7 @@ editor.inputs['C-a'] = function() {
 };
 editor.inputs['C-a'].doc = "Select all objects.";
 
-editor.inputs['`'] = function() { editor.repl = !editor.repl; };
+editor.inputs['`'] = function() { editor.openpanel(replpanel); }
 editor.inputs['`'].doc = "Open or close the repl.";
 
 /* Return if selected component. */
@@ -1433,6 +1426,7 @@ inputpanel.inputs.char = function(c) { this.value += c; this.keycb(); }
 inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); }
 inputpanel.inputs.escape = function() { this.close(); }
 inputpanel.inputs.backspace = function() { this.value = this.value.slice(0,-1); this.keycb(); };
+inputpanel.inputs.backspace.rep = true;
 inputpanel.inputs.enter = function() { this.submit(); }
 
 function proto_count_lvls(name)
@@ -1479,6 +1473,31 @@ function proto_children(name) {
 }
 
 load("scripts/textedit.js");
+
+var replpanel = Object.copy(inputpanel, {
+  title: "REPL",
+  closeonsubmit:false,
+  guibody() {
+    Nuke.newrow(400);
+    var log = cmd(84);
+    var f = log.prev('\n', 0,10);
+    Nuke.scrolltext(log.slice(f));
+    Nuke.newrow(30);
+    this.value = Nuke.textbox(this.value);
+  },
+
+  action() {
+    var ecode = "";  
+    if (editor.selectlist.length === 1) 
+      for (var key in editor.selectlist[0].$)
+        ecode += `var ${key} = editor.selectlist[0].$['${key}'];`;
+	
+    ecode += this.value;
+    this.value = "";
+	
+    Log.say(eval(ecode));
+  },
+});
 
 var objectexplorer = Object.copy(inputpanel, {
   title: "object explorer",

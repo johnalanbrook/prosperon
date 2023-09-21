@@ -136,6 +136,8 @@ Ur-types are directly related to your file directory hierarchy. In a pinball gam
 
 This is how resources are loaded in any given ur-type. Relative file paths work. So, in 'ball.js', it can reference 'hit.wav', and will play that file when it does; when bumper.js loads 'hit.wav', it will load the one located in its folder.
 
+An ur-type is a list of properties and functions. When the ur-type is created, an entity is spawned in the world, and the entity is pasted with all the properties of the ur-type. After that, hookup happens, for start, update, physupdate, etc, functions.
+
 The left flipper can use the root flipper flip sound by loading "../flip.wav".
 
 Absolute paths can be specified using a leading slash. The absolute path the bumper's hit sound is "/bumper/hit.wav".

@@ -38,9 +38,50 @@ var Color = {
   yellow: [251,255,43,255],
   red: [255,36,20,255],
   teal: [96, 252, 237,255],
-  gray: [181, 181,181,255],
+  gray: [181,181,181,255],
   cyan: [0,255,255],
+  purple: [162,93,227],
 };
+
+Color.Arkanoid = {
+  orange: [255,143,0,255],
+  teal: [0,255,255,255],
+  green: [0,255,0,255],
+  red: [255,0,0,255],
+  blue: [0,112,255,255],
+  purple: [255,0,255,255],
+  yellow: [255,255,0],
+  silver: [157,157,157],
+  gold: [188,174,0],
+};
+
+Color.Arkanoid.Powerups = {
+  red: [174,0,0], /* laser */
+  blue: [0,0,174], /* enlarge */
+  green: [0,174,0], /* catch */
+  orange: [224,143,0], /* slow */
+  purple: [210,0,210], /* break */
+  cyan: [0,174,255], /* disruption */
+  gray: [143,143,143] /* 1up */
+};
+
+Color.Gameboy = {
+  darkest: [229,107,26],
+  dark: [229,189,26],
+  light: [189,229,26],
+  lightest: [107,229,26],
+};
+
+Color.Apple = {
+  green: [94,189,62],
+  yellow: [255,185,0],
+  orange: [247,130,0],
+  red: [226,56,56],
+  purple: [151,57,153],
+  blue: [0,156,223]
+};
+
+Object.deepfreeze(Color);
 
 function bb2wh(bb) {
   return [bb.r-bb.l, bb.t-bb.b];
@@ -378,13 +419,16 @@ var ur_json = function()
   function objdiff(from, to) {
     if (!to) return from; // Everything on from is unique
     var ret = {};
-    ret.ur = to.toString();
+
     for (var key in from) {
-      if (!(key in to)) continue;
+      if (!from[key] || !to[key]) continue;
+      if (typeof from[key] === 'function') continue;
+      if (typeof to === 'object' && !(key in to)) continue;
 
       if (typeof from[key] === 'object') {
         if ('ur' in from[key]) {
-	  ret[key] = objdiff(from[key],from[key].ur);
+	  var urdiff = objdiff(from[key],from[key].ur);
+	  if (urdiff && !urdiff.empty) ret[key] = urdiff;
 	  continue;
 	}
 	var diff = objdiff(from[key], to[key]);

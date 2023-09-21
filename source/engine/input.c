@@ -192,7 +192,6 @@ void input_btn(int btn, int state, uint32_t mod)
 
 void input_key(int key, uint32_t mod)
 {
-  if (mod != 0) return;
   JSValue argv[2];
   char out[2] = {0};
   out[0] = (char)key;

@@ -39,6 +39,18 @@ var descriptors = {};
   return target;
 };
 
+Object.deepfreeze = function(obj)
+{
+  for (var key in obj) {
+    if (typeof obj[key] === 'object') {
+      Object.freeze(obj[key]);
+      Object.deepfreeze(obj[key]);
+    }
+  }
+  Object.freeze(obj);
+}
+
+/* Goes through each key and overwrites if it's present, adds if it is not */
 Object.dainty_assign = function(target, source)
 {
   for (var key in source) {
@@ -59,6 +71,9 @@ Object.dainty_assign = function(target, source)
     }
   }
 }
+
+/* This name is more consistent with Ruby, etc */
+Object.merge = Object.dainty_assign;
 
 Object.totalassign = function(to, from)
 {

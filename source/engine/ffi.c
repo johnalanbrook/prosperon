@@ -1387,7 +1387,9 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
 }
 
 JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  return JS_NewInt64(js, make_sprite(js2int(argv[0])));
+  JSValue sprite = JS_NewObject(js);
+  JS_SetPropertyStr(js,sprite,"id",JS_NewInt64(js, make_sprite(js2int(argv[0]))));
+  return sprite;
 }
 
 /* Make anim from texture */

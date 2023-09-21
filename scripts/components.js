@@ -26,17 +26,28 @@ var component = {
 
 component.toJSON = ur_json;
 
-component.sprite = Object.copy(component, {
+component.sprite = {
+  pos:[0,0],
+  color:[1,1,1],
+  layer:0,
+  enabled:true,
+  toString() { return "sprite"; },
+  make(go) {
+    var nsprite = Object.create(component.sprite.maker);
+    Object.assign(nsprite, make_sprite(go));    
+    Object.assign(nsprite, this);
+    nsprite.ur = this;
+    return nsprite;
+  },
+};
+
+component.sprite.maker = Object.copy(component, {
   name: "sprite",
-  path: "",
-  layer: 0,
-  pos: [0,0],
+  set path(x) { cmd(12,this.id,x,this.rect); },
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
-  asset(str) { this.path = str; this.sync();},
-  angle: 0,
+  asset(str) { this.path = str; },
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
-
   get enabled() { return cmd(114,this.id); },
   set enabled(x) { cmd(20,this.id,x); },
   set color(x) { cmd(96,this.id,x); },
@@ -47,6 +58,7 @@ component.sprite = Object.copy(component, {
   get layer() { return undefined; },
 
   boundingbox() {
+    return cwh2bb([0,0],[0,0]);
     var dim = this.dimensions();
     dim = dim.scale(this.gameobject.scale);
     var realpos = this.pos.copy();
@@ -55,35 +67,13 @@ component.sprite = Object.copy(component, {
     return cwh2bb(realpos,dim);
   },
 
-  sync() {
-    if (this.path)
-      cmd(12,this.id,this.path,this.rect);
-  },
-
   kill() { cmd(9,this.id); },
   dimensions() { return cmd(64,this.path); },
   width() { return cmd(64,this.path).x; },
   height() { return cmd(64,this.path).y; },
-
-  make(go) {
-    var sprite = Object.create(this);
-    sprite.id = make_sprite(go);
-    sprite.sync();
-    return sprite;
-  },
-
-  POS_MID: [-0.5, -0.5],
 });
 
-var sprite = component.sprite;
-
-component.sprite.ur = {
-  pos:[0,0],
-  color:[1,1,1],
-  layer:0,
-  enabled:true,
-  toString() { return "sprite"; },
-};
+var sprite = component.sprite.maker;
 
 sprite.inputs = {};
 sprite.inputs.kp9 = function() { this.pos = [0,0]; };

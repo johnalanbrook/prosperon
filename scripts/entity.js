@@ -322,7 +322,7 @@ var gameobject = {
     Object.totalassign(obj, ur);
     obj.ur = ur;
 
-    for (var prop in obj) {
+/*    for (var prop in obj) {
        if (typeof obj[prop] === 'object' && 'comp' in obj[prop]) {
          var newcomp = component[obj[prop].comp].make(obj.body);
 	 Object.assign(newcomp, obj[prop]);
@@ -332,21 +332,28 @@ var gameobject = {
 	 obj.components[prop] = obj[prop];
        }
     };
+*/
+    level.add_child(obj);
+    for (var prop in obj) {
+      var p = obj[prop];
+      if (typeof p !== 'object') continue;
 
-    /* Spawn subobjects defined */
-    if (obj.$) {
-      for (var e in obj.$) {
-	var newobj = obj.spawn(prototypes.get_ur(obj.$[e].ur));
-	Object.assign(newobj, obj.$[e].diff);
-        obj.$[e] = newobj;
+      if ('ur' in p) {
+        Log.warn(`spawning a ${prop} on this obj`);
+        var newobj = obj.spawn(prototypes.get_ur(p.ur));
+	Object.assign(newobj, p);
+	obj.$[prop] = newobj;
+      } else if ('make' in p) {
+        obj[prop] = obj[prop].make(obj.body);
+        obj.components[prop] = obj[prop];
       }
-    }
-    
+    };
+
     obj.check_registers(obj);    
     
     if (typeof obj.start === 'function') obj.start();
 
-    level.add_child(obj);
+
 
     return obj;
   },
@@ -481,8 +488,6 @@ prototypes.from_file = function(file)
   newur.toString = function() { return tag; };
   Object.assign(nested_access(ur,path), newur);
   nested_access(ur,path).__proto__ = newur.__proto__;
-
-  Log.warn(`Made ur from script ${file}: ${JSON.stringify(newur)}`);
 
   return nested_access(ur,path);
 }
