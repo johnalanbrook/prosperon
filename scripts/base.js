@@ -72,8 +72,63 @@ Object.dainty_assign = function(target, source)
   }
 }
 
-/* This name is more consistent with Ruby, etc */
-Object.merge = Object.dainty_assign;
+Object.isAccessor = function(obj, prop)
+{
+  var prop = Object.getOwnPropertyDescriptor(obj,prop);
+  if (prop) return false;
+  return true;
+}
+
+
+/* Same as merge from Ruby */
+Object.merge = function(target, ...objs)
+{
+  var objmerge = function(tar, obj)
+  {
+    for (var key of Object.keys(obj)) {
+      if (typeof obj[key] === 'object') {
+        if (tar[key]) {
+	  objmerge(tar[key], obj[key]);
+	  continue;
+	}
+	else {
+	  tar[key] = obj[key];
+	  continue;
+	}
+      }
+      tar[key] = obj[key];
+    }
+  }
+
+  for (var obj of objs)
+    objmerge(target,obj);
+}
+
+Object.totalmerge = function(target, ...objs)
+{
+  for (var obj of objs) {
+    for (var key in obj) {
+      if (typeof obj[key] === 'object') {
+        if (typeof target[key] === 'object') {
+	  if (Object.isAccessor(target,key))
+	    target[key] = obj[key];
+	  else
+  	    Object.merge(target[key], obj[key]);
+	}
+	else
+	  target[key] = obj[key];
+	  
+      } else
+        target[key] = obj[key];
+    }
+  }
+}
+
+/* Returns a new object with undefined, null, and empty values removed. */
+Object.compact = function(obj)
+{
+
+}
 
 Object.totalassign = function(to, from)
 {

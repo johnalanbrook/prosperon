@@ -522,7 +522,16 @@ var editor = {
 
     this.selectlist.forEach(function(x) {
       var color = x.color ? x.color : Color.white;
-      GUI.text(x.ur.toString(), world2screen(x.pos).add([0, 16]), 1, Color.purple);
+      var ojson = JSON.parse(JSON.stringify(x));
+      delete ojson.pos;
+      delete ojson.angle;
+      var sname = x.ur.toString();
+      if (!ojson.empty)
+        x.dirty = true;
+      else
+        x.dirty = false;
+      if (x.dirty) sname += "*";
+      GUI.text(sname, world2screen(x.pos).add([0, 16]), 1, Color.purple);
       for (var key in x.$) {
         var o = x.$[key];
         GUI.text(o.ur.toString(), world2screen(o.pos).add([0,16]),1,Color.purple);
@@ -704,8 +713,8 @@ editor.inputs['C-a'] = function() {
 };
 editor.inputs['C-a'].doc = "Select all objects.";
 
-editor.inputs['`'] = function() { editor.openpanel(replpanel); }
-editor.inputs['`'].doc = "Open or close the repl.";
+editor.inputs['C-`'] = function() { editor.openpanel(replpanel); }
+editor.inputs['C-`'].doc = "Open or close the repl.";
 
 /* Return if selected component. */
 editor.inputs['h'] = function() {
@@ -1494,8 +1503,8 @@ var replpanel = Object.copy(inputpanel, {
 	
     ecode += this.value;
     this.value = "";
-	
-    Log.say(eval(ecode));
+    var ret = eval(ecode);
+    if (ret) Log.say(ret);
   },
 });
 
@@ -1727,7 +1736,7 @@ var savetypeas = Object.copy(inputpanel, {
 var quitpanel = Object.copy(inputpanel, {
   title: "really quit?",
   action() {
-    quit();
+    Game.quit();
   },
   
   guibody () {

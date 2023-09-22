@@ -8,6 +8,7 @@
 #include "time.h"
 #include <stdio.h>
 #include <ctype.h>
+#include <wchar.h>
 #include "resources.h"
 
 #include "stb_ds.h"
@@ -190,13 +191,17 @@ void input_btn(int btn, int state, uint32_t mod)
   }
 }
 
-void input_key(int key, uint32_t mod)
+static const uint32_t UNCHAR_FLAGS = SAPP_MODIFIER_CTRL | SAPP_MODIFIER_ALT | SAPP_MODIFIER_SUPER;
+
+void input_key(uint32_t key, uint32_t mod)
 {
+  if (mod & UNCHAR_FLAGS) return;
+  if (key <= 31 || key >= 127) return;
+
   JSValue argv[2];
-  char out[2] = {0};
-  out[0] = (char)key;
+  char s[2] = {key, '\0'};
   argv[0] = JS_NewString(js, "char");
-  argv[1] = JS_NewString(js, out);
+  argv[1] = JS_NewString(js, s);
   script_callee(pawn_callee, 2, argv);
   
   JS_FreeValue(js, argv[0]);

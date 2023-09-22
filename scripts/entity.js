@@ -319,41 +319,31 @@ var gameobject = {
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
-    Object.totalassign(obj, ur);
+    obj.$ = {};
     obj.ur = ur;
 
-/*    for (var prop in obj) {
-       if (typeof obj[prop] === 'object' && 'comp' in obj[prop]) {
-         var newcomp = component[obj[prop].comp].make(obj.body);
-	 Object.assign(newcomp, obj[prop]);
-	 newcomp.sync?.();
-         obj[prop] = newcomp;
-	 obj[prop].defn('gameobject', obj);
-	 obj.components[prop] = obj[prop];
-       }
-    };
-*/
     level.add_child(obj);
-    for (var prop in obj) {
-      var p = obj[prop];
+    for (var prop in ur) {
+      var p = ur[prop];
       if (typeof p !== 'object') continue;
 
       if ('ur' in p) {
-        Log.warn(`spawning a ${prop} on this obj`);
-        var newobj = obj.spawn(prototypes.get_ur(p.ur));
-	Object.assign(newobj, p);
-	obj.$[prop] = newobj;
+        obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
+	obj.$[prop] = obj[prop];
+//	Object.assign(obj[prop], p);
       } else if ('make' in p) {
-        obj[prop] = obj[prop].make(obj.body);
+        obj[prop] = p.make(obj.body);
         obj.components[prop] = obj[prop];
+      } else if ('comp' in p) {
+        obj[prop] = component[p.comp].make(obj.body);
+	obj.components[prop] = obj[prop];
       }
     };
-
+    
+    Object.totalmerge(obj,ur);
     obj.check_registers(obj);    
     
     if (typeof obj.start === 'function') obj.start();
-
-
 
     return obj;
   },
@@ -469,8 +459,8 @@ prototypes.from_file = function(file)
     delete json.$;
   }
   
-  compile_env(script, newur, file);  
-  Object.dainty_assign(newur, json);    
+  compile_env(script, newur, file);
+  Object.merge(newur,json);
 
   file = file.replaceAll('/', '.');
   var path = file.name().split('.');
@@ -486,10 +476,11 @@ prototypes.from_file = function(file)
   prototypes.list.push(tag);
   
   newur.toString = function() { return tag; };
-  Object.assign(nested_access(ur,path), newur);
+  ur[path] = nested_access(ur,path);
+  Object.assign(ur[path], newur);
   nested_access(ur,path).__proto__ = newur.__proto__;
 
-  return nested_access(ur,path);
+  return ur[path];
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
 prototypes.list = [];

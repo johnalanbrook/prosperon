@@ -1314,11 +1314,9 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 7:
+    go->mass = js2number(argv[2]);
     if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
-      cpBodySetMass(go->body, js2number(argv[2]));
-    else
-      YughWarn("Cannot set mass of a non dynamic body.");
-      
+      cpBodySetMass(go->body, go->mass);
     break;
 
   case 8:
