@@ -108,10 +108,6 @@ var editor = {
       Game.objects.forEach(x => x.sync());
       
   },
-
-  save_prototypes() {
-    save_gameobjects_as_prototypes();
-  },
   
   /* Save the selected object as a new prototype, extending the chain */
   save_proto_as(name) {
@@ -139,7 +135,8 @@ var editor = {
   save_type_as(name) {
     if (name in gameobjects) {
       Log.info("Already an object with name '" + name + "'. Choose another one.");
-      return;
+
+return;
     }
 
     var newp = this.selectlist[0].__proto__.__proto__.clone(name);
@@ -455,6 +452,7 @@ var editor = {
     }
     
     this.edit_level = Primum.spawn(ur.arena);
+    this.edit_level.toString = function() { return "desktop"; };
     editor.edit_level.selectable = false;
   },
 
@@ -484,30 +482,27 @@ var editor = {
     Debug.point(world2screen(this.cursor), 2, Color.green);
 
     if (this.comp_info && this.sel_comp) {
-      GUI.text(Input.print_pawn_kbm(this.sel_comp), [100,700],1);
+      GUI.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
     }
 
     GUI.text("0,0", world2screen([0,0]));
     
     var clvl = this.edit_level;
+    var lvlcolorsample = 1;
     var ypos = 200;
-    var lvlcolor = Color.white;
     while (clvl) {
-      var lvlstr = clvl.file ? clvl.file : "NEW ENTITY";
-      if (clvl.unique)
-        lvlstr += "#";
-      else if (clvl.dirty)
+      var lvlstr = clvl.toString();
+      if (clvl.dirty)
         lvlstr += "*";
-      GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
-
-      lvlcolor = Color.gray;
+      GUI.text(lvlstr, [0, ypos], 1, ColorMap.Inferno.sample(lvlcolorsample));
+      lvlcolorsample -= 0.1;
 
       clvl = clvl.level;
       if (clvl) {
-        GUI.text("^^^^^^", [0,ypos+5],1);
-	ypos += 5;
+        GUI.text("^^^^^^", [0,ypos-15],1);
+	ypos -= 15;
       }
-      ypos += 15;
+      ypos -= 5;
     }
     
     this.edit_level.objects.forEach(function(x) {
@@ -522,11 +517,8 @@ var editor = {
 
     this.selectlist.forEach(function(x) {
       var color = x.color ? x.color : Color.white;
-      var ojson = JSON.parse(JSON.stringify(x));
-      delete ojson.pos;
-      delete ojson.angle;
       var sname = x.ur.toString();
-      if (!ojson.empty)
+      if (!x.save_obj().empty)
         x.dirty = true;
       else
         x.dirty = false;
@@ -709,7 +701,6 @@ editor.inputs['C-a'] = function() {
   if (!editor.selectlist.empty) { editor.unselect(); return; }
   editor.unselect();
   editor.selectlist = editor.edit_level.objects.slice();
-  Log.warn("C-a pressed.");
 };
 editor.inputs['C-a'].doc = "Select all objects.";
 
@@ -724,7 +715,7 @@ editor.inputs['h'] = function() {
 };
 editor.inputs['h'].doc = "Toggle object hidden.";
 
-editor.inputs['C-h'] = function() { Game.objects.forEach(function(x) { x.visible = true; }); };
+editor.inputs['C-h'] = function() { Primum.objects.forEach(function(x) { x.visible = true; }); };
 editor.inputs['C-h'].doc = "Unhide all objects.";
 
 editor.inputs['C-e'] = function() { editor.openpanel(assetexplorer); };
@@ -736,7 +727,6 @@ editor.inputs['C-l'].doc = "Open list of spawned entities.";
 editor.inputs['C-i'] = function() {
   if (editor.selectlist.length !== 1) return;
   objectexplorer.obj = editor.selectlist[0];
-  objectexplorer.on_close = editor.save_prototypes;
   editor.openpanel(objectexplorer);
 };
 editor.inputs['C-i'].doc = "Open the object explorer for a selected object.";
@@ -748,14 +738,6 @@ editor.inputs['C-d'] = function() {
   editor.selectlist = duped;
 };
 editor.inputs['C-d'].doc = "Duplicate all selected objects.";
-
-editor.inputs.f3 = function() {
-
-  editor.selectlist.forEach(function(x) {
-    Log.say(JSON.stringify(x,null,2));
-//    x.components.forEach(function(x) { Log.say(JSON.stringify(x,null,2)); Log.say(JSON.stringify(x.ur,null,2));});
-  });
-};
 
 editor.inputs['C-m'] = function() {
   if (editor.sel_comp) {
@@ -794,15 +776,13 @@ editor.inputs.f.doc = "Find the selected objects.";
 
 editor.inputs['C-f'] = function() {
   if (editor.selectlist.length !== 1) return;
-  if (!editor.selectlist[0].file) return;
+
   editor.edit_level = editor.selectlist[0];
   editor.unselect();
-  editor.reset_undos();
-  editor.curlvl = editor.edit_level.save();
 };
 editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
 
-editor.inputs['C-S-f'] = function() {
+editor.inputs['C-F'] = function() {
   if (!editor.edit_level.level) return;
 
   editor.edit_level = editor.edit_level.level;
@@ -812,7 +792,7 @@ editor.inputs['C-S-f'] = function() {
   editor.edit_level.filejson = editor.edit_level.save();
   editor.edit_level.check_dirty();
 };
-editor.inputs['C-S-f'].doc = "Tunnel out of the level you are editing, saving it in the process.";
+editor.inputs['C-F'].doc = "Tunnel out of the level you are editing, saving it in the process.";
 
 editor.inputs['C-r'] = function() { editor.selectlist.forEach(function(x) { x.angle = -x.angle; }); };
 editor.inputs['C-r'].doc = "Negate the selected's angle.";
@@ -896,6 +876,7 @@ editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
+ 
   if (editor.edit_level.level) {
     if (!editor.edit_level.unique)
       editor.save_current();
@@ -911,10 +892,10 @@ editor.inputs['C-s'] = function() {
 };
 editor.inputs['C-s'].doc = "Save selected.";
 
-editor.inputs['C-S-s'] = function() {
+editor.inputs['C-S'] = function() {
   editor.openpanel(saveaspanel);
 };
-editor.inputs['C-S-s'].doc = "Save selected as.";
+editor.inputs['C-S'].doc = "Save selected as.";
 
 editor.inputs['C-z'] = function() { editor.undo(); };
 editor.inputs['C-z'].doc = "Undo the last change made.";
@@ -940,14 +921,14 @@ editor.inputs['C-n'] = function() {
 editor.inputs['C-n'].doc = "Open a new level.";
 
 editor.inputs['C-o'] = function() {
-  if (editor.edit_level.dirty()) {
+/*  if (editor.edit_level.dirty) {
     editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", function() {
       editor.clear_level();
       editor.openpanel(openlevelpanel);
     }.bind(editor)));
     return;
   }
-
+*/
   editor.openpanel(openlevelpanel);
 };
 editor.inputs['C-o'].doc = "Open a level.";
@@ -1502,6 +1483,7 @@ var replpanel = Object.copy(inputpanel, {
         ecode += `var ${key} = editor.selectlist[0].$['${key}'];`;
 	
     ecode += this.value;
+    Log.say(this.value);
     this.value = "";
     var ret = eval(ecode);
     if (ret) Log.say(ret);

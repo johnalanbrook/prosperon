@@ -65,6 +65,7 @@ Input.print_pawn_kbm = function(pawn) {
   if (!('inputs' in pawn)) return;
   var str = "";
   for (var key in pawn.inputs) {
+    if (!pawn.inputs[key].doc) continue;
     str += `${key} | ${pawn.inputs[key].doc}\n`;
   }
   return str;

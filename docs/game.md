@@ -195,6 +195,12 @@ The "$" is populated with an object's children. $.sword.damage will properly get
 
 To access the entity's owner, it is through _. For example, the human can access the orc via _.Orc.
 
+## The REPL
+
+The REPL lets you poke around in the game. The first accessible item is the Primum. Everything else must be child to it. When an object is selected, its children are accessible in a more friendly way. You can do commands as if you "are" that object.
+
+The ur-type of the object is always shown in purple. If it has no type, there is nothing shown.
+
 ## Entities
 Entities are things that exist in the game world.
 

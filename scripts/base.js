@@ -42,10 +42,8 @@ var descriptors = {};
 Object.deepfreeze = function(obj)
 {
   for (var key in obj) {
-    if (typeof obj[key] === 'object') {
-      Object.freeze(obj[key]);
+    if (typeof obj[key] === 'object')
       Object.deepfreeze(obj[key]);
-    }
   }
   Object.freeze(obj);
 }

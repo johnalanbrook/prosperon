@@ -83,6 +83,84 @@ Color.Apple = {
 
 Object.deepfreeze(Color);
 
+var ColorMap = {};
+ColorMap.makemap = function(map)
+{
+  var newmap = Object.create(ColorMap);
+  Object.assign(newmap, map);
+  return newmap;
+}
+ColorMap.Jet = ColorMap.makemap({
+  0: [0,0,131],
+  0.125: [0,60,170],
+  0.375: [5,255,255],
+  0.625: [255,255,0],
+  0.875: [250,0,0],
+  1: [128,0,0]
+});
+
+ColorMap.BlueRed = ColorMap.makemap({
+  0: [0,0,255],
+  1: [255,0,0]
+});
+
+ColorMap.Inferno = ColorMap.makemap({
+  0:[0,0,4],
+  0.13: [31,12,72],
+  0.25: [85,15,109],
+  0.38: [136,34,106],
+  0.5: [186,54,85],
+  0.63: [227,89,51],
+  0.75: [249,140,10],
+  0.88: [249,201,50],
+  1: [252,255,164]
+});
+
+ColorMap.Bathymetry = ColorMap.makemap({
+  0: [40,26,44],
+  0.13: [59.49,90],
+  0.25: [64,76,139],
+  0.38: [63,110,151],
+  0.5: [72,142,158],
+  0.63: [85,174,163],
+  0.75: [120,206,163],
+  0.88: [187,230,172],
+  1: [253,254,204]
+});
+
+ColorMap.Viridis = ColorMap.makemap({
+  0: [68,1,84],
+  0.13: [71,44,122],
+  0.25: [59,81,139],
+  0.38: [44,113,142],
+  0.5: [33,144,141],
+  0.63: [39,173,129],
+  0.75: [92,200,99],
+  0.88: [170,220,50],
+  1: [253,231,37]
+});
+
+ColorMap.sample = function(t, map)
+{
+  map ??= this;
+  if (t < 0) return map[0];
+  if (t > 1) return map[1];
+
+  var lastkey = 0;
+  for (var key of Object.keys(map).sort()) {
+    if (t < key) {
+      var b = map[key];
+      var a = map[lastkey];
+      var tt = (key - lastkey) * t;
+      return a.lerp(b, tt);
+    }
+    lastkey = key;
+  }
+  return map[1];
+}
+
+Object.freeze(ColorMap);
+
 function bb2wh(bb) {
   return [bb.r-bb.l, bb.t-bb.b];
 };
@@ -623,6 +701,7 @@ var preprimum = {};
 preprimum.add_child = function() {};
 var World = gameobject.make(gameobject.ur, preprimum);
 var Primum = World;
+Primum.toString = function() { return "Primum"; };
 Primum.selectable = false;
 World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 World.unparent = function() { Log.warn("The Primum has no parent, always."); }

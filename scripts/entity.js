@@ -13,7 +13,8 @@ function grab_from_points(pos, points, slop) {
 var gameobject = {
   save: true,
   selectable: true,
-
+  ed_locked: false,
+  
   layer_nuke() {
     Nuke.label("Collision layer");
     Nuke.newline(Collision.num);
@@ -28,8 +29,6 @@ var gameobject = {
     for (var i = 0; i < 5; i++)
       this.draw_layer = Nuke.radio(i, this.draw_layer, i);
   },
-
-  ed_locked: false,
   
   _visible:  true,
   get visible(){ return this._visible; },
@@ -40,6 +39,8 @@ var gameobject = {
         this.components[key].visible = x;
       }
     }
+    for (var key in this.$)
+      this.$[key].visible = x;
   },
 
   phys_nuke() {
@@ -93,11 +94,20 @@ var gameobject = {
     return bb.t-bb.b;
   },
 
-  stop() {},
+  save_obj() {
+    var json = JSON.stringify(this);
+    if (!json) return {};
+    var o = JSON.parse(json);
+    delete o.pos;
+    delete o.angle;
+    return o;
+  },
 
   /* Make a unique object the same as its prototype */
   revert() {
-//    unmerge(this, this.prop_obj());
+    var save = this.save_obj();
+    for (var key in save)
+      this[key] = this.ur[key];
   },
 
   gui() {
@@ -225,7 +235,6 @@ var gameobject = {
       disable() { this.components.forEach(function(x) { x.disable(); });},
       enable() { this.components.forEach(function(x) { x.enable(); });},
       sync() { },
-      dirty() { return false; },
 
       spawn(ur) {
 	if (typeof ur === 'string')
@@ -330,7 +339,6 @@ var gameobject = {
       if ('ur' in p) {
         obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
 	obj.$[prop] = obj[prop];
-//	Object.assign(obj[prop], p);
       } else if ('make' in p) {
         obj[prop] = p.make(obj.body);
         obj.components[prop] = obj[prop];

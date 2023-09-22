@@ -1,6 +1,7 @@
 var GUI = {
   text(str, pos, size, color, wrap) {
     size = size ? size : 1;
+    
     color = color ? color : [255,255,255,255];
     wrap = wrap ? wrap : -1;
 
