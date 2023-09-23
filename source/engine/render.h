@@ -15,6 +15,8 @@
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
 
+#define RGBA_MAX 255
+
 struct mCamera;
 struct window;
 
@@ -126,10 +128,10 @@ static struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {
 
 static float *rgba2floats(float *r, struct rgba c)
 {
-  r[0] = c.r / 255.0;
-  r[1] = c.g / 255.0;
-  r[2] = c.b / 255.0;
-  r[3] = c.a / 255.0;
+  r[0] = (float)c.r / RGBA_MAX;
+  r[1] = (float)c.g / RGBA_MAX;
+  r[2] = (float)c.b / RGBA_MAX;
+  r[3] = (float)c.a / RGBA_MAX;
   return r;
 }
 

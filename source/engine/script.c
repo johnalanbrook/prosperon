@@ -98,7 +98,7 @@ void script_evalf(const char *format, ...)
 }
 
 uint8_t *compile_script(const char *file, size_t *len) {
-  const char *script = slurp_text(file, len);
+  char *script = slurp_text(file, len);
   JSValue obj = JS_Eval(js, script, *len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
   free(script);
   size_t out_len;

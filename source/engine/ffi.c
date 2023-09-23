@@ -161,12 +161,12 @@ struct rgba js2color(JSValue v) {
   JSValue c[4];
   for (int i = 0; i < 4; i++)
     c[i] = js_arridx(v,i);
-  unsigned char a = JS_IsUndefined(c[3]) ? 255 : js2int(c[3]);
+  float a = JS_IsUndefined(c[3]) ? 1.0 : js2number(c[3]);
   struct rgba color = {
-    .r = js2int(c[0]),
-    .g = js2int(c[1]),
-    .b = js2int(c[2]),
-    .a = a,
+    .r = js2number(c[0])*RGBA_MAX,
+    .g = js2number(c[1])*RGBA_MAX,
+    .b = js2number(c[2])*RGBA_MAX,
+    .a = a*RGBA_MAX,
   };
 
   return color;

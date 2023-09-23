@@ -31,25 +31,25 @@ load("scripts/diff.js");
 Log.level = 1;
 
 var Color = {
-  white: [255,255,255,255],
-  black: [0,0,0,255],
-  blue: [84,110,255,255],
-  green: [120,255,10,255],
-  yellow: [251,255,43,255],
-  red: [255,36,20,255],
-  teal: [96, 252, 237,255],
-  gray: [181,181,181,255],
+  white: [255,255,255],
+  black: [0,0,0],
+  blue: [84,110,255],
+  green: [120,255,10],
+  yellow: [251,255,43],
+  red: [255,36,20],
+  teal: [96, 252, 237],
+  gray: [181,181,181],
   cyan: [0,255,255],
   purple: [162,93,227],
 };
 
 Color.Arkanoid = {
-  orange: [255,143,0,255],
-  teal: [0,255,255,255],
-  green: [0,255,0,255],
-  red: [255,0,0,255],
-  blue: [0,112,255,255],
-  purple: [255,0,255,255],
+  orange: [255,143,0],
+  teal: [0,255,255],
+  green: [0,255,0],
+  red: [255,0,0],
+  blue: [0,112,255],
+  purple: [255,0,255],
   yellow: [255,255,0],
   silver: [157,157,157],
   gold: [188,174,0],
@@ -80,6 +80,50 @@ Color.Apple = {
   purple: [151,57,153],
   blue: [0,156,223]
 };
+
+Color.Debug = {
+  boundingbox: Color.white,
+  names: [84,110,255],
+};
+
+Color.Editor = {
+  grid: [99,255,128],
+  select: [255,255,55],
+  newgroup: [120,255,10],
+};
+
+/* Detects the format of all colors and munges them into a floating point format */
+Color.normalize = function(c) {
+  var add_a = function(a) {
+    var n = this.slice();
+    n.a = a;
+    return n;
+  };
+  
+  for (var p of Object.keys(c)) {
+    var fmt = "nrm";
+    if (typeof c[p] !== 'object') continue;
+    if (!Array.isArray(c[p])) {
+      Color.normalize(c[p]);
+      continue;
+    }
+    
+    for (var color of c[p]) {
+      if (color > 1) {
+        fmt = "8b";
+	break;
+      }
+    }
+
+    switch(fmt) {
+      case "8b":
+        c[p] = c[p].map(function(x) { return x/255; });
+    }
+    c[p].alpha = add_a;
+  }
+};
+
+Color.normalize(Color);
 
 Object.deepfreeze(Color);
 
@@ -139,6 +183,8 @@ ColorMap.Viridis = ColorMap.makemap({
   0.88: [170,220,50],
   1: [253,231,37]
 });
+
+Color.normalize(ColorMap);
 
 ColorMap.sample = function(t, map)
 {
@@ -634,7 +680,7 @@ var Game = {
     };
 
     if (newgroup.file)
-      newgroup.color = [120,255,10];
+      newgroup.color = Color.Editor.newgroup;
 
     return newgroup;
   },

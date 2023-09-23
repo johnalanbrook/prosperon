@@ -35,14 +35,12 @@ component.sprite = {
   make(go) {
     var nsprite = Object.create(component.sprite.maker);
     Object.assign(nsprite, make_sprite(go));    
-    Object.assign(nsprite, this);
     nsprite.ur = this;
     return nsprite;
   },
 };
 
 component.sprite.maker = Object.copy(component, {
-  name: "sprite",
   set path(x) { cmd(12,this.id,x,this.rect); },
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
@@ -73,6 +71,8 @@ component.sprite.maker = Object.copy(component, {
   height() { return cmd(64,this.path).y; },
 });
 
+Object.freeze(sprite);
+
 var sprite = component.sprite.maker;
 
 sprite.inputs = {};
@@ -85,11 +85,10 @@ sprite.inputs.kp4 = function() { this.pos = [-1,-0.5]; };
 sprite.inputs.kp3 = function() { this.pos = [0, -1]; };
 sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
 sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
+Object.seal(sprite);
 
 /* Container to play sprites and anim2ds */
 component.char2d = Object.copy(sprite, {
-  name: "char 2d",
-  
   frame2rect(frames, frame) {
     var rect = {s0:0,s1:1,t0:0,t1:1};
     
@@ -99,17 +98,15 @@ component.char2d = Object.copy(sprite, {
 
     return rect;
   },
-  
-  make(go) {
-    var char = Object.copy(this, {
-      get enabled() { return cmd(114,this.id); },
-      set enabled(x) { cmd(20,this.id,x); },
-      set color(x) { cmd(96,this.id,x); },
-      get pos() { return cmd(111, this.id); },
-      set pos(x) { cmd(37,this.id,x); },
-      set layer(x) { cmd(60, this.id, x); },
-      get layer() { return this.gameobject.draw_layer; },
 
+  get enabled() { return cmd(114,this.id); },
+  set enabled(x) { cmd(20,this.id,x); },
+  set color(x) { cmd(96,this.id,x); },
+  get pos() { return cmd(111, this.id); },
+  set pos(x) { cmd(37,this.id,x); },
+  set layer(x) { cmd(60, this.id, x); },
+  get layer() { return this.gameobject.draw_layer; },
+  
       boundingbox() {
         var dim = cmd(64,this.path);
 	dim = dim.scale(this.gameobject.scale);	
@@ -128,8 +125,12 @@ component.char2d = Object.copy(sprite, {
       },
 
       kill() { cmd(9,this.id); },
-    });
-
+  ur: {
+    
+  },
+  
+  make(go) {
+    var char = Object.create(this);
     char.curplaying = char.anims.array()[0];
     char.obscure('curplaying');
     char.id = make_sprite(go, char.curplaying.path, this.pos);    
@@ -247,28 +248,25 @@ collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
-  name: "polygon 2d",
   points: [],
-  flipx: false,
-  flipy: false,
+
+  ur: {
+    flipx: false,
+    flipy: false
+  },
+  
+  sync() {
+    cmd_poly2d(0, this.id, this.spoints);
+  },
+  
+  boundingbox() {
+    return points2bb(this.spoints);
+  },
 
   make(go) {
     var poly = Object.create(this);
     Object.assign(poly, make_poly2d(go, this.points));
-    
-    Object.assign(poly, this.make_fns);
-    Object.assign(poly, {
-      boundingbox() {
-        return points2bb(this.spoints);
-      },
-
-      sync() { cmd_poly2d(0, this.id, this.spoints); }
-    });
-    
     poly.defn('points', this.points.copy());
-
-    Object.defineProperty(poly, 'id', {enumerable:false});
-    Object.defineProperty(poly, 'shape', {enumerable:false});
 
     poly.sync();
 
@@ -604,9 +602,11 @@ bucket.inputs.rb.doc = "Rotate the points CW.";
 bucket.inputs.rb.rep = true;
 
 component.circle2d = Object.copy(collider2d, {
-  name: "circle 2d",
   set radius(x) { cmd_circle2d(0,this.id,x); },
   get radius() { return cmd_circle2d(2,this.id); },
+
+  set scale(x) { this.radius = x; },
+  get scale() { return this.radius; },
 
   set offset(x) { cmd_circle2d(1,this.id,x); },
   get offset() { return cmd_circle2d(3,this.id); },
@@ -619,9 +619,6 @@ component.circle2d = Object.copy(collider2d, {
   make(go) {
     var circle = Object.create(this);
     Object.assign(circle, make_circle2d(go, circle.radius, circle.offset));
-    circle.radius = 10;
-    circle.offset = [0,0];
-
     return circle;
   },
 
@@ -669,5 +666,3 @@ var Resources = {
 
   },
 };
-
-Log.warn("bottom of components");

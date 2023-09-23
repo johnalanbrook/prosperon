@@ -559,8 +559,8 @@ void draw_grid(float width, float span, struct rgba color)
 
   sg_apply_pipeline(grid_pipe);
   sg_apply_bindings(&grid_bind);
-
-  float col[4] = { color.r/255.0 ,color.g/255.0 ,color.b/255.0 ,color.a/255.0 };
+  float col[4];
+  rgba2floats(col,color);
 
   fs_params_t pt;
   pt.thickness = (float)width;

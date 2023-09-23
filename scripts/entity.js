@@ -347,7 +347,7 @@ var gameobject = {
 	obj.components[prop] = obj[prop];
       }
     };
-    
+
     Object.totalmerge(obj,ur);
     obj.check_registers(obj);    
     
@@ -497,7 +497,6 @@ prototypes.from_obj = function(name, obj)
 {
   var newobj = Object.copy(gameobject.ur, obj);
   prototypes.ur[name] = newobj;
-  Log.say(Object.keys(newobj));
   newobj.toString = function() { return name; };
   return prototypes.ur[name];
 }

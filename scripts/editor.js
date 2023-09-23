@@ -561,7 +561,7 @@ return;
         GUI.image("icons/icons8-lock-16.png", world2screen(obj.pos));
     });
 
-    Debug.draw_grid(1, editor_config.grid_size/editor.camera.zoom, editor_config.grid_color);
+    Debug.draw_grid(1, editor_config.grid_size/editor.camera.zoom, Color.Editor.grid.alpha(0.3));
     var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); });
     var endgrid = screen2world([Window.width, 0]);
     
@@ -595,7 +595,7 @@ return;
       wh[0] /= editor.camera.zoom;
       wh[1] /= editor.camera.zoom;
       var bb = cwh2bb(world2screen(c),wh);
-      Debug.boundingbox(bb, [255,255,55,10]);
+      Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
       Debug.line(bb2points(bb).wrapped(1), Color.white);
     }
     

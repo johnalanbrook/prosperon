@@ -202,17 +202,12 @@ int fexists(char *path)
   return 0;
 }
 
-void *slurp_file(const char *filename, size_t *size)
+void *os_slurp(const char *file, size_t *size)
 {
-  if (cdb_find(&game_cdb, filename, strlen(filename)))
-    return cdb_slurp(&game_cdb, filename, size);
-  else if (cdb_find(&corecdb, filename, strlen(filename)))
-    return cdb_slurp(&corecdb, filename, size);
-  
   FILE *f;
 
   jump:
-  f = fopen(filename, "rb");
+  f = fopen(file, "rb");
 
   if (!f) return NULL;
 
@@ -226,6 +221,18 @@ void *slurp_file(const char *filename, size_t *size)
   if (size) *size = fsize;
 
   return slurp;
+}
+
+void *slurp_file(const char *filename, size_t *size)
+{
+  if (!access(filename, R_OK))
+    return os_slurp(filename, size);
+  else if (cdb_find(&game_cdb, filename, strlen(filename)))
+    return cdb_slurp(&game_cdb, filename, size);
+  else if (cdb_find(&corecdb, filename, strlen(filename)))
+    return cdb_slurp(&corecdb, filename, size);
+
+  return NULL;
 }
 
 char *slurp_text(const char *filename, size_t *size)

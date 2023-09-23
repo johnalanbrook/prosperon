@@ -1,9 +1,8 @@
 var GUI = {
   text(str, pos, size, color, wrap) {
-    size = size ? size : 1;
-    
-    color = color ? color : [255,255,255,255];
-    wrap = wrap ? wrap : -1;
+    size ??= 1;
+    color ??= Color.white;
+    wrap ??= -1;
 
     var bb = cmd(118, str, size, wrap);
     var opos = [bb.r, bb.t];
@@ -14,7 +13,7 @@ var GUI = {
   },
 
   text_cursor(str, pos, size, cursor) {
-    cursor_text(str,pos,size,[255,255,255],cursor);
+    cursor_text(str,pos,size,Color.white,cursor);
   },
 
   image(path,pos) {
@@ -70,10 +69,10 @@ var GUI = {
     anchor: [0,0],
     text_shadow: {
       pos: [0,0],
-      color: [255,255,255,255]
+      color: Color.white,
     },
     text_outline: 1, /* outline in pixels */
-    color: [255,255,255,255],
+    color: Color.white,
     margin: [5,5], /* Distance between elements for things like columns */
     width: 0,
     height: 0,

@@ -85,7 +85,7 @@ var Debug = {
 
   draw() {
     if (this.draw_bb)
-      Game.objects.forEach(function(x) { Debug.boundingbox(x.boundingbox(), [255,255,255,10]); });
+      Game.objects.forEach(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
 
     if (Game.paused()) gui_text("PAUSED", [0,0],1);
 
@@ -97,7 +97,7 @@ var Debug = {
 
     if (this.draw_names)
       Game.objects.forEach(function(x) {
-        GUI.text(x, world2screen(x.pos).add([0,32]), 1, [84,110,255]);
+        GUI.text(x, world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
       });
 
     if (Debug.Options.gif.rec) {

@@ -19,23 +19,15 @@ URIError = {};
 
 Object.complete_assign = function(target, source)
 {
-var descriptors = {};
-  var assigns = {};
   if (typeof source === 'undefined') return target;
+  
   Object.keys(source).forEach(function (k) {
-    var desc = Object.getOwnPropertyDescriptor(source, k);
-
-    if (desc.value) {
-      if (typeof desc.value === 'object' && desc.value.hasOwn('value'))
-        descriptors[k] = desc.value;
-      else
-        assigns[k] = desc.value;
-    } else
-      descriptors[k] = desc;
+    if (Object.isAccessor(source,k))
+      Object.defineProperty(target, k, Object.getOwnPropertyDescriptor(source,k));
+    else
+      target[k] = source[k];
   });
 
-  Object.defineProperties(target, descriptors);
-  Object.assign(target, assigns);
   return target;
 };
 
@@ -72,54 +64,36 @@ Object.dainty_assign = function(target, source)
 
 Object.isAccessor = function(obj, prop)
 {
-  var prop = Object.getOwnPropertyDescriptor(obj,prop);
-  if (prop) return false;
-  return true;
+  var desc = Object.getOwnPropertyDescriptor(obj,prop);
+  if (!desc) return false;
+  if (desc.get || desc.set) return true;
+  return false;
 }
 
+Object.mergekey = function(o1,o2,k)
+{
+  if (typeof(o2[k]) === 'object') {
+    if (Array.isArray(o2[k]))
+      o1[k] = o2[k].slice();
+    else
+      Object.merge(o1[k], o2[k]);
+   } else
+     o1[k] = o2[k];
+}
 
 /* Same as merge from Ruby */
 Object.merge = function(target, ...objs)
 {
-  var objmerge = function(tar, obj)
-  {
-    for (var key of Object.keys(obj)) {
-      if (typeof obj[key] === 'object') {
-        if (tar[key]) {
-	  objmerge(tar[key], obj[key]);
-	  continue;
-	}
-	else {
-	  tar[key] = obj[key];
-	  continue;
-	}
-      }
-      tar[key] = obj[key];
-    }
-  }
-
   for (var obj of objs)
-    objmerge(target,obj);
+    for (var key of Object.keys(obj))
+      Object.mergekey(target,obj,key);
 }
 
 Object.totalmerge = function(target, ...objs)
 {
-  for (var obj of objs) {
-    for (var key in obj) {
-      if (typeof obj[key] === 'object') {
-        if (typeof target[key] === 'object') {
-	  if (Object.isAccessor(target,key))
-	    target[key] = obj[key];
-	  else
-  	    Object.merge(target[key], obj[key]);
-	}
-	else
-	  target[key] = obj[key];
-	  
-      } else
-        target[key] = obj[key];
-    }
-  }
+  for (var obj of objs)
+    for (var key in obj)
+      Object.mergekey(target,obj,key);
 }
 
 /* Returns a new object with undefined, null, and empty values removed. */
