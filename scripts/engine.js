@@ -221,7 +221,7 @@ var timer = {
       return;
     }
       
-    var t = clone(this);
+    var t = Object.create(this);
     t.callback = fn;
     var guardfn = function() {
       if (typeof t.callback === 'function')
@@ -802,7 +802,6 @@ function save_game_configs() {
 };
 
 load("scripts/physics.js");
-
 
 Game.view_camera = function(cam)
 {

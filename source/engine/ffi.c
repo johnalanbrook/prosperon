@@ -1103,6 +1103,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = JS_NewInt64(js, jso_file(str));
       break;
 
+    case 139:
+      str = JS_ToCString(js,argv[1]);
+      ret = JS_NewInt64(js, gif_nframes(str));
+      break;
   }
 
   if (str)

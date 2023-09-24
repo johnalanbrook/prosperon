@@ -186,6 +186,7 @@ return;
   },
 
   key_move(dir) {
+    if (!editor.grabselect) return;
     if (Keys.ctrl())
       this.selectlist.forEach(this.snapper(dir.scale(1.01), editor_config.grid_size));
     else
@@ -561,7 +562,7 @@ return;
         GUI.image("icons/icons8-lock-16.png", world2screen(obj.pos));
     });
 
-    Debug.draw_grid(1, editor_config.grid_size/editor.camera.zoom, Color.Editor.grid.alpha(0.3));
+    Debug.draw_grid(1, editor_config.grid_size, Color.Editor.grid.alpha(0.3));
     var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); });
     var endgrid = screen2world([Window.width, 0]);
     
@@ -1157,6 +1158,14 @@ editor.inputs.mouse.move = function(pos, dpos)
     x.obj.angle = x.angle + Math.rad2deg(anglediff);
     if (x.pos)
       x.obj.pos = x.pos.sub(x.offset).add(x.offset.rotate(anglediff));
+  });
+}
+
+editor.inputs.mouse.scroll = function(scroll)
+{
+  scroll.y *= -1;
+  editor.grabselect?.forEach(function(x) {
+    x.pos = x.pos.add(scroll.scale(editor.camera.zoom));
   });
 }
 

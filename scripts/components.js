@@ -87,18 +87,47 @@ sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
 sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
 Object.seal(sprite);
 
+var gif2anim = function(gif)
+{
+  var anim = {};
+  anim.frames = [];
+  anim.path = gif;
+  var frames = cmd(139,gif);
+  Log.warn(`gif has ${frames} frames`);
+  var yslice = 1/frames;
+  for (var f = 0; f < frames; f++) {
+    var frame = {};
+    frame.rect = {
+      s0: 0,
+      s1: 1,
+      t0: yslice*f,
+      t1: yslice*(f+1)
+    };
+    frame.time = 0.05;
+    anim.frames.push(frame);
+  }
+  anim.loop = true;
+  return anim;
+}
+
+var strip2anim = function(strip)
+{
+  var anim = {};
+  anim.frames = [];
+  anim.path = strip;
+  var frames = 8;
+  var xslice = 1/frames;
+  for (var f = 0; f < frames; f++) {
+    var frame = {};
+    frame.rect = {s0:xslice*f, s1: slice*(f+1), t0:0, t1:1};
+    frame.time = 0.05;
+    anim.frames.push(frame);
+  }
+  return anim;
+}
+
 /* Container to play sprites and anim2ds */
 component.char2d = Object.copy(sprite, {
-  frame2rect(frames, frame) {
-    var rect = {s0:0,s1:1,t0:0,t1:1};
-    
-    var frameslice = 1/frames;
-    rect.s0 = frameslice*frame;
-    rect.s1 = frameslice*(frame+1);
-
-    return rect;
-  },
-
   get enabled() { return cmd(114,this.id); },
   set enabled(x) { cmd(20,this.id,x); },
   set color(x) { cmd(96,this.id,x); },
@@ -106,74 +135,63 @@ component.char2d = Object.copy(sprite, {
   set pos(x) { cmd(37,this.id,x); },
   set layer(x) { cmd(60, this.id, x); },
   get layer() { return this.gameobject.draw_layer; },
-  
-      boundingbox() {
-        var dim = cmd(64,this.path);
-	dim = dim.scale(this.gameobject.scale);	
-	dim.x *= 1/6;
-	var realpos = [0,0];
-//	var realpos = this.pos.slice();
 
-//	realpos.x = realpos.x * dim.x + (dim.x/2);
-//	realpos.y = realpos.y * dim.y + (dim.y/2);
-	return cwh2bb(realpos,dim);
-      },
+  boundingbox() {
+    var dim = cmd(64,this.path);
+    dim = dim.scale(this.gameobject.scale);	
+    var realpos = [0,0];
+  //	var realpos = this.pos.slice();
 
-      sync() {
-        if (this.path)
-	  cmd(12,this.id,this.path,this.rect);
-      },
+  //	realpos.x = realpos.x * dim.x + (dim.x/2);
+  //	realpos.y = realpos.y * dim.y + (dim.y/2);
+    return cwh2bb(realpos,dim);
+  },
 
-      kill() { cmd(9,this.id); },
+  sync() {
+    if (this.path)
+      cmd(12,this.id,this.path,this.rect);
+  },
+
+  kill() { cmd(9,this.id); },
   ur: {
     
   },
-  
+
   make(go) {
     var char = Object.create(this);
-    char.curplaying = char.anims.array()[0];
-    char.obscure('curplaying');
-    char.id = make_sprite(go, char.curplaying.path, this.pos);    
-
-    char.obscure('id');
+    Object.assign(char, make_sprite(go));
     char.frame = 0;
-    char.timer = timer.make(char.advance.bind(char), 1/char.curplaying.fps);
+    char.timer = timer.make(char.advance.bind(char), 1);
     char.timer.loop = true;
-    char.obscure('timer');
-//    char.obscure('rect');
-    char.rect = {};
-    char.setsprite();
     return char;
   },
   
   frame: 0,
   
   play(name) {
-    if (!(name in this.anims)) {
+    if (!(name in this)) {
       Log.info("Can't find an animation named " + name);
       return;
     }
     
-    if (this.curplaying === this.anims[name]) {
+    if (this.curplaying === this[name]) {
       this.timer.start();
       return;
     }
     
-    this.curplaying = this.anims[name];
-    this.timer.time = 1/this.curplaying.fps;
-    this.timer.start();
+    this.curplaying = this[name];
     this.frame = 0;
+    this.timer.time = this.curplaying.frames[this.frame].time;
+    this.timer.start();
     this.setsprite();
   },
   
   setsprite() {
-    this.path = this.curplaying.path;
-    this.rect = this.frame2rect(this.curplaying.frames, this.frame);
-    cmd(12, this.id, this.path, this.rect);
+    cmd(12, this.id, this.curplaying.path, this.curplaying.frames[this.frame].rect);
   },
 
   advance() {
-    this.frame = (this.frame + 1) % this.curplaying.frames;
+    this.frame = (this.frame + 1) % this.curplaying.frames.length;
     this.setsprite();
 
     if (this.frame === 0 && !this.curplaying.loop)

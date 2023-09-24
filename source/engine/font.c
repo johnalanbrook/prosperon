@@ -78,7 +78,8 @@ void font_init() {
       .label = "text buffer"
     });
 
-  font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
+//  font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
+  font = MakeFont("fonts/c64.ttf", 8);
   bind_text.fs.images[0] = font->texID;
   bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 }
@@ -147,8 +148,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
       .height = packsize,
       .pixel_format = SG_PIXELFORMAT_R8,
       .usage = SG_USAGE_IMMUTABLE,
-//      .min_filter = SG_FILTER_NEAREST,
-//      .mag_filter = SG_FILTER_NEAREST,
       .data.subimage[0][0] = {
           .ptr = bitmap,
           .size = packsize * packsize}});
@@ -166,10 +165,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     r.t1 = (glyph.y1) / (float)packsize;
 
     stbtt_GetCodepointHMetrics(&fontinfo, c, &newfont->Characters[c].Advance, &newfont->Characters[c].leftbearing);
-    newfont->Characters[c].Advance *= newfont->emscale;
     newfont->Characters[c].leftbearing *= newfont->emscale;
 
-//    newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
+    newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
     newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0; 
     newfont->Characters[c].Size[1] = glyph.y1 - glyph.y0;
     newfont->Characters[c].Bearing[0] = glyph.xoff;
@@ -219,7 +217,7 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
   float lsize = 1.0 / 1024.0;
 
-  float oline = 0.0;
+  float oline = 1.0;
   
   vert.pos.x = cursor.X + c.Bearing[0] * scale + oline;
   vert.pos.y = cursor.Y - c.Bearing[1] * scale - oline;
@@ -312,6 +310,7 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
   return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){width,height});
 }
 
+/* pos given in screen coordinates */
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   int len = strlen(text);
   drawcaret = caret;
@@ -338,8 +337,8 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       int wordWidth = 0;
 
       while (!isspace(*line) && *line != '\0') {
-        wordWidth += font->Characters[*line].Advance * tracking * scale;
-        line++;
+        wordWidth += font->Characters[*line].Advance * tracking * scale; 
+       line++;
       }
 
       if (lw > 0 && (cursor.X + wordWidth - pos.X) >= lw) {

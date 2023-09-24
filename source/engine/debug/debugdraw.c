@@ -564,7 +564,7 @@ void draw_grid(float width, float span, struct rgba color)
 
   fs_params_t pt;
   pt.thickness = (float)width;
-  pt.span = span;
+  pt.span = span/cam_zoom();
   memcpy(&pt.color, col, sizeof(float)*4);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(ubo));
   sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(pt));

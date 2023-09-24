@@ -72,11 +72,14 @@ Object.isAccessor = function(obj, prop)
 
 Object.mergekey = function(o1,o2,k)
 {
-  if (typeof(o2[k]) === 'object') {
+  if (Object.isAccessor(o2,k))
+    Object.defineProperty(o1, k, Object.getOwnPropertyDescriptor(o2,k));
+  else if (typeof o2[k] === 'object') {
     if (Array.isArray(o2[k]))
       o1[k] = o2[k].slice();
-    else
+    else {
       Object.merge(o1[k], o2[k]);
+    }
    } else
      o1[k] = o2[k];
 }

@@ -99,6 +99,8 @@ void anim_bkwd(struct anim2d *anim);
 void anim_incr(struct anim2d  *anim);
 void anim_decr(struct anim2d *anim);
 
+int gif_nframes(const char *path);
+
 struct glrect tex_get_rect(struct Texture *tex);
 cpVect tex_get_dimensions(struct Texture *tex);
 struct glrect anim_get_rect(struct anim2d *anim);

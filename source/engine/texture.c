@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stb_ds.h>
 #include <stb_image.h>
+#include "gifdec.h"
 
 #include "resources.h"
 
@@ -69,6 +70,26 @@ int mip_wh(int w, int h, int *mw, int *mh, int lvl)
   return 0;
 }
 
+int gif_nframes(const char *path)
+{
+  long rawlen;
+  unsigned char *raw = slurp_file(path, &rawlen);
+  char *ext = strrchr(path,'.');
+  int frames = 0; /* default here is also the error code */
+
+  FILE *f = fmemopen(raw, rawlen, "r");
+  gd_GIF *gif = gd_open_gif_f(f);
+  
+  if (!gif) goto fin;
+
+  while (gd_get_frame(gif)) frames++;
+
+  fin:
+  gd_close_gif(gif);  
+  free(raw);
+  return frames;
+}
+
 /* If an empty string or null is put for path, loads default texture */
 struct Texture *texture_pullfromfile(const char *path) {
   if (!path) return texture_notex();
@@ -93,13 +114,51 @@ struct Texture *texture_pullfromfile(const char *path) {
   unsigned char *data;
 
   char *ext = strrchr(path, '.');
-
-  if (ext && !strcmp(ext, ".qoi")) {
+  
+  if (!strcmp(ext, ".qoi")) {
     qoi_desc qoi;
     data = qoi_decode(raw, rawlen, &qoi, 4);
     tex->width = qoi.width;
     tex->height = qoi.height;
     n = qoi.channels;
+  } else if (!strcmp(ext, ".gif")) {
+    FILE *f = fmemopen(raw, rawlen, "r");
+    gd_GIF *gif = gd_open_gif_f(f);
+    int frames = 0;
+    while (gd_get_frame(gif))
+      frames++;
+
+    gd_rewind(gif);
+
+    int frame = 0;    
+    uint8_t gifbuf[gif->width*gif->height*3];
+    data = malloc(gif->width*gif->height*4*frames);
+
+    while (gd_get_frame(gif)) {
+      gd_render_frame(gif, gifbuf);
+      uint8_t black[4] = {0,0,0,0};
+      for (int p = 0; p < gif->height*gif->width; p++) {
+        int offset = (p*4)+(frame*gif->width*gif->height*4);
+	if (gd_is_bgcolor(gif, gifbuf+(p*3)))
+	  memcpy(data+offset, black, 4*sizeof(uint8_t));
+	else {
+	  memcpy(data+offset, gifbuf+(p*3), 3*sizeof(uint8_t));
+	  data[offset+3] = 255;
+	}
+      }
+      
+      frame++;
+    }
+    tex->width = gif->width;
+    tex->height = gif->height*frames;
+    gd_close_gif(gif);
+    fclose(f);
+
+/*
+    int *delays;
+    int frames;
+    data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &frames, &n, 4);
+  */  
   } else {
     data = stbi_load_from_memory(raw, rawlen, &tex->width, &tex->height, &n, 4);
   }
