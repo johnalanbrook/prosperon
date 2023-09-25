@@ -3,7 +3,6 @@
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
-#include "sokol/sokol_glue.h"
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"
 #include "sokol/sokol_args.h"

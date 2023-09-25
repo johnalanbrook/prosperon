@@ -87,6 +87,52 @@ sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
 sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
 Object.seal(sprite);
 
+var aseframeset2anim = function(frameset, meta)
+{
+  var anim = {};
+  anim.frames = [];
+  anim.path = meta.image;
+  var dim = meta.size;
+
+  var ase_make_frame = function(ase_frame,i) {
+    var f = ase_frame.frame;
+    var frame = {};
+    frame.rect = {
+      s0: f.x/dim.w,
+      s1: (f.x+f.w)/dim.w,
+      t0: f.y/dim.h,
+      t1: (f.y+f.h)/dim.h
+    };
+    frame.time = ase_frame.duration / 1000;
+    anim.frames.push(frame);
+  };
+
+  frameset.forEach(ase_make_frame);
+
+  anim.loop = true;
+  return anim;
+}
+
+var ase2anim = function(ase)
+{
+  var json = IO.slurp(ase);
+  json = JSON.parse(json);
+  var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);
+  return aseframeset2anim(json.frames, json.meta);
+}
+
+var ase2anims = function(ase)
+{
+  var json = IO.slurp(ase);
+  json = JSON.parse(json);
+  var anims = {};
+  var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);  
+  for (var tag of json.meta.frameTags) 
+    anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), json.meta);
+
+  return anims;
+}
+
 var gif2anim = function(gif)
 {
   var anim = {};

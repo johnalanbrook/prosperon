@@ -16,7 +16,6 @@
 #include "resources.h"
 #include "yugine.h"
 #include "sokol/sokol_app.h"
-#include "sokol/sokol_glue.h"
 
 #include "crt.sglsl.h"
 #include "box.sglsl.h"
@@ -70,14 +69,16 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
     .render_target = true,
     .width = gif.w,
     .height = gif.h,
-    .pixel_format = SG_PIXELFORMAT_RGBA8
+//    .pixel_format = SG_PIXELFORMAT_RGBA8
+    .label = "gif rt",
   });
 
   sg_gif.depth = sg_make_image(&(sg_image_desc){
     .render_target = true,
     .width = gif.w,
     .height = gif.h,
-    .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
+    .pixel_format = SG_PIXELFORMAT_DEPTH,
+    .label = "gif depth",
   });
   
   sg_gif.pass = sg_make_pass(&(sg_pass_desc){
@@ -196,6 +197,13 @@ void trace_destroy_shader(sg_shader shd, void *data)
   YughWarn("DESTROYED SHADER");
 }
 
+void trace_fail_image(sg_image id, void *data)
+{
+  sg_image_desc desc = sg_query_image_desc(id);
+  YughWarn("Failed to make image %s", desc.label);
+  
+}
+
 static sg_trace_hooks hooks = {
   .fail_shader = trace_fail_shader,
   .make_shader = trace_make_shader,
@@ -207,9 +215,22 @@ void render_init() {
   mainwin.height = sapp_height();
 
   sg_setup(&(sg_desc){
-      .context = sapp_sgcontext(),
+      .context.d3d11.device = sapp_d3d11_get_device(),
+      .context.d3d11.device_context = sapp_d3d11_get_device_context(),
+      .context.d3d11.render_target_view_cb = sapp_d3d11_get_render_target_view,
+      .context.d3d11.depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view,
+/*      .context.metal.device = sapp_metal_get_device(),
+      .context.metal.renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
+      .context.metal.drawable_cb = sapp_metal_get_drawable,
+      .context.color_format = (sg_pixel_format) sapp_color_format(),
+      .context.depth_format = (sg_pixel_format) sapp_depth_format(),
+      .context.sample_count = sapp_sample_count(),
+      .context.wgpu.device = sapp_wgpu_get_device(),
+      .context.wgpu.render_view_cb = sapp_wgpu_get_render_view,
+      .context.wgpu.resolve_view_cb = sapp_wgpu_get_resolve_view,
+      .context.wgpu.depth_stencil_view_cb = sapp_wgpu_get_depth_stencil_view,
       .mtl_force_managed_storage_mode = 1,
-      .logger = {
+*/      .logger = {
           .func = sg_logging,
           .user_data = NULL,
       },
@@ -263,13 +284,15 @@ void render_init() {
     .render_target = true,
     .width = mainwin.width,
     .height = mainwin.height,
+    .label = "crt rt",
   });
 
   crt_post.depth_img = sg_make_image(&(sg_image_desc){
     .render_target = true,
     .width = mainwin.width,
     .height = mainwin.height,
-    .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
+    .pixel_format = SG_PIXELFORMAT_DEPTH,
+    .label = "crt depth",
   });
 
   crt_post.pass = sg_make_pass(&(sg_pass_desc){
@@ -370,14 +393,14 @@ void render_winsize()
   crt_post.img = sg_make_image(&(sg_image_desc){
     .render_target = true,
     .width = mainwin.width,
-    .height = mainwin.height
+    .height = mainwin.height,
   });
 
   crt_post.depth_img = sg_make_image(&(sg_image_desc){
     .render_target = true,
     .width = mainwin.width,
     .height = mainwin.height,
-    .pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL
+    .pixel_format = SG_PIXELFORMAT_DEPTH,
   });
 
   crt_post.pass = sg_make_pass(&(sg_pass_desc){

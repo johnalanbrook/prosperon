@@ -58,6 +58,7 @@ struct TextureOptions {
     int animation;
     int wrapx;
     int wrapy;
+
 };
 
 /* Represents an actual texture on the GPU */
@@ -68,6 +69,7 @@ struct Texture {
     unsigned char *data;
     struct TextureOptions opts;
     struct TexAnim anim;
+  int frames;  
 };
 
 struct Image {

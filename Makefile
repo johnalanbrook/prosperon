@@ -17,6 +17,9 @@ LD = $(CC)
 ifeq ($(CC), clang)
   AR = llvm-ar
 endif
+ifeq ($(CC), x86_64-w64-mingw32-gcc)
+  AR = x86_64-w64-mingw32-ar
+endif
 
 ifdef NEDITOR
   CFLAGS += -DNO_EDITOR
@@ -72,6 +75,7 @@ ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static
   CFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
+#  LDLIBS += mingw32 kernel32 gdi32 user32 shell32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   PLAT = w64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
@@ -144,7 +148,7 @@ SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 install: $(BIN)/$(NAME)
 	cp -f $(BIN)/$(NAME) $(DESTDIR)
 
-$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a $(BIN)/libcdb.a
+$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
 	@echo Linking $(NAME)
 	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
 	cp $(BIN)/$(NAME) .
@@ -155,13 +159,13 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
 	@mkdir -p $(DISTDIR)
 	@$(PKGCMD)
 
-$(BIN)/libengine.a: $(SHADERS) source/engine/core.cdb.h .WAIT $(OBJS)
+$(BIN)/libengine.a: $(SHADERS) source/engine/core.cdb.h $(OBJS)
 	@$(AR) rcs $@ $(OBJS)
 
 $(BIN)/libcdb.a:
 	mkdir -p $(BIN)
 	rm -f $(CDB)/libcdb.a
-	make -C $(CDB) libcdb.a
+	make -C $(CDB) CC=$(CC) AR=$(AR) libcdb.a
 	cp $(CDB)/libcdb.a $(BIN)
 
 $(BIN)/libquickjs.a:
@@ -211,7 +215,7 @@ jso: tools/jso.c $(BIN)/libquickjs.a
 WINCC = x86_64-w64-mingw32-gcc
 .PHONY: crosswin
 crosswin: 
-	make CC=$(WINCC) OS=Windows_NT
+	gmake CC=$(WINCC) OS=Windows_NT
 
 clean:
 	@echo Cleaning project
