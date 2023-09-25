@@ -69,7 +69,7 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
     .render_target = true,
     .width = gif.w,
     .height = gif.h,
-//    .pixel_format = SG_PIXELFORMAT_RGBA8
+    .pixel_format = SG_PIXELFORMAT_RGBA8,
     .label = "gif rt",
   });
 
@@ -180,8 +180,17 @@ static struct {
   sg_image depth_img;
 } crt_post;
 
+void trace_make_image(const sg_image_desc *d, sg_image result, void *data)
+{
+  YughInfo("Making image %s", d->label);
+}
 
-void trace_make_shader(sg_shader_desc *d, sg_shader result, void *data)
+void trace_init_image(sg_image id, const sg_image_desc *d, void *data)
+{
+  YughInfo("Init image %s", d->label);
+}
+
+void trace_make_shader(const sg_shader_desc *d, sg_shader result, void *data)
 {
   if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED)
     YughError("FAILED MAKING A SHADER: %s\n%s\n%s", d->label);
@@ -189,18 +198,42 @@ void trace_make_shader(sg_shader_desc *d, sg_shader result, void *data)
 
 void trace_fail_shader(sg_shader id, void *data)
 {
-  YughWarn("SHADER DID NOT COMPILE");
+  YughError("SHADER DID NOT COMPILE");
 }
 
 void trace_destroy_shader(sg_shader shd, void *data)
 {
-  YughWarn("DESTROYED SHADER");
+  YughInfo("DESTROYED SHADER");
 }
 
 void trace_fail_image(sg_image id, void *data)
 {
   sg_image_desc desc = sg_query_image_desc(id);
-  YughWarn("Failed to make image %s", desc.label);
+  YughError("Failed to make image %s", desc.label);
+}
+
+void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline result, void *data)
+{
+  YughInfo("Making pipeline %s, id %d", d->label, result);
+}
+
+void trace_apply_pipeline(sg_pipeline pip, void *data)
+{
+  YughInfo("Applying pipeline %d", pip);
+}
+
+void trace_fail_pipeline(sg_pipeline pip, void *data)
+{
+  YughError("Failed pipeline %s", sg_query_pipeline_desc(pip).label);
+}
+
+void trace_make_pass(const sg_pass_desc *d, sg_pass result, void *data)
+{
+  YughInfo("Making pass %s", d->label);
+}
+
+void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
+{
   
 }
 
@@ -208,6 +241,14 @@ static sg_trace_hooks hooks = {
   .fail_shader = trace_fail_shader,
   .make_shader = trace_make_shader,
   .destroy_shader = trace_destroy_shader,
+  .fail_image = trace_fail_image,
+  .make_image = trace_make_image,
+  .init_image = trace_init_image,
+  .make_pipeline = trace_make_pipeline,
+  .fail_pipeline = trace_fail_pipeline,
+  .apply_pipeline = trace_apply_pipeline,
+  .begin_pass = trace_begin_pass,
+  .make_pass = trace_make_pass,
 };
 
 void render_init() {
@@ -219,24 +260,21 @@ void render_init() {
       .context.d3d11.device_context = sapp_d3d11_get_device_context(),
       .context.d3d11.render_target_view_cb = sapp_d3d11_get_render_target_view,
       .context.d3d11.depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view,
-/*      .context.metal.device = sapp_metal_get_device(),
+      .context.metal.device = sapp_metal_get_device(),
       .context.metal.renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
       .context.metal.drawable_cb = sapp_metal_get_drawable,
-      .context.color_format = (sg_pixel_format) sapp_color_format(),
-      .context.depth_format = (sg_pixel_format) sapp_depth_format(),
+      .context.color_format = sapp_color_format(),
+      .context.depth_format = SG_PIXELFORMAT_DEPTH,
       .context.sample_count = sapp_sample_count(),
       .context.wgpu.device = sapp_wgpu_get_device(),
       .context.wgpu.render_view_cb = sapp_wgpu_get_render_view,
       .context.wgpu.resolve_view_cb = sapp_wgpu_get_resolve_view,
       .context.wgpu.depth_stencil_view_cb = sapp_wgpu_get_depth_stencil_view,
       .mtl_force_managed_storage_mode = 1,
-*/      .logger = {
+      .logger = {
           .func = sg_logging,
-          .user_data = NULL,
       },
- 
       .buffer_pool_size = 1024,
-      .context.sample_count = 1,
   });
 
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
@@ -267,7 +305,8 @@ void render_init() {
 	[1].format = SG_VERTEXFORMAT_FLOAT2
       }
     },
-    .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8
+    .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8,
+    .label = "gif pipe",
   });
 
   crt_post.pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -277,7 +316,8 @@ void render_init() {
         [0].format = SG_VERTEXFORMAT_FLOAT2,
 	[1].format = SG_VERTEXFORMAT_FLOAT2
       }
-    }
+    },
+    .label = "crt post pipeline",
   });
 
   crt_post.img = sg_make_image(&(sg_image_desc){
@@ -298,6 +338,7 @@ void render_init() {
   crt_post.pass = sg_make_pass(&(sg_pass_desc){
     .color_attachments[0].image = crt_post.img,
     .depth_stencil_attachment.image = crt_post.depth_img,
+    .label = "crt post pass",
   });
 
 #if defined SOKOL_GLCORE33 || defined SOKOL_GLES3
@@ -342,6 +383,7 @@ void render_init() {
 
   crt_post.bind.fs.images[0] = crt_post.img;
   crt_post.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+
 /*
   sg_image_desc shadow_desc = {
     .render_target = true,
@@ -350,7 +392,7 @@ void render_init() {
     .pixel_format = SG_PIXELFORMAT_R32F,
   };
   sg_image depth_img = sg_make_image(&shadow_desc);
-  shadow_desc.pixel_format = SG_PIXELFORMAT_DEPTH;
+  shadow_desc.pixel_format = sapp_depth_format();
   ddimg = sg_make_image(&shadow_desc);
 
   sg_shadow.pass = sg_make_pass(&(sg_pass_desc){
@@ -373,7 +415,7 @@ void render_init() {
     .depth = {
       .compare = SG_COMPAREFUNC_LESS_EQUAL,
       .write_enabled = true,
-      .pixel_format = SG_PIXELFORMAT_DEPTH
+      .pixel_format = sapp_depth_format()
     },
     .colors[0].pixel_format = SG_PIXELFORMAT_R32F,
     .index_type = SG_INDEXTYPE_UINT16,
@@ -389,11 +431,12 @@ void render_winsize()
   sg_destroy_image(crt_post.img);
   sg_destroy_image(crt_post.depth_img);
   sg_destroy_pass(crt_post.pass);
-  
+
   crt_post.img = sg_make_image(&(sg_image_desc){
     .render_target = true,
     .width = mainwin.width,
     .height = mainwin.height,
+    .label = "crt img resize",
   });
 
   crt_post.depth_img = sg_make_image(&(sg_image_desc){
@@ -401,11 +444,13 @@ void render_winsize()
     .width = mainwin.width,
     .height = mainwin.height,
     .pixel_format = SG_PIXELFORMAT_DEPTH,
+    .label = "crt depth resize",
   });
 
   crt_post.pass = sg_make_pass(&(sg_pass_desc){
     .color_attachments[0].image = crt_post.img,
     .depth_stencil_attachment.image = crt_post.depth_img,
+    .label = "crt pass resize",
   });
 
   crt_post.bind.fs.images[0] = crt_post.img;

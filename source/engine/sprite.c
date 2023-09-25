@@ -117,7 +117,6 @@ void sprite_io(struct sprite *sprite, FILE *f, int read) {
 void sprite_draw_all() {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-
   static struct sprite **layers[5];
 
   for (int i = 0; i < 5; i++)
@@ -154,11 +153,11 @@ void sprite_initialize() {
 	      [2].format = SG_VERTEXFORMAT_UBYTE4N}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
-/*      .depth = {
+      .depth = {
         .write_enabled = true,
-	.compare = SG_COMPAREFUNC_LESS_EQUAL
+	.compare = SG_COMPAREFUNC_LESS_EQUAL,
+	.pixel_format = SG_PIXELFORMAT_DEPTH
       }
-  */
   });
 
   bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){

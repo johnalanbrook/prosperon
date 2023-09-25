@@ -75,7 +75,6 @@ ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static
   CFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
-#  LDLIBS += mingw32 kernel32 gdi32 user32 shell32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   PLAT = w64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
@@ -98,8 +97,7 @@ else
 
   ifeq ($(UNAME), Darwin)
     CFLAGS += -x objective-c
-    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox
-    LDFLAGS += -framework Metal -framework MetalKit
+    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
     PLAT = osx-$(ARCH)$(INFO)
   endif
 endif
@@ -159,7 +157,7 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
 	@mkdir -p $(DISTDIR)
 	@$(PKGCMD)
 
-$(BIN)/libengine.a: $(SHADERS) source/engine/core.cdb.h $(OBJS)
+$(BIN)/libengine.a: source/engine/core.cdb.h $(OBJS)
 	@$(AR) rcs $@ $(OBJS)
 
 $(BIN)/libcdb.a:
@@ -167,6 +165,10 @@ $(BIN)/libcdb.a:
 	rm -f $(CDB)/libcdb.a
 	make -C $(CDB) CC=$(CC) AR=$(AR) libcdb.a
 	cp $(CDB)/libcdb.a $(BIN)
+
+tools/libcdb.a:
+	make -C $(CDB) libcdb.a
+	mv $(CDB)/libcdb.a tools
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
@@ -186,8 +188,8 @@ shaders: $(SHADERS)
 	@echo Creating shader $^
 	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:glsl300es -o $@
 
-cdb: tools/cdb.c $(BIN)/libcdb.a
-	$(CC) $< -lcdb -L$(BIN) -I$(CDB) -o cdb
+cdb: tools/cdb.c tools/libcdb.a
+	cc $^ -I$(CDB) -o cdb
 
 source/engine/core.cdb.h: core.cdb
 	xxd -i $< > $@
@@ -202,11 +204,17 @@ core.cdb: packer $(CORE)
 	chmod 644 out.cdb
 	mv out.cdb core.cdb
 
-packer: tools/packer.c $(BIN)/libcdb.a
-	cc $^ -Isource/engine/thirdparty/tinycdb -o packer
+CDB_C != find $(CDB) -name *.c
+packer: tools/packer.c tools/libcdb.a
+	cc $^ -I$(CDB) -o packer
 
-jso: tools/jso.c $(BIN)/libquickjs.a
-	$(CC) $< -lquickjs -lm -L$(BIN) -Iquickjs -o $@
+jso: tools/jso.c tools/libquickjs.a
+	$(CC) $^ -lm -Iquickjs -o $@
+
+tools/libquickjs.a:
+	make -C quickjs clean
+	make -C quickjs OPT=$(OPT) AR=$(AR) libquickjs.a
+	cp -f quickjs/libquickjs.a tools
 
 %.jso: %.js jso
 	@echo Making $@ from $<
@@ -214,14 +222,13 @@ jso: tools/jso.c $(BIN)/libquickjs.a
 
 WINCC = x86_64-w64-mingw32-gcc
 .PHONY: crosswin
-crosswin: 
-	gmake CC=$(WINCC) OS=Windows_NT
+crosswin:
+	make CC=$(WINCC) OS=Windows_NT
 
 clean:
 	@echo Cleaning project
 	@rm -rf bin dist
 	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS scripts/*.jso
-	@make -C $(CDB) clean
 	@make -C quickjs clean
 
 TAGINC != find . -name "*.[chj]"

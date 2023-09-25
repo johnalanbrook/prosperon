@@ -194,7 +194,8 @@ void debugdraw_init()
       }
     },
     .primitive_type = SG_PRIMITIVETYPE_POINTS,
-    .colors[0].blend = blend_trans
+    .colors[0].blend = blend_trans,
+    .label = "dbg point",
   });
   
   point_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
@@ -217,7 +218,8 @@ void debugdraw_init()
     },
     .primitive_type = SG_PRIMITIVETYPE_LINES,
     .index_type = SG_INDEXTYPE_UINT16,
-    .colors[0].blend = blend_trans
+    .colors[0].blend = blend_trans,
+    .label = "dbg line",
   });
   
   line_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
@@ -283,6 +285,7 @@ void debugdraw_init()
 //    .cull_mode = sg_cullmode_back,
     .label = "grid pipeline",
     .colors[0].blend = blend_trans,
+    .label = "dbg grid",
   });
   
   grid_bind.vertex_buffers[0] = circle_bind.vertex_buffers[1];
@@ -298,6 +301,7 @@ void debugdraw_init()
     },
     .index_type = SG_INDEXTYPE_UINT32,
     .colors[0].blend = blend_trans,
+    .label = "dbg poly",
   });
   poly_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct poly_vertex)*v_amt,

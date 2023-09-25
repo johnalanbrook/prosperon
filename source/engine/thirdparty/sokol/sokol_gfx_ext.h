@@ -164,17 +164,8 @@ static void _sg_d3d11_query_image_pixels(_sg_image_t* img, void* pixels) {
     D3D11_MAPPED_SUBRESOURCE msr = {.pData = NULL};
     hr = _sg_d3d11_Map(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0, D3D11_MAP_READ, 0, &msr);
     SOKOL_ASSERT(SUCCEEDED(hr));
-
-    // copy the data into the desired buffer, converting pixels to the desired format at the same time
-    /*    int res = SDL_ConvertPixels(
-        img->cmn.width, img->cmn.height,
-        _sg_d3d11_dxgi_format_to_sdl_pixel_format(staging_desc.Format),
-        msr.pData, msr.RowPitch,
-        SDL_PIXELFORMAT_RGBA32,
-        pixels, img->cmn.width * 4);
-    SOKOL_ASSERT(res == 0);
-    _SOKOL_UNUSED(res);
-    */
+    memcpy(pixels, msr.pData, img->cmn.width * img->cmn.height * 4);
+    
     // unmap the texture
     _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0);
 
@@ -231,16 +222,7 @@ static void _sg_d3d11_query_pixels(int x, int y, int w, int h, bool origin_top_l
     hr = _sg_d3d11_Map(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0, D3D11_MAP_READ, 0, &msr);
     SOKOL_ASSERT(SUCCEEDED(hr));
 
-    // copy the data into the desired buffer, converting pixels to the desired format at the same time
-    /*    int res = SDL_ConvertPixels(
-        w, h,
-        _sg_d3d11_dxgi_format_to_sdl_pixel_format(staging_desc.Format),
-        msr.pData, msr.RowPitch,
-        SDL_PIXELFORMAT_RGBA32,
-        pixels, w * 4);
-    SOKOL_ASSERT(res == 0);
-    _SOKOL_UNUSED(res);
-    */
+    memcpy(pixels, msr.pData, w * h * 4);    
     // unmap the texture
     _sg_d3d11_Unmap(_sg.d3d11.ctx, (ID3D11Resource*)staging_tex, 0);
 

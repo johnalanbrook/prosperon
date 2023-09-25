@@ -285,8 +285,14 @@ Debug.Options.gif = {
   },
 };
 
-DebugControls.inputs.f8 = Debug.Options.gif.start.bind(Debug.Options.gif);
-DebugControls.inputs.f9 = Debug.Options.gif.stop.bind(Debug.Options.gif);
+DebugControls.inputs.f8 = function() {
+  var now = new Date();
+  Debug.Options.gif.file = now.toISOString() + ".gif";
+  Debug.Options.gif.start();
+};
+DebugControls.inputs.f9 = function() {
+  Debug.Options.gif.stop();
+}
 
 DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
 DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";

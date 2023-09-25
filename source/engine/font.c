@@ -57,6 +57,7 @@ void font_init() {
       },
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .colors[0].blend = blend_trans,
+      .label = "text",
     });
     
   float text_verts[8] = {
