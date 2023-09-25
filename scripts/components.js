@@ -34,7 +34,8 @@ component.sprite = {
   toString() { return "sprite"; },
   make(go) {
     var nsprite = Object.create(component.sprite.maker);
-    Object.assign(nsprite, make_sprite(go));    
+    nsprite.gameobject = go;
+    Object.assign(nsprite, make_sprite(go.body));    
     nsprite.ur = this;
     return nsprite;
   },
@@ -108,7 +109,7 @@ var aseframeset2anim = function(frameset, meta)
   };
 
   frameset.forEach(ase_make_frame);
-
+  anim.dim = [frameset[0].sourceSize.x, frameset[0].sourceSize.y];
   anim.loop = true;
   return anim;
 }
@@ -153,6 +154,9 @@ var gif2anim = function(gif)
     anim.frames.push(frame);
   }
   anim.loop = true;
+  var dim = cmd(64,gif);
+  dim.y /= frames;
+  anim.dim = dim;
   return anim;
 }
 
@@ -169,6 +173,8 @@ var strip2anim = function(strip)
     frame.time = 0.05;
     anim.frames.push(frame);
   }
+  anim.dim = cmd(64,strip);
+  anim.dim.x /= frames;
   return anim;
 }
 
@@ -183,13 +189,11 @@ component.char2d = Object.copy(sprite, {
   get layer() { return this.gameobject.draw_layer; },
 
   boundingbox() {
-    var dim = cmd(64,this.path);
+    var dim = this.curplaying.dim.slice();
     dim = dim.scale(this.gameobject.scale);	
-    var realpos = [0,0];
-  //	var realpos = this.pos.slice();
-
-  //	realpos.x = realpos.x * dim.x + (dim.x/2);
-  //	realpos.y = realpos.y * dim.y + (dim.y/2);
+    var realpos = this.pos.slice();
+    realpos.x = realpos.x * dim.x + (dim.x/2);
+    realpos.y = realpos.y * dim.y + (dim.y/2);
     return cwh2bb(realpos,dim);
   },
 
@@ -205,7 +209,8 @@ component.char2d = Object.copy(sprite, {
 
   make(go) {
     var char = Object.create(this);
-    Object.assign(char, make_sprite(go));
+    char.gameobject = go;
+    Object.assign(char, make_sprite(go.body));
     char.frame = 0;
     char.timer = timer.make(char.advance.bind(char), 1);
     char.timer.loop = true;
@@ -329,7 +334,8 @@ component.polygon2d = Object.copy(collider2d, {
 
   make(go) {
     var poly = Object.create(this);
-    Object.assign(poly, make_poly2d(go, this.points));
+    poly.gameobject = go;
+    Object.assign(poly, make_poly2d(go.body, this.points));
     poly.defn('points', this.points.copy());
 
     poly.sync();
@@ -502,7 +508,8 @@ component.bucket = Object.copy(collider2d, {
   
   make(go) {
     var edge = Object.create(this);
-    Object.assign(edge, make_edge2d(go, this.points, this.thickness));
+    edge.gameobject = go;
+    Object.assign(edge, make_edge2d(go.body, this.points, this.thickness));
     Object.assign(edge, {
       set thickness(x) {
         cmd_edge2d(1,this.id,x);
@@ -682,7 +689,8 @@ component.circle2d = Object.copy(collider2d, {
     
   make(go) {
     var circle = Object.create(this);
-    Object.assign(circle, make_circle2d(go, circle.radius, circle.offset));
+    circle.gameobject = go;
+    Object.assign(circle, make_circle2d(go.body, circle.radius, circle.offset));
     return circle;
   },
 

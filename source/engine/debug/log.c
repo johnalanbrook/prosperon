@@ -25,6 +25,7 @@ char *catstr[] = {"engine", "script", "render"};
 
 FILE *logfile = NULL;
 
+#define ERROR_BUFFER 1024
 #define CONSOLE_BUF 1024*1024*5 /* 5MB */
 
 char *lastlog;

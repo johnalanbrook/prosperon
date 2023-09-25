@@ -62,9 +62,24 @@ Object.dainty_assign = function(target, source)
   }
 }
 
+Object.containingKey = function(obj, prop)
+{
+  if (typeof obj !== 'object') return undefined;
+  if (!(prop in obj)) return undefined;
+  
+  var o = obj;
+  while (o.__proto__ && !Object.hasOwn(o, prop))
+    o = o.__proto__;
+
+  return o;
+}
+
 Object.isAccessor = function(obj, prop)
 {
-  var desc = Object.getOwnPropertyDescriptor(obj,prop);
+  var o = Object.containingKey(obj,prop);
+  if (!o) return false;
+  
+  var desc = Object.getOwnPropertyDescriptor(o,prop);
   if (!desc) return false;
   if (desc.get || desc.set) return true;
   return false;
@@ -78,6 +93,7 @@ Object.mergekey = function(o1,o2,k)
     if (Array.isArray(o2[k]))
       o1[k] = o2[k].slice();
     else {
+      if (!o1[k]) o1[k] = {};
       Object.merge(o1[k], o2[k]);
     }
    } else

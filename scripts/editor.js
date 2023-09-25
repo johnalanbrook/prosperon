@@ -498,6 +498,7 @@ return;
       GUI.text(lvlstr, [0, ypos], 1, ColorMap.Inferno.sample(lvlcolorsample));
       lvlcolorsample -= 0.1;
 
+      if (!clvl.level) break;
       clvl = clvl.level;
       if (clvl) {
         GUI.text("^^^^^^", [0,ypos-15],1);
@@ -989,6 +990,7 @@ editor.inputs['C-f1'] = function() { editor.edit_mode = "basic"; };
 editor.inputs['C-f1'].doc = "Enter basic edit mode.";
 editor.inputs['C-f2'] = function() { editor.edit_mode = "brush"; };
 editor.inputs['C-f2'].doc = "Enter brush mode.";
+
 
 editor.inputs.f2 = function() {
   objectexplorer.on_close = save_configs;

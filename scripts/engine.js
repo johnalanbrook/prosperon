@@ -567,7 +567,9 @@ var ur_json = function()
     return ret;
   }
 
-  return objdiff(this, this.ur); 
+  var ur = objdiff(this,this.ur);
+  
+  return ur ? ur : {};
 }
 
 
@@ -744,13 +746,13 @@ Register.update.register(Game.exec, Game);
 load("scripts/entity.js");
 
 var preprimum = {};
-preprimum.add_child = function() {};
+preprimum.objects = [];
 var World = gameobject.make(gameobject.ur, preprimum);
 var Primum = World;
+Primum.level = undefined;
 Primum.toString = function() { return "Primum"; };
 Primum.selectable = false;
 World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
-World.unparent = function() { Log.warn("The Primum has no parent, always."); }
 
 /* Load configs */
 function load_configs(file) {
