@@ -424,23 +424,7 @@ return;
       this.openpanel(saveaspanel);
       return;
     }
-
-    var lvl = this.edit_level.save();
-
-    Log.info("Saving level of size " + lvl.length + " bytes.");
-
-    slurpwrite(lvl, this.edit_level.file);
-    this.edit_level.filejson = lvl;
-    this.edit_level.check_dirty();
-
-    if (this.edit_level.script) {
-      var scriptfile = this.edit_level.file.replace('.lvl', '.js');
-      slurpwrite(this.edit_level.script, scriptfile);
-    }
-
-    Level.sync_file(this.edit_level.file);
   },
-
   
   clear_level() {
     if (this.edit_level) {
@@ -634,7 +618,6 @@ return;
     var ur = prototypes.get_ur(file);
     if (!ur) return;
     var obj = editor.edit_level.spawn(ur);
-    Log.warn(`editor loading ur ${file} with type ${JSON.stringify(prototypes.get_ur(file),null,2)}`);
     obj.pos = Mouse.worldpos;
     this.selectlist = [obj];
   },
@@ -665,18 +648,25 @@ return;
       group.forEach(function(x) { x.kill(); });
     }
   },
-  
-  saveas_check(file) {
-    if (!file) return;
+
+  /* Checking to save an entity as a subtype. */
+  saveas_check(sub) {
+    if (!sub) return;
+    var curur = prototypes.get_ur(sub);
     
-    if (!file.endsWith(".lvl"))
-      file = file + ".lvl";
-    
-    if (IO.exists(file)) {
+    if (curur) {
       notifypanel.action = editor.saveas;
-      this.openpanel(gen_notify("Level already exists with that name. Overwrite?", this.saveas.bind(this, file)));
-    } else
-      this.saveas(file);
+      this.openpanel(gen_notify("Entity already exists with that name. Overwrite?", this.saveas.bind(this, sub)));
+    } else {
+      var path = sub.replaceAll('.', '/') + ".json";
+      IO.slurpwrite(JSON.stringify(editor.selectlist[0],null,1), path);
+      var t = editor.selectlist[0].transform();
+      editor.selectlist[0].kill();
+      editor.unselect();
+      editor.load(sub);
+      editor.selectlist[0].pos = t.pos;
+      editor.selectlist[0].angle = t.angle;
+    }
   },
 
   saveas(file) {
@@ -718,16 +708,16 @@ editor.inputs['C-h'].doc = "Unhide all objects.";
 editor.inputs['C-e'] = function() { editor.openpanel(assetexplorer); };
 editor.inputs['C-e'].doc = "Open asset explorer.";
 
-editor.inputs['C-l'] = function() { editor.openpanel(entitylistpanel, true); };
+editor.inputs['C-l'] = function() { editor.openpanel(entitylistpanel); };
 editor.inputs['C-l'].doc = "Open list of spawned entities.";
 
-editor.inputs['C-i'] = function() {
+/*editor.inputs['C-i'] = function() {
   if (editor.selectlist.length !== 1) return;
   objectexplorer.obj = editor.selectlist[0];
   editor.openpanel(objectexplorer);
 };
 editor.inputs['C-i'].doc = "Open the object explorer for a selected object.";
-
+*/
 editor.inputs['C-d'] = function() {
   if (editor.selectlist.length === 0) return;
   var duped = editor.dup_objects(editor.selectlist);
@@ -873,6 +863,13 @@ editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
+  if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
+  Log.warn(`Saving ur for ${editor.selectlist[0].toString()}`);
+  
+  Object.merge(editor.selectlist[0].ur, editor.selectlist[0].json_obj());
+  IO.slurpwrite(JSON.stringify(editor.selectlist[0].ur,null,1), editor.selectlist[0].toString() + ".json");
+  return;
+
   if (editor.edit_level.level) {
     if (!editor.edit_level.unique)
       editor.save_current();
@@ -889,6 +886,8 @@ editor.inputs['C-s'] = function() {
 editor.inputs['C-s'].doc = "Save selected.";
 
 editor.inputs['C-S'] = function() {
+  if (editor.selectlist.length !== 1) return;
+  saveaspanel.stem = this.selectlist[0].toString();
   editor.openpanel(saveaspanel);
 };
 editor.inputs['C-S'].doc = "Save selected as.";
@@ -1500,7 +1499,7 @@ var replpanel = Object.copy(inputpanel, {
     ecode += this.value;
     Log.say(this.value);
     this.value = "";
-    var ret = eval(ecode);
+    var ret = function() {return eval(ecode);}.call(editor.selectlist[0]);
     if (ret) Log.say(ret);
   },
 });
@@ -1707,7 +1706,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
 var saveaspanel = Object.copy(inputpanel, {
   title: "save level as",
   action() {
-    editor.saveas_check(this.value);
+    editor.saveas_check(this.stem + "." + this.value);
   },
 });
 

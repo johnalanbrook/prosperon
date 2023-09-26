@@ -63,8 +63,6 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 //	  js_stacktrace();
   }
 
-  if (priority >= 2)
-    print_stacktrace();
 #endif
 }
 

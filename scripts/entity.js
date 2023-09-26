@@ -279,35 +279,7 @@ var gameobject = {
       },
 
       json_obj() {
-	function objdiff(from, to) {
-	  if (!to) return from; // Everything on from is unique
-	  var ret = {};
-
-	  for (var key in from) {
-	    if (!from[key] || !to[key]) continue;
-	    if (typeof from[key] === 'function') continue;
-	    if (typeof to === 'object' && !(key in to)) continue;
-
-	    if (typeof from[key] === 'object') {
-	      if ('ur' in from[key]) {
-		var urdiff = objdiff(from[key],from[key].ur);
-		if (urdiff && !urdiff.empty) ret[key] = urdiff;
-		continue;
-	      }
-	      var diff = objdiff(from[key], to[key]);
-	      if (diff && !diff.empty) ret[key] = diff;
-	      continue;
-	    }
-
-	    if (from[key] !== to[key])
-	      ret[key] = from[key];
-	  }
-	  if (ret.empty) return undefined;
-	  return ret;
-	}
-	var ur = Object.create(this.ur);
-	Object.assign(ur,objdiff(this,this.ur));
-	return ur;
+        return JSON.parse(JSON.stringify(this));
       },
       
       make_ur() {
@@ -315,6 +287,13 @@ var gameobject = {
 	thisur.pos = this.pos;
 	thisur.angle = this.angle;
 	return thisur;
+      },
+
+      transform() {
+        var t = {};
+	t.pos = this.pos;
+	t.angle = this.angle;
+	return t;
       },
 
       dup(diff) {
@@ -468,49 +447,65 @@ for (var key in prototypes) {
 
 prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
-/* Makes a new ur-type from a file. The file can define components. */
+/* Makes a new ur-type from disk. If the ur doesn't exist, it searches on the disk to create it. */
 prototypes.from_file = function(file)
 {
-  if (!IO.exists(file)) {
-    Log.error(`File ${file} does not exist.`);
-    return;
-  }
-  var urpath = prototypes.file2ur(file);
+  var urpath = file;
   var path = urpath.split('.');
-  
+  if (path.length > 1 && (path.at(-1) === path.at(-2))) {
+    return prototypes.get_ur(path.at(-1));
+  }
+    
   var upperur = gameobject.ur;
+  
   if (path.length > 1) {
     var upperpath = path.slice(0,-1);
     upperur = prototypes.get_ur(upperpath.join('/'));
+    if (!upperur) {
+      Log.error(`Attempted to create an UR ${urpath}, but ${upperpath} is not a defined UR.`);
+      return undefined;
+    }
   }
 
   var newur = Object.create(upperur);
-  var script = IO.slurp(file);
+  file = file.replaceAll('.','/');
 
-  var json = {};
-  if (IO.exists(file.name() + ".json"))
-    json = JSON.parse(IO.slurp(file.name() + ".json"));
+  var jsfile = file + ".js";
+  var jsonfile = file + ".json";
+
+  var script = undefined;
+  var json = undefined;
+
+  if (IO.exists(jsfile))
+    script = IO.slurp(jsfile);
+  else {
+    jsfile = urpath + "/" + path.at(-1) + ".js";
+    if (IO.exists(jsfile)) script = IO.slurp(jsfile);
+  }
+    
+  if (IO.exists(jsonfile))
+    json = JSON.parse(IO.slurp(jsonfile));
+  else {
+    jsonfile = urpath + "/" + path.at(-1) + ".json";
+    if (IO.exists(jsonfile)) json = JSON.parse(IO.slurp(jsonfile));
+  }
+
+  if (!json && !script) {
+    Log.warn(`Could not make ur from ${file}`);
+    return undefined;
+  }
+
+  if (script)
+    compile_env(script, newur, file);
   
-  compile_env(script, newur, file);
+  json ??= {};
   Object.merge(newur,json);
 
-  file = file.replaceAll('/', '.');
-  
-  var nested_access = function(base, names) {
-    for (var i = 0; i < names.length; i++)
-      base = base[names[i]] = base[names[i]] || {};
-
-    return base;
-  };
-
   prototypes.list.push(urpath);
-  
   newur.toString = function() { return urpath; };
-  ur[urpath] = nested_access(ur,path);
-  Object.assign(ur[urpath], newur);
-  nested_access(ur,path).__proto__ = newur.__proto__;
+  ur[urpath] = newur;
 
-  return ur[path];
+  return ur[urpath];
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
 prototypes.list = [];
@@ -532,7 +527,6 @@ prototypes.list_ur = function()
     var list = [];
     for (var e in obj) {
       list.push(prefix + e);
-      Log.warn("Descending into " + e);
       list.concat(list_obj(obj[e], e + "."));
     }
 
@@ -542,38 +536,43 @@ prototypes.list_ur = function()
   return list_obj(ur);
 }
 
-prototypes.file2ur(file)
+prototypes.file2ur = function(file)
 {
+  file = file.strip_ext();
   file = file.replaceAll('/','.');
-  return file.name();
+  return file;
 }
 
+/* Returns an ur, or makes it, for any given type of path
+   could be a file on a disk like ball/big.js
+   could be an ur path like ball.big
+*/
 prototypes.get_ur = function(name)
 {
-  var urpath = prototypes.file2ur(name);
-  if (!prototypes.ur[name]) {
-    if (IO.exists(name.name() + ".js")) {
-      prototypes.from_file(name.name() + ".js");
-      return prototypes.ur[name];
-    } else {
+  var urpath = name;
+  if (urpath.includes('/'))
+    urpath = prototypes.file2ur(name);
+
+  if (!prototypes.ur[urpath]) {
+    var ur = prototypes.from_file(urpath);
+    Log.warn(`tried to make ${urpath}`);
+    if (ur)
+      return ur;
+    else {
       Log.warn(`Could not find prototype using name ${name}.`);
       return undefined;
     }
   } else
-    return prototypes.ur[name];
+    return prototypes.ur[urpath];
 }
 
 prototypes.generate_ur = function(path)
 {
   var ob = IO.glob("**.js");
-  ob = ob.filter(function(str) { return !str.startsWith("scripts"); });
-
-  ob.forEach(function(name) {
-    if (name === "game.js") return;
-    if (name === "play.js") return;
-    Log.warn("generating for " + name);
-    prototypes.get_ur(name);
-  });
+  ob = ob.concat(IO.glob("**.json"));
+  ob = ob.filter(function(path) { return path !== "game.js" && path !== "play.js" });
+  ob = ob.map(function(path) { return path.set_ext(""); });
+  ob.forEach(function(name) { prototypes.get_ur(name); });
 }
 
 var ur = prototypes.ur;

@@ -315,6 +315,13 @@ Object.defineProperty(String.prototype, 'shift', {
   }
 });
 
+Object.defineProperty(String.prototype, 'strip_ext', {
+  value: function() {
+    var idx  = this.lastIndexOf('.');
+    if (idx === -1) return this.slice();
+    return this.slice(0,idx);
+  }
+});
 
 Object.defineProperty(String.prototype, 'ext', {
   value: function() {
@@ -326,7 +333,7 @@ Object.defineProperty(String.prototype, 'ext', {
 
 Object.defineProperty(String.prototype, 'set_ext', {
   value: function(val) {
-    return this.dir() + "/" + this.name() + val;
+    return this.dir() + this.name() + val;
   }
 });
 
@@ -348,7 +355,8 @@ Object.defineProperty(String.prototype, 'base', {
 Object.defineProperty(String.prototype, 'dir', {
   value: function() {
     var e = this.lastIndexOf('/');
-    return this.slice(0, e);
+    if (e === -1) return "";
+    return this.slice(0, e+1);
   }
 });
 
