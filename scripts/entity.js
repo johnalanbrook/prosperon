@@ -305,19 +305,22 @@ var gameobject = {
 	  if (ret.empty) return undefined;
 	  return ret;
 	}
-
-	var ur = objdiff(this,this.ur);
-
-	return ur ? ur : {};
+	var ur = Object.create(this.ur);
+	Object.assign(ur,objdiff(this,this.ur));
+	return ur;
+      },
+      
+      make_ur() {
+        var thisur = this.json_obj();
+	thisur.pos = this.pos;
+	thisur.angle = this.angle;
+	return thisur;
       },
 
       dup(diff) {
-	var dup = this.level.spawn(this.ur);
-	var thisur = this.json_obj();
-	thisur.pos = this.pos;
-	thisur.angle = this.angle;
-	Object.totalmerge(dup, thisur);
-	return dup;
+        var n = this.level.spawn(this.ur);
+	Object.totalmerge(n, this.make_ur());
+	return n;
       },
       
       kill() {
@@ -396,6 +399,7 @@ var gameobject = {
     };
 
     Object.totalmerge(obj,ur);
+    obj.$.forEach(function(x) { x.pos = obj.pos.add(x.pos); });
     obj.check_registers(obj);
     
     if (typeof obj.start === 'function') obj.start();
@@ -471,23 +475,27 @@ prototypes.from_file = function(file)
     Log.error(`File ${file} does not exist.`);
     return;
   }
+  var urpath = prototypes.file2ur(file);
+  var path = urpath.split('.');
+  
+  var upperur = gameobject.ur;
+  if (path.length > 1) {
+    var upperpath = path.slice(0,-1);
+    upperur = prototypes.get_ur(upperpath.join('/'));
+  }
 
-  var newur = Object.create(gameobject.ur);
-  newur.$ = {};
+  var newur = Object.create(upperur);
   var script = IO.slurp(file);
 
   var json = {};
-  if (IO.exists(file.name() + ".json")) {
-    var json = JSON.parse(IO.slurp(file.name() + ".json"));
-    Object.assign(newur.$, json.$);
-    delete json.$;
-  }
+  if (IO.exists(file.name() + ".json"))
+    json = JSON.parse(IO.slurp(file.name() + ".json"));
   
   compile_env(script, newur, file);
   Object.merge(newur,json);
 
   file = file.replaceAll('/', '.');
-  var path = file.name().split('.');
+  
   var nested_access = function(base, names) {
     for (var i = 0; i < names.length; i++)
       base = base[names[i]] = base[names[i]] || {};
@@ -495,13 +503,11 @@ prototypes.from_file = function(file)
     return base;
   };
 
-  var instances = [];
-  var tag = file.name();
-  prototypes.list.push(tag);
+  prototypes.list.push(urpath);
   
-  newur.toString = function() { return tag; };
-  ur[path] = nested_access(ur,path);
-  Object.assign(ur[path], newur);
+  newur.toString = function() { return urpath; };
+  ur[urpath] = nested_access(ur,path);
+  Object.assign(ur[urpath], newur);
   nested_access(ur,path).__proto__ = newur.__proto__;
 
   return ur[path];
@@ -516,17 +522,6 @@ prototypes.from_obj = function(name, obj)
   newobj.toString = function() { return name; };
   return prototypes.ur[name];
 }
-
-prototypes.load_config = function(name)
-{
-  if (!prototypes.ur[name])
-    prototypes.ur[name] = gameobject.clone(name);
-
-  Log.warn(`Made new ur of name ${name}`);
-
-  return prototypes.ur[name];
-}
-
 
 prototypes.list_ur = function()
 {
@@ -547,14 +542,23 @@ prototypes.list_ur = function()
   return list_obj(ur);
 }
 
+prototypes.file2ur(file)
+{
+  file = file.replaceAll('/','.');
+  return file.name();
+}
+
 prototypes.get_ur = function(name)
 {
+  var urpath = prototypes.file2ur(name);
   if (!prototypes.ur[name]) {
-    if (IO.exists(name + ".js"))
-      prototypes.from_file(name + ".js");
-
-    prototypes.load_config(name);
-    return prototypes.ur[name];
+    if (IO.exists(name.name() + ".js")) {
+      prototypes.from_file(name.name() + ".js");
+      return prototypes.ur[name];
+    } else {
+      Log.warn(`Could not find prototype using name ${name}.`);
+      return undefined;
+    }
   } else
     return prototypes.ur[name];
 }
@@ -567,8 +571,8 @@ prototypes.generate_ur = function(path)
   ob.forEach(function(name) {
     if (name === "game.js") return;
     if (name === "play.js") return;
-
-    prototypes.from_file(name);
+    Log.warn("generating for " + name);
+    prototypes.get_ur(name);
   });
 }
 

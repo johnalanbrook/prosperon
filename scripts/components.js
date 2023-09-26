@@ -140,7 +140,6 @@ var gif2anim = function(gif)
   anim.frames = [];
   anim.path = gif;
   var frames = cmd(139,gif);
-  Log.warn(`gif has ${frames} frames`);
   var yslice = 1/frames;
   for (var f = 0; f < frames; f++) {
     var frame = {};

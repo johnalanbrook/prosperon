@@ -628,18 +628,13 @@ return;
   killring: [],
   killcom: [],
 
-  paste() {
-    this.selectlist = this.dup_objects(this.killring);
-
-    this.selectlist.forEach(function(x) {
-      x.pos = x.pos.sub(this.killcom).add(this.cursor);
-    },this);
-  },
-
   lvl_history: [],
 
   load(file) {
-    var obj = editor.edit_level.spawn(prototypes.get_ur(file));
+    var ur = prototypes.get_ur(file);
+    if (!ur) return;
+    var obj = editor.edit_level.spawn(ur);
+    Log.warn(`editor loading ur ${file} with type ${JSON.stringify(prototypes.get_ur(file),null,2)}`);
     obj.pos = Mouse.worldpos;
     this.selectlist = [obj];
   },
@@ -878,7 +873,6 @@ editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
- 
   if (editor.edit_level.level) {
     if (!editor.edit_level.unique)
       editor.save_current();
@@ -1190,6 +1184,7 @@ editor.inputs.delete = function() {
 };
 editor.inputs.delete.doc = "Delete selected objects.";
 editor.inputs['S-d'] = editor.inputs.delete;
+editor.inputs['C-k'] = editor.inputs.delete;
 
 editor.inputs['C-u'] = function() {
   this.selectlist.forEach(function(x) {
@@ -1274,22 +1269,31 @@ editor.inputs['C-rb'].rep = true;
 editor.inputs['C-c'] = function() {
   this.killring = [];
   this.killcom = [];
+  this.killcom = find_com(this.selectlist);  
 
   this.selectlist.forEach(function(x) {
-    this.killring.push(x);
+    this.killring.push(x.make_ur());
   },this);
-
-  this.killcom = find_com(this.killring);
 };
 editor.inputs['C-c'].doc = "Copy selected objects to killring.";
 
 editor.inputs['C-x'] = function() {
-  editor.inputs['C-c']();
-  this.killring.forEach(function(x) { x.kill(); });
+  editor.inputs['C-c'].call(editor);
+  this.selectlist.forEach(function(x) { x.kill(); });
+  editor.unselect();
 };
 editor.inputs['C-x'].doc = "Cut objects to killring.";
 
-editor.inputs['C-v'] = function() { editor.paste(); };
+editor.inputs['C-v'] = function() {
+    this.unselect();
+    this.killring.forEach(function(x) {
+      editor.selectlist.push(editor.edit_level.spawn(x));
+    });
+
+    this.selectlist.forEach(function(x) {
+      x.pos = x.pos.sub(this.killcom).add(this.cursor);
+    },this);
+};
 editor.inputs['C-v'].doc = "Pull objects from killring to world.";
 
 editor.inputs.char = function(c) {
@@ -1298,7 +1302,7 @@ editor.inputs.char = function(c) {
 
 var brushmode = {};
 brushmode.inputs = {};
-brushmode.inputs.lm = function() { editor.paste(); };
+brushmode.inputs.lm = function() { editor.inputs['C-v'].call(editor); };
 brushmode.inputs.lm.doc = "Paste selected brush.";
 
 brushmode.inputs.b = function() {

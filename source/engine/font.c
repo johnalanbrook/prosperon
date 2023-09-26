@@ -118,9 +118,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
 
-  char fontpath[256];
-  snprintf(fontpath, 256, "fonts/%s", fontfile);
-  
   unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
   unsigned char *bitmap = malloc(packsize * packsize);
 
