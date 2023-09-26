@@ -22,15 +22,46 @@ var component = {
   extend(spec) {
     return Object.copy(this, spec);
   },
+
+  /* Given a relative path, return the full path */
+  resani(path) {
+    if (!this.gameobject) return path;
+    if (path[0] === '/') return path.slice(1);
+    var res = this.gameobject.ur.toString();
+    res = res.replaceAll('.', '/');
+    var restry = res + "/" + path;
+    while (!IO.exists(restry)) {
+      res = res.updir() + "/";
+      if (res === "/")
+        return path;
+
+      restry = res + path;
+    }
+    return restry;
+  },
+
+  /* Given the full path, return the most relative path */
+  resavi(path) {
+    if (!this.gameobject) return path;
+    if (path[0] === '/') return path;
+
+    var res = this.gameobject.ur.toString();
+    res = res.replaceAll('.', '/');
+    if (!path.startsWith(res))
+      return path;
+
+    return path.replace(res, "").slice(1);
+  },
 };
 
-component.toJSON = ur_json;
+//component.toJSON = ur_json;
 
 component.sprite = {
   pos:[0,0],
   color:[1,1,1],
   layer:0,
   enabled:true,
+  path: "",
   toString() { return "sprite"; },
   make(go) {
     var nsprite = Object.create(component.sprite.maker);
@@ -42,7 +73,13 @@ component.sprite = {
 };
 
 component.sprite.maker = Object.copy(component, {
-  set path(x) { cmd(12,this.id,x,this.rect); },
+  set path(x) {
+    x = this.resani(x);
+    cmd(12,this.id,x,this.rect);
+  },
+  get path() {
+    return cmd(116,this.id);
+  },
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },
   asset(str) { this.path = str; },
@@ -690,6 +727,8 @@ component.circle2d = Object.copy(collider2d, {
     var circle = Object.create(this);
     circle.gameobject = go;
     Object.assign(circle, make_circle2d(go.body, circle.radius, circle.offset));
+    Object.merge(circle, this.ur);
+    
     return circle;
   },
 

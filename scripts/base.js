@@ -333,7 +333,8 @@ Object.defineProperty(String.prototype, 'ext', {
 
 Object.defineProperty(String.prototype, 'set_ext', {
   value: function(val) {
-    return this.dir() + this.name() + val;
+    var s = this.strip_ext();
+    return s + val;
   }
 });
 
@@ -356,10 +357,16 @@ Object.defineProperty(String.prototype, 'dir', {
   value: function() {
     var e = this.lastIndexOf('/');
     if (e === -1) return "";
-    return this.slice(0, e+1);
+    return this.slice(0, e);
   }
 });
 
+Object.defineProperty(String.prototype, 'updir', {
+  value: function() {
+    var dir = this.dir();
+    return dir.dir();
+  }
+});
 
 /* ARRAY DEFS */
 

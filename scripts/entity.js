@@ -94,20 +94,11 @@ var gameobject = {
     return bb.t-bb.b;
   },
 
-  save_obj() {
-    var json = JSON.stringify(this);
-    if (!json) return {};
-    var o = JSON.parse(json);
-    delete o.pos;
-    delete o.angle;
-    return o;
-  },
-
   /* Make a unique object the same as its prototype */
   revert() {
-    var save = this.save_obj();
-    for (var key in save)
-      this[key] = this.ur[key];
+    var t = this.transform();
+    Object.totalmerge(this,this.ur);
+    Object.merge(this,t);
   },
 
   gui() {
@@ -368,12 +359,11 @@ var gameobject = {
       if ('ur' in p) {
         obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
 	obj.$[prop] = obj[prop];
-      } else if ('make' in p) {
-        obj[prop] = p.make(obj);
-        obj.components[prop] = obj[prop];
       } else if ('comp' in p) {
         obj[prop] = component[p.comp].make(obj);
 	obj.components[prop] = obj[prop];
+	obj[prop].ur = Object.create(obj[prop].ur);
+	Object.totalmerge(obj[prop].ur, p);
       }
     };
 
@@ -483,8 +473,14 @@ prototypes.from_file = function(file)
     if (IO.exists(jsfile)) script = IO.slurp(jsfile);
   }
     
-  if (IO.exists(jsonfile))
-    json = JSON.parse(IO.slurp(jsonfile));
+  if (IO.exists(jsonfile)) {
+    try {
+      json = JSON.parse(IO.slurp(jsonfile));
+    }
+    catch(e) {
+      Log.warn(`JSON in file ${jsonfile} is malformed.`);
+    }
+  }
   else {
     jsonfile = urpath + "/" + path.at(-1) + ".json";
     if (IO.exists(jsonfile)) json = JSON.parse(IO.slurp(jsonfile));
@@ -555,7 +551,6 @@ prototypes.get_ur = function(name)
 
   if (!prototypes.ur[urpath]) {
     var ur = prototypes.from_file(urpath);
-    Log.warn(`tried to make ${urpath}`);
     if (ur)
       return ur;
     else {

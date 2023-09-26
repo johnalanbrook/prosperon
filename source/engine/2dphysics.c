@@ -201,6 +201,7 @@ struct phys2d_circle *Make2DCircle(int go) {
   new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(id2go(go)->body, new->radius, cpvzero));
   new->shape.debugdraw = phys2d_dbgdrawcircle;
   new->shape.moi = phys2d_circle_moi;
+  new->shape.apply = phys2d_applycircle;
   init_phys2dshape(&new->shape, go, new);
 
   return new;

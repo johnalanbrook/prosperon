@@ -73,91 +73,6 @@ var editor = {
 
   programmode: false,
 
-  delete_empty_reviver(key, val) {
-    if (typeof val === 'object' && val.empty)
-      return undefined;
-
-    return val;
-  },
-
-  save_proto() {
-    if (this.selectlist.length !== 1) return;
-    Log.warn(`Saving prototype ${this.selectlist[0].toString()}`);
-      var protos = JSON.parse(IO.slurp("proto.json"));
-      
-      var tobj = this.selectlist[0].prop_obj();
-      var pobj = this.selectlist[0].__proto__.prop_obj();
-
-      Log.warn("Going to deep merge.");
-      deep_merge(pobj, tobj);
-      Log.warn("Finished deep merge.");
-
-      pobj.from = this.selectlist[0].__proto__.from;
-
-      protos[this.selectlist[0].__proto__.name] = pobj;
-      Log.warn(JSON.stringify(protos));
-      slurpwrite(JSON.stringify(protos, undefined, 2), "proto.json");
-      
-      /* Save object changes to parent */
-      Object.dainty_assign(this.selectlist[0].__proto__, tobj);
-
-      /* Remove the local from this object */
-      unmerge(this.selectlist[0], tobj);
-
-      /* Now sync all objects */
-      Game.objects.forEach(x => x.sync());
-      
-  },
-  
-  /* Save the selected object as a new prototype, extending the chain */
-  save_proto_as(name) {
-    if (name in gameobjects) {
-      Log.info("Already an object with name '" + name + "'. Choose another one.");
-      return;
-    }
-    var newp = this.selectlist[0].__proto__.clone(name);
-
-    for (var key in newp)
-      if (typeof newp[key] === 'object' && 'clone' in newp[key])
-        newp[key] = newp[key].clone();
-
-    Object.dainty_assign(newp, this.selectlist[0].prop_obj());
-    this.selectlist[0].kill();
-    var gopos = this.selectlist[0].pos;
-    this.unselect();
-    var proto = this.edit_level.spawn(gameobjects[name]);
-    this.selectlist.push(proto);
-    this.save_proto();
-    proto.pos = gopos;
-  },
-
-  /* Save selected object as a new prototype, replacing the current prototype */
-  save_type_as(name) {
-    if (name in gameobjects) {
-      Log.info("Already an object with name '" + name + "'. Choose another one.");
-
-return;
-    }
-
-    var newp = this.selectlist[0].__proto__.__proto__.clone(name);
-    
-    for (var key in newp)
-      if (typeof newp[key] === 'object' && 'clone' in newp[key])
-        newp[key] = newp[key].clone();
-
-    var tobj = this.selectlist[0].prop_obj();
-    var pobj = this.selectlist[0].__proto__.prop_obj();
-    deep_merge(pobj, tobj);
-    
-
-    Object.dainty_assign(newp, pobj);
-    this.selectlist[0].kill();
-    this.unselect();
-    var proto = this.edit_level.spawn(gameobjects[name]);
-    this.selectlist.push(proto);
-    this.save_proto();
-  },
-
   dup_objects(x) {
     var objs = x.slice();
     var duped = [];
@@ -504,7 +419,7 @@ return;
     this.selectlist.forEach(function(x) {
       var color = x.color ? x.color : Color.white;
       var sname = x.ur.toString();
-      if (!x.save_obj().empty)
+      if (!x.json_obj().empty)
         x.dirty = true;
       else
         x.dirty = false;
@@ -667,15 +582,6 @@ return;
       editor.selectlist[0].pos = t.pos;
       editor.selectlist[0].angle = t.angle;
     }
-  },
-
-  saveas(file) {
-    if (!file) return;
-    
-    Log.info("made it");
-    
-    this.edit_level.file = file;
-    this.save_current();
   },
 }
 
@@ -864,10 +770,11 @@ editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
   if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
-  Log.warn(`Saving ur for ${editor.selectlist[0].toString()}`);
-  
   Object.merge(editor.selectlist[0].ur, editor.selectlist[0].json_obj());
-  IO.slurpwrite(JSON.stringify(editor.selectlist[0].ur,null,1), editor.selectlist[0].toString() + ".json");
+  var path = editor.selectlist[0].toString();
+  path = path.replaceAll('.','/');
+  path = path + "/" + path.name() + ".json";
+  IO.slurpwrite(JSON.stringify(editor.selectlist[0].ur,null,1), path);
   return;
 
   if (editor.edit_level.level) {
@@ -1713,13 +1620,6 @@ var saveaspanel = Object.copy(inputpanel, {
 var groupsaveaspanel = Object.copy(inputpanel, {
   title: "group save as",
   action() { editor.groupsaveas(editor.selectlist, this.value); }
-});
-
-var saveprototypeas = Object.copy(inputpanel, {
-  title: "save prototype as",
-  action() {
-    editor.save_proto_as(this.value);
-  },
 });
 
 var savetypeas = Object.copy(inputpanel, {

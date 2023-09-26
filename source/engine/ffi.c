@@ -707,6 +707,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 36:
     id2go(js2int(argv[1]))->scale = js2number(argv[2]);
+    gameobject_apply(id2go(js2int(argv[1])));
     cpSpaceReindexShapesForBody(space, id2go(js2int(argv[1]))->body);
     return JS_NULL;
 

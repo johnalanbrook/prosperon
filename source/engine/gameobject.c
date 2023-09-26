@@ -95,6 +95,10 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
   filter.categories = CP_ALL_CATEGORIES;//1<<go->layer;
   filter.mask = CP_ALL_CATEGORIES;//category_masks[go->layer];
   cpShapeSetFilter(shape, filter);
+
+  struct phys2d_shape *ape = cpShapeGetUserData(shape);
+  if (ape)
+    ape->apply(ape->data);
 }
 
 void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go) {

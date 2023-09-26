@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <errno.h>
 #include <unistd.h>
 #include "font.h"
 
@@ -248,8 +249,34 @@ char *slurp_text(const char *filename, size_t *size)
   return retstr;
 }
 
+void rek_mkdir(char *path) {
+    char *sep = strrchr(path, '/');
+    if(sep != NULL) {
+        *sep = 0;
+        rek_mkdir(path);
+        *sep = '/';
+    }
+#if defined __WIN32    
+    if(mkdir(path) && errno != EEXIST)
+#else
+    if (mkdir(path, 0777) && errno != EEXIST)
+#endif    
+        printf("error while trying to create '%s'\n%m\n", path); 
+}
+
+FILE *fopen_mkdir(char *path, char *mode) {
+    char *sep = strrchr(path, '/');
+    if(sep) { 
+        char *path0 = strdup(path);
+        path0[ sep - path ] = 0;
+        rek_mkdir(path0);
+        free(path0);
+    }
+    return fopen(path,mode);
+}
+
 int slurp_write(const char *txt, const char *filename) {
-  FILE *f = fopen(filename, "w");
+  FILE *f = fopen_mkdir(filename, "w");
   if (!f) return 1;
 
   fputs(txt, f);

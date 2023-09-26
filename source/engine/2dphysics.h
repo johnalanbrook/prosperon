@@ -21,13 +21,13 @@ extern struct rgba kinematic_color;
 extern struct rgba static_color;
 extern struct rgba sleep_color;
 
-
 struct phys2d_shape {
   cpShape *shape;
   int go;
   void *data;
   void (*debugdraw)(void *data);
   float (*moi)(void *data, float mass);
+  void (*apply)(void *data);
 };
 
 /* Circles are the fastest collier type */
