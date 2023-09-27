@@ -110,7 +110,7 @@ var Player = {
   },
 
   mouse_input(type, ...args) {
-    for (var pawn of this.pawns.reverse()) {
+    for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.mouse?.[type] === 'function') {
         pawn.inputs.mouse[type].call(pawn,...args);
 	pawn.inputs.post?.call(pawn);
@@ -120,7 +120,7 @@ var Player = {
   },
 
   char_input(c) {
-    for (var pawn of this.pawns.reverse()) {
+    for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.char === 'function') {
         pawn.inputs.char.call(pawn, c);
 	pawn.inputs.post?.call(pawn);
@@ -130,7 +130,7 @@ var Player = {
   },
 
   raw_input(cmd, state, ...args) {
-    for (var pawn of this.pawns.reverse()) {
+    for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.any === 'function') {
         pawn.inputs.any(cmd);
         return;
@@ -156,6 +156,7 @@ var Player = {
       if (typeof fn === 'function') {
         fn.call(pawn, ... args);
 	pawn.inputs.post?.call(pawn);
+	return;
       }
     }
   },

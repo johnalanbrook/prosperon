@@ -75,11 +75,10 @@ var Log = {
 var IO = {
   exists(file) { return cmd(65, file);},
   slurp(file) {
-    if (!this.exists(file)) {
-      Log.warn(`File ${file} does not exist; can't slurp.`);
-      return "";
-    }
-    return cmd(38,file);
+    if (IO.exists(file))
+      return cmd(38,file);
+    else
+      throw new Error(`File ${file} does not exist; can't slurp`);
   },
   slurpwrite(str, file) { return cmd(39, str, file); },
   extensions(ext) {

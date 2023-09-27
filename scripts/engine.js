@@ -543,7 +543,6 @@ var ur_json = function()
   function objdiff(from, to) {
     if (!to) return from; // Everything on from is unique
 
-
     var ret = {};
     
     for (var key in from) {
@@ -564,7 +563,6 @@ var ur_json = function()
 
         continue;
       }
-
 
       if (typeof from[key] === 'object') {
         if (key === 'points') Log.warn("POINTS");

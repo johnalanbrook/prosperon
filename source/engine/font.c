@@ -138,7 +138,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
   newfont->emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
-  newfont->linegap = (newfont->ascent - newfont->descent)* 2 * newfont->emscale;
+  newfont->linegap = (newfont->ascent - newfont->descent) * newfont->emscale;
 
   newfont->texID = sg_make_image(&(sg_image_desc){
       .type = SG_IMAGETYPE_2D,

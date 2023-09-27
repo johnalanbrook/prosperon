@@ -97,7 +97,7 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
   cpShapeSetFilter(shape, filter);
 
   struct phys2d_shape *ape = cpShapeGetUserData(shape);
-  if (ape)
+  if (ape && ape->apply)
     ape->apply(ape->data);
 }
 

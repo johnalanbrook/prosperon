@@ -448,7 +448,8 @@ prototypes.from_file = function(file)
   var urpath = file;
   var path = urpath.split('.');
   if (path.length > 1 && (path.at(-1) === path.at(-2))) {
-    return prototypes.get_ur(path.at(-1));
+    urpath = path.slice(0,-1).join('.');
+    return prototypes.get_ur(urpath);
   }
     
   var upperur = gameobject.ur;
@@ -477,18 +478,15 @@ prototypes.from_file = function(file)
     jsfile = urpath + "/" + path.at(-1) + ".js";
     if (IO.exists(jsfile)) script = IO.slurp(jsfile);
   }
-    
-  if (IO.exists(jsonfile)) {
-    try {
-      json = JSON.parse(IO.slurp(jsonfile));
-    }
+
+  try {
+    try {json = JSON.parse(IO.slurp(jsonfile)); }
     catch(e) {
-      Log.warn(`JSON in file ${jsonfile} is malformed.`);
+      jsonfile = file + "/" + path.at(-1) + ".json";
+      if (IO.exists(jsonfile)) json = JSON.parse(IO.slurp(jsonfile));
     }
-  }
-  else {
-    jsonfile = urpath + "/" + path.at(-1) + ".json";
-    if (IO.exists(jsonfile)) json = JSON.parse(IO.slurp(jsonfile));
+  } catch(e) {
+    Log.warn(`JSON in file ${jsonfile} is malformed.${e}`);  
   }
 
   if (!json && !script) {

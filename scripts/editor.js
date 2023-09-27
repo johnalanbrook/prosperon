@@ -992,7 +992,9 @@ editor.inputs.mm = function() {
     }
     
     if (editor.sel_comp && 'pick' in editor.sel_comp) {
-      editor.grabselect = [editor.sel_comp.pick(Mouse.worldpos)];
+      var o = editor.sel_comp.pick(Mouse.worldpos);
+      if (o)
+        editor.grabselect = [o];
       return;
     }
 

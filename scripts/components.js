@@ -362,7 +362,7 @@ component.polygon2d = Object.copy(collider2d, {
   make(go) {
     var poly = Object.create(this);
     poly.gameobject = go;
-    poly.points = [0,0];
+    poly.points = [];
     poly.flipx = false;
     poly.flipy = false;
     Object.assign(poly, make_poly2d(go.body, poly.points));
@@ -453,9 +453,7 @@ polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 
 Object.freeze(polygon2d);
 
-component.bucket = Object.copy(collider2d, {
-  name: "bucket",
-  cpoints:[],
+component.edge2d = Object.copy(collider2d, {
   degrees:2,
   dimensions:2,
   /* open: 0
@@ -532,52 +530,42 @@ component.bucket = Object.copy(collider2d, {
       assert knots%order != 0
     */
 
-    if (this.type === bucket.typeid.looped)
+    if (this.type === typeid.this.looped)
       return spline_cmd(0, this.degrees, this.dimensions, 0, spoints.wrapped(this.degrees), n);
 
     return spline_cmd(0, this.degrees, this.dimensions, this.type, spoints, n);
-  },  
+  },
+  set thickness(x) {
+    cmd_edge2d(1,this.id,x);
+  },
+  
+  get thickness() { return cmd(112,this.id); },
 
   samples: 10,
-  points:[],
-  thickness:0, /* Number of pixels out the edge is */  
   
+  boundingbox() {
+    return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
+  },
+
   make(go) {
     var edge = Object.create(this);
     edge.gameobject = go;
-    Object.assign(edge, make_edge2d(go.body, this.points, this.thickness));
-    Object.assign(edge, {
-      set thickness(x) {
-        cmd_edge2d(1,this.id,x);
-      },
-      get thickness() { return cmd(112,this.id); },
-
-      boundingbox() {
-        return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
-      },
-
-      sync() {
-        var sensor = this.sensor;
-        this.points = this.sample(this.samples);
-        cmd_edge2d(0,this.id,this.points);
-	this.sensor = sensor;
-      },
-    });
-
-    Object.assign(edge, this.make_fns);
-
-    Object.defineProperty(edge, 'id', {enumerable:false});
-    Object.defineProperty(edge, 'shape', {enumerable:false});
-
-    edge.defn('points', []);
-
+    edge.cpoints = [];
+    edge.points = [];
+    Object.assign(edge, make_edge2d(go.body, edge.points, 0));    
+    edge.thickness = 0;
     return edge;
   },
   
+  sync() {
+    var sensor = this.sensor;
+    this.points = this.sample(this.samples);
+    cmd_edge2d(0,this.id,this.points);
+    this.sensor = sensor;
+  },
+
   /* EDITOR */
   gizmo() {
-    if (!this.hasOwn('cpoints')) this.cpoints = this.__proto__.cpoints.copy();
-    
     this.spoints.forEach(function(x) {
       Debug.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
     }, this);
@@ -591,10 +579,20 @@ component.bucket = Object.copy(collider2d, {
     this.cpoints = this.cpoints.map(function(x) { return x.sub(change); });
   },
 
-  pick(pos) { return Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints); },
+  pick(pos) {
+    var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints);
+    if (p) return {
+      set pos(n) { p.x = n.x; p.y = n.y; },
+      get pos() { return p; },
+      sync: this.sync.bind(this),
+    };
+      
+
+    return undefined;
+  },
 });
 
-var bucket = component.bucket;
+var bucket = component.edge2d;
 bucket.inputs = {};
 bucket.inputs.h = function() { this.hollow = !this.hollow; };
 bucket.inputs.h.doc = "Toggle hollow.";

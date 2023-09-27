@@ -92,7 +92,7 @@ Object.mergekey = function(o1,o2,k)
     Object.defineProperty(o1, k, Object.getOwnPropertyDescriptor(o2,k));
   else if (typeof o2[k] === 'object') {
     if (Array.isArray(o2[k]))
-      o1[k] = o2[k].slice();
+      o1[k] = deep_copy(o2[k]);
     else {
       if (!o1[k]) o1[k] = {};
       if (typeof o1[k] === 'object')
@@ -383,6 +383,13 @@ Object.defineProperty(Array.prototype, 'copy', {
     });
     
     return c;
+  }
+});
+
+Object.defineProperty(Array.prototype, 'reversed', {
+  value: function() {
+    var c = this.slice();
+    return c.reverse();
   }
 });
 

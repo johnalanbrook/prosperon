@@ -435,7 +435,7 @@ struct phys2d_edge *Make2DEdge(int go) {
   new->shape.debugdraw = phys2d_dbgdrawedge;
   new->shape.moi = phys2d_edge_moi;
   new->shape.shape = NULL;
-  new->shape.apply = phys2d_applyedge;
+  new->shape.apply = NULL;
   new->draws = 0;
   new->closed = 0;
   phys2d_applyedge(new);
