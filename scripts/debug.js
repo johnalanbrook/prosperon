@@ -1,7 +1,7 @@
 var Gizmos = {
   pick_gameobject_points(worldpos, gameobject, points) {
     var idx = grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
-    if (idx === -1) return null;
+    if (idx === -1) return undefined;
     return points[idx];
   },
 };

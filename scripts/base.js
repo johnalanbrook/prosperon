@@ -392,14 +392,6 @@ Object.defineProperty(Array.prototype, 'rotate', {
   }
 });
 
-
-Object.defineProperty(Array.prototype, '$add', {
-value: function(b) {
-  for (var i = 0; i < this.length; i++) {
-    this[i] += b[i];
-  }
-}});
-
 function setelem(n) {
   return {
     get: function() { return this[n]; },
@@ -420,7 +412,6 @@ arrsetelem('r', 0);
 arrsetelem('g', 1);
 arrsetelem('b', 2);
 arrsetelem('a', 3);
-
 
 Object.defineProperty(Array.prototype, 'add', {
 value: function(b) {

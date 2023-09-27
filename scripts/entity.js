@@ -205,7 +205,12 @@ var gameobject = {
       set friction(x) { cmd(108,this.body,x); },
 
       set mass(x) { set_body(7,this.body,x); },
-      get mass() { return q_body(5, this.body); },
+      get mass() {
+        if (!(this.phys === Physics.dynamic))
+	  return this.ur.mass;
+	  
+        return q_body(5, this.body);
+      },
 
       set phys(x) { set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
@@ -363,13 +368,12 @@ var gameobject = {
         Log.warn(`spawning a ${p.comp}`);
         obj[prop] = component[p.comp].make(obj);
 	obj.components[prop] = obj[prop];
-//	obj[prop].ur = Object.create(obj[prop].ur);
-//	Object.totalmerge(obj[prop].ur, p);
       }
     };
 
     Object.totalmerge(obj,ur);
     obj.$.forEach(function(x) { x.pos = obj.pos.add(x.pos); });
+    obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
     obj.check_registers(obj);
     
     if (typeof obj.start === 'function') obj.start();

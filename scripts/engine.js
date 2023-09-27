@@ -542,16 +542,35 @@ var ur_json = function()
 {
   function objdiff(from, to) {
     if (!to) return from; // Everything on from is unique
-    var ret = {};
 
+
+    var ret = {};
+    
     for (var key in from) {
       if (!from[key] || !to[key]) continue;
       if (typeof from[key] === 'function') continue;
       if (typeof to === 'object' && !(key in to)) continue;
 
-      if (typeof from[key] === 'object') {
+      if (Array.isArray(from[key])) {
+	if (!Array.isArray(to[key]))
+	  ret[key] = from[key].slice();
+
+	if (from[key].length !== to[key].length)
+	  ret[key] = from[key].slice();
+
 	var diff = objdiff(from[key], to[key]);
-	if (diff && !diff.empty) ret[key] = diff;
+	if (diff && !diff.empty)
+	  ret[key] = from[key];
+
+        continue;
+      }
+
+
+      if (typeof from[key] === 'object') {
+        if (key === 'points') Log.warn("POINTS");
+	var diff = objdiff(from[key], to[key]);
+	if (diff && !diff.empty)
+            ret[key] = diff;	
 	continue;
       }
       

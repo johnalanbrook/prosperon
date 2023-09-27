@@ -992,10 +992,7 @@ editor.inputs.mm = function() {
     }
     
     if (editor.sel_comp && 'pick' in editor.sel_comp) {
-      editor.grabselect = editor.sel_comp.pick(Mouse.worldpos);
-      if (!editor.grabselect) return;
-      
-//      editor.moveoffset = editor.sel_comp.gameobject.editor2world(editor.grabselect).sub(Mouse.worldpos);
+      editor.grabselect = [editor.sel_comp.pick(Mouse.worldpos)];
       return;
     }
 
@@ -1045,7 +1042,11 @@ editor.inputs.mouse.move = function(pos, dpos)
       editor.camera.pos = editor.camera.pos.sub(dpos.scale(editor.camera.zoom));
   }
 
-  editor.grabselect?.forEach(x => x.pos = x.pos.add(dpos.scale(editor.camera.zoom)));
+  editor.grabselect?.forEach(function(x) {
+    x.pos = x.pos.add(dpos.scale(editor.camera.zoom));
+    if ('sync' in x)
+      x.sync();
+  });
   
   var relpos = Mouse.worldpos.sub(editor.cursor);
   var dist = Vector.length(relpos);

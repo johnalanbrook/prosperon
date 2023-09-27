@@ -51,11 +51,15 @@ var Log = {
   },
 
   write(msg) {
+    if (typeof msg === 'object')
+      msg = JSON.stringify(msg,null,2);
+  
     cmd(91,msg);
   },
 
   say(msg) {
-    cmd(91, `${msg}\n`);
+    Log.write(msg);
+    Log.write('\n');
   },
 
   stack(skip = 0) {

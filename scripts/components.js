@@ -351,11 +351,6 @@ collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
-  ur: {
-    flipx: false,
-    flipy: false
-  },
-  
   sync() {
     cmd_poly2d(0, this.id, this.spoints);
   },
@@ -367,7 +362,7 @@ component.polygon2d = Object.copy(collider2d, {
   make(go) {
     var poly = Object.create(this);
     poly.gameobject = go;
-    poly.points = [];
+    poly.points = [0,0];
     poly.flipx = false;
     poly.flipy = false;
     Object.assign(poly, make_poly2d(go.body, poly.points));
@@ -398,8 +393,6 @@ component.polygon2d = Object.copy(collider2d, {
   },
   
   gizmo() {
-    if (!this.hasOwn('points')) this.points = this.__proto__.points.copy();
-    
     this.spoints.forEach(function(x) {
       Debug.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
     }, this);
@@ -410,7 +403,19 @@ component.polygon2d = Object.copy(collider2d, {
   },
 
   pick(pos) {
-    return Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
+    var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
+    if (p) {
+      return {
+      set pos(n) {
+        p.x = n.x;
+	p.y = n.y;
+      },
+      get pos() { return p; },
+      sync: this.sync.bind(this)
+    }
+    }
+      
+    return undefined;
   },
   
   query() {

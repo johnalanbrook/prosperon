@@ -296,6 +296,7 @@ struct phys2d_box *Make2DBox(int go) {
   new->offset[0] = 0.f;
   new->offset[1] = 0.f;
   new->shape.go = go;
+  new->shape.apply = phys2d_applybox;
   phys2d_applybox(new);
   new->shape.debugdraw = phys2d_dbgdrawbox;
   new->shape.moi = phys2d_box_moi;
@@ -362,6 +363,7 @@ struct phys2d_poly *Make2DPoly(int go) {
   new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(id2go(go)->body, 0, new->points, new->radius));
   new->shape.debugdraw = phys2d_dbgdrawpoly;
   new->shape.moi = phys2d_poly_moi;
+  new->shape.apply = phys2d_applypoly;
   init_phys2dshape(&new->shape, go, new);
   return new;
 }
@@ -433,6 +435,7 @@ struct phys2d_edge *Make2DEdge(int go) {
   new->shape.debugdraw = phys2d_dbgdrawedge;
   new->shape.moi = phys2d_edge_moi;
   new->shape.shape = NULL;
+  new->shape.apply = phys2d_applyedge;
   new->draws = 0;
   new->closed = 0;
   phys2d_applyedge(new);
