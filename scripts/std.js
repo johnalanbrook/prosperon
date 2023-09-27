@@ -29,7 +29,7 @@ var Log = {
     var lmatch = nnn.match(/\:\d*\)/);
     var line = lmatch ? lmatch[0].shift(1).shift(-1) : "0";
 
-    yughlog(lvl, msg, file, line);
+    yughlog(lvl, lg, file, line);
   },
   
   info(msg) {

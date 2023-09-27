@@ -51,7 +51,7 @@ static void render_audio(plm_t *mpeg, plm_samples_t *samples, void *user) {
 }
 
 void ds_openvideo(struct datastream *ds, const char *video, const char *adriver) {
-  long rawlen;
+  size_t rawlen;
   void *raw;
   raw = slurp_file(video, &rawlen);
   ds->plm = plm_create_with_memory(raw, rawlen, 0);

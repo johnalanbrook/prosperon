@@ -360,10 +360,11 @@ var gameobject = {
         obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
 	obj.$[prop] = obj[prop];
       } else if ('comp' in p) {
+        Log.warn(`spawning a ${p.comp}`);
         obj[prop] = component[p.comp].make(obj);
 	obj.components[prop] = obj[prop];
-	obj[prop].ur = Object.create(obj[prop].ur);
-	Object.totalmerge(obj[prop].ur, p);
+//	obj[prop].ur = Object.create(obj[prop].ur);
+//	Object.totalmerge(obj[prop].ur, p);
       }
     };
 

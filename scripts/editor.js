@@ -770,7 +770,10 @@ editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
   if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
+  Log.warn(JSON.stringify(editor.selectlist[0],null,1));
+  Log.warn(JSON.stringify(editor.selectlist[0].ur,null,1));  
   Object.merge(editor.selectlist[0].ur, editor.selectlist[0].json_obj());
+  Log.warn(JSON.stringify(editor.selectlist[0].ur,null,1));
   var path = editor.selectlist[0].toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";

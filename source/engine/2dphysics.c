@@ -203,6 +203,7 @@ struct phys2d_circle *Make2DCircle(int go) {
   new->shape.moi = phys2d_circle_moi;
   new->shape.apply = phys2d_applycircle;
   init_phys2dshape(&new->shape, go, new);
+  phys2d_applycircle(new);
 
   return new;
 }

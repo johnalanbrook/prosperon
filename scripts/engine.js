@@ -550,11 +550,6 @@ var ur_json = function()
       if (typeof to === 'object' && !(key in to)) continue;
 
       if (typeof from[key] === 'object') {
-        if ('ur' in from[key]) {
-	  var urdiff = objdiff(from[key],from[key].ur);
-	  if (urdiff && !urdiff.empty) ret[key] = urdiff;
-	  continue;
-	}
 	var diff = objdiff(from[key], to[key]);
 	if (diff && !diff.empty) ret[key] = diff;
 	continue;
@@ -572,44 +567,7 @@ var ur_json = function()
   return ur ? ur : {};
 }
 
-
 load("scripts/components.js");
-
-function replacer_empty_nil(key, val) {
-  if (typeof val === 'object' && JSON.stringify(val) === '{}')
-    return undefined;
-
-//  if (typeof val === 'number')
-//    return parseFloat(val.toFixed(4));
-
-  return val;
-};
-
-function clean_object(obj) {
-  Object.keys(obj).forEach(function(x) {
-    if (!(x in obj.__proto__)) return;
-
-    switch(typeof obj[x]) {
-      case 'object':
-        if (Array.isArray(obj[x])) {
-          if (obj[x].equal(obj.__proto__[x])) {
-	    delete obj[x];
-	  }
-	} else
-	  clean_object(obj[x]);
-	  
-        break;
-
-      case 'function':
-        return;
-
-      default:
-        if (obj[x] === obj.__proto__[x])
-	  delete obj[x];
-	break;
-    }
-  });
-};
 
 function find_com(objects)
 {

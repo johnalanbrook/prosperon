@@ -54,8 +54,6 @@ var component = {
   },
 };
 
-//component.toJSON = ur_json;
-
 component.sprite = {
   pos:[0,0],
   color:[1,1,1],
@@ -353,8 +351,6 @@ collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
-  points: [],
-
   ur: {
     flipx: false,
     flipy: false
@@ -371,11 +367,10 @@ component.polygon2d = Object.copy(collider2d, {
   make(go) {
     var poly = Object.create(this);
     poly.gameobject = go;
-    Object.assign(poly, make_poly2d(go.body, this.points));
-    poly.defn('points', this.points.copy());
-
-    poly.sync();
-
+    poly.points = [];
+    poly.flipx = false;
+    poly.flipy = false;
+    Object.assign(poly, make_poly2d(go.body, poly.points));
     return poly;
   },
 
@@ -726,8 +721,7 @@ component.circle2d = Object.copy(collider2d, {
   make(go) {
     var circle = Object.create(this);
     circle.gameobject = go;
-    Object.assign(circle, make_circle2d(go.body, circle.radius, circle.offset));
-    Object.merge(circle, this.ur);
+    Object.assign(circle, make_circle2d(go.body));
     
     return circle;
   },

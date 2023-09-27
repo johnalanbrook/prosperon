@@ -1458,13 +1458,8 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
 
 JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int go = js2int(argv[0]);
-  double radius = js2number(argv[1]);
 
   struct phys2d_circle *circle = Make2DCircle(go);
-  circle->radius = radius;
-  circle->offset = js2vec2(argv[2]);
-
-  phys2d_applycircle(circle);
 
   JSValue circleval = JS_NewObject(js);
   JS_SetPropertyStr(js, circleval, "id", ptr2js(circle));
@@ -1657,7 +1652,7 @@ void ffi_load() {
 
   DUK_FUNC(make_box2d, 3)
   DUK_FUNC(cmd_box2d, 6)
-  DUK_FUNC(make_circle2d, 3)
+  DUK_FUNC(make_circle2d, 1)
   DUK_FUNC(cmd_circle2d, 6)
   DUK_FUNC(make_poly2d, 2)
   DUK_FUNC(cmd_poly2d, 6)
