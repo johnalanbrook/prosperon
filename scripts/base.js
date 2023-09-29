@@ -156,16 +156,6 @@ Object.defineProperty(Object.prototype, 'hasOwn', {
   value: function(x) { return this.hasOwnProperty(x); }
 });
 
-Object.defineProperty(Object.prototype, 'array', {
-  value: function() {
-    var a = [];
-    for (var key in this)
-      a.push(this[key]);
-
-    return a;
-  },
-});
-
 Object.defineProperty(Object.prototype, 'defn', {
   value: function(name, val) {
     Object.defineProperty(this, name, { value:val, writable:true, configurable:true });
@@ -221,11 +211,9 @@ Object.defineProperty(Object.prototype, 'deflock', {
 
 Object.defineProperty(Object.prototype, 'forEach', {
   value: function(fn) {
-    for (var key in this)
-      fn(this[key]);
+    Object.values(this).forEach(fn);
   }
 });
-
 
 Object.defineProperty(Object.prototype, 'empty', {
   get: function() {
@@ -239,6 +227,36 @@ Object.defineProperty(Object.prototype, 'nth', {
 
     return this[Object.keys(this)[x]];
   },
+});
+
+Object.defineProperty(Object.prototype, 'filter', {
+  value: function(fn) {
+    return Object.values(this).filter(fn);
+  }
+});
+    
+Object.defineProperty(Object.prototype, 'push', {
+  value: function(val) {
+    var str = val.toString();
+    str = str.replaceAll('.', '_');
+    var n = 1;
+    var t = str + n;
+    while (Object.hasOwn(this,t)) {
+      n++;
+      t = str + n;
+    }
+    this[t] = val;
+    return val;
+  }
+});
+
+Object.defineProperty(Object.prototype, 'remove', {
+  value: function(val) {
+    for (var e of this.entries()) {
+      if (e.value === val)
+        delete this[e.key]
+    }
+  }
 });
 
 Object.defineProperty(Object.prototype, 'findIndex', {
@@ -650,6 +668,11 @@ Object.defineProperty(Array.prototype, 'lerp', {
 });
 
 Math.lerp = function(s,f,t) { return (f-s)*t + s; };
+
+Number.prec = function(num)
+{
+  return num.toPrecision(3)/1;
+}
 
 Object.defineProperty(Object.prototype, 'lerp',{
   value: function(to, t) {

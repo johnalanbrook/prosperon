@@ -76,7 +76,7 @@ component.sprite.maker = Object.copy(component, {
     cmd(12,this.id,x,this.rect);
   },
   get path() {
-    return cmd(116,this.id);
+    return this.resavi(cmd(116,this.id));
   },
   get visible() { return this.enabled; },
   set visible(x) { this.enabled = x; },

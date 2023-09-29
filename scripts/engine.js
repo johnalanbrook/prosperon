@@ -546,7 +546,7 @@ var ur_json = function()
     var ret = {};
     
     for (var key in from) {
-      if (!from[key] || !to[key]) continue;
+      if (typeof from[key] === 'undefined' || typeof to[key] === 'undefined') continue;
       if (typeof from[key] === 'function') continue;
       if (typeof to === 'object' && !(key in to)) continue;
 

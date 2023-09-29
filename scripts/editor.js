@@ -352,7 +352,7 @@ var editor = {
     }
     
     this.edit_level = Primum.spawn(ur.arena);
-    this.edit_level.toString = function() { return "desktop"; };
+//    this.edit_level.toString = function() { return "desktop"; };
     editor.edit_level.selectable = false;
   },
 
@@ -388,13 +388,16 @@ var editor = {
     GUI.text("0,0", world2screen([0,0]));
     
     var clvl = this.edit_level;
-    var lvlcolorsample = 1;
+    var lvlcolorsample = 1;    
+    var lvlcolor = ColorMap.Inferno.sample(lvlcolorsample);
     var ypos = 200;
     while (clvl) {
+      lvlcolor = ColorMap.Inferno.sample(lvlcolorsample);
       var lvlstr = clvl.toString();
       if (clvl.dirty)
         lvlstr += "*";
-      GUI.text(lvlstr, [0, ypos], 1, ColorMap.Inferno.sample(lvlcolorsample));
+      GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
+     
       lvlcolorsample -= 0.1;
 
       if (!clvl.level) break;
@@ -405,44 +408,42 @@ var editor = {
       }
       ypos -= 5;
     }
-    
-    this.edit_level.objects.forEach(function(x) {
-      if ('ed_gizmo' in x)
-        x.ed_gizmo();
-    });
-    
-    if (Debug.phys_drawing)
-      this.edit_level.objects.forEach(function(x) {
-        Debug.point(world2screen(x.pos), 2, Color.teal);
-      });
+
+    /* Color selected objects with the next deeper color */
+    lvlcolorsample -= 0.1;
+    lvlcolor = ColorMap.Inferno.sample(lvlcolorsample);
 
     this.selectlist.forEach(function(x) {
-      var color = x.color ? x.color : Color.white;
       var sname = x.ur.toString();
       if (!x.json_obj().empty)
         x.dirty = true;
       else
         x.dirty = false;
       if (x.dirty) sname += "*";
-      GUI.text(sname, world2screen(x.pos).add([0, 16]), 1, Color.purple);
-      for (var key in x.$) {
-        var o = x.$[key];
-        GUI.text(o.ur.toString(), world2screen(o.pos).add([0,16]),1,Color.purple);
-        GUI.text(key, world2screen(o.pos), 1, Color.green);
-      }
-      
-      GUI.text(x.pos.map(function(x) { return Math.round(x); }), world2screen(x.pos), 1, color);
+      GUI.text(sname, world2screen(x.pos).add([0, 16]), 1, lvlcolor);
+      GUI.text(x.pos.map(function(x) { return Math.round(x); }), world2screen(x.pos), 1, Color.white);
       Debug.arrow(world2screen(x.pos), world2screen(x.pos.add(x.up().scale(40))), Color.yellow, 1);
 
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
-      
-      if (x.hasOwn('file')) 
-        x.objects.forEach(function(x) {
-	  GUI.text(x.toString(), world2screen(x.pos).add([0,16]),1,Color.blue);
-	});
     });
 
+    if (this.selectlist.length === 0)
+      for (var key in this.edit_level.objects) {
+        var o = this.edit_level.objects[key];
+        GUI.text(key, world2screen(o.pos), 1, lvlcolor);
+      }
+    else
+      this.selectlist.forEach(function(x) {
+        Object.entries(x.objects).forEach(function(x) {
+	  GUI.text(x[0], world2screen(x[1].pos), 1, lvlcolor);
+	});
+      });
+    
+    this.edit_level.objects.forEach(function(x) {
+      if ('ed_gizmo' in x)
+        x.ed_gizmo();
+    });
 
     if (this.selectlist.length === 1) {
       var i = 1;
@@ -565,8 +566,11 @@ var editor = {
   },
 
   /* Checking to save an entity as a subtype. */
-  saveas_check(sub) {
+  /* sub is the name of the type; obj is the object to save it as */
+  saveas_check(sub, obj) {
     if (!sub) return;
+    obj ??= editor.selectlist[0];
+    
     var curur = prototypes.get_ur(sub);
     
     if (curur) {
@@ -574,13 +578,14 @@ var editor = {
       this.openpanel(gen_notify("Entity already exists with that name. Overwrite?", this.saveas.bind(this, sub)));
     } else {
       var path = sub.replaceAll('.', '/') + ".json";
-      IO.slurpwrite(JSON.stringify(editor.selectlist[0],null,1), path);
-      var t = editor.selectlist[0].transform();
-      editor.selectlist[0].kill();
+      var saveobj = obj.level_obj();
+      IO.slurpwrite(JSON.stringify(saveobj,null,1), path);
+      var t = obj.transform();
+      obj.kill();
       editor.unselect();
       editor.load(sub);
-      editor.selectlist[0].pos = t.pos;
-      editor.selectlist[0].angle = t.angle;
+      obj.pos = t.pos;
+      obj.angle = t.angle;
     }
   },
 }
@@ -676,13 +681,12 @@ editor.inputs['C-f'] = function() {
 editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
 
 editor.inputs['C-F'] = function() {
-  if (!editor.edit_level.level) return;
+  if (editor.edit_level.level === Primum) return;
 
   editor.edit_level = editor.edit_level.level;
   editor.unselect();
   editor.reset_undos();
   editor.curlvl = editor.edit_level.save();
-  editor.edit_level.filejson = editor.edit_level.save();
   editor.edit_level.check_dirty();
 };
 editor.inputs['C-F'].doc = "Tunnel out of the level you are editing, saving it in the process.";
@@ -769,6 +773,12 @@ editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
+  if (editor.selectlist.length === 0) {
+    saveaspanel.stem = editor.edit_level.toString();
+    saveaspanel.obj = editor.edit_level;
+    editor.openpanel(saveaspanel);
+    return;
+  };
   if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
   Log.warn(JSON.stringify(editor.selectlist[0],null,1));
   Log.warn(JSON.stringify(editor.selectlist[0].ur,null,1));  
@@ -826,14 +836,6 @@ editor.inputs['C-n'] = function() {
 editor.inputs['C-n'].doc = "Open a new level.";
 
 editor.inputs['C-o'] = function() {
-/*  if (editor.edit_level.dirty) {
-    editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", function() {
-      editor.clear_level();
-      editor.openpanel(openlevelpanel);
-    }.bind(editor)));
-    return;
-  }
-*/
   editor.openpanel(openlevelpanel);
 };
 editor.inputs['C-o'].doc = "Open a level.";
@@ -1399,15 +1401,19 @@ var replpanel = Object.copy(inputpanel, {
 
   action() {
     var ecode = "";  
-    if (editor.selectlist.length === 1) 
-      for (var key in editor.selectlist[0].$)
-        ecode += `var ${key} = editor.selectlist[0].$['${key}'];`;
+    if (editor.selectlist.length === 1) {
+      for (var key in editor.selectlist[0].objects)
+        ecode += `var ${key} = editor.selectlist[0].objects['${key}'];`;
+    } else {
+      for (var key in editor.edit_level.objects)
+        ecode += `var ${key} = editor.edit_level.objects['${key}'];`;
+    }
 	
     ecode += this.value;
     Log.say(this.value);
     this.value = "";
     var ret = function() {return eval(ecode);}.call(editor.selectlist[0]);
-    if (ret) Log.say(ret);
+    Log.say(ret);
   },
 });
 
@@ -1613,20 +1619,15 @@ var openlevelpanel = Object.copy(inputpanel,  {
 var saveaspanel = Object.copy(inputpanel, {
   title: "save level as",
   action() {
-    editor.saveas_check(this.stem + "." + this.value);
+    var savename = "";
+    if (this.stem) savename += this.stem + ".";
+    editor.saveas_check(savename + this.value, this.obj);
   },
 });
 
 var groupsaveaspanel = Object.copy(inputpanel, {
   title: "group save as",
   action() { editor.groupsaveas(editor.selectlist, this.value); }
-});
-
-var savetypeas = Object.copy(inputpanel, {
-  title: "save type as",
-  action() {
-    editor.save_type_as(this.value);
-  },
 });
 
 var quitpanel = Object.copy(inputpanel, {
