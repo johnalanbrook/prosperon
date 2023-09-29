@@ -197,9 +197,9 @@ var editor = {
   stash: "",
 
   start_play_ed() {
-      this.stash = this.edit_level.save();
-      this.edit_level.kill();
-      load_configs("game.config");
+//      this.stash = this.edit_level.save();
+//      this.edit_level.kill();
+//      load_configs("game.config");
       Game.play();
       Player.players[0].uncontrol(this);
       Player.players[0].control(limited_editor);
@@ -719,7 +719,7 @@ editor.inputs['C-p'] = function() {
   if (!Game.playing()) {
     editor.start_play_ed();
 //    if (!Level.loadlevel("debug"))
-      World.loadlevel("game");
+      Primum.spawn(ur.start);
   } else {
     Game.pause();
   }
@@ -856,9 +856,7 @@ editor.inputs['C-y'] = function() {
   texteditor.on_close = function() { editor.edit_level.script = texteditor.value;};
 
   editor.openpanel(texteditor);
-  if (!editor.edit_level.script)
-    editor.edit_level.script = "";
-  texteditor.value = editor.edit_level.script;
+  texteditor.value = "";
   texteditor.start();
 };
 editor.inputs['C-y'].doc = "Open script editor for the level.";
@@ -983,6 +981,29 @@ editor.inputs.rm = function() {
     editor.unselect();
 };
 
+editor.try_pick = function()
+{
+  editor.grabselect = [];
+
+  if (editor.sel_comp && 'pick' in editor.sel_comp) {
+    var o = editor.sel_comp.pick(Mouse.worldpos);
+    if (o)
+      editor.grabselect = [o];
+    return;
+  }
+
+  if (editor.selectlist.length > 0) {
+    editor.grabselect = editor.selectlist.slice();
+    return;
+  }
+
+  var grabobj = editor.try_select();
+
+  if (!grabobj) return;
+  editor.grabselect = [grabobj];
+  editor.selectlist = [grabobj];
+}
+
 editor.inputs.mm = function() {
     if (editor.brush_obj) {
       editor.selectlist = editor.dup_objects([editor.brush_obj]);
@@ -990,24 +1011,8 @@ editor.inputs.mm = function() {
       editor.grabselect = editor.selectlist[0];
       return;
     }
-    
-    if (editor.sel_comp && 'pick' in editor.sel_comp) {
-      var o = editor.sel_comp.pick(Mouse.worldpos);
-      if (o)
-        editor.grabselect = [o];
-      return;
-    }
 
-    var grabobj = editor.try_select();
-    editor.grabselect = [];
-    if (!grabobj) return;
-    
-    if (Keys.ctrl()) {
-      grabobj = editor.dup_objects([grabobj])[0];
-    }
-
-    editor.grabselect = [grabobj];
-    editor.selectlist = [grabobj];
+    editor.try_pick();
 };
 editor.inputs['C-mm'] = editor.inputs.mm;
 
@@ -1075,14 +1080,12 @@ editor.inputs.mouse.scroll = function(scroll)
   editor.grabselect?.forEach(function(x) {
     x.pos = x.pos.add(scroll.scale(editor.camera.zoom));
   });
-}
 
-editor.inputs.mouse['C-scroll'] = function(scroll)
-{
+  scroll.y *= -1;
   editor.camera.pos = editor.camera.pos.sub(scroll.scale(editor.camera.zoom * 3).scale([1,-1]));  
 }
 
-editor.inputs.mouse['C-M-scroll'] = function(scroll)
+editor.inputs.mouse['C-scroll'] = function(scroll)
 {
   editor.camera.zoom += scroll.y/100;
 }
@@ -1116,16 +1119,7 @@ editor.inputs['C-S-g'] = function() { editor.openpanel(groupsaveaspanel); };
 editor.inputs['C-S-g'].doc = "Save selected objects as a new level.";
 
 editor.inputs.g = function() {
-  editor.grabselect = [];
-  
-  if (this.sel_comp) {
-    if ('pos' in this.sel_comp)
-      editor.grabselect = [this.sel_comp];
-  } else     
-    editor.grabselect = editor.selectlist.slice();
-
-  if (!editor.grabselect.empty)
-    Mouse.disabled();
+  editor.try_pick();
 };
 editor.inputs.g.doc = "Move selected objects.";
 editor.inputs.g.released = function() { editor.grabselect = []; Mouse.normal(); };

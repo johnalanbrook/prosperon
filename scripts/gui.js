@@ -135,8 +135,7 @@ var GUI = {
     };
 
     def.items.forEach(function(item,idx) {
-      Object.setPrototypeOf(def.items[idx], def);
-
+      def.items[idx].__proto__ = def;
       if (def.items[idx-1])
         def.up = def.items[idx-1];
 

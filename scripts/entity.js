@@ -466,28 +466,14 @@ prototypes.from_file = function(file)
   var newur = Object.create(upperur);
   file = file.replaceAll('.','/');
 
-  var jsfile = file + ".js";
-  var jsonfile = file + ".json";
+  var jsfile = prototypes.get_ur_file(urpath, ".js");
+  var jsonfile = prototypes.get_ur_file(urpath, ".json");
 
   var script = undefined;
   var json = undefined;
 
-  if (IO.exists(jsfile))
-    script = IO.slurp(jsfile);
-  else {
-    jsfile = urpath + "/" + path.at(-1) + ".js";
-    if (IO.exists(jsfile)) script = IO.slurp(jsfile);
-  }
-
-  try {
-    try {json = JSON.parse(IO.slurp(jsonfile)); }
-    catch(e) {
-      jsonfile = file + "/" + path.at(-1) + ".json";
-      if (IO.exists(jsonfile)) json = JSON.parse(IO.slurp(jsonfile));
-    }
-  } catch(e) {
-    Log.warn(`JSON in file ${jsonfile} is malformed.${e}`);  
-  }
+  if (jsfile) script = IO.slurp(jsfile);
+  if (jsonfile) json = JSON.parse(IO.slurp(jsonfile));
 
   if (!json && !script) {
     Log.warn(`Could not make ur from ${file}`);
@@ -535,6 +521,11 @@ prototypes.list_ur = function()
   return list_obj(ur);
 }
 
+prototypes.ur2file = function(urpath)
+{
+  return urpath.replaceAll('.', '/');
+}
+
 prototypes.file2ur = function(file)
 {
   file = file.strip_ext();
@@ -562,6 +553,16 @@ prototypes.get_ur = function(name)
     }
   } else
     return prototypes.ur[urpath];
+}
+
+prototypes.get_ur_file = function(path, ext)
+{
+  var urpath = prototypes.ur2file(path);
+  var file = urpath + ext;
+  if (IO.exists(file)) return file;
+  file = urpath + "/" + path.split('.').at(-1) + ext;
+  if (IO.exists(file)) return file;
+  return undefined;
 }
 
 prototypes.generate_ur = function(path)

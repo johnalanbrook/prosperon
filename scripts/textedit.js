@@ -78,26 +78,6 @@ var texteditor = Object.copy(inputpanel, {
     this.cursor++;
   },
 
-  input_enter_pressrep() {
-    var white = this.line_starting_whitespace(this.cursor);
-    this.insert_char('\n');
-
-    for (var i = 0; i < white; i++)
-      this.insert_char(" ");
-      
-  },
-
-  input_text(char) {
-    if (Keys.ctrl() || Keys.alt()) return;
-    this.insert_char(char);
-    this.keycb();
-  },
-
-  input_backspace_pressrep() {
-    this.value = this.value.slice(0,this.cursor-1) + this.value.slice(this.cursor);
-    this.cursor--;
-  },
-
   line_starting_whitespace(p) {
     var white = 0;
     var l = this.line_start(p);
@@ -189,6 +169,27 @@ var texteditor = Object.copy(inputpanel, {
 });
 
 texteditor.inputs = {};
+texteditor.inputs.char = function(char) {
+  this.insert_char(char);
+  this.keycb();
+},
+
+texteditor.inputs.enter = function(){
+  var white = this.line_starting_whitespace(this.cursor);
+  this.insert_char('\n');
+
+  for (var i = 0; i < white; i++)
+    this.insert_char(" ");
+};
+texteditor.inputs.enter.rep = true;
+
+texteditor.inputs.backspace = function(){
+  this.value = this.value.slice(0,this.cursor-1) + this.value.slice(this.cursor);
+  this.cursor--;
+};
+texteditor.inputs.backspace.rep = true;
+
+
 texteditor.inputs['C-s'] = function() {
   editor.edit_level.script = texteditor.value;
   editor.save_current();

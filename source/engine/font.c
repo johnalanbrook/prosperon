@@ -12,7 +12,7 @@
 #include <chipmunk/chipmunk.h>
 #include "2dphysics.h"
 #include "resources.h"
-
+#include "debugdraw.h"
 #include "text.sglsl.h"
 
 #include "stb_image_write.h"
@@ -178,16 +178,20 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
 static int curchar = 0;
 
-void draw_char_box(struct Character c, cpVect cursor, float scale, struct rgba color)
+void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color)
 {
   cpVect wh;
  
   wh.x = 8 * scale;
   wh.y = 14;
-  cursor.x += wh.x / 2.f;
-  cursor.y += wh.y / 2.f;
+  cursor.X += wh.x / 2.f;
+  cursor.Y += wh.y / 2.f;
 
-//  draw_box(cursor, wh, color);
+  cpVect b;
+  b.x = cursor.X;
+  b.y = cursor.Y;
+
+  draw_box(b, wh, color);
 }
 
 void text_flush(HMM_Mat4 *proj) {
@@ -229,31 +233,6 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
   memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
   curchar++;
-  return;
-
-  /*
-      if (drawcaret == curchar) {
-          draw_char_box(c, cursor, scale, color);
-              shader_use(shader);
-        }
-  */
-  /*
-      sg_append_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
-
-      offset[0] = 1;
-      offset[1] = -1;
-      fill_charverts(verts, cursor, scale, c, offset);
-      sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
-
-      offset[1] = 1;
-      fill_charverts(verts, cursor, scale, c, offset);
-      sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
-
-      offset[0] = -1;
-      offset[1] = -1;
-      fill_charverts(verts, cursor, scale, c, offset);
-      sg_update_buffer(bind_text.vertex_buffers[0], SG_RANGE_REF(verts));
-  */
 }
 
 void text_settype(struct sFont *mfont) {
@@ -321,6 +300,9 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
   struct rgba usecolor = color;
 
   while (*line != '\0') {
+    if (caret == curchar)
+      draw_char_box(font->Characters[69], cursor, scale, color);
+      
     if (isblank(*line)) {
       sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
       cursor.X += font->Characters[*line].Advance * tracking * scale;
@@ -351,10 +333,8 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       }
     }
   }
-  /*    if (caret > curchar) {
-          draw_char_box(font->Characters[69], cursor, scale, color);
-      }
-  */
+//  if (caret > curchar)
+//    draw_char_box(font->Characters[69], cursor, scale, color);
 
   return cursor.Y - pos.Y;
 }
