@@ -240,22 +240,19 @@ Object.defineProperty(Object.prototype, 'push', {
     var str = val.toString();
     str = str.replaceAll('.', '_');
     var n = 1;
-    var t = str + n;
+    var t = str;
     while (Object.hasOwn(this,t)) {
-      n++;
       t = str + n;
+      n++;      
     }
     this[t] = val;
-    return val;
+    return t;
   }
 });
 
 Object.defineProperty(Object.prototype, 'remove', {
   value: function(val) {
-    for (var e of this.entries()) {
-      if (e.value === val)
-        delete this[e.key]
-    }
+    delete this[val.toString()];
   }
 });
 
@@ -385,7 +382,10 @@ Object.defineProperty(String.prototype, 'dir', {
 
 Object.defineProperty(String.prototype, 'updir', {
   value: function() {
-    var dir = this.dir();
+    if (this.lastIndexOf('/') === this.length-1)
+      return this.slice(0,this.length-1);
+    
+    var dir = (this + "/").dir();
     return dir.dir();
   }
 });
@@ -521,10 +521,8 @@ function add(x,y) { return x+y; };
 function mult(x,y) { return x*y; };
 
 Object.defineProperty(Array.prototype, 'mapc', {
-  value: function(fn, arr) {
-      return this.map(function(x, i) {
-        return fn(x, arr[i]);
-      });
+  value: function(fn) {
+    return this.map(x => fn(x));
   }
 });
 
@@ -671,7 +669,7 @@ Math.lerp = function(s,f,t) { return (f-s)*t + s; };
 
 Number.prec = function(num)
 {
-  return num.toPrecision(3)/1;
+  return parseFloat(num.toFixed(2));
 }
 
 Object.defineProperty(Object.prototype, 'lerp',{

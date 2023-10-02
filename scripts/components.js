@@ -47,10 +47,11 @@ var component = {
 
     var res = this.gameobject.ur.toString();
     res = res.replaceAll('.', '/');
-    if (!path.startsWith(res))
-      return path;
-
-    return path.replace(res, "").slice(1);
+    var dir = path.dir();
+    if (res.startsWith(dir))
+      return path.base();
+    
+    return path;
   },
 };
 
@@ -72,8 +73,7 @@ component.sprite = {
 
 component.sprite.maker = Object.copy(component, {
   set path(x) {
-    x = this.resani(x);
-    cmd(12,this.id,x,this.rect);
+    cmd(12,this.id,this.resani(x),this.rect);
   },
   get path() {
     return this.resavi(cmd(116,this.id));

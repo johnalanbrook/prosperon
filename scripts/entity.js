@@ -61,20 +61,6 @@ var gameobject = {
     }
   },
 
-  set_relpos(x) {
-    if (!this.level) {
-      this.pos = x;
-      return;
-    }
-
-    this.pos = Vector.rotate(x, Math.deg2rad(this.level.angle)).add(this.level.pos);
-  },
-
-  get_relpos() {
-    var offset = this.pos.sub(this.level.pos);
-    return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
-  },
-  
   get_relangle() {
     if (!this.level) return this.angle;
     return this.angle - this.level.angle;
@@ -146,8 +132,8 @@ var gameobject = {
 
 	this.objects.forEach(function(obj) {
 	  obj.scale *= pct;
-	  obj.set_relpos(obj.get_relpos().scale(pct));
-	}, this);      
+	  obj.pos = obj.pos.scale(pct);
+	});      
       },
 
       get flipx() { return cmd(104,this.body); },
@@ -156,8 +142,8 @@ var gameobject = {
         return;
 	this.objects.forEach(function(obj) {
 	  obj.flipx = !obj.flipx;
-	  var rp = obj.get_relpos();
-	  obj.pos = [-rp.x, rp.y].add(this.pos);
+	  var rp = obj.pos;
+	  obj.pos = [-rp.x, rp.y].add(this.worldpos);
 	  obj.angle = -obj.angle;
 	},this);	
       },
@@ -167,18 +153,25 @@ var gameobject = {
         cmd(56, this.body, x);
 	return;
 	this.objects.forEach(function(obj) {
-	  var rp = obj.get_relpos();
-	  obj.pos = [rp.x, -rp.y].add(this.pos);
+	  var rp = obj.pos;
+	  obj.pos = [rp.x, -rp.y].add(this.worldpos);
 	  obj.angle = -obj.angle;
 	},this);	
       },
       
       set pos(x) {
-        var diff = x.sub(this.pos);
-	this.objects.forEach(function(x) { x.pos = x.pos.add(diff); });
-        set_body(2,this.body,x);
+        this.worldpos = Vector.rotate(x, Math.deg2rad(this.level.angle)).add(this.level.worldpos); },
+      get pos() {
+        var offset = this.worldpos.sub(this.level.worldpos);
+	return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
       },
-      get pos() { return q_body(1,this.body); },
+
+      get worldpos() { return q_body(1,this.body); },
+      set worldpos(x) {
+        var diff = x.sub(this.worldpos);
+	this.objects.forEach(function(x) { x.worldpos = x.worldpos.add(diff); });
+	set_body(2,this.body,x);
+      },
 
       get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
       set angle(x) {
@@ -234,9 +227,13 @@ var gameobject = {
       spawn(ur) {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
-        if (!ur) Log.warn("Failed to make UR from " + ur);
-
-        return gameobject.make(ur, this);
+        if (!ur) {
+	  Log.warn("Failed to make UR from " + ur);
+	  return undefined;
+	}
+	
+	var go = gameobject.make(ur, this);
+        return go;
       },
 
       /* Bounding box of the object in world dimensions */
@@ -273,7 +270,52 @@ var gameobject = {
       },
 
       json_obj() {
-        return JSON.parse(JSON.stringify(this));
+	function objdiff(from, to) {
+	  var ret = {};
+
+	  for (var key in from) {
+	    if (typeof from[key] === 'undefined' || typeof to[key] === 'undefined') continue;
+	    if (typeof from[key] === 'function') continue;
+	    if (typeof to === 'object' && !(key in to)) continue;
+
+	    if (Array.isArray(from[key])) {
+	      if (!Array.isArray(to[key]))
+		ret[key] = Object.values(objdiff(from[key], []));
+
+	      if (from[key].length !== to[key].length)
+		ret[key] = Object.values(objdiff(from[key], []));
+
+	      var diff = objdiff(from[key], to[key]);
+	      if (diff && !diff.empty)
+		ret[key] = Object.values(diff);
+
+	      continue;
+	    }
+
+	    if (typeof from[key] === 'object') {
+	      var diff = objdiff(from[key], to[key]);
+	      if (diff && !diff.empty)
+		  ret[key] = diff;	
+	      continue;
+	    }
+
+	    if (typeof from[key] === 'number') {
+	      var a = Number.prec(from[key]);
+	      if (a !== to[key])
+		ret[key] = a;
+	      continue;
+	    }
+
+	    if (from[key] !== to[key])
+	      ret[key] = from[key];
+	  }
+	  if (ret.empty) return undefined;
+	  return ret;
+	}
+
+	var ur = objdiff(this,this.ur);
+
+        return ur ? ur : {};
       },
 
       transform_obj() {
@@ -286,9 +328,19 @@ var gameobject = {
         var json = this.json_obj();
 	Object.entries(this.objects).forEach(function(x) {
 	  json[x[0]] = x[1].transform_obj();
+	  Object.assign(json[x[0]], x[1].json_obj());
 	  json[x[0]].ur = x[1].ur.toString();
 	});
 	return json;
+      },
+
+      ur_obj() {
+        var ur = this.json_obj();
+	for (var k in ur) 
+	  if (ur[k].ur)
+	    delete ur[k];
+
+	return ur;
       },
       
       make_ur() {
@@ -300,12 +352,17 @@ var gameobject = {
 
       transform() {
         var t = {};
-	t.pos = this.get_relpos();
-	t.pos.x = Number.prec(t.pos.x);
-	t.pos.y = Number.prec(t.pos.y);
-	t.angle = Number.prec(this.get_relangle());
+	t.pos = this.pos.map(Number.prec);
+	t.angle = Number.prec(this.angle);
 	return t;
       },
+
+      phys_obj() {
+        var phys = {};
+	phys.velocity = this.velocity.map(Number.prec);
+	phys.angularvelocity = Number.prec(this.angularvelocity);
+	return phys;
+     },
 
       dup(diff) {
         var n = this.level.spawn(this.ur);
@@ -322,14 +379,11 @@ var gameobject = {
 	Register.endofloop(() => {
 	  cmd(2, this.body);
 	  delete Game.objects[this.body];
-
-//	  if (this.level)
-//	    this.level.unregister(this);
+  	  this.level.remove_obj(this);
 
 	  Player.uncontrol(this);
 	  this.instances.remove(this);
 	  Register.unregister_obj(this);
-    //      Signal.clear_obj(this);
 
 	  this.body = -1;
 	  for (var key in this.components) {
@@ -343,13 +397,20 @@ var gameobject = {
 	});
       },
 
+   remove_obj(obj) {
+     delete this[obj.toString()];     
+     this.objects.remove(obj);
+   },
+
       up() { return [0,1].rotate(Math.deg2rad(this.angle));},
       down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
       right() { return [1,0].rotate(Math.deg2rad(this.angle));},
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
   reparent(parent) {
-    if (this.level === parent) return;
-    parent.objects.push(this);
+    if (this.level === parent)
+      this.level.remove_obj(this);
+    var name = parent.objects.push(this);
+    this.toString = function() { return name; };
     
     if (this.level)
       this.level.objects.remove(this);
@@ -384,7 +445,9 @@ var gameobject = {
       }
     };
 
+    var save_tostr = obj.toString;
     Object.totalmerge(obj,ur);
+    obj.toString = save_tostr;
     obj.objects.forEach(function(x) { x.pos = obj.pos.add(x.pos); });
     obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
     obj.check_registers(obj);
@@ -409,7 +472,7 @@ var gameobject = {
   },
 }
 
-gameobject.toJSON = ur_json;
+gameobject.toJSON = gameobject.level_obj;
 
 gameobject.ur = {
 //  pos: [0,0],
@@ -510,9 +573,9 @@ prototypes.list = [];
 
 prototypes.from_obj = function(name, obj)
 {
-  var newobj = Object.copy(gameobject.ur, obj);
-  prototypes.ur[name] = newobj;
-  newobj.toString = function() { return name; };
+  var newur = Object.copy(gameobject.ur, obj);
+  prototypes.ur[name] = newur;
+  newur.toString = function() { return name; };
   return prototypes.ur[name];
 }
 

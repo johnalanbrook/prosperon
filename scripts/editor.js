@@ -420,9 +420,9 @@ var editor = {
       else
         x.dirty = false;
       if (x.dirty) sname += "*";
-      GUI.text(sname, world2screen(x.pos).add([0, 16]), 1, lvlcolor);
-      GUI.text(x.pos.map(function(x) { return Math.round(x); }), world2screen(x.pos), 1, Color.white);
-      Debug.arrow(world2screen(x.pos), world2screen(x.pos.add(x.up().scale(40))), Color.yellow, 1);
+      GUI.text(sname, world2screen(x.worldpos).add([0, 16]), 1, lvlcolor);
+      GUI.text(x.worldpos.map(function(x) { return Math.round(x); }), world2screen(x.worldpos), 1, Color.white);
+      Debug.arrow(world2screen(x.worldpos), world2screen(x.worldpos.add(x.up().scale(40))), Color.yellow, 1);
 
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
@@ -431,12 +431,12 @@ var editor = {
     if (this.selectlist.length === 0)
       for (var key in this.edit_level.objects) {
         var o = this.edit_level.objects[key];
-        GUI.text(key, world2screen(o.pos), 1, lvlcolor);
+        GUI.text(key, world2screen(o.worldpos), 1, lvlcolor);
       }
     else
       this.selectlist.forEach(function(x) {
         Object.entries(x.objects).forEach(function(x) {
-	  GUI.text(x[0], world2screen(x[1].pos), 1, lvlcolor);
+	  GUI.text(x[0], world2screen(x[1].worldpos), 1, lvlcolor);
 	});
       });
     
@@ -450,7 +450,7 @@ var editor = {
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].name + "]";
-        GUI.text(str, world2screen(this.selectlist[0].pos).add([0,-16*(i++)]));
+        GUI.text(str, world2screen(this.selectlist[0].worldpos).add([0,-16*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -460,7 +460,7 @@ var editor = {
 
     editor.edit_level.objects.forEach(function(obj) {
       if (!obj.selectable)
-        GUI.image("icons/icons8-lock-16.png", world2screen(obj.pos));
+        GUI.image("icons/icons8-lock-16.png", world2screen(obj.worldpos));
     });
 
     Debug.draw_grid(1, editor_config.grid_size, Color.Editor.grid.alpha(0.3));
@@ -686,8 +686,8 @@ editor.inputs['C-F'] = function() {
   editor.edit_level = editor.edit_level.level;
   editor.unselect();
   editor.reset_undos();
-  editor.curlvl = editor.edit_level.save();
-  editor.edit_level.check_dirty();
+//  editor.curlvl = editor.edit_level.save();
+//  editor.edit_level.check_dirty();
 };
 editor.inputs['C-F'].doc = "Tunnel out of the level you are editing, saving it in the process.";
 
@@ -696,7 +696,7 @@ editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
 editor.inputs.r = function() {
   if (editor.sel_comp && 'angle' in editor.sel_comp) {
-    var relpos = Mouse.worldpos.sub(editor.sel_comp.gameobject.pos);
+    var relpos = Mouse.worldpos.sub(editor.sel_comp.gameobject.worldpos);
     editor.startoffset = Math.atan2(relpos.y, relpos.x);
     editor.startrot = editor.sel_comp.angle;
 
@@ -774,34 +774,18 @@ editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
   if (editor.selectlist.length === 0) {
-    saveaspanel.stem = editor.edit_level.toString();
+    saveaspanel.stem = editor.edit_level.ur.toString();
     saveaspanel.obj = editor.edit_level;
     editor.openpanel(saveaspanel);
     return;
   };
+  
   if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
-  Log.warn(JSON.stringify(editor.selectlist[0],null,1));
-  Log.warn(JSON.stringify(editor.selectlist[0].ur,null,1));  
-  Object.merge(editor.selectlist[0].ur, editor.selectlist[0].json_obj());
-  Log.warn(JSON.stringify(editor.selectlist[0].ur,null,1));
-  var path = editor.selectlist[0].toString();
+  Object.merge(editor.selectlist[0].ur_obj(), editor.selectlist[0].level_obj());
+  var path = editor.selectlist[0].ur.toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";
   IO.slurpwrite(JSON.stringify(editor.selectlist[0].ur,null,1), path);
-  return;
-
-  if (editor.edit_level.level) {
-    if (!editor.edit_level.unique)
-      editor.save_current();
-
-    editor.selectlist = [];
-    editor.selectlist.push(editor.edit_level);
-    editor.edit_level = editor.edit_level.level;
-
-    return;
-  }
-
-  editor.save_current();
 };
 editor.inputs['C-s'].doc = "Save selected.";
 
@@ -907,6 +891,7 @@ editor.inputs.lm.doc = "Selection box.";
 
 editor.inputs.lm.released = function() {
     Mouse.normal();
+    editor.unselect();
 
     if (!editor.sel_start) return; 
     

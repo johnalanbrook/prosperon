@@ -27,7 +27,7 @@ static struct {
 struct Texture *tex_default;
 
 struct Texture *texture_notex() {
-  return texture_pullfromfile("icons/no_tex.png");
+  return texture_pullfromfile("icons/no_tex.gif");
 }
 
 unsigned int next_pow2(unsigned int v)
@@ -83,7 +83,12 @@ struct Texture *texture_pullfromfile(const char *path) {
   if (index != -1)
     return texhash[index].value;
 
-  YughInfo("Loading texture %s.", path);
+  long rawlen;
+  unsigned char *raw = slurp_file(path, &rawlen);
+  
+  if (!raw) return texture_notex();
+
+  unsigned char *data;
 
   struct Texture *tex = calloc(1, sizeof(*tex));
   tex->opts.sprite = 1;
@@ -93,10 +98,6 @@ struct Texture *texture_pullfromfile(const char *path) {
   tex->opts.wrapy = 1;
 
   int n;
-
-  long rawlen;
-  unsigned char *raw = slurp_file(path, &rawlen);
-  unsigned char *data;
 
   char *ext = strrchr(path, '.');
   

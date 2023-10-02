@@ -967,6 +967,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   case 102:
     eye = HMM_AddV3(eye,(HMM_Vec3){0,0,0.01});
     break;
+    
   case 103:
     return num2js(js2go(argv[1])->scale);
 
