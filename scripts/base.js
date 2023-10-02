@@ -110,6 +110,8 @@ Object.merge = function(target, ...objs)
   for (var obj of objs)
     for (var key of Object.keys(obj))
       Object.mergekey(target,obj,key);
+
+  return target;
 }
 
 Object.totalmerge = function(target, ...objs)
@@ -144,6 +146,17 @@ Object.copy = function(proto, ...objs)
 Object.defHidden = function(obj, prop)
 {
   Object.defineProperty(obj, prop, {enumerable:false, writable:true});
+}
+
+Object.hide = function(obj,prop)
+{
+  var p = Object.getOwnPropertyDescriptor(obj,prop);
+  if (!p) {
+    Log.warn(`No property of name ${prop}.`);
+    return;
+  }
+  p.enumerable = false;
+  Object.defineProperty(obj, prop, p);
 }
 
 Object.defineProperty(Object.prototype, 'obscure', {
@@ -507,7 +520,7 @@ value: function(b) {
   if (b == null) return false;
   if (this === b) return true;
 
-  return JSON.stringify(this) === JSON.stringify(b);
+  return JSON.stringify(this.sort()) === JSON.stringify(b.sort());
   
   for (var i = 0; i < this.length; i++) {
     if (!this[i] === b[i])
@@ -669,7 +682,7 @@ Math.lerp = function(s,f,t) { return (f-s)*t + s; };
 
 Number.prec = function(num)
 {
-  return parseFloat(num.toFixed(2));
+  return parseFloat(num.toFixed(3));
 }
 
 Object.defineProperty(Object.prototype, 'lerp',{

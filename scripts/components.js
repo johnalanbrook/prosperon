@@ -78,8 +78,8 @@ component.sprite.maker = Object.copy(component, {
   get path() {
     return this.resavi(cmd(116,this.id));
   },
-  get visible() { return this.enabled; },
-  set visible(x) { this.enabled = x; },
+  hide() { this.enabled = false; },
+  show() { this.enabled = true; },
   asset(str) { this.path = str; },
   rect: {s0:0, s1: 1, t0: 0, t1: 1},
   get enabled() { return cmd(114,this.id); },

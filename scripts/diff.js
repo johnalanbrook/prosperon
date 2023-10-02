@@ -83,6 +83,11 @@ function diffassign(target, from) {
   }
 };
 
+function positive_diff(from, to)
+{
+  var diff = {};
+}
+
 function diff(from, to) {
   var obj = {};
 

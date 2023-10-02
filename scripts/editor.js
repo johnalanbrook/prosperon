@@ -388,41 +388,50 @@ var editor = {
     GUI.text("0,0", world2screen([0,0]));
     
     var clvl = this.edit_level;
-    var lvlcolorsample = 1;    
-    var lvlcolor = ColorMap.Inferno.sample(lvlcolorsample);
+    var lvlchain = [];
+    while (clvl !== Primum) {
+      lvlchain.push(clvl);
+      clvl = clvl.level;
+    }
+    lvlchain.push(clvl);
+    
+    var lvlcolorsample = 1;
+    var colormap = ColorMap.Bathymetry;
+    var lvlcolor = colormap.sample(lvlcolorsample);
     var ypos = 200;
-    while (clvl) {
-      lvlcolor = ColorMap.Inferno.sample(lvlcolorsample);
-      var lvlstr = clvl.toString();
-      if (clvl.dirty)
+    
+    lvlchain.reverse();
+    lvlchain.forEach(function(x) {
+      lvlcolor = colormap.sample(lvlcolorsample);
+      var lvlstr = x.toString();
+      if (x.dirty)
         lvlstr += "*";
       GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
      
       lvlcolorsample -= 0.1;
 
-      if (!clvl.level) break;
-      clvl = clvl.level;
-      if (clvl) {
-        GUI.text("^^^^^^", [0,ypos-15],1);
-	ypos -= 15;
-      }
-      ypos -= 5;
-    }
-
+      GUI.text("^^^^^^", [0,ypos+=5],1);
+      ypos += 15;
+    });
+    
     /* Color selected objects with the next deeper color */
     lvlcolorsample -= 0.1;
-    lvlcolor = ColorMap.Inferno.sample(lvlcolorsample);
+    lvlcolor = colormap.sample(lvlcolorsample);
+
+    GUI.text("$$$$$$", [0,ypos],1,lvlcolor);
 
     this.selectlist.forEach(function(x) {
       var sname = x.ur.toString();
-      if (!x.json_obj().empty)
+      if (!x.level_obj().empty)
         x.dirty = true;
       else
         x.dirty = false;
+	
       if (x.dirty) sname += "*";
-      GUI.text(sname, world2screen(x.worldpos).add([0, 16]), 1, lvlcolor);
-      GUI.text(x.worldpos.map(function(x) { return Math.round(x); }), world2screen(x.worldpos), 1, Color.white);
-      Debug.arrow(world2screen(x.worldpos), world2screen(x.worldpos.add(x.up().scale(40))), Color.yellow, 1);
+      
+      GUI.text(sname, world2screen(x.worldpos()).add([0, 16]), 1, lvlcolor);
+      GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), world2screen(x.worldpos()), 1, Color.white);
+      Debug.arrow(world2screen(x.worldpos()), world2screen(x.worldpos().add(x.up().scale(40))), Color.yellow, 1);
 
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
@@ -431,12 +440,12 @@ var editor = {
     if (this.selectlist.length === 0)
       for (var key in this.edit_level.objects) {
         var o = this.edit_level.objects[key];
-        GUI.text(key, world2screen(o.worldpos), 1, lvlcolor);
+        GUI.text(key, world2screen(o.worldpos()), 1, lvlcolor);
       }
     else
       this.selectlist.forEach(function(x) {
         Object.entries(x.objects).forEach(function(x) {
-	  GUI.text(x[0], world2screen(x[1].worldpos), 1, lvlcolor);
+	  GUI.text(x[0], world2screen(x[1].worldpos()), 1, lvlcolor);
 	});
       });
     
@@ -450,7 +459,7 @@ var editor = {
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].name + "]";
-        GUI.text(str, world2screen(this.selectlist[0].worldpos).add([0,-16*(i++)]));
+        GUI.text(str, world2screen(this.selectlist[0].worldpos()).add([0,-16*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -460,7 +469,7 @@ var editor = {
 
     editor.edit_level.objects.forEach(function(obj) {
       if (!obj.selectable)
-        GUI.image("icons/icons8-lock-16.png", world2screen(obj.worldpos));
+        GUI.image("icons/icons8-lock-16.png", world2screen(obj.worldpos()));
     });
 
     Debug.draw_grid(1, editor_config.grid_size, Color.Editor.grid.alpha(0.3));
@@ -696,7 +705,7 @@ editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
 editor.inputs.r = function() {
   if (editor.sel_comp && 'angle' in editor.sel_comp) {
-    var relpos = Mouse.worldpos.sub(editor.sel_comp.gameobject.worldpos);
+    var relpos = Mouse.worldpos.sub(editor.sel_comp.gameobject.worldpos());
     editor.startoffset = Math.atan2(relpos.y, relpos.x);
     editor.startrot = editor.sel_comp.angle;
 
@@ -779,12 +788,13 @@ editor.inputs['C-s'] = function() {
     editor.openpanel(saveaspanel);
     return;
   };
-  
+
   if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
-  Object.merge(editor.selectlist[0].ur_obj(), editor.selectlist[0].level_obj());
+  Object.merge(editor.selectlist[0].ur, editor.selectlist[0].level_obj());
   var path = editor.selectlist[0].ur.toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";
+
   IO.slurpwrite(JSON.stringify(editor.selectlist[0].ur,null,1), path);
 };
 editor.inputs['C-s'].doc = "Save selected.";
@@ -1385,19 +1395,16 @@ var replpanel = Object.copy(inputpanel, {
   },
 
   action() {
-    var ecode = "";  
-    if (editor.selectlist.length === 1) {
-      for (var key in editor.selectlist[0].objects)
-        ecode += `var ${key} = editor.selectlist[0].objects['${key}'];`;
-    } else {
-      for (var key in editor.edit_level.objects)
-        ecode += `var ${key} = editor.edit_level.objects['${key}'];`;
-    }
+    var ecode = "";
+    var repl_obj = (editor.selectlist.length === 1) ? editor.selectlist[0] : editor.edit_level;
+    ecode += `var $ = repl_obj.objects;`;
+    for (var key in repl_obj.objects)
+      ecode += `var ${key} = editor.edit_level.objects['${key}'];`;
 	
     ecode += this.value;
     Log.say(this.value);
     this.value = "";
-    var ret = function() {return eval(ecode);}.call(editor.selectlist[0]);
+    var ret = function() {return eval(ecode);}.call(repl_obj);
     Log.say(ret);
   },
 });

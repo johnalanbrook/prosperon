@@ -11,9 +11,6 @@ function grab_from_points(pos, points, slop) {
 };
 
 var gameobject = {
-  save: true,
-  selectable: true,
-  ed_locked: false,
   
   layer_nuke() {
     Nuke.label("Collision layer");
@@ -29,19 +26,9 @@ var gameobject = {
     for (var i = 0; i < 5; i++)
       this.draw_layer = Nuke.radio(i, this.draw_layer, i);
   },
-  
-  _visible:  true,
-  get visible(){ return this._visible; },
-  set visible(x) {
-    this._visible = x; 
-    for (var key in this.components) {
-      if ('visible' in this.components[key]) {
-        this.components[key].visible = x;
-      }
-    }
-    for (var key in this.objects)
-      this.objects[key].visible = x;
-  },
+
+  hide() { this.components.forEach(function(x) { x.hide(); }); this.objects.forEach(function(x) { x.hide(); }); },
+  show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
 
   phys_nuke() {
     Nuke.newline(1);
@@ -66,8 +53,6 @@ var gameobject = {
     return this.angle - this.level.angle;
   },
 
-  gizmo: "", /* Path to an image to draw for this gameobject */
-
   width() {
     var bb = this.boundingbox();
     return bb.r - bb.l;
@@ -80,9 +65,9 @@ var gameobject = {
 
   /* Make a unique object the same as its prototype */
   revert() {
-    var t = this.transform();
+//    var t = this.transform();
     Object.totalmerge(this,this.ur);
-    Object.merge(this,t);
+//    Object.merge(this,t);
   },
 
   gui() {
@@ -95,7 +80,6 @@ var gameobject = {
       if (typeof this[key] === 'object' && 'gui' in this[key]) this[key].gui();
     }
   },
-
 
   check_registers(obj) {
     Register.unregister_obj(this);
@@ -123,8 +107,6 @@ var gameobject = {
         register_collide(1, x.collide, x, obj.body, x.shape);
     });
   },
-  instances: [],
-
       get scale() { return cmd(103, this.body); },
       set scale(x) {
 	var pct = x/this.scale;
@@ -143,7 +125,7 @@ var gameobject = {
 	this.objects.forEach(function(obj) {
 	  obj.flipx = !obj.flipx;
 	  var rp = obj.pos;
-	  obj.pos = [-rp.x, rp.y].add(this.worldpos);
+	  obj.pos = [-rp.x, rp.y].add(this.worldpos());
 	  obj.angle = -obj.angle;
 	},this);	
       },
@@ -154,22 +136,21 @@ var gameobject = {
 	return;
 	this.objects.forEach(function(obj) {
 	  var rp = obj.pos;
-	  obj.pos = [rp.x, -rp.y].add(this.worldpos);
+	  obj.pos = [rp.x, -rp.y].add(this.worldpos());
 	  obj.angle = -obj.angle;
 	},this);	
       },
       
-      set pos(x) {
-        this.worldpos = Vector.rotate(x, Math.deg2rad(this.level.angle)).add(this.level.worldpos); },
+      set pos(x) { this.set_worldpos(Vector.rotate(x, Math.deg2rad(this.level.angle)).add(this.level.worldpos())); },
       get pos() {
-        var offset = this.worldpos.sub(this.level.worldpos);
+        var offset = this.worldpos().sub(this.level.worldpos());
 	return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
       },
 
-      get worldpos() { return q_body(1,this.body); },
-      set worldpos(x) {
-        var diff = x.sub(this.worldpos);
-	this.objects.forEach(function(x) { x.worldpos = x.worldpos.add(diff); });
+      worldpos() { return q_body(1,this.body); },
+      set_worldpos(x) {
+        var diff = x.sub(this.worldpos());
+	this.objects.forEach(function(x) { x.set_worldpos(x.worldpos().add(diff)); });
 	set_body(2,this.body,x);
       },
 
@@ -209,6 +190,7 @@ var gameobject = {
       set velocity(x) { set_body(9, this.body, x); },
       get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
       set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
+      
       pulse(vec) { set_body(4, this.body, vec);},
 
       push(vec) { set_body(12,this.body,vec);},
@@ -269,52 +251,52 @@ var gameobject = {
 	return bb ? bb : cwh2bb([0,0], [0,0]);
       },
 
-      json_obj() {
-	function objdiff(from, to) {
-	  var ret = {};
+      diff(from, to) {
+	var ret = {};
 
-	  for (var key in from) {
-	    if (typeof from[key] === 'undefined' || typeof to[key] === 'undefined') continue;
-	    if (typeof from[key] === 'function') continue;
-	    if (typeof to === 'object' && !(key in to)) continue;
+	for (var key in from) {
+	  if (!Object.hasOwn(from, key) && !Object.isAccessor(from,key)) continue;
+	  if (typeof from[key] === 'undefined' || typeof to[key] === 'undefined') continue;
+	  if (typeof from[key] === 'function') continue;
+//	  if (typeof to === 'object' && !(key in to)) continue; 
 
-	    if (Array.isArray(from[key])) {
-	      if (!Array.isArray(to[key]))
-		ret[key] = Object.values(objdiff(from[key], []));
+	  if (Array.isArray(from[key])) {
+	    if (!Array.isArray(to[key]))
+	      ret[key] = Object.values(gameobject.diff(from[key], []));
 
-	      if (from[key].length !== to[key].length)
-		ret[key] = Object.values(objdiff(from[key], []));
+	    if (from[key].length !== to[key].length)
+	      ret[key] = Object.values(gameobject.diff(from[key], []));
 
-	      var diff = objdiff(from[key], to[key]);
-	      if (diff && !diff.empty)
-		ret[key] = Object.values(diff);
+	    var diff = gameobject.diff(from[key], to[key]);
+	    if (diff && !diff.empty)
+	      ret[key] = Object.values(diff);
 
-	      continue;
-	    }
-
-	    if (typeof from[key] === 'object') {
-	      var diff = objdiff(from[key], to[key]);
-	      if (diff && !diff.empty)
-		  ret[key] = diff;	
-	      continue;
-	    }
-
-	    if (typeof from[key] === 'number') {
-	      var a = Number.prec(from[key]);
-	      if (a !== to[key])
-		ret[key] = a;
-	      continue;
-	    }
-
-	    if (from[key] !== to[key])
-	      ret[key] = from[key];
+	    continue;
 	  }
-	  if (ret.empty) return undefined;
-	  return ret;
+
+	  if (typeof from[key] === 'object') {
+	    var diff = gameobject.diff(from[key], to[key]);
+	    if (diff && !diff.empty)
+		ret[key] = diff;	
+	    continue;
+	  }
+
+	  if (typeof from[key] === 'number') {
+	    var a = Number.prec(from[key]);
+	    if (a !== to[key])
+	      ret[key] = a;
+	    continue;
+	  }
+
+	  if (from[key] !== to[key])
+	    ret[key] = from[key];
 	}
+	if (ret.empty) return undefined;
+	return ret;
+      },
 
-	var ur = objdiff(this,this.ur);
-
+      json_obj() {
+	var ur = gameobject.diff(this,this.ur);
         return ur ? ur : {};
       },
 
@@ -326,11 +308,23 @@ var gameobject = {
 
       level_obj() {
         var json = this.json_obj();
-	Object.entries(this.objects).forEach(function(x) {
-	  json[x[0]] = x[1].transform_obj();
-	  Object.assign(json[x[0]], x[1].json_obj());
-	  json[x[0]].ur = x[1].ur.toString();
-	});
+	var objects = {};
+	this.ur.objects ??= {};
+	if (!Object.keys(this.objects).equal(Object.keys(this.ur.objects))) {
+	  for (var o in this.objects)
+	    objects[o] = this.objects[o].transform_obj();
+	} else {
+	  for (var o in this.objects) {
+	    var obj = this.objects[o].json_obj();
+	    Object.assign(obj, gameobject.diff(this.objects[o].transform(), this.ur.objects[o]));
+	    if (!obj.empty)
+	      objects[o] = obj;
+	  }
+	}
+
+	if (!objects.empty)
+  	  json.objects = objects;
+	
 	return json;
       },
 
@@ -423,6 +417,8 @@ var gameobject = {
     obj.body = make_gameobject();
     obj.components = {};
     obj.objects = {};
+    Object.hide(obj, 'components');
+    Object.hide(obj, 'objects');
     obj.toString = function() { return obj.ur.toString(); };
     
     Game.register_obj(obj);
@@ -439,22 +435,50 @@ var gameobject = {
 
       if ('ur' in p) {
         obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
+	obj.rename_obj(obj[prop].toString(), prop);
       } else if ('comp' in p) {
         obj[prop] = component[p.comp].make(obj);
 	obj.components[prop] = obj[prop];
       }
     };
 
+    if (ur.objects) {
+      for (var prop in ur.objects) {
+        var o = ur.objects[prop];
+        var newobj = obj.spawn(prototypes.get_ur(o.ur));
+	obj.rename_obj(newobj.toString(), prop);
+      }
+    }
+
     var save_tostr = obj.toString;
     Object.totalmerge(obj,ur);
     obj.toString = save_tostr;
-    obj.objects.forEach(function(x) { x.pos = obj.pos.add(x.pos); });
     obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
     obj.check_registers(obj);
+
+    obj.objects.forEach(function(x) {
+      x.ur = prototypes.get_ur(x.ur);
+    });
     
     if (typeof obj.start === 'function') obj.start();
 
     return obj;
+  },
+
+  rename_obj(name, newname) {
+    if (!this.objects[name]) {
+      Log.warn(`No object with name ${name}. Could not rename to ${newname}.`);
+      return;
+    }
+    if (this.objects[newname]) {
+      Log.warn(`Already an object with name ${newname}.`);
+      return;
+    }
+    Log.warn(`Renaming from ${name} to ${newname}.`);
+
+    this.objects[newname] = this.objects[name];
+    delete this.objects[name];
+    return this.objects[newname];
   },
 
   register_hit(fn, obj) {
@@ -474,6 +498,8 @@ var gameobject = {
 
 gameobject.toJSON = gameobject.level_obj;
 
+gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
+
 gameobject.ur = {
 //  pos: [0,0],
   scale:1,
@@ -486,9 +512,10 @@ gameobject.ur = {
 //  velocity:[0,0],
 //  angularvelocity:0,
   layer: 0,
+  save: true,
+  selectable: true,
+  ed_locked: false,
 };
-
-gameobject.entity = {};
 
 /* Default objects */
 var prototypes = {};
