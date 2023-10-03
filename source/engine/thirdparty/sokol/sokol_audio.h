@@ -1519,13 +1519,15 @@ _SOKOL_PRIVATE bool _saudio_alsa_backend_init(void) {
         _SAUDIO_ERROR(ALSA_PTHREAD_CREATE_FAILED);
         goto error;
     }
-
+    snd_config_update_free_global();
     return true;
 error:
+
     if (_saudio.backend.device) {
         snd_pcm_close(_saudio.backend.device);
         _saudio.backend.device = 0;
     }
+    snd_config_update_free_global();        
     return false;
 };
 
@@ -1535,6 +1537,7 @@ _SOKOL_PRIVATE void _saudio_alsa_backend_shutdown(void) {
     pthread_join(_saudio.backend.thread, 0);
     snd_pcm_drain(_saudio.backend.device);
     snd_pcm_close(_saudio.backend.device);
+    snd_config_update_free_global();
     _saudio_free(_saudio.backend.buffer);
 };
 

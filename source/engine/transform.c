@@ -40,11 +40,3 @@ HMM_Vec3 trans_left(const struct mTransform *trans)
 {
   return HMM_QVRot(vLEFT, trans->rotation);
 }
-
-#include "nuke.h"
-
-void trans_drawgui(struct mTransform *T) {
-  nuke_property_float3("Position", -1000.f, T->pos.Elements, 1000.f, 1.f, 1.f);
-  nuke_property_float3("Rotation", 0.f, T->rotation.Elements, 360.f, 1.f, 0.1f);
-  nuke_property_float("Scale", 0.f, &T->scale, 1000.f, 0.1f, 0.1f);
-}

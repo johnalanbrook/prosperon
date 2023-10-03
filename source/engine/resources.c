@@ -185,7 +185,7 @@ void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)
     unsigned vlen, vpos;
     vpos = cdb_datapos(cdb);
     vlen = cdb_datalen(cdb);
-    char *data = malloc(vlen);
+    char *data = malloc(vlen+1);
     cdb_read(cdb, data, vlen, vpos);
     if (size) *size = vlen;
     return data;

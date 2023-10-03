@@ -28,6 +28,8 @@ void script_draw();
 void duk_run_err();
 void js_dump_stack();
 
+void out_memusage(const char *f);
+
 void script_editor();
 void script_call(const char *f);
 void script_call_sym(JSValue sym);

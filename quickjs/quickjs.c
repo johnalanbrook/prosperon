@@ -44,9 +44,6 @@
 #include "list.h"
 #include "quickjs.h"
 #include "libregexp.h"
-
-#undef CONFIG_BIGNUM
-
 #ifdef CONFIG_BIGNUM
 #include "libbf.h"
 #endif
@@ -58,8 +55,6 @@
 #else
 #define DIRECT_DISPATCH  1
 #endif
-
-#define JS_TYPEDARRAY
 
 #if defined(__APPLE__)
 #define MALLOC_OVERHEAD  0
@@ -97,11 +92,11 @@
  */
 //#define DUMP_BYTECODE  (1)
 /* dump the occurence of the automatic GC */
-//#define DUMP_GC
+#define DUMP_GC
 /* dump objects freed by the garbage collector */
-//#define DUMP_GC_FREE
+#define DUMP_GC_FREE
 /* dump objects leaking when freeing the runtime */
-//#define DUMP_LEAKS  1
+#define DUMP_LEAKS  1
 /* dump memory usage before running the garbage collector */
 //#define DUMP_MEM
 //#define DUMP_OBJECTS    /* dump objects in JS_FreeContext */
@@ -1465,7 +1460,6 @@ static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_GeneratorFunction, js_bytecode_function_finalizer, js_bytecode_function_mark },  /* JS_CLASS_GENERATOR_FUNCTION */
     { JS_ATOM_ForInIterator, js_for_in_iterator_finalizer, js_for_in_iterator_mark },      /* JS_CLASS_FOR_IN_ITERATOR */
     { JS_ATOM_RegExp, js_regexp_finalizer, NULL },                              /* JS_CLASS_REGEXP */
-#ifdef JS_TYPEDARRAY    
     { JS_ATOM_ArrayBuffer, js_array_buffer_finalizer, NULL },                   /* JS_CLASS_ARRAY_BUFFER */
     { JS_ATOM_SharedArrayBuffer, js_array_buffer_finalizer, NULL },             /* JS_CLASS_SHARED_ARRAY_BUFFER */
     { JS_ATOM_Uint8ClampedArray, js_typed_array_finalizer, js_typed_array_mark }, /* JS_CLASS_UINT8C_ARRAY */
@@ -1475,16 +1469,13 @@ static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Uint16Array, js_typed_array_finalizer, js_typed_array_mark },     /* JS_CLASS_UINT16_ARRAY */
     { JS_ATOM_Int32Array, js_typed_array_finalizer, js_typed_array_mark },      /* JS_CLASS_INT32_ARRAY */
     { JS_ATOM_Uint32Array, js_typed_array_finalizer, js_typed_array_mark },     /* JS_CLASS_UINT32_ARRAY */
-
 #ifdef CONFIG_BIGNUM
     { JS_ATOM_BigInt64Array, js_typed_array_finalizer, js_typed_array_mark },   /* JS_CLASS_BIG_INT64_ARRAY */
     { JS_ATOM_BigUint64Array, js_typed_array_finalizer, js_typed_array_mark },  /* JS_CLASS_BIG_UINT64_ARRAY */
 #endif
-
     { JS_ATOM_Float32Array, js_typed_array_finalizer, js_typed_array_mark },    /* JS_CLASS_FLOAT32_ARRAY */
     { JS_ATOM_Float64Array, js_typed_array_finalizer, js_typed_array_mark },    /* JS_CLASS_FLOAT64_ARRAY */
     { JS_ATOM_DataView, js_typed_array_finalizer, js_typed_array_mark },        /* JS_CLASS_DATAVIEW */
-#endif    
 #ifdef CONFIG_BIGNUM
     { JS_ATOM_BigInt, js_object_data_finalizer, js_object_data_mark },      /* JS_CLASS_BIG_INT */
     { JS_ATOM_BigFloat, js_object_data_finalizer, js_object_data_mark },    /* JS_CLASS_BIG_FLOAT */
@@ -1492,20 +1483,16 @@ static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_BigDecimal, js_object_data_finalizer, js_object_data_mark },    /* JS_CLASS_BIG_DECIMAL */
     { JS_ATOM_OperatorSet, js_operator_set_finalizer, js_operator_set_mark },    /* JS_CLASS_OPERATOR_SET */
 #endif
-#ifdef JS_MAP
     { JS_ATOM_Map, js_map_finalizer, js_map_mark },             /* JS_CLASS_MAP */
     { JS_ATOM_Set, js_map_finalizer, js_map_mark },             /* JS_CLASS_SET */
     { JS_ATOM_WeakMap, js_map_finalizer, js_map_mark },         /* JS_CLASS_WEAKMAP */
     { JS_ATOM_WeakSet, js_map_finalizer, js_map_mark },         /* JS_CLASS_WEAKSET */
     { JS_ATOM_Map_Iterator, js_map_iterator_finalizer, js_map_iterator_mark }, /* JS_CLASS_MAP_ITERATOR */
     { JS_ATOM_Set_Iterator, js_map_iterator_finalizer, js_map_iterator_mark }, /* JS_CLASS_SET_ITERATOR */
-#endif
     { JS_ATOM_Array_Iterator, js_array_iterator_finalizer, js_array_iterator_mark }, /* JS_CLASS_ARRAY_ITERATOR */
     { JS_ATOM_String_Iterator, js_array_iterator_finalizer, js_array_iterator_mark }, /* JS_CLASS_STRING_ITERATOR */
     { JS_ATOM_RegExp_String_Iterator, js_regexp_string_iterator_finalizer, js_regexp_string_iterator_mark }, /* JS_CLASS_REGEXP_STRING_ITERATOR */
-#ifdef JS_PROMISE    
     { JS_ATOM_Generator, js_generator_finalizer, js_generator_mark }, /* JS_CLASS_GENERATOR */
-#endif
 };
 
 static int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
@@ -1661,9 +1648,7 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     rt->class_array[JS_CLASS_C_FUNCTION].call = js_call_c_function;
     rt->class_array[JS_CLASS_C_FUNCTION_DATA].call = js_c_function_data_call;
     rt->class_array[JS_CLASS_BOUND_FUNCTION].call = js_call_bound_function;
-#ifdef JS_PROMISE    
     rt->class_array[JS_CLASS_GENERATOR_FUNCTION].call = js_generator_function_call;
-#endif    
     if (init_shape_hash(rt))
         goto fail;
 
@@ -2173,13 +2158,13 @@ JSContext *JS_NewContext(JSRuntime *rt)
     JS_AddIntrinsicBaseObjects(ctx);
     JS_AddIntrinsicDate(ctx);
     JS_AddIntrinsicEval(ctx);
-//    JS_AddIntrinsicStringNormalize(ctx);
+    JS_AddIntrinsicStringNormalize(ctx);
     JS_AddIntrinsicRegExp(ctx);
     JS_AddIntrinsicJSON(ctx);
-//    JS_AddIntrinsicProxy(ctx);
-//    JS_AddIntrinsicMapSet(ctx);
-//    JS_AddIntrinsicTypedArrays(ctx);
-//    JS_AddIntrinsicPromise(ctx);
+    JS_AddIntrinsicProxy(ctx);
+    JS_AddIntrinsicMapSet(ctx);
+    JS_AddIntrinsicTypedArrays(ctx);
+    JS_AddIntrinsicPromise(ctx);
 #ifdef CONFIG_BIGNUM
     JS_AddIntrinsicBigInt(ctx);
 #endif
@@ -5432,11 +5417,9 @@ static void free_object(JSRuntime *rt, JSObject *p)
     p->shape = NULL;
     p->prop = NULL;
 
-#ifdef JS_MAP
     if (unlikely(p->first_weak_ref)) {
         reset_weak_ref(rt, p);
     }
-#endif
 
     finalizer = rt->class_array[p->class_id].finalizer;
     if (finalizer)
@@ -5664,7 +5647,6 @@ static void mark_children(JSRuntime *rt, JSGCObjectHeader *gp,
             JS_MarkValue(rt, *var_ref->pvalue, mark_func);
         }
         break;
-#ifdef JS_PROMISE	
     case JS_GC_OBJ_TYPE_ASYNC_FUNCTION:
         {
             JSAsyncFunctionData *s = (JSAsyncFunctionData *)gp;
@@ -5674,7 +5656,6 @@ static void mark_children(JSRuntime *rt, JSGCObjectHeader *gp,
             JS_MarkValue(rt, s->resolving_funcs[1], mark_func);
         }
         break;
-#endif
     case JS_GC_OBJ_TYPE_SHAPE:
         {
             JSShape *sh = (JSShape *)gp;
@@ -6844,10 +6825,8 @@ static int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
     if (throw_flag && JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
         return TRUE;
 
-#ifdef JS_PROXY
     if (unlikely(p->class_id == JS_CLASS_PROXY))
         return js_proxy_setPrototypeOf(ctx, obj, proto_val, throw_flag);
-#endif
     sh = p->shape;
     if (sh->proto == proto)
         return TRUE;
@@ -6937,8 +6916,6 @@ JSValue JS_GetPrototype(JSContext *ctx, JSValueConst obj)
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
         JSObject *p;
         p = JS_VALUE_GET_OBJ(obj);
-	
-#ifdef JS_PROXY	
         if (unlikely(p->class_id == JS_CLASS_PROXY)) {
             val = js_proxy_getPrototypeOf(ctx, obj);
         } else {
@@ -6948,13 +6925,6 @@ JSValue JS_GetPrototype(JSContext *ctx, JSValueConst obj)
             else
                 val = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
         }
-#else
-       p = p->shape->proto;
-            if (!p)
-                val = JS_NULL;
-            else
-                val = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
-#endif
     } else {
         val = JS_DupValue(ctx, JS_GetPrototypePrimitive(ctx, obj));
     }
@@ -7776,11 +7746,9 @@ int JS_IsExtensible(JSContext *ctx, JSValueConst obj)
     if (unlikely(JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT))
         return FALSE;
     p = JS_VALUE_GET_OBJ(obj);
-#ifdef JS_PROXY    
     if (unlikely(p->class_id == JS_CLASS_PROXY))
         return js_proxy_isExtensible(ctx, obj);
     else
-#endif
         return p->extensible;
 }
 
@@ -7792,10 +7760,8 @@ int JS_PreventExtensions(JSContext *ctx, JSValueConst obj)
     if (unlikely(JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT))
         return FALSE;
     p = JS_VALUE_GET_OBJ(obj);
-#ifdef JS_PROXY
     if (unlikely(p->class_id == JS_CLASS_PROXY))
         return js_proxy_preventExtensions(ctx, obj);
-#endif
     p->extensible = FALSE;
     return TRUE;
 }
@@ -12005,11 +11971,9 @@ int JS_IsArray(JSContext *ctx, JSValueConst val)
     JSObject *p;
     if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
         p = JS_VALUE_GET_OBJ(val);
-#ifdef JS_PROXY	
         if (unlikely(p->class_id == JS_CLASS_PROXY))
             return js_proxy_isArray(ctx, val);
         else
-#endif
             return p->class_id == JS_CLASS_ARRAY;
     } else {
         return FALSE;
@@ -15304,7 +15268,6 @@ static JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async)
 {
     JSValue method, ret, sync_iter;
 
-#ifdef JS_PROMISE
     if (is_async) {
         method = JS_GetProperty(ctx, obj, JS_ATOM_Symbol_asyncIterator);
         if (JS_IsException(method))
@@ -15321,9 +15284,7 @@ static JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async)
             JS_FreeValue(ctx, sync_iter);
             return ret;
         }
-    } else
-#endif    
-    {
+    } else {
         method = JS_GetProperty(ctx, obj, JS_ATOM_Symbol_iterator);
         if (JS_IsException(method))
             return method;
@@ -18788,7 +18749,6 @@ static JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
             realm = b->realm;
         }
         break;
-#ifdef JS_PROXY	
     case JS_CLASS_PROXY:
         {
             JSProxyData *s = p->u.opaque;
@@ -18802,7 +18762,6 @@ static JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
             }
         }
         break;
-#endif
     case JS_CLASS_BOUND_FUNCTION:
         {
             JSBoundFunction *bf = p->u.bound_function;
@@ -18926,7 +18885,6 @@ static JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
 }
 
 /* JSAsyncFunctionState (used by generator and async functions) */
-#ifdef JS_PROMISE
 static __exception int async_func_init(JSContext *ctx, JSAsyncFunctionState *s,
                                        JSValueConst func_obj, JSValueConst this_obj,
                                        int argc, JSValueConst *argv)
@@ -19807,7 +19765,6 @@ static JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst fun
     js_async_generator_free(ctx->rt, s);
     return JS_EXCEPTION;
 }
-#endif
 
 /* JS parser */
 
@@ -28310,14 +28267,12 @@ static JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier)
     JS_FreeAtom(ctx, basename);
     if (JS_IsException(basename_val))
         return basename_val;
-
-#ifdef JS_PROMISE
+    
     promise = JS_NewPromiseCapability(ctx, resolving_funcs);
     if (JS_IsException(promise)) {
         JS_FreeValue(ctx, basename_val);
         return promise;
     }
-#endif    
 
     args[0] = resolving_funcs[0];
     args[1] = resolving_funcs[1];
@@ -41757,17 +41712,13 @@ static const JSCFunctionListEntry js_string_proto_normalize[] = {
 };
 #endif
 
-
 void JS_AddIntrinsicStringNormalize(JSContext *ctx)
 {
-#ifdef JS_STRINGNORMALIZE
 #ifdef CONFIG_ALL_UNICODE
     JS_SetPropertyFunctionList(ctx, ctx->class_proto[JS_CLASS_STRING], js_string_proto_normalize,
                                countof(js_string_proto_normalize));
 #endif
-#endif
 }
-
 
 /* Math */
 
@@ -44461,7 +44412,6 @@ static const JSCFunctionListEntry js_reflect_obj[] = {
 };
 
 /* Proxy */
-#ifdef JS_PROXY
 
 static void js_proxy_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -45414,8 +45364,6 @@ void JS_AddIntrinsicProxy(JSContext *ctx)
                               obj1, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
 }
 
-#endif
-
 /* Symbol */
 
 static JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
@@ -45528,7 +45476,6 @@ static const JSCFunctionListEntry js_symbol_funcs[] = {
 };
 
 /* Set/Map/WeakSet/WeakMap */
-#ifdef JS_MAP
 
 typedef struct JSMapRecord {
     int ref_count; /* used during enumeration to avoid freeing the record */
@@ -46276,7 +46223,6 @@ static const uint8_t js_map_proto_funcs_count[6] = {
     countof(js_set_iterator_proto_funcs),
 };
 
-
 void JS_AddIntrinsicMapSet(JSContext *ctx)
 {
     int i;
@@ -46307,10 +46253,8 @@ void JS_AddIntrinsicMapSet(JSContext *ctx)
                                    js_map_proto_funcs_count[i + 4]);
     }
 }
-#endif
 
 /* Generator */
-#ifdef JS_PROMISE
 static const JSCFunctionListEntry js_generator_function_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "GeneratorFunction", JS_PROP_CONFIGURABLE),
 };
@@ -46323,7 +46267,6 @@ static const JSCFunctionListEntry js_generator_proto_funcs[] = {
 };
 
 /* Promise */
-
 
 typedef enum JSPromiseStateEnum {
     JS_PROMISE_PENDING,
@@ -47549,7 +47492,6 @@ static JSClassShortDef const js_async_class_def[] = {
     { JS_ATOM_AsyncGenerator, js_async_generator_finalizer, js_async_generator_mark },  /* JS_CLASS_ASYNC_GENERATOR */
 };
 
-
 void JS_AddIntrinsicPromise(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
@@ -47634,7 +47576,7 @@ void JS_AddIntrinsicPromise(JSContext *ctx)
                        0, JS_PROP_CONFIGURABLE);
     JS_FreeValue(ctx, obj1);
 }
-#endif
+
 /* URI handling */
 
 static int string_get_hex(JSString *p, int k, int n) {
@@ -51139,7 +51081,6 @@ void JS_AddIntrinsicBaseObjects(JSContext *ctx)
     }
 
     /* ES6 Generator */
-#ifdef JS_PROMISE
     ctx->class_proto[JS_CLASS_GENERATOR] = JS_NewObjectProto(ctx, ctx->iterator_proto);
     JS_SetPropertyFunctionList(ctx, ctx->class_proto[JS_CLASS_GENERATOR],
                                js_generator_proto_funcs,
@@ -51159,7 +51100,7 @@ void JS_AddIntrinsicBaseObjects(JSContext *ctx)
     JS_SetConstructor2(ctx, obj1, ctx->class_proto[JS_CLASS_GENERATOR_FUNCTION],
                        0, JS_PROP_CONFIGURABLE);
     JS_FreeValue(ctx, obj1);
-#endif
+
     /* global properties */
     ctx->eval_obj = JS_NewCFunction(ctx, js_global_eval, "eval", 1);
     JS_DefinePropertyValue(ctx, ctx->global_obj, JS_ATOM_eval,
@@ -51172,7 +51113,7 @@ void JS_AddIntrinsicBaseObjects(JSContext *ctx)
 }
 
 /* Typed Arrays */
-#ifdef JS_TYPEDARRAY
+
 static uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT] = {
     0, 0, 0, 1, 1, 2, 2,
 #ifdef CONFIG_BIGNUM
@@ -53538,7 +53479,7 @@ static const JSCFunctionListEntry js_dataview_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("setFloat64", 2, js_dataview_setValue, JS_CLASS_FLOAT64_ARRAY ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "DataView", JS_PROP_CONFIGURABLE ),
 };
-#endif
+
 /* Atomics */
 #ifdef CONFIG_ATOMICS
 
@@ -54031,11 +53972,8 @@ void JS_AddIntrinsicAtomics(JSContext *ctx)
     JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_atomics_obj, countof(js_atomics_obj));
 }
 
-#endif
+#endif /* CONFIG_ATOMICS */
 
-/* CONFIG_ATOMICS */
-
-#ifdef JS_TYPEDARRAY
 void JS_AddIntrinsicTypedArrays(JSContext *ctx)
 {
     JSValue typed_array_base_proto, typed_array_base_func;
@@ -54121,4 +54059,3 @@ void JS_AddIntrinsicTypedArrays(JSContext *ctx)
     JS_AddIntrinsicAtomics(ctx);
 #endif
 }
-#endif

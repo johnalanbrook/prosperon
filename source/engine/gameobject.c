@@ -4,7 +4,6 @@
 #include "debugdraw.h"
 #include "input.h"
 #include "log.h"
-#include "nuke.h"
 #include "resources.h"
 #include "script.h"
 #include "shader.h"
@@ -250,68 +249,6 @@ void gameobject_setpos(struct gameobject *go, cpVect vec) {
   cpBodySetPosition(go->body, vec);
 
   phys2d_reindex_body(go->body);
-}
-
-void object_gui(struct gameobject *go) {
-  /*
-      float temp_pos[2];
-      draw_cppoint(cpBodyGetPosition(go->body), 3);
-
-      nuke_property_float2("Position", -1000000.f, temp_pos, 1000000.f, 1.f, 0.5f);
-
-      cpVect tvect = { temp_pos[0], temp_pos[1] };
-      cpBodySetPosition(go->body, tvect);
-
-      float mtry = cpBodyGetAngle(go->body);
-      float modtry = fmodf(mtry * RAD2DEGS, 360.f);
-      if (modtry < 0.f)
-        modtry += 360.f;
-
-      float modtry2 = modtry;
-      nuke_property_float("Angle", -1000.f, &modtry, 1000.f, 0.5f, 0.5f);
-      modtry -= modtry2;
-      cpBodySetAngle(go->body, mtry + (modtry * DEG2RADS));
-
-      nuke_property_float("Scale", 0.f, &go->scale, 1000.f, 0.01f, go->scale * 0.01f);
-
-      nuke_nel(3);
-      nuke_radio_btn("Static", &go->bodytype, CP_BODY_TYPE_STATIC);
-      nuke_radio_btn("Dynamic", &go->bodytype, CP_BODY_TYPE_DYNAMIC);
-      nuke_radio_btn("Kinematic", &go->bodytype, CP_BODY_TYPE_KINEMATIC);
-
-      cpBodySetType(go->body, go->bodytype);
-
-      if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
-           nuke_property_float("Mass", 0.01f, &go->mass, 1000.f, 0.01f, 0.01f);
-          cpBodySetMass(go->body, go->mass);
-      }
-
-      nuke_property_float("Friction", 0.f, &go->f, 10.f, 0.01f, 0.01f);
-      nuke_property_float("Elasticity", 0.f, &go->e, 2.f, 0.01f, 0.01f);
-
-      int n = -1;
-
-
-
-      for (int i = 0; i < arrlen(go->components); i++) {
-          struct component *c = &go->components[i];
-
-           comp_draw_debug(c);
-
-       nuke_nel(5);
-       if (nuke_btn("Del")) n = i;
-
-       if (nuke_push_tree_id(c->ref->name, i)) {
-              comp_draw_gui(c);
-              nuke_tree_pop();
-          }
-
-
-      }
-
-      if (n >= 0)
-          gameobject_delcomponent(go, n);
-  */
 }
 
 void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {

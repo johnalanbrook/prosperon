@@ -311,8 +311,10 @@ var gameobject = {
 	var objects = {};
 	this.ur.objects ??= {};
 	if (!Object.keys(this.objects).equal(Object.keys(this.ur.objects))) {
-	  for (var o in this.objects)
+	  for (var o in this.objects) {
 	    objects[o] = this.objects[o].transform_obj();
+	    objects[o].ur = this.objects[o].ur.toString();
+	  }
 	} else {
 	  for (var o in this.objects) {
 	    var obj = this.objects[o].json_obj();
@@ -446,6 +448,7 @@ var gameobject = {
       for (var prop in ur.objects) {
         var o = ur.objects[prop];
         var newobj = obj.spawn(prototypes.get_ur(o.ur));
+	if (!newobj) continue;
 	obj.rename_obj(newobj.toString(), prop);
       }
     }
@@ -642,6 +645,10 @@ prototypes.file2ur = function(file)
 */
 prototypes.get_ur = function(name)
 {
+  if (!name) {
+    Log.warn(`Can't get ur from an undefined.`);
+    return;
+  }
   var urpath = name;
   if (urpath.includes('/'))
     urpath = prototypes.file2ur(name);

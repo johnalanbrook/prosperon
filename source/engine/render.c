@@ -7,7 +7,6 @@
 #include "font.h"
 #include "gameobject.h"
 #include "log.h"
-#include "nuke.h"
 #include "shader.h"
 #include "sprite.h"
 #include "window.h"
@@ -283,10 +282,6 @@ void render_init() {
   debugdraw_init();
   sprite_initialize();
 
-  #ifndef NO_EDITOR
-  nuke_init(&mainwin);
-  #endif
-  
   model_init();
   sg_color c;
   rgba2floats(&c, editorClearColor);
@@ -519,19 +514,11 @@ void full_2d_pass(struct window *window)
 
   ////// TEXT && GUI
   debug_nextpass();
-  #ifndef NO_EDITOR
-  nuke_start();
-  #endif
   
   call_gui();
   debug_flush(&hudproj);
   text_flush(&hudproj);
   sprite_flush();
-
-  #ifndef NO_EDITOR
-  call_nk_gui();
-  nuke_end();
-  #endif
 }
 
 void full_3d_pass(struct window *window)

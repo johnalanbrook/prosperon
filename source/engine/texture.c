@@ -174,6 +174,9 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   shput(texhash, path, tex);
 
+  for (int i = 1; i < mips; i++)
+    free(mipdata[i]);
+
   return tex;
 }
 

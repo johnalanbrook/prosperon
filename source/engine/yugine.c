@@ -34,10 +34,6 @@
 
 #include "string.h"
 
-#ifndef NO_EDITOR
-#include "nuke.h"
-#endif
-
 #include "render.h"
 
 #include "sokol/sokol_app.h"
@@ -116,7 +112,7 @@ void seghandle(int sig) {
   if (strsignal(sig))
     YughCritical("CRASH! Signal: %s.", strsignal(sig));
 
-  print_stacktrace();
+//  print_stacktrace();
 
   exit(1);
 #endif
@@ -189,14 +185,14 @@ void c_frame()
 
 void c_clean() {
   gif_rec_end("out.gif");
+  out_memusage("jsmem.txt");
+  script_stop();
+  saudio_shutdown();
+  sg_shutdown();
 };
 
 void c_event(const sapp_event *e)
 {
-  #ifndef NO_EDITOR
-  snk_handle_event(e);
-  #endif
-
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
       input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);

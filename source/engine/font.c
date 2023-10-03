@@ -118,7 +118,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
 
-  unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
+  unsigned char *ttf_buffer = slurp_text(fontfile, NULL);
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_packedchar glyphs[95];
@@ -150,8 +150,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
           .ptr = bitmap,
           .size = packsize * packsize}});
 
-  free(ttf_buffer);
-  free(bitmap);
 
   for (unsigned char c = 32; c < 127; c++) {
     stbtt_packedchar glyph = glyphs[c - 32];
@@ -172,6 +170,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     newfont->Characters[c].Bearing[1] = glyph.yoff2;
     newfont->Characters[c].rect = r;
   }
+
+  free(ttf_buffer);
+  free(bitmap);
 
   return newfont;
 }
@@ -243,48 +244,39 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
 {
   HMM_Vec2 cursor = {0,0};
   const unsigned char *c = text;
-  const unsigned char *wordstart;
+  const unsigned char *line, *wordstart, *drawstart;
+  line = drawstart = (unsigned char *)text;
 
-  while (*c != '\0') {
-    if (isblank(*c)) {
-      cursor.X += font->Characters[*c].Advance * tracking * scale;
-      c++;
-    } else if (isspace(*c)) {
+  while (*line != '\0') {
+    if (isblank(*line)) {
+      cursor.X += font->Characters[*line].Advance * tracking * scale;
+      line++;
+    } else if (isspace(*line)) {
       cursor.Y -= scale * font->linegap;
       cursor.X = 0;
-      c++;
+      line++;
     } else {
-      wordstart = c;
-      int wordwidth = 0;
+      wordstart = line;
+      int wordWidth = 0;
 
-      while (!isspace(*c) && *c != '\0') {
-        wordwidth += font->Characters[*c].Advance * tracking * scale;
-	c++;
+      while (!isspace(*line) && *line != '\0') {
+        wordWidth += font->Characters[*line].Advance * tracking * scale; 
+       line++;
       }
 
-      if (lw > 0 && (cursor.X + wordwidth) >= lw) {
+      if (lw > 0 && (cursor.X + wordWidth) >= lw) {
         cursor.X = 0;
-	cursor.Y -= scale * font->linegap;
+        cursor.Y -= scale * font->linegap;
       }
 
-      while (wordstart < c) {
+      while (wordstart < line) {
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
-	wordstart++;
+        wordstart++;
       }
     }
   }
-
-  float height = cursor.Y + (font->height*scale);
-  float width = lw > 0 ? lw : cursor.X;
-
-  struct boundingbox bb = {};
-  bb.l = 0;
-  bb.t = font->ascent * font->emscale * scale;
-  bb.b = font->descent * font->emscale * scale;
-  bb.r = cursor.X;
-  return bb;
-
-  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){width,height});
+  
+  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){cursor.X,-cursor.Y});
 }
 
 /* pos given in screen coordinates */

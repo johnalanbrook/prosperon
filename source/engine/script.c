@@ -49,6 +49,17 @@ void script_startup() {
 //  jso_file("scripts/engine.js");
 }
 
+void script_stop()
+{
+  JS_RunGC(rt);
+  JS_FreeRuntime(rt);
+}
+
+void script_gc()
+{
+  JS_RunGC(rt);
+}
+
 JSValue num_cache[100] = {0};
 
 int js_print_exception(JSValue v) {
@@ -56,9 +67,10 @@ int js_print_exception(JSValue v) {
   if (JS_IsException(v)) {
     JSValue exception = JS_GetException(js);
     
-    /* TODO: Does it need freed if null? */
-    if (JS_IsNull(exception))
+    if (JS_IsNull(exception)) {
+      JS_FreeValue(js,exception);
       return 0;
+    }
       
     JSValue val = JS_GetPropertyStr(js, exception, "stack");
     const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
@@ -125,7 +137,8 @@ void js_dump_stack() {
 }
 
 int script_dofile(const char *file) {
-  script_runfile(file);
+  JSValue ret = script_runfile(file);
+  JS_FreeValue(js,ret);
   return file_mod_secs(file);
 }
 
@@ -185,6 +198,15 @@ void script_call_sym(JSValue sym) {
   c.fn = sym;
   c.obj = JS_GetGlobalObject(js);
   call_callee(&c);
+}
+
+void out_memusage(const char *file)
+{
+  FILE *f = fopen(file, "w");
+  JSMemoryUsage jsmem;
+  JS_ComputeMemoryUsage(rt, &jsmem);
+  JS_DumpMemoryUsage(f, &jsmem, rt);
+  fclose(f);
 }
 
 JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)

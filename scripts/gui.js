@@ -1,13 +1,23 @@
 var GUI = {
-  text(str, pos, size, color, wrap) {
+  text(str, pos, size, color, wrap, anchor) {
     size ??= 1;
     color ??= Color.white;
     wrap ??= -1;
+    anchor ??= [0,1];
 
     var bb = cmd(118, str, size, wrap);
-    var opos = [bb.r, bb.t];
-        
-    var h = ui_text(str, pos, size, color, wrap);
+    var w = bb.r*2;
+    var h = bb.t*2;
+
+    //ui_text draws with an anchor on top left corner
+    var p = pos.slice();
+    p.x -= w * anchor.x;
+    bb.r += (w*anchor.x);
+    bb.l += (w*anchor.x);
+    p.y += h * (1 - anchor.y);
+    bb.t += h*(1-anchor.y);
+    bb.b += h*(1-anchor.y);
+    ui_text(str, p, size, color, wrap);
 
     return bb;
   },

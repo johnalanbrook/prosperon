@@ -2,7 +2,6 @@
 
 #include "debug.h"
 #include "gameobject.h"
-#include "nuke.h"
 #include <string.h>
 
 #include "debugdraw.h"
@@ -101,6 +100,8 @@ int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n) {
     if (cpBBContainsVect(bbox, points[i]))
       arrpush(qhits, i);
   }
+
+  cpShapeFree(box);
 
   return qhits;
 }

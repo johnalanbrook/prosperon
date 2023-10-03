@@ -44,6 +44,18 @@ static JSValue globalThis;
       (byte & 0x02 ? '1' : '0'), \
       (byte & 0x01 ? '1' : '0')
 
+void js_setprop_str(JSValue obj, const char *prop, JSValue v)
+{
+  JS_SetPropertyStr(js, obj, prop, v);
+//  JS_FreeValue(js,v);
+}
+
+void js_setprop_num(JSValue obj, uint32_t i, JSValue v)
+{
+  JS_SetPropertyUint32(js, obj, i, v);
+//  JS_FreeValue(js,v);
+}
+
 JSValue js_getpropstr(JSValue v, const char *str)
 {
   JSValue p = JS_GetPropertyStr(js,v,str);
@@ -84,7 +96,7 @@ JSValue strarr2js(const char **c)
 {
   JSValue arr = JS_NewArray(js);
   for (int i = 0; i < arrlen(c); i++)
-    JS_SetPropertyUint32(js, arr, i, JS_NewString(js, c[i]));
+    js_setprop_num(arr,i,JS_NewString(js, c[i]));
 
   return arr;
 }
@@ -169,6 +181,9 @@ struct rgba js2color(JSValue v) {
     .a = a*RGBA_MAX,
   };
 
+  for (int i = 0; i < 4; i++)
+    JS_FreeValue(js,c[i]);
+
   return color;
 }
 
@@ -201,22 +216,24 @@ cpBitmask js2bitmask(JSValue v) {
   return mask;
 }
 
+cpVect *cpvecarr = NULL;
+
 cpVect *js2cpvec2arr(JSValue v) {
+  if (cpvecarr)
+    arrfree(cpvecarr);
+    
   int n = js_arrlen(v);
-  cpVect *points = NULL;
 
   for (int i = 0; i < n; i++)
-    arrput(points, js2vec2(js_getpropidx( v, i)));
+    arrput(cpvecarr, js2vec2(js_getpropidx( v, i)));
 
-  return points;
+  return cpvecarr;
 }
 
 JSValue bitmask2js(cpBitmask mask) {
   JSValue arr = JS_NewArray(js);
-  for (int i = 0; i < 11; i++) {
-    int on = mask & 1 << i;
-    JS_SetPropertyUint32(js, arr, i, JS_NewBool(js, on));
-  }
+  for (int i = 0; i < 11; i++)
+    js_setprop_num(arr,i,JS_NewBool(js,mask & 1 << i));
 
   return arr;
 }
@@ -228,8 +245,8 @@ void vec2float(cpVect v, float *f) {
 
 JSValue vec2js(cpVect v) {
   JSValue array = JS_NewArray(js);
-  JS_SetPropertyInt64(js, array, 0, JS_NewFloat64(js, v.x));
-  JS_SetPropertyInt64(js, array, 1, JS_NewFloat64(js, v.y));
+  js_setprop_num(array,0,JS_NewFloat64(js,v.x));
+  js_setprop_num(array,1,JS_NewFloat64(js,v.y));
   return array;
 }
 
@@ -242,7 +259,8 @@ JSValue v22js(HMM_Vec2 v)
 JSValue vecarr2js(cpVect *points, int n) {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < n; i++)
-    JS_SetPropertyInt64(js, array, i, vec2js(points[i]));
+    js_setprop_num(array,i,vec2js(points[i]));
+    
   return array;
 }
 
@@ -297,130 +315,25 @@ struct rect js2rect(JSValue v) {
   return rect;
 }
 
+
 JSValue rect2js(struct rect rect) {
   JSValue obj = JS_NewObject(js);
-  JS_SetPropertyStr(js, obj, "x", JS_NewFloat64(js, rect.x));
-  JS_SetPropertyStr(js, obj, "y", JS_NewFloat64(js, rect.y));
-  JS_SetPropertyStr(js, obj, "w", JS_NewFloat64(js, rect.w));
-  JS_SetPropertyStr(js, obj, "h", JS_NewFloat64(js, rect.h));
+  js_setprop_str(obj, "x", JS_NewFloat64(js, rect.x));
+  js_setprop_str(obj, "y", JS_NewFloat64(js, rect.y));
+  js_setprop_str(obj, "w", JS_NewFloat64(js, rect.w));
+  js_setprop_str(obj, "h", JS_NewFloat64(js, rect.h));
   return obj;
 }
 
 JSValue bb2js(struct boundingbox bb)
 {
   JSValue obj = JS_NewObject(js);
-  JS_SetPropertyStr(js,obj,"t", JS_NewFloat64(js,bb.t));
-  JS_SetPropertyStr(js,obj,"b", JS_NewFloat64(js,bb.b));
-  JS_SetPropertyStr(js,obj,"r", JS_NewFloat64(js,bb.r));
-  JS_SetPropertyStr(js,obj,"l", JS_NewFloat64(js,bb.l));
+  js_setprop_str(obj,"t", JS_NewFloat64(js,bb.t));
+  js_setprop_str(obj,"b", JS_NewFloat64(js,bb.b));
+  js_setprop_str(obj,"r", JS_NewFloat64(js,bb.r));
+  js_setprop_str(obj,"l", JS_NewFloat64(js,bb.l));
   return obj;
 }
-
-
-#ifndef NO_EDITOR
-
-#include "nuke.h"
-JSValue duk_nuke(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
-  float editnum;
-  int editint;
-  char textbox[130];
-  const char *str = NULL;
-
-  if (JS_IsString(argv[1]))
-    str = JS_ToCString(js, argv[1]);
-  else {
-    JSValue tostr = JS_ToString(js, argv[1]);
-    str = JS_ToCString(js, argv[1]);
-    JS_FreeValue(js, tostr);
-  }
-
-  struct rect rect = (struct rect){0, 0, 0, 0};
-  JSValue ret = JS_NULL;
-
-  switch (cmd) {
-  case 0:
-    rect = js2rect(argv[2]);
-    nuke_begin(str, rect);
-    break;
-
-  case 1:
-    nuke_stop();
-    break;
-
-  case 2:
-    editnum = js2number(argv[2]);
-    nuke_property_float(str, js2number(argv[3]), &editnum, js2number(argv[4]), js2number(argv[5]), js2number(argv[5]));
-    ret = JS_NewFloat64(js, editnum);
-    break;
-
-  case 3:
-    nuke_nel(js2number(argv[1]));
-    break;
-
-  case 4:
-    editint = JS_ToBool(js, argv[2]);
-    nuke_checkbox(str, &editint);
-    ret = JS_NewBool(js, editint);
-    break;
-
-  case 5:
-    nuke_label(str);
-    break;
-
-  case 6:
-    ret = JS_NewBool(js, nuke_btn(str));
-    break;
-
-  case 7:
-    strncpy(textbox, str, 130);
-    nuke_edit_str(textbox);
-    ret = JS_NewString(js, textbox);
-    break;
-
-  case 8:
-    nuke_img(str);
-    break;
-
-  case 9:
-    editint = js2int(argv[2]);
-    nuke_radio_btn(str, &editint, js2int(argv[3]));
-    ret = JS_NewInt64(js, editint);
-    break;
-
-  case 10:
-    rect = nuke_win_get_bounds();
-    ret = rect2js(rect);
-    break;
-
-  case 11:
-    ret = JS_NewBool(js, nuke_push_tree_id(str, js2int(argv[2])));
-    break;
-
-  case 12:
-    nuke_tree_pop();
-    return JS_NULL;
-
-  case 13:
-    nuke_row(js2int(argv[1]));
-    break;
-
-  case 14:
-    nuke_scrolltext(str);
-    break;
-
-  case 15:
-    nuke_nel_h(js2int(argv[1]), js2int(argv[2]));
-    break;
-  }
-
-  if (str)
-    JS_FreeCString(js, str);
-
-  return ret;
-}
-
-#endif
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   static_assert(sizeof(tsReal) * 2 == sizeof(cpVect));
@@ -463,9 +376,9 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
   for (int i = 0; i < nsamples; i++) {
     JSValue psample = JS_NewArray(js);
-    JS_SetPropertyUint32(js, psample, 0, float2js(samples[i].x));
-    JS_SetPropertyUint32(js, psample, 1, float2js(samples[i].y));
-    JS_SetPropertyUint32(js, arr, i, psample);
+    js_setprop_num(psample, 0, float2js(samples[i].x));
+    js_setprop_num(psample, 1, float2js(samples[i].y));
+    js_setprop_num(arr, i, psample);
   }
 
   ts_bspline_free(&spline);
@@ -476,7 +389,7 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
 JSValue ints2js(int *ints) {
   JSValue arr = JS_NewArray(js);
   for (int i = 0; i < arrlen(ints); i++)
-    JS_SetPropertyUint32(js, arr, i, int2js(ints[i]));
+    js_setprop_num(arr,i,int2js(ints[i]));
 
   return arr;
 }
@@ -557,6 +470,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   int cmd = js2int(argv[0]);
   const char *str = NULL;
   const char *str2 = NULL;
+  const void *d1 = NULL;
+  const void *d2 = NULL;
   JSValue ret = JS_NULL;
 
   switch (cmd) {
@@ -652,14 +567,16 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 21:
-    return JS_NewBool(js, shape_get_sensor(js2ptr(argv[1])));
+    ret = JS_NewBool(js, shape_get_sensor(js2ptr(argv[1])));
+    break;
 
   case 22:
     shape_enabled(js2ptr(argv[1]), JS_ToBool(js, argv[2]));
     break;
 
   case 23:
-    return JS_NewBool(js, shape_is_enabled(js2ptr(argv[1])));
+    ret = JS_NewBool(js, shape_is_enabled(js2ptr(argv[1])));
+    break;
 
   case 24:
     timer_pause(js2timer(argv[1]));
@@ -682,43 +599,48 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 29:
-    return JS_NewFloat64(js, js2timer(argv[1])->interval);
+    ret = JS_NewFloat64(js, js2timer(argv[1])->interval);
+    break;
 
   case 30:
     sprite_setanim(id2sprite(js2int(argv[1])), js2ptr(argv[2]), js2int(argv[3]));
-    return JS_NULL;
+    break;
 
   case 31:
     free(js2ptr(argv[1]));
     break;
 
   case 32:
-    return JS_NewFloat64(js, js2timer(argv[1])->remain_time);
+    ret = JS_NewFloat64(js, js2timer(argv[1])->remain_time);
+    break;
 
   case 33:
-    return JS_NewBool(js, js2timer(argv[1])->on);
+    ret = JS_NewBool(js, js2timer(argv[1])->on);
+    break;
 
   case 34:
-    return JS_NewBool(js, js2timer(argv[1])->repeat);
+    ret = JS_NewBool(js, js2timer(argv[1])->repeat);
+    break;
 
   case 35:
     js2timer(argv[1])->repeat = JS_ToBool(js, argv[2]);
-    return JS_NULL;
+    break;
 
   case 36:
     id2go(js2int(argv[1]))->scale = js2number(argv[2]);
     gameobject_apply(id2go(js2int(argv[1])));
     cpSpaceReindexShapesForBody(space, id2go(js2int(argv[1]))->body);
-    return JS_NULL;
+    break;
 
   case 37:
-    if (!id2sprite(js2int(argv[1]))) return JS_NULL;
+    if (!id2sprite(js2int(argv[1]))) break;
     id2sprite(js2int(argv[1]))->pos = js2hmmv2(argv[2]);
     break;
 
   case 38:
     str = JS_ToCString(js, argv[1]);
-    ret = JS_NewString(js, slurp_text(str, NULL));
+    d1 = slurp_text(str,NULL);
+    ret = JS_NewString(js, d1);
     break;
 
   case 39:
@@ -738,68 +660,79 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 42:
-    return bitmask2js(id2go(js2int(argv[1]))->filter.categories);
+    ret = bitmask2js(id2go(js2int(argv[1]))->filter.categories);
+    break;
 
   case 43:
-    return bitmask2js(id2go(js2int(argv[1]))->filter.mask);
+    ret = bitmask2js(id2go(js2int(argv[1]))->filter.mask);
+    break;
 
   case 44:
-    return JS_NewInt64(js, pos2gameobject(js2vec2(argv[1])));
+    ret = JS_NewInt64(js, pos2gameobject(js2vec2(argv[1])));
+    break;
 
   case 45:
-    return vec2js(mouse_pos);
+    ret = vec2js(mouse_pos);
+    break;
 
   case 46:
     set_mouse_mode(js2int(argv[1]));
-    return JS_NULL;
+    break;
 
   case 47:
     draw_grid(js2number(argv[1]), js2number(argv[2]), js2color(argv[3]));
-    return JS_NULL;
+    break;
 
   case 48:
-    return JS_NewInt64(js, mainwin.width);
+    ret = JS_NewInt64(js, mainwin.width);
+    break;
 
   case 49:
-    return JS_NewInt64(js, mainwin.height);
+    ret = JS_NewInt64(js, mainwin.height);
+    break;
 
   case 50:
-    return JS_NewBool(js, action_down(js2int(argv[1])));
+    ret = JS_NewBool(js, action_down(js2int(argv[1])));
+    break;
 
   case 51:
     draw_cppoint(js2vec2(argv[1]), js2number(argv[2]), js2color(argv[3]));
-    return JS_NULL;
+    break;
 
   case 52:
-    return ints2js(phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2])));
+    ret = ints2js(phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2])));
+    break;
 
   case 53:
     draw_box(js2vec2(argv[1]), js2vec2(argv[2]), js2color(argv[3]));
-    return JS_NULL;
+    break;
 
   case 54:
     gameobject_apply(js2go(argv[1]));
-    return JS_NULL;
+    break;
 
   case 55:
     js2go(argv[1])->flipx = JS_ToBool(js, argv[2]) ? -1 : 1;
-    return JS_NULL;
+    break;
 
   case 56:
     js2go(argv[1])->flipy = JS_ToBool(js, argv[2]) ? -1 : 1;
-    return JS_NULL;
+    break;
 
   case 57:
-    return JS_NewBool(js, js2go(argv[1])->flipx == -1 ? 1 : 0);
+    ret = JS_NewBool(js, js2go(argv[1])->flipx == -1 ? 1 : 0);
+    break;
 
   case 58:
-    return JS_NewBool(js, js2go(argv[1])->flipy == -1 ? 1 : 0);
+    ret = JS_NewBool(js, js2go(argv[1])->flipy == -1 ? 1 : 0);
+    break;
 
   case 59:
-    return JS_NewInt64(js, point2segindex(js2vec2(argv[1]), js2cpvec2arr(argv[2]), js2number(argv[3])));
+    ret = JS_NewInt64(js, point2segindex(js2vec2(argv[1]), js2cpvec2arr(argv[2]), js2number(argv[3])));
+    break;
 
   case 60:
-    if (!id2sprite(js2int(argv[1]))) return JS_NULL;
+    if (!id2sprite(js2int(argv[1]))) break;
     id2sprite(js2int(argv[1]))->layer = js2int(argv[2]);
     break;
 
@@ -812,7 +745,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 63:
-    return JS_NewFloat64(js, deltaT);
+    ret = JS_NewFloat64(js, deltaT);
+    break;
 
   case 64:
     str = JS_ToCString(js, argv[1]);
@@ -841,28 +775,32 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 70:
-    return vec2js(world2go(js2go(argv[1]), js2vec2(argv[2])));
+    ret = vec2js(world2go(js2go(argv[1]), js2vec2(argv[2])));
+    break;
 
   case 71:
-    return vec2js(go2world(js2go(argv[1]), js2vec2(argv[2])));
+    ret = vec2js(go2world(js2go(argv[1]), js2vec2(argv[2])));
+    break;
 
   case 72:
-    return vec2js(cpSpaceGetGravity(space));
+    ret = vec2js(cpSpaceGetGravity(space));
+    break;
 
   case 73:
     cpSpaceSetDamping(space, js2number(argv[1]));
-    return JS_NULL;
+    break;
 
   case 74:
-    return JS_NewFloat64(js, cpSpaceGetDamping(space));
+    ret = JS_NewFloat64(js, cpSpaceGetDamping(space));
+    break;
 
   case 75:
     js2go(argv[1])->layer = js2int(argv[2]);
-    return JS_NULL;
+    break;
 
   case 76:
     set_cat_mask(js2int(argv[1]), js2bitmask(argv[2]));
-    return JS_NULL;
+    break;
 
   case 77:
     break;
@@ -871,31 +809,36 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 79:
-    return JS_NewBool(js, phys_stepping());
+    ret = JS_NewBool(js, phys_stepping());
+    break;
 
   case 80:
-    return ints2js(phys2d_query_shape(js2ptr(argv[1])));
+    ret = ints2js(phys2d_query_shape(js2ptr(argv[1])));
+    break;
 
   case 81:
     draw_arrow(js2vec2(argv[1]), js2vec2(argv[2]), js2color(argv[3]), js2int(argv[4]));
-    return JS_NULL;
+    break;
 
   case 82:
     gameobject_draw_debug(js2int(argv[1]));
-    return JS_NULL;
+    break;
 
   case 83:
     draw_edge(js2cpvec2arr(argv[1]), js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, 0, js2color(argv[2]), 10);
-    return JS_NULL;
+    break;
 
   case 84:
-    return JS_NewString(js, consolelog);
+    ret = JS_NewString(js, consolelog);
+    break;
 
   case 85:
-    return vec2js(cpvproject(js2vec2(argv[1]), js2vec2(argv[2])));
+    ret = vec2js(cpvproject(js2vec2(argv[1]), js2vec2(argv[2])));
+    break;
 
   case 86:
-    return ints2js(phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4])));
+    ret = ints2js(phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4])));
+    break;
 
   case 87:
     str = JS_ToCString(js, argv[1]);
@@ -904,11 +847,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 88:
 //    mini_music_pause();
-    return JS_NULL;
+    break;
 
   case 89:
 //    mini_music_stop();
-    return JS_NULL;
+    break;
 
   case 90:
     str = JS_ToCString(js, argv[1]);
@@ -969,48 +912,60 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
     
   case 103:
-    return num2js(js2go(argv[1])->scale);
+    ret = num2js(js2go(argv[1])->scale);
+    break;
 
   case 104:
-    return bool2js(js2go(argv[1])->flipx == -1 ? 1 : 0);
+    ret = bool2js(js2go(argv[1])->flipx == -1 ? 1 : 0);
+    break;
 
   case 105:
-    return bool2js(js2go(argv[1])->flipy == -1 ? 1 : 0);
+    ret = bool2js(js2go(argv[1])->flipy == -1 ? 1 : 0);
+    break;
 
   case 106:
     js2go(argv[1])->e = js2number(argv[2]);
     break;
 
   case 107:
-    return num2js(js2go(argv[1])->e);
+    ret = num2js(js2go(argv[1])->e);
+    break;
 
   case 108:
     js2go(argv[1])->f = js2number(argv[2]);
     break;
+    
   case 109:
-    return num2js(js2go(argv[1])->f);
+    ret = num2js(js2go(argv[1])->f);
+    break;
+    
   case 110:
-    return num2js(js2go(argv[1])->e);
+    ret = num2js(js2go(argv[1])->e);
+    break;
 
     case 111:
-      return v22js(js2sprite(argv[1])->pos);
+      ret = v22js(js2sprite(argv[1])->pos);
+      break;
 
     case 112:
-      return num2js(((struct phys2d_edge*)js2ptr(argv[1]))->thickness);
+      ret = num2js(((struct phys2d_edge*)js2ptr(argv[1]))->thickness);
+      break;
 
     case 113:
       js2go(argv[1])->ref = JS_DupValue(js,argv[2]);
       break;
 
     case 114:
-      return bool2js(js2sprite(argv[1])->enabled);
+      ret = bool2js(js2sprite(argv[1])->enabled);
+      break;
 
     case 115:
       draw_circle(js2vec2(argv[1]), js2number(argv[2]), js2number(argv[2]), js2color(argv[3]), -1);
       break;
 
     case 116:
-      return str2js(tex_get_path(js2sprite(argv[1])->tex));
+      ret = str2js(tex_get_path(js2sprite(argv[1])->tex));
+      break;
       
     case 117:
       str = JS_ToCString(js, argv[1]);
@@ -1031,7 +986,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = str2js(engine_info());
       break;
     case 121:
-      return num2js(get_timescale());
+      ret = num2js(get_timescale());
       break;
     case 122:
       break;
@@ -1117,8 +1072,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   if (str2)
     JS_FreeCString(js, str2);
 
-  if (!JS_IsNull(ret))
+  if (d1) free(d1);
+  if (d2) free(d2);
+
+  if (!JS_IsNull(ret)) {
     return ret;
+  }
 
   return JS_NULL;
 }
@@ -1392,7 +1351,7 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
 
 JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   JSValue sprite = JS_NewObject(js);
-  JS_SetPropertyStr(js,sprite,"id",JS_NewInt64(js, make_sprite(js2int(argv[0]))));
+  js_setprop_str(sprite,"id",JS_NewInt64(js, make_sprite(js2int(argv[0]))));
   return sprite;
 }
 
@@ -1423,8 +1382,8 @@ JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
   phys2d_applybox(box);
 
   JSValue boxval = JS_NewObject(js);
-  JS_SetPropertyStr(js, boxval, "id", ptr2js(box));
-  JS_SetPropertyStr(js, boxval, "shape", ptr2js(&box->shape));
+  js_setprop_str(boxval, "id", ptr2js(box));
+  js_setprop_str(boxval, "shape", ptr2js(&box->shape));
   return boxval;
 }
 
@@ -1463,8 +1422,8 @@ JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCon
   struct phys2d_circle *circle = Make2DCircle(go);
 
   JSValue circleval = JS_NewObject(js);
-  JS_SetPropertyStr(js, circleval, "id", ptr2js(circle));
-  JS_SetPropertyStr(js, circleval, "shape", ptr2js(&circle->shape));
+  js_setprop_str(circleval, "id", ptr2js(circle));
+  js_setprop_str(circleval, "shape", ptr2js(&circle->shape));
   return circleval;
 }
 
@@ -1500,8 +1459,8 @@ JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   phys2d_poly_setverts(poly, js2cpvec2arr(argv[1]));
 
   JSValue polyval = JS_NewObject(js);
-  JS_SetPropertyStr(js, polyval, "id", ptr2js(poly));
-  JS_SetPropertyStr(js, polyval, "shape", ptr2js(&poly->shape));
+  js_setprop_str(polyval, "id", ptr2js(poly));
+  js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
   return polyval;
 }
 
@@ -1534,8 +1493,8 @@ JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   }
 
   JSValue edgeval = JS_NewObject(js);
-  JS_SetPropertyStr(js, edgeval, "id", ptr2js(edge));
-  JS_SetPropertyStr(js, edgeval, "shape", ptr2js(&edge->shape));
+  js_setprop_str(edgeval, "id", ptr2js(edge));
+  js_setprop_str(edgeval, "shape", ptr2js(&edge->shape));
   return edgeval;
 }
 
@@ -1571,8 +1530,8 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
   inflatepoints(inflate_in, points, -d, n);
 
   JSValue arr = JS_NewArray(js);
-  JS_SetPropertyUint32(js, arr, 0, vecarr2js(inflate_out, n));
-  JS_SetPropertyUint32(js, arr, 1, vecarr2js(inflate_in, n));
+  js_setprop_num(arr, 0, vecarr2js(inflate_out, n));
+  js_setprop_num(arr, 1, vecarr2js(inflate_in, n));
   return arr;
 }
 
@@ -1596,6 +1555,7 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
     YughInfo("Val is now %f at time %f", anim_val(a, i), i);
     JSValue vv = num2js(anim_val(a, i));
     JS_Call(js, prop, globalThis, 1, &vv);
+    JS_FreeValue(js,vv);
   }
 
   return JS_NULL;
@@ -1637,10 +1597,6 @@ void ffi_load() {
 
   DUK_FUNC(yughlog, 4)
 
-  #ifndef NO_EDITOR
-  DUK_FUNC(nuke, 6)
-  #endif
-  
   DUK_FUNC(make_gameobject, 0)
   DUK_FUNC(set_body, 3)
   DUK_FUNC(q_body, 2)

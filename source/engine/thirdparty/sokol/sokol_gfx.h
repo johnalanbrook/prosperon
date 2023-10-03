@@ -179,7 +179,6 @@
             sg_commit()
 
     --- at the end of your program, shutdown sokol_gfx with:
-
             sg_shutdown()
 
     --- if you need to destroy resources before sg_shutdown(), call:

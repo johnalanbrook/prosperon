@@ -19,8 +19,6 @@ var configs = {
 };
 
 var editor = {
-  dbgdraw: false,
-  selected: undefined,
   selectlist: [],
   grablist: [],
   scalelist: [],
@@ -379,6 +377,7 @@ var editor = {
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
 
+
     Debug.point(world2screen(this.cursor), 2, Color.green);
 
     if (this.comp_info && this.sel_comp) {
@@ -387,7 +386,7 @@ var editor = {
 
     GUI.text("0,0", world2screen([0,0]));
     
-    var clvl = this.edit_level;
+    var clvl = this.selectlist.length === 1 ? this.selectlist[0] : this.edit_level;
     var lvlchain = [];
     while (clvl !== Primum) {
       lvlchain.push(clvl);
@@ -401,11 +400,12 @@ var editor = {
     var ypos = 200;
     
     lvlchain.reverse();
-    lvlchain.forEach(function(x) {
+    lvlchain.forEach(function(x,i) {
       lvlcolor = colormap.sample(lvlcolorsample);
       var lvlstr = x.toString();
       if (x.dirty)
         lvlstr += "*";
+      if (i === lvlchain.length-1) lvlstr += "[this]";
       GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
      
       lvlcolorsample -= 0.1;
@@ -1260,15 +1260,7 @@ var inputpanel = {
   stolen: {},
   
   gui() {
-    Nuke.window(this.title);
-    Nuke.newline();
     this.guibody();
-
-    if (Nuke.button("close"))
-      this.close();
-      
-    Nuke.end();
-    return false;
   },
   
   guibody() {
@@ -1386,12 +1378,9 @@ var replpanel = Object.copy(inputpanel, {
   title: "REPL",
   closeonsubmit:false,
   guibody() {
-    Nuke.newrow(400);
     var log = cmd(84);
-    var f = log.prev('\n', 0,10);
-    Nuke.scrolltext(log.slice(f));
-    Nuke.newrow(30);
-    this.value = Nuke.textbox(this.value);
+    GUI.text(log, [400,60], 1, Color.white, 600, [0,0]);
+    GUI.text(this.value, [400,50], 1, Color.green, 600);
   },
 
   action() {
@@ -1591,7 +1580,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
   keycb() { this.assets = this.allassets.filter(x => x.search(this.value) !== -1); },
   
   guibody() {
-    this.value = Nuke.textbox(this.value);
+    GUI.text(this.value, [100,600], 1, Color.green, 600);
     
     this.assets.forEach(function(x) {
       if (Nuke.button(x)) {

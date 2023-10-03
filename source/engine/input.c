@@ -61,7 +61,7 @@ JSValue input2js(const char *input) {
     sh_new_arena(jshash);
 
   JSValue n = str2js(input);
-  shput(jshash, input, str2js(input));
+  shput(jshash, input, n);
 
   return n;
 }
@@ -178,6 +178,7 @@ void input_btn(int btn, int state, uint32_t mod)
 
   argv[0] = JS_NewString(js, "action");
   script_callee(pawn_callee, 3, argv);
+  
   JS_FreeValue(js, argv[0]);  
   JS_FreeValue(js, argv[1]);
 

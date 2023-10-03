@@ -366,7 +366,7 @@ void JS_AddIntrinsicStringNormalize(JSContext *ctx);
 void JS_AddIntrinsicRegExpCompiler(JSContext *ctx);
 void JS_AddIntrinsicRegExp(JSContext *ctx);
 void JS_AddIntrinsicJSON(JSContext *ctx);
-//void JS_AddIntrinsicProxy(JSContext *ctx);
+void JS_AddIntrinsicProxy(JSContext *ctx);
 void JS_AddIntrinsicMapSet(JSContext *ctx);
 void JS_AddIntrinsicTypedArrays(JSContext *ctx);
 void JS_AddIntrinsicPromise(JSContext *ctx);

@@ -1,7 +1,6 @@
 #include "window.h"
 #include "input.h"
 #include "log.h"
-#include "nuke.h"
 #include "script.h"
 #include "texture.h"
 #include <stdio.h>
