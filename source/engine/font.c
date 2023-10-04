@@ -191,6 +191,7 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
   cpVect b;
   b.x = cursor.X;
   b.y = cursor.Y;
+  color.a = 30;
 
   draw_box(b, wh, color);
 }
@@ -210,10 +211,8 @@ void text_flush(HMM_Mat4 *proj) {
   curchar = 0;
 }
 
-static int drawcaret = 0;
-
-void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color, struct boundingbox frame) {
-  if (curchar == max_chars)
+void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+  if (curchar+1 >=  max_chars)
     return;
 
   struct text_vert vert;
@@ -278,14 +277,13 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
       }
     }
   }
-  
-  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){cursor.X,-cursor.Y});
+
+  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){cursor.X,font->linegap-cursor.Y});
 }
 
 /* pos given in screen coordinates */
-int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking, struct boundingbox frame) {
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   int len = strlen(text);
-  drawcaret = caret;
 
   HMM_Vec2 cursor = pos;
 
@@ -295,15 +293,15 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
   struct rgba usecolor = color;
 
   while (*line != '\0') {
-    if (caret == curchar)
+    if (caret >= 0 && caret == curchar)
       draw_char_box(font->Characters[69], cursor, scale, color);
       
     if (isblank(*line)) {
-      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor, frame);
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
       cursor.X += font->Characters[*line].Advance * tracking * scale;
       line++;
     } else if (isspace(*line)) {
-      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor, frame);
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
       cursor.Y -= scale * font->linegap;
       cursor.X = pos.X;
       line++;
@@ -322,7 +320,7 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       }
 
       while (wordstart < line) {
-        sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor, frame);
+        sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
       }

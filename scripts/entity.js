@@ -11,102 +11,7 @@ function grab_from_points(pos, points, slop) {
 };
 
 var gameobject = {
-  
-  layer_nuke() {
-    Nuke.label("Collision layer");
-    Nuke.newline(Collision.num);
-    for (var i = 0; i < Collision.num; i++)
-      this.layer = Nuke.radio(i, this.layer, i);
-  },
-
-  draw_layer: 1,
-  draw_layer_nuke() {
-    Nuke.label("Draw layer");
-    Nuke.newline(5);
-    for (var i = 0; i < 5; i++)
-      this.draw_layer = Nuke.radio(i, this.draw_layer, i);
-  },
-
-  hide() { this.components.forEach(function(x) { x.hide(); }); this.objects.forEach(function(x) { x.hide(); }); },
-  show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
-
-  phys_nuke() {
-    Nuke.newline(1);
-    Nuke.label("phys");
-    Nuke.newline(3);
-    this.phys = Nuke.radio("dynamic", this.phys, 0);
-    this.phys = Nuke.radio("kinematic", this.phys, 1);
-    this.phys = Nuke.radio("static", this.phys, 2);
-  },
-  
-  set_center(pos) {
-    var change = pos.sub(this.pos);
-    this.pos = pos;
-    
-    for (var key in this.components) {
-      this.components[key].finish_center(change);
-    }
-  },
-
-  get_relangle() {
-    if (!this.level) return this.angle;
-    return this.angle - this.level.angle;
-  },
-
-  width() {
-    var bb = this.boundingbox();
-    return bb.r - bb.l;
-  },
-
-  height() {
-    var bb = this.boundingbox();
-    return bb.t-bb.b;
-  },
-
-  /* Make a unique object the same as its prototype */
-  revert() {
-//    var t = this.transform();
-    Object.totalmerge(this,this.ur);
-//    Object.merge(this,t);
-  },
-
-  gui() {
-    var go_guis = walk_up_get_prop(this, 'go_gui');
-    Nuke.newline();
-
-    go_guis.forEach(function(x) { x.call(this); }, this);
-
-    for (var key in this) {
-      if (typeof this[key] === 'object' && 'gui' in this[key]) this[key].gui();
-    }
-  },
-
-  check_registers(obj) {
-    Register.unregister_obj(this);
-  
-    if (typeof obj.update === 'function')
-      Register.update.register(obj.update, obj);
-
-    if (typeof obj.physupdate === 'function')
-      Register.physupdate.register(obj.physupdate, obj);
-
-    if (typeof obj.collide === 'function')
-      obj.register_hit(obj.collide, obj);
-
-    if (typeof obj.separate === 'function')
-      obj.register_separate(obj.separate, obj);
-
-    if (typeof obj.draw === 'function')
-      Register.draw.register(obj.draw,obj);
-
-    if (typeof obj.debug === 'function')
-      Register.debug.register(obj.debug, obj);
-
-    obj.components.forEach(function(x) {
-      if (typeof x.collide === 'function')
-        register_collide(1, x.collide, x, obj.body, x.shape);
-    });
-  },
+  impl: {
       get scale() { return cmd(103, this.body); },
       set scale(x) {
 	var pct = x/this.scale;
@@ -141,12 +46,34 @@ var gameobject = {
 	},this);	
       },
       
-      set pos(x) { this.set_worldpos(Vector.rotate(x, Math.deg2rad(this.level.angle)).add(this.level.worldpos())); },
+      set pos(x) {
+        this.set_worldpos(x); return;
+        this.set_worldpos(Vector.rotate(x,Math.deg2rad(this.level.angle)).add(this.level.worldpos()));
+      },
       get pos() {
         var offset = this.worldpos().sub(this.level.worldpos());
 	return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
       },
+      get elasticity() { return cmd(107,this.body); },
+      set elasticity(x) { cmd(106,this.body,x); },
 
+      get friction() { return cmd(109,this.body); },
+      set friction(x) { cmd(108,this.body,x); },
+
+      set mass(x) { set_body(7,this.body,x); },
+      get mass() {
+        if (!(this.phys === Physics.dynamic))
+	  return this.__proto__.mass;
+	  
+        return q_body(5, this.body);
+      },
+
+      set phys(x) { set_body(1, this.body, x); },
+      get phys() { return q_body(0,this.body); },
+      get velocity() { return q_body(3, this.body); },
+      set velocity(x) { set_body(9, this.body, x); },
+      get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
+      set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
       worldpos() { return q_body(1,this.body); },
       set_worldpos(x) {
         var diff = x.sub(this.worldpos());
@@ -170,30 +97,10 @@ var gameobject = {
         set_body(0,this.body, Math.deg2rad(x));
       },
 
-      get elasticity() { return cmd(107,this.body); },
-      set elasticity(x) { cmd(106,this.body,x); },
-
-      get friction() { return cmd(109,this.body); },
-      set friction(x) { cmd(108,this.body,x); },
-
-      set mass(x) { set_body(7,this.body,x); },
-      get mass() {
-        if (!(this.phys === Physics.dynamic))
-	  return this.ur.mass;
-	  
-        return q_body(5, this.body);
-      },
-
-      set phys(x) { set_body(1, this.body, x); },
-      get phys() { return q_body(0,this.body); },
-      get velocity() { return q_body(3, this.body); },
-      set velocity(x) { set_body(9, this.body, x); },
-      get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
-      set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
       
       pulse(vec) { set_body(4, this.body, vec);},
 
-      push(vec) { set_body(12,this.body,vec);},
+      shove(vec) { set_body(12,this.body,vec);},
       world2this(pos) { return cmd(70, this.body, pos); },
       this2world(pos) { return cmd(71, this.body,pos); },
       set layer(x) { cmd(75,this.body,x); },
@@ -201,11 +108,6 @@ var gameobject = {
       alive() { return this.body >= 0; },
       in_air() { return q_body(7, this.body);},
       on_ground() { return !this.in_air(); },
-
-      disable() { this.components.forEach(function(x) { x.disable(); });},
-      enable() { this.components.forEach(function(x) { x.enable(); });},
-      sync() { },
-
       spawn(ur) {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
@@ -214,9 +116,103 @@ var gameobject = {
 	  return undefined;
 	}
 	
-	var go = gameobject.make(ur, this);
+	var go = ur.make(this);
         return go;
       },
+      
+  reparent(parent) {
+    if (this.level === parent)
+      this.level.remove_obj(this);
+      
+    var name = parent.objects.push(this);
+    this.toString = function() { return name; };
+    
+    if (this.level)
+      this.level.objects.remove(this);
+    this.level = parent;
+  },
+   remove_obj(obj) {
+     delete this[obj.toString()];     
+     this.objects.remove(obj);
+   },
+      
+  },
+  
+  draw_layer: 1,
+  components: [],
+  objects: [],
+  level: undefined,
+
+  hide() { this.components.forEach(function(x) { x.hide(); }); this.objects.forEach(function(x) { x.hide(); }); },
+  show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
+
+  get_relangle() {
+    if (!this.level) return this.angle;
+    return this.angle - this.level.angle;
+  },
+
+  width() {
+    var bb = this.boundingbox();
+    return bb.r - bb.l;
+  },
+
+  height() {
+    var bb = this.boundingbox();
+    return bb.t-bb.b;
+  },
+
+  /* Make a unique object the same as its prototype */
+  revert() {
+    Object.totalmerge(this,this.__proto__);
+  },
+
+  check_registers(obj) {
+    Register.unregister_obj(obj);
+  
+    if (typeof obj.update === 'function')
+      Register.update.register(obj.update, obj);
+
+    if (typeof obj.physupdate === 'function')
+      Register.physupdate.register(obj.physupdate, obj);
+
+    if (typeof obj.collide === 'function')
+      obj.register_hit(obj.collide, obj);
+
+    if (typeof obj.separate === 'function')
+      obj.register_separate(obj.separate, obj);
+
+    if (typeof obj.draw === 'function')
+      Register.draw.register(obj.draw,obj);
+
+    if (typeof obj.debug === 'function')
+      Register.debug.register(obj.debug, obj);
+
+    obj.components.forEach(function(x) {
+      if (typeof x.collide === 'function')
+        register_collide(1, x.collide, x, obj.body, x.shape);
+    });
+  },
+    pos: [0,0],
+    angle:0,
+    phys:1,
+    flipx:false,
+    flipy:false,
+    scale:1,
+    elasticity:0.5,
+    friction:1,
+    mass:1,
+    velocity:[0,0],
+    angularvelocity:0,
+    layer:0,
+    save:true,
+    selectable:true,
+    ed_locked:false,
+    
+
+      disable() { this.components.forEach(function(x) { x.disable(); });},
+      enable() { this.components.forEach(function(x) { x.enable(); });},
+      sync() { },
+
 
       /* Bounding box of the object in world dimensions */
       boundingbox() {
@@ -294,9 +290,10 @@ var gameobject = {
 	if (ret.empty) return undefined;
 	return ret;
       },
-
+      
       json_obj() {
-	var ur = gameobject.diff(this,this.ur);
+	var ur = gameobject.diff(this,this.__proto__);
+        
         return ur ? ur : {};
       },
 
@@ -309,8 +306,8 @@ var gameobject = {
       level_obj() {
         var json = this.json_obj();
 	var objects = {};
-	this.ur.objects ??= {};
-	if (!Object.keys(this.objects).equal(Object.keys(this.ur.objects))) {
+	this.__proto__.objects ??= {};
+	if (!Object.keys(this.objects).equal(Object.keys(this.__proto__.objects))) {
 	  for (var o in this.objects) {
 	    objects[o] = this.objects[o].transform_obj();
 	    objects[o].ur = this.objects[o].ur.toString();
@@ -318,7 +315,7 @@ var gameobject = {
 	} else {
 	  for (var o in this.objects) {
 	    var obj = this.objects[o].json_obj();
-	    Object.assign(obj, gameobject.diff(this.objects[o].transform(), this.ur.objects[o]));
+	    Object.assign(obj, gameobject.diff(this.objects[o].transform(), this.__proto__.objects[o]));
 	    if (!obj.empty)
 	      objects[o] = obj;
 	  }
@@ -361,7 +358,7 @@ var gameobject = {
      },
 
       dup(diff) {
-        var n = this.level.spawn(this.ur);
+        var n = this.level.spawn(this.__proto__);
 	Object.totalmerge(n, this.make_ur());
 	return n;
       },
@@ -380,6 +377,7 @@ var gameobject = {
 
 	  Player.uncontrol(this);
 	  Register.unregister_obj(this);
+	  this.instances.remove(this);
 
 	  this.body = -1;
 	  for (var key in this.components) {
@@ -395,76 +393,62 @@ var gameobject = {
 //	});
       },
 
-   remove_obj(obj) {
-     delete this[obj.toString()];     
-     this.objects.remove(obj);
-   },
-
       up() { return [0,1].rotate(Math.deg2rad(this.angle));},
       down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
       right() { return [1,0].rotate(Math.deg2rad(this.angle));},
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
-  reparent(parent) {
-    if (this.level === parent)
-      this.level.remove_obj(this);
-    var name = parent.objects.push(this);
-    this.toString = function() { return name; };
-    
-    if (this.level)
-      this.level.objects.remove(this);
-    this.level = parent;
-  },
-
-  make(ur, level) {
+  instances: [],
+  make(level) {
     level ??= Primum;
-    var obj = Object.create(gameobject);
+    var obj = Object.create(this);
+    this.instances.push(obj);
     obj.body = make_gameobject();
     obj.components = {};
     obj.objects = {};
+    Object.complete_assign(obj, gameobject.impl);
     Object.hide(obj, 'components');
     Object.hide(obj, 'objects');
-    obj.toString = function() { return obj.ur.toString(); };
+    obj.toJSON = gameobject.level_json;
     
     Game.register_obj(obj);
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
-    obj.ur = ur;
-
     obj.reparent(level);
 
-    for (var prop in ur) {
-      var p = ur[prop];
+    for (var prop in this) {
+      var p = this[prop];
       if (typeof p !== 'object') continue;
 
       if ('ur' in p) {
         obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
 	obj.rename_obj(obj[prop].toString(), prop);
       } else if ('comp' in p) {
-        obj[prop] = component[p.comp].make(obj);
+        Log.warn(p);
+        obj[prop] = Object.assign(component[p.comp].make(obj), p);
 	obj.components[prop] = obj[prop];
       }
     };
 
-    if (ur.objects) {
-      for (var prop in ur.objects) {
-        var o = ur.objects[prop];
+    if (this.objects) {
+      for (var prop in this.objects) {
+        Log.warn(this.objects[prop]);
+	continue;
+        var o = this.objects[prop];
         var newobj = obj.spawn(prototypes.get_ur(o.ur));
 	if (!newobj) continue;
 	obj.rename_obj(newobj.toString(), prop);
       }
     }
 
-    var save_tostr = obj.toString;
-    Object.totalmerge(obj,ur);
-    obj.toString = save_tostr;
-    obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
-    obj.check_registers(obj);
+    for (var p in this.impl) {
+      if (Object.isAccessor(this.impl, p))
+        obj[p] = this[p];
+    }
 
-    obj.objects.forEach(function(x) {
-      x.ur = prototypes.get_ur(x.ur);
-    });
-    
+    obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
+    gameobject.check_registers(obj);
+
     if (typeof obj.start === 'function') obj.start();
 
     return obj;
@@ -501,26 +485,7 @@ var gameobject = {
   },
 }
 
-gameobject.toJSON = gameobject.level_obj;
-
-gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
-
-gameobject.ur = {
-//  pos: [0,0],
-  scale:1,
-  flipx:false,
-  flipy:false,
-//  angle:0,
-  elasticity:0.5,
-  friction:1,
-  mass:1,
-//  velocity:[0,0],
-//  angularvelocity:0,
-  layer: 0,
-  save: true,
-  selectable: true,
-  ed_locked: false,
-};
+gameobject.impl.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
 /* Default objects */
 var prototypes = {};
@@ -560,7 +525,7 @@ prototypes.from_file = function(file)
     return prototypes.get_ur(urpath);
   }
     
-  var upperur = gameobject.ur;
+  var upperur = gameobject;
   
   if (path.length > 1) {
     var upperpath = path.slice(0,-1);
@@ -571,7 +536,8 @@ prototypes.from_file = function(file)
     }
   }
 
-  var newur = Object.create(upperur);
+  var newur = {};//Object.create(upperur);
+  
   file = file.replaceAll('.','/');
 
   var jsfile = prototypes.get_ur_file(urpath, ".js");
@@ -594,8 +560,16 @@ prototypes.from_file = function(file)
   json ??= {};
   Object.merge(newur,json);
 
+  for (var p in newur)
+    if (Object.isObject(newur[p]) && Object.isObject(upperur[p]))
+      newur[p].__proto__ = upperur[p];
+      
+  newur.__proto__ = upperur;
+  newur.instances = [];
+
   prototypes.list.push(urpath);
   newur.toString = function() { return urpath; };
+  newur.ur = urpath;
   ur[urpath] = newur;
 
   return ur[urpath];
@@ -605,7 +579,7 @@ prototypes.list = [];
 
 prototypes.from_obj = function(name, obj)
 {
-  var newur = Object.copy(gameobject.ur, obj);
+  var newur = Object.copy(gameobject, obj);
   prototypes.ur[name] = newur;
   newur.toString = function() { return name; };
   return prototypes.ur[name];
@@ -715,3 +689,36 @@ prototypes.from_obj("camera2d", {
 });
 
 prototypes.from_obj("arena", {});
+
+prototypes.resavi = function(ur, path)
+{
+    if (!ur) return path;
+    if (path[0] === '/') return path;
+
+    var res = ur.replaceAll('.', '/');
+    var dir = path.dir();
+    if (res.startsWith(dir))
+      return path.base();
+    
+    return path;
+}
+
+prototypes.resani = function(ur, path)
+{
+  if (!path) return "";
+  Log.warn(`Sanitizing ${path} from ${ur}`);
+    if (!ur) return path;
+    if (path[0] === '/') return path.slice(1);
+
+    var res = ur.replaceAll('.', '/');
+    var restry = res + "/" + path;
+    while (!IO.exists(restry)) {
+      res = res.updir() + "/";
+      if (res === "/")
+        return path;
+
+      restry = res + path;
+    }
+    return restry;
+}
+

@@ -420,7 +420,7 @@ var editor = {
     GUI.text("$$$$$$", [0,ypos],1,lvlcolor);
 
     this.selectlist.forEach(function(x) {
-      var sname = x.ur.toString();
+      var sname = x.__proto__.toString();
       if (!x.level_obj().empty)
         x.dirty = true;
       else
@@ -1231,6 +1231,7 @@ editor.inputs.s = function() {
   
   if (editor.sel_comp) {
     if (!('scale' in editor.sel_comp)) return;
+    Log.warn(`scaling ${editor.sel_comp.toString()}`);
     editor.scalelist.push({
       obj: editor.sel_comp,
       scale: editor.sel_comp.scale,
@@ -1257,19 +1258,23 @@ var inputpanel = {
   value: "",
   on: false,
   stolen: {},
-  
+  pos:[100,Window.height-50],
+  wh:[350,600],
+  anchor: [0,1],
+
   gui() {
-    this.guibody();
+    var win = Mum.window({width:this.wh.x,height:this.wh.y, color:Color.black.alpha(0.1), anchor:this.anchor});
+    var itms = this.guibody();
+    if (!Array.isArray(itms)) itms = [itms];
+    win.items = itms;
+    win.draw(this.pos.slice());
   },
   
   guibody() {
-    this.value = Nuke.textbox(this.value);
-    
-    Nuke.newline(2);
-    if (Nuke.button("submit")) {
-      this.submit();
-      return true;
-    }
+    return [
+      Mum.text({str:this.value, color:Color.green}),
+      Mum.button({str:"Submit", action:this.submit})
+    ];
   },
   
   open(steal) {
@@ -1313,6 +1318,8 @@ var inputpanel = {
   submit_check() { return true; },
 
   keycb() {},
+
+  caret: 0,
   
   input_backspace_pressrep() {
     this.value = this.value.slice(0,-1);
@@ -1321,12 +1328,23 @@ var inputpanel = {
 };
 
 inputpanel.inputs = {};
-inputpanel.inputs.char = function(c) { this.value += c; this.keycb(); }
+inputpanel.inputs.char = function(c) {
+  this.value = this.value.slice(0,this.caret) + c + this.value.slice(this.caret);
+  this.caret++;
+  Log.warn(this.caret);
+  this.keycb();
+}
+inputpanel.inputs['C-d'] = function() { this.value = this.value.slice(0,this.caret) + this.value.slice(this.caret+1); };
 inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); }
 inputpanel.inputs.escape = function() { this.close(); }
-inputpanel.inputs.backspace = function() { this.value = this.value.slice(0,-1); this.keycb(); };
+inputpanel.inputs.backspace = function() {
+  this.value = this.value.slice(0,this.caret-1) + this.value.slice(this.caret);
+  this.caret--;
+  this.keycb();
+};
 inputpanel.inputs.backspace.rep = true;
 inputpanel.inputs.enter = function() { this.submit(); }
+
 
 function proto_count_lvls(name)
 {
@@ -1376,21 +1394,25 @@ load("scripts/textedit.js");
 var replpanel = Object.copy(inputpanel, {
   title: "REPL",
   closeonsubmit:false,
+  wh: [700,300],
+  pos: [50,50],
+  anchor: [0,0],
+
   guibody() {
-    cmd(141);
-    var w = 700;
-    var h = 300;
-    var p = [50,50];
     var log = cmd(84);
-    GUI.window(p, [w,h], Color.black.alpha(0.1));
-    GUI.scissor(p.x,p.y,w,h);
-    GUI.text(log, p.add([0,10]), 1, Color.white, w, [0,0]);
-    GUI.text(this.value, p, 1, Color.green, w);
-    cmd(141);
-    GUI.scissor(0,0,Window.width, Window.height);
+    log = log.slice(-500);
+    
+    return [
+      Mum.text({str:log, anchor:[0,0], offset:[0,-300]}),
+      Mum.text({str:this.value,color:Color.green, offset:[0,-290], caret: this.caret})
+    ];
   },
+  prevmark:-1,
+  prevthis:[],
 
   action() {
+    if (!this.value) return;
+    this.prevthis.unshift(this.value);
     var ecode = "";
     var repl_obj = (editor.selectlist.length === 1) ? editor.selectlist[0] : editor.edit_level;
     ecode += `var $ = repl_obj.objects;`;
@@ -1400,10 +1422,30 @@ var replpanel = Object.copy(inputpanel, {
     ecode += this.value;
     Log.say(this.value);
     this.value = "";
+    this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
-    Log.say(ret);
+    if (ret)
+      Log.say(ret);
   },
 });
+
+replpanel.inputs = Object.create(inputpanel.inputs);
+replpanel.inputs['C-p'] = function()
+{
+  if (this.prevmark >= this.prevthis.length) return;
+  this.prevmark++;
+  this.value = this.prevthis[this.prevmark];
+}
+
+replpanel.inputs['C-n'] = function()
+{
+  this.prevmark--;
+  if (this.prevmark < 0) {
+    this.prevmark = -1;
+    this.value = "";
+  } else
+    this.value = this.prevthis[this.prevmark];
+}
 
 var objectexplorer = Object.copy(inputpanel, {
   title: "object explorer",
@@ -1601,7 +1643,9 @@ var openlevelpanel = Object.copy(inputpanel,  {
   },
   
   guibody() {
-    Mum.column({items:Object.values(this.mumlist)}).draw([100,100]);
+    var a = [Mum.text({str:this.value,color:Color.green})];
+    var b = a.concat(Object.values(this.mumlist));
+    return Mum.column({items:b});
   },
 });
 
@@ -1804,3 +1848,6 @@ Game.stop();
 Game.editor_mode(true);
 
 load("editorconfig.js");
+
+Log.warn(ur.ball);
+Log.warn(ur['ball.big']);

@@ -282,24 +282,10 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[4]);
-  struct boundingbox bb = js2bb(argv[5]);
-  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, -1, 1.0, bb));
+  int cursor = js2int(argv[5]);
+  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, cursor, 1.0));
   JS_FreeCString(js, s);
   return ret;
-}
-
-JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const char *s = JS_ToCString(js, argv[0]);
-  HMM_Vec2 pos = js2hmmv2(argv[1]);
-
-  float size = js2number(argv[2]);
-  struct rgba c = js2color(argv[3]);
-  int wrap = js2int(argv[5]);
-  int cursor = js2int(argv[4]);
-  struct boundingbox bb = js2bb(argv[6]);
-  renderText(s, pos, size, c, wrap, cursor, 1.0,bb);
-  JS_FreeCString(js, s);
-  return JS_NULL;
 }
 
 JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1636,8 +1622,7 @@ void ffi_load() {
   DUK_FUNC(register, 3)
   DUK_FUNC(register_collide, 6)
 
-  DUK_FUNC(ui_text, 5)
-  DUK_FUNC(cursor_text, 5)
+  DUK_FUNC(ui_text, 6)
   DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)

@@ -1,10 +1,11 @@
 var GUI = {
-  text(str, pos, size, color, wrap, anchor, frame) {
+  text(str, pos, size, color, wrap, anchor, cursor) {
     size ??= 1;
     color ??= Color.white;
     wrap ??= -1;
     anchor ??= [0,1];
-    frame ??= Window.boundingbox();
+
+    cursor ??= -1;
 
     var bb = cmd(118, str, size, wrap);
     var w = bb.r*2;
@@ -18,13 +19,9 @@ var GUI = {
     p.y += h * (1 - anchor.y);
     bb.t += h*(1-anchor.y);
     bb.b += h*(1-anchor.y);
-    ui_text(str, p, size, color, wrap, bb);
+    ui_text(str, p, size, color, wrap, cursor);
 
     return bb;
-  },
-
-  text_cursor(str, pos, size, cursor) {
-    cursor_text(str,pos,size,Color.white,cursor);
   },
 
   scissor(x,y,w,h) {
@@ -68,13 +65,14 @@ var GUI = {
 };
 
 var Mum = {
-    padding:[2,2], /* Each element inset with this padding on all sides */
+    padding:[0,0], /* Each element inset with this padding on all sides */
+    offset:[0,0],
     font: "fonts/LessPerfectDOSVGA.ttf",
     font_size: 1,
     text_align: "left",
     scale: 1,
     angle: 0,
-    anchor: [0,0],
+    anchor: [0,1],
     text_shadow: {
       pos: [0,0],
       color: Color.white,
@@ -93,6 +91,8 @@ var Mum = {
     return n;
   },
 
+  start() {},
+
   extend(def) {
     var n = Object.create(this);
     Object.assign(n, def);
@@ -103,21 +103,57 @@ var Mum = {
 Mum.text = Mum.extend({
   draw(cursor) {
     if (this.hide) return;
-    this.calc_bb(cursor);
-    
+    this.caret ??= -1;
+
+/*    if (!this.bb)
+      this.calc_bb(cursor);
+    else
+      this.update_bb(cursor);
+*/    
     if (this.selected) {
       Object.assign(this,this.hovered);
       this.calc_bb(cursor);
     }
-
-    var pos = cursor.sub(bb2wh(this.bb).scale(this.anchor));
-    ui_text(this.str, pos, this.font_size, this.color, this.width);
+    this.calc_bb(cursor);
+    var aa = [0,1].sub(this.anchor);
+    var pos = cursor.add(this.wh.scale(aa)).add(this.offset);
+    if (this.caret > -1) Log.warn(`Drawing box at pos ${this.caret} over letter ${this.str[this.caret-1]}`);
+    ui_text(this.str, pos, this.font_size, this.color, -1, this.width, this.caret);
   },
+  
+  update_bb(cursor) {
+    this.bb = movebb(this.bb, cursor.sub(this.wh.scale(this.anchor)));
+  },
+  
   calc_bb(cursor) {
     var bb = cmd(118,this.str, this.font_size, this.width);
-    var wh = bb2wh(bb);
-    var pos = cursor.sub(wh.scale(this.anchor));
+    this.wh = bb2wh(bb);
+    var pos = cursor.sub(this.wh.scale(this.anchor));
     this.bb = movebb(bb,pos);
+  },
+  start() {
+    this.calc_bb([0,0]);
+  },
+});
+
+Mum.window = Mum.extend({
+  start() {
+    this.wh = [this.width, this.height];
+    this.bb = cwh2bb([0,0], this.wh);
+  },
+  draw(pos) {
+    var p = pos.sub(this.wh.scale(this.anchor));
+    GUI.window(p,this.wh, this.color);
+    this.bb = bl2bb(p, this.wh);
+    var pos = [this.bb.l, this.bb.t];
+    GUI.flush();
+    GUI.scissor(p.x,p.y,this.wh.x,this.wh.y);
+    this.items.forEach(function(item) {
+      if (item.hide) return;
+      item.draw(pos.slice());
+    });
+    GUI.flush();
+    GUI.scissor_win();
   },
 });
 
@@ -130,9 +166,9 @@ Mum.image = Mum.extend({
     }
 
     var tex_wh = cmd(64, this.path);
-    var wh = tex_wh.slice();
-    if (this.width !== 0) wh.x = this.width;
-    if (this.height !== 0) wh.y = this.height;
+    this.wh = tex_wh.slice();
+    if (this.width !== 0) this.wh.x = this.width;
+    if (this.height !== 0) this.wh.y = this.height;
 
     this.wh = wh.scale(this.scale);
     this.sendscale = [wh.x/tex_wh.x, wh.y/tex_wh.y];
@@ -156,9 +192,8 @@ Mum.column = Mum.extend({
     this.items.forEach(function(item) {
       if (item.hide) return;
       item.draw(cursor);
-      var wh = bb2wh(item.bb);
-      cursor.y -= wh.y*2;
-      cursor.y -= this.padding.y*2;
+      cursor.y -= item.wh.y;
+      cursor.y -= this.padding.y;
     }, this);
   },
 });

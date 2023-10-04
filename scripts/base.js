@@ -62,6 +62,18 @@ Object.dainty_assign = function(target, source)
   }
 }
 
+Object.isObject = function(o)
+{
+  return (typeof o === 'object' && !Array.isArray(o));
+}
+
+Object.setter_assign = function(target, source)
+{
+  for (var key in target)
+    if (Object.isAccessor(target,key) && typeof source[key] !== 'undefined')
+      target[key] = source[key];
+}
+
 Object.containingKey = function(obj, prop)
 {
   if (typeof obj !== 'object') return undefined;
@@ -821,6 +833,16 @@ function bb_expand(oldbb, x) {
 
   return bb;
 };
+
+function bl2bb(bl, wh)
+{
+  return {
+    b: bl.y,
+    l: bl.x,
+    r: bl.x + wh.x,
+    t: bl.y + wh.y
+  };
+}
 
 function bb_from_objects(objs) {
   var bb = objs[0].boundingbox;

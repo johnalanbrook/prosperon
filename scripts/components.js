@@ -22,40 +22,9 @@ var component = {
   extend(spec) {
     return Object.copy(this, spec);
   },
-
-  /* Given a relative path, return the full path */
-  resani(path) {
-    if (!this.gameobject) return path;
-    if (path[0] === '/') return path.slice(1);
-    var res = this.gameobject.ur.toString();
-    res = res.replaceAll('.', '/');
-    var restry = res + "/" + path;
-    while (!IO.exists(restry)) {
-      res = res.updir() + "/";
-      if (res === "/")
-        return path;
-
-      restry = res + path;
-    }
-    return restry;
-  },
-
-  /* Given the full path, return the most relative path */
-  resavi(path) {
-    if (!this.gameobject) return path;
-    if (path[0] === '/') return path;
-
-    var res = this.gameobject.ur.toString();
-    res = res.replaceAll('.', '/');
-    var dir = path.dir();
-    if (res.startsWith(dir))
-      return path.base();
-    
-    return path;
-  },
 };
 
-component.sprite = {
+component.sprite = Object.copy(component, {
   pos:[0,0],
   color:[1,1,1],
   layer:0,
@@ -63,20 +32,25 @@ component.sprite = {
   path: "",
   toString() { return "sprite"; },
   make(go) {
-    var nsprite = Object.create(component.sprite.maker);
+    var nsprite = Object.create(this);
     nsprite.gameobject = go;
-    Object.assign(nsprite, make_sprite(go.body));    
-    nsprite.ur = this;
+    Object.assign(nsprite, make_sprite(go.body)); 
+    Object.complete_assign(nsprite, component.sprite.impl);
+    for (var p in component.sprite.impl)
+      if (typeof this[p] !== 'undefined') {
+        Log.warn(`setting ${p}`);
+        nsprite[p] = this[p];
+      }
     return nsprite;
   },
-};
+});
 
-component.sprite.maker = Object.copy(component, {
+component.sprite.impl = {
   set path(x) {
-    cmd(12,this.id,this.resani(x),this.rect);
+    cmd(12,this.id,prototypes.resani(this.gameobject.ur, x),this.rect);
   },
   get path() {
-    return this.resavi(cmd(116,this.id));
+    return prototypes.resavi(this.gameobject.ur, cmd(116,this.id));
   },
   hide() { this.enabled = false; },
   show() { this.enabled = true; },
@@ -105,11 +79,11 @@ component.sprite.maker = Object.copy(component, {
   dimensions() { return cmd(64,this.path); },
   width() { return cmd(64,this.path).x; },
   height() { return cmd(64,this.path).y; },
-});
+};
 
 Object.freeze(sprite);
 
-var sprite = component.sprite.maker;
+var sprite = component.sprite;
 
 sprite.inputs = {};
 sprite.inputs.kp9 = function() { this.pos = [0,0]; };
@@ -707,15 +681,21 @@ bucket.inputs.rb.doc = "Rotate the points CW.";
 bucket.inputs.rb.rep = true;
 
 component.circle2d = Object.copy(collider2d, {
-  set radius(x) { cmd_circle2d(0,this.id,x); },
-  get radius() { return cmd_circle2d(2,this.id); },
+  impl: {
+    set radius(x) { cmd_circle2d(0,this.id,x); },
+    get radius() { return cmd_circle2d(2,this.id); },
 
-  set scale(x) { this.radius = x; },
-  get scale() { return this.radius; },
+    set scale(x) { Log.warn(x);this.radius = x; },
+    get scale() { return this.radius; },
 
-  set offset(x) { cmd_circle2d(1,this.id,x); },
-  get offset() { return cmd_circle2d(3,this.id); },
-
+    set offset(x) { cmd_circle2d(1,this.id,x); },
+    get offset() { return cmd_circle2d(3,this.id); },
+  },
+  
+  radius:10,
+  offset:[0,0],
+  toString() { return "circle2d"; },
+  
   boundingbox() {
     var diameter = this.radius*2*this.gameobject.scale;
     return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
@@ -725,21 +705,9 @@ component.circle2d = Object.copy(collider2d, {
     var circle = Object.create(this);
     circle.gameobject = go;
     Object.assign(circle, make_circle2d(go.body));
+    Object.complete_assign(circle,this.impl);
     
     return circle;
-  },
-
-  gui() {
-    Nuke.newline();
-    Nuke.label("circle2d");
-    this.radius = Nuke.pprop("Radius", this.radius);
-    this.offset = Nuke.pprop("offset", this.offset);
-  },
-
-  ur: {
-    radius:10,
-    offset:[0,0],
-    toString() { return "circle2d"; },
   },
 });
 
