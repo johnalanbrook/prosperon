@@ -87,7 +87,7 @@ var Debug = {
     if (this.draw_bb)
       Game.objects.forEach(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
 
-    if (Game.paused()) gui_text("PAUSED", [0,0],1);
+    if (Game.paused()) GUI.text("PAUSED", [0,0],1);
 
     if (this.draw_gizmos)
       Game.objects.forEach(function(x) {
@@ -105,7 +105,7 @@ var Debug = {
       gui_text(Time.seconds_to_timecode(Time.time - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
     }
 
-    gui_text(Game.playing() ? "PLAYING"
+    GUI.text(Game.playing() ? "PLAYING"
                          : Game.stepping() ?
 			 "STEP" :
 			 Game.paused() ?

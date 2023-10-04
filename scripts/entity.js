@@ -372,13 +372,13 @@ var gameobject = {
 	  return;
 	}
 
-	Register.endofloop(() => {
+//	Register.endofloop(() => {
 	  cmd(2, this.body);
 	  delete Game.objects[this.body];
-  	  this.level.remove_obj(this);
+	  if (this.level)
+    	    this.level.remove_obj(this);
 
 	  Player.uncontrol(this);
-	  this.instances.remove(this);
 	  Register.unregister_obj(this);
 
 	  this.body = -1;
@@ -387,10 +387,12 @@ var gameobject = {
 	    this.components[key].kill();
 	  }
 
-	  this.objects.forEach(x => x.kill());
+	  for (var key in this.objects)
+	    this.objects[key].kill();
+
 	  if (typeof this.stop === 'function')
   	    this.stop();
-	});
+//	});
       },
 
    remove_obj(obj) {

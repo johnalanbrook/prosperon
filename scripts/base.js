@@ -828,6 +828,10 @@ function bb_from_objects(objs) {
   return bb;
 };
 
+var Boundingbox = {};
+Boundingbox.width = function(bb) { return bb.r - bb.l; };
+Boundingbox.height = function(bb) { return bb.t - bb.b; };
+Boundingbox.bl = function(bb) { return [bb.l, bb.b] };
 
 /* VECTORS */
 var Vector = {

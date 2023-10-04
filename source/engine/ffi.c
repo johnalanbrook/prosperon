@@ -187,6 +187,17 @@ struct rgba js2color(JSValue v) {
   return color;
 }
 
+struct boundingbox js2bb(JSValue v)
+{
+  struct boundingbox bb;
+  bb.t = js2number(js_getpropstr(v,"t"));
+  bb.b = js2number(js_getpropstr(v,"b"));
+  bb.r = js2number(js_getpropstr(v,"r"));
+  bb.l = js2number(js_getpropstr(v,"l"));
+  return bb;
+}
+
+
 HMM_Vec2 js2hmmv2(JSValue v)
 {
   HMM_Vec2 v2;
@@ -264,16 +275,6 @@ JSValue vecarr2js(cpVect *points, int n) {
   return array;
 }
 
-JSValue duk_gui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const char *s = JS_ToCString(js, argv[0]);
-  HMM_Vec2 pos = js2hmmv2(argv[1]);
-
-  float size = js2number(argv[2]);
-  renderText(s, pos, size, color_white, 500, -1, 1.0);
-  JS_FreeCString(js, s);
-  return JS_NULL;
-}
-
 JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2hmmv2(argv[1]);
@@ -281,7 +282,8 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[4]);
-  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, -1, 1.0));
+  struct boundingbox bb = js2bb(argv[5]);
+  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, -1, 1.0, bb));
   JS_FreeCString(js, s);
   return ret;
 }
@@ -294,7 +296,8 @@ JSValue duk_cursor_text(JSContext *js, JSValueConst this, int argc, JSValueConst
   struct rgba c = js2color(argv[3]);
   int wrap = js2int(argv[5]);
   int cursor = js2int(argv[4]);
-  renderText(s, pos, size, c, wrap, cursor, 1.0);
+  struct boundingbox bb = js2bb(argv[6]);
+  renderText(s, pos, size, c, wrap, cursor, 1.0,bb);
   JS_FreeCString(js, s);
   return JS_NULL;
 }
@@ -334,6 +337,7 @@ JSValue bb2js(struct boundingbox bb)
   js_setprop_str(obj,"l", JS_NewFloat64(js,bb.l));
   return obj;
 }
+
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   static_assert(sizeof(tsReal) * 2 == sizeof(cpVect));
@@ -1064,6 +1068,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js,argv[1]);
       ret = JS_NewInt64(js, gif_nframes(str));
       break;
+
+    case 140:
+      sg_apply_scissor_rectf(js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), 0);
+      break;
+
+    case 141:
+      text_flush(&hudproj);
+      break;
   }
 
   if (str)
@@ -1554,7 +1566,8 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
   for (double i = 0; i < 3.0; i = i + 0.1) {
     YughInfo("Val is now %f at time %f", anim_val(a, i), i);
     JSValue vv = num2js(anim_val(a, i));
-    JS_Call(js, prop, globalThis, 1, &vv);
+    JSValue e = JS_Call(js, prop, globalThis, 1, &vv);
+    JS_FreeValue(js,e);
     JS_FreeValue(js,vv);
   }
 
@@ -1565,7 +1578,7 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
   double secs = js2number(argv[1]);
   struct callee *c = malloc(sizeof(*c));
   c->fn = JS_DupValue(js, argv[0]);
-  c->obj = JS_DupValue(js, globalThis);
+  c->obj = globalThis;
   int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
 
   return JS_NewInt64(js, id);
@@ -1623,7 +1636,6 @@ void ffi_load() {
   DUK_FUNC(register, 3)
   DUK_FUNC(register_collide, 6)
 
-  DUK_FUNC(gui_text, 6)
   DUK_FUNC(ui_text, 5)
   DUK_FUNC(cursor_text, 5)
   DUK_FUNC(gui_img, 10)
@@ -1631,4 +1643,5 @@ void ffi_load() {
   DUK_FUNC(inflate_cpv, 3)
 
   DUK_FUNC(anim, 2)
+  JS_FreeValue(js,globalThis);
 }

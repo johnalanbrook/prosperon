@@ -377,7 +377,6 @@ var editor = {
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
 
-
     Debug.point(world2screen(this.cursor), 2, Color.green);
 
     if (this.comp_info && this.sel_comp) {
@@ -753,7 +752,7 @@ editor.inputs['C-M-p'] = function() {
 editor.inputs['C-M-p'].doc = "Start game from currently edited level.";
 
 editor.inputs['C-q'] = function() {
-  
+
 };
 editor.inputs['C-q'].doc = "Quit simulation and return to editor.";
 
@@ -1378,9 +1377,17 @@ var replpanel = Object.copy(inputpanel, {
   title: "REPL",
   closeonsubmit:false,
   guibody() {
+    cmd(141);
+    var w = 700;
+    var h = 300;
+    var p = [50,50];
     var log = cmd(84);
-    GUI.text(log, [400,60], 1, Color.white, 600, [0,0]);
-    GUI.text(this.value, [400,50], 1, Color.green, 600);
+    GUI.window(p, [w,h], Color.black.alpha(0.1));
+    GUI.scissor(p.x,p.y,w,h);
+    GUI.text(log, p.add([0,10]), 1, Color.white, w, [0,0]);
+    GUI.text(this.value, p, 1, Color.green, w);
+    cmd(141);
+    GUI.scissor(0,0,Window.width, Window.height);
   },
 
   action() {
@@ -1565,6 +1572,8 @@ var openlevelpanel = Object.copy(inputpanel,  {
   assets: [],
   allassets: [],
 
+  mumlist: {},
+
   submit_check() {
     if (this.assets.length === 0) return false;
 
@@ -1575,25 +1584,24 @@ var openlevelpanel = Object.copy(inputpanel,  {
   start() {
     this.allassets = prototypes.list.sort();
     this.assets = this.allassets.slice();
+
+    this.mumlist = [];
+    this.assets.forEach(function(x) {
+      this.mumlist[x] = Mum.text({str:x});
+    }, this);
   },
 
-  keycb() { this.assets = this.allassets.filter(x => x.search(this.value) !== -1); },
+  keycb() {
+    this.assets = this.allassets.filter(x => x.search(this.value) !== -1);
+    for (var m in this.mumlist)
+      this.mumlist[m].hide = true;
+    this.assets.forEach(function(x) {
+     this.mumlist[x].hide = false;
+    }, this);
+  },
   
   guibody() {
-    GUI.text(this.value, [100,600], 1, Color.green, 600);
-    
-    this.assets.forEach(function(x) {
-      if (Nuke.button(x)) {
-        this.value = x;
-	this.submit();
-      }
-    }, this);
-
-    Nuke.newline(2);
-    
-    if (Nuke.button("submit")) {
-      this.submit();
-    }
+    Mum.column({items:Object.values(this.mumlist)}).draw([100,100]);
   },
 });
 

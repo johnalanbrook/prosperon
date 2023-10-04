@@ -1,9 +1,10 @@
 var GUI = {
-  text(str, pos, size, color, wrap, anchor) {
+  text(str, pos, size, color, wrap, anchor, frame) {
     size ??= 1;
     color ??= Color.white;
     wrap ??= -1;
     anchor ??= [0,1];
+    frame ??= Window.boundingbox();
 
     var bb = cmd(118, str, size, wrap);
     var w = bb.r*2;
@@ -17,7 +18,7 @@ var GUI = {
     p.y += h * (1 - anchor.y);
     bb.t += h*(1-anchor.y);
     bb.b += h*(1-anchor.y);
-    ui_text(str, p, size, color, wrap);
+    ui_text(str, p, size, color, wrap, bb);
 
     return bb;
   },
@@ -26,143 +27,16 @@ var GUI = {
     cursor_text(str,pos,size,Color.white,cursor);
   },
 
+  scissor(x,y,w,h) {
+    cmd(140,x,y,w,h);
+  },
+  
+  scissor_win() { cmd(140,0,0,Window.width,Window.height); },
+  
   image(path,pos) {
     var wh = cmd(64,path);
     gui_img(path,pos, [1.0,1.0], 0.0, 0.0, [0.0,0.0], 0.0, Color.black);
     return cwh2bb([0,0], wh);
-  },
-
-  image_fn(defn) {
-    var def = Object.create(this.defaults);
-    Object.assign(def,defn);
-    if (!def.path) {
-      Log.warn("GUI image needs a path.");
-      def.draw = function(){};
-      return def;
-    }
-
-    var tex_wh = cmd(64,def.path);
-    var wh = tex_wh.slice();
-
-    if (def.width !== 0)
-      wh.x = def.width;
-
-    if (def.height !== 0)
-      wh.y = def.height;
-
-    wh = wh.scale(def.scale);
-
-    var sendscale = [];
-    sendscale.x = wh.x / tex_wh.x;
-    sendscale.y = wh.y / tex_wh.y;
-
-    def.draw = function(pos) {
-      def.calc_bb(pos);
-      gui_img(def.path, pos.sub(def.anchor.scale(wh)), sendscale, def.angle, def.image_repeat, def.image_repeat_offset, def.color);
-    };
-
-    def.calc_bb = function(cursor) {
-      def.bb = cwh2bb(wh.scale([0.5,0.5]), wh);
-      def.bb = movebb(def.bb, cursor.sub(wh.scale(def.anchor)));
-    };
-
-    return def;
-  },
-
-  defaults: {
-    padding:[2,2], /* Each element inset with this padding on all sides */
-    font: "fonts/LessPerfectDOSVGA.ttf",
-    font_size: 1,
-    text_align: "left",
-    scale: 1,
-    angle: 0,
-    anchor: [0,0],
-    text_shadow: {
-      pos: [0,0],
-      color: Color.white,
-    },
-    text_outline: 1, /* outline in pixels */
-    color: Color.white,
-    margin: [5,5], /* Distance between elements for things like columns */
-    width: 0,
-    height: 0,
-    image_repeat: false,
-    image_repeat_offset: [0,0],
-    debug: false, /* set to true to draw debug boxes */
-  },
-
-  text_fn(str, defn)
-  {
-    var def = Object.create(this.defaults);
-    Object.assign(def,defn);
-    
-    def.draw = function(cursor) {
-      def.calc_bb(cursor);
-
-      if (def.debug)
-        Debug.boundingbox(def.bb, def.debug_colors.bounds);
-      
-      var old = def;
-      def = Object.create(def);
-
-/*      if (pointinbb(def.bb, Mouse.screenpos)) {
-        Object.assign(def, def.hovered);
-	def.calc_bb(cursor);
-	GUI.selected = def;
-	def.selected = true;
-      }
-*/
-      if (def.selected) {
-        Object.assign(def, def.hovered);
-	def.calc_bb(cursor);
-      }
-
-      var pos = cursor.sub(bb2wh(def.bb).scale(def.anchor));
-
-      ui_text(str, pos, def.font_size, def.color, def.width);
-
-      def = old;
-    };
-
-    def.calc_bb = function(cursor) {
-      var bb = cmd(118, str, def.font_size, def.width);
-      var wh = bb2wh(bb);
-      var pos = cursor.sub(wh.scale(def.anchor));
-      def.bb = movebb(bb,pos);
-    };
-
-    return def;
-  },
-
-  column(defn) {
-    var def = Object.create(this.defaults);
-    Object.assign(def,defn);
-
-    if (!def.items) {
-      Log.warn("Columns needs items.");
-      def.draw = function(){};
-      return def;
-    };
-
-    def.items.forEach(function(item,idx) {
-      def.items[idx].__proto__ = def;
-      if (def.items[idx-1])
-        def.up = def.items[idx-1];
-
-      if (def.items[idx+1])
-        def.down = def.items[idx+1];
-    });
-
-    def.draw = function(pos) {
-        def.items.forEach(function(item) {
-	  item.draw.call(this,pos);
-          var wh = bb2wh(item.bb);
-          pos.y -= wh.y;
-          pos.y -= def.padding.x*2;
-        });
-    };
-
-    return def;
   },
 
   input_lmouse_pressed() {
@@ -193,14 +67,119 @@ var GUI = {
   }
 };
 
-GUI.defaults.debug_colors = {
+var Mum = {
+    padding:[2,2], /* Each element inset with this padding on all sides */
+    font: "fonts/LessPerfectDOSVGA.ttf",
+    font_size: 1,
+    text_align: "left",
+    scale: 1,
+    angle: 0,
+    anchor: [0,0],
+    text_shadow: {
+      pos: [0,0],
+      color: Color.white,
+    },
+    text_outline: 1, /* outline in pixels */
+    color: Color.white,
+    margin: [5,5], /* Distance between elements for things like columns */
+    width: 0,
+    height: 0,
+    image_repeat: false,
+    image_repeat_offset: [0,0],
+    debug: false, /* set to true to draw debug boxes */
+  make(def) {
+    var n = Object.create(this);
+    Object.assign(n, def);
+    return n;
+  },
+
+  extend(def) {
+    var n = Object.create(this);
+    Object.assign(n, def);
+    return function(def) { var p = n.make(def); p.start(); return p; };
+  },
+}
+
+Mum.text = Mum.extend({
+  draw(cursor) {
+    if (this.hide) return;
+    this.calc_bb(cursor);
+    
+    if (this.selected) {
+      Object.assign(this,this.hovered);
+      this.calc_bb(cursor);
+    }
+
+    var pos = cursor.sub(bb2wh(this.bb).scale(this.anchor));
+    ui_text(this.str, pos, this.font_size, this.color, this.width);
+  },
+  calc_bb(cursor) {
+    var bb = cmd(118,this.str, this.font_size, this.width);
+    var wh = bb2wh(bb);
+    var pos = cursor.sub(wh.scale(this.anchor));
+    this.bb = movebb(bb,pos);
+  },
+});
+
+Mum.image = Mum.extend({
+  start() {
+    if (!this.path) {
+      Log.warn("Mum image needs a path.");
+      this.draw = function(){};
+      return;
+    }
+
+    var tex_wh = cmd(64, this.path);
+    var wh = tex_wh.slice();
+    if (this.width !== 0) wh.x = this.width;
+    if (this.height !== 0) wh.y = this.height;
+
+    this.wh = wh.scale(this.scale);
+    this.sendscale = [wh.x/tex_wh.x, wh.y/tex_wh.y];
+  },
+  
+  draw(pos) {
+    this.calc_bb(pos);
+    gui_img(this.path, pos.sub(this.anchor.scale([this.width, this.height])), this.sendscale, this.angle, this.image_repeat, this.image_repeat_offset, this.color);
+  },
+
+  calc_bb(pos) {
+    this.bb = cwh2bb(this.wh.scale([0.5,0.5]), wh);
+    this.bb = movebb(this.bb, pos.sub(this.wh.scale(this.anchor)));
+  }
+});
+
+Mum.column = Mum.extend({
+  draw(cursor) {
+    if (this.hide) return;
+    
+    this.items.forEach(function(item) {
+      if (item.hide) return;
+      item.draw(cursor);
+      var wh = bb2wh(item.bb);
+      cursor.y -= wh.y*2;
+      cursor.y -= this.padding.y*2;
+    }, this);
+  },
+});
+
+GUI.window = function(pos, wh, color)
+{
+  var p = pos.slice();
+  p.x += wh.x/2;
+  p.y += wh.y/2;
+  Debug.box(p,wh,color);
+}
+
+GUI.flush = function() { cmd(141); };
+
+Mum.debug_colors = {
   bounds: Color.red.slice(),
   margin: Color.blue.slice(),
   padding: Color.green.slice()
 };
 
-Object.values(GUI.defaults.debug_colors).forEach(function(v) { v.a = 100; });
-
+Object.values(Mum.debug_colors).forEach(function(v) { v.a = 100; });
 
 /* Take numbers from 0 to 1 and remap them to easing functions */
 var Ease = {

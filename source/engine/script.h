@@ -17,6 +17,7 @@ extern JSValue num_cache[100];
 
 void js_stacktrace();
 void script_startup();
+void script_stop();
 void script_run(const char *script, const char *file);
 void script_evalf(const char *format, ...);
 int script_dofile(const char *file);

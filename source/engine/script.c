@@ -51,6 +51,7 @@ void script_startup() {
 
 void script_stop()
 {
+  send_signal("quit",0,NULL);
   JS_RunGC(rt);
   JS_FreeRuntime(rt);
 }
@@ -114,7 +115,8 @@ uint8_t *compile_script(const char *file, size_t *len) {
   JSValue obj = JS_Eval(js, script, *len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
   free(script);
   size_t out_len;
-  uint8_t *out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE); 
+  uint8_t *out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
+  JS_FreeValue(js,obj);
   return out;
 }
 
@@ -157,6 +159,7 @@ time_t jso_file(const char *file)
   JSValue obj = JS_ReadObject(js, byte, len, JS_READ_OBJ_BYTECODE);
   JSValue ret = JS_EvalFunction(js, obj);
   js_print_exception(ret);
+  JS_FreeValue(js,ret);
   free(byte);
   return file_mod_secs(file);
 }
@@ -169,7 +172,7 @@ JSValue script_runfile(const char *file)
 
   JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAGS);
   js_print_exception(obj);
-  
+
   free(script);
   return obj;
 }
@@ -247,13 +250,15 @@ void send_signal(const char *signal, int argc, JSValue *argv)
 {
   JSValue globalThis = JS_GetGlobalObject(js);
   JSValue sig = JS_GetPropertyStr(js, globalThis, "Signal");
+  JS_FreeValue(js, globalThis);
   JSValue fn = JS_GetPropertyStr(js, sig, "call");
   JSValue args[argc+1];
   args[0] = str2js(signal);
   for (int i = 0; i < argc; i++)
     args[1+i] = argv[i];
     
-  JS_Call(js, fn, sig, argc+1, args);
+  JS_FreeValue(js,JS_Call(js, fn, sig, argc+1, args));
+  JS_FreeValue(js,sig);
 }
 
 static struct callee update_callee;

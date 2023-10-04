@@ -197,25 +197,25 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
 
 void text_flush(HMM_Mat4 *proj) {
   if (curchar == 0) return;
-  sg_apply_pipeline(pipe_text);
-  sg_apply_bindings(&bind_text);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
-
   sg_range verts;
   verts.ptr = text_buffer;
   verts.size = sizeof(struct text_vert) * curchar;
-  sg_update_buffer(bind_text.vertex_buffers[0], &verts);
-
+  int offset = sg_append_buffer(bind_text.vertex_buffers[0], &verts);
+  
+  bind_text.vertex_buffer_offsets[0] = offset;
+  sg_apply_pipeline(pipe_text);
+  sg_apply_bindings(&bind_text);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
   sg_draw(0, 4, curchar);
   curchar = 0;
 }
 
 static int drawcaret = 0;
 
-void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color, struct boundingbox frame) {
   if (curchar == max_chars)
     return;
-    
+
   struct text_vert vert;
 
   float lsize = 1.0 / 1024.0;
@@ -226,6 +226,9 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
   vert.pos.y = cursor.Y - c.Bearing[1] * scale - oline;
   vert.wh.x = c.Size[0] * scale + (oline*2);
   vert.wh.y = c.Size[1] * scale + (oline*2);
+
+//  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;
+
   vert.uv.u = (c.rect.s0 - oline*lsize)*USHRT_MAX;
   vert.uv.v = (c.rect.t0 - oline*lsize)*USHRT_MAX;
   vert.st.u = (c.rect.s1-c.rect.s0+oline*lsize*2.0)*USHRT_MAX;
@@ -280,7 +283,7 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
 }
 
 /* pos given in screen coordinates */
-int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking, struct boundingbox frame) {
   int len = strlen(text);
   drawcaret = caret;
 
@@ -296,11 +299,11 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       draw_char_box(font->Characters[69], cursor, scale, color);
       
     if (isblank(*line)) {
-      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor, frame);
       cursor.X += font->Characters[*line].Advance * tracking * scale;
       line++;
     } else if (isspace(*line)) {
-      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor, frame);
       cursor.Y -= scale * font->linegap;
       cursor.X = pos.X;
       line++;
@@ -319,7 +322,7 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       }
 
       while (wordstart < line) {
-        sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
+        sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor, frame);
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
       }

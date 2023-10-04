@@ -198,6 +198,7 @@ void gameobject_clean(int id) {
 /* Really more of a "mark for deletion" ... */
 void gameobject_delete(int id) {
   id2go(id)->next = first;
+  JS_FreeValue(js, id2go(id)->ref);
   first = id;
 
   if (cpSpaceIsLocked(space))

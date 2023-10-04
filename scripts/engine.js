@@ -504,6 +504,13 @@ var Signal = {
   },
 };
 
+var game_quit = function()
+{
+  Primum.kill();
+}
+
+Signal.register("quit", game_quit);
+
 var Window = {
   set width(w) { cmd(125, w); },
   set height(h) { cmd(126, h); },
@@ -511,6 +518,14 @@ var Window = {
   get height() { return cmd(49); },
   get dimensions() { return [this.width, this.height]; },
   set name(str) { cmd(134, str); },
+  boundingbox() {
+    return {
+      t: Window.height,
+      b: 0,
+      r: Window.width,
+      l: 0
+    };
+  },
 };
 
 Window.icon = function(path) { cmd(90, path); };
