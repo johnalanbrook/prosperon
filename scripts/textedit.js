@@ -68,9 +68,10 @@ var texteditor = Object.copy(inputpanel, {
     return this.startbuffer !== this.value;
   },
 
-  gui() {
-    GUI.text_cursor(this.value, [100,700],1,this.cursor+1);
-    GUI.text("C" + this.cursor + ":::L" + this.line + ":::" + (this.dirty ? "DIRTY" : "CLEAN"), [100,100], 1);
+  guibody() {
+    return [
+      Mum.text({str:this.value, caret:this.cursor, offset:[0,-16]}),
+    ];
   },
 
   insert_char(char) {

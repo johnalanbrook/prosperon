@@ -475,9 +475,8 @@ HMM_Vec2 world2screen(HMM_Vec2 pos)
 
 HMM_Vec2 screen2world(HMM_Vec2 pos)
 {
-  pos.Y *= -1;
   pos = HMM_ScaleV2(pos, 1/mainwin.dpi);
-  pos = HMM_AddV2(pos, HMM_V2(-mainwin.rwidth/2.0, mainwin.rheight/2.0));
+  pos = HMM_SubV2(pos, HMM_V2(mainwin.rwidth/2.0, mainwin.rheight/2.0));
   pos = HMM_ScaleV2(pos, zoom);
   pos = HMM_AddV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
   return pos;

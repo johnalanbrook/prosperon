@@ -119,7 +119,7 @@ void input_mouse(int btn, int state, uint32_t mod)
 void input_mouse_move(float x, float y, float dx, float dy, uint32_t mod)
 {
   mouse_pos.x = x;
-  mouse_pos.y = y;
+  mouse_pos.y = mainwin.height - y;
   mouse_delta.x = dx;
   mouse_delta.y = -dy;
   

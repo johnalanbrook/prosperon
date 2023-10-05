@@ -19,7 +19,7 @@ URIError = {};
 
 Object.mixin = function(target, source)
 {
-  if (typeof source === 'undefined') return target;
+  if (typeof source !== 'object') return target;
   
   Object.keys(source).forEach(function (k) {
     if (Object.isAccessor(source,k))
@@ -40,26 +40,19 @@ Object.deepfreeze = function(obj)
   Object.freeze(obj);
 }
 
-/* Goes through each key and overwrites if it's present, adds if it is not */
+/* Goes through each key and overwrites if it's present */
 Object.dainty_assign = function(target, source)
 {
-  for (var key in source) {
-
-    if (typeof source[key] === 'function') {
-      target[key] = source[key];
-      continue;
-    }
-    if (!Object.hasOwn(target, key)) continue;
-    if (!Object.getOwnPropertyDescriptor(target, key).writable) continue;
+  Object.keys(target).forEach(function(key) {
+    if (!(key in source)) return;
     
     if (Array.isArray(target[key]))
       target[key] = source[key];
     else if (typeof target[key] === 'object')
       Object.dainty_assign(target[key], source[key]);
-    else {
+    else
       target[key] = source[key];
-    }
-  }
+  });
 }
 
 Object.isObject = function(o)

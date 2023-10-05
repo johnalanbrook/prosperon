@@ -8,12 +8,6 @@ var Mouse = {
     return cmd(45);
   },
 
-  get screenpos() {
-    var p = this.pos;
-    p.y = Window.dimensions.y - p.y;
-    return p;
-  },
-
   get worldpos() {
     return screen2world(cmd(45));
   },
@@ -114,7 +108,8 @@ var Player = {
       if (typeof pawn.inputs?.mouse?.[type] === 'function') {
         pawn.inputs.mouse[type].call(pawn,...args);
 	pawn.inputs.post?.call(pawn);
-	return;
+	if (!pawn.inputs.fallthru)
+ 	  return;
       }
     }
   },
@@ -124,7 +119,8 @@ var Player = {
       if (typeof pawn.inputs?.char === 'function') {
         pawn.inputs.char.call(pawn, c);
 	pawn.inputs.post?.call(pawn);
-	return;
+	if (!pawn.inputs.fallthru)	
+	  return;
       }
     };
   },
@@ -133,7 +129,8 @@ var Player = {
     for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.any === 'function') {
         pawn.inputs.any(cmd);
-        return;
+	if (!pawn.inputs.fallthru)	
+          return;
       }
       if (!pawn.inputs?.[cmd]) continue;
 
@@ -156,7 +153,8 @@ var Player = {
       if (typeof fn === 'function') {
         fn.call(pawn, ... args);
 	pawn.inputs.post?.call(pawn);
-	return;
+	if (!pawn.inputs.fallthru)	
+	  return;
       }
     }
   },

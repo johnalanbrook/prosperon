@@ -90,6 +90,7 @@ function positive_diff(from, to)
 
 function vdiff(from,to)
 {
+  if (typeof from === 'function') return undefined;
   if (typeof from === 'number') {
     var a = Number.prec(from);
     return a === to ? undefined : a;
@@ -110,16 +111,12 @@ function gdiff(from, to) {
 
   Object.entries(from).forEach(function([k,v]) {
     if (typeof v === 'function') return;  
-    if (!Object.isAccessor(from, k)) {
-      obj[k] = v;
-      return;
-    }
 
     var diff = vdiff(v, to[k]);
     if (diff) {
       if (Array.isArray(v))
         obj[k] = Object.values(diff);
-      else
+      else if (!diff.empty)
         obj[k] = diff;
     }
   });

@@ -702,10 +702,14 @@ component.circle2d = Object.copy(collider2d, {
     
   make(go) {
     var circle = Object.create(this);
+    
     circle.gameobject = go;
     Object.assign(circle, make_circle2d(go.body));
     Object.mixin(circle,this.impl);
     Object.hide(circle, 'gameobject', 'id', 'shape', 'scale');
+    for (var key in this.impl)
+      if (this[key]) circle[key] = this[key];
+      
     return circle;
   },
 });

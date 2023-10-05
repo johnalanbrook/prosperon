@@ -691,6 +691,9 @@ load("scripts/entity.js");
 
 var preprimum = {};
 preprimum.objects = {};
+preprimum.worldpos = function() { return [0,0]; };
+preprimum.pos = [0,0];
+preprimum.angle = 0;
 var World = gameobject.make(preprimum);
 var Primum = World;
 Primum.level = undefined;

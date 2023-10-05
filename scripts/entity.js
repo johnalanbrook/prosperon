@@ -47,9 +47,9 @@ var gameobject = {
       },
       
       set pos(x) {
-        this.set_worldpos(x); return;
         this.set_worldpos(Vector.rotate(x,Math.deg2rad(this.level.angle)).add(this.level.worldpos()));
       },
+      
       get pos() {
         var offset = this.worldpos().sub(this.level.worldpos());
 	return Vector.rotate(offset, -Math.deg2rad(this.level.angle));
@@ -84,14 +84,15 @@ var gameobject = {
       get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
       set angle(x) {
         var diff = x - this.angle;
+	var thatpos = this.pos;
 	this.objects.forEach(function(x) {
 	  x.angle = x.angle + diff;
-	  var pos = x.pos.sub(this.pos);
+	  var pos = x.pos.sub(thatpos);
 	  var r = Vector.length(pos);
 	  var p = Math.rad2deg(Math.atan2(pos.y, pos.x));
 	  p += diff;
 	  p = Math.deg2rad(p);
-	  x.pos = this.pos.add([r*Math.cos(p), r*Math.sin(p)]);
+	  x.set_worldpos(thatpos.add([r*Math.cos(p), r*Math.sin(p)]));
 	}, this);
 	  
         set_body(0,this.body, Math.deg2rad(x));
@@ -298,11 +299,6 @@ var gameobject = {
 	delete d.angle;
 	delete d.velocity;
 	delete d.angularvelocity;
-	d.components = [];
-	this.components.forEach(function(x) {
-	  var c = gdiff(x, x.__proto__);
-	  if (c) d.components.push(c);
-	});
         return d;
       },
 
@@ -313,7 +309,8 @@ var gameobject = {
       },
 
       level_obj() {
-        var json = this.json_obj();
+        var json = gdiff(this,this.__proto__);
+
 	var objects = {};
 	this.__proto__.objects ??= {};
 	if (!Object.keys(this.objects).equal(Object.keys(this.__proto__.objects))) {
@@ -417,6 +414,7 @@ var gameobject = {
     obj.components = {};
     obj.objects = {};
     Object.mixin(obj, gameobject.impl);
+
     Object.hide(obj, 'components');
     Object.hide(obj, 'objects');
     obj._ed = {};
@@ -433,36 +431,26 @@ var gameobject = {
     for (var prop in this) {
       var p = this[prop];
       if (typeof p !== 'object') continue;
-
-      if ('ur' in p) {
-        obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
-	obj.rename_obj(obj[prop].toString(), prop);
-	Object.hide(obj, prop);
-      } else if ('comp' in p) {
-        Log.warn(p);
-        obj[prop] = Object.assign(component[p.comp].make(obj), p);
+      if (typeof p.make === 'function') {
+        obj[prop] = p.make(obj);
 	obj.components[prop] = obj[prop];
-	Object.hide(obj,prop);
       }
-    };
+    };      
 
     if (this.objects) {
       for (var prop in this.objects) {
-        Log.warn(this.objects[prop]);
-	continue;
         var o = this.objects[prop];
         var newobj = obj.spawn(prototypes.get_ur(o.ur));
 	if (!newobj) continue;
 	obj.rename_obj(newobj.toString(), prop);
+	Object.assign(newobj,o);
       }
     }
 
-    for (var p in this.impl) {
-      if (Object.isAccessor(this.impl, p))
-        obj[p] = this[p];
-    }
+    Object.dainty_assign(obj, this);
 
     obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
+    
     gameobject.check_registers(obj);
 
     if (typeof obj.start === 'function') obj.start();
@@ -576,9 +564,17 @@ prototypes.from_file = function(file)
   json ??= {};
   Object.merge(newur,json);
 
-  for (var p in newur)
-    if (Object.isObject(newur[p]) && Object.isObject(upperur[p]))
-      newur[p].__proto__ = upperur[p];
+  Object.entries(newur).forEach(function([k,v]) {
+    if (Object.isObject(v) && Object.isObject(upperur[k]))
+      v.__proto__ = upperur[k];
+  });
+
+  Object.values(newur).forEach(function(v) {
+    if (typeof v !== 'object') return;
+    if (!v.comp) return;
+    v.__proto__ = component[v.comp];
+    delete v.comp;
+  });
       
   newur.__proto__ = upperur;
   newur.instances = [];
@@ -708,33 +704,32 @@ prototypes.from_obj("arena", {});
 
 prototypes.resavi = function(ur, path)
 {
-    if (!ur) return path;
-    if (path[0] === '/') return path;
+  if (!ur) return path;
+  if (path[0] === '/') return path;
 
-    var res = ur.replaceAll('.', '/');
-    var dir = path.dir();
-    if (res.startsWith(dir))
-      return path.base();
-    
-    return path;
+  var res = ur.replaceAll('.', '/');
+  var dir = path.dir();
+  if (res.startsWith(dir))
+    return path.base();
+
+  return path;
 }
 
 prototypes.resani = function(ur, path)
 {
   if (!path) return "";
-  Log.warn(`Sanitizing ${path} from ${ur}`);
-    if (!ur) return path;
-    if (path[0] === '/') return path.slice(1);
+  if (!ur) return path;
+  if (path[0] === '/') return path.slice(1);
 
-    var res = ur.replaceAll('.', '/');
-    var restry = res + "/" + path;
-    while (!IO.exists(restry)) {
-      res = res.updir() + "/";
-      if (res === "/")
-        return path;
+  var res = ur.replaceAll('.', '/');
+  var restry = res + "/" + path;
+  while (!IO.exists(restry)) {
+    res = res.updir() + "/";
+    if (res === "/")
+      return path;
 
-      restry = res + path;
-    }
-    return restry;
+    restry = res + path;
+  }
+  return restry;
 }
 

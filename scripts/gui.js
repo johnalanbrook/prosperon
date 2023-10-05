@@ -64,15 +64,50 @@ var GUI = {
   }
 };
 
+var gui_controls = {};
+gui_controls.update = function() { };
+
+gui_controls.options = [];
+gui_controls.inputs = {};
+gui_controls.inputs.fallthru = false;
+gui_controls.inputs.mouse = {};
+gui_controls.inputs.mouse.move = function(pos,dpos)
+{
+  var newsel = undefined;
+  this.options.forEach(function(x) {
+    if (pointinbb(x.bb,pos)) {
+      newsel = x;
+      return;
+    }
+  });
+
+  if (this.selected && this.selected !== newsel)
+    this.selected.selected = false;
+
+  this.selected = newsel;
+  if (this.selected)
+    this.selected.selected = true;
+}
+
+gui_controls.inputs.lm = function() {
+  if (this.selected) {
+    Log.warn(this.selected.str);
+    this.selected.action(this.selected);
+  }
+};
+
 var Mum = {
     padding:[0,0], /* Each element inset with this padding on all sides */
     offset:[0,0],
     font: "fonts/LessPerfectDOSVGA.ttf",
+    selectable: false,
+    selected: false,
     font_size: 1,
     text_align: "left",
     scale: 1,
     angle: 0,
     anchor: [0,1],
+    hovered: {},
     text_shadow: {
       pos: [0,0],
       color: Color.white,
@@ -85,10 +120,15 @@ var Mum = {
     image_repeat: false,
     image_repeat_offset: [0,0],
     debug: false, /* set to true to draw debug boxes */
+    
   make(def) {
     var n = Object.create(this);
     Object.assign(n, def);
     return n;
+  },
+
+  prestart() {
+    this.hovered.__proto__ = this;
   },
 
   start() {},
@@ -96,28 +136,32 @@ var Mum = {
   extend(def) {
     var n = Object.create(this);
     Object.assign(n, def);
-    return function(def) { var p = n.make(def); p.start(); return p; };
+    return function(def) {
+      var p = n.make(def);
+      p.prestart();
+      p.start();
+      return p;
+    };
   },
 }
 
 Mum.text = Mum.extend({
   draw(cursor) {
     if (this.hide) return;
+    if (this.selectable) gui_controls.options.push_unique(this);
     this.caret ??= -1;
 
 /*    if (!this.bb)
       this.calc_bb(cursor);
     else
       this.update_bb(cursor);
-*/    
-    if (this.selected) {
-      Object.assign(this,this.hovered);
-      this.calc_bb(cursor);
-    }
+*/
+    var params = this.selected ? this.hovered : this;
+
     this.calc_bb(cursor);
-    var aa = [0,1].sub(this.anchor);
-    var pos = cursor.add(this.wh.scale(aa)).add(this.offset);
-    ui_text(this.str, pos, this.font_size, this.color, this.width, this.caret);
+    var aa = [0,1].sub(params.anchor);
+    var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
+    ui_text(params.str, pos, params.font_size, params.color, params.width, params.caret);
   },
   
   update_bb(cursor) {
@@ -127,8 +171,8 @@ Mum.text = Mum.extend({
   calc_bb(cursor) {
     var bb = cmd(118,this.str, this.font_size, this.width);
     this.wh = bb2wh(bb);
-    var pos = cursor.sub(this.wh.scale(this.anchor));
-    this.bb = movebb(bb,pos);
+    var pos = cursor.add(this.wh.scale([0,1].sub(this.anchor))).add(this.offset);    
+    this.bb = movebb(bb,pos.add([this.wh.x/2,0]));
   },
   start() {
     this.calc_bb([0,0]);
@@ -187,6 +231,7 @@ Mum.image = Mum.extend({
 Mum.column = Mum.extend({
   draw(cursor) {
     if (this.hide) return;
+    cursor = cursor.add(this.offset);
     
     this.items.forEach(function(item) {
       if (item.hide) return;

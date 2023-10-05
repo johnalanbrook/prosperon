@@ -1278,6 +1278,7 @@ var inputpanel = {
   },
   
   open(steal) {
+    Log.warn(gameobject.angle);  
     this.on = true;
     this.value = "";
     if (steal) {
@@ -1320,6 +1321,11 @@ var inputpanel = {
   keycb() {},
 
   caret: 0,
+
+  reset_value() {
+    this.value = "";
+    this.caret = 0;
+  },
   
   input_backspace_pressrep() {
     this.value = this.value.slice(0,-1);
@@ -1340,8 +1346,12 @@ inputpanel.inputs['C-b'] = function() {
   if (this.caret === 0) return;
   this.caret--;
 };
+inputpanel.inputs['C-f'] = function() {
+  if (this.caret === this.value.length) return;
+  this.caret++;
+};
 inputpanel.inputs['C-a'] = function() { this.caret = 0; };
-inputpanel.inputs['C-f'] = function() { this.caret = this.value.length; };
+inputpanel.inputs['C-e'] = function() { this.caret = this.value.length; };
 inputpanel.inputs.backspace = function() {
   if (this.caret === 0) return;
   this.value = this.value.slice(0,this.caret-1) + this.value.slice(this.caret);
@@ -1350,6 +1360,10 @@ inputpanel.inputs.backspace = function() {
 };
 inputpanel.inputs.backspace.rep = true;
 inputpanel.inputs.enter = function() { this.submit(); }
+
+inputpanel.inputs['C-k'] = function() {
+  this.value = this.value.slice(0,this.caret);
+};
 
 
 function proto_count_lvls(name)
@@ -1431,8 +1445,7 @@ var replpanel = Object.copy(inputpanel, {
     this.value = "";
     this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
-    if (ret)
-      Log.say(ret);
+    Log.say(ret);
   },
 });
 
@@ -1442,7 +1455,7 @@ replpanel.inputs['C-p'] = function()
   if (this.prevmark >= this.prevthis.length) return;
   this.prevmark++;
   this.value = this.prevthis[this.prevmark];
-  this.inputs['C-f'].call(this);
+  this.inputs['C-e'].call(this);
 }
 
 replpanel.inputs['C-n'] = function()
@@ -1454,7 +1467,7 @@ replpanel.inputs['C-n'] = function()
   } else
     this.value = this.prevthis[this.prevmark];
 
-  this.inputs['C-f'].call(this);
+  this.inputs['C-e'].call(this);
 }
 
 var objectexplorer = Object.copy(inputpanel, {
@@ -1462,6 +1475,7 @@ var objectexplorer = Object.copy(inputpanel, {
   obj: undefined,
   previous: [],
   start() {
+
     this.previous = [];
     Input.setnuke();
   },
@@ -1632,14 +1646,21 @@ var openlevelpanel = Object.copy(inputpanel,  {
     this.value = this.assets[0];
     return true;
   },
-  
+
   start() {
     this.allassets = prototypes.list.sort();
     this.assets = this.allassets.slice();
+    var click_ur = function(btn) {
+      Log.warn(btn.str);
+      this.value = btn.str;
+      this.keycb();
+      this.submit();
+    };
+    click_ur = click_ur.bind(this);
 
     this.mumlist = [];
     this.assets.forEach(function(x) {
-      this.mumlist[x] = Mum.text({str:x});
+      this.mumlist[x] = Mum.text({str:x, action:click_ur,selectable: true, hovered:{color:Color.red}});
     }, this);
   },
 
@@ -1653,9 +1674,9 @@ var openlevelpanel = Object.copy(inputpanel,  {
   },
   
   guibody() {
-    var a = [Mum.text({str:this.value,color:Color.green})];
+    var a = [Mum.text({str:this.value,color:Color.green, caret:this.caret})];
     var b = a.concat(Object.values(this.mumlist));
-    return Mum.column({items:b});
+    return Mum.column({items:b, offset:[0,-10]});
   },
 });
 
@@ -1845,6 +1866,10 @@ Player.players[0].control(editor);
 Register.gui.register(editor.ed_gui, editor);
 Debug.register_call(editor.ed_debug, editor);
 
+Register.update.register(gui_controls.update, gui_controls);
+Player.players[0].control(gui_controls);
+
+
 if (IO.exists("editor.config"))
   load_configs("editor.config");
 
@@ -1853,5 +1878,6 @@ editor.clear_level();
 editor.camera = Game.camera;
 Game.stop();
 Game.editor_mode(true);
+
 
 load("editorconfig.js");
