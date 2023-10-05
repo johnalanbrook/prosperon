@@ -24,6 +24,13 @@ var component = {
   },
 };
 
+component.assign_impl = function(o)
+{
+  for (var key in o.impl)
+    if (typeof o[key] !== 'undefined' && typeof o[key] !== 'function')
+      o[key] = o.impl[key];
+}
+
 component.sprite = Object.copy(component, {
   pos:[0,0],
   color:[1,1,1],
@@ -37,20 +44,23 @@ component.sprite = Object.copy(component, {
     nsprite.gameobject = go;
     Object.assign(nsprite, make_sprite(go.body)); 
     Object.mixin(nsprite, component.sprite.impl);
+    nsprite.kill = component.sprite.impl.kill;
+
     Object.hide(nsprite, 'gameobject', 'id');
     for (var p in component.sprite.impl)
-      if (typeof this[p] !== 'undefined')
+      if (typeof this[p] !== 'undefined' && typeof this[p] !== 'function')
         nsprite[p] = this[p];
+
     return nsprite;
   },
 });
 
 component.sprite.impl = {
   set path(x) {
-    cmd(12,this.id,prototypes.resani(this.gameobject.ur, x),this.rect);
+    cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
   },
   get path() {
-    return prototypes.resavi(this.gameobject.ur, cmd(116,this.id));
+    return prototypes.resavi(this.gameobject.__proto__.toString(), cmd(116,this.id));
   },
   hide() { this.enabled = false; },
   show() { this.enabled = true; },
@@ -324,9 +334,7 @@ collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
-  sync() {
-    cmd_poly2d(0, this.id, this.spoints);
-  },
+  toString() { return "poly2d"; },
   
   boundingbox() {
     return points2bb(this.spoints);
@@ -339,8 +347,12 @@ component.polygon2d = Object.copy(collider2d, {
     poly.flipx = false;
     poly.flipy = false;
     Object.assign(poly, make_poly2d(go.body, poly.points));
+    Object.mixin(poly, poly.impl);
+    Object.hide(poly, 'id', 'shape', 'gameobject', 'flipx', 'flipy');
     return poly;
   },
+
+  points:[],
 
   /* EDITOR */  
   get spoints() {
@@ -361,7 +373,6 @@ component.polygon2d = Object.copy(collider2d, {
 	spoints.push(newpoint);
       });
     }
-
     return spoints;
   },
   
@@ -376,6 +387,9 @@ component.polygon2d = Object.copy(collider2d, {
   },
 
   pick(pos) {
+    if (!Object.hasOwn(this,'points'))
+      this.points = deep_copy(this.__proto__.points);
+      
     var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
     if (p) {
       return {
@@ -390,11 +404,16 @@ component.polygon2d = Object.copy(collider2d, {
       
     return undefined;
   },
-  
+});
+
+component.polygon2d.impl = {
+  sync() {
+    cmd_poly2d(0, this.id, this.spoints);
+  },
   query() {
     return cmd(80, this.shape);
   },
-});
+};
 
 var polygon2d = component.polygon2d;
 
@@ -424,11 +443,13 @@ polygon2d.inputs['C-b'] = function() {
 };
 polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 
-Object.freeze(polygon2d);
+//Object.freeze(polygon2d);
 
 component.edge2d = Object.copy(collider2d, {
   degrees:2,
   dimensions:2,
+  thickness:0,
+  points: [],
   /* open: 0
      clamped: 1
      beziers: 2
@@ -444,6 +465,7 @@ component.edge2d = Object.copy(collider2d, {
   
   flipx: false,
   flipy: false,
+  toString() { return "edge2d"; },
   
   hollow: false,
   hollowt: 0,
@@ -508,11 +530,6 @@ component.edge2d = Object.copy(collider2d, {
 
     return spline_cmd(0, this.degrees, this.dimensions, this.type, spoints, n);
   },
-  set thickness(x) {
-    cmd_edge2d(1,this.id,x);
-  },
-  
-  get thickness() { return cmd(112,this.id); },
 
   samples: 10,
   
@@ -523,20 +540,14 @@ component.edge2d = Object.copy(collider2d, {
   make(go) {
     var edge = Object.create(this);
     edge.gameobject = go;
-    edge.cpoints = [];
-    edge.points = [];
-    Object.assign(edge, make_edge2d(go.body, edge.points, 0));    
-    edge.thickness = 0;
+//    edge.cpoints = [];
+//    edge.points = [];
+    Object.assign(edge, make_edge2d(go.body, edge.points, 0));
+    Object.mixin(edge,edge.impl);
+    Object.hide(edge, 'gameobject', 'id', 'shape');
     return edge;
   },
   
-  sync() {
-    var sensor = this.sensor;
-    this.points = this.sample(this.samples);
-    cmd_edge2d(0,this.id,this.points);
-    this.sensor = sensor;
-  },
-
   /* EDITOR */
   gizmo() {
     this.spoints.forEach(function(x) {
@@ -564,6 +575,19 @@ component.edge2d = Object.copy(collider2d, {
     return undefined;
   },
 });
+
+component.edge2d.impl = {
+  set thickness(x) {
+    cmd_edge2d(1,this.id,x);
+  },
+  get thickness() { return cmd(112,this.id); },
+  sync() {
+    var sensor = this.sensor;
+    this.points = this.sample(this.samples);
+    cmd_edge2d(0,this.id,this.points);
+    this.sensor = sensor;
+  },
+};
 
 var bucket = component.edge2d;
 bucket.inputs = {};
@@ -684,7 +708,7 @@ component.circle2d = Object.copy(collider2d, {
     set radius(x) { cmd_circle2d(0,this.id,x); },
     get radius() { return cmd_circle2d(2,this.id); },
 
-    set scale(x) { Log.warn(x);this.radius = x; },
+    set scale(x) { this.radius = x; },
     get scale() { return this.radius; },
 
     set offset(x) { cmd_circle2d(1,this.id,x); },
@@ -707,8 +731,10 @@ component.circle2d = Object.copy(collider2d, {
     Object.assign(circle, make_circle2d(go.body));
     Object.mixin(circle,this.impl);
     Object.hide(circle, 'gameobject', 'id', 'shape', 'scale');
+    component.assign_impl(circle);
     for (var key in this.impl)
-      if (this[key]) circle[key] = this[key];
+      if (typeof this[key] !== 'undefined' && typeof this[key] !== 'function')    
+        if (this[key]) circle[key] = this[key];
       
     return circle;
   },

@@ -229,6 +229,7 @@ cpBitmask js2bitmask(JSValue v) {
 
 cpVect *cpvecarr = NULL;
 
+/* Must be freed */
 cpVect *js2cpvec2arr(JSValue v) {
   if (cpvecarr)
     arrfree(cpvecarr);

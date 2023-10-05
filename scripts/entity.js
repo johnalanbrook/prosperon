@@ -81,21 +81,30 @@ var gameobject = {
 	set_body(2,this.body,x);
       },
 
-      get angle() { return Math.rad2deg(q_body(2,this.body))%360; },
+      worldangle() { return Math.rad2deg(q_body(2,this.body))%360; },
+      get angle() {
+        if (!this.level) return this.worldangle();
+        return this.worldangle() - this.level.worldangle();
+      },
       set angle(x) {
         var diff = x - this.angle;
 	var thatpos = this.pos;
 	this.objects.forEach(function(x) {
-	  x.angle = x.angle + diff;
-	  var pos = x.pos.sub(thatpos);
-	  var r = Vector.length(pos);
-	  var p = Math.rad2deg(Math.atan2(pos.y, pos.x));
+	  x.rotate(diff);
+//	  x.angle = x.angle + diff;
+	  var opos = x.pos;
+	  var r = Vector.length(opos);
+	  var p = Math.rad2deg(Math.atan2(opos.y, opos.x));
 	  p += diff;
 	  p = Math.deg2rad(p);
-	  x.set_worldpos(thatpos.add([r*Math.cos(p), r*Math.sin(p)]));
+	  x.pos = [r*Math.cos(p), r*Math.sin(p)];
 	}, this);
 	  
-        set_body(0,this.body, Math.deg2rad(x));
+        set_body(0,this.body, Math.deg2rad(x - this.level.worldangle()));
+      },
+
+      rotate(x) {
+        this.angle = this.angle + x;
       },
 
       
@@ -164,7 +173,7 @@ var gameobject = {
 
   /* Make a unique object the same as its prototype */
   revert() {
-    Object.totalmerge(this,this.__proto__);
+    Object.merge(this,this.__proto__);
   },
 
   check_registers(obj) {
@@ -249,52 +258,8 @@ var gameobject = {
 	return bb ? bb : cwh2bb([0,0], [0,0]);
       },
 
-      diff(from, to) {
-	var ret = {};
-
-	for (var key in from) {
-	  if (!Object.hasOwn(from, key) && !Object.isAccessor(from,key)) continue;
-	  if (typeof from[key] === 'undefined' || typeof to[key] === 'undefined') continue;
-	  if (typeof from[key] === 'function') continue;
-//	  if (typeof to === 'object' && !(key in to)) continue; 
-
-	  if (Array.isArray(from[key])) {
-	    if (!Array.isArray(to[key]))
-	      ret[key] = Object.values(gameobject.diff(from[key], []));
-
-	    if (from[key].length !== to[key].length)
-	      ret[key] = Object.values(gameobject.diff(from[key], []));
-
-	    var diff = gameobject.diff(from[key], to[key]);
-	    if (diff && !diff.empty)
-	      ret[key] = Object.values(diff);
-
-	    continue;
-	  }
-
-	  if (typeof from[key] === 'object') {
-	    var diff = gameobject.diff(from[key], to[key]);
-	    if (diff && !diff.empty)
-		ret[key] = diff;	
-	    continue;
-	  }
-
-	  if (typeof from[key] === 'number') {
-	    var a = Number.prec(from[key]);
-	    if (a !== to[key])
-	      ret[key] = a;
-	    continue;
-	  }
-
-	  if (from[key] !== to[key])
-	    ret[key] = from[key];
-	}
-	if (ret.empty) return undefined;
-	return ret;
-      },
-
       json_obj() {
-        var d = gdiff(this,this.__proto__);
+        var d = ediff(this,this.__proto__);
 	delete d.pos;
 	delete d.angle;
 	delete d.velocity;
@@ -309,7 +274,7 @@ var gameobject = {
       },
 
       level_obj() {
-        var json = gdiff(this,this.__proto__);
+        var json = this.json_obj();
 
 	var objects = {};
 	this.__proto__.objects ??= {};
@@ -321,7 +286,7 @@ var gameobject = {
 	} else {
 	  for (var o in this.objects) {
 	    var obj = this.objects[o].json_obj();
-	    Object.assign(obj, gameobject.diff(this.objects[o].transform(), this.__proto__.objects[o]));
+	    Object.assign(obj, ediff(this.objects[o].transform(), this.__proto__.objects[o]));
 	    if (!obj.empty)
 	      objects[o] = obj;
 	  }
@@ -414,11 +379,12 @@ var gameobject = {
     obj.components = {};
     obj.objects = {};
     Object.mixin(obj, gameobject.impl);
-
     Object.hide(obj, 'components');
     Object.hide(obj, 'objects');
     obj._ed = {};
     Object.hide(obj, '_ed');
+    obj.ur = this.toString();
+    Object.hide(obj,'ur');
     
     Game.register_obj(obj);
 
@@ -440,13 +406,12 @@ var gameobject = {
     if (this.objects) {
       for (var prop in this.objects) {
         var o = this.objects[prop];
-        var newobj = obj.spawn(prototypes.get_ur(o.ur));
+        var newobj = obj.spawn(o.ur);
 	if (!newobj) continue;
 	obj.rename_obj(newobj.toString(), prop);
 	Object.assign(newobj,o);
       }
     }
-
     Object.dainty_assign(obj, this);
 
     obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
@@ -467,7 +432,6 @@ var gameobject = {
       Log.warn(`Already an object with name ${newname}.`);
       return;
     }
-    Log.warn(`Renaming from ${name} to ${newname}.`);
 
     this.objects[newname] = this.objects[name];
     delete this.objects[name];
@@ -573,15 +537,14 @@ prototypes.from_file = function(file)
     if (typeof v !== 'object') return;
     if (!v.comp) return;
     v.__proto__ = component[v.comp];
-    delete v.comp;
   });
       
   newur.__proto__ = upperur;
   newur.instances = [];
+  Object.hide(newur, 'instances');
 
   prototypes.list.push(urpath);
   newur.toString = function() { return urpath; };
-  newur.ur = urpath;
   ur[urpath] = newur;
 
   return ur[urpath];

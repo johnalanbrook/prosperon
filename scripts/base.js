@@ -45,9 +45,10 @@ Object.dainty_assign = function(target, source)
 {
   Object.keys(target).forEach(function(key) {
     if (!(key in source)) return;
+    if (typeof target[key] === 'function') return;
     
     if (Array.isArray(target[key]))
-      target[key] = source[key];
+      target[key] = deep_copy(source[key]);
     else if (typeof target[key] === 'object')
       Object.dainty_assign(target[key], source[key]);
     else
@@ -736,7 +737,7 @@ Math.angledist = function (a1, a2) {
     return wrap;
 };
 Math.angledist.doc = "Find the shortest angle between two angles.";
-
+Math.patan2 = function(p) { return Math.atan2(p.y,p.x); };
 Math.deg2rad = function(deg) { return deg * 0.0174533; };
 Math.rad2deg = function(rad) { return rad / 0.0174533; };
 Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };

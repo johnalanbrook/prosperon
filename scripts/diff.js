@@ -83,60 +83,43 @@ function diffassign(target, from) {
   }
 };
 
-function positive_diff(from, to)
+function ediff(from,to)
 {
-  var diff = {};
-}
+  var ret = {};
+  
+  Object.entries(from).forEach(function([key,v]) {
+    if (typeof v === 'function') return;
+    if (typeof v === 'undefined') return;
 
-function vdiff(from,to)
-{
-  if (typeof from === 'function') return undefined;
-  if (typeof from === 'number') {
-    var a = Number.prec(from);
-    return a === to ? undefined : a;
-  }
+    if (Array.isArray(v)) {
+      if (!Array.isArray(to[key]) || v.length !== to[key].length)
+	ret[key] = Object.values(ediff(v, []));
 
-  if (typeof from === 'object') {
-    var ret = {};
-    Object.keys(from).forEach(function(k) {
-      var diff = vdiff(from[k], to[k]);
-      if (diff) ret[k] = diff;
-    });
-    return ret.empty ? undefined : ret;
-  }
-}
+      var diff = ediff(from[key], to[key]);
+      if (diff && !diff.empty)
+	ret[key] = Object.values(ediff(v,[]));
 
-function gdiff(from, to) {
-  var obj = {};
-
-  Object.entries(from).forEach(function([k,v]) {
-    if (typeof v === 'function') return;  
-
-    var diff = vdiff(v, to[k]);
-    if (diff) {
-      if (Array.isArray(v))
-        obj[k] = Object.values(diff);
-      else if (!diff.empty)
-        obj[k] = diff;
+      return;
     }
+
+    if (typeof v === 'object') {
+      var diff = ediff(v, to[key]);
+      if (diff && !diff.empty)
+	  ret[key] = diff;	
+      return;
+    }
+
+    if (typeof v === 'number') {
+      var a = Number.prec(v);
+      if (!to || a !== to[key])
+	ret[key] = a;
+      return;
+    }
+
+    if (!to || v !== to[key])
+      ret[key] = v;
   });
-
-  return obj;
-};
-
-function diff(from, to) {
-  var obj = {};
-
-  for (var e in to) {
-    if (typeof to[e] === 'object' && from.hasOwnProperty(e)) {
-      obj[e] = diff(from[e], to[e]);
-      if (obj[e].empty)
-        delete obj[e];
-    } else {
-      if (from[e] !== to[e])
-        obj[e] = to[e];
-    }
-  }
-
-  return obj;
-};
+  
+  if (ret.empty) return undefined;
+  return ret;
+}

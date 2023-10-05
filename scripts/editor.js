@@ -421,7 +421,7 @@ var editor = {
 
     this.selectlist.forEach(function(x) {
       var sname = x.__proto__.toString();
-      if (!x.json_obj().empty)
+      if (!x.level_obj().empty)
         x._ed.dirty = true;
       else
         x._ed.dirty = false;
@@ -789,12 +789,12 @@ editor.inputs['C-s'] = function() {
   };
 
   if (editor.selectlist.length !== 1 || !editor.selectlist[0]._ed.dirty) return;
-  Object.merge(editor.selectlist[0].ur, editor.selectlist[0].level_obj());
+  Object.merge(editor.selectlist[0].__proto__, editor.selectlist[0].level_obj());
   var path = editor.selectlist[0].ur.toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";
 
-  IO.slurpwrite(JSON.stringify(editor.selectlist[0].ur,null,1), path);
+  IO.slurpwrite(JSON.stringify(editor.selectlist[0].__proto__,null,1), path);
 };
 editor.inputs['C-s'].doc = "Save selected.";
 
@@ -1273,12 +1273,11 @@ var inputpanel = {
   guibody() {
     return [
       Mum.text({str:this.value, color:Color.green}),
-      Mum.button({str:"Submit", action:this.submit})
+//      Mum.button({str:"Submit", action:this.submit})
     ];
   },
   
   open(steal) {
-    Log.warn(gameobject.angle);  
     this.on = true;
     this.value = "";
     if (steal) {

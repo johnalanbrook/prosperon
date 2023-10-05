@@ -47,7 +47,7 @@ var Debug = {
 
   numbered_point(pos, n) {
     Debug.point(world2screen(pos), 3);
-    gui_text(n, world2screen(pos).add([0,4]), 1);
+    GUI.text(n, world2screen(pos).add([0,4]), 1);
   },
 
   phys_drawing: false,

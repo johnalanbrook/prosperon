@@ -390,8 +390,13 @@ void phys2d_polyaddvert(struct phys2d_poly *poly) {
 
 void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
   if (!verts) return;
-  arrfree(poly->points);
-  poly->points = verts;
+  if (poly->points)
+    arrfree(poly->points);
+    
+  arrsetlen(poly->points, arrlen(verts));
+  for (int i = 0; i < arrlen(verts); i++)
+    poly->points[i] = verts[i];
+    
   phys2d_applypoly(poly);
 }
 
