@@ -181,6 +181,9 @@ static int curchar = 0;
 
 void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color)
 {
+  cursor.Y -= 2;
+  sdrawCharacter(font->Characters['_'], cursor, scale, color);
+  return;
   cpVect wh;
  
   wh.x = 8 * scale;
@@ -281,37 +284,44 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
   return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){cursor.X,font->linegap-cursor.Y});
 }
 
+void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
+{
+  if (caret == l)
+    draw_char_box(font->Characters[0], pos, scale, color);
+}
+
 /* pos given in screen coordinates */
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   int len = strlen(text);
 
   HMM_Vec2 cursor = pos;
 
+  int l = 0;
   const unsigned char *line, *wordstart, *drawstart;
   line = drawstart = (unsigned char *)text;
 
   struct rgba usecolor = color;
+  check_caret(caret, l, cursor, scale, usecolor);
 
-  while (*line != '\0') {
-    if (caret >= 0 && caret == curchar)
-      draw_char_box(font->Characters[69], cursor, scale, color);
-      
-    if (isblank(*line)) {
-      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
-      cursor.X += font->Characters[*line].Advance * tracking * scale;
-      line++;
-    } else if (isspace(*line)) {
-      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
+  while (line[l] != '\0') {
+    if (isblank(line[l])) {
+      sdrawCharacter(font->Characters[line[l]], cursor, scale, usecolor);
+      cursor.X += font->Characters[line[l]].Advance * tracking * scale;
+      l++;
+      check_caret(caret, l, cursor, scale, usecolor);      
+    } else if (isspace(line[l])) {
+      sdrawCharacter(font->Characters[line[l]], cursor, scale, usecolor);
       cursor.Y -= scale * font->linegap;
       cursor.X = pos.X;
-      line++;
+      l++;
+      check_caret(caret, l, cursor, scale, usecolor);
     } else {
-      wordstart = line;
+      wordstart = &line[l];
       int wordWidth = 0;
 
-      while (!isspace(*line) && *line != '\0') {
-        wordWidth += font->Characters[*line].Advance * tracking * scale; 
-       line++;
+      while (!isspace(line[l]) && line[l] != '\0') {
+        wordWidth += font->Characters[line[l]].Advance * tracking * scale; 
+        l++;
       }
 
       if (lw > 0 && (cursor.X + wordWidth - pos.X) >= lw) {
@@ -319,15 +329,14 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
         cursor.Y -= scale * font->linegap;
       }
 
-      while (wordstart < line) {
+      while (wordstart < &line[l]) {
         sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
+	check_caret(caret, wordstart-line, cursor, scale, usecolor);	
       }
     }
   }
-//  if (caret > curchar)
-//    draw_char_box(font->Characters[69], cursor, scale, color);
 
   return cursor.Y - pos.Y;
 }

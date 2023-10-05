@@ -17,7 +17,7 @@ Reflect = {};
 Symbol = {};
 URIError = {};
 
-Object.complete_assign = function(target, source)
+Object.mixin = function(target, source)
 {
   if (typeof source === 'undefined') return target;
   
@@ -150,7 +150,7 @@ Object.copy = function(proto, ...objs)
 {
   var c = Object.create(proto);
   for (var obj of objs)
-    Object.complete_assign(c, obj);
+    Object.mixin(c, obj);
   return c;
 }
 
@@ -160,15 +160,17 @@ Object.defHidden = function(obj, prop)
   Object.defineProperty(obj, prop, {enumerable:false, writable:true});
 }
 
-Object.hide = function(obj,prop)
+Object.hide = function(obj,...props)
 {
-  var p = Object.getOwnPropertyDescriptor(obj,prop);
-  if (!p) {
-    Log.warn(`No property of name ${prop}.`);
-    return;
+  for (var prop of props) {
+    var p = Object.getOwnPropertyDescriptor(obj,prop);
+    if (!p) {
+      Log.warn(`No property of name ${prop}.`);
+      return;
+    }
+    p.enumerable = false;
+    Object.defineProperty(obj, prop, p);
   }
-  p.enumerable = false;
-  Object.defineProperty(obj, prop, p);
 }
 
 Object.defineProperty(Object.prototype, 'obscure', {

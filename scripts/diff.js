@@ -88,6 +88,45 @@ function positive_diff(from, to)
   var diff = {};
 }
 
+function vdiff(from,to)
+{
+  if (typeof from === 'number') {
+    var a = Number.prec(from);
+    return a === to ? undefined : a;
+  }
+
+  if (typeof from === 'object') {
+    var ret = {};
+    Object.keys(from).forEach(function(k) {
+      var diff = vdiff(from[k], to[k]);
+      if (diff) ret[k] = diff;
+    });
+    return ret.empty ? undefined : ret;
+  }
+}
+
+function gdiff(from, to) {
+  var obj = {};
+
+  Object.entries(from).forEach(function([k,v]) {
+    if (typeof v === 'function') return;  
+    if (!Object.isAccessor(from, k)) {
+      obj[k] = v;
+      return;
+    }
+
+    var diff = vdiff(v, to[k]);
+    if (diff) {
+      if (Array.isArray(v))
+        obj[k] = Object.values(diff);
+      else
+        obj[k] = diff;
+    }
+  });
+
+  return obj;
+};
+
 function diff(from, to) {
   var obj = {};
 
@@ -100,11 +139,6 @@ function diff(from, to) {
       if (from[e] !== to[e])
         obj[e] = to[e];
     }
-  }
-
-  for (var e in from) {
-    if (!to.hasOwnProperty(e))
-      obj[e] = "DELETE";
   }
 
   return obj;

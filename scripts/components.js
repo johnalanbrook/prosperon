@@ -30,17 +30,17 @@ component.sprite = Object.copy(component, {
   layer:0,
   enabled:true,
   path: "",
+  rect: {s0:0, s1: 1, t0: 0, t1: 1},  
   toString() { return "sprite"; },
   make(go) {
     var nsprite = Object.create(this);
     nsprite.gameobject = go;
     Object.assign(nsprite, make_sprite(go.body)); 
-    Object.complete_assign(nsprite, component.sprite.impl);
+    Object.mixin(nsprite, component.sprite.impl);
+    Object.hide(nsprite, 'gameobject', 'id');
     for (var p in component.sprite.impl)
-      if (typeof this[p] !== 'undefined') {
-        Log.warn(`setting ${p}`);
+      if (typeof this[p] !== 'undefined')
         nsprite[p] = this[p];
-      }
     return nsprite;
   },
 });
@@ -55,7 +55,6 @@ component.sprite.impl = {
   hide() { this.enabled = false; },
   show() { this.enabled = true; },
   asset(str) { this.path = str; },
-  rect: {s0:0, s1: 1, t0: 0, t1: 1},
   get enabled() { return cmd(114,this.id); },
   set enabled(x) { cmd(20,this.id,x); },
   set color(x) { cmd(96,this.id,x); },
@@ -705,8 +704,8 @@ component.circle2d = Object.copy(collider2d, {
     var circle = Object.create(this);
     circle.gameobject = go;
     Object.assign(circle, make_circle2d(go.body));
-    Object.complete_assign(circle,this.impl);
-    
+    Object.mixin(circle,this.impl);
+    Object.hide(circle, 'gameobject', 'id', 'shape', 'scale');
     return circle;
   },
 });

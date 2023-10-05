@@ -1622,7 +1622,7 @@ void ffi_load() {
   DUK_FUNC(register, 3)
   DUK_FUNC(register_collide, 6)
 
-  DUK_FUNC(ui_text, 6)
+  DUK_FUNC(ui_text, 8)
   DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)

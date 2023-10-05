@@ -117,8 +117,7 @@ Mum.text = Mum.extend({
     this.calc_bb(cursor);
     var aa = [0,1].sub(this.anchor);
     var pos = cursor.add(this.wh.scale(aa)).add(this.offset);
-    if (this.caret > -1) Log.warn(`Drawing box at pos ${this.caret} over letter ${this.str[this.caret-1]}`);
-    ui_text(this.str, pos, this.font_size, this.color, -1, this.width, this.caret);
+    ui_text(this.str, pos, this.font_size, this.color, this.width, this.caret);
   },
   
   update_bb(cursor) {

@@ -402,7 +402,7 @@ var editor = {
     lvlchain.forEach(function(x,i) {
       lvlcolor = colormap.sample(lvlcolorsample);
       var lvlstr = x.toString();
-      if (x.dirty)
+      if (x._ed.dirty)
         lvlstr += "*";
       if (i === lvlchain.length-1) lvlstr += "[this]";
       GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
@@ -421,12 +421,12 @@ var editor = {
 
     this.selectlist.forEach(function(x) {
       var sname = x.__proto__.toString();
-      if (!x.level_obj().empty)
-        x.dirty = true;
+      if (!x.json_obj().empty)
+        x._ed.dirty = true;
       else
-        x.dirty = false;
+        x._ed.dirty = false;
 	
-      if (x.dirty) sname += "*";
+      if (x._ed.dirty) sname += "*";
       
       GUI.text(sname, world2screen(x.worldpos()).add([0, 16]), 1, lvlcolor);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), world2screen(x.worldpos()), 1, Color.white);
@@ -788,7 +788,7 @@ editor.inputs['C-s'] = function() {
     return;
   };
 
-  if (editor.selectlist.length !== 1 || !editor.selectlist[0].dirty) return;
+  if (editor.selectlist.length !== 1 || !editor.selectlist[0]._ed.dirty) return;
   Object.merge(editor.selectlist[0].ur, editor.selectlist[0].level_obj());
   var path = editor.selectlist[0].ur.toString();
   path = path.replaceAll('.','/');
@@ -818,7 +818,7 @@ editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
-  if (editor.edit_level.dirty) {
+  if (editor.edit_level._ed.dirty) {
     Log.info("Level has changed; save before starting a new one.");
     editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => editor.clear_level()));
     return;
@@ -835,14 +835,14 @@ editor.inputs['C-o'].doc = "Open a level.";
 
 editor.inputs['C-M-o'] = function() {
   if (editor.selectlist.length === 1 && editor.selectlist[0].file) {
-    if (editor.edit_level.dirty) return;
+    if (editor.edit_level._ed.dirty) return;
     editor.load(editor.selectlist[0].file);
   }
 };
 editor.inputs['C-M-o'].doc = "Revert opened level back to its disk form.";
 
 editor.inputs['C-S-o'] = function() {
-  if (!editor.edit_level.dirty)
+  if (!editor.edit_level._ed.dirty)
     editor.load_prev();
 };
 editor.inputs['C-S-o'].doc = "Open previous level.";
@@ -1331,13 +1331,19 @@ inputpanel.inputs = {};
 inputpanel.inputs.char = function(c) {
   this.value = this.value.slice(0,this.caret) + c + this.value.slice(this.caret);
   this.caret++;
-  Log.warn(this.caret);
   this.keycb();
 }
 inputpanel.inputs['C-d'] = function() { this.value = this.value.slice(0,this.caret) + this.value.slice(this.caret+1); };
 inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); }
 inputpanel.inputs.escape = function() { this.close(); }
+inputpanel.inputs['C-b'] = function() {
+  if (this.caret === 0) return;
+  this.caret--;
+};
+inputpanel.inputs['C-a'] = function() { this.caret = 0; };
+inputpanel.inputs['C-f'] = function() { this.caret = this.value.length; };
 inputpanel.inputs.backspace = function() {
+  if (this.caret === 0) return;
   this.value = this.value.slice(0,this.caret-1) + this.value.slice(this.caret);
   this.caret--;
   this.keycb();
@@ -1413,6 +1419,7 @@ var replpanel = Object.copy(inputpanel, {
   action() {
     if (!this.value) return;
     this.prevthis.unshift(this.value);
+    this.prevmark = -1;
     var ecode = "";
     var repl_obj = (editor.selectlist.length === 1) ? editor.selectlist[0] : editor.edit_level;
     ecode += `var $ = repl_obj.objects;`;
@@ -1435,6 +1442,7 @@ replpanel.inputs['C-p'] = function()
   if (this.prevmark >= this.prevthis.length) return;
   this.prevmark++;
   this.value = this.prevthis[this.prevmark];
+  this.inputs['C-f'].call(this);
 }
 
 replpanel.inputs['C-n'] = function()
@@ -1445,6 +1453,8 @@ replpanel.inputs['C-n'] = function()
     this.value = "";
   } else
     this.value = this.prevthis[this.prevmark];
+
+  this.inputs['C-f'].call(this);
 }
 
 var objectexplorer = Object.copy(inputpanel, {
@@ -1670,10 +1680,7 @@ var quitpanel = Object.copy(inputpanel, {
   },
   
   guibody () {
-    Nuke.label("Really quit?");
-    Nuke.newline(2);
-    if (Nuke.button("yes"))
-      this.submit();
+    return Mum.text({str: "Really quit?"});
   },
 });
 
@@ -1848,6 +1855,3 @@ Game.stop();
 Game.editor_mode(true);
 
 load("editorconfig.js");
-
-Log.warn(ur.ball);
-Log.warn(ur['ball.big']);

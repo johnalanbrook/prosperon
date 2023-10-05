@@ -204,6 +204,7 @@ var gameobject = {
     velocity:[0,0],
     angularvelocity:0,
     layer:0,
+    
     save:true,
     selectable:true,
     ed_locked:false,
@@ -290,11 +291,19 @@ var gameobject = {
 	if (ret.empty) return undefined;
 	return ret;
       },
-      
+
       json_obj() {
-	var ur = gameobject.diff(this,this.__proto__);
-        
-        return ur ? ur : {};
+        var d = gdiff(this,this.__proto__);
+	delete d.pos;
+	delete d.angle;
+	delete d.velocity;
+	delete d.angularvelocity;
+	d.components = [];
+	this.components.forEach(function(x) {
+	  var c = gdiff(x, x.__proto__);
+	  if (c) d.components.push(c);
+	});
+        return d;
       },
 
       transform_obj() {
@@ -398,23 +407,28 @@ var gameobject = {
       right() { return [1,0].rotate(Math.deg2rad(this.angle));},
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
   instances: [],
+
   make(level) {
     level ??= Primum;
     var obj = Object.create(this);
     this.instances.push(obj);
     obj.body = make_gameobject();
+    Object.hide(obj, 'body');
     obj.components = {};
     obj.objects = {};
-    Object.complete_assign(obj, gameobject.impl);
+    Object.mixin(obj, gameobject.impl);
     Object.hide(obj, 'components');
     Object.hide(obj, 'objects');
-    obj.toJSON = gameobject.level_json;
+    obj._ed = {};
+    Object.hide(obj, '_ed');
     
     Game.register_obj(obj);
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
     obj.reparent(level);
+
+    Object.hide(obj, 'level')
 
     for (var prop in this) {
       var p = this[prop];
@@ -423,10 +437,12 @@ var gameobject = {
       if ('ur' in p) {
         obj[prop] = obj.spawn(prototypes.get_ur(p.ur));
 	obj.rename_obj(obj[prop].toString(), prop);
+	Object.hide(obj, prop);
       } else if ('comp' in p) {
         Log.warn(p);
         obj[prop] = Object.assign(component[p.comp].make(obj), p);
 	obj.components[prop] = obj[prop];
+	Object.hide(obj,prop);
       }
     };
 
