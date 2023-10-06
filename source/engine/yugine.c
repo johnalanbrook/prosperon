@@ -112,7 +112,7 @@ void seghandle(int sig) {
   if (strsignal(sig))
     YughCritical("CRASH! Signal: %s.", strsignal(sig));
 
-//  print_stacktrace();
+  js_stacktrace();  
 
   exit(1);
 #endif

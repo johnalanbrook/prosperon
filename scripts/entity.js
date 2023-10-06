@@ -12,8 +12,20 @@ function grab_from_points(pos, points, slop) {
 
 var gameobject = {
   impl: {
-      get scale() { return cmd(103, this.body); },
+    clear() {
+      this.objects.forEach(function(x) {
+        x.kill();
+      });
+      this.objects = {};
+    },
+      gscale() { return cmd(103,this.body); },
+      get scale() {
+        if (!this.level) return this.gscale();
+        return this.gscale()/this.level.gscale();
+      },
       set scale(x) {
+        if (this.level)
+          x *= this.level.gscale();
 	var pct = x/this.scale;
         cmd(36, this.body, x);	
 
@@ -260,6 +272,7 @@ var gameobject = {
 
       json_obj() {
         var d = ediff(this,this.__proto__);
+	if (!d) return {};
 	delete d.pos;
 	delete d.angle;
 	delete d.velocity;
@@ -381,7 +394,10 @@ var gameobject = {
     Object.mixin(obj, gameobject.impl);
     Object.hide(obj, 'components');
     Object.hide(obj, 'objects');
-    obj._ed = {};
+    obj._ed = {
+      selectable: true,
+      dirty: false,
+    };
     Object.hide(obj, '_ed');
     obj.ur = this.toString();
     Object.hide(obj,'ur');
@@ -428,10 +444,8 @@ var gameobject = {
       Log.warn(`No object with name ${name}. Could not rename to ${newname}.`);
       return;
     }
-    if (this.objects[newname]) {
-      Log.warn(`Already an object with name ${newname}.`);
+    if (this.objects[newname])
       return;
-    }
 
     this.objects[newname] = this.objects[name];
     delete this.objects[name];
@@ -556,6 +570,7 @@ prototypes.from_obj = function(name, obj)
 {
   var newur = Object.copy(gameobject, obj);
   prototypes.ur[name] = newur;
+  prototypes.list.push(name);
   newur.toString = function() { return name; };
   return prototypes.ur[name];
 }
@@ -695,4 +710,3 @@ prototypes.resani = function(ur, path)
   }
   return restry;
 }
-

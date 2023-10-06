@@ -428,6 +428,8 @@ polygon2d.inputs['C-lm'] = function() {
   this.points.push(this.gameobject.world2this(Mouse.worldpos));
 };
 polygon2d.inputs['C-lm'].doc = "Add a point to location of mouse.";
+polygon2d.inputs.lm = function(){};
+polygon2d.inputs.lm.released = function(){};
 
 polygon2d.inputs['S-lm'] = function() {
   var idx = grab_from_points(Mouse.worldpos, this.points.map(p => this.gameobject.this2world(p)), 25);

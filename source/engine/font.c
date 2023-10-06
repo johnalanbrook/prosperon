@@ -79,8 +79,9 @@ void font_init() {
       .label = "text buffer"
     });
 
-//  font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
-  font = MakeFont("fonts/c64.ttf", 8);
+  font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
+//  font = MakeFont("fonts/c64.ttf", 8);
+//  font = MakeFont("fonts/teenytinypixels.ttf", 16);  
   bind_text.fs.images[0] = font->texID;
   bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 }
@@ -138,7 +139,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
   newfont->emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
-  newfont->linegap = (newfont->ascent - newfont->descent) * newfont->emscale;
+  newfont->linegap = (newfont->ascent - newfont->descent) * 1.5*newfont->emscale/2;
 
   newfont->texID = sg_make_image(&(sg_image_desc){
       .type = SG_IMAGETYPE_2D,

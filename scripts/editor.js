@@ -40,7 +40,7 @@ var editor = {
   /* Tries to select id */
   do_select(go) {
     var obj = go >= 0 ? Game.object(go) : undefined;
-    if (!obj || !obj.selectable) return undefined;
+    if (!obj || !obj._ed.selectable) return undefined;
     
     if (obj.level !== this.edit_level) {
       var testlevel = obj.level;
@@ -351,7 +351,7 @@ var editor = {
     
     this.edit_level = Primum.spawn(ur.arena);
 //    this.edit_level.toString = function() { return "desktop"; };
-    editor.edit_level.selectable = false;
+    editor.edit_level._ed.selectable = false;
   },
 
   _sel_comp: undefined,
@@ -467,13 +467,13 @@ var editor = {
     }
 
     editor.edit_level.objects.forEach(function(obj) {
-      if (!obj.selectable)
+      if (!obj._ed.selectable)
         GUI.image("icons/icons8-lock-16.png", world2screen(obj.worldpos()));
     });
 
     Debug.draw_grid(1, editor_config.grid_size, Color.Editor.grid.alpha(0.3));
-    var startgrid = screen2world([-20,Window.height]).map(function(x) { return Math.snap(x, editor_config.grid_size); });
-    var endgrid = screen2world([Window.width, 0]);
+    var startgrid = screen2world([-20,0]).map(function(x) { return Math.snap(x, editor_config.grid_size); });
+    var endgrid = screen2world([Window.width, Window.height]);
     
     var w_step = Math.round(editor_config.ruler_mark_px/Window.width * (endgrid.x-startgrid.x)/editor_config.grid_size)*editor_config.grid_size;
     if (w_step === 0) w_step = editor_config.grid_size;
@@ -539,6 +539,7 @@ var editor = {
   lvl_history: [],
 
   load(file) {
+    Log.warn("LOADING " + file);
     var ur = prototypes.get_ur(file);
     if (!ur) return;
     var obj = editor.edit_level.spawn(ur);
@@ -583,15 +584,24 @@ var editor = {
     
     if (curur) {
       notifypanel.action = editor.saveas;
-      this.openpanel(gen_notify("Entity already exists with that name. Overwrite?", this.saveas.bind(this, sub)));
+      this.openpanel(gen_notify("Entity already exists with that name. Delete first."));
     } else {
       var path = sub.replaceAll('.', '/') + ".json";
       var saveobj = obj.level_obj();
       IO.slurpwrite(JSON.stringify(saveobj,null,1), path);
-      var t = obj.transform();
+
+
+      if (obj === editor.edit_level) {
+        obj.clear();
+	var nobj = editor.edit_level.spawn(sub);
+	editor.selectlist = [nobj];
+	return;
+      }
+      
+      var t = obj.transform();      
       obj.kill();
       editor.unselect();
-      editor.load(sub);
+      obj = editor.load(sub);
       obj.pos = t.pos;
       obj.angle = t.angle;
     }
@@ -747,6 +757,10 @@ editor.inputs['M-p'] = function() {
 editor.inputs['M-p'].doc = "Do one time step, pausing if necessary.";
 
 editor.inputs['C-M-p'] = function() {
+  if (!Game.playing()) {
+    editor.start_play_ed();
+    Game.editor_mode(false);    
+  }
   Log.warn(`Starting edited level ...`);
 };
 editor.inputs['C-M-p'].doc = "Start game from currently edited level.";
@@ -811,10 +825,10 @@ editor.inputs['C-z'].doc = "Undo the last change made.";
 editor.inputs['C-S-z'] = function() { editor.redo(); };
 editor.inputs['C-S-z'].doc = "Redo the last undo.";
 
-editor.inputs.t = function() { editor.selectlist.forEach(function(x) { x.selectable = false; }); };
+editor.inputs.t = function() { editor.selectlist.forEach(function(x) { x._ed.selectable = false; }); };
 editor.inputs.t.doc = "Lock selected objects to make them non selectable.";
 
-editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x) { x.selectable = true; }); };
+editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x) { x._ed.selectable = true; }); };
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
@@ -1261,19 +1275,28 @@ var inputpanel = {
   pos:[100,Window.height-50],
   wh:[350,600],
   anchor: [0,1],
+  padding:[5,-15],
 
   gui() {
-    var win = Mum.window({width:this.wh.x,height:this.wh.y, color:Color.black.alpha(0.1), anchor:this.anchor});
+    this.win = Mum.window({width:this.wh.x,height:this.wh.y, color:Color.black.alpha(0.1), anchor:this.anchor, padding:this.padding});
     var itms = this.guibody();
     if (!Array.isArray(itms)) itms = [itms];
-    win.items = itms;
-    win.draw(this.pos.slice());
+    if (this.title)
+    this.win.items = [
+      Mum.column({items: [
+        Mum.text({str:this.title}),
+	...itms
+       ]})
+    ];
+    else
+      this.win.items = itms;
+    this.win.draw(this.pos.slice());
   },
   
   guibody() {
     return [
       Mum.text({str:this.value, color:Color.green}),
-//      Mum.button({str:"Submit", action:this.submit})
+      Mum.button({str:"SUBMIT", action:this.submit.bind(this)})
     ];
   },
   
@@ -1339,7 +1362,7 @@ inputpanel.inputs.char = function(c) {
   this.keycb();
 }
 inputpanel.inputs['C-d'] = function() { this.value = this.value.slice(0,this.caret) + this.value.slice(this.caret+1); };
-inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); }
+inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); this.caret = this.value.length;}
 inputpanel.inputs.escape = function() { this.close(); }
 inputpanel.inputs['C-b'] = function() {
   if (this.caret === 0) return;
@@ -1411,11 +1434,12 @@ function proto_children(name) {
 load("scripts/textedit.js");
 
 var replpanel = Object.copy(inputpanel, {
-  title: "REPL",
+  title: "",
   closeonsubmit:false,
   wh: [700,300],
   pos: [50,50],
   anchor: [0,0],
+  padding: [0,0],
 
   guibody() {
     var log = cmd(84);
@@ -1649,6 +1673,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
   start() {
     this.allassets = prototypes.list.sort();
     this.assets = this.allassets.slice();
+    this.caret = 0;
     var click_ur = function(btn) {
       Log.warn(btn.str);
       this.value = btn.str;
@@ -1659,7 +1684,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
 
     this.mumlist = [];
     this.assets.forEach(function(x) {
-      this.mumlist[x] = Mum.text({str:x, action:click_ur,selectable: true, hovered:{color:Color.red}});
+      this.mumlist[x] = Mum.button({str:x, action:click_ur});
     }, this);
   },
 
@@ -1680,7 +1705,8 @@ var openlevelpanel = Object.copy(inputpanel,  {
 });
 
 var saveaspanel = Object.copy(inputpanel, {
-  title: "save level as",
+  get title() { return `save level as: ${this.stem}.`; },
+
   action() {
     var savename = "";
     if (this.stem) savename += this.stem + ".";
@@ -1712,17 +1738,10 @@ var notifypanel = Object.copy(inputpanel, {
   },
   
   guibody() {
-    Nuke.label(this.msg);
-    Nuke.newline(2);
-    if (Nuke.button("OK")) {
-      if ('yes' in this)
-        this.yes();
-      this.close();
-    }
-  },
-
-  input_n_pressed() {
-    this.close();
+    return Mum.column({items: [
+      Mum.text({str:this.msg}),
+      Mum.button({str:"OK", action:this.close.bind(this)})
+    ]});
   },
 });
 
@@ -1817,7 +1836,7 @@ var entitylistpanel = Object.copy(inputpanel, {
       }
       
       x.visible = Nuke.checkbox(x.visible);
-      x.selectable = Nuke.checkbox(x.selectable);
+      x._ed.selectable = Nuke.checkbox(x._ed.selectable);
       
       if (editor.selectlist.includes(x)) Nuke.label("T"); else Nuke.label("F");
     });
@@ -1845,14 +1864,12 @@ limited_editor.inputs['M-p'] = function()
 limited_editor.inputs['C-q'] = function()
 {
   Game.stop();
-  game.stop();
   Sound.killall();
   Player.players[0].uncontrol(limited_editor);
   Player.players[0].control(editor);
   Register.gui.register(editor.ed_gui, editor);
   Debug.register_call(editor.ed_debug, editor);
-//  World.kill();
-  World.clear_all();
+  Primum.clear_all();
   editor.load_json(editor.stash);
   Game.view_camera(editor.camera);
 }

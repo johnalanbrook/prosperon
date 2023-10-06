@@ -114,9 +114,11 @@ var Mum = {
     },
     text_outline: 1, /* outline in pixels */
     color: Color.white,
-    margin: [5,5], /* Distance between elements for things like columns */
+    margin: [0,0], /* Distance between elements for things like columns */
     width: 0,
     height: 0,
+    max_width: Infinity,
+    max_height: Infinity,
     image_repeat: false,
     image_repeat_offset: [0,0],
     debug: false, /* set to true to draw debug boxes */
@@ -136,17 +138,20 @@ var Mum = {
   extend(def) {
     var n = Object.create(this);
     Object.assign(n, def);
-    return function(def) {
+    var fn = function(def) {
       var p = n.make(def);
       p.prestart();
       p.start();
       return p;
     };
+    fn._int = n;
+    return fn;
   },
 }
 
 Mum.text = Mum.extend({
-  draw(cursor) {
+  draw(cursor, cnt) {
+    cnt ??= Mum;
     if (this.hide) return;
     if (this.selectable) gui_controls.options.push_unique(this);
     this.caret ??= -1;
@@ -158,10 +163,13 @@ Mum.text = Mum.extend({
 */
     var params = this.selected ? this.hovered : this;
 
+    this.width = Math.min(params.max_width, cnt.max_width);
+
     this.calc_bb(cursor);
+    this.height = this.wh.y;
     var aa = [0,1].sub(params.anchor);
     var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
-    ui_text(params.str, pos, params.font_size, params.color, params.width, params.caret);
+    ui_text(params.str, pos, params.font_size, params.color, this.width, params.caret);
   },
   
   update_bb(cursor) {
@@ -179,22 +187,34 @@ Mum.text = Mum.extend({
   },
 });
 
+Mum.button = Mum.text._int.extend({
+ selectable: true,
+ color: Color.blue,
+ hovered:{
+   color: Color.red
+ },
+ action() { Log.warn("Button has no action."); },
+});
+
 Mum.window = Mum.extend({
   start() {
     this.wh = [this.width, this.height];
     this.bb = cwh2bb([0,0], this.wh);
   },
-  draw(pos) {
-    var p = pos.sub(this.wh.scale(this.anchor));
+  draw(cursor, cnt) {
+    cnt ??= Mum;
+    var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
     GUI.window(p,this.wh, this.color);
     this.bb = bl2bb(p, this.wh);
-    var pos = [this.bb.l, this.bb.t];
     GUI.flush();
     GUI.scissor(p.x,p.y,this.wh.x,this.wh.y);
+    this.max_width = this.width;
+    
+    var pos = [this.bb.l, this.bb.t].add(this.padding);
     this.items.forEach(function(item) {
       if (item.hide) return;
-      item.draw(pos.slice());
-    });
+      item.draw(pos.slice(),this);
+    }, this);
     GUI.flush();
     GUI.scissor_win();
   },
@@ -229,14 +249,15 @@ Mum.image = Mum.extend({
 });
 
 Mum.column = Mum.extend({
-  draw(cursor) {
+  draw(cursor, cnt) {
     if (this.hide) return;
     cursor = cursor.add(this.offset);
+    this.max_width = cnt.width;
     
     this.items.forEach(function(item) {
       if (item.hide) return;
-      item.draw(cursor);
-      cursor.y -= item.wh.y;
+      item.draw(cursor, this);
+      cursor.y -= item.height;
       cursor.y -= this.padding.y;
     }, this);
   },

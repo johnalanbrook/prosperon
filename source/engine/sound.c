@@ -151,6 +151,10 @@ struct wav *make_sound(const char *wav) {
   struct wav mwav;
   long rawlen;
   void *raw = slurp_file(wav, &rawlen);
+  if (!raw) {
+    YughError("Could not find file %s.", wav);
+    return;
+  }
 
   if (!strcmp(ext, "wav"))
     mwav.data = drwav_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
