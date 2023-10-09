@@ -57,6 +57,7 @@ component.sprite = Object.copy(component, {
 
 component.sprite.impl = {
   set path(x) {
+    Log.warn(x);
     cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
   },
   get path() {

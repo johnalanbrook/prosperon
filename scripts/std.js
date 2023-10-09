@@ -9,6 +9,14 @@ function fcompile_env(file, env)
   return compile_env(IO.slurp(file), env, file);
 }
 
+var OS = {
+  get cwd() { return cmd(144); },
+};
+OS.exec = function(s)
+{
+  cmd(143, s);
+}
+
 var Log = {
   set level(x) { cmd(92,x); },
   get level() { return cmd(93); },
@@ -61,6 +69,10 @@ var Log = {
     Log.write(msg);
     Log.write('\n');
   },
+
+  console(msg) {
+    cmd(142, msg + '\n');
+  },    
 
   stack(skip = 0) {
     var stack = (new Error()).stack;

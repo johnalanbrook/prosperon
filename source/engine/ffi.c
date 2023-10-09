@@ -1063,6 +1063,20 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 141:
       text_flush(&hudproj);
       break;
+
+    case 142:
+      str = JS_ToCString(js, argv[1]);
+      console_print(str);
+      break;
+
+    case 143:
+      str = JS_ToCString(js, argv[1]);
+      system(str);
+      break;
+
+    case 144:
+      ret = str2js(DATA_PATH);
+      break;
   }
 
   if (str)

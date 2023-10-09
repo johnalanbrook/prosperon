@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-extern int stemlen;
+extern char *DATA_PATH;
 
 void resources_init();
 void fill_extensions(char *paths, const char *path, const char *ext);

@@ -19,12 +19,14 @@ var configs = {
 };
 
 var editor = {
+  dbg_ur: "arena.level1",
   selectlist: [],
   grablist: [],
   scalelist: [],
   rotlist: [],
   camera: undefined,
   edit_level: undefined, /* The current level that is being edited */
+  desktop: undefined, /* The editor desktop, where all editing objects live */
   working_layer: 0,
   get cursor() {
     if (this.selectlist.length === 0 ) return Mouse.worldpos;
@@ -192,16 +194,31 @@ var editor = {
   mousejoy: undefined,
   joystart: undefined,
   
-  stash: "",
+  stash: undefined,
 
   start_play_ed() {
-//      this.stash = this.edit_level.save();
-//      this.edit_level.kill();
+    this.stash = this.edit_level.level_obj();
+    this.edit_level.kill();
 //      load_configs("game.config");
-      Game.play();
-      Player.players[0].uncontrol(this);
-      Player.players[0].control(limited_editor);
-      Register.unregister_obj(this);
+    Game.play();
+    Player.players[0].uncontrol(this);
+    Player.players[0].control(limited_editor);
+    Register.unregister_obj(this);
+    Primum.spawn(this.dbg_ur);
+  },
+
+  enter_editor() {
+    Game.pause();
+    Player.players[0].control(this);
+    Player.players[0].uncontrol(limited_editor);
+    Register.gui.register(editor.ed_gui, editor);
+    Debug.register_call(editor.ed_debug, editor);
+    Register.update.register(gui_controls.update, gui_controls);
+    Player.players[0].control(gui_controls);
+  },
+
+  end_debug() {
+    
   },
    
   openpanel(panel, dontsteal) {
@@ -350,8 +367,14 @@ var editor = {
     }
     
     this.edit_level = Primum.spawn(ur.arena);
-//    this.edit_level.toString = function() { return "desktop"; };
+    this.desktop = this.edit_level;
+    if (this.stash)
+      
     editor.edit_level._ed.selectable = false;
+  },
+
+  load_desktop(d) {
+    
   },
 
   _sel_comp: undefined,
@@ -737,16 +760,12 @@ editor.inputs.r.doc = "Rotate selected using the mouse while held down.";
 
 editor.inputs.r.released = function() { editor.rotlist = []; }
 
-editor.inputs['C-p'] = function() {
-  if (!Game.playing()) {
-    editor.start_play_ed();
-//    if (!Level.loadlevel("debug"))
-      Primum.spawn(ur.start);
-  } else {
-    Game.pause();
-  }
-};
-editor.inputs['C-p'].doc = "Start game from 'debug' if it exists; otherwise, from 'game'.";
+editor.inputs.f5 = function()
+{
+  editor.start_play_ed();
+}
+
+editor.inputs.f5.doc = "Start game from 'debug' if it exists; otherwise, from 'game'.";
 
 editor.inputs['M-p'] = function() {
   if (Game.playing())
@@ -1548,7 +1567,7 @@ replpanel.inputs.tab = function() {
   });
 
   if (keys.length > 1)
-    Log.say(keys.join(', '));
+    Log.console(keys.join(', '));
 };
 replpanel.inputs['C-p'] = function()
 {
@@ -1971,28 +1990,21 @@ limited_editor.inputs['M-p'] = function()
 
 limited_editor.inputs['C-q'] = function()
 {
-  Game.stop();
   Sound.killall();
-  Player.players[0].uncontrol(limited_editor);
-  Player.players[0].control(editor);
-  Register.gui.register(editor.ed_gui, editor);
-  Debug.register_call(editor.ed_debug, editor);
+  editor.enter_editor();
   Primum.clear_all();
   editor.load_json(editor.stash);
   Game.view_camera(editor.camera);
 }
 
+limited_editor.inputs['M-q'] = function()
+{
+  editor.enter_editor();
+}
+
 /* This is used for editing during a paused game */
 var limited_editing = {};
 limited_editing.inputs = {};
-
-Player.players[0].control(editor);
-Register.gui.register(editor.ed_gui, editor);
-Debug.register_call(editor.ed_debug, editor);
-
-Register.update.register(gui_controls.update, gui_controls);
-Player.players[0].control(gui_controls);
-
 
 if (IO.exists("editor.config"))
   load_configs("editor.config");
@@ -2003,5 +2015,6 @@ editor.camera = Game.camera;
 Game.stop();
 Game.editor_mode(true);
 
+editor.enter_editor();
 
 load("editorconfig.js");

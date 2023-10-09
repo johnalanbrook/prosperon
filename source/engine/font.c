@@ -180,22 +180,25 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
 static int curchar = 0;
 
+void draw_underline_cursor(HMM_Vec2 pos, float scale, struct rgba color)
+{
+  pos.Y -= 2;
+  sdrawCharacter(font->Characters['_'], pos, scale, color);
+}
+
 void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color)
 {
-  cursor.Y -= 2;
-  sdrawCharacter(font->Characters['_'], cursor, scale, color);
-  return;
   cpVect wh;
+  color.a = 30;
  
-  wh.x = 8 * scale;
-  wh.y = 14;
-  cursor.X += wh.x / 2.f;
-  cursor.Y += wh.y / 2.f;
+  wh.x = c.Size[0] * scale + 2;
+  wh.y = c.Size[1] * scale + 2;
+  cursor.X += c.Bearing[0] * scale + 1;
+  cursor.Y -= (c.Bearing[1] * scale + 1);
 
   cpVect b;
-  b.x = cursor.X;
-  b.y = cursor.Y;
-  color.a = 30;
+  b.x = cursor.X + wh.x/2;
+  b.y = cursor.Y + wh.y/2;
 
   draw_box(b, wh, color);
 }
@@ -219,6 +222,8 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
   if (curchar+1 >=  max_chars)
     return;
 
+  struct rgba colorbox = {0,0,0,255};
+  
   struct text_vert vert;
 
   float lsize = 1.0 / 1024.0;
@@ -250,7 +255,7 @@ unsigned char *esc_color(unsigned char *c, struct rgba *color, struct rgba defc)
 {
   struct rgba d;
   if (!color) color = &d;
-  if (*c != '\e') c;
+  if (*c != '\e') return c;
   c++;
   if (*c != '[') return c;
   c++;
@@ -272,7 +277,6 @@ unsigned char *esc_color(unsigned char *c, struct rgba *color, struct rgba defc)
   }
   return c;
 }
-
 
 struct boundingbox text_bb(const unsigned char *text, float scale, float lw, float tracking)
 {
@@ -323,7 +327,7 @@ struct boundingbox text_bb(const unsigned char *text, float scale, float lw, flo
 void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
 {
   if (caret == l)
-    draw_char_box(font->Characters[0], pos, scale, color);
+    draw_underline_cursor(pos,scale,color);
 }
 
 

@@ -28,12 +28,10 @@ FILE *logfile = NULL;
 #define ERROR_BUFFER 1024
 #define CONSOLE_BUF 1024*1024 /* 5MB */
 
-char *lastlog;
 char *consolelog;
 
 void log_init()
 {
-  lastlog = malloc(ERROR_BUFFER+1);
   consolelog = malloc(CONSOLE_BUF+1);
 }
 
@@ -77,8 +75,11 @@ void log_print(const char *str)
     fprintf(logfile, "%s", str);
     fflush(logfile);
   }
+}
 
-  snprintf(lastlog, ERROR_BUFFER, "%s", str);
+void console_print(const char *str)
+{
+  strncat(consolelog, str, CONSOLE_BUF);
 }
 
 void log_setfile(char *file) {

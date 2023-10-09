@@ -29,7 +29,7 @@ var gameobject = {
 	var pct = x/this.scale;
         cmd(36, this.body, x);	
 
-	this.objects.forEach(function(obj) {
+	this.objects?.forEach(function(obj) {
 	  obj.scale *= pct;
 	  obj.pos = obj.pos.scale(pct);
 	});      
@@ -234,6 +234,7 @@ var gameobject = {
     velocity:[0,0],
     angularvelocity:0,
     layer:0,
+    worldpos() { return [0,0]; },
     
     save:true,
     selectable:true,
@@ -280,7 +281,25 @@ var gameobject = {
 
       json_obj() {
         var d = ediff(this,this.__proto__);
-	if (!d) return {};
+	d ??= {};
+ 
+	var objects = {};
+	this.__proto__.objects ??= {};
+	if (!Object.keys(this.objects).equal(Object.keys(this.__proto__.objects))) {
+	  for (var o in this.objects) {
+	    objects[o] = this.objects[o].transform_obj();
+	    objects[o].ur = this.objects[o].ur.toString();
+	  }
+	} else {
+	  for (var o in this.objects) {
+	    var obj = ediff(this.objects[o].transform_obj(),
+	    this.__proto__.objects[o]);
+	    if (obj) objects[o] = obj;
+	  }
+	}
+	if (!objects.empty)
+	  d.objects = objects;
+
 	delete d.pos;
 	delete d.angle;
 	delete d.velocity;
@@ -295,28 +314,7 @@ var gameobject = {
       },
 
       level_obj() {
-        var json = this.json_obj();
-
-	var objects = {};
-	this.__proto__.objects ??= {};
-	if (!Object.keys(this.objects).equal(Object.keys(this.__proto__.objects))) {
-	  for (var o in this.objects) {
-	    objects[o] = this.objects[o].transform_obj();
-	    objects[o].ur = this.objects[o].ur.toString();
-	  }
-	} else {
-	  for (var o in this.objects) {
-	    var obj = this.objects[o].json_obj();
-	    Object.assign(obj, ediff(this.objects[o].transform(), this.__proto__.objects[o]));
-	    if (!obj.empty)
-	      objects[o] = obj;
-	  }
-	}
-
-	if (!objects.empty)
-  	  json.objects = objects;
-	
-	return json;
+	return this.json_obj();
       },
 
       ur_obj() {
@@ -433,9 +431,9 @@ var gameobject = {
         var newobj = obj.spawn(o.ur);
 	if (!newobj) continue;
 	obj.rename_obj(newobj.toString(), prop);
-	Object.assign(newobj,o);
       }
     }
+
     Object.dainty_assign(obj, this);
 
     obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
@@ -445,6 +443,16 @@ var gameobject = {
     if (typeof obj.start === 'function') obj.start();
 
     return obj;
+  },
+
+  make_objs(objs) {
+    for (var prop in objs) {
+      var o = objs[prop];
+      var newobj = this.spawn(o.ur);
+      if (!newobj) continue;
+      this.rename_obj(newobj.toString(), prop);
+      Object.assign(newobj,o);
+    }
   },
 
   rename_obj(name, newname) {

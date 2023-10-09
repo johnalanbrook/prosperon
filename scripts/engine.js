@@ -708,7 +708,7 @@ Register.update.register(Game.exec, Game);
 
 load("scripts/entity.js");
 
-var preprimum = {};
+var preprimum = Object.create(gameobject);
 preprimum.objects = {};
 preprimum.worldpos = function() { return [0,0]; };
 preprimum.worldangle = function() { return 0; };
@@ -716,7 +716,7 @@ preprimum.scale = 1;
 preprimum.gscale = function() { return 1; };
 preprimum.pos = [0,0];
 preprimum.angle = 0;
-var World = gameobject.make(preprimum);
+var World = preprimum.make(preprimum);
 var Primum = World;
 Primum.level = undefined;
 Primum.toString = function() { return "Primum"; };

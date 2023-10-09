@@ -30,8 +30,6 @@ char *PREF_PATH = NULL;
 
 char **prefabs;
 
-int stemlen = 0;
-
 static const char *cur_ext = NULL;
 struct dirent *c_dirent = NULL;
 
@@ -41,6 +39,8 @@ const char *DB_NAME = "test.db";
 
 static struct cdb corecdb;
 static struct cdb game_cdb;
+
+
 
 void resources_init() {
   DATA_PATH = malloc(MAXPATH);

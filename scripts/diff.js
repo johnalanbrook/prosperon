@@ -87,6 +87,9 @@ function ediff(from,to)
 {
   var ret = {};
   
+  if (!to)
+    return ediff(from,{});
+  
   Object.entries(from).forEach(function([key,v]) {
     if (typeof v === 'function') return;
     if (typeof v === 'undefined') return;
@@ -120,6 +123,5 @@ function ediff(from,to)
       ret[key] = v;
   });
   
-  if (ret.empty) return undefined;
   return ret;
 }

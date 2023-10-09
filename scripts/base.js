@@ -69,16 +69,19 @@ Object.deepfreeze = function(obj)
 /* Goes through each key and overwrites if it's present */
 Object.dainty_assign = function(target, source)
 {
-  Object.keys(target).forEach(function(key) {
-    if (!(key in source)) return;
+  Object.keys(source).forEach(function(key) {
+    if (!(key in target)) return;
+    if (typeof source[key] === 'function') return;
     if (typeof target[key] === 'function') return;
     
-    if (Array.isArray(target[key]))
+    if (Array.isArray(source[key]))
       target[key] = deep_copy(source[key]);
-    else if (typeof target[key] === 'object')
+    else if (typeof source[key] === 'object')
       Object.dainty_assign(target[key], source[key]);
-    else
+    else {
+      Log.warn(`set key ${key}`);
       target[key] = source[key];
+    }
   });
 }
 
