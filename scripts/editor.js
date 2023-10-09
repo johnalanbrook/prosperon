@@ -1507,10 +1507,8 @@ replpanel.inputs.tab = function() {
 
   if (!this.value.includes('.')) keys.push("this");
 
-  if (eval(`typeof ${keyobj.tofirst('.')}`) === 'object' && eval(`typeof ${keyobj.replace('.', '?.')}`) === 'object') {
-    Log.warn("set obj to " + keyobj);
+  if (eval(`typeof ${keyobj.tofirst('.')}`) === 'object' && eval(`typeof ${keyobj.replace('.', '?.')}`) === 'object')
     obj = eval(keyobj);
-  }
   else if (this.value.includes('.')){
     Log.say(`${this.value} is not an object.`);
     return;
@@ -1893,8 +1891,7 @@ var assetexplorer = Object.copy(openlevelpanel, {
 function tab_complete(val, list) {
     if (!val) return val;
     list.dofilter(function(x) { return x.startsWith(val); });
-    Log.warn(list);
-    Log.warn(val);
+
     if (list.length === 1) {
       return list[0];
     }
