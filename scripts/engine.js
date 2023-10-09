@@ -43,6 +43,25 @@ var Color = {
   purple: [162,93,227],
 };
 
+Color.tohtml = function(v)
+{
+  var html = v.map(function(n) { return Number.hex(n*255); });
+  return "#" + html.join('');
+}
+
+Color.toesc = function(v)
+{
+  return Esc.color(v);
+}
+
+var Esc = {};
+Esc.reset = "\x1b[0";
+Esc.color = function(v) {
+  var c = v.map(function(n) { return Math.floor(n*255); });
+  var truecolor = "\x1b[38;2;" + c.join(';') + ';';
+  return truecolor;
+}
+
 Color.Arkanoid = {
   orange: [255,143,0],
   teal: [0,255,255],

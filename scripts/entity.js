@@ -183,6 +183,14 @@ var gameobject = {
     return bb.t-bb.b;
   },
 
+  move(vec) {
+    this.pos = this.pos.add(vec);
+  },
+
+  rotate(amt) {
+    this.angle += amt;
+  },
+
   /* Make a unique object the same as its prototype */
   revert() {
     Object.merge(this,this.__proto__);
@@ -529,7 +537,11 @@ prototypes.from_file = function(file)
   var json = undefined;
 
   if (jsfile) script = IO.slurp(jsfile);
-  if (jsonfile) json = JSON.parse(IO.slurp(jsonfile));
+  try {
+    if (jsonfile) json = JSON.parse(IO.slurp(jsonfile));
+  } catch(e) {
+    Log.warn(e);
+  }
 
   if (!json && !script) {
     Log.warn(`Could not make ur from ${file}`);

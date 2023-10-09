@@ -1278,7 +1278,7 @@ var inputpanel = {
   padding:[5,-15],
 
   gui() {
-    this.win = Mum.window({width:this.wh.x,height:this.wh.y, color:Color.black.alpha(0.1), anchor:this.anchor, padding:this.padding});
+    this.win ??= Mum.window({width:this.wh.x,height:this.wh.y, color:Color.black.alpha(0.1), anchor:this.anchor, padding:this.padding});
     var itms = this.guibody();
     if (!Array.isArray(itms)) itms = [itms];
     if (this.title)
@@ -1356,29 +1356,44 @@ var inputpanel = {
 };
 
 inputpanel.inputs = {};
+
+inputpanel.inputs.post = function()
+{
+  this.keycb();
+}
+
 inputpanel.inputs.char = function(c) {
   this.value = this.value.slice(0,this.caret) + c + this.value.slice(this.caret);
   this.caret++;
-  this.keycb();
 }
 inputpanel.inputs['C-d'] = function() { this.value = this.value.slice(0,this.caret) + this.value.slice(this.caret+1); };
-inputpanel.inputs.tab = function() { this.value = tab_complete(this.value, this.assets); this.caret = this.value.length;}
+inputpanel.inputs['C-d'].rep = true;
+inputpanel.inputs.tab = function() {
+  this.value = tab_complete(this.value, this.assets);
+  this.caret = this.value.length;
+}
 inputpanel.inputs.escape = function() { this.close(); }
 inputpanel.inputs['C-b'] = function() {
   if (this.caret === 0) return;
   this.caret--;
 };
+inputpanel.inputs['C-b'].rep = true;
+inputpanel.inputs['C-u'] = function()
+{
+  this.value = this.value.slice(this.caret);
+  this.caret = 0;
+}
 inputpanel.inputs['C-f'] = function() {
   if (this.caret === this.value.length) return;
   this.caret++;
 };
+inputpanel.inputs['C-f'].rep = true;
 inputpanel.inputs['C-a'] = function() { this.caret = 0; };
 inputpanel.inputs['C-e'] = function() { this.caret = this.value.length; };
 inputpanel.inputs.backspace = function() {
   if (this.caret === 0) return;
   this.value = this.value.slice(0,this.caret-1) + this.value.slice(this.caret);
   this.caret--;
-  this.keycb();
 };
 inputpanel.inputs.backspace.rep = true;
 inputpanel.inputs.enter = function() { this.submit(); }
@@ -1386,7 +1401,6 @@ inputpanel.inputs.enter = function() { this.submit(); }
 inputpanel.inputs['C-k'] = function() {
   this.value = this.value.slice(0,this.caret);
 };
-
 
 function proto_count_lvls(name)
 {
@@ -1440,13 +1454,15 @@ var replpanel = Object.copy(inputpanel, {
   pos: [50,50],
   anchor: [0,0],
   padding: [0,0],
+  scrolloffset: [0,0],
 
   guibody() {
+    this.win.selectable = true;
     var log = cmd(84);
-    log = log.slice(-500);
+    log = log.slice(-5000);
     
     return [
-      Mum.text({str:log, anchor:[0,0], offset:[0,-300]}),
+      Mum.text({str:log, anchor:[0,0], offset:[0,-300].sub(this.scrolloffset), selectable: true}),
       Mum.text({str:this.value,color:Color.green, offset:[0,-290], caret: this.caret})
     ];
   },
@@ -1470,9 +1486,72 @@ var replpanel = Object.copy(inputpanel, {
     var ret = function() {return eval(ecode);}.call(repl_obj);
     Log.say(ret);
   },
+
+  resetscroll() {
+    this.scrolloffset.y = 0;  
+  },
 });
 
 replpanel.inputs = Object.create(inputpanel.inputs);
+replpanel.inputs.tab = function() {
+  this.resetscroll();
+  var obj = globalThis;
+  var keys = [];
+  var keyobj = this.value.tolast('.');
+  var o = this.value.tolast('.');
+  var stub = this.value.fromlast('.');  
+  var replobj = (editor.selectlist.length === 1) ? "editor.selectlist[0]" : "editor.edit_level";
+  
+  if (this.value.startswith("this."))
+    keyobj = keyobj.replace("this", replobj);
+
+  if (!this.value.includes('.')) keys.push("this");
+
+  if (eval(`typeof ${keyobj.tofirst('.')}`) === 'object' && eval(`typeof ${keyobj.replace('.', '?.')}`) === 'object') {
+    Log.warn("set obj to " + keyobj);
+    obj = eval(keyobj);
+  }
+  else if (this.value.includes('.')){
+    Log.say(`${this.value} is not an object.`);
+    return;
+  } 
+   
+  for (var k in obj)
+    keys.push(k)
+
+  var comp = "";
+  if (stub)
+    comp = tab_complete(stub, keys);
+  else if (!this.value.includes('.'))
+    comp = tab_complete(o, keys);
+  else
+    comp = tab_complete("",keys);
+  
+  if (stub)
+    this.value = o + '.' + comp;
+  else if (this.value.endswith('.'))
+    this.value = o + '.' + comp;
+  else
+    this.value = comp;
+
+  this.caret = this.value.length;
+
+  keys = keys.sort();
+
+  keys = keys.map(function(x) {
+    if (typeof obj[x] === 'function')
+      return Esc.color(Color.Apple.orange) + x + Esc.reset;
+    if (Object.isObject(obj[x]))
+      return Esc.color(Color.Apple.purple) + x + Esc.reset;    
+    if (Array.isArray(obj[x]))
+      return Esc.color(Color.Apple.green) + x + Esc.reset;    
+
+    return x;
+  });
+
+  if (keys.length > 1)
+    Log.say(keys.join(', '));
+};
 replpanel.inputs['C-p'] = function()
 {
   if (this.prevmark >= this.prevthis.length) return;
@@ -1492,6 +1571,40 @@ replpanel.inputs['C-n'] = function()
 
   this.inputs['C-e'].call(this);
 }
+
+replpanel.inputs.mouse = {};
+replpanel.inputs.mouse.scroll = function(scroll)
+{
+  if (!this.win.selected) return;
+
+  this.scrolloffset.y += scroll.y;
+  if (this.scrolloffset.y < 0) this.scrolloffset.y = 0;
+}
+
+replpanel.inputs.up = function()
+{
+  this.scrolloffset.y += 40;
+}
+replpanel.inputs.up.rep = true;
+replpanel.inputs.down = function()
+{
+  this.scrolloffset.y -= 40;
+  if (this.scrolloffset.y < 0) this.scrolloffset.y = 0;  
+}
+replpanel.inputs.down.rep = true;
+
+replpanel.inputs.pgup = function()
+{
+  this.scrolloffset.y += 300;
+}
+replpanel.inputs.pgup.rep = true;
+
+replpanel.inputs.pgdown = function()
+{
+  this.scrolloffset.y -= 300;
+  if (this.scrolloffset.y < 0) this.scrolloffset.y = 0;  
+}
+replpanel.inputs.pgdown.rep = true;
 
 var objectexplorer = Object.copy(inputpanel, {
   title: "object explorer",
@@ -1778,29 +1891,27 @@ var assetexplorer = Object.copy(openlevelpanel, {
 });
 
 function tab_complete(val, list) {
-    var check = list.filter(function(x) { return x.startsWith(val); }, this);
-    if (check.length === 1) {
-      list = check;
-      return check[0];
+    if (!val) return val;
+    list.dofilter(function(x) { return x.startsWith(val); });
+    Log.warn(list);
+    Log.warn(val);
+    if (list.length === 1) {
+      return list[0];
     }
     
     var ret = undefined;
     var i = val.length;
-    while (!ret && !check.empty) {
-
-      var char = check[0][i];
-      if (!check.every(function(x) { return x[i] === char; }))
-        ret = check[0].slice(0, i);
+    while (!ret && !list.empty) {
+      var char = list[0][i];
+      if (!list.every(function(x) { return x[i] === char; }))
+        ret = list[0].slice(0, i);
       else {
         i++;
-	check = check.filter(function(x) { return x.length-1 > i; });
+	list.dofilter(function(x) { return x.length-1 > i; });
       }
     }
 
-    if (!ret) return val;
-
-    list = check;
-    return ret;
+    return ret ? ret : val;
 }
 
 var texgui = Object.copy(inputpanel, {

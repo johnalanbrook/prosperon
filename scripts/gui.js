@@ -67,33 +67,34 @@ var GUI = {
 var gui_controls = {};
 gui_controls.update = function() { };
 
-gui_controls.options = [];
+gui_controls.set_mum = function(mum)
+{
+  mum.selected = true;
+  
+  if (this.selected && this.selected !== mum)
+    this.selected.selected = false;
+
+  this.selected = mum;
+}
+gui_controls.check_bb = function(mum)
+{
+  if (pointinbb(mum.bb, Mouse.pos))
+    gui_controls.set_mum(mum);
+}
 gui_controls.inputs = {};
 gui_controls.inputs.fallthru = false;
 gui_controls.inputs.mouse = {};
 gui_controls.inputs.mouse.move = function(pos,dpos)
 {
-  var newsel = undefined;
-  this.options.forEach(function(x) {
-    if (pointinbb(x.bb,pos)) {
-      newsel = x;
-      return;
-    }
-  });
+}
+gui_controls.inputs.mouse.scroll = function(scroll)
+{
 
-  if (this.selected && this.selected !== newsel)
-    this.selected.selected = false;
-
-  this.selected = newsel;
-  if (this.selected)
-    this.selected.selected = true;
 }
 
 gui_controls.inputs.lm = function() {
-  if (this.selected) {
-    Log.warn(this.selected.str);
+  if (this.selected && this.selected.action)
     this.selected.action(this.selected);
-  }
 };
 
 var Mum = {
@@ -153,7 +154,7 @@ Mum.text = Mum.extend({
   draw(cursor, cnt) {
     cnt ??= Mum;
     if (this.hide) return;
-    if (this.selectable) gui_controls.options.push_unique(this);
+    if (this.selectable) gui_controls.check_bb(this);
     this.caret ??= -1;
 
 /*    if (!this.bb)
@@ -209,7 +210,7 @@ Mum.window = Mum.extend({
     GUI.flush();
     GUI.scissor(p.x,p.y,this.wh.x,this.wh.y);
     this.max_width = this.width;
-    
+    if (this.selectable) gui_controls.check_bb(this);
     var pos = [this.bb.l, this.bb.t].add(this.padding);
     this.items.forEach(function(item) {
       if (item.hide) return;

@@ -277,7 +277,7 @@ JSValue vecarr2js(cpVect *points, int n) {
 }
 
 JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const char *s = JS_ToCString(js, argv[0]);
+  const unsigned char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2hmmv2(argv[1]);
 
   float size = js2number(argv[2]);

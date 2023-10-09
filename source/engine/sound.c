@@ -153,7 +153,7 @@ struct wav *make_sound(const char *wav) {
   void *raw = slurp_file(wav, &rawlen);
   if (!raw) {
     YughError("Could not find file %s.", wav);
-    return;
+    return NULL;
   }
 
   if (!strcmp(ext, "wav"))

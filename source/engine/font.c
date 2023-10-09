@@ -23,7 +23,7 @@
 
 struct sFont *font;
 
-#define max_chars 4000
+#define max_chars 10000
 
 static sg_shader fontshader;
 static sg_bindings bind_text;
@@ -139,7 +139,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
   newfont->emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
-  newfont->linegap = (newfont->ascent - newfont->descent) * 1.5*newfont->emscale/2;
+  newfont->linegap = (newfont->ascent - newfont->descent) * newfont->emscale;
 
   newfont->texID = sg_make_image(&(sg_image_desc){
       .type = SG_IMAGETYPE_2D,
@@ -246,8 +246,37 @@ void text_settype(struct sFont *mfont) {
   font = mfont;
 }
 
-struct boundingbox text_bb(const char *text, float scale, float lw, float tracking)
+unsigned char *esc_color(unsigned char *c, struct rgba *color, struct rgba defc)
 {
+  struct rgba d;
+  if (!color) color = &d;
+  if (*c != '\e') c;
+  c++;
+  if (*c != '[') return c;
+  c++;
+  if (*c == '0') {
+    *color = defc;
+    c++;
+    return c;
+  }
+  else if (!strncmp(c, "38;2;", 5)) {
+    c += 5;
+    *color = (struct rgba){0,0,0,255};
+    color->r = atoi(c);
+    c = strchr(c, ';')+1;
+    color->g = atoi(c);
+    c = strchr(c,';')+1;
+    color->b = atoi(c);
+    c = strchr(c,';')+1;
+    return c;
+  }
+  return c;
+}
+
+
+struct boundingbox text_bb(const unsigned char *text, float scale, float lw, float tracking)
+{
+  struct rgba dummy;
   HMM_Vec2 cursor = {0,0};
   const unsigned char *c = text;
   const unsigned char *line, *wordstart, *drawstart;
@@ -262,6 +291,9 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
       cursor.X = 0;
       line++;
     } else {
+      if (*line == '\e')
+        line = esc_color(line, NULL, dummy);
+    
       wordstart = line;
       int wordWidth = 0;
 
@@ -276,6 +308,9 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
       }
 
       while (wordstart < line) {
+        if (*wordstart == '\e')
+          line = esc_color(wordstart, NULL, dummy);
+      
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
       }
@@ -291,38 +326,42 @@ void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
     draw_char_box(font->Characters[0], pos, scale, color);
 }
 
+
 /* pos given in screen coordinates */
-int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
+int renderText(const unsigned char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   int len = strlen(text);
 
   HMM_Vec2 cursor = pos;
 
-  int l = 0;
   const unsigned char *line, *wordstart, *drawstart;
   line = drawstart = (unsigned char *)text;
 
   struct rgba usecolor = color;
-  check_caret(caret, l, cursor, scale, usecolor);
+  check_caret(caret, line-drawstart, cursor, scale, usecolor);
 
-  while (line[l] != '\0') {
-    if (isblank(line[l])) {
-      sdrawCharacter(font->Characters[line[l]], cursor, scale, usecolor);
-      cursor.X += font->Characters[line[l]].Advance * tracking * scale;
-      l++;
-      check_caret(caret, l, cursor, scale, usecolor);      
-    } else if (isspace(line[l])) {
-      sdrawCharacter(font->Characters[line[l]], cursor, scale, usecolor);
+  while (*line != '\0') {
+    if (isblank(*line)) {
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
+      cursor.X += font->Characters[*line].Advance * tracking * scale;
+      line++;
+      check_caret(caret, line-drawstart, cursor, scale, usecolor);      
+    } else if (isspace(*line)) {
+      sdrawCharacter(font->Characters[*line], cursor, scale, usecolor);
       cursor.Y -= scale * font->linegap;
       cursor.X = pos.X;
-      l++;
-      check_caret(caret, l, cursor, scale, usecolor);
+      line++;
+      check_caret(caret, line-drawstart, cursor, scale, usecolor);
     } else {
-      wordstart = &line[l];
+      if (*line == '\e')
+        line = esc_color(line, &usecolor, color);
+
+      wordstart = line;
       int wordWidth = 0;
 
-      while (!isspace(line[l]) && line[l] != '\0') {
-        wordWidth += font->Characters[line[l]].Advance * tracking * scale; 
-        l++;
+      while (!isspace(*line) && *line != '\0') {
+
+        wordWidth += font->Characters[*line].Advance * tracking * scale; 
+        line++;
       }
 
       if (lw > 0 && (cursor.X + wordWidth - pos.X) >= lw) {
@@ -330,11 +369,14 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
         cursor.Y -= scale * font->linegap;
       }
 
-      while (wordstart < &line[l]) {
+      while (wordstart < line) {
+	if (*wordstart == '\e')
+	  wordstart = esc_color(wordstart, &usecolor, color);
+      
         sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
-	check_caret(caret, wordstart-line, cursor, scale, usecolor);	
+	check_caret(caret, wordstart-drawstart, cursor, scale, usecolor);	
       }
     }
   }

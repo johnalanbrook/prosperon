@@ -1,5 +1,6 @@
 var texteditor = Object.copy(inputpanel, {
   title: "text editor",
+  wh: [700,500],
   _cursor:0, /* Text cursor: [char,line] */
   get cursor() { return this._cursor; },
   set cursor(x) {
@@ -68,8 +69,11 @@ var texteditor = Object.copy(inputpanel, {
     return this.startbuffer !== this.value;
   },
 
+  src: "NEW FILE",
+
   guibody() {
     return [
+      Mum.text({str:`EDITING ${this.src}`}),
       Mum.text({str:this.value, caret:this.cursor, offset:[0,-16]}),
     ];
   },
@@ -170,6 +174,7 @@ var texteditor = Object.copy(inputpanel, {
 });
 
 texteditor.inputs = {};
+
 texteditor.inputs.char = function(char) {
   this.insert_char(char);
   this.keycb();
@@ -192,11 +197,11 @@ texteditor.inputs.backspace.rep = true;
 
 
 texteditor.inputs['C-s'] = function() {
-  editor.edit_level.script = texteditor.value;
-  editor.save_current();
-  texteditor.startbuffer = texteditor.value.slice();
+  if (this.srctype === 'function') {
+    eval(`${this.src} = ${this.value}`);
+  }
 };
-texteditor.inputs['C-s'].doc = "Save script to file.";
+texteditor.inputs['C-s'].doc = "Save edited text.";
 
 texteditor.inputs['C-u'] = function() { this.popstate(); };
 texteditor.inputs['C-u'].doc = "Undo.";
@@ -335,3 +340,17 @@ texteditor.inputs['M-n'] = function() {
 };
 texteditor.inputs['M-n'].doc = "Go down to next line with text on it.";
 texteditor.inputs['M-n'].rep = true;
+
+texteditor.open_fn = function(fnstr)
+{
+  var fn = eval(fnstr);
+  if (!fn) {
+    Log.warn(`${fnstr} is not a function.`);
+    return;
+  }
+  this.src = fnstr;
+  this.srctype = "function";
+  editor.openpanel(this);
+  this.value = fn;
+  this.cursor = 0;
+}

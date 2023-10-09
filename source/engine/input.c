@@ -279,90 +279,52 @@ const char *keyname_extd(int key) {
   switch (key) {
     case SAPP_KEYCODE_ENTER:
       return "enter";
-      break;
-
     case SAPP_KEYCODE_ESCAPE:
       return "escape";
-      break;
-
     case SAPP_KEYCODE_DELETE:
       return "delete";
-      break;
-
     case SAPP_KEYCODE_INSERT:
       return "insert";
-      break;
-
     case SAPP_KEYCODE_TAB:
       return "tab";
-      break;
-
     case SAPP_KEYCODE_RIGHT:
       return "right";
-      break;
-
     case SAPP_KEYCODE_LEFT:
       return "left";
-      break;
-
     case SAPP_KEYCODE_UP:
       return "up";
-      break;
-
     case SAPP_KEYCODE_DOWN:
       return "down";
-      break;
-
     case SAPP_KEYCODE_LEFT_SHIFT:
       return "lshift";
-      break;
-
     case SAPP_KEYCODE_RIGHT_SHIFT:
       return "rshift";
-      break;
-
     case SAPP_KEYCODE_LEFT_CONTROL:
       return "lctrl";
-      break;
-
     case SAPP_KEYCODE_LEFT_ALT:
       return "lalt";
-      break;
-
     case SAPP_KEYCODE_RIGHT_CONTROL:
       return "rctrl";
-      break;
-
     case SAPP_KEYCODE_RIGHT_ALT:
       return "ralt";
-      break;
-
     case SAPP_KEYCODE_SPACE:
       return "space";
-      break;
-
     case SAPP_KEYCODE_KP_ADD:
       return "plus";
-      break;
-
     case SAPP_KEYCODE_KP_SUBTRACT:
       return "minus";
-      break;
     case SAPP_KEYCODE_GRAVE_ACCENT:
       return "`";
-      break;
-
     case SAPP_KEYCODE_LEFT_BRACKET:
       return "lbracket";
-      break;
-
     case SAPP_KEYCODE_RIGHT_BRACKET:
       return "rbracket";
-      break;
-
     case SAPP_KEYCODE_BACKSPACE:
       return "backspace";
-      break;
+    case SAPP_KEYCODE_PAGE_UP:
+      return "pgup";
+    case SAPP_KEYCODE_PAGE_DOWN:
+      return "pgdown";
   }
 
   if (key >= 32 && key <=90) {
@@ -371,7 +333,6 @@ const char *keyname_extd(int key) {
     
     return keybuf;
   }
-
 
   return "NULL";
 }

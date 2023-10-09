@@ -19,11 +19,11 @@ var Music = {
 var Sound = {
   sounds: [], /* array of loaded sound files */
   play(file) {
-//    var s = Object.create(Sound);
-//    s.path = file;
-//    s.play();
+    if (!IO.exists(file)) {
+      Log.warn(`Cannot play sound ${file}: does not exist.`);
+      return;
+    }
      this.id = cmd(14,file);
-    //return s;
   },
   
   music(midi, sf) {

@@ -10,12 +10,38 @@
    In addition to the removal of a bunch of stuff as seen here.
    Access prototypes through __proto__ instead of the long-winded Object.getProtoTypeOf.
 */
-var FNRM = function() { Log.error("removed"); };
-Object.getPrototypeOf = FNRM;
-Object.setPrototypeOf = FNRM;
-Reflect = {};
-Symbol = {};
-URIError = {};
+
+Object.getPrototypeOf = undefined;
+Object.setPrototypeOf = undefined;
+Reflect = undefined;
+Symbol = undefined;
+URIError = undefined;
+Proxy = undefined;
+Map = undefined;
+WeakMap = undefined;
+Promise = undefined;
+Set = undefined;
+WeakSet = undefined;
+
+Object.methods = function(o)
+{
+  var m = [];
+  Object.keys(o).forEach(function(k) {
+    if (typeof o[k] === 'function') m.push(k);
+  });
+  return m;
+}
+
+Object.rkeys = function(o)
+{
+  var keys = [];
+  Object.keys(o).forEach(function(key) {
+    keys.push(key);
+    if (Object.isObject(o[key]))
+      keys.push(Object.rkeys(o[key]));
+  });
+  return keys;
+}
 
 Object.mixin = function(target, source)
 {
@@ -356,49 +382,51 @@ Object.defineProperty(String.prototype, 'shift', {
 });
 
 Object.defineProperty(String.prototype, 'strip_ext', {
-  value: function() {
-    var idx  = this.lastIndexOf('.');
+  value: function() { return this.tolast('.'); }
+});
+
+Object.defineProperty(String.prototype, 'ext', {
+  value: function() { return this.fromlast('.'); }
+});
+
+Object.defineProperty(String.prototype, 'set_ext', {
+  value: function(val) { return this.strip_ext() + val; }
+});
+
+Object.defineProperty(String.prototype, 'fromlast', {
+  value: function(val) {
+    var idx = this.lastIndexOf(val);
+    if (idx === -1) return "";
+    return this.slice(idx+1);
+  }
+});
+
+Object.defineProperty(String.prototype, 'tolast', {
+  value: function(val) {
+    var idx = this.lastIndexOf(val);
     if (idx === -1) return this.slice();
     return this.slice(0,idx);
   }
 });
 
-Object.defineProperty(String.prototype, 'ext', {
-  value: function() {
-    var idx = this.lastIndexOf('.');
-    if (idx === -1) return undefined;
-    return this.slice(idx);
-  }
-});
-
-Object.defineProperty(String.prototype, 'set_ext', {
+Object.defineProperty(String.prototype, 'tofirst', {
   value: function(val) {
-    var s = this.strip_ext();
-    return s + val;
+    var idx = this.indexOf(val);
+    if (idx === -1) return this.slice();
+    return this.slice(0,idx);
   }
 });
 
 Object.defineProperty(String.prototype, 'name', {
-  value: function() {
-    var s = this.lastIndexOf('/');
-    var e = this.lastIndexOf('.');
-    if (e === -1) e = this.length;
-    return this.slice(s+1,e);
-  }
+  value: function() { return this.fromlast('/').tolast('.'); }
 });
 
 Object.defineProperty(String.prototype, 'base', {
-  value: function() {
-    return this.slice(this.lastIndexOf('/')+1);
-  }
+  value: function() { return this.fromlast('/'); }
 });
 
 Object.defineProperty(String.prototype, 'dir', {
-  value: function() {
-    var e = this.lastIndexOf('/');
-    if (e === -1) return "";
-    return this.slice(0, e);
-  }
+  value: function() { return this.tolast('/'); }
 });
 
 Object.defineProperty(String.prototype, 'updir', {
@@ -410,6 +438,25 @@ Object.defineProperty(String.prototype, 'updir', {
     return dir.dir();
   }
 });
+
+Object.defineProperty(String.prototype, 'startswith', {
+  value: function(val) {
+    if (!val) return false;
+    return this.startsWith(val);
+  }
+});
+
+Object.defineProperty(String.prototype, 'endswith', {
+  value: function(val) {
+    if (!val) return false;
+    return this.endsWith(val);
+  }
+});
+
+Object.defineProperty(String.prototype, 'uc', { value: function() { return this.toUpperCase(); } });
+
+Object.defineProperty(String.prototype, 'lc', {value:function() { return this.toLowerCase(); }});
+
 
 /* ARRAY DEFS */
 
@@ -424,6 +471,36 @@ Object.defineProperty(Array.prototype, 'copy', {
     return c;
   }
 });
+
+Object.defineProperty(Array.prototype, 'dofilter', {
+  value: function(fn) {
+    var j = 0;
+    this.forEach(function(val,i) {
+      if (fn(val)) {
+        if (i !== j) this[j] = val;
+	j++;
+      }
+    }, this);
+    this.length = j;
+    return this;
+  }
+});
+
+
+function filterInPlace(a, condition, thisArg) {
+  let j = 0;
+
+  a.forEach((e, i) => { 
+    if (condition.call(thisArg, e, i, a)) {
+      if (i!==j) a[j] = e; 
+      j++;
+    }
+  });
+
+  a.length = j;
+  return a;
+}
+
 
 Object.defineProperty(Array.prototype, 'reversed', {
   value: function() {
@@ -691,6 +768,13 @@ Math.lerp = function(s,f,t) { return (f-s)*t + s; };
 Number.prec = function(num)
 {
   return parseFloat(num.toFixed(3));
+}
+
+Number.hex = function(n)
+{
+  var s = Math.floor(n).toString(16);
+  if (s.length === 1) s = '0' + s;
+  return s.uc();
 }
 
 Object.defineProperty(Object.prototype, 'lerp',{
