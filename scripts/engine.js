@@ -716,6 +716,7 @@ preprimum.scale = 1;
 preprimum.gscale = function() { return 1; };
 preprimum.pos = [0,0];
 preprimum.angle = 0;
+preprimum.remove_obj = function() {};
 var World = preprimum.make(preprimum);
 var Primum = World;
 Primum.level = undefined;

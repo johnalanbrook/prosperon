@@ -63,7 +63,7 @@ void script_gc()
 
 JSValue num_cache[100] = {0};
 
-int js_print_exception(JSValue v) {
+/*int js_print_exception(JSValue v) {
 #ifndef NDEBUG
   if (JS_IsException(v)) {
     JSValue exception = JS_GetException(js);
@@ -73,7 +73,7 @@ int js_print_exception(JSValue v) {
       return 0;
     }
       
-    JSValue val = JS_GetPropertyStr(js, exception, "stack");
+    JSValue val = JS_ToCStringJS_GetPropertyStr(js, exception, "stack");
     const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
     const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
     const char *stack = JS_ToCString(js, val);
@@ -90,7 +90,7 @@ int js_print_exception(JSValue v) {
 #endif
   return 0;
 }
-
+*/
 void script_run(const char *script, const char *file) {
   JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
   js_print_exception(obj);

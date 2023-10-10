@@ -67,21 +67,33 @@ Object.deepfreeze = function(obj)
 }
 
 /* Goes through each key and overwrites if it's present */
+/*
 Object.dainty_assign = function(target, source)
 {
-  Object.keys(source).forEach(function(key) {
-    if (!(key in target)) return;
-    if (typeof source[key] === 'function') return;
+Object.keys(target).forEach(function(key) {
+    if (!(key in source)) return;
+
     if (typeof target[key] === 'function') return;
     
-    if (Array.isArray(source[key]))
+    if (Array.isArray(target[key]))
       target[key] = deep_copy(source[key]);
-    else if (typeof source[key] === 'object')
+    else if (typeof target[key] === 'object')
       Object.dainty_assign(target[key], source[key]);
-    else {
-      Log.warn(`set key ${key}`);
+    else
       target[key] = source[key];
-    }
+  });
+}
+*/
+Object.dainty_assign = function(target, source)
+{
+  Object.keys(source).forEach(function(k) {
+    if (!(k in target)) return;
+    if (Array.isArray(source[k]))
+      target[k] = deep_copy(source[k]);
+    else if (Object.isObject(source[k]))
+      Object.dainty_assign(target[k], source[k]);
+    else
+      target[k] = source[k];
   });
 }
 
@@ -421,7 +433,11 @@ Object.defineProperty(String.prototype, 'tofirst', {
 });
 
 Object.defineProperty(String.prototype, 'name', {
-  value: function() { return this.fromlast('/').tolast('.'); }
+  value: function() {
+    var idx = this.indexOf('/');
+    if (idx === -1)
+      return this.tolast('.');
+    return this.fromlast('/').tolast('.'); }
 });
 
 Object.defineProperty(String.prototype, 'base', {

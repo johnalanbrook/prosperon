@@ -130,7 +130,11 @@ var gameobject = {
       alive() { return this.body >= 0; },
       in_air() { return q_body(7, this.body);},
       on_ground() { return !this.in_air(); },
-      spawn(ur) {
+      spawn_from_instance(inst) {
+        var ur = prototypes.get_ur(inst.ur);
+	
+      },
+      spawn(ur, data) {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
         if (!ur) {
@@ -138,31 +142,47 @@ var gameobject = {
 	  return undefined;
 	}
 	
-	var go = ur.make(this);
+	var go = ur.make(this, data);
         return go;
       },
-      
+
+  /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
     if (this.level === parent)
-      this.level.remove_obj(this);
-      
-    var name = parent.objects.push(this);
-    this.toString = function() { return name; };
+      return;
+
+    this.level?.remove_obj(this);
     
-    if (this.level)
-      this.level.objects.remove(this);
     this.level = parent;
+      
+    function unique_name(list, obj) {
+      var str = obj.toString().replaceAll('.', '_');
+      var n = 1;
+      var t = str;
+      while (Object.hasOwn(list, t)) {
+        t = str + n;
+	n++;
+      }
+      return t;
+    };
+    
+    var name = unique_name(parent.objects, this.ur);
+    parent.objects[name] = this;
+    this.toString = function() { return name; };
   },
+  
    remove_obj(obj) {
-     delete this[obj.toString()];     
-     this.objects.remove(obj);
+     if (this[obj.toString()] === this.objects[obj.toString()])
+       delete this[obj.toString()];
+       
+     delete this.objects[obj.toString()];
    },
       
   },
   
   draw_layer: 1,
-  components: [],
-  objects: [],
+  components: {},
+  objects: {},
   level: undefined,
 
   hide() { this.components.forEach(function(x) { x.hide(); }); this.objects.forEach(function(x) { x.hide(); }); },
@@ -194,6 +214,7 @@ var gameobject = {
   /* Make a unique object the same as its prototype */
   revert() {
     Object.merge(this,this.__proto__);
+    this.sync();
   },
 
   check_registers(obj) {
@@ -243,7 +264,10 @@ var gameobject = {
 
       disable() { this.components.forEach(function(x) { x.disable(); });},
       enable() { this.components.forEach(function(x) { x.enable(); });},
-      sync() { },
+      sync() {
+       this.components.forEach(function(x) { x.sync(); });
+       this.objects.forEach(function(x) { x.sync(); });
+      },
 
 
       /* Bounding box of the object in world dimensions */
@@ -285,20 +309,13 @@ var gameobject = {
  
 	var objects = {};
 	this.__proto__.objects ??= {};
-	if (!Object.keys(this.objects).equal(Object.keys(this.__proto__.objects))) {
-	  for (var o in this.objects) {
-	    objects[o] = this.objects[o].transform_obj();
-	    objects[o].ur = this.objects[o].ur.toString();
-	  }
-	} else {
-	  for (var o in this.objects) {
-	    var obj = ediff(this.objects[o].transform_obj(),
-	    this.__proto__.objects[o]);
-	    if (obj) objects[o] = obj;
-	  }
-	}
-	if (!objects.empty)
-	  d.objects = objects;
+	var curobjs = {};
+	for (var o in this.objects)
+	  curobjs[o] = this.objects[o].instance_obj();
+
+        var odiff = ediff(curobjs, this.__proto__.objects);
+	if (odiff)
+	  d.objects = curobjs;
 
 	delete d.pos;
 	delete d.angle;
@@ -307,14 +324,16 @@ var gameobject = {
         return d;
       },
 
+      instance_obj() {
+        var t = this.transform_obj();
+	t.ur = this.ur;
+	return t;
+      },
+
       transform_obj() {
         var t = this.json_obj();
 	Object.assign(t, this.transform());
 	return t;
-      },
-
-      level_obj() {
-	return this.json_obj();
       },
 
       ur_obj() {
@@ -389,32 +408,29 @@ var gameobject = {
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
   instances: [],
 
-  make(level) {
+  make(level, data) {
     level ??= Primum;
     var obj = Object.create(this);
+    obj.level = level;
     this.instances.push(obj);
     obj.body = make_gameobject();
-    Object.hide(obj, 'body');
     obj.components = {};
     obj.objects = {};
-    Object.mixin(obj, gameobject.impl);
-    Object.hide(obj, 'components');
-    Object.hide(obj, 'objects');
+    assign_impl(obj, gameobject.impl);
     obj._ed = {
       selectable: true,
       dirty: false,
     };
-    Object.hide(obj, '_ed');
     obj.ur = this.toString();
-    Object.hide(obj,'ur');
     
     Game.register_obj(obj);
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
+    obj.level = undefined;
     obj.reparent(level);
 
-    Object.hide(obj, 'level')
+    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level');    
 
     for (var prop in this) {
       var p = this[prop];
@@ -423,20 +439,19 @@ var gameobject = {
         obj[prop] = p.make(obj);
 	obj.components[prop] = obj[prop];
       }
-    };      
-
+    };
+    
     if (this.objects) {
       for (var prop in this.objects) {
         var o = this.objects[prop];
-        var newobj = obj.spawn(o.ur);
+        var newobj = obj.spawn(o.ur, o);
 	if (!newobj) continue;
 	obj.rename_obj(newobj.toString(), prop);
       }
     }
 
     Object.dainty_assign(obj, this);
-
-    obj.components.forEach(function(x) { if ('sync' in x) x.sync(); });
+    obj.sync();
     
     gameobject.check_registers(obj);
 
@@ -448,10 +463,11 @@ var gameobject = {
   make_objs(objs) {
     for (var prop in objs) {
       var o = objs[prop];
-      var newobj = this.spawn(o.ur);
+      var newobj = this.spawn(o.ur, o);
       if (!newobj) continue;
       this.rename_obj(newobj.toString(), prop);
-      Object.assign(newobj,o);
+      Log.warn(`setting object ${prop} to ${JSON.stringify(o)}`);
+//      Object.assign(newobj,o);
     }
   },
 
@@ -488,29 +504,6 @@ gameobject.impl.spawn.doc = `Spawn an entity of type 'ur' on this entity. Return
 /* Default objects */
 var prototypes = {};
 prototypes.ur = {};
-prototypes.load_all = function()
-{
-if (IO.exists("proto.json"))
-  prototypes = JSON.parse(IO.slurp("proto.json"));
-
-for (var key in prototypes) {
-  if (key in gameobjects)
-    Object.dainty_assign(gameobjects[key], prototypes[key]);
-  else {
-    /* Create this gameobject fresh */
-    Log.info("Making new prototype: " + key + " from " + prototypes[key].from);
-    var newproto = gameobjects[prototypes[key].from].clone(key);
-    gameobjects[key] = newproto;
-
-    for (var pkey in newproto)
-      if (typeof newproto[pkey] === 'object' && newproto[pkey] && 'clone' in newproto[pkey])
-        newproto[pkey] = newproto[pkey].clone();
-
-    Object.dainty_assign(gameobjects[key], prototypes[key]);
-  }
-}
-}
-
 prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
 /* Makes a new ur-type from disk. If the ur doesn't exist, it searches on the disk to create it. */
@@ -534,7 +527,7 @@ prototypes.from_file = function(file)
     }
   }
 
-  var newur = {};//Object.create(upperur);
+  var newur = {};
   
   file = file.replaceAll('.','/');
 
@@ -548,7 +541,7 @@ prototypes.from_file = function(file)
   try {
     if (jsonfile) json = JSON.parse(IO.slurp(jsonfile));
   } catch(e) {
-    Log.warn(e);
+    Log.warn(`Unable to create json from ${jsonfile}`);
   }
 
   if (!json && !script) {

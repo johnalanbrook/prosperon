@@ -122,6 +122,7 @@ function ediff(from,to)
     if (!to || v !== to[key])
       ret[key] = v;
   });
+  if (ret.empty) return undefined;
   
   return ret;
 }

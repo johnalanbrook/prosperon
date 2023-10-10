@@ -1,3 +1,16 @@
+function assign_impl(obj, impl)
+{
+  var tmp = {};
+  for (var key in impl)
+    if (typeof obj[key] !== 'undefined' && typeof obj[key] !== 'function')
+      tmp[key] = obj[key];
+
+  Object.mixin(obj, impl);
+
+  for (var key in tmp)
+    obj[key] = tmp[key];
+}
+
 var component = {
   components: [],
   toString() {
@@ -11,9 +24,20 @@ var component = {
   enabled: true,
   enable() { this.enabled = true; },
   disable() { this.enabled = false; },
+
+  hides: ['gameobject', 'id'],
   
-  make(go) { },
+  make(go) {
+    var nc = Object.create(this);
+    nc.gameobject = go;
+    Object.assign(nc, this._enghook(go.body));
+    assign_impl(nc,this.impl);
+    Object.hide(nc, ...this.hides);
+    return nc;
+  },
+  
   kill() { Log.info("Kill not created for this component yet"); },
+  sync() {},
   gui() { },
   gizmo() { },
   
@@ -24,13 +48,6 @@ var component = {
   },
 };
 
-component.assign_impl = function(o)
-{
-  for (var key in o.impl)
-    if (typeof o[key] !== 'undefined' && typeof o[key] !== 'function')
-      o[key] = o.impl[key];
-}
-
 component.sprite = Object.copy(component, {
   pos:[0,0],
   color:[1,1,1],
@@ -39,30 +56,17 @@ component.sprite = Object.copy(component, {
   path: "",
   rect: {s0:0, s1: 1, t0: 0, t1: 1},  
   toString() { return "sprite"; },
-  make(go) {
-    var nsprite = Object.create(this);
-    nsprite.gameobject = go;
-    Object.assign(nsprite, make_sprite(go.body)); 
-    Object.mixin(nsprite, component.sprite.impl);
-    nsprite.kill = component.sprite.impl.kill;
-
-    Object.hide(nsprite, 'gameobject', 'id');
-    for (var p in component.sprite.impl)
-      if (typeof this[p] !== 'undefined' && typeof this[p] !== 'function')
-        nsprite[p] = this[p];
-
-    return nsprite;
-  },
+  _enghook: make_sprite,
 });
 
 component.sprite.impl = {
   set path(x) {
-    Log.warn(x);
     cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
   },
   get path() {
     return prototypes.resavi(this.gameobject.__proto__.toString(), cmd(116,this.id));
   },
+  toString() { return "sprite"; },
   hide() { this.enabled = false; },
   show() { this.enabled = true; },
   asset(str) { this.path = str; },
@@ -336,23 +340,15 @@ collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
   toString() { return "poly2d"; },
+  flipx: false,
+  flipy: false,
   
   boundingbox() {
     return points2bb(this.spoints);
   },
-
-  make(go) {
-    var poly = Object.create(this);
-    poly.gameobject = go;
-    poly.points = [];
-    poly.flipx = false;
-    poly.flipy = false;
-    Object.assign(poly, make_poly2d(go.body, poly.points));
-    Object.mixin(poly, poly.impl);
-    Object.hide(poly, 'id', 'shape', 'gameobject', 'flipx', 'flipy');
-    return poly;
-  },
-
+  
+  hides: ['id', 'shape', 'gameobject'],
+  _enghook: make_poly2d,
   points:[],
 
   /* EDITOR */  
@@ -726,21 +722,9 @@ component.circle2d = Object.copy(collider2d, {
     var diameter = this.radius*2*this.gameobject.scale;
     return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
   },
-    
-  make(go) {
-    var circle = Object.create(this);
-    
-    circle.gameobject = go;
-    Object.assign(circle, make_circle2d(go.body));
-    Object.mixin(circle,this.impl);
-    Object.hide(circle, 'gameobject', 'id', 'shape', 'scale');
-    component.assign_impl(circle);
-    for (var key in this.impl)
-      if (typeof this[key] !== 'undefined' && typeof this[key] !== 'function')    
-        if (this[key]) circle[key] = this[key];
-      
-    return circle;
-  },
+
+  hides: ['gameobject', 'id', 'shape', 'scale'],
+  _enghook: make_circle2d,
 });
 
 /* ASSETS */

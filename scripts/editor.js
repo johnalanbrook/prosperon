@@ -197,7 +197,7 @@ var editor = {
   stash: undefined,
 
   start_play_ed() {
-    this.stash = this.edit_level.level_obj();
+    this.stash = this.edit_level.json_obj();
     this.edit_level.kill();
 //      load_configs("game.config");
     Game.play();
@@ -444,7 +444,7 @@ var editor = {
 
     this.selectlist.forEach(function(x) {
       var sname = x.__proto__.toString();
-      if (!x.level_obj().empty)
+      if (!x.json_obj().empty)
         x._ed.dirty = true;
       else
         x._ed.dirty = false;
@@ -480,7 +480,7 @@ var editor = {
       var i = 1;
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
-        var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].name + "]";
+        var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].toString() + "]";
         GUI.text(str, world2screen(this.selectlist[0].worldpos()).add([0,-16*(i++)]));
       }
 
@@ -610,7 +610,7 @@ var editor = {
       this.openpanel(gen_notify("Entity already exists with that name. Delete first."));
     } else {
       var path = sub.replaceAll('.', '/') + ".json";
-      var saveobj = obj.level_obj();
+      var saveobj = obj.json_obj();
       IO.slurpwrite(JSON.stringify(saveobj,null,1), path);
 
 
@@ -822,12 +822,15 @@ editor.inputs['C-s'] = function() {
   };
 
   if (editor.selectlist.length !== 1 || !editor.selectlist[0]._ed.dirty) return;
-  Object.merge(editor.selectlist[0].__proto__, editor.selectlist[0].level_obj());
+  var saveobj = editor.selectlist[0].json_obj();
+  Object.merge(editor.selectlist[0].__proto__, saveobj);
+  editor.selectlist[0].__proto__.objects = saveobj.objects;
   var path = editor.selectlist[0].ur.toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";
 
   IO.slurpwrite(JSON.stringify(editor.selectlist[0].__proto__,null,1), path);
+  Log.warn(`Wrote to file ${path}`);
 };
 editor.inputs['C-s'].doc = "Save selected.";
 

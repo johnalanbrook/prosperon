@@ -26,7 +26,7 @@ uniform sampler smp;
 
 void main()
 {
-  color = fcolor * texture(sampler2D(image,smp), texcoords);
+  color = texture(sampler2D(image,smp), texcoords);
 
   if (color.a <= 0.1f)
       discard;

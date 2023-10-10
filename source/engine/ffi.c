@@ -92,6 +92,11 @@ JSValue str2js(const char *c) {
   return JS_NewString(js, c);
 }
 
+const char *js2str(JSValue v)
+{
+  return JS_ToCString(js, v);
+}
+
 JSValue strarr2js(const char **c)
 {
   JSValue arr = JS_NewArray(js);
@@ -287,6 +292,29 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, cursor, 1.0));
   JS_FreeCString(js, s);
   return ret;
+}
+
+int js_print_exception(JSValue v)
+{
+#ifndef NDEBUG
+  if (!JS_IsException(v))
+    return 0;
+
+  JSValue ex = JS_GetException(js);
+    
+    const char *name = JS_ToCString(js, js_getpropstr(ex, "name"));
+    const char *msg = js2str(js_getpropstr(ex, "message"));
+    const char *stack = js2str(js_getpropstr(ex, "stack"));
+    int line = 0;
+    mYughLog(LOG_SCRIPT, LOG_ERROR, line, "script", "%s :: %s\n%s", name, msg, stack);
+
+    JS_FreeCString(js, name);
+    JS_FreeCString(js, msg);
+    JS_FreeCString(js, stack);
+    JS_FreeValue(js,ex);
+    return 1;
+#endif
+  return 0;
 }
 
 JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1469,8 +1497,7 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
 JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int go = js2int(argv[0]);
   struct phys2d_poly *poly = Make2DPoly(go);
-  phys2d_poly_setverts(poly, js2cpvec2arr(argv[1]));
-
+  phys2d_poly_setverts(poly, NULL);
   JSValue polyval = JS_NewObject(js);
   js_setprop_str(polyval, "id", ptr2js(poly));
   js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
@@ -1625,7 +1652,7 @@ void ffi_load() {
   DUK_FUNC(cmd_box2d, 6)
   DUK_FUNC(make_circle2d, 1)
   DUK_FUNC(cmd_circle2d, 6)
-  DUK_FUNC(make_poly2d, 2)
+  DUK_FUNC(make_poly2d, 1)
   DUK_FUNC(cmd_poly2d, 6)
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)

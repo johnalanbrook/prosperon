@@ -12,6 +12,7 @@ cpVect js2vec2(JSValue v);
 
 JSValue bitmask2js(cpBitmask mask);
 cpBitmask js2bitmask(JSValue v);
+int js_print_exception(JSValue v);
 
 struct rgba js2color(JSValue v);
 double js2number(JSValue v);

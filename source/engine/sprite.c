@@ -236,6 +236,7 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
   }
 
   bind_sprite.fs.images[0] = tex->id;
+//  YughWarn("Draw sprite %s at %g, %g", tex_get_path(tex), sposes[0].X, sposes[0].Y);
 
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
   sg_apply_bindings(&bind_sprite);
