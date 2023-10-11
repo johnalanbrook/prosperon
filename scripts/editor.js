@@ -197,10 +197,10 @@ var editor = {
   stash: undefined,
 
   start_play_ed() {
-    this.stash = this.edit_level.json_obj();
-    this.edit_level.kill();
-//      load_configs("game.config");
+    this.stash = this.desktop.instance_obj();
+    Primum.clear();
     Game.play();
+    Game.editor_mode(false);
     Player.players[0].uncontrol(this);
     Player.players[0].control(limited_editor);
     Register.unregister_obj(this);
@@ -215,6 +215,16 @@ var editor = {
     Debug.register_call(editor.ed_debug, editor);
     Register.update.register(gui_controls.update, gui_controls);
     Player.players[0].control(gui_controls);
+
+    this.desktop = Primum.spawn(ur.arena);
+    this.edit_level = this.desktop;
+    editor.edit_level._ed.selectable = false;
+    if (this.stash) {
+      this.desktop.make_objs(this.stash.objects);
+      Object.dainty_assign(this.desktop, this.stash);
+    }
+    this.selectlist = [];
+    Game.view_camera(editor.camera);    
   },
 
   end_debug() {
@@ -356,23 +366,6 @@ var editor = {
     }
   },
   
-  clear_level() {
-    if (this.edit_level) {
-      if (this.edit_level.level) {
-        this.openpanel(gen_notify("Can't close a nested level. Save up to the root before continuing."));
-        return;
-      }
-      this.unselect();
-      this.edit_level.kill();
-    }
-    
-    this.edit_level = Primum.spawn(ur.arena);
-    this.desktop = this.edit_level;
-    if (this.stash)
-      
-    editor.edit_level._ed.selectable = false;
-  },
-
   load_desktop(d) {
     
   },
@@ -663,13 +656,13 @@ editor.inputs['C-e'].doc = "Open asset explorer.";
 editor.inputs['C-l'] = function() { editor.openpanel(entitylistpanel); };
 editor.inputs['C-l'].doc = "Open list of spawned entities.";
 
-/*editor.inputs['C-i'] = function() {
+editor.inputs['C-i'] = function() {
   if (editor.selectlist.length !== 1) return;
   objectexplorer.obj = editor.selectlist[0];
   editor.openpanel(objectexplorer);
 };
 editor.inputs['C-i'].doc = "Open the object explorer for a selected object.";
-*/
+
 editor.inputs['C-d'] = function() {
   if (editor.selectlist.length === 0) return;
   var duped = editor.dup_objects(editor.selectlist);
@@ -854,13 +847,14 @@ editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
-  if (editor.edit_level._ed.dirty) {
+/*  if (editor.edit_level._ed.dirty) {
     Log.info("Level has changed; save before starting a new one.");
     editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => editor.clear_level()));
     return;
   }
 
-  editor.clear_level();    
+  editor.clear_level();
+*/
 };
 editor.inputs['C-n'].doc = "Open a new level.";
 
@@ -1631,14 +1625,9 @@ var objectexplorer = Object.copy(inputpanel, {
   obj: undefined,
   previous: [],
   start() {
-
     this.previous = [];
     Input.setnuke();
   },
-
-  on_close() { Input.setgame(); },
-
-  input_enter_pressed() {},
 
   goto_obj(obj) {
     if (obj === this.obj) return;
@@ -1646,8 +1635,13 @@ var objectexplorer = Object.copy(inputpanel, {
     this.obj = obj;
   },
 
+  prev_obj() {
+    this.obj = this.previous.pop();
+  },
+
   guibody() {
-    Nuke.label("Examining " + this.obj);
+    var items = [];
+    items.push(Mum.text({str:"Examining " + this.obj}));
       
     var n = 0;
     var curobj = this.obj;
@@ -1657,23 +1651,14 @@ var objectexplorer = Object.copy(inputpanel, {
     }
 
     n--;
-    Nuke.newline(n);
     curobj = this.obj.__proto__;
     while (curobj) {
-      if (Nuke.button(curobj.toString()))
-        this.goto_obj(curobj);
-
+      items.push(Mum.text({str:curobj.toString(), action:this.goto_obj(curobj)}));
       curobj = curobj.__proto__;
     }
 
-    Nuke.newline(2);
-
-    if (this.previous.empty)
-      Nuke.label("");
-    else {
-      if (Nuke.button("prev: " + this.previous.last))
-        this.obj = this.previous.pop();
-    }
+    if (!this.previous.empty)
+      items.push(Mum.text({str:"prev: " + this.previous.last, action: this.prev_obj}));
 
     Object.getOwnPropertyNames(this.obj).forEach(key => {
       var descriptor = Object.getOwnPropertyDescriptor(this.obj, key);
@@ -1688,70 +1673,52 @@ var objectexplorer = Object.copy(inputpanel, {
       var name = (hidden ? "[hidden] " : "") + key;
       var val = this.obj[key];
 
-      var nuke_str = key + "_nuke";
-      if (nuke_str in this.obj) {
-        this.obj[nuke_str]();
-	if (key in this.obj.__proto__) {
-	  if (Nuke.button("delete " + key)) {
-	     if (("_" + key) in this.obj)
-	       delete this.obj["_"+key];
-	     else
-	       delete this.obj[key];
-	  }
-	}
-      } else
       switch (typeof val) {
         case 'object':
           if (val) {
 	    if (Array.isArray(val)) {
-	      this.obj[key] = Nuke.pprop(key,val);
+//	      this.obj[key] = Nuke.pprop(key,val);
 	      break;
 	    }
 	      
-	    Nuke.newline(2);
-	    Nuke.label(name);
-            if (Nuke.button(val.toString())) this.goto_obj(val);
+//	    Nuke.newline(2);
+	    items.push(Mum.text({str:name}));
+	    items.push(Mum.text({str:val.toString(), action: this.goto_obj.bind(val)}));
 	  } else {
-    	      this.obj[key] = Nuke.pprop(key,val);
+//    	      this.obj[key] = Nuke.pprop(key,val);
 	  }
 	  break;
 
 	case 'function':
-	  Nuke.newline(2);
-	  Nuke.label(name);
-	  Nuke.label("function");
+	  items.push(Mum.text({str:name}));
+	  items.push(Mum.text({str:"function"}));
 	  break;
 
 	default:
 	  if (!hidden) {// && Object.getOwnPropertyDescriptor(this.obj, key).writable) {
-	    if (key.startsWith('_')) key = key.slice(1);
+//	    this.obj[key] = Nuke.pprop(key, this.obj[key]);
 
-	    this.obj[key] = Nuke.pprop(key, this.obj[key]);
-
-	    if (key in this.obj.__proto__) {
+/*	    if (key in this.obj.__proto__) {
 	      if (Nuke.button("delete " + key)) {
 	        if ("_"+key in this.obj)
 		  delete this.obj["_"+key];
 		else
              	  delete this.obj[key];
               }
-	    }
+	    }*/
 	  }
 	  else {
-	    Nuke.newline(2);
-	    Nuke.label(name);
-	    Nuke.label(val.toString());
+	    items.push(Mum.text({str:name}));
+	    items.push(Mum.text({str:val.toString()}));
 	  }
 	  break;
       }
     });
 
-    Nuke.newline();
-    Nuke.label("Properties that can be pulled in ...");
-    Nuke.newline(3);
+    items.push(Mum.text({str:"Properties that can be pulled in ..."}));
+//    Nuke.newline(3);
     var pullprops = [];
     for (var key in this.obj.__proto__) {
-      if (key.startsWith('_')) key = key.slice(1);
       if (!this.obj.hasOwn(key)) {
         if (typeof this.obj[key] === 'object' || typeof this.obj[key] === 'function') continue;
 	pullprops.push(key);
@@ -1761,13 +1728,12 @@ var objectexplorer = Object.copy(inputpanel, {
     pullprops = pullprops.sort();
 
     pullprops.forEach(function(key) {
-      if (Nuke.button(key))
-        this.obj[key] = this.obj[key];
-    }, this);
+      items.push(Mum.text({str:key}));
+//        this.obj[key] = this.obj[key];
+    });
 
-    Game.objects.forEach(function(x) { x.sync(); });
-
-    Nuke.newline();
+//    Game.objects.forEach(function(x) { x.sync(); });
+    return items;
   },
 
 
@@ -1994,10 +1960,9 @@ limited_editor.inputs['M-p'] = function()
 limited_editor.inputs['C-q'] = function()
 {
   Sound.killall();
+  Primum.clear();
+  
   editor.enter_editor();
-  Primum.clear_all();
-  editor.load_json(editor.stash);
-  Game.view_camera(editor.camera);
 }
 
 limited_editor.inputs['M-q'] = function()
@@ -2013,10 +1978,10 @@ if (IO.exists("editor.config"))
   load_configs("editor.config");
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
-editor.clear_level();
 editor.camera = Game.camera;
 Game.stop();
 Game.editor_mode(true);
+Debug.draw_phys(true);
 
 editor.enter_editor();
 

@@ -131,9 +131,9 @@ var gameobject = {
       in_air() { return q_body(7, this.body);},
       on_ground() { return !this.in_air(); },
       spawn_from_instance(inst) {
-        var ur = prototypes.get_ur(inst.ur);
-	
+        return this.spawn(inst.ur, inst);
       },
+      
       spawn(ur, data) {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
@@ -380,19 +380,24 @@ var gameobject = {
 
 //	Register.endofloop(() => {
 	  cmd(2, this.body);
-	  delete Game.objects[this.body];
-	  if (this.level)
+	  Game.unregister_obj(this);
+
+	  if (this.level) {
     	    this.level.remove_obj(this);
+	    this.level = undefined;
+	  }
 
 	  Player.uncontrol(this);
 	  Register.unregister_obj(this);
-	  this.instances.remove(this);
+//	  this.instances.remove(this);
 
 	  this.body = -1;
 	  for (var key in this.components) {
 	    Register.unregister_obj(this.components[key]);
 	    this.components[key].kill();
+	    this.components.gameobject = undefined;
 	  }
+	  delete this.components;
 
 	  for (var key in this.objects)
 	    this.objects[key].kill();
@@ -406,13 +411,12 @@ var gameobject = {
       down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
       right() { return [1,0].rotate(Math.deg2rad(this.angle));},
       left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
-  instances: [],
 
   make(level, data) {
     level ??= Primum;
     var obj = Object.create(this);
     obj.level = level;
-    this.instances.push(obj);
+//    this.instances.push(obj);
     obj.body = make_gameobject();
     obj.components = {};
     obj.objects = {};
@@ -441,33 +445,24 @@ var gameobject = {
       }
     };
     
-    if (this.objects) {
-      for (var prop in this.objects) {
-        var o = this.objects[prop];
-        var newobj = obj.spawn(o.ur, o);
-	if (!newobj) continue;
-	obj.rename_obj(newobj.toString(), prop);
-      }
-    }
+    if (this.objects)
+      obj.make_objs(this.objects);
 
     Object.dainty_assign(obj, this);
     obj.sync();
     
     gameobject.check_registers(obj);
 
-    if (typeof obj.start === 'function') obj.start();
+    if (Game.playing() && typeof obj.start === 'function') obj.start();
 
     return obj;
   },
 
   make_objs(objs) {
     for (var prop in objs) {
-      var o = objs[prop];
-      var newobj = this.spawn(o.ur, o);
+      var newobj = this.spawn_from_instance(objs[prop]);
       if (!newobj) continue;
       this.rename_obj(newobj.toString(), prop);
-      Log.warn(`setting object ${prop} to ${JSON.stringify(o)}`);
-//      Object.assign(newobj,o);
     }
   },
 

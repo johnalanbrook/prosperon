@@ -153,9 +153,9 @@ var Player = {
       if (typeof fn === 'function') {
         fn.call(pawn, ... args);
 	pawn.inputs.post?.call(pawn);
-	if (!pawn.inputs.fallthru)	
-	  return;
       }
+
+      if (!pawn.inputs.fallthru) return;
     }
   },
   

@@ -600,6 +600,11 @@ var Game = {
   register_obj(obj) {
     this.objects[obj.body] = obj;
   },
+
+  unregister_obj(obj) {
+    if (this.objects[obj.body] === obj)
+      this.objects[obj.body] = undefined;
+  },
   
   /* Returns an object given an id */
   object(id) {

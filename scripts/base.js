@@ -43,6 +43,14 @@ Object.rkeys = function(o)
   return keys;
 }
 
+Object.extend = function(from, src)
+{
+  var n = {};
+  Object.mixin(n, from);
+  Object.mixin(n, src);
+  return n;
+}
+
 Object.mixin = function(target, source)
 {
   if (typeof source !== 'object') return target;
@@ -57,6 +65,15 @@ Object.mixin = function(target, source)
   return target;
 };
 
+Object.deepmixin = function(target, source)
+{
+  var o = source;
+  while (o !== Object.prototype) {
+    Object.mixin(target, o);
+    o = o.__proto__;
+  };
+}
+
 Object.deepfreeze = function(obj)
 {
   for (var key in obj) {
@@ -67,23 +84,6 @@ Object.deepfreeze = function(obj)
 }
 
 /* Goes through each key and overwrites if it's present */
-/*
-Object.dainty_assign = function(target, source)
-{
-Object.keys(target).forEach(function(key) {
-    if (!(key in source)) return;
-
-    if (typeof target[key] === 'function') return;
-    
-    if (Array.isArray(target[key]))
-      target[key] = deep_copy(source[key]);
-    else if (typeof target[key] === 'object')
-      Object.dainty_assign(target[key], source[key]);
-    else
-      target[key] = source[key];
-  });
-}
-*/
 Object.dainty_assign = function(target, source)
 {
   Object.keys(source).forEach(function(k) {
@@ -229,13 +229,6 @@ Object.defineProperty(Object.prototype, 'nulldef', {
     if (!this.hasOwnProperty(name)) this[name] = val;
   }
 });
-
-/*Object.defineProperty(Object.prototype, 'writable', {
-  value: function(name) {
-    return Object.getPropertyDescriptor(this, name).writable;
-  }
-});
-*/
 
 Object.defineProperty(Object.prototype, 'prop_obj', {
   value: function() { return JSON.parse(JSON.stringify(this)); }

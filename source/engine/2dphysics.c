@@ -607,8 +607,10 @@ struct postphys_cb {
 static struct postphys_cb *begins = NULL;
 
 void flush_collide_cbs() {
-  for (int i = 0; i < arrlen(begins); i++)
+  for (int i = 0; i < arrlen(begins); i++) {
     script_callee(begins[i].c, 1, &begins[i].send);
+    JS_FreeValue(js, begins[i].send);
+  }
 
   arrsetlen(begins,0);
 }

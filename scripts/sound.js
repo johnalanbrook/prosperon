@@ -20,7 +20,7 @@ var Sound = {
   sounds: [], /* array of loaded sound files */
   play(file) {
     if (!IO.exists(file)) {
-      Log.warn(`Cannot play sound ${file}: does not exist.`);
+      Log.error(`Cannot play sound ${file}: does not exist.`);
       return;
     }
      this.id = cmd(14,file);

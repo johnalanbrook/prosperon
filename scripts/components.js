@@ -324,11 +324,14 @@ var collider2d = Object.copy(component, {
   register_hit(fn, obj) {
     register_collide(1, fn, obj, this.gameobject.body, this.shape);
   },
-/*    set sensor(x) { cmd(18,this.shape,x); },
+
+  impl: {
+    set sensor(x) { cmd(18,this.shape,x); },
     get sensor() { return cmd(21,this.shape); },
-    set enabled(x) { cmd(22,this.shape,x); },
-    get enabled() { return cmd(23,this.shape); }
-*/
+//    set enabled(x) { cmd(22,this.shape,x); },
+//    get enabled() { return cmd(23,this.shape); }
+  },
+
 });
 
 collider2d.inputs = {};
@@ -403,14 +406,14 @@ component.polygon2d = Object.copy(collider2d, {
   },
 });
 
-component.polygon2d.impl = {
+component.polygon2d.impl = Object.extend(collider2d.impl, {
   sync() {
     cmd_poly2d(0, this.id, this.spoints);
   },
   query() {
     return cmd(80, this.shape);
   },
-};
+});
 
 var polygon2d = component.polygon2d;
 
@@ -448,7 +451,6 @@ component.edge2d = Object.copy(collider2d, {
   degrees:2,
   dimensions:2,
   thickness:0,
-  points: [],
   /* open: 0
      clamped: 1
      beziers: 2
@@ -524,7 +526,7 @@ component.edge2d = Object.copy(collider2d, {
       assert knots%order != 0
     */
 
-    if (this.type === typeid.this.looped)
+    if (this.type === component.edge2d.typeid.this.looped)
       return spline_cmd(0, this.degrees, this.dimensions, 0, spoints.wrapped(this.degrees), n);
 
     return spline_cmd(0, this.degrees, this.dimensions, this.type, spoints, n);
@@ -536,17 +538,9 @@ component.edge2d = Object.copy(collider2d, {
     return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
   },
 
-  make(go) {
-    var edge = Object.create(this);
-    edge.gameobject = go;
-//    edge.cpoints = [];
-//    edge.points = [];
-    Object.assign(edge, make_edge2d(go.body, edge.points, 0));
-    Object.mixin(edge,edge.impl);
-    Object.hide(edge, 'gameobject', 'id', 'shape');
-    return edge;
-  },
-  
+  hides: ['gameobject', 'id', 'shape', 'points'],
+  _enghook: make_edge2d,
+
   /* EDITOR */
   gizmo() {
     this.spoints.forEach(function(x) {
@@ -569,24 +563,23 @@ component.edge2d = Object.copy(collider2d, {
       get pos() { return p; },
       sync: this.sync.bind(this),
     };
-      
 
     return undefined;
   },
 });
 
-component.edge2d.impl = {
+component.edge2d.impl = Object.extend(collider2d.impl, {
   set thickness(x) {
     cmd_edge2d(1,this.id,x);
   },
   get thickness() { return cmd(112,this.id); },
   sync() {
     var sensor = this.sensor;
-    this.points = this.sample(this.samples);
-    cmd_edge2d(0,this.id,this.points);
+    var points = this.sample(this.samples);
+    cmd_edge2d(0,this.id,points);
     this.sensor = sensor;
   },
-};
+});
 
 var bucket = component.edge2d;
 bucket.inputs = {};
@@ -655,6 +648,8 @@ bucket.inputs['C-M-lm'] = function() {
 };
 bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
 
+bucket.inputs.lm = function(){};
+
 bucket.inputs['C-lm'] = function() {
   var idx = 0;
 
@@ -670,13 +665,15 @@ bucket.inputs['C-lm'] = function() {
 };
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
-bucket.inputs['S-lm'] = function() {
-  var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.add(this.gameobject.pos); }, this), 25);
+bucket.inputs['C-M-lm'] = function() {
+  var idx = cmd(59, Mouse.worldpos.sub(this.gameobject.pos), this.cpoints, 250);
+  Log.warn(idx);
+//  var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.add(this.gameobject.pos); }, this), 25);
   if (idx === -1) return;
 
   this.cpoints.splice(idx, 1);
 };
-bucket.inputs['S-lm'].doc = "Remove point from the spline.";
+bucket.inputs['C-M-lm'].doc = "Remove point from the spline.";
 
 bucket.inputs.lb = function() {
   var np = [];
@@ -703,17 +700,6 @@ bucket.inputs.rb.doc = "Rotate the points CW.";
 bucket.inputs.rb.rep = true;
 
 component.circle2d = Object.copy(collider2d, {
-  impl: {
-    set radius(x) { cmd_circle2d(0,this.id,x); },
-    get radius() { return cmd_circle2d(2,this.id); },
-
-    set scale(x) { this.radius = x; },
-    get scale() { return this.radius; },
-
-    set offset(x) { cmd_circle2d(1,this.id,x); },
-    get offset() { return cmd_circle2d(3,this.id); },
-  },
-  
   radius:10,
   offset:[0,0],
   toString() { return "circle2d"; },
@@ -725,6 +711,17 @@ component.circle2d = Object.copy(collider2d, {
 
   hides: ['gameobject', 'id', 'shape', 'scale'],
   _enghook: make_circle2d,
+});
+
+component.circle2d.impl = Object.extend(collider2d.impl, {
+  set radius(x) { cmd_circle2d(0,this.id,x); },
+  get radius() { return cmd_circle2d(2,this.id); },
+
+  set scale(x) { this.radius = x; },
+  get scale() { return this.radius; },
+
+  set offset(x) { cmd_circle2d(1,this.id,x); },
+  get offset() { return cmd_circle2d(3,this.id); },
 });
 
 /* ASSETS */
