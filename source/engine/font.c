@@ -243,6 +243,7 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
   vert.st.v = (c.rect.t1-c.rect.t0+oline*lsize*2.0)*USHRT_MAX;
   vert.color = color;
 
+//  sg_append_buffer(bind_text.vertex_buffers[0], &vert, sizeof(struct text_vert));
   memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
   curchar++;
 }

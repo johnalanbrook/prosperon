@@ -34,7 +34,6 @@ struct point_vertex {
 };
 static int point_c = 0;
 static int point_sc = 0;
-static struct point_vertex point_b[v_amt];
 
 static sg_shader line_shader;
 static sg_pipeline line_pipe;
@@ -50,8 +49,6 @@ static int line_c = 0;
 static int line_v = 0;
 static int line_sc = 0;
 static int line_sv = 0;
-static struct line_vert line_b[v_amt];
-static uint16_t line_bi[v_amt];
 static sg_pipeline grid_pipe;
 static sg_bindings grid_bind;
 static sg_shader grid_shader;
@@ -69,8 +66,6 @@ struct poly_vertex {
   float uv[2];
   struct rgba color;
 };
-static struct poly_vertex poly_b[v_amt];
-static uint32_t poly_bi[v_amt];
 
 static sg_pipeline circle_pipe;
 static sg_bindings circle_bind;
@@ -85,8 +80,6 @@ struct circle_vertex {
   float fill;
 };
 
-static struct circle_vertex circle_b[v_amt];
-
 /* Writes debug data to buffers, and draws */
 void debug_flush(HMM_Mat4 *view)
 {
@@ -94,10 +87,6 @@ void debug_flush(HMM_Mat4 *view)
     sg_apply_pipeline(poly_pipe);
     sg_apply_bindings(&poly_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(*view));
-    int b = sg_append_buffer(poly_bind.vertex_buffers[0], &(sg_range){
-      .ptr = poly_b, .size = sizeof(struct poly_vertex)*poly_v});
-    int bi = sg_append_buffer(poly_bind.index_buffer, &(sg_range){
-      .ptr = poly_bi, .size = sizeof(uint32_t)*poly_c});
     sg_draw(poly_sc,poly_c,1);
   }
 
@@ -105,9 +94,6 @@ void debug_flush(HMM_Mat4 *view)
     sg_apply_pipeline(point_pipe);
     sg_apply_bindings(&point_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(*view));
-    sg_append_buffer(point_bind.vertex_buffers[0], &(sg_range){
-      .ptr = point_b,
-      .size = sizeof(struct point_vertex)*point_c});
     sg_draw(point_sc,point_c,1);
   }
 
@@ -118,21 +104,13 @@ void debug_flush(HMM_Mat4 *view)
     lfs_params_t lt;
     lt.time = appTime;
     sg_apply_uniforms(SG_SHADERSTAGE_FS,0,SG_RANGE_REF(lt));
-    sg_append_buffer(line_bind.vertex_buffers[0], &(sg_range){
-      .ptr = line_b, .size = sizeof(struct line_vert)*line_v});
-    sg_append_buffer(line_bind.index_buffer, &(sg_range){
-      .ptr = line_bi, .size = sizeof(uint16_t)*line_c});
     sg_draw(line_sc,line_c,1);
-  }
+   }
 
   if (circle_count != 0) {
     sg_apply_pipeline(circle_pipe);
     sg_apply_bindings(&circle_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*view));
-    sg_append_buffer(circle_bind.vertex_buffers[0], &(sg_range){
-      .ptr = circle_b,
-      .size = sizeof(struct circle_vertex)*circle_count
-    });
     sg_draw(circle_sc,4,circle_count);
   }
 }
@@ -282,7 +260,7 @@ void debugdraw_init()
       }
     },
     .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-//    .cull_mode = sg_cullmode_back,
+    .cull_mode = SG_CULLMODE_BACK,
     .label = "grid pipeline",
     .colors[0].blend = blend_trans,
     .label = "dbg grid",
@@ -301,6 +279,7 @@ void debugdraw_init()
     },
     .index_type = SG_INDEXTYPE_UINT32,
     .colors[0].blend = blend_trans,
+//    .cull_mode = SG_CULLMODE_FRONT,
     .label = "dbg poly",
   });
   poly_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
@@ -316,45 +295,42 @@ void debugdraw_init()
   });
 }
 
-void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int closed, float seg_speed)
+void draw_line(cpVect *a_points, int n, struct rgba color, float seg_len, int closed, float seg_speed)
 {
-  if (a_n < 2) return;
+  if (n < 2) return;
+  cpVect *points = a_points;
   seg_speed = 1;
+  if (closed) {
+    n++;    
+    points = malloc(sizeof(cpVect) * n);
+    memcpy(points, a_points, sizeof(cpVect)*(n-1));
 
-  int n = closed ? a_n+1 : a_n;
-  cpVect points[n];
-
-  memcpy(points, a_points, sizeof(cpVect)*n);
-  if (closed)
-    points[n-1] = a_points[0];
+    points[n-1] = points[0];
+  }
 
   struct line_vert v[n];
   float dist = 0;
-  
-  for (int i = 0; i < n-1; i++) {
+
+  for (int i = 0; i < n; i++) {
     v[i].pos.x = points[i].x;
     v[i].pos.y = points[i].y;
-    v[i].dist = dist;
     v[i].color = color;
     v[i].seg_len = seg_len;
     v[i].seg_speed = seg_speed;
-    dist += cpvdist(points[i], points[i+1]);
   }
-  
-  v[n-1].pos.x = points[n-1].x;
-  v[n-1].pos.y = points[n-1].y;
-  v[n-1].dist = dist;
-  v[n-1].color = color;
-  v[n-1].seg_len = seg_len;
-  v[n-1].seg_speed = seg_speed;
+
+  v[0].dist = 0;
+  for (int i = 1; i < n; i++) {
+    dist += cpvdist(points[i-1], points[i]);
+    v[i].dist = dist;    
+  }
   
   int i_c = (n-1)*2;
   
   uint16_t idxs[i_c];
-  
   for (int i = 0, d = 0; i < n-1; i++, d+=2) {
-    idxs[d] = i + line_v + line_sv;
-    idxs[d+1] = i+1 + line_v + line_sv;
+    idxs[d] = i + line_v;
+    idxs[d+1] = idxs[d]+1;
   }
   
   sg_range vr = {
@@ -367,11 +343,13 @@ void draw_line(cpVect *a_points, int a_n, struct rgba color, float seg_len, int 
     .size = sizeof(uint16_t)*i_c
   };
   
-  memcpy(line_b+line_v, v, sizeof(struct line_vert)*n);
-  memcpy(line_bi+line_c, idxs, sizeof(uint16_t)*i_c);
+  sg_append_buffer(line_bind.vertex_buffers[0], &vr);
+  sg_append_buffer(line_bind.index_buffer, &ir);
   
   line_c += i_c;
   line_v += n;
+
+  if (closed) free(points);
 }
 
 cpVect center_of_vects(cpVect *v, int n)
@@ -443,7 +421,7 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
 {
 //  static_assert(sizeof(cpVect) == 2*sizeof(float));
   if (thickness == 0) {
-    thickness = 1;
+    draw_line(points,n,color,0,closed,0);
   }
 
   /* todo: should be dashed, and filled. use a texture. */  
@@ -488,8 +466,8 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
     vertices[i].color = color;
   }
 
-  memcpy(poly_b+poly_v, vertices, sizeof(struct poly_vertex)*mesh->num_vertices);
-  memcpy(poly_bi+poly_c, mesh->triangle_indices, sizeof(uint32_t)*mesh->num_triangles*3);
+  sg_append_buffer(poly_bind.vertex_buffers[0], &(sg_range){.ptr = vertices, .size = sizeof(struct poly_vertex)*mesh->num_vertices});
+  sg_append_buffer(poly_bind.index_buffer, &(sg_range){.ptr = mesh->triangle_indices, sizeof(uint32_t)*mesh->num_triangles*3});
   
   poly_c += mesh->num_triangles*3;
   poly_v += mesh->num_vertices;    
@@ -498,17 +476,31 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
 
   /* Now drawing the line outlines */
   if (thickness == 1) {
-    draw_line(points,n,line_color,line_seg, 0, 0);
+    draw_line(points,n,line_color,line_seg, closed, 0);
   } else {
-    /* Draw inside and outside lines */
-    struct draw_p in_p[n];
-    struct draw_p out_p[n];
+    cpVect in_p[n];
+    cpVect out_p[n];
     
-    for (int i = 0, v = 0; i < n*2+1; i+=2, v++)
-      in_p[v] = vertices[i].pos;
+    for (int i = 0, v = 0; i < n*2+1; i+=2, v++) {
+      in_p[v].x = vertices[i].pos.x;
+      in_p[v].y = vertices[i].pos.y;
+    }
 
-    for (int i = 1, v = 0; i < n*2; i+=2,v++)
-      out_p[v] = vertices[i].pos;
+    for (int i = 1, v = 0; i < n*2; i+=2,v++) {
+      out_p[v].x = vertices[i].pos.x;
+      out_p[v].y = vertices[i].pos.y;
+    }
+
+    if (!closed) {
+      cpVect p[n*2];
+      for (int i = 0; i < n; i++)
+	p[i] = in_p[i];
+      for (int i = n-1, v = n; i >= 0; i--,v++)
+	p[v] = out_p[i];
+
+      draw_line(p,n*2,line_color,line_seg,1,0);
+      return;
+    }
 
     draw_line(in_p,n,line_color,line_seg,1,0);
     draw_line(out_p,n,line_color,line_seg,1,0);
@@ -524,7 +516,7 @@ void draw_circle(cpVect pos, float radius, float pixels, struct rgba color, floa
   cv.color = color;
   cv.segsize = seg/radius;
   cv.fill = pixels/radius;
-  memcpy(circle_b+circle_count, &cv, sizeof(struct circle_vertex));
+  sg_append_buffer(circle_bind.vertex_buffers[0], &(sg_range){.ptr = &cv, .size = sizeof(struct circle_vertex)});
   circle_count++;
 }
 
@@ -583,8 +575,7 @@ void draw_cppoint(struct cpVect point, float r, struct rgba color)
   };
   p.pos.x = point.x;
   p.pos.y = point.y;
-
-  memcpy(point_b+point_c, &p, sizeof(struct point_vertex));
+  sg_append_buffer(point_bind.vertex_buffers[0], &(sg_range){.ptr = &p, .size = sizeof(struct point_vertex)});
   point_c++;
 }
 
@@ -620,9 +611,9 @@ void draw_poly(cpVect *points, int n, struct rgba color)
     polyverts[i].uv[1] = 0.0;
     polyverts[i].color = color;
   }
-  
-  memcpy(poly_b+poly_v, polyverts, sizeof(struct poly_vertex)*n);
-  memcpy(poly_bi+poly_c, tridxs, sizeof(uint32_t)*3*tric);
+
+  sg_append_buffer(poly_bind.vertex_buffers[0], &(sg_range){.ptr = polyverts, .size = sizeof(struct poly_vertex)*n});
+  sg_append_buffer(poly_bind.index_buffer, &(sg_range){.ptr = tridxs, sizeof(uint32_t)*3*tric});
   
   poly_c += tric*3;
   poly_v += n;

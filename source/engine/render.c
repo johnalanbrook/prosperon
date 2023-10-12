@@ -547,7 +547,6 @@ void openglRender(struct window *window) {
   full_2d_pass(window);
   sg_end_pass();
 
-
   if (gif.rec && (appTime - gif.timer) > gif.spf) {
     sg_begin_pass(sg_gif.pass, &pass_action);
     sg_apply_pipeline(sg_gif.pipe);

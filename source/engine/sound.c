@@ -127,6 +127,7 @@ void push_sound(soundbyte *buffer, int frames, int chan)
 }
 
 void sound_init() {
+  mixer_init();
   saudio_setup(&(saudio_desc){
     .stream_cb = push_sound,
     .sample_rate = SAMPLERATE,
@@ -134,7 +135,6 @@ void sound_init() {
     .buffer_frames = BUF_FRAMES,
     .logger.func = sg_logging,
   });
-  mixer_init();
 }
 
 struct wav *make_sound(const char *wav) {

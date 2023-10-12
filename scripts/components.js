@@ -466,12 +466,14 @@ component.edge2d = Object.copy(collider2d, {
   
   flipx: false,
   flipy: false,
+  cpoints:[],
   toString() { return "edge2d"; },
   
   hollow: false,
   hollowt: 0,
   
-  get spoints() {
+  spoints() {
+    if (!this.cpoints) return [];
     var spoints = this.cpoints.slice();
     
     if (this.flipx) {
@@ -505,7 +507,7 @@ component.edge2d = Object.copy(collider2d, {
   },
 
   sample(n) {
-    var spoints = this.spoints;
+    var spoints = this.spoints();
 
     this.degrees = Math.clamp(this.degrees, 1, spoints.length-1);
     
@@ -528,7 +530,7 @@ component.edge2d = Object.copy(collider2d, {
 
     if (this.type === component.edge2d.typeid.this.looped)
       return spline_cmd(0, this.degrees, this.dimensions, 0, spoints.wrapped(this.degrees), n);
-
+ 
     return spline_cmd(0, this.degrees, this.dimensions, this.type, spoints, n);
   },
 
@@ -543,7 +545,7 @@ component.edge2d = Object.copy(collider2d, {
 
   /* EDITOR */
   gizmo() {
-    this.spoints.forEach(function(x) {
+    this.spoints().forEach(function(x) {
       Debug.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
     }, this);
     
@@ -600,7 +602,7 @@ bucket.inputs['M-v'].doc = "Decrease spline thickness.";
 bucket.inputs['M-v'].rep = true;
 
 bucket.inputs['C-b'] = function() {
-  this.cpoints = this.spoints;
+  this.cpoints = this.spoints();
   this.flipx = false;
   this.flipy = false;
 };

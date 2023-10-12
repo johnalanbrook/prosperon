@@ -41,8 +41,6 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     if (priority >= logLevel) {
 	time_t now = time(0);
 	struct tm *tinfo = localtime(&now);
-	char timestr[50];
-	strftime(timestr,50,"%y", tinfo);
 
 	double ticks = (double)clock()/CLOCKS_PER_SEC;
 
