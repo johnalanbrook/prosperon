@@ -246,7 +246,7 @@ void debugdraw_init()
   };
 
   circle_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-    .data = SG_RANGE(circleverts),
+    .data = (sg_range){.ptr = circleverts, .size = sizeof(float)*8},
     .usage = SG_USAGE_IMMUTABLE,
   });
 

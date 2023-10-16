@@ -13,9 +13,10 @@ function grab_from_points(pos, points, slop) {
 var gameobject = {
   impl: {
     clear() {
-      this.objects.forEach(function(x) {
-        x.kill();
-      });
+      for (var k in this.objects) {
+        Log.info(`Killing ${k}`);
+	this.objects[k].kill();
+      };
       this.objects = {};
     },
       gscale() { return cmd(103,this.body); },
@@ -377,9 +378,11 @@ var gameobject = {
 	  Log.warn(`Object is already dead!`);
 	  return;
 	}
+	
 
 //	Register.endofloop(() => {
-	  cmd(2, this.body);
+//	  cmd(2, this.body);
+	  q_body(8,this.body);
 	  Game.unregister_obj(this);
 
 	  if (this.level) {
@@ -390,17 +393,17 @@ var gameobject = {
 	  Player.uncontrol(this);
 	  Register.unregister_obj(this);
 //	  this.instances.remove(this);
-
 	  this.body = -1;
+
 	  for (var key in this.components) {
 	    Register.unregister_obj(this.components[key]);
+	    Log.info(`Destroying component ${key}`);
 	    this.components[key].kill();
 	    this.components.gameobject = undefined;
 	  }
 	  delete this.components;
 
-	  for (var key in this.objects)
-	    this.objects[key].kill();
+          this.clear();
 
 	  if (typeof this.stop === 'function')
   	    this.stop();

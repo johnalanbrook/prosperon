@@ -406,14 +406,17 @@ component.polygon2d = Object.copy(collider2d, {
   },
 });
 
-component.polygon2d.impl = Object.extend(collider2d.impl, {
+component.polygon2d.impl = {
+    set sensor(x) { cmd(18,this.shape,x); },
+    get sensor() { return cmd(21,this.shape); },
+
   sync() {
     cmd_poly2d(0, this.id, this.spoints);
   },
   query() {
     return cmd(80, this.shape);
   },
-});
+};
 
 var polygon2d = component.polygon2d;
 
@@ -540,7 +543,7 @@ component.edge2d = Object.copy(collider2d, {
     return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
   },
 
-  hides: ['gameobject', 'id', 'shape', 'points'],
+  hides: ['gameobject', 'id', 'shape'],
   _enghook: make_edge2d,
 
   /* EDITOR */
@@ -570,7 +573,10 @@ component.edge2d = Object.copy(collider2d, {
   },
 });
 
-component.edge2d.impl = Object.extend(collider2d.impl, {
+component.edge2d.impl = {
+    set sensor(x) { cmd(18,this.shape,x); },
+    get sensor() { return cmd(21,this.shape); },
+
   set thickness(x) {
     cmd_edge2d(1,this.id,x);
   },
@@ -581,7 +587,7 @@ component.edge2d.impl = Object.extend(collider2d.impl, {
     cmd_edge2d(0,this.id,points);
     this.sensor = sensor;
   },
-});
+};
 
 var bucket = component.edge2d;
 bucket.inputs = {};
@@ -715,7 +721,10 @@ component.circle2d = Object.copy(collider2d, {
   _enghook: make_circle2d,
 });
 
-component.circle2d.impl = Object.extend(collider2d.impl, {
+component.circle2d.impl = {
+    set sensor(x) { cmd(18,this.shape,x); },
+    get sensor() { return cmd(21,this.shape); },
+
   set radius(x) { cmd_circle2d(0,this.id,x); },
   get radius() { return cmd_circle2d(2,this.id); },
 
@@ -724,7 +733,7 @@ component.circle2d.impl = Object.extend(collider2d.impl, {
 
   set offset(x) { cmd_circle2d(1,this.id,x); },
   get offset() { return cmd_circle2d(3,this.id); },
-});
+};
 
 /* ASSETS */
 

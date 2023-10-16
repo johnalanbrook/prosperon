@@ -33,6 +33,9 @@
 
 static JSValue globalThis;
 
+static JSClassID js_ptr_id;
+static JSClassDef js_ptr_class = { "POINTER" };
+
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
   (byte & 0x80 ? '1' : '0'),     \
@@ -136,13 +139,13 @@ struct gameobject *js2go(JSValue v) {
 struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
 
 void *js2ptr(JSValue v) {
-  void *p;
-  JS_ToInt64(js, &p, v);
-  return p;
+  return JS_GetOpaque(v,js_ptr_id);
 }
 
 JSValue ptr2js(void *ptr) {
-  return JS_NewInt64(js, (long)ptr);
+  JSValue obj = JS_NewObjectClass(js, js_ptr_id);
+  JS_SetOpaque(obj, ptr);
+  return obj;
 }
 
 struct timer *js2timer(JSValue v) {
@@ -505,7 +508,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 2:
+    YughWarn("Deleting gameobject %d", js2int(argv[1]));
     gameobject_delete(js2int(argv[1]));
+    YughWarn("Deleted gameobject %d", js2int(argv[1]));
     break;
 
   case 3:
@@ -1105,6 +1110,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 144:
       ret = str2js(DATA_PATH);
       break;
+
+    case 145:
+      if (js2bool(argv[1])) window_makefullscreen(&mainwin);
+      else window_unfullscreen(&mainwin);
+      break;
   }
 
   if (str)
@@ -1357,7 +1367,8 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
 JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int q = js2int(argv[0]);
-  struct gameobject *go = get_gameobject_from_id(js2int(argv[1]));
+  int goid = js2int(argv[1]);
+  struct gameobject *go = get_gameobject_from_id(goid);
 
   if (!go) return JS_NULL;
 
@@ -1385,6 +1396,10 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
 
   case 7:
     return JS_NewBool(js, phys2d_in_air(go->body));
+
+   case 8:
+     gameobject_delete(goid);
+     break;
   }
 
   return JS_NULL;
@@ -1489,7 +1504,7 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
     case 3:
       return vec2js(circle->offset);
   }
-
+  
   phys2d_applycircle(circle);
   return JS_NULL;
 }
@@ -1671,4 +1686,7 @@ void ffi_load() {
 
   DUK_FUNC(anim, 2)
   JS_FreeValue(js,globalThis);
+
+  JS_NewClassID(&js_ptr_id);
+  JS_NewClass(JS_GetRuntime(js), js_ptr_id, &js_ptr_class);
 }

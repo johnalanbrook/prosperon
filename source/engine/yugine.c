@@ -108,14 +108,16 @@ void print_stacktrace() {
 }
 
 void seghandle(int sig) {
-#ifdef __GLIBC__
-  if (strsignal(sig))
-    YughCritical("CRASH! Signal: %s.", strsignal(sig));
+//#ifdef __GLIBC__
+//  if (strsignal(sig))
+  YughCritical("CRASH! Signal: %d.", sig);
 
   js_stacktrace();  
 
   exit(1);
-#endif
+//#endif
+//  js_stacktrace();
+//  exit(1);
 }
 
 const char *engine_info()
@@ -308,7 +310,7 @@ void app_name(char *name)
 sapp_desc sokol_main(int argc, char **argv) {
 #ifndef NDEBUG
   log_init();
-  #ifdef __linux__
+//  #ifdef __linux__
   int logout = 0;
   if (logout) {
     time_t now = time(NULL);
@@ -327,11 +329,12 @@ sapp_desc sokol_main(int argc, char **argv) {
           log_cat(sysinfo);
           pclose(sysinfo);
       }*/
+//  #endif
   signal(SIGSEGV, seghandle);
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
-  signal(SIGBUS, seghandle);
-  #endif
+//  signal(SIGBUS, seghandle);
+  
 #endif
 
   stm_setup(); /* time */

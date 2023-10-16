@@ -178,7 +178,10 @@ var Player = {
     var n = Object.create(this);
     n.pawns = [];
     n.gamepads = [];
-    n.control = function(pawn) { n.pawns.push_unique(pawn); };
+    n.control = function(pawn) {
+      Log.info(`Player taking control of ${pawn.toString()}`);
+      n.pawns.push_unique(pawn);
+    };
     n.uncontrol = function(pawn) { n.pawns = n.pawns.filter(x => x !== pawn); };
     this.players.push(n);
     return n;

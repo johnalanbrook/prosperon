@@ -64,6 +64,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 
 void log_print(const char *str)
 {
+#ifndef NDEBUG
   fprintf(stderr, "%s", str);
   fflush(stderr);
 
@@ -73,11 +74,14 @@ void log_print(const char *str)
     fprintf(logfile, "%s", str);
     fflush(logfile);
   }
+#endif
 }
 
 void console_print(const char *str)
 {
+#ifndef NDEBUG
   strncat(consolelog, str, CONSOLE_BUF);
+#endif
 }
 
 void log_setfile(char *file) {

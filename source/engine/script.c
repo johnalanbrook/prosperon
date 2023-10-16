@@ -14,6 +14,7 @@
 #include "sys/types.h"
 #include "time.h"
 #include "resources.h"
+#include "input.h"
 
 #include <stdarg.h>
 
@@ -25,6 +26,21 @@ JSRuntime *rt = NULL;
 #else
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
 #endif
+
+static struct {
+  char *key;
+  JSValue value;
+} *jsstrs = NULL;
+
+JSValue jstr(const char *str)
+{
+  int index = shgeti(jsstrs, str);
+  if (index != -1) return jsstrs[index].value;
+
+  JSValue v = str2js(str);
+  shput(jsstrs, str, v);
+  return v;
+}
 
 static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
   if (typeflag != FTW_F)
@@ -39,6 +55,8 @@ static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
 void script_startup() {
   rt = JS_NewRuntime();
   js = JS_NewContext(rt);
+  
+  sh_new_arena(jsstrs);  
 
   ffi_load();
 
@@ -52,6 +70,11 @@ void script_startup() {
 void script_stop()
 {
   send_signal("quit",0,NULL);
+  
+  for (int i = 0; i < shlen(jsstrs); i++)
+    JS_FreeValue(js,jsstrs[i].value);
+    
+  JS_FreeContext(js);
   JS_RunGC(rt);
   JS_FreeRuntime(rt);
 }
@@ -253,12 +276,13 @@ void send_signal(const char *signal, int argc, JSValue *argv)
   JS_FreeValue(js, globalThis);
   JSValue fn = JS_GetPropertyStr(js, sig, "call");
   JSValue args[argc+1];
-  args[0] = str2js(signal);
+  args[0] = jstr(signal);
   for (int i = 0; i < argc; i++)
     args[1+i] = argv[i];
     
   JS_FreeValue(js,JS_Call(js, fn, sig, argc+1, args));
-  JS_FreeValue(js,sig);
+  JS_FreeValue(js, sig);
+  JS_FreeValue(js, fn);
 }
 
 static struct callee update_callee;

@@ -11,24 +11,10 @@
 #include <wchar.h>
 #include "resources.h"
 
-#include "stb_ds.h"
-
 float deltaT = 0;
 
 static int mouse_states[3] = {INPUT_UP};
 static int key_states[512] = {INPUT_UP};
-
-JSValue jsinput;
-JSValue jsnum;
-JSValue jsgamepadstr[15];
-JSValue jsaxesstr[4];
-JSValue jsinputstate[5];
-JSValue jsaxis;
-JSValue jsany;
-JSValue jsmouse;
-JSValue jspos;
-JSValue jsmove;
-JSValue jsscroll;
 
 cpVect mousewheel = {0,0};
 cpVect mouse_pos = {0, 0};
@@ -46,25 +32,6 @@ static int mquit = 0;
 
 static struct callee pawn_callee;
 static struct callee gamepad_callee;
-
-static struct {
-  char *key;
-  JSValue value;
-} *jshash = NULL;
-
-JSValue input2js(const char *input) {
-  int idx = shgeti(jshash, input);
-  if (idx != -1)
-    return jshash[idx].value;
-
-  if (shlen(jshash) == 0)
-    sh_new_arena(jshash);
-
-  JSValue n = str2js(input);
-  shput(jshash, input, n);
-
-  return n;
-}
 
 void add_downkey(int key) {
   for (int i = 0; i < arrlen(downkeys); i++)
@@ -97,6 +64,18 @@ char *mb2str(int btn)
   return "NULLMOUSE";
 }
 
+JSValue input2js(int state)
+{
+  switch(state) {
+    case INPUT_UP: return jstr("released");
+    case INPUT_REPEAT: return jstr("rep");
+    case INPUT_DOWN: return jstr("pressed");
+    case 3: return jstr("pressrep");
+    case 4: return jstr("down");
+  }
+  return JS_NULL;
+}
+
 void input_mouse(int btn, int state, uint32_t mod)
 {
   char out[16] = {0};
@@ -108,12 +87,10 @@ void input_mouse(int btn, int state, uint32_t mod)
   );
 
   JSValue argv[3];
-  argv[0] = JS_NewString(js, "emacs");  
-  argv[1] = JS_NewString(js, out);
-  argv[2] = jsinputstate[state];
+  argv[0] = jstr("emacs");
+  argv[1] = jstr(out);
+  argv[2] = input2js(state);
   script_callee(pawn_callee, 3, argv);
-  JS_FreeValue(js, argv[0]);
-  JS_FreeValue(js, argv[1]);
 }
 
 void input_mouse_move(float x, float y, float dx, float dy, uint32_t mod)
@@ -124,8 +101,8 @@ void input_mouse_move(float x, float y, float dx, float dy, uint32_t mod)
   mouse_delta.y = -dy;
   
   JSValue argv[4];
-  argv[0] = jsmouse;
-  argv[1] = jsmove;
+  argv[0] = jstr("mouse");
+  argv[1] = jstr("move");
   argv[2] = vec2js(mouse_pos);
   argv[3] = vec2js(mouse_delta);
   script_callee(pawn_callee, 4, argv);
@@ -139,23 +116,23 @@ void input_mouse_scroll(float x, float y, uint32_t mod)
   mousewheel.y = y;
 
   JSValue argv[4];
-  argv[0] = jsmouse;
+  argv[0] = jstr("mouse");
   char out[16] = {0};
   snprintf(out, 16, "%s%s%sscroll",
     mod & SAPP_MODIFIER_CTRL ? "C-" : "",
     mod & SAPP_MODIFIER_ALT ? "M-" : "",
     mod & SAPP_MODIFIER_SUPER ? "S-" : ""
   );
-  argv[1] = JS_NewString(js,out);
+  argv[1] = jstr(out);
   argv[2] = vec2js(mousewheel);
   script_callee(pawn_callee, 3, argv);
-  JS_FreeValue(js, argv[1]);
   JS_FreeValue(js, argv[2]);
 }
 
 void input_btn(int btn, int state, uint32_t mod)
 {
-  char *keystr = keyname_extd(btn);
+  char keystr[16] = {0};
+  strncat(keystr,keyname_extd(btn),16);
 
   if (strlen(keystr) == 1 && mod & SAPP_MODIFIER_SHIFT)
     keystr[0] = toupper(keystr[0]);
@@ -169,19 +146,15 @@ void input_btn(int btn, int state, uint32_t mod)
   );
 
   JSValue argv[3];
-  argv[1] = JS_NewString(js, out);  
-  argv[2] = jsinputstate[state];
+  argv[1] = jstr(out);
+  argv[2] = input2js(state);
   
-  argv[0] = JS_NewString(js, "emacs");
+  argv[0] = jstr("emacs");
   script_callee(pawn_callee, 3, argv);
-  JS_FreeValue(js, argv[0]);
 
-  argv[0] = JS_NewString(js, "action");
+  argv[0] = jstr("action");
   script_callee(pawn_callee, 3, argv);
   
-  JS_FreeValue(js, argv[0]);  
-  JS_FreeValue(js, argv[1]);
-
   if (state == INPUT_DOWN) {
     key_states[btn] = INPUT_DOWN;
     add_downkey(btn);
@@ -201,12 +174,9 @@ void input_key(uint32_t key, uint32_t mod)
 
   JSValue argv[2];
   char s[2] = {key, '\0'};
-  argv[0] = JS_NewString(js, "char");
-  argv[1] = JS_NewString(js, s);
+  argv[0] = jstr("char");
+  argv[1] = jstr(s);
   script_callee(pawn_callee, 2, argv);
-  
-  JS_FreeValue(js, argv[0]);
-  JS_FreeValue(js, argv[1]);
 }
 
 void register_pawn(struct callee c) {
@@ -219,9 +189,9 @@ void register_gamepad(struct callee c) {
 
 static void pawn_call_keydown(int key) {
   JSValue argv[4];
-  argv[0] = jsinput;
-  argv[1] = jsnum;
-  argv[2] = jsinputstate[INPUT_DOWN];
+  argv[0] = jstr("input");
+  argv[1] = jstr("num");
+  argv[2] = input2js(INPUT_DOWN);
   /* TODO: Could cache */
   argv[3] = JS_NewInt32(js, key);
   script_callee(pawn_callee, 4, argv);
@@ -235,24 +205,6 @@ static void pawn_call_keydown(int key) {
 void set_mouse_mode(int mousemode) { sapp_lock_mouse(mousemode); }
 
 void input_init() {
-  jsaxesstr[0] = str2js("ljoy");
-  jsaxesstr[1] = str2js("rjoy");
-  jsaxesstr[2] = str2js("ltrigger");
-  jsaxesstr[3] = str2js("rtrigger");
-  jsaxis = str2js("axis");
-  jsinputstate[INPUT_UP] = str2js("released");
-  jsinputstate[INPUT_REPEAT] = str2js("rep");
-  jsinputstate[INPUT_DOWN] = str2js("pressed");
-  jsinputstate[3] = str2js("pressrep");
-  jsinputstate[4] = str2js("down");
-  jsinput = str2js("input");
-  jsnum = str2js("num");
-  jsany = str2js("any");
-  jsmouse = str2js("mouse");
-  jspos = str2js("pos");
-  jsmove = str2js("move");
-  jsscroll = str2js("scroll");
-
   for (int i = 0; i < 512; i++)
     key_states[i] = INPUT_UP;
 
@@ -339,11 +291,10 @@ const char *keyname_extd(int key) {
 
 void call_input_down(int *key) {
   JSValue argv[3];
-  argv[0] = JS_NewString(js, "emacs");
-  argv[1] = input2js(keyname_extd(*key));
-  argv[2] = jsinputstate[4];
+  argv[0] = jstr("emacs");
+  argv[1] = jstr(keyname_extd(*key));
+  argv[2] = input2js(4);
   script_callee(pawn_callee, 3, argv);
-  JS_FreeValue(js, argv[0]);
 }
 
 /* This is called once every frame - or more if we want it more! */

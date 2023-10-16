@@ -479,7 +479,6 @@ var Register = {
 Register.add_cb(0, "update").doc = "Called once per frame.";
 Register.add_cb(1, "physupdate");
 Register.add_cb(2, "gui");
-Register.add_cb(3, "nk_gui");
 Register.add_cb(6, "debug");
 register(7, Register.kbm_input, Register);
 Register.add_cb(8, "gamepad_input");
@@ -488,8 +487,6 @@ Register.add_cb(10, "draw");
 register(9, Log.stack, this);
 
 Register.gamepad_playermap[0] = Player.players[0];
-
-
 
 Player.players[0].control(GUI);
 
@@ -531,6 +528,7 @@ var game_quit = function()
 Signal.register("quit", game_quit);
 
 var Window = {
+  fullscreen(f) { cmd(145, f); },
   set width(w) { cmd(125, w); },
   set height(h) { cmd(126, h); },
   get width() { return cmd(48); },
@@ -549,7 +547,6 @@ var Window = {
 
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
-
 
 function reloadfiles() {
   Object.keys(files).forEach(function (x) { load(x); });

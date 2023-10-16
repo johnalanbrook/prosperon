@@ -72,8 +72,8 @@ UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DEST
 ARCH = x64
 
 ifeq ($(OS), Windows_NT)
-  LDFLAGS += -mwin32 -static
-  CFLAGS += -mwin32
+  LDFLAGS += -mwin32 -static -g
+  CFLAGS += -mwin32 -g
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   PLAT = w64
@@ -221,6 +221,7 @@ tools/libquickjs.a:
 	./jso $< > $@
 
 WINCC = x86_64-w64-mingw32-gcc
+#WINCC = i686-w64-mingw32-g++
 .PHONY: crosswin
 crosswin:
 	make CC=$(WINCC) OS=Windows_NT

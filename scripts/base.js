@@ -54,14 +54,7 @@ Object.extend = function(from, src)
 Object.mixin = function(target, source)
 {
   if (typeof source !== 'object') return target;
-  
-  Object.keys(source).forEach(function (k) {
-    if (Object.isAccessor(source,k))
-      Object.defineProperty(target, k, Object.getOwnPropertyDescriptor(source,k));
-    else
-      target[k] = source[k];
-  });
-
+  Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
   return target;
 };
 
