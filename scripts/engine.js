@@ -488,8 +488,6 @@ register(9, Log.stack, this);
 
 Register.gamepad_playermap[0] = Player.players[0];
 
-Player.players[0].control(GUI);
-
 var Signal = {
   signals: [],
   obj_begin(fn, obj, go) {
@@ -665,8 +663,6 @@ var Game = {
   stop()
   {
     Game.pause();
-    /* And return to editor .. */
-    Log.warn("Stopping not implemented. Paused, and go to editor.");
   },
 
   step()
@@ -724,6 +720,7 @@ var Primum = World;
 Primum.level = undefined;
 Primum.toString = function() { return "Primum"; };
 Primum._ed.selectable = false;
+Primum._ed.check_dirty = function() { };
 World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 
 /* Load configs */

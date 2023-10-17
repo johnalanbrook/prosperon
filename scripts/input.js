@@ -174,12 +174,16 @@ var Player = {
     return false;
   },
 
+  print_pawns() {
+    for (var pawn of this.pawns.reversed())
+      Log.say(pawn.toString());
+  },
+
   create() {
     var n = Object.create(this);
     n.pawns = [];
     n.gamepads = [];
     n.control = function(pawn) {
-      Log.info(`Player taking control of ${pawn.toString()}`);
       n.pawns.push_unique(pawn);
     };
     n.uncontrol = function(pawn) { n.pawns = n.pawns.filter(x => x !== pawn); };

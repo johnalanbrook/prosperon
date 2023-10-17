@@ -148,6 +148,7 @@ var Profile = {
 
 /* These controls are available during editing, and during play of debug builds */
 var DebugControls = {};
+DebugControls.toString = function() { return "Debug"; };
 DebugControls.inputs = {};
 DebugControls.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
 DebugControls.inputs.f1.doc = "Draw physics debugging aids.";

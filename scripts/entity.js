@@ -324,16 +324,16 @@ var gameobject = {
 	delete d.angularvelocity;
         return d;
       },
+      
+      transform_obj() {
+        var t = this.json_obj();
+	Object.assign(t, this.transform());
+	return t;
+      },
 
       instance_obj() {
         var t = this.transform_obj();
 	t.ur = this.ur;
-	return t;
-      },
-
-      transform_obj() {
-        var t = this.json_obj();
-	Object.assign(t, this.transform());
 	return t;
       },
 
@@ -426,6 +426,7 @@ var gameobject = {
     assign_impl(obj, gameobject.impl);
     obj._ed = {
       selectable: true,
+      check_dirty() { this.dirty = !obj.json_obj().empty; },
       dirty: false,
     };
     obj.ur = this.toString();

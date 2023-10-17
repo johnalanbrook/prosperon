@@ -19,6 +19,7 @@ var configs = {
 };
 
 var editor = {
+  toString() { return "editor"; },
   dbg_ur: "arena.level1",
   selectlist: [],
   grablist: [],
@@ -214,34 +215,34 @@ var editor = {
     Register.gui.register(editor.ed_gui, editor);
     Debug.register_call(editor.ed_debug, editor);
     Register.update.register(gui_controls.update, gui_controls);
-    Player.players[0].control(gui_controls);
+//    Player.players[0].control(gui_controls);
 
     this.desktop = Primum.spawn(ur.arena);
     this.edit_level = this.desktop;
+    this.desktop.toString = function() { return "desktop"; };
     editor.edit_level._ed.selectable = false;
     if (this.stash) {
       this.desktop.make_objs(this.stash.objects);
       Object.dainty_assign(this.desktop, this.stash);
     }
     this.selectlist = [];
-    Game.view_camera(editor.camera);    
+    editor.camera = Primum.spawn(ur.camera2d);
+    Game.view_camera(editor.camera);
   },
 
   end_debug() {
     
   },
    
-  openpanel(panel, dontsteal) {
-    if (this.curpanel)
+  openpanel(panel) {
+    if (this.curpanel) {
       this.curpanel.close();
+      Player.players[0].uncontrol(this.curpanel);
+    }
       
     this.curpanel = panel;
-    
-    var stolen = this;
-    if (dontsteal)
-      stolen = undefined;
-
-    this.curpanel.open(stolen);
+    Player.players[0].control(this.curpanel);
+    this.curpanel.open();
   },
 
   curpanels: [],
@@ -437,11 +438,7 @@ var editor = {
 
     this.selectlist.forEach(function(x) {
       var sname = x.__proto__.toString();
-      if (!x.json_obj().empty)
-        x._ed.dirty = true;
-      else
-        x._ed.dirty = false;
-	
+      x._ed.check_dirty();
       if (x._ed.dirty) sname += "*";
       
       GUI.text(sname, world2screen(x.worldpos()).add([0, 16]), 1, lvlcolor);
@@ -807,22 +804,30 @@ editor.inputs.escape = function() { editor.openpanel(quitpanel); }
 editor.inputs.escape.doc = "Quit editor.";
 
 editor.inputs['C-s'] = function() {
+  var saveobj = undefined;
   if (editor.selectlist.length === 0) {
-    saveaspanel.stem = editor.edit_level.ur.toString();
-    saveaspanel.obj = editor.edit_level;
-    editor.openpanel(saveaspanel);
-    return;
-  };
+    if (editor.edit_level === editor.desktop) {
+      saveaspanel.stem = editor.edit_level.ur.toString();
+      saveaspanel.obj = editor.edit_level;
+      editor.openpanel(saveaspanel);
+      return;
+    } else
+      saveobj = editor.edit_level;
+  } else if (editor.selectlist.length === 1)
+    saveobj = editor.selectlist[0];
 
-  if (editor.selectlist.length !== 1 || !editor.selectlist[0]._ed.dirty) return;
-  var saveobj = editor.selectlist[0].json_obj();
-  Object.merge(editor.selectlist[0].__proto__, saveobj);
-  editor.selectlist[0].__proto__.objects = saveobj.objects;
-  var path = editor.selectlist[0].ur.toString();
+  Log.warn("Attempgint to save " + saveobj.toString());
+  saveobj.check_dirty();
+  if (!saveobj._ed.dirty) return;
+
+  var savejs = saveobj.json_obj();
+  Object.merge(saveobj.__proto__, savejs);
+  saveobj.__proto__.objects = savejs.objects;
+  var path = saveobj.ur.toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";
 
-  IO.slurpwrite(JSON.stringify(editor.selectlist[0].__proto__,null,1), path);
+  IO.slurpwrite(JSON.stringify(saveobj.__proto__,null,1), path);
   Log.warn(`Wrote to file ${path}`);
 };
 editor.inputs['C-s'].doc = "Save selected.";
@@ -1285,9 +1290,9 @@ editor.inputs.s.released = function() { this.scalelist = []; };
 
 var inputpanel = {
   title: "untitled",
+  toString() { return this.title; },  
   value: "",
   on: false,
-  stolen: {},
   pos:[100,Window.height-50],
   wh:[350,600],
   anchor: [0,1],
@@ -1316,14 +1321,9 @@ var inputpanel = {
     ];
   },
   
-  open(steal) {
+  open() {
     this.on = true;
     this.value = "";
-    if (steal) {
-      this.stolen = steal;
-      Player.players[0].uncontrol(this.stolen);
-      Player.players[0].control(this);
-    }
     this.start();
     this.keycb();
   },
@@ -1332,11 +1332,6 @@ var inputpanel = {
   
   close() {
     Player.players[0].uncontrol(this);
-    if (this.stolen) {
-      Player.players[0].control(this.stolen);
-      this.stolen = undefined;
-    }
-
     this.on = false;
     if ('on_close' in this)
       this.on_close();
@@ -1418,49 +1413,6 @@ inputpanel.inputs['C-k'] = function() {
   this.value = this.value.slice(0,this.caret);
 };
 
-function proto_count_lvls(name)
-{
-  if (!this.occs) this.occs = {};
-  if (name in this.occs) return this.occs[name];
-  var lvls = IO.extensions("lvl");
-  var occs = {};
-  var total = 0;
-  lvls.forEach(function(lvl) {
-    var json = JSON.parse(IO.slurp(lvl));
-    var count = 0;
-    json.forEach(function(x) { if (x.from === name) count++; });
-    occs[lvl] = count;
-    total += count;
-  });
-
-  this.occs[name] = occs;
-  this.occs[name].total = total;
-
-  return this.occs[name];
-}
-proto_count_lvls = proto_count_lvls.bind(proto_count_lvls);
-
-function proto_used(name) {
-  var occs = proto_count_lvls(name);
-  var used = false;
-  occs.forEach(function(x) { if (x > 0) used = true; });
-
-  Log.info(used);
-}
-
-function proto_total_use(name) {
-  return proto_count_lvls(name).total;
-}
-
-function proto_children(name) {
-  var children = [];
-
-  for (var key in gameobjects)
-    if (gameobjects[key].from === name) children.push(gameobjects[key]);
-
-  return children;
-}
-
 load("scripts/textedit.js");
 
 var replpanel = Object.copy(inputpanel, {
@@ -1511,6 +1463,7 @@ var replpanel = Object.copy(inputpanel, {
 replpanel.inputs = Object.create(inputpanel.inputs);
 replpanel.inputs.tab = function() {
   this.resetscroll();
+  if (!this.value) return;
   var obj = globalThis;
   var keys = [];
   var keyobj = this.value.tolast('.');
@@ -1593,6 +1546,15 @@ replpanel.inputs.mouse.scroll = function(scroll)
 
   this.scrolloffset.y += scroll.y;
   if (this.scrolloffset.y < 0) this.scrolloffset.y = 0;
+}
+
+replpanel.inputs.mm = function() { this.mm = true; };
+replpanel.inputs.mm.released = function() { this.mm = false; };
+
+replpanel.inputs.mouse.move = function(pos,dpos)
+{
+  if (this.mm)
+    this.scrolloffset.y -= dpos.y;
 }
 
 replpanel.inputs.up = function()
@@ -1774,7 +1736,6 @@ var openlevelpanel = Object.copy(inputpanel,  {
     this.assets = this.allassets.slice();
     this.caret = 0;
     var click_ur = function(btn) {
-      Log.warn(btn.str);
       this.value = btn.str;
       this.keycb();
       this.submit();
@@ -1783,7 +1744,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
 
     this.mumlist = [];
     this.assets.forEach(function(x) {
-      this.mumlist[x] = Mum.button({str:x, action:click_ur});
+      this.mumlist[x] = Mum.text({str:x, action:click_ur, color: Color.blue, hovered: {color:Color.red}, selectable:true});
     }, this);
   },
 
@@ -1978,7 +1939,6 @@ if (IO.exists("editor.config"))
   load_configs("editor.config");
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
-editor.camera = Game.camera;
 Game.stop();
 Game.editor_mode(true);
 Debug.draw_phys(true);
