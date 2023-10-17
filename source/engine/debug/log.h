@@ -38,6 +38,7 @@ void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uin
 void log_setfile(char *file);
 void log_cat(FILE *f);
 void log_print(const char *str);
+void log_clear();
 void console_print(const char *str);
 
 #endif

@@ -43,6 +43,9 @@ var Color = {
   purple: [162,93,227],
 };
 
+Color.editor = {};
+Color.editor.ur = Color.green;
+
 Color.tohtml = function(v)
 {
   var html = v.map(function(n) { return Number.hex(n*255); });
@@ -599,6 +602,12 @@ var Game = {
   unregister_obj(obj) {
     if (this.objects[obj.body] === obj)
       this.objects[obj.body] = undefined;
+  },
+
+  obj_at(worldpos) {
+    var idx = physics.pos_query(worldpos);
+    if (idx === -1) return undefined;
+    return Game.objects[idx];
   },
   
   /* Returns an object given an id */

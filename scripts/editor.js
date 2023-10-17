@@ -35,6 +35,10 @@ var editor = {
   },
   edit_mode: "basic",
 
+  get_this() {
+    return this.edit_level;
+  },
+
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
     var go = physics.pos_query(Mouse.worldpos);
     return this.do_select(go);
@@ -200,6 +204,7 @@ var editor = {
   start_play_ed() {
     this.stash = this.desktop.instance_obj();
     Primum.clear();
+    load("config.js");
     Game.play();
     Game.editor_mode(false);
     Player.players[0].uncontrol(this);
@@ -218,8 +223,8 @@ var editor = {
 //    Player.players[0].control(gui_controls);
 
     this.desktop = Primum.spawn(ur.arena);
+    Primum.rename_obj(this.desktop.toString(), "desktop");
     this.edit_level = this.desktop;
-    this.desktop.toString = function() { return "desktop"; };
     editor.edit_level._ed.selectable = false;
     if (this.stash) {
       this.desktop.make_objs(this.stash.objects);
@@ -371,6 +376,18 @@ var editor = {
     
   },
 
+  draw_objects_names(obj,root,depth){
+      if (!obj) return;
+      if (!obj.objects) return;
+      depth ??= 0;
+      root = root ? root + "." : root;
+      Object.entries(obj.objects).forEach(function(x) {
+        var p = root + x[0];
+        GUI.text(p, world2screen(x[1].worldpos()), 1, editor.color_depths[depth]);
+	editor.draw_objects_names(x[1], p, depth+1);
+      });
+  },
+
   _sel_comp: undefined,
   get sel_comp() { return this._sel_comp; },
   set sel_comp(x) {
@@ -387,6 +404,8 @@ var editor = {
 
   time: 0,
 
+  color_depths: [],
+
   ed_gui() {
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
@@ -401,8 +420,10 @@ var editor = {
     }
 
     GUI.text("0,0", world2screen([0,0]));
+
+    var thiso = editor.get_this();
+    var clvl = thiso;
     
-    var clvl = this.selectlist.length === 1 ? this.selectlist[0] : this.edit_level;
     var lvlchain = [];
     while (clvl !== Primum) {
       lvlchain.push(clvl);
@@ -410,38 +431,35 @@ var editor = {
     }
     lvlchain.push(clvl);
     
-    var lvlcolorsample = 1;
-    var colormap = ColorMap.Bathymetry;
-    var lvlcolor = colormap.sample(lvlcolorsample);
-    var ypos = 200;
+    var colormap = ColorMap.Inferno;
+    editor.color_depths = [];
+    for (var i = 1; i > 0 ; i -= 0.1)
+      editor.color_depths.push(colormap.sample(i));
     
+    var ypos = 200;
+    var depth = 0;
     lvlchain.reverse();
     lvlchain.forEach(function(x,i) {
-      lvlcolor = colormap.sample(lvlcolorsample);
+      depth = i;
       var lvlstr = x.toString();
       if (x._ed.dirty)
         lvlstr += "*";
       if (i === lvlchain.length-1) lvlstr += "[this]";
-      GUI.text(lvlstr, [0, ypos], 1, lvlcolor);
+      GUI.text(lvlstr, [0, ypos], 1, editor.color_depths[depth]);
      
-      lvlcolorsample -= 0.1;
-
       GUI.text("^^^^^^", [0,ypos+=5],1);
       ypos += 15;
     });
+
+    depth++;
+    GUI.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
     
-    /* Color selected objects with the next deeper color */
-    lvlcolorsample -= 0.1;
-    lvlcolor = colormap.sample(lvlcolorsample);
-
-    GUI.text("$$$$$$", [0,ypos],1,lvlcolor);
-
     this.selectlist.forEach(function(x) {
       var sname = x.__proto__.toString();
       x._ed.check_dirty();
       if (x._ed.dirty) sname += "*";
       
-      GUI.text(sname, world2screen(x.worldpos()).add([0, 16]), 1, lvlcolor);
+      GUI.text(sname, world2screen(x.worldpos()).add([0, 16]), 1, Color.editor.ur);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), world2screen(x.worldpos()), 1, Color.white);
       Debug.arrow(world2screen(x.worldpos()), world2screen(x.worldpos().add(x.up().scale(40))), Color.yellow, 1);
 
@@ -449,22 +467,12 @@ var editor = {
         x.gizmo();
     });
 
-    if (this.selectlist.length === 0)
-      for (var key in this.edit_level.objects) {
-        var o = this.edit_level.objects[key];
-        GUI.text(key, world2screen(o.worldpos()), 1, lvlcolor);
-      }
-    else
-      this.selectlist.forEach(function(x) {
-        Object.entries(x.objects).forEach(function(x) {
-	  GUI.text(x[0], world2screen(x[1].worldpos()), 1, lvlcolor);
-	});
-      });
+    var mg = Game.obj_at(Mouse.worldpos);
     
-    this.edit_level.objects.forEach(function(x) {
-      if ('ed_gizmo' in x)
-        x.ed_gizmo();
-    });
+    if (mg) {
+      var p = mg.path_from(thiso);
+      GUI.text(p, world2screen(Mouse.worldpos),1,Color.teal);
+    }
 
     if (this.selectlist.length === 1) {
       var i = 1;
@@ -1047,6 +1055,13 @@ editor.inputs.mm = function() {
 };
 editor.inputs['C-mm'] = editor.inputs.mm;
 
+editor.inputs['C-M-lm'] = function()
+{
+  var go = Game.obj_at(Mouse.worldpos);
+  if (!go) return;
+  editor.edit_level = go.level;
+}
+
 editor.inputs['C-M-mm'] = function() {
   editor.mousejoy = Mouse.pos;
   editor.joystart = editor.camera.pos;
@@ -1442,7 +1457,7 @@ var replpanel = Object.copy(inputpanel, {
     this.prevthis.unshift(this.value);
     this.prevmark = -1;
     var ecode = "";
-    var repl_obj = (editor.selectlist.length === 1) ? editor.selectlist[0] : editor.edit_level;
+    var repl_obj = editor.get_this();
     ecode += `var $ = repl_obj.objects;`;
     for (var key in repl_obj.objects)
       ecode += `var ${key} = editor.edit_level.objects['${key}'];`;
@@ -1461,6 +1476,15 @@ var replpanel = Object.copy(inputpanel, {
 });
 
 replpanel.inputs = Object.create(inputpanel.inputs);
+replpanel.inputs.block = true;
+replpanel.inputs.lm = function()
+{
+  var mg = Game.obj_at(Mouse.worldpos);
+  if (!mg) return;
+  var p = mg.path_from(editor.get_this());
+  this.value = p;
+  this.caret = this.value.length;
+}
 replpanel.inputs.tab = function() {
   this.resetscroll();
   if (!this.value) return;
@@ -1485,6 +1509,9 @@ replpanel.inputs.tab = function() {
    
   for (var k in obj)
     keys.push(k)
+
+  for (var k in editor.get_this())
+    keys.push(k);
 
   var comp = "";
   if (stub)

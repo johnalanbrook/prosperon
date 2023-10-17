@@ -77,6 +77,11 @@ void log_print(const char *str)
 #endif
 }
 
+void log_clear()
+{
+  consolelog[0] = 0;
+}
+
 void console_print(const char *str)
 {
 #ifndef NDEBUG

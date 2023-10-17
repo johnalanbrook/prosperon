@@ -12,6 +12,21 @@ function grab_from_points(pos, points, slop) {
 
 var gameobject = {
   impl: {
+	full_path() {
+	  return this.path_from(Primum);
+	},
+
+    path_from(o) {
+      var p = this.toString();
+      var c = this.level;
+      while (c && c !== o && c !== Primum) {
+        p = c.toString() + "." + p;
+	c = c.level;
+      }
+      if (c === Primum) p = "Primum." + p;
+      return p;
+    },
+  
     clear() {
       for (var k in this.objects) {
         Log.info(`Killing ${k}`);
@@ -160,15 +175,17 @@ var gameobject = {
       var str = obj.toString().replaceAll('.', '_');
       var n = 1;
       var t = str;
-      while (Object.hasOwn(list, t)) {
+      while (t in list) {
         t = str + n;
 	n++;
       }
       return t;
     };
     
-    var name = unique_name(parent.objects, this.ur);
+    var name = unique_name(parent, this.ur);
+
     parent.objects[name] = this;
+    parent[name] = this;
     this.toString = function() { return name; };
   },
   
@@ -177,6 +194,7 @@ var gameobject = {
        delete this[obj.toString()];
        
      delete this.objects[obj.toString()];
+     delete this[obj.toString()];
    },
       
   },
@@ -408,6 +426,7 @@ var gameobject = {
 	  if (typeof this.stop === 'function')
   	    this.stop();
 //	});
+
       },
 
       up() { return [0,1].rotate(Math.deg2rad(this.angle));},
@@ -418,6 +437,7 @@ var gameobject = {
   make(level, data) {
     level ??= Primum;
     var obj = Object.create(this);
+    obj.make = undefined;
     obj.level = level;
 //    this.instances.push(obj);
     obj.body = make_gameobject();
@@ -454,11 +474,9 @@ var gameobject = {
 
     Object.dainty_assign(obj, this);
     obj.sync();
-    
     gameobject.check_registers(obj);
 
     if (Game.playing() && typeof obj.start === 'function') obj.start();
-
     return obj;
   },
 
@@ -479,7 +497,10 @@ var gameobject = {
       return;
 
     this.objects[newname] = this.objects[name];
+    this[newname] = this[name];
+    this[newname].toString = function() { return newname; };
     delete this.objects[name];
+    delete this[name];
     return this.objects[newname];
   },
 
@@ -502,6 +523,7 @@ gameobject.impl.spawn.doc = `Spawn an entity of type 'ur' on this entity. Return
 
 /* Default objects */
 var prototypes = {};
+prototypes.ur_ext = ".jso";
 prototypes.ur = {};
 prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
@@ -530,7 +552,7 @@ prototypes.from_file = function(file)
   
   file = file.replaceAll('.','/');
 
-  var jsfile = prototypes.get_ur_file(urpath, ".js");
+  var jsfile = prototypes.get_ur_file(urpath, prototypes.ur_ext);
   var jsonfile = prototypes.get_ur_file(urpath, ".json");
 
   var script = undefined;
@@ -655,9 +677,8 @@ prototypes.get_ur_file = function(path, ext)
 
 prototypes.generate_ur = function(path)
 {
-  var ob = IO.glob("**.js");
+  var ob = IO.glob("**" + prototypes.ur_ext);
   ob = ob.concat(IO.glob("**.json"));
-  ob = ob.filter(function(path) { return path !== "game.js" && path !== "play.js" });
   ob = ob.map(function(path) { return path.set_ext(""); });
   ob.forEach(function(name) { prototypes.get_ur(name); });
 }

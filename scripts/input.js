@@ -132,7 +132,11 @@ var Player = {
 	if (!pawn.inputs.fallthru)	
           return;
       }
-      if (!pawn.inputs?.[cmd]) continue;
+
+      if (!pawn.inputs?.[cmd]) {
+        if (pawn.inputs.block) return;
+	continue;
+      }
 
       var fn = null;
 
@@ -156,6 +160,7 @@ var Player = {
       }
 
       if (!pawn.inputs.fallthru) return;
+      if (pawn.inputs.block) return;      
     }
   },
   

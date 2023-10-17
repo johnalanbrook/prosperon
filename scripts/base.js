@@ -80,6 +80,7 @@ Object.deepfreeze = function(obj)
 Object.dainty_assign = function(target, source)
 {
   Object.keys(source).forEach(function(k) {
+    if (typeof source[k] === 'function') return;
     if (!(k in target)) return;
     if (Array.isArray(source[k]))
       target[k] = deep_copy(source[k]);
@@ -415,6 +416,14 @@ Object.defineProperty(String.prototype, 'tofirst', {
     var idx = this.indexOf(val);
     if (idx === -1) return this.slice();
     return this.slice(0,idx);
+  }
+});
+
+Object.defineProperty(String.prototype, 'fromfirst', {
+  value: function(val) {
+    var idx = this.indexOf(val);
+    if (idx === -1) return this;
+    return this.slice(idx+1);
   }
 });
 

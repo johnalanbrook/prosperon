@@ -1115,6 +1115,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       if (js2bool(argv[1])) window_makefullscreen(&mainwin);
       else window_unfullscreen(&mainwin);
       break;
+    case 146:
+      log_clear();
+      break;
   }
 
   if (str)

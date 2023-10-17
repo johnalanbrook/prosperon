@@ -253,3 +253,15 @@ var Time = {
 
 Player.players[0].control(DebugControls);
 Register.gui.register(Debug.draw, Debug);
+
+var console = {};
+console.log = Log.say;
+console.info = Log.info;
+console.warn = Log.warn;
+console.error = Log.error;
+console.stack = Log.stack;
+console.clear = function()
+{
+  cmd(146);
+}
+
