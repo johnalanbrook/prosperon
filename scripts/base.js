@@ -32,6 +32,17 @@ Object.methods = function(o)
   return m;
 }
 
+Object.dig = function(obj, path, def)
+{
+  def ??= {};
+  var pp = path.split('.');
+  for (var i = 0; i < pp.length-1; i++) {
+    obj = obj[pp[i]] = obj[pp[i]] || {};
+  }
+  obj[pp[pp.length-1]] = def;
+  return def;
+}
+
 Object.rkeys = function(o)
 {
   var keys = [];

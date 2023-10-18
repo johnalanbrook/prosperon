@@ -210,7 +210,8 @@ var editor = {
     Player.players[0].uncontrol(this);
     Player.players[0].control(limited_editor);
     Register.unregister_obj(this);
-    Primum.spawn(this.dbg_ur);
+    editor.dbg_play = Primum.spawn(this.dbg_ur);
+    load("debug.js");
   },
 
   enter_editor() {
@@ -268,13 +269,9 @@ var editor = {
     this.backshots = [];
   },
 
-  check_snapshot() {
-    if (!this.selectlist.empty || this.grabselect) this.snapshot();
-  },
-
   snapshot() {
-    var cur = this.edit_level.save();
-    var dif = diff(cur, this.curlvl);
+    var cur = this.edit_level.json_obj();
+    var dif = ediff(cur, this.curlvl);
     
     if (dif.empty) return;
 
@@ -420,6 +417,8 @@ var editor = {
     }
 
     GUI.text("0,0", world2screen([0,0]));
+    GUI.text(editor.edit_level.worldpos().map(function(x) { return Math.round(x); }), world2screen(editor.edit_level.worldpos()), 1, Color.red);
+    GUI.text("+", world2screen(editor.edit_level.worldpos()), 1, Color.blue);
 
     var thiso = editor.get_this();
     var clvl = thiso;
@@ -442,6 +441,7 @@ var editor = {
     lvlchain.forEach(function(x,i) {
       depth = i;
       var lvlstr = x.toString();
+      x._ed.check_dirty();
       if (x._ed.dirty)
         lvlstr += "*";
       if (i === lvlchain.length-1) lvlstr += "[this]";
@@ -465,6 +465,12 @@ var editor = {
 
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
+    });
+
+    Object.entries(thiso.objects).forEach(function(x) {
+      var p = x[0];
+      if (x[1]._ed.dirty) p += "*";
+      GUI.text(p, world2screen(x[1].worldpos()),1,editor.color_depths[depth]);
     });
 
     var mg = Game.obj_at(Mouse.worldpos);
@@ -631,7 +637,7 @@ var editor = {
 
 editor.inputs = {};
 editor.inputs.release_post = function() {
-  editor.check_snapshot();
+  editor.snapshot();
   editor.edit_level.check_dirty();
 };
 editor.inputs['C-a'] = function() {
@@ -824,8 +830,7 @@ editor.inputs['C-s'] = function() {
   } else if (editor.selectlist.length === 1)
     saveobj = editor.selectlist[0];
 
-  Log.warn("Attempgint to save " + saveobj.toString());
-  saveobj.check_dirty();
+  saveobj._ed.check_dirty();
   if (!saveobj._ed.dirty) return;
 
   var savejs = saveobj.json_obj();
@@ -1024,23 +1029,10 @@ editor.try_pick = function()
 {
   editor.grabselect = [];
 
-  if (editor.sel_comp && 'pick' in editor.sel_comp) {
-    var o = editor.sel_comp.pick(Mouse.worldpos);
-    if (o)
-      editor.grabselect = [o];
-    return;
-  }
+  if (editor.sel_comp && 'pick' in editor.sel_comp)
+    return editor.sel_comp.pick(Mouse.worldpos);
 
-  if (editor.selectlist.length > 0) {
-    editor.grabselect = editor.selectlist.slice();
-    return;
-  }
-
-  var grabobj = editor.try_select();
-
-  if (!grabobj) return;
-  editor.grabselect = [grabobj];
-  editor.selectlist = [grabobj];
+  return editor.try_select();
 }
 
 editor.inputs.mm = function() {
@@ -1051,7 +1043,10 @@ editor.inputs.mm = function() {
       return;
     }
 
-    editor.try_pick();
+  var o = editor.try_pick();
+  if (!o) return;
+  editor.selectlist = [o];
+  editor.grabselect = [o];
 };
 editor.inputs['C-mm'] = editor.inputs.mm;
 
@@ -1165,7 +1160,13 @@ editor.inputs['C-S-g'] = function() { editor.openpanel(groupsaveaspanel); };
 editor.inputs['C-S-g'].doc = "Save selected objects as a new level.";
 
 editor.inputs.g = function() {
-  editor.try_pick();
+  if (editor.selectlist.length === 0) {
+    var o = editor.try_pick();
+    if (!o) return;
+    editor.selectlist = [o];
+  }
+    
+  editor.grabselect = editor.selectlist.slice();  
 };
 editor.inputs.g.doc = "Move selected objects.";
 editor.inputs.g.released = function() { editor.grabselect = []; Mouse.normal(); };
@@ -1971,5 +1972,3 @@ Game.editor_mode(true);
 Debug.draw_phys(true);
 
 editor.enter_editor();
-
-load("editorconfig.js");

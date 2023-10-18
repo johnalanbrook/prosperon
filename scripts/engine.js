@@ -9,10 +9,14 @@ load("scripts/std.js");
 
 function initialize()
 {
-  if (!Game.edit)
-    load("scripts/play.js");
-  else
+  if (!Game.edit) {
+    load("config.js");
+    load("game.js");
+  }
+  else {
     load("scripts/editor.js");
+    load("editorconfig.js");
+  }
 }
 
 function run(file)
@@ -724,6 +728,8 @@ preprimum.gscale = function() { return 1; };
 preprimum.pos = [0,0];
 preprimum.angle = 0;
 preprimum.remove_obj = function() {};
+preprimum.instances = [];
+preprimum.toString = function() { return "preprimum"; };
 var World = preprimum.make(preprimum);
 var Primum = World;
 Primum.level = undefined;
@@ -787,6 +793,7 @@ Game.view_camera = function(cam)
 {
   Game.camera = cam;
   cmd(61, Game.camera.body);
+  cam.zoom = cam.zoom;
 }
 
 Game.view_camera(Primum.spawn(ur.camera2d));

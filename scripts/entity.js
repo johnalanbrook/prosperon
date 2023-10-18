@@ -154,7 +154,7 @@ var gameobject = {
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
         if (!ur) {
-	  Log.warn("Failed to make UR from " + ur);
+	  Log.error("Failed to make UR from " + ur);
 	  return undefined;
 	}
 	
@@ -410,7 +410,7 @@ var gameobject = {
 
 	  Player.uncontrol(this);
 	  Register.unregister_obj(this);
-//	  this.instances.remove(this);
+//	  ur[this.ur].instances.remove(this);
 	  this.body = -1;
 
 	  for (var key in this.components) {
@@ -440,6 +440,8 @@ var gameobject = {
     obj.make = undefined;
     obj.level = level;
 //    this.instances.push(obj);
+//    Log.warn(`Made an object from ${this.toString()}`);
+//    Log.warn(this.instances.length);
     obj.body = make_gameobject();
     obj.components = {};
     obj.objects = {};
@@ -455,11 +457,6 @@ var gameobject = {
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
-    obj.level = undefined;
-    obj.reparent(level);
-
-    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level');    
-
     for (var prop in this) {
       var p = this[prop];
       if (typeof p !== 'object') continue;
@@ -468,9 +465,14 @@ var gameobject = {
 	obj.components[prop] = obj[prop];
       }
     };
-    
+
     if (this.objects)
       obj.make_objs(this.objects);
+
+    obj.level = undefined;
+    obj.reparent(level);
+
+    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level');    
 
     Object.dainty_assign(obj, this);
     obj.sync();
@@ -594,8 +596,13 @@ prototypes.from_file = function(file)
   prototypes.list.push(urpath);
   newur.toString = function() { return urpath; };
   ur[urpath] = newur;
+//  var urs = urpath.split('.');
+//  var u = ur;
+//  for (var i = 0; i < urs.length; i++)
+//    u = u[urs[i]] = u[urs[i]] || newur;
+  //Object.dig(ur, urpath, newur);
 
-  return ur[urpath];
+  return newur;
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
 prototypes.list = [];

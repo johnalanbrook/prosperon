@@ -30,7 +30,8 @@ var GUI = {
   
   scissor_win() { cmd(140,0,0,Window.width,Window.height); },
   
-  image(path,pos) {
+  image(path,pos,color) {
+    color ??= Color.black;
     var wh = cmd(64,path);
     gui_img(path,pos, [1.0,1.0], 0.0, 0.0, [0.0,0.0], 0.0, Color.black);
     return cwh2bb([0,0], wh);
