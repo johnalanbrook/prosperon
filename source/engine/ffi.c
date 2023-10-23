@@ -1118,6 +1118,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 146:
       log_clear();
       break;
+
+    case 147:
+      exit(js2int(argv[1]));
+      break;
   }
 
   if (str)

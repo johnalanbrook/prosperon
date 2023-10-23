@@ -131,10 +131,14 @@ static int argc;
 static char **args;
 
 void c_init() {
+  sound_init();
+  input_init();
+  script_evalf("world_start();");
+  
   render_init();
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
-  script_evalf("initialize();");
+  script_evalf("Game.init();");
 }
 
 int frame_fps() {
@@ -174,7 +178,6 @@ static void process_frame()
     prof_start(&prof_draw);
     window_render(&mainwin);
     prof(&prof_draw);
-
     
     gameobjects_cleanup();
 }
@@ -307,7 +310,7 @@ void app_name(char *name)
   start_desc.window_title = strdup(name);
 }
 
-sapp_desc sokol_main(int argc, char **argv) {
+int main(int argc, char **argv) {
 #ifndef NDEBUG
   log_init();
 //  #ifdef __linux__
@@ -318,8 +321,6 @@ sapp_desc sokol_main(int argc, char **argv) {
     snprintf(fname, 100, "yugine-%d.log", now);
     log_setfile(fname);
   }
-
-  YughInfo("Starting yugine version %s.", VER);
 
   FILE *sysinfo = NULL;
   /*    sysinfo = popen("uname -a", "r");
@@ -336,12 +337,9 @@ sapp_desc sokol_main(int argc, char **argv) {
 //  signal(SIGBUS, seghandle);
   
 #endif
-
   stm_setup(); /* time */
-  resources_init(); 
-
-  phys2d_init();
-
+  resources_init();
+  phys2d_init();  
   script_startup();
   
   int argsize = 0;
@@ -360,15 +358,11 @@ sapp_desc sokol_main(int argc, char **argv) {
 
   script_evalf("cmd_args('%s');", cmdstr);
 
-  sound_init();
-  input_init();
-
-  script_dofile("warmup.js");
-
   start_desc.width = mainwin.width;
   start_desc.height = mainwin.height;
   start_desc.fullscreen = 0;
 
-  
-  return start_desc;
+  sapp_run(&start_desc);
+
+  return 0;
 }

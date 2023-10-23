@@ -80,6 +80,7 @@
 
 
 /* dump object free */
+#ifdef DBG
 //#define DUMP_FREE
 //#define DUMP_CLOSURE
 /* dump the bytecode of the compiled functions: combination of bits
@@ -105,7 +106,7 @@
 //#define DUMP_MODULE_RESOLVE
 //#define DUMP_PROMISE
 //#define DUMP_READ_OBJECT
-
+#endif
 /* test the GC by forcing it before each object allocation */
 //#define FORCE_GC_AT_MALLOC
 

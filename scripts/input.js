@@ -16,14 +16,16 @@ var Mouse = {
     cmd(46, 1);
   },
   
-  hidden() {
-    cmd(46, 1);
-  },
-  
   normal() {
     cmd(46, 0);
   },
 };
+
+Mouse.doc = {};
+Mouse.doc.pos = "The screen position of the mouse.";
+Mouse.doc.worldpos = "The position in the game world of the mouse.";
+Mouse.disabled.doc = "Set the mouse to hidden. This locks it to the game and hides it, but still provides movement and click events.";
+Mouse.normal.doc = "Set the mouse to show again after hiding.";
 
 var Keys = {
   shift() {
@@ -82,7 +84,6 @@ Input.print_md_kbm = function(pawn) {
 Input.has_bind = function(pawn, bind) {
   return (typeof pawn.inputs?.[bind] === 'function');
 };
-
 
 var Action = {
   add_new(name) {
@@ -188,15 +189,27 @@ var Player = {
     var n = Object.create(this);
     n.pawns = [];
     n.gamepads = [];
-    n.control = function(pawn) {
-      n.pawns.push_unique(pawn);
-    };
-    n.uncontrol = function(pawn) { n.pawns = n.pawns.filter(x => x !== pawn); };
     this.players.push(n);
     return n;
+  },
+
+  pawns: [],
+
+  control(pawn) {
+    this.pawns.push_unique(pawn);
+  },
+
+  uncontrol(pawn) {
+    this.pawns = this.pawns.filter(x => x !== pawn);
   },
 };
 
 for (var i = 0; i < 4; i++) {
   Player.create();
 }
+
+Player.control.doc = "Control a provided object, if the object has an 'inputs' object.";
+Player.uncontrol.doc = "Uncontrol a previously controlled object.";
+Player.print_pawns.doc = "Print out a list of the current pawn control stack.";
+Player.doc = {};
+Player.doc.players = "A list of current players.";

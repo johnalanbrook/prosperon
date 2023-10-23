@@ -82,6 +82,23 @@ var Log = {
 
     this.write(stack.slice(n));
   },
+
+  clear() {
+    cmd(146);
+  },
+};
+
+Log.doc = {
+  level: "Set level to output logging to console.",
+  info: "Output info level message.",
+  warn: "Output warn level message.",
+  error: "Output error level message, and print stacktrace.",
+  critical: "Output critical level message, and exit game immediately.",
+  write: "Write raw text to console.",
+  say: "Write raw text to console, plus a newline.",
+  stack: "Output a stacktrace to console.",
+  console: "Output directly to in game console.",
+  clear: "Clear console."
 };
 
 var IO = {
@@ -109,6 +126,15 @@ var IO = {
     var regex = new RegExp("^"+pat+"$", "");
     return paths.filter(str => str.match(regex));
   },
+};
+
+IO.doc = {
+  doc: "Functions for filesystem input/output commands.",
+  exists: "Returns true if a file exists.",
+  slurp: "Returns the contents of given file as a string.",
+  slurpwrite: "Write a given string to a given file.",
+  ls: "List contents of the game directory.",
+  glob: "Glob files in game directory.",
 };
 
 var Cmdline = {};
@@ -151,10 +177,13 @@ function cmd_args(cmdargs)
     }
 }
 
-
+var STD = {};
+STD.exit = function(status)
+{
+  cmd(147,status);
+}
 Cmdline.register_cmd("p", function() { Game.edit = false; }, "Launch engine in play mode.");
-Cmdline.register_cmd("v", function() { Log.say(cmd(120)); Game.quit(); }, "Display engine info.");
-Cmdline.register_cmd("c", function() {}, "Redirect logging to console.");
+Cmdline.register_cmd("v", function() { Log.say(cmd(120)); STD.exit(0);}, "Display engine info.");
 Cmdline.register_cmd("l", function(n) {
   Log.level = n;
 }, "Set log level.");
@@ -162,8 +191,7 @@ Cmdline.register_cmd("h", function(str) {
   for (var cmd of Cmdline.cmds) {
     Log.say(`-${cmd.flag}:  ${cmd.doc}`);
   }
-
-  Game.quit();
+  STD.exit(0);
 },
 "Help.");
 Cmdline.register_cmd("b", function(str) {
@@ -179,17 +207,23 @@ Cmdline.register_cmd("b", function(str) {
   Log.warn(`Packing into ${packname}`);
     
   cmd(124, packname);
-  Game.quit();
+  STD.exit(0);
 }, "Pack the game into the given name.");
 
 Cmdline.register_cmd("e", function(pawn) {
   run("scripts/editor.js");
+  Log.write(`## Input for ${pawn}\n`);
   eval(`Log.write(Input.print_md_kbm(${pawn}));`);
-  Game.quit();
+  STD.exit(0);
 }, "Print input documentation for a given object in a markdown table." );
 
 Cmdline.register_cmd("t", function() {
   Log.warn("Testing not implemented yet.");
-  Game.quit();
+  STD.exit(0);  
 }, "Test suite.");
 
+Cmdline.register_cmd("d", function(obj) {
+  run("scripts/editor.js");
+  Log.say(API.print_doc(obj[0]));
+  STD.exit(0);
+}, "Print documentation for an object.");

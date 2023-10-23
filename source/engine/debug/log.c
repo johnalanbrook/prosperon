@@ -29,34 +29,35 @@ FILE *logfile = NULL;
 #define CONSOLE_BUF 1024*1024 /* 5MB */
 
 char *consolelog;
+FILE *consolefp;
 
 void log_init()
 {
   consolelog = malloc(CONSOLE_BUF+1);
+  consolefp = fmemopen(consolelog, CONSOLE_BUF+1,"w");
 }
 
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
 #ifndef NDEBUG
-    if (priority >= logLevel) {
-	time_t now = time(0);
-	struct tm *tinfo = localtime(&now);
+  if (priority >= logLevel) {
+    time_t now = time(0);
+    struct tm *tinfo = localtime(&now);
 
-	double ticks = (double)clock()/CLOCKS_PER_SEC;
+    double ticks = (double)clock()/CLOCKS_PER_SEC;
 
-	va_list args;
-	va_start(args, message);
-	char msgbuffer[ERROR_BUFFER] = { '\0' };
-	vsnprintf(msgbuffer, ERROR_BUFFER, message, args);
-	va_end(args);
+    va_list args;
+    va_start(args, message);
+    char msgbuffer[ERROR_BUFFER] = { '\0' };
+    vsnprintf(msgbuffer, ERROR_BUFFER, message, args);
+    va_end(args);
 
 
-	char buffer[ERROR_BUFFER] = { '\0' };
-	snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
+    char buffer[ERROR_BUFFER] = { '\0' };
+    snprintf(buffer, ERROR_BUFFER, "%s:%d: %s, %s: %s\n", file, line, logstr[priority], catstr[category], msgbuffer);
 
-	log_print(buffer);
-//	if (category == LOG_SCRIPT && priority >= 2)
-//	  js_stacktrace();
+    fprintf(stderr, buffer);
+    fflush(stderr);
   }
 
 #endif
@@ -64,10 +65,10 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 
 void log_print(const char *str)
 {
+  fprintf(stdout, "%s", str);
+  fflush(stdout);
+  
 #ifndef NDEBUG
-  fprintf(stderr, "%s", str);
-  fflush(stderr);
-
   strncat(consolelog, str, CONSOLE_BUF);
 
   if (logfile) {

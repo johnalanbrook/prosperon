@@ -275,7 +275,7 @@ var gameobject = {
     angularvelocity:0,
     layer:0,
     worldpos() { return [0,0]; },
-    
+
     save:true,
     selectable:true,
     ed_locked:false,
@@ -466,8 +466,10 @@ var gameobject = {
       }
     };
 
-    if (this.objects)
+    if (this.objects) {
       obj.make_objs(this.objects);
+
+    }
 
     obj.level = undefined;
     obj.reparent(level);
@@ -479,6 +481,12 @@ var gameobject = {
     gameobject.check_registers(obj);
 
     if (Game.playing() && typeof obj.start === 'function') obj.start();
+/*      obj.objects.forEach(function(obj) {
+        if (Game.playing() && typeof obj.start === 'function') obj.start();            
+      });
+*/    
+    
+    
     return obj;
   },
 
@@ -522,6 +530,40 @@ var gameobject = {
 }
 
 gameobject.impl.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
+
+gameobject.doc = {
+  doc: "All objects in the game created through spawning have these attributes.",
+  pos: "Position of the object, relative to its level.",
+  angle: "Rotation of this object, relative to its level.",
+  velocity: "Velocity of the object, relative to world.",
+  angularvelocity: "Angular velocity of the object, relative to the world.",
+  scale: "Scale of the object, relative to its level.",
+  flipx: "Set the object to be flipped on its x axis.",
+  flipy: "Set the object to be flipped on its y axis.",
+  elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find their resultant velocities.`,
+  friction: `When one object touches another, friction slows them down.`,
+  mass: `The higher the mass of the object, the less forces will affect it.`,
+  phys: `Set to 0, 1, or 2, representing static, kinematic, and dynamic.`,
+  worldpos: `Function returns the world position of the object.`,
+  set_worldpos: `Function to set the position of the object in world coordinates.`,
+  worldangle: `Function to get the angle of the entity in the world.`,
+  rotate: `Function to rotate this object by x degrees.`,
+  pulse: `Apply an impulse to this body in world coordinates. Impulse is a short force.`,
+  shove: `Apply a force to this body in world coordinates. Should be used over many frames.`,
+  in_air: `Return true if the object is in the air.`,
+  on_ground: `Return true if the object is on the ground.`,
+  spawn: `Create an instance of a supplied ur-type on this object. Optionally provide a data object to modify the created entity.`,
+  hide: `Make this object invisible.`,
+  show: `Make this object visible.`,
+  width: `The total width of the object and all its components.`,
+  height: `The total height of the object.`,
+  move: `Move this object the given amount.`,
+  boundingbox: `The boundingbox of the object.`,
+  dup: `Make an exact copy of this object.`,
+  transform: `Return an object representing the transform state of this object.`,
+  kill: `Remove this object from the world.`,
+  level: "The entity this entity belongs to.",
+};
 
 /* Default objects */
 var prototypes = {};

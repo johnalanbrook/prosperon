@@ -99,6 +99,12 @@ Object.freeze(sprite);
 
 var sprite = component.sprite;
 
+sprite.doc = {
+  path: "Path to the texture.",
+  color: "Color to mix with the sprite.",
+  pos: "The offset position of the sprite, relative to its entity."
+};
+
 sprite.inputs = {};
 sprite.inputs.kp9 = function() { this.pos = [0,0]; };
 sprite.inputs.kp8 = function() { this.pos = [-0.5, 0]; };

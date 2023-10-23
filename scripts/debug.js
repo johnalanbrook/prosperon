@@ -146,6 +146,8 @@ var Profile = {
   get fps() { return sys_cmd(8); },
 };
 
+Profile.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
+
 /* These controls are available during editing, and during play of debug builds */
 var DebugControls = {};
 DebugControls.toString = function() { return "Debug"; };
@@ -251,6 +253,15 @@ var Time = {
   },
 };
 
+Time.doc = {};
+Time.doc.timescale = "Get and set the timescale. 1 is normal time; 0.5 is half speed; etc.";
+Time.doc.updateMS = "Set the ms per game update.";
+Time.doc.physMS = "Set the ms per physics update.";
+Time.doc.renderMS = "Set the ms per render update.";
+Time.doc.time = "Seconds elapsed since the game started.";
+Time.doc.pause = "Pause the game by setting the timescale to 0; remembers the current timescale on play.";
+Time.doc.play = "Resume the game after using Time.pause.";
+
 Player.players[0].control(DebugControls);
 Register.gui.register(Debug.draw, Debug);
 
@@ -265,3 +276,55 @@ console.clear = function()
   cmd(146);
 }
 
+var API = {};
+API.doc_entry = function(obj, key)
+{
+  var d = obj.doc;
+  var doc = "";
+  var title = key;
+  
+  var o = obj[key];
+  if (typeof o === 'undefined' && obj.impl && typeof obj.impl[key] !== 'undefined')
+    o = obj.impl[key];
+
+  var t = typeof o;
+  if (t === 'object' && Array.isArray(o)) t = 'array';
+
+  if (t === 'function') {
+    title = o.toString().tofirst(')') + ")";
+    if (o.doc) doc = o.doc;
+    t = "";
+  }
+  if (t === 'undefined') t = "";
+
+  if (t) t = "**" + t + "**";
+
+  if (!doc) {
+    if (d && d[key]) doc = d[key];
+    else return "";
+  }
+
+  return `### \`${title}\`
+${t}
+${doc}
+`;
+}
+
+API.print_doc =  function(name)
+{
+  var obj = eval(name);
+  if (!obj.doc) {
+    Log.warn(`Object has no doc sidecar.`);
+    return;
+  }
+
+  var mdoc = "# " + name + " API #\n";
+  if (obj.doc?.doc) mdoc += obj.doc.doc + "\n";
+  else if (typeof obj.doc === 'string') mdoc += obj.doc + "\n";
+  for (var key in obj) {
+    if (key === 'doc') continue;
+    mdoc += API.doc_entry(obj, key);
+  }
+
+  return mdoc;
+}

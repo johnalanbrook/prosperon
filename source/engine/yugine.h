@@ -10,6 +10,7 @@ void sim_step();
 int phys_stepping();
 void set_timescale(float val);
 void print_stacktrace();
+void yugine_init();
 
 const char *engine_info();
 void app_name(char *name);

@@ -40,8 +40,6 @@ const char *DB_NAME = "test.db";
 static struct cdb corecdb;
 static struct cdb game_cdb;
 
-
-
 void resources_init() {
   DATA_PATH = malloc(MAXPATH);
   getcwd(DATA_PATH, MAXPATH);

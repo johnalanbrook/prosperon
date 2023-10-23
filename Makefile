@@ -135,6 +135,7 @@ DISTDIR = ./dist
 
 .DEFAULT_GOAL := all
 all: $(BIN)/$(NAME)
+	cp $(BIN)/$(NAME) .
 
 DESTDIR ?= ~/.bin
 
@@ -149,7 +150,6 @@ install: $(BIN)/$(NAME)
 $(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
 	@echo Linking $(NAME)
 	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
-	cp $(BIN)/$(NAME) .
 	@echo Finished build
 
 $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
@@ -170,9 +170,32 @@ tools/libcdb.a:
 	make -C $(CDB) libcdb.a
 	mv $(CDB)/libcdb.a tools
 
+
+DOCOS = Sound gameobject Game Window physics Profile Time Player Mouse IO timer Log ColorMap sprite
+DOCHTML := $(addsuffix .api.html, $(DOCOS))
+DOCMD := $(addsuffix .api.md, $(DOCOS))
+
+api.md: $(DOCMD)
+	@(echo "# API"; cat $^) > $@
+	@rm $^
+
+INPUT = editor component.sprite component.polygon2d component.edge2d component.circle2d
+INPUTMD := $(addsuffix .input.md, $(INPUT))
+input.md: $(INPUTMD)
+	@(echo "# Input"; cat $^) > $@
+	@rm $^
+
+%.input.md: primum $(SCRIPTS)
+	@echo Printing controls for $*
+	@./primum -e $* > $@
+
+%.api.md: primum $(SCRIPTS)
+	@echo Printing api for $*
+	@./primum -d $* > $@
+
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
-	make -C quickjs OPT=$(OPT) HOST_CC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
+	make -C quickjs DBG=$(DBG) OPT=$(OPT) HOST_CC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 

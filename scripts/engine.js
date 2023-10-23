@@ -7,18 +7,6 @@ function load(file) {
 load("scripts/base.js");
 load("scripts/std.js");
 
-function initialize()
-{
-  if (!Game.edit) {
-    load("config.js");
-    load("game.js");
-  }
-  else {
-    load("scripts/editor.js");
-    load("editorconfig.js");
-  }
-}
-
 function run(file)
 {
   var modtime = cmd(119, file);
@@ -231,6 +219,10 @@ ColorMap.sample = function(t, map)
   return map[1];
 }
 
+ColorMap.doc = {
+  sample: "Sample a given colormap at the given percentage (0 to 1).",
+};
+
 Object.freeze(ColorMap);
 
 function bb2wh(bb) {
@@ -248,6 +240,7 @@ var timer = {
     }
       
     var t = Object.create(this);
+    assign_impl(t, this.impl);
     t.callback = fn;
     var guardfn = function() {
       if (typeof t.callback === 'function')
@@ -265,7 +258,7 @@ var timer = {
     var t = this.make(fn, secs, obj, 0, app);
     t.start();
   },
-
+  impl: {
   get remain() { return cmd(32, this.id); },
   get on() { return cmd(33, this.id); },
   get loop() { return cmd(34, this.id); },
@@ -278,6 +271,30 @@ var timer = {
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
   get pct() { return this.remain / this.time; },
+  },
+
+  remain: 0,
+  on: false,
+  loop: false,
+  start(){},
+  stop(){},
+  kill(){},
+  pause(){},
+  time: 0,
+  pct: 0,
+};
+
+timer.doc = {
+  doc: "Quickly make timers to fire off events once or multiple times.",
+  oneshot: "Executes a given function after the given number of seconds.",
+  make: "Returns a timer that can be handled and reused.",
+  start: "Starts the timer.",
+  stop: "Stops the timer.",
+  loop: "Set to true for the timer to repeat when done.",
+  kill: "Destroys the timer.",
+  pct: "Get the percentange the timer is complete.",
+  time: "Set or get the amount of time this timer waits to execute. Does not reset the time, so if it is set to below the elapsed time it will execute immediately.",
+  remain: "The time remianing before the function is executed.",
 };
 
 var animation = {
@@ -367,7 +384,11 @@ load("scripts/physics.js");
 load("scripts/input.js");
 load("scripts/sound.js");
 
-function screen2world(screenpos) { return Game.camera.view2world(screenpos); }
+function screen2world(screenpos) {
+  if (Game.camera)
+    return Game.camera.view2world(screenpos);
+  return screenpos;
+}
 function world2screen(worldpos) { return Game.camera.world2view(worldpos); }
 
 var Register = {
@@ -595,6 +616,17 @@ function find_com(objects)
 };
 
 var Game = {
+  init() {
+    if (!Game.edit) {
+      load("config.js");
+      load("game.js");
+    }
+    else {
+      load("scripts/editor.js");
+      load("editorconfig.js");
+      editor.enter_editor();
+    }
+  },
   objects: [],
   resolution: [1200,720],
   name: "Untitled",
@@ -715,11 +747,29 @@ var Game = {
   },
 };
 
+Game.doc = {};
+Game.doc.object = "Returns the entity belonging to a given id.";
+Game.doc.quit = "Immediately quit the game.";
+Game.doc.pause = "Pause game simulation.";
+Game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and if the game is a debug build, starts its editor.";
+Game.doc.play = "Resume or start game simulation.";
+Game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
+Game.doc.dt = "Current frame dt.";
+
+Window.doc = {};
+Window.doc.width = "Width of the game window.";
+Window.doc.height = "Height of the game window.";
+Window.doc.dimensions = "Window width and height packaged in an array [width,height]";
+Window.doc.name = "Name in the title bar of the window.";
+Window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
+
 Register.update.register(Game.exec, Game);
 
 load("scripts/entity.js");
 
-var preprimum = Object.create(gameobject);
+function world_start() {
+globalThis.preprimum = Object.create(gameobject);
+var preprimum = globalThis.preprimum;
 preprimum.objects = {};
 preprimum.worldpos = function() { return [0,0]; };
 preprimum.worldangle = function() { return 0; };
@@ -730,13 +780,16 @@ preprimum.angle = 0;
 preprimum.remove_obj = function() {};
 preprimum.instances = [];
 preprimum.toString = function() { return "preprimum"; };
-var World = preprimum.make(preprimum);
-var Primum = World;
+globalThis.World = preprimum.make(preprimum);
+globalThis.Primum = World;
+var Primum = globalThis.Primum;
 Primum.level = undefined;
 Primum.toString = function() { return "Primum"; };
 Primum._ed.selectable = false;
 Primum._ed.check_dirty = function() { };
-World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
+globalThis.World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
+Game.view_camera(Primum.spawn(ur.camera2d));
+}
 
 /* Load configs */
 function load_configs(file) {
@@ -795,8 +848,6 @@ Game.view_camera = function(cam)
   cmd(61, Game.camera.body);
   cam.zoom = cam.zoom;
 }
-
-Game.view_camera(Primum.spawn(ur.camera2d));
 
 Window.name = "Primum Machinam (V0.1)";
 Window.width = 1280;

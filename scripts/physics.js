@@ -27,6 +27,13 @@ var physics = {
   },
 };
 
+physics.doc = {};
+physics.doc.gravity = "Gravity expressed in units per second.";
+physics.doc.damping = "Damping applied to all physics bodies. Bound between 0 and 1.";
+physics.doc.pos_query = "Returns any object colliding with the given point.";
+physics.doc.box_query = "Returns an array of body ids that collide with a given box.";
+physics.doc.box_point_query = "Returns the subset of points from a given list that are inside a given box.";
+
 var Collision = {
   types: {},
   num: 10,

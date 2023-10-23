@@ -1159,6 +1159,7 @@ editor.inputs['M-u'].doc = "Make selected objects unique.";
 editor.inputs['C-S-g'] = function() { editor.openpanel(groupsaveaspanel); };
 editor.inputs['C-S-g'].doc = "Save selected objects as a new level.";
 
+editor.inputs.g = editor.inputs.mm;/*
 editor.inputs.g = function() {
   if (editor.selectlist.length === 0) {
     var o = editor.try_pick();
@@ -1168,6 +1169,7 @@ editor.inputs.g = function() {
     
   editor.grabselect = editor.selectlist.slice();  
 };
+*/
 editor.inputs.g.doc = "Move selected objects.";
 editor.inputs.g.released = function() { editor.grabselect = []; Mouse.normal(); };
 
@@ -1971,4 +1973,4 @@ Game.stop();
 Game.editor_mode(true);
 Debug.draw_phys(true);
 
-editor.enter_editor();
+//editor.enter_editor();
