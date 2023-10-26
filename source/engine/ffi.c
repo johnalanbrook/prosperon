@@ -1564,7 +1564,10 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
   int cmd = js2int(argv[0]);
   struct phys2d_edge *edge = js2ptr(argv[1]);
 
-  if (!edge) return JS_NULL;
+  if (!edge) {
+    YughError("Attempted to do a cmd on edge %p. Not found.", edge);
+    return JS_NULL;
+  }
 
   switch (cmd) {
   case 0:

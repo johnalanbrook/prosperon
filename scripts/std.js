@@ -211,7 +211,7 @@ Cmdline.register_cmd("b", function(str) {
 }, "Pack the game into the given name.");
 
 Cmdline.register_cmd("e", function(pawn) {
-  run("scripts/editor.js");
+  load("scripts/editor.js");
   Log.write(`## Input for ${pawn}\n`);
   eval(`Log.write(Input.print_md_kbm(${pawn}));`);
   STD.exit(0);
@@ -223,7 +223,36 @@ Cmdline.register_cmd("t", function() {
 }, "Test suite.");
 
 Cmdline.register_cmd("d", function(obj) {
-  run("scripts/editor.js");
+  load("scripts/editor.js");
   Log.say(API.print_doc(obj[0]));
   STD.exit(0);
 }, "Print documentation for an object.");
+
+Cmdline.register_cmd("cjson", function(json) {
+  var f = json[0];
+  if (!IO.exists(f)) {
+    Log.warn(`File ${f} does not exist.`);
+    STD.exit(1);
+  }
+
+  prototypes.generate_ur();
+
+  var j = JSON.parse(IO.slurp(f));
+
+  for (var k in j) {
+    if (k in j.objects)
+      delete j[k];
+  }
+
+  Log.warn(j);
+
+  for (var k in j.objects) {
+    var o = j.objects[k];
+    samediff(o, ur[o.ur]);
+  }
+
+  Log.say(j);
+//  IO.slurpwrite(JSON.stringify(j,undefined,2), f);
+
+  STD.exit(0);
+}, "Clean up a jso file.");

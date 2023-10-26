@@ -787,6 +787,7 @@ Primum.level = undefined;
 Primum.toString = function() { return "Primum"; };
 Primum._ed.selectable = false;
 Primum._ed.check_dirty = function() { };
+Primum._ed.dirty = false;
 globalThis.World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 Game.view_camera(Primum.spawn(ur.camera2d));
 }

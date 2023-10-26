@@ -1,7 +1,7 @@
 @vs vs
 in vec2 vertex;
 in vec2 uv;
-in vec4 vColor;
+in vec4 vc;
 
 out vec2 texcoords;
 out vec4 fcolor;
@@ -10,7 +10,7 @@ uniform vs_p { mat4 proj; };
 
 void main()
 {
-  fcolor = vColor;
+  fcolor = vc;
   texcoords = uv;
   gl_Position = proj * vec4(vertex, 0.0, 1.0);
 }
@@ -27,9 +27,11 @@ uniform sampler smp;
 void main()
 {
   color = texture(sampler2D(image,smp), texcoords);
-
+  
   if (color.a <= 0.1f)
       discard;
+  
+  color = mix(color, fcolor, 0.01);
 }
 @end
 

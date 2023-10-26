@@ -24,7 +24,7 @@ JSRuntime *rt = NULL;
 #ifndef NDEBUG
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT
 #else
-#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
+#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT// | JS_EVAL_FLAG_STRIP 
 #endif
 
 static struct {

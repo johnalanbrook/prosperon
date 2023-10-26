@@ -92,7 +92,7 @@ var Debug = {
     if (this.draw_gizmos)
       Game.objects.forEach(function(x) {
         if (!x.icon) return;
-        gui_img(x.icon, world2screen(x.pos));
+        GUI.image(x.icon, world2screen(x.pos));
       });
 
     if (this.draw_names)
@@ -101,8 +101,8 @@ var Debug = {
       });
 
     if (Debug.Options.gif.rec) {
-      gui_text("REC", [0,40], 1);
-      gui_text(Time.seconds_to_timecode(Time.time - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
+      GUI.text("REC", [0,40], 1);
+      GUI.text(Time.seconds_to_timecode(Time.time - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
     }
 
     GUI.text(Game.playing() ? "PLAYING"
@@ -323,6 +323,7 @@ API.print_doc =  function(name)
   else if (typeof obj.doc === 'string') mdoc += obj.doc + "\n";
   for (var key in obj) {
     if (key === 'doc') continue;
+    if (key === 'toString') continue;
     mdoc += API.doc_entry(obj, key);
   }
 

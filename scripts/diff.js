@@ -83,7 +83,12 @@ function diffassign(target, from) {
   }
 };
 
-function ediff(from,to)
+function diffkey(from,to,key)
+{
+
+}
+
+function objdiff(from,to)
 {
   var ret = {};
   
@@ -125,4 +130,114 @@ function ediff(from,to)
   if (ret.empty) return undefined;
   
   return ret;
+}
+
+function valdiff(from,to)
+{
+  if (typeof from !== typeof to) return from;
+  if (typeof from === 'function') return undefined;
+  if (typeof from === 'undefined') return undefined;
+
+  if (typeof from === 'number') {
+    if (Number.prec(from) !== Number.prec(to))
+      return to;
+      
+    return undefined;
+  }
+
+  if (typeof from === 'object')
+    return ediff(from,to);
+
+  if (from !== to) return to;
+
+  return undefined;
+}
+
+
+
+function ediff(from,to)
+{
+  var ret = {};
+  
+  if (!to)
+//    return ediff(from, {});
+    return deep_copy(from);
+  
+  Object.entries(from).forEach(function([key,v]) {
+    if (typeof v === 'function') return;
+    if (typeof v === 'undefined') return;
+
+    if (Array.isArray(v)) {
+      if (!Array.isArray(to[key]) || v.length !== to[key].length)
+	ret[key] = Object.values(ediff(v, []));
+
+      var diff = ediff(from[key], to[key]);
+      if (diff && !diff.empty)
+	ret[key] = Object.values(ediff(v,[]));
+
+      return;
+    }
+
+    if (typeof v === 'object') {
+      var diff = ediff(v, to[key]);
+      if (diff && !diff.empty)
+	  ret[key] = diff;	
+      return;
+    }
+
+    if (typeof v === 'number') {
+      var a = Number.prec(v);
+      if (!to || a !== to[key])
+	ret[key] = a;
+      return;
+    }
+
+    if (!to || v !== to[key])
+      ret[key] = v;
+  });
+  if (ret.empty) return undefined;
+  
+  return ret;
+}
+
+ediff.doc = "Given a from and to object, returns an object that, if applied to from, will make it the same as to. Does not include deletion; it is only additive.";
+
+function subdiff(from,to)
+{
+
+}
+
+subdiff.doc = "Given a from and to object, returns a list of properties that must be deleted from the 'from' object to make it like the 'to' object.";
+
+function samediff(from, to)
+{
+  var same = [];
+  if (!to) return same;
+  if (typeof to !== 'object') {
+    Log.warn("'To' must be an object. Got " + to);
+    return same;
+  }
+  Object.keys(from).forEach(function(k) {
+    if (Object.isObject(from[k])) {
+      samediff(from[k], to[k]);
+      return;
+    }
+
+//    if (Array.isArray(from[k])) {
+//      var d = valdiff(from[k], to[k]);
+//      if (!d)
+//    }
+
+    var d = valdiff(from[k], to[k]);
+    if (!d)
+      delete from[k];
+  });
+
+  return same;
+}
+
+samediff.doc = "Given a from and to object, returns an array of keys that are the same on from as on to.";
+
+function cleandiff(from, to)
+{
 }

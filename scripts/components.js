@@ -7,6 +7,8 @@ function assign_impl(obj, impl)
 
   Object.mixin(obj, impl);
 
+  if (obj.sync) obj.sync();
+
   for (var key in tmp)
     obj[key] = tmp[key];
 }
@@ -31,6 +33,7 @@ var component = {
     var nc = Object.create(this);
     nc.gameobject = go;
     Object.assign(nc, this._enghook(go.body));
+    nc.sync();
     assign_impl(nc,this.impl);
     Object.hide(nc, ...this.hides);
     return nc;
@@ -580,8 +583,8 @@ component.edge2d = Object.copy(collider2d, {
 });
 
 component.edge2d.impl = {
-    set sensor(x) { cmd(18,this.shape,x); },
-    get sensor() { return cmd(21,this.shape); },
+  set sensor(x) { cmd(18,this.shape,x); },
+  get sensor() { return cmd(21,this.shape); },
 
   set thickness(x) {
     cmd_edge2d(1,this.id,x);

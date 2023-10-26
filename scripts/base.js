@@ -213,6 +213,19 @@ Object.hide = function(obj,...props)
   }
 }
 
+Object.unhide = function(obj, ...props)
+{
+  for (var prop of props) {
+    var p = Object.getOwnPropertyDescriptor(obj,prop);
+    if (!p) {
+      Log.warn(`No property of name ${prop}.`);
+      return;
+    }
+    p.enumerable = true;
+    Object.defineProperty(obj, prop, p);
+  }
+}
+
 Object.defineProperty(Object.prototype, 'obscure', {
   value: function(name) {
     Object.defineProperty(this, name, { enumerable: false });
@@ -999,7 +1012,7 @@ var Vector = {
     var p = Vector.angle(v) + angle;
     return [r*Math.cos(p), r*Math.sin(p)];
   },
-
+  
   equal(v1, v2, tol) {
     if (!tol)
       return v1.equal(v2);

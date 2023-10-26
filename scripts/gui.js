@@ -66,7 +66,7 @@ var GUI = {
 };
 
 var gui_controls = {};
-//gui_controls.toString = function() { return "GUI controls"; };
+gui_controls.toString = function() { return "GUI controls"; };
 gui_controls.update = function() { };
 
 gui_controls.set_mum = function(mum)
@@ -93,10 +93,10 @@ gui_controls.inputs.mouse.scroll = function(scroll)
 {
 }
 
-gui_controls.inputs.lm = function() {
+gui_controls.check_submit = function() {
   if (this.selected && this.selected.action)
     this.selected.action(this.selected);
-};
+}
 
 var Mum = {
     padding:[0,0], /* Each element inset with this padding on all sides */

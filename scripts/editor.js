@@ -39,6 +39,10 @@ var editor = {
     return this.edit_level;
   },
 
+  get_that() {
+    return this.selectlist.length === 1 ? this.selectlist[0] : this.get_this();
+  },
+
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
     var go = physics.pos_query(Mouse.worldpos);
     return this.do_select(go);
@@ -437,13 +441,19 @@ var editor = {
     
     var ypos = 200;
     var depth = 0;
+    var alldirty = false;
+    for (var lvl of lvlchain) {
+      if (alldirty)
+        lvl._ed.dirty = true;
+      else {
+        lvl._ed.check_dirty();
+        if (lvl._ed.dirty) alldirty = true;
+      }
+    }
     lvlchain.reverse();
     lvlchain.forEach(function(x,i) {
       depth = i;
-      var lvlstr = x.toString();
-      x._ed.check_dirty();
-      if (x._ed.dirty)
-        lvlstr += "*";
+      var lvlstr = x._ed.namestr();
       if (i === lvlchain.length-1) lvlstr += "[this]";
       GUI.text(lvlstr, [0, ypos], 1, editor.color_depths[depth]);
      
@@ -468,8 +478,7 @@ var editor = {
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
-      var p = x[0];
-      if (x[1]._ed.dirty) p += "*";
+      var p = x[1]._ed.namestr();
       GUI.text(p, world2screen(x[1].worldpos()),1,editor.color_depths[depth]);
     });
 
@@ -542,6 +551,23 @@ var editor = {
     this.curpanels.forEach(function(x) {
       if (x.on) x.gui();
     });
+/*
+    var o = editor.get_that();
+
+    var pos = [6,600];
+    var offset = [0,0];
+    var os = Object.entries(o.objects);
+
+    GUI.text(o.toString(), pos.add(offset));
+    offset = offset.add([5,-16]);
+
+    os.forEach(function(x) {
+      GUI.text(x.toString(), pos.add(offset));
+      offset = offset.add([0,-16]);
+    });
+
+    GUI.text(JSON.stringify(o._ed.urdiff,null,1), [500,500]);
+*/
   },
   
   ed_debug() {
@@ -830,18 +856,20 @@ editor.inputs['C-s'] = function() {
   } else if (editor.selectlist.length === 1)
     saveobj = editor.selectlist[0];
 
-  saveobj._ed.check_dirty();
-  if (!saveobj._ed.dirty) return;
+//  saveobj._ed.check_dirty();
+//  if (!saveobj._ed.dirty) return;
 
   var savejs = saveobj.json_obj();
   Object.merge(saveobj.__proto__, savejs);
-  saveobj.__proto__.objects = savejs.objects;
+  if (savejs.objects) saveobj.__proto__.objects = savejs.objects;
   var path = saveobj.ur.toString();
   path = path.replaceAll('.','/');
   path = path + "/" + path.name() + ".json";
 
   IO.slurpwrite(JSON.stringify(saveobj.__proto__,null,1), path);
   Log.warn(`Wrote to file ${path}`);
+
+  Object.values(saveobj.objects).forEach(function(x) { x._ed.check_dirty(); });
 };
 editor.inputs['C-s'].doc = "Save selected.";
 
@@ -1431,6 +1459,11 @@ inputpanel.inputs['C-k'] = function() {
   this.value = this.value.slice(0,this.caret);
 };
 
+inputpanel.inputs.lm = function()
+{
+  gui_controls.check_submit();
+}
+
 load("scripts/textedit.js");
 
 var replpanel = Object.copy(inputpanel, {
@@ -1633,7 +1666,8 @@ var objectexplorer = Object.copy(inputpanel, {
 
   guibody() {
     var items = [];
-    items.push(Mum.text({str:"Examining " + this.obj}));
+    items.push(Mum.text({str:"Examining " + this.obj.toString()}));
+    return items;
       
     var n = 0;
     var curobj = this.obj;
@@ -1779,7 +1813,10 @@ var openlevelpanel = Object.copy(inputpanel,  {
   },
 
   keycb() {
-    this.assets = this.allassets.filter(x => x.search(this.value) !== -1);
+    if(this.value)
+      this.assets = this.allassets.filter(x => x.startswith(this.value));
+    else
+      this.assets = this.allassets.slice();
     for (var m in this.mumlist)
       this.mumlist[m].hide = true;
     this.assets.forEach(function(x) {
@@ -1953,11 +1990,6 @@ limited_editor.inputs['C-q'] = function()
   Sound.killall();
   Primum.clear();
   
-  editor.enter_editor();
-}
-
-limited_editor.inputs['M-q'] = function()
-{
   editor.enter_editor();
 }
 

@@ -191,6 +191,7 @@ void trace_init_image(sg_image id, const sg_image_desc *d, void *data)
 
 void trace_make_shader(const sg_shader_desc *d, sg_shader result, void *data)
 {
+  YughInfo("Making shader %s", d->label);
   if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED)
     YughError("FAILED MAKING A SHADER: %s\n%s\n%s", d->label);
 }
@@ -218,7 +219,7 @@ void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline result, void *da
 
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
-  YughInfo("Applying pipeline %d", pip);
+//  YughInfo("Applying pipeline %d", pip);
 }
 
 void trace_fail_pipeline(sg_pipeline pip, void *data)

@@ -179,7 +179,7 @@ api.md: $(DOCMD)
 	@(echo "# API"; cat $^) > $@
 	@rm $^
 
-INPUT = editor component.sprite component.polygon2d component.edge2d component.circle2d
+INPUT = editor DebugControls component.sprite component.polygon2d component.edge2d component.circle2d
 INPUTMD := $(addsuffix .input.md, $(INPUT))
 input.md: $(INPUTMD)
 	@(echo "# Input"; cat $^) > $@
