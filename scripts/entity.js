@@ -414,7 +414,7 @@ var gameobject = {
 	    this.level = undefined;
 	  }
 
-	  Player.uncontrol(this);
+	  Player.do_uncontrol(this);
 	  Register.unregister_obj(this);
 //	  ur[this.ur].instances.remove(this);
 	  this.body = -1;

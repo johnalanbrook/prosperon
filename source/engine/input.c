@@ -263,6 +263,10 @@ const char *keyname_extd(int key) {
       return "space";
     case SAPP_KEYCODE_KP_ADD:
       return "plus";
+    case '=':
+      return "plus";
+    case '-':
+      return "minus";
     case SAPP_KEYCODE_KP_SUBTRACT:
       return "minus";
     case SAPP_KEYCODE_GRAVE_ACCENT:

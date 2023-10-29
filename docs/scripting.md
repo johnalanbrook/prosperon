@@ -2,10 +2,11 @@
 
 Script hooks exist to allow to modification of the game.
 
-|config.js|called before any game play|
+|config.js|called before any game play, including play from editor|
 |game.js|called to start the game|
 |editorconfig.js|called when the editor is loaded, used to personalize|
 |debug.js|called when play in editor is selected|
+|dbgret.js|called when play in editor returns to editor|
 
 All objects in the Yugine can have an associated script. This script can perform setup, teardown, and handles responses for the object.
 

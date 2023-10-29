@@ -595,6 +595,18 @@ function Color(from) {
 };
 */
 
+var Spline = {};
+Spline.sample = function(degrees, dimensions, type, ctrl_points, nsamples)
+{
+  var s = spline_cmd(0, degrees,dimensions,type,ctrl_points,nsamples);
+  return s;
+}
+Spline.type = {
+  open: 0,
+  clamped: 1,
+  beziers: 2
+};
+
 load("scripts/components.js");
 
 function find_com(objects)
@@ -853,3 +865,4 @@ Game.view_camera = function(cam)
 Window.name = "Primum Machinam (V0.1)";
 Window.width = 1280;
 Window.height = 720;
+

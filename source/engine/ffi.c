@@ -237,7 +237,7 @@ cpBitmask js2bitmask(JSValue v) {
 
 cpVect *cpvecarr = NULL;
 
-/* Must be freed */
+/* Does not need to be freed by returning; but not reentrant */
 cpVect *js2cpvec2arr(JSValue v) {
   if (cpvecarr)
     arrfree(cpvecarr);
@@ -362,30 +362,24 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
   tsBSpline spline;
 
-  int d = js2int(argv[2]); /* dimensions */
   int degrees = js2int(argv[1]);
+  int d = js2int(argv[2]); /* dimensions */
   int type = js2int(argv[3]);
-  JSValue ctrl_pts = argv[4];
-  int n = js_arrlen(ctrl_pts);
+  cpVect *points = js2cpvec2arr(argv[4]);
   size_t nsamples = js2int(argv[5]);
-
-  cpVect points[n];
-
+  
   tsStatus status;
-  ts_bspline_new(n, d, degrees, type, &spline, &status);
+  ts_bspline_new(arrlen(points), d, degrees, type, &spline, &status);
 
   if (status.code)
     YughCritical("Spline creation error %d: %s", status.code, status.message);
 
-  for (int i = 0; i < n; i++)
-    points[i] = js2vec2(js_getpropidx( ctrl_pts, i));
-
-  ts_bspline_set_control_points(&spline, (tsReal *)points, &status);
+  ts_bspline_set_control_points(&spline, (tsReal*)points, &status);
 
   if (status.code)
     YughCritical("Spline creation error %d: %s", status.code, status.message);
 
-  cpVect samples[nsamples];
+  cpVect *samples = malloc(nsamples*sizeof(cpVect));
 
   size_t rsamples;
   /* TODO: This does not work with Clang/GCC due to UB */
@@ -394,16 +388,10 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
   if (status.code)
     YughCritical("Spline creation error %d: %s", status.code, status.message);
 
-  JSValue arr = JS_NewArray(js);
-
-  for (int i = 0; i < nsamples; i++) {
-    JSValue psample = JS_NewArray(js);
-    js_setprop_num(psample, 0, float2js(samples[i].x));
-    js_setprop_num(psample, 1, float2js(samples[i].y));
-    js_setprop_num(arr, i, psample);
-  }
-
+  JSValue arr = vecarr2js(samples, nsamples);
+  
   ts_bspline_free(&spline);
+  free(samples);
 
   return arr;
 }
@@ -1587,16 +1575,9 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
   cpVect *points = js2cpvec2arr(argv[0]);
   int n = js2int(argv[1]);
   double d = js2number(argv[2]);
-
-  cpVect inflate_out[n];
-  cpVect inflate_in[n];
-
-  inflatepoints(inflate_out, points, d, n);
-  inflatepoints(inflate_in, points, -d, n);
-
-  JSValue arr = JS_NewArray(js);
-  js_setprop_num(arr, 0, vecarr2js(inflate_out, n));
-  js_setprop_num(arr, 1, vecarr2js(inflate_in, n));
+  cpVect *infl = inflatepoints(points,d,n);
+  JSValue arr = vecarr2js(infl,arrlen(infl));
+  arrfree(infl);
   return arr;
 }
 

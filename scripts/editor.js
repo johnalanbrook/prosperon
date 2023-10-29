@@ -568,6 +568,7 @@ var editor = {
 
     GUI.text(JSON.stringify(o._ed.urdiff,null,1), [500,500]);
 */
+    
   },
   
   ed_debug() {
@@ -662,6 +663,9 @@ var editor = {
 }
 
 editor.inputs = {};
+editor.inputs.post = function() {
+  if (editor.sel_comp && 'sync' in editor.sel_comp) editor.sel_comp.sync();
+};
 editor.inputs.release_post = function() {
   editor.snapshot();
   editor.edit_level.check_dirty();
@@ -710,7 +714,7 @@ editor.inputs['C-d'].doc = "Duplicate all selected objects.";
 
 editor.inputs['C-m'] = function() {
   if (editor.sel_comp) {
-    if (editor.sel_comp.flipy)
+    if ('flipy' in editor.sel_comp)
       editor.sel_comp.flipy = !editor.sel_comp.flipy;
 
     return;
@@ -722,7 +726,7 @@ editor.inputs['C-m'].doc = "Mirror selected objects on the Y axis.";
 
 editor.inputs.m = function() {
   if (editor.sel_comp) {
-    if (editor.sel_comp.flipx)
+    if ('flipx' in editor.sel_comp)
       editor.sel_comp.flipx = !editor.sel_comp.flipx;
 
     return;
@@ -1187,17 +1191,22 @@ editor.inputs['M-u'].doc = "Make selected objects unique.";
 editor.inputs['C-S-g'] = function() { editor.openpanel(groupsaveaspanel); };
 editor.inputs['C-S-g'].doc = "Save selected objects as a new level.";
 
-editor.inputs.g = editor.inputs.mm;/*
 editor.inputs.g = function() {
   if (editor.selectlist.length === 0) {
     var o = editor.try_pick();
     if (!o) return;
     editor.selectlist = [o];
   }
+
+  if (editor.sel_comp && 'pick' in editor.sel_comp) {
+    var o = editor.sel_comp.pick(Mouse.worldpos);
+    if (o) editor.grabselect = [o];
+    return;
+  }
     
-  editor.grabselect = editor.selectlist.slice();  
+  editor.grabselect = editor.selectlist.slice();
 };
-*/
+
 editor.inputs.g.doc = "Move selected objects.";
 editor.inputs.g.released = function() { editor.grabselect = []; Mouse.normal(); };
 
@@ -1237,6 +1246,13 @@ editor.inputs['C-g'] = function() {
   editor.inputs.g();
 };
 editor.inputs['C-g'].doc = "Duplicate selected objects, then move them.";
+
+editor.inputs['M-g'] = function()
+{
+  if (this.sel_comp && 'pick_all' in this.sel_comp)
+    this.grabselect = this.sel_comp.pick_all();
+}
+editor.inputs['M-g'].doc = "Move all.";
 
 editor.inputs['C-lb'] = function() {
   editor_config.grid_size -= Keys.shift() ? 10 : 1;
@@ -1989,6 +2005,7 @@ limited_editor.inputs['C-q'] = function()
 {
   Sound.killall();
   Primum.clear();
+  load("dbgret.js");
   
   editor.enter_editor();
 }

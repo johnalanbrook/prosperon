@@ -460,7 +460,6 @@ polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 //Object.freeze(polygon2d);
 
 component.edge2d = Object.copy(collider2d, {
-  degrees:2,
   dimensions:2,
   thickness:0,
   /* open: 0
@@ -468,13 +467,8 @@ component.edge2d = Object.copy(collider2d, {
      beziers: 2
      looped: 3
   */
-  type: 3,
-  typeid: {
-    open: 0,
-    clamped: 1,
-    beziers: 2,
-    looped: 3
-  },
+  type: Spline.type.clamped,
+  looped: false,
   
   flipx: false,
   flipy: false,
@@ -483,7 +477,7 @@ component.edge2d = Object.copy(collider2d, {
   
   hollow: false,
   hollowt: 0,
-  
+
   spoints() {
     if (!this.cpoints) return [];
     var spoints = this.cpoints.slice();
@@ -504,15 +498,12 @@ component.edge2d = Object.copy(collider2d, {
       }
     }
 
-    return spoints;
-
     if (this.hollow) {
-      var hpoints = [];
-      var inflatep = inflate_cpv(spoints, spoints.length, this.hollowt); 
-     inflatep[0].slice().reverse().forEach(function(x) { hpoints.push(x); });
-      
-      inflatep[1].forEach(function(x) { hpoints.push(x); });
-      return hpoints;
+      var hpoints = inflate_cpv(spoints, spoints.length, this.hollowt);
+      if (hpoints.length === spoints.length) return spoints;
+      var arr1 = hpoints.filter(function(x,i) { return i % 2 === 0; });
+      var arr2 = hpoints.filter(function(x,i) { return i % 2 !== 0; });
+      return arr1.concat(arr2.reverse());
     }
     
     return spoints;
@@ -521,29 +512,29 @@ component.edge2d = Object.copy(collider2d, {
   sample(n) {
     var spoints = this.spoints();
 
-    this.degrees = Math.clamp(this.degrees, 1, spoints.length-1);
+    var degrees = 2;
+
+    if (n < spoints.length) n = spoints.length;
     
     if (spoints.length === 2)
       return spoints;
     if (spoints.length < 2)
       return [];
-    if (this.degrees < 2) {
-      if (this.type === 3)
-        return spoints.wrapped(1);
-	
+    if (this.samples === spoints.length) {
+      if (this.looped) return spoints.wrapped(1);
       return spoints;
     }
-
+    
     /*
       order = degrees+1
       knots = spoints.length + order
       assert knots%order != 0
     */
 
-    if (this.type === component.edge2d.typeid.this.looped)
-      return spline_cmd(0, this.degrees, this.dimensions, 0, spoints.wrapped(this.degrees), n);
+    if (this.looped)
+      return Spline.sample(degrees, this.dimensions, Spline.type.open, spoints.wrapped(this.degrees), n);
  
-    return spline_cmd(0, this.degrees, this.dimensions, this.type, spoints, n);
+    return Spline.sample(degrees, this.dimensions, this.type, spoints, n);
   },
 
   samples: 10,
@@ -580,6 +571,18 @@ component.edge2d = Object.copy(collider2d, {
 
     return undefined;
   },
+
+  pick_all() {
+    var picks = [];
+    this.cpoints.forEach(function(x) {
+      picks.push({
+        set pos(n) { x.x = n.x; x.y = n.y; },
+	get pos() { return x; },
+	sync: this.sync.bind(this),
+      });
+    }, this);
+    return picks;
+  },
 });
 
 component.edge2d.impl = {
@@ -591,6 +594,7 @@ component.edge2d.impl = {
   },
   get thickness() { return cmd(112,this.id); },
   sync() {
+    if (this.samples < this.spoints().length) this.samples = this.spoints().length;
     var sensor = this.sensor;
     var points = this.sample(this.samples);
     cmd_edge2d(0,this.id,points);
@@ -599,63 +603,57 @@ component.edge2d.impl = {
 };
 
 var bucket = component.edge2d;
+bucket.spoints.doc = "Returns the controls points after modifiers are applied, such as it being hollow or mirrored on its axises.";
 bucket.inputs = {};
+bucket.inputs.post = function() { this.sync(); };
 bucket.inputs.h = function() { this.hollow = !this.hollow; };
 bucket.inputs.h.doc = "Toggle hollow.";
 
-bucket.inputs['C-g'] = function() {
-  this.hollowt--;
-  if (this.hollowt < 0) this.hollowt = 0;
-};
+bucket.inputs['C-g'] = function() { if (this.hollowt > 0) this.hollowt--; };
 bucket.inputs['C-g'].doc = "Thin the hollow thickness.";
+bucket.inputs['C-g'].rep = true;
 
 bucket.inputs['C-f'] = function() { this.hollowt++; };
 bucket.inputs['C-f'].doc = "Increase the hollow thickness.";
+bucket.inputs['C-f'].rep = true;
 
-bucket.inputs['M-v'] = function() { this.thickness--; };
+bucket.inputs['M-v'] = function() { if (this.thickness > 0) this.thickness--; };
 bucket.inputs['M-v'].doc = "Decrease spline thickness.";
 bucket.inputs['M-v'].rep = true;
 
-bucket.inputs['C-b'] = function() {
+bucket.inputs['C-y'] = function() {
   this.cpoints = this.spoints();
   this.flipx = false;
   this.flipy = false;
+  this.hollow = false;
 };
-bucket.inputs['C-b'].doc = "Freeze mirroring,";
+bucket.inputs['C-y'].doc = "Freeze mirroring,";
 bucket.inputs['M-b'] = function() { this.thickness++; };
 bucket.inputs['M-b'].doc = "Increase spline thickness.";
 bucket.inputs['M-b'].rep = true;
-
-bucket.inputs['C-plus'] = function() { this.degrees++; };
-bucket.inputs['C-plus'].doc = "Increase the degrees of this spline.";
-bucket.inputs['C-plus'].rep = true;
 
 bucket.inputs.plus = function() { this.samples++; };
 bucket.inputs.plus.doc = "Increase the number of samples of this spline.";
 bucket.inputs.plus.rep = true;
 
-bucket.inputs.minus = function() {
-  this.samples--;
-  if (this.samples < 1) this.samples = 1;
-};
+bucket.inputs.minus = function() { if (this.samples > this.spoints().length) this.samples--;};
 bucket.inputs.minus.doc = "Decrease the number of samples on this spline.";
 bucket.inputs.minus.rep = true;
-
-bucket.inputs['C-minus'] = function() { this.degrees--; };
-bucket.inputs['C-minus'].doc = "Decrease the number of degrees of this spline.";
-bucket.inputs['C-minus'].rep = true;
 
 bucket.inputs['C-r'] = function() { this.cpoints = this.cpoints.reverse(); };
 bucket.inputs['C-r'].doc = "Reverse the order of the spline's points.";
 
-bucket.inputs['C-l'] = function() { this.type = 3; };
-bucket.inputs['C-l'].doc = "Set type of spline to clamped.";
+bucket.inputs['C-l'] = function() { this.looped = !this.looped};
+bucket.inputs['C-l'].doc = "Toggle spline being looped.";
 
-bucket.inputs['C-c'] = function() { this.type = 1; };
-bucket.inputs['C-c'].doc = "Set type of spline to closed.";
+bucket.inputs['C-c'] = function() { this.type = Spline.type.clamped; };
+bucket.inputs['C-c'].doc = "Set type of spline to clamped.";
 
-bucket.inputs['C-o'] = function() { this.type = 0; };
+bucket.inputs['C-o'] = function() { this.type = Spline.type.open; };
 bucket.inputs['C-o'].doc = "Set spline to open.";
+
+bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; };
+bucket.inputs['C-b'].doc = "Set spline to bezier.";
 
 bucket.inputs['C-M-lm'] = function() {
   var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(this.gameobject.world2this,this.gameobject), 25);

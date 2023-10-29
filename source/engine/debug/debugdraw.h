@@ -24,7 +24,6 @@ void debug_flush(HMM_Mat4 *view);
 void debug_newframe();
 void debug_nextpass();
 
-cpVect inflatepoint(cpVect a, cpVect b, cpVect c, float d);
-void inflatepoints(cpVect *r, cpVect *p, float d, int n);
+cpVect *inflatepoints(cpVect *p, float d, int n);
 
 #endif

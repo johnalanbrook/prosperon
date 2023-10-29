@@ -165,7 +165,7 @@ var Player = {
     }
   },
   
-  uncontrol(pawn) {
+  do_uncontrol(pawn) {
     this.players.forEach(function(p) {
       p.pawns = p.pawns.filter(x => x !== pawn);
     });
