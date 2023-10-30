@@ -1,3 +1,7 @@
+var Audio = {
+    
+};
+
 var Music = {
   play(path) {
     Log.info("Playing " + path);

@@ -56,7 +56,7 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
   gif.cpf = cpf;
   gif.spf = cpf/100.0;
   gif.rec = 1;
-  gif.timer = appTime;
+  gif.timer = apptime();
   if (gif.buffer) free(gif.buffer);
   gif.buffer = malloc(gif.w*gif.h*4);
 
@@ -548,14 +548,14 @@ void openglRender(struct window *window) {
   full_2d_pass(window);
   sg_end_pass();
 
-  if (gif.rec && (appTime - gif.timer) > gif.spf) {
+  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
     sg_begin_pass(sg_gif.pass, &pass_action);
     sg_apply_pipeline(sg_gif.pipe);
     sg_apply_bindings(&sg_gif.bind);
     sg_draw(0,6,1);
     sg_end_pass();
 
-    gif.timer = appTime;
+    gif.timer = apptime();
     sg_query_image_pixels(sg_gif.img, crt_post.bind.fs.samplers[0], gif.buffer, gif.w*gif.h*4);
     msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }

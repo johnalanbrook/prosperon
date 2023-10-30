@@ -238,7 +238,11 @@ var gameobject = {
 
   /* Make a unique object the same as its prototype */
   revert() {
-    Object.merge(this,this.__proto__);
+    var jobj = this.json_obj();
+    delete jobj.objects;
+    Object.keys(jobj).forEach(function(x) {
+      this[x] = this.__proto__[x];
+    }, this);
     this.sync();
   },
 
@@ -416,7 +420,10 @@ var gameobject = {
 
 	  Player.do_uncontrol(this);
 	  Register.unregister_obj(this);
-//	  ur[this.ur].instances.remove(this);
+
+	  if (this.__proto__.instances)
+	    this.__proto__.instances.remove(this);
+	    
 	  this.body = -1;
 
 	  for (var key in this.components) {
@@ -446,7 +453,8 @@ var gameobject = {
     obj.make = undefined;
     obj.level = level;
 //    obj.toJSON = obj.transform_obj;
-//    this.instances.push(obj);
+    if (this.instances)
+      this.instances.push(obj);
 //    Log.warn(`Made an object from ${this.toString()}`);
 //    Log.warn(this.instances.length);
     obj.body = make_gameobject();
@@ -509,12 +517,10 @@ var gameobject = {
     obj.sync();
     gameobject.check_registers(obj);
 
+    if (data)
+      Object.dainty_assign(obj,data);
+
     if (Game.playing() && typeof obj.start === 'function') obj.start();
-/*      obj.objects.forEach(function(obj) {
-        if (Game.playing() && typeof obj.start === 'function') obj.start();            
-      });
-*/    
-    
     
     return obj;
   },

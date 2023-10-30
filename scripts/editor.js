@@ -629,7 +629,7 @@ var editor = {
   },
 
   /* Checking to save an entity as a subtype. */
-  /* sub is the name of the type; obj is the object to save it as */
+  /* sub is the name of the (sub)type; obj is the object to save it as */
   saveas_check(sub, obj) {
     if (!sub) return;
     obj ??= editor.selectlist[0];
@@ -644,18 +644,20 @@ var editor = {
       var saveobj = obj.json_obj();
       IO.slurpwrite(JSON.stringify(saveobj,null,1), path);
 
-
       if (obj === editor.edit_level) {
-        obj.clear();
-	var nobj = editor.edit_level.spawn(sub);
-	editor.selectlist = [nobj];
-	return;
+        if (obj === editor.desktop) {
+	  obj.clear();
+    	  var nobj = editor.edit_level.spawn(sub);
+	  editor.selectlist = [nobj];
+	  return;
+	}
+	editor.edit_level = editor.edit_level.level;
       }
-      
-      var t = obj.transform();      
-      obj.kill();
+
+      var t = obj.transform();
       editor.unselect();
-      obj = editor.load(sub);
+      obj.kill();
+      obj = editor.edit_level.spawn(sub);
       obj.pos = t.pos;
       obj.angle = t.angle;
     }
@@ -874,12 +876,18 @@ editor.inputs['C-s'] = function() {
   Log.warn(`Wrote to file ${path}`);
 
   Object.values(saveobj.objects).forEach(function(x) { x._ed.check_dirty(); });
+
+  Game.objects.forEach(function(x) {
+    if (x._ed.dirty) return;
+    x.revert();
+    x._ed.check_dirty();
+  });
 };
 editor.inputs['C-s'].doc = "Save selected.";
 
 editor.inputs['C-S'] = function() {
   if (editor.selectlist.length !== 1) return;
-  saveaspanel.stem = this.selectlist[0].toString();
+  saveaspanel.stem = this.selectlist[0].ur;
   editor.openpanel(saveaspanel);
 };
 editor.inputs['C-S'].doc = "Save selected as.";
@@ -1077,7 +1085,7 @@ editor.inputs.mm = function() {
 
   var o = editor.try_pick();
   if (!o) return;
-  editor.selectlist = [o];
+//  editor.selectlist = [o];
   editor.grabselect = [o];
 };
 editor.inputs['C-mm'] = editor.inputs.mm;

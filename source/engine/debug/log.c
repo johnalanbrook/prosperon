@@ -29,14 +29,12 @@ FILE *logfile = NULL;
 #define CONSOLE_BUF 1024*1024 /* 5MB */
 
 char *consolelog;
-FILE *consolefp;
 
 static FILE *sout;
 
 void log_init()
 {
   consolelog = malloc(CONSOLE_BUF+1);
-  consolefp = fmemopen(consolelog, CONSOLE_BUF+1,"w");
   sout = fdopen(dup(stdout),"w");
   sout = stdout;
 }

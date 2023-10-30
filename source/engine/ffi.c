@@ -514,7 +514,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 6:
-//    updateMS = js2number(argv[1]);
+    updateMS = js2number(argv[1]);
     break;
 
   case 7:
@@ -1047,7 +1047,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       gif_rec_end(str);
       break;
     case 133:
-      ret = JS_NewFloat64(js, appTime);
+      ret = JS_NewFloat64(js, apptime());
       break;
 
     case 134:

@@ -102,7 +102,7 @@ void debug_flush(HMM_Mat4 *view)
     sg_apply_bindings(&line_bind);
     sg_apply_uniforms(SG_SHADERSTAGE_VS,0,SG_RANGE_REF(*view));
     lfs_params_t lt;
-    lt.time = appTime;
+    lt.time = apptime();
     sg_apply_uniforms(SG_SHADERSTAGE_FS,0,SG_RANGE_REF(lt));
     sg_draw(line_sc,line_c,1);
    }

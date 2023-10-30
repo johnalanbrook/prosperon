@@ -790,7 +790,6 @@ preprimum.gscale = function() { return 1; };
 preprimum.pos = [0,0];
 preprimum.angle = 0;
 preprimum.remove_obj = function() {};
-preprimum.instances = [];
 preprimum.toString = function() { return "preprimum"; };
 globalThis.World = preprimum.make(preprimum);
 globalThis.Primum = World;
@@ -800,6 +799,8 @@ Primum.toString = function() { return "Primum"; };
 Primum._ed.selectable = false;
 Primum._ed.check_dirty = function() { };
 Primum._ed.dirty = false;
+Primum.revert = function(){};
+Primum.ur = undefined;
 globalThis.World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 Game.view_camera(Primum.spawn(ur.camera2d));
 }

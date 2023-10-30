@@ -54,12 +54,16 @@ static struct d_prof prof_input;
 static struct d_prof prof_physics;
 
 double physlag = 0;
-
 double physMS = 1 / 60.f;
+uint64_t physlast = 0;
+
+double updateMS = 1/60.f;
+uint64_t updatelast = 0;
 
 static int phys_step = 0;
 
-double appTime = 0;
+uint64_t start_t;
+uint64_t frame_t;
 
 static float timescale = 1.f;
 
@@ -139,6 +143,8 @@ void c_init() {
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
   script_evalf("Game.init();");
+
+  
 }
 
 int frame_fps() {
@@ -147,32 +153,32 @@ int frame_fps() {
 
 static void process_frame()
 {
-    double elapsed = sapp_frame_duration();
-    appTime += elapsed;
+  double elapsed = stm_sec(stm_laptime(&frame_t));
+  physlag += elapsed;
 
     input_poll(0);
+    /* Timers all update every frame - once per monitor refresh */
     timer_update(elapsed, timescale);    
       
-    if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
+    if (sim_play == SIM_PLAY || sim_play == SIM_STEP && stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {
+      double dt = stm_sec(stm_diff(frame_t, updatelast));
+      updatelast = frame_t;
       prof_start(&prof_update);
-
-      call_updates(elapsed * timescale);
+      call_updates(dt * timescale);
       prof(&prof_update);
-
-      physlag += elapsed;
-      while (physlag >= physMS) {
-        prof_start(&prof_physics);
-        phys_step = 1;
-        physlag -= physMS;
-        phys2d_update(physMS * timescale);
-	call_physics(physMS * timescale);
-        if (sim_play == SIM_STEP) sim_pause();
-        phys_step = 0;
-	prof(&prof_physics);
-      }
 
       if (sim_play == SIM_STEP)
         sim_pause();
+    }
+
+    while ((sim_play == SIM_PLAY || sim_play == SIM_STEP) && physlag > physMS) {
+      physlag -= physMS;
+      prof_start(&prof_physics);
+      phys_step = 1;
+      phys2d_update(physMS * timescale);
+      call_physics(physMS * timescale);
+      phys_step = 0;
+      prof(&prof_physics);
     }
 
     prof_start(&prof_draw);
@@ -338,6 +344,9 @@ int main(int argc, char **argv) {
   
 #endif
   stm_setup(); /* time */
+  start_t = frame_t = stm_now();
+  physlast = updatelast = start_t;
+  
   resources_init();
   phys2d_init();  
   script_startup();
@@ -365,4 +374,9 @@ int main(int argc, char **argv) {
   sapp_run(&start_desc);
 
   return 0;
+}
+
+double apptime()
+{
+  return stm_sec(stm_diff(start_t, stm_now()));
 }
