@@ -195,6 +195,16 @@ struct rgba js2color(JSValue v) {
   return color;
 }
 
+JSValue color2js(struct rgba color)
+{
+  JSValue arr = JS_NewArray(js);
+  js_setprop_num(arr,0,JS_NewFloat64(js,(double)color.r/255));
+  js_setprop_num(arr,1,JS_NewFloat64(js,(double)color.g/255));  
+  js_setprop_num(arr,2,JS_NewFloat64(js,(double)color.b/255));
+  js_setprop_num(arr,3,JS_NewFloat64(js,(double)color.a/255));
+  return arr;
+}
+
 struct boundingbox js2bb(JSValue v)
 {
   struct boundingbox bb;
@@ -1109,6 +1119,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 147:
       exit(js2int(argv[1]));
+      break;
+    case 148:
+      ret = color2js(id2sprite(js2int(argv[1]))->color);
       break;
   }
 

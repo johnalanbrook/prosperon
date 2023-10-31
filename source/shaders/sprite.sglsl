@@ -31,7 +31,7 @@ void main()
   if (color.a <= 0.1f)
       discard;
   
-  color = mix(color, fcolor, 0.01);
+  color *=fcolor;
 }
 @end
 

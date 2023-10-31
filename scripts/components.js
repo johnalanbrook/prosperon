@@ -53,7 +53,7 @@ var component = {
 
 component.sprite = Object.copy(component, {
   pos:[0,0],
-  color:[1,1,1],
+  color:[1,1,1,1],
   layer:0,
   enabled:true,
   path: "",
@@ -64,10 +64,12 @@ component.sprite = Object.copy(component, {
 
 component.sprite.impl = {
   set path(x) {
-    cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
+    //cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
+    cmd(12,this.id,x,this.rect);
   },
   get path() {
-    return prototypes.resavi(this.gameobject.__proto__.toString(), cmd(116,this.id));
+    return cmd(116,this.id);
+    //return prototypes.resavi(this.gameobject.__proto__.toString(), cmd(116,this.id));
   },
   toString() { return "sprite"; },
   hide() { this.enabled = false; },
@@ -76,7 +78,7 @@ component.sprite.impl = {
   get enabled() { return cmd(114,this.id); },
   set enabled(x) { cmd(20,this.id,x); },
   set color(x) { cmd(96,this.id,x); },
-  get color() {return undefined; },
+  get color() {return cmd(148,this.id);},
   get pos() { return cmd(111, this.id); },
   set pos(x) { cmd(37,this.id,x); },
   set layer(x) { cmd(60, this.id, x); },

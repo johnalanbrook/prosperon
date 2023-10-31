@@ -416,6 +416,8 @@ var Tween = {
     defn.fn = function(dt) {
       defn.accum += dt;
       defn.pct = (defn.accum % defn.time) / defn.time;
+      if (defn.loop === 'none' && defn.accum >= defn.time)
+        defn.stop();
 
       var t = defn.whole ? defn.ease(defn.pct) : defn.pct;
 
@@ -429,54 +431,26 @@ var Tween = {
       obj[target] = tvals[i].lerp(tvals[i+1], nval);
     };
 
-    defn.restart = function() { defn.accum = 0; };
-    defn.stop = function() { defn.pause(); defn.restart(); };
-    defn.pause = function() { Register.update.unregister(defn.fn); };
-
-    Register.update.register(defn.fn, defn);
-
-    return defn;
-  },
-
-  embed(obj, target, tvals, options) {
-    var defn = Object.create(this.default);
-    Object.assign(defn, options);
-
-    defn.update_vals = function(vals) {
-      defn.vals = vals;
-      
-      if (defn.loop === 'circle')
-        defn.vals.push(defn.vals[0]);
-      else if (defn.loop === 'yoyo') {
-        for (var i = defn.vals.length-2; i >= 0; i--)
-          defn.vals.push(defn.vals[i]);
-      }
-
-      defn.slices = defn.vals.length - 1;
-      defn.slicelen = 1 / defn.slices;
+    var playing = false;
+    
+    defn.play = function() {
+      if (playing) return;
+      Register.update.register(defn.fn, defn);
+      playing = true;
     };
-
-    defn.update_vals(tvals);
-
-    defn.time_s = Date.now();
-
-    Object.defineProperty(obj, target, {
-      get() {
-        defn.accum = (Date.now() - defn.time_s)/1000;
-	defn.pct = (defn.accum % defn.time) / defn.time;
-	var t = defn.whole ? defn.ease(defn.pct) : defn.pct;
-
-	var nval = t / defn.slicelen;
-	var i = Math.trunc(nval);
-	nval -= i;
-
-	if (!defn.whole)
-	  nval = defn.ease(nval);
-
-	return defn.vals[i].lerp(defn.vals[i+1],nval);
-      },
-    });
+    defn.restart = function() {
+      defn.accum = 0;
+      obj[target] = tvals[0];
+    };
+    defn.stop = function() { if (!playing) return; defn.pause(); defn.restart(); };
+    defn.pause = function() {
+      if (!playing) return;
+      Register.update.unregister(defn.fn);
+      playing = false;
+    };
 
     return defn;
   },
 };
+
+Tween.make = Tween.start;

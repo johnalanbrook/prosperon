@@ -11,7 +11,7 @@ struct timer {
     void *data;
     int owndata;
     int next;
-  int app;
+  int app; /* True if this timer is an "app" timer, and should always update; otherwise, only update with game time */
 };
 
 int timer_make(double interval, void (*callback)(void *param), void *param, int own, int app);

@@ -154,13 +154,12 @@ int frame_fps() {
 static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
-  physlag += elapsed;
-
     input_poll(0);
     /* Timers all update every frame - once per monitor refresh */
-    timer_update(elapsed, timescale);    
-      
-    if (sim_play == SIM_PLAY || sim_play == SIM_STEP && stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {
+    timer_update(elapsed, timescale);
+
+  if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
+    if (stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {
       double dt = stm_sec(stm_diff(frame_t, updatelast));
       updatelast = frame_t;
       prof_start(&prof_update);
@@ -171,7 +170,8 @@ static void process_frame()
         sim_pause();
     }
 
-    while ((sim_play == SIM_PLAY || sim_play == SIM_STEP) && physlag > physMS) {
+    physlag += elapsed;
+    while (physlag > physMS) {
       physlag -= physMS;
       prof_start(&prof_physics);
       phys_step = 1;
@@ -180,6 +180,7 @@ static void process_frame()
       phys_step = 0;
       prof(&prof_physics);
     }
+  }
 
     prof_start(&prof_draw);
     window_render(&mainwin);
@@ -378,5 +379,5 @@ int main(int argc, char **argv) {
 
 double apptime()
 {
-  return stm_sec(stm_diff(start_t, stm_now()));
+  return stm_sec(stm_diff(stm_now(), start_t));
 }

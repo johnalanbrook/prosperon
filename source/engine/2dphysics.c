@@ -144,6 +144,7 @@ int cpshape_enabled(cpShape *c) {
 }
 
 struct rgba shape_color(cpShape *shape) {
+  if (!cpshape_enabled(shape)) return disabled_color;
   switch (cpBodyGetType(cpShapeGetBody(shape))) {
   case CP_BODY_TYPE_DYNAMIC:
 //    cpBodySleep(cpShapeGetBody(shape));

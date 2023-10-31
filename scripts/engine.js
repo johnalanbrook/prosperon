@@ -240,15 +240,19 @@ var timer = {
     }
       
     var t = Object.create(this);
-    assign_impl(t, this.impl);
+//    assign_impl(t, this.impl);
+
     t.callback = fn;
     var guardfn = function() {
-      if (typeof t.callback === 'function')
+      if (typeof t.callback === 'function') {
         t.callback();
+	if (!t.loop) t.kill();
+      }
       else
         Log.warn("Timer trying to execute without a function.");
     };
     t.id = make_timer(guardfn, secs, app);
+    t.loop = loop;    
     
     return t;
   },
@@ -258,7 +262,7 @@ var timer = {
     var t = this.make(fn, secs, obj, 0, app);
     t.start();
   },
-  impl: {
+//  impl: {
   get remain() { return cmd(32, this.id); },
   get on() { return cmd(33, this.id); },
   get loop() { return cmd(34, this.id); },
@@ -271,17 +275,17 @@ var timer = {
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
   get pct() { return this.remain / this.time; },
-  },
+//  },
 
-  remain: 0,
-  on: false,
-  loop: false,
-  start(){},
-  stop(){},
-  kill(){},
-  pause(){},
-  time: 0,
-  pct: 0,
+//  remain: 0,
+//  on: false,
+//  loop: false,
+//  start(){},
+//  stop(){},
+//  kill(){},
+//  pause(){},
+//  time: 0,
+//  pct: 0,
 };
 
 timer.doc = {
@@ -480,7 +484,7 @@ var Register = {
     }
 
     n.unregister = function(fn) {
-      entries = entries.filter(function(e) { return e.fn !== f; });
+      entries = entries.filter(function(e) { return e.fn !== fn; });
     }
 
     n.unregister_obj = function(obj) {
@@ -528,7 +532,7 @@ var Signal = {
     register_collide(3,fn,obj,go.body);
   },
 
-  clera_obj(obj) {
+  clear_obj(obj) {
     this.signals.filter(function(x) { return x[1] !== obj; });
   },
 
@@ -767,6 +771,8 @@ Game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and 
 Game.doc.play = "Resume or start game simulation.";
 Game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
 Game.doc.dt = "Current frame dt.";
+Game.doc.view_camera = "Set the camera for the current view.";
+Game.doc.camera = "Current camera.";
 
 Window.doc = {};
 Window.doc.width = "Width of the game window.";
