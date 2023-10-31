@@ -562,9 +562,9 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
 /************ COLLIDER ****************/
 void shape_enabled(struct phys2d_shape *shape, int enabled) {
   if (enabled)
-    cpShapeSetFilter(shape->data, CP_SHAPE_FILTER_ALL);
+    cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_ALL);
   else
-    cpShapeSetFilter(shape->data, CP_SHAPE_FILTER_NONE);
+    cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_NONE);
 }
 
 int shape_is_enabled(struct phys2d_shape *shape) {
@@ -588,7 +588,7 @@ int shape_get_sensor(struct phys2d_shape *shape) {
   if (!shape->shape) {
     struct phys2d_edge *edge = shape->data;
     if (arrlen(edge->shapes) > 0) return cpShapeGetSensor(edge->shapes[0]);
-    YughError("Attempted to get the sensor of an edge with no shapes. It has %d points.", arrlen(edge->points));
+    YughInfo("Attempted to get the sensor of an edge with no shapes. It has %d points.", arrlen(edge->points));
     return 0;
   }
 

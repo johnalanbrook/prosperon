@@ -54,11 +54,10 @@ Object.rkeys = function(o)
   return keys;
 }
 
-Object.extend = function(from, src)
+Object.extend = function(from)
 {
   var n = {};
   Object.mixin(n, from);
-  Object.mixin(n, src);
   return n;
 }
 
@@ -68,6 +67,15 @@ Object.mixin = function(target, source)
   Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
   return target;
 };
+
+Object.mix = function(...objs)
+{
+  var n = {};
+  for (var o of objs)
+    Object.mixin(n,o);
+
+  return n;
+}
 
 Object.deepmixin = function(target, source)
 {

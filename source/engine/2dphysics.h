@@ -24,7 +24,7 @@ extern struct rgba sleep_color;
 struct phys2d_shape {
   cpShape *shape;
   int go;
-  void *data;
+  void *data; /* The specific subtype; phys2d_circle, etc */
   void (*debugdraw)(void *data);
   float (*moi)(void *data, float mass);
   void (*apply)(void *data);

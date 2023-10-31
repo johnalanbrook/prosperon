@@ -1,3 +1,15 @@
+/* On collisions, entities are sent a 'hit' object, which looks like this: */
+var HIT = {
+  normal: "The normal of the collision point.",
+  hit: "The gameobject ID of the object that collided.",
+  sensor: "Boolean for if the colliding object was a sensor.",
+  velocity: "Velocity of the contact.",
+  pos: "Position in world space of the contact.",
+  depth: "Depth of the contact.",
+  id: "Gameobject ID of the colliding object.",
+  obj: "Entity that collided."
+};
+
 var Physics = {
   dynamic: 0,
   kinematic: 1,

@@ -1,7 +1,7 @@
 function assign_impl(obj, impl)
 {
   var tmp = {};
-  for (var key in impl)
+  for (var key of Object.keys(impl))
     if (typeof obj[key] !== 'undefined' && typeof obj[key] !== 'function')
       tmp[key] = obj[key];
 
@@ -337,11 +337,12 @@ var collider2d = Object.copy(component, {
   impl: {
     set sensor(x) { cmd(18,this.shape,x); },
     get sensor() { return cmd(21,this.shape); },
-//    set enabled(x) { cmd(22,this.shape,x); },
-//    get enabled() { return cmd(23,this.shape); }
+    set enabled(x) { cmd(22,this.shape,x); },
+    get enabled() { return cmd(23,this.shape); }
   },
-
 });
+
+Object.hide(collider2d.impl, 'enabled');
 
 collider2d.inputs = {};
 collider2d.inputs['M-s'] = function() { this.sensor = !this.sensor; }
@@ -415,17 +416,14 @@ component.polygon2d = Object.copy(collider2d, {
   },
 });
 
-component.polygon2d.impl = {
-    set sensor(x) { cmd(18,this.shape,x); },
-    get sensor() { return cmd(21,this.shape); },
-
+component.polygon2d.impl = Object.mix(collider2d.impl, {
   sync() {
     cmd_poly2d(0, this.id, this.spoints);
   },
   query() {
     return cmd(80, this.shape);
   },
-};
+});
 
 var polygon2d = component.polygon2d;
 
@@ -585,10 +583,7 @@ component.edge2d = Object.copy(collider2d, {
   },
 });
 
-component.edge2d.impl = {
-  set sensor(x) { cmd(18,this.shape,x); },
-  get sensor() { return cmd(21,this.shape); },
-
+component.edge2d.impl = Object.mix({
   set thickness(x) {
     cmd_edge2d(1,this.id,x);
   },
@@ -600,7 +595,7 @@ component.edge2d.impl = {
     cmd_edge2d(0,this.id,points);
     this.sensor = sensor;
   },
-};
+}, component.edge2d.impl);
 
 var bucket = component.edge2d;
 bucket.spoints.doc = "Returns the controls points after modifiers are applied, such as it being hollow or mirrored on its axises.";
@@ -728,10 +723,7 @@ component.circle2d = Object.copy(collider2d, {
   _enghook: make_circle2d,
 });
 
-component.circle2d.impl = {
-    set sensor(x) { cmd(18,this.shape,x); },
-    get sensor() { return cmd(21,this.shape); },
-
+component.circle2d.impl = Object.mix({
   set radius(x) { cmd_circle2d(0,this.id,x); },
   get radius() { return cmd_circle2d(2,this.id); },
 
@@ -740,7 +732,7 @@ component.circle2d.impl = {
 
   set offset(x) { cmd_circle2d(1,this.id,x); },
   get offset() { return cmd_circle2d(3,this.id); },
-};
+}, collider2d.impl);;
 
 /* ASSETS */
 
