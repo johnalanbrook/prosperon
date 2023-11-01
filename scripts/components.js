@@ -122,100 +122,95 @@ sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
 sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
 Object.seal(sprite);
 
-var aseframeset2anim = function(frameset, meta)
-{
-  var anim = {};
-  anim.frames = [];
-  anim.path = meta.image;
-  var dim = meta.size;
+var SpriteAnim = {
+  gif(path) {
+    var anim = {};
+    anim.frames = [];
+    anim.path = path;
+    var frames = cmd(139,path);
+    var yslice = 1/frames;
+    for (var f = 0; f < frames; f++) {
+      var frame = {};
+      frame.rect = {
+	s0: 0,
+	s1: 1,
+	t0: yslice*f,
+	t1: yslice*(f+1)
+      };
+      frame.time = 0.05;
+      anim.frames.push(frame);
+    }
+    anim.loop = true;
+    var dim = cmd(64,path);
+    dim.y /= frames;
+    anim.dim = dim;
+    return anim;
+  },
 
-  var ase_make_frame = function(ase_frame,i) {
-    var f = ase_frame.frame;
-    var frame = {};
-    frame.rect = {
-      s0: f.x/dim.w,
-      s1: (f.x+f.w)/dim.w,
-      t0: f.y/dim.h,
-      t1: (f.y+f.h)/dim.h
+  strip(path, frames) {
+    var anim = {};
+    anim.frames = [];
+    anim.path = path;
+    var xslice = 1/frames;
+    for (var f = 0; f < frames; f++) {
+      var frame = {};
+      frame.rect = {s0:xslice*f, s1: xslice*(f+1), t0:0, t1:1};
+      frame.time = 0.05;
+      anim.frames.push(frame);
+    }
+    anim.dim = cmd(64,path);
+    anim.dim.x /= frames;
+    return anim;
+  },
+
+  aseprite(path) {
+  function aseframeset2anim(frameset, meta) {
+    var anim = {};
+    anim.frames = [];
+    anim.path = meta.image;
+    var dim = meta.size;
+
+    var ase_make_frame = function(ase_frame,i) {
+      var f = ase_frame.frame;
+      var frame = {};
+      frame.rect = {
+	s0: f.x/dim.w,
+	s1: (f.x+f.w)/dim.w,
+	t0: f.y/dim.h,
+	t1: (f.y+f.h)/dim.h
+      };
+      frame.time = ase_frame.duration / 1000;
+      anim.frames.push(frame);
     };
-    frame.time = ase_frame.duration / 1000;
-    anim.frames.push(frame);
-  };
 
-  frameset.forEach(ase_make_frame);
-  anim.dim = [frameset[0].sourceSize.x, frameset[0].sourceSize.y];
-  anim.loop = true;
-  return anim;
-}
-
-var ase2anim = function(ase)
-{
-  var json = IO.slurp(ase);
-  json = JSON.parse(json);
-  var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);
-  return aseframeset2anim(json.frames, json.meta);
-}
-
-var ase2anims = function(ase)
-{
-  var json = IO.slurp(ase);
-  json = JSON.parse(json);
-  var anims = {};
-  var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);  
-  for (var tag of json.meta.frameTags) 
-    anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), json.meta);
-
-  return anims;
-}
-
-var gif2anim = function(gif)
-{
-  var anim = {};
-  anim.frames = [];
-  anim.path = gif;
-  var frames = cmd(139,gif);
-  var yslice = 1/frames;
-  for (var f = 0; f < frames; f++) {
-    var frame = {};
-    frame.rect = {
-      s0: 0,
-      s1: 1,
-      t0: yslice*f,
-      t1: yslice*(f+1)
+    frameset.forEach(ase_make_frame);
+    anim.dim = [frameset[0].sourceSize.x, frameset[0].sourceSize.y];
+    anim.loop = true;
+    return anim;
     };
-    frame.time = 0.05;
-    anim.frames.push(frame);
-  }
-  anim.loop = true;
-  var dim = cmd(64,gif);
-  dim.y /= frames;
-  anim.dim = dim;
-  return anim;
-}
 
-var strip2anim = function(strip)
-{
-  var anim = {};
-  anim.frames = [];
-  anim.path = strip;
-  var frames = 8;
-  var xslice = 1/frames;
-  for (var f = 0; f < frames; f++) {
-    var frame = {};
-    frame.rect = {s0:xslice*f, s1: slice*(f+1), t0:0, t1:1};
-    frame.time = 0.05;
-    anim.frames.push(frame);
-  }
-  anim.dim = cmd(64,strip);
-  anim.dim.x /= frames;
-  return anim;
-}
+    var json = IO.slurp(ase);
+    json = JSON.parse(json);
+    var anims = {};
+    var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);  
+    for (var tag of json.meta.frameTags) 
+      anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), json.meta);
+
+    return anims;
+  },
+};
+
+SpriteAnim.doc = 'Functions to create Primum animations from varying sources.';
+SpriteAnim.gif.doc = 'Convert a gif.';
+SpriteAnim.strip.doc = 'Given a path and number of frames, converts a horizontal strip animation, where each cell is the same width.'
+SpriteAnim.aseprite.doc = 'Given an aseprite json metadata, returns an object of animations defined in the aseprite file.';
 
 /* Container to play sprites and anim2ds */
-component.char2d = Object.copy(sprite, {
+component.char2d = Object.copy(component, {
   get enabled() { return cmd(114,this.id); },
   set enabled(x) { cmd(20,this.id,x); },
   set color(x) { cmd(96,this.id,x); },
+  
   get pos() { return cmd(111, this.id); },
   set pos(x) { cmd(37,this.id,x); },
   set layer(x) { cmd(60, this.id, x); },
@@ -235,18 +230,15 @@ component.char2d = Object.copy(sprite, {
       cmd(12,this.id,this.path,this.rect);
   },
 
-  kill() { cmd(9,this.id); },
-  ur: {
-    
-  },
-
   make(go) {
+    Log.say('creating animation');
     var char = Object.create(this);
     char.gameobject = go;
     Object.assign(char, make_sprite(go.body));
     char.frame = 0;
     char.timer = timer.make(char.advance.bind(char), 1);
     char.timer.loop = true;
+    Object.hide(char, 'timer');
     return char;
   },
   
@@ -307,6 +299,17 @@ component.char2d = Object.copy(sprite, {
     cmd(9, this.id);
   },
 });
+
+component.char2d.impl = {
+  get enabled() { return cmd(114,this.id); },
+  set enabled(x) { cmd(20,this.id,x); },
+  set color(x) { cmd(96,this.id,x); },
+  
+  get pos() { return cmd(111, this.id); },
+  set pos(x) { cmd(37,this.id,x); },
+  set layer(x) { cmd(60, this.id, x); },
+  get layer() { return this.gameobject.draw_layer; },
+};
 
 /* Returns points specifying this geometry, with ccw */
 var Geometry = {

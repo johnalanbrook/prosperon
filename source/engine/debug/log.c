@@ -35,7 +35,7 @@ static FILE *sout;
 void log_init()
 {
   consolelog = malloc(CONSOLE_BUF+1);
-  sout = fdopen(dup(stdout),"w");
+  sout = fdopen(dup(1),"w");
   sout = stdout;
 }
 
