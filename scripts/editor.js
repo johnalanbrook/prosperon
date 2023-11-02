@@ -175,12 +175,6 @@ var editor = {
       };
       return;
     }
-    
-    if (num === 0) {
-      this.camera.pos = [0,0];
-      this.camera.zoom = 1;
-      return;
-    }
 
     if (num in this.camera_recalls)
       Object.assign(this.camera, this.camera_recalls[num]);
@@ -1304,7 +1298,10 @@ editor.inputs['C-v'] = function() {
 editor.inputs['C-v'].doc = "Pull objects from killring to world.";
 
 editor.inputs.char = function(c) {
-  
+  if (c === '0') {
+    this.camera.pos = [0,0];
+    this.camera.zoom = 1;
+  }
 };
 
 var brushmode = {};

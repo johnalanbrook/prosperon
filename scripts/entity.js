@@ -272,7 +272,7 @@ var gameobject = {
         register_collide(1, x.collide, x, obj.body, x.shape);
     });
   },
-    phys:1,
+    phys:Physics.static,
     flipx:false,
     flipy:false,
     scale:1,
@@ -552,6 +552,10 @@ var gameobject = {
     delete this.objects[name];
     delete this[name];
     return this.objects[newname];
+  },
+
+  add_component(comp) {
+    if (typeof comp['comp'] !== 'string') return;
   },
 
   register_hit(fn, obj) {

@@ -171,7 +171,7 @@ tools/libcdb.a:
 	mv $(CDB)/libcdb.a tools
 
 
-DOCOS = Sound gameobject Game Window physics Profile Time Player Mouse IO Log ColorMap sprite SpriteAnim
+DOCOS = Sound gameobject Game Window physics Profile Time Player Mouse IO Log ColorMap sprite SpriteAnim Render
 DOCHTML := $(addsuffix .api.html, $(DOCOS))
 DOCMD := $(addsuffix .api.md, $(DOCOS))
 

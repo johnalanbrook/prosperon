@@ -36,11 +36,13 @@ var component = {
     nc.sync();
     assign_impl(nc,this.impl);
     Object.hide(nc, ...this.hides);
+    nc.post();
     return nc;
   },
   
   kill() { Log.info("Kill not created for this component yet"); },
   sync() {},
+  post(){},
   gui() { },
   gizmo() { },
   
@@ -147,7 +149,7 @@ var SpriteAnim = {
     return anim;
   },
 
-  strip(path, frames) {
+  strip(path, frames, time=0.05) {
     var anim = {};
     anim.frames = [];
     anim.path = path;
@@ -155,11 +157,15 @@ var SpriteAnim = {
     for (var f = 0; f < frames; f++) {
       var frame = {};
       frame.rect = {s0:xslice*f, s1: xslice*(f+1), t0:0, t1:1};
-      frame.time = 0.05;
+      frame.time = time;
       anim.frames.push(frame);
     }
     anim.dim = cmd(64,path);
     anim.dim.x /= frames;
+    anim.toJSON = function()
+    {
+      return anim.path;
+    }
     return anim;
   },
 
@@ -198,26 +204,34 @@ var SpriteAnim = {
 
     return anims;
   },
+
+  validate(anim)
+  {
+    if (!Object.isObject(anim)) return false;
+    if (typeof anim.path !== 'string') return false;
+    if (typeof anim.dim !== 'object') return false;
+    return true;
+  },
+
+  find(path) {
+    if (!IO.exists(path + ".asset")) return;
+    var asset = JSON.parse(IO.slurp(path + ".asset"));
+    
+  },
 };
 
 SpriteAnim.doc = 'Functions to create Primum animations from varying sources.';
 SpriteAnim.gif.doc = 'Convert a gif.';
 SpriteAnim.strip.doc = 'Given a path and number of frames, converts a horizontal strip animation, where each cell is the same width.'
 SpriteAnim.aseprite.doc = 'Given an aseprite json metadata, returns an object of animations defined in the aseprite file.';
+SpriteAnim.find.doc = 'Given a path, find the relevant animation for the file.';
 
 /* Container to play sprites and anim2ds */
-component.char2d = Object.copy(component, {
-  get enabled() { return cmd(114,this.id); },
-  set enabled(x) { cmd(20,this.id,x); },
-  set color(x) { cmd(96,this.id,x); },
-  
-  get pos() { return cmd(111, this.id); },
-  set pos(x) { cmd(37,this.id,x); },
-  set layer(x) { cmd(60, this.id, x); },
-  get layer() { return this.gameobject.draw_layer; },
 
+component.char2d = Object.create(component.sprite);
+Object.assign(component.char2d, {
   boundingbox() {
-    var dim = this.curplaying.dim.slice();
+    var dim = this.acur.dim.slice();
     dim = dim.scale(this.gameobject.scale);	
     var realpos = this.pos.slice();
     realpos.x = realpos.x * dim.x + (dim.x/2);
@@ -225,24 +239,22 @@ component.char2d = Object.copy(component, {
     return cwh2bb(realpos,dim);
   },
 
+  anims:{},
+
   sync() {
     if (this.path)
       cmd(12,this.id,this.path,this.rect);
   },
 
-  make(go) {
-    Log.say('creating animation');
-    var char = Object.create(this);
-    char.gameobject = go;
-    Object.assign(char, make_sprite(go.body));
-    char.frame = 0;
-    char.timer = timer.make(char.advance.bind(char), 1);
-    char.timer.loop = true;
-    Object.hide(char, 'timer');
-    return char;
-  },
-  
   frame: 0,
+
+  play_anim(anim) {
+    this.acur = anim;
+    this.frame = 0;
+    this.timer.time = this.acur.frames[this.frame].time;
+    this.timer.start();
+    this.setsprite();
+  },
   
   play(name) {
     if (!(name in this)) {
@@ -250,33 +262,33 @@ component.char2d = Object.copy(component, {
       return;
     }
     
-    if (this.curplaying === this[name]) {
+    if (this.acur === this[name]) {
       this.timer.start();
       return;
     }
     
-    this.curplaying = this[name];
+    this.acur = this[name];
     this.frame = 0;
-    this.timer.time = this.curplaying.frames[this.frame].time;
+    this.timer.time = this.acur.frames[this.frame].time;
     this.timer.start();
     this.setsprite();
   },
   
   setsprite() {
-    cmd(12, this.id, this.curplaying.path, this.curplaying.frames[this.frame].rect);
+    cmd(12, this.id, this.acur.path, this.acur.frames[this.frame].rect);
   },
 
   advance() {
-    this.frame = (this.frame + 1) % this.curplaying.frames.length;
+    this.frame = (this.frame + 1) % this.acur.frames.length;
     this.setsprite();
 
-    if (this.frame === 0 && !this.curplaying.loop)
+    if (this.frame === 0 && !this.acur.loop)
       this.timer.pause();
   },
 
   devance() {
     this.frame = (this.frame - 1);
-    if (this.frame === -1) this.frame = this.curplaying.frames-1;
+    if (this.frame === -1) this.frame = this.acur.frames-1;
     this.setsprite();
   },
 
@@ -298,18 +310,45 @@ component.char2d = Object.copy(component, {
     this.timer.kill();
     cmd(9, this.id);
   },
+
+  add_anim(anim,name) {
+    if (name in this) return;
+    this[name] = function() {
+      this.play_anim(anim);
+    }
+  },
+
+  post() {
+    this.timer = timer.make(this.advance.bind(this), 1);
+    this.timer.loop = true;
+    Object.hide(this,'timer');
+    for (var k in this.anims) {
+      var path = this.anims[k];
+      this.anims[k] = run_env(path + ".asset", path);
+      this.add_anim(this.anims[k], k);
+    }
+    Object.hide(this, 'acur');
+  },
 });
 
-component.char2d.impl = {
-  get enabled() { return cmd(114,this.id); },
-  set enabled(x) { cmd(20,this.id,x); },
-  set color(x) { cmd(96,this.id,x); },
-  
-  get pos() { return cmd(111, this.id); },
-  set pos(x) { cmd(37,this.id,x); },
-  set layer(x) { cmd(60, this.id, x); },
-  get layer() { return this.gameobject.draw_layer; },
+component.char2d.doc = {
+  doc: "An animation player for sprites.",
+  frame: "The current frame of animation.",
+  anims: "A list of all animations in this player.",
+  acur: "The currently playing animation object.",
+  advance: "Advance the animation by one frame.",
+  devance: "Go back one frame in the animation.",
+  setframe: "Set a specific frame of animation.",
+  stop: "Stops the animation and returns to the first frame.",
+  pause: "Pauses the animation sequence in place.",
+  play: "Given an animation string, play it. Equivalent to anim.[name].play().",
+  play_anim: "Play a given animation object.",
+  add_anim: "Add an animation object with the given name."
 };
+
+//  sprite.timer = timer.make(sprite.advance.bind(sprite),1);
+//  sprite.timer.loop = true;
+  
 
 /* Returns points specifying this geometry, with ccw */
 var Geometry = {

@@ -19,6 +19,12 @@ function run(file)
   return cmd(117, file);
 }
 
+function run_env(file, env)
+{
+  var script = IO.slurp(file);
+  return function(){return eval(script);}.call(env);
+}
+
 load("scripts/diff.js");
 Log.level = 1;
 
@@ -240,7 +246,6 @@ var timer = {
     }
       
     var t = Object.create(this);
-//    assign_impl(t, this.impl);
 
     t.callback = fn;
     var guardfn = function() {
@@ -252,7 +257,8 @@ var timer = {
         Log.warn("Timer trying to execute without a function.");
     };
     t.id = make_timer(guardfn, secs, app);
-    t.loop = loop;    
+    t.loop = loop;
+    t.pause();
     
     return t;
   },
@@ -262,7 +268,6 @@ var timer = {
     var t = this.make(fn, secs, obj, 0, app);
     t.start();
   },
-//  impl: {
   get remain() { return cmd(32, this.id); },
   get on() { return cmd(33, this.id); },
   get loop() { return cmd(34, this.id); },
@@ -275,19 +280,8 @@ var timer = {
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
   get pct() { return this.remain / this.time; },
-//  },
-
-//  remain: 0,
-//  on: false,
-//  loop: false,
-//  start(){},
-//  stop(){},
-//  kill(){},
-//  pause(){},
-//  time: 0,
-//  pct: 0,
 };
-
+timer.toJSON = function() { return undefined; };
 timer.doc = {
   doc: "Quickly make timers to fire off events once or multiple times.",
   oneshot: "Executes a given function after the given number of seconds.",
@@ -382,6 +376,12 @@ var Render = {
   wireframe() {
     cmd(68);
   },
+};
+
+Render.doc = {
+  doc: "Functions for rendering modes.",
+  normal: "Final render with all lighting.",
+  wireframe: "Show only wireframes of models."
 };
 
 load("scripts/physics.js");
@@ -873,3 +873,7 @@ Window.name = "Primum Machinam (V0.1)";
 Window.width = 1280;
 Window.height = 720;
 
+var Asset = {};
+Asset.doc = {
+  doc: "Functions to manage the loading and unloading of assets, like sounds and images."
+};
