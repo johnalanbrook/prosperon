@@ -8,13 +8,22 @@
 extern HMM_Vec3 eye;
 struct shader;
 
+/* A single mesh */
 struct mesh {
   sg_bindings bind;
   uint32_t face_count;
 };
 
+/* A collection of meshes which create a full figure */
 struct model {
   struct mesh *meshes;
+};
+
+/* A model with draw information */ 
+struct drawmodel {
+  struct model *model;
+  HMM_Mat4 amodel;
+  int go;
 };
 
 /* Get the model at a path, or create and return if it doesn't exist */
@@ -28,7 +37,11 @@ void loadmodel(struct model *model);
 
 void model_init();
 
-void draw_model(struct model *model, HMM_Mat4 amodel, HMM_Mat4 lsm);
+void draw_model(struct model *model, HMM_Mat4 amodel);
 void draw_models(struct model *model, struct shader *shader);
+
+struct drawmodel *make_drawmodel(int go);
+void draw_drawmodel(struct drawmodel *dm);
+void free_drawmodel(struct drawmodel *dm);
 
 #endif

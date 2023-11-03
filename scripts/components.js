@@ -104,6 +104,15 @@ component.sprite.impl = {
 
 Object.freeze(sprite);
 
+component.model = Object.copy(component, {
+  path:"",
+  _enghook: make_model,
+});
+component.model.impl = {
+  set path(x) { cmd(149, this.id, x); },
+  draw() { cmd(150, this.id); },
+};
+
 var sprite = component.sprite;
 
 sprite.doc = {

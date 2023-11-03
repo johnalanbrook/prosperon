@@ -650,6 +650,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 36:
     id2go(js2int(argv[1]))->scale = js2number(argv[2]);
+    id2go(js2int(argv[1]))->scale3 = HMM_V3i(js2number(argv[2]));
     gameobject_apply(id2go(js2int(argv[1])));
     cpSpaceReindexShapesForBody(space, id2go(js2int(argv[1]))->body);
     break;
@@ -1123,6 +1124,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 148:
       ret = color2js(id2sprite(js2int(argv[1]))->color);
       break;
+    case 149:
+      ((struct drawmodel *)js2ptr(argv[1]))->model = GetExistingModel(js2str(argv[2]));
+      break;
+
+    case 150:
+      draw_drawmodel(js2ptr(argv[1]));
+      break;
+      
   }
 
   if (str)
@@ -1491,6 +1500,15 @@ JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCon
   return circleval;
 }
 
+JSValue duk_make_model(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  int go = js2int(argv[0]);
+  struct drawmodel *dm = make_drawmodel(go);
+  JSValue ret = JS_NewObject(js);
+  js_setprop_str(ret, "id", ptr2js(dm));
+  return ret;
+}
+
 JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   struct phys2d_circle *circle = js2ptr(argv[1]);
@@ -1675,6 +1693,7 @@ void ffi_load() {
   DUK_FUNC(cmd_poly2d, 6)
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)
+  DUK_FUNC(make_model,2);
   DUK_FUNC(make_timer, 3)
 
   DUK_FUNC(cmd_points, 5);

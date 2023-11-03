@@ -3471,6 +3471,50 @@ _SOKOL_PRIVATE void _sapp_macos_run(const sapp_desc* desc) {
     // set the application dock icon as early as possible, otherwise
     // the dummy icon will be visible for a short time
     sapp_set_icon(&_sapp.desc.icon);
+
+NSMenu* menu_bar = [[NSMenu alloc] init];
+    NSMenuItem* app_menu_item = [[NSMenuItem alloc] init];
+    [menu_bar addItem:app_menu_item];
+    NSApp.mainMenu = menu_bar;
+    NSMenu* app_menu = [[NSMenu alloc] init];
+    NSString* window_title_as_nsstring = [NSString stringWithUTF8String:desc->window_title];
+
+    NSString* quit_title =  [@"Quit " stringByAppendingString:window_title_as_nsstring];
+    NSMenuItem* quit_menu_item = [[NSMenuItem alloc]
+        initWithTitle:quit_title
+        action:@selector(terminate:)
+        keyEquivalent:@"q"];
+
+    NSString* hide_title =  [@"Hide " stringByAppendingString:window_title_as_nsstring];
+    NSMenuItem* hide_menu_item = [[NSMenuItem alloc]
+        initWithTitle:hide_title
+        action:@selector(hide:)
+        keyEquivalent:@"h"];
+
+    NSMenuItem* hide_others_item = [[NSMenuItem alloc]
+        initWithTitle:@"Hide Others"
+        action:@selector(hideOtherApplications:)
+        keyEquivalent:@"h"];
+
+    [hide_others_item setKeyEquivalentModifierMask: NSEventModifierFlagOption];
+
+    NSMenuItem* show_all_item = [[NSMenuItem alloc]
+        initWithTitle:@"Show All"
+        action:@selector(unhideAllApplications:)
+        keyEquivalent:@""];
+
+    [app_menu addItem:hide_menu_item];
+    [app_menu addItem:hide_others_item];
+    [app_menu addItem:show_all_item];
+    [app_menu addItem:[NSMenuItem separatorItem]];
+    [app_menu addItem:quit_menu_item];
+    app_menu_item.submenu = app_menu;
+
+    _SAPP_OBJC_RELEASE(window_title_as_nsstring);
+    _SAPP_OBJC_RELEASE(app_menu);
+    _SAPP_OBJC_RELEASE(app_menu_item);
+    _SAPP_OBJC_RELEASE(menu_bar);
+        
     _sapp.macos.app_dlg = [[_sapp_macos_app_delegate alloc] init];
     NSApp.delegate = _sapp.macos.app_dlg;
 

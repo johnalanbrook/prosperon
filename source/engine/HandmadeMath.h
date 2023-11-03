@@ -542,6 +542,11 @@ static inline HMM_Vec3 HMM_V3(float X, float Y, float Z) {
   return Result;
 }
 
+static inline HMM_Vec3 HMM_V3i(float i)
+{
+  return (HMM_Vec3){i,i,i};
+}
+
 static inline HMM_Vec4 HMM_V4(float X, float Y, float Z, float W) {
 
   HMM_Vec4 Result;

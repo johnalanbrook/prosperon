@@ -6,8 +6,11 @@
 #include "stb_ds.h"
 #include "font.h"
 #include "window.h"
+#include "gameobject.h"
+#include "libgen.h"
 
-#include "diffuse.sglsl.h"
+//#include "diffuse.sglsl.h"
+#include "unlit.sglsl.h"
 
 #include "render.h"
 
@@ -39,24 +42,38 @@ static sg_shader model_shader;
 static sg_pipeline model_pipe;
 
 void model_init() {
-  model_shader = sg_make_shader(diffuse_shader_desc(sg_query_backend()));
+/*  model_shader = sg_make_shader(diffuse_shader_desc(sg_query_backend()));
 
   model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = model_shader,
       .layout = {
           .attrs = {
               [0].format = SG_VERTEXFORMAT_FLOAT3,
-              [0].buffer_index = 0, /* position */
               [1].format = SG_VERTEXFORMAT_USHORT2N,
-              [1].buffer_index = 1, /* tex coords */
-              [2].format = SG_VERTEXFORMAT_UINT10_N2,
-              [2].buffer_index = 2, /* normal */
           },
       },
       .index_type = SG_INDEXTYPE_UINT16,
       .cull_mode = SG_CULLMODE_FRONT,
       .depth.write_enabled = true,
       .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
+  });
+*/
+
+  model_shader = sg_make_shader(unlit_shader_desc(sg_query_backend()));
+
+  model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = model_shader,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT3,
+	[1].format = SG_VERTEXFORMAT_USHORT2N,
+	[1].buffer_index = 1,
+      },
+    },
+    .index_type = SG_INDEXTYPE_UINT16,
+    .cull_mode = SG_CULLMODE_FRONT,
+    .depth.write_enabled = true,
+    .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
   });
 }
 
@@ -118,6 +135,7 @@ struct model *MakeModel(const char *path) {
   struct model *model = calloc(1, sizeof(*model));
   /* TODO: Optimize by grouping by material. One material per draw. */
   YughWarn("Model has %d materials.", data->materials_count);
+  const char *dir = dirname(path);
 
   float vs[65535*3];
   uint16_t idxs[65535];
@@ -156,19 +174,21 @@ struct model *MakeModel(const char *path) {
       }
 
       if (primitive.material->has_pbr_metallic_roughness && primitive.material->pbr_metallic_roughness.base_color_texture.texture) {
-//        YughWarn("Texture is %s.", primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri);
+        const char *imp = seprint("%s/%s", dir, primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri);
+        YughInfo("Texture is %s.", imp);
  
-        model->meshes[j].bind.fs.images[0] = texture_pullfromfile(primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri)->id;
+        model->meshes[j].bind.fs.images[0] = texture_pullfromfile(imp)->id;
+	free(imp);
       } else
         model->meshes[j].bind.fs.images[0] = texture_pullfromfile("k")->id;
 
-      cgltf_texture *tex;
-      if (tex = primitive.material->normal_texture.texture) {
-        model->meshes[j].bind.fs.images[1] = texture_pullfromfile(tex->image->uri)->id;
-      } else
-        model->meshes[j].bind.fs.images[1] = texture_pullfromfile("k")->id;
+      model->meshes[j].bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 
-      model->meshes[j].bind.fs.images[2] = ddimg;
+      cgltf_texture *tex;
+//      if (tex = primitive.material->normal_texture.texture) {
+//        model->meshes[j].bind.fs.images[1] = texture_pullfromfile(tex->image->uri)->id;
+//      }// else
+//        model->meshes[j].bind.fs.images[1] = texture_pullfromfile("k")->id;
 
       int has_norm = 0;
 
@@ -184,6 +204,7 @@ struct model *MakeModel(const char *path) {
 
         switch (attribute.type) {
         case cgltf_attribute_type_position:
+
           model->meshes[j].bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
               .data.ptr = vs,
               .data.size = sizeof(float) * n});
@@ -194,10 +215,10 @@ struct model *MakeModel(const char *path) {
 	  packed_norms = malloc(model->meshes[j].face_count * sizeof(uint32_t));;
 	  for (int i = 0; i < model->meshes[j].face_count; i++)
 	    packed_norms[i] = pack_int10_n2(vs + i*3);
-	    
-          model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
-              .data.ptr = packed_norms,
-              .data.size = sizeof(uint32_t) * model->meshes[j].face_count});
+
+//          model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
+//              .data.ptr = packed_norms,
+//              .data.size = sizeof(uint32_t) * model->meshes[j].face_count});
 
 	  free (packed_norms);
           break;
@@ -209,7 +230,7 @@ struct model *MakeModel(const char *path) {
 	  packed_coords = malloc(model->meshes[j].face_count * 2 * sizeof(unsigned short));
 	  for (int i = 0; i < model->meshes[j].face_count*2; i++)
 	    packed_coords[i] = pack_short_texcoord(vs[i]);
-	    
+
           model->meshes[j].bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
               .data.ptr = vs,
               .data.size = sizeof(unsigned short) * 2 * model->meshes[j].face_count});
@@ -243,10 +264,10 @@ struct model *MakeModel(const char *path) {
           norms[i*3+j] = packed_norm;
       }
 
-      model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
-        .data.ptr = norms,
-        .data.size = sizeof(uint32_t) * model->meshes[j].face_count
-      });
+//      model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
+//        .data.ptr = norms,
+//        .data.size = sizeof(uint32_t) * model->meshes[j].face_count
+//      });
       }
     }    
   }
@@ -256,7 +277,7 @@ struct model *MakeModel(const char *path) {
 
 HMM_Vec3 eye = {50,10,5};
 
-void draw_model(struct model *model, HMM_Mat4 amodel, HMM_Mat4 lsm) {
+void draw_model(struct model *model, HMM_Mat4 amodel) {
   HMM_Mat4 proj = HMM_Perspective_RH_ZO(45, (float)mainwin.width / mainwin.height, 0.1, 10000);
   HMM_Vec3 center = {0.f, 0.f, 0.f};
   HMM_Vec3 up = {0.f, 1.f, 0.f};
@@ -268,27 +289,46 @@ void draw_model(struct model *model, HMM_Mat4 amodel, HMM_Mat4 lsm) {
   HMM_Vec3 lp = {1, 1, 1};
   HMM_Vec3 dir_dir = HMM_NormV3(HMM_SubV3(center, dirl_pos));
 
-  HMM_Mat4 m2[4];
-  m2[0] = view;
-  m2[1] = amodel;
-  m2[2] = proj;
-  m2[3] = lsm;
-
-  HMM_Vec3 f_ubo[5];
-  f_ubo[0] = lp;
-  f_ubo[1] = dir_dir;
-  f_ubo[2] = eye;
-  f_ubo[3] = eye;
-  f_ubo[4] = eye;
+  vs_p_t vs_p;
+  memcpy(vs_p.vp, view.Elements, sizeof(float)*16);
+  memcpy(vs_p.model, amodel.Elements, sizeof(float)*16);
+  memcpy(vs_p.proj, proj.Elements, sizeof(float)*16);  
 
   sg_apply_pipeline(model_pipe);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(m2));
-  sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(f_ubo));
-
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vs_p));
 
   for (int i = 0; i < arrlen(model->meshes); i++) {
     sg_apply_bindings(&model->meshes[i].bind);
     sg_draw(0, model->meshes[i].face_count, 1);    
   }
+}
+
+struct drawmodel *make_drawmodel(int go)
+{
+  struct drawmodel *dm = malloc(sizeof(struct drawmodel));
+  dm->model = NULL;
+  dm->amodel = HMM_M4D(1.f);
+  dm->go = go;
+  return dm;
+}
+
+void draw_drawmodel(struct drawmodel *dm)
+{
+  if (!dm->model) return;
+  struct gameobject *go = id2go(dm->go);
+  cpVect pos = cpBodyGetPosition(go->body);
+  HMM_Mat4 scale = HMM_Scale(id2go(dm->go)->scale3);
+  HMM_Mat4 trans = HMM_M4D(1.f);
+  trans.Elements[3][2] = -pos.x;
+  trans.Elements[3][1] = pos.y;
+  HMM_Mat4 rot = HMM_Rotate_RH(cpBodyGetAngle(go->body), vUP);
+  /* model matrix = trans * rot * scale */
+  
+  draw_model(dm->model, HMM_MulM4(trans, HMM_MulM4(rot, scale)));
+}
+
+void free_drawmodel(struct drawmodel *dm)
+{
+  free(dm);
 }
 

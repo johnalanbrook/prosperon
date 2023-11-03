@@ -8,7 +8,6 @@ out vec3 normal;
 out vec3 frag_pos;
 out vec4 frag_pos_light;
 
-
 uniform vs_p {
 uniform mat4 vp;
 uniform mat4 model;

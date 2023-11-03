@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "quickjs/quickjs.h"
+#include "HandmadeMath.h"
 
 struct shader;
 struct sprite;
@@ -16,6 +17,7 @@ struct gameobject {
   cpBodyType bodytype;
   int next;
   float scale;
+  HMM_Vec3 scale3;
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */

@@ -144,6 +144,7 @@ static void gameobject_setpickcolor(struct gameobject *go) {
 int MakeGameobject() {
   struct gameobject go = {
       .scale = 1.f,
+      .scale3 = (HMM_Vec3){1.f,1.f,1.f},
       .bodytype = CP_BODY_TYPE_STATIC,
       .mass = 1.f,
       .next = -1,
