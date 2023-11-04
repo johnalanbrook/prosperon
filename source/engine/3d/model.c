@@ -115,7 +115,7 @@ uint32_t pack_int10_n2(float *norm)
 }
 
 struct model *MakeModel(const char *path) {
-  YughWarn("Making the model from %s.", path);
+  YughInfo("Making the model from %s.", path);
   cgltf_options options = {0};
   cgltf_data *data = NULL;
   cgltf_result result = cgltf_parse_file(&options, path, &data);
@@ -134,7 +134,7 @@ struct model *MakeModel(const char *path) {
 
   struct model *model = calloc(1, sizeof(*model));
   /* TODO: Optimize by grouping by material. One material per draw. */
-  YughWarn("Model has %d materials.", data->materials_count);
+  YughInfo("Model has %d materials.", data->materials_count);
   const char *dir = dirname(path);
 
   float vs[65535*3];
@@ -145,7 +145,7 @@ struct model *MakeModel(const char *path) {
     struct mesh newmesh = {0};
     arrput(model->meshes,newmesh);
 
-    YughWarn("Making mesh %d. It has %d primitives.", i, mesh->primitives_count);
+    YughInfo("Making mesh %d. It has %d primitives.", i, mesh->primitives_count);
 
     for (int j = 0; j < mesh->primitives_count; j++) {
       cgltf_primitive primitive = mesh->primitives[j];
@@ -173,12 +173,16 @@ struct model *MakeModel(const char *path) {
             .type = SG_BUFFERTYPE_INDEXBUFFER});
       }
 
-      if (primitive.material->has_pbr_metallic_roughness && primitive.material->pbr_metallic_roughness.base_color_texture.texture) {
-        const char *imp = seprint("%s/%s", dir, primitive.material->pbr_metallic_roughness.base_color_texture.texture->image->uri);
-        YughInfo("Texture is %s.", imp);
- 
-        model->meshes[j].bind.fs.images[0] = texture_pullfromfile(imp)->id;
-	free(imp);
+      if (primitive.material->has_pbr_metallic_roughness) {// && primitive.material->pbr_metallic_roughness.base_color_texture.texture) {
+        cgltf_image *img = primitive.material->pbr_metallic_roughness.base_color_texture.texture->image;
+	if (img->buffer_view) {
+	  cgltf_buffer_view *buf = img->buffer_view;
+	  model->meshes[j].bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
+	} else {
+          const char *imp = seprint("%s/%s", dir, img->uri);
+          model->meshes[j].bind.fs.images[0] = texture_pullfromfile(imp)->id;
+	  free(imp);
+  	}
       } else
         model->meshes[j].bind.fs.images[0] = texture_pullfromfile("k")->id;
 
@@ -232,7 +236,7 @@ struct model *MakeModel(const char *path) {
 	    packed_coords[i] = pack_short_texcoord(vs[i]);
 
           model->meshes[j].bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-              .data.ptr = vs,
+              .data.ptr = packed_coords,
               .data.size = sizeof(unsigned short) * 2 * model->meshes[j].face_count});
 
 	  free(packed_coords);
@@ -241,7 +245,7 @@ struct model *MakeModel(const char *path) {
       }
 
       if (!has_norm) {
-      YughWarn("Model does not have normals. Generating them.");
+      YughInfo("Model does not have normals. Generating them.");
       uint32_t norms[model->meshes[j].face_count];
 
 
@@ -271,6 +275,8 @@ struct model *MakeModel(const char *path) {
       }
     }    
   }
+
+  shput(modelhash, path, model);
 
   return model;
 }

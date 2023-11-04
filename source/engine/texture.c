@@ -195,6 +195,77 @@ char *tex_get_path(struct Texture *tex) {
   return "";
 }
 
+struct Texture *texture_fromdata(void *raw, long size)
+{
+  struct Texture *tex = calloc(1, sizeof(*tex));
+  tex->opts.sprite = 1;
+  tex->opts.mips = 0;
+  tex->opts.gamma = 0;
+  tex->opts.wrapx = 1;
+  tex->opts.wrapy = 1;
+
+  int n;
+  void *data = stbi_load_from_memory(raw, size, &tex->width, &tex->height, &n, 4);
+
+  if (data == NULL) {
+    YughError("Given raw data no valid. Loading default instead.");
+    return texture_notex();
+  }
+
+  unsigned int nw = next_pow2(tex->width);
+  unsigned int nh = next_pow2(tex->height);
+  
+  tex->data = data;
+
+  int filter;
+  if (tex->opts.sprite) {
+      filter = SG_FILTER_NEAREST;
+  } else {
+      filter = SG_FILTER_LINEAR;
+  }
+  
+  sg_image_data sg_img_data;
+  
+  int mips = mip_levels(tex->width, tex->height)+1;
+
+  YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
+  
+  int mipw, miph;
+  mipw = tex->width;
+  miph = tex->height;
+  
+  sg_img_data.subimage[0][0] = (sg_range){ .ptr = data, .size = mipw*miph*4 };  
+  
+  unsigned char *mipdata[mips];
+  mipdata[0] = data;
+    
+  for (int i = 1; i < mips; i++) {
+    int w, h, mipw, miph;
+    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
+    mip_wh(tex->width, tex->height, &w, &h, i);
+    mipdata[i] = malloc(w * h * 4);
+    stbir_resize_uint8(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
+    sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
+    
+    mipw = w;
+    miph = h;
+  }
+
+  tex->id = sg_make_image(&(sg_image_desc){
+      .type = SG_IMAGETYPE_2D,
+      .width = tex->width,
+      .height = tex->height,
+      .usage = SG_USAGE_IMMUTABLE,
+      .num_mipmaps = mips,
+      .data = sg_img_data
+    });
+
+  for (int i = 1; i < mips; i++)
+    free(mipdata[i]);
+
+  return tex;
+}
+
 struct Texture *texture_loadfromfile(const char *path) {
   struct Texture *new = texture_pullfromfile(path);
   /*

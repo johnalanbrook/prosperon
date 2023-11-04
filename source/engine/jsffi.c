@@ -1,4 +1,4 @@
-#include "ffi.h"
+#include "jsffi.h"
 
 #include "script.h"
 
@@ -1668,6 +1668,29 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_NULL;
 }
 
+//#include "dlfcn.h"
+
+/*JSValue duk_cffi(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  void *fn = dlsym(dlopen(NULL,0), "puts");
+  ffi_cif cif;
+  ffi_type *args[1];
+  void *values[1];
+  char *s;
+  ffi_arg rc;
+  args[0] = &ffi_type_pointer;
+  values[0] = &s;
+
+  if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, args) == FFI_OK) {
+    s = "Hello World!";
+    ffi_call(&cif, fn, &rc, values);
+    s = "This is cool";
+    ffi_call(&cif, fn, &rc, values);
+  }
+
+  return JS_NULL;
+}
+*/
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {
@@ -1706,6 +1729,8 @@ void ffi_load() {
   DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)
+
+//  DUK_FUNC(cffi,0);
 
   DUK_FUNC(anim, 2)
   JS_FreeValue(js,globalThis);

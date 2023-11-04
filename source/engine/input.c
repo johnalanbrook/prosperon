@@ -1,6 +1,6 @@
 #include "input.h"
 
-#include "ffi.h"
+#include "jsffi.h"
 #include "font.h"
 #include "log.h"
 #include "script.h"

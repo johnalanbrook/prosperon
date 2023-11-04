@@ -14,7 +14,7 @@
 
 #include "tinyspline.h"
 
-#include "ffi.h"
+#include "jsffi.h"
 #include "script.h"
 
 #include "log.h"

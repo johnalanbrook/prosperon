@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ffi.h"
+#include "jsffi.h"
 
 #include "render.h"
 

@@ -3,7 +3,7 @@
 #include "log.h"
 #include "stdio.h"
 
-#include "ffi.h"
+#include "jsffi.h"
 #include "font.h"
 
 #include "ftw.h"

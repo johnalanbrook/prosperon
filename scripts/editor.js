@@ -1503,7 +1503,7 @@ var replpanel = Object.copy(inputpanel, {
     
     return [
       Mum.text({str:log, anchor:[0,0], offset:[0,-300].sub(this.scrolloffset), selectable: true}),
-      Mum.text({str:this.value,color:Color.green, offset:[0,-290], caret: this.caret})
+      Mum.text({str:this.value,color:Color.purple, offset:[0,-290], caret: this.caret})
     ];
   },
   prevmark:-1,
