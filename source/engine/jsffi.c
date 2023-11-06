@@ -1131,7 +1131,36 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 150:
       draw_drawmodel(js2ptr(argv[1]));
       break;
-      
+
+   case 151:
+     js2go(argv[1])->maxvelocity = js2number(argv[2]);
+     break;
+   case 152:
+     ret = num2js(js2go(argv[1])->maxvelocity);
+     break;
+    case 153:
+     cpBodySetTorque(js2go(argv[1])->body, js2number(argv[2]));
+     break;
+
+    case 154:
+      js2go(argv[1])->maxangularvelocity = js2number(argv[2]);
+      break;
+    case 155:
+      ret = num2js(js2go(argv[1])->maxangularvelocity);
+      break;
+
+    case 156:
+      js2go(argv[1])->damping = js2number(argv[2]);
+      break;
+    case 157:
+      ret = num2js(js2go(argv[1])->damping);
+      break;
+    case 158:
+      js2go(argv[1])->gravity = js2bool(argv[2]);
+      break;
+    case 159:
+      ret = bool2js(js2go(argv[1])->gravity);
+      break;
   }
 
   if (str)
@@ -1374,6 +1403,9 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 13:
     cpBodySetMoment(go->body, js2number(argv[2]));
+    return JS_NULL;
+  case 14:
+    cpBodyApplyForceAtLocalPoint(go->body, js2vec2(argv[2]), js2vec2(argv[3]));
     return JS_NULL;
   }
 

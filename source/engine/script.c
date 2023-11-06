@@ -6,6 +6,8 @@
 #include "jsffi.h"
 #include "font.h"
 
+#include "gameobject.h"
+
 #include "ftw.h"
 
 #include "stb_ds.h"
@@ -304,7 +306,9 @@ void call_nk_gui() { js_callee_exec(&nk_gui_callee, 0, NULL); }
 
 static struct callee physupdate_callee;
 void register_physics(struct callee c) { physupdate_callee = c; }
-void call_physics(double dt) { callee_dbl(physupdate_callee, dt); }
+void call_physics(double dt) {
+  callee_dbl(physupdate_callee, dt);
+}
 
 struct callee debug_callee;
 void register_debug(struct callee c) { debug_callee = c; }

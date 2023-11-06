@@ -141,11 +141,33 @@ static void gameobject_setpickcolor(struct gameobject *go) {
       */
 }
 
+static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
+{
+  struct gameobject *go = id2go(cpBodyGetUserData(body));
+  if (!go)
+    cpBodyUpdateVelocity(body,gravity,damping,dt);
+
+//  cpFloat d = isnan(go->damping) ? damping : d;
+  cpVect g = go->gravity ? gravity : cpvzero;
+
+  cpBodyUpdateVelocity(body,g,damping,dt);
+  if (!isinf(go->maxvelocity))
+    cpBodySetVelocity(body, cpvclamp(cpBodyGetVelocity(body), go->maxvelocity));
+    
+  if (!isinf(go->maxangularvelocity)) {
+    float av = cpBodyGetAngularVelocity(body);
+    if (fabs(av) > go->maxangularvelocity)
+      cpBodySetAngularVelocity(body, copysignf(go->maxangularvelocity, av));
+  }
+}
+
 int MakeGameobject() {
   struct gameobject go = {
       .scale = 1.f,
       .scale3 = (HMM_Vec3){1.f,1.f,1.f},
       .bodytype = CP_BODY_TYPE_STATIC,
+      .maxvelocity = INFINITY,
+      .maxangularvelocity = INFINITY,
       .mass = 1.f,
       .next = -1,
       .sensor = 0,
@@ -157,6 +179,7 @@ int MakeGameobject() {
   go.cbs.separate.obj = JS_NULL;
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
+  cpBodySetVelocityUpdateFunc(go.body, velocityFn);
 
   int retid;
 

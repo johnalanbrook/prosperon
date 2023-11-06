@@ -573,14 +573,93 @@ function arrsetelem(str, n)
   Object.defineProperty(Array.prototype, str, setelem(n));
 }
 
-Object.defineProperty(Array.prototype, 'x', setelem(0));
-Object.defineProperty(Array.prototype, 'y', setelem(1));
-Object.defineProperty(Array.prototype, 'z', setelem(2));
-Object.defineProperty(Array.prototype, 'w', setelem(3));
-arrsetelem('r', 0);
-arrsetelem('g', 1);
-arrsetelem('b', 2);
-arrsetelem('a', 3);
+var arr_elems = ['x', 'y', 'z', 'w'];
+var quat_elems = ['i', 'j', 'k'];
+var color_elems = ['r', 'g', 'b', 'a'];
+
+arr_elems.forEach(function(x, i) { arrsetelem(x,i); });
+quat_elems.forEach(function(x, i) { arrsetelem(x,i); });
+color_elems.forEach(function(x, i) { arrsetelem(x,i); });
+
+var nums = [0,1,2,3];
+
+var swizz = [];
+
+for (var i of nums)
+  for (var j of nums)
+    swizz.push([i,j]);
+
+swizz.forEach(function(x) {
+  var str = "";
+  for (var i of x)
+    str += arr_elems[i];
+    
+  Object.defineProperty(Array.prototype, str, {
+    get() { return [this[x[0]], this[x[1]]]; },
+    set(j) { this[x[0]] = j[0]; this[x[1]] = j[1]; },
+  });
+
+  str = "";
+  for (var i of x) str += color_elems[i]; 
+  Object.defineProperty(Array.prototype, str, {
+    get() { return [this[x[0]], this[x[1]]]; },
+    set(j) { this[x[0]] = j[0]; this[x[1]] = j[1]; },
+  });
+
+});
+
+
+swizz = [];
+for (var i of nums)
+  for (var j of nums)
+    for (var k of nums)
+      swizz.push([i,j,k]);
+
+swizz.forEach(function(x) {
+  var str = "";
+  for (var i of x)
+    str += arr_elems[i];
+    
+  Object.defineProperty(Array.prototype, str, {
+    get() { return [this[x[0]], this[x[1]], this[x[2]]]; },
+    set(j) { this[x[0]] = j[0]; this[x[1]] = j[1]; this[x[2]] = j[2];},
+  });
+
+  str = "";
+  for (var i of x) str += color_elems[i];
+  Object.defineProperty(Array.prototype, str, {
+    get() { return [this[x[0]], this[x[1]], this[x[2]]]; },
+    set(j) { this[x[0]] = j[0]; this[x[1]] = j[1]; this[x[2]] = j[2];},
+  });
+});
+
+
+swizz = [];
+for (var i of nums)
+  for (var j of nums)
+    for (var k of nums)
+      for (var w of nums)
+        swizz.push([i,j,k,w]);
+
+swizz.forEach(function(x) {
+  var str = "";
+  for (var i of x)
+    str += arr_elems[i];
+    
+  Object.defineProperty(Array.prototype, str, {
+    get() { return [this[x[0]], this[x[1]], this[x[2]], this[x[3]]];},
+    set(j) { this[x[0]] = j[0]; this[x[1]] = j[1]; this[x[2]] = j[2]; this[x[3]] = j[3];},
+  });
+
+  str = "";
+  for (var i of x) str += color_elems[i];
+    Object.defineProperty(Array.prototype, str, {
+    get() { return [this[x[0]], this[x[1]], this[x[2]], this[x[3]]];},
+    set(j) { this[x[0]] = j[0]; this[x[1]] = j[1]; this[x[2]] = j[2]; this[x[3]] = j[3];},
+  });
+
+});
+
 
 Object.defineProperty(Array.prototype, 'add', {
 value: function(b) {

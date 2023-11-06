@@ -560,6 +560,10 @@ component.edge2d = Object.copy(collider2d, {
     return spoints;
   },
 
+  post() {
+    this.cpoints = [];
+  },
+
   sample(n) {
     var spoints = this.spoints();
 
@@ -729,12 +733,12 @@ bucket.inputs['C-lm'] = function() {
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
 bucket.inputs['C-M-lm'] = function() {
+//  var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.sub(this.gameobject.worldpos()); }, this), 25);
   var idx = cmd(59, Mouse.worldpos.sub(this.gameobject.pos), this.cpoints, 250);
-  Log.warn(idx);
-//  var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.add(this.gameobject.pos); }, this), 25);
-  if (idx === -1) return;
 
-  this.cpoints.splice(idx, 1);
+  if (idx <= 0  || idx > this.cpoints.length) return;
+
+  this.cpoints.splice(idx-1, 1);
 };
 bucket.inputs['C-M-lm'].doc = "Remove point from the spline.";
 

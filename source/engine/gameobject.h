@@ -21,6 +21,10 @@ struct gameobject {
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */
+  float maxvelocity;
+  float maxangularvelocity;
+  int gravity;
+  float damping;
   int flipx; /* 1 or -1 */
   int flipy;
   int sensor;

@@ -168,8 +168,11 @@ function ediff(from,to)
     if (typeof v === 'undefined') return;
 
     if (Array.isArray(v)) {
-      if (!Array.isArray(to[key]) || v.length !== to[key].length)
-	ret[key] = Object.values(ediff(v, []));
+      if (!Array.isArray(to[key]) || v.length !== to[key].length) {
+        var r = ediff(v,[]);
+	if (r) ret[key] = Object.values(r);
+	return;
+      }
 
       var diff = ediff(from[key], to[key]);
       if (diff && !diff.empty)

@@ -7,7 +7,18 @@ prototypes.generate_ur('.');
 var editor_config = {
   grid_size: 100,
   ruler_mark_px: 100,
-  grid_color: [99, 255, 128, 100],
+  grid_color: Color.green.alpha(0.3),
+  
+};
+
+var Device = {
+  pc: [1920,1080],
+  macbook_m2: [2560,1664],
+  ds_top: [400,240],
+  ds_bottom: [320,240],
+  switch: [1280,720],
+  ipad_air_m2: [2360,1640],
+  iphone_se: [1334, 750],
 };
 
 var configs = {
@@ -209,6 +220,7 @@ var editor = {
     Player.players[0].control(limited_editor);
     Register.unregister_obj(this);
     editor.dbg_play = Primum.spawn(this.dbg_ur);
+    editor.dbg_play.pos = [0,0];
     load("debug.js");
   },
 
@@ -538,6 +550,9 @@ var editor = {
       Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
       Debug.line(bb2points(bb).wrapped(1), Color.white);
     }
+
+    /* 1920x1080 */
+    Debug.line(bb2points(cwh2bb(world2screen([0,0]),[1920/Game.camera.zoom,1080/Game.camera.zoom])).wrapped(1), Color.yellow);
     
     if (this.curpanel && this.curpanel.on)
       this.curpanel.gui();
@@ -675,6 +690,32 @@ editor.inputs['C-a'].doc = "Select all objects.";
 
 editor.inputs['C-`'] = function() { editor.openpanel(replpanel); }
 editor.inputs['C-`'].doc = "Open or close the repl.";
+
+editor.inputs.n = function() {
+  if (editor.selectlist.length !== 1) return;
+  var o = editor.try_select();
+  if (!o) return;
+  if (o === editor.selectlist[0]) return;
+  if (o.level !== editor.selectlist[0].level) return;
+
+  var tpos = editor.selectlist[0].pos;
+  tpos.x *= -1;
+  o.pos = tpos;
+};
+editor.inputs.n.doc = "Set the hovered object's position to mirror the selected object's position on the X axis."
+editor.inputs['M-n'] = function()
+{
+  if (editor.selectlist.length !== 1) return;
+  var o = editor.try_select();
+  if (!o) return;
+  if (o === editor.selectlist[0]) return;
+  if (o.level !== editor.selectlist[0].level) return;
+
+  var tpos = editor.selectlist[0].pos;
+  tpos.y *= -1;
+  o.pos = tpos;
+};
+editor.inputs.n.doc = "Set the hovered object's position to mirror the selected object's position on the Y axis."
 
 /* Return if selected component. */
 editor.inputs['h'] = function() {

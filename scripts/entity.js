@@ -34,6 +34,12 @@ var gameobject = {
       };
       this.objects = {};
     },
+
+      set max_velocity(x) { cmd(151, this.body, x); },
+      get max_velocity() { return cmd(152, this.body); },
+      set max_angularvelocity(x) { cmd(154, this.body, Math.deg2rad(x)); },
+      get max_angularvelocity() { return Math.rad2deg(cmd(155, this.body)); },
+      set torque(x) { if (!(x >= 0 && x <= Infinity)) return; cmd(153, this.body, x); },
       gscale() { return cmd(103,this.body); },
       sgscale(x) { cmd(36,this.body,x) },
       get scale() {
@@ -99,6 +105,8 @@ var gameobject = {
 	  
         return q_body(5, this.body);
       },
+      set gravity(x) { cmd(158,this.body, x); },
+      get gravity() { return cmd(159,this.body); },
 
       set phys(x) { set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
@@ -199,9 +207,20 @@ var gameobject = {
   components: {},
   objects: {},
   level: undefined,
+  get_moi() { return q_body(6, this.body); },
+  
+  set_moi(x) {
+    if(x <= 0) {
+      Log.error("Cannot set moment of inertia to 0 or less.");
+      return;
+    }
+    set_body(13, this.body, x);
+  },
 
       pulse(vec) { set_body(4, this.body, vec);},
       shove(vec) { set_body(12,this.body,vec);},
+      shove_at(vec, at) { set_body(14,this.body,vec,at); },
+      torque(val) { cmd(153, this.body, val); },
       world2this(pos) { return cmd(70, this.body, pos); },
       this2world(pos) { return cmd(71, this.body,pos); },
       set layer(x) { cmd(75,this.body,x); },
@@ -272,12 +291,19 @@ var gameobject = {
         register_collide(1, x.collide, x, obj.body, x.shape);
     });
   },
+    pos: [0,0],
+    angle:0,
+    velocity:[0,0],
+    angularvelocity:0,
     phys:Physics.static,
     flipx:false,
     flipy:false,
     scale:1,
     elasticity:0.5,
     friction:1,
+    gravity: true,
+    max_velocity: Infinity,
+    max_angularvelocity: Infinity,
     mass:1,
     layer:0,
     worldpos() { return [0,0]; },
@@ -520,6 +546,7 @@ var gameobject = {
     if (data)
       Object.dainty_assign(obj,data);
 
+    if (typeof obj.warmup === 'function') obj.warmup();
     if (Game.playing() && typeof obj.start === 'function') obj.start();
     
     return obj;
@@ -586,6 +613,7 @@ gameobject.doc = {
   flipy: "Set the object to be flipped on its y axis.",
   elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find their resultant velocities.`,
   friction: `When one object touches another, friction slows them down.`,
+  gravity: 'True if this object should be affected by gravity.',
   mass: `The higher the mass of the object, the less forces will affect it.`,
   phys: `Set to 0, 1, or 2, representing static, kinematic, and dynamic.`,
   worldpos: `Function returns the world position of the object.`,
@@ -594,6 +622,9 @@ gameobject.doc = {
   rotate: `Function to rotate this object by x degrees.`,
   pulse: `Apply an impulse to this body in world coordinates. Impulse is a short force.`,
   shove: `Apply a force to this body in world coordinates. Should be used over many frames.`,
+  shove_at: 'Apply a force to this body, at a position relative to itself.',
+  max_velocity: 'The max linear velocity this object can travel.',
+  max_angularvelocity: 'The max angular velocity this object can rotate.',
   in_air: `Return true if the object is in the air.`,
   on_ground: `Return true if the object is on the ground.`,
   spawn: `Create an instance of a supplied ur-type on this object. Optionally provide a data object to modify the created entity.`,
