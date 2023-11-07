@@ -252,6 +252,7 @@ Mum.image = Mum.extend({
 
 Mum.column = Mum.extend({
   draw(cursor, cnt) {
+    cnt ??= Mum;
     if (this.hide) return;
     cursor = cursor.add(this.offset);
     this.max_width = cnt.width;

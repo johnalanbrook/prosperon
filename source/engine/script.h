@@ -27,6 +27,8 @@ time_t jso_file(const char *file);
 JSValue script_runfile(const char *file);
 void script_update(double dt);
 void script_draw();
+struct callee *make_callee(JSValue fn, JSValue obj);
+void free_callee(struct callee *c);
 
 void duk_run_err();
 void js_dump_stack();

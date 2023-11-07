@@ -1673,11 +1673,8 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
 JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   double secs = js2number(argv[1]);
-  struct callee *c = malloc(sizeof(*c));
-  c->fn = JS_DupValue(js, argv[0]);
-  c->obj = globalThis;
+  struct callee *c = make_callee(argv[0], argv[3]);
   int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
-
   return JS_NewInt64(js, id);
 }
 
@@ -1749,7 +1746,7 @@ void ffi_load() {
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)
   DUK_FUNC(make_model,2);
-  DUK_FUNC(make_timer, 3)
+  DUK_FUNC(make_timer, 4)
 
   DUK_FUNC(cmd_points, 5);
 

@@ -382,20 +382,20 @@ void anim_load(struct anim2d *anim, const char *path) {
 }
 
 void anim_play(struct anim2d *anim) {
-  if (anim->playing)
-    return;
+//  if (anim->playing)
+//    return;
 
-  if (anim->frame == anim_frames(anim->anim))
-    anim->frame = 0;
+//  if (anim->frame == anim_frames(anim->anim))
+//    anim->frame = 0;
 
-  anim->playing = 1;
+//  anim->playing = 1;
 
-  if (anim->timer == NULL)
-    anim->timer = id2timer(timer_make(1.f / anim->anim->ms, anim_incr, anim, 0, 0));
-  else
-    timerr_settime(anim->timer, 1.f / anim->anim->ms);
+//  if (anim->timer == NULL)
+//    anim->timer = id2timer(timer_make(1.f / anim->anim->ms, anim_incr, anim, 0, 0));
+//  else
+//    timerr_settime(anim->timer, 1.f / anim->anim->ms);
 
-  timer_start(anim->timer);
+//  timer_start(anim->timer);
 }
 
 void anim_stop(struct anim2d *anim) {

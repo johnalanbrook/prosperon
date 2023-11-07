@@ -10,6 +10,13 @@ function grab_from_points(pos, points, slop) {
   return idx;
 };
 
+var actor = {};
+actor.spawn = function(ur, config){};
+actor.die = function(actor){};
+actor.kill = function(actor){};
+actor.delay = function(fn, seconds) {};
+actor.clock = function(fn){};
+
 var gameobject = {
   impl: {
 	full_path() {
@@ -33,6 +40,12 @@ var gameobject = {
 	this.objects[k].kill();
       };
       this.objects = {};
+    },
+    
+    timers:[],
+    delay(fn, seconds) {
+      var t = timer.oneshot(fn, seconds, this, false);
+      return function() { t.kill(); };
     },
 
       set max_velocity(x) { cmd(151, this.body, x); },
@@ -285,6 +298,9 @@ var gameobject = {
 
     if (typeof obj.debug === 'function')
       Register.debug.register(obj.debug, obj);
+
+    if (typeof obj.gui === 'function')
+      Register.gui.register(obj.gui,obj);
 
     obj.components.forEach(function(x) {
       if (typeof x.collide === 'function')
@@ -638,6 +654,7 @@ gameobject.doc = {
   transform: `Return an object representing the transform state of this object.`,
   kill: `Remove this object from the world.`,
   level: "The entity this entity belongs to.",
+  delay: 'Run the given function after the given number of seconds has elapsed.',
 };
 
 /* Default objects */

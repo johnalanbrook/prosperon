@@ -215,7 +215,6 @@ var editor = {
     Primum.clear();
     load("config.js");
     Game.play();
-    Game.editor_mode(false);
     Player.players[0].uncontrol(this);
     Player.players[0].control(limited_editor);
     Register.unregister_obj(this);
@@ -849,7 +848,6 @@ editor.inputs['M-p'].doc = "Do one time step, pausing if necessary.";
 editor.inputs['C-M-p'] = function() {
   if (!Game.playing()) {
     editor.start_play_ed();
-    Game.editor_mode(false);    
   }
   Log.warn(`Starting edited level ...`);
 };
@@ -1544,7 +1542,7 @@ var replpanel = Object.copy(inputpanel, {
     
     return [
       Mum.text({str:log, anchor:[0,0], offset:[0,-300].sub(this.scrolloffset), selectable: true}),
-      Mum.text({str:this.value,color:Color.purple, offset:[0,-290], caret: this.caret})
+      Mum.text({str:this.value,color:Color.green, offset:[0,-290], caret: this.caret})
     ];
   },
   prevmark:-1,

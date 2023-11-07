@@ -37,6 +37,10 @@ var physics = {
 
     return cmd(86, box.pos, box.wh, points, points.length);
   },
+
+  shape_query(shape) {
+    return cmd(80,shape);
+  },
 };
 
 physics.doc = {};

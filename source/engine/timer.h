@@ -23,4 +23,6 @@ void timer_stop(struct timer *t);
 void timer_update(double dt, double scale);
 void timerr_settime(struct timer *t, double interval);
 
+void timers_free();
+
 #endif

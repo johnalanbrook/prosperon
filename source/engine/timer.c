@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include <stb_ds.h>
+#include "script.h"
 
 struct timer *timers;
 static int first = -1;
@@ -76,7 +77,7 @@ void timer_start(struct timer *t) {
 
 void timer_remove(int id) {
   struct timer *t = id2timer(id);
-  if (t->owndata) free(t->data);
+  free_callee(t->data);
   t->next = first;
   t->on = 0;  
   first = id;
@@ -89,4 +90,10 @@ void timerr_settime(struct timer *t, double interval) {
 
 struct timer *id2timer(int id) {
   return &timers[id];
+}
+
+void timers_free()
+{
+  for (int i = 0; i < arrlen(timers); i++)
+    free_callee(timers[i].data);
 }

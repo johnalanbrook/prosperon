@@ -252,7 +252,7 @@ crosswin:
 clean:
 	@echo Cleaning project
 	@rm -rf bin dist
-	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS scripts/*.jso
+	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer scripts/*.jso
 	@make -C quickjs clean
 
 TAGINC != find . -name "*.[chj]"

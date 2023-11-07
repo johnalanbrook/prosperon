@@ -239,6 +239,7 @@ load("scripts/gui.js");
 
 var timer = {
   make(fn, secs,obj,loop,app) {
+    obj ??= globalThis;
     app ??= false;
     if (secs === 0) {
       fn.call(obj);
@@ -246,17 +247,7 @@ var timer = {
     }
       
     var t = Object.create(this);
-
-    t.callback = fn;
-    var guardfn = function() {
-      if (typeof t.callback === 'function') {
-        t.callback();
-	if (!t.loop) t.kill();
-      }
-      else
-        Log.warn("Timer trying to execute without a function.");
-    };
-    t.id = make_timer(guardfn, secs, app);
+    t.id = make_timer(fn, secs, app, obj);
     t.loop = loop;
     t.pause();
     

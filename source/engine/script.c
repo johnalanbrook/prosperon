@@ -71,13 +71,13 @@ void script_startup() {
 
 void script_stop()
 {
+  timers_free();
   send_signal("quit",0,NULL);
   
   for (int i = 0; i < shlen(jsstrs); i++)
     JS_FreeValue(js,jsstrs[i].value);
     
   JS_FreeContext(js);
-  JS_RunGC(rt);
   JS_FreeRuntime(rt);
 }
 
@@ -269,6 +269,21 @@ void callee_vec2(struct callee c, cpVect vec) {
 
 void script_callee(struct callee c, int argc, JSValue *argv) {
   js_callee_exec(&c, argc, argv);
+}
+
+struct callee *make_callee(JSValue fn, JSValue obj)
+{
+  struct callee *c = malloc(sizeof(*c));
+  c->fn = JS_DupValue(js, fn);
+  c->obj = JS_DupValue(js, obj);
+  return c;  
+}
+
+void free_callee(struct callee *c)
+{
+  JS_FreeValue(js,c->fn);
+  JS_FreeValue(js,c->obj);
+  free(c);
 }
 
 void send_signal(const char *signal, int argc, JSValue *argv)
