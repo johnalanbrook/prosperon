@@ -53,6 +53,9 @@ int go2id(struct gameobject *go);
 int body2id(cpBody *body);
 cpBody *id2body(int id);
 int shape2gameobject(cpShape *shape);
+struct gameobject *shape2go(cpShape *shape);
+uint32_t go2category(struct gameobject *go);
+uint32_t go2mask(struct gameobject *go);
 
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
 

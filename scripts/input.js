@@ -135,7 +135,7 @@ var Player = {
       }
 
       if (!pawn.inputs?.[cmd]) {
-        if (pawn.inputs.block) return;
+        if (pawn.inputs?.block) return;
 	continue;
       }
 

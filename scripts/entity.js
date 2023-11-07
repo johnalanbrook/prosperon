@@ -123,6 +123,10 @@ var gameobject = {
 
       set phys(x) { set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
+//      set mask(x) { cmd(41, this.body, x); },
+//      get mask() { return cmd(43, this.body); },
+//      set category(x) { cmd(40, this.body, x); },
+//      get category() { return cmd(42, this.body); },
       get velocity() { return q_body(3, this.body); },
       set velocity(x) { set_body(9, this.body, x); },
       get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
@@ -237,7 +241,7 @@ var gameobject = {
       world2this(pos) { return cmd(70, this.body, pos); },
       this2world(pos) { return cmd(71, this.body,pos); },
       set layer(x) { cmd(75,this.body,x); },
-      get layer() { return 0; },
+      get layer() { cmd(77,this.body); },
       alive() { return this.body >= 0; },
       in_air() { return q_body(7, this.body);},
       on_ground() { return !this.in_air(); },
@@ -335,7 +339,6 @@ var gameobject = {
        this.components.forEach(function(x) { x.sync(); });
        this.objects.forEach(function(x) { x.sync(); });
       },
-
 
       /* Bounding box of the object in world dimensions */
       boundingbox() {

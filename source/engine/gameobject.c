@@ -50,6 +50,11 @@ int shape2gameobject(cpShape *shape) {
   return s->go;
 }
 
+struct gameobject *shape2go(cpShape *shape)
+{
+  return id2go(shape2gameobject(shape));
+}
+
 int pos2gameobject(cpVect pos) {
   cpShape *hit = phys2d_query_pos(pos);
 
@@ -84,6 +89,16 @@ int go2id(struct gameobject *go) {
   return id_from_gameobject(go);
 }
 
+uint32_t go2category(struct gameobject *go)
+{
+  return 0;
+}
+
+uint32_t go2mask(struct gameobject *go)
+{
+  return 0;
+}
+
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
   cpShapeSetFriction(shape, go->f);
   cpShapeSetElasticity(shape, go->e);
@@ -91,8 +106,8 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
 
   cpShapeFilter filter;
   filter.group = go2id(go);
-  filter.categories = CP_ALL_CATEGORIES;//1<<go->layer;
-  filter.mask = CP_ALL_CATEGORIES;//category_masks[go->layer];
+  filter.categories = 1<<go->layer;
+  filter.mask = category_masks[go->layer];
   cpShapeSetFilter(shape, filter);
 
   struct phys2d_shape *ape = cpShapeGetUserData(shape);

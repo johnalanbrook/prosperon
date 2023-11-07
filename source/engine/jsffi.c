@@ -50,13 +50,11 @@ static JSClassDef js_ptr_class = { "POINTER" };
 void js_setprop_str(JSValue obj, const char *prop, JSValue v)
 {
   JS_SetPropertyStr(js, obj, prop, v);
-//  JS_FreeValue(js,v);
 }
 
 void js_setprop_num(JSValue obj, uint32_t i, JSValue v)
 {
   JS_SetPropertyUint32(js, obj, i, v);
-//  JS_FreeValue(js,v);
 }
 
 JSValue js_getpropstr(JSValue v, const char *str)
@@ -826,6 +824,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 77:
+    ret = int2js(js2go(argv[1])->layer);
     break;
 
   case 78:

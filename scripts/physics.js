@@ -52,31 +52,15 @@ physics.doc.box_point_query = "Returns the subset of points from a given list th
 
 var Collision = {
   types: {},
-  num: 10,
+  num: 32,
   set_collide(a, b, x) {
     this.types[a][b] = x;
     this.types[b][a] = x;
+    this.sync();
   },
   sync() {
     for (var i = 0; i < this.num; i++)
       cmd(76,i,this.types[i]);
-  },
-  types_nuke() {
-    Nuke.newline(this.num+1);
-    Nuke.label("");
-    for (var i = 0; i < this.num; i++) Nuke.label(i);
-    
-    for (var i = 0; i < this.num; i++) {
-      Nuke.label(i);
-      for (var j = 0; j < this.num; j++) {
-        if (j < i)
-	  Nuke.label("");
-	else {
-          this.types[i][j] = Nuke.checkbox(this.types[i][j]);
-  	  this.types[j][i] = this.types[i][j];
-	}
-      }
-    }
   },
 };
 
@@ -85,4 +69,6 @@ for (var i = 0; i < Collision.num; i++) {
   for (var j = 0; j < Collision.num; j++)
     Collision.types[i][j] = false;
 };
+
+Collision.sync();
 

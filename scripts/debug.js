@@ -241,6 +241,7 @@ var Time = {
   },
 
   pause() {
+    Time.stash = Time.timescale;
     Time.timescale = 0;
   },
 
