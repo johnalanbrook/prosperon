@@ -235,6 +235,41 @@ function bb2wh(bb) {
   return [bb.r-bb.l, bb.t-bb.b];
 };
 
+var Device = {
+  pc: [1920,1080],
+  macbook_m2: [2560,1664, 13.6],
+  ds_top: [400,240, 3.53],
+  ds_bottom: [320,240, 3.02],
+  playdate: [400,240,2.7],
+  switch: [1280,720, 6.2],
+  switch_lite: [1280,720,5.5],
+  switch_oled: [1280,720,7],
+  dsi: [256,192,3.268],
+  ds: [256,192, 3],
+  dsixl: [256,192,4.2],
+  ipad_air_m2: [2360,1640, 11.97],
+  iphone_se: [1334, 750, 4.7],
+  iphone_12_pro: [2532,1170,6.06],
+  iphone_15: [2556,1179,6.1],
+  gba: [240,160,2.9],
+  gameboy: [160,144,2.48],
+  gbc: [160,144,2.28],
+  steamdeck: [1280,800,7],
+  vita: [960,544,5],
+  psp: [480,272,4.3],
+  imac_m3: [4480,2520,23.5],
+  macbook_pro_m3: [3024,1964, 14.2],
+  ps1: [320,240,5],
+  ps2: [640,480],
+  snes: [256,224],
+  gamecube: [640,480],
+  n64: [320,240],
+  c64: [320,200],
+  macintosh: [512,342,9],
+  gamegear: [160,144,3.2],
+};
+
+
 load("scripts/gui.js");
 
 var timer = {
@@ -258,6 +293,7 @@ var timer = {
     app ??= false;
     var t = this.make(fn, secs, obj, 0, app);
     t.start();
+    return t;
   },
   get remain() { return cmd(32, this.id); },
   get on() { return cmd(33, this.id); },
@@ -267,7 +303,7 @@ var timer = {
   start() { cmd(26, this.id); },
   stop() { cmd(25, this.id); },
   pause() { cmd(24, this.id); },
-  kill() { cmd(27, this.id); },
+  kill() { if (this.dead) return; cmd(27, this.id); this.dead = true; },
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
   get pct() { return this.remain / this.time; },
@@ -635,8 +671,9 @@ var Game = {
     }
   },
   objects: [],
-  resolution: [1200,720],
-  name: "Untitled",
+
+  native: Device.pc,
+
   edit: true,
   register_obj(obj) {
     this.objects[obj.body] = obj;
@@ -857,7 +894,7 @@ Game.view_camera = function(cam)
 {
   Game.camera = cam;
   cmd(61, Game.camera.body);
-  cam.zoom = cam.zoom;
+//  cam.zoom = cam.zoom;
 }
 
 Window.name = "Primum Machinam (V0.1)";
@@ -868,3 +905,4 @@ var Asset = {};
 Asset.doc = {
   doc: "Functions to manage the loading and unloading of assets, like sounds and images."
 };
+

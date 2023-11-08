@@ -45,6 +45,7 @@ var gameobject = {
     timers:[],
     delay(fn, seconds) {
       var t = timer.oneshot(fn, seconds, this, false);
+      this.timers.push(t);
       return function() { t.kill(); };
     },
 
@@ -458,6 +459,11 @@ var gameobject = {
 	  q_body(8,this.body);
 	  Game.unregister_obj(this);
 
+	  this.timers.forEach(function(t) {
+	    if (!t) return;
+	    t.kill();
+	  });
+
 	  if (this.level) {
     	    this.level.remove_obj(this);
 	    this.level = undefined;
@@ -833,10 +839,15 @@ prototypes.from_obj("camera2d", {
     phys: Physics.kinematic,
     speed: 300,
     
-    get zoom() { return cmd(135); },
+    get zoom() {
+      var z = Game.native.y / Window.dimensions.y;
+      return cmd(135) / z;
+    },
     set zoom(x) {
-      x = Math.clamp(x,0.1,10);
-      cmd(62, x);
+      x = Math.clamp(x,0.1,10);    
+      var z = Game.native.y / Window.dimensions.y;
+      z *= x;
+      cmd(62, z);
     },
     
     speedmult: 1.0,

@@ -143,8 +143,6 @@ void c_init() {
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
   script_evalf("Game.init();");
-
-  
 }
 
 int frame_fps() {

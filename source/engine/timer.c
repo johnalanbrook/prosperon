@@ -95,5 +95,6 @@ struct timer *id2timer(int id) {
 void timers_free()
 {
   for (int i = 0; i < arrlen(timers); i++)
-    free_callee(timers[i].data);
+    if (timers[i].on)
+      free_callee(timers[i].data);
 }

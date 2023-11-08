@@ -954,10 +954,10 @@ Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * ma
 /* BOUNDINGBOXES */
 function cwh2bb(c, wh) {
   return {
-    t: c.y+wh.y/2,
-    b: c.y-wh.y/2,
-    l: c.x-wh.x/2,
-    r: c.x+wh.x/2
+    t: c.y+(wh.y/2),
+    b: c.y-(wh.y/2),
+    l: c.x-(wh.x/2),
+    r: c.x+(wh.x/2)
   };
 };
 

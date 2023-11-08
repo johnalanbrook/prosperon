@@ -11,15 +11,6 @@ var editor_config = {
   
 };
 
-var Device = {
-  pc: [1920,1080],
-  macbook_m2: [2560,1664],
-  ds_top: [400,240],
-  ds_bottom: [320,240],
-  switch: [1280,720],
-  ipad_air_m2: [2360,1640],
-  iphone_se: [1334, 750],
-};
 
 var configs = {
   toString() { return "configs"; },
@@ -32,6 +23,8 @@ var configs = {
 var editor = {
   toString() { return "editor"; },
   dbg_ur: "arena.level1",
+  machine: undefined,
+  device_test: undefined,
   selectlist: [],
   grablist: [],
   scalelist: [],
@@ -228,6 +221,7 @@ var editor = {
     Player.players[0].control(this);
     Player.players[0].uncontrol(limited_editor);
     Register.gui.register(editor.ed_gui, editor);
+    Register.draw.register(editor.draw, editor);
     Debug.register_call(editor.ed_debug, editor);
     Register.update.register(gui_controls.update, gui_controls);
 //    Player.players[0].control(gui_controls);
@@ -411,6 +405,25 @@ var editor = {
   time: 0,
 
   color_depths: [],
+  draw() {
+    Debug.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
+
+    /* Draw selection box */
+    if (this.sel_start) {
+      var endpos = Mouse.worldpos;
+      var c = [];
+      c[0] = (endpos[0] - this.sel_start[0]) / 2;
+      c[0] += this.sel_start[0];
+      c[1] = (endpos[1] - this.sel_start[1]) / 2;
+      c[1] += this.sel_start[1];
+      var wh = [];
+      wh[0] = Math.abs(endpos[0] - this.sel_start[0]);
+      wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
+      var bb = cwh2bb(c,wh);
+      Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
+      Debug.line(bb2points(bb).wrapped(1), Color.white);
+    }
+  },
 
   ed_gui() {
     /* Clean out killed objects */
@@ -531,27 +544,6 @@ var editor = {
       GUI.text(startgrid[1], [0, world2screen([0, startgrid[1]])[1]]);
       startgrid[1] += h_step;
     }
-    
-    /* Draw selection box */
-    if (this.sel_start) {
-      var endpos = Mouse.worldpos;
-      var c = [];
-      c[0] = (endpos[0] - this.sel_start[0]) / 2;
-      c[0] += this.sel_start[0];
-      c[1] = (endpos[1] - this.sel_start[1]) / 2;
-      c[1] += this.sel_start[1];
-      var wh = [];
-      wh[0] = Math.abs(endpos[0] - this.sel_start[0]);
-      wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
-      wh[0] /= editor.camera.zoom;
-      wh[1] /= editor.camera.zoom;
-      var bb = cwh2bb(world2screen(c),wh);
-      Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
-      Debug.line(bb2points(bb).wrapped(1), Color.white);
-    }
-
-    /* 1920x1080 */
-    Debug.line(bb2points(cwh2bb(world2screen([0,0]),[1920/Game.camera.zoom,1080/Game.camera.zoom])).wrapped(1), Color.yellow);
     
     if (this.curpanel && this.curpanel.on)
       this.curpanel.gui();
@@ -2049,6 +2041,7 @@ limited_editor.inputs['C-q'] = function()
 {
   Sound.killall();
   Primum.clear();
+  load("editorconfig.js");
   load("dbgret.js");
   
   editor.enter_editor();
@@ -2065,5 +2058,3 @@ if (IO.exists("editor.config"))
 Game.stop();
 Game.editor_mode(true);
 Debug.draw_phys(true);
-
-//editor.enter_editor();
