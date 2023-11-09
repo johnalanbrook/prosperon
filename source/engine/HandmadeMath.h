@@ -1197,6 +1197,15 @@ static inline HMM_Mat3 HMM_DivM3F(HMM_Mat3 Matrix, float Scalar) {
   return Result;
 }
 
+static inline HMM_Mat3 HMM_ScaleM3(HMM_Vec2 Scale) {
+
+  HMM_Mat3 Result = HMM_M3D(1.0f);
+  Result.Elements[0][0] = Scale.X;
+  Result.Elements[1][1] = Scale.Y;
+
+  return Result;
+}
+
 static inline float HMM_DeterminantM3(HMM_Mat3 Matrix) {
 
   HMM_Mat3 Cross;

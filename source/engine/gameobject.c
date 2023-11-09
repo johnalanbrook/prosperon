@@ -55,6 +55,42 @@ struct gameobject *shape2go(cpShape *shape)
   return id2go(shape2gameobject(shape));
 }
 
+HMM_Vec2 go2pos(struct gameobject *go)
+{
+  cpVect p = cpBodyGetPosition(go->body);
+  return (HMM_Vec2){p.x, p.y};
+}
+
+float go2angle(struct gameobject *go)
+{
+  return cpBodyGetAngle(go->body);
+}
+
+transform2d mat2transform2d(HMM_Mat3 mat)
+{
+}
+
+HMM_Mat3 transform2d2mat(transform2d t)
+{
+  HMM_Mat3 m = HMM_M3D(1);
+  HMM_Mat3 p = HMM_M3D(1);
+  p.Columns[2].X = t.pos.X;
+  p.Columns[2].Y = t.pos.Y;
+
+  HMM_Mat3 s = HMM_M3D(1);
+  s.Columns[0].X = t.scale.X;
+  s.Columns[1].Y = t.scale.Y;
+
+  HMM_Mat3 r = HMM_M3D(1);
+  r.Columns[0] = (HMM_Vec3){cos(t.angle), sin(t.angle), 0};
+  r.Columns[1] = (HMM_Vec3){-sin(t.angle), cos(t.angle), 0};
+
+  m = HMM_MulM3(s, r);
+  m = HMM_MulM3(m, p);
+  return m;
+}
+
+
 int pos2gameobject(cpVect pos) {
   cpShape *hit = phys2d_query_pos(pos);
 
@@ -83,6 +119,16 @@ int id_from_gameobject(struct gameobject *go) {
 void gameobject_set_sensor(int id, int sensor) {
   id2go(id)->sensor = sensor;
   gameobject_apply(id2go(id));
+}
+
+transform2d go2t(gameobject *go)
+{
+  transform2d t;
+  cpVect p = cpBodyGetPosition(go->body);
+  t.pos.X = p.x; t.pos.Y = p.y;
+  t.angle = cpBodyGetAngle(go->body);
+  t.scale = (HMM_Vec2){go->scale, go->scale};
+  return t;
 }
 
 int go2id(struct gameobject *go) {
@@ -158,7 +204,7 @@ static void gameobject_setpickcolor(struct gameobject *go) {
 
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
-  struct gameobject *go = id2go(cpBodyGetUserData(body));
+  struct gameobject *go = id2go((int)cpBodyGetUserData(body));
   if (!go)
     cpBodyUpdateVelocity(body,gravity,damping,dt);
 

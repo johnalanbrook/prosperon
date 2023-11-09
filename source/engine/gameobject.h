@@ -13,7 +13,16 @@ struct shader;
 struct sprite;
 struct component;
 
-struct gameobject {
+typedef struct transform2d {
+  HMM_Vec2 pos;
+  HMM_Vec2 scale;
+  double angle;
+} transform2d;
+
+transform2d mat2transform2d(HMM_Mat3 mat);
+HMM_Mat3 transform2d2mat(transform2d t);
+
+typedef struct gameobject {
   cpBodyType bodytype;
   int next;
   float scale;
@@ -35,7 +44,10 @@ struct gameobject {
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
   JSValue ref;
-};
+  HMM_Mat3 transform;
+  struct gameobject *master;
+  transform2d t; /* The local transformation of this object */
+} gameobject;
 
 extern struct gameobject *gameobjects;
 
@@ -45,6 +57,10 @@ void gameobject_delete(int id);
 void gameobjects_cleanup();
 
 void gameobject_set_sensor(int id, int sensor);
+
+HMM_Vec2 go2pos(struct gameobject *go);
+float go2angle(struct gameobject *go);
+transform2d go2t(gameobject *go);
 
 struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);

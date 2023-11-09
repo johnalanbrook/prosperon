@@ -12,6 +12,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include "HandmadeMath.h"
 
 #include "sprite.sglsl.h"
 #include "9slice.sglsl.h"
@@ -191,7 +192,7 @@ void sprite_initialize() {
 }
 
 /* offset given in texture offset, so -0.5,-0.5 results in it being centered */
-void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM_Vec2 offset, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, float wrapscale) {
+void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, float wrapscale) {
   struct sprite_vert verts[4];
   
   HMM_Vec2 sposes[4] = {
@@ -200,20 +201,23 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
     {0.0,1.0},
     {1.0,1.0},
   };
-
-  HMM_Mat2 rot = HMM_RotateM2(angle);
+  
 
   HMM_Vec2 t_scale = {
-    tex->width * st_s_w(r) * size.X,
-    tex->height * st_s_h(r) * size.Y
+    tex->width * st_s_w(r), //*size.X;
+    tex->height * st_s_h(r) // * size.Y
   };
+  m = HMM_MulM3(m, HMM_ScaleM3(t_scale));
 
   for (int i = 0; i < 4; i++) {
-    sposes[i] = HMM_AddV2(sposes[i], offset);
+/*    sposes[i] = HMM_AddV2(sposes[i], offset);
     sposes[i] = HMM_MulV2(sposes[i], t_scale);
     sposes[i] = HMM_MulM2V2(rot, sposes[i]);
     sposes[i] = HMM_AddV2(sposes[i], pos);
     verts[i].pos = sposes[i];
+*/
+    HMM_Vec3 v = HMM_MulM3V3(m, (HMM_Vec3){sposes[i].X, sposes[i].Y, 1.0});
+    verts[i].pos = (HMM_Vec2){v.X, v.Y};
     verts[i].color = color;
   }
   if (!wrap) {
@@ -226,10 +230,10 @@ void tex_draw(struct Texture *tex, HMM_Vec2 pos, float angle, HMM_Vec2 size, HMM
     verts[3].uv.X = r.s1;
     verts[3].uv.Y = r.t0;
   } else {
-    verts[0].uv = HMM_MulV2((HMM_Vec2){0,0}, size);
-    verts[1].uv = HMM_MulV2((HMM_Vec2){1,0}, size);
-    verts[2].uv = HMM_MulV2((HMM_Vec2){0,1}, size);
-    verts[3].uv = HMM_MulV2((HMM_Vec2){1,1}, size);
+//    verts[0].uv = HMM_MulV2((HMM_Vec2){0,0}, size);
+//    verts[1].uv = HMM_MulV2((HMM_Vec2){1,0}, size);
+//    verts[2].uv = HMM_MulV2((HMM_Vec2){0,1}, size);
+//    verts[3].uv = HMM_MulV2((HMM_Vec2){1,1}, size);
 
     for (int i = 0; i < 4; i++)
       verts[i].uv = HMM_AddV2(verts[i].uv, wrapoffset);
@@ -250,9 +254,13 @@ void sprite_draw(struct sprite *sprite) {
 
   if (sprite->tex) {
     cpVect cpos = cpBodyGetPosition(go->body);
-    HMM_Vec2 pos = {cpos.x, cpos.y};
-    HMM_Vec2 size = {sprite->size.X * go->scale * go->flipx, sprite->size.Y * go->scale * go->flipy};
-    tex_draw(sprite->tex, pos, cpBodyGetAngle(go->body), size, sprite->pos, sprite->frame, sprite->color, 0, pos, 0);
+    HMM_Vec2 pos = (HMM_Vec2){cpos.x, cpos.y};
+    HMM_Vec2 size = (HMM_Vec2){sprite->size.X * go->scale * go->flipx, sprite->size.Y * go->scale * go->flipy};
+    transform2d t = go2t(id2go(sprite->go));
+    HMM_Mat3 m = transform2d2mat(t);
+    m.Columns[2].X += sprite->pos.X;
+    m.Columns[2].Y += sprite->pos.Y;
+    tex_draw(sprite->tex, transform2d2mat(t), sprite->frame, sprite->color, 0, pos, 0);
   }
 }
 
@@ -266,8 +274,11 @@ void gui_draw_img(const char *img, HMM_Vec2 pos, HMM_Vec2 scale, float angle, in
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_loadfromfile(img);
-  HMM_Vec2 offset = {0.f, 0.f};
-  tex_draw(tex, pos, angle, scale, offset, tex_get_rect(tex), color, wrap, wrapoffset, wrapscale);
+  transform2d t;
+  t.pos = pos;
+  t.angle = angle;
+  t.scale = scale;
+  tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, wrapscale);
 }
 
 void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)
