@@ -76,6 +76,11 @@ ifdef CONFIG_CLANG
   CFLAGS += -Wwrite-strings
   CFLAGS += -Wchar-subscripts -funsigned-char
   CFLAGS += -MMD -MF $(OBJDIR)/$(@F).d
+  CFLAGS += -arch $(ARCH)
+ifneq ($(TTARGET),)
+  CFLAGS += --target=$(TTARGET)
+  CFLAGS += -isysroot $(SYSRT)
+endif
   ifdef CONFIG_DEFAULT_AR
     AR=$(CROSS_PREFIX)ar
   else

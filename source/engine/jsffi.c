@@ -1102,7 +1102,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 143:
       str = JS_ToCString(js, argv[1]);
-      system(str);
+//      system(str);
       break;
 
     case 144:

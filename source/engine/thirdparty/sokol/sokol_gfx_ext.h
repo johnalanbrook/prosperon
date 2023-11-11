@@ -17,16 +17,8 @@ https://github.com/edubart/sokol_gp
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 SOKOL_GFX_API_DECL void sg_query_image_pixels(sg_image img_id, sg_sampler smp_id, void* pixels, int size);
 SOKOL_GFX_API_DECL void sg_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels, int size);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif // SOKOL_GFX_EXT_INCLUDED
 
@@ -88,43 +80,23 @@ static void _sg_gl_query_pixels(int x, int y, int w, int h, bool origin_top_left
 #elif defined(SOKOL_D3D11)
 
 static inline void _sgext_d3d11_Texture2D_GetDesc(ID3D11Texture2D* self, D3D11_TEXTURE2D_DESC* pDesc) {
-    #if defined(__cplusplus)
-        self->GetDesc(pDesc);
-    #else
         self->lpVtbl->GetDesc(self, pDesc);
-    #endif
 }
 
 static inline void _sgext_d3d11_SamplerState_GetDesc(ID3D11SamplerState* self, D3D11_SAMPLER_DESC* pDesc) {
-    #if defined(__cplusplus)
-        self->GetDesc(pDesc);
-    #else
         self->lpVtbl->GetDesc(self, pDesc);
-    #endif
 }
 
 static inline void _sgext_d3d11_CopySubresourceRegion(ID3D11DeviceContext* self, ID3D11Resource *pDstResource, UINT DstSubresource, UINT DstX, UINT DstY, UINT DstZ, ID3D11Resource *pSrcResource, UINT SrcSubresource, const D3D11_BOX *pSrcBox) {
-    #if defined(__cplusplus)
-        self->CopySubresourceRegion(pDstResource, DstSubresource, DstX, DstY, DstZ, pSrcResource, SrcSubresource, pSrcBox);
-    #else
         self->lpVtbl->CopySubresourceRegion(self, pDstResource, DstSubresource, DstX, DstY, DstZ, pSrcResource, SrcSubresource, pSrcBox);
-    #endif
 }
 
 static inline void _sgext_d3d11_OMGetRenderTargets(ID3D11DeviceContext* self, UINT NumViews, ID3D11RenderTargetView **ppRenderTargetViews, ID3D11DepthStencilView **ppDepthStencilView) {
-    #if defined(__cplusplus)
-        self->OMGetRenderTargets(NumViews, ppRenderTargetViews, ppDepthStencilView);
-    #else
         self->lpVtbl->OMGetRenderTargets(self, NumViews, ppRenderTargetViews, ppDepthStencilView);
-    #endif
 }
 
 static inline void _sgext_d3d11_RenderTargetView_GetResource(ID3D11RenderTargetView* self, ID3D11Resource** ppResource) {
-    #if defined(__cplusplus)
-        self->GetResource(ppResource);
-    #else
         self->lpVtbl->GetResource(self, ppResource);
-    #endif
 }
 
 static void _sg_d3d11_query_image_pixels(_sg_image_t* img, void* pixels) {
@@ -232,6 +204,15 @@ static void _sg_d3d11_query_pixels(int x, int y, int w, int h, bool origin_top_l
 
 #elif defined(SOKOL_METAL)
 
+#ifdef TARGET_OS_IPHONE
+
+static void _sg_metal_commit_command_buffer(){};
+static void _sg_metal_encode_texture_pixels(int x, int y, int w, int h, bool origin_top_left, id<MTLTexture> mtl_src_texture, void* pixels) {};
+static void _sg_metal_query_image_pixels(_sg_image_t* img, void* pixels) {};
+static void _sg_metal_query_pixels(int x, int y, int w, int h, bool origin_top_left, void *pixels) {};
+
+#else
+
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
@@ -287,6 +268,7 @@ static void _sg_metal_query_pixels(int x, int y, int w, int h, bool origin_top_l
     _sg_metal_encode_texture_pixels(x, y, w, h, origin_top_left, mtl_drawable.texture, pixels);
 }
 
+#endif
 #endif
 
 void sg_query_image_pixels(sg_image img_id, sg_sampler smp_id, void* pixels, int size) {

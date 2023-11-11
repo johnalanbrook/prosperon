@@ -61,48 +61,53 @@ else
   endif
 endif
 
-PTYPE != uname -m
-
 CFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
 
 PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
 UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
 
-ARCH = x64
+ifeq ($(ARCH),)
+  ARCH != uname -m
+endif
 
 ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static -g
   CFLAGS += -mwin32 -g
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
-  PLAT = w64
+  ARCH := x86_64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
+else ifeq ($(OS), ios)
+  TTARGET = arm64-apple-ios13.1 
+  SYSRT := /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
+  CFLAGS += --target=$(TTARGET) -isysroot $(SYSRT) -DTARGET_OS_IPHONE -x objective-c
+  LDFLAGS += --target=$(TTARGET) -isysroot $(SYSRT) -framework Foundation -framework UIKit -framework Metal -framework MetalKit -framework AudioToolbox -framework AVFoundation
 else ifeq ($(CC), emcc)
+  OS := Web
   LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=450MB
   CFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
   CC = emcc
   EXT = .html
-  PLAT = html5
 else
   UNAME != uname -s
   ifeq ($(UNAME), Linux)
+    OS := Linux
     LDFLAGS += -pthread -rdynamic
     LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
-    PLAT = linux-$(ARCH)$(INFO)
   endif
 
   ifeq ($(UNAME), Darwin)
-    CFLAGS += -x objective-c
-    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
-    PLAT = osx-$(ARCH)$(INFO)
+    OS := macos
+    CFLAGS += -arch $(ARCH) -x objective-c
+    LDFLAGS += -arch $(ARCH) -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
   endif
 endif
 
-BIN = bin/$(CC)/$(INFO)
+BIN = bin/$(OS)/$(ARCH)$(INFO)
 
 OBJDIR = $(BIN)/obj
 
@@ -113,7 +118,7 @@ OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/Nuklear source/engine/thirdparty/tinycdb source/shaders
+includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders
 includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable
@@ -128,9 +133,7 @@ LDLIBS := $(addprefix -l, $(LDLIBS))
 DEPENDS = $(OBJS:.o=.d)
 -include $(DEPENDS)
 
-MYTAG = $(VER)_$(PTYPE)_$(INFO)
-
-DIST = yugine-$(PLAT)-$(COM)$(ZIP)
+DIST = yugine-$(OS)$(ARCH)$(INFO)-$(COM)$(ZIP)
 DISTDIR = ./dist
 
 .DEFAULT_GOAL := all
@@ -195,7 +198,7 @@ input.md: $(INPUTMD)
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
-	make -C quickjs DBG=$(DBG) OPT=$(OPT) HOST_CC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
+	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) HOST_CC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 
@@ -209,7 +212,7 @@ shaders: $(SHADERS)
 
 %.sglsl.h:%.sglsl
 	@echo Creating shader $^
-	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:glsl300es -o $@
+	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
 
 cdb: tools/cdb.c tools/libcdb.a
 	cc $^ -I$(CDB) -o cdb
@@ -248,6 +251,13 @@ WINCC = x86_64-w64-mingw32-gcc
 .PHONY: crosswin
 crosswin:
 	make CC=$(WINCC) OS=Windows_NT
+
+crossmac:
+	make ARCH=arm64
+	mv primum primum_arm64
+	make ARCH=x86_64
+	mv primum primum_x86_64
+	lipo primum_arm64 primum_x86_64 -create -output primum
 
 clean:
 	@echo Cleaning project
