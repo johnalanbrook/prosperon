@@ -562,7 +562,7 @@ var gameobject = {
     obj.level = undefined;
     obj.reparent(level);
 
-    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level');    
+    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');    
 
     Object.dainty_assign(obj, this);
     obj.sync();

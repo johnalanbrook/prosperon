@@ -323,7 +323,7 @@ void draw_drawmodel(struct drawmodel *dm)
   if (!dm->model) return;
   struct gameobject *go = id2go(dm->go);
   cpVect pos = cpBodyGetPosition(go->body);
-  HMM_Mat4 scale = HMM_Scale(id2go(dm->go)->scale3);
+  HMM_Mat4 scale = HMM_Scale(id2go(dm->go)->scale);
   HMM_Mat4 trans = HMM_M4D(1.f);
   trans.Elements[3][2] = -pos.x;
   trans.Elements[3][1] = pos.y;

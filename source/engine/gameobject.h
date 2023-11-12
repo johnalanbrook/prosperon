@@ -25,8 +25,7 @@ HMM_Mat3 transform2d2mat(transform2d t);
 typedef struct gameobject {
   cpBodyType bodytype;
   int next;
-  float scale;
-  HMM_Vec3 scale3;
+  HMM_Vec3 scale;
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */
@@ -34,8 +33,6 @@ typedef struct gameobject {
   float maxangularvelocity;
   int gravity;
   float damping;
-  int flipx; /* 1 or -1 */
-  int flipy;
   int sensor;
   unsigned int layer;
   cpShapeFilter filter;
@@ -61,6 +58,13 @@ void gameobject_set_sensor(int id, int sensor);
 HMM_Vec2 go2pos(struct gameobject *go);
 float go2angle(struct gameobject *go);
 transform2d go2t(gameobject *go);
+HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos);
+HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos);
+
+HMM_Mat3 t_go2world(struct gameobject *go);
+HMM_Mat3 t_world2go(struct gameobject *go);
+HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);
+HMM_Vec2 gotpos(struct gameobject *go, HMM_Vec2 pos);
 
 struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);

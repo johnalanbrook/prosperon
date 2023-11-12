@@ -8,10 +8,6 @@ In addition, a window showing each entity underneath that entity are shown.
 
 The desktop is the topmost object that exists in the editor. Instead of editing specific files, you simply load them into your desktop, and go from there. This makes it easier to see two different entities simultaneously so you can ensure changes to one are congruous with the vision for the others.
 
-## Ur-types
-
-Ur-types are what are loaded into the game world. They are templates for creating entities.
-
 ## *'s and %'s
 
 When a '*' is seen next to an entity's name, that means it is altered compared to its ur-type and is unsaved. There are a number of ways to take care of a '*'. If you do not do one of the below, something on the entity will be lost.

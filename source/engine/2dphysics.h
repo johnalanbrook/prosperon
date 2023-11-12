@@ -33,21 +33,21 @@ struct phys2d_shape {
 /* Circles are the fastest collier type */
 struct phys2d_circle {
   float radius;
-  cpVect offset;
+  HMM_Vec2 offset;
   struct phys2d_shape shape;
 };
 
 /* A single segment */
 struct phys2d_segment {
-  float a[2];
-  float b[2];
+  HMM_Vec2 a;
+  HMM_Vec2 b;
   float thickness;
   struct phys2d_shape shape;
 };
 
 /* A convex polygon; defined as the convex hull around the given set of points */
 struct phys2d_poly {
-  cpVect *points;
+  HMM_Vec2 *points;
   float radius;
   struct phys2d_shape shape;
 };
@@ -56,15 +56,15 @@ struct phys2d_poly {
 struct phys2d_box {
   float w;
   float h;
-  float offset[2];
+  HMM_Vec2 offset;
   float rotation;
-  float r;
+  float r; /* radius */
   struct phys2d_shape shape;
 };
 
 /* An edge with no volume. Cannot collide with each other. Join to make levels. Static only. */
 struct phys2d_edge {
-  cpVect *points;
+  HMM_Vec2 *points;
   float thickness;
   cpShape **shapes;
   int closed; /* True if the first and last points should be connected */
@@ -141,8 +141,6 @@ int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n);
 void flush_collide_cbs();
 
 void phys2d_reindex_body(cpBody *body);
-cpVect world2go(struct gameobject *go, cpVect worldpos);
-cpVect go2world(struct gameobject *go, cpVect gopos);
 extern unsigned int category_masks[32];
 void set_cat_mask(int cat, unsigned int mask);
 int phys2d_in_air(cpBody *body);

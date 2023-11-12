@@ -201,25 +201,18 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
     {0.0,1.0},
     {1.0,1.0},
   };
-  
 
   HMM_Vec2 t_scale = {
     tex->width * st_s_w(r), //*size.X;
     tex->height * st_s_h(r) // * size.Y
   };
-  m = HMM_MulM3(m, HMM_ScaleM3(t_scale));
 
   for (int i = 0; i < 4; i++) {
-/*    sposes[i] = HMM_AddV2(sposes[i], offset);
-    sposes[i] = HMM_MulV2(sposes[i], t_scale);
-    sposes[i] = HMM_MulM2V2(rot, sposes[i]);
-    sposes[i] = HMM_AddV2(sposes[i], pos);
-    verts[i].pos = sposes[i];
-*/
     HMM_Vec3 v = HMM_MulM3V3(m, (HMM_Vec3){sposes[i].X, sposes[i].Y, 1.0});
     verts[i].pos = (HMM_Vec2){v.X, v.Y};
     verts[i].color = color;
   }
+  
   if (!wrap) {
     verts[0].uv.X = r.s0;
     verts[0].uv.Y = r.t1;
@@ -253,14 +246,18 @@ void sprite_draw(struct sprite *sprite) {
   struct gameobject *go = id2go(sprite->go);
 
   if (sprite->tex) {
-    cpVect cpos = cpBodyGetPosition(go->body);
-    HMM_Vec2 pos = (HMM_Vec2){cpos.x, cpos.y};
-    HMM_Vec2 size = (HMM_Vec2){sprite->size.X * go->scale * go->flipx, sprite->size.Y * go->scale * go->flipy};
     transform2d t = go2t(id2go(sprite->go));
     HMM_Mat3 m = transform2d2mat(t);
-    m.Columns[2].X += sprite->pos.X;
-    m.Columns[2].Y += sprite->pos.Y;
-    tex_draw(sprite->tex, transform2d2mat(t), sprite->frame, sprite->color, 0, pos, 0);
+
+    HMM_Mat3 ss = HMM_M3D(1);
+    ss.Columns[0].X = sprite->size.X * sprite->tex->width * st_s_w(sprite->frame);
+    ss.Columns[1].Y = sprite->size.Y * sprite->tex->height * st_s_h(sprite->frame);
+    HMM_Mat3 ts = HMM_M3D(1);
+    ts.Columns[2] = (HMM_Vec3){sprite->pos.X, sprite->pos.Y, 1};
+
+    HMM_Mat3 sm = HMM_MulM3(ss, ts);
+    m = HMM_MulM3(m, sm);
+    tex_draw(sprite->tex, m, sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0);
   }
 }
 

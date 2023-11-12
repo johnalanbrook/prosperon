@@ -85,9 +85,34 @@ HMM_Mat3 transform2d2mat(transform2d t)
   r.Columns[0] = (HMM_Vec3){cos(t.angle), sin(t.angle), 0};
   r.Columns[1] = (HMM_Vec3){-sin(t.angle), cos(t.angle), 0};
 
-  m = HMM_MulM3(s, r);
-  m = HMM_MulM3(m, p);
+  m = HMM_MulM3(r, s);
+  m = HMM_MulM3(p, m);
   return m;
+}
+
+HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos)
+{
+  return HMM_MulM3V3(t_go2world(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
+}
+
+HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos)
+{
+  return HMM_MulM3V3(t_world2go(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
+}
+
+HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);
+{
+  return HMM_MulV2(go->scale.XY, pos);
+}
+
+HMM_Mat3 t_go2world(struct gameobject *go)
+{
+  return transform2d2mat(go2t(go));
+}
+
+HMM_Mat3 t_world2go(struct gameobject *go)
+{
+  return HMM_InvGeneralM3(transform2d2mat(go2t(go)));
 }
 
 
@@ -127,7 +152,7 @@ transform2d go2t(gameobject *go)
   cpVect p = cpBodyGetPosition(go->body);
   t.pos.X = p.x; t.pos.Y = p.y;
   t.angle = cpBodyGetAngle(go->body);
-  t.scale = (HMM_Vec2){go->scale, go->scale};
+  t.scale = go->scale.XY;
   return t;
 }
 
@@ -224,8 +249,7 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
 
 int MakeGameobject() {
   struct gameobject go = {
-      .scale = 1.f,
-      .scale3 = (HMM_Vec3){1.f,1.f,1.f},
+      .scale = (HMM_Vec3){1.f,1.f,1.f},
       .bodytype = CP_BODY_TYPE_STATIC,
       .maxvelocity = INFINITY,
       .maxangularvelocity = INFINITY,

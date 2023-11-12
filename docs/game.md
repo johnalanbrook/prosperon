@@ -1,45 +1,36 @@
-# Yugine
+# Primum
 
-The yugine essentially is made of a sequence of levels. Levels can be
-nested, they can be streamed in, or loaded one at a time. Levels are
-made of levels.
+Games are made of entities. Entities are made of components. Components can be thought of as properties that entities poses; entities are a collection of components. Components include things like drawables (textures, sprites), physical colliders, and more.
 
-Different "modes" of using the engine has unique sequences of level
-loading orders. Each level has an associated script file. Level
-loading functions call the script file, as well as the level file. The
-level file can be considered to be a container of objects that the
-associated script file can access.
+Entities can have control of other entities, in which case the one in control is the 'master' and the controlee the 'padawan'. When a master moves or rotates, all padawans move and rotate with it.
 
-* Game start
-  1. Engine scripts
-  2. config.js
-  3. game.lvl & game.js
+The first and most masterful entity is the Primum. The Primum has no components, and its rotation and position are zero. It defines the center of the game.
 
-* Editor
-  1. Engine scripts
-  2. config.js
-  3. editor.js
+## Scripting
 
-* Editor play
-  * F5 debug.lvl. Used for custom debug level testing. If doesn't exist, game.lvl is loaded.
-  * F6 game.lvl
-  * F7 Currently edited level
+There are a number of script hooks which are ran at particular times of engine loading. When a game starts ...
+ - config.js
+ - game.js
 
-## Playing, editing, debugging
+When the editor starts ...
+ - editorconfig.js
 
-Playing is playing your game. Controls are what are specified for your game.
+F5 can be pressed in the editor to test the game. In that case ...
+ - config.js
+ - debug.js
 
-In debug builds, additional debug controls are available. For example, F12 brings up GUI debug boxes. C-M-f puts you into a flying camera mode, without pausing your game.
+And when play mode is left ...
+  - dbgret.js
 
-The game can be paused to edit it. Most editor controls are available here, all of them essentially except for loading new levels, clearing the level, etc. An object can be clicked on and edited, objects can be moved, etc.
+## Ur-types
+Ur-types are what are loaded into the game world. They are templates for creating entities. Ur-types are defined by providing the engine with .jso files.
 
-A prefab can be opened up to edit on its own, without breaking the currently played level.
+If you have a 'enemy.jso' file, then on game start you can spawn an enemy via 'Primum.spawn(ur.enemy)'. The 'ur' object holds all ur-types the game knows about.
 
-In edit mode, there are no running scripts; only editing them.
+Ur-types are loaded on demand, or can be preloaded with 'prototypes.generate_ur()'.
 
-## The ECS system
-
-There are two distinct items in the Primum Machina: the Entity, and the Component. Components give qualities to Entities. An Entity is any real, tangible thing in the universe, and so every entity has a position. Components do not necessarily have a position; they can be things like the image that draws where the entity is located, and colliders that allow the entity to respond with the world.
+## The ECS system, revisited
+There are two distinct items in the Primum: the Entity, and the Component. Components give qualities to Entities. An Entity is any real, tangible thing in the universe, and so every entity has a position. Components do not necessarily have a position; they can be things like the image that draws where the entity is located, and colliders that allow the entity to respond with the world.
 
 ### Components
 The most "bare metal" are the components. These are essentially hooks into the engine that tell it how to do particular things. For example, to render a sprite, Javascript does no rendering, but rather tells the engine to create an image and render it in a particular spot. Javascript does the accounting to make or destroy the sprite as needed - but besides that initial startup, no scripting is done.
@@ -88,9 +79,7 @@ Ur-ur, the thing all Ur-types derive from
      - Variant 2A, overwritten values from Variant 2
  - Ur-type 2
 
-All ur-types and variants can be created in the world, where they become a true blue ENTITY. Entities can be under entities infinitely.
-
-Ur-types have a specific combination of components. When a component is removed from an entity, the link to its ur-type breaks.
+All ur-types and variants can be created in the world, where they become an entity. Entities can be under entities infinitely. (Master-padawan)
 
 Entities have access to their ur-type through their .ur parameter. Each ur-type and variant likewise stores a list of entities that have been created from them.
 
@@ -101,16 +90,8 @@ ur.type : the actual object
 ur.instances : instances of it
 ur.tag : the full name of it
 
-### Loading traits
-Traits are defined by code and a data file. When an Ur-type is extended with a trait, the code is run, and then the data file contains modifications and
-
-### Creating entities
-Entities are like real world representations of an Ur-type. Ur-types exist only theoretically, but can then be spawned into a true entity in the game world.
-
+### Diverting entities
 An entity can diverge from its ur-type. When this happens, you can either revert the entity, copy how it's changed to its ur-type, or promote it to its own ur-type.
-
-### Efficiency of all this
-It is extremely cheap and fast to create entities. Ur-types work as a defined way for the engine to make an object, and can even cache deleted copies of them.
 
 ## Resources
 Assets can generally be used just with their filename. It will be loaded with default values. However, how the engine interprets it can be altered with a sidecar file, named "filename.asset", so "ball.png" will be modified via "ball.png.asset". These are typical JSON files. For images, specify gamma, if it's a sprite or texture, etc, for sound, specify its gain, etc.

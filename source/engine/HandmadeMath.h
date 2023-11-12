@@ -96,6 +96,8 @@
 #ifndef HANDMADE_MATH_H
 #define HANDMADE_MATH_H
 
+#include <chipmunk/chipmunk.h>
+
 /* let's figure out if SSE is really available (unless disabled anyway)
    (it isn't on non-x86/x86_64 platforms or even x86 without explicit SSE support)
    => only use "#ifdef HANDMADE_MATH__USE_SSE" to check for SSE support below this block! */
@@ -230,12 +232,16 @@ typedef union HMM_Vec2 {
 
   float Elements[2];
 
+  cpVect cp;
+
 #ifdef __cplusplus
   inline float &operator[](const int &Index) {
     return Elements[Index];
   }
 #endif
 } HMM_Vec2;
+
+const HMM_Vec2 v2zero = {0,0};
 
 typedef union HMM_Vec3 {
   struct
@@ -285,6 +291,8 @@ typedef union HMM_Vec3 {
   }
 #endif
 } HMM_Vec3;
+
+const HMM_Vec3 v3zero = {0,0,0};
 
 typedef union HMM_Vec4 {
   struct
@@ -1135,7 +1143,6 @@ static inline HMM_Mat3 HMM_SubM3(HMM_Mat3 Left, HMM_Mat3 Right) {
 }
 
 static inline HMM_Vec3 HMM_MulM3V3(HMM_Mat3 Matrix, HMM_Vec3 Vector) {
-
   HMM_Vec3 Result;
 
   Result.X = Vector.Elements[0] * Matrix.Columns[0].X;
@@ -1163,6 +1170,19 @@ static inline HMM_Mat3 HMM_MulM3(HMM_Mat3 Left, HMM_Mat3 Right) {
   return Result;
 }
 
+/*static inline HMM_Mat3 HMM_VMulM3(int c, ...)
+{
+  HMM_Mat3 res = HMM_M3D(1);
+  va_list args;
+  va_start(args, c);
+  for (int i = 0; i < c; i++) {
+    HMM_Mat3 m = va_arg(args, HMM_Mat3);
+    res = HMM_MulM3(m, res);
+  }
+  va_end(args);
+  return res;
+}
+*/
 static inline HMM_Mat3 HMM_MulM3F(HMM_Mat3 Matrix, float Scalar) {
 
   HMM_Mat3 Result;

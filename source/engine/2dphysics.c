@@ -198,7 +198,7 @@ struct phys2d_circle *Make2DCircle(int go) {
   struct phys2d_circle *new = malloc(sizeof(struct phys2d_circle));
 
   new->radius = 10.f;
-  new->offset = cpvzero;
+  new->offset = v2zero;
 
   new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(id2go(go)->body, new->radius, cpvzero));
   new->shape.debugdraw = phys2d_dbgdrawcircle;
@@ -211,66 +211,33 @@ struct phys2d_circle *Make2DCircle(int go) {
 }
 
 float phys2d_circle_moi(struct phys2d_circle *c, float m) {
-  return cpMomentForCircle(m, 0, c->radius, c->offset);
+  return 1;
+  //TODO: Calculate correctly
+  //return cpMomentForCircle(m, 0, c->radius, c->offset);
 }
 
 void phys2d_circledel(struct phys2d_circle *c) {
   phys2d_shape_del(&c->shape);
 }
 
-cpVect world2go(struct gameobject *go, cpVect worldpos) {
-  cpTransform T = {0};
-  cpVect pos = cpBodyGetPosition(go->body);
-  worldpos.x -= pos.x;
-  worldpos.y -= pos.y;
-  //  worldpos.x /= go->scale;
-  //  worldpos.y /= go->scale;
-  float angle = cpBodyGetAngle(go->body);
-  T.a = go->flipx * cos(-angle) / go->scale;
-  T.b = sin(-angle) / go->scale;
-  T.c = -sin(-angle) / go->scale;
-  T.d = go->flipy * cos(-angle) / go->scale;
-  worldpos = cpTransformPoint(T, worldpos);
-
-  return worldpos;
-}
-
-cpVect go2world(struct gameobject *go, cpVect gopos) {
-  cpVect pos = cpBodyGetPosition(go->body);
-  float angle = cpBodyGetAngle(go->body);
-  cpTransform T = {0};
-  T.a = go->scale * go->flipx * cos(angle);
-  T.b = sin(angle) * go->scale * go->flipx;
-  T.c = -sin(angle) * go->scale * go->flipy;
-  T.d = go->scale * go->flipy * cos(angle);
-  T.tx = pos.x;
-  T.ty = pos.y;
-  return cpTransformPoint(T, gopos);
-}
-
-cpVect gotransformpoint(struct gameobject *go, cpVect point) {
-  point.x *= go->scale * go->flipx;
-  point.y *= go->scale * go->flipy;
-  return point;
-}
-
-cpVect bodytransformpoint(cpBody *body, cpVect offset) {
-  cpVect pos = cpBodyGetPosition(body);
-  float d = sqrt(pow(offset.x, 2.f) + pow(offset.y, 2.f));
-  float a = atan2(offset.y, offset.x) + cpBodyGetAngle(body);
-  pos.x += d * cos(a);
-  pos.y += d * sin(a);
+HMM_Vec2 bodytransformpoint(cpBody *body, HMM_Vec2 offset) {
+  HMM_Vec2 pos;
+  pos.cp = cpBodyGetPosition(body);
+  float d = sqrt(pow(offset.X, 2.f) + pow(offset.Y, 2.f));
+  float a = atan2(offset.Y, offset.X) + cpBodyGetAngle(body);
+  pos.X += d * cos(a);
+  pos.Y += d * sin(a);
   return pos;
 }
 
 void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
-  cpVect pos = bodytransformpoint(cpShapeGetBody(c), cpCircleShapeGetOffset(c));
+  HMM_Vec2 pos = bodytransformpoint(cpShapeGetBody(c), (HMM_Vec2)cpCircleShapeGetOffset(c));
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
   float seglen = cpShapeGetSensor(c) ? 5 : -1;
-  draw_circle(pos, radius, 1, color, seglen);
+  draw_circle(pos.cp, radius, 1, color, seglen);
   color.a = col_alpha;
-  draw_circle(pos,radius,radius,color,-1);
+  draw_circle(pos.cp,radius,radius,color,-1);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
@@ -280,11 +247,10 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
 void phys2d_applycircle(struct phys2d_circle *circle) {
   struct gameobject *go = id2go(circle->shape.go);
 
-  float radius = circle->radius * go->scale;
-  cpVect offset = gotransformpoint(go, circle->offset);
-
+  float radius = circle->radius * HMM_LenSqrV2(go->scale.XY);
   cpCircleShapeSetRadius(circle->shape.shape, radius);
-  cpCircleShapeSetOffset(circle->shape.shape, offset);
+
+  cpCircleShapeSetOffset(circle->shape.shape, HMM_MulV2(go->scale.XY, circle->offset).cp);
 }
 
 /************* BOX2D ************/
@@ -295,8 +261,7 @@ struct phys2d_box *Make2DBox(int go) {
   new->w = 50.f;
   new->h = 50.f;
   new->r = 0.f;
-  new->offset[0] = 0.f;
-  new->offset[1] = 0.f;
+  new->offset = v2zero;
   new->shape.go = go;
   new->shape.apply = phys2d_applybox;
   phys2d_applybox(new);
@@ -310,14 +275,14 @@ float phys2d_box_moi(struct phys2d_box *box, float m) {
   return cpMomentForBox(m, box->w, box->h);
 }
 
-cpTransform go2transform(struct gameobject *go, cpVect offset, float angle) {
-  cpTransform T = {0};
-  T.a = cos(angle) * go->scale * go->flipx;
-  T.b = -sin(angle) * go->scale * go->flipx;
-  T.c = sin(angle) * go->scale * go->flipy;
-  T.d = cos(angle) * go->scale * go->flipy;
-  T.tx = offset.x * go->scale;
-  T.ty = offset.y * go->scale;
+cpTransform trs2cpt(HMM_Vec2 t, float angle, HMM_Vec2 s) {
+  cpTransform T;
+  T.a = cos(angle) * s.X;
+  T.b = -sin(angle) * s.X;
+  T.c = sin(angle) * s.Y;
+  T.d = cos(angle) * s.Y;
+  T.tx = t.X * s.X;
+  T.ty = t.Y * s.Y;
   return T;
 }
 
@@ -328,10 +293,7 @@ void phys2d_boxdel(struct phys2d_box *box) {
 void phys2d_applybox(struct phys2d_box *box) {
   phys2d_boxdel(box);
   struct gameobject *go = id2go(box->shape.go);
-  cpVect off;
-  off.x = box->offset[0];
-  off.y = box->offset[1];
-  cpTransform T = go2transform(id2go(box->shape.go), off, box->rotation);
+  cpTransform T = trs2cpt(box->offset, box->rotation, id2go(box->shape.go)->scale.XY);
   float hh = box->h / 2.f;
   float hw = box->w / 2.f;
   cpVect verts[4] = {{-hw, -hh}, {hw, -hh}, {hw, hh}, {-hw, hh}};
@@ -341,10 +303,10 @@ void phys2d_applybox(struct phys2d_box *box) {
 
 void phys2d_dbgdrawbox(struct phys2d_box *box) {
   int n = cpPolyShapeGetCount(box->shape.shape);
-  cpVect points[n * 2];
+  HMM_Vec2 points[n * 2];
 
   for (int i = 0; i < n; i++)
-    points[i] = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i));
+    points[i] = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i)).cp;
 
   struct rgba c = shape_color(box->shape.shape);
   struct rgba cl = c;
@@ -386,7 +348,7 @@ void phys2d_polydel(struct phys2d_poly *poly) {
 }
 
 void phys2d_polyaddvert(struct phys2d_poly *poly) {
-  arrput(poly->points, cpvzero);
+  arrput(poly->points, v2zero);
 }
 
 void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
@@ -395,8 +357,10 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
     arrfree(poly->points);
     
   arrsetlen(poly->points, arrlen(verts));
-  for (int i = 0; i < arrlen(verts); i++)
-    poly->points[i] = verts[i];
+  for (int i = 0; i < arrlen(verts); i++) {
+    poly->points[i].X = verts[i].x;
+    poly->points[i].Y = verts[i].y;
+  }
     
   phys2d_applypoly(poly);
 }
@@ -405,7 +369,7 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
   struct gameobject *go = id2go(poly->shape.go);
 
-  cpTransform T = go2transform(go, cpvzero, 0);
+  cpTransform T = trs2cpt((HMM_Vec2){0,0}, 0, (HMM_Vec2){1,1});
 
   cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
@@ -453,7 +417,7 @@ struct phys2d_edge *Make2DEdge(int go) {
 float phys2d_edge_moi(struct phys2d_edge *edge, float m) {
   float moi = 0;
   for (int i = 0; i < arrlen(edge->points) - 1; i++)
-    moi += cpMomentForSegment(m, edge->points[i], edge->points[i + 1], edge->thickness);
+    moi += cpMomentForSegment(m, edge->points[i].cp, edge->points[i + 1].cp, edge->thickness);
 
   return moi;
 }
@@ -463,7 +427,7 @@ void phys2d_edgedel(struct phys2d_edge *edge) {
 }
 
 void phys2d_edgeaddvert(struct phys2d_edge *edge) {
-  arrput(edge->points, cpvzero);
+  arrput(edge->points, v2zero);
   if (arrlen(edge->points) > 1)
     arrput(edge->shapes, cpSpaceAddShape(space, cpSegmentShapeNew(id2go(edge->shape.go)->body, cpvzero, cpvzero, edge->thickness)));
 
@@ -486,7 +450,7 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index) {
   }
 
   if (index != arrlen(edge->points)) {
-    cpSegmentShapeSetEndpoints(edge->shapes[index - 1], edge->points[index - 1], edge->points[index]);
+    cpSegmentShapeSetEndpoints(edge->shapes[index - 1], edge->points[index - 1].cp, edge->points[index].cp);
   }
 
   cpSpaceRemoveShape(space, edge->shapes[index - 1]);
@@ -498,7 +462,7 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index) {
 
 void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val) {
   assert(arrlen(edge->points) > index && index >= 0);
-  edge->points[index] = val;
+  edge->points[index].cp = val;
 
   phys2d_applyedge(edge);
 }
@@ -520,12 +484,12 @@ void phys2d_applyedge(struct phys2d_edge *edge) {
   struct gameobject *go = id2go(edge->shape.go);
 
   for (int i = 0; i < arrlen(edge->shapes); i++) {
-    cpVect a = gotransformpoint(go, edge->points[i]);
-    cpVect b = gotransformpoint(go, edge->points[i + 1]);
-    cpSegmentShapeSetEndpoints(edge->shapes[i], a, b);
+    HMM_Vec2 a = goscale(go, edge->points[i]);
+    HMM_Vec2 b = goscale(go, edge->points[i+1]);
+    cpSegmentShapeSetEndpoints(edge->shapes[i], a.cp, b.cp);
     cpSegmentShapeSetRadius(edge->shapes[i], edge->thickness);
     if (i > 0 && i < arrlen(edge->shapes) - 1)
-      cpSegmentShapeSetNeighbors(edge->shapes[i], gotransformpoint(go, edge->points[i - 1]), gotransformpoint(go, edge->points[i + 2]));
+      cpSegmentShapeSetNeighbors(edge->shapes[i], goscale(go,edge->points[i-1]).cp, goscale(go,edge->points[i+2]).cp);
     go_shape_apply(NULL, edge->shapes[i], go);
     cpShapeSetUserData(edge->shapes[i], &edge->shape);
   }
@@ -544,11 +508,11 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
 
   if (arrlen(edge->shapes) < 1) return;
 
-  cpVect drawpoints[arrlen(edge->points)];
+  HMM_Vec2 drawpoints[arrlen(edge->points)];
   struct gameobject *go = id2go(edge->shape.go);
 
   for (int i = 0; i < arrlen(edge->points); i++) {
-    drawpoints[i] = gotransformpoint(go, edge->points[i]);
+    drawpoints[i] = goscale(go, edge->points[i]);
     drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i]);
   }
 
