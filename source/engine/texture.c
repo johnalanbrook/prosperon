@@ -357,9 +357,9 @@ struct glrect tex_get_rect(struct Texture *tex) {
   return ST_UNIT;
 }
 
-cpVect tex_get_dimensions(struct Texture *tex) {
-  if (!tex) return cpvzero;
-  cpVect d;
+HMM_Vec2 tex_get_dimensions(struct Texture *tex) {
+  if (!tex) return (HMM_Vec2){0,0};
+  HMM_Vec2 d;
   d.x = tex->width;
   d.y = tex->height;
   return d;

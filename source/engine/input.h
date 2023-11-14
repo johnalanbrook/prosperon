@@ -8,9 +8,9 @@
 #include <chipmunk/chipmunk.h>
 #include <stdint.h>
 
-extern cpVect mousewheel;
-extern cpVect mouse_pos;
-extern cpVect mouse_delta;
+extern HMM_Vec2 mousewheel;
+extern HMM_Vec2 mouse_pos;
+extern HMM_Vec2 mouse_delta;
 
 #define INPUT_DOWN 0
 #define INPUT_UP 1

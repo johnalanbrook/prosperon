@@ -109,7 +109,7 @@ void phys2d_edge_set_enabled(struct phys2d_edge *edge, int enabled);
 void phys2d_init();
 void phys2d_update(float deltaT);
 cpShape *phys2d_query_pos(cpVect pos);
-int *phys2d_query_box(cpVect pos, cpVect wh);
+int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh);
 
 struct phys_cbs {
   struct callee begin;
@@ -136,7 +136,7 @@ struct rgba shape_color_s(cpShape *shape);
 void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(int go);
 int *phys2d_query_shape(struct phys2d_shape *shape);
-int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n);
+int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n);
 
 void flush_collide_cbs();
 

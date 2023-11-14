@@ -83,7 +83,7 @@ void querylistbodies(cpBody *body, void *data) {
   }
 }
 
-int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n) {
+int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n) {
   cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
   cpTransform T = {0};
   T.a = 1;
@@ -97,7 +97,7 @@ int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n) {
   if (qhits) arrfree(qhits);
 
   for (int i = 0; i < n; i++) {
-    if (cpBBContainsVect(bbox, points[i]))
+    if (cpBBContainsVect(bbox, points[i].cp))
       arrpush(qhits, i);
   }
 
@@ -106,7 +106,7 @@ int *phys2d_query_box_points(cpVect pos, cpVect wh, cpVect *points, int n) {
   return qhits;
 }
 
-int *phys2d_query_box(cpVect pos, cpVect wh) {
+int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
   cpTransform T = {0};
   T.a = 1;
@@ -220,24 +220,21 @@ void phys2d_circledel(struct phys2d_circle *c) {
   phys2d_shape_del(&c->shape);
 }
 
-HMM_Vec2 bodytransformpoint(cpBody *body, HMM_Vec2 offset) {
+HMM_Vec2 bodytransformpoint(cpBody *body, cpVect offset) {
   HMM_Vec2 pos;
-  pos.cp = cpBodyGetPosition(body);
-  float d = sqrt(pow(offset.X, 2.f) + pow(offset.Y, 2.f));
-  float a = atan2(offset.Y, offset.X) + cpBodyGetAngle(body);
-  pos.X += d * cos(a);
-  pos.Y += d * sin(a);
-  return pos;
+  pos.cp = offset;
+  struct gameobject *go = id2go(body2id(body));
+  return go2world(go, pos);
 }
 
 void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
-  HMM_Vec2 pos = bodytransformpoint(cpShapeGetBody(c), (HMM_Vec2)cpCircleShapeGetOffset(c));
+  HMM_Vec2 pos = bodytransformpoint(cpShapeGetBody(c), cpCircleShapeGetOffset(c));
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
   float seglen = cpShapeGetSensor(c) ? 5 : -1;
-  draw_circle(pos.cp, radius, 1, color, seglen);
+  draw_circle(pos, radius, 1, color, seglen);
   color.a = col_alpha;
-  draw_circle(pos.cp,radius,radius,color,-1);
+  draw_circle(pos,radius,radius,color,-1);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
@@ -247,7 +244,7 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
 void phys2d_applycircle(struct phys2d_circle *circle) {
   struct gameobject *go = id2go(circle->shape.go);
 
-  float radius = circle->radius * HMM_LenSqrV2(go->scale.XY);
+  float radius = circle->radius * HMM_MAX(HMM_ABS(go->scale.X), HMM_ABS(go->scale.Y));
   cpCircleShapeSetRadius(circle->shape.shape, radius);
 
   cpCircleShapeSetOffset(circle->shape.shape, HMM_MulV2(go->scale.XY, circle->offset).cp);
@@ -304,9 +301,13 @@ void phys2d_applybox(struct phys2d_box *box) {
 void phys2d_dbgdrawbox(struct phys2d_box *box) {
   int n = cpPolyShapeGetCount(box->shape.shape);
   HMM_Vec2 points[n * 2];
+  struct gameobject *go = shape2go(box->shape.shape);
 
-  for (int i = 0; i < n; i++)
-    points[i] = bodytransformpoint(cpShapeGetBody(box->shape.shape), cpPolyShapeGetVert(box->shape.shape, i)).cp;
+  for (int i = 0; i < n; i++) {
+    HMM_Vec2 p;
+    p.cp = cpPolyShapeGetVert(box->shape.shape, i);
+    points[i] = go2world(go, p);
+  }
 
   struct rgba c = shape_color(box->shape.shape);
   struct rgba cl = c;
@@ -382,7 +383,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
 
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
-    cpVect points[n];
+    HMM_Vec2 points[n];
 
     for (int i = 0; i < n; i++)
       points[i] = bodytransformpoint(cpShapeGetBody(poly->shape.shape), cpPolyShapeGetVert(poly->shape.shape, i));
@@ -513,7 +514,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
 
   for (int i = 0; i < arrlen(edge->points); i++) {
     drawpoints[i] = goscale(go, edge->points[i]);
-    drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i]);
+    drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i].cp);
   }
 
   float seglen = cpShapeGetSensor(edge->shapes[0]) ? sensor_seg : 0;
@@ -580,7 +581,7 @@ void flush_collide_cbs() {
   arrsetlen(begins,0);
 }
 
-void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
+void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, int hit, cpArbiter *arb) {
   cpShape *shape1;
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
@@ -589,8 +590,11 @@ void duk_call_phys_cb(cpVect norm, struct callee c, int hit, cpArbiter *arb) {
   JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
   JS_SetPropertyStr(js, obj, "hit", JS_NewInt32(js, hit));
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
-  JS_SetPropertyStr(js, obj, "velocity", vec2js(cpArbiterGetSurfaceVelocity(arb)));
-  JS_SetPropertyStr(js, obj, "pos", vec2js(cpArbiterGetPointA(arb, 0)));
+  HMM_Vec2 srfv;
+  srfv.cp = cpArbiterGetSurfaceVelocity(arb);
+  JS_SetPropertyStr(js, obj, "velocity", vec2js(srfv));
+  srfv.cp = cpArbiterGetPointA(arb,0);
+  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
   JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
@@ -619,7 +623,8 @@ static cpBool handle_collision(cpArbiter *arb, int type) {
   struct phys2d_shape *pshape1 = cpShapeGetUserData(shape1);
   struct phys2d_shape *pshape2 = cpShapeGetUserData(shape2);
 
-  cpVect norm1 = cpArbiterGetNormal(arb);
+  HMM_Vec2 norm1;
+  norm1.cp = cpArbiterGetNormal(arb);
 
   switch (type) {
   case CTYPE_BEGIN:

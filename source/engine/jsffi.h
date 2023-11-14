@@ -7,8 +7,8 @@
 
 void ffi_load();
 
-JSValue vec2js(cpVect v);
-cpVect js2vec2(JSValue v);
+JSValue vec2js(HMM_Vec2 v);
+HMM_Vec2 js2vec2(JSValue v);
 
 JSValue bitmask2js(cpBitmask mask);
 cpBitmask js2bitmask(JSValue v);

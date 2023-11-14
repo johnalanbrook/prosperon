@@ -219,7 +219,7 @@ void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline result, void *da
 
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
-//  YughInfo("Applying pipeline %d", pip);
+  YughInfo("Applying pipeline %d", pip);
 }
 
 void trace_fail_pipeline(sg_pipeline pip, void *data)

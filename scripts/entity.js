@@ -55,7 +55,12 @@ var gameobject = {
       get max_angularvelocity() { return Math.rad2deg(cmd(155, this.body)); },
       set torque(x) { if (!(x >= 0 && x <= Infinity)) return; cmd(153, this.body, x); },
       gscale() { return cmd(103,this.body); },
-      sgscale(x) { cmd(36,this.body,x) },
+      sgscale(x) {
+        if (typeof x === 'number')
+	  cmd(36,this.body, [x,x]);
+	else
+          cmd(36,this.body,x)
+      },
       get scale() {
         if (!this.level) return this.gscale();
         return this.gscale()/this.level.gscale();
@@ -64,7 +69,9 @@ var gameobject = {
         if (this.level)
           x *= this.level.gscale();
 	var pct = x/this.gscale();
-        cmd(36, this.body, x);	
+
+	this.sgscale(x);
+//        cmd(36, this.body, x);	
 
 	this.objects?.forEach(function(obj) {
 	  obj.sgscale(obj.gscale()*pct);
@@ -72,29 +79,6 @@ var gameobject = {
 	});      
       },
 
-      get flipx() { return cmd(104,this.body); },
-      set flipx(x) {
-        cmd(55, this.body, x);
-        return;
-	this.objects.forEach(function(obj) {
-	  obj.flipx = !obj.flipx;
-	  var rp = obj.pos;
-	  obj.pos = [-rp.x, rp.y].add(this.worldpos());
-	  obj.angle = -obj.angle;
-	},this);	
-      },
-      
-      get flipy() { return cmd(105,this.body); },
-      set flipy(x) {
-        cmd(56, this.body, x);
-	return;
-	this.objects.forEach(function(obj) {
-	  var rp = obj.pos;
-	  obj.pos = [rp.x, -rp.y].add(this.worldpos());
-	  obj.angle = -obj.angle;
-	},this);	
-      },
-      
       set pos(x) {
         this.set_worldpos(Vector.rotate(x.scale(this.level.gscale()),Math.deg2rad(this.level.worldangle())).add(this.level.worldpos()));
       },

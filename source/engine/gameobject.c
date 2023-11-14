@@ -100,7 +100,7 @@ HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos)
   return HMM_MulM3V3(t_world2go(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
 }
 
-HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);
+HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos)
 {
   return HMM_MulV2(go->scale.XY, pos);
 }
@@ -116,8 +116,8 @@ HMM_Mat3 t_world2go(struct gameobject *go)
 }
 
 
-int pos2gameobject(cpVect pos) {
-  cpShape *hit = phys2d_query_pos(pos);
+int pos2gameobject(HMM_Vec2 pos) {
+  cpShape *hit = phys2d_query_pos(pos.cp);
 
   if (hit) {
     return shape2gameobject(hit);
@@ -126,7 +126,7 @@ int pos2gameobject(cpVect pos) {
   for (int i = 0; i < arrlen(gameobjects); i++) {
     if (!gameobjects[i].body) continue;
     cpVect gpos = cpBodyGetPosition(gameobjects[i].body);
-    float dist = cpvlength(cpvsub(gpos, pos));
+    float dist = cpvlength(cpvsub(gpos, pos.cp));
 
     if (dist <= 25) return i;
   }
@@ -332,7 +332,7 @@ void gameobjects_cleanup() {
   }
 }
 
-void gameobject_move(struct gameobject *go, cpVect vec) {
+void gameobject_move(struct gameobject *go, HMM_Vec2 vec) {
   cpVect p = cpBodyGetPosition(go->body);
   p.x += vec.x;
   p.y += vec.y;

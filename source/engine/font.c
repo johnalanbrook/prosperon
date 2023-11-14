@@ -188,7 +188,7 @@ void draw_underline_cursor(HMM_Vec2 pos, float scale, struct rgba color)
 
 void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color)
 {
-  cpVect wh;
+  HMM_Vec2 wh;
   color.a = 30;
  
   wh.x = c.Size[0] * scale + 2;
@@ -196,7 +196,7 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
   cursor.X += c.Bearing[0] * scale + 1;
   cursor.Y -= (c.Bearing[1] * scale + 1);
 
-  cpVect b;
+  HMM_Vec2 b;
   b.x = cursor.X + wh.x/2;
   b.y = cursor.Y + wh.y/2;
 

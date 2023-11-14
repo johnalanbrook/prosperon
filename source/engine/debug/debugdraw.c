@@ -212,7 +212,6 @@ void debugdraw_init()
   });
 
   csg = sg_make_shader(circle_shader_desc(sg_query_backend()));
-
     circle_pipe = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = csg,
       .layout = {
@@ -295,15 +294,15 @@ void debugdraw_init()
   });
 }
 
-void draw_line(cpVect *a_points, int n, struct rgba color, float seg_len, int closed, float seg_speed)
+void draw_line(HMM_Vec2 *a_points, int n, struct rgba color, float seg_len, int closed, float seg_speed)
 {
   if (n < 2) return;
-  cpVect *points = a_points;
+  HMM_Vec2 *points = a_points;
   seg_speed = 1;
   if (closed) {
     n++;    
-    points = malloc(sizeof(cpVect) * n);
-    memcpy(points, a_points, sizeof(cpVect)*(n-1));
+    points = malloc(sizeof(HMM_Vec2) * n);
+    memcpy(points, a_points, sizeof(HMM_Vec2)*(n-1));
 
     points[n-1] = points[0];
   }
@@ -321,7 +320,7 @@ void draw_line(cpVect *a_points, int n, struct rgba color, float seg_len, int cl
 
   v[0].dist = 0;
   for (int i = 1; i < n; i++) {
-    dist += cpvdist(points[i-1], points[i]);
+    dist += HMM_DistV2(points[i-1], points[i]);
     v[i].dist = dist;    
   }
   
@@ -352,9 +351,9 @@ void draw_line(cpVect *a_points, int n, struct rgba color, float seg_len, int cl
   if (closed) free(points);
 }
 
-cpVect center_of_vects(cpVect *v, int n)
+HMM_Vec2 center_of_vects(HMM_Vec2 *v, int n)
 {
-  cpVect c;
+  HMM_Vec2 c;
   for (int i = 0; i < n; i++) {
     c.x += v[i].x;
     c.y += v[i].y;
@@ -365,15 +364,15 @@ cpVect center_of_vects(cpVect *v, int n)
   return c;
 }
 
-float vecs2m(cpVect a, cpVect b)
+float vecs2m(HMM_Vec2 a, HMM_Vec2 b)
 {
   return (b.y-a.y)/(b.x-a.x);
 }
 
-cpVect *inflatepoints(cpVect *p, float d, int n)
+HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
 {
   if (d == 0) {
-    cpVect *ret = NULL;
+    HMM_Vec2 *ret = NULL;
     arraddn(ret,n);
        for (int i = 0; i < n; i++)
          ret[i] = p[i];
@@ -402,7 +401,7 @@ cpVect *inflatepoints(cpVect *p, float d, int n)
     .closed = 0,
   });
 
-  cpVect *ret = NULL;
+  HMM_Vec2 *ret = NULL;
   arraddn(ret,mesh->num_vertices);
   for (int i = 0; i < mesh->num_vertices; i++) {
     ret[i].x = mesh->positions[i].x;
@@ -411,16 +410,16 @@ cpVect *inflatepoints(cpVect *p, float d, int n)
   return ret;
 }
 
-void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
+void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
 {
-//  static_assert(sizeof(cpVect) == 2*sizeof(float));
+//  static_assert(sizeof(HMM_Vec2) == 2*sizeof(float));
   if (thickness == 0) {
     draw_line(points,n,color,0,closed,0);
   }
 
   /* todo: should be dashed, and filled. use a texture. */  
   /* draw polygon outline */
-  if (cpveql(points[0], points[n-1])) {
+  if (HMM_EqV2(points[0], points[n-1])) {
     closed = true;
     n--;
   }
@@ -471,8 +470,8 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   if (thickness == 1) {
     draw_line(points,n,line_color,line_seg, closed, 0);
   } else {
-    cpVect in_p[n];
-    cpVect out_p[n];
+    HMM_Vec2 in_p[n];
+    HMM_Vec2 out_p[n];
     
     for (int i = 0, v = 0; i < n*2+1; i+=2, v++) {
       in_p[v].x = vertices[i].pos.x;
@@ -485,7 +484,7 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
     }
 
     if (!closed) {
-      cpVect p[n*2];
+      HMM_Vec2 p[n*2];
       for (int i = 0; i < n; i++)
 	p[i] = in_p[i];
       for (int i = n-1, v = n; i >= 0; i--,v++)
@@ -500,7 +499,7 @@ void draw_edge(cpVect *points, int n, struct rgba color, int thickness, int clos
   }
 }
 
-void draw_circle(cpVect pos, float radius, float pixels, struct rgba color, float seg)
+void draw_circle(HMM_Vec2 pos, float radius, float pixels, struct rgba color, float seg)
 {
   struct circle_vertex cv;
   cv.pos.x = pos.x;
@@ -513,12 +512,12 @@ void draw_circle(cpVect pos, float radius, float pixels, struct rgba color, floa
   circle_count++;
 }
 
-void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
+void draw_box(HMM_Vec2 c, HMM_Vec2 wh, struct rgba color)
 {
     float hw = wh.x / 2.f;
     float hh = wh.y / 2.f;
 
-    cpVect verts[4] = {
+    HMM_Vec2 verts[4] = {
       { .x = c.x-hw, .y = c.y-hh },
       { .x = c.x+hw, .y = c.y-hh },
       { .x = c.x+hw, .y = c.y+hh },
@@ -528,17 +527,17 @@ void draw_box(struct cpVect c, struct cpVect wh, struct rgba color)
     draw_poly(verts, 4, color);
 }
 
-void draw_arrow(struct cpVect start, struct cpVect end, struct rgba color, int capsize)
+void draw_arrow(HMM_Vec2 start, HMM_Vec2 end, struct rgba color, int capsize)
 { 
-  cpVect points[2] = {start, end};
+  HMM_Vec2 points[2] = {start, end};
   draw_line(points, 2, color, 0, 0,0);
   draw_cppoint(end, capsize, color);
 }
 
 void draw_grid(float width, float span, struct rgba color)
 {
-  cpVect offset = cam_pos();
-  offset = cpvmult(offset, 1/cam_zoom());
+  HMM_Vec2 offset = (HMM_Vec2)cam_pos();
+  offset = HMM_MulV2F(offset, 1/cam_zoom());
 
   float ubo[4];
   ubo[0] = offset.x;
@@ -560,25 +559,25 @@ void draw_grid(float width, float span, struct rgba color)
   sg_draw(0,4,1);
 }
 
-void draw_cppoint(struct cpVect point, float r, struct rgba color)
+void draw_cppoint(HMM_Vec2 point, float r, struct rgba color)
 {
   struct point_vertex p = {
     .color = color,
     .radius = r
   };
-  p.pos.x = point.x;
-  p.pos.y = point.y;
+  p.pos.x = point.X;
+  p.pos.y = point.Y;
   sg_append_buffer(point_bind.vertex_buffers[0], &(sg_range){.ptr = &p, .size = sizeof(struct point_vertex)});
   point_c++;
 }
 
-void draw_points(struct cpVect *points, int n, float size, struct rgba color)
+void draw_points(HMM_Vec2 *points, int n, float size, struct rgba color)
 {
     for (int i = 0; i < n; i++)
       draw_cppoint(points[i], size, color);
 }
 
-void draw_poly(cpVect *points, int n, struct rgba color)
+void draw_poly(HMM_Vec2 *points, int n, struct rgba color)
 {
   /* Find polygon mesh */
   int tric = n - 2;

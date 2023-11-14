@@ -80,9 +80,9 @@ uint32_t go2mask(struct gameobject *go);
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
 
 /* Tries a few methods to select a gameobject; if none is selected returns -1 */
-int pos2gameobject(cpVect pos);
+int pos2gameobject(HMM_Vec2 pos);
 
-void gameobject_move(struct gameobject *go, cpVect vec);
+void gameobject_move(struct gameobject *go, HMM_Vec2 vec);
 void gameobject_rotate(struct gameobject *go, float as);
 void gameobject_setangle(struct gameobject *go, float angle);
 void gameobject_setpos(struct gameobject *go, cpVect vec);

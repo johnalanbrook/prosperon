@@ -214,19 +214,12 @@ struct boundingbox js2bb(JSValue v)
 }
 
 
-HMM_Vec2 js2hmmv2(JSValue v)
+HMM_Vec2 js2vec2(JSValue v)
 {
   HMM_Vec2 v2;
   v2.X = js2number(js_getpropidx(v,0));
   v2.Y = js2number(js_getpropidx(v,1));
   return v2;
-}
-
-cpVect js2vec2(JSValue v) {
-  cpVect vect;
-  vect.x = js2number(js_getpropidx(v,0));
-  vect.y = js2number(js_getpropidx(v,1));
-  return vect;
 }
 
 cpBitmask js2bitmask(JSValue v) {
@@ -243,10 +236,10 @@ cpBitmask js2bitmask(JSValue v) {
   return mask;
 }
 
-cpVect *cpvecarr = NULL;
+HMM_Vec2 *cpvecarr = NULL;
 
 /* Does not need to be freed by returning; but not reentrant */
-cpVect *js2cpvec2arr(JSValue v) {
+HMM_Vec2 *js2cpvec2arr(JSValue v) {
   if (cpvecarr)
     arrfree(cpvecarr);
     
@@ -266,12 +259,12 @@ JSValue bitmask2js(cpBitmask mask) {
   return arr;
 }
 
-void vec2float(cpVect v, float *f) {
+void vec2float(HMM_Vec2 v, float *f) {
   f[0] = v.x;
   f[1] = v.y;
 }
 
-JSValue vec2js(cpVect v) {
+JSValue vec2js(HMM_Vec2 v) {
   JSValue array = JS_NewArray(js);
   js_setprop_num(array,0,JS_NewFloat64(js,v.x));
   js_setprop_num(array,1,JS_NewFloat64(js,v.y));
@@ -280,11 +273,11 @@ JSValue vec2js(cpVect v) {
 
 JSValue v22js(HMM_Vec2 v)
 {
-  cpVect c = { v.X, v.Y };
+  HMM_Vec2 c = { v.X, v.Y };
   return vec2js(c);
 }
 
-JSValue vecarr2js(cpVect *points, int n) {
+JSValue vecarr2js(HMM_Vec2 *points, int n) {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < n; i++)
     js_setprop_num(array,i,vec2js(points[i]));
@@ -294,7 +287,7 @@ JSValue vecarr2js(cpVect *points, int n) {
 
 JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const unsigned char *s = JS_ToCString(js, argv[0]);
-  HMM_Vec2 pos = js2hmmv2(argv[1]);
+  HMM_Vec2 pos = js2vec2(argv[1]);
 
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
@@ -330,7 +323,7 @@ int js_print_exception(JSValue v)
 
 JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *img = JS_ToCString(js, argv[0]);
-  gui_draw_img(img, js2hmmv2(argv[1]), js2hmmv2(argv[2]), js2number(argv[3]), js2bool(argv[4]), js2hmmv2(argv[5]), 1.0, js2color(argv[6]));
+  gui_draw_img(img, js2vec2(argv[1]), js2vec2(argv[2]), js2number(argv[3]), js2bool(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
   JS_FreeCString(js, img);
   return JS_NULL;
 }
@@ -366,14 +359,14 @@ JSValue bb2js(struct boundingbox bb)
 
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  static_assert(sizeof(tsReal) * 2 == sizeof(cpVect));
+  static_assert(sizeof(tsReal) * 2 == sizeof(HMM_Vec2));
 
   tsBSpline spline;
 
   int degrees = js2int(argv[1]);
   int d = js2int(argv[2]); /* dimensions */
   int type = js2int(argv[3]);
-  cpVect *points = js2cpvec2arr(argv[4]);
+  HMM_Vec2 *points = js2cpvec2arr(argv[4]);
   size_t nsamples = js2int(argv[5]);
   
   tsStatus status;
@@ -387,7 +380,7 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
   if (status.code)
     YughCritical("Spline creation error %d: %s", status.code, status.message);
 
-  cpVect *samples = malloc(nsamples*sizeof(cpVect));
+  HMM_Vec2 *samples = malloc(nsamples*sizeof(HMM_Vec2));
 
   size_t rsamples;
   /* TODO: This does not work with Clang/GCC due to UB */
@@ -412,20 +405,20 @@ JSValue ints2js(int *ints) {
   return arr;
 }
 
-int vec_between(cpVect p, cpVect a, cpVect b) {
-  cpVect n;
+int vec_between(HMM_Vec2 p, HMM_Vec2 a, HMM_Vec2 b) {
+  HMM_Vec2 n;
   n.x = b.x - a.x;
   n.y = b.y - a.y;
-  n = cpvnormalize(n);
+  n = HMM_NormV2(n);
 
-  return (cpvdot(n, cpvsub(p, a)) > 0 && cpvdot(cpvneg(n), cpvsub(p, b)) > 0);
+  return HMM_DotV2(n, HMM_SubV2(p,a)) > 0 && HMM_DotV2(HMM_MulV2F(n, -1), HMM_SubV2(p,b)) > 0;
 }
 
 /* Determines between which two points in 'segs' point 'p' falls.
    0 indicates 'p' comes before the first point.
    arrlen(segs) indicates it comes after the last point.
 */
-int point2segindex(cpVect p, cpVect *segs, double slop) {
+int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
   float shortest = slop < 0 ? INFINITY : slop;
   int best = -1;
 
@@ -444,10 +437,10 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
       shortest = dist;
       best = i + 1;
     } else {
-      if (i == 0 && cpvdist(p, segs[0]) < slop) {
+      if (i == 0 && HMM_DistV2(p,segs[0]) < slop) {
         shortest = dist;
         best = i;
-      } else if (i == arrlen(segs) - 2 && cpvdist(p, arrlast(segs)) < slop) {
+      } else if (i == arrlen(segs) - 2 && HMM_DistV2(p,arrlast(segs)) < slop) {
         shortest = dist;
         best = arrlen(segs);
       }
@@ -455,12 +448,12 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
   }
 
   if (best == 1) {
-    cpVect n;
+    HMM_Vec2 n;
     n.x = segs[1].x - segs[0].x;
     n.y = segs[1].y - segs[0].y;
-    n = cpvnormalize(n);
-    if (cpvdot(n, cpvsub(p, segs[0])) < 0) {
-      if (cpvdist(p, segs[0]) >= slop)
+    n = HMM_NormV2(n);
+    if (HMM_DotV2(n, HMM_SubV2(p,segs[0])) < 0 ){
+      if (HMM_DistV2(p, segs[0]) >= slop)
         best = -1;
       else
         best = 0;
@@ -468,13 +461,13 @@ int point2segindex(cpVect p, cpVect *segs, double slop) {
   }
 
   if (best == arrlen(segs) - 1) {
-    cpVect n;
+    HMM_Vec2 n;
     n.x = segs[best - 1].x - segs[best].x;
     n.y = segs[best - 1].y - segs[best - 1].y;
-    n = cpvnormalize(n);
+    n = HMM_NormV2(n);
 
-    if (cpvdot(n, cpvsub(p, segs[best])) < 0) {
-      if (cpvdist(p, segs[best]) >= slop)
+    if (HMM_DotV2(n, HMM_SubV2(p, segs[best])) < 0) {
+      if (HMM_DistV2(p, segs[best]) >= slop)
         best = -1;
       else
         best = arrlen(segs);
@@ -530,7 +523,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 8:
-    phys2d_set_gravity(js2vec2(argv[1]));
+    phys2d_set_gravity(js2vec2(argv[1]).cp);
     break;
 
   case 9:
@@ -647,15 +640,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 36:
-    id2go(js2int(argv[1]))->scale = js2number(argv[2]);
-    id2go(js2int(argv[1]))->scale3 = HMM_V3i(js2number(argv[2]));
+    id2go(js2int(argv[1]))->scale.XY = js2vec2(argv[2]);
     gameobject_apply(id2go(js2int(argv[1])));
     cpSpaceReindexShapesForBody(space, id2go(js2int(argv[1]))->body);
     break;
 
   case 37:
     if (!id2sprite(js2int(argv[1]))) break;
-    id2sprite(js2int(argv[1]))->pos = js2hmmv2(argv[2]);
+    id2sprite(js2int(argv[1]))->pos = js2vec2(argv[2]);
     break;
 
   case 38:
@@ -733,19 +725,19 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 55:
-    js2go(argv[1])->flipx = JS_ToBool(js, argv[2]) ? -1 : 1;
     break;
+//    js2go(argv[1])->flipx = JS_ToBool(js, argv[2]) ? -1 : 1;
 
   case 56:
-    js2go(argv[1])->flipy = JS_ToBool(js, argv[2]) ? -1 : 1;
+//    js2go(argv[1])->flipy = JS_ToBool(js, argv[2]) ? -1 : 1;
     break;
 
   case 57:
-    ret = JS_NewBool(js, js2go(argv[1])->flipx == -1 ? 1 : 0);
+//    ret = JS_NewBool(js, js2go(argv[1])->flipx == -1 ? 1 : 0);
     break;
 
   case 58:
-    ret = JS_NewBool(js, js2go(argv[1])->flipy == -1 ? 1 : 0);
+//    ret = JS_NewBool(js, js2go(argv[1])->flipy == -1 ? 1 : 0);
     break;
 
   case 59:
@@ -804,7 +796,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 72:
-    ret = vec2js(cpSpaceGetGravity(space));
+    ret = vec2js((HMM_Vec2)cpSpaceGetGravity(space));
     break;
 
   case 73:
@@ -855,7 +847,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 85:
-    ret = vec2js(cpvproject(js2vec2(argv[1]), js2vec2(argv[2])));
+    ret = vec2js(HMM_ProjV2(js2vec2(argv[1]), js2vec2(argv[2])));
     break;
 
   case 86:
@@ -934,15 +926,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
     
   case 103:
-    ret = num2js(js2go(argv[1])->scale);
+    ret = num2js(js2go(argv[1])->scale.X);
     break;
 
   case 104:
-    ret = bool2js(js2go(argv[1])->flipx == -1 ? 1 : 0);
+//    ret = bool2js(js2go(argv[1])->flipx == -1 ? 1 : 0);
     break;
 
   case 105:
-    ret = bool2js(js2go(argv[1])->flipy == -1 ? 1 : 0);
+//    ret = bool2js(js2go(argv[1])->flipy == -1 ? 1 : 0);
     break;
 
   case 106:
@@ -1070,11 +1062,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 136:
-      ret = v22js(world2screen(js2hmmv2(argv[1])));
+      ret = v22js(world2screen(js2vec2(argv[1])));
       break;
 
     case 137:
-      ret = v22js(screen2world(js2hmmv2(argv[1])));
+      ret = v22js(screen2world(js2vec2(argv[1])));
       break;
 
     case 138:
@@ -1355,7 +1347,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 2:
-    cpBodySetPosition(go->body, js2vec2(argv[2]));
+    cpBodySetPosition(go->body, js2vec2(argv[2]).cp);
     break;
 
   case 3:
@@ -1363,15 +1355,15 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 4:
-    cpBodyApplyImpulseAtWorldPoint(go->body, js2vec2(argv[2]), cpBodyGetPosition(go->body));
+    cpBodyApplyImpulseAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
     return JS_NULL;
 
   case 5:
-    go->flipx = JS_ToBool(js, argv[2]);
+//    go->flipx = JS_ToBool(js, argv[2]);
     break;
 
   case 6:
-    go->flipy = JS_ToBool(js, argv[2]);
+//    go->flipy = JS_ToBool(js, argv[2]);
     break;
 
   case 7:
@@ -1385,7 +1377,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     return JS_NULL;
 
   case 9:
-    cpBodySetVelocity(go->body, js2vec2(argv[2]));
+    cpBodySetVelocity(go->body, js2vec2(argv[2]).cp);
     return JS_NULL;
 
   case 10:
@@ -1397,14 +1389,14 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 12:
-    cpBodyApplyForceAtWorldPoint(go->body, js2vec2(argv[2]), cpBodyGetPosition(go->body));
+    cpBodyApplyForceAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
     return JS_NULL;
 
   case 13:
     cpBodySetMoment(go->body, js2number(argv[2]));
     return JS_NULL;
   case 14:
-    cpBodyApplyForceAtLocalPoint(go->body, js2vec2(argv[2]), js2vec2(argv[3]));
+    cpBodyApplyForceAtLocalPoint(go->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp);
     return JS_NULL;
   }
 
@@ -1425,13 +1417,13 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
     return JS_NewInt64(js, cpBodyGetType(go->body));
 
   case 1:
-    return vec2js(cpBodyGetPosition(go->body));
+    return vec2js((HMM_Vec2)cpBodyGetPosition(go->body));
 
   case 2:
     return JS_NewFloat64(js, cpBodyGetAngle(go->body));
 
   case 3:
-    return vec2js(cpBodyGetVelocity(go->body));
+    return vec2js((HMM_Vec2)cpBodyGetVelocity(go->body));
 
   case 4:
     return JS_NewFloat64(js, cpBodyGetAngularVelocity(go->body));
@@ -1474,14 +1466,12 @@ JSValue duk_make_anim2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 
 JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int go = js2int(argv[0]);
-  cpVect size = js2vec2(argv[1]);
-  cpVect offset = js2vec2(argv[2]);
+  HMM_Vec2 size = js2vec2(argv[1]);
 
   struct phys2d_box *box = Make2DBox(go);
   box->w = size.x;
   box->h = size.y;
-  box->offset[0] = offset.x;
-  box->offset[1] = offset.y;
+  box->offset = js2vec2(argv[2]);
 
   phys2d_applybox(box);
 
@@ -1494,7 +1484,7 @@ JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
 JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   struct phys2d_box *box = js2ptr(argv[1]);
-  cpVect arg;
+  HMM_Vec2 arg;
 
   if (!box) return JS_NULL;
 
@@ -1506,9 +1496,7 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
     break;
 
   case 1:
-    arg = js2vec2(argv[2]);
-    box->offset[0] = arg.x;
-    box->offset[1] = arg.y;
+    box->offset = js2vec2(argv[2]);
     break;
 
   case 2:
@@ -1596,12 +1584,12 @@ JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   struct phys2d_edge *edge = Make2DEdge(go);
 
   int n = js_arrlen(argv[1]);
-  cpVect points[n];
+  HMM_Vec2 points[n];
 
   for (int i = 0; i < n; i++) {
     points[i] = js2vec2(js_getpropidx(argv[1],i));
     phys2d_edgeaddvert(edge);
-    phys2d_edge_setvert(edge, i, points[i]);
+    phys2d_edge_setvert(edge, i, points[i].cp);
   }
 
   JSValue edgeval = JS_NewObject(js);
@@ -1634,10 +1622,10 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
 }
 
 JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  cpVect *points = js2cpvec2arr(argv[0]);
+  HMM_Vec2 *points = js2cpvec2arr(argv[0]);
   int n = js2int(argv[1]);
   double d = js2number(argv[2]);
-  cpVect *infl = inflatepoints(points,d,n);
+  HMM_Vec2 *infl = inflatepoints(points,d,n);
   JSValue arr = vecarr2js(infl,arrlen(infl));
   arrfree(infl);
   return arr;
@@ -1653,7 +1641,7 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 
   for (int i = 0; i < keyframes; i++) {
     struct keyframe k;
-    cpVect v = js2vec2(js_getpropidx( argv[1], i));
+    HMM_Vec2 v = js2vec2(js_getpropidx( argv[1], i));
     k.time = v.y;
     k.val = v.x;
     a = anim_add_keyframe(a, k);
@@ -1680,7 +1668,7 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
 JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int n = js_arrlen(argv[1]);
-  cpVect points[n];
+  HMM_Vec2 points[n];
 
   for (int i = 0; i < n; i++)
     points[i] = js2vec2(js_arridx(argv[1], i));

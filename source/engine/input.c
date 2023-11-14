@@ -16,9 +16,9 @@ float deltaT = 0;
 static int mouse_states[3] = {INPUT_UP};
 static int key_states[512] = {INPUT_UP};
 
-cpVect mousewheel = {0,0};
-cpVect mouse_pos = {0, 0};
-cpVect mouse_delta = {0, 0};
+HMM_Vec2 mousewheel = {0,0};
+HMM_Vec2 mouse_pos = {0, 0};
+HMM_Vec2 mouse_delta = {0, 0};
 
 struct joystick {
   int id;

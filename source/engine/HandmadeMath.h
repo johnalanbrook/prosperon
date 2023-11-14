@@ -113,10 +113,6 @@
 #endif /* not _MSC_VER */
 #endif /* #ifndef HANDMADE_MATH_NO_SSE */
 
-#if (!defined(__cplusplus) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
-#define HANDMADE_MATH__USE_C11_GENERICS 1
-#endif
-
 #ifdef HANDMADE_MATH__USE_SSE
 #include <xmmintrin.h>
 #endif
@@ -126,27 +122,11 @@
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wfloat-equal"
-#if (defined(__GNUC__) && (__GNUC__ == 4 && __GNUC_MINOR__ < 8)) || defined(__clang__)
-#pragma GCC diagnostic ignored "-Wmissing-braces"
-#endif
-#ifdef __clang__
-#pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#endif
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
 #define HMM_DEPRECATED(msg) __attribute__((deprecated(msg)))
 #elif defined(_MSC_VER)
 #define HMM_DEPRECATED(msg) __declspec(deprecated(msg))
 #else
 #define HMM_DEPRECATED(msg)
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 #if !defined(HANDMADE_MATH_USE_DEGREES) && !defined(HANDMADE_MATH_USE_TURNS) && !defined(HANDMADE_MATH_USE_RADIANS)
@@ -215,6 +195,10 @@ typedef union HMM_Vec2 {
     float X, Y;
   };
 
+  struct {
+    float x, y;
+  };
+
   struct
   {
     float U, V;
@@ -234,14 +218,9 @@ typedef union HMM_Vec2 {
 
   cpVect cp;
 
-#ifdef __cplusplus
-  inline float &operator[](const int &Index) {
-    return Elements[Index];
-  }
-#endif
 } HMM_Vec2;
 
-const HMM_Vec2 v2zero = {0,0};
+static const HMM_Vec2 v2zero = {0,0};
 
 typedef union HMM_Vec3 {
   struct
@@ -285,14 +264,9 @@ typedef union HMM_Vec3 {
 
   float Elements[3];
 
-#ifdef __cplusplus
-  inline float &operator[](const int &Index) {
-    return Elements[Index];
-  }
-#endif
 } HMM_Vec3;
 
-const HMM_Vec3 v3zero = {0,0,0};
+static const HMM_Vec3 v3zero = {0,0,0};
 
 typedef union HMM_Vec4 {
   struct
@@ -347,44 +321,24 @@ typedef union HMM_Vec4 {
   __m128 SSE;
 #endif
 
-#ifdef __cplusplus
-  inline float &operator[](const int &Index) {
-    return Elements[Index];
-  }
-#endif
 } HMM_Vec4;
 
 typedef union HMM_Mat2 {
   float Elements[2][2];
   HMM_Vec2 Columns[2];
 
-#ifdef __cplusplus
-  inline HMM_Vec2 &operator[](const int &Index) {
-    return Columns[Index];
-  }
-#endif
 } HMM_Mat2;
 
 typedef union HMM_Mat3 {
   float Elements[3][3];
   HMM_Vec3 Columns[3];
 
-#ifdef __cplusplus
-  inline HMM_Vec3 &operator[](const int &Index) {
-    return Columns[Index];
-  }
-#endif
 } HMM_Mat3;
 
 typedef union HMM_Mat4 {
   float Elements[4][4];
   HMM_Vec4 Columns[4];
 
-#ifdef __cplusplus
-  inline HMM_Vec4 &operator[](const int &Index) {
-    return Columns[Index];
-  }
-#endif
 } HMM_Mat4;
 
 typedef union HMM_Quat {
@@ -822,6 +776,11 @@ static inline float HMM_DotV2(HMM_Vec2 Left, HMM_Vec2 Right) {
   return (Left.X * Right.X) + (Left.Y * Right.Y);
 }
 
+static inline HMM_Vec2 HMM_ProjV2(HMM_Vec2 a, HMM_Vec2 b)
+{
+  return HMM_MulV2F(b, HMM_DotV2(a,b)/HMM_DotV2(b,b));
+}
+
 static inline float HMM_DotV3(HMM_Vec3 Left, HMM_Vec3 Right) {
   return (Left.X * Right.X) + (Left.Y * Right.Y) + (Left.Z * Right.Z);
 }
@@ -877,6 +836,10 @@ static inline float HMM_LenV2(HMM_Vec2 A) {
   return HMM_SqrtF(HMM_LenSqrV2(A));
 }
 
+static inline float HMM_DistV2(HMM_Vec2 a, HMM_Vec2 b) {
+  return HMM_LenV2(HMM_SubV2(a,b));
+}
+
 static inline float HMM_LenV3(HMM_Vec3 A) {
   return HMM_SqrtF(HMM_LenSqrV3(A));
 }
@@ -886,6 +849,7 @@ static inline float HMM_LenV4(HMM_Vec4 A) {
 }
 
 static inline HMM_Vec2 HMM_NormV2(HMM_Vec2 A) {
+  // HMM_MulV2F(A, 1.0/HMM_LenV2(A)+FLOAT_MIN);
   return HMM_MulV2F(A, HMM_InvSqrtF(HMM_DotV2(A, A)));
 }
 
@@ -2206,858 +2170,5 @@ static inline HMM_Quat HMM_QFromAxisAngle_LH(HMM_Vec3 Axis, float AngleOfRotatio
 
   return HMM_QFromAxisAngle_RH(Axis, -AngleOfRotation);
 }
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
-
-static inline float HMM_Len(HMM_Vec2 A) {
-  return HMM_LenV2(A);
-}
-
-static inline float HMM_Len(HMM_Vec3 A) {
-  return HMM_LenV3(A);
-}
-
-static inline float HMM_Len(HMM_Vec4 A) {
-  return HMM_LenV4(A);
-}
-
-static inline float HMM_LenSqr(HMM_Vec2 A) {
-  return HMM_LenSqrV2(A);
-}
-
-static inline float HMM_LenSqr(HMM_Vec3 A) {
-  return HMM_LenSqrV3(A);
-}
-
-static inline float HMM_LenSqr(HMM_Vec4 A) {
-  return HMM_LenSqrV4(A);
-}
-
-static inline HMM_Vec2 HMM_Norm(HMM_Vec2 A) {
-  return HMM_NormV2(A);
-}
-
-static inline HMM_Vec3 HMM_Norm(HMM_Vec3 A) {
-  return HMM_NormV3(A);
-}
-
-static inline HMM_Vec4 HMM_Norm(HMM_Vec4 A) {
-  return HMM_NormV4(A);
-}
-
-static inline HMM_Quat HMM_Norm(HMM_Quat A) {
-  return HMM_NormQ(A);
-}
-
-static inline float HMM_Dot(HMM_Vec2 Left, HMM_Vec2 VecTwo) {
-  return HMM_DotV2(Left, VecTwo);
-}
-
-static inline float HMM_Dot(HMM_Vec3 Left, HMM_Vec3 VecTwo) {
-  return HMM_DotV3(Left, VecTwo);
-}
-
-static inline float HMM_Dot(HMM_Vec4 Left, HMM_Vec4 VecTwo) {
-  return HMM_DotV4(Left, VecTwo);
-}
-
-static inline HMM_Vec2 HMM_Lerp(HMM_Vec2 Left, float Time, HMM_Vec2 Right) {
-  return HMM_LerpV2(Left, Time, Right);
-}
-
-static inline HMM_Vec3 HMM_Lerp(HMM_Vec3 Left, float Time, HMM_Vec3 Right) {
-  return HMM_LerpV3(Left, Time, Right);
-}
-
-static inline HMM_Vec4 HMM_Lerp(HMM_Vec4 Left, float Time, HMM_Vec4 Right) {
-  return HMM_LerpV4(Left, Time, Right);
-}
-
-static inline HMM_Mat2 HMM_Transpose(HMM_Mat2 Matrix) {
-  return HMM_TransposeM2(Matrix);
-}
-
-static inline HMM_Mat3 HMM_Transpose(HMM_Mat3 Matrix) {
-  return HMM_TransposeM3(Matrix);
-}
-
-static inline HMM_Mat4 HMM_Transpose(HMM_Mat4 Matrix) {
-  return HMM_TransposeM4(Matrix);
-}
-
-static inline float HMM_Determinant(HMM_Mat2 Matrix) {
-  return HMM_DeterminantM2(Matrix);
-}
-
-static inline float HMM_Determinant(HMM_Mat3 Matrix) {
-  return HMM_DeterminantM3(Matrix);
-}
-
-static inline float HMM_Determinant(HMM_Mat4 Matrix) {
-  return HMM_DeterminantM4(Matrix);
-}
-
-static inline HMM_Mat2 HMM_InvGeneral(HMM_Mat2 Matrix) {
-  return HMM_InvGeneralM2(Matrix);
-}
-
-static inline HMM_Mat3 HMM_InvGeneral(HMM_Mat3 Matrix) {
-  return HMM_InvGeneralM3(Matrix);
-}
-
-static inline HMM_Mat4 HMM_InvGeneral(HMM_Mat4 Matrix) {
-  return HMM_InvGeneralM4(Matrix);
-}
-
-static inline float HMM_Dot(HMM_Quat QuatOne, HMM_Quat QuatTwo) {
-  return HMM_DotQ(QuatOne, QuatTwo);
-}
-
-static inline HMM_Vec2 HMM_Add(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_AddV2(Left, Right);
-}
-
-static inline HMM_Vec3 HMM_Add(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_AddV3(Left, Right);
-}
-
-static inline HMM_Vec4 HMM_Add(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_AddV4(Left, Right);
-}
-
-static inline HMM_Mat2 HMM_Add(HMM_Mat2 Left, HMM_Mat2 Right) {
-  return HMM_AddM2(Left, Right);
-}
-
-static inline HMM_Mat3 HMM_Add(HMM_Mat3 Left, HMM_Mat3 Right) {
-  return HMM_AddM3(Left, Right);
-}
-
-static inline HMM_Mat4 HMM_Add(HMM_Mat4 Left, HMM_Mat4 Right) {
-  return HMM_AddM4(Left, Right);
-}
-
-static inline HMM_Quat HMM_Add(HMM_Quat Left, HMM_Quat Right) {
-  return HMM_AddQ(Left, Right);
-}
-
-static inline HMM_Vec2 HMM_Sub(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_SubV2(Left, Right);
-}
-
-static inline HMM_Vec3 HMM_Sub(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_SubV3(Left, Right);
-}
-
-static inline HMM_Vec4 HMM_Sub(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_SubV4(Left, Right);
-}
-
-static inline HMM_Mat2 HMM_Sub(HMM_Mat2 Left, HMM_Mat2 Right) {
-  return HMM_SubM2(Left, Right);
-}
-
-static inline HMM_Mat3 HMM_Sub(HMM_Mat3 Left, HMM_Mat3 Right) {
-  return HMM_SubM3(Left, Right);
-}
-
-static inline HMM_Mat4 HMM_Sub(HMM_Mat4 Left, HMM_Mat4 Right) {
-  return HMM_SubM4(Left, Right);
-}
-
-static inline HMM_Quat HMM_Sub(HMM_Quat Left, HMM_Quat Right) {
-  return HMM_SubQ(Left, Right);
-}
-
-static inline HMM_Vec2 HMM_Mul(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_MulV2(Left, Right);
-}
-
-static inline HMM_Vec2 HMM_Mul(HMM_Vec2 Left, float Right) {
-  return HMM_MulV2F(Left, Right);
-}
-
-static inline HMM_Vec3 HMM_Mul(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_MulV3(Left, Right);
-}
-
-static inline HMM_Vec3 HMM_Mul(HMM_Vec3 Left, float Right) {
-  return HMM_MulV3F(Left, Right);
-}
-
-static inline HMM_Vec4 HMM_Mul(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_MulV4(Left, Right);
-}
-
-static inline HMM_Vec4 HMM_Mul(HMM_Vec4 Left, float Right) {
-  return HMM_MulV4F(Left, Right);
-}
-
-static inline HMM_Mat2 HMM_Mul(HMM_Mat2 Left, HMM_Mat2 Right) {
-  return HMM_MulM2(Left, Right);
-}
-
-static inline HMM_Mat3 HMM_Mul(HMM_Mat3 Left, HMM_Mat3 Right) {
-  return HMM_MulM3(Left, Right);
-}
-
-static inline HMM_Mat4 HMM_Mul(HMM_Mat4 Left, HMM_Mat4 Right) {
-  return HMM_MulM4(Left, Right);
-}
-
-static inline HMM_Mat2 HMM_Mul(HMM_Mat2 Left, float Right) {
-  return HMM_MulM2F(Left, Right);
-}
-
-static inline HMM_Mat3 HMM_Mul(HMM_Mat3 Left, float Right) {
-  return HMM_MulM3F(Left, Right);
-}
-
-static inline HMM_Mat4 HMM_Mul(HMM_Mat4 Left, float Right) {
-  return HMM_MulM4F(Left, Right);
-}
-
-static inline HMM_Vec2 HMM_Mul(HMM_Mat2 Matrix, HMM_Vec2 Vector) {
-  return HMM_MulM2V2(Matrix, Vector);
-}
-
-static inline HMM_Vec3 HMM_Mul(HMM_Mat3 Matrix, HMM_Vec3 Vector) {
-  return HMM_MulM3V3(Matrix, Vector);
-}
-
-static inline HMM_Vec4 HMM_Mul(HMM_Mat4 Matrix, HMM_Vec4 Vector) {
-  return HMM_MulM4V4(Matrix, Vector);
-}
-
-static inline HMM_Quat HMM_Mul(HMM_Quat Left, HMM_Quat Right) {
-  return HMM_MulQ(Left, Right);
-}
-
-static inline HMM_Quat HMM_Mul(HMM_Quat Left, float Right) {
-  return HMM_MulQF(Left, Right);
-}
-
-static inline HMM_Vec2 HMM_Div(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_DivV2(Left, Right);
-}
-
-static inline HMM_Vec2 HMM_Div(HMM_Vec2 Left, float Right) {
-  return HMM_DivV2F(Left, Right);
-}
-
-static inline HMM_Vec3 HMM_Div(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_DivV3(Left, Right);
-}
-
-static inline HMM_Vec3 HMM_Div(HMM_Vec3 Left, float Right) {
-  return HMM_DivV3F(Left, Right);
-}
-
-static inline HMM_Vec4 HMM_Div(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_DivV4(Left, Right);
-}
-
-static inline HMM_Vec4 HMM_Div(HMM_Vec4 Left, float Right) {
-  return HMM_DivV4F(Left, Right);
-}
-
-static inline HMM_Mat2 HMM_Div(HMM_Mat2 Left, float Right) {
-  return HMM_DivM2F(Left, Right);
-}
-
-static inline HMM_Mat3 HMM_Div(HMM_Mat3 Left, float Right) {
-  return HMM_DivM3F(Left, Right);
-}
-
-static inline HMM_Mat4 HMM_Div(HMM_Mat4 Left, float Right) {
-  return HMM_DivM4F(Left, Right);
-}
-
-static inline HMM_Quat HMM_Div(HMM_Quat Left, float Right) {
-  return HMM_DivQF(Left, Right);
-}
-
-static inline HMM_Bool HMM_Eq(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_EqV2(Left, Right);
-}
-
-static inline HMM_Bool HMM_Eq(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_EqV3(Left, Right);
-}
-
-static inline HMM_Bool HMM_Eq(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_EqV4(Left, Right);
-}
-
-static inline HMM_Vec2 operator+(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_AddV2(Left, Right);
-}
-
-static inline HMM_Vec3 operator+(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_AddV3(Left, Right);
-}
-
-static inline HMM_Vec4 operator+(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_AddV4(Left, Right);
-}
-
-static inline HMM_Mat2 operator+(HMM_Mat2 Left, HMM_Mat2 Right) {
-  return HMM_AddM2(Left, Right);
-}
-
-static inline HMM_Mat3 operator+(HMM_Mat3 Left, HMM_Mat3 Right) {
-  return HMM_AddM3(Left, Right);
-}
-
-static inline HMM_Mat4 operator+(HMM_Mat4 Left, HMM_Mat4 Right) {
-  return HMM_AddM4(Left, Right);
-}
-
-static inline HMM_Quat operator+(HMM_Quat Left, HMM_Quat Right) {
-  return HMM_AddQ(Left, Right);
-}
-
-static inline HMM_Vec2 operator-(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_SubV2(Left, Right);
-}
-
-static inline HMM_Vec3 operator-(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_SubV3(Left, Right);
-}
-
-static inline HMM_Vec4 operator-(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_SubV4(Left, Right);
-}
-
-static inline HMM_Mat2 operator-(HMM_Mat2 Left, HMM_Mat2 Right) {
-  return HMM_SubM2(Left, Right);
-}
-
-static inline HMM_Mat3 operator-(HMM_Mat3 Left, HMM_Mat3 Right) {
-  return HMM_SubM3(Left, Right);
-}
-
-static inline HMM_Mat4 operator-(HMM_Mat4 Left, HMM_Mat4 Right) {
-  return HMM_SubM4(Left, Right);
-}
-
-static inline HMM_Quat operator-(HMM_Quat Left, HMM_Quat Right) {
-  return HMM_SubQ(Left, Right);
-}
-
-static inline HMM_Vec2 operator*(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_MulV2(Left, Right);
-}
-
-static inline HMM_Vec3 operator*(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_MulV3(Left, Right);
-}
-
-static inline HMM_Vec4 operator*(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_MulV4(Left, Right);
-}
-
-static inline HMM_Mat2 operator*(HMM_Mat2 Left, HMM_Mat2 Right) {
-  return HMM_MulM2(Left, Right);
-}
-
-static inline HMM_Mat3 operator*(HMM_Mat3 Left, HMM_Mat3 Right) {
-  return HMM_MulM3(Left, Right);
-}
-
-static inline HMM_Mat4 operator*(HMM_Mat4 Left, HMM_Mat4 Right) {
-  return HMM_MulM4(Left, Right);
-}
-
-static inline HMM_Quat operator*(HMM_Quat Left, HMM_Quat Right) {
-  return HMM_MulQ(Left, Right);
-}
-
-static inline HMM_Vec2 operator*(HMM_Vec2 Left, float Right) {
-  return HMM_MulV2F(Left, Right);
-}
-
-static inline HMM_Vec3 operator*(HMM_Vec3 Left, float Right) {
-  return HMM_MulV3F(Left, Right);
-}
-
-static inline HMM_Vec4 operator*(HMM_Vec4 Left, float Right) {
-  return HMM_MulV4F(Left, Right);
-}
-
-static inline HMM_Mat2 operator*(HMM_Mat2 Left, float Right) {
-  return HMM_MulM2F(Left, Right);
-}
-
-static inline HMM_Mat3 operator*(HMM_Mat3 Left, float Right) {
-  return HMM_MulM3F(Left, Right);
-}
-
-static inline HMM_Mat4 operator*(HMM_Mat4 Left, float Right) {
-  return HMM_MulM4F(Left, Right);
-}
-
-static inline HMM_Quat operator*(HMM_Quat Left, float Right) {
-  return HMM_MulQF(Left, Right);
-}
-
-static inline HMM_Vec2 operator*(float Left, HMM_Vec2 Right) {
-  return HMM_MulV2F(Right, Left);
-}
-
-static inline HMM_Vec3 operator*(float Left, HMM_Vec3 Right) {
-  return HMM_MulV3F(Right, Left);
-}
-
-static inline HMM_Vec4 operator*(float Left, HMM_Vec4 Right) {
-  return HMM_MulV4F(Right, Left);
-}
-
-static inline HMM_Mat2 operator*(float Left, HMM_Mat2 Right) {
-  return HMM_MulM2F(Right, Left);
-}
-
-static inline HMM_Mat3 operator*(float Left, HMM_Mat3 Right) {
-  return HMM_MulM3F(Right, Left);
-}
-
-static inline HMM_Mat4 operator*(float Left, HMM_Mat4 Right) {
-  return HMM_MulM4F(Right, Left);
-}
-
-static inline HMM_Quat operator*(float Left, HMM_Quat Right) {
-  return HMM_MulQF(Right, Left);
-}
-
-static inline HMM_Vec2 operator*(HMM_Mat2 Matrix, HMM_Vec2 Vector) {
-  return HMM_MulM2V2(Matrix, Vector);
-}
-
-static inline HMM_Vec3 operator*(HMM_Mat3 Matrix, HMM_Vec3 Vector) {
-  return HMM_MulM3V3(Matrix, Vector);
-}
-
-static inline HMM_Vec4 operator*(HMM_Mat4 Matrix, HMM_Vec4 Vector) {
-  return HMM_MulM4V4(Matrix, Vector);
-}
-
-static inline HMM_Vec2 operator/(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_DivV2(Left, Right);
-}
-
-static inline HMM_Vec3 operator/(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_DivV3(Left, Right);
-}
-
-static inline HMM_Vec4 operator/(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_DivV4(Left, Right);
-}
-
-static inline HMM_Vec2 operator/(HMM_Vec2 Left, float Right) {
-  return HMM_DivV2F(Left, Right);
-}
-
-static inline HMM_Vec3 operator/(HMM_Vec3 Left, float Right) {
-  return HMM_DivV3F(Left, Right);
-}
-
-static inline HMM_Vec4 operator/(HMM_Vec4 Left, float Right) {
-  return HMM_DivV4F(Left, Right);
-}
-
-static inline HMM_Mat4 operator/(HMM_Mat4 Left, float Right) {
-  return HMM_DivM4F(Left, Right);
-}
-
-static inline HMM_Mat3 operator/(HMM_Mat3 Left, float Right) {
-  return HMM_DivM3F(Left, Right);
-}
-
-static inline HMM_Mat2 operator/(HMM_Mat2 Left, float Right) {
-  return HMM_DivM2F(Left, Right);
-}
-
-static inline HMM_Quat operator/(HMM_Quat Left, float Right) {
-  return HMM_DivQF(Left, Right);
-}
-
-static inline HMM_Vec2 &operator+=(HMM_Vec2 &Left, HMM_Vec2 Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Vec3 &operator+=(HMM_Vec3 &Left, HMM_Vec3 Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Vec4 &operator+=(HMM_Vec4 &Left, HMM_Vec4 Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Mat2 &operator+=(HMM_Mat2 &Left, HMM_Mat2 Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Mat3 &operator+=(HMM_Mat3 &Left, HMM_Mat3 Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Mat4 &operator+=(HMM_Mat4 &Left, HMM_Mat4 Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Quat &operator+=(HMM_Quat &Left, HMM_Quat Right) {
-  return Left = Left + Right;
-}
-
-static inline HMM_Vec2 &operator-=(HMM_Vec2 &Left, HMM_Vec2 Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Vec3 &operator-=(HMM_Vec3 &Left, HMM_Vec3 Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Vec4 &operator-=(HMM_Vec4 &Left, HMM_Vec4 Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Mat2 &operator-=(HMM_Mat2 &Left, HMM_Mat2 Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Mat3 &operator-=(HMM_Mat3 &Left, HMM_Mat3 Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Mat4 &operator-=(HMM_Mat4 &Left, HMM_Mat4 Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Quat &operator-=(HMM_Quat &Left, HMM_Quat Right) {
-  return Left = Left - Right;
-}
-
-static inline HMM_Vec2 &operator*=(HMM_Vec2 &Left, HMM_Vec2 Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Vec3 &operator*=(HMM_Vec3 &Left, HMM_Vec3 Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Vec4 &operator*=(HMM_Vec4 &Left, HMM_Vec4 Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Vec2 &operator*=(HMM_Vec2 &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Vec3 &operator*=(HMM_Vec3 &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Vec4 &operator*=(HMM_Vec4 &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Mat2 &operator*=(HMM_Mat2 &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Mat3 &operator*=(HMM_Mat3 &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Mat4 &operator*=(HMM_Mat4 &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Quat &operator*=(HMM_Quat &Left, float Right) {
-  return Left = Left * Right;
-}
-
-static inline HMM_Vec2 &operator/=(HMM_Vec2 &Left, HMM_Vec2 Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Vec3 &operator/=(HMM_Vec3 &Left, HMM_Vec3 Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Vec4 &operator/=(HMM_Vec4 &Left, HMM_Vec4 Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Vec2 &operator/=(HMM_Vec2 &Left, float Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Vec3 &operator/=(HMM_Vec3 &Left, float Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Vec4 &operator/=(HMM_Vec4 &Left, float Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Mat4 &operator/=(HMM_Mat4 &Left, float Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Quat &operator/=(HMM_Quat &Left, float Right) {
-  return Left = Left / Right;
-}
-
-static inline HMM_Bool operator==(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return HMM_EqV2(Left, Right);
-}
-
-static inline HMM_Bool operator==(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return HMM_EqV3(Left, Right);
-}
-
-static inline HMM_Bool operator==(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return HMM_EqV4(Left, Right);
-}
-
-static inline HMM_Bool operator!=(HMM_Vec2 Left, HMM_Vec2 Right) {
-  return !HMM_EqV2(Left, Right);
-}
-
-static inline HMM_Bool operator!=(HMM_Vec3 Left, HMM_Vec3 Right) {
-  return !HMM_EqV3(Left, Right);
-}
-
-static inline HMM_Bool operator!=(HMM_Vec4 Left, HMM_Vec4 Right) {
-  return !HMM_EqV4(Left, Right);
-}
-
-static inline HMM_Vec2 operator-(HMM_Vec2 In) {
-
-  HMM_Vec2 Result;
-  Result.X = -In.X;
-  Result.Y = -In.Y;
-
-  return Result;
-}
-
-static inline HMM_Vec3 operator-(HMM_Vec3 In) {
-
-  HMM_Vec3 Result;
-  Result.X = -In.X;
-  Result.Y = -In.Y;
-  Result.Z = -In.Z;
-
-  return Result;
-}
-
-static inline HMM_Vec4 operator-(HMM_Vec4 In) {
-
-  HMM_Vec4 Result;
-#if HANDMADE_MATH__USE_SSE
-  Result.SSE = _mm_xor_ps(In.SSE, _mm_set1_ps(-0.0f));
-#else
-  Result.X = -In.X;
-  Result.Y = -In.Y;
-  Result.Z = -In.Z;
-  Result.W = -In.W;
-#endif
-
-  return Result;
-}
-
-#endif /* __cplusplus*/
-
-#ifdef HANDMADE_MATH__USE_C11_GENERICS
-#define HMM_Add(A, B) _Generic((A),         \
-                               HMM_Vec2     \
-                               : HMM_AddV2, \
-                                 HMM_Vec3   \
-                               : HMM_AddV3, \
-                                 HMM_Vec4   \
-                               : HMM_AddV4, \
-                                 HMM_Mat2   \
-                               : HMM_AddM2, \
-                                 HMM_Mat3   \
-                               : HMM_AddM3, \
-                                 HMM_Mat4   \
-                               : HMM_AddM4, \
-                                 HMM_Quat   \
-                               : HMM_AddQ)(A, B)
-
-#define HMM_Sub(A, B) _Generic((A),         \
-                               HMM_Vec2     \
-                               : HMM_SubV2, \
-                                 HMM_Vec3   \
-                               : HMM_SubV3, \
-                                 HMM_Vec4   \
-                               : HMM_SubV4, \
-                                 HMM_Mat2   \
-                               : HMM_SubM2, \
-                                 HMM_Mat3   \
-                               : HMM_SubM3, \
-                                 HMM_Mat4   \
-                               : HMM_SubM4, \
-                                 HMM_Quat   \
-                               : HMM_SubQ)(A, B)
-
-#define HMM_Mul(A, B) _Generic((B),                      \
-                               float                     \
-                               : _Generic((A),           \
-                                          HMM_Vec2       \
-                                          : HMM_MulV2F,  \
-                                            HMM_Vec3     \
-                                          : HMM_MulV3F,  \
-                                            HMM_Vec4     \
-                                          : HMM_MulV4F,  \
-                                            HMM_Mat2     \
-                                          : HMM_MulM2F,  \
-                                            HMM_Mat3     \
-                                          : HMM_MulM3F,  \
-                                            HMM_Mat4     \
-                                          : HMM_MulM4F,  \
-                                            HMM_Quat     \
-                                          : HMM_MulQF),  \
-                                 HMM_Mat2                \
-                               : HMM_MulM2,              \
-                                 HMM_Mat3                \
-                               : HMM_MulM3,              \
-                                 HMM_Mat4                \
-                               : HMM_MulM4,              \
-                                 HMM_Quat                \
-                               : HMM_MulQ,               \
-                                 default                 \
-                               : _Generic((A),           \
-                                          HMM_Vec2       \
-                                          : HMM_MulV2,   \
-                                            HMM_Vec3     \
-                                          : HMM_MulV3,   \
-                                            HMM_Vec4     \
-                                          : HMM_MulV4,   \
-                                            HMM_Mat2     \
-                                          : HMM_MulM2V2, \
-                                            HMM_Mat3     \
-                                          : HMM_MulM3V3, \
-                                            HMM_Mat4     \
-                                          : HMM_MulM4V4))(A, B)
-
-#define HMM_Div(A, B) _Generic((B),                     \
-                               float                    \
-                               : _Generic((A),          \
-                                          HMM_Mat2      \
-                                          : HMM_DivM2F, \
-                                            HMM_Mat3    \
-                                          : HMM_DivM3F, \
-                                            HMM_Mat4    \
-                                          : HMM_DivM4F, \
-                                            HMM_Vec2    \
-                                          : HMM_DivV2F, \
-                                            HMM_Vec3    \
-                                          : HMM_DivV3F, \
-                                            HMM_Vec4    \
-                                          : HMM_DivV4F, \
-                                            HMM_Quat    \
-                                          : HMM_DivQF), \
-                                 HMM_Mat2               \
-                               : HMM_DivM2,             \
-                                 HMM_Mat3               \
-                               : HMM_DivM3,             \
-                                 HMM_Mat4               \
-                               : HMM_DivM4,             \
-                                 HMM_Quat               \
-                               : HMM_DivQ,              \
-                                 default                \
-                               : _Generic((A),          \
-                                          HMM_Vec2      \
-                                          : HMM_DivV2,  \
-                                            HMM_Vec3    \
-                                          : HMM_DivV3,  \
-                                            HMM_Vec4    \
-                                          : HMM_DivV4))(A, B)
-
-#define HMM_Len(A) _Generic((A),         \
-                            HMM_Vec2     \
-                            : HMM_LenV2, \
-                              HMM_Vec3   \
-                            : HMM_LenV3, \
-                              HMM_Vec4   \
-                            : HMM_LenV4)(A)
-
-#define HMM_LenSqr(A) _Generic((A),            \
-                               HMM_Vec2        \
-                               : HMM_LenSqrV2, \
-                                 HMM_Vec3      \
-                               : HMM_LenSqrV3, \
-                                 HMM_Vec4      \
-                               : HMM_LenSqrV4)(A)
-
-#define HMM_Norm(A) _Generic((A),          \
-                             HMM_Vec2      \
-                             : HMM_NormV2, \
-                               HMM_Vec3    \
-                             : HMM_NormV3, \
-                               HMM_Vec4    \
-                             : HMM_NormV4)(A)
-
-#define HMM_Dot(A, B) _Generic((A),         \
-                               HMM_Vec2     \
-                               : HMM_DotV2, \
-                                 HMM_Vec3   \
-                               : HMM_DotV3, \
-                                 HMM_Vec4   \
-                               : HMM_DotV4)(A, B)
-
-#define HMM_Lerp(A, T, B) _Generic((A),          \
-                                   float         \
-                                   : HMM_Lerp,   \
-                                     HMM_Vec2    \
-                                   : HMM_LerpV2, \
-                                     HMM_Vec3    \
-                                   : HMM_LerpV3, \
-                                     HMM_Vec4    \
-                                   : HMM_LerpV4)(A, T, B)
-
-#define HMM_Eq(A, B) _Generic((A),        \
-                              HMM_Vec2    \
-                              : HMM_EqV2, \
-                                HMM_Vec3  \
-                              : HMM_EqV3, \
-                                HMM_Vec4  \
-                              : HMM_EqV4)(A, B)
-
-#define HMM_Transpose(M) _Generic((M),               \
-                                  HMM_Mat2           \
-                                  : HMM_TransposeM2, \
-                                    HMM_Mat3         \
-                                  : HMM_TransposeM3, \
-                                    HMM_Mat4         \
-                                  : HMM_TransposeM4)(M)
-
-#define HMM_Determinant(M) _Generic((M),                 \
-                                    HMM_Mat2             \
-                                    : HMM_DeterminantM2, \
-                                      HMM_Mat3           \
-                                    : HMM_DeterminantM3, \
-                                      HMM_Mat4           \
-                                    : HMM_DeterminantM4)(M)
-
-#define HMM_InvGeneral(M) _Generic((M),                \
-                                   HMM_Mat2            \
-                                   : HMM_InvGeneralM2, \
-                                     HMM_Mat3          \
-                                   : HMM_InvGeneralM3, \
-                                     HMM_Mat4          \
-                                   : HMM_InvGeneralM4)(M)
-
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
 
 #endif /* HANDMADE_MATH_H */
