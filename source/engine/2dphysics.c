@@ -220,15 +220,9 @@ void phys2d_circledel(struct phys2d_circle *c) {
   phys2d_shape_del(&c->shape);
 }
 
-HMM_Vec2 bodytransformpoint(cpBody *body, cpVect offset) {
-  HMM_Vec2 pos;
-  pos.cp = offset;
-  struct gameobject *go = id2go(body2id(body));
-  return go2world(go, pos);
-}
-
 void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
-  HMM_Vec2 pos = bodytransformpoint(cpShapeGetBody(c), cpCircleShapeGetOffset(c));
+  HMM_Mat3 rt = mt_rt(go2t(shape2go(c)));
+  HMM_Vec2 pos = mat_t_pos(rt, (HMM_Vec2)cpCircleShapeGetOffset(c));
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
   float seglen = cpShapeGetSensor(c) ? 5 : -1;
@@ -272,12 +266,12 @@ float phys2d_box_moi(struct phys2d_box *box, float m) {
   return cpMomentForBox(m, box->w, box->h);
 }
 
-cpTransform trs2cpt(HMM_Vec2 t, float angle, HMM_Vec2 s) {
+cpTransform trs2cpt(HMM_Vec2 t, float r, HMM_Vec2 s) {
   cpTransform T;
-  T.a = cos(angle) * s.X;
-  T.b = -sin(angle) * s.X;
-  T.c = sin(angle) * s.Y;
-  T.d = cos(angle) * s.Y;
+  T.a = cos(r) * s.X;
+  T.b = -sin(r) * s.X;
+  T.c = sin(r) * s.Y;
+  T.d = cos(r) * s.Y;
   T.tx = t.X * s.X;
   T.ty = t.Y * s.Y;
   return T;
@@ -370,7 +364,7 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
   struct gameobject *go = id2go(poly->shape.go);
 
-  cpTransform T = trs2cpt((HMM_Vec2){0,0}, 0, (HMM_Vec2){1,1});
+  cpTransform T = trs2cpt((HMM_Vec2){0,0}, 0, go->scale.XY);
 
   cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
@@ -384,9 +378,9 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
     HMM_Vec2 points[n];
-
+    HMM_Mat3 rt = mt_rt(go2t(shape2go(poly->shape.shape)));
     for (int i = 0; i < n; i++)
-      points[i] = bodytransformpoint(cpShapeGetBody(poly->shape.shape), cpPolyShapeGetVert(poly->shape.shape, i));
+      points[i] = mat_t_pos(rt, (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i));
 
     draw_poly(points, n, color);
     float seglen = cpShapeGetSensor(poly->shape.shape) ? sensor_seg : 0;
@@ -511,11 +505,11 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
 
   HMM_Vec2 drawpoints[arrlen(edge->points)];
   struct gameobject *go = id2go(edge->shape.go);
+  
 
-  for (int i = 0; i < arrlen(edge->points); i++) {
-    drawpoints[i] = goscale(go, edge->points[i]);
-    drawpoints[i] = bodytransformpoint(cpShapeGetBody(edge->shapes[0]), drawpoints[i].cp);
-  }
+  HMM_Mat3 g2w = t_go2world(go);
+  for (int i = 0; i < arrlen(edge->points); i++) 
+    drawpoints[i] = mat_t_pos(g2w, edge->points[i]);
 
   float seglen = cpShapeGetSensor(edge->shapes[0]) ? sensor_seg : 0;
   struct rgba color = shape_color(edge->shapes[0]);

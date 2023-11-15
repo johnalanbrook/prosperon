@@ -66,6 +66,15 @@ HMM_Mat3 t_world2go(struct gameobject *go);
 HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);
 HMM_Vec2 gotpos(struct gameobject *go, HMM_Vec2 pos);
 
+HMM_Mat3 mt_rst(transform2d t);
+HMM_Mat3 mt_st(transform2d t);
+HMM_Mat3 mt_rt(transform2d t);
+
+/* Transform a position via the matrix */
+HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos);
+/* Transform a direction via the matrix - does not take into account translation of matrix */
+HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir);
+
 struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);
 int id_from_gameobject(struct gameobject *go);

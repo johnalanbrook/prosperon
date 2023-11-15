@@ -57,39 +57,38 @@ var gameobject = {
       gscale() { return cmd(103,this.body); },
       sgscale(x) {
         if (typeof x === 'number')
-	  cmd(36,this.body, [x,x]);
-	else
-          cmd(36,this.body,x)
+	  x = [x,x];
+        cmd(36,this.body,x)
       },
       get scale() {
         if (!this.level) return this.gscale();
-        return this.gscale()/this.level.gscale();
+        return this.gscale().map((x,i) => x/this.level.gscale()[i]);
       },
       set scale(x) {
-        if (this.level)
-          x *= this.level.gscale();
-	var pct = x/this.gscale();
+        if (typeof x === 'number')
+	  x = [x,x];
+	  
+        if (this.level) {
+	  var g = this.level.gscale();
+	  x = x.map((y,i) => y * g[i]);
+	 }
+
+	var pct = x.map(function(y,i) { return y/this.gscale()[i]; }, this);
 
 	this.sgscale(x);
-//        cmd(36, this.body, x);	
-
-	this.objects?.forEach(function(obj) {
-	  obj.sgscale(obj.gscale()*pct);
-	  obj.pos = obj.pos.scale(pct);
-	});      
+	/* TRANSLATE ALL SUB OBJECTS */
       },
 
       set pos(x) {
-        this.set_worldpos(Vector.rotate(x.scale(this.level.gscale()),Math.deg2rad(this.level.worldangle())).add(this.level.worldpos()));
+        if (!x[0] || !x[1]) return;
+        this.set_worldpos(this.level.this2world(x));
       },
       
       get pos() {
         if (!this.level) return this.worldpos();
-        var offset = this.worldpos().sub(this.level.worldpos());
-	offset = Vector.rotate(offset, -Math.deg2rad(this.level.angle));
-	offset = offset.scale(1/this.level.gscale());
-	return offset;
+        return this.level.world2this(this.worldpos());
       },
+      
       get elasticity() { return cmd(107,this.body); },
       set elasticity(x) { cmd(106,this.body,x); },
 
@@ -118,9 +117,9 @@ var gameobject = {
       set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
       worldpos() { return q_body(1,this.body); },
       set_worldpos(x) {
-        var diff = x.sub(this.worldpos());
-	this.objects.forEach(function(x) { x.set_worldpos(x.worldpos().add(diff)); });
+        var poses = this.objects.map(x => x.pos);
 	set_body(2,this.body,x);
+	this.objects.forEach((o,i) => o.set_worldpos(this.this2world(poses[i])));
       },
 
       worldangle() { return Math.rad2deg(q_body(2,this.body))%360; },
@@ -149,7 +148,6 @@ var gameobject = {
       rotate(x) {
         this.sworldangle(this.worldangle()+x);
       },
-
       
       spawn_from_instance(inst) {
         return this.spawn(inst.ur, inst);
@@ -301,9 +299,12 @@ var gameobject = {
     velocity:[0,0],
     angularvelocity:0,
     phys:Physics.static,
-    flipx:false,
-    flipy:false,
-    scale:1,
+    flipx() { return this.scale.x < 0; },
+    flipy() { return this.scale.y < 0; },
+    scale:[1,1,1],
+    mirror(plane) {
+      this.scale = Vector.reflect(this.scale, plane);
+    },
     elasticity:0.5,
     friction:1,
     gravity: true,
@@ -618,8 +619,8 @@ gameobject.doc = {
   velocity: "Velocity of the object, relative to world.",
   angularvelocity: "Angular velocity of the object, relative to the world.",
   scale: "Scale of the object, relative to its level.",
-  flipx: "Set the object to be flipped on its x axis.",
-  flipy: "Set the object to be flipped on its y axis.",
+  flipx: "Check if the object is flipped on its x axis.",
+  flipy: "Check if the object is flipped on its y axis.",
   elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find their resultant velocities.`,
   friction: `When one object touches another, friction slows them down.`,
   gravity: 'True if this object should be affected by gravity.',

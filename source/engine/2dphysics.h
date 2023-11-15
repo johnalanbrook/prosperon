@@ -64,7 +64,7 @@ struct phys2d_box {
 
 /* An edge with no volume. Cannot collide with each other. Join to make levels. Static only. */
 struct phys2d_edge {
-  HMM_Vec2 *points;
+  HMM_Vec2 *points; /* Points defined relative to the gameobject */
   float thickness;
   cpShape **shapes;
   int closed; /* True if the first and last points should be connected */

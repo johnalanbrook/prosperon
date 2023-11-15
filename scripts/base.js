@@ -296,6 +296,16 @@ Object.defineProperty(Object.prototype, 'forEach', {
   }
 });
 
+Object.defineProperty(Object.prototype, 'map', {
+  value: function(fn) {
+    var a = [];
+    Object.values(this).forEach(function(x) {
+      a.push(fn(x));
+    });
+    return a;
+  }
+});
+
 Object.defineProperty(Object.prototype, 'empty', {
   get: function() {
     return Object.keys(this).empty;
@@ -1082,7 +1092,7 @@ var Vector = {
   },
 
   dot(a, b) {
-
+    return cmd(88,a,b);
   },
   
   random() {
@@ -1114,6 +1124,11 @@ var Vector = {
     });
 
     return eql;
+  },
+
+  reflect(vec, plane) {
+    var p = Vector.norm(plane);
+    return vec.sub(p.scale(2*Vector.dot(vec, p)));
   },
   
 };

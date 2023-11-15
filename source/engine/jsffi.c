@@ -271,12 +271,6 @@ JSValue vec2js(HMM_Vec2 v) {
   return array;
 }
 
-JSValue v22js(HMM_Vec2 v)
-{
-  HMM_Vec2 c = { v.X, v.Y };
-  return vec2js(c);
-}
-
 JSValue vecarr2js(HMM_Vec2 *points, int n) {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < n; i++)
@@ -855,12 +849,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 87:
-    str = JS_ToCString(js, argv[1]);
+//    str = JS_ToCString(js, argv[1]);
 //    mini_music_play(str);
     break;
 
   case 88:
-//    mini_music_pause();
+    ret = num2js(HMM_DotV2(js2vec2(argv[1]), js2vec2(argv[2])));
     break;
 
   case 89:
@@ -926,7 +920,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
     
   case 103:
-    ret = num2js(js2go(argv[1])->scale.X);
+    ret = vec2js(js2go(argv[1])->scale.XY);
     break;
 
   case 104:
@@ -958,7 +952,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
     case 111:
-      ret = v22js(js2sprite(argv[1])->pos);
+      ret = vec2js(js2sprite(argv[1])->pos);
       break;
 
     case 112:
@@ -1062,11 +1056,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 136:
-      ret = v22js(world2screen(js2vec2(argv[1])));
+      ret = vec2js(world2screen(js2vec2(argv[1])));
       break;
 
     case 137:
-      ret = v22js(screen2world(js2vec2(argv[1])));
+      ret = vec2js(screen2world(js2vec2(argv[1])));
       break;
 
     case 138:

@@ -11,7 +11,6 @@ var editor_config = {
   
 };
 
-
 var configs = {
   toString() { return "configs"; },
   editor: editor_config,
@@ -740,6 +739,7 @@ editor.inputs['C-d'] = function() {
 };
 editor.inputs['C-d'].doc = "Duplicate all selected objects.";
 
+
 editor.inputs['C-m'] = function() {
   if (editor.sel_comp) {
     if ('flipy' in editor.sel_comp)
@@ -748,7 +748,7 @@ editor.inputs['C-m'] = function() {
     return;
   }
   
-  editor.selectlist.forEach(function(x) { x.flipy = !x.flipy; });
+  editor.selectlist.forEach(function(x) { x.mirror([0,1]);});
 };
 editor.inputs['C-m'].doc = "Mirror selected objects on the Y axis.";
 
@@ -760,9 +760,10 @@ editor.inputs.m = function() {
     return;
   }
   
-  editor.selectlist.forEach(function(x) { x.flipx = !x.flipx; });
+  editor.selectlist.forEach(x => x.mirror([1,0]));
 };
 editor.inputs.m.doc = "Mirror selected objects on the X axis.";
+
 
 editor.inputs.q = function() { editor.comp_info = !editor.comp_info; };
 editor.inputs.q.doc = "Toggle help for the selected component.";
@@ -1166,7 +1167,7 @@ editor.inputs.mouse.move = function(pos, dpos)
 
   editor.scalelist?.forEach(function(x) {
     var scalediff = dist / x.scaleoffset;
-    x.obj.scale = x.scale * scalediff;
+    x.obj.scale = x.scale.map(x=> x * scalediff);
     if (x.offset)
       x.obj.pos = editor.cursor.add(x.offset.scale(scalediff));
   });

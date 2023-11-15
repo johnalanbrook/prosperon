@@ -68,36 +68,73 @@ float go2angle(struct gameobject *go)
 
 transform2d mat2transform2d(HMM_Mat3 mat)
 {
+  
+}
+
+HMM_Mat3 mt_t(transform2d t)
+{
+  HMM_Mat3 p = HMM_M3D(1);
+  p.Columns[2].X = t.pos.X;
+  p.Columns[2].Y = t.pos.Y;
+  return p;
+}
+
+HMM_Mat3 mt_s(transform2d t)
+{
+  HMM_Mat3 s = HMM_M3D(1);
+  s.Columns[0].X = t.scale.X;
+  s.Columns[1].Y = t.scale.Y;
+  return s;
+}
+
+HMM_Mat3 mt_r(transform2d t)
+{
+  HMM_Mat3 r = HMM_M3D(1);
+  r.Columns[0] = (HMM_Vec3){cos(t.angle), sin(t.angle), 0};
+  r.Columns[1] = (HMM_Vec3){-sin(t.angle), cos(t.angle), 0};
+  return r;
 }
 
 HMM_Mat3 transform2d2mat(transform2d t)
 {
-  HMM_Mat3 m = HMM_M3D(1);
-  HMM_Mat3 p = HMM_M3D(1);
-  p.Columns[2].X = t.pos.X;
-  p.Columns[2].Y = t.pos.Y;
+  return HMM_MulM3(mt_t(t), HMM_MulM3(mt_r(t), mt_s(t)));
+}
 
-  HMM_Mat3 s = HMM_M3D(1);
-  s.Columns[0].X = t.scale.X;
-  s.Columns[1].Y = t.scale.Y;
+HMM_Mat3 mt_rst(transform2d t)
+{
+  return transform2d2mat(t);
+}
 
-  HMM_Mat3 r = HMM_M3D(1);
-  r.Columns[0] = (HMM_Vec3){cos(t.angle), sin(t.angle), 0};
-  r.Columns[1] = (HMM_Vec3){-sin(t.angle), cos(t.angle), 0};
+HMM_Mat3 mt_st(transform2d t)
+{
+  return HMM_MulM3(mt_t(t), mt_s(t));
+}
 
-  m = HMM_MulM3(r, s);
-  m = HMM_MulM3(p, m);
-  return m;
+HMM_Mat3 mt_rt(transform2d t)
+{
+  return HMM_MulM3(mt_t(t), mt_r(t));
 }
 
 HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos)
 {
-  return HMM_MulM3V3(t_go2world(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
+  HMM_Vec2 v = HMM_MulM3V3(t_go2world(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
+  return v;
 }
 
 HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos)
 {
   return HMM_MulM3V3(t_world2go(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
+}
+
+HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos)
+{
+  return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 1}).XY;
+}
+
+HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir)
+{
+  m.Columns[2] = (HMM_Vec3){0,0,1};
+  return HMM_MulM3V3(m, (HMM_Vec3){dir.x, dir.y, 1}).XY;
 }
 
 HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos)
@@ -149,10 +186,11 @@ void gameobject_set_sensor(int id, int sensor) {
 transform2d go2t(gameobject *go)
 {
   transform2d t;
-  cpVect p = cpBodyGetPosition(go->body);
-  t.pos.X = p.x; t.pos.Y = p.y;
+  t.pos.cp = cpBodyGetPosition(go->body);
   t.angle = cpBodyGetAngle(go->body);
   t.scale = go->scale.XY;
+  if (isnan(t.scale.X)) t.scale.X = 1;
+  if (isnan(t.scale.Y)) t.scale.Y = 1;
   return t;
 }
 
