@@ -44,7 +44,7 @@ var gameobject = {
     
     timers:[],
     delay(fn, seconds) {
-      var t = timer.oneshot(fn, seconds, this, false);
+      var t = timer.oneshot(fn.bind(this), seconds, this, false);
       this.timers.push(t);
       return function() { t.kill(); };
     },
@@ -223,6 +223,9 @@ var gameobject = {
       torque(val) { cmd(153, this.body, val); },
       world2this(pos) { return cmd(70, this.body, pos); },
       this2world(pos) { return cmd(71, this.body,pos); },
+    dir_world2this(dir) { return cmd(160, this.body, dir); },
+    dir_this2world(dir) { return cmd(161, this.body, dir); },
+      
       set layer(x) { cmd(75,this.body,x); },
       get layer() { cmd(77,this.body); },
       alive() { return this.body >= 0; },
@@ -258,9 +261,13 @@ var gameobject = {
   /* Make a unique object the same as its prototype */
   revert() {
     var jobj = this.json_obj();
+    var lobj = this.level.__proto__.objects[this.toString()];
     delete jobj.objects;
     Object.keys(jobj).forEach(function(x) {
-      this[x] = this.__proto__[x];
+      if (lobj && x in lobj)
+        this[x] = lobj[x];
+      else
+        this[x] = this.__proto__[x];
     }, this);
     this.sync();
   },
@@ -301,7 +308,7 @@ var gameobject = {
     phys:Physics.static,
     flipx() { return this.scale.x < 0; },
     flipy() { return this.scale.y < 0; },
-    scale:[1,1,1],
+    scale:[1,1],
     mirror(plane) {
       this.scale = Vector.reflect(this.scale, plane);
     },
@@ -834,13 +841,18 @@ prototypes.from_obj("camera2d", {
       z *= x;
       cmd(62, z);
     },
+
+    realzoom() {
+      return cmd(135);
+    },
     
     speedmult: 1.0,
     
     selectable: false,
 
-    world2this(pos) { return cmd(70, this.body, pos); },
-    this2world(pos) { return cmd(71, this.body,pos); },
+    dir_view2world(dir) {
+      return dir.scale(this.realzoom());
+    },
     
     view2world(pos) {
       return cmd(137,pos);

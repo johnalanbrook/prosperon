@@ -256,3 +256,8 @@ Cmdline.register_cmd("cjson", function(json) {
 
   STD.exit(0);
 }, "Clean up a jso file.");
+
+Cmdline.register_cmd("r", function(script) {
+  run(script);
+  STD.exit(0);
+}, "Run a script.");

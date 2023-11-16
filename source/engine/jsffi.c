@@ -1146,6 +1146,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 159:
       ret = bool2js(js2go(argv[1])->gravity);
       break;
+    case 160:
+      ret = vec2js(mat_t_dir(t_world2go(js2go(argv[1])), js2vec2(argv[2])));
+      break;
+    case 161:
+      ret = vec2js(mat_t_dir(t_go2world(js2go(argv[1])), js2vec2(argv[2])));
+      break;
   }
 
   if (str)

@@ -587,9 +587,9 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, int hit, cpArbiter *arb) {
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);
   JS_SetPropertyStr(js, obj, "velocity", vec2js(srfv));
-  srfv.cp = cpArbiterGetPointA(arb,0);
-  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
-  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
+//  srfv.cp = cpArbiterGetPointA(arb,0);
+//  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
+//  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
 
@@ -632,10 +632,8 @@ static cpBool handle_collision(cpArbiter *arb, int type) {
     break;
 
   case CTYPE_SEP:
-    if (JS_IsObject(go->cbs.separate.obj)) {
-      YughWarn("Made it here; separate.");
+    if (JS_IsObject(go->cbs.separate.obj))
       duk_call_phys_cb(norm1, go->cbs.separate, g2, arb);
-    }
 
     break;
   }

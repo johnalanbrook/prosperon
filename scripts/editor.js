@@ -210,6 +210,7 @@ var editor = {
     Player.players[0].uncontrol(this);
     Player.players[0].control(limited_editor);
     Register.unregister_obj(this);
+    load("predbg.js");
     editor.dbg_play = Primum.spawn(this.dbg_ur);
     editor.dbg_play.pos = [0,0];
     load("debug.js");
@@ -596,7 +597,7 @@ var editor = {
     var ur = prototypes.get_ur(file);
     if (!ur) return;
     var obj = editor.edit_level.spawn(ur);
-    obj.pos = Mouse.worldpos;
+    obj.set_worldpos(Mouse.worldpos);
     this.selectlist = [obj];
   },
 
@@ -904,6 +905,8 @@ editor.inputs['C-s'] = function() {
   Object.values(saveobj.objects).forEach(function(x) { x._ed.check_dirty(); });
 
   Game.objects.forEach(function(x) {
+    if (typeof x !== 'object') return;
+    if (!('_ed' in x)) return;
     if (x._ed.dirty) return;
     x.revert();
     x._ed.check_dirty();
@@ -1153,11 +1156,11 @@ editor.inputs.mouse.move = function(pos, dpos)
     if (editor.z_start)
       editor.camera.zoom -= dpos.y/500;
     else if (editor.joystart)
-      editor.camera.pos = editor.camera.pos.sub(dpos.scale(editor.camera.zoom));
+      editor.camera.pos = editor.camera.pos.sub(Game.camera.dir_view2world(dpos));
   }
 
   editor.grabselect?.forEach(function(x) {
-    x.pos = x.pos.add(dpos.scale(editor.camera.zoom));
+    x.move(Game.camera.dir_view2world(dpos));
     if ('sync' in x)
       x.sync();
   });
@@ -1184,12 +1187,8 @@ editor.inputs.mouse.move = function(pos, dpos)
 editor.inputs.mouse.scroll = function(scroll)
 {
   scroll.y *= -1;
-  editor.grabselect?.forEach(function(x) {
-    x.pos = x.pos.add(scroll.scale(editor.camera.zoom));
-  });
-
-  scroll.y *= -1;
-  editor.camera.pos = editor.camera.pos.sub(scroll.scale(editor.camera.zoom * 3).scale([1,-1]));  
+//  editor.grabselect?.forEach(x => x.move(Game.camera.dir_view2world(scroll)));
+  editor.camera.move(Game.camera.dir_view2world(scroll.scale(-3)));
 }
 
 editor.inputs.mouse['C-scroll'] = function(scroll)
@@ -2000,7 +1999,7 @@ var entitylistpanel = Object.copy(inputpanel, {
     this.level = editor.edit_level;
   },
   
-  guibody() {
+/*  guibody() {
     Nuke.newline(4);
     Nuke.label("Object");
     Nuke.label("Visible");
@@ -2018,6 +2017,7 @@ var entitylistpanel = Object.copy(inputpanel, {
       if (editor.selectlist.includes(x)) Nuke.label("T"); else Nuke.label("F");
     });
   },
+*/
 });
 
 var limited_editor = {};

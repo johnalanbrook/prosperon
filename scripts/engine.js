@@ -272,7 +272,7 @@ var Device = {
 
 load("scripts/gui.js");
 
-var timer = {
+var ctimer = {
   make(fn, secs,obj,loop,app) {
     obj ??= globalThis;
     app ??= false;
@@ -307,6 +307,61 @@ var timer = {
   set time(x) { cmd(28, this.id, x); },
   get time() { return cmd(29, this.id); },
   get pct() { return this.remain / this.time; },
+};
+
+var timer = {
+  time: 1,
+  remain: 1,
+  loop: false,
+  on: false,
+  start() {
+    this.on = true;
+  },
+
+  restart() {
+    this.remain = this.time;
+    this.start();
+  },
+  
+  update(dt) {
+    if (!this.on) return;
+    
+    this.remain -= dt;
+    if (this.remain <= 0)
+      this.fire();
+  },
+  
+  fire() {
+    this.fn();
+    if (this.loop)
+      this.restart();
+  },
+
+  pct() { return this.remain / this.time; },
+
+  kill() {
+    Register.unregister_obj(this);
+  },
+
+  delay(fn, secs, desc) {
+    var t = timer.make(fn,secs,desc);
+    t.loop = false;
+    t.restart();
+    t.fn = function() { fn(); t.kill(); };
+    return function() { t.kill(); };
+  },
+  oneshot(fn, secs, obj, desc) {
+    this.delay(fn,secs,desc);
+  },
+  make(fn, secs, desc) {
+    var t = Object.create(this);
+    Object.assign(t, desc);
+    t.time = secs;
+    t.remain = secs;
+    t.fn = fn;
+    Register.update.register(t.update, t);
+    return t;
+  },
 };
 timer.toJSON = function() { return undefined; };
 timer.doc = {

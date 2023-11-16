@@ -1,3 +1,16 @@
+function make_point_obj(o, p)
+{
+  return {
+    pos: p,
+    move(d) {
+      d = o.gameobject.dir_world2this(d);
+      p.x += d.x;
+      p.y += d.y;
+    },
+    sync: o.sync.bind(o)
+  }
+}
+
 function assign_impl(obj, impl)
 {
   var tmp = {};
@@ -355,10 +368,6 @@ component.char2d.doc = {
   add_anim: "Add an animation object with the given name."
 };
 
-//  sprite.timer = timer.make(sprite.advance.bind(sprite),1);
-//  sprite.timer.loop = true;
-  
-
 /* Returns points specifying this geometry, with ccw */
 var Geometry = {
   box(w, h) {
@@ -373,9 +382,42 @@ var Geometry = {
     ];
 
     return points;
-  }
+  },
+
+  arc(radius, angle, n, start) {
+    start ??= 0;
+    start = Math.deg2rad(start);
+    if (angle >= 360)
+      angle = 360;
+
+    if (n <= 1) return [];
+    var points = [];
+    
+    angle = Math.deg2rad(angle);
+    var arclen = angle/n;
+    for (var i = 0; i < n; i++)
+      points.push(Vector.rotate([radius,0], start + (arclen*i)));
+
+    return points;
+  },
+
+  circle(radius, n) {
+    if (n <= 1) return [];
+    return Geometry.arc(radius, 360, n);
+  },
+
+  ngon(radius, n) {
+    return Geometry.arc(radius,360,n);
+  },
 };
 
+Geometry.doc = {
+  doc: "Functions for creating a list of points for various geometric shapes.",
+  box: "Create a box.",
+  arc: "Create an arc, made of n points.",
+  circle: "Create a circle, made of n points."
+};
+  
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
 var collider2d = Object.copy(component, {
   name: "collider 2d",
@@ -416,6 +458,10 @@ component.polygon2d = Object.copy(collider2d, {
   hides: ['id', 'shape', 'gameobject'],
   _enghook: make_poly2d,
   points:[],
+  setpoints(points) {
+    this.points = points;
+    this.sync();
+  },
 
   /* EDITOR */  
   get spoints() {
@@ -454,16 +500,8 @@ component.polygon2d = Object.copy(collider2d, {
       this.points = deep_copy(this.__proto__.points);
       
     var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
-    if (p) {
-      return {
-      set pos(n) {
-        p.x = n.x;
-	p.y = n.y;
-      },
-      get pos() { return p; },
-      sync: this.sync.bind(this)
-    }
-    }
+    if (p)
+      return make_point_obj(this, p);
       
     return undefined;
   },
@@ -560,6 +598,11 @@ component.edge2d = Object.copy(collider2d, {
     return spoints;
   },
 
+  setpoints(points) {
+    this.cpoints = points;
+    this.sync();
+  },
+
   post() {
     this.cpoints = [];
   },
@@ -575,7 +618,7 @@ component.edge2d = Object.copy(collider2d, {
       return spoints;
     if (spoints.length < 2)
       return [];
-    if (this.samples === spoints.length) {
+    if (this.samples === 1) {
       if (this.looped) return spoints.wrapped(1);
       return spoints;
     }
@@ -585,6 +628,8 @@ component.edge2d = Object.copy(collider2d, {
       knots = spoints.length + order
       assert knots%order != 0
     */
+    
+    n = this.samples * this.sample_calc();
 
     if (this.looped)
       return Spline.sample(degrees, this.dimensions, Spline.type.open, spoints.wrapped(this.degrees), n);
@@ -618,25 +663,27 @@ component.edge2d = Object.copy(collider2d, {
 
   pick(pos) {
     var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints);
-    if (p) return {
-      set pos(n) { p.x = n.x; p.y = n.y; },
-      get pos() { return p; },
-      sync: this.sync.bind(this),
-    };
-
+    if (p)
+      return make_point_obj(this, p);
+      
     return undefined;
   },
 
   pick_all() {
     var picks = [];
     this.cpoints.forEach(function(x) {
-      picks.push({
-        set pos(n) { x.x = n.x; x.y = n.y; },
-	get pos() { return x; },
-	sync: this.sync.bind(this),
-      });
+      picks.push(make_point_obj(this,x));
     }, this);
     return picks;
+  },
+
+  sample_calc() {
+    return (this.spoints().length-1);
+  },
+
+  samples_per_cp() {
+    var s = this.sample_calc();
+    return this.samples/s;
   },
 });
 
@@ -646,7 +693,6 @@ component.edge2d.impl = Object.mix({
   },
   get thickness() { return cmd(112,this.id); },
   sync() {
-    if (this.samples < this.spoints().length) this.samples = this.spoints().length;
     var sensor = this.sensor;
     var points = this.sample(this.samples);
     cmd_edge2d(0,this.id,points);
@@ -684,11 +730,16 @@ bucket.inputs['M-b'] = function() { this.thickness++; };
 bucket.inputs['M-b'].doc = "Increase spline thickness.";
 bucket.inputs['M-b'].rep = true;
 
-bucket.inputs.plus = function() { this.samples++; };
+bucket.inputs.plus = function() {
+  this.samples++;
+};
 bucket.inputs.plus.doc = "Increase the number of samples of this spline.";
 bucket.inputs.plus.rep = true;
 
-bucket.inputs.minus = function() { if (this.samples > this.spoints().length) this.samples--;};
+bucket.inputs.minus = function() {
+  if (this.samples === 1) return;
+  this.samples--;
+};
 bucket.inputs.minus.doc = "Decrease the number of samples on this spline.";
 bucket.inputs.minus.rep = true;
 
@@ -698,24 +749,22 @@ bucket.inputs['C-r'].doc = "Reverse the order of the spline's points.";
 bucket.inputs['C-l'] = function() { this.looped = !this.looped};
 bucket.inputs['C-l'].doc = "Toggle spline being looped.";
 
-bucket.inputs['C-c'] = function() { this.type = Spline.type.clamped; };
+bucket.inputs['C-c'] = function() { this.type = Spline.type.clamped; this.looped = false; };
 bucket.inputs['C-c'].doc = "Set type of spline to clamped.";
 
-bucket.inputs['C-o'] = function() { this.type = Spline.type.open; };
+bucket.inputs['C-o'] = function() { this.type = Spline.type.open; this.looped = false; };
 bucket.inputs['C-o'].doc = "Set spline to open.";
 
-bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; };
+bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; this.looped = false;};
 bucket.inputs['C-b'].doc = "Set spline to bezier.";
 
 bucket.inputs['C-M-lm'] = function() {
-  var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(this.gameobject.world2this,this.gameobject), 25);
+  var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
 
   this.cpoints = this.cpoints.newfirst(idx);
 };
 bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
-
-bucket.inputs.lm = function(){};
 
 bucket.inputs['C-lm'] = function() {
   var idx = 0;
@@ -732,15 +781,14 @@ bucket.inputs['C-lm'] = function() {
 };
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
-bucket.inputs['C-M-lm'] = function() {
-//  var idx = grab_from_points(screen2world(Mouse.pos), this.cpoints.map(function(x) {return x.sub(this.gameobject.worldpos()); }, this), 25);
-  var idx = cmd(59, Mouse.worldpos.sub(this.gameobject.pos), this.cpoints, 250);
+bucket.inputs['S-lm'] = function() {
+  var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
 
-  if (idx <= 0  || idx > this.cpoints.length) return;
+  if (idx < 0  || idx > this.cpoints.length) return;
 
-  this.cpoints.splice(idx-1, 1);
+  this.cpoints.splice(idx, 1);
 };
-bucket.inputs['C-M-lm'].doc = "Remove point from the spline.";
+bucket.inputs['S-lm'].doc = "Remove point from the spline.";
 
 bucket.inputs.lb = function() {
   var np = [];
