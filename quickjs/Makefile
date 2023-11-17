@@ -22,9 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-ifeq ($(shell uname -s),Darwin)
-CONFIG_DARWIN=y
-endif
 # Windows cross compilation from Linux
 #CONFIG_WIN32=y
 # use link time optimization (smaller and faster executables but slower build)
@@ -34,11 +31,12 @@ CONFIG_LTO=y
 # force 32 bit build for some utilities
 #CONFIG_M32=y
 
-ifdef CONFIG_DARWIN
 # use clang instead of gcc
-CONFIG_CLANG=y
-CONFIG_DEFAULT_AR=y
+ifeq ($(CCC),clang)
+  CONFIG_CLANG=y
+  CONFIG_DEFAULT_AR=y
 endif
+
 
 # installation directory
 prefix=/usr/local
@@ -63,10 +61,9 @@ else
   CROSS_PREFIX=
   EXE=
 endif
-ifdef CONFIG_CLANG
-  HOST_CC=clang
+ifeq ($(CCC), clang)
   CC=$(CROSS_PREFIX)clang
-  CFLAGS=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
+  CFLAGS += -g -Wall -MMD -MF $(OBJDIR)/$(@F).d
   CFLAGS += -Wextra
   CFLAGS += -Wno-sign-compare
   CFLAGS += -Wno-missing-field-initializers
@@ -91,9 +88,8 @@ endif
     endif
   endif
 else
-  HOST_CC=gcc
   CC=$(CROSS_PREFIX)gcc
-  CFLAGS=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
+  CFLAGS += -g -Wall -MMD -MF $(OBJDIR)/$(@F).d
   CFLAGS += -Wno-array-bounds -Wno-format-truncation
   CFLAGS += -Wno-unused-function -Wno-unused-const-variable
   ifdef CONFIG_LTO

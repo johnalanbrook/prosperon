@@ -42,11 +42,32 @@ var gameobject = {
       this.objects = {};
     },
     
-    timers:[],
     delay(fn, seconds) {
-      var t = timer.oneshot(fn.bind(this), seconds, this, false);
+      var t = timer.delay(fn.bind(this), seconds, false);
       this.timers.push(t);
-      return function() { t.kill(); };
+      return t;
+    },
+
+    tween(prop, values, def){
+      var t = Tween.make(this, prop, values, def);
+      t.play();
+      
+      var k = function() { t.pause(); }
+      this.timers.push(k);
+      return k;
+    },
+
+    cry(file) {
+      Sound.play(file);
+      return;
+      
+      if (this.curcry && !Sound.finished(this.curcry)) return;
+      this.curcry = Sound.play(file);
+      var r = this.curcry;
+      Log.warn(r);
+      var fn = function() { Log.warn(r); if (r) Sound.stop(r); };
+      this.timers.push(fn);
+      return fn;
     },
 
       set max_velocity(x) { cmd(151, this.body, x); },
@@ -451,10 +472,7 @@ var gameobject = {
 	  q_body(8,this.body);
 	  Game.unregister_obj(this);
 
-	  this.timers.forEach(function(t) {
-	    if (!t) return;
-	    t.kill();
-	  });
+	  this.timers.forEach(t => t());
 
 	  if (this.level) {
     	    this.level.remove_obj(this);
@@ -503,6 +521,7 @@ var gameobject = {
     obj.body = make_gameobject();
     obj.components = {};
     obj.objects = {};
+    obj.timers = [];
     assign_impl(obj, gameobject.impl);
     obj._ed = {
       selectable: true,
@@ -656,6 +675,7 @@ gameobject.doc = {
   kill: `Remove this object from the world.`,
   level: "The entity this entity belongs to.",
   delay: 'Run the given function after the given number of seconds has elapsed.',
+  cry: 'Make a sound. Can only make one at a time.',
 };
 
 /* Default objects */
@@ -894,4 +914,57 @@ prototypes.resani = function(ur, path)
     restry = res + path;
   }
   return restry;
+}
+
+prototypes.ur_dir = function(ur)
+{
+  var path = ur.replaceAll('.', '/');
+  Log.warn(path);
+  Log.warn(IO.exists(path));
+  Log.warn(`${path} does not exist; sending ${path.dir()}`);
+}
+
+prototypes.ur_json = function(ur)
+{
+  var path = ur.replaceAll('.', '/');
+  if (IO.exists(path))
+    path = path + "/" + path.name() + ".json";
+  else
+    path = path + ".json";
+
+  return path;
+}
+
+prototypes.ur_stem =  function(ur)
+{
+  var path = ur.replaceAll('.', '/');
+  if (IO.exists(path))
+    return path + "/" + path.name();
+  else
+    return path;
+}
+
+prototypes.ur_file_exts = ['.jso', '.json'];
+
+prototypes.ur_folder = function(ur)
+{
+  var path = ur.replaceAll('.', '/');
+  return IO.exists(path);
+}
+
+prototypes.ur_pullout_folder = function(ur)
+{
+  if (!prototypes.ur_folder(ur)) return;
+
+  var stem = prototypes.ur_stem(ur);
+  
+/*  prototypes.ur_file_exts.forEach(function(e) {
+    var p = stem + e;
+    if (IO.exists(p))
+  */    
+}
+
+prototypes.ur_pushin_folder = function(ur)
+{
+
 }

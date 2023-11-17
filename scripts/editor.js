@@ -895,9 +895,7 @@ editor.inputs['C-s'] = function() {
   var savejs = saveobj.json_obj();
   Object.merge(saveobj.__proto__, savejs);
   if (savejs.objects) saveobj.__proto__.objects = savejs.objects;
-  var path = saveobj.ur.toString();
-  path = path.replaceAll('.','/');
-  path = path + "/" + path.name() + ".json";
+  var path = prototypes.ur_stem(saveobj.ur.toString()) + ".json";
 
   IO.slurpwrite(JSON.stringify(saveobj.__proto__,null,1), path);
   Log.warn(`Wrote to file ${path}`);

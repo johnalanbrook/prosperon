@@ -233,42 +233,43 @@ void play_oneshot(struct wav *wav) {
 struct sound *play_sound(struct wav *wav) {
   struct sound *new = calloc(1, sizeof(*new));
   new->data = wav;
-
   new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
   new->playing = 1;
-
+  new->loop = 0;
+  new->frame = 0;
+  new->endcb = kill_oneshot;
   return new;
 }
 
 int sound_playing(const struct sound *s) {
-  return s->playing;
+  return !sound_paused(s);
 }
 
 int sound_paused(const struct sound *s) {
-  return (!s->playing && s->frame < s->data->frames);
+  return s->bus == NULL;
 }
 void sound_pause(struct sound *s) {
-  s->playing = 0;
+  if (s->bus == NULL) return;
   bus_free(s->bus);
+  s->bus = NULL;
 }
 
 void sound_resume(struct sound *s) {
-  s->playing = 1;
+  if (s->bus != NULL) return;
   s->bus = first_free_bus(dsp_filter(s, sound_fillbuf));
 }
 
 void sound_stop(struct sound *s) {
-  s->playing = 0;
+  sound_pause(s);
   s->frame = 0;
-  bus_free(s->bus);
 }
 
 int sound_finished(const struct sound *s) {
-  return !s->playing && s->frame == s->data->frames;
+  return s->frame == s->data->frames;
 }
 
 int sound_stopped(const struct sound *s) {
-  return !s->playing && s->frame == 0;
+  return s->bus == NULL;
 }
 
 struct mp3 make_music(const char *mp3) {
@@ -298,8 +299,7 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
     s->frame++;
     
     if (s->frame == s->data->frames) {
-      bus_free(s->bus);
-      s->bus = NULL;
+      sound_stop(s);
       s->endcb(s);
       return;
     }

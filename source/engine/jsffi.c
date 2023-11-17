@@ -546,7 +546,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 14:
     str = JS_ToCString(js, argv[1]);
-    play_oneshot(make_sound(str));
+    ret = ptr2js(play_sound(make_sound(str)));
     break;
 
   case 15:
@@ -1151,6 +1151,26 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 161:
       ret = vec2js(mat_t_dir(t_go2world(js2go(argv[1])), js2vec2(argv[2])));
+      break;
+    case 162:
+      str = JS_ToCString(js, argv[1]);
+      ret = int2js(remove(str));
+      break;
+    case 163:
+      str = JS_ToCString(js,argv[1]);
+      str2 = JS_ToCString(js,argv[2]);
+      ret = int2js(rename(str, str2));
+      break;
+    case 164:
+      sound_stop(js2ptr(argv[1]));
+      break;
+    case 165:
+      ret = bool2js(sound_paused(js2ptr(argv[1])));
+      break;
+    case 166:
+      str = js2str(argv[1]);
+      str2 = js2str(argv[2]);
+      ret = int2js(cp(str, str2));
       break;
   }
 

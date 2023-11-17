@@ -415,7 +415,8 @@ Geometry.doc = {
   doc: "Functions for creating a list of points for various geometric shapes.",
   box: "Create a box.",
   arc: "Create an arc, made of n points.",
-  circle: "Create a circle, made of n points."
+  circle: "Create a circle, made of n points.",
+  ngon: "Create a polygon of n sides.",
 };
   
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
@@ -532,12 +533,12 @@ polygon2d.inputs['C-lm'].doc = "Add a point to location of mouse.";
 polygon2d.inputs.lm = function(){};
 polygon2d.inputs.lm.released = function(){};
 
-polygon2d.inputs['S-lm'] = function() {
+polygon2d.inputs['C-M-lm'] = function() {
   var idx = grab_from_points(Mouse.worldpos, this.points.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
   this.points.splice(idx, 1);
 };
-polygon2d.inputs['S-lm'].doc = "Remove point under mouse.";
+polygon2d.inputs['C-M-lm'].doc = "Remove point under mouse.";
 
 polygon2d.inputs['C-b'] = function() {
   this.points = this.spoints;
@@ -637,7 +638,7 @@ component.edge2d = Object.copy(collider2d, {
     return Spline.sample(degrees, this.dimensions, this.type, spoints, n);
   },
 
-  samples: 10,
+  samples: 1,
   
   boundingbox() {
     return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
@@ -678,7 +679,9 @@ component.edge2d = Object.copy(collider2d, {
   },
 
   sample_calc() {
-    return (this.spoints().length-1);
+    var n = this.spoints().length-1;
+    if (this.looped) n++;
+    return n;
   },
 
   samples_per_cp() {
@@ -781,14 +784,17 @@ bucket.inputs['C-lm'] = function() {
 };
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
-bucket.inputs['S-lm'] = function() {
+bucket.inputs['C-M-lm'] = function() {
   var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
 
   if (idx < 0  || idx > this.cpoints.length) return;
 
   this.cpoints.splice(idx, 1);
 };
-bucket.inputs['S-lm'].doc = "Remove point from the spline.";
+bucket.inputs['C-M-lm'].doc = "Remove point from the spline.";
+
+bucket.inputs.lm = function(){};
+bucket.inputs.lm.released = function(){};
 
 bucket.inputs.lb = function() {
   var np = [];

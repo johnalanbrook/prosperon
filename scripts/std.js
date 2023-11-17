@@ -101,6 +101,15 @@ Log.doc = {
   clear: "Clear console."
 };
 
+/*
+  IO path rules. Starts with, meaning:
+  "@": playerpath
+  "/": game room
+  "#": Force look locally (instead of in db first)
+    - This is combined with others. #/, #@, etc
+  "": Local path relative to script defined in
+*/
+  
 var IO = {
   exists(file) { return cmd(65, file);},
   slurp(file) {
@@ -116,6 +125,16 @@ var IO = {
     return paths;
   },
   ls() { return cmd(66); },
+  /* Only works on text files currently */
+  cp(f1, f2) {
+    cmd(166, f1, f2);
+  },
+  mv(f1, f2) {
+    return cmd(163, f1, f2);
+  },
+  rm(f) {
+    return cmd(f);
+  },
   glob(pat) {
     var paths = IO.ls();
     pat = pat.replaceAll(/([\[\]\(\)\^\$\.\|\+])/g, "\\$1");
@@ -136,6 +155,25 @@ IO.doc = {
   ls: "List contents of the game directory.",
   glob: "Glob files in game directory.",
 };
+
+var Parser = {};
+Parser.replstrs = function(path)
+{
+  var script = IO.slurp(path);
+  var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
+  var stem = path.dir();
+
+  script = script.replace(regexp,function(str) {
+    if (str[1] === "/")
+      return str.rm(1);
+
+    if (str[1] === "@")
+      return str.rm(1).splice(1, "playerpath/");
+
+    return str.splice(1, stem + "/");
+  });
+  Log.warn(script);
+}
 
 var Cmdline = {};
 

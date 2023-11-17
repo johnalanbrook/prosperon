@@ -198,7 +198,7 @@ input.md: $(INPUTMD)
 
 $(BIN)/libquickjs.a:
 	make -C quickjs clean
-	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) HOST_CC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
+	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) HOST_CC=$(CC) CCC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 

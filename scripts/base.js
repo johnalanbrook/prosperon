@@ -485,6 +485,19 @@ Object.defineProperty(String.prototype, 'dir', {
   value: function() { return this.tolast('/'); }
 });
 
+Object.defineProperty(String.prototype, 'splice', {
+  value: function(index, str, ) {
+    return this.slice(0,index) + str + this.slice(index);
+  }
+});
+
+Object.defineProperty(String.prototype, 'rm', {
+  value: function(index, endidx) {
+    endidx ??= index+1;
+    return this.slice(0,index) + this.slice(endidx);
+  }
+});
+
 Object.defineProperty(String.prototype, 'updir', {
   value: function() {
     if (this.lastIndexOf('/') === this.length-1)

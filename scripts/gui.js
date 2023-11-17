@@ -391,10 +391,19 @@ Ease.elastic.c5 = 2*Math.PI / 4.5;
 
 var Tween = {
   default: {
-    loop: "restart", /* none, restart, yoyo, circle */ 
+    loop: "restart",
+    /*
+      loop types
+      none: when done, return to first value
+      hold: hold last value of tween
+      restart: restart at beginning, looping
+      yoyo: go up and then back down
+      circle: go up and back down, looped
+    */
     time: 1, /* seconds to do */
     ease: Ease.linear,
-    whole: true,
+    whole: true, /* True if time is for the entire tween, false if each stage */
+    cb: function(){},
   },
 
   start(obj, target, tvals, options)
@@ -416,6 +425,13 @@ var Tween = {
 
     defn.fn = function(dt) {
       defn.accum += dt;
+      if (defn.accum >= defn.time && defn.loop === 'hold') {
+        obj[target] = tvals[tvals.length-1];
+        defn.pause();
+	defn.cb.call(obj);
+	return;
+      }
+
       defn.pct = (defn.accum % defn.time) / defn.time;
       if (defn.loop === 'none' && defn.accum >= defn.time)
         defn.stop();
@@ -445,8 +461,9 @@ var Tween = {
     };
     defn.stop = function() { if (!playing) return; defn.pause(); defn.restart(); };
     defn.pause = function() {
+      Register.update.unregister(defn.fn);    
       if (!playing) return;
-      Register.update.unregister(defn.fn);
+
       playing = false;
     };
 

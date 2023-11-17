@@ -247,6 +247,19 @@ char *slurp_text(const char *filename, size_t *size)
   return retstr;
 }
 
+int cp(char *p1, char *p2)
+{
+  long len;
+  void *data = slurp_file(p1, &len);
+
+  FILE *f = fopen_mkdir(p2, "w");
+  if (!f) return 1;
+  fwrite(data, len, 1, f);
+  free(data);
+  fclose(f);
+  return 0;
+}
+
 void rek_mkdir(char *path) {
     char *sep = strrchr(path, '/');
     if(sep != NULL) {

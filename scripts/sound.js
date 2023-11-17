@@ -27,7 +27,16 @@ var Sound = {
       Log.error(`Cannot play sound ${file}: does not exist.`);
       return;
     }
-     this.id = cmd(14,file);
+    var p = cmd(14,file);
+    return p;
+  },
+
+  finished(sound) {
+    return cmd(165, sound);
+  },
+
+  stop(sound) {
+    cmd(164, sound);
   },
   
   music(midi, sf) {
