@@ -36,6 +36,21 @@ void mixer_init() {
     bus[BUS_N-1].next = -1;
 }
 
+void filter_to_bus(struct dsp_filter *f)
+{
+  struct bus *b = first_free_bus(*f);
+  if (b)
+    f->bus = b;
+}
+
+void unplug_filter(struct dsp_filter *f)
+{
+  if (!f->bus) return;
+
+  bus_free(f->bus);
+  f->bus = NULL;
+}
+
 struct bus *first_free_bus(struct dsp_filter in) {
     for (int i = 0; i < 255; i++)
       if (!bus[i].on) {

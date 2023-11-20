@@ -20,6 +20,7 @@ struct dsp_filter {
 
     int inputs;
     struct dsp_filter *in[6];
+    struct bus *bus;
 
     soundbyte cache[CHANNELS*BUF_FRAMES];
     int dirty;

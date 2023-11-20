@@ -161,6 +161,7 @@ struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, soundbyte *o
     new.data = data;
     new.filter = filter;
     new.inputs = 0;
+    new.bus = NULL;
     return new;
 }
 

@@ -17,6 +17,10 @@
 #define QOI_IMPLEMENTATION
 #include "qoi.h"
 
+#ifndef NSVG
+#include "nanosvgrast.h"
+#endif
+
 struct glrect ST_UNIT = {0.f, 1.f, 0.f, 1.f};
 
 static struct {
@@ -111,6 +115,23 @@ struct Texture *texture_pullfromfile(const char *path) {
     int *delays;
     data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &tex->frames, &n, 4);
     tex->height *= tex->frames;
+  } else if (!strcmp(ext, ".svg")) {
+  #ifndef NSVG
+    NSVGimage *svg = nsvgParse(raw, "px", 96);
+    struct NSVGrasterizer *rast = nsvgCreateRasterizer();
+    n=4;
+    tex->width=100;
+    tex->height=100;
+    float scale = tex->width/svg->width;
+    
+    data = malloc(tex->width*tex->height*n);
+    nsvgRasterize(rast, svg, 0, 0, scale, data, tex->width, tex->height, tex->width*n);
+    free(svg);
+    free(rast);
+  #else
+    YughWarn("Primum was built without SVG capabilities.");
+    return;
+  #endif
   } else {
     data = stbi_load_from_memory(raw, rawlen, &tex->width, &tex->height, &n, 4);
   }

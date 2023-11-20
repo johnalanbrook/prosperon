@@ -31,7 +31,6 @@
 #include "dr_wav.h"
 
 #ifndef NFLAC
-
 #define DR_FLAC_IMPLEMENTATION
 #define DR_FLAC_NO_STDIO
 #include "dr_flac.h"
@@ -43,9 +42,11 @@
 #include "dr_mp3.h"
 #endif
 
+#ifndef NQOA
 #define QOA_NO_STDIO
 #define QOA_IMPLEMENTATION
 #include "qoa.h"
+#endif
 
 static struct {
   char *key;
@@ -139,7 +140,8 @@ void sound_init() {
 
 struct wav *make_sound(const char *wav) {
   int index = shgeti(wavhash, wav);
-  if (index != -1) return wavhash[index].value;
+  if (index != -1)
+    return wavhash[index].value;
   
   char *ext = strrchr(wav, '.')+1;
   
@@ -158,19 +160,26 @@ struct wav *make_sound(const char *wav) {
 
   if (!strcmp(ext, "wav"))
     mwav.data = drwav_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
-  #ifndef NFLAC
-  else if (!strcmp(ext, "flac"))
+
+  else if (!strcmp(ext, "flac")) {
+  #ifndef NFLAC  
     mwav.data = drflac_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav.ch, &mwav.samplerate, &mwav.frames, NULL);
+  #else
+    YughWarn("Could not load %s because Primum was built without FLAC support.", wav);
   #endif
-  #ifndef NMP3
+  }
   else if (!strcmp(ext, "mp3")) {
+  #ifndef NMP3  
     drmp3_config cnf;
     mwav.data = drmp3_open_memory_and_read_pcm_frames_f32(raw, rawlen, &cnf, &mwav.frames, NULL);
     mwav.ch = cnf.channels;
     mwav.samplerate = cnf.sampleRate;
-  }
+  #else
+    YughWarn("Could not load %s because Primum was built without MP3 support.", wav);
   #endif
+  }
   else if (!strcmp(ext, "qoa")) {
+  #ifndef NQOA
     qoa_desc qoa;
     short *qoa_data = qoa_decode(raw, rawlen, &qoa);
     mwav.ch = qoa.channels;
@@ -179,8 +188,11 @@ struct wav *make_sound(const char *wav) {
     mwav.data = malloc(sizeof(soundbyte) * mwav.frames * mwav.ch);
     src_short_to_float_array(qoa_data, mwav.data, mwav.frames*mwav.ch);
     free(qoa_data);
+  #else
+    YughWarn("Could not load %s because Primum was built without QOA support.", wav);
+  #endif
   } else {
-    YughWarn("Cannot process file type '%s'.", ext);
+    YughWarn("File with unknown type '%s'.", wav);
     free (raw);
     return NULL;
   }
@@ -221,24 +233,24 @@ void kill_oneshot(struct sound *s) {
 }
 
 void play_oneshot(struct wav *wav) {
-  struct sound *new = malloc(sizeof(*new));
-  new->data = wav;
-  new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
-  new->playing = 1;
-  new->loop = 0;
-  new->frame = 0;
-  new->endcb = kill_oneshot;
+  struct sound *self = malloc(sizeof(*self));
+  self->data = wav;
+  self->bus = first_free_bus(dsp_filter(self, sound_fillbuf));
+  self->playing = 1;
+  self->loop = 0;
+  self->frame = 0;
+  self->endcb = kill_oneshot;
 }
 
 struct sound *play_sound(struct wav *wav) {
-  struct sound *new = calloc(1, sizeof(*new));
-  new->data = wav;
-  new->bus = first_free_bus(dsp_filter(new, sound_fillbuf));
-  new->playing = 1;
-  new->loop = 0;
-  new->frame = 0;
-  new->endcb = kill_oneshot;
-  return new;
+  struct sound *self = calloc(1, sizeof(*self));
+  self->data = wav;
+  self->bus = first_free_bus(dsp_filter(self, sound_fillbuf));
+  self->playing = 1;
+  self->loop = 0;
+  self->frame = 0;
+  self->endcb = kill_oneshot;
+  return self;
 }
 
 int sound_playing(const struct sound *s) {

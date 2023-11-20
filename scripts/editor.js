@@ -216,6 +216,16 @@ var editor = {
     load("debug.js");
   },
 
+  start_play() {
+    Primum.clear();
+    load("config.js");
+    Game.play();
+    Player.players[0].uncontrol(this);
+    Player.players[0].control(limited_editor);
+    Register.unregister_obj(this);
+    load("game.js");
+  },
+
   enter_editor() {
     Game.pause();
     Player.players[0].control(this);
@@ -830,6 +840,13 @@ editor.inputs.f5 = function()
 }
 
 editor.inputs.f5.doc = "Start game from 'debug' if it exists; otherwise, from 'game'.";
+
+editor.inputs.f6 = function()
+{
+  editor.start_play();
+}
+
+editor.inputs.f6.doc = "Start game as if the player started it.";
 
 editor.inputs['M-p'] = function() {
   if (Game.playing())
@@ -2041,7 +2058,6 @@ limited_editor.inputs['M-p'] = function()
 
 limited_editor.inputs['C-q'] = function()
 {
-  Sound.killall();
   Primum.clear();
   load("editorconfig.js");
   load("dbgret.js");

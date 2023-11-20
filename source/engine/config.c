@@ -35,3 +35,7 @@
 #define PL_MPEG_IMPLEMENTATION
 #include <pl_mpeg.h>
 
+#define NANOSVG_IMPLEMENTATION
+#define NANOSVGRAST_IMPLEMENTATION
+#include "nanosvg.h"
+#include "nanosvgrast.h"

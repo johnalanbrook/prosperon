@@ -33,8 +33,7 @@
 #include <time.h>
 
 #ifdef STEAM
-#include "steam/steam_api_flat.h"
-//#include "steam/steam_api.h"
+#include "steamffi.h"
 #endif
 
 #include "string.h"
@@ -349,7 +348,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef STEAM
-SteamAPI_Init();
+steaminit();
 #endif
 
   stm_setup(); /* time */

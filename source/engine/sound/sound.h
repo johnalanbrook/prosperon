@@ -5,20 +5,6 @@
 
 typedef float soundbyte;
 
-struct Mix_Chunk {
-    int i;
-};
-
-struct Mix_Music {
-    int i;
-};
-
-enum MUS {
-    MUS_STOP,
-    MUS_PLAY,
-    MUS_PAUSE
-};
-
 struct soundstream {
     struct circbuf *buf;
 };
@@ -38,16 +24,16 @@ struct sound {
     void (*endcb)(struct sound*);
 };
 
-/* Represents a sound file */
+/* Represents a sound file source, fulled loaded*/
 struct wav {
     unsigned int ch;
     unsigned int samplerate;
     unsigned long long frames;
     float gain; /* In dB */
-
     soundbyte *data;
 };
 
+/* Represents a sound file stream */
 struct mp3 {
 
 };
@@ -57,12 +43,6 @@ void audio_open(const char *device);
 void audio_close();
 
 void sound_fillbuf(struct sound *s, soundbyte *buf, int n);
-
-void mini_sound(char *path);
-void mini_master(float v);
-void mini_music_play(char *path);
-void mini_music_pause();
-void mini_music_stop();
 
 struct wav *make_sound(const char *wav);
 void free_sound(const char *wav);

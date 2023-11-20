@@ -5,6 +5,12 @@ MAKEDIR != pwd
 # Options
 # DBG --- build with debugging symbols and logging
 
+CXX:=$(CC)
+
+ifeq ($(CXX), tcc)
+  CXX=clang
+endif
+
 ifeq ($(CC),cc)
   CC=clang
 endif
@@ -34,6 +40,14 @@ endif
 
 ifdef NMP3
   CFLAGS += -DNMP3
+endif
+
+ifdef NSVG
+  CFLAGS += -DNSVG
+endif
+
+ifdef NQOA
+  CFLAGS += -DNQOA
 endif
 
 ifeq ($(DBG),1)
@@ -66,7 +80,6 @@ endif
 
 CFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
 
-
 PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
 UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
@@ -74,6 +87,8 @@ UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DEST
 ifeq ($(ARCH),)
   ARCH != uname -m
 endif
+
+STEAMPATH = steam/sdk/redistributable_bin
 
 ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static -g
@@ -84,6 +99,11 @@ ifeq ($(OS), Windows_NT)
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
+
+  ifdef STEAM
+    LDPATHS += $(STEAMPATH)/win64
+    LDLIBS += steam_api64
+  endif
 
 else ifeq ($(OS), ios)
   TTARGET = arm64-apple-ios13.1 
@@ -99,30 +119,43 @@ else ifeq ($(CC), emcc)
   CC = emcc
   EXT = .html
 
-else
+else 
   UNAME != uname -s
   ifeq ($(UNAME), Linux)
     OS := Linux
     LDFLAGS += -pthread -rdynamic
     LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
+
+    ifdef STEAM
+      LDLIBS += steam_api
+      LDPATHS += $(STEAMPATH)/linux64
+    endif
   endif
 
   ifeq ($(UNAME), Darwin)
     OS := macos
     CFLAGS += -arch $(ARCH) -x objective-c
     LDFLAGS += -arch $(ARCH) -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
+    ifdef STEAM
+      LDPATHS += $(STEAMPATH)/osx
+      LDLIBS += steam_api
+    endif
   endif
 endif
 
 BIN = bin/$(OS)/$(ARCH)$(INFO)
 
+ifdef STEAM
+  BIN := $(addsuffix /steam, $(BIN))
+endif
+
 OBJDIR = $(BIN)/obj
 
 # All other sources
 OBJS != find source/engine -type f -name '*.c'
-#OBJS += $(shell find source/engine -type f -name '*.cpp')
+OBJS += $(shell find source/engine -type f -name '*.cpp')
 OBJS += $(shell find source/engine -type f -name '*.m')
-#OBJS := $(patsubst %.cpp, %.o, $(OBJS))
+OBJS := $(patsubst %.cpp, %.o, $(OBJS))
 OBJS := $(patsubst %.c, %.o,$(OBJS))
 OBJS := $(patsubst %.m, %.o, $(OBJS))
 OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
@@ -134,10 +167,9 @@ includeflag := $(addprefix -I, $(includeflag))
 
 # Adding different SDKs
 ifdef STEAM
-  LDLIBS += steam_api
-  LDPATHS += steam/sdk/redistributable_bin/osx
   includeflag += -Isteam/sdk/public
   CFLAGS += -DSTEAM
+#  BIN += /steam
 endif
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable -Wno-address-of-temporary
@@ -229,8 +261,8 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(@D)
-	@echo Making C++ object $@
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo Making C++ object $@ with $(CXX)
+	@$(CXX) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.m
 	@mkdir -p $(@D)

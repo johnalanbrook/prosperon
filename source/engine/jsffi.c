@@ -546,7 +546,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 14:
     str = JS_ToCString(js, argv[1]);
-    ret = ptr2js(play_sound(make_sound(str)));
+    //ret = ptr2js(play_sound(make_sound(str)));
+    play_oneshot(make_sound(str));
     break;
 
   case 15:

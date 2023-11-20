@@ -19,6 +19,8 @@ extern soundbyte *mastermix;
 void mixer_init();
 
 struct bus *first_free_bus(struct dsp_filter in);
+void filter_to_bus(struct dsp_filter *f);
+void unplug_filter(struct dsp_filter *f);
 void bus_fill_buffers(soundbyte *master, int n);
 
 /* Set volume between 0 and 100% */

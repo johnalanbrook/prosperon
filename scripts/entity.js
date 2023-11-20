@@ -467,7 +467,7 @@ var gameobject = {
       
       kill() {
 	if (this.body === -1) {
-	  Log.warn(`Object is already dead!`);
+//	  Log.warn(`Object is already dead!`);
 	  return;
 	}
 	
@@ -518,11 +518,9 @@ var gameobject = {
     var obj = Object.create(this);
     obj.make = undefined;
     obj.level = level;
-//    obj.toJSON = obj.transform_obj;
     if (this.instances)
       this.instances.push(obj);
-//    Log.warn(`Made an object from ${this.toString()}`);
-//    Log.warn(this.instances.length);
+      
     obj.body = make_gameobject();
     obj.components = {};
     obj.objects = {};

@@ -28,10 +28,6 @@ ifeq ($(shell uname -s),Darwin)
   endif
 endif
 
-$(info $$CFLAGS is [${CFLAGS}])
-$(info HOST_CC is $(HOST_CC))
-$(info shell is $(shell uname -s))
-
 # Windows cross compilation from Linux
 #CONFIG_WIN32=y
 # use link time optimization (smaller and faster executables but slower build)
