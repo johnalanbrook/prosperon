@@ -1,9 +1,9 @@
 #ifndef DEBUG_GUI_H
 #define DEBUG_GUI_H
 
-#ifndef static_assert
-#define static_assert(pred) switch(0){case 0:case pred:;}
-#endif
+//#ifndef static_assert
+//#define static_assert(pred) switch(0){case 0:case pred:;}
+//#endif
 
 #include <stdint.h>
 

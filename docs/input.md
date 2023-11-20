@@ -15,3 +15,6 @@ For these controls, pawn control order can matter. Pawns that are controlled lat
 
 ## actions & input maps
 Actions are a named input, ideal for game controls. Rather than say that "x" jumps, it might be better to name a "jump" action.
+
+## Blocking
+If 'block' is set to false on the input object, it will not block lower inputs from using the controls.

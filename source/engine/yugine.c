@@ -32,6 +32,11 @@
 #include <signal.h>
 #include <time.h>
 
+#ifdef STEAM
+#include "steam/steam_api_flat.h"
+//#include "steam/steam_api.h"
+#endif
+
 #include "string.h"
 
 #include "render.h"
@@ -342,6 +347,11 @@ int main(int argc, char **argv) {
 //  signal(SIGBUS, seghandle);
   
 #endif
+
+#ifdef STEAM
+SteamAPI_Init();
+#endif
+
   stm_setup(); /* time */
   start_t = frame_t = stm_now();
   physlast = updatelast = start_t;

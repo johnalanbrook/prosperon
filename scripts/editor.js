@@ -53,7 +53,7 @@ var editor = {
     
   /* Tries to select id */
   do_select(go) {
-    var obj = go >= 0 ? Game.object(go) : undefined;
+    var obj = (go >= 0 ? Game.object(go) : undefined);
     if (!obj || !obj._ed.selectable) return undefined;
     
     if (obj.level !== this.edit_level) {
@@ -273,14 +273,17 @@ var editor = {
   },
 
   snapshot() {
-    var cur = this.edit_level.json_obj();
-    var dif = ediff(cur, this.curlvl);
-    
-    if (dif.empty) return;
+    var dif = this.edit_level.json_obj();
+    if (!dif) return;
+  
+    if (this.snapshots.length !== 0) {
+      var ddif = ediff(dif, this.snapshots.last);
+      if (!ddif) return;
+      dif = ddif;
+    }
 
-    this.snapshots.push(this.curlvl);
+    this.snapshots.push(dif);
     this.backshots = [];
-    this.curlvl = cur;
     return;
     
     this.snapshots.push(dif);
@@ -342,12 +345,10 @@ var editor = {
       return;
     }
     this.unselect();
-    this.backshots.push(this.edit_level.save());
+//    this.backshots.push(this.edit_level.save());
     var dd = this.snapshots.pop();
-    this.edit_level.clear();
-    this.edit_level.load(dd);
-    this.edit_level.check_dirty();
-    this.curlvl = dd;
+    Object.dainty_assign(this.edit_level, dd);
+    this.edit_level._ed.check_dirty();
     return;
     
     this.backshots.push(dd);
@@ -487,9 +488,9 @@ var editor = {
       x._ed.check_dirty();
       if (x._ed.dirty) sname += "*";
       
-      GUI.text(sname, world2screen(x.worldpos()).add([0, 16]), 1, Color.editor.ur);
+      GUI.text(sname, world2screen(x.worldpos()).add([0, 32]), 1, Color.editor.ur);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), world2screen(x.worldpos()), 1, Color.white);
-      Debug.arrow(world2screen(x.worldpos()), world2screen(x.worldpos().add(x.up().scale(40))), Color.yellow, 1);
+//      Debug.arrow(world2screen(x.worldpos()), world2screen(x.worldpos().add(x.up().scale(40))), Color.yellow, 1);
 
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
@@ -497,7 +498,7 @@ var editor = {
 
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1]._ed.namestr();
-      GUI.text(p, world2screen(x[1].worldpos()),1,editor.color_depths[depth]);
+      GUI.text(p, world2screen(x[1].worldpos().add([0,16])),1,editor.color_depths[depth]);
     });
 
     var mg = Game.obj_at(Mouse.worldpos);
@@ -670,7 +671,7 @@ editor.inputs.post = function() {
 };
 editor.inputs.release_post = function() {
   editor.snapshot();
-  editor.edit_level.check_dirty();
+  editor.edit_level._ed.check_dirty();
 };
 editor.inputs['C-a'] = function() {
   if (!editor.selectlist.empty) { editor.unselect(); return; }
@@ -782,6 +783,7 @@ editor.inputs['C-f'] = function() {
 
   editor.edit_level = editor.selectlist[0];
   editor.unselect();
+  editor.reset_undos();  
 };
 editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
 
@@ -791,8 +793,6 @@ editor.inputs['C-F'] = function() {
   editor.edit_level = editor.edit_level.level;
   editor.unselect();
   editor.reset_undos();
-//  editor.curlvl = editor.edit_level.save();
-//  editor.edit_level.check_dirty();
 };
 editor.inputs['C-F'].doc = "Tunnel out of the level you are editing, saving it in the process.";
 
@@ -1027,7 +1027,7 @@ editor.inputs.lm.released = function() {
     var selects = [];
     
     /* TODO: selects somehow gets undefined objects in here */
-    if (Mouse.worldpos.equal(editor.sel_start)) {
+    if (Vector.equal(Mouse.worldpos, editor.sel_start, 5)) {
       var sel = editor.try_select();
       if (sel) selects.push(sel);
     } else {
@@ -1168,9 +1168,13 @@ editor.inputs.mouse.move = function(pos, dpos)
 
   editor.scalelist?.forEach(function(x) {
     var scalediff = dist / x.scaleoffset;
-    x.obj.scale = x.scale.map(x=> x * scalediff);
-    if (x.offset)
-      x.obj.pos = editor.cursor.add(x.offset.scale(scalediff));
+    if (typeof x.obj.scale === 'number')
+      x.obj.scale = x.scale * scalediff;
+    else {
+      x.obj.scale = x.scale.map(x=> x * scalediff);
+      if (x.offset)
+        x.obj.pos = editor.cursor.add(x.offset.scale(scalediff));
+    }
   });
 
   editor.rotlist?.forEach(function(x) {
@@ -1362,7 +1366,6 @@ editor.inputs.s = function() {
   
   if (editor.sel_comp) {
     if (!('scale' in editor.sel_comp)) return;
-    Log.warn(`scaling ${editor.sel_comp.toString()}`);
     editor.scalelist.push({
       obj: editor.sel_comp,
       scale: editor.sel_comp.scale,

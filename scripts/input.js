@@ -160,6 +160,12 @@ var Player = {
 	pawn.inputs.post?.call(pawn);
       }
 
+      switch (state) {
+        case 'released':
+	  pawn.inputs.release_post?.call(pawn);
+	  break;
+      }
+
       if (!pawn.inputs.fallthru) return;
       if (pawn.inputs.block) return;      
     }

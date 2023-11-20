@@ -22,6 +22,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+ifeq ($(shell uname -s),Darwin)
+  ifeq ($(HOST_CC),clang)
+    CFLAGS += -arch $(ARCH)
+  endif
+endif
+
+$(info $$CFLAGS is [${CFLAGS}])
+$(info HOST_CC is $(HOST_CC))
+$(info shell is $(shell uname -s))
+
 # Windows cross compilation from Linux
 #CONFIG_WIN32=y
 # use link time optimization (smaller and faster executables but slower build)
@@ -32,7 +42,7 @@ CONFIG_LTO=y
 #CONFIG_M32=y
 
 # use clang instead of gcc
-ifeq ($(CCC),clang)
+ifeq ($(HOST_CC),clang)
   CONFIG_CLANG=y
   CONFIG_DEFAULT_AR=y
 endif
@@ -61,7 +71,7 @@ else
   CROSS_PREFIX=
   EXE=
 endif
-ifeq ($(CCC), clang)
+ifeq ($(CC), clang)
   CC=$(CROSS_PREFIX)clang
   CFLAGS += -g -Wall -MMD -MF $(OBJDIR)/$(@F).d
   CFLAGS += -Wextra
@@ -73,7 +83,6 @@ ifeq ($(CCC), clang)
   CFLAGS += -Wwrite-strings
   CFLAGS += -Wchar-subscripts -funsigned-char
   CFLAGS += -MMD -MF $(OBJDIR)/$(@F).d
-  CFLAGS += -arch $(ARCH)
 ifneq ($(TTARGET),)
   CFLAGS += --target=$(TTARGET)
   CFLAGS += -isysroot $(SYSRT)

@@ -45,7 +45,6 @@ cpShape *phys2d_query_pos(cpVect pos) {
   filter.mask = CP_ALL_CATEGORIES;
   filter.categories = CP_ALL_CATEGORIES;
   cpShape *find = cpSpacePointQueryNearest(space, pos, 0.f, filter, NULL);
-  //  cpShape *find = cpSpaceSegmentQueryFirst(space, pos, pos, 0.f, filter, NULL);
 
   return find;
 }

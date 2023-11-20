@@ -29,9 +29,11 @@ typedef struct gameobject {
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */
+  float timescale;
   float maxvelocity;
   float maxangularvelocity;
   int gravity;
+  HMM_Vec2 cgravity;
   float damping;
   int sensor;
   unsigned int layer;

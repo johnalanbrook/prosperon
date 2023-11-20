@@ -208,6 +208,8 @@ uint32_t go2mask(struct gameobject *go)
   return 0;
 }
 
+unsigned int editor_cat = 1<<31;
+
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
   cpShapeSetFriction(shape, go->f);
   cpShapeSetElasticity(shape, go->e);
@@ -215,8 +217,10 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
 
   cpShapeFilter filter;
   filter.group = go2id(go);
-  filter.categories = 1<<go->layer;
-  filter.mask = category_masks[go->layer];
+  filter.categories = 1<<go->layer | editor_cat;
+//  filter.mask = CP_ALL_CATEGORIES;
+  filter.mask = category_masks[go->layer] | editor_cat;
+//  filter.mask = CP_ALL_CATEGORIES;
   cpShapeSetFilter(shape, filter);
 
   struct phys2d_shape *ape = cpShapeGetUserData(shape);
@@ -268,16 +272,19 @@ static void gameobject_setpickcolor(struct gameobject *go) {
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
   struct gameobject *go = id2go((int)cpBodyGetUserData(body));
-  if (!go)
+  if (!go) {
     cpBodyUpdateVelocity(body,gravity,damping,dt);
+    return;
+  }
 
-//  cpFloat d = isnan(go->damping) ? damping : d;
-  cpVect g = go->gravity ? gravity : cpvzero;
+  cpFloat d = isnan(go->damping) ? damping : d;
+  cpVect g = go->gravity ? gravity : go->cgravity.cp;
+  
+  cpBodyUpdateVelocity(body,g,d,dt*go->timescale);
 
-  cpBodyUpdateVelocity(body,g,damping,dt);
   if (!isinf(go->maxvelocity))
     cpBodySetVelocity(body, cpvclamp(cpBodyGetVelocity(body), go->maxvelocity));
-    
+
   if (!isinf(go->maxangularvelocity)) {
     float av = cpBodyGetAngularVelocity(body);
     if (fabs(av) > go->maxangularvelocity)
@@ -295,6 +302,10 @@ int MakeGameobject() {
       .next = -1,
       .sensor = 0,
       .shape_cbs = NULL,
+      .gravity = 1,
+      .cgravity = (HMM_Vec2){0,0},
+      .damping = NAN,
+      .timescale = 1.0,
       .ref = JS_NULL,
   };
 

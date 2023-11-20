@@ -45,21 +45,21 @@ int ispow2(int num)
 
 struct circbuf *circbuf_make(size_t size, unsigned int len)
 {
-    struct circbuf *new = malloc(sizeof(*new));
-    new->len = powof2(len);
-    new->data = calloc(sizeof(short), new->len);
-    new->read = new->write = 0;
-    return new;
+    struct circbuf *self = malloc(sizeof(*self));
+    self->len = powof2(len);
+    self->data = calloc(sizeof(short), self->len);
+    self->read = self->write = 0;
+    return self;
 }
 
 struct circbuf circbuf_init(size_t size, unsigned int len)
 {
-    struct circbuf new;
-    new.len = powof2(len);
-    new.data = calloc(sizeof(short), new.len);
-    new.read = new.write = 0;
+    struct circbuf self;
+    self.len = powof2(len);
+    self.data = calloc(sizeof(short), self.len);
+    self.read = self.write = 0;
 
-    return new;
+    return self;
 }
 
 int cbuf_size(struct circbuf *buf) {

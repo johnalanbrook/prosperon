@@ -101,7 +101,6 @@ var gameobject = {
       },
 
       set pos(x) {
-        if (!x[0] || !x[1]) return;
         this.set_worldpos(this.level.this2world(x));
       },
       
@@ -125,6 +124,9 @@ var gameobject = {
       },
       set gravity(x) { cmd(158,this.body, x); },
       get gravity() { return cmd(159,this.body); },
+      set_gravity(x) { cmd(167, this.body, x); },
+      set timescale(x) { cmd(168,this.body,x); },
+      get timescale() { return cmd(169,this.body); },
 
       set phys(x) { set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
@@ -134,6 +136,8 @@ var gameobject = {
 //      get category() { return cmd(42, this.body); },
       get velocity() { return q_body(3, this.body); },
       set velocity(x) { set_body(9, this.body, x); },
+//      get damping() { return cmd(157,this.body); },
+      set_damping(x) { cmd(156, this.body, x); },
       get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
       set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
       worldpos() { return q_body(1,this.body); },
@@ -241,7 +245,7 @@ var gameobject = {
       pulse(vec) { set_body(4, this.body, vec);},
       shove(vec) { set_body(12,this.body,vec);},
       shove_at(vec, at) { set_body(14,this.body,vec,at); },
-      torque(val) { cmd(153, this.body, val); },
+//      torque(val) { cmd(153, this.body, val); },
       world2this(pos) { return cmd(70, this.body, pos); },
       this2world(pos) { return cmd(71, this.body,pos); },
     dir_world2this(dir) { return cmd(160, this.body, dir); },
@@ -329,6 +333,7 @@ var gameobject = {
     phys:Physics.static,
     flipx() { return this.scale.x < 0; },
     flipy() { return this.scale.y < 0; },
+    timescale: 1,
     scale:[1,1],
     mirror(plane) {
       this.scale = Vector.reflect(this.scale, plane);
@@ -573,7 +578,7 @@ var gameobject = {
     obj.level = undefined;
     obj.reparent(level);
 
-    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');    
+    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers', 'timescale');    
 
     Object.dainty_assign(obj, this);
     obj.sync();
@@ -697,12 +702,13 @@ prototypes.from_file = function(file)
   var upperur = gameobject;
   
   if (path.length > 1) {
+    var upur = undefined;
     var upperpath = path.slice(0,-1);
-    upperur = prototypes.get_ur(upperpath.join('/'));
-    if (!upperur) {
-      Log.error(`Attempted to create an UR ${urpath}, but ${upperpath} is not a defined UR.`);
-      return undefined;
+    while (!upur && upperpath) {
+      upur = prototypes.get_ur(upperpath.join('/'));
+      upperpath = upperpath.slice(0,-1);
     }
+    if (upur) upperur = upur;
   }
 
   var newur = {};

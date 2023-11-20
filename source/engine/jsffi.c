@@ -353,7 +353,7 @@ JSValue bb2js(struct boundingbox bb)
 
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  static_assert(sizeof(tsReal) * 2 == sizeof(HMM_Vec2));
+//  static_assert(sizeof(tsReal) * 2 == sizeof(HMM_Vec2));
 
   tsBSpline spline;
 
@@ -1126,7 +1126,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 153:
      cpBodySetTorque(js2go(argv[1])->body, js2number(argv[2]));
      break;
-
     case 154:
       js2go(argv[1])->maxangularvelocity = js2number(argv[2]);
       break;
@@ -1171,6 +1170,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = js2str(argv[1]);
       str2 = js2str(argv[2]);
       ret = int2js(cp(str, str2));
+      break;
+    case 167:
+      js2go(argv[1])->cgravity = js2vec2(argv[2]);
+      break;
+    case 168:
+      js2go(argv[1])->timescale = js2number(argv[2]);
+      break;
+    case 169:
+      ret = num2js(js2go(argv[1])->timescale);
       break;
   }
 

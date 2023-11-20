@@ -5,6 +5,9 @@ MAKEDIR != pwd
 # Options
 # DBG --- build with debugging symbols and logging
 
+ifeq ($(CC),cc)
+  CC=clang
+endif
 # Temp to strip long emcc paths to just emcc
 CC := $(notdir $(CC))
 
@@ -14,9 +17,9 @@ OPT ?= 0
 INFO :=
 LD = $(CC)
 
-ifeq ($(CC), clang)
-  AR = llvm-ar
-endif
+#ifeq ($(CC), clang)
+#  AR = llvm-ar
+#endif
 ifeq ($(CC), x86_64-w64-mingw32-gcc)
   AR = x86_64-w64-mingw32-ar
 endif
@@ -63,6 +66,7 @@ endif
 
 CFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
 
+
 PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
 UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
@@ -80,11 +84,13 @@ ifeq ($(OS), Windows_NT)
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
+
 else ifeq ($(OS), ios)
   TTARGET = arm64-apple-ios13.1 
   SYSRT := /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
   CFLAGS += --target=$(TTARGET) -isysroot $(SYSRT) -DTARGET_OS_IPHONE -x objective-c
   LDFLAGS += --target=$(TTARGET) -isysroot $(SYSRT) -framework Foundation -framework UIKit -framework Metal -framework MetalKit -framework AudioToolbox -framework AVFoundation
+
 else ifeq ($(CC), emcc)
   OS := Web
   LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=450MB
@@ -92,6 +98,7 @@ else ifeq ($(CC), emcc)
   LDLIBS +=  pthread quickjs GL openal c m dl
   CC = emcc
   EXT = .html
+
 else
   UNAME != uname -s
   ifeq ($(UNAME), Linux)
@@ -113,7 +120,11 @@ OBJDIR = $(BIN)/obj
 
 # All other sources
 OBJS != find source/engine -type f -name '*.c'
+#OBJS += $(shell find source/engine -type f -name '*.cpp')
+OBJS += $(shell find source/engine -type f -name '*.m')
+#OBJS := $(patsubst %.cpp, %.o, $(OBJS))
 OBJS := $(patsubst %.c, %.o,$(OBJS))
+OBJS := $(patsubst %.m, %.o, $(OBJS))
 OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
@@ -121,7 +132,15 @@ includeflag != find source -type d -name include
 includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders
 includeflag := $(addprefix -I, $(includeflag))
 
-WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable
+# Adding different SDKs
+ifdef STEAM
+  LDLIBS += steam_api
+  LDPATHS += steam/sdk/redistributable_bin/osx
+  includeflag += -Isteam/sdk/public
+  CFLAGS += -DSTEAM
+endif
+
+WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable -Wno-address-of-temporary
 
 NAME = primum$(EXT)
 SEM = 0.0.1
@@ -129,6 +148,7 @@ COM != fossil describe
 VER = $(SEM)-$(COM)
 
 LDLIBS := $(addprefix -l, $(LDLIBS))
+LDPATHS := $(addprefix -L, $(LDPATHS))
 
 DEPENDS = $(OBJS:.o=.d)
 -include $(DEPENDS)
@@ -152,7 +172,7 @@ install: $(BIN)/$(NAME)
 
 $(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
 	@echo Linking $(NAME)
-	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDLIBS) -o $@
+	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
 $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
@@ -196,15 +216,25 @@ input.md: $(INPUTMD)
 	@echo Printing api for $*
 	@./primum -d $* > $@
 
-$(BIN)/libquickjs.a:
+$(BIN)/libquickjs.a: $(QUICKJS_O)
 	make -C quickjs clean
-	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) HOST_CC=$(CC) CCC=$(CC) AR=$(AR) libquickjs.a libquickjs.lto.a CC=$(CC)
+	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a libquickjs.lto.a HOST_CC=$(CC)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 
 $(OBJDIR)/%.o: %.c 
 	@mkdir -p $(@D)
 	@echo Making C object $@
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(@D)
+	@echo Making C++ object $@
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.m
+	@mkdir -p $(@D)
+	@echo Making Objective-C object $@
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 shaders: $(SHADERS)
