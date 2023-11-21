@@ -15,6 +15,7 @@ struct sprite {
   HMM_Vec2 size;
   float rotation;
   struct rgba color;
+  struct rgba emissive;
   int go; /* id of gameobject */
   struct Texture *tex;
   struct glrect frame;

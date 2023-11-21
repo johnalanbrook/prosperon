@@ -31,36 +31,35 @@ ifeq ($(CC), x86_64-w64-mingw32-gcc)
 endif
 
 ifdef NEDITOR
-  CFLAGS += -DNO_EDITOR
+  CPPFLAGS += -DNO_EDITOR
 endif
 
 ifdef NFLAC
-  CFLAGS += -DNFLAC
+  CPPFLAGS += -DNFLAC
 endif
 
 ifdef NMP3
-  CFLAGS += -DNMP3
+  CPPFLAGS += -DNMP3
 endif
 
 ifdef NSVG
-  CFLAGS += -DNSVG
+  CPPFLAGS += -DNSVG
 endif
 
 ifdef NQOA
-  CFLAGS += -DNQOA
+  CPPFLAGS += -DNQOA
 endif
 
 ifeq ($(DBG),1)
-  CFLAGS += -g
+  CPPFLAGS += -g
   INFO += _dbg
-  LDFLAGS += -g
 else
-  CFLAGS += -DNDEBUG
+  CPPFLAGS += -DNDEBUG
   LDFLAGS += -s
 endif
 
 ifeq ($(OPT),small)
-  CFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
+  CPPFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
   LDFLAGS += -flto
 
   ifeq ($(CC), emcc)
@@ -70,15 +69,14 @@ ifeq ($(OPT),small)
   INFO := $(addsuffix _small,$(INFO))
 else
   ifeq ($(OPT), 1)
-    CFLAGS += -O2 -flto
-    LDFLAGS += -flto
+    CPPFLAGS += -O2 -flto
     INFO := $(addsuffix _opt,$(INFO))
   else
-    CFLAGS += -O0
+    CPPFLAGS += -O0
   endif
 endif
 
-CFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
+CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\"
 
 PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
@@ -89,32 +87,32 @@ ifeq ($(ARCH),)
 endif
 
 STEAMPATH = steam/sdk/redistributable_bin
+DISCORDPATH = discord/lib
+
+ifdef DISCORD
+  LDPATHS += $(DISCORDPATH)/$(ARCH)
+  LDLIBS += discord_game_sdk
+  CPPFLAGS += -DDISCORD
+endif
+
+ifdef STEAM
+  LDLIBS += steam_api
+  LDPATHS += $(STEAMPATH)/$(ARCH)
+endif
 
 ifeq ($(OS), Windows_NT)
-  LDFLAGS += -mwin32 -static -g
-  CFLAGS += -mwin32 -g
+  LDFLAGS += -mwin32 -static
+  CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
   EXT = .exe
   ARCH := x86_64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
-
-  ifdef STEAM
-    LDPATHS += $(STEAMPATH)/win64
-    LDLIBS += steam_api64
-  endif
-
-else ifeq ($(OS), ios)
-  TTARGET = arm64-apple-ios13.1 
-  SYSRT := /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
-  CFLAGS += --target=$(TTARGET) -isysroot $(SYSRT) -DTARGET_OS_IPHONE -x objective-c
-  LDFLAGS += --target=$(TTARGET) -isysroot $(SYSRT) -framework Foundation -framework UIKit -framework Metal -framework MetalKit -framework AudioToolbox -framework AVFoundation
-
 else ifeq ($(CC), emcc)
   OS := Web
   LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=450MB
-  CFLAGS += -pthread
+  CPPFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
   CC = emcc
   EXT = .html
@@ -125,21 +123,14 @@ else
     OS := Linux
     LDFLAGS += -pthread -rdynamic
     LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
-
-    ifdef STEAM
-      LDLIBS += steam_api
-      LDPATHS += $(STEAMPATH)/linux64
-    endif
   endif
 
   ifeq ($(UNAME), Darwin)
     OS := macos
-    CFLAGS += -arch $(ARCH) -x objective-c
-    LDFLAGS += -arch $(ARCH) -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
-    ifdef STEAM
-      LDPATHS += $(STEAMPATH)/osx
-      LDLIBS += steam_api
-    endif
+    CPPFLAGS += -arch $(ARCH)
+    CFLAGS += -x objective-c
+    CXXFLAGS += -std=c++11
+    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
   endif
 endif
 
@@ -168,7 +159,7 @@ includeflag := $(addprefix -I, $(includeflag))
 # Adding different SDKs
 ifdef STEAM
   includeflag += -Isteam/sdk/public
-  CFLAGS += -DSTEAM
+  CPPFLAGS += -DSTEAM
 #  BIN += /steam
 endif
 
@@ -204,7 +195,7 @@ install: $(BIN)/$(NAME)
 
 $(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
 	@echo Linking $(NAME)
-	$(LD) $^ $(LDFLAGS) -L$(BIN) $(LDPATHS) $(LDLIBS) -o $@
+	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L$(BIN) $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
 $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
@@ -257,17 +248,17 @@ $(BIN)/libquickjs.a: $(QUICKJS_O)
 $(OBJDIR)/%.o: %.c 
 	@mkdir -p $(@D)
 	@echo Making C object $@
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(@D)
 	@echo Making C++ object $@ with $(CXX)
-	@$(CXX) $(CFLAGS) -c $< -o $@
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.m
 	@mkdir -p $(@D)
 	@echo Making Objective-C object $@
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 shaders: $(SHADERS)
 	@echo Making shaders

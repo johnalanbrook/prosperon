@@ -98,6 +98,7 @@ component.sprite.impl = {
   set pos(x) { cmd(37,this.id,x); },
   set layer(x) { cmd(60, this.id, x); },
   get layer() { return undefined; },
+  emissive(x) { cmd(170, this.id, x); },
 
   boundingbox() {
     return cwh2bb([0,0],[0,0]);
@@ -251,7 +252,7 @@ SpriteAnim.find.doc = 'Given a path, find the relevant animation for the file.';
 /* Container to play sprites and anim2ds */
 
 component.char2d = Object.create(component.sprite);
-Object.assign(component.char2d, {
+component.char2dimpl = {
   boundingbox() {
     var dim = this.acur.dim.slice();
     dim = dim.scale(this.gameobject.scale);	
@@ -273,8 +274,7 @@ Object.assign(component.char2d, {
   play_anim(anim) {
     this.acur = anim;
     this.frame = 0;
-    this.timer.time = this.acur.frames[this.frame].time;
-    this.timer.start();
+    this.gameobject.delay(this.advance.bind(this), this.acur.frames[this.frame].time);
     this.setsprite();
   },
   
@@ -303,9 +303,7 @@ Object.assign(component.char2d, {
   advance() {
     this.frame = (this.frame + 1) % this.acur.frames.length;
     this.setsprite();
-
-    if (this.frame === 0 && !this.acur.loop)
-      this.timer.pause();
+    this.gameobject.delay(this.advance.bind(this), this.acur.frames[this.frame].time);
   },
 
   devance() {
@@ -329,7 +327,6 @@ Object.assign(component.char2d, {
   },
   
   kill() {
-    this.timer.kill();
     cmd(9, this.id);
   },
 
@@ -351,7 +348,9 @@ Object.assign(component.char2d, {
     }
     Object.hide(this, 'acur');
   },
-});
+};
+
+Object.assign(component.char2d, component.char2dimpl);
 
 component.char2d.doc = {
   doc: "An animation player for sprites.",

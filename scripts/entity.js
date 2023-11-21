@@ -108,6 +108,10 @@ var gameobject = {
         if (!this.level) return this.worldpos();
         return this.level.world2this(this.worldpos());
       },
+
+  get draw_layer() { return cmd(171, this.body); },
+  set draw_layer(x) { cmd(172, this.body, x); },
+
       
       get elasticity() { return cmd(107,this.body); },
       set elasticity(x) { cmd(106,this.body,x); },
@@ -130,10 +134,6 @@ var gameobject = {
 
       set phys(x) { set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
-//      set mask(x) { cmd(41, this.body, x); },
-//      get mask() { return cmd(43, this.body); },
-//      set category(x) { cmd(40, this.body, x); },
-//      get category() { return cmd(42, this.body); },
       get velocity() { return q_body(3, this.body); },
       set velocity(x) { set_body(9, this.body, x); },
 //      get damping() { return cmd(157,this.body); },
@@ -225,10 +225,10 @@ var gameobject = {
      delete this.objects[obj.toString()];
      delete this[obj.toString()];
    },
+   
       
   },
   
-  draw_layer: 1,
   components: {},
   objects: {},
   level: undefined,
@@ -345,6 +345,7 @@ var gameobject = {
     max_angularvelocity: Infinity,
     mass:1,
     layer:0,
+    draw_layer:0,
     worldpos() { return [0,0]; },
 
     save:true,

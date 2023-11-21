@@ -46,6 +46,7 @@ typedef struct gameobject {
   HMM_Mat3 transform;
   struct gameobject *master;
   transform2d t; /* The local transformation of this object */
+  float drawlayer;
 } gameobject;
 
 extern struct gameobject *gameobjects;
@@ -76,6 +77,9 @@ HMM_Mat3 mt_rt(transform2d t);
 HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos);
 /* Transform a direction via the matrix - does not take into account translation of matrix */
 HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir);
+
+HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos);
+HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir);
 
 struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);

@@ -1181,6 +1181,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 169:
       ret = num2js(js2go(argv[1])->timescale);
       break;
+    case 170:
+      id2sprite(js2int(argv[1]))->emissive = js2color(argv[2]);
+      break;
+    case 171:
+      ret = num2js(js2go(argv[1])->drawlayer);
+      break;
+    case 172:
+     js2go(argv[1])->drawlayer = js2number(argv[2]);
+     break;
   }
 
   if (str)

@@ -137,6 +137,18 @@ HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir)
   return HMM_MulM3V3(m, (HMM_Vec3){dir.x, dir.y, 1}).XY;
 }
 
+HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos)
+{
+  return HMM_MulM4V4(m, (HMM_Vec4){pos.X, pos.Y, pos.Z, 1}).XYZ;
+}
+
+HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
+{
+  m.Columns[4] = (HMM_Vec4){0,0,0,1};
+  return mat3_t_pos(m, dir);
+}
+
+
 HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos)
 {
   return HMM_MulV2(go->scale.XY, pos);
@@ -301,6 +313,7 @@ int MakeGameobject() {
       .mass = 1.f,
       .next = -1,
       .sensor = 0,
+      .drawlayer = 0,
       .shape_cbs = NULL,
       .gravity = 1,
       .cgravity = (HMM_Vec2){0,0},

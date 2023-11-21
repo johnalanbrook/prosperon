@@ -30,6 +30,7 @@ struct sprite_vert {
   HMM_Vec2 pos;
   HMM_Vec2 uv;
   struct rgba color;
+  struct rgba emissive;
 };
 
 static int num_spriteverts = 5000;
@@ -54,6 +55,7 @@ struct slice9_vert {
 int make_sprite(int go) {
   struct sprite sprite = {
       .color = color_white,
+      .emissive = {0,0,0,0},
       .size = {1.f, 1.f},
       .tex = texture_loadfromfile(NULL),
       .go = go,
@@ -115,21 +117,30 @@ void sprite_io(struct sprite *sprite, FILE *f, int read) {
   }
 }
 
+int sprite_sort(int *a, int *b)
+{
+  struct gameobject *goa = id2go(sprites[*a].go);
+  struct gameobject *gob = id2go(sprites[*b].go);
+  if (goa->drawlayer == gob->drawlayer) return 0;
+  if (goa->drawlayer > gob->drawlayer) return 1;
+  return -1;
+}
+
 void sprite_draw_all() {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  static struct sprite **layers[5];
-
-  for (int i = 0; i < 5; i++)
-    arrfree(layers[i]);
+  static int *layers;
+  if (layers) arrfree(layers);
 
   for (int i = 0; i < arrlen(sprites); i++)
-    if (sprites[i].go >= 0 && sprites[i].enabled) arrpush(layers[sprites[i].layer], &sprites[i]);
-  
+    if (sprites[i].go >= 0 && sprites[i].enabled) arrpush(layers, i);
 
-  for (int i = 4; i >= 0; i--)
-    for (int j = 0; j < arrlen(layers[i]); j++)
-      sprite_draw(layers[i][j]);
+  if (arrlen(layers) == 0) return;
+  if (arrlen(layers) > 1)
+    qsort(layers, arrlen(layers), sizeof(*layers), sprite_sort);
+
+  for (int i = 0; i < arrlen(layers); i++)
+    sprite_draw(&sprites[layers[i]]);
 }
 
 void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect frame) {
@@ -151,9 +162,11 @@ void sprite_initialize() {
           .attrs = {
               [0].format = SG_VERTEXFORMAT_FLOAT2,
 	      [1].format = SG_VERTEXFORMAT_FLOAT2,
-	      [2].format = SG_VERTEXFORMAT_UBYTE4N}},
+	      [2].format = SG_VERTEXFORMAT_UBYTE4N,
+	      [3].format = SG_VERTEXFORMAT_UBYTE4N}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
+      .colors[0].blend = blend_trans,
       .depth = {
         .write_enabled = true,
 	.compare = SG_COMPAREFUNC_LESS_EQUAL,
@@ -192,7 +205,7 @@ void sprite_initialize() {
 }
 
 /* offset given in texture offset, so -0.5,-0.5 results in it being centered */
-void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, float wrapscale) {
+void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba emissive) {
   struct sprite_vert verts[4];
   
   HMM_Vec2 sposes[4] = {
@@ -208,9 +221,9 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
   };
 
   for (int i = 0; i < 4; i++) {
-    HMM_Vec3 v = HMM_MulM3V3(m, (HMM_Vec3){sposes[i].X, sposes[i].Y, 1.0});
-    verts[i].pos = (HMM_Vec2){v.X, v.Y};
+    verts[i].pos = mat_t_pos(m, sposes[i]);
     verts[i].color = color;
+    verts[i].emissive = emissive;
   }
   
   if (!wrap) {
@@ -257,7 +270,7 @@ void sprite_draw(struct sprite *sprite) {
 
     HMM_Mat3 sm = HMM_MulM3(ss, ts);
     m = HMM_MulM3(m, sm);
-    tex_draw(sprite->tex, m, sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0);
+    tex_draw(sprite->tex, m, sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0, sprite->emissive);
   }
 }
 
@@ -275,7 +288,7 @@ void gui_draw_img(const char *img, HMM_Vec2 pos, HMM_Vec2 scale, float angle, in
   t.pos = pos;
   t.angle = angle;
   t.scale = scale;
-  tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, wrapscale);
+  tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, wrapscale, (struct rgba){0,0,0,0});
 }
 
 void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)

@@ -33,6 +33,11 @@ Basic boolean flags, set to 0 or 1, to enable or disable features in the build
 ## Building for Steam
  -Get the steam SDK
  -Unpack it into a folder named 'steam' at the top level directory
+ -Move the steam libs into the lib folders arm64, x86, and x86_64
  -Make with STEAM=1
 
 Steam uses a C++ based SDK, so a C-only compiler like TCC will not work.
+
+## Building with Discord
+ -Get the steam SDK
+ -Make with DISCORD=1
