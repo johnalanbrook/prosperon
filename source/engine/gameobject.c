@@ -100,6 +100,60 @@ HMM_Mat3 transform2d2mat(transform2d t)
   return HMM_MulM3(mt_t(t), HMM_MulM3(mt_r(t), mt_s(t)));
 }
 
+transform3d mat2transform3d(HMM_Mat4 mat)
+{
+  
+}
+
+transform3d go2t3(gameobject *go)
+{
+  transform3d t;
+  HMM_Vec2 p = go2pos(go);
+  t.pos.Y = p.Y;
+  t.pos.X = p.X;
+  t.scale = go->scale;
+  t.scale.Z = go->scale.X;
+  t.rotation = HMM_QFromAxisAngle_RH(vFWD, go2angle(go));
+  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vRIGHT, -t.pos.Y/70), t.rotation);
+  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vUP, t.pos.X/70), t.rotation);
+  return t;
+}
+
+HMM_Mat4 m4_t(transform3d t)
+{
+  return HMM_Translate(t.pos);
+}
+
+HMM_Mat4 m4_s(transform3d t)
+{
+  return HMM_Scale(t.scale);
+}
+
+HMM_Mat4 m4_r(transform3d t)
+{
+  return HMM_QToM4(t.rotation);
+}
+
+HMM_Mat4 m4_st(transform3d t)
+{
+  return HMM_MulM4(m4_t(t), m4_s(t));
+}
+
+HMM_Mat4 m4_rt(transform3d t)
+{
+  return HMM_MulM4(m4_t(t), m4_r(t));
+}
+
+HMM_Mat4 m4_rst(transform3d t)
+{
+  return HMM_MulM4(m4_st(t), m4_r(t));
+}
+
+HMM_Mat4 transform3d2mat(transform3d t)
+{
+  return m4_rst(t);
+}
+
 HMM_Mat3 mt_rst(transform2d t)
 {
   return transform2d2mat(t);

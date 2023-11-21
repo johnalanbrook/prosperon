@@ -22,6 +22,21 @@ typedef struct transform2d {
 transform2d mat2transform2d(HMM_Mat3 mat);
 HMM_Mat3 transform2d2mat(transform2d t);
 
+typedef struct transform3d {
+  HMM_Vec3 pos;
+  HMM_Vec3 scale;
+  HMM_Quat rotation;
+} transform3d;
+
+transform3d mat2transform3d(HMM_Mat4 mat);
+HMM_Mat4 transform3d2mat(transform3d t);
+HMM_Mat4 m4_t(transform3d t);
+HMM_Mat4 m4_s(transform3d t);
+HMM_Mat4 m4_r(transform3d t);
+HMM_Mat4 m4_rt(transform3d t);
+HMM_Mat4 m4_st(transform3d t);
+HMM_Mat4 m4_rst(transform3d t);
+
 typedef struct gameobject {
   cpBodyType bodytype;
   int next;
@@ -61,6 +76,7 @@ void gameobject_set_sensor(int id, int sensor);
 HMM_Vec2 go2pos(struct gameobject *go);
 float go2angle(struct gameobject *go);
 transform2d go2t(gameobject *go);
+transform3d go2t3(gameobject *go);
 HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos);
 HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos);
 

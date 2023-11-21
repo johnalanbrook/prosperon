@@ -173,7 +173,9 @@ struct model *MakeModel(const char *path) {
             .type = SG_BUFFERTYPE_INDEXBUFFER});
       }
 
-      if (primitive.material->has_pbr_metallic_roughness) {// && primitive.material->pbr_metallic_roughness.base_color_texture.texture) {
+      struct cgltf_material *mat = primitive.material;
+      
+      if (mat && primitive.material->has_pbr_metallic_roughness) {
         cgltf_image *img = primitive.material->pbr_metallic_roughness.base_color_texture.texture->image;
 	if (img->buffer_view) {
 	  cgltf_buffer_view *buf = img->buffer_view;
@@ -281,13 +283,14 @@ struct model *MakeModel(const char *path) {
   return model;
 }
 
-HMM_Vec3 eye = {50,10,5};
+/* eye position */
+HMM_Vec3 eye = {0,0,100};
 
 void draw_model(struct model *model, HMM_Mat4 amodel) {
-  HMM_Mat4 proj = HMM_Perspective_RH_ZO(45, (float)mainwin.width / mainwin.height, 0.1, 10000);
+  HMM_Mat4 proj = projection;//HMM_Perspective_RH_ZO(45, (float)mainwin.width / mainwin.height, 0.1, 10000);
   HMM_Vec3 center = {0.f, 0.f, 0.f};
   HMM_Vec3 up = {0.f, 1.f, 0.f};
-  HMM_Mat4 view = HMM_LookAt_RH(eye, center, up);
+  HMM_Mat4 view = HMM_LookAt_RH(eye, center, vUP);
 
   HMM_Mat4 vp = HMM_MulM4(proj, view);
   HMM_Mat4 mvp = HMM_MulM4(vp, amodel);
@@ -322,15 +325,8 @@ void draw_drawmodel(struct drawmodel *dm)
 {
   if (!dm->model) return;
   struct gameobject *go = id2go(dm->go);
-  cpVect pos = cpBodyGetPosition(go->body);
-  HMM_Mat4 scale = HMM_Scale(id2go(dm->go)->scale);
-  HMM_Mat4 trans = HMM_M4D(1.f);
-  trans.Elements[3][2] = -pos.x;
-  trans.Elements[3][1] = pos.y;
-  HMM_Mat4 rot = HMM_Rotate_RH(cpBodyGetAngle(go->body), vUP);
-  /* model matrix = trans * rot * scale */
-  
-  draw_model(dm->model, HMM_MulM4(trans, HMM_MulM4(rot, scale)));
+  HMM_Mat4 rst = m4_rst(go2t3(go));
+  draw_model(dm->model, rst);
 }
 
 void free_drawmodel(struct drawmodel *dm)

@@ -497,7 +497,7 @@ void full_2d_pass(struct window *window)
              pos.x - zoom * window->rwidth / 2,
              pos.x + zoom * window->rwidth / 2,
              pos.y - zoom * window->rheight / 2,
-             pos.y + zoom * window->rheight / 2, -1.f, 1.f);
+             pos.y + zoom * window->rheight / 2, -1000.f, 1000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, window->rwidth, 0, window->rheight, -1.f, 1.f);
 
@@ -528,8 +528,8 @@ void full_3d_pass(struct window *window)
   model = HMM_MulM4(model, HMM_Scale((HMM_Vec3){scale,scale,scale}));
 
   // Shadow pass
-  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
-  sg_apply_pipeline(sg_shadow.pipe);
+//  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
+//  sg_apply_pipeline(sg_shadow.pipe);
 
   HMM_Mat4 light_proj = HMM_Orthographic_RH_ZO(-100.f, 100.f, -100.f, 100.f, 1.f, 100.f);
   HMM_Mat4 light_view = HMM_LookAt_RH(dirl_pos, (HMM_Vec3){0,0,0}, (HMM_Vec3){0,1,0});
