@@ -114,8 +114,8 @@ transform3d go2t3(gameobject *go)
   t.scale = go->scale;
   t.scale.Z = go->scale.X;
   t.rotation = HMM_QFromAxisAngle_RH(vFWD, go2angle(go));
-  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vRIGHT, -t.pos.Y/70), t.rotation);
-  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vUP, t.pos.X/70), t.rotation);
+  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vRIGHT, -t.pos.Y/100), t.rotation);
+  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vUP, t.pos.X/100), t.rotation);
   return t;
 }
 

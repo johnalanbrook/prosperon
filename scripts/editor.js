@@ -676,6 +676,11 @@ var editor = {
 }
 
 editor.inputs = {};
+editor.inputs.f9 = function() {
+  Log.warn("CAPTURING");
+  cmd(173, "capture.bmp", 0, 0, 500, 500);
+}
+
 editor.inputs.post = function() {
   if (editor.sel_comp && 'sync' in editor.sel_comp) editor.sel_comp.sync();
 };

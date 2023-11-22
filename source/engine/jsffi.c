@@ -1190,6 +1190,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 172:
      js2go(argv[1])->drawlayer = js2number(argv[2]);
      break;
+   case 173:
+     str = js2str(argv[1]);
+     capture_screen(js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5]), str);
+     break;
   }
 
   if (str)

@@ -229,7 +229,7 @@ struct Texture *texture_fromdata(void *raw, long size)
   void *data = stbi_load_from_memory(raw, size, &tex->width, &tex->height, &n, 4);
 
   if (data == NULL) {
-    YughError("Given raw data no valid. Loading default instead.");
+    YughError("Given raw data not valid. Loading default instead.");
     return texture_notex();
   }
 

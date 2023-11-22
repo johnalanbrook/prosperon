@@ -639,6 +639,26 @@ var game_quit = function()
 
 Signal.register("quit", game_quit);
 
+var Event = {
+  events: {},
+
+  observe(name, obj, fn) {
+    this.events[name] ??= [];
+    this.events[name].push([obj, fn]);
+  },
+
+  unobserve(name, obj) {
+    this.events[name] = this.events[name].filter(x => x[0] !== obj);
+  },
+
+  notify(name) {
+    if (!this.events[name]) return;
+    this.events[name].forEach(function(x) {
+      x[1].call(x[0]);
+    });
+  },
+};
+
 var Window = {
   fullscreen(f) { cmd(145, f); },
   set width(w) { cmd(125, w); },

@@ -465,7 +465,7 @@ Object.defineProperty(String.prototype, 'fromfirst', {
   value: function(val) {
     var idx = this.indexOf(val);
     if (idx === -1) return this;
-    return this.slice(idx+1);
+    return this.slice(idx+val.length);
   }
 });
 

@@ -15,6 +15,7 @@
 #include "resources.h"
 #include "yugine.h"
 #include "sokol/sokol_app.h"
+#include "stb_image_write.h"
 
 #include "crt.sglsl.h"
 #include "box.sglsl.h"
@@ -45,6 +46,16 @@ static struct {
   int rec;
   char *buffer;
 } gif;
+
+static struct {
+  sg_shader shader;
+  sg_pipeline pipe;
+  sg_bindings bind;
+  sg_pass pass;
+  sg_image img;
+  sg_image depth_img;
+} crt_post;
+
 
 MsfGifState gif_state = {};
 void gif_rec_start(int w, int h, int cpf, int bitdepth)
@@ -98,6 +109,17 @@ void gif_rec_end(char *path)
   }
   msf_gif_free(gif_res);
   gif.rec = 0;
+}
+
+void capture_screen(int x, int y, int w, int h, char *path)
+{
+  int n = 4;
+  void *data = malloc(w*h*n);
+  sg_query_pixels(0,0,w,h,1,data,w*h*sizeof(char)*n);
+//  sg_query_image_pixels(crt_post.img, crt_post.bind.fs.samplers[0], data, w*h*4);  
+  stbi_write_png("cap.png", w, h, n, data, n*w);
+//  stbi_write_bmp("cap.bmp", w, h, n, data);
+  free(data);
 }
 
 #include "sokol/sokol_app.h"
@@ -170,14 +192,6 @@ static struct {
   sg_shader shader;
 } sg_shadow;
 
-static struct {
-  sg_shader shader;
-  sg_pipeline pipe;
-  sg_bindings bind;
-  sg_pass pass;
-  sg_image img;
-  sg_image depth_img;
-} crt_post;
 
 void trace_make_image(const sg_image_desc *d, sg_image result, void *data)
 {

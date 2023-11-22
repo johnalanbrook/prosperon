@@ -255,7 +255,6 @@ var gameobject = {
       get layer() { cmd(77,this.body); },
       alive() { return this.body >= 0; },
       in_air() { return q_body(7, this.body);},
-      on_ground() { return !this.in_air(); },
 
   hide() { this.components.forEach(function(x) { x.hide(); }); this.objects.forEach(function(x) { x.hide(); }); },
   show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
@@ -320,6 +319,13 @@ var gameobject = {
 
     if (typeof obj.gui === 'function')
       Register.gui.register(obj.gui,obj);
+
+    for (var k in obj) {
+      if (!k.startswith("on_")) continue;
+      var signal = k.fromfirst("on_");
+      Event.observe(signal, obj, obj[k]);
+      Log.warn("REGISTERED " + signal);
+    };
 
     obj.components.forEach(function(x) {
       if (typeof x.collide === 'function')
