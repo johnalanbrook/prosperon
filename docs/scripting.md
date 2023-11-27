@@ -17,6 +17,6 @@ All objects in the Yugine can have an associated script. This script can perform
 |update(dt)|called once per game frame tick|
 |physupdate(dt)|called once per physics tick|
 |stop|called when the object is killed|
-|debug|use draw functions with the object's world position|
-|gui|draw functions in screen space|
+|debug|use draw functions with the object's world position, during debug pass|
+|gui|draw functions in screen space, during gameplay gui pass|
 |draw|draw functions in world space|

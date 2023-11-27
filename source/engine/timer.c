@@ -77,7 +77,7 @@ void timer_start(struct timer *t) {
 
 void timer_remove(int id) {
   struct timer *t = id2timer(id);
-  free_callee(t->data);
+//  free_callee(t->data);
   t->next = first;
   t->on = 0;  
   first = id;
@@ -94,7 +94,7 @@ struct timer *id2timer(int id) {
 
 void timers_free()
 {
-  for (int i = 0; i < arrlen(timers); i++)
-    if (timers[i].on)
-      free_callee(timers[i].data);
+//  for (int i = 0; i < arrlen(timers); i++)
+//    if (timers[i].on)
+//      free_callee(timers[i].data);
 }

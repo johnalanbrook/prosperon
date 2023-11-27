@@ -211,6 +211,15 @@ void script_eval_w_env(const char *s, JSValue env, const char *file) {
   JS_FreeValue(js, v);
 }
 
+void call_env(JSValue env, const char *eval)
+{
+  if (!JS_IsObject(env)) return;
+  JSValue fn = JS_GetPropertyStr(js, env, eval);
+  JSValue v = JS_EvalThis(js, env, eval, strlen(eval), "script", JS_EVAL_FLAGS);
+  js_print_exception(v);
+  JS_FreeValue(js,v);
+}
+
 void file_eval_env(const char *file, JSValue env)
 {
   size_t len;
@@ -222,6 +231,7 @@ void file_eval_env(const char *file, JSValue env)
 }
 
 void script_call_sym(JSValue sym) {
+  if (!JS_IsFunction(js, sym)) return;
   struct callee c;
   c.fn = sym;
   c.obj = JS_GetGlobalObject(js);
@@ -239,6 +249,9 @@ void out_memusage(const char *file)
 
 JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)
 {
+  if (JS_IsUndefined(c->fn)) return JS_NULL;
+  if (JS_IsUndefined(c->obj)) return JS_NULL;
+  
   JSValue ret = JS_Call(js, c->fn, c->obj, argc, argv);
   js_print_exception(ret);
   JS_FreeValue(js, ret);
@@ -271,19 +284,18 @@ void script_callee(struct callee c, int argc, JSValue *argv) {
   js_callee_exec(&c, argc, argv);
 }
 
-struct callee *make_callee(JSValue fn, JSValue obj)
+struct callee make_callee(JSValue fn, JSValue obj)
 {
-  struct callee *c = malloc(sizeof(*c));
-  c->fn = JS_DupValue(js, fn);
-  c->obj = JS_DupValue(js, obj);
+  struct callee c;
+  c.fn = JS_DupValue(js, fn);
+  c.obj = JS_DupValue(js, obj);
   return c;  
 }
 
-void free_callee(struct callee *c)
+void free_callee(struct callee c)
 {
-  JS_FreeValue(js,c->fn);
-  JS_FreeValue(js,c->obj);
-  free(c);
+  JS_FreeValue(js,c.fn);
+  JS_FreeValue(js,c.obj);
 }
 
 void send_signal(const char *signal, int argc, JSValue *argv)

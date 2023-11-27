@@ -314,6 +314,7 @@ var timer = {
   remain: 1,
   loop: false,
   on: false,
+  apptime: false, /* If true, based on app's time instead of game world time */
   start() {
     this.on = true;
   },
@@ -325,7 +326,7 @@ var timer = {
   
   update(dt) {
     if (!this.on) return;
-    
+
     this.remain -= dt;
     if (this.remain <= 0)
       this.fire();
@@ -337,7 +338,7 @@ var timer = {
       this.restart();
   },
 
-  pct() { return this.remain / this.time; },
+  pct() { return 1 - (this.remain / this.time); },
 
   kill() {
     Register.unregister_obj(this);

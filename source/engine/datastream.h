@@ -3,6 +3,8 @@
 
 #include <pl_mpeg.h>
 #include <stdint.h>
+#include "dsp.h"
+#include "utringbuffer.h"
 
 #include "sokol/sokol_gfx.h"
 
@@ -12,17 +14,16 @@ struct datastream {
   plm_t *plm;
   double last_time;
   int playing;
-  int audio_device;
   sg_image img;
   int width;
   int height;
-  struct soundstream *astream;
+  soundbyte *ring;
 };
 
 struct Texture;
 
 void MakeDatastream();
-void ds_openvideo(struct datastream *ds, const char *path, const char *adriver);
+struct datastream *ds_openvideo(const char *path);
 struct Texture *ds_maketexture(struct datastream *);
 void ds_advance(struct datastream *ds, double);
 void ds_seek(struct datastream *ds, double);

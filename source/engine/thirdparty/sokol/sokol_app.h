@@ -3503,9 +3503,15 @@ NSMenu* menu_bar = [[NSMenu alloc] init];
         action:@selector(unhideAllApplications:)
         keyEquivalent:@""];
 
+    NSMenuItem *fullscreen_item = [[NSMenuItem alloc]
+      initWithTitle:@"Enter Full Screen"
+      action:@selector(toggleFullScreen:)
+      keyEquivalent:@"f"];
+
     [app_menu addItem:hide_menu_item];
     [app_menu addItem:hide_others_item];
     [app_menu addItem:show_all_item];
+    [app_menu addItem:fullscreen_item];
     [app_menu addItem:[NSMenuItem separatorItem]];
     [app_menu addItem:quit_menu_item];
     app_menu_item.submenu = app_menu;

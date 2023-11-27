@@ -1,81 +1,59 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include "cbuf.h"
+#include "script.h"
 
 typedef float soundbyte;
 
-struct soundstream {
-    struct circbuf *buf;
-};
-
-struct soundstream *soundstream_make();
+struct dsp_node;
 
 /* A bookmark into a wav, actually playing the sound */
-struct sound {
-    int loop; /* How many times to loop */
+typedef struct sound {
     unsigned int frame; /* Pointing to the current frame on the wav */
-    int playing;
-    float gain;
-
     struct wav *data;
-    struct bus *bus;
-
-    void (*endcb)(struct sound*);
-};
+    int loop;
+    JSValue hook;
+} sound;
 
 /* Represents a sound file source, fulled loaded*/
-struct wav {
+typedef struct wav {
     unsigned int ch;
     unsigned int samplerate;
     unsigned long long frames;
-    float gain; /* In dB */
     soundbyte *data;
-};
+} wav;
 
 /* Represents a sound file stream */
-struct mp3 {
+typedef struct mp3 {
+  
+} mp3;
 
-};
+typedef struct qoa {
+//  struct qoa_desc desc;
+} qoa;
 
 void sound_init();
 void audio_open(const char *device);
 void audio_close();
 
-void sound_fillbuf(struct sound *s, soundbyte *buf, int n);
-
 struct wav *make_sound(const char *wav);
 void free_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);
-struct sound *play_sound(struct wav *wav);
-void play_oneshot(struct wav *wav);
+struct dsp_node *dsp_source(char *path);
+struct dsp_node *dsp_mod(const char *path);
 
-int sound_playing(const struct sound *s);
-int sound_paused(const struct sound *s);
-int sound_stopped(const struct sound *s);
 int sound_finished(const struct sound *s);
-void sound_pause(struct sound *s);
-void sound_resume(struct sound *s);
-void sound_stop(struct sound *s);
 
 struct mp3 make_mp3(const char *mp3);
-
-const char *get_audio_driver();
-
-void soundstream_fillbuf(struct soundstream *stream, soundbyte *buf, int n);
-
-void close_audio_device(int device);
-int open_device(const char *adriver);
 
 float short2db(short val);
 short db2short(float db);
 short short_gain(short val, float db);
+float fgain(float val, float db);
+float float2db(float val);
+float db2float(float db);
 
 float pct2db(float pct);
 float pct2mult(float pct);
-
-void audio_init();
-
-
 
 #endif

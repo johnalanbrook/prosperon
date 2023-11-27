@@ -3,90 +3,50 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
-struct circbuf {
-    int16_t *data;
-    uint32_t read;
-    uint32_t write;
-    unsigned int len;
+static inline unsigned int powof2(unsigned int x)
+{
+  x = x-1;
+  x |= (x >> 1);
+  x |= (x >> 2);
+  x |= (x >> 4);
+  x |= (x >> 8);
+  x |= (x >> 16);
+  return x+1;
+}
+
+struct rheader
+{
+  unsigned int read;
+  unsigned int write;
+  int len;
 };
 
-struct circbuf *circbuf_make(size_t size, unsigned int len);
-struct circbuf circbuf_init(size_t size, unsigned int len);
-void cbuf_push(struct circbuf *buf, short data);
-short cbuf_shift(struct circbuf *buf);
+#define ringheader(r) ((struct rheader *)r-1)
 
-#endif
-
-#ifdef CBUF_IMPLEMENT
-
-#include "assert.h"
-#include "stdlib.h"
-
-unsigned int powof2(unsigned int num)
+static inline void *ringmake(void *ring, size_t elemsize, unsigned int n)
 {
-    if (num != 0) {
-	num--;
-	num |= (num >> 1);
-	num |= (num >> 2);
-	num |= (num >> 4);
-	num |= (num >> 8);
-	num |= (num >> 16);
-	num++;
-    }
-
-    return num;
+  n = powof2(n);
+  if (ring) {
+    struct rheader *h = ringheader(ring);
+    if (n <= h->len) return h+1;
+    h = realloc(h, elemsize*n+sizeof(struct rheader));
+    return h+1;
+  }
+  
+  struct rheader *h = malloc(elemsize*n+sizeof(struct rheader));
+  h->len = n; h->read = 0; h->write = 0;
+  return h+1;
 }
 
-int ispow2(int num)
-{
-    return (num && !(num & (num - 1)));
-}
-
-struct circbuf *circbuf_make(size_t size, unsigned int len)
-{
-    struct circbuf *self = malloc(sizeof(*self));
-    self->len = powof2(len);
-    self->data = calloc(sizeof(short), self->len);
-    self->read = self->write = 0;
-    return self;
-}
-
-struct circbuf circbuf_init(size_t size, unsigned int len)
-{
-    struct circbuf self;
-    self.len = powof2(len);
-    self.data = calloc(sizeof(short), self.len);
-    self.read = self.write = 0;
-
-    return self;
-}
-
-int cbuf_size(struct circbuf *buf) {
-    return buf->write - buf->read;
-}
-
-int cbuf_empty(struct circbuf *buf) {
-    return buf->read == buf->write;
-}
-
-int cbuf_full(struct circbuf *buf) {
-    return cbuf_size(buf) >= buf->len;
-}
-
-uint32_t cbuf_mask(struct circbuf *buf, uint32_t n) {
-    return n & (buf->len-1);
-}
-
-void cbuf_push(struct circbuf *buf, short data) {
-    //assert(!cbuf_full(buf));
-
-    buf->data[cbuf_mask(buf,buf->write++)] = data;
-}
-
-short cbuf_shift(struct circbuf *buf) {
-    //assert(!cbuf_empty(buf));
-    return buf->data[cbuf_mask(buf, buf->read++)];
-}
+#define ringnew(r,n) (r = ringmake(r, sizeof(*r),n))
+#define ringfree(r) ((r) ? free(ringheader(r)) : 0)
+#define ringmask(r,v) (v & (ringheader(r)->len-1))
+#define ringpush(r,v) (r[ringmask(r,ringheader(r)->write++)] = v)
+#define ringshift(r) (r[ringmask(r,ringheader(r)->read++)])
+#define ringsize(r) ((r) ? ringheader(r)->write - ringheader(r)->read : 0)
+#define ringfull(r) ((r) ? ringsize(r) == ringheader(r)->len : 0)
+#define ringempty(r) ((r) ? ringheader(r)->read == ringheader(r)->write : 0)
 
 #endif

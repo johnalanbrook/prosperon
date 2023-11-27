@@ -13,6 +13,9 @@
 #define MSF_GIF_IMPL
 #include "msf_gif.h"
 
+#define STB_HEXWAVE_IMPLEMENTATION
+#include "stb_hexwave.h"
+
 #define STB_DS_IMPLEMENTATION
 #include <stb_ds.h>
 

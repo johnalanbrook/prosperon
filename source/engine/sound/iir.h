@@ -1,21 +1,17 @@
 #ifndef IIR_H
 #define IIR_H
 
-#include "dsp.h"
+#include "sound.h"
 
 struct dsp_iir {
-    float freq;
     int n;  // Amount of constants
-    int order;  // How many times it's applied
-    float *ccof;
-    float *dcof;
-    float *dx;
-    float *dy;
-
-    struct dsp_filter in;
+    float *a;
+    float *b;
+    float *x;
+    float *y;
 };
 
-struct dsp_iir make_iir(int cofs, int order);
+struct dsp_iir make_iir(int order);
 
 double *binomial_mult( int n, double *p );
 double *trinomial_mult( int n, double *b, double *c );

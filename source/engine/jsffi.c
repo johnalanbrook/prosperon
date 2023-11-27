@@ -10,10 +10,10 @@
 #include "input.h"
 #include "level.h"
 #include "log.h"
-#include "mix.h"
+#include "dsp.h"
 #include "music.h"
 #include "2dphysics.h"
-
+#include "datastream.h"
 #include "sound.h"
 #include "sprite.h"
 #include "stb_ds.h"
@@ -546,12 +546,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 14:
     str = JS_ToCString(js, argv[1]);
-    //ret = ptr2js(play_sound(make_sound(str)));
-    play_oneshot(make_sound(str));
+    ret = ptr2js(dsp_source(str));
+    ((sound*)((dsp_node*)js2ptr(ret))->data)->hook = argv[2];
     break;
 
   case 15:
-    music_stop();
+//    music_stop();
     break;
 
   case 16:
@@ -1162,10 +1162,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = int2js(rename(str, str2));
       break;
     case 164:
-      sound_stop(js2ptr(argv[1]));
+      unplug_node(js2ptr(argv[1]));
       break;
     case 165:
-      ret = bool2js(sound_paused(js2ptr(argv[1])));
+//      ret = bool2js(sound_paused(js2ptr(argv[1])));
       break;
     case 166:
       str = js2str(argv[1]);
@@ -1194,6 +1194,77 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
      str = js2str(argv[1]);
      capture_screen(js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5]), str);
      break;
+   case 174:
+     str = js2str(argv[1]);
+     ds_openvideo(str);
+     break;
+
+    case 175:
+      ret = num2js(((dsp_node*)js2ptr(argv[1]))->gain);
+      break;
+    case 176:
+      ((dsp_node*)js2ptr(argv[1]))->gain = js2number(argv[2]);
+      break;
+    case 177:
+      plugin_node(js2ptr(argv[1]), js2ptr(argv[2]));
+      break;
+    case 178:
+      ret = num2js(((dsp_node*)js2ptr(argv[1]))->pan);
+      break;
+    case 179:
+      ((dsp_node*)js2ptr(argv[1]))->pan=js2number(argv[2]);
+      break;
+    case 180:
+      ret = ptr2js(masterbus);
+      break;
+    case 181:
+      ret = ptr2js(make_node(NULL,NULL));
+      break;
+    case 182:
+      str = js2str(argv[1]);
+      ret = ptr2js(dsp_source(str));
+      ((sound*)((dsp_node*)js2ptr(ret))->data)->hook = JS_DupValue(js,argv[2]);
+      break;
+    case 183:
+      ((dsp_node*)js2ptr(argv[1]))->off = js2bool(argv[2]);
+      break;
+    case 184:
+      ((dsp_node*)js2ptr(argv[1]))->pass = js2bool(argv[2]);
+      break;
+    case 185:
+      ret = ptr2js(dsp_delay(js2number(argv[1]), js2number(argv[2])));
+      break;
+    case 186:
+      ret = ptr2js(dsp_lpf(js2number(argv[1])));
+      break;
+    case 187:
+      ret = ptr2js(dsp_hpf(js2number(argv[1])));
+      break;
+    case 188:
+      str = js2str(argv[1]);
+      ret = ptr2js(dsp_mod(str));
+      break;
+    case 189:
+      ret = ptr2js(dsp_bitcrush(js2number(argv[1]), js2number(argv[2])));
+      break;
+    case 190:
+      ret = ptr2js(dsp_compressor());
+      break;
+    case 191:
+      ret = ptr2js(dsp_limiter(js2number(argv[1])));
+      break;
+    case 192:
+      ret = ptr2js(dsp_noise_gate(js2number(argv[1])));
+      break;
+    case 193:
+      node_free(js2ptr(argv[1]));
+      break;
+    case 194:
+      ret = bool2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->loop);
+      break;
+    case 195:
+      ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->loop = js2bool(argv[2]);
+      break;
   }
 
   if (str)
@@ -1701,10 +1772,11 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 }
 
 JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  double secs = js2number(argv[1]);
-  struct callee *c = make_callee(argv[0], argv[3]);
-  int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
-  return JS_NewInt64(js, id);
+//  double secs = js2number(argv[1]);
+//  struct callee *c = make_callee(argv[0], argv[3]);
+//  int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
+//  return JS_NewInt64(js, id);
+  return JS_NULL;
 }
 
 JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)

@@ -550,7 +550,6 @@ double sf_bwbp( int n, double f1f, double f2f )
   sf_bwbs - calculates the scaling factor for a butterworth bandstop filter.
   The scaling factor is what the c coefficients must be multiplied by so
   that the filter response has a maximum value of 1.
-
 */
 
 double sf_bwbs( int n, double f1f, double f2f )
@@ -581,9 +580,6 @@ double sf_bwbs( int n, double f1f, double f2f )
 
     return( 1.0 / sfr );
 }
-
-
-
 
 float *fir_lp(int n, double fcf)
 {
@@ -640,43 +636,32 @@ float *fir_bpf(int n, double fcf1, double fcf2)
     return ret;
 }
 
-
-
-
-
-
-
-
-
 /* Biquad filters */
-
-struct dsp_iir make_iir(int cofs, int order)
+struct dsp_iir make_iir(int order)
 {
     struct dsp_iir new;
-    new.n = cofs;
-    new.order = order;
-
-    new.dcof = calloc(sizeof(float), cofs *order);
-    new.ccof = calloc(sizeof(float), cofs *order);
-    new.dx = calloc(sizeof(float), cofs *order);
-    new.dy = calloc(sizeof(float), cofs *order);
+    new.n = order+1;
+    new.a = calloc(sizeof(float), new.n);
+    new.b = calloc(sizeof(float), new.n);
+    new.x = calloc(sizeof(float), new.n);
+    new.y = calloc(sizeof(float), new.n);
 
     return new;
 }
 
 struct dsp_iir biquad_iir()
 {
-    return make_iir(3, 1);
+    return make_iir(2);
 }
 
 void biquad_iir_fill(struct dsp_iir bq, double *a, double *b)
 {
-    bq.ccof[0] = (b[0] / a[0]);
-    bq.ccof[1] = (b[1] / a[0]);
-    bq.ccof[2] = (b[2] / a[0]);
-    bq.dcof[0] = 0.f;
-    bq.dcof[1] = (a[1] / a[0]);
-    bq.dcof[2] = (a[2] / a[0]);
+    bq.a[0] = (b[0] / a[0]);
+    bq.a[1] = (b[1] / a[0]);
+    bq.a[2] = (b[2] / a[0]);
+    bq.b[0] = 0.f;
+    bq.b[1] = (a[1] / a[0]);
+    bq.b[2] = (a[2] / a[0]);
 }
 
 struct dsp_iir bqlp_dcof(double fcf, float Q)
@@ -687,7 +672,7 @@ struct dsp_iir bqlp_dcof(double fcf, float Q)
     double b[3];
     double az = sin(w0) / (2 * Q);
 
-    b[0] = (1 - cos(w0)) / 2;
+    b[0] = (1 - cos(w0)) / 2.0;
     b[1] = 1 - cos(w0);
     b[2] = b[0];
 
@@ -841,10 +826,23 @@ struct dsp_iir bqhs_dcof(double fcf, float Q, float dbgain)
     return new;
 }
 
-
-
 /* Bipole Butterworth, Critically damped, and Bessel */
 /* https://unicorn.us.com/trading/allpolefilters.html */
+/*
+struct p2_iir {
+  int order;
+  int n;
+  float *a;
+  float *b;
+  float *x;
+  float *y;
+}
+soundbyte p2_calc(struct p2_iir iir, soundbyte val)
+{
+  for (int i = 0; i < iir.order; i++) {
+    
+  }
+}
 
 void p2_ccalc(double fcf, double p, double g, double *a, double *b)
 {
@@ -867,7 +865,7 @@ struct dsp_iir p2_bwlp(double fcf)
     double g = 1;
 
     struct dsp_iir new = biquad_iir();
-    p2_ccalc(fcf, p, g, new.ccof, new.dcof);
+    p2_ccalc(fcf, p, g, new.a, new.b);
 
     return new;
 }
@@ -875,8 +873,8 @@ struct dsp_iir p2_bwlp(double fcf)
 struct dsp_iir p2_bwhp(double fcf)
 {
     struct dsp_iir new = p2_bwlp(fcf);
-    new.ccof[1] *= -1;
-    new.dcof[1] *= -1;
+    new.a[1] *= -1;
+    new.b[1] *= -1;
 
     return new;
 }
@@ -887,7 +885,7 @@ struct dsp_iir p2_cdlp(double fcf)
     double p = 2;
 
     struct dsp_iir new = biquad_iir();
-    p2_ccalc(fcf, p, g, new.ccof, new.dcof);
+    p2_ccalc(fcf, p, g, new.a, new.b);
 
     return new;
 }
@@ -895,8 +893,8 @@ struct dsp_iir p2_cdlp(double fcf)
 struct dsp_iir p2_cdhp(double fcf)
 {
     struct dsp_iir new = p2_cdlp(fcf);
-    new.ccof[1] *= -1;
-    new.dcof[1] *= -1;
+    new.a[1] *= -1;
+    new.b[1] *= -1;
 
     return new;
 }
@@ -907,7 +905,7 @@ struct dsp_iir p2_beslp(double fcf)
     double p = 3;
 
     struct dsp_iir new = biquad_iir();
-    p2_ccalc(fcf, p, g, new.ccof, new.dcof);
+    p2_ccalc(fcf, p, g, new.a, new.b);
 
     return new;
 }
@@ -915,55 +913,11 @@ struct dsp_iir p2_beslp(double fcf)
 struct dsp_iir p2_beshp(double fcf)
 {
     struct dsp_iir new = p2_beslp(fcf);
-    new.ccof[1] *= -1;
-    new.dcof[1] *= -1;
+    new.a[1] *= -1;
+    new.b[1] *= -1;
 
     return new;
 }
-
-struct dsp_iir p2_iir_order(int order)
-{
-    struct dsp_iir new;
-    new.n = 3;
-    new.order = order;
-
-    new.ccof = calloc(sizeof(float), 3 * order);
-    new.dcof = calloc(sizeof(float), 3 * order);
-    new.dx = calloc(sizeof(float), 3 * order);
-    new.dy = calloc(sizeof(float), 3 * order);
-
-    return new;
-}
-
-short p2_filter(struct dsp_iir iir, short val)
-{
-    float a = (float)val/SHRT_MAX;
-
-    for (int i = 0; i < iir.order; i++) {
-        int indx = i * iir.n;
-
-        iir.dx[indx] = a;
-
-        a = 0.f;
-
-        for (int j = 0; j < iir.n; j++)
-            a += iir.ccof[indx + j] * iir.dx[indx];
-
-        for (int j = iir.n-1; j > 0; j--)
-            iir.dx[indx] = iir.dx[indx-1];
-
-        for (int j = 0; j < iir.n; j++)
-            a -= iir.dcof[indx+j] * iir.dy[indx];
-
-        iir.dy[indx] = a;
-
-        for (int j = iir.n-1; j > 0; j--)
-            iir.dy[indx] = iir.dy[indx-1];
-    }
-
-    return a * SHRT_MAX;
-}
-
 
 struct dsp_iir che_lp(int order, double fcf, double e)
 {
@@ -986,13 +940,13 @@ struct dsp_iir che_lp(int order, double fcf, double e)
         s = a2*c + 2.f*a*b + 1.f;
         double A = a2/(4.f);
 
-        new.ccof[0*i] = ep * 1.f/A;
-        new.ccof[1*i] = ep * -2.f/A;
-        new.ccof[2*i] = ep * 1.f/A;
+        new.a[0*i] = ep * 1.f/A;
+        new.a[1*i] = ep * -2.f/A;
+        new.a[2*i] = ep * 1.f/A;
 
-        new.dcof[0*i] = ep * 0.f;
-        new.dcof[1*i] = ep * 2.f*(1-a2*c);
-        new.dcof[2*i] = ep * -(a2*c - 2.f*a*b + 1.f);
+        new.b[0*i] = ep * 0.f;
+        new.b[1*i] = ep * 2.f*(1-a2*c);
+        new.b[2*i] = ep * -(a2*c - 2.f*a*b + 1.f);
     }
 
     return new;
@@ -1018,9 +972,9 @@ struct dsp_iir che_hp(int order, double fcf, double e)
         s = a2*c + 2.f*a*b + 1.f;
         double A = 1.f/(4.f);
 
-        new.ccof[0*i] = ep * 1.f/A;
-        new.ccof[1*i] = ep * -2.f/A;
-        new.ccof[2*i] = ep * 1.f/A;
+        new.a[0*i] = ep * 1.f/A;
+        new.a[1*i] = ep * -2.f/A;
+        new.a[2*i] = ep * 1.f/A;
 
 
     }
@@ -1037,7 +991,7 @@ struct dsp_iir che_bp(int order, double s, double fcf1, double fcf2, double e)
     double ep = 2.f/e;
 
     int n = order / 4;
-        struct dsp_iir new = p2_iir_order(order);
+        struct dsp_iir new = biquad_iir();
 
         double a = cos(M_PI*(fcf1+fcf2)/2) / cos(M_PI*(fcf2-fcf1)/s);
         double a2 = pow(a, 2);
@@ -1055,15 +1009,15 @@ struct dsp_iir che_bp(int order, double s, double fcf1, double fcf2, double e)
             c = pow(r, 2) + pow(c, 2);
             s = b2*c + 2.f*b*r + 1.f;
 
-            new.ccof[0*i] = ep * 1.f/A;
-            new.ccof[1*i] = ep * -2.f/A;
-            new.ccof[2*i] = ep * 1.f/A;
+            new.a[0*i] = ep * 1.f/A;
+            new.a[1*i] = ep * -2.f/A;
+            new.a[2*i] = ep * 1.f/A;
 
-            new.dcof[0*i] = 0.f;
-            new.dcof[1*i] = ep * 4.f*a*(1.f+b*r)/s;
-            new.dcof[2*i] = ep * 2.f*(b2*c-2.f*a2-1.f)/s;
-            new.dcof[3*i] = ep * 4.f*a*(1.f-b*r)/s;
-            new.dcof[4*i] = ep * -(b2*c - 2.f*b*r + 1.f) / s;
+            new.b[0*i] = 0.f;
+            new.b[1*i] = ep * 4.f*a*(1.f+b*r)/s;
+            new.b[2*i] = ep * 2.f*(b2*c-2.f*a2-1.f)/s;
+            new.b[3*i] = ep * 4.f*a*(1.f-b*r)/s;
+            new.b[4*i] = ep * -(b2*c - 2.f*b*r + 1.f) / s;
         }
 
         return new;
@@ -1096,16 +1050,17 @@ double ep = 2.f/e;
         c = pow(r, 2) + pow(c, 2);
         s = b2*c + 2.f*b*r + 1.f;
 
-        new.ccof[0*i] = ep * 1.f/A;
-        new.ccof[1*i] = ep * -2.f/A;
-        new.ccof[2*i] = ep * 1.f/A;
+        new.a[0*i] = ep * 1.f/A;
+        new.a[1*i] = ep * -2.f/A;
+        new.a[2*i] = ep * 1.f/A;
 
-        new.dcof[0*i] = 0.f;
-        new.dcof[1*i] = ep * 4.f*a*(c+b*r)/s;
-        new.dcof[2*i] = ep * 2.f*(b2-2.f*a2*c-c)/s;
-        new.dcof[3*i] = ep * 4.f*a*(c-b*r)/s;
-        new.dcof[4*i] = ep * -(b2 - 2.f*b*r + c) / s;
+        new.b[0*i] = 0.f;
+        new.b[1*i] = ep * 4.f*a*(c+b*r)/s;
+        new.b[2*i] = ep * 2.f*(b2-2.f*a2*c-c)/s;
+        new.b[3*i] = ep * 4.f*a*(c-b*r)/s;
+        new.b[4*i] = ep * -(b2 - 2.f*b*r + c) / s;
     }
 
     return new;
 }
+*/

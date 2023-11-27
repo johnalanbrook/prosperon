@@ -522,6 +522,11 @@ Object.defineProperty(String.prototype, 'endswith', {
   }
 });
 
+Object.defineProperty(String.prototype, 'pct', {
+  value: function(val) {
+  }
+});
+
 Object.defineProperty(String.prototype, 'uc', { value: function() { return this.toUpperCase(); } });
 
 Object.defineProperty(String.prototype, 'lc', {value:function() { return this.toLowerCase(); }});

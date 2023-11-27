@@ -17,6 +17,8 @@ actor.kill = function(actor){};
 actor.delay = function(fn, seconds) {};
 actor.clock = function(fn){};
 
+var Empyrean = Object.create(actor);
+
 var gameobject = {
   impl: {
 	full_path() {
@@ -58,16 +60,10 @@ var gameobject = {
     },
 
     cry(file) {
-      Sound.play(file);
-      return;
-      
-      if (this.curcry && !Sound.finished(this.curcry)) return;
-      this.curcry = Sound.play(file);
-      var r = this.curcry;
-      Log.warn(r);
-      var fn = function() { Log.warn(r); if (r) Sound.stop(r); };
-      this.timers.push(fn);
-      return fn;
+      var p = Sound.play(file, Sound.bus.sfx);
+      var killfn = p.kill.bind(p);
+      this.timers.push(killfn);
+      return killfn;
     },
 
       set max_velocity(x) { cmd(151, this.body, x); },
@@ -324,7 +320,6 @@ var gameobject = {
       if (!k.startswith("on_")) continue;
       var signal = k.fromfirst("on_");
       Event.observe(signal, obj, obj[k]);
-      Log.warn("REGISTERED " + signal);
     };
 
     obj.components.forEach(function(x) {

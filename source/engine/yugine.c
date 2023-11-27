@@ -7,7 +7,6 @@
 #include "window.h"
 #include "sound.h"
 #include "resources.h"
-
 #include <stdio.h>
 
 #include "datastream.h"
@@ -142,8 +141,10 @@ const char *engine_info()
 static int argc;
 static char **args;
 
+struct datastream *bjork;
+
 void c_init() {
-  sound_init();
+
   input_init();
   script_evalf("world_start();");
   
@@ -151,6 +152,7 @@ void c_init() {
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
   script_evalf("Game.init();");
+//  bjork = ds_openvideo("bjork.mpg");
 }
 
 int frame_fps() {
@@ -160,6 +162,7 @@ int frame_fps() {
 static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
+//  ds_advance(bjork, elapsed);
     input_poll(0);
     /* Timers all update every frame - once per monitor refresh */
     timer_update(elapsed, timescale);
@@ -374,7 +377,7 @@ dam->update_activity(dam, &da, NULL, NULL);
   stm_setup(); /* time */
   start_t = frame_t = stm_now();
   physlast = updatelast = start_t;
-  
+  sound_init();  
   resources_init();
   phys2d_init();  
   script_startup();
@@ -398,7 +401,6 @@ dam->update_activity(dam, &da, NULL, NULL);
   start_desc.width = mainwin.width;
   start_desc.height = mainwin.height;
   start_desc.fullscreen = 0;
-
   sapp_run(&start_desc);
 
   return 0;

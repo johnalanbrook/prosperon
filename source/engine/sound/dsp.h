@@ -6,47 +6,46 @@
 #define CHANNELS 2
 
 #include "sound.h"
+#include "cbuf.h"
+#include "script.h"
 
-//#include "circbuf.h"
+/* a DSP node, when processed, sums its inputs, and stores the result of proc in its cache */
+typedef struct dsp_node {
+  void (*proc)(void *dsp, soundbyte *buf, int samples); /* processor */
+  void *data; /* Node specific data to use in the proc function, passed in as dsp */
+  void (*data_free)(void *data);
+  soundbyte cache[BUF_FRAMES*CHANNELS]; /* Cached process */
+  struct dsp_node **ins; /* Array of in nodes */
+  struct dsp_node *out; /* node this one is connected to */
+  int pass; /* True if the filter should be bypassed */
+  int off; /* True if the filter shouldn't output */
+  float gain; /* Between 0 and 1, to attenuate this output */
+  float pan; /* Between -100 and +100, panning left to right in the speakers */
+} dsp_node;
 
-struct dsp_iir;
+void dsp_init();
 
+/* Get the output of a node */
+soundbyte *dsp_node_out(dsp_node *node);
+void dsp_node_run(dsp_node *node);
+dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int samples));
+void plugin_node(dsp_node *from, dsp_node *to);
+void unplug_node(dsp_node *node);
+void node_free(dsp_node *node);
 
-void dsp_rectify(soundbyte *in, soundbyte *out, int n);
+void scale_soundbytes(soundbyte *a, float scale, int frames);
+void sum_soundbytes(soundbyte *a, soundbyte *b, int frames);
+void zero_soundbytes(soundbyte *a, int frames);
+void set_soundbytes(soundbyte *a, soundbyte *b, int frames);
 
-struct dsp_filter {
-    void (*filter)(void *data, soundbyte *out, int samples);
-    void *data;
+dsp_node *dsp_mixer_node();
+dsp_node *dsp_am_mod(dsp_node *mod);
+dsp_node *dsp_rectify();
 
-    int inputs;
-    struct dsp_filter *in[6];
-    struct bus *bus;
+extern dsp_node *masterbus;
 
-    soundbyte cache[CHANNELS*BUF_FRAMES];
-    int dirty;
-};
-
-struct dsp_filter dsp_filter(void *data, void (*filter)(void *data, soundbyte *out, int samples));
-
-struct dsp_fir {
-    float freq;
-    int n;
-    int head;
-    float *cof;
-    float *dx;
-
-    struct dsp_filter in;
-};
-
-void dsp_filter_addin(struct dsp_filter filter, struct dsp_filter *in);
-
-struct dsp_filter lp_fir_make(float freq);
-
-void dsp_iir_fillbuf(struct dsp_iir *iir, soundbyte *out, int n);
-struct dsp_filter hpf_make(int poles, float freq);
-struct dsp_filter lpf_make(int poles, float freq);
-struct dsp_filter bpf_make(int poles, float freq1, float freq2);
-struct dsp_filter npf_make(int poles, float freq1, float freq2);
+dsp_node *dsp_hpf(float freq);
+dsp_node *dsp_lpf(float freq);
 
 /* atk, dec, sus, rls specify the time, in miliseconds, the phase begins */
 struct dsp_adsr {
@@ -63,24 +62,15 @@ struct dsp_adsr {
     float out;
 };
 
-void dsp_adsr_fillbuf(struct dsp_adsr *adsr, soundbyte *out, int n);
-struct dsp_filter make_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigned int rls);
+dsp_node *dsp_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigned int rls);
 
-struct dsp_delay {
-    unsigned int ms_delay;
-//    struct circbuf buf;
-    struct dsp_filter in;
-};
+typedef struct {
+  unsigned int ms_delay;
+  float decay; /* Each echo should be multiplied by this number */
+  soundbyte *ring;
+} delay;
 
-struct dsp_delay dsp_delay_make(unsigned int ms_delay);
-void dsp_delay_filbuf(struct dsp_delay *delay, soundbyte *buf, int n);
-
-struct dsp_ammod {
-    struct dsp_filter ina;
-    struct dsp_filter inb;
-    soundbyte abuf[BUF_FRAMES*CHANNELS];
-    soundbyte bbuf[BUF_FRAMES*CHANNELS];
-};
+dsp_node *dsp_delay(double sec, double decay);
 
 struct dsp_compressor {
     double ratio;
@@ -92,69 +82,26 @@ struct dsp_compressor {
     double rls_tau;
 };
 
-struct dsp_filter dsp_make_compressor();
-void dsp_compressor_fillbuf(struct dsp_compressor *comp, soundbyte *out, int n);
+dsp_node *dsp_compressor();
 
-struct dsp_limiter {
-
-};
-
-struct dsp_filter dsp_make_limiter();
-void dsp_limiter_fillbuf(struct dsp_limiter *lim, soundbyte *out, int n);
-
-
-struct phasor {
-    unsigned int sr;
-    float cur;
-    float freq;
-    unsigned int clen;
-    unsigned int cstep;
-    float *cache;
-};
+dsp_node *dsp_limiter(float ceil);
+dsp_node *dsp_noise_gate(float floor);
 
 struct phasor phasor_make(unsigned int sr, float freq);
 
-struct osc {
-    float (*f)(float p);
-    struct phasor p;
-    unsigned int frames;
-    unsigned int frame;
-    soundbyte *cache;
-};
-
-struct wav;
-
-struct wav gen_sine(float amp, float freq, int sr, int ch);
-struct wav gen_square(float amp, float freq, int sr, int ch);
-struct wav gen_triangle(float amp, float freq, int sr, int ch);
-struct wav gen_saw(float amp, float freq, int sr, int ch);
-
-void gen_whitenoise(void *data, soundbyte *out, int n);
-void gen_pinknoise(void *data, soundbyte *out, int n);
-
+dsp_node *dsp_whitenoise();
+dsp_node *dsp_pinknoise();
 
 float sin_phasor(float p);
 float square_phasor(float p);
 float saw_phasor(float p);
 float tri_phasor(float p);
 
-void osc_fillbuf(struct osc *osc, soundbyte *buf, int n);
-
-void am_mod(struct dsp_ammod *mod, soundbyte *c, int n);
-
-struct dsp_reverb {
-    unsigned int time; /* Time in miliseconds for the sound to decay out */
-};
-
-struct dsp_filter make_reverb();
-void dsp_reverb_fillbuf(struct dsp_reverb *r, soundbyte *out, int n);
-
-void dsp_pan(float *deg, soundbyte *out, int n);
-
+dsp_node *dsp_reverb();
+dsp_node *dsp_sinewave(float amp, float freq);
+dsp_node *dsp_square(float amp, float freq, int sr, int ch);
+dsp_node *dsp_bitcrush(float sr, float res);
 void dsp_mono(void *p, soundbyte *out, int n);
-
-void dsp_bitcrush(void *p, soundbyte *out, int n);
-
-void dsp_run(struct dsp_filter filter, soundbyte *out, int n);
+void pan_frames(soundbyte *out, float deg, int frames);
 
 #endif

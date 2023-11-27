@@ -5,7 +5,6 @@
 #include "iir.h"
 #include "limits.h"
 #include "log.h"
-#include "mix.h"
 #include "resources.h"
 #include "shader.h"
 #include "sound.h"
@@ -17,7 +16,6 @@
 
 #include "mpeg2.sglsl.h"
 
-#define CBUF_IMPLEMENT
 #include "cbuf.h"
 
 #include "sokol/sokol_gfx.h"
@@ -26,8 +24,13 @@ sg_shader vid_shader;
 sg_pipeline vid_pipeline;
 sg_bindings vid_bind;
 
-static void render_frame(plm_t *mpeg, plm_frame_t *frame, void *user) {
-  struct datastream *ds = user;
+void soundstream_fillbuf(struct datastream *ds, soundbyte *buf, int frames) {
+  for (int i = 0; i < frames*CHANNELS; i++)
+    buf[i] = ringshift(ds->ring);
+}
+
+static void render_frame(plm_t *mpeg, plm_frame_t *frame, struct datastream *ds) {
+  return;
   uint8_t rgb[frame->height*frame->width*4];
   plm_frame_to_rgba(frame, rgb, frame->width*4);
   sg_image_data imgd;
@@ -40,32 +43,29 @@ static void render_frame(plm_t *mpeg, plm_frame_t *frame, void *user) {
   sg_update_image(ds->img, &imgd);
 }
 
-static void render_audio(plm_t *mpeg, plm_samples_t *samples, void *user) {
-  struct datastream *ds = user;
-  short t;
-
-  for (int i = 0; i < samples->count * CHANNELS; i++) {
-    t = (short)(samples->interleaved[i] * SHRT_MAX);
-//    cbuf_push(ds->astream->buf, t * 5);
-  }
+static void render_audio(plm_t *mpeg, plm_samples_t *samples, struct datastream *ds) {
+  for (int i = 0; i < samples->count * CHANNELS; i++)
+    ringpush(ds->ring, samples->interleaved[i]);
 }
 
-void ds_openvideo(struct datastream *ds, const char *video, const char *adriver) {
+struct datastream *ds_openvideo(const char *path)
+{
+  struct datastream *ds = malloc(sizeof(*ds));
   size_t rawlen;
   void *raw;
-  raw = slurp_file(video, &rawlen);
+  raw = slurp_file(path, &rawlen);
   ds->plm = plm_create_with_memory(raw, rawlen, 0);
   free(raw);
 
   if (!ds->plm) {
-    YughError("Couldn't open %s", video);
+    YughError("Couldn't open %s", path);
   }
 
-  YughWarn("Opened %s - framerate: %f, samplerate: %d, audio streams: %i, duration: %f",
-          video,
+  YughWarn("Opened %s - framerate: %f, samplerate: %d,audio streams: %d, duration: %g",
+          path,
           plm_get_framerate(ds->plm),
           plm_get_samplerate(ds->plm),
-
+	  plm_get_num_audio_streams(ds->plm),
           plm_get_duration(ds->plm));
 
 
@@ -74,28 +74,8 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
     .height = plm_get_height(ds->plm)
   });  
 
-
-  ds->astream = soundstream_make();
-  struct dsp_filter astream_filter;
-  astream_filter.data = &ds->astream;
-  astream_filter.filter = soundstream_fillbuf;
-
-  // struct dsp_filter lpf = lpf_make(8, 10000);
-  struct dsp_filter lpf = lpf_make(1, 200);
-  struct dsp_iir *iir = lpf.data;
-  iir->in = astream_filter;
-
-  struct dsp_filter hpf = hpf_make(1, 2000);
-  struct dsp_iir *hiir = hpf.data;
-  hiir->in = astream_filter;
-
-  /*
-      struct dsp_filter llpf = lp_fir_make(20);
-      struct dsp_fir *fir = llpf.data;
-      fir->in = astream_filter;
-  */
-
-  // first_free_bus(astream_filter);
+  ds->ring = ringnew(ds->ring, 8192);
+  plugin_node(make_node(ds, soundstream_fillbuf), masterbus);
 
   plm_set_video_decode_callback(ds->plm, render_frame, ds);
   plm_set_audio_decode_callback(ds->plm, render_audio, ds);
@@ -108,19 +88,19 @@ void ds_openvideo(struct datastream *ds, const char *video, const char *adriver)
   plm_set_audio_lead_time(ds->plm, BUF_FRAMES / SAMPLERATE);
 
   ds->playing = true;
+
+  return ds;
 }
 
 void MakeDatastream() {
-  vid_shader = sg_make_shader(mpeg2_shader_desc(sg_query_backend()));}
+  vid_shader = sg_make_shader(mpeg2_shader_desc(sg_query_backend()));
+}
 
 void ds_advance(struct datastream *ds, double s) {
-  if (ds->playing) {
-    plm_decode(ds->plm, s);
-  }
+  if (ds->playing) plm_decode(ds->plm, s);
 }
 
 void ds_seek(struct datastream *ds, double time) {
-  // clear_raw(ds->audio_device);
   plm_seek(ds->plm, time, false);
 }
 
@@ -140,8 +120,7 @@ void ds_stop(struct datastream *ds) {
     plm_destroy(ds->plm);
     ds->plm = NULL;
   }
-  if (ds->audio_device)
-    close_audio_device(ds->audio_device);
+
   ds->playing = false;
 }
 

@@ -3,22 +3,22 @@
 #include "dsp.h"
 #include "tsf.h"
 #include "tml.h"
-#include "mix.h"
 #include "sound.h"
 #include "log.h"
 #include "resources.h"
 #include <stdlib.h>
+#include "stb_ds.h"
 
 #define TSF_BLOCK 32
 
-struct dsp_midi_song gsong;
-struct dsp_filter songfil;
-
-float music_pan = 0.f;
+static struct {
+  char *key;
+  tsf **value;
+} *sf_hash = NULL;
 
 void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
 {
-  soundbyte *o = (soundbyte*)out;
+  soundbyte *o = out;
   tml_message *midi = song->midi;
 
   for (int i = 0; i < n; i += TSF_BLOCK) {
@@ -55,44 +55,37 @@ void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
   song->midi = midi;
 }
 
-struct bus *musicbus;
+tsf *make_soundfont(const char *path)
+{
+  int idx = shgeti(sf_hash, path);
+  if (idx != -1) return sf_hash[idx].value;
+  
+  long rawlen;
+  void *raw = slurp_file(path, &rawlen);
+  tsf *sf = tsf_load_memory(raw,rawlen);
+  free(raw);
+  
+  if (!sf) { YughWarn("Soundfont %s not found.", sf); return NULL; }
+  tsf_set_output(sf, TSF_STEREO_INTERLEAVED, SAMPLERATE, 0.f);
+  // Preset on 10th MIDI channel to use percussion sound bank if possible  
+  tsf_channel_set_bank_preset(sf, 0, 128, 0);
+
+  shput(sf_hash, path, sf);
+  return sf;
+}
+
+dsp_node *dsp_midi(const char *midi, tsf *sf)
+{
+  long rawlen;
+  void *raw = slurp_file(midi, &rawlen);
+  struct dsp_midi_song *ms = malloc(sizeof(*ms));
+  ms->time = 0.0;
+  ms->midi = tml_load_memory(raw, rawlen);
+  ms->sf = tsf_copy(sf);
+  return make_node(ms, dsp_midi_fillbuf);
+}
 
 void play_song(const char *midi, const char *sf)
 {
-    long rawlen;
-    void *raw = slurp_file(midi, &rawlen);
-    
-    gsong.midi = tml_load_memory(raw, rawlen);
-    if (gsong.midi == NULL) {
-        YughWarn("Midi %s not found.", midi);
-	free(raw);
-        return;
-    }
-    free(raw);
-    
-    raw = slurp_file(sf, &rawlen);
-    gsong.sf = tsf_load_memory(raw, rawlen);
-
-    if (gsong.sf == NULL) {
-        YughWarn("SF2 %s not found.", sf);
-	free(raw);
-        return;
-    }
-    free(raw);
-
-    gsong.time = 0.f;
-
-    tsf_set_output(gsong.sf, TSF_STEREO_INTERLEAVED, SAMPLERATE, 0.f);
-
-    // Preset on 10th MIDI channel to use percussion sound bank if possible
-    tsf_channel_set_bank_preset(gsong.sf, 9, 128, 0);
-
-    songfil.data = &gsong;
-    songfil.filter = dsp_midi_fillbuf;
-    filter_to_bus(&songfil);
-}
-
-void music_stop()
-{
-  unplug_filter(&songfil);
+  plugin_node(dsp_midi(midi, make_soundfont(sf)), masterbus);
 }
