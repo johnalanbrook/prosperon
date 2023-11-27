@@ -1,16 +1,8 @@
 var AI = {
-  tick() {
-    
-  },
-
-  sequence(list) {
-    
-  },
-  
   race(list) {
-    return function() {
+    return function(dt) {
       var good = false;
-      list.forEach(x => if (x()) good = true);
+      list.forEach(function(x) { if (x.call(this,dt)) good = true; }, this);
       return good;
     };
   },
@@ -18,21 +10,34 @@ var AI = {
   do(times, list) {
     
   },
-  
-  sync(list) {
-    return function() {
+
+  sequence(list) {
+    var i = 0;
+    return function(dt) {
+      while (i !== list.length) {
+        if (list[i].call(this,dt))
+	  i++;
+	else
+	  return false;
+      }
+      return true;
+    };
+  },
+
+  parallel(list) {
+    return function(dt) {
       var good = true;
-      list.forEach(x => if (!x()) good = false);
+      list.forEach(function(x){ if (!x.call(this,dt)) good = false; },this);
       return good;
     };
   },
 
-  moveto(pos) {
-    return function() {
-    var dir = pos.sub(this.pos);
+  moveto() {
+    return function(dt) {
+    var dir = this.randomloc.sub(this.pos);
     if (Vector.length(dir) < 10) return true;
     
-    this.velocity = Vector.normalize(pos.sub(this.pos)).scale(20);
+    this.velocity = Vector.norm(this.randomloc.sub(this.pos)).scale(20);
     return false;
     }
   },
@@ -40,8 +45,8 @@ var AI = {
   wait(secs) {
     secs ??= 1;
     var accum = 0;
-    return function() {
-      accum += Game.dt;
+    return function(dt) {
+      accum += dt;
       if (accum >= secs)
         return true;
 	

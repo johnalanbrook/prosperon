@@ -1265,6 +1265,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 195:
       ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->loop = js2bool(argv[2]);
       break;
+    case 196:
+      ret = num2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->frame);
+      break;
+    case 197:
+      ret = num2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->data->frames);    
+      break;
+    case 198:
+      ret = num2js(SAMPLERATE);
+      break;
+    case 199:
+      ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->frame = js2number(argv[2]);
+      break;
   }
 
   if (str)

@@ -211,13 +211,30 @@ void script_eval_w_env(const char *s, JSValue env, const char *file) {
   JS_FreeValue(js, v);
 }
 
+struct callenv {
+  JSValue v;
+  const char *eval;
+};
+
+struct callenv *calls;
+
+void call_stack()
+{
+  for (int i = 0; i < arrlen(calls); i++) {
+    JSValue v = JS_EvalThis(js, calls[i].v, calls[i].eval, strlen(calls[i].eval), calls[i].eval, JS_EVAL_FLAGS);
+    js_print_exception(v);
+    JS_FreeValue(js, v);
+ }
+  arrfree(calls);
+}
+
 void call_env(JSValue env, const char *eval)
 {
-  if (!JS_IsObject(env)) return;
-  JSValue fn = JS_GetPropertyStr(js, env, eval);
-  JSValue v = JS_EvalThis(js, env, eval, strlen(eval), "script", JS_EVAL_FLAGS);
-  js_print_exception(v);
-  JS_FreeValue(js,v);
+  if (!JS_IsObject(env)) { YughWarn("NOT AN ENV"); return; };
+  struct callenv c;
+  c.v = env;
+  c.eval = eval;
+  arrpush(calls, c);
 }
 
 void file_eval_env(const char *file, JSValue env)

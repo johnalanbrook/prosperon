@@ -162,6 +162,7 @@ int frame_fps() {
 static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
+      call_stack();  
 //  ds_advance(bjork, elapsed);
     input_poll(0);
     /* Timers all update every frame - once per monitor refresh */
@@ -172,6 +173,7 @@ static void process_frame()
       double dt = stm_sec(stm_diff(frame_t, updatelast));
       updatelast = frame_t;
       prof_start(&prof_update);
+
       call_updates(dt * timescale);
       prof(&prof_update);
 

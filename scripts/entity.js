@@ -62,6 +62,7 @@ var gameobject = {
     cry(file) {
       var p = Sound.play(file, Sound.bus.sfx);
       var killfn = p.kill.bind(p);
+      p.end = killfn;
       this.timers.push(killfn);
       return killfn;
     },

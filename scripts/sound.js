@@ -17,17 +17,26 @@ var dsp_node = {
   kill() {
     if (this._dead) return;
     this._dead = true;
-    cmd(193, this.id); },
+    cmd(193, this.id);
+  },
+  end() {},
 };
 
 var dsp_source = Object.copy(dsp_node,{
   end(){},
   get loop() { return cmd(194,this.id); },
   set loop(x) { cmd(195,this.id, x);},
+  get frame() { return cmd(196,this.id); },
+  set frame(x) { cmd(199, this.id, x); },
+  frames() { return cmd(197,this.id); },
+  length() { return this.frames()/Sound.samplerate(); },
+  time() { return this.frame/Sound.samplerate(); },
+  pct() { return this.time()/this.length(); },
 });
 
 var Sound = {
   bus: {},
+  samplerate() { return cmd(198); },
   sounds: [], /* array of loaded sound files */
   play(file, bus) {
     if (!IO.exists(file)) {
