@@ -1,27 +1,25 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
-#include <chipmunk/chipmunk.h>
+#include "HandmadeMath.h"
 
 struct particle {
-    cpVect pos;
-    cpVect v; /* velocity */
-    double angle;
-    double av; /* angular velocity */
+  HMM_Vec3 pos;
+  HMM_Vec3 v; /* velocity */
+  HMM_Quat angle;
+  HMM_Quat av; /* angular velocity */
 
-
-    union {
-        double life;
-        struct particle *next;
-    };
+  union {
+    double life;
+    unsigned int next;
+  };
 };
 
 struct emitter {
-    struct particle *particles;
-    struct particle *first;
-    int max;
-    double life;
-    void (*seeder)(struct particle *p); /* Called to initialize each particle */
+  struct particle *particles;
+  int max;
+  double life;
+  void (*seeder)(struct particle *p); /* Called to initialize each particle */
 };
 
 struct emitter make_emitter();

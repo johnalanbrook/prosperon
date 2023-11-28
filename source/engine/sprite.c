@@ -13,14 +13,14 @@
 #include <ctype.h>
 #include <limits.h>
 #include "HandmadeMath.h"
+#include "freelist.h"
 
 #include "sprite.sglsl.h"
 #include "9slice.sglsl.h"
 
 struct TextureOptions TEX_SPRITE = {1, 0, 0};
 
-static struct sprite *sprites;
-static int first = -1;
+static struct sprite *sprites = NULL;
 
 static sg_shader shader_sprite;
 static sg_pipeline pip_sprite;
@@ -59,29 +59,21 @@ int make_sprite(int go) {
       .size = {1.f, 1.f},
       .tex = texture_loadfromfile(NULL),
       .go = go,
-      .next = -1,
       .layer = 0,
+      .next = -1,
       .enabled = 1};
 
-  int slot = 0;
-  if (first < 0) {
-    arrput(sprites, sprite);
-    slot = arrlen(sprites)-1;
-  } else {
-    slot = first;
-    first = id2sprite(first)->next;
-    *id2sprite(slot) = sprite;
-  }
-
-  return slot;
+  int id;
+  freelist_grab(id, sprites);
+  sprites[id] = sprite;
+  return id;
 }
 
 void sprite_delete(int id) {
   struct sprite *sp = id2sprite(id);
   sp->go = -1;
   sp->enabled = 0;
-  sp->next = first;
-  first = id;
+  freelist_kill(sprites,id);
 }
 
 void sprite_enabled(int id, int e) {
@@ -132,8 +124,9 @@ void sprite_draw_all() {
   static int *layers;
   if (layers) arrfree(layers);
 
-  for (int i = 0; i < arrlen(sprites); i++)
-    if (sprites[i].go >= 0 && sprites[i].enabled) arrpush(layers, i);
+  for (int i = 0; i < freelist_len(sprites); i++)
+    if (sprites[i].next == -1 && sprites[i].go >= 0 && sprites[i].enabled)
+      arrpush(layers, i);
 
   if (arrlen(layers) == 0) return;
   if (arrlen(layers) > 1)
@@ -144,6 +137,10 @@ void sprite_draw_all() {
 }
 
 void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect frame) {
+  if (!sprite) {
+    YughWarn("NO SPRITE!");
+    return;
+  }
   sprite->tex = texture_loadfromfile(path);
   sprite_setframe(sprite, &frame);
 }
@@ -154,6 +151,8 @@ void sprite_settex(struct sprite *sprite, struct Texture *tex) {
 }
 
 void sprite_initialize() {
+  freelist_size(sprites, 500);
+  
   shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
 
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
