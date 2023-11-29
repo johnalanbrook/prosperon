@@ -941,6 +941,19 @@ Object.defineProperty(Array.prototype, 'lerp', {
 
 Math.lerp = function(s,f,t) { return (f-s)*t + s; };
 
+Math.grab_from_points = function(pos, points, slop) {
+  var shortest = slop;
+  var idx = -1;
+  points.forEach(function(x,i) {
+    if (Vector.length(pos.sub(x)) < shortest) {
+      shortest = Vector.length(pos.sub(x));
+      idx = i;
+    }
+  });
+  return idx;
+};
+
+
 Number.prec = function(num)
 {
   return parseFloat(num.toFixed(3));

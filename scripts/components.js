@@ -533,7 +533,7 @@ polygon2d.inputs.lm = function(){};
 polygon2d.inputs.lm.released = function(){};
 
 polygon2d.inputs['C-M-lm'] = function() {
-  var idx = grab_from_points(Mouse.worldpos, this.points.map(p => this.gameobject.this2world(p)), 25);
+  var idx = Math.grab_from_points(Mouse.worldpos, this.points.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
   this.points.splice(idx, 1);
 };
@@ -761,7 +761,7 @@ bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; this.looped 
 bucket.inputs['C-b'].doc = "Set spline to bezier.";
 
 bucket.inputs['C-M-lm'] = function() {
-  var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
+  var idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
 
   this.cpoints = this.cpoints.newfirst(idx);
@@ -784,7 +784,7 @@ bucket.inputs['C-lm'] = function() {
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
 bucket.inputs['C-M-lm'] = function() {
-  var idx = grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
+  var idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
 
   if (idx < 0  || idx > this.cpoints.length) return;
 

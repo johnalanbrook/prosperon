@@ -677,9 +677,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 36:
-    id2go(js2int(argv[1]))->scale.XY = js2vec2(argv[2]);
-    gameobject_apply(id2go(js2int(argv[1])));
-    cpSpaceReindexShapesForBody(space, id2go(js2int(argv[1]))->body);
+    js2go(argv[1])->scale.XY = js2vec2(argv[2]);
+    gameobject_apply(js2go(argv[1]));
+    cpSpaceReindexShapesForBody(space, js2go(argv[1])->body);
     break;
 
   case 37:
@@ -700,21 +700,21 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 40:
-    id2go(js2int(argv[1]))->filter.categories = js2bitmask(argv[2]);
-    gameobject_apply(id2go(js2int(argv[1])));
+    js2go(argv[1])->filter.categories = js2bitmask(argv[2]);
+    gameobject_apply(js2go(argv[1]));
     break;
 
   case 41:
-    id2go(js2int(argv[1]))->filter.mask = js2bitmask(argv[2]);
-    gameobject_apply(id2go(js2int(argv[1])));
+    js2go(argv[1])->filter.mask = js2bitmask(argv[2]);
+    gameobject_apply(js2go(argv[1]));    
     break;
 
   case 42:
-    ret = bitmask2js(id2go(js2int(argv[1]))->filter.categories);
+    ret = bitmask2js(js2go(argv[1])->filter.categories);
     break;
 
   case 43:
-    ret = bitmask2js(id2go(js2int(argv[1]))->filter.mask);
+    ret = bitmask2js(js2go(argv[1])->filter.mask);
     break;
 
   case 44:
@@ -1247,7 +1247,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       js2dsp_node(argv[1])->gain = js2number(argv[2]);
       break;
     case 177:
-      plugin_node(js2ptr(argv[1]), js2ptr(argv[2]));
+      plugin_node(js2dsp_node(argv[1]), js2dsp_node(argv[2]));
       break;
     case 178:
       ret = num2js(js2dsp_node(argv[1])->pan);
@@ -1263,7 +1263,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 182:
       str = js2str(argv[1]);
-      ret = ptr2js(dsp_source(str));
+      ret = dsp_node2js(dsp_source(str));
       ((sound*)js2dsp_node(ret)->data)->hook = JS_DupValue(js,argv[2]);
       break;
     case 183:
@@ -1628,9 +1628,9 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
   case 7:
     return JS_NewBool(js, phys2d_in_air(go->body));
 
-   case 8:
-//     gameobject_delete(goid);
-     break;
+  case 8:
+    gameobject_delete(go2id(go));
+    break;
   }
 
   return JS_UNDEFINED;

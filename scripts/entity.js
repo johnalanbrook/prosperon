@@ -1,15 +1,3 @@
-function grab_from_points(pos, points, slop) {
-  var shortest = slop;
-  var idx = -1;
-  points.forEach(function(x,i) {
-    if (Vector.length(pos.sub(x)) < shortest) {
-      shortest = Vector.length(pos.sub(x));
-      idx = i;
-    }
-  });
-  return idx;
-};
-
 var actor = {};
 actor.spawn = function(script, config){
   if (typeof script !== 'string') return;
@@ -18,22 +6,55 @@ actor.spawn = function(script, config){
 
   if (typeof config === 'object')
     Object.merge(padawan, config);
-    
+
+  padawan.padawans = [];
+  padawan.timers = [];
+  padawan.master = this;
+  Object.hide(padawan, "master","timers");
+  this.padawans.push(padawan);
   return padawan;
 };
 actor.die = function(actor){
   
 };
-actor.kill = function(actor){
-  this.timers.forEach(t => t());
-  this.timers = undefined;
+actor.timers = [];
+actor.kill = function(){
+  this.timers.forEach(t => t.kill());
+  this.master.remove(this);
+  this.padawans.forEach(p => p.kill());
+  this.__dead__ = true;
 };
+actor.toJSON = function() {
+  if (this.__dead__) return undefined;
+  return this;
+}
 actor.delay = function(fn, seconds) {
-  var t = timer.delay(fn.bind(this), seconds, true);
+  var t = Object.create(timer);
+  t.remain = seconds;
+  t.kill = () => {
+    timer.kill.call(t);
+    this.timers.remove(t);
+  }
+  t.fire = () => {
+    if (this.__dead__) return;
+    fn();
+    t.kill();
+  };
+  Register.appupdate.register(t.update, t);
   this.timers.push(t);
   return function() { t.kill(); };
 };
 actor.clock = function(fn){};
+actor.master = undefined;
+
+actor.padawans = [];
+
+actor.remaster = function(to){
+  this.master.padawans.remove(this);
+  this.master = to;
+  to.padawans.push(this);
+};
+
 
 var gameobject = {
   full_path() {
@@ -148,7 +169,7 @@ var gameobject = {
       set timescale(x) { cmd(168,this.body,x); },
       get timescale() { return cmd(169,this.body); },
 
-      set phys(x) { set_body(1, this.body, x); },
+      set phys(x) { console.warn(`Setting phys to ${x}`); set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
       get velocity() { return q_body(3, this.body); },
       set velocity(x) { set_body(9, this.body, x); },
@@ -490,6 +511,7 @@ var gameobject = {
     }
 
     delete this.components;
+//    q_body(8,this.body);
 
     this.clear();
 
@@ -748,25 +770,11 @@ prototypes.from_file = function(file)
   prototypes.list.push(urpath);
   newur.toString = function() { return urpath; };
   ur[urpath] = newur;
-//  var urs = urpath.split('.');
-//  var u = ur;
-//  for (var i = 0; i < urs.length; i++)
-//    u = u[urs[i]] = u[urs[i]] || newur;
-  //Object.dig(ur, urpath, newur);
 
   return newur;
 }
 prototypes.from_file.doc = "Create a new ur-type from a given script file.";
 prototypes.list = [];
-
-prototypes.from_obj = function(name, obj)
-{
-  var newur = Object.copy(gameobject, obj);
-  prototypes.ur[name] = newur;
-  prototypes.list.push(name);
-  newur.toString = function() { return name; };
-  return prototypes.ur[name];
-}
 
 prototypes.list_ur = function()
 {
@@ -843,44 +851,6 @@ prototypes.generate_ur = function(path)
 }
 
 var ur = prototypes.ur;
-
-prototypes.from_obj("camera2d", {
-    phys: Physics.kinematic,
-    speed: 300,
-    
-    get zoom() {
-      var z = Game.native.y / Window.dimensions.y;
-      return cmd(135) / z;
-    },
-    set zoom(x) {
-      x = Math.clamp(x,0.1,10);    
-      var z = Game.native.y / Window.dimensions.y;
-      z *= x;
-      cmd(62, z);
-    },
-
-    realzoom() {
-      return cmd(135);
-    },
-    
-    speedmult: 1.0,
-    
-    selectable: false,
-
-    dir_view2world(dir) {
-      return dir.scale(this.realzoom());
-    },
-    
-    view2world(pos) {
-      return cmd(137,pos);
-    },
-    
-    world2view(pos) {
-      return cmd(136,pos);
-    },
-});
-
-prototypes.from_obj("arena", {});
 
 prototypes.resavi = function(ur, path)
 {

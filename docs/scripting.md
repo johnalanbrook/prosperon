@@ -2,6 +2,10 @@
 
 Primum programs are organized into two different types of source files: scripts and entities. Scripts end with .js, entities end with .jso.
 
+Actors can be created with jso files. Make one by calling 'actor.spawn(file)'.
+
+Entities are specialized actors, that are in the world of the computer game. While calling delay on actor causes a delay relative to real-life time, delay on an entity causes a delay relative to the game world time.
+
 ## Scripts
 
 Script hooks exist to allow to modification of the game.

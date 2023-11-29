@@ -70,111 +70,25 @@ var Device = {
 
 load("scripts/gui.js");
 
-var ctimer = {
-  make(fn, secs,obj,loop,app) {
-    obj ??= globalThis;
-    app ??= false;
-    if (secs === 0) {
-      fn.call(obj);
-      return;
-    }
-      
-    var t = Object.create(this);
-    t.id = make_timer(fn, secs, app, obj);
-    t.loop = loop;
-    t.pause();
-    
-    return t;
-  },
-
-  oneshot(fn, secs,obj, app) {
-    app ??= false;
-    var t = this.make(fn, secs, obj, 0, app);
-    t.start();
-    return t;
-  },
-  get remain() { return cmd(32, this.id); },
-  get on() { return cmd(33, this.id); },
-  get loop() { return cmd(34, this.id); },
-  set loop(x) { cmd(35, this.id, x); },
-  
-  start() { cmd(26, this.id); },
-  stop() { cmd(25, this.id); },
-  pause() { cmd(24, this.id); },
-  kill() { if (this.dead) return; cmd(27, this.id); this.dead = true; },
-  set time(x) { cmd(28, this.id, x); },
-  get time() { return cmd(29, this.id); },
-  get pct() { return this.remain / this.time; },
-};
-
 var timer = {
-  time: 1,
-  remain: 1,
-  loop: false,
-  on: false,
-  apptime: false, /* If true, based on app's time instead of game world time */
-  start() {
-    this.on = true;
-  },
-
-  restart() {
-    this.remain = this.time;
-    this.start();
-  },
-  
   update(dt) {
-    if (!this.on) return;
-
     this.remain -= dt;
     if (this.remain <= 0)
       this.fire();
   },
-  
-  fire() {
-    this.fn();
-    if (this.loop)
-      this.restart();
-  },
-
-  pct() { return 1 - (this.remain / this.time); },
 
   kill() {
     Register.unregister_obj(this);
   },
-
-  delay(fn, secs, desc) {
-    var t = timer.make(fn,secs,desc);
-    t.loop = false;
-    t.restart();
-    return t;
-    t.fn = function() { fn(); t.kill(); };
-    return function() { t.kill(); };
-  },
-  oneshot(fn, secs, obj, desc) {
-    this.delay(fn,secs,desc);
-  },
-  make(fn, secs, desc) {
+  
+  delay(fn, secs) {
     var t = Object.create(this);
-    Object.assign(t, desc);
     t.time = secs;
     t.remain = secs;
-    t.fn = fn;
+    t.fire = function() { fn(); t.kill(); };
     Register.update.register(t.update, t);
-    return t;
+    return function() { t.kill(); };
   },
-};
-timer.toJSON = function() { return undefined; };
-timer.doc = {
-  doc: "Quickly make timers to fire off events once or multiple times.",
-  oneshot: "Executes a given function after the given number of seconds.",
-  make: "Returns a timer that can be handled and reused.",
-  start: "Starts the timer.",
-  stop: "Stops the timer.",
-  loop: "Set to true for the timer to repeat when done.",
-  kill: "Destroys the timer.",
-  pct: "Get the percentange the timer is complete.",
-  time: "Set or get the amount of time this timer waits to execute. Does not reset the time, so if it is set to below the elapsed time it will execute immediately.",
-  remain: "The time remianing before the function is executed.",
 };
 
 load("scripts/animation.js");
@@ -208,20 +122,6 @@ function screen2world(screenpos) {
 function world2screen(worldpos) { return Game.camera.world2view(worldpos); }
 
 var Register = {
-  inloop: false,
-  loopcbs: [],
-  finloop() {
-    this.loopcbs.forEach(x => x());
-    this.loopcbs = [];
-  },
-
-  wraploop(loop) {
-    this.inloop = true;
-    loop();
-    this.inloop = false;
-    this.finloop();
-  },
-
   kbm_input(mode, btn, state, ...args) {
     if (state === 'released') {
       btn = btn.split('-').last;
@@ -321,6 +221,7 @@ var Register = {
 };
 
 Register.add_cb(0, "update").doc = "Called once per frame.";
+Register.add_cb(11, "appupdate");
 Register.add_cb(1, "physupdate");
 Register.add_cb(2, "gui");
 Register.add_cb(6, "debug");
@@ -557,17 +458,16 @@ load("scripts/entity.js");
 
 
 function world_start() {
-globalThis.Primum = Object.create(gameobject);
-Primum.objects = {};
-Primum._ed = {
-  selectable:false,
-  check_dirty() {},
-  dirty:false,
-  namestr(){},
-};
-Primum.toString = function() { return "Primum"; };
-Primum.ur = undefined;
-Game.view_camera(Primum.spawn(ur.camera2d));
+  globalThis.Primum = Object.create(gameobject);
+  Primum.objects = {};
+  Primum._ed = {
+    selectable:false,
+    check_dirty() {},
+    dirty:false,
+    namestr(){},
+  };
+  Primum.toString = function() { return "Primum"; };
+  Primum.ur = undefined;
 }
 
 load("scripts/physics.js");

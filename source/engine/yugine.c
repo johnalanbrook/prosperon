@@ -162,6 +162,7 @@ int frame_fps() {
 static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
+  script_evalf("Register.appupdate.broadcast(%g);", elapsed);
       call_stack();  
 //  ds_advance(bjork, elapsed);
     input_poll(0);

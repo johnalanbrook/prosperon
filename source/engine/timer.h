@@ -4,6 +4,7 @@
 struct timer {
     int timerid;
     int on;
+    
     double interval; // Time of timer
     int repeat;
     double remain_time;   // How much time until the timer executes

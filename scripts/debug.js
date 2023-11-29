@@ -1,6 +1,6 @@
 var Gizmos = {
   pick_gameobject_points(worldpos, gameobject, points) {
-    var idx = grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
+    var idx = Math.grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
     if (idx === -1) return undefined;
     return points[idx];
   },
@@ -122,7 +122,7 @@ Debug.Options.Color = {
 
 var Gizmos = {
   pick_gameobject_points(worldpos, gameobject, points) {
-    var idx = grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
+    var idx = Math.grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
     if (idx === -1) return null;
     return points[idx];
   },
@@ -266,12 +266,7 @@ Time.doc.play = "Resume the game after using Time.pause.";
 Player.players[0].control(DebugControls);
 Register.gui.register(Debug.draw, Debug);
 
-var console = {};
-console.log = Log.say;
-console.info = Log.info;
-console.warn = Log.warn;
-console.error = Log.error;
-console.stack = Log.stack;
+var console = Object.create(Log);
 console.clear = function()
 {
   cmd(146);
