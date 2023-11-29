@@ -36,6 +36,30 @@ static JSValue globalThis;
 static JSClassID js_ptr_id;
 static JSClassDef js_ptr_class = { "POINTER" };
 
+
+#define QJSCLASS(TYPE)\
+static JSClassID js_ ## TYPE ## _id;\
+static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
+TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
+TYPE##_free(n);}\
+static JSClassDef js_##TYPE##_class = {\
+  #TYPE,\
+  .finalizer = js_##TYPE##_finalizer\
+};\
+static TYPE *js2##TYPE (JSValue val) { return JS_GetOpaque(val,js_##TYPE##_id); }\
+static JSValue js_##TYPE##2js(TYPE *n) { \
+  JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
+  JS_SetOpaque(j,n);\
+  return j; }\
+
+QJSCLASS(dsp_node)
+
+#define QJSCLASSPREP(TYPE) \
+JS_NewClassID(&js_##TYPE##_id);\
+JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
+
+//QJSCLASS(sprite)
+
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
   (byte & 0x80 ? '1' : '0'),     \
@@ -1304,6 +1328,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 207:
       ret = ptr2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
       break;
+    case 208:
+      ret = JS_NewObjectClass(js, js_dsp_node_id);
+      JS_SetOpaque(ret, dsp_mixer_node());
+      break;
   }
 
   if (str)
@@ -1906,4 +1934,6 @@ void ffi_load() {
 
   JS_NewClassID(&js_ptr_id);
   JS_NewClass(JS_GetRuntime(js), js_ptr_id, &js_ptr_class);
+
+  QJSCLASSPREP(dsp_node);
 }

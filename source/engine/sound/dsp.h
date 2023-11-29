@@ -33,6 +33,7 @@ dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int sam
 void plugin_node(dsp_node *from, dsp_node *to);
 void unplug_node(dsp_node *node);
 void node_free(dsp_node *node);
+void dsp_node_free(dsp_node *node);
 void filter_iir(struct dsp_iir *iir, soundbyte *buffer, int frames);
 
 void scale_soundbytes(soundbyte *a, float scale, int frames);

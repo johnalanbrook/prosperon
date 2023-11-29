@@ -159,6 +159,8 @@ void node_free(dsp_node *node)
   free(node);    
 }
 
+void dsp_node_free(dsp_node *node) { node_free(node); }
+
 void plugin_node(dsp_node *from, dsp_node *to)
 {
   if (from->out) return;

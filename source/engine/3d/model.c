@@ -41,6 +41,26 @@ static void processtexture();
 static sg_shader model_shader;
 static sg_pipeline model_pipe;
 
+struct bone_weights {
+  char b1;
+  char b2;
+  char b3;
+  char b4;
+};
+
+struct bone {
+  HMM_Vec3 pos;
+  HMM_Quat rot;
+  HMM_Vec3 scale;
+};
+
+struct mesh_v {
+  HMM_Vec3 pos;
+  struct uv_n uv;
+  uint32_t norm;
+  struct bone_weights bones;
+};
+
 void model_init() {
 /*  model_shader = sg_make_shader(diffuse_shader_desc(sg_query_backend()));
 

@@ -42,6 +42,13 @@ var AI = {
     }
   },
 
+  move() {
+    return function(dt) {
+      this.velocity = this.left().scale(20);
+      return false;
+    }
+  },
+
   wait(secs) {
     secs ??= 1;
     var accum = 0;
