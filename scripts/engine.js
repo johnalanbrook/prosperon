@@ -28,208 +28,7 @@ function run_env(file, env)
 load("scripts/diff.js");
 Log.level = 1;
 
-var Color = {
-  white: [255,255,255],
-  black: [0,0,0],
-  blue: [84,110,255],
-  green: [120,255,10],
-  yellow: [251,255,43],
-  red: [255,36,20],
-  teal: [96, 252, 237],
-  gray: [181,181,181],
-  cyan: [0,255,255],
-  purple: [162,93,227],
-};
-
-Color.editor = {};
-Color.editor.ur = Color.green;
-
-Color.tohtml = function(v)
-{
-  var html = v.map(function(n) { return Number.hex(n*255); });
-  return "#" + html.join('');
-}
-
-Color.toesc = function(v)
-{
-  return Esc.color(v);
-}
-
-var Esc = {};
-Esc.reset = "\x1b[0";
-Esc.color = function(v) {
-  var c = v.map(function(n) { return Math.floor(n*255); });
-  var truecolor = "\x1b[38;2;" + c.join(';') + ';';
-  return truecolor;
-}
-
-Color.Arkanoid = {
-  orange: [255,143,0],
-  teal: [0,255,255],
-  green: [0,255,0],
-  red: [255,0,0],
-  blue: [0,112,255],
-  purple: [255,0,255],
-  yellow: [255,255,0],
-  silver: [157,157,157],
-  gold: [188,174,0],
-};
-
-Color.Arkanoid.Powerups = {
-  red: [174,0,0], /* laser */
-  blue: [0,0,174], /* enlarge */
-  green: [0,174,0], /* catch */
-  orange: [224,143,0], /* slow */
-  purple: [210,0,210], /* break */
-  cyan: [0,174,255], /* disruption */
-  gray: [143,143,143] /* 1up */
-};
-
-Color.Gameboy = {
-  darkest: [229,107,26],
-  dark: [229,189,26],
-  light: [189,229,26],
-  lightest: [107,229,26],
-};
-
-Color.Apple = {
-  green: [94,189,62],
-  yellow: [255,185,0],
-  orange: [247,130,0],
-  red: [226,56,56],
-  purple: [151,57,153],
-  blue: [0,156,223]
-};
-
-Color.Debug = {
-  boundingbox: Color.white,
-  names: [84,110,255],
-};
-
-Color.Editor = {
-  grid: [99,255,128],
-  select: [255,255,55],
-  newgroup: [120,255,10],
-};
-
-/* Detects the format of all colors and munges them into a floating point format */
-Color.normalize = function(c) {
-  var add_a = function(a) {
-    var n = this.slice();
-    n.a = a;
-    return n;
-  };
-  
-  for (var p of Object.keys(c)) {
-    var fmt = "nrm";
-    if (typeof c[p] !== 'object') continue;
-    if (!Array.isArray(c[p])) {
-      Color.normalize(c[p]);
-      continue;
-    }
-    
-    for (var color of c[p]) {
-      if (color > 1) {
-        fmt = "8b";
-	break;
-      }
-    }
-
-    switch(fmt) {
-      case "8b":
-        c[p] = c[p].map(function(x) { return x/255; });
-    }
-    c[p].alpha = add_a;
-  }
-};
-
-Color.normalize(Color);
-
-Object.deepfreeze(Color);
-
-var ColorMap = {};
-ColorMap.makemap = function(map)
-{
-  var newmap = Object.create(ColorMap);
-  Object.assign(newmap, map);
-  return newmap;
-}
-ColorMap.Jet = ColorMap.makemap({
-  0: [0,0,131],
-  0.125: [0,60,170],
-  0.375: [5,255,255],
-  0.625: [255,255,0],
-  0.875: [250,0,0],
-  1: [128,0,0]
-});
-
-ColorMap.BlueRed = ColorMap.makemap({
-  0: [0,0,255],
-  1: [255,0,0]
-});
-
-ColorMap.Inferno = ColorMap.makemap({
-  0:[0,0,4],
-  0.13: [31,12,72],
-  0.25: [85,15,109],
-  0.38: [136,34,106],
-  0.5: [186,54,85],
-  0.63: [227,89,51],
-  0.75: [249,140,10],
-  0.88: [249,201,50],
-  1: [252,255,164]
-});
-
-ColorMap.Bathymetry = ColorMap.makemap({
-  0: [40,26,44],
-  0.13: [59.49,90],
-  0.25: [64,76,139],
-  0.38: [63,110,151],
-  0.5: [72,142,158],
-  0.63: [85,174,163],
-  0.75: [120,206,163],
-  0.88: [187,230,172],
-  1: [253,254,204]
-});
-
-ColorMap.Viridis = ColorMap.makemap({
-  0: [68,1,84],
-  0.13: [71,44,122],
-  0.25: [59,81,139],
-  0.38: [44,113,142],
-  0.5: [33,144,141],
-  0.63: [39,173,129],
-  0.75: [92,200,99],
-  0.88: [170,220,50],
-  1: [253,231,37]
-});
-
-Color.normalize(ColorMap);
-
-ColorMap.sample = function(t, map)
-{
-  map ??= this;
-  if (t < 0) return map[0];
-  if (t > 1) return map[1];
-
-  var lastkey = 0;
-  for (var key of Object.keys(map).sort()) {
-    if (t < key) {
-      var b = map[key];
-      var a = map[lastkey];
-      var tt = (key - lastkey) * t;
-      return a.lerp(b, tt);
-    }
-    lastkey = key;
-  }
-  return map[1];
-}
-
-ColorMap.doc = {
-  sample: "Sample a given colormap at the given percentage (0 to 1).",
-};
-
-Object.freeze(ColorMap);
+load("scripts/color.js");
 
 function bb2wh(bb) {
   return [bb.r-bb.l, bb.t-bb.b];
@@ -268,7 +67,6 @@ var Device = {
   macintosh: [512,342,9],
   gamegear: [160,144,3.2],
 };
-
 
 load("scripts/gui.js");
 
@@ -348,6 +146,7 @@ var timer = {
     var t = timer.make(fn,secs,desc);
     t.loop = false;
     t.restart();
+    return t;
     t.fn = function() { fn(); t.kill(); };
     return function() { t.kill(); };
   },
@@ -378,78 +177,7 @@ timer.doc = {
   remain: "The time remianing before the function is executed.",
 };
 
-var animation = {
-  time: 0,
-  loop: false,
-  playtime: 0,
-  playing: false,
-  keyframes: [],
-
-  create() {
-    var anim = Object.create(animation);
-    Register.update.register(anim.update, anim);
-    return anim;
-  },
-
-  start() {
-    this.playing = true;
-    this.time = this.keyframes.last[1];
-    this.playtime = 0;
-  },
-
-  interval(a, b, t) {
-    return (t - a) / (b - a);
-  },
-
-  near_val(t) {
-    for (var i = 0; i < this.keyframes.length-1; i++) {
-      if (t > this.keyframes[i+1][1]) continue;
-
-      return this.interval(this.keyframes[i][1], this.keyframes[i+1][1], t) >= 0.5 ? this.keyframes[i+1][0] : this.keyframes[i][0];
-    }
-
-    return this.keyframes.last[0];
-  },
-
-  lerp_val(t) {
-    for (var i = 0; i < this.keyframes.length-1; i++) {
-      if (t > this.keyframes[i+1][1]) continue;
-
-      var intv = this.interval(this.keyframes[i][1], this.keyframes[i+1][1], t);
-      return ((1 - intv) * this.keyframes[i][0]) + (intv * this.keyframes[i+1][0]);
-    }
-
-    return this.keyframes.last[0];
-  },
-
-  cubic_val(t) {
-
-  },
-
-  mirror() {
-    if (this.keyframes.length <= 1) return;
-    for (var i = this.keyframes.length-1; i >= 1; i--) {
-      this.keyframes.push(this.keyframes[i-1]);
-      this.keyframes.last[1] = this.keyframes[i][1] + (this.keyframes[i][1] - this.keyframes[i-1][1]);
-    }
-  },
-
-  update(dt) {
-    if (!this.playing) return;
-
-    this.playtime += dt;
-    if (this.playtime >= this.time) {
-      if (this.loop)
-        this.playtime = 0;
-      else {
-        this.playing = false;
-        return;
-      }
-    }
-
-    this.fn(this.lerp_val(this.playtime));
-  },
-};
+load("scripts/animation.js");
 
 var Render = {
   normal() {
@@ -717,24 +445,6 @@ Spline.type = {
 
 load("scripts/components.js");
 
-function find_com(objects)
-{
-  if (!objects || objects.length === 0)
-    return [0,0];
-    var com = [0,0];
-    com[0] = objects.reduce(function(acc, val) {
-      return acc + val.pos[0];
-    }, 0);
-    com[0] /= objects.length;
-    
-    com[1] = objects.reduce(function(acc, val) {
-      return acc + val.pos[1];
-    }, 0);
-    com[1] /= objects.length;    
-    
-    return com;
-};
-
 var Game = {
   init() {
     if (!Game.edit) {
@@ -747,29 +457,13 @@ var Game = {
       editor.enter_editor();
     }
   },
-  objects: [],
 
   native: Device.pc,
 
   edit: true,
-  register_obj(obj) {
-    this.objects[obj.body] = obj;
-  },
 
-  unregister_obj(obj) {
-    if (this.objects[obj.body] === obj)
-      this.objects[obj.body] = undefined;
-  },
-
-  obj_at(worldpos) {
-    var idx = physics.pos_query(worldpos);
-    if (idx === -1) return undefined;
-    return Game.objects[idx];
-  },
-  
-  /* Returns an object given an id */
-  object(id) {
-    return this.objects[id];
+  all_objects(fn) {
+    /* Wind down from Primum */
   },
 
   /* Returns a list of objects by name */
@@ -785,35 +479,6 @@ var Game = {
   /* List of all objects spawned that have a specific tag */
   find_tag(tag) {
 
-  },
-
-  groupify(objects, spec) {
-    var newgroup = {
-      locked: true,
-      breakable: true,
-      objs: objects,
-//      get pos() { return find_com(objects); },
-//      set pos(x) { this.objs.forEach(function(obj) { obj.pos = x; }) },
-    };
-
-    Object.assign(newgroup, spec);
-    objects.forEach(function(x) {
-      x.defn('group', newgroup);
-    });
-
-    var bb = bb_from_objects(newgroup.objs);
-    newgroup.startbb = bb2cwh(bb);
-    newgroup.bboffset = newgroup.startbb.c.sub(newgroup.objs[0].pos);
-
-    newgroup.boundingbox = function() {
-      newgroup.startbb.c = newgroup.objs[0].pos.add(newgroup.bboffset);
-      return cwh2bb(newgroup.startbb.c, newgroup.startbb.wh);
-    };
-
-    if (newgroup.file)
-      newgroup.color = Color.Editor.newgroup;
-
-    return newgroup;
   },
 
   quit()
@@ -890,80 +555,20 @@ Register.update.register(Game.exec, Game);
 
 load("scripts/entity.js");
 
+
 function world_start() {
-globalThis.preprimum = Object.create(gameobject);
-var preprimum = globalThis.preprimum;
-preprimum.objects = {};
-preprimum.worldpos = function() { return [0,0]; };
-preprimum.worldangle = function() { return 0; };
-preprimum.scale = [1,1,1];
-preprimum.gscale = function() { return [1,1,1]; };
-preprimum.pos = [0,0];
-preprimum.angle = 0;
-preprimum.remove_obj = function() {};
-preprimum.toString = function() { return "preprimum"; };
-globalThis.World = preprimum.make(preprimum);
-globalThis.Primum = World;
-var Primum = globalThis.Primum;
-Primum.level = undefined;
+globalThis.Primum = Object.create(gameobject);
+Primum.objects = {};
+Primum._ed = {
+  selectable:false,
+  check_dirty() {},
+  dirty:false,
+  namestr(){},
+};
 Primum.toString = function() { return "Primum"; };
-Primum._ed.selectable = false;
-Primum._ed.check_dirty = function() { };
-Primum._ed.dirty = false;
-Primum.revert = function(){};
 Primum.ur = undefined;
-globalThis.World.reparent = function(parent) { Log.warn("Cannot reparent the Primum."); }
 Game.view_camera(Primum.spawn(ur.camera2d));
 }
-
-/* Load configs */
-function load_configs(file) {
-  Log.info(`Loading config file ${file}.`);
-  var configs = JSON.parse(IO.slurp(file));
-  for (var key in configs) {
-    if (typeof globalThis[key] !== "object") continue;
-    Object.assign(globalThis[key], configs[key]);
-  }
-  
-  Collision.sync();
-  Game.objects.forEach(function(x) { x.sync(); });
-  
-  if (!local_conf.mouse) {
-    Log.info("disabling mouse features");
-    Mouse.disabled = function() {};
-    Mouse.hidden = function() {};
-  };
-};
-
-var local_conf = {
-  mouse: true,
-};
-
-if (IO.exists("game.config"))
-  load_configs("game.config");
-
-/* Save configs */
-function save_configs() {
-    Log.info("saving configs");
-    var configs = {};
-    configs.editor_config = editor_config;
-    configs.Nuke = Nuke;
-    configs.local_conf = local_conf;
-    IO.slurpwrite(JSON.stringify(configs, null, 1), "editor.config");
-    
-    save_game_configs();
-};
-
-function save_game_configs() {
-  var configs = {};
-  configs.physics = physics;
-  configs.Collision = Collision;
-  Log.info(configs);
-  IO.slurpwrite(JSON.stringify(configs,null,1), "game.config");
-
-  Collision.sync();
-  Game.objects.forEach(function(x) { x.sync(); });
-};
 
 load("scripts/physics.js");
 

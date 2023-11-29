@@ -1,5 +1,9 @@
 # Yugine Scripting Guide
 
+Primum programs are organized into two different types of source files: scripts and entities. Scripts end with .js, entities end with .jso.
+
+## Scripts
+
 Script hooks exist to allow to modification of the game.
 
 |config.js|called before any game play, including play from editor|
@@ -9,7 +13,13 @@ Script hooks exist to allow to modification of the game.
 |debug.js|called when play in editor is selected, after level load|
 |dbgret.js|called when play in editor returns to editor|
 
-All objects in the Yugine can have an associated script. This script can perform setup, teardown, and handles responses for the object.
+In addition, any script can be run by running "load".
+
+## Entities
+
+Entities are defined in a jso file. The "this" parameter in the jso file is a reference to the actor, allowing you to define properties on it.
+
+Computation takes place in turns. Each entity has functions called, if they exist. If a machine has multiple threads, multiple entities may be taking turns at a time.
 
 |function|description|
 |---|---|

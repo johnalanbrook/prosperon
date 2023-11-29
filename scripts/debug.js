@@ -85,18 +85,18 @@ var Debug = {
 
   draw() {
     if (this.draw_bb)
-      Game.objects.forEach(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
+      Game.all_objects(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
 
     if (Game.paused()) GUI.text("PAUSED", [0,0],1);
 
     if (this.draw_gizmos)
-      Game.objects.forEach(function(x) {
+      Game.all_objects(function(x) {
         if (!x.icon) return;
         GUI.image(x.icon, world2screen(x.pos));
       });
 
     if (this.draw_names)
-      Game.objects.forEach(function(x) {
+      Game.all_objects(function(x) {
         GUI.text(x, world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
       });
 

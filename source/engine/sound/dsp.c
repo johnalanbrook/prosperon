@@ -151,6 +151,7 @@ dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int sam
 
 void node_free(dsp_node *node)
 {
+  YughWarn("FREEING A NODE");
   unplug_node(node);
   if (node->data)
     if (node->data_free) node->data_free(node->data);

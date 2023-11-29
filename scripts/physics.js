@@ -27,7 +27,6 @@ var physics = {
   
   /* Returns a list of body ids that a box collides with */
   box_query(box) {
-    var pts = cmd(52,box.pos,box.wh);
     return cmd(52, box.pos, box.wh);
   },
   
@@ -40,6 +39,18 @@ var physics = {
 
   shape_query(shape) {
     return cmd(80,shape);
+  },
+
+  com(pos) {
+    if (!Array.isArray(pos)) return;
+    var com = [];
+    for (var i = 0; i < pos[0].length; i++) {
+      com[i] = pos.reduce(function(acc,val) {
+        return acc + val[i];
+      });
+      com[i] /= pos.length;
+    }
+    return com;
   },
 };
 

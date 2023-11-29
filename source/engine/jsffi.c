@@ -36,7 +36,6 @@ static JSValue globalThis;
 static JSClassID js_ptr_id;
 static JSClassDef js_ptr_class = { "POINTER" };
 
-
 #define QJSCLASS(TYPE)\
 static JSClassID js_ ## TYPE ## _id;\
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
@@ -44,21 +43,24 @@ TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
 TYPE##_free(n);}\
 static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
-  .finalizer = js_##TYPE##_finalizer\
+  .finalizer = js_##TYPE##_finalizer,\
 };\
 static TYPE *js2##TYPE (JSValue val) { return JS_GetOpaque(val,js_##TYPE##_id); }\
-static JSValue js_##TYPE##2js(TYPE *n) { \
+static JSValue TYPE##2js(TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   JS_SetOpaque(j,n);\
   return j; }\
 
 QJSCLASS(dsp_node)
 
+// gamobject2js, js2gameobject deals with gameobject*
+// go2js,js2go deals with gameobject ids
+
+QJSCLASS(gameobject)
+
 #define QJSCLASSPREP(TYPE) \
 JS_NewClassID(&js_##TYPE##_id);\
 JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
-
-//QJSCLASS(sprite)
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
@@ -80,6 +82,21 @@ void js_setprop_num(JSValue obj, uint32_t i, JSValue v)
 {
   JS_SetPropertyUint32(js, obj, i, v);
 }
+
+JSValue go2ref(int id)
+{
+  if (id == -1) return JS_UNDEFINED;
+  return JS_DupValue(js,id2go(id)->ref);
+}
+
+JSValue gos2ref(int *go)
+{
+  JSValue array = JS_NewArray(js);
+  for (int i = 0; i < arrlen(go); i++)
+    js_setprop_num(array,i,go2ref(go[i]));
+  return array;
+}
+
 
 JSValue js_getpropstr(JSValue v, const char *str)
 {
@@ -155,8 +172,10 @@ JSValue num2js(double g) {
 }
 
 struct gameobject *js2go(JSValue v) {
-  return id2go(js2int(v));
+  return id2go(js2gameobject(v));
 }
+
+static int jsgo2id(JSValue v) { return go2id(js2go(v)); }
 
 struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
 
@@ -343,7 +362,7 @@ JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   const char *img = JS_ToCString(js, argv[0]);
   gui_draw_img(img, js2vec2(argv[1]), js2vec2(argv[2]), js2number(argv[3]), js2bool(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
   JS_FreeCString(js, img);
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 struct rect js2rect(JSValue v) {
@@ -374,7 +393,6 @@ JSValue bb2js(struct boundingbox bb)
   js_setprop_str(obj,"l", JS_NewFloat64(js,bb.l));
   return obj;
 }
-
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
 //  static_assert(sizeof(tsReal) * 2 == sizeof(HMM_Vec2));
@@ -501,7 +519,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   const char *str2 = NULL;
   const void *d1 = NULL;
   const void *d2 = NULL;
-  JSValue ret = JS_NULL;
+  JSValue ret = JS_UNDEFINED;
 
   switch (cmd) {
   case 0:
@@ -700,7 +718,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 44:
-    ret = JS_NewInt64(js, pos2gameobject(js2vec2(argv[1])));
+    ret = go2ref(pos2gameobject(js2vec2(argv[1])));
     break;
 
   case 45:
@@ -732,7 +750,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 52:
-    ret = ints2js(phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2])));
+    ret = gos2ref(phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2])));
     break;
 
   case 53:
@@ -803,7 +821,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 69:
-    gameobject_set_sensor(js2int(argv[1]), JS_ToBool(js, argv[2]));
+    gameobject_set_sensor(js2go(argv[1]), JS_ToBool(js, argv[2]));
     break;
 
   case 70:
@@ -846,7 +864,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 80:
-    ret = ints2js(phys2d_query_shape(js2ptr(argv[1])));
+    ret = gos2ref(phys2d_query_shape(js2ptr(argv[1])));
     break;
 
   case 81:
@@ -854,7 +872,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 82:
-    gameobject_draw_debug(js2int(argv[1]));
+    gameobject_draw_debug(js2go(argv[1]));
     break;
 
   case 83:
@@ -870,7 +888,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 86:
-    ret = ints2js(phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4])));
+    ret = gos2ref(phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4])));
     break;
 
   case 87:
@@ -985,7 +1003,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 113:
-      js2go(argv[1])->ref = JS_DupValue(js,argv[2]);
+      js2go(argv[1])->ref = argv[2];//JS_DupValue(js,argv[2]);
       break;
 
     case 114:
@@ -1222,115 +1240,110 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
      str = js2str(argv[1]);
      ds_openvideo(str);
      break;
-
     case 175:
-      ret = num2js(((dsp_node*)js2ptr(argv[1]))->gain);
+      ret = num2js((js2dsp_node(argv[1]))->gain);
       break;
     case 176:
-      ((dsp_node*)js2ptr(argv[1]))->gain = js2number(argv[2]);
+      js2dsp_node(argv[1])->gain = js2number(argv[2]);
       break;
     case 177:
       plugin_node(js2ptr(argv[1]), js2ptr(argv[2]));
       break;
     case 178:
-      ret = num2js(((dsp_node*)js2ptr(argv[1]))->pan);
+      ret = num2js(js2dsp_node(argv[1])->pan);
       break;
     case 179:
-      ((dsp_node*)js2ptr(argv[1]))->pan=js2number(argv[2]);
+      js2dsp_node(argv[1])->pan=js2number(argv[2]);
       break;
     case 180:
-      ret = ptr2js(masterbus);
+      ret = dsp_node2js(masterbus);
       break;
     case 181:
-      ret = ptr2js(make_node(NULL,NULL,NULL));
+      ret = dsp_node2js(make_node(NULL,NULL,NULL));
       break;
     case 182:
       str = js2str(argv[1]);
       ret = ptr2js(dsp_source(str));
-      ((sound*)((dsp_node*)js2ptr(ret))->data)->hook = JS_DupValue(js,argv[2]);
+      ((sound*)js2dsp_node(ret)->data)->hook = JS_DupValue(js,argv[2]);
       break;
     case 183:
-      ((dsp_node*)js2ptr(argv[1]))->off = js2bool(argv[2]);
+      js2dsp_node(argv[1])->off = js2bool(argv[2]);
       break;
     case 184:
-      ((dsp_node*)js2ptr(argv[1]))->pass = js2bool(argv[2]);
+      js2dsp_node(argv[1])->pass = js2bool(argv[2]);
       break;
     case 185:
-      ret = ptr2js(dsp_delay(js2number(argv[1]), js2number(argv[2])));
+      ret = dsp_node2js(dsp_delay(js2number(argv[1]), js2number(argv[2])));
       break;
     case 186:
-      ret = ptr2js(dsp_lpf(js2number(argv[1])));
+      ret = dsp_node2js(dsp_lpf(js2number(argv[1])));
       break;
     case 187:
-      ret = ptr2js(dsp_hpf(js2number(argv[1])));
+      ret = dsp_node2js(dsp_hpf(js2number(argv[1])));
       break;
     case 188:
       str = js2str(argv[1]);
-      ret = ptr2js(dsp_mod(str));
+      ret = dsp_node2js(dsp_mod(str));
       break;
     case 189:
-      ret = ptr2js(dsp_bitcrush(js2number(argv[1]), js2number(argv[2])));
+      ret = dsp_node2js(dsp_bitcrush(js2number(argv[1]), js2number(argv[2])));
       break;
     case 190:
-      ret = ptr2js(dsp_compressor());
+      ret = dsp_node2js(dsp_compressor());
       break;
     case 191:
-      ret = ptr2js(dsp_limiter(js2number(argv[1])));
+      ret = dsp_node2js(dsp_limiter(js2number(argv[1])));
       break;
     case 192:
-      ret = ptr2js(dsp_noise_gate(js2number(argv[1])));
+      ret = dsp_node2js(dsp_noise_gate(js2number(argv[1])));
       break;
     case 193:
-      node_free(js2ptr(argv[1]));
+//      node_free(js2ptr(argv[1]));
       break;
     case 194:
-      ret = bool2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->loop);
+      ret = bool2js(((sound*)js2dsp_node(argv[1])->data)->loop);
       break;
     case 195:
-      ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->loop = js2bool(argv[2]);
+      ((sound*)js2dsp_node(argv[1])->data)->loop = js2bool(argv[2]);
       break;
     case 196:
-      ret = num2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->frame);
+      ret = num2js(((sound*)js2dsp_node(argv[1])->data)->frame);
       break;
     case 197:
-      ret = num2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->data->frames);    
+      ret = num2js(((sound*)js2dsp_node(argv[1])->data)->data->frames);    
       break;
     case 198:
       ret = num2js(SAMPLERATE);
       break;
     case 199:
-      ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->frame = js2number(argv[2]);
+      ((sound*)js2dsp_node(argv[1])->data)->frame = js2number(argv[2]);
       break;
     case 200:
-      ret = ptr2js(dsp_pitchshift(js2number(argv[1])));
+      ret = dsp_node2js(dsp_pitchshift(js2number(argv[1])));
       break;
     case 201:
-      ret = num2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->timescale);
+      ret = num2js(((sound*)js2dsp_node(argv[1])->data)->timescale);
       break;
     case 202:
       YughWarn("%g", js2number(argv[2]));
-      ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->timescale = js2number(argv[2]);
+      ((sound*)js2dsp_node(argv[1])->data)->timescale = js2number(argv[2]);
       break;
     case 203:
-      ret = ptr2js(dsp_whitenoise());
+      ret = dsp_node2js(dsp_whitenoise());
       break;
     case 204:
-      ret = ptr2js(dsp_pinknoise());
+      ret = dsp_node2js(dsp_pinknoise());
       break;
     case 205:
-      ret = ptr2js(dsp_rednoise());
+      ret = dsp_node2js(dsp_rednoise());
       break;
     case 206:
       str = js2str(argv[1]);
       str2 = js2str(argv[2]);
-      ret = ptr2js(dsp_midi(str, make_soundfont(str2)));
+      ret = dsp_node2js(dsp_midi(str, make_soundfont(str2)));
       break;
     case 207:
-      ret = ptr2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
-      break;
-    case 208:
-      ret = JS_NewObjectClass(js, js_dsp_node_id);
-      JS_SetOpaque(ret, dsp_mixer_node());
+      ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
       break;
   }
 
@@ -1347,7 +1360,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     return ret;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1402,7 +1415,7 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape *shape) {
@@ -1414,7 +1427,7 @@ void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape 
 
 JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
-  int go = js2int(argv[3]);
+  int go = jsgo2id(argv[3]);
   struct callee c;
   c.fn = argv[1];
   c.obj = argv[2];
@@ -1437,7 +1450,7 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
     break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1486,11 +1499,11 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  return JS_NewInt64(js, MakeGameobject());
+  return gameobject2js(MakeGameobject());
 }
 
 JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1504,15 +1517,14 @@ JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   JS_FreeCString(js, s);
   JS_FreeCString(js, f);
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
-  int id = js2int(argv[1]);
-  struct gameobject *go = get_gameobject_from_id(id);
-
-  if (!go) return JS_NULL;
+  struct gameobject *go = js2go(argv[1]);
+  
+  if (!go) return JS_UNDEFINED;
 
   /* TODO: Possible that reindexing shapes only needs done for static shapes? */
   switch (cmd) {
@@ -1536,7 +1548,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 4:
     cpBodyApplyImpulseAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
-    return JS_NULL;
+    return JS_UNDEFINED;
 
   case 5:
 //    go->flipx = JS_ToBool(js, argv[2]);
@@ -1554,11 +1566,11 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 8:
     cpBodySetAngularVelocity(go->body, js2number(argv[2]));
-    return JS_NULL;
+    return JS_UNDEFINED;
 
   case 9:
     cpBodySetVelocity(go->body, js2vec2(argv[2]).cp);
-    return JS_NULL;
+    return JS_UNDEFINED;
 
   case 10:
     go->e = fmax(js2number(argv[2]), 0);
@@ -1570,27 +1582,26 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
   case 12:
     cpBodyApplyForceAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
-    return JS_NULL;
+    return JS_UNDEFINED;
 
   case 13:
     cpBodySetMoment(go->body, js2number(argv[2]));
-    return JS_NULL;
+    return JS_UNDEFINED;
   case 14:
     cpBodyApplyForceAtLocalPoint(go->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp);
-    return JS_NULL;
+    return JS_UNDEFINED;
   }
 
   cpSpaceReindexShapesForBody(space, go->body);
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int q = js2int(argv[0]);
-  int goid = js2int(argv[1]);
-  struct gameobject *go = get_gameobject_from_id(goid);
+  struct gameobject *go = js2go(argv[1]);
 
-  if (!go) return JS_NULL;
+  if (!go) return JS_UNDEFINED;
 
   switch (q) {
   case 0:
@@ -1618,16 +1629,16 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
     return JS_NewBool(js, phys2d_in_air(go->body));
 
    case 8:
-     gameobject_delete(goid);
+//     gameobject_delete(goid);
      break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   JSValue sprite = JS_NewObject(js);
-  js_setprop_str(sprite,"id",JS_NewInt64(js, make_sprite(js2int(argv[0]))));
+  js_setprop_str(sprite,"id",JS_NewInt64(js, make_sprite(jsgo2id(argv[0]))));
   return sprite;
 }
 
@@ -1645,7 +1656,7 @@ JSValue duk_make_anim2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 }
 
 JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = js2int(argv[0]);
+  int go = jsgo2id(argv[0]);
   HMM_Vec2 size = js2vec2(argv[1]);
 
   struct phys2d_box *box = Make2DBox(go);
@@ -1666,7 +1677,7 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
   struct phys2d_box *box = js2ptr(argv[1]);
   HMM_Vec2 arg;
 
-  if (!box) return JS_NULL;
+  if (!box) return JS_UNDEFINED;
 
   switch (cmd) {
   case 0:
@@ -1685,11 +1696,11 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
   }
 
   phys2d_applybox(box);
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = js2int(argv[0]);
+  int go = jsgo2id(argv[0]);
 
   struct phys2d_circle *circle = Make2DCircle(go);
 
@@ -1701,7 +1712,7 @@ JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCon
 
 JSValue duk_make_model(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-  int go = js2int(argv[0]);
+  int go = jsgo2id(argv[0]);
   struct drawmodel *dm = make_drawmodel(go);
   JSValue ret = JS_NewObject(js);
   js_setprop_str(ret, "id", ptr2js(dm));
@@ -1712,7 +1723,7 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
   int cmd = js2int(argv[0]);
   struct phys2d_circle *circle = js2ptr(argv[1]);
 
-  if (!circle) return JS_NULL;
+  if (!circle) return JS_UNDEFINED;
 
   switch (cmd) {
   case 0:
@@ -1731,11 +1742,11 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
   }
   
   phys2d_applycircle(circle);
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = js2int(argv[0]);
+  int go = jsgo2id(argv[0]);
   struct phys2d_poly *poly = Make2DPoly(go);
   phys2d_poly_setverts(poly, NULL);
   JSValue polyval = JS_NewObject(js);
@@ -1748,7 +1759,7 @@ JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
   int cmd = js2int(argv[0]);
   struct phys2d_poly *poly = js2ptr(argv[1]);
 
-  if (!poly) return JS_NULL;
+  if (!poly) return JS_UNDEFINED;
 
   switch (cmd) {
   case 0:
@@ -1756,11 +1767,11 @@ JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
     break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = js2int(argv[0]);
+  int go = jsgo2id(argv[0]);
   struct phys2d_edge *edge = Make2DEdge(go);
 
   int n = js_arrlen(argv[1]);
@@ -1784,7 +1795,7 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
   if (!edge) {
     YughError("Attempted to do a cmd on edge %p. Not found.", edge);
-    return JS_NULL;
+    return JS_UNDEFINED;
   }
 
   switch (cmd) {
@@ -1798,7 +1809,7 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
     break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1835,7 +1846,7 @@ JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
     JS_FreeValue(js,vv);
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1843,7 +1854,7 @@ JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst 
 //  struct callee *c = make_callee(argv[0], argv[3]);
 //  int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
 //  return JS_NewInt64(js, id);
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
@@ -1862,7 +1873,7 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
       break;
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 //#include "dlfcn.h"
@@ -1885,7 +1896,7 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
     ffi_call(&cif, fn, &rc, values);
   }
 
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 */
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
@@ -1936,4 +1947,6 @@ void ffi_load() {
   JS_NewClass(JS_GetRuntime(js), js_ptr_id, &js_ptr_class);
 
   QJSCLASSPREP(dsp_node);
+  QJSCLASSPREP(gameobject);
 }
+

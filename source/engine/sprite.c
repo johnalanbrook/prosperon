@@ -53,6 +53,7 @@ struct slice9_vert {
 };
 
 int make_sprite(int go) {
+  YughWarn("Attaching sprite to gameobject %d", go);
   struct sprite sprite = {
       .color = color_white,
       .emissive = {0,0,0,0},

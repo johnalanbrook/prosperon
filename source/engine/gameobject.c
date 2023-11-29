@@ -233,6 +233,7 @@ int pos2gameobject(HMM_Vec2 pos) {
 
     if (dist <= 25) return i;
   }
+  
   return -1;
 }
 
@@ -373,11 +374,11 @@ int MakeGameobject() {
       .cgravity = (HMM_Vec2){0,0},
       .damping = NAN,
       .timescale = 1.0,
-      .ref = JS_NULL,
+      .ref = JS_UNDEFINED,
   };
 
-  go.cbs.begin.obj = JS_NULL;
-  go.cbs.separate.obj = JS_NULL;
+  go.cbs.begin.obj = JS_UNDEFINED;
+  go.cbs.separate.obj = JS_UNDEFINED;
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
   cpBodySetVelocityUpdateFunc(go.body, velocityFn);
@@ -430,6 +431,13 @@ void gameobject_delete(int id) {
     arrpush(go_toclean, id);
   else
     gameobject_clean(id);
+}
+
+void gameobject_free(int id)
+{
+  YughWarn("FREED A GAMEOBJECT!!!");
+  if (id >= 0)
+    gameobject_delete(id);
 }
 
 void gameobjects_cleanup() {

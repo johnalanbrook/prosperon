@@ -11,19 +11,34 @@ function grab_from_points(pos, points, slop) {
 };
 
 var actor = {};
-actor.spawn = function(ur, config){};
-actor.die = function(actor){};
-actor.kill = function(actor){};
-actor.delay = function(fn, seconds) {};
+actor.spawn = function(script, config){
+  if (typeof script !== 'string') return;
+  var padawan = Object.create(actor);
+  compile_env(script, padawan, "script");
+
+  if (typeof config === 'object')
+    Object.merge(padawan, config);
+    
+  return padawan;
+};
+actor.die = function(actor){
+  
+};
+actor.kill = function(actor){
+  this.timers.forEach(t => t());
+  this.timers = undefined;
+};
+actor.delay = function(fn, seconds) {
+  var t = timer.delay(fn.bind(this), seconds, true);
+  this.timers.push(t);
+  return function() { t.kill(); };
+};
 actor.clock = function(fn){};
 
-var Empyrean = Object.create(actor);
-
 var gameobject = {
-  impl: {
-	full_path() {
-	  return this.path_from(Primum);
-	},
+  full_path() {
+    return this.path_from(Primum);
+  },
 
     path_from(o) {
       var p = this.toString();
@@ -46,8 +61,9 @@ var gameobject = {
     
     delay(fn, seconds) {
       var t = timer.delay(fn.bind(this), seconds, false);
-      this.timers.push(t);
-      return t;
+      var killfn = function() { t.kill(); };
+      this.timers.push(killfn);
+      return killfn;
     },
 
     tween(prop, values, def){
@@ -98,7 +114,10 @@ var gameobject = {
       },
 
       set pos(x) {
-        this.set_worldpos(this.level.this2world(x));
+        if (!this.level)
+	  this.set_worldpos(x);
+	else
+          this.set_worldpos(this.level.this2world(x));
       },
       
       get pos() {
@@ -133,7 +152,7 @@ var gameobject = {
       get phys() { return q_body(0,this.body); },
       get velocity() { return q_body(3, this.body); },
       set velocity(x) { set_body(9, this.body, x); },
-//      get damping() { return cmd(157,this.body); },
+      get damping() { return cmd(157,this.body); },
       set_damping(x) { cmd(156, this.body, x); },
       get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
       set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
@@ -155,7 +174,6 @@ var gameobject = {
 	var thatpos = this.pos;
 	this.objects.forEach(function(x) {
 	  x.rotate(diff);
-//	  x.angle = x.angle + diff;
 	  var opos = x.pos;
 	  var r = Vector.length(opos);
 	  var p = Math.rad2deg(Math.atan2(opos.y, opos.x));
@@ -163,8 +181,11 @@ var gameobject = {
 	  p = Math.deg2rad(p);
 	  x.pos = [r*Math.cos(p), r*Math.sin(p)];
 	});
-	  
-        set_body(0,this.body, Math.deg2rad(x - this.level.worldangle()));
+
+        if (this.level)
+          set_body(0,this.body, Math.deg2rad(x - this.level.worldangle()));
+	else
+	  set_body(0,this.body,x);
       },
 
       rotate(x) {
@@ -222,9 +243,6 @@ var gameobject = {
      delete this.objects[obj.toString()];
      delete this[obj.toString()];
    },
-   
-      
-  },
   
   components: {},
   objects: {},
@@ -242,7 +260,6 @@ var gameobject = {
       pulse(vec) { set_body(4, this.body, vec);},
       shove(vec) { set_body(12,this.body,vec);},
       shove_at(vec, at) { set_body(14,this.body,vec,at); },
-//      torque(val) { cmd(153, this.body, val); },
       world2this(pos) { return cmd(70, this.body, pos); },
       this2world(pos) { return cmd(71, this.body,pos); },
     dir_world2this(dir) { return cmd(160, this.body, dir); },
@@ -281,6 +298,10 @@ var gameobject = {
 
   /* Make a unique object the same as its prototype */
   revert() {
+//    var keys = Object.samenewkeys(this, this.__proto__);
+//    keys.unique.forEach(x => delete this[x]);
+//    keys.same.forEach(x => this[x] = this.__proto__[x]);
+    
     var jobj = this.json_obj();
     var lobj = this.level.__proto__.objects[this.toString()];
     delete jobj.objects;
@@ -328,39 +349,22 @@ var gameobject = {
         register_collide(1, x.collide, x, obj.body, x.shape);
     });
   },
-    pos: [0,0],
-    angle:0,
-    velocity:[0,0],
-    angularvelocity:0,
-    phys:Physics.static,
+  
     flipx() { return this.scale.x < 0; },
     flipy() { return this.scale.y < 0; },
-    timescale: 1,
-    scale:[1,1],
     mirror(plane) {
       this.scale = Vector.reflect(this.scale, plane);
     },
-    elasticity:0.5,
-    friction:1,
-    gravity: true,
-    max_velocity: Infinity,
-    max_angularvelocity: Infinity,
-    mass:1,
-    layer:0,
-    draw_layer:0,
-    worldpos() { return [0,0]; },
-
     save:true,
     selectable:true,
     ed_locked:false,
     
-
-      disable() { this.components.forEach(function(x) { x.disable(); });},
-      enable() { this.components.forEach(function(x) { x.enable(); });},
-      sync() {
-       this.components.forEach(function(x) { x.sync(); });
-       this.objects.forEach(function(x) { x.sync(); });
-      },
+    disable() { this.components.forEach(function(x) { x.disable(); });},
+    enable() { this.components.forEach(function(x) { x.enable(); });},
+    sync() {
+     this.components.forEach(function(x) { x.sync(); });
+     this.objects.forEach(function(x) { x.sync(); });
+    },
 
       /* Bounding box of the object in world dimensions */
       boundingbox() {
@@ -416,10 +420,6 @@ var gameobject = {
         return d;
       },
 
-      full_obj() {
-        
-      },
-      
       transform_obj() {
         var t = this.json_obj();
 	Object.assign(t, this.transform());
@@ -467,57 +467,43 @@ var gameobject = {
 	Object.totalmerge(n, this.make_ur());
 	return n;
       },
-      
-      kill() {
-	if (this.body === -1) {
-//	  Log.warn(`Object is already dead!`);
-	  return;
-	}
-	
 
-//	Register.endofloop(() => {
-//	  cmd(2, this.body);
-	  q_body(8,this.body);
-	  Game.unregister_obj(this);
+  kill() {
+    this.timers.forEach(t => t());
+    
+    if (this.level) {
+      this.level.remove_obj(this);
+      this.level = undefined;
+    }
 
-	  this.timers.forEach(t => t());
+    Player.do_uncontrol(this);
+    Register.unregister_obj(this);
 
-	  if (this.level) {
-    	    this.level.remove_obj(this);
-	    this.level = undefined;
-	  }
+    if (this.__proto__.instances)
+      this.__proto__.instances.remove(this);
 
-	  Player.do_uncontrol(this);
-	  Register.unregister_obj(this);
+    for (var key in this.components) {
+      Register.unregister_obj(this.components[key]);
+      Log.info(`Destroying component ${key}`);
+      this.components[key].kill();
+      this.components.gameobject = undefined;
+    }
 
-	  if (this.__proto__.instances)
-	    this.__proto__.instances.remove(this);
-	    
-	  this.body = -1;
+    delete this.components;
 
-	  for (var key in this.components) {
-	    Register.unregister_obj(this.components[key]);
-	    Log.info(`Destroying component ${key}`);
-	    this.components[key].kill();
-	    this.components.gameobject = undefined;
-	  }
-	  delete this.components;
+    this.clear();
 
-          this.clear();
+    if (typeof this.stop === 'function')
+      this.stop();
+  },
 
-	  if (typeof this.stop === 'function')
-  	    this.stop();
-//	});
-
-      },
-
-      up() { return [0,1].rotate(Math.deg2rad(this.angle));},
-      down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
-      right() { return [1,0].rotate(Math.deg2rad(this.angle));},
-      left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
+  up() { return [0,1].rotate(Math.deg2rad(this.angle));},
+  down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
+  right() { return [1,0].rotate(Math.deg2rad(this.angle));},
+  left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
 
   make(level, data) {
-    level ??= Primum;
+//    level ??= Primum;
     var obj = Object.create(this);
     obj.make = undefined;
     obj.level = level;
@@ -525,10 +511,10 @@ var gameobject = {
       this.instances.push(obj);
       
     obj.body = make_gameobject();
+
     obj.components = {};
     obj.objects = {};
     obj.timers = [];
-    assign_impl(obj, gameobject.impl);
     obj._ed = {
       selectable: true,
       check_dirty() {
@@ -547,7 +533,6 @@ var gameobject = {
 
       dirty: false,
       inst: false,
-      model: Object.create(this),
       urdiff: {},
       namestr() {
         var s = obj.toString();
@@ -558,10 +543,9 @@ var gameobject = {
 	return s;
       },
     };
+
     obj.ur = this.toString();
     
-    Game.register_obj(obj);
-
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
     for (var prop in this) {
@@ -579,7 +563,7 @@ var gameobject = {
     obj.level = undefined;
     obj.reparent(level);
 
-    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers', 'timescale');    
+    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');    
 
     Object.dainty_assign(obj, this);
     obj.sync();
@@ -596,6 +580,7 @@ var gameobject = {
 
   make_objs(objs) {
     for (var prop in objs) {
+      Log.warn(prop);
       var newobj = this.spawn_from_instance(objs[prop]);
       if (!newobj) continue;
       this.rename_obj(newobj.toString(), prop);
@@ -624,7 +609,8 @@ var gameobject = {
   },
 
   add_component(comp) {
-    if (typeof comp['comp'] !== 'string') return;
+    if (typeof comp.make !== 'function') return;
+    return {comp:comp.toString()};
   },
 
   register_hit(fn, obj) {
@@ -642,7 +628,11 @@ var gameobject = {
   },
 }
 
-gameobject.impl.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
+gameobject.body = make_gameobject();
+cmd(113,gameobject.body, gameobject);
+Object.hide(gameobject, 'timescale');
+
+gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
 gameobject.doc = {
   doc: "All objects in the game created through spawning have these attributes.",

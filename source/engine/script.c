@@ -193,7 +193,7 @@ JSValue script_runfile(const char *file)
 {
   size_t len;
   const char *script = slurp_text(file, &len);
-  if (!script) return JS_NULL;
+  if (!script) return JS_UNDEFINED;
 
   JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAGS);
   js_print_exception(obj);
@@ -266,13 +266,13 @@ void out_memusage(const char *file)
 
 JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)
 {
-  if (JS_IsUndefined(c->fn)) return JS_NULL;
-  if (JS_IsUndefined(c->obj)) return JS_NULL;
+  if (JS_IsUndefined(c->fn)) return JS_UNDEFINED;
+  if (JS_IsUndefined(c->obj)) return JS_UNDEFINED;
   
   JSValue ret = JS_Call(js, c->fn, c->obj, argc, argv);
   js_print_exception(ret);
   JS_FreeValue(js, ret);
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 void call_callee(struct callee *c) {

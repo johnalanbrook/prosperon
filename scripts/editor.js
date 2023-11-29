@@ -4,23 +4,12 @@
 */
 prototypes.generate_ur('.');
 
-var editor_config = {
+var editor = {
+  toString() { return "editor"; },
   grid_size: 100,
   ruler_mark_px: 100,
   grid_color: Color.green.alpha(0.3),
-  
-};
 
-var configs = {
-  toString() { return "configs"; },
-  editor: editor_config,
-  physics: physics,
-  local: local_conf,
-  collision: Collision,
-};
-
-var editor = {
-  toString() { return "editor"; },
   dbg_ur: "arena.level1",
   machine: undefined,
   device_test: undefined,
@@ -34,7 +23,7 @@ var editor = {
   working_layer: 0,
   get cursor() {
     if (this.selectlist.length === 0 ) return Mouse.worldpos;
-    return find_com(this.selectlist);
+    return physics.com(this.selectlist.map(x => x.pos));
   },
   edit_mode: "basic",
 
@@ -52,9 +41,9 @@ var editor = {
   },
     
   /* Tries to select id */
-  do_select(go) {
-    var obj = (go >= 0 ? Game.object(go) : undefined);
-    if (!obj || !obj._ed.selectable) return undefined;
+  do_select(obj) {
+    if (!obj) return;
+//    if (!obj || !obj._ed.selectable) return undefined;
     
     if (obj.level !== this.edit_level) {
       var testlevel = obj.level;
@@ -102,7 +91,7 @@ var editor = {
   step_amt() { return Keys.shift() ? 10 : 1; },
 
   on_grid(pos) {
-    return pos.every(function(x) { return x % editor_config.grid_size === 0; });
+    return pos.every(function(x) { return x % editor.grid_size === 0; });
   },
 
   snapper(dir, grid) {
@@ -115,7 +104,7 @@ var editor = {
   key_move(dir) {
     if (!editor.grabselect) return;
     if (Keys.ctrl())
-      this.selectlist.forEach(this.snapper(dir.scale(1.01), editor_config.grid_size));
+      this.selectlist.forEach(this.snapper(dir.scale(1.01), editor.grid_size));
     else
       this.selectlist.forEach(this.mover(dir.scale(this.step_amt())));
   },
@@ -234,8 +223,6 @@ var editor = {
     Register.draw.register(editor.draw, editor);
     Debug.register_call(editor.ed_debug, editor);
     Register.update.register(gui_controls.update, gui_controls);
-//    Player.players[0].control(gui_controls);
-
     this.desktop = Primum.spawn(ur.arena);
     Primum.rename_obj(this.desktop.toString(), "desktop");
     this.edit_level = this.desktop;
@@ -313,17 +300,6 @@ var editor = {
     this.edit_level.check_dirty();
   },
 
-  diff_lvl(d) {
-    this.unselect();
-    for (var key in d) {
-      if (d[key] === "DELETE")
-        Game.objects[key].kill();
-    }
-    diffassign(Game.objects, d);
-    Game.objects.forEach(function(x) { x.sync(); });
-    this.curlvl = this.edit_level.save();
-  },
-  
   redo() {
     if (this.backshots.empty) {
       Log.info("Nothing to redo.");
@@ -336,17 +312,6 @@ var editor = {
     this.edit_level.load(dd);
     this.edit_level.check_dirty();
     this.curlvl = dd;
-    return;
-
-    var dd = this.backshots.pop();
-      this.snapshots.push(dd);        
-    if (this.was_undoing) {
-      dd = this.backshots.pop();
-      this.snapshots.push(dd);
-      this.was_undoing = false;
-    }
-
-    this.diff_lvl(dd);
   },
 
   undo() {
@@ -359,17 +324,6 @@ var editor = {
     var dd = this.snapshots.pop();
     Object.dainty_assign(this.edit_level, dd);
     this.edit_level._ed.check_dirty();
-    return;
-    
-    this.backshots.push(dd);
-    
-    if (!this.was_undoing) {
-      dd = this.snapshots.pop();
-      this.backshots.push(dd);
-      this.was_undoing = true;  
-    }
-
-    this.diff_lvl(dd);  
   },
   
   restore_buffer() {
@@ -511,7 +465,7 @@ var editor = {
       GUI.text(p, world2screen(x[1].worldpos().add([0,16])),1,editor.color_depths[depth]);
     });
 
-    var mg = Game.obj_at(Mouse.worldpos);
+    var mg = physics.pos_query(Mouse.worldpos);
     
     if (mg) {
       var p = mg.path_from(thiso);
@@ -536,15 +490,15 @@ var editor = {
         GUI.image("icons/icons8-lock-16.png", world2screen(obj.worldpos()));
     });
 
-    Debug.draw_grid(1, editor_config.grid_size, Color.Editor.grid.alpha(0.3));
-    var startgrid = screen2world([-20,0]).map(function(x) { return Math.snap(x, editor_config.grid_size); });
+    Debug.draw_grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
+    var startgrid = screen2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
     var endgrid = screen2world([Window.width, Window.height]);
     
-    var w_step = Math.round(editor_config.ruler_mark_px/Window.width * (endgrid.x-startgrid.x)/editor_config.grid_size)*editor_config.grid_size;
-    if (w_step === 0) w_step = editor_config.grid_size;
+    var w_step = Math.round(editor.ruler_mark_px/Window.width * (endgrid.x-startgrid.x)/editor.grid_size)*editor.grid_size;
+    if (w_step === 0) w_step = editor.grid_size;
     
-    var h_step = Math.round(editor_config.ruler_mark_px/Window.height * (endgrid.y-startgrid.y)/editor_config.grid_size)*editor_config.grid_size;
-    if (h_step === 0) h_step = editor_config.grid_size;
+    var h_step = Math.round(editor.ruler_mark_px/Window.height * (endgrid.y-startgrid.y)/editor.grid_size)*editor.grid_size;
+    if (h_step === 0) h_step = editor.grid_size;
     
     while(startgrid[0] <= endgrid[0]) {
       GUI.text(startgrid[0], [world2screen([startgrid[0], 0])[0],0]);
@@ -620,25 +574,6 @@ var editor = {
     this.unselect();
   },
   
-  groupsaveas(group, file) {
-    if (!file) return;
-    
-    file = file+".lvl";
-    if (IO.exists(file)) {
-      this.openpanel(gen_notify("Level already exists with that name. Overwrite?", dosave.bind(this,file)));
-      return;
-    } else
-      dosave(file);
-      
-    function dosave(file) {
-      var com = find_com(group);
-      Level.saveas(group, file);
-      editor.addlevel(file, com);
-
-      group.forEach(function(x) { x.kill(); });
-    }
-  },
-
   /* Checking to save an entity as a subtype. */
   /* sub is the name of the (sub)type; obj is the object to save it as */
   saveas_check(sub, obj) {
@@ -924,7 +859,8 @@ editor.inputs['C-s'] = function() {
 
   Object.values(saveobj.objects).forEach(function(x) { x._ed.check_dirty(); });
 
-  Game.objects.forEach(function(x) {
+
+  Game.all_objects(function(x) {
     if (typeof x !== 'object') return;
     if (!('_ed' in x)) return;
     if (x._ed.dirty) return;
@@ -1141,7 +1077,7 @@ editor.inputs['C-mm'] = editor.inputs.mm;
 
 editor.inputs['C-M-lm'] = function()
 {
-  var go = Game.obj_at(Mouse.worldpos);
+  var go = physics.pos_query(Mouse.worldpos);
   if (!go) return;
   editor.edit_level = go.level;
 }
@@ -1312,20 +1248,20 @@ editor.inputs['M-g'] = function()
 editor.inputs['M-g'].doc = "Move all.";
 
 editor.inputs['C-lb'] = function() {
-  editor_config.grid_size -= Keys.shift() ? 10 : 1;
-  if (editor_config.grid_size <= 0) editor_config.grid_size = 1;
+  editor.grid_size -= Keys.shift() ? 10 : 1;
+  if (editor.grid_size <= 0) editor.grid_size = 1;
 };
 editor.inputs['C-lb'].doc = "Decrease grid size. Hold shift to decrease it more.";
 editor.inputs['C-lb'].rep = true;
 
-editor.inputs['C-rb'] = function() { editor_config.grid_size += Keys.shift() ? 10 : 1; };
+editor.inputs['C-rb'] = function() { editor.grid_size += Keys.shift() ? 10 : 1; };
 editor.inputs['C-rb'].doc = "Increase grid size. Hold shift to increase it more.";
 editor.inputs['C-rb'].rep = true;
 
 editor.inputs['C-c'] = function() {
   this.killring = [];
   this.killcom = [];
-  this.killcom = find_com(this.selectlist);  
+  this.killcom = physics.com(this.selectlist.map(x=>x.pos));  
 
   this.selectlist.forEach(function(x) {
     this.killring.push(x.make_ur());
@@ -1590,7 +1526,7 @@ replpanel.inputs = Object.create(inputpanel.inputs);
 replpanel.inputs.block = true;
 replpanel.inputs.lm = function()
 {
-  var mg = Game.obj_at(Mouse.worldpos);
+  var mg = physics.pos_query(Mouse.worldpos);
   if (!mg) return;
   var p = mg.path_from(editor.get_this());
   this.value = p;
@@ -1833,7 +1769,7 @@ var objectexplorer = Object.copy(inputpanel, {
 //        this.obj[key] = this.obj[key];
     });
 
-//    Game.objects.forEach(function(x) { x.sync(); });
+//    Game.all_objects(function(x) { x.sync(); });
     return items;
   },
 

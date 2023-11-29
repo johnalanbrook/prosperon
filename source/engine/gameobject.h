@@ -69,6 +69,7 @@ extern struct gameobject *gameobjects;
 int MakeGameobject();
 void gameobject_apply(struct gameobject *go);
 void gameobject_delete(int id);
+void gameobject_free(int id);
 void gameobjects_cleanup();
 
 void gameobject_set_sensor(int id, int sensor);

@@ -23,6 +23,17 @@ Promise = undefined;
 Set = undefined;
 WeakSet = undefined;
 
+var json = {};
+json.encode = function(value, space, replacer, whitelist)
+{
+  return JSON.stringify(value, space, replacer);
+}
+
+json.decode = function(text, reviver)
+{
+  return JSON.parse(text,reviver);
+}
+
 Object.methods = function(o)
 {
   var m = [];
@@ -31,6 +42,7 @@ Object.methods = function(o)
   });
   return m;
 }
+Object.methods.doc = "Retun an array of all functions an object has access to.";
 
 Object.dig = function(obj, path, def)
 {
@@ -42,6 +54,17 @@ Object.dig = function(obj, path, def)
   obj[pp[pp.length-1]] = def;
   return def;
 }
+
+Object.samenewkeys = function(a,b)
+{
+  b ??= a.__proto__;
+  var ret = {};
+  ret.same = [];
+  ret.unique = [];
+  Object.keys(a).forEach(key => (key in b) ? ret.same.push(key) : ret.unique.push(key));
+  return ret;
+}
+Object.samenewkeys.doc = "Return an object listing which keys are the same and unique on a compared to b.";
 
 Object.rkeys = function(o)
 {

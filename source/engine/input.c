@@ -73,7 +73,7 @@ JSValue input2js(int state)
     case 3: return jstr("pressrep");
     case 4: return jstr("down");
   }
-  return JS_NULL;
+  return JS_UNDEFINED;
 }
 
 void input_mouse(int btn, int state, uint32_t mod)
