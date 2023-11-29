@@ -121,7 +121,7 @@ dsp_node *dsp_mod(const char *path)
   void *data = slurp_file(path, &modsize);
   pocketmod_context *mod = malloc(sizeof(*mod));
   pocketmod_init(mod, data, modsize, SAMPLERATE);
-  return make_node(mod, filter_mod);
+  return make_node(mod, filter_mod, NULL);
 }
 
 void sound_init() {
@@ -241,13 +241,19 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
     frames = n;
   else
     end = 1;
+
+  if (s->timescale != 1) {
+    src_callback_read(s->src, s->timescale, frames, buf);
+    return;
+  }
   
   soundbyte *in = s->data->data;
   
   for (int i = 0; i < frames; i++) {
     for (int j = 0; j < CHANNELS; j++)
       buf[i * CHANNELS + j] = in[s->frame*CHANNELS + j];
-      s->frame++;
+
+    s->frame++;
   }
 
   if(end) {
@@ -260,7 +266,16 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
 void free_source(struct sound *s)
 {
   JS_FreeValue(js, s->hook);
+  src_delete(s->src);
   free(s);
+}
+
+static long *src_cb(struct sound *s, float **data)
+{
+  long needed = BUF_FRAMES/s->timescale;
+  *data = s->data->data+s->frame;
+  s->frame += needed;
+  return needed;
 }
 
 struct dsp_node *dsp_source(char *path)
@@ -269,9 +284,10 @@ struct dsp_node *dsp_source(char *path)
   self->frame = 0;
   self->data = make_sound(path);
   self->loop = false;
+  self->src = src_callback_new(src_cb, SRC_SINC_MEDIUM_QUALITY, 2, NULL, self);
+  self->timescale = 1;
   self->hook = JS_UNDEFINED;
-  dsp_node *n = make_node(self, sound_fillbuf);
-  n->data_free = free_source;
+  dsp_node *n = make_node(self, sound_fillbuf, free_source);
   return n;
 }
 

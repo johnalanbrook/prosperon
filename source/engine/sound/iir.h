@@ -40,6 +40,7 @@ struct dsp_iir sp_hp(double fcf);
 
 double chevy_pct_to_e(double pct);
 
+struct dsp_iir make_iir(int order);
 struct dsp_iir bqlp_dcof(double fcf, float Q);
 struct dsp_iir bqhp_dcof(double fcf, float Q);
 struct dsp_iir bqbpq_dcof(double fcf, float Q);

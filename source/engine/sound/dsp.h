@@ -8,6 +8,7 @@
 #include "sound.h"
 #include "cbuf.h"
 #include "script.h"
+#include "iir.h"
 
 /* a DSP node, when processed, sums its inputs, and stores the result of proc in its cache */
 typedef struct dsp_node {
@@ -28,10 +29,11 @@ void dsp_init();
 /* Get the output of a node */
 soundbyte *dsp_node_out(dsp_node *node);
 void dsp_node_run(dsp_node *node);
-dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int samples));
+dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int samples), void (*fr)(void *data));
 void plugin_node(dsp_node *from, dsp_node *to);
 void unplug_node(dsp_node *node);
 void node_free(dsp_node *node);
+void filter_iir(struct dsp_iir *iir, soundbyte *buffer, int frames);
 
 void scale_soundbytes(soundbyte *a, float scale, int frames);
 void sum_soundbytes(soundbyte *a, soundbyte *b, int frames);
@@ -71,6 +73,8 @@ typedef struct {
 } delay;
 
 dsp_node *dsp_delay(double sec, double decay);
+dsp_node *dsp_fwd_delay(double sec, double decay);
+dsp_node *dsp_pitchshift(float octaves);
 
 struct dsp_compressor {
     double ratio;
@@ -91,6 +95,7 @@ struct phasor phasor_make(unsigned int sr, float freq);
 
 dsp_node *dsp_whitenoise();
 dsp_node *dsp_pinknoise();
+dsp_node *dsp_rednoise();
 
 float sin_phasor(float p);
 float square_phasor(float p);

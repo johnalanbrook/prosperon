@@ -1218,7 +1218,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = ptr2js(masterbus);
       break;
     case 181:
-      ret = ptr2js(make_node(NULL,NULL));
+      ret = ptr2js(make_node(NULL,NULL,NULL));
       break;
     case 182:
       str = js2str(argv[1]);
@@ -1276,6 +1276,33 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 199:
       ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->frame = js2number(argv[2]);
+      break;
+    case 200:
+      ret = ptr2js(dsp_pitchshift(js2number(argv[1])));
+      break;
+    case 201:
+      ret = num2js(((sound*)((dsp_node*)js2ptr(argv[1]))->data)->timescale);
+      break;
+    case 202:
+      YughWarn("%g", js2number(argv[2]));
+      ((sound*)((dsp_node*)js2ptr(argv[1]))->data)->timescale = js2number(argv[2]);
+      break;
+    case 203:
+      ret = ptr2js(dsp_whitenoise());
+      break;
+    case 204:
+      ret = ptr2js(dsp_pinknoise());
+      break;
+    case 205:
+      ret = ptr2js(dsp_rednoise());
+      break;
+    case 206:
+      str = js2str(argv[1]);
+      str2 = js2str(argv[2]);
+      ret = ptr2js(dsp_midi(str, make_soundfont(str2)));
+      break;
+    case 207:
+      ret = ptr2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
       break;
   }
 

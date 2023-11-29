@@ -74,6 +74,13 @@ tsf *make_soundfont(const char *path)
   return sf;
 }
 
+void dsp_midi_free(struct dsp_midi_song *ms)
+{
+  free(ms->midi);
+  tsf_close(ms->sf);
+  free(ms);
+}
+
 dsp_node *dsp_midi(const char *midi, tsf *sf)
 {
   long rawlen;
@@ -82,7 +89,8 @@ dsp_node *dsp_midi(const char *midi, tsf *sf)
   ms->time = 0.0;
   ms->midi = tml_load_memory(raw, rawlen);
   ms->sf = tsf_copy(sf);
-  return make_node(ms, dsp_midi_fillbuf);
+  free(midi);
+  return make_node(ms, dsp_midi_fillbuf, dsp_midi_free);
 }
 
 void play_song(const char *midi, const char *sf)

@@ -75,7 +75,7 @@ struct datastream *ds_openvideo(const char *path)
   });  
 
   ds->ring = ringnew(ds->ring, 8192);
-  plugin_node(make_node(ds, soundstream_fillbuf), masterbus);
+  plugin_node(make_node(ds, soundstream_fillbuf, NULL), masterbus);
 
   plm_set_video_decode_callback(ds->plm, render_frame, ds);
   plm_set_audio_decode_callback(ds->plm, render_audio, ds);

@@ -2,6 +2,7 @@
 #define SOUND_H
 
 #include "script.h"
+#include "samplerate.h"
 
 typedef float soundbyte;
 
@@ -12,6 +13,8 @@ typedef struct sound {
     unsigned int frame; /* Pointing to the current frame on the wav */
     struct wav *data;
     int loop;
+    float timescale;
+    SRC_STATE *src;
     JSValue hook;
 } sound;
 
