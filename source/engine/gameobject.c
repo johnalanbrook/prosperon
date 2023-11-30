@@ -11,20 +11,11 @@
 #include <chipmunk/chipmunk.h>
 #include <string.h>
 #include "debugdraw.h"
+#include "freelist.h"
 
 #include "stb_ds.h"
 
 struct gameobject *gameobjects = NULL;
-static int first = -1;
-
-const int nameBuf[MAXNAME] = {0};
-const int prefabNameBuf[MAXNAME] = {0};
-
-struct gameobject *get_gameobject_from_id(int id) {
-  if (id < 0) return NULL;
-
-  return &gameobjects[id];
-}
 
 struct gameobject *id2go(int id) {
   if (id < 0) return NULL;
@@ -32,9 +23,7 @@ struct gameobject *id2go(int id) {
   return &gameobjects[id];
 }
 
-int body2id(cpBody *body) {
-  return (int)cpBodyGetUserData(body);
-}
+int body2id(cpBody *body) { return (int)cpBodyGetUserData(body); }
 
 cpBody *id2body(int id) {
   struct gameobject *go = id2go(id);
@@ -61,56 +50,15 @@ HMM_Vec2 go2pos(struct gameobject *go)
   return (HMM_Vec2){p.x, p.y};
 }
 
-float go2angle(struct gameobject *go)
-{
-  return cpBodyGetAngle(go->body);
-}
-
-transform2d mat2transform2d(HMM_Mat3 mat)
-{
-  
-}
-
-HMM_Mat3 mt_t(transform2d t)
-{
-  HMM_Mat3 p = HMM_M3D(1);
-  p.Columns[2].X = t.pos.X;
-  p.Columns[2].Y = t.pos.Y;
-  return p;
-}
-
-HMM_Mat3 mt_s(transform2d t)
-{
-  HMM_Mat3 s = HMM_M3D(1);
-  s.Columns[0].X = t.scale.X;
-  s.Columns[1].Y = t.scale.Y;
-  return s;
-}
-
-HMM_Mat3 mt_r(transform2d t)
-{
-  HMM_Mat3 r = HMM_M3D(1);
-  r.Columns[0] = (HMM_Vec3){cos(t.angle), sin(t.angle), 0};
-  r.Columns[1] = (HMM_Vec3){-sin(t.angle), cos(t.angle), 0};
-  return r;
-}
-
-HMM_Mat3 transform2d2mat(transform2d t)
-{
-  return HMM_MulM3(mt_t(t), HMM_MulM3(mt_r(t), mt_s(t)));
-}
-
-transform3d mat2transform3d(HMM_Mat4 mat)
-{
-  
-}
+float go2angle(struct gameobject *go) { return cpBodyGetAngle(go->body); }
 
 transform3d go2t3(gameobject *go)
 {
   transform3d t;
   HMM_Vec2 p = go2pos(go);
+  t.pos.X = p.X;  
   t.pos.Y = p.Y;
-  t.pos.X = p.X;
+  t.pos.Z = go->drawlayer;
   t.scale = go->scale;
   t.scale.Z = go->scale.X;
   t.rotation = HMM_QFromAxisAngle_RH(vFWD, go2angle(go));
@@ -119,105 +67,18 @@ transform3d go2t3(gameobject *go)
   return t;
 }
 
-HMM_Mat4 m4_t(transform3d t)
-{
-  return HMM_Translate(t.pos);
-}
+HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_go2world(go), pos); }
 
-HMM_Mat4 m4_s(transform3d t)
-{
-  return HMM_Scale(t.scale);
-}
+HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_world2go(go), pos); }
 
-HMM_Mat4 m4_r(transform3d t)
-{
-  return HMM_QToM4(t.rotation);
-}
+HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos) { return HMM_MulV2(go->scale.XY, pos); }
 
-HMM_Mat4 m4_st(transform3d t)
-{
-  return HMM_MulM4(m4_t(t), m4_s(t));
-}
+HMM_Mat3 t_go2world(struct gameobject *go) { return transform2d2mat(go2t(go)); }
 
-HMM_Mat4 m4_rt(transform3d t)
-{
-  return HMM_MulM4(m4_t(t), m4_r(t));
-}
+HMM_Mat3 t_world2go(struct gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
 
-HMM_Mat4 m4_rst(transform3d t)
-{
-  return HMM_MulM4(m4_st(t), m4_r(t));
-}
-
-HMM_Mat4 transform3d2mat(transform3d t)
-{
-  return m4_rst(t);
-}
-
-HMM_Mat3 mt_rst(transform2d t)
-{
-  return transform2d2mat(t);
-}
-
-HMM_Mat3 mt_st(transform2d t)
-{
-  return HMM_MulM3(mt_t(t), mt_s(t));
-}
-
-HMM_Mat3 mt_rt(transform2d t)
-{
-  return HMM_MulM3(mt_t(t), mt_r(t));
-}
-
-HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos)
-{
-  HMM_Vec2 v = HMM_MulM3V3(t_go2world(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
-  return v;
-}
-
-HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos)
-{
-  return HMM_MulM3V3(t_world2go(go), (HMM_Vec3){pos.X, pos.Y, 1.0}).XY;
-}
-
-HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos)
-{
-  return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 1}).XY;
-}
-
-HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir)
-{
-  m.Columns[2] = (HMM_Vec3){0,0,1};
-  return HMM_MulM3V3(m, (HMM_Vec3){dir.x, dir.y, 1}).XY;
-}
-
-HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos)
-{
-  return HMM_MulM4V4(m, (HMM_Vec4){pos.X, pos.Y, pos.Z, 1}).XYZ;
-}
-
-HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
-{
-  m.Columns[4] = (HMM_Vec4){0,0,0,1};
-  return mat3_t_pos(m, dir);
-}
-
-
-HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos)
-{
-  return HMM_MulV2(go->scale.XY, pos);
-}
-
-HMM_Mat3 t_go2world(struct gameobject *go)
-{
-  return transform2d2mat(go2t(go));
-}
-
-HMM_Mat3 t_world2go(struct gameobject *go)
-{
-  return HMM_InvGeneralM3(transform2d2mat(go2t(go)));
-}
-
+HMM_Mat4 t3d_go2world(struct gameobject *go) { return transform3d2mat(go2t3(go)); }
+HMM_Mat4 t3d_world2go(struct gameobject *go) { return HMM_InvGeneralM4(t3d_go2world(go)); }
 
 int pos2gameobject(HMM_Vec2 pos) {
   cpShape *hit = phys2d_query_pos(pos.cp);
@@ -237,19 +98,6 @@ int pos2gameobject(HMM_Vec2 pos) {
   return -1;
 }
 
-int id_from_gameobject(struct gameobject *go) {
-  for (int i = 0; i < arrlen(gameobjects); i++) {
-    if (&gameobjects[i] == go) return i;
-  }
-
-  return -1;
-}
-
-void gameobject_set_sensor(int id, int sensor) {
-  id2go(id)->sensor = sensor;
-  gameobject_apply(id2go(id));
-}
-
 transform2d go2t(gameobject *go)
 {
   transform2d t;
@@ -262,17 +110,10 @@ transform2d go2t(gameobject *go)
 }
 
 int go2id(struct gameobject *go) {
-  return id_from_gameobject(go);
-}
+  for (int i = 0; i < arrlen(gameobjects); i++)
+    if (&gameobjects[i] == go) return i;
 
-uint32_t go2category(struct gameobject *go)
-{
-  return 0;
-}
-
-uint32_t go2mask(struct gameobject *go)
-{
-  return 0;
+  return -1;
 }
 
 unsigned int editor_cat = 1<<31;
@@ -324,18 +165,6 @@ void gameobject_apply(struct gameobject *go) {
   }
 }
 
-static void gameobject_setpickcolor(struct gameobject *go) {
-  /*
-      float r = ((go->editor.id & 0x000000FF) >> 0) / 255.f;
-      float g = ((go->editor.id & 0x0000FF00) >> 8) / 255.f;
-      float b = ((go->editor.id & 0x00FF0000) >> 16) / 255.f;
-
-      go->editor.color[0] = r;
-      go->editor.color[1] = g;
-      go->editor.color[2] = b;
-      */
-}
-
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
   struct gameobject *go = id2go((int)cpBodyGetUserData(body));
@@ -367,9 +196,9 @@ int MakeGameobject() {
       .maxangularvelocity = INFINITY,
       .mass = 1.f,
       .next = -1,
-      .sensor = 0,
       .drawlayer = 0,
       .shape_cbs = NULL,
+      .children = NULL,
       .gravity = 1,
       .cgravity = (HMM_Vec2){0,0},
       .damping = NAN,
@@ -383,20 +212,22 @@ int MakeGameobject() {
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
   cpBodySetVelocityUpdateFunc(go.body, velocityFn);
 
-  int retid;
+  int id;
+  if (!gameobjects) freelist_size(gameobjects,500);
+  freelist_grab(id, gameobjects);
+  cpBodySetUserData(go.body, (void*)id);
+  phys2d_setup_handlers(id);
+  gameobjects[id] = go;
+  return id;
+}
 
-  if (first < 0) {
-    arrput(gameobjects, go);
-    retid = arrlast(gameobjects).id = arrlen(gameobjects) - 1;
-  } else {
-    retid = first;
-    first = id2go(first)->next;
-    *id2go(retid) = go;
-  }
+void gameobject_traverse(struct gameobject *go, HMM_Mat4 p)
+{
+  HMM_Mat4 local = transform3d2mat(go2t3(go));
+  go->world = HMM_MulM4(local, p);
 
-  cpBodySetUserData(go.body, (void *)retid);
-  phys2d_setup_handlers(retid);
-  return retid;
+  for (int i = 0; i < arrlen(go->children); i++)
+    gameobject_traverse(go->children[i], go->world);
 }
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
@@ -423,19 +254,20 @@ void gameobject_clean(int id) {
 
 /* Really more of a "mark for deletion" ... */
 void gameobject_delete(int id) {
-  id2go(id)->next = first;
-  JS_FreeValue(js, id2go(id)->ref);
-  first = id;
+  gameobject *go = id2go(id);
+  JS_FreeValue(js, go->ref);
 
   if (cpSpaceIsLocked(space))
     arrpush(go_toclean, id);
   else
     gameobject_clean(id);
+
+  dag_clip(go);
+  freelist_kill(gameobjects,id);  
 }
 
 void gameobject_free(int id)
 {
-  YughWarn("FREED A GAMEOBJECT!!!");
   if (id >= 0)
     gameobject_delete(id);
 }
@@ -445,15 +277,6 @@ void gameobjects_cleanup() {
     gameobject_clean(go_toclean[i]);
 
   arrsetlen(go_toclean, 0);
-
-  return;
-
-  int clean = first;
-
-  while (clean >= 0 && id2go(clean)->body) {
-    gameobject_clean(clean);
-    clean = id2go(clean)->next;
-  }
 }
 
 void gameobject_move(struct gameobject *go, HMM_Vec2 vec) {
@@ -508,38 +331,4 @@ void gameobject_draw_debug(int go) {
 void gameobject_draw_debugs() {
   for (int i = 0; i < arrlen(gameobjects); i++)
     gameobject_draw_debug(i);
-}
-
-static struct {
-  struct gameobject go;
-  cpVect pos;
-  float angle;
-} *saveobjects = NULL;
-
-void gameobject_saveall() {
-  arrfree(saveobjects);
-  arrsetlen(saveobjects, arrlen(gameobjects));
-
-  for (int i = 0; i < arrlen(gameobjects); i++) {
-    saveobjects[i].go = gameobjects[i];
-    saveobjects[i].pos = cpBodyGetPosition(gameobjects[i].body);
-    saveobjects[i].angle = cpBodyGetAngle(gameobjects[i].body);
-  }
-}
-
-void gameobject_loadall() {
-  YughInfo("N gameobjects: %d, N saved: %d", arrlen(gameobjects), arrlen(saveobjects));
-  for (int i = 0; i < arrlen(saveobjects); i++) {
-    gameobjects[i] = saveobjects[i].go;
-    cpBodySetPosition(gameobjects[i].body, saveobjects[i].pos);
-    cpBodySetAngle(gameobjects[i].body, saveobjects[i].angle);
-    cpBodySetVelocity(gameobjects[i].body, cpvzero);
-    cpBodySetAngularVelocity(gameobjects[i].body, 0.f);
-  }
-
-  arrfree(saveobjects);
-}
-
-int gameobjects_saved() {
-  return arrlen(saveobjects);
 }

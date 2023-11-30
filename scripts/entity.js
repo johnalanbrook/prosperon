@@ -238,6 +238,7 @@ var gameobject = {
     this.level?.remove_obj(this);
     
     this.level = parent;
+    cmd(208,parent,this);
       
     function unique_name(list, obj) {
       var str = obj.toString().replaceAll('.', '_');
@@ -264,7 +265,7 @@ var gameobject = {
      delete this.objects[obj.toString()];
      delete this[obj.toString()];
    },
-  
+
   components: {},
   objects: {},
   level: undefined,
@@ -525,10 +526,11 @@ var gameobject = {
   left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
 
   make(level, data) {
-//    level ??= Primum;
+    level ??= Primum;
     var obj = Object.create(this);
     obj.make = undefined;
-    obj.level = level;
+
+
     if (this.instances)
       this.instances.push(obj);
       
@@ -567,6 +569,8 @@ var gameobject = {
     };
 
     obj.ur = this.toString();
+
+    obj.reparent(level);
     
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
@@ -581,9 +585,6 @@ var gameobject = {
 
     if (this.objects)
       obj.make_objs(this.objects);
-
-    obj.level = undefined;
-    obj.reparent(level);
 
     Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');    
 

@@ -53,11 +53,10 @@ struct slice9_vert {
 };
 
 int make_sprite(int go) {
-  YughWarn("Attaching sprite to gameobject %d", go);
   struct sprite sprite = {
+    .t = t2d_unit,
       .color = color_white,
       .emissive = {0,0,0,0},
-      .size = {1.f, 1.f},
       .tex = texture_loadfromfile(NULL),
       .go = go,
       .layer = 0,
@@ -77,9 +76,7 @@ void sprite_delete(int id) {
   freelist_kill(sprites,id);
 }
 
-void sprite_enabled(int id, int e) {
-  sprites[id].enabled = e;
-}
+void sprite_enabled(int id, int e) { sprites[id].enabled = e; }
 
 struct sprite *id2sprite(int id) {
   if (id < 0) return NULL;
@@ -246,7 +243,6 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
   }
 
   bind_sprite.fs.images[0] = tex->id;
-//  YughWarn("Draw sprite %s at %g, %g", tex_get_path(tex), sposes[0].X, sposes[0].Y);
 
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
   sg_apply_bindings(&bind_sprite);
@@ -259,14 +255,13 @@ void sprite_draw(struct sprite *sprite) {
   struct gameobject *go = id2go(sprite->go);
 
   if (sprite->tex) {
-    transform2d t = go2t(id2go(sprite->go));
-    HMM_Mat3 m = transform2d2mat(t);
+    HMM_Mat3 m = t_go2world(go);
 
     HMM_Mat3 ss = HMM_M3D(1);
-    ss.Columns[0].X = sprite->size.X * sprite->tex->width * st_s_w(sprite->frame);
-    ss.Columns[1].Y = sprite->size.Y * sprite->tex->height * st_s_h(sprite->frame);
+    ss.Columns[0].X = sprite->t.scale.X * sprite->tex->width * st_s_w(sprite->frame);
+    ss.Columns[1].Y = sprite->t.scale.Y * sprite->tex->height * st_s_h(sprite->frame);
     HMM_Mat3 ts = HMM_M3D(1);
-    ts.Columns[2] = (HMM_Vec3){sprite->pos.X, sprite->pos.Y, 1};
+    ts.Columns[2] = (HMM_Vec3){sprite->t.pos.X, sprite->t.pos.Y, 1};
 
     HMM_Mat3 sm = HMM_MulM3(ss, ts);
     m = HMM_MulM3(m, sm);
@@ -280,14 +275,10 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
   sprite->frame = anim->st_frames[frame];
 }
 
-void gui_draw_img(const char *img, HMM_Vec2 pos, HMM_Vec2 scale, float angle, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
+void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_loadfromfile(img);
-  transform2d t;
-  t.pos = pos;
-  t.angle = angle;
-  t.scale = scale;
   tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, wrapscale, (struct rgba){0,0,0,0});
 }
 
@@ -334,27 +325,4 @@ void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba
 
 void sprite_setframe(struct sprite *sprite, struct glrect *frame) {
   sprite->frame = *frame;
-}
-void video_draw(struct datastream *ds, HMM_Vec2 pos, HMM_Vec2 size, float rotate, struct rgba color)
-{
-//  shader_use(vid_shader);
-/*
-  static mfloat_t model[16];
-  memcpy(model, UNITMAT4, sizeof(UNITMAT4));
-  mat4_translate_vec2(model, position);
-  mat4_scale_vec2(model, size);
-*/
-//  shader_setmat4(vid_shader, "model", model);
-//  shader_setvec3(vid_shader, "spriteColor", color);
-  /*
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, stream->texture_y);
-      glActiveTexture(GL_TEXTURE1);
-      glBindTexture(GL_TEXTURE_2D, stream->texture_cb);
-      glActiveTexture(GL_TEXTURE2);
-      glBindTexture(GL_TEXTURE_2D, stream->texture_cr);
-
-      // TODO: video bind VAO
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  */
 }

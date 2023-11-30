@@ -4,13 +4,13 @@
 #include "script.h"
 #include <chipmunk/chipmunk.h>
 #include "render.h"
+#include "transform.h"
 
 struct gameobject;
 
 extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
-
 
 extern struct rgba color_white;
 extern struct rgba color_black;

@@ -1,6 +1,5 @@
 #include "render.h"
 
-#include "camera.h"
 #include "config.h"
 #include "datastream.h"
 #include "debugdraw.h"

@@ -9,6 +9,7 @@ struct freelistheader
 {
   unsigned int first;
   unsigned int len;
+  unsigned int count;
 };
 
 #define freelist_header(p) ((struct freelistheader*)p-1)
@@ -17,6 +18,7 @@ static inline void *freelist_make(struct freelistheader *list, size_t elemsize, 
   list = malloc(elemsize*n*sizeof(struct freelistheader));
   list->first = 0;
   list->len = n;
+  list->count = 0;
   return list+1;
 }
 
@@ -30,9 +32,10 @@ static inline unsigned int freelist_check(struct freelistheader *h, void *data, 
 #define freelist_size(p,l) do{p = freelist_make(p,sizeof(*p),l); for(int i = 0; i < l; i++) { p[i].next = i+1; }}while(0)
 #define freelist_len(p) (freelist_header(p)->len)
 #define freelist_first(p) (freelist_header(p)->first)
-#define freelist_grab(i,p) do{i=freelist_header(p)->first; freelist_header(p)->first = p[i].next; p[i].next = -1;}while(0)
-#define freelist_kill(p,i) do{p[i].next = freelist_first(p);freelist_first(p)=i;}while(0)
+#define freelist_grab(i,p) do{i=freelist_header(p)->first; freelist_header(p)->first = p[i].next; p[i].next = -1;freelist_header(p)->count++;}while(0)
+#define freelist_kill(p,i) do{p[i].next = freelist_first(p);freelist_first(p)=i;freelist_header(p)->count--;}while(0)
 #define freelist_free(p) (free(freelist_header(p)))
+#define freelist_count(p) (freelist_header(p)->count)
 
 struct link_header
 {

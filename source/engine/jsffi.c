@@ -360,7 +360,11 @@ int js_print_exception(JSValue v)
 
 JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   const char *img = JS_ToCString(js, argv[0]);
-  gui_draw_img(img, js2vec2(argv[1]), js2vec2(argv[2]), js2number(argv[3]), js2bool(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
+  transform2d t;
+  t.pos = js2vec2(argv[1]);
+  t.scale = js2vec2(argv[2]);
+  t.angle = js2number(argv[3]);
+  gui_draw_img(img, t, js2bool(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
   JS_FreeCString(js, img);
   return JS_UNDEFINED;
 }
@@ -684,7 +688,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 37:
     if (!id2sprite(js2int(argv[1]))) break;
-    id2sprite(js2int(argv[1]))->pos = js2vec2(argv[2]);
+    id2sprite(js2int(argv[1]))->t.pos = js2vec2(argv[2]);
     break;
 
   case 38:
@@ -821,7 +825,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 69:
-    gameobject_set_sensor(js2go(argv[1]), JS_ToBool(js, argv[2]));
     break;
 
   case 70:
@@ -995,7 +998,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
     case 111:
-      ret = vec2js(js2sprite(argv[1])->pos);
+      ret = vec2js(js2sprite(argv[1])->t.pos);
       break;
 
     case 112:
@@ -1344,6 +1347,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 207:
       ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
+      break;
+    case 208:
+      dag_set(js2go(argv[1]), js2go(argv[2]));
       break;
   }
 

@@ -6,14 +6,13 @@
 #include "texture.h"
 #include "HandmadeMath.h"
 #include "render.h"
+#include "transform.h"
 
 struct datastream;
 struct gameobject;
 
 struct sprite {
-  HMM_Vec2 pos;
-  HMM_Vec2 size;
-  float rotation;
+  transform2d t;
   struct rgba color;
   struct rgba emissive;
   int go; /* id of gameobject */
@@ -35,11 +34,10 @@ void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame);
 void sprite_setframe(struct sprite *sprite, struct glrect *frame);
 void sprite_initialize();
 void sprite_draw(struct sprite *sprite);
-void video_draw(struct datastream *ds, HMM_Vec2 pos, HMM_Vec2 size, float rotate, struct rgba color);
 void sprite_draw_all();
 unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite);
 void sprite_flush();
 
-void gui_draw_img(const char *img, HMM_Vec2 pos, HMM_Vec2 scale, float angle, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
+void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
 
 #endif

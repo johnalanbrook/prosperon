@@ -89,7 +89,6 @@ dsp_node *dsp_midi(const char *midi, tsf *sf)
   ms->time = 0.0;
   ms->midi = tml_load_memory(raw, rawlen);
   ms->sf = tsf_copy(sf);
-  free(midi);
   return make_node(ms, dsp_midi_fillbuf, dsp_midi_free);
 }
 

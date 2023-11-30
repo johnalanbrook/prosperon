@@ -8,39 +8,35 @@
 #include <stdio.h>
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
+#include "transform.h"
+
+#define dag_rm(p,c) do{\
+ for (int i = arrlen(p->children)-1; i--; i >=0) {\
+  if (p->children[i] == c) { \
+  arrdelswap(p->children,i);\
+  c->parent=NULL;\
+  break;\
+}}}while(0)
+
+#define dag_set(p,c) do{\
+  arrpush(p->children,c);\
+  if(c->parent) dag_rm(c->parent,c);\
+  c->parent=p;\
+}while(0)
+
+#define dag_clip(p) do{\
+  if (p->parent)\
+    dag_rm(p->parent,p);\
+}while(0)
 
 struct shader;
 struct sprite;
 struct component;
 
-typedef struct transform2d {
-  HMM_Vec2 pos;
-  HMM_Vec2 scale;
-  double angle;
-} transform2d;
-
-transform2d mat2transform2d(HMM_Mat3 mat);
-HMM_Mat3 transform2d2mat(transform2d t);
-
-typedef struct transform3d {
-  HMM_Vec3 pos;
-  HMM_Vec3 scale;
-  HMM_Quat rotation;
-} transform3d;
-
-transform3d mat2transform3d(HMM_Mat4 mat);
-HMM_Mat4 transform3d2mat(transform3d t);
-HMM_Mat4 m4_t(transform3d t);
-HMM_Mat4 m4_s(transform3d t);
-HMM_Mat4 m4_r(transform3d t);
-HMM_Mat4 m4_rt(transform3d t);
-HMM_Mat4 m4_st(transform3d t);
-HMM_Mat4 m4_rst(transform3d t);
-
 typedef struct gameobject {
   cpBodyType bodytype;
   int next;
-  HMM_Vec3 scale;
+  HMM_Vec3 scale; /* local */
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */
@@ -50,7 +46,6 @@ typedef struct gameobject {
   int gravity;
   HMM_Vec2 cgravity;
   float damping;
-  int sensor;
   unsigned int layer;
   cpShapeFilter filter;
   cpBody *body; /* NULL if this object is dead */
@@ -58,10 +53,12 @@ typedef struct gameobject {
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
   JSValue ref;
-  HMM_Mat3 transform;
   struct gameobject *master;
+  HMM_Mat4 world;
   transform2d t; /* The local transformation of this object */
   float drawlayer;
+  struct gameobject *parent;
+  struct gameobject **children;
 } gameobject;
 
 extern struct gameobject *gameobjects;
@@ -72,42 +69,33 @@ void gameobject_delete(int id);
 void gameobject_free(int id);
 void gameobjects_cleanup();
 
-void gameobject_set_sensor(int id, int sensor);
+void gameobject_traverse(struct gameobject *start, HMM_Mat4 p);
 
-HMM_Vec2 go2pos(struct gameobject *go);
-float go2angle(struct gameobject *go);
 transform2d go2t(gameobject *go);
 transform3d go2t3(gameobject *go);
+
 HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos);
 HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos);
 
 HMM_Mat3 t_go2world(struct gameobject *go);
 HMM_Mat3 t_world2go(struct gameobject *go);
+HMM_Mat4 t3d_go2world(struct gameobject *go);
+HMM_Mat4 t3d_world2go(struct gameobject *go);
+
+HMM_Vec2 go2pos(struct gameobject *go);
+float go2angle(struct gameobject *go);
+
 HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);
 HMM_Vec2 gotpos(struct gameobject *go, HMM_Vec2 pos);
 
 HMM_Mat3 mt_rst(transform2d t);
-HMM_Mat3 mt_st(transform2d t);
-HMM_Mat3 mt_rt(transform2d t);
 
-/* Transform a position via the matrix */
-HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos);
-/* Transform a direction via the matrix - does not take into account translation of matrix */
-HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir);
-
-HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos);
-HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir);
-
-struct gameobject *get_gameobject_from_id(int id);
 struct gameobject *id2go(int id);
-int id_from_gameobject(struct gameobject *go);
 int go2id(struct gameobject *go);
 int body2id(cpBody *body);
 cpBody *id2body(int id);
 int shape2gameobject(cpShape *shape);
 struct gameobject *shape2go(cpShape *shape);
-uint32_t go2category(struct gameobject *go);
-uint32_t go2mask(struct gameobject *go);
 
 void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
 
@@ -121,11 +109,4 @@ void gameobject_setpos(struct gameobject *go, cpVect vec);
 
 void gameobject_draw_debugs();
 void gameobject_draw_debug(int go);
-
-void object_gui(struct gameobject *go);
-
-void gameobject_saveall();
-void gameobject_loadall();
-int gameobjects_saved();
-
 #endif

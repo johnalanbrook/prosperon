@@ -220,8 +220,7 @@ void phys2d_circledel(struct phys2d_circle *c) {
 }
 
 void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
-  HMM_Mat3 rt = mt_rt(go2t(shape2go(c)));
-  HMM_Vec2 pos = mat_t_pos(rt, (HMM_Vec2)cpCircleShapeGetOffset(c));
+  HMM_Vec2 pos = mat_t_pos(t_go2world(shape2go(c)), (HMM_Vec2)cpCircleShapeGetOffset(c));
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
   float seglen = cpShapeGetSensor(c) ? 5 : -1;
@@ -377,7 +376,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
     HMM_Vec2 points[n];
-    HMM_Mat3 rt = mt_rt(go2t(shape2go(poly->shape.shape)));
+    HMM_Mat3 rt = t_go2world(shape2go(poly->shape.shape));
     for (int i = 0; i < n; i++)
       points[i] = mat_t_pos(rt, (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i));
 

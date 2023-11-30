@@ -48,12 +48,6 @@ struct bone_weights {
   char b4;
 };
 
-struct bone {
-  HMM_Vec3 pos;
-  HMM_Quat rot;
-  HMM_Vec3 scale;
-};
-
 struct mesh_v {
   HMM_Vec3 pos;
   struct uv_n uv;
@@ -345,7 +339,7 @@ void draw_drawmodel(struct drawmodel *dm)
 {
   if (!dm->model) return;
   struct gameobject *go = id2go(dm->go);
-  HMM_Mat4 rst = m4_rst(go2t3(go));
+  HMM_Mat4 rst = t3d_go2world(go);
   draw_model(dm->model, rst);
 }
 

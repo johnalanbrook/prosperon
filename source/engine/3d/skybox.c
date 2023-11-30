@@ -1,6 +1,5 @@
 #include "skybox.h"
 
-#include "camera.h"
 #include "shader.h"
 #include <stdlib.h>
 #include <string.h>

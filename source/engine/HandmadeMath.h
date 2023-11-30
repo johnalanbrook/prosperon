@@ -1181,9 +1181,9 @@ static inline HMM_Mat3 HMM_DivM3F(HMM_Mat3 Matrix, float Scalar) {
   return Result;
 }
 
-static inline HMM_Mat3 HMM_ScaleM3(HMM_Vec2 Scale) {
+static inline HMM_Mat2 HMM_ScaleM2(HMM_Vec2 Scale) {
 
-  HMM_Mat3 Result = HMM_M3D(1.0f);
+  HMM_Mat2 Result = HMM_M2D(1.0f);
   Result.Elements[0][0] = Scale.X;
   Result.Elements[1][1] = Scale.Y;
 
@@ -1198,6 +1198,16 @@ static inline float HMM_DeterminantM3(HMM_Mat3 Matrix) {
   Cross.Columns[2] = HMM_Cross(Matrix.Columns[0], Matrix.Columns[1]);
 
   return HMM_DotV3(Cross.Columns[2], Matrix.Columns[2]);
+}
+
+static inline HMM_Mat3 HMM_M2BasisPos(HMM_Mat2 basis, HMM_Vec2 pos)
+{
+  HMM_Mat3 m;
+  m.Columns[0].XY = basis.Columns[0];
+  m.Columns[1].XY = basis.Columns[1];
+  m.Columns[2].XY = pos;
+  m.Columns[2].Z = 1;
+  return m;
 }
 
 static inline HMM_Mat3 HMM_InvGeneralM3(HMM_Mat3 Matrix) {

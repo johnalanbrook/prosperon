@@ -1,5 +1,4 @@
 #include "yugine.h"
-#include "camera.h"
 #include "font.h"
 #include "gameobject.h"
 #include "input.h"
@@ -168,6 +167,11 @@ static void process_frame()
     input_poll(0);
     /* Timers all update every frame - once per monitor refresh */
     timer_update(elapsed, timescale);
+
+  /* Update at a high level::
+   * Update scene graph
+   *
+  */
 
   if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
     if (stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {

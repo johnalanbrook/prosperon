@@ -2,7 +2,7 @@
 #define MODEL_H
 
 #include "HandmadeMath.h"
-
+#include "transform.h"
 #include "sokol/sokol_gfx.h"
 
 extern HMM_Vec3 eye;
@@ -25,6 +25,11 @@ struct drawmodel {
   HMM_Mat4 amodel;
   int go;
 };
+
+typedef struct bone {
+  transform3d t;
+  struct bone *children;
+} bone;
 
 /* Get the model at a path, or create and return if it doesn't exist */
 struct model *GetExistingModel(const char *path);
