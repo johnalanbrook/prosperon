@@ -44,24 +44,35 @@ struct gameobject *shape2go(cpShape *shape)
   return id2go(shape2gameobject(shape));
 }
 
-HMM_Vec2 go2pos(struct gameobject *go)
+HMM_Vec2 go_pos(struct gameobject *go)
 {
   cpVect p = cpBodyGetPosition(go->body);
   return (HMM_Vec2){p.x, p.y};
 }
+
+HMM_Vec2 go_worldpos(struct gameobject *go)
+{
+  HMM_Vec2 ret;
+  ret.cp = cpBodyGetPosition(go->body);
+  return ret;
+}
+
+float go_angle(struct gameobject *go) { return go_worldangle(go); }
+
+float go_worldangle(struct gameobject *go) { return cpBodyGetAngle(go->body); }
 
 float go2angle(struct gameobject *go) { return cpBodyGetAngle(go->body); }
 
 transform3d go2t3(gameobject *go)
 {
   transform3d t;
-  HMM_Vec2 p = go2pos(go);
+  HMM_Vec2 p = go_pos(go);
   t.pos.X = p.X;  
   t.pos.Y = p.Y;
   t.pos.Z = go->drawlayer;
   t.scale = go->scale;
   t.scale.Z = go->scale.X;
-  t.rotation = HMM_QFromAxisAngle_RH(vFWD, go2angle(go));
+  t.rotation = HMM_QFromAxisAngle_RH(vFWD, go_angle(go));
   t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vRIGHT, -t.pos.Y/100), t.rotation);
   t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vUP, t.pos.X/100), t.rotation);
   return t;

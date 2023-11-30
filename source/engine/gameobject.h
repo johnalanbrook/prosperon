@@ -35,8 +35,9 @@ struct component;
 
 typedef struct gameobject {
   cpBodyType bodytype;
+  cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
+  HMM_Vec3 scale; /* local */  
   int next;
-  HMM_Vec3 scale; /* local */
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */
@@ -48,7 +49,6 @@ typedef struct gameobject {
   float damping;
   unsigned int layer;
   cpShapeFilter filter;
-  cpBody *body; /* NULL if this object is dead */
   int id;
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
@@ -82,7 +82,11 @@ HMM_Mat3 t_world2go(struct gameobject *go);
 HMM_Mat4 t3d_go2world(struct gameobject *go);
 HMM_Mat4 t3d_world2go(struct gameobject *go);
 
-HMM_Vec2 go2pos(struct gameobject *go);
+HMM_Vec2 go_pos(struct gameobject *go);
+HMM_Vec2 go_worldpos(struct gameobject *go);
+//float go_angle(struct gameobject *go);
+float go_worldangle(struct gameobject *go);
+
 float go2angle(struct gameobject *go);
 
 HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);

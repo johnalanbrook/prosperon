@@ -141,7 +141,8 @@ var gameobject = {
           this.set_worldpos(this.level.this2world(x));
       },
       
-      get pos() {
+      get pos() { return cmd
+       
         if (!this.level) return this.worldpos();
         return this.level.world2this(this.worldpos());
       },
