@@ -76,9 +76,14 @@ var DSP = {
     return dsp_node.make(cmd(207,secs,decay));
   },
   allpass(secs, decay) {
+    var composite = {};
     var fwd = DSP.fwd_delay(secs,-decay);
     var fbk = DSP.delay(secs,decay);
+    composite.id = fwd.id;
+    composite.plugin = composite.plugin.bind(fbk);
+    composite.unplug = dsp_node.unplug.bind(fbk);
     fwd.plugin(fbk);
+    return composite;
   },
   lpf(f) {
     return dsp_node.make(cmd(186,f));

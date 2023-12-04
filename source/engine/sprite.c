@@ -62,7 +62,6 @@ int make_sprite(int go) {
       .layer = 0,
       .next = -1,
       .enabled = 1};
-
   int id;
   freelist_grab(id, sprites);
   sprites[id] = sprite;
@@ -119,20 +118,23 @@ int sprite_sort(int *a, int *b)
 void sprite_draw_all() {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  static int *layers;
+  int *layers = NULL;
   if (layers) arrfree(layers);
 
   for (int i = 0; i < freelist_len(sprites); i++)
-    if (sprites[i].next == -1 && sprites[i].go >= 0 && sprites[i].enabled)
+    if (sprites[i].next == -1 && sprites[i].go >= 0 && sprites[i].enabled) 
       arrpush(layers, i);
 
-  if (arrlen(layers) == 0) return;
+  if (!layers || arrlen(layers) == 0) return;
   if (arrlen(layers) > 1)
     qsort(layers, arrlen(layers), sizeof(*layers), sprite_sort);
 
   for (int i = 0; i < arrlen(layers); i++)
     sprite_draw(&sprites[layers[i]]);
+
+  arrfree(layers);
 }
+
 
 void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect frame) {
   if (!sprite) {
@@ -201,20 +203,16 @@ void sprite_initialize() {
   });
 }
 
-/* offset given in texture offset, so -0.5,-0.5 results in it being centered */
 void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba emissive) {
   struct sprite_vert verts[4];
+  float w = tex->width*st_s_w(r);
+  float h = tex->height*st_s_h(r);
   
   HMM_Vec2 sposes[4] = {
     {0.0,0.0},
-    {1.0,0.0},
-    {0.0,1.0},
-    {1.0,1.0},
-  };
-
-  HMM_Vec2 t_scale = {
-    tex->width * st_s_w(r), //*size.X;
-    tex->height * st_s_h(r) // * size.Y
+    {w,0.0},
+    {0.0,h},
+    {w,h}
   };
 
   for (int i = 0; i < 4; i++) {
@@ -222,25 +220,15 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
     verts[i].color = color;
     verts[i].emissive = emissive;
   }
-  
-  if (!wrap) {
-    verts[0].uv.X = r.s0;
-    verts[0].uv.Y = r.t1;
-    verts[1].uv.X = r.s1;
-    verts[1].uv.Y = r.t1;
-    verts[2].uv.X = r.s0;
-    verts[2].uv.Y = r.t0;
-    verts[3].uv.X = r.s1;
-    verts[3].uv.Y = r.t0;
-  } else {
-//    verts[0].uv = HMM_MulV2((HMM_Vec2){0,0}, size);
-//    verts[1].uv = HMM_MulV2((HMM_Vec2){1,0}, size);
-//    verts[2].uv = HMM_MulV2((HMM_Vec2){0,1}, size);
-//    verts[3].uv = HMM_MulV2((HMM_Vec2){1,1}, size);
 
-    for (int i = 0; i < 4; i++)
-      verts[i].uv = HMM_AddV2(verts[i].uv, wrapoffset);
-  }
+  verts[0].uv.X = r.s0;
+  verts[0].uv.Y = r.t1;
+  verts[1].uv.X = r.s1;
+  verts[1].uv.Y = r.t1;
+  verts[2].uv.X = r.s0;
+  verts[2].uv.Y = r.t0;
+  verts[3].uv.X = r.s1;
+  verts[3].uv.Y = r.t0;
 
   bind_sprite.fs.images[0] = tex->id;
 
@@ -256,16 +244,9 @@ void sprite_draw(struct sprite *sprite) {
 
   if (sprite->tex) {
     HMM_Mat3 m = t_go2world(go);
-
-    HMM_Mat3 ss = HMM_M3D(1);
-    ss.Columns[0].X = sprite->t.scale.X * sprite->tex->width * st_s_w(sprite->frame);
-    ss.Columns[1].Y = sprite->t.scale.Y * sprite->tex->height * st_s_h(sprite->frame);
-    HMM_Mat3 ts = HMM_M3D(1);
-    ts.Columns[2] = (HMM_Vec3){sprite->t.pos.X, sprite->t.pos.Y, 1};
-
-    HMM_Mat3 sm = HMM_MulM3(ss, ts);
-    m = HMM_MulM3(m, sm);
-    tex_draw(sprite->tex, m, sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0, sprite->emissive);
+    HMM_Mat3 sm = transform2d2mat(sprite->t);
+    
+    tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0, sprite->emissive);
   }
 }
 

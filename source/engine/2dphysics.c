@@ -12,8 +12,6 @@
 
 #include "2dphysics.h"
 
-#include "tinyspline.h"
-
 #include "jsffi.h"
 #include "script.h"
 
@@ -39,6 +37,18 @@ void set_cat_mask(int cat, unsigned int mask) {
   category_masks[cat] = mask;
 }
 
+cpTransform m3_to_cpt(HMM_Mat3 m)
+{
+  cpTransform t;
+  t.a = m.Columns[0].x;
+  t.c = m.Columns[0].y;
+  t.tx = m.Columns[0].z;
+  t.b = m.Columns[1].x;
+  t.d = m.Columns[1].y;
+  t.ty = m.Columns[1].z;
+  return t;
+}
+
 cpShape *phys2d_query_pos(cpVect pos) {
   cpShapeFilter filter;
   filter.group = CP_NO_GROUP;
@@ -49,62 +59,56 @@ cpShape *phys2d_query_pos(cpVect pos) {
   return find;
 }
 
-int *qhits;
-
-void querylist(cpShape *shape, cpContactPointSet *points, void *data) {
-  int go = shape2gameobject(shape);
-  int in = 0;
-  for (int i = 0; i < arrlen(qhits); i++) {
-    if (qhits[i] == go) {
-      in = 1;
-      break;
-    }
-  }
-
-  if (!in) arrput(qhits, go);
+int sort_ids(int *a, int *b)
+{
+  if (*a == *b) return 0;
+  if (*a < *b) return -1;
+  return 1;
 }
 
-void querylistbodies(cpBody *body, void *data) {
-  cpBB *bbox = data;
-  if (cpBBContainsVect(*bbox, cpBodyGetPosition(body))) {
-    int go = body2id(body);
-    if (go < 0) return;
+int *clean_ids(int *ids)
+{
+  qsort(ids, sizeof(*ids), arrlen(ids), sort_ids);
 
-    int in = 0;
-    for (int i = 0; i < arrlen(qhits); i++) {
-      if (qhits[i] == go) {
-        in = 1;
-        break;
-      }
-    }
+  int curid = -1;
+  for (int i = arrlen(ids)-1; i >= 0; i--)
+    if (ids[i] == curid)
+      arrdelswap(ids, i);
+    else
+      curid = ids[i];
 
-    if (!in) arrput(qhits, go);
-  }
+  return ids;
 }
 
+void querylist(cpShape *shape, cpContactPointSet *points, int *ids) {
+  arrput(ids,shape2gameobject(shape));
+}
+
+typedef struct querybox {
+  cpBB bb;
+  int *ids;
+} querybox;
+
+void querylistbodies(cpBody *body, querybox *qb) {
+  if (cpBBContainsVect(qb->bb, cpBodyGetPosition(body)))
+    arrput(qb->ids,body2id(body));
+}
+
+/* Return all points from a list of points in the given boundingbox */
 int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n) {
-  cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
-  cpTransform T = {0};
-  T.a = 1;
-  T.d = 1;
-  T.tx = pos.x;
-  T.ty = pos.y;
-  cpShapeUpdate(box, T);
+  cpBB bbox;
+  bbox = cpBBExpand(bbox, cpvadd(pos.cp, cpvmult(wh.cp,0.5)));
+  bbox = cpBBExpand(bbox, cpvsub(pos.cp, cpvmult(wh.cp,0.5)));
+  int *hits = NULL;
 
-  cpBB bbox = cpShapeGetBB(box);
-
-  if (qhits) arrfree(qhits);
-
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++)
     if (cpBBContainsVect(bbox, points[i].cp))
-      arrpush(qhits, i);
-  }
+      arrpush(hits, i);
 
-  cpShapeFree(box);
-
-  return qhits;
+  return hits;
 }
 
+/* Return all gameobjects within the given box */
 int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
   cpTransform T = {0};
@@ -116,22 +120,24 @@ int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
 
   cpBB bbox = cpShapeGetBB(box);
 
-  if (qhits) arrfree(qhits);
+  int *ids = NULL;
 
-  cpSpaceShapeQuery(space, box, querylist, NULL);
-  cpSpaceEachBody(space, querylistbodies, &bbox);
+  querybox qb;
+  qb.bb = bbox;
+  qb.ids = ids;
+
+  cpSpaceShapeQuery(space, box, querylist, ids);
+  cpSpaceEachBody(space, querylistbodies, &qb);
 
   cpShapeFree(box);
 
-  return qhits;
+  return clean_ids(ids);
 }
 
 int *phys2d_query_shape(struct phys2d_shape *shape) {
-  if (qhits) arrfree(qhits);
-
-  cpSpaceShapeQuery(space, shape->shape, querylist, NULL);
-
-  return qhits;
+  int *ids = NULL;
+  cpSpaceShapeQuery(space, shape->shape, querylist, ids);
+  return clean_ids(ids);
 }
 
 int cpshape_enabled(cpShape *c) {
@@ -246,11 +252,12 @@ void phys2d_applycircle(struct phys2d_circle *circle) {
 
 struct phys2d_box *Make2DBox(int go) {
   struct phys2d_box *new = malloc(sizeof(struct phys2d_box));
-
-  new->w = 50.f;
-  new->h = 50.f;
+  new->t = (transform2d){
+    .pos = {0,0},
+    .angle = 0,
+    .scale = {0,0}
+  };
   new->r = 0.f;
-  new->offset = v2zero;
   new->shape.go = go;
   new->shape.apply = phys2d_applybox;
   phys2d_applybox(new);
@@ -261,18 +268,7 @@ struct phys2d_box *Make2DBox(int go) {
 }
 
 float phys2d_box_moi(struct phys2d_box *box, float m) {
-  return cpMomentForBox(m, box->w, box->h);
-}
-
-cpTransform trs2cpt(HMM_Vec2 t, float r, HMM_Vec2 s) {
-  cpTransform T;
-  T.a = cos(r) * s.X;
-  T.b = -sin(r) * s.X;
-  T.c = sin(r) * s.Y;
-  T.d = cos(r) * s.Y;
-  T.tx = t.X * s.X;
-  T.ty = t.Y * s.Y;
-  return T;
+  return cpMomentForBox(m, box->t.scale.x, box->t.scale.y);
 }
 
 void phys2d_boxdel(struct phys2d_box *box) {
@@ -282,10 +278,8 @@ void phys2d_boxdel(struct phys2d_box *box) {
 void phys2d_applybox(struct phys2d_box *box) {
   phys2d_boxdel(box);
   struct gameobject *go = id2go(box->shape.go);
-  cpTransform T = trs2cpt(box->offset, box->rotation, id2go(box->shape.go)->scale.XY);
-  float hh = box->h / 2.f;
-  float hw = box->w / 2.f;
-  cpVect verts[4] = {{-hw, -hh}, {hw, -hh}, {hw, hh}, {-hw, hh}};
+  cpTransform T = m3_to_cpt(transform2d2mat(box->t));
+  cpVect verts[4] = {{-0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}, {-0.5, 0.5}};
   box->shape.shape = cpSpaceAddShape(space, cpPolyShapeNew(go->body, 4, verts, T, box->r));
   init_phys2dshape(&box->shape, box->shape.go, box);
 }
@@ -361,9 +355,7 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
 void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
   struct gameobject *go = id2go(poly->shape.go);
-
-  cpTransform T = trs2cpt((HMM_Vec2){0,0}, 0, go->scale.XY);
-
+  cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
   cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
@@ -477,12 +469,13 @@ void phys2d_applyedge(struct phys2d_edge *edge) {
   struct gameobject *go = id2go(edge->shape.go);
 
   for (int i = 0; i < arrlen(edge->shapes); i++) {
-    HMM_Vec2 a = goscale(go, edge->points[i]);
-    HMM_Vec2 b = goscale(go, edge->points[i+1]);
+    /* Points must be scaled with gameobject, */
+    HMM_Vec2 a = HMM_MulV2(go->scale.xy, edge->points[i]);
+    HMM_Vec2 b = HMM_MulV2(go->scale.xy, edge->points[i+1]);
     cpSegmentShapeSetEndpoints(edge->shapes[i], a.cp, b.cp);
     cpSegmentShapeSetRadius(edge->shapes[i], edge->thickness);
     if (i > 0 && i < arrlen(edge->shapes) - 1)
-      cpSegmentShapeSetNeighbors(edge->shapes[i], goscale(go,edge->points[i-1]).cp, goscale(go,edge->points[i+2]).cp);
+      cpSegmentShapeSetNeighbors(edge->shapes[i], HMM_MulV2(go->scale.xy,edge->points[i-1]).cp, HMM_MulV2(go->scale.xy,edge->points[i+2]).cp);
     go_shape_apply(NULL, edge->shapes[i], go);
     cpShapeSetUserData(edge->shapes[i], &edge->shape);
   }
@@ -503,7 +496,6 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
 
   HMM_Vec2 drawpoints[arrlen(edge->points)];
   struct gameobject *go = id2go(edge->shape.go);
-  
 
   HMM_Mat3 g2w = t_go2world(go);
   for (int i = 0; i < arrlen(edge->points); i++) 
@@ -553,9 +545,7 @@ int shape_get_sensor(struct phys2d_shape *shape) {
   return cpShapeGetSensor(shape->shape);
 }
 
-void phys2d_reindex_body(cpBody *body) {
-  cpSpaceReindexShapesForBody(space, body);
-}
+void phys2d_reindex_body(cpBody *body) { cpSpaceReindexShapesForBody(space, body); }
 
 struct postphys_cb {
   struct callee c;

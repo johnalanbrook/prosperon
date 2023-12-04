@@ -8,16 +8,25 @@
 extern HMM_Vec3 eye;
 struct shader;
 
+typedef struct material {
+  
+} material;
+
+struct model;
+
 /* A single mesh */
-struct mesh {
-  sg_bindings bind;
+typedef struct mesh {
+  sg_bindings bind; /* Encapsulates material, norms, etc */
   uint32_t face_count;
-};
+  struct model *model;
+} mesh;
 
 /* A collection of meshes which create a full figure */
-struct model {
+typedef struct model {
   struct mesh *meshes;
-};
+  const char *path;
+  HMM_Mat4 matrix;
+} model;
 
 /* A model with draw information */ 
 struct drawmodel {

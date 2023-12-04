@@ -1,19 +1,34 @@
 #ifndef ANIM_H
 #define ANIM_H
 
+#include "HandmadeMath.h"
+
 struct keyframe {
   double time;
   double val;
 };
 
-struct anim {
-  struct keyframe *frames;
-  int loop;
-  int interp;
+#define LINEAR 0
+#define STEP 1
+#define CUBICSPLINE 2
+
+typedef struct sampler {
+  float *times;
+  HMM_Vec4 *data;
+  int type;
+  int rotation;
+} sampler;
+
+struct anim_channel {
+  sampler *sampler;
 };
 
-struct anim make_anim();
-struct anim anim_add_keyframe(struct anim a, struct keyframe f);
-double anim_val(struct anim anim, double t);
+struct animation {
+  char *name;
+  double time;
+  struct anim_channel *channels;
+};
+
+HMM_Vec4 sample_sampler(sampler *sampler, float time);
 
 #endif

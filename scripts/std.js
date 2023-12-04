@@ -296,6 +296,7 @@ Cmdline.register_cmd("cjson", function(json) {
 }, "Clean up a jso file.");
 
 Cmdline.register_cmd("r", function(script) {
-  run(script);
+  try { run(script); } catch(e) { STD.exit(0); }
+  
   STD.exit(0);
 }, "Run a script.");

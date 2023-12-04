@@ -23,6 +23,7 @@ extern struct rgba sleep_color;
 
 struct phys2d_shape {
   cpShape *shape;
+  transform2d t;
   int go;
   void *data; /* The specific subtype; phys2d_circle, etc */
   void (*debugdraw)(void *data);
@@ -48,16 +49,14 @@ struct phys2d_segment {
 /* A convex polygon; defined as the convex hull around the given set of points */
 struct phys2d_poly {
   HMM_Vec2 *points;
+  transform2d t;
   float radius;
   struct phys2d_shape shape;
 };
 
 /* A box shape; a type of a polygon collider */
 struct phys2d_box {
-  float w;
-  float h;
-  HMM_Vec2 offset;
-  float rotation;
+  transform2d t; /* Scale here is used as width/height */
   float r; /* radius */
   struct phys2d_shape shape;
 };

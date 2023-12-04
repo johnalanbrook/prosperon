@@ -17,6 +17,9 @@ typedef struct {
 
 extern const transform2d t2d_unit;
 
+#define VEC2_FMT "[%g,%g]"
+#define VEC2_MEMS(s) (s).x, (s).y
+
 HMM_Vec3 trans_forward(const transform3d *const trans);
 HMM_Vec3 trans_back(const transform3d *trans);
 HMM_Vec3 trans_up(const transform3d *trans);
@@ -38,6 +41,8 @@ HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos);
 HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir);
 
 HMM_Mat3 transform2d2mat(transform2d t);
+transform2d mat2transform2d(HMM_Mat3 m);
 HMM_Mat4 transform3d2mat(transform3d t);
+transform3d mat2transform3d(HMM_Mat4 m);
 
 #endif

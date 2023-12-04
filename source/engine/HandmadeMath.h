@@ -228,6 +228,8 @@ typedef union HMM_Vec3 {
     float X, Y, Z;
   };
 
+  struct { float x, y, z; };
+
   struct
   {
     float U, V, W;
@@ -243,6 +245,13 @@ typedef union HMM_Vec3 {
     HMM_Vec2 XY;
     float _Ignored0;
   };
+
+  struct
+  {
+    HMM_Vec2 xy;
+    float _Ignored4;
+  };
+
 
   struct
   {
@@ -268,6 +277,28 @@ typedef union HMM_Vec3 {
 
 static const HMM_Vec3 v3zero = {0,0,0};
 
+typedef union HMM_Quat {
+  struct
+  {
+    union {
+      HMM_Vec3 XYZ;
+      struct
+      {
+        float X, Y, Z;
+      };
+    };
+
+    float W;
+  };
+
+  float Elements[4];
+
+#ifdef HANDMADE_MATH__USE_SSE
+  __m128 SSE;
+#endif
+} HMM_Quat;
+
+
 typedef union HMM_Vec4 {
   struct
   {
@@ -277,6 +308,7 @@ typedef union HMM_Vec4 {
       {
         float X, Y, Z;
       };
+      HMM_Vec3 xyz;
     };
 
     float W;
@@ -301,6 +333,23 @@ typedef union HMM_Vec4 {
     float _Ignored1;
   };
 
+  struct {
+    HMM_Vec2 xy;
+    float _ig0;
+    float _ig1;
+  };
+
+  struct {
+    HMM_Vec2 _2;
+    float _ig2;
+    float _ig3;
+  };
+
+  struct {
+    HMM_Vec3 _3;
+    float _ig4;
+  };
+
   struct
   {
     float _Ignored2;
@@ -314,6 +363,8 @@ typedef union HMM_Vec4 {
     float _Ignored5;
     HMM_Vec2 ZW;
   };
+
+  HMM_Quat quat;
 
   float Elements[4];
 
@@ -341,26 +392,6 @@ typedef union HMM_Mat4 {
 
 } HMM_Mat4;
 
-typedef union HMM_Quat {
-  struct
-  {
-    union {
-      HMM_Vec3 XYZ;
-      struct
-      {
-        float X, Y, Z;
-      };
-    };
-
-    float W;
-  };
-
-  float Elements[4];
-
-#ifdef HANDMADE_MATH__USE_SSE
-  __m128 SSE;
-#endif
-} HMM_Quat;
 
 typedef signed int HMM_Bool;
 
@@ -551,6 +582,7 @@ static inline HMM_Vec2 HMM_AddV2(HMM_Vec2 Left, HMM_Vec2 Right) {
 
   return Result;
 }
+
 
 static inline HMM_Vec3 HMM_AddV3(HMM_Vec3 Left, HMM_Vec3 Right) {
 
@@ -776,6 +808,8 @@ static inline float HMM_DotV2(HMM_Vec2 Left, HMM_Vec2 Right) {
   return (Left.X * Right.X) + (Left.Y * Right.Y);
 }
 
+
+
 static inline HMM_Vec2 HMM_ProjV2(HMM_Vec2 a, HMM_Vec2 b)
 {
   return HMM_MulV2F(b, HMM_DotV2(a,b)/HMM_DotV2(b,b));
@@ -836,6 +870,11 @@ static inline float HMM_LenV2(HMM_Vec2 A) {
   return HMM_SqrtF(HMM_LenSqrV2(A));
 }
 
+static inline float HMM_AngleV2(HMM_Vec2 a, HMM_Vec2 b)
+{
+  return acos(HMM_DotV2(a,b)/(HMM_LenV2(a)*HMM_LenV2(b)));
+}
+
 static inline float HMM_DistV2(HMM_Vec2 a, HMM_Vec2 b) {
   return HMM_LenV2(HMM_SubV2(a,b));
 }
@@ -844,8 +883,18 @@ static inline float HMM_LenV3(HMM_Vec3 A) {
   return HMM_SqrtF(HMM_LenSqrV3(A));
 }
 
+static inline float HMM_AngleV3(HMM_Vec3 a, HMM_Vec3 b)
+{
+  return acos(HMM_DotV3(a,b)/(HMM_LenV3(a)*HMM_LenV3(b)));
+}
+
 static inline float HMM_LenV4(HMM_Vec4 A) {
   return HMM_SqrtF(HMM_LenSqrV4(A));
+}
+
+static inline float HMM_AngleV4(HMM_Vec4 a, HMM_Vec4 b)
+{
+  return acos(HMM_DotV4(a,b)/(HMM_LenV4(a)*HMM_LenV4(b)));
 }
 
 static inline HMM_Vec2 HMM_NormV2(HMM_Vec2 A) {
@@ -953,6 +1002,7 @@ static inline HMM_Mat2 HMM_RotateM2(float angle)
   return result;
 }
 
+
 static inline HMM_Mat2 HMM_AddM2(HMM_Mat2 Left, HMM_Mat2 Right) {
 
   HMM_Mat2 Result;
@@ -1056,6 +1106,29 @@ static inline HMM_Mat3 HMM_M3D(float Diagonal) {
   Result.Elements[2][2] = Diagonal;
 
   return Result;
+}
+
+static inline HMM_Mat3 HMM_Translate2D(HMM_Vec2 p)
+{
+  HMM_Mat3 res = HMM_M3D(1);
+  res.Columns[2].XY = p;
+  return res;
+}
+
+static inline HMM_Mat3 HMM_RotateM3(float angle)
+{
+  HMM_Mat3 r = HMM_M3D(1);
+  r.Columns[0] = (HMM_Vec3){cos(angle), sin(angle), 0};
+  r.Columns[1] = (HMM_Vec3){-sin(angle), cos(angle), 0};
+  return r;
+}
+
+static inline HMM_Mat3 HMM_ScaleM3(HMM_Vec2 s)
+{
+  HMM_Mat3 sm = HMM_M3D(1);
+  sm.Columns[0].X = s.x;
+  sm.Columns[1].Y = s.y;
+  return sm;
 }
 
 static inline HMM_Mat3 HMM_TransposeM3(HMM_Mat3 Matrix) {
@@ -1200,12 +1273,11 @@ static inline float HMM_DeterminantM3(HMM_Mat3 Matrix) {
   return HMM_DotV3(Cross.Columns[2], Matrix.Columns[2]);
 }
 
-static inline HMM_Mat3 HMM_M2BasisPos(HMM_Mat2 basis, HMM_Vec2 pos)
+static inline HMM_Mat3 HMM_M2Basis(HMM_Mat2 basis)
 {
   HMM_Mat3 m;
   m.Columns[0].XY = basis.Columns[0];
   m.Columns[1].XY = basis.Columns[1];
-  m.Columns[2].XY = pos;
   m.Columns[2].Z = 1;
   return m;
 }

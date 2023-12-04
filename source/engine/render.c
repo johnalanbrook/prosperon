@@ -506,7 +506,7 @@ void full_2d_pass(struct window *window)
   //////////// 2D projection
   cpVect pos = cam_pos();
 
-  projection = HMM_Orthographic_LH_ZO(
+  projection = HMM_Orthographic_LH_NO(
              pos.x - zoom * window->rwidth / 2,
              pos.x + zoom * window->rwidth / 2,
              pos.y - zoom * window->rheight / 2,

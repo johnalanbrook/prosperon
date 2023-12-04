@@ -1,13 +1,7 @@
 #include "gameobject.h"
 
 #include "2dphysics.h"
-#include "debugdraw.h"
-#include "input.h"
 #include "log.h"
-#include "resources.h"
-#include "script.h"
-#include "shader.h"
-#include "sprite.h"
 #include <chipmunk/chipmunk.h>
 #include <string.h>
 #include "debugdraw.h"
@@ -82,8 +76,6 @@ HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_go2w
 
 HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_world2go(go), pos); }
 
-HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos) { return HMM_MulV2(go->scale.XY, pos); }
-
 HMM_Mat3 t_go2world(struct gameobject *go) { return transform2d2mat(go2t(go)); }
 
 HMM_Mat3 t_world2go(struct gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
@@ -94,9 +86,8 @@ HMM_Mat4 t3d_world2go(struct gameobject *go) { return HMM_InvGeneralM4(t3d_go2wo
 int pos2gameobject(HMM_Vec2 pos) {
   cpShape *hit = phys2d_query_pos(pos.cp);
 
-  if (hit) {
+  if (hit)
     return shape2gameobject(hit);
-  }
 
   for (int i = 0; i < arrlen(gameobjects); i++) {
     if (!gameobjects[i].body) continue;
@@ -290,23 +281,6 @@ void gameobjects_cleanup() {
   arrsetlen(go_toclean, 0);
 }
 
-void gameobject_move(struct gameobject *go, HMM_Vec2 vec) {
-  cpVect p = cpBodyGetPosition(go->body);
-  p.x += vec.x;
-  p.y += vec.y;
-  cpBodySetPosition(go->body, p);
-
-  phys2d_reindex_body(go->body);
-}
-
-void gameobject_rotate(struct gameobject *go, float as) {
-  cpFloat a = cpBodyGetAngle(go->body);
-  a += as * deltaT;
-  cpBodySetAngle(go->body, a);
-
-  phys2d_reindex_body(go->body);
-}
-
 void gameobject_setangle(struct gameobject *go, float angle) {
   cpBodySetAngle(go->body, angle);
   phys2d_reindex_body(go->body);
@@ -315,7 +289,6 @@ void gameobject_setangle(struct gameobject *go, float angle) {
 void gameobject_setpos(struct gameobject *go, cpVect vec) {
   if (!go || !go->body) return;
   cpBodySetPosition(go->body, vec);
-
   phys2d_reindex_body(go->body);
 }
 
@@ -329,13 +302,6 @@ void gameobject_draw_debug(int go) {
   if (!g || !g->body) return;
 
   cpVect pos = cpBodyGetPosition(g->body);
-  struct rgba color = {
-    .r = 0.76*255,
-    .b = 0.38*255,
-    .g = 255,
-    .a = 255
-  };
-
   cpBodyEachShape(g->body, body_draw_shapes_dbg, NULL);
 }
 

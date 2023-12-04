@@ -14,7 +14,6 @@
 
 #include "render.h"
 
-// #define HANDMADE_MATH_USE_TURNS
 #include "HandmadeMath.h"
 
 #include "math.h"
@@ -100,11 +99,11 @@ struct model *GetExistingModel(const char *path) {
   return MakeModel(path);
 }
 
-cgltf_attribute *get_attr_type(cgltf_primitive p, cgltf_attribute_type t)
+cgltf_attribute *get_attr_type(cgltf_primitive *p, cgltf_attribute_type t)
 {
-  for (int i = 0; i < p.attributes_count; i++) {
-    if (p.attributes[i].type == t)
-      return &p.attributes[i];
+  for (int i = 0; i < p->attributes_count; i++) {
+    if (p->attributes[i].type == t)
+      return &p->attributes[i];
   }
 
   return NULL;
@@ -128,7 +127,193 @@ uint32_t pack_int10_n2(float *norm)
   return (ni[0] & 0x3FF) | ( (ni[1] & 0x3FF) << 10) | ( (ni[2] & 0x3FF) << 20) | ( (0 & 0x3) << 30);
 }
 
-struct model *MakeModel(const char *path) {
+void mesh_add_material(mesh *mesh, cgltf_material *mat)
+{
+  if (!mat) return;
+  
+  if (mat && mat->has_pbr_metallic_roughness) {
+    cgltf_image *img = mat->pbr_metallic_roughness.base_color_texture.texture->image;
+     if (img->buffer_view) {
+       cgltf_buffer_view *buf = img->buffer_view;
+       mesh->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
+     } else {
+       const char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
+       mesh->bind.fs.images[0] = texture_pullfromfile(imp)->id;
+       free(imp);
+     }
+   } else
+     // Get "no texture" tex
+     mesh->bind.fs.images[0] = texture_pullfromfile("k")->id;
+     mesh->bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+     
+     cgltf_texture *tex;
+     if (tex = mat->normal_texture.texture)
+       mesh->bind.fs.images[1] = texture_pullfromfile(tex->image->uri)->id;
+     else
+       mesh->bind.fs.images[1] = texture_pullfromfile("k")->id;
+}
+
+void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
+{
+  uint16_t *idxs;
+  if (prim->indices) {
+    int c = prim->indices->count;
+    idxs = malloc(sizeof(*idxs)*c);
+    memcpy(idxs, cgltf_buffer_view_data(prim->indices->buffer_view), sizeof(uint16_t) * c);
+
+    mesh->bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+	.data.ptr = idxs,
+	.data.size = sizeof(uint16_t) * c,
+	.type = SG_BUFFERTYPE_INDEXBUFFER});
+
+    mesh->face_count = c;
+  } else {
+    YughWarn("Model does not have indices. Generating them.");
+    int c = prim->attributes[0].data->count;
+    mesh->face_count = c;
+    idxs = malloc(sizeof(*idxs)*c);
+    
+    for (int z = 0; z < c; z++)
+      idxs[z] = z;
+
+    mesh->bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+	.data.ptr = idxs,
+	.data.size = sizeof(uint16_t) * c,
+	.type = SG_BUFFERTYPE_INDEXBUFFER});
+  }
+  free(idxs);
+
+  mesh_add_material(mesh, prim->material);
+  int has_norm = 0;  
+
+  for (int k = 0; k < prim->attributes_count; k++) {
+    cgltf_attribute attribute = prim->attributes[k];
+
+    int n = cgltf_accessor_unpack_floats(attribute.data, NULL, 0); /* floats per element x num elements */
+    float *vs = malloc(sizeof(float)*n);
+    cgltf_accessor_unpack_floats(attribute.data, vs, n);
+
+    uint32_t *packed_norms;
+    unsigned short *packed_coords;
+
+
+    switch (attribute.type) {
+      case cgltf_attribute_type_position:
+
+      mesh->bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+	  .data.ptr = vs,
+	  .data.size = sizeof(float) * n});
+      break;
+
+    case cgltf_attribute_type_normal:
+      has_norm = 1;
+      packed_norms = malloc(mesh->face_count * sizeof(uint32_t));
+      for (int i = 0; i < mesh->face_count; i++)
+	packed_norms[i] = pack_int10_n2(vs + i*3);
+
+        mesh->bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
+          .data.ptr = packed_norms,
+          .data.size = sizeof(uint32_t) * mesh->face_count});
+
+      free (packed_norms);
+      break;
+
+    case cgltf_attribute_type_tangent:
+      break;
+
+    case cgltf_attribute_type_color:
+      break;
+
+    case cgltf_attribute_type_weights:
+      break;
+
+    case cgltf_attribute_type_joints:
+      break;
+
+    case cgltf_attribute_type_texcoord:
+      packed_coords = malloc(mesh->face_count * 2 * sizeof(unsigned short));
+      for (int i = 0; i < mesh->face_count*2; i++)
+	packed_coords[i] = pack_short_texcoord(vs[i]);
+
+      mesh->bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
+        .data.ptr = packed_coords,
+	.data.size = sizeof(unsigned short) * 2 * mesh->face_count});
+
+      free(packed_coords);
+      break;
+    }
+    free(vs);
+  }
+
+  if (!has_norm) {
+    uint32_t norms[mesh->face_count];
+
+    cgltf_attribute *pa = get_attr_type(prim, cgltf_attribute_type_position);
+    int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
+    float ps[n];
+    cgltf_accessor_unpack_floats(pa->data,ps,n);
+
+    for (int i = 0, face=0; i < mesh->face_count/3; i++, face+=9) {
+      int o = face;
+      HMM_Vec3 a = {ps[o], ps[o+1],ps[o+2]};
+      o += 3;
+      HMM_Vec3 b = {ps[o], ps[o+1],ps[o+2]};
+      o += 3;
+      HMM_Vec3 c = {ps[o], ps[o+1],ps[o+2]};
+      HMM_Vec3 norm = HMM_NormV3(HMM_Cross(HMM_SubV3(b,a), HMM_SubV3(c,a)));
+
+      uint32_t packed_norm = pack_int10_n2(norm.Elements);
+      for (int j = 0; j < 3; j++)
+        norms[i*3+j] = packed_norm;
+     }
+     mesh->bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
+       .data.ptr = norms,
+       .data.size = sizeof(uint32_t) * mesh->face_count
+     });
+  }
+}
+
+void model_add_cgltf_mesh(model *model, cgltf_mesh *gltf_mesh)
+{
+  mesh mesh = {0};
+  mesh.model = model;
+
+  for (int i = 0; i < gltf_mesh->primitives_count; i++)
+    mesh_add_primitive(&mesh, &gltf_mesh->primitives[i]);
+
+  arrput(model->meshes,mesh);
+}
+
+void model_add_cgltf_anim(model *model, cgltf_animation *anim)
+{
+
+}
+
+void model_add_cgltf_skin(model *model, cgltf_skin *skin)
+{
+  
+}
+
+void model_process_node(model *model, cgltf_node *node)
+{
+  if (node->has_matrix)
+    memcpy(model->matrix.Elements, node->matrix, sizeof(float)*16);
+
+  if (node->mesh)
+    model_add_cgltf_mesh(model, node->mesh);
+
+  if (node->skin)
+    model_add_cgltf_skin(model, node->skin);
+}
+
+void model_process_scene(model *model, cgltf_scene *scene)
+{
+  for (int i = 0; i < scene->nodes_count; i++)
+    model_process_node(model, scene->nodes[i]);
+}
+
+struct model *MakeModel(const char *path)
+{
   YughInfo("Making the model from %s.", path);
   cgltf_options options = {0};
   cgltf_data *data = NULL;
@@ -147,150 +332,17 @@ struct model *MakeModel(const char *path) {
   }
 
   struct model *model = calloc(1, sizeof(*model));
-  /* TODO: Optimize by grouping by material. One material per draw. */
-  YughInfo("Model has %d materials.", data->materials_count);
-  const char *dir = dirname(path);
+  
+  model->path = path;
 
-  float vs[65535*3];
-  uint16_t idxs[65535];
+  if (data->scenes_count == 0 || data->scenes_count > 1) return NULL;
+  model_process_scene(model, data->scene);
 
-  for (int i = 0; i < data->meshes_count; i++) {
-    cgltf_mesh *mesh = &data->meshes[i];
-    struct mesh newmesh = {0};
-    arrput(model->meshes,newmesh);
+  for (int i = 0; i < data->meshes_count; i++)
+    model_add_cgltf_mesh(model, &data->meshes[i]);
 
-    YughInfo("Making mesh %d. It has %d primitives.", i, mesh->primitives_count);
-
-    for (int j = 0; j < mesh->primitives_count; j++) {
-      cgltf_primitive primitive = mesh->primitives[j];
-
-      if (primitive.indices) {
-        int c = primitive.indices->count;
-        memcpy(idxs, cgltf_buffer_view_data(primitive.indices->buffer_view), sizeof(uint16_t) * c);
-
-        model->meshes[j].bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-            .data.ptr = idxs,
-            .data.size = sizeof(uint16_t) * c,
-            .type = SG_BUFFERTYPE_INDEXBUFFER});
-
-        model->meshes[j].face_count = c;
-      } else {
-        YughWarn("Model does not have indices. Generating them.");
-        int c = primitive.attributes[0].data->count;
-        model->meshes[j].face_count = c;
-        for (int z = 0; z < c; z++)
-          idxs[z] = z;
-
-        model->meshes[j].bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-            .data.ptr = idxs,
-            .data.size = sizeof(uint16_t) * c,
-            .type = SG_BUFFERTYPE_INDEXBUFFER});
-      }
-
-      struct cgltf_material *mat = primitive.material;
-      
-      if (mat && primitive.material->has_pbr_metallic_roughness) {
-        cgltf_image *img = primitive.material->pbr_metallic_roughness.base_color_texture.texture->image;
-	if (img->buffer_view) {
-	  cgltf_buffer_view *buf = img->buffer_view;
-	  model->meshes[j].bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
-	} else {
-          const char *imp = seprint("%s/%s", dir, img->uri);
-          model->meshes[j].bind.fs.images[0] = texture_pullfromfile(imp)->id;
-	  free(imp);
-  	}
-      } else
-        model->meshes[j].bind.fs.images[0] = texture_pullfromfile("k")->id;
-
-      model->meshes[j].bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
-
-      cgltf_texture *tex;
-//      if (tex = primitive.material->normal_texture.texture) {
-//        model->meshes[j].bind.fs.images[1] = texture_pullfromfile(tex->image->uri)->id;
-//      }// else
-//        model->meshes[j].bind.fs.images[1] = texture_pullfromfile("k")->id;
-
-      int has_norm = 0;
-
-      for (int k = 0; k < primitive.attributes_count; k++) {
-        cgltf_attribute attribute = primitive.attributes[k];
-
-        int n = cgltf_accessor_unpack_floats(attribute.data, NULL, 0); /* floats per element x num elements */
-
-        cgltf_accessor_unpack_floats(attribute.data, vs, n);
-
-	uint32_t *packed_norms;
-	unsigned short *packed_coords;
-
-        switch (attribute.type) {
-        case cgltf_attribute_type_position:
-
-          model->meshes[j].bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-              .data.ptr = vs,
-              .data.size = sizeof(float) * n});
-          break;
-
-        case cgltf_attribute_type_normal:
-	  has_norm = 1;
-	  packed_norms = malloc(model->meshes[j].face_count * sizeof(uint32_t));;
-	  for (int i = 0; i < model->meshes[j].face_count; i++)
-	    packed_norms[i] = pack_int10_n2(vs + i*3);
-
-//          model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
-//              .data.ptr = packed_norms,
-//              .data.size = sizeof(uint32_t) * model->meshes[j].face_count});
-
-	  free (packed_norms);
-          break;
-
-        case cgltf_attribute_type_tangent:
-          break;
-
-        case cgltf_attribute_type_texcoord:
-	  packed_coords = malloc(model->meshes[j].face_count * 2 * sizeof(unsigned short));
-	  for (int i = 0; i < model->meshes[j].face_count*2; i++)
-	    packed_coords[i] = pack_short_texcoord(vs[i]);
-
-          model->meshes[j].bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-              .data.ptr = packed_coords,
-              .data.size = sizeof(unsigned short) * 2 * model->meshes[j].face_count});
-
-	  free(packed_coords);
-          break;
-        }
-      }
-
-      if (!has_norm) {
-      YughInfo("Model does not have normals. Generating them.");
-      uint32_t norms[model->meshes[j].face_count];
-
-
-      cgltf_attribute *pa = get_attr_type(primitive, cgltf_attribute_type_position);
-      int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
-      float ps[n];
-      cgltf_accessor_unpack_floats(pa->data,ps,n);
-
-      for (int i = 0, face=0; i < model->meshes[j].face_count/3; i++, face+=9) {
-        int o = face;
-        HMM_Vec3 a = {ps[o], ps[o+1],ps[o+2]};
-	o += 3;
-	HMM_Vec3 b = {ps[o], ps[o+1],ps[o+2]};
-	o += 3;
-	HMM_Vec3 c = {ps[o], ps[o+1],ps[o+2]};
-	HMM_Vec3 norm = HMM_NormV3(HMM_Cross(HMM_SubV3(b,a), HMM_SubV3(c,a)));
-
-	uint32_t packed_norm = pack_int10_n2(norm.Elements);
-	for (int j = 0; j < 3; j++)
-          norms[i*3+j] = packed_norm;
-      }
-
-//      model->meshes[j].bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
-//        .data.ptr = norms,
-//        .data.size = sizeof(uint32_t) * model->meshes[j].face_count
-//      });
-      }
-    }    
-  }
+  for (int i = 0; i < data->animations_count; i++)
+    model_add_cgltf_anim(model, &data->animations[i]);
 
   shput(modelhash, path, model);
 

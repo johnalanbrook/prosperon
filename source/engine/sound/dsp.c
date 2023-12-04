@@ -435,7 +435,6 @@ dsp_node *dsp_fwd_delay(double sec, double decay)
   d->ring = NULL;
   d->ring = ringnew(d->ring, sec*CHANNELS*SAMPLERATE*2);
   ringheader(d->ring)->write += CHANNELS*SAMPLERATE*sec;
-  YughWarn("FWD DELAY");
   return make_node(d, filter_fwd_delay, delay_free);
 }
 
@@ -448,47 +447,40 @@ double tau2pole(double tau)
 
 void dsp_adsr_fillbuf(struct dsp_adsr *adsr, soundbyte *out, int n)
 {
-    soundbyte val;
+  soundbyte val;
 
-    for (int i = 0; i < n; i++) {
-        if (adsr->time > adsr->rls) {
-            // Totally decayed
-            adsr->out = 0.f;
+  for (int i = 0; i < n; i++) {
+    if (adsr->time > adsr->rls) {
+      adsr->out = 0.f;
+      goto fin;
+     }
 
-            goto fin;
-        }
+    if (adsr->time > adsr->sus) {
+      // Release phase
+      adsr->out = adsr->rls_t * adsr->out;
+       goto fin;
+    }
 
-        if (adsr->time > adsr->sus) {
-            // Release phase
-            adsr->out = adsr->rls_t * adsr->out;
+    if (adsr->time > adsr->dec) {
+      // Sustain phase
+      adsr->out = adsr->sus_pwr;
+      goto fin;
+    }
 
-            goto fin;
-        }
+    if (adsr->time > adsr->atk) {
+      // Decay phase
+      adsr->out = (1 - adsr->dec_t) * adsr->sus_pwr + adsr->dec_t * adsr->out;
+      goto fin;
+    }
 
-        if (adsr->time > adsr->dec) {
-            // Sustain phase
-            adsr->out = adsr->sus_pwr;
+    // Attack phase
+    adsr->out = (1-adsr->atk_t) + adsr->atk_t * adsr->out;
+    
+    fin:
 
-            goto fin;
-        }
-
-        if (adsr->time > adsr->atk) {
-            // Decay phase
-            adsr->out = (1 - adsr->dec_t) * adsr->sus_pwr + adsr->dec_t * adsr->out;
-
-            goto fin;
-        }
-
-        // Attack phase
-        adsr->out = (1-adsr->atk_t) + adsr->atk_t * adsr->out;
-
-
-
-        fin:
-
-        val = SHRT_MAX * adsr->out;
-        out[i*CHANNELS] = out[i*CHANNELS+1] = val;
-        adsr->time += (double)(1000.f / SAMPLERATE);
+    val = SHRT_MAX * adsr->out;
+    out[i*CHANNELS] = out[i*CHANNELS+1] = val;
+    adsr->time += (double)(1000.f / SAMPLERATE);
     }
 }
 

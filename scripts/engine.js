@@ -413,11 +413,7 @@ var Game = {
   {
     sys_cmd(1);
   },
-
-  get dt() {
-    return cmd(63);
-  },
-
+  
   wait_fns: [],
 
   wait_exec(fn) {
@@ -487,4 +483,3 @@ var Asset = {};
 Asset.doc = {
   doc: "Functions to manage the loading and unloading of assets, like sounds and images."
 };
-

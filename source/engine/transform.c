@@ -36,9 +36,28 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
   return mat3_t_pos(m, dir);
 }
 
-HMM_Mat3 transform2d2mat(transform2d t) {
-  HMM_Mat2 m = HMM_MulM2(HMM_RotateM2(t.angle), HMM_ScaleM2(t.scale));
-  return HMM_M2BasisPos(m, t.pos);
+HMM_Mat3 transform2d2mat(transform2d trn) {
+  return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale)));
+}
+
+transform2d mat2transform2d(HMM_Mat3 m)
+{
+  transform2d t;
+  t.pos = m.Columns[2].xy;
+  t.scale = (HMM_Vec2){HMM_LenV2(m.Columns[0].xy), HMM_LenV2(m.Columns[1].xy)};
+  t.angle = acos(m.Columns[0].x/t.scale.x);
+  return t;
 }
   
 HMM_Mat4 transform3d2mat(transform3d t) { return HMM_MulM4(HMM_Translate(t.pos), HMM_MulM4(HMM_QToM4(t.rotation), HMM_Scale(t.scale))); }
+
+transform3d mat2transform3d(HMM_Mat4 m)
+{
+  transform3d t;
+  t.pos = m.Columns[3].xyz;
+  for (int i = 0; i < 2; i++)
+    t.scale.Elements[i] = HMM_LenV3(m.Columns[i].xyz);
+//  for (int i = 0; i < 2; i++)
+//    m.Columns[i].xyz = HMM_MulV3(m.Columns[i].xyz, t.scale.Elements[i]);
+  t.rotation = HMM_M4ToQ_RH(m);
+}

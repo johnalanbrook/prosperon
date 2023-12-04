@@ -2,6 +2,7 @@
 #define PARTICLE_H
 
 #include "HandmadeMath.h"
+#include "transform.h"
 
 struct particle {
   HMM_Vec3 pos;
@@ -15,12 +16,13 @@ struct particle {
   };
 };
 
-struct emitter {
+typedef struct emitter {
   struct particle *particles;
+  transform3d t;
   int max;
   double life;
   void (*seeder)(struct particle *p); /* Called to initialize each particle */
-};
+} emitter;
 
 struct emitter make_emitter();
 void free_emitter(struct emitter e);

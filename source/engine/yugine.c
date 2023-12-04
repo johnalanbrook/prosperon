@@ -1,11 +1,13 @@
 #include "yugine.h"
 #include "font.h"
+#include "transform.h"
 #include "gameobject.h"
 #include "input.h"
 #include "render.h"
 #include "window.h"
 #include "sound.h"
 #include "resources.h"
+#include "spline.h"
 #include <stdio.h>
 
 #include "datastream.h"
@@ -388,7 +390,7 @@ dam->update_activity(dam, &da, NULL, NULL);
   resources_init();
   phys2d_init();  
   script_startup();
-  
+
   int argsize = 0;
   for (int i = 0; i < argc; i++) {
     argsize += strlen(argv[i]);

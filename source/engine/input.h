@@ -16,8 +16,6 @@ extern HMM_Vec2 mouse_delta;
 #define INPUT_UP 1
 #define INPUT_REPEAT 2
 
-extern float deltaT;
-
 void input_init();
 void input_poll(double wait);
 

@@ -1,5 +1,3 @@
-// odplot productions is a trademarked name. Project Yugh is a copyrighted property. This code, however, is free to be copy and extended as you see fit.
-
 #ifndef THIRDPERSONFOLLOW_H
 #define THIRDPERSONFOLLOW_H
 
@@ -8,6 +6,7 @@
 
 struct follow {
   float distance;
+  HMM_Vec3 offset;
   HMM_Quat target_rot;
 };
 

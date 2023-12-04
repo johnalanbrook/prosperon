@@ -18,8 +18,8 @@
 #include "sprite.h"
 #include "stb_ds.h"
 #include "string.h"
-#include "tinyspline.h"
 #include "window.h"
+#include "spline.h"
 #include "yugine.h"
 #include <assert.h>
 #include "resources.h"
@@ -53,8 +53,8 @@ static JSValue TYPE##2js(TYPE *n) { \
 
 QJSCLASS(dsp_node)
 
-// gamobject2js, js2gameobject deals with gameobject*
-// go2js,js2go deals with gameobject ids
+// gameobject2js, js2gameobject deals with gameobject*, converted to ids
+// go2js,js2go deals with gameobject*
 
 QJSCLASS(gameobject)
 
@@ -96,7 +96,6 @@ JSValue gos2ref(int *go)
     js_setprop_num(array,i,go2ref(go[i]));
   return array;
 }
-
 
 JSValue js_getpropstr(JSValue v, const char *str)
 {
@@ -399,42 +398,23 @@ JSValue bb2js(struct boundingbox bb)
 }
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-//  static_assert(sizeof(tsReal) * 2 == sizeof(HMM_Vec2));
-
-  tsBSpline spline;
-
-  int degrees = js2int(argv[1]);
-  int d = js2int(argv[2]); /* dimensions */
+  int degrees = js2int(argv[1]); /* not used */
+  int d = js2int(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
+  /*
+    0: hermite-cubic
+    1: catmull-rom
+    2: b-spline
+    3: bezier
+  */
   int type = js2int(argv[3]);
   HMM_Vec2 *points = js2cpvec2arr(argv[4]);
   size_t nsamples = js2int(argv[5]);
-  
-  tsStatus status;
-  ts_bspline_new(arrlen(points), d, degrees, type, &spline, &status);
 
-  if (status.code)
-    YughCritical("Spline creation error %d: %s", status.code, status.message);
-
-  ts_bspline_set_control_points(&spline, (tsReal*)points, &status);
-
-  if (status.code)
-    YughCritical("Spline creation error %d: %s", status.code, status.message);
-
-  HMM_Vec2 *samples = malloc(nsamples*sizeof(HMM_Vec2));
-
-  size_t rsamples;
-  /* TODO: This does not work with Clang/GCC due to UB */
-  ts_bspline_sample(&spline, nsamples, (tsReal **)&samples, &rsamples, &status);
-
-  if (status.code)
-    YughCritical("Spline creation error %d: %s", status.code, status.message);
-
+  HMM_Vec2 *samples = catmull_rom_ma_v2(points, nsamples);
   JSValue arr = vecarr2js(samples, nsamples);
-  
-  ts_bspline_free(&spline);
   free(samples);
 
-  return arr;
+  return JS_UNDEFINED;
 }
 
 JSValue ints2js(int *ints) {
@@ -523,6 +503,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   const char *str2 = NULL;
   const void *d1 = NULL;
   const void *d2 = NULL;
+  int *ids = NULL;
   JSValue ret = JS_UNDEFINED;
 
   switch (cmd) {
@@ -754,7 +735,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 52:
-    ret = gos2ref(phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2])));
+    ids = phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2]));
+    ret = gos2ref(ids);
+    arrfree(ids);
     break;
 
   case 53:
@@ -799,7 +782,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 63:
-    ret = JS_NewFloat64(js, deltaT);
     break;
 
   case 64:
@@ -867,7 +849,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 80:
-    ret = gos2ref(phys2d_query_shape(js2ptr(argv[1])));
+    ids = phys2d_query_shape(js2ptr(argv[1]));
+    ret = gos2ref(ids);
+    arrfree(ids);
     break;
 
   case 81:
@@ -891,7 +875,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 86:
-    ret = gos2ref(phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4])));
+    ids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4]));
+    ret = gos2ref(ids);
+    arrfree(ids);
     break;
 
   case 87:
@@ -1150,6 +1136,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 147:
+      YughWarn("EXITING");
       exit(js2int(argv[1]));
       break;
     case 148:
@@ -1549,7 +1536,6 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 3:
-    gameobject_move(go, js2vec2(argv[2]));
     break;
 
   case 4:
@@ -1557,11 +1543,9 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     return JS_UNDEFINED;
 
   case 5:
-//    go->flipx = JS_ToBool(js, argv[2]);
     break;
 
   case 6:
-//    go->flipy = JS_ToBool(js, argv[2]);
     break;
 
   case 7:
@@ -1644,7 +1628,7 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
 
 JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   JSValue sprite = JS_NewObject(js);
-  js_setprop_str(sprite,"id",JS_NewInt64(js, make_sprite(jsgo2id(argv[0]))));
+  js_setprop_str(sprite,"id",JS_NewInt64(js, make_sprite(js2gameobject(argv[0]))));
   return sprite;
 }
 
@@ -1666,9 +1650,8 @@ JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
   HMM_Vec2 size = js2vec2(argv[1]);
 
   struct phys2d_box *box = Make2DBox(go);
-  box->w = size.x;
-  box->h = size.y;
-  box->offset = js2vec2(argv[2]);
+  box->t.scale = js2vec2(argv[1]);
+  box->t.pos = js2vec2(argv[2]);
 
   phys2d_applybox(box);
 
@@ -1687,17 +1670,15 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
 
   switch (cmd) {
   case 0:
-    arg = js2vec2(argv[2]);
-    box->w = arg.x;
-    box->h = arg.y;
+    box->t.scale = js2vec2(argv[2]);
     break;
 
   case 1:
-    box->offset = js2vec2(argv[2]);
+    box->t.pos = js2vec2(argv[2]);
     break;
 
   case 2:
-    box->rotation = js2number(argv[2]);
+    box->t.angle = js2number(argv[2]);
     break;
   }
 
@@ -1830,28 +1811,6 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
 
 /* These are anims for controlling properties on an object */
 JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  JSValue prop = argv[0];
-  int keyframes = js_arrlen(argv[1]);
-  YughInfo("Processing %d keyframes.", keyframes);
-
-  struct anim a = make_anim();
-
-  for (int i = 0; i < keyframes; i++) {
-    struct keyframe k;
-    HMM_Vec2 v = js2vec2(js_getpropidx( argv[1], i));
-    k.time = v.y;
-    k.val = v.x;
-    a = anim_add_keyframe(a, k);
-  }
-
-  for (double i = 0; i < 3.0; i = i + 0.1) {
-    YughInfo("Val is now %f at time %f", anim_val(a, i), i);
-    JSValue vv = num2js(anim_val(a, i));
-    JSValue e = JS_Call(js, prop, globalThis, 1, &vv);
-    JS_FreeValue(js,e);
-    JS_FreeValue(js,vv);
-  }
-
   return JS_UNDEFINED;
 }
 

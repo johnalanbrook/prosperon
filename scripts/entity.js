@@ -169,7 +169,6 @@ var gameobject = {
       set_gravity(x) { cmd(167, this.body, x); },
       set timescale(x) { cmd(168,this.body,x); },
       get timescale() { return cmd(169,this.body); },
-
       set phys(x) { console.warn(`Setting phys to ${x}`); set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
       get velocity() { return q_body(3, this.body); },
@@ -513,7 +512,6 @@ var gameobject = {
     }
 
     delete this.components;
-//    q_body(8,this.body);
 
     this.clear();
 

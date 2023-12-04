@@ -2,10 +2,7 @@
 #define GAMEOBJECT_H
 
 #include "2dphysics.h"
-#include "config.h"
 #include <chipmunk/chipmunk.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
 #include "transform.h"
@@ -29,10 +26,6 @@
     dag_rm(p->parent,p);\
 }while(0)
 
-struct shader;
-struct sprite;
-struct component;
-
 typedef struct gameobject {
   cpBodyType bodytype;
   cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
@@ -49,7 +42,6 @@ typedef struct gameobject {
   float damping;
   unsigned int layer;
   cpShapeFilter filter;
-  int id;
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
   JSValue ref;
@@ -88,11 +80,6 @@ HMM_Vec2 go_worldpos(struct gameobject *go);
 float go_worldangle(struct gameobject *go);
 
 float go2angle(struct gameobject *go);
-
-HMM_Vec2 goscale(struct gameobject *go, HMM_Vec2 pos);
-HMM_Vec2 gotpos(struct gameobject *go, HMM_Vec2 pos);
-
-HMM_Mat3 mt_rst(transform2d t);
 
 struct gameobject *id2go(int id);
 int go2id(struct gameobject *go);
