@@ -78,6 +78,51 @@ void js_setprop_str(JSValue obj, const char *prop, JSValue v)
   JS_SetPropertyStr(js, obj, prop, v);
 }
 
+JSValue unix2time(time_t unix)
+{
+  struct tm *t = localtime(&unix);
+  JSValue o = JS_NewObject(js);
+  js_setprop_str(o, "sec", JS_NewFloat64(js, t->tm_sec));
+  js_setprop_str(o, "min", JS_NewFloat64(js, t->tm_min));
+  js_setprop_str(o, "hour", JS_NewFloat64(js, t->tm_hour));
+  js_setprop_str(o, "day", JS_NewFloat64(js, t->tm_mday));
+  js_setprop_str(o, "mon", JS_NewFloat64(js, t->tm_mon));
+  js_setprop_str(o, "year", JS_NewFloat64(js, t->tm_year+1900));
+  js_setprop_str(o, "weekday", JS_NewFloat64(js, t->tm_wday));
+  js_setprop_str(o, "yday", JS_NewFloat64(js, t->tm_yday));
+  js_setprop_str(o, "dst", JS_NewBool(js, t->tm_isdst));
+  js_setprop_str(o, "unix", JS_NewFloat64(js, unix));
+  return o;
+}
+
+JSValue jstzone()
+{
+  time_t t = time(NULL);
+  struct tm lt = {0};
+  localtime_r(&t, &lt);
+  return num2js(lt.tm_gmtoff);
+}
+
+int js2bool(JSValue v) { return JS_ToBool(js, v); }
+
+JSValue bool2js(int b) { return JS_NewBool(js,b); }
+
+JSValue jsdst()
+{
+  time_t t = time(NULL);
+  struct tm lt = {};
+  localtime_r(&t,&lt);
+  return bool2js(lt.tm_isdst);
+}
+
+JSValue jscurtime()
+{
+  time_t t;
+  time(&t);
+  JSValue jst = num2js(t);
+  return jst;
+}
+
 void js_setprop_num(JSValue obj, uint32_t i, JSValue v)
 {
   JS_SetPropertyUint32(js, obj, i, v);
@@ -153,14 +198,6 @@ double js2number(JSValue v) {
   return g;
 }
 
-int js2bool(JSValue v) {
-  return JS_ToBool(js, v);
-}
-
-JSValue bool2js(int b)
-{
-  return JS_NewBool(js,b);
-}
 
 JSValue float2js(double g) {
   return JS_NewFloat64(js, g);
@@ -1337,6 +1374,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 208:
       dag_set(js2go(argv[1]), js2go(argv[2]));
+      break;
+    case 209:
+      ret = unix2time(js2number(argv[1]));
+      break;
+    case 210:
+      ret = jscurtime();
+      break;
+    case 211:
+      ret = jstzone();
+      break;
+    case 212:
+      ret = jsdst();
       break;
   }
 

@@ -66,11 +66,10 @@ var Log = {
   },
 
   say(msg) {
-    Log.write(msg);
-    Log.write('\n');
+    Log.write(msg + '\n');
   },
 
-  console(msg) {
+  repl(msg) {
     cmd(142, msg + '\n');
   },    
 

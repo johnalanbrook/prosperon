@@ -267,6 +267,10 @@ Player.players[0].control(DebugControls);
 Register.gui.register(Debug.draw, Debug);
 
 var console = Object.create(Log);
+console.log = function(str)
+{
+  console.say(time.text(time.now(), 'yyyy-m-dd hh:nn:ss') + "  " + str);
+}
 console.clear = function()
 {
   cmd(146);

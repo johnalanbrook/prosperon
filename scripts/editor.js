@@ -1591,7 +1591,7 @@ replpanel.inputs.tab = function() {
   });
 
   if (keys.length > 1)
-    Log.console(keys.join(', '));
+    Log.repl(keys.join(', '));
 };
 replpanel.inputs['C-p'] = function()
 {

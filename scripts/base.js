@@ -23,6 +23,243 @@ Promise = undefined;
 Set = undefined;
 WeakSet = undefined;
 
+var fmt = {};
+
+var timeparse = {
+  yyyy: "year",
+  mm: "month",
+  m: "month",
+  eee: "yday",
+  dd: "day",
+  d: "day",
+  v: "weekday",
+  hh: "hour",
+  h: "hour",
+  nn: "minute",
+  n: "minute",
+  ss: "second",
+  s: "second",
+};
+
+String.parse = function(str, p)
+{
+  var rec = {};
+  var fmts = Object.keys(p).sort(function(a,b) { return a.length > b.length; });
+}
+
+/* Time values are always expressed in terms of real earth-seconds */
+var time = {
+  get hour2minute() { return this.hour/this.minute; },
+  get day2hour() { return this.day/this.hour; },
+  get minute2second() { return this.minute/this.second; },
+  get week2day() { return this.week/this.day; },
+};
+
+time.second = 1; /* earth-seconds in a second */
+time.minute = 60; /* seconds in a minute */
+time.hour = 3_600; /* seconds in an hour */
+time.day = 86_400; /* seconds in a day */
+time.week = 604_800; /* seconds in a week */
+time.weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+time.monthstr = ["January", "February", "March", 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+time.epoch = 1970; /* Times are expressed in terms of day 0 at hms 0 of this year */
+time.now = function() { return cmd(210);}
+time.computer_zone = function() { return cmd(211)/this.hour; }
+time.computer_dst = function() { return cmd(212); }
+time.isleap = function(year) { return this.yearsize(year) === 366; }
+time.isleap.doc = "Return true if the given year is a leapyear.";
+
+time.yearsize = function(y) {
+  if (y%4 === 0 && (y%100 != 0 || y%400 === 0))
+    return 366;
+  return 365;
+}
+time.yearsize.doc = "Given a year, return the number of days in that year.";
+
+time.monthdays = [31,28,31,30,31,30,31,31,30,31,30,31];
+time.zones = {};
+time.zones['-12'] = 'IDLW';
+time.record = function(num, zone)
+{
+  if (typeof num === 'object') return num;
+  else if (typeof num === 'number') {
+    zone ??= this.computer_zone();
+    var monthdays = this.monthdays.slice();
+    var rec = {
+      second: 0,
+      minute: 0,
+      hour: 0,
+      yday: 0,
+      year: 0,
+      zone: 0
+    };
+    rec.zone = zone;
+    num += zone*this.hour;
+    
+    var hms = num % this.day;
+    var day = parseInt(num/this.day);
+
+    if (hms < 0) {
+      hms += this.day;
+      day--;
+    }
+    rec.second = hms%this.minute;
+    var d1 = Math.floor(hms/this.minute);
+    rec.minute = d1 % this.minute;
+    rec.hour = Math.floor(d1/this.minute);
+
+    /* addend%7 is 4 */
+    rec.weekday = (day + 4503599627370496+2)%7;
+
+    var d1 = this.epoch;
+    if (day >= 0)
+      for (d1= this.epoch; day >= this.yearsize(d1); d1++)
+        day -= this.yearsize(d1);
+    else
+      for (d1 = this.epoch; day < 0; d1--)
+        day += this.yearsize(d1-1);
+
+    rec.year = d1;
+    if (rec.year <= 0)
+      rec.ce = 'BC';
+    else
+      rec.ce = 'AD';
+      
+    rec.yday = day;
+
+    if (this.yearsize(d1) === 366)
+      monthdays[1] = 29;
+
+    var d0  = day;
+    for (d1 = 0; d0 >= monthdays[d1]; d1++)
+      d0 -= monthdays[d1];
+
+    monthdays[1] = 28;
+    rec.day = d0 + 1;
+
+    rec.month = d1;
+     return rec;
+  }
+}
+
+time.number = function(rec)
+{
+  if (typeof rec === 'number')
+    return rec;
+  else if (typeof rec === 'object') {
+    var c = 0;
+    var year = rec.year ? rec.year : 0;
+    var hour = rec.hour ? rec.hour : 0;
+    var minute = rec.minute ? rec.minute : 0;
+    var second = rec.second ? rec.second : 0;
+    var zone = rec.zone ? rec.zone : 0;
+
+    if (year > this.epoch)
+      for (var i = this.epoch; i < year; i++)
+        c += this.day*this.yearsize(i);
+    else if (year < this.epoch) {
+      for (var i = this.epoch-1; i > year; i--)
+        c += this.day*this.yearsize(i);
+
+      c += (this.yearsize(year)-yday-1)*this.day;
+      c += (this.day2hour-hour-1)*this.hour;
+      c += (this.hour2minute-minute-1)*this.minute;
+      c += (this.minute2second-second);
+      c += zone*this.hour;
+      c *= -1;
+      return c;
+    }
+
+    c += second;
+    c += minute * this.minute;
+    c += hour * this.hour;
+    c += yday * this.day;
+    c -= zone * this.hour;
+
+    return c;
+  }
+}
+
+/* Time formatting
+  yyyy - year in a 4 digit field
+  y - as many digits as necessary
+  mm - month (1-12)
+  mB - month name
+  mb - abbreviated month name
+  dd - day (1-31)
+  d
+  c - if the year is <= 0, BC. Otherwise, AD.
+  hh - hour
+  h
+  nn - minutes
+  n
+  ss - seconds
+  s
+  v - day of the week (0-6)
+  vB - weekday name
+  vb - abbreviated weekday name
+  a - am/pm
+  z - zone, -12 to +11
+*/
+
+time.fmt = "vB mB d h:nn:ss TZz a y c";
+
+/* If num is a number, converts to a rec first. */
+time.text = function(num, fmt, zone)
+{
+  fmt ??= this.fmt;
+  var rec = num;
+  
+  if (typeof rec === 'number')
+    rec = time.record(num, zone);
+
+  zone = rec.zone;
+
+  if (fmt.match('a')) {
+    if (rec.hour >= 13) {
+      rec.hour -= 12;
+      fmt = fmt.replaceAll('a', 'PM');
+    } else if (rec.hour === 12)
+      fmt = fmt.replaceAll('a', 'PM');
+    else if (rec.hour === 0) {
+      rec.hour = 12;
+      fmt = fmt.replaceAll('a', 'AM');
+    } else
+      fmt = fmt.replaceAll('a', 'AM');
+  }
+  var year = rec.year > 0 ? rec.year : rec.year - 1;
+  if (fmt.match('c')) {
+    if (year < 0) {
+      year = Math.abs(year);
+      fmt = fmt.replaceAll('c', 'BC');
+    } else
+      fmt = fmt.replaceAll('c', 'AD');
+  }
+    
+  fmt = fmt.replaceAll('yyyy', year.toString().padStart(4,'0'));
+  fmt = fmt.replaceAll('y', year);
+  fmt = fmt.replaceAll('eee', rec.yday+1);
+  fmt = fmt.replaceAll('dd', rec.day.toString().padStart(2,'0'));
+  fmt = fmt.replaceAll('d', rec.day);
+  fmt = fmt.replaceAll('hh', rec.hour.toString().padStart(2,'0'));
+  fmt = fmt.replaceAll('h', rec.hour);
+  fmt = fmt.replaceAll('nn', rec.minute.toString().padStart(2,'0'));
+  fmt = fmt.replaceAll('n', rec.minute);
+  fmt = fmt.replaceAll('ss', rec.second.toString().padStart(2, '0'));
+  fmt = fmt.replaceAll('s', rec.second);
+  fmt = fmt.replaceAll('z', zone >= 0 ? "+" + zone : zone);
+  fmt = fmt.replaceAll(/mm[^bB]/g, rec.month+1);
+  fmt = fmt.replaceAll(/m[^bB]/g, rec.month+1);
+  fmt = fmt.replaceAll(/v[^bB]/g, rec.weekday);  
+  fmt = fmt.replaceAll('mb', this.monthstr[rec.month].slice(0,3));
+  fmt = fmt.replaceAll('mB', this.monthstr[rec.month]);  
+  fmt = fmt.replaceAll('vB', this.weekdays[rec.weekday]);
+  fmt = fmt.replaceAll('vb', this.weekdays[rec.weekday].slice(0,3));
+
+  return fmt;
+}
+
 var json = {};
 json.encode = function(value, space, replacer, whitelist)
 {
@@ -940,6 +1177,8 @@ Object.defineProperty(Array.prototype, 'lerp', {
 });
 
 Math.lerp = function(s,f,t) { return (f-s)*t + s; };
+Math.gcd = function(a,b) { return b === 0 ? a : gcd(b,a%b); }
+Math.lcm = function(a,b) { return (a*b)/gcd(a,b); }
 
 Math.grab_from_points = function(pos, points, slop) {
   var shortest = slop;
