@@ -55,7 +55,7 @@ void model_init();
 void draw_model(struct model *model, HMM_Mat4 amodel);
 void draw_models(struct model *model, struct shader *shader);
 
-struct drawmodel *make_drawmodel(int go);
+struct drawmodel *make_drawmodel(gameobject *go);
 void draw_drawmodel(struct drawmodel *dm);
 void free_drawmodel(struct drawmodel *dm);
 

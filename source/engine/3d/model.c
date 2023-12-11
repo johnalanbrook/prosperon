@@ -378,7 +378,7 @@ void draw_model(struct model *model, HMM_Mat4 amodel) {
   }
 }
 
-struct drawmodel *make_drawmodel(int go)
+struct drawmodel *make_drawmodel(gameobject *go)
 {
   struct drawmodel *dm = malloc(sizeof(struct drawmodel));
   dm->model = NULL;

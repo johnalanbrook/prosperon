@@ -57,18 +57,9 @@ cpShape *phys2d_query_pos(cpVect pos) {
   return find;
 }
 
-int sort_ids(int *a, int *b)
+gameobject **clean_ids(gameobject **ids)
 {
-  if (*a == *b) return 0;
-  if (*a < *b) return -1;
-  return 1;
-}
-
-gameobject *clean_ids(int *ids)
-{
-  qsort(ids, sizeof(*ids), arrlen(ids), sort_ids);
-
-  int curid = -1;
+  gameobject *curid = NULL;
   for (int i = arrlen(ids)-1; i >= 0; i--)
     if (ids[i] == curid)
       arrdelswap(ids, i);
@@ -78,7 +69,7 @@ gameobject *clean_ids(int *ids)
   return ids;
 }
 
-void querylist(cpShape *shape, cpContactPointSet *points, int *ids) { arrput(ids,shape2go(shape)); }
+void querylist(cpShape *shape, cpContactPointSet *points, gameobject **ids) { arrput(ids,shape2go(shape)); }
 
 typedef struct querybox {
   cpBB bb;
@@ -184,7 +175,7 @@ void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->go = go;
   shape->data = data;
   go_shape_apply(go->body, shape->shape, go);
-  cpShapeSetCollisionType(shape->shape, go);
+  cpShapeSetCollisionType(shape->shape, (int)go);
   cpShapeSetUserData(shape->shape, shape);
 }
 
@@ -566,7 +557,7 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
 
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
-  JS_SetPropertyStr(js, obj, "hit", JS_NewInt32(js, hit));
+  JS_SetPropertyStr(js, obj, "hit", hit->ref);
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);
@@ -574,7 +565,6 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
 //  srfv.cp = cpArbiterGetPointA(arb,0);
 //  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
 //  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
-  JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
   JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,hit->ref));
 
   struct postphys_cb cb;
@@ -631,14 +621,14 @@ static cpBool script_phys_cb_separate(cpArbiter *arb, cpSpace *space, void *data
 }
 
 void phys2d_rm_go_handlers(gameobject *go) {
-  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
+  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (int)go);
   handler->userData = NULL;
   handler->beginFunc = NULL;
   handler->separateFunc = NULL;
 }
 
 void phys2d_setup_handlers(gameobject *go) {
-  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
+  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (int)go);
   handler->userData = go;
   handler->beginFunc = script_phys_cb_begin;
   handler->separateFunc = script_phys_cb_separate;

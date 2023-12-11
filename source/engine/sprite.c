@@ -52,7 +52,7 @@ struct slice9_vert {
   struct rgba color;
 };
 
-int make_sprite(int go) {
+int make_sprite(gameobject *go) {
   struct sprite sprite = {
     .t = t2d_unit,
       .color = color_white,
@@ -70,7 +70,7 @@ int make_sprite(int go) {
 
 void sprite_delete(int id) {
   struct sprite *sp = id2sprite(id);
-  sp->go = -1;
+  sp->go = NULL;
   sp->enabled = 0;
   freelist_kill(sprites,id);
 }

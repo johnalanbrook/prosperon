@@ -21,7 +21,7 @@ struct sprite {
   int next;
 };
 
-int make_sprite(int go);
+int make_sprite(gameobject *go);
 struct sprite *id2sprite(int id);
 void sprite_delete(int id);
 void sprite_enabled(int id, int e);

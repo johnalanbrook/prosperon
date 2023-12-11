@@ -74,23 +74,6 @@ void js_setprop_str(JSValue obj, const char *prop, JSValue v)
   JS_SetPropertyStr(js, obj, prop, v);
 }
 
-JSValue unix2time(time_t unix)
-{
-  struct tm *t = localtime(&unix);
-  JSValue o = JS_NewObject(js);
-  js_setprop_str(o, "sec", JS_NewFloat64(js, t->tm_sec));
-  js_setprop_str(o, "min", JS_NewFloat64(js, t->tm_min));
-  js_setprop_str(o, "hour", JS_NewFloat64(js, t->tm_hour));
-  js_setprop_str(o, "day", JS_NewFloat64(js, t->tm_mday));
-  js_setprop_str(o, "mon", JS_NewFloat64(js, t->tm_mon));
-  js_setprop_str(o, "year", JS_NewFloat64(js, t->tm_year+1900));
-  js_setprop_str(o, "weekday", JS_NewFloat64(js, t->tm_wday));
-  js_setprop_str(o, "yday", JS_NewFloat64(js, t->tm_yday));
-  js_setprop_str(o, "dst", JS_NewBool(js, t->tm_isdst));
-  js_setprop_str(o, "unix", JS_NewFloat64(js, unix));
-  return o;
-}
-
 JSValue jstzone()
 {
   time_t t = time(NULL);
@@ -524,7 +507,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 2:
-    gameobject_free(js2int(argv[1]));
+//    gameobject_free(js2gameobject(argv[1]));
     break;
 
   case 3:
@@ -1344,7 +1327,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       dag_set(js2gameobject(argv[1]), js2gameobject(argv[2]));
       break;
     case 209:
-      ret = unix2time(js2number(argv[1]));
       break;
     case 210:
       ret = jscurtime();
@@ -1495,7 +1477,7 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     return JS_NewBool(js, sim_paused());
 
   case 7:
-    return JS_NewInt64(js, MakeGameobject());
+    return gameobject2js(MakeGameobject());
 
   case 8:
     return JS_NewInt64(js, frame_fps());

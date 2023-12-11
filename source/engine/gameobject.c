@@ -88,10 +88,10 @@ unsigned int editor_cat = 1<<31;
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
   cpShapeSetFriction(shape, go->f);
   cpShapeSetElasticity(shape, go->e);
-  cpShapeSetCollisionType(shape, go);
+  cpShapeSetCollisionType(shape, (int)go);
 
   cpShapeFilter filter;
-  filter.group = go;
+  filter.group = (int)go;
   filter.categories = 1<<go->layer | editor_cat;
 //  filter.mask = CP_ALL_CATEGORIES;
   filter.mask = category_masks[go->layer] | editor_cat;

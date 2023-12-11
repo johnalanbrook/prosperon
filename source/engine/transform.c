@@ -14,7 +14,7 @@ HMM_Vec3 trans_down(const transform3d *trans) { return HMM_QVRot(vDOWN, trans->r
 HMM_Vec3 trans_right(const transform3d *trans) { return HMM_QVRot(vRIGHT, trans->rotation); }
 HMM_Vec3 trans_left(const transform3d *trans) { return HMM_QVRot(vLEFT, trans->rotation); }
 
-HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos) { return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 0}).XY; }
+HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos) { return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 0}).xy; }
 
 HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir)
 {

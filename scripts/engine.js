@@ -1,3 +1,4 @@
+"use math";
 var files = {};
 function load(file) {
    var modtime = cmd(0, file);

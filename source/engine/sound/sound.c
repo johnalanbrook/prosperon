@@ -270,7 +270,7 @@ void free_source(struct sound *s)
   free(s);
 }
 
-static long *src_cb(struct sound *s, float **data)
+static long src_cb(struct sound *s, float **data)
 {
   long needed = BUF_FRAMES/s->timescale;
   *data = s->data->data+s->frame;
