@@ -518,10 +518,9 @@ void full_2d_pass(struct window *window)
   call_draw();
 
   //// DEBUG
-  if (debugDrawPhysics) {
-    gameobject_draw_debugs();
+  if (debugDrawPhysics)
     call_debugs();    
-  }
+
   debug_flush(&projection);
   text_flush(&projection);
 

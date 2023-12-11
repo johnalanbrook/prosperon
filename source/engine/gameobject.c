@@ -1,61 +1,35 @@
 #include "gameobject.h"
 
 #include "2dphysics.h"
-#include "log.h"
 #include <chipmunk/chipmunk.h>
 #include <string.h>
 #include "debugdraw.h"
-#include "freelist.h"
+#include "log.h"
 
 #include "stb_ds.h"
 
-struct gameobject *gameobjects = NULL;
-
-struct gameobject *id2go(int id) {
-  if (id < 0) return NULL;
-
-  return &gameobjects[id];
-}
-
-int body2id(cpBody *body) { return (int)cpBodyGetUserData(body); }
-
-cpBody *id2body(int id) {
-  struct gameobject *go = id2go(id);
-
-  if (go)
-    return go->body;
-
-  return NULL;
-}
-
-int shape2gameobject(cpShape *shape) {
-  struct phys2d_shape *s = cpShapeGetUserData(shape);
-  return s->go;
-}
-
-struct gameobject *shape2go(cpShape *shape)
+gameobject *body2go(cpBody *body) { return cpBodyGetUserData(body); }
+gameobject *shape2go(cpShape *shape)
 {
-  return id2go(shape2gameobject(shape));
+  return ((struct phys2d_shape *)cpShapeGetUserData(shape))->go;
 }
 
-HMM_Vec2 go_pos(struct gameobject *go)
+HMM_Vec2 go_pos(gameobject *go)
 {
   cpVect p = cpBodyGetPosition(go->body);
   return (HMM_Vec2){p.x, p.y};
 }
 
-HMM_Vec2 go_worldpos(struct gameobject *go)
+HMM_Vec2 go_worldpos(gameobject *go)
 {
   HMM_Vec2 ret;
   ret.cp = cpBodyGetPosition(go->body);
   return ret;
 }
 
-float go_angle(struct gameobject *go) { return go_worldangle(go); }
-
-float go_worldangle(struct gameobject *go) { return cpBodyGetAngle(go->body); }
-
-float go2angle(struct gameobject *go) { return cpBodyGetAngle(go->body); }
+float go_angle(gameobject *go) { return go_worldangle(go); }
+float go_worldangle(gameobject *go) { return cpBodyGetAngle(go->body); }
+float go2angle(gameobject *go) { return cpBodyGetAngle(go->body); }
 
 transform3d go2t3(gameobject *go)
 {
@@ -72,23 +46,21 @@ transform3d go2t3(gameobject *go)
   return t;
 }
 
-HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_go2world(go), pos); }
+HMM_Vec2 go2world(gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_go2world(go), pos); }
+HMM_Vec2 world2go(gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_world2go(go), pos); }
+HMM_Mat3 t_go2world(gameobject *go) { return transform2d2mat(go2t(go)); }
+HMM_Mat3 t_world2go(gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
+HMM_Mat4 t3d_go2world(gameobject *go) { return transform3d2mat(go2t3(go)); }
+HMM_Mat4 t3d_world2go(gameobject *go) { return HMM_InvGeneralM4(t3d_go2world(go)); }
 
-HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_world2go(go), pos); }
-
-HMM_Mat3 t_go2world(struct gameobject *go) { return transform2d2mat(go2t(go)); }
-
-HMM_Mat3 t_world2go(struct gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
-
-HMM_Mat4 t3d_go2world(struct gameobject *go) { return transform3d2mat(go2t3(go)); }
-HMM_Mat4 t3d_world2go(struct gameobject *go) { return HMM_InvGeneralM4(t3d_go2world(go)); }
-
-int pos2gameobject(HMM_Vec2 pos) {
+gameobject *pos2gameobject(HMM_Vec2 pos) {
   cpShape *hit = phys2d_query_pos(pos.cp);
 
   if (hit)
-    return shape2gameobject(hit);
+    return shape2go(hit);
 
+  return NULL;
+/*
   for (int i = 0; i < arrlen(gameobjects); i++) {
     if (!gameobjects[i].body) continue;
     cpVect gpos = cpBodyGetPosition(gameobjects[i].body);
@@ -96,8 +68,8 @@ int pos2gameobject(HMM_Vec2 pos) {
 
     if (dist <= 25) return i;
   }
-  
-  return -1;
+  */
+  return NULL;
 }
 
 transform2d go2t(gameobject *go)
@@ -111,22 +83,15 @@ transform2d go2t(gameobject *go)
   return t;
 }
 
-int go2id(struct gameobject *go) {
-  for (int i = 0; i < arrlen(gameobjects); i++)
-    if (&gameobjects[i] == go) return i;
-
-  return -1;
-}
-
 unsigned int editor_cat = 1<<31;
 
-void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
+void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
   cpShapeSetFriction(shape, go->f);
   cpShapeSetElasticity(shape, go->e);
-  cpShapeSetCollisionType(shape, go2id(go));
+  cpShapeSetCollisionType(shape, go);
 
   cpShapeFilter filter;
-  filter.group = go2id(go);
+  filter.group = go;
   filter.categories = 1<<go->layer | editor_cat;
 //  filter.mask = CP_ALL_CATEGORIES;
   filter.mask = category_masks[go->layer] | editor_cat;
@@ -138,7 +103,7 @@ void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go) {
     ape->apply(ape->data);
 }
 
-void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go) {
+void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
   float moment = cpBodyGetMoment(go->body);
   struct phys2d_shape *s = cpShapeGetUserData(shape);
   if (!s) {
@@ -151,7 +116,7 @@ void go_shape_moi(cpBody *body, cpShape *shape, struct gameobject *go) {
   cpBodySetMoment(go->body, 1);
 }
 
-void gameobject_apply(struct gameobject *go) {
+void gameobject_apply(gameobject *go) {
   cpBodySetType(go->body, go->bodytype);
   cpBodyEachShape(go->body, go_shape_apply, go);
 
@@ -169,7 +134,7 @@ void gameobject_apply(struct gameobject *go) {
 
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
-  struct gameobject *go = id2go((int)cpBodyGetUserData(body));
+  gameobject *go = body2go(body);
   if (!go) {
     cpBodyUpdateVelocity(body,gravity,damping,dt);
     return;
@@ -190,8 +155,9 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
   }
 }
 
-int MakeGameobject() {
-  struct gameobject go = {
+gameobject *MakeGameobject() {
+  gameobject *ngo = malloc(sizeof(*ngo));
+  gameobject go = {
       .scale = (HMM_Vec3){1.f,1.f,1.f},
       .bodytype = CP_BODY_TYPE_STATIC,
       .maxvelocity = INFINITY,
@@ -206,6 +172,8 @@ int MakeGameobject() {
       .damping = NAN,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
+      .parent = NULL,
+      .children = NULL
   };
 
   go.cbs.begin.obj = JS_UNDEFINED;
@@ -214,16 +182,13 @@ int MakeGameobject() {
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
   cpBodySetVelocityUpdateFunc(go.body, velocityFn);
 
-  int id;
-  if (!gameobjects) freelist_size(gameobjects,500);
-  freelist_grab(id, gameobjects);
-  cpBodySetUserData(go.body, (void*)id);
-  phys2d_setup_handlers(id);
-  gameobjects[id] = go;
-  return id;
+  *ngo = go;
+  cpBodySetUserData(go.body, ngo);
+  phys2d_setup_handlers(ngo);
+  return ngo;
 }
 
-void gameobject_traverse(struct gameobject *go, HMM_Mat4 p)
+void gameobject_traverse(gameobject *go, HMM_Mat4 p)
 {
   HMM_Mat4 local = transform3d2mat(go2t3(go));
   go->world = HMM_MulM4(local, p);
@@ -242,36 +207,30 @@ void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
   cpShapeFree(shape);
 }
 
-int *go_toclean = NULL;
+gameobject **go_toclean = NULL;
 
 /* Free this gameobject */
-void gameobject_clean(int id) {
-  struct gameobject *go = id2go(id);
+void gameobject_clean(gameobject *go) {
   arrfree(go->shape_cbs);
   cpBodyEachShape(go->body, rm_body_shapes, NULL);
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
   go->body = NULL;
+
+  free(go);
 }
 
 /* Really more of a "mark for deletion" ... */
-void gameobject_delete(int id) {
-  gameobject *go = id2go(id);
+void gameobject_free(gameobject *go) {
+  if (!go) return;
+  YughWarn("FREEING A GAMEOBJECT");  
   JS_FreeValue(js, go->ref);
+  dag_clip(go);  
 
   if (cpSpaceIsLocked(space))
-    arrpush(go_toclean, id);
+    arrpush(go_toclean, go);
   else
-    gameobject_clean(id);
-
-  dag_clip(go);
-  freelist_kill(gameobjects,id);  
-}
-
-void gameobject_free(int id)
-{
-  if (id >= 0)
-    gameobject_delete(id);
+    gameobject_clean(go);
 }
 
 void gameobjects_cleanup() {
@@ -281,12 +240,12 @@ void gameobjects_cleanup() {
   arrsetlen(go_toclean, 0);
 }
 
-void gameobject_setangle(struct gameobject *go, float angle) {
+void gameobject_setangle(gameobject *go, float angle) {
   cpBodySetAngle(go->body, angle);
   phys2d_reindex_body(go->body);
 }
 
-void gameobject_setpos(struct gameobject *go, cpVect vec) {
+void gameobject_setpos(gameobject *go, cpVect vec) {
   if (!go || !go->body) return;
   cpBodySetPosition(go->body, vec);
   phys2d_reindex_body(go->body);
@@ -297,15 +256,9 @@ void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
   s->debugdraw(s->data);
 }
 
-void gameobject_draw_debug(int go) {
-  struct gameobject *g = id2go(go);
-  if (!g || !g->body) return;
+void gameobject_draw_debug(gameobject *go) {
+  if (!go || !go->body) return;
 
-  cpVect pos = cpBodyGetPosition(g->body);
-  cpBodyEachShape(g->body, body_draw_shapes_dbg, NULL);
-}
-
-void gameobject_draw_debugs() {
-  for (int i = 0; i < arrlen(gameobjects); i++)
-    gameobject_draw_debug(i);
+  cpVect pos = cpBodyGetPosition(go->body);
+  cpBodyEachShape(go->body, body_draw_shapes_dbg, NULL);
 }

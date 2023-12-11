@@ -287,29 +287,12 @@ void c_event(const sapp_event *e)
 
 int sim_playing() { return sim_play == SIM_PLAY; }
 int sim_paused() { return sim_play == SIM_PAUSE; }
-
-void sim_start() {
-  sim_play = SIM_PLAY;
-}
-
-void sim_pause() {
-  sim_play = SIM_PAUSE;
-}
-
+void sim_start() { sim_play = SIM_PLAY; }
+void sim_pause() { sim_play = SIM_PAUSE; }
 int phys_stepping() { return sim_play == SIM_STEP; }
-
-void sim_step() {
-  sim_play = SIM_STEP;
-}
-
-void set_timescale(float val) {
-  timescale = val;
-}
-
-double get_timescale()
-{
-  return timescale;
-}
+void sim_step() { sim_play = SIM_STEP; }
+void set_timescale(float val) { timescale = val; }
+double get_timescale() { return timescale; }
 
 static sapp_desc start_desc = {
     .width = 720,
@@ -330,10 +313,7 @@ static sapp_desc start_desc = {
     .logger.func = sg_logging,
 };
 
-void app_name(char *name)
-{
-  start_desc.window_title = strdup(name);
-}
+void app_name(char *name) { start_desc.window_title = strdup(name); }
 
 int main(int argc, char **argv) {
 #ifndef NDEBUG

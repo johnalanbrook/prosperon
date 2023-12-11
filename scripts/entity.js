@@ -141,8 +141,7 @@ var gameobject = {
           this.set_worldpos(this.level.this2world(x));
       },
       
-      get pos() { return cmd
-       
+      get pos() { 
         if (!this.level) return this.worldpos();
         return this.level.world2this(this.worldpos());
       },
@@ -238,7 +237,8 @@ var gameobject = {
     this.level?.remove_obj(this);
     
     this.level = parent;
-    cmd(208,parent,this);
+    
+    cmd(208,parent.body,this.body);
       
     function unique_name(list, obj) {
       var str = obj.toString().replaceAll('.', '_');
@@ -310,13 +310,9 @@ var gameobject = {
     return bb.t-bb.b;
   },
 
-  move(vec) {
-    this.pos = this.pos.add(vec);
-  },
+  move(vec) { this.pos = this.pos.add(vec); },
 
-  rotate(amt) {
-    this.angle += amt;
-  },
+  rotate(amt) { this.angle += amt; },
 
   /* Make a unique object the same as its prototype */
   revert() {

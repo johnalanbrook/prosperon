@@ -33,9 +33,7 @@ static const float sensor_seg = 10;
 
 unsigned int category_masks[32];
 
-void set_cat_mask(int cat, unsigned int mask) {
-  category_masks[cat] = mask;
-}
+void set_cat_mask(int cat, unsigned int mask) { category_masks[cat] = mask; }
 
 cpTransform m3_to_cpt(HMM_Mat3 m)
 {
@@ -66,7 +64,7 @@ int sort_ids(int *a, int *b)
   return 1;
 }
 
-int *clean_ids(int *ids)
+gameobject *clean_ids(int *ids)
 {
   qsort(ids, sizeof(*ids), arrlen(ids), sort_ids);
 
@@ -80,18 +78,16 @@ int *clean_ids(int *ids)
   return ids;
 }
 
-void querylist(cpShape *shape, cpContactPointSet *points, int *ids) {
-  arrput(ids,shape2gameobject(shape));
-}
+void querylist(cpShape *shape, cpContactPointSet *points, int *ids) { arrput(ids,shape2go(shape)); }
 
 typedef struct querybox {
   cpBB bb;
-  int *ids;
+  gameobject **ids;
 } querybox;
 
 void querylistbodies(cpBody *body, querybox *qb) {
   if (cpBBContainsVect(qb->bb, cpBodyGetPosition(body)))
-    arrput(qb->ids,body2id(body));
+    arrput(qb->ids,body2go(body));
 }
 
 /* Return all points from a list of points in the given boundingbox */
@@ -109,7 +105,7 @@ int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n)
 }
 
 /* Return all gameobjects within the given box */
-int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
+gameobject *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
   cpTransform T = {0};
   T.a = 1;
@@ -134,8 +130,8 @@ int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   return clean_ids(ids);
 }
 
-int *phys2d_query_shape(struct phys2d_shape *shape) {
-  int *ids = NULL;
+gameobject *phys2d_query_shape(struct phys2d_shape *shape) {
+  gameobject **ids = NULL;
   cpSpaceShapeQuery(space, shape->shape, querylist, ids);
   return clean_ids(ids);
 }
@@ -184,10 +180,10 @@ void phys2d_update(float deltaT) {
   flush_collide_cbs();
 }
 
-void init_phys2dshape(struct phys2d_shape *shape, int go, void *data) {
+void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->go = go;
   shape->data = data;
-  go_shape_apply(id2go(go)->body, shape->shape, id2go(go));
+  go_shape_apply(go->body, shape->shape, go);
   cpShapeSetCollisionType(shape->shape, go);
   cpShapeSetUserData(shape->shape, shape);
 }
@@ -199,13 +195,13 @@ void phys2d_shape_del(struct phys2d_shape *shape) {
 }
 
 /***************** CIRCLE2D *****************/
-struct phys2d_circle *Make2DCircle(int go) {
+struct phys2d_circle *Make2DCircle(gameobject *go) {
   struct phys2d_circle *new = malloc(sizeof(struct phys2d_circle));
 
   new->radius = 10.f;
   new->offset = v2zero;
 
-  new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(id2go(go)->body, new->radius, cpvzero));
+  new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(go->body, new->radius, cpvzero));
   new->shape.debugdraw = phys2d_dbgdrawcircle;
   new->shape.moi = phys2d_circle_moi;
   new->shape.apply = phys2d_applycircle;
@@ -240,7 +236,7 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
 }
 
 void phys2d_applycircle(struct phys2d_circle *circle) {
-  struct gameobject *go = id2go(circle->shape.go);
+  gameobject *go = circle->shape.go;
 
   float radius = circle->radius * HMM_MAX(HMM_ABS(go->scale.X), HMM_ABS(go->scale.Y));
   cpCircleShapeSetRadius(circle->shape.shape, radius);
@@ -250,7 +246,7 @@ void phys2d_applycircle(struct phys2d_circle *circle) {
 
 /************* BOX2D ************/
 
-struct phys2d_box *Make2DBox(int go) {
+struct phys2d_box *Make2DBox(gameobject *go) {
   struct phys2d_box *new = malloc(sizeof(struct phys2d_box));
   new->t = (transform2d){
     .pos = {0,0},
@@ -277,7 +273,7 @@ void phys2d_boxdel(struct phys2d_box *box) {
 
 void phys2d_applybox(struct phys2d_box *box) {
   phys2d_boxdel(box);
-  struct gameobject *go = id2go(box->shape.go);
+  struct gameobject *go = box->shape.go;
   cpTransform T = m3_to_cpt(transform2d2mat(box->t));
   cpVect verts[4] = {{-0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}, {-0.5, 0.5}};
   box->shape.shape = cpSpaceAddShape(space, cpPolyShapeNew(go->body, 4, verts, T, box->r));
@@ -304,14 +300,14 @@ void phys2d_dbgdrawbox(struct phys2d_box *box) {
 }
 /************** POLYGON ************/
 
-struct phys2d_poly *Make2DPoly(int go) {
+struct phys2d_poly *Make2DPoly(gameobject *go) {
   struct phys2d_poly *new = malloc(sizeof(struct phys2d_poly));
 
   new->points = NULL;
   arrsetlen(new->points, 0);
   new->radius = 0.f;
 
-  new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(id2go(go)->body, 0, new->points, new->radius));
+  new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(go->body, 0, new->points, new->radius));
   new->shape.debugdraw = phys2d_dbgdrawpoly;
   new->shape.moi = phys2d_poly_moi;
   new->shape.apply = phys2d_applypoly;
@@ -354,7 +350,7 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
 
 void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
-  struct gameobject *go = id2go(poly->shape.go);
+  struct gameobject *go = poly->shape.go;
   cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
   cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
@@ -379,7 +375,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
 }
 /****************** EDGE 2D**************/
 
-struct phys2d_edge *Make2DEdge(int go) {
+struct phys2d_edge *Make2DEdge(gameobject *go) {
   struct phys2d_edge *new = malloc(sizeof(struct phys2d_edge));
   new->points = NULL;
   arrsetlen(new->points, 0);
@@ -414,7 +410,7 @@ void phys2d_edgedel(struct phys2d_edge *edge) {
 void phys2d_edgeaddvert(struct phys2d_edge *edge) {
   arrput(edge->points, v2zero);
   if (arrlen(edge->points) > 1)
-    arrput(edge->shapes, cpSpaceAddShape(space, cpSegmentShapeNew(id2go(edge->shape.go)->body, cpvzero, cpvzero, edge->thickness)));
+    arrput(edge->shapes, cpSpaceAddShape(space, cpSegmentShapeNew(edge->shape.go->body, cpvzero, cpvzero, edge->thickness)));
 
   phys2d_applyedge(edge);
 }
@@ -466,7 +462,7 @@ void phys2d_edge_addverts(struct phys2d_edge *edge, cpVect *verts) {
 }
 
 void phys2d_applyedge(struct phys2d_edge *edge) {
-  struct gameobject *go = id2go(edge->shape.go);
+  struct gameobject *go = edge->shape.go;
 
   for (int i = 0; i < arrlen(edge->shapes); i++) {
     /* Points must be scaled with gameobject, */
@@ -480,7 +476,7 @@ void phys2d_applyedge(struct phys2d_edge *edge) {
     cpShapeSetUserData(edge->shapes[i], &edge->shape);
   }
 
-  cpSpaceReindexShapesForBody(space, id2go(edge->shape.go)->body);
+  cpSpaceReindexShapesForBody(space, edge->shape.go->body);
 }
 
 void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
@@ -495,7 +491,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
   if (arrlen(edge->shapes) < 1) return;
 
   HMM_Vec2 drawpoints[arrlen(edge->points)];
-  struct gameobject *go = id2go(edge->shape.go);
+  struct gameobject *go = edge->shape.go;
 
   HMM_Mat3 g2w = t_go2world(go);
   for (int i = 0; i < arrlen(edge->points); i++) 
@@ -563,7 +559,7 @@ void flush_collide_cbs() {
   arrsetlen(begins,0);
 }
 
-void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, int hit, cpArbiter *arb) {
+void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter *arb) {
   cpShape *shape1;
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
@@ -579,7 +575,7 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, int hit, cpArbiter *arb) {
 //  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
 //  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
   JS_SetPropertyStr(js, obj, "id", JS_NewInt32(js,hit));
-  JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,id2go(hit)->ref));
+  JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,hit->ref));
 
   struct postphys_cb cb;
   cb.c = c;
@@ -594,11 +590,8 @@ static cpBool handle_collision(cpArbiter *arb, int type) {
   cpBody *body1;
   cpBody *body2;
   cpArbiterGetBodies(arb, &body1, &body2);
-  int g1 = (int)cpBodyGetUserData(body1);
-  int g2 = (int)cpBodyGetUserData(body2);
-  struct gameobject *go = id2go(g1);
-  struct gameobject *go2 = id2go(g2);
-
+  gameobject *go = cpBodyGetUserData(body1);
+  gameobject *go2 = cpBodyGetUserData(body2);
   cpShape *shape1;
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
@@ -612,16 +605,16 @@ static cpBool handle_collision(cpArbiter *arb, int type) {
   case CTYPE_BEGIN:
     for (int i = 0; i < arrlen(go->shape_cbs); i++)
       if (go->shape_cbs[i].shape == pshape1)
-        duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, g2, arb);
+        duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, go2, arb);
 
     if (JS_IsObject(go->cbs.begin.obj))
-      duk_call_phys_cb(norm1, go->cbs.begin, g2, arb);
+      duk_call_phys_cb(norm1, go->cbs.begin, go2, arb);
 
     break;
 
   case CTYPE_SEP:
     if (JS_IsObject(go->cbs.separate.obj))
-      duk_call_phys_cb(norm1, go->cbs.separate, g2, arb);
+      duk_call_phys_cb(norm1, go->cbs.separate, go2, arb);
 
     break;
   }
@@ -637,16 +630,16 @@ static cpBool script_phys_cb_separate(cpArbiter *arb, cpSpace *space, void *data
   return handle_collision(arb, CTYPE_SEP);
 }
 
-void phys2d_rm_go_handlers(int go) {
+void phys2d_rm_go_handlers(gameobject *go) {
   cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
   handler->userData = NULL;
   handler->beginFunc = NULL;
   handler->separateFunc = NULL;
 }
 
-void phys2d_setup_handlers(int go) {
+void phys2d_setup_handlers(gameobject *go) {
   cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, go);
-  handler->userData = (void *)go;
+  handler->userData = go;
   handler->beginFunc = script_phys_cb_begin;
   handler->separateFunc = script_phys_cb_separate;
 }

@@ -3,10 +3,9 @@
 
 #include "script.h"
 #include <chipmunk/chipmunk.h>
+#include "gameobject.h"
 #include "render.h"
 #include "transform.h"
-
-struct gameobject;
 
 extern float phys2d_gravity;
 extern int physOn;
@@ -24,7 +23,7 @@ extern struct rgba sleep_color;
 struct phys2d_shape {
   cpShape *shape;
   transform2d t;
-  int go;
+  gameobject *go;
   void *data; /* The specific subtype; phys2d_circle, etc */
   void (*debugdraw)(void *data);
   float (*moi)(void *data, float mass);
@@ -71,19 +70,19 @@ struct phys2d_edge {
   int draws;
 };
 
-struct phys2d_circle *Make2DCircle(int go);
+struct phys2d_circle *Make2DCircle(gameobject *go);
 void phys2d_circledel(struct phys2d_circle *c);
 void phys2d_applycircle(struct phys2d_circle *circle);
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle);
 float phys2d_circle_moi(struct phys2d_circle *c, float m);
 
-struct phys2d_box *Make2DBox(int go);
+struct phys2d_box *Make2DBox(gameobject *go);
 void phys2d_boxdel(struct phys2d_box *box);
 void phys2d_applybox(struct phys2d_box *box);
 void phys2d_dbgdrawbox(struct phys2d_box *box);
 float phys2d_box_moi(struct phys2d_box *box, float m);
 
-struct phys2d_poly *Make2DPoly(int go);
+struct phys2d_poly *Make2DPoly(gameobject *go);
 void phys2d_polydel(struct phys2d_poly *poly);
 void phys2d_applypoly(struct phys2d_poly *poly);
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly);
@@ -91,7 +90,7 @@ void phys2d_polyaddvert(struct phys2d_poly *poly);
 void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts);
 float phys2d_poly_moi(struct phys2d_poly *poly, float m);
 
-struct phys2d_edge *Make2DEdge(int go);
+struct phys2d_edge *Make2DEdge(gameobject *go);
 void phys2d_edgedel(struct phys2d_edge *edge);
 void phys2d_applyedge(struct phys2d_edge *edge);
 void phys2d_dbgdrawedge(struct phys2d_edge *edge);
@@ -108,12 +107,8 @@ void phys2d_edge_set_enabled(struct phys2d_edge *edge, int enabled);
 void phys2d_init();
 void phys2d_update(float deltaT);
 cpShape *phys2d_query_pos(cpVect pos);
-int *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh);
+gameobject *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh);
 
-struct phys_cbs {
-  struct callee begin;
-  struct callee separate;
-};
 
 struct shape_cb {
   struct phys2d_shape *shape;
@@ -122,7 +117,7 @@ struct shape_cb {
 
 void fire_hits();
 
-void phys2d_rm_go_handlers(int go);
+void phys2d_rm_go_handlers(gameobject *go);
 void phys2d_set_gravity(cpVect v);
 
 void shape_enabled(struct phys2d_shape *shape, int enabled);
@@ -133,8 +128,8 @@ int shape_get_sensor(struct phys2d_shape *shape);
 struct rgba shape_color_s(cpShape *shape);
 
 void shape_gui(struct phys2d_shape *shape);
-void phys2d_setup_handlers(int go);
-int *phys2d_query_shape(struct phys2d_shape *shape);
+void phys2d_setup_handlers(gameobject *go);
+gameobject *phys2d_query_shape(struct phys2d_shape *shape);
 int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n);
 
 void flush_collide_cbs();

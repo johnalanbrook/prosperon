@@ -12,6 +12,12 @@ struct callee {
   JSValue obj;
 };
 
+struct phys_cbs {
+  struct callee begin;
+  struct callee separate;
+};
+
+
 extern struct callee stacktrace_callee;
 extern JSValue num_cache[100];
 

@@ -4,6 +4,7 @@
 #include "HandmadeMath.h"
 #include "transform.h"
 #include "sokol/sokol_gfx.h"
+#include "gameobject.h"
 
 extern HMM_Vec3 eye;
 struct shader;
@@ -32,7 +33,7 @@ typedef struct model {
 struct drawmodel {
   struct model *model;
   HMM_Mat4 amodel;
-  int go;
+  gameobject *go;
 };
 
 typedef struct bone {

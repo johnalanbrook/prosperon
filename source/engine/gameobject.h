@@ -1,11 +1,11 @@
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 
-#include "2dphysics.h"
 #include <chipmunk/chipmunk.h>
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
 #include "transform.h"
+#include "script.h"
 
 #define dag_rm(p,c) do{\
  for (int i = arrlen(p->children)-1; i--; i >=0) {\
@@ -26,7 +26,7 @@
     dag_rm(p->parent,p);\
 }while(0)
 
-typedef struct gameobject {
+struct gameobject {
   cpBodyType bodytype;
   cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
   HMM_Vec3 scale; /* local */  
@@ -51,53 +51,46 @@ typedef struct gameobject {
   float drawlayer;
   struct gameobject *parent;
   struct gameobject **children;
-} gameobject;
+};
 
-extern struct gameobject *gameobjects;
+typedef struct gameobject gameobject;
 
-int MakeGameobject();
-void gameobject_apply(struct gameobject *go);
-void gameobject_delete(int id);
-void gameobject_free(int id);
+gameobject *MakeGameobject();
+void gameobject_apply(gameobject *go);
+void gameobject_free(gameobject *go);
 void gameobjects_cleanup();
 
-void gameobject_traverse(struct gameobject *start, HMM_Mat4 p);
+void gameobject_traverse(gameobject *start, HMM_Mat4 p);
 
 transform2d go2t(gameobject *go);
 transform3d go2t3(gameobject *go);
 
-HMM_Vec2 go2world(struct gameobject *go, HMM_Vec2 pos);
-HMM_Vec2 world2go(struct gameobject *go, HMM_Vec2 pos);
+HMM_Vec2 go2world(gameobject *go, HMM_Vec2 pos);
+HMM_Vec2 world2go(gameobject *go, HMM_Vec2 pos);
 
-HMM_Mat3 t_go2world(struct gameobject *go);
-HMM_Mat3 t_world2go(struct gameobject *go);
-HMM_Mat4 t3d_go2world(struct gameobject *go);
-HMM_Mat4 t3d_world2go(struct gameobject *go);
+HMM_Mat3 t_go2world(gameobject *go);
+HMM_Mat3 t_world2go(gameobject *go);
+HMM_Mat4 t3d_go2world(gameobject *go);
+HMM_Mat4 t3d_world2go(gameobject *go);
 
-HMM_Vec2 go_pos(struct gameobject *go);
-HMM_Vec2 go_worldpos(struct gameobject *go);
-//float go_angle(struct gameobject *go);
-float go_worldangle(struct gameobject *go);
+HMM_Vec2 go_pos(gameobject *go);
+HMM_Vec2 go_worldpos(gameobject *go);
+//float go_angle(gameobject *go);
+float go_worldangle(gameobject *go);
 
-float go2angle(struct gameobject *go);
+float go2angle(gameobject *go);
 
-struct gameobject *id2go(int id);
-int go2id(struct gameobject *go);
-int body2id(cpBody *body);
-cpBody *id2body(int id);
-int shape2gameobject(cpShape *shape);
-struct gameobject *shape2go(cpShape *shape);
+gameobject *body2go(cpBody *body);
+gameobject *shape2go(cpShape *shape);
 
-void go_shape_apply(cpBody *body, cpShape *shape, struct gameobject *go);
+void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 
 /* Tries a few methods to select a gameobject; if none is selected returns -1 */
-int pos2gameobject(HMM_Vec2 pos);
+gameobject *pos2gameobject(HMM_Vec2 pos);
 
-void gameobject_move(struct gameobject *go, HMM_Vec2 vec);
-void gameobject_rotate(struct gameobject *go, float as);
-void gameobject_setangle(struct gameobject *go, float angle);
-void gameobject_setpos(struct gameobject *go, cpVect vec);
-
-void gameobject_draw_debugs();
-void gameobject_draw_debug(int go);
+void gameobject_move(gameobject *go, HMM_Vec2 vec);
+void gameobject_rotate(gameobject *go, float as);
+void gameobject_setangle(gameobject *go, float angle);
+void gameobject_setpos(gameobject *go, cpVect vec);
+void gameobject_draw_debug(gameobject *go);
 #endif

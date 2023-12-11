@@ -390,7 +390,7 @@ struct drawmodel *make_drawmodel(int go)
 void draw_drawmodel(struct drawmodel *dm)
 {
   if (!dm->model) return;
-  struct gameobject *go = id2go(dm->go);
+  struct gameobject *go = dm->go;
   HMM_Mat4 rst = t3d_go2world(go);
   draw_model(dm->model, rst);
 }

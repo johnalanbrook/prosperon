@@ -8,7 +8,6 @@
 #include "font.h"
 #include "gameobject.h"
 #include "input.h"
-#include "level.h"
 #include "log.h"
 #include "dsp.h"
 #include "music.h"
@@ -51,11 +50,8 @@ static JSValue TYPE##2js(TYPE *n) { \
   JS_SetOpaque(j,n);\
   return j; }\
 
+
 QJSCLASS(dsp_node)
-
-// gameobject2js, js2gameobject deals with gameobject*, converted to ids
-// go2js,js2go deals with gameobject*
-
 QJSCLASS(gameobject)
 
 #define QJSCLASSPREP(TYPE) \
@@ -123,22 +119,13 @@ JSValue jscurtime()
   return jst;
 }
 
-void js_setprop_num(JSValue obj, uint32_t i, JSValue v)
-{
-  JS_SetPropertyUint32(js, obj, i, v);
-}
+void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(js, obj, i, v); }
 
-JSValue go2ref(int id)
-{
-  if (id == -1) return JS_UNDEFINED;
-  return JS_DupValue(js,id2go(id)->ref);
-}
-
-JSValue gos2ref(int *go)
+JSValue gos2ref(gameobject **go)
 {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < arrlen(go); i++)
-    js_setprop_num(array,i,go2ref(go[i]));
+    js_setprop_num(array,i,go[i]->ref);
   return array;
 }
 
@@ -198,26 +185,11 @@ double js2number(JSValue v) {
   return g;
 }
 
-
-JSValue float2js(double g) {
-  return JS_NewFloat64(js, g);
-}
-
-JSValue num2js(double g) {
-  return float2js(g);
-}
-
-struct gameobject *js2go(JSValue v) {
-  return id2go(js2gameobject(v));
-}
-
-static int jsgo2id(JSValue v) { return go2id(js2go(v)); }
-
+JSValue float2js(double g) { return JS_NewFloat64(js, g);}
+JSValue num2js(double g) { return float2js(g); }
 struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
 
-void *js2ptr(JSValue v) {
-  return JS_GetOpaque(v,js_ptr_id);
-}
+void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
 
 JSValue ptr2js(void *ptr) {
   JSValue obj = JS_NewObjectClass(js, js_ptr_id);
@@ -225,9 +197,7 @@ JSValue ptr2js(void *ptr) {
   return obj;
 }
 
-struct timer *js2timer(JSValue v) {
-  return id2timer(js2int(v));
-}
+struct timer *js2timer(JSValue v) { return id2timer(js2int(v)); }
 
 double js_get_prop_number(JSValue v, const char *p) {
   double num;
@@ -244,9 +214,7 @@ struct glrect js2glrect(JSValue v) {
   return rect;
 }
 
-JSValue js_arridx(JSValue v, int idx) {
-  return js_getpropidx( v, idx);
-}
+JSValue js_arridx(JSValue v, int idx) { return js_getpropidx( v, idx); }
 
 int js_arrlen(JSValue v) {
   int len;
@@ -541,6 +509,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   const void *d1 = NULL;
   const void *d2 = NULL;
   int *ids = NULL;
+  gameobject *go = NULL;
   JSValue ret = JS_UNDEFINED;
 
   switch (cmd) {
@@ -555,9 +524,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 2:
-    YughWarn("Deleting gameobject %d", js2int(argv[1]));
-    gameobject_delete(js2int(argv[1]));
-    YughWarn("Deleted gameobject %d", js2int(argv[1]));
+    gameobject_free(js2int(argv[1]));
     break;
 
   case 3:
@@ -699,9 +666,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 36:
-    js2go(argv[1])->scale.XY = js2vec2(argv[2]);
-    gameobject_apply(js2go(argv[1]));
-    cpSpaceReindexShapesForBody(space, js2go(argv[1])->body);
+    js2gameobject(argv[1])->scale.XY = js2vec2(argv[2]);
+    gameobject_apply(js2gameobject(argv[1]));
+    cpSpaceReindexShapesForBody(space, js2gameobject(argv[1])->body);
     break;
 
   case 37:
@@ -722,25 +689,26 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 40:
-    js2go(argv[1])->filter.categories = js2bitmask(argv[2]);
-    gameobject_apply(js2go(argv[1]));
+    js2gameobject(argv[1])->filter.categories = js2bitmask(argv[2]);
+    gameobject_apply(js2gameobject(argv[1]));
     break;
 
   case 41:
-    js2go(argv[1])->filter.mask = js2bitmask(argv[2]);
-    gameobject_apply(js2go(argv[1]));    
+    js2gameobject(argv[1])->filter.mask = js2bitmask(argv[2]);
+    gameobject_apply(js2gameobject(argv[1]));    
     break;
 
   case 42:
-    ret = bitmask2js(js2go(argv[1])->filter.categories);
+    ret = bitmask2js(js2gameobject(argv[1])->filter.categories);
     break;
 
   case 43:
-    ret = bitmask2js(js2go(argv[1])->filter.mask);
+    ret = bitmask2js(js2gameobject(argv[1])->filter.mask);
     break;
 
   case 44:
-    ret = go2ref(pos2gameobject(js2vec2(argv[1])));
+    go = pos2gameobject(js2vec2(argv[1]));
+    ret = go ? go->ref : JS_UNDEFINED;
     break;
 
   case 45:
@@ -782,23 +750,23 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 54:
-    gameobject_apply(js2go(argv[1]));
+    gameobject_apply(js2gameobject(argv[1]));
     break;
 
   case 55:
     break;
-//    js2go(argv[1])->flipx = JS_ToBool(js, argv[2]) ? -1 : 1;
+//    js2gameobject(argv[1])->flipx = JS_ToBool(js, argv[2]) ? -1 : 1;
 
   case 56:
-//    js2go(argv[1])->flipy = JS_ToBool(js, argv[2]) ? -1 : 1;
+//    js2gameobject(argv[1])->flipy = JS_ToBool(js, argv[2]) ? -1 : 1;
     break;
 
   case 57:
-//    ret = JS_NewBool(js, js2go(argv[1])->flipx == -1 ? 1 : 0);
+//    ret = JS_NewBool(js, js2gameobject(argv[1])->flipx == -1 ? 1 : 0);
     break;
 
   case 58:
-//    ret = JS_NewBool(js, js2go(argv[1])->flipy == -1 ? 1 : 0);
+//    ret = JS_NewBool(js, js2gameobject(argv[1])->flipy == -1 ? 1 : 0);
     break;
 
   case 59:
@@ -811,7 +779,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 61:
-    set_cam_body(id2body(js2int(argv[1])));
+    set_cam_body(js2gameobject(argv[1])->body);
     break;
 
   case 62:
@@ -847,11 +815,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 70:
-    ret = vec2js(world2go(js2go(argv[1]), js2vec2(argv[2])));
+    ret = vec2js(world2go(js2gameobject(argv[1]), js2vec2(argv[2])));
     break;
 
   case 71:
-    ret = vec2js(go2world(js2go(argv[1]), js2vec2(argv[2])));
+    ret = vec2js(go2world(js2gameobject(argv[1]), js2vec2(argv[2])));
     break;
 
   case 72:
@@ -867,7 +835,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 75:
-    js2go(argv[1])->layer = js2int(argv[2]);
+    js2gameobject(argv[1])->layer = js2int(argv[2]);
     break;
 
   case 76:
@@ -875,7 +843,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 77:
-    ret = int2js(js2go(argv[1])->layer);
+    ret = int2js(js2gameobject(argv[1])->layer);
     break;
 
   case 78:
@@ -896,7 +864,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 82:
-    gameobject_draw_debug(js2go(argv[1]));
+    gameobject_draw_debug(js2gameobject(argv[1]));
     break;
 
   case 83:
@@ -989,35 +957,35 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
     
   case 103:
-    ret = vec2js(js2go(argv[1])->scale.XY);
+    ret = vec2js(js2gameobject(argv[1])->scale.XY);
     break;
 
   case 104:
-//    ret = bool2js(js2go(argv[1])->flipx == -1 ? 1 : 0);
+//    ret = bool2js(js2gameobject(argv[1])->flipx == -1 ? 1 : 0);
     break;
 
   case 105:
-//    ret = bool2js(js2go(argv[1])->flipy == -1 ? 1 : 0);
+//    ret = bool2js(js2gameobject(argv[1])->flipy == -1 ? 1 : 0);
     break;
 
   case 106:
-    js2go(argv[1])->e = js2number(argv[2]);
+    js2gameobject(argv[1])->e = js2number(argv[2]);
     break;
 
   case 107:
-    ret = num2js(js2go(argv[1])->e);
+    ret = num2js(js2gameobject(argv[1])->e);
     break;
 
   case 108:
-    js2go(argv[1])->f = js2number(argv[2]);
+    js2gameobject(argv[1])->f = js2number(argv[2]);
     break;
     
   case 109:
-    ret = num2js(js2go(argv[1])->f);
+    ret = num2js(js2gameobject(argv[1])->f);
     break;
     
   case 110:
-    ret = num2js(js2go(argv[1])->e);
+    ret = num2js(js2gameobject(argv[1])->e);
     break;
 
     case 111:
@@ -1029,7 +997,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 113:
-      js2go(argv[1])->ref = argv[2];//JS_DupValue(js,argv[2]);
+      js2gameobject(argv[1])->ref = argv[2];//JS_DupValue(js,argv[2]);
       break;
 
     case 114:
@@ -1188,38 +1156,38 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
    case 151:
-     js2go(argv[1])->maxvelocity = js2number(argv[2]);
+     js2gameobject(argv[1])->maxvelocity = js2number(argv[2]);
      break;
    case 152:
-     ret = num2js(js2go(argv[1])->maxvelocity);
+     ret = num2js(js2gameobject(argv[1])->maxvelocity);
      break;
     case 153:
-     cpBodySetTorque(js2go(argv[1])->body, js2number(argv[2]));
+     cpBodySetTorque(js2gameobject(argv[1])->body, js2number(argv[2]));
      break;
     case 154:
-      js2go(argv[1])->maxangularvelocity = js2number(argv[2]);
+      js2gameobject(argv[1])->maxangularvelocity = js2number(argv[2]);
       break;
     case 155:
-      ret = num2js(js2go(argv[1])->maxangularvelocity);
+      ret = num2js(js2gameobject(argv[1])->maxangularvelocity);
       break;
 
     case 156:
-      js2go(argv[1])->damping = js2number(argv[2]);
+      js2gameobject(argv[1])->damping = js2number(argv[2]);
       break;
     case 157:
-      ret = num2js(js2go(argv[1])->damping);
+      ret = num2js(js2gameobject(argv[1])->damping);
       break;
     case 158:
-      js2go(argv[1])->gravity = js2bool(argv[2]);
+      js2gameobject(argv[1])->gravity = js2bool(argv[2]);
       break;
     case 159:
-      ret = bool2js(js2go(argv[1])->gravity);
+      ret = bool2js(js2gameobject(argv[1])->gravity);
       break;
     case 160:
-      ret = vec2js(mat_t_dir(t_world2go(js2go(argv[1])), js2vec2(argv[2])));
+      ret = vec2js(mat_t_dir(t_world2go(js2gameobject(argv[1])), js2vec2(argv[2])));
       break;
     case 161:
-      ret = vec2js(mat_t_dir(t_go2world(js2go(argv[1])), js2vec2(argv[2])));
+      ret = vec2js(mat_t_dir(t_go2world(js2gameobject(argv[1])), js2vec2(argv[2])));
       break;
     case 162:
       str = JS_ToCString(js, argv[1]);
@@ -1242,22 +1210,22 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = int2js(cp(str, str2));
       break;
     case 167:
-      js2go(argv[1])->cgravity = js2vec2(argv[2]);
+      js2gameobject(argv[1])->cgravity = js2vec2(argv[2]);
       break;
     case 168:
-      js2go(argv[1])->timescale = js2number(argv[2]);
+      js2gameobject(argv[1])->timescale = js2number(argv[2]);
       break;
     case 169:
-      ret = num2js(js2go(argv[1])->timescale);
+      ret = num2js(js2gameobject(argv[1])->timescale);
       break;
     case 170:
       id2sprite(js2int(argv[1]))->emissive = js2color(argv[2]);
       break;
     case 171:
-      ret = num2js(js2go(argv[1])->drawlayer);
+      ret = num2js(js2gameobject(argv[1])->drawlayer);
       break;
     case 172:
-     js2go(argv[1])->drawlayer = js2number(argv[2]);
+     js2gameobject(argv[1])->drawlayer = js2number(argv[2]);
      break;
    case 173:
      str = js2str(argv[1]);
@@ -1373,7 +1341,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
       break;
     case 208:
-      dag_set(js2go(argv[1]), js2go(argv[2]));
+      dag_set(js2gameobject(argv[1]), js2gameobject(argv[2]));
       break;
     case 209:
       ret = unix2time(js2number(argv[1]));
@@ -1460,23 +1428,23 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   return JS_UNDEFINED;
 }
 
-void gameobject_add_shape_collider(int go, struct callee c, struct phys2d_shape *shape) {
+void gameobject_add_shape_collider(gameobject *go, struct callee c, struct phys2d_shape *shape) {
   struct shape_cb shapecb;
   shapecb.shape = shape;
   shapecb.cbs.begin = c;
-  arrpush(id2go(go)->shape_cbs, shapecb);
+  arrpush(go->shape_cbs, shapecb);
 }
 
 JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
-  int go = jsgo2id(argv[3]);
+  gameobject *go = js2gameobject(argv[3]);
   struct callee c;
   c.fn = argv[1];
   c.obj = argv[2];
 
   switch (cmd) {
   case 0:
-    id2go(go)->cbs.begin = c;
+    go->cbs.begin = c;
     break;
 
   case 1:
@@ -1488,7 +1456,7 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
     break;
 
   case 3:
-    id2go(go)->cbs.separate = c;
+    go->cbs.separate = c;
     break;
   }
 
@@ -1533,7 +1501,6 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     return JS_NewInt64(js, frame_fps());
 
   case 9: /* Clear the level out */
-    new_level();
     break;
 
   case 10:
@@ -1545,6 +1512,7 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 }
 
 JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+  YughWarn("MAKING GAMOBJECT");
   return gameobject2js(MakeGameobject());
 }
 
@@ -1564,7 +1532,7 @@ JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
 JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
-  struct gameobject *go = js2go(argv[1]);
+  gameobject *go = js2gameobject(argv[1]);
   
   if (!go) return JS_UNDEFINED;
 
@@ -1638,7 +1606,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 
 JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int q = js2int(argv[0]);
-  struct gameobject *go = js2go(argv[1]);
+  gameobject *go = js2gameobject(argv[1]);
 
   if (!go) return JS_UNDEFINED;
 
@@ -1668,7 +1636,7 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
     return JS_NewBool(js, phys2d_in_air(go->body));
 
   case 8:
-    gameobject_delete(go2id(go));
+    gameobject_free(go);
     break;
   }
 
@@ -1695,7 +1663,7 @@ JSValue duk_make_anim2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 }
 
 JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = jsgo2id(argv[0]);
+  gameobject *go = js2gameobject(argv[0]);
   HMM_Vec2 size = js2vec2(argv[1]);
 
   struct phys2d_box *box = Make2DBox(go);
@@ -1736,7 +1704,7 @@ JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *
 }
 
 JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = jsgo2id(argv[0]);
+  gameobject *go = js2gameobject(argv[0]);
 
   struct phys2d_circle *circle = Make2DCircle(go);
 
@@ -1748,7 +1716,7 @@ JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCon
 
 JSValue duk_make_model(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-  int go = jsgo2id(argv[0]);
+  gameobject *go = js2gameobject(argv[0]);
   struct drawmodel *dm = make_drawmodel(go);
   JSValue ret = JS_NewObject(js);
   js_setprop_str(ret, "id", ptr2js(dm));
@@ -1782,7 +1750,7 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
 }
 
 JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = jsgo2id(argv[0]);
+  gameobject *go = js2gameobject(argv[0]);
   struct phys2d_poly *poly = Make2DPoly(go);
   phys2d_poly_setverts(poly, NULL);
   JSValue polyval = JS_NewObject(js);
@@ -1807,7 +1775,7 @@ JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
 }
 
 JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int go = jsgo2id(argv[0]);
+  gameobject *go = js2gameobject(argv[0]);
   struct phys2d_edge *edge = Make2DEdge(go);
 
   int n = js_arrlen(argv[1]);

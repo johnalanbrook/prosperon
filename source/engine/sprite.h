@@ -7,15 +7,13 @@
 #include "HandmadeMath.h"
 #include "render.h"
 #include "transform.h"
-
-struct datastream;
-struct gameobject;
+#include "gameobject.h"
 
 struct sprite {
   transform2d t;
   struct rgba color;
   struct rgba emissive;
-  int go; /* id of gameobject */
+  gameobject *go; /* id of gameobject */
   struct Texture *tex;
   struct glrect frame;
   int enabled;

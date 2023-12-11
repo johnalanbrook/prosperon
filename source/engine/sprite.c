@@ -108,8 +108,8 @@ void sprite_io(struct sprite *sprite, FILE *f, int read) {
 
 int sprite_sort(int *a, int *b)
 {
-  struct gameobject *goa = id2go(sprites[*a].go);
-  struct gameobject *gob = id2go(sprites[*b].go);
+  struct gameobject *goa = sprites[*a].go;
+  struct gameobject *gob = sprites[*b].go;
   if (goa->drawlayer == gob->drawlayer) return 0;
   if (goa->drawlayer > gob->drawlayer) return 1;
   return -1;
@@ -240,7 +240,7 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
 }
 
 void sprite_draw(struct sprite *sprite) {
-  struct gameobject *go = id2go(sprite->go);
+  gameobject *go = sprite->go;
 
   if (sprite->tex) {
     HMM_Mat3 m = t_go2world(go);
