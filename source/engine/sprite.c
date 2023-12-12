@@ -122,7 +122,7 @@ void sprite_draw_all() {
   if (layers) arrfree(layers);
 
   for (int i = 0; i < freelist_len(sprites); i++)
-    if (sprites[i].next == -1 && sprites[i].go >= 0 && sprites[i].enabled) 
+    if (sprites[i].next == -1 && sprites[i].go != NULL && sprites[i].enabled) 
       arrpush(layers, i);
 
   if (!layers || arrlen(layers) == 0) return;
@@ -240,14 +240,12 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
 }
 
 void sprite_draw(struct sprite *sprite) {
-  gameobject *go = sprite->go;
+  if (!sprite->tex) return;
+  HMM_Mat3 m = t_go2world(sprite->go);
+  HMM_Mat3 sm = transform2d2mat(sprite->t);
 
-  if (sprite->tex) {
-    HMM_Mat3 m = t_go2world(go);
-    HMM_Mat3 sm = transform2d2mat(sprite->t);
-    
-    tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0, sprite->emissive);
-  }
+  tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0, sprite->emissive);
+
 }
 
 void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {

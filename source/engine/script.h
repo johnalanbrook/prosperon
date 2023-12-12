@@ -17,7 +17,6 @@ struct phys_cbs {
   struct callee separate;
 };
 
-
 extern struct callee stacktrace_callee;
 extern JSValue num_cache[100];
 

@@ -296,8 +296,8 @@ void vec2float(HMM_Vec2 v, float *f) {
 
 JSValue vec2js(HMM_Vec2 v) {
   JSValue array = JS_NewArray(js);
-  js_setprop_num(array,0,JS_NewFloat64(js,v.x));
-  js_setprop_num(array,1,JS_NewFloat64(js,v.y));
+  js_setprop_num(array,0,num2js(v.x));
+  js_setprop_num(array,1,num2js(v.y));
   return array;
 }
 
@@ -386,23 +386,29 @@ JSValue bb2js(struct boundingbox bb)
 }
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int degrees = js2int(argv[1]); /* not used */
-  int d = js2int(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
+  int cmd = js2int(argv[0]);
   /*
     0: hermite-cubic
     1: catmull-rom
     2: b-spline
     3: bezier
   */
-  int type = js2int(argv[3]);
-  HMM_Vec2 *points = js2cpvec2arr(argv[4]);
-  size_t nsamples = js2int(argv[5]);
+  int type = js2int(argv[1]);  
+  int d = js2int(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
+  HMM_Vec2 *points = js2cpvec2arr(argv[3]);
+  float param = js2number(argv[4]);
+  HMM_Vec2 *samples = catmull_rom_ma_v2(points, param);
 
-  HMM_Vec2 *samples = catmull_rom_ma_v2(points, nsamples);
-  JSValue arr = vecarr2js(samples, nsamples);
-  free(samples);
+  if (!samples)
+    return JS_UNDEFINED;
 
-  return JS_UNDEFINED;
+//  for (int i = 0; i < arrlen(samples); i++)
+//    YughWarn("%g,%g", samples[i].x, samples[i].y);
+
+  JSValue arr = vecarr2js(samples, arrlen(samples));  
+//  arrfree(samples);
+
+  return arr;
 }
 
 JSValue ints2js(int *ints) {
@@ -491,7 +497,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   const char *str2 = NULL;
   const void *d1 = NULL;
   const void *d2 = NULL;
-  int *ids = NULL;
+  gameobject *ids = NULL;
   gameobject *go = NULL;
   JSValue ret = JS_UNDEFINED;
 
@@ -691,7 +697,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 44:
     go = pos2gameobject(js2vec2(argv[1]));
-    ret = go ? go->ref : JS_UNDEFINED;
+    ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
     break;
 
   case 45:
@@ -1324,7 +1330,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
       break;
     case 208:
-      dag_set(js2gameobject(argv[1]), js2gameobject(argv[2]));
+//      dag_set(js2gameobject(argv[1]), js2gameobject(argv[2]));
       break;
     case 209:
       break;

@@ -27,13 +27,9 @@ var editor = {
   },
   edit_mode: "basic",
 
-  get_this() {
-    return this.edit_level;
-  },
+  get_this() { return this.edit_level; },
 
-  get_that() {
-    return this.selectlist.length === 1 ? this.selectlist[0] : this.get_this();
-  },
+  get_that() { return this.selectlist.length === 1 ? this.selectlist[0] : this.get_this(); },
 
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
     var go = physics.pos_query(Mouse.worldpos);
@@ -78,7 +74,7 @@ var editor = {
     var objs = x.slice();
     var duped = [];
 
-    objs.forEach(function(x) { duped.push(x.dup()); } );
+    objs.forEach(x => duped.push(x.dup()));
     return duped;
   },
 
@@ -404,7 +400,7 @@ var editor = {
     }
 
     GUI.text("0,0", world2screen([0,0]));
-    GUI.text(editor.edit_level.worldpos().map(function(x) { return Math.round(x); }), world2screen(editor.edit_level.worldpos()), 1, Color.red);
+    GUI.text(editor.edit_level.worldpos().map(x => Math.round(x)), world2screen(editor.edit_level.worldpos()), 1, Color.red);
     GUI.text("+", world2screen(editor.edit_level.worldpos()), 1, Color.blue);
 
     var thiso = editor.get_this();
@@ -771,21 +767,12 @@ editor.inputs.r = function() {
   });
 };
 editor.inputs.r.doc = "Rotate selected using the mouse while held down.";
-
 editor.inputs.r.released = function() { editor.rotlist = []; }
 
-editor.inputs.f5 = function()
-{
-  editor.start_play_ed();
-}
-
+editor.inputs.f5 = function() { editor.start_play_ed(); }
 editor.inputs.f5.doc = "Start game from 'debug' if it exists; otherwise, from 'game'.";
 
-editor.inputs.f6 = function()
-{
-  editor.start_play();
-}
-
+editor.inputs.f6 = function() { editor.start_play(); }
 editor.inputs.f6.doc = "Start game as if the player started it.";
 
 editor.inputs['M-p'] = function() {
@@ -1137,7 +1124,6 @@ editor.inputs.mouse.move = function(pos, dpos)
 
   editor.rotlist?.forEach(function(x) {
     var anglediff = Math.atan2(relpos.y, relpos.x) - x.rotoffset;
-    
     x.obj.angle = x.angle + Math.rad2deg(anglediff);
     if (x.pos)
       x.obj.pos = x.pos.sub(x.offset).add(x.offset.rotate(anglediff));

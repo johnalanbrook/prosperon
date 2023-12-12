@@ -8,6 +8,8 @@
 
 #include "stb_ds.h"
 
+static gameobject **gameobjects;
+
 gameobject *body2go(cpBody *body) { return cpBodyGetUserData(body); }
 gameobject *shape2go(cpShape *shape)
 {
@@ -59,16 +61,14 @@ gameobject *pos2gameobject(HMM_Vec2 pos) {
   if (hit)
     return shape2go(hit);
 
-  return NULL;
-/*
   for (int i = 0; i < arrlen(gameobjects); i++) {
-    if (!gameobjects[i].body) continue;
-    cpVect gpos = cpBodyGetPosition(gameobjects[i].body);
-    float dist = cpvlength(cpvsub(gpos, pos.cp));
+    if (!gameobjects[i]->body) continue;
+    HMM_Vec2 gpos = go_pos(gameobjects[i]);
+    float dist = HMM_DistV2(gpos,pos);
 
-    if (dist <= 25) return i;
+    if (dist <= 25) return gameobjects[i];
   }
-  */
+
   return NULL;
 }
 
@@ -166,14 +166,11 @@ gameobject *MakeGameobject() {
       .next = -1,
       .drawlayer = 0,
       .shape_cbs = NULL,
-      .children = NULL,
       .gravity = 1,
       .cgravity = (HMM_Vec2){0,0},
       .damping = NAN,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
-      .parent = NULL,
-      .children = NULL
   };
 
   go.cbs.begin.obj = JS_UNDEFINED;
@@ -185,16 +182,8 @@ gameobject *MakeGameobject() {
   *ngo = go;
   cpBodySetUserData(go.body, ngo);
   phys2d_setup_handlers(ngo);
+  arrpush(gameobjects, ngo);
   return ngo;
-}
-
-void gameobject_traverse(gameobject *go, HMM_Mat4 p)
-{
-  HMM_Mat4 local = transform3d2mat(go2t3(go));
-  go->world = HMM_MulM4(local, p);
-
-  for (int i = 0; i < arrlen(go->children); i++)
-    gameobject_traverse(go->children[i], go->world);
 }
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
@@ -225,7 +214,12 @@ void gameobject_free(gameobject *go) {
   if (!go) return;
   YughWarn("FREEING A GAMEOBJECT");  
   JS_FreeValue(js, go->ref);
-  dag_clip(go);  
+
+  for (int i = arrlen(gameobjects)-1; i >= 0; i--)
+    if (gameobjects[i] == go) {
+      arrdelswap(gameobjects, i);
+      break;
+    }
 
   if (cpSpaceIsLocked(space))
     arrpush(go_toclean, go);

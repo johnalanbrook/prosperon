@@ -551,13 +551,9 @@ polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 component.edge2d = Object.copy(collider2d, {
   dimensions:2,
   thickness:0,
-  /* open: 0
-     clamped: 1
-     beziers: 2
-     looped: 3
-  */
-  type: Spline.type.clamped,
+  type: Spline.type.catmull,
   looped: false,
+  angle: 5,
   
   flipx: false,
   flipy: false,
@@ -609,32 +605,12 @@ component.edge2d = Object.copy(collider2d, {
 
   sample(n) {
     var spoints = this.spoints();
+//    n = this.samples * this.sample_calc();
 
-    var degrees = 2;
-
-    if (n < spoints.length) n = spoints.length;
-    
-    if (spoints.length === 2)
-      return spoints;
-    if (spoints.length < 2)
-      return [];
-    if (this.samples === 1) {
-      if (this.looped) return spoints.wrapped(1);
-      return spoints;
-    }
-    
-    /*
-      order = degrees+1
-      knots = spoints.length + order
-      assert knots%order != 0
-    */
-    
-    n = this.samples * this.sample_calc();
-
-    if (this.looped)
-      return Spline.sample(degrees, this.dimensions, Spline.type.open, spoints.wrapped(this.degrees), n);
+/*    if (this.looped)
+      return Spline.sample(degrees, this.dimensions, Spline.type.open, spoints.wrapped(this.degrees), n);*/
  
-    return Spline.sample(degrees, this.dimensions, this.type, spoints, n);
+    return Spline.sample_angle(this.type, spoints, this.angle);
   },
 
   samples: 1,

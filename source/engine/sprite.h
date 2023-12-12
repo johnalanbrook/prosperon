@@ -13,7 +13,7 @@ struct sprite {
   transform2d t;
   struct rgba color;
   struct rgba emissive;
-  gameobject *go; /* id of gameobject */
+  gameobject *go;
   struct Texture *tex;
   struct glrect frame;
   int enabled;

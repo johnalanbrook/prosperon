@@ -25,10 +25,6 @@
 
 #include "2dphysics.h"
 
-#ifdef __GLIBC__
-#include <execinfo.h>
-#endif
-
 #include <signal.h>
 #include <time.h>
 
@@ -83,55 +79,6 @@ static int sim_play = SIM_PLAY;
 
 int editor_mode = 0;
 
-#ifdef __TINYC__
-int backtrace(void **buffer, int size) {
-    extern uint64_t *__libc_stack_end;
-    uint64_t **p, *bp, *frame;
-    asm ("mov %%rbp, %0;" : "=r" (bp));
-    p = (uint64_t**) bp;
-    int i = 0;
-    while (i < size) {
-        frame = p[0];
-        if (frame < bp || frame > __libc_stack_end) {
-            return i;
-        }
-        buffer[i++] = p[1];
-        p = (uint64_t**) frame;
-    }
-    return i;
-}
-#endif
-
-void print_stacktrace() {
-#ifdef __GLIBC__
-  void *ents[512];
-  size_t size = backtrace(ents, 512);
-
-  YughCritical("====================BACKTRACE====================");
-  char **stackstr = backtrace_symbols(ents, size);
-
-  YughCritical("Stack size is %d.", size);
-
-  for (int i = 0; i < size; i++)
-    YughCritical(stackstr[i]);
-
-  js_stacktrace();
-#endif
-}
-
-void seghandle(int sig) {
-//#ifdef __GLIBC__
-//  if (strsignal(sig))
-  YughCritical("CRASH! Signal: %d.", sig);
-
-  js_stacktrace();  
-
-  exit(1);
-//#endif
-//  js_stacktrace();
-//  exit(1);
-}
-
 const char *engine_info()
 {
   static char str[100];
@@ -153,19 +100,15 @@ void c_init() {
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
   script_evalf("Game.init();");
-//  bjork = ds_openvideo("bjork.mpg");
 }
 
-int frame_fps() {
-  return 1.0/sapp_frame_duration();
-}
+int frame_fps() { return 1.0/sapp_frame_duration(); }
 
 static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
   script_evalf("Register.appupdate.broadcast(%g);", elapsed);
       call_stack();  
-//  ds_advance(bjork, elapsed);
     input_poll(0);
     /* Timers all update every frame - once per monitor refresh */
     timer_update(elapsed, timescale);
@@ -318,7 +261,6 @@ void app_name(char *name) { start_desc.window_title = strdup(name); }
 int main(int argc, char **argv) {
 #ifndef NDEBUG
   log_init();
-//  #ifdef __linux__
   int logout = 0;
   if (logout) {
     time_t now = time(NULL);
@@ -326,21 +268,6 @@ int main(int argc, char **argv) {
     snprintf(fname, 100, "yugine-%d.log", now);
     log_setfile(fname);
   }
-
-  FILE *sysinfo = NULL;
-  /*    sysinfo = popen("uname -a", "r");
-      if (!sysinfo) {
-          YughWarn("Failed to get sys info.");
-      } else {
-          log_cat(sysinfo);
-          pclose(sysinfo);
-      }*/
-//  #endif
-  signal(SIGSEGV, seghandle);
-  signal(SIGABRT, seghandle);
-  signal(SIGFPE, seghandle);
-//  signal(SIGBUS, seghandle);
-  
 #endif
 
 #ifdef STEAM
@@ -395,7 +322,4 @@ dam->update_activity(dam, &da, NULL, NULL);
   return 0;
 }
 
-double apptime()
-{
-  return stm_sec(stm_diff(stm_now(), start_t));
-}
+double apptime() { return stm_sec(stm_diff(stm_now(), start_t)); }

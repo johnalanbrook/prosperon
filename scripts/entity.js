@@ -55,7 +55,6 @@ actor.remaster = function(to){
   to.padawans.push(this);
 };
 
-
 var gameobject = {
   full_path() {
     return this.path_from(Primum);
@@ -237,8 +236,6 @@ var gameobject = {
     this.level?.remove_obj(this);
     
     this.level = parent;
-    
-    cmd(208,parent.body,this.body);
       
     function unique_name(list, obj) {
       var str = obj.toString().replaceAll('.', '_');

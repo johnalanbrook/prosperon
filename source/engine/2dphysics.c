@@ -57,8 +57,16 @@ cpShape *phys2d_query_pos(cpVect pos) {
   return find;
 }
 
+int p_compare(void *a, void *b)
+{
+  if (a > b) return 1;
+  if (a < b) return -1;
+  if (a == b) return 0;
+}
+
 gameobject **clean_ids(gameobject **ids)
 {
+  qsort(ids, arrlen(ids), sizeof(*ids), p_compare);
   gameobject *curid = NULL;
   for (int i = arrlen(ids)-1; i >= 0; i--)
     if (ids[i] == curid)
@@ -107,21 +115,20 @@ gameobject *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
 
   cpBB bbox = cpShapeGetBB(box);
 
-  int *ids = NULL;
-
   querybox qb;
   qb.bb = bbox;
-  qb.ids = ids;
+  qb.ids = NULL;
 
-  cpSpaceShapeQuery(space, box, querylist, ids);
+  cpSpaceShapeQuery(space, box, querylist, qb.ids);
   cpSpaceEachBody(space, querylistbodies, &qb);
 
   cpShapeFree(box);
 
-  return clean_ids(ids);
+  return clean_ids(qb.ids);
 }
 
-gameobject *phys2d_query_shape(struct phys2d_shape *shape) {
+gameobject *phys2d_query_shape(struct phys2d_shape *shape)
+{
   gameobject **ids = NULL;
   cpSpaceShapeQuery(space, shape->shape, querylist, ids);
   return clean_ids(ids);
@@ -565,7 +572,6 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
 //  srfv.cp = cpArbiterGetPointA(arb,0);
 //  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
 //  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
-  JS_SetPropertyStr(js,obj,"obj", JS_DupValue(js,hit->ref));
 
   struct postphys_cb cb;
   cb.c = c;

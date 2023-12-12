@@ -45,12 +45,9 @@ struct gameobject {
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
   JSValue ref;
-  struct gameobject *master;
   HMM_Mat4 world;
   transform2d t; /* The local transformation of this object */
   float drawlayer;
-  struct gameobject *parent;
-  struct gameobject **children;
 };
 
 typedef struct gameobject gameobject;
@@ -59,8 +56,6 @@ gameobject *MakeGameobject();
 void gameobject_apply(gameobject *go);
 void gameobject_free(gameobject *go);
 void gameobjects_cleanup();
-
-void gameobject_traverse(gameobject *start, HMM_Mat4 p);
 
 transform2d go2t(gameobject *go);
 transform3d go2t3(gameobject *go);

@@ -1,13 +1,11 @@
 /* On collisions, entities are sent a 'hit' object, which looks like this: */
 var HIT = {
   normal: "The normal of the collision point.",
-  hit: "The gameobject ID of the object that collided.",
+  hit: "The gameobject of the object that collided.",
   sensor: "Boolean for if the colliding object was a sensor.",
   velocity: "Velocity of the contact.",
   pos: "Position in world space of the contact.",
   depth: "Depth of the contact.",
-  id: "Gameobject ID of the colliding object.",
-  obj: "Entity that collided."
 };
 
 var Physics = {
@@ -21,14 +19,10 @@ var physics = {
   get gravity() { return cmd(72); },
   set damping(x) { cmd(73,Math.clamp(x,0,1)); },
   get damping() { return cmd(74); },
-  pos_query(pos) {
-    return cmd(44, pos);
-  },
+  pos_query(pos) { return cmd(44, pos); },
   
   /* Returns a list of body ids that a box collides with */
-  box_query(box) {
-    return cmd(52, box.pos, box.wh);
-  },
+  box_query(box) { return cmd(52, box.pos, box.wh); },
   
   box_point_query(box, points) {
     if (!box || !points)
@@ -37,20 +31,11 @@ var physics = {
     return cmd(86, box.pos, box.wh, points, points.length);
   },
 
-  shape_query(shape) {
-    return cmd(80,shape);
-  },
+  shape_query(shape) { return cmd(80,shape); },
 
   com(pos) {
-    if (!Array.isArray(pos)) return;
-    var com = [];
-    for (var i = 0; i < pos[0].length; i++) {
-      com[i] = pos.reduce(function(acc,val) {
-        return acc + val[i];
-      });
-      com[i] /= pos.length;
-    }
-    return com;
+    if (!Array.isArray(pos)) return [0,0];
+    return pos.reduce((a,i) => a.add(i)).map(g => g/pos.length);
   },
 };
 

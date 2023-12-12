@@ -14,7 +14,7 @@ HMM_Vec3 trans_down(const transform3d *trans) { return HMM_QVRot(vDOWN, trans->r
 HMM_Vec3 trans_right(const transform3d *trans) { return HMM_QVRot(vRIGHT, trans->rotation); }
 HMM_Vec3 trans_left(const transform3d *trans) { return HMM_QVRot(vLEFT, trans->rotation); }
 
-HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos) { return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 0}).xy; }
+HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos) { return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 1}).xy; }
 
 HMM_Vec2 mat_t_dir(HMM_Mat3 m, HMM_Vec2 dir)
 {
@@ -36,9 +36,7 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
   return mat3_t_pos(m, dir);
 }
 
-HMM_Mat3 transform2d2mat(transform2d trn) {
-  return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale)));
-}
+HMM_Mat3 transform2d2mat(transform2d trn) { return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale))); }
 
 transform2d mat2transform2d(HMM_Mat3 m)
 {
