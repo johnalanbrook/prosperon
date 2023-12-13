@@ -294,7 +294,9 @@ HMM_Vec2 *catmull_rom_ma_v2(HMM_Vec2 *cp, float ma)
 {
   if (arrlen(cp) < 4) return NULL;
   HMM_Vec2 *ret = NULL;
+
   int segments = arrlen(cp)-3;
+  arrsetcap(ret,segments*(ma>=2 ? 3 : 7));  
   arrput(ret, cp[1]); 
   for (int i = 1; i < arrlen(cp)-2; i++)
     ret = catmull_rom_min_angle(&cp[i-1], &cp[i], &cp[i+1], &cp[i+2], ma, ret);

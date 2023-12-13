@@ -551,9 +551,10 @@ polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 component.edge2d = Object.copy(collider2d, {
   dimensions:2,
   thickness:0,
+  /* if type === -1, point to point */
   type: Spline.type.catmull,
   looped: false,
-  angle: 3,
+  angle: 3, /* maximum angle between two segments */
   
   flipx: false,
   flipy: false,
@@ -603,8 +604,13 @@ component.edge2d = Object.copy(collider2d, {
     this.cpoints = [];
   },
 
-  sample(n) {
+  sample() {
     var spoints = this.spoints();
+    if (this.type === -1) {
+      if (this.looped) spoints.push(spoints[0]);
+      return spoints;
+    }
+    
     if (this.looped) {
       spoints.unshift(spoints[spoints.length-1]);              
       spoints.push(spoints[1]);
@@ -617,8 +623,6 @@ component.edge2d = Object.copy(collider2d, {
     return Spline.sample_angle(this.type, spoints, this.angle);
   },
 
-  samples: 1,
-  
   boundingbox() {
     return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
   },
@@ -656,17 +660,6 @@ component.edge2d = Object.copy(collider2d, {
     }, this);
     return picks;
   },
-
-  sample_calc() {
-    var n = this.spoints().length-1;
-    if (this.looped) n++;
-    return n;
-  },
-
-  samples_per_cp() {
-    var s = this.sample_calc();
-    return this.samples/s;
-  },
 });
 
 component.edge2d.impl = Object.mix({
@@ -676,7 +669,7 @@ component.edge2d.impl = Object.mix({
   get thickness() { return cmd(112,this.id); },
   sync() {
     var sensor = this.sensor;
-    var points = this.sample(this.samples);
+    var points = this.sample();
     if (!points) return;
     cmd_edge2d(0,this.id,points);
     this.sensor = sensor;
@@ -714,15 +707,16 @@ bucket.inputs['M-b'].doc = "Increase spline thickness.";
 bucket.inputs['M-b'].rep = true;
 
 bucket.inputs.plus = function() {
-  this.samples++;
+  if (this.angle <= 1) {
+    this.angle = 1;
+    return;
+  }
+  this.angle *= 0.9;
 };
 bucket.inputs.plus.doc = "Increase the number of samples of this spline.";
 bucket.inputs.plus.rep = true;
 
-bucket.inputs.minus = function() {
-  if (this.samples === 1) return;
-  this.samples--;
-};
+bucket.inputs.minus = function() { this.angle *= 1.1; };
 bucket.inputs.minus.doc = "Decrease the number of samples on this spline.";
 bucket.inputs.minus.rep = true;
 
@@ -732,14 +726,11 @@ bucket.inputs['C-r'].doc = "Reverse the order of the spline's points.";
 bucket.inputs['C-l'] = function() { this.looped = !this.looped};
 bucket.inputs['C-l'].doc = "Toggle spline being looped.";
 
-bucket.inputs['C-c'] = function() { this.type = Spline.type.clamped; this.looped = false; };
-bucket.inputs['C-c'].doc = "Set type of spline to clamped.";
+bucket.inputs['C-c'] = function() { this.type = Spline.type.catmull; };
+bucket.inputs['C-c'].doc = "Set type of spline to catmull-rom.";
 
-bucket.inputs['C-o'] = function() { this.type = Spline.type.open; this.looped = false; };
-bucket.inputs['C-o'].doc = "Set spline to open.";
-
-bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; this.looped = false;};
-bucket.inputs['C-b'].doc = "Set spline to bezier.";
+bucket.inputs['C-o'] = function() { this.type = -1; };
+bucket.inputs['C-o'].doc = "Set spline to linear.";
 
 bucket.inputs['C-M-lm'] = function() {
   var idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
