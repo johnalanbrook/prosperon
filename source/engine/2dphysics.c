@@ -387,7 +387,6 @@ struct phys2d_edge *Make2DEdge(gameobject *go) {
   new->shape.shape = NULL;
   new->shape.apply = NULL;
   new->draws = 0;
-  new->closed = 0;
   phys2d_applyedge(new);
 
   return new;
@@ -405,16 +404,14 @@ void phys2d_edgedel(struct phys2d_edge *edge) {
   phys2d_shape_del(&edge->shape);
 }
 
-void phys2d_edgeaddvert(struct phys2d_edge *edge) {
-  arrput(edge->points, v2zero);
+void phys2d_edgeaddvert(struct phys2d_edge *edge, HMM_Vec2 v) {
+  arrput(edge->points, v);
   if (arrlen(edge->points) > 1)
     arrput(edge->shapes, cpSpaceAddShape(space, cpSegmentShapeNew(edge->shape.go->body, cpvzero, cpvzero, edge->thickness)));
-
-  phys2d_applyedge(edge);
 }
 
 void phys2d_edge_rmvert(struct phys2d_edge *edge, int index) {
-  assert(arrlen(edge->points) > index && index >= 0);
+  if (index>arrlen(edge->points) || index < 0) return;
 
   arrdel(edge->points, index);
 
@@ -424,41 +421,47 @@ void phys2d_edge_rmvert(struct phys2d_edge *edge, int index) {
     cpSpaceRemoveShape(space, edge->shapes[index]);
     cpShapeFree(edge->shapes[index]);
     arrdel(edge->shapes, index);
-    phys2d_applyedge(edge);
     return;
   }
 
-  if (index != arrlen(edge->points)) {
+  if (index != arrlen(edge->points))
     cpSegmentShapeSetEndpoints(edge->shapes[index - 1], edge->points[index - 1].cp, edge->points[index].cp);
-  }
 
   cpSpaceRemoveShape(space, edge->shapes[index - 1]);
   cpShapeFree(edge->shapes[index - 1]);
   arrdel(edge->shapes, index - 1);
-
-  phys2d_applyedge(edge);
 }
 
 void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val) {
   assert(arrlen(edge->points) > index && index >= 0);
   edge->points[index].cp = val;
+}
+
+void phys2d_edge_update_verts(struct phys2d_edge *edge, HMM_Vec2 *verts)
+{
+  if (arrlen(edge->points) == arrlen(verts)) {
+    for (int i = 0; i < arrlen(verts); i++)
+      phys2d_edge_setvert(edge,i,verts[i].cp);
+  } else {
+    int vertchange = arrlen(verts)-arrlen(edge->points);
+    phys2d_edge_clearverts(edge);
+    phys2d_edge_addverts(edge,verts);
+  }
 
   phys2d_applyedge(edge);
 }
 
 void phys2d_edge_clearverts(struct phys2d_edge *edge) {
-  for (int i = arrlen(edge->points) - 1; i >= 0; i--) {
+  for (int i = arrlen(edge->points) - 1; i >= 0; i--)
     phys2d_edge_rmvert(edge, i);
-  }
 }
 
-void phys2d_edge_addverts(struct phys2d_edge *edge, cpVect *verts) {
-  for (int i = 0; i < arrlen(verts); i++) {
-    phys2d_edgeaddvert(edge);
-    phys2d_edge_setvert(edge, i, verts[i]);
-  }
+void phys2d_edge_addverts(struct phys2d_edge *edge, HMM_Vec2 *verts) {
+  for (int i = 0; i < arrlen(verts); i++)
+    phys2d_edgeaddvert(edge, verts[i]);
 }
 
+/* Calculates all true positions of verts, links them up, and so on */
 void phys2d_applyedge(struct phys2d_edge *edge) {
   struct gameobject *go = edge->shape.go;
 

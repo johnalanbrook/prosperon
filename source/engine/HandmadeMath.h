@@ -389,6 +389,7 @@ typedef union HMM_Mat3 {
 typedef union HMM_Mat4 {
   float Elements[4][4];
   HMM_Vec4 Columns[4];
+  float e[4][4];
 
 } HMM_Mat4;
 

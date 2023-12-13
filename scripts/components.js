@@ -553,7 +553,7 @@ component.edge2d = Object.copy(collider2d, {
   thickness:0,
   type: Spline.type.catmull,
   looped: false,
-  angle: 5,
+  angle: 3,
   
   flipx: false,
   flipy: false,
@@ -605,11 +605,15 @@ component.edge2d = Object.copy(collider2d, {
 
   sample(n) {
     var spoints = this.spoints();
-//    n = this.samples * this.sample_calc();
-
-/*    if (this.looped)
-      return Spline.sample(degrees, this.dimensions, Spline.type.open, spoints.wrapped(this.degrees), n);*/
- 
+    if (this.looped) {
+      spoints.unshift(spoints[spoints.length-1]);              
+      spoints.push(spoints[1]);
+      spoints.push(spoints[2]);
+    } else {
+      spoints.unshift(spoints[0].sub(spoints[1]).add(spoints[0]));
+      spoints.push(spoints[spoints.length-1].sub(spoints[spoints.length-2]).add(spoints[spoints.length-1]));
+    }
+    
     return Spline.sample_angle(this.type, spoints, this.angle);
   },
 
@@ -673,6 +677,7 @@ component.edge2d.impl = Object.mix({
   sync() {
     var sensor = this.sensor;
     var points = this.sample(this.samples);
+    if (!points) return;
     cmd_edge2d(0,this.id,points);
     this.sensor = sensor;
   },

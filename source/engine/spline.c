@@ -2,6 +2,7 @@
 #include "stb_ds.h"
 #include "log.h"
 #include "transform.h"
+#include "math.h"
 
 static const HMM_Mat4 cubic_hermite_m = {
   2, -2, 1, 1,
@@ -121,6 +122,14 @@ static const HMM_Mat4 catmull_rom_dddm = {
   -9*CAT_S, 18*CAT_S, -18*CAT_S, 6*CAT_S
 };
 
+/*
+  [t3 t2 t1 1] B [p1
+      	          p2  that is, point 1, tangent at point 1, point 2, tan and point 2
+		  t1
+		  t2]
+
+*/
+
 HMM_Vec4 spline_CT(HMM_Mat4 *C, float t)
 {
   float t2 = t*t;
@@ -135,7 +144,7 @@ HMM_Mat4 make_G(HMM_Vec2 a, HMM_Vec2 b, HMM_Vec2 c, HMM_Vec2 d)
   G.Columns[0].xy = a;
   G.Columns[1].xy = b;
   G.Columns[2].xy = c;
-  G.Columns[3].xy = d;
+  G.Columns[3].xy = d;  
   return G;
 }
 
@@ -143,6 +152,11 @@ HMM_Mat4 make_C(HMM_Vec2 p0, HMM_Vec2 p1, HMM_Vec2 p2, HMM_Vec2 p3, HMM_Mat4 *B)
 {
   HMM_Mat4 G = make_G(p0, p1, p2, p3);
   return HMM_MulM4(G, *B);
+}
+
+HMM_Mat4 catmull_C(HMM_Vec2 c0, HMM_Vec2 c1, HMM_Vec2 c2, HMM_Vec2 c3)
+{
+  return make_C(c0,c1,c2,c3,&catmull_rom_m);
 }
 
 HMM_Vec2 cubic_spline_d(HMM_Vec2 p0, HMM_Vec2 p1, HMM_Vec2 p2, HMM_Vec2 p3, HMM_Mat4 *m, float d)
@@ -193,7 +207,7 @@ HMM_Vec2 *catmull_rom_min_seg(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d
   HMM_Mat4 G = make_G(p0, *b, *c, p3);
   HMM_Mat4 C = HMM_MulM4(G, catmull_rom_m);
   HMM_Vec2 *ret = NULL;
-  arrsetcap(ret, 100);
+  arrsetcap(ret, 1000);
   arrput(ret, *b);
   spline2d_min_seg(0, 1, min_seg, &C, ret);
   return ret;
@@ -228,15 +242,32 @@ HMM_Vec##DIM *spline2d_min_angle_##DIM(float u0, float u1, float max_angle, HMM_
     arrput(V##DIM##RET,b);\
 }\
 
-SPLINE_MIN(2)
+HMM_Vec2 *spline2d_min_angle_2(float u0, float u1, float max_angle, HMM_Mat4 *C, HMM_Vec2 *arr) 
+{
+  float umid = (u0 + u1)/2;
+  HMM_Vec2 a = spline_CT(C, u0)._2;
+  HMM_Vec2 b = spline_CT(C, u1)._2;
+  HMM_Vec2 m = spline_CT(C, umid)._2;
+  if (fabs(HMM_AngleV2(m,b)) > max_angle) {
+    arr = spline2d_min_angle_2(u0, umid, max_angle, C, arr);
+    arr = spline2d_min_angle_2(umid, u1, max_angle, C, arr);
+  }
+  else
+    arrput(arr,b);
+
+  return arr;
+}
+
+
+//SPLINE_MIN(2)
 SPLINE_MIN(3)
 
-/* Computes non even points to give the best looking curve */
-HMM_Vec2 *catmull_rom_min_angle(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d, float min_angle)
+/* Computes non even points to give the best looking curve  for a given catmull a,b,c,d */
+HMM_Vec2 *catmull_rom_min_angle(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d, float min_angle, HMM_Vec2 *arr)
 {
-  HMM_Mat4 G = make_G(*a, *b, *c, *d);
-  HMM_Mat4 C = HMM_MulM4(G, catmull_rom_m);
-  return spline2d_min_angle_2(0,1,min_angle*M_PI/180.0,&C);
+  HMM_Mat4 C = catmull_C(*a,*b,*c,*d);  
+  arr = spline2d_min_angle_2(0,1,min_angle*M_PI/180.0,&C, arr);
+  return arr;
 }
 
 #define CR_MA(DIM) \
@@ -257,9 +288,22 @@ HMM_Vec##DIM *catmull_rom_ma_v##DIM(HMM_Vec##DIM *cp, float ma) \
   return arrdup(V##DIM##RET);\
 }\
 
-CR_MA(2)
-CR_MA(3)
-CR_MA(4)
+//CR_MA(2)
+
+HMM_Vec2 *catmull_rom_ma_v2(HMM_Vec2 *cp, float ma)
+{
+  if (arrlen(cp) < 4) return NULL;
+  HMM_Vec2 *ret = NULL;
+  int segments = arrlen(cp)-3;
+  arrput(ret, cp[1]); 
+  for (int i = 1; i < arrlen(cp)-2; i++)
+    ret = catmull_rom_min_angle(&cp[i-1], &cp[i], &cp[i+1], &cp[i+2], ma, ret);
+
+  return ret;
+}
+
+//CR_MA(3)
+//CR_MA(4)
 
 HMM_Vec2 catmull_rom_query(HMM_Vec2 *cp, float d, HMM_Mat4 *G)
 {

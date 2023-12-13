@@ -65,7 +65,6 @@ struct phys2d_edge {
   HMM_Vec2 *points; /* Points defined relative to the gameobject */
   float thickness;
   cpShape **shapes;
-  int closed; /* True if the first and last points should be connected */
   struct phys2d_shape shape;
   int draws;
 };
@@ -94,13 +93,15 @@ struct phys2d_edge *Make2DEdge(gameobject *go);
 void phys2d_edgedel(struct phys2d_edge *edge);
 void phys2d_applyedge(struct phys2d_edge *edge);
 void phys2d_dbgdrawedge(struct phys2d_edge *edge);
-void phys2d_edgeaddvert(struct phys2d_edge *edge);
+void phys2d_edgeaddvert(struct phys2d_edge *edge, HMM_Vec2 v);
 void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
 float phys2d_edge_moi(struct phys2d_edge *edge, float m);
 
 void phys2d_edge_setvert(struct phys2d_edge *edge, int index, cpVect val);
 void phys2d_edge_clearverts(struct phys2d_edge *edge);
-void phys2d_edge_addverts(struct phys2d_edge *edge, cpVect *verts);
+void phys2d_edge_rmvert(struct phys2d_edge *edge, int index);
+void phys2d_edge_update_verts(struct phys2d_edge *edge, HMM_Vec2 *verts);
+void phys2d_edge_addverts(struct phys2d_edge *edge, HMM_Vec2 *verts);
 void phys2d_edge_set_sensor(struct phys2d_edge *edge, int sensor);
 void phys2d_edge_set_enabled(struct phys2d_edge *edge, int enabled);
 

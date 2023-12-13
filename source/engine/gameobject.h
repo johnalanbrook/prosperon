@@ -88,4 +88,5 @@ void gameobject_rotate(gameobject *go, float as);
 void gameobject_setangle(gameobject *go, float angle);
 void gameobject_setpos(gameobject *go, cpVect vec);
 void gameobject_draw_debug(gameobject *go);
+void gameobject_draw_debugs();
 #endif

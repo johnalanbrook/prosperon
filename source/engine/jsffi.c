@@ -266,19 +266,14 @@ cpBitmask js2bitmask(JSValue v) {
   return mask;
 }
 
-HMM_Vec2 *cpvecarr = NULL;
-
 /* Does not need to be freed by returning; but not reentrant */
 HMM_Vec2 *js2cpvec2arr(JSValue v) {
-  if (cpvecarr)
-    arrfree(cpvecarr);
-    
+  HMM_Vec2 *arr = NULL;
   int n = js_arrlen(v);
-
   for (int i = 0; i < n; i++)
-    arrput(cpvecarr, js2vec2(js_getpropidx( v, i)));
+    arrput(arr, js2vec2(js_getpropidx( v, i)));
 
-  return cpvecarr;
+  return arr;
 }
 
 JSValue bitmask2js(cpBitmask mask) {
@@ -398,15 +393,13 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
   HMM_Vec2 *points = js2cpvec2arr(argv[3]);
   float param = js2number(argv[4]);
   HMM_Vec2 *samples = catmull_rom_ma_v2(points, param);
-
+  arrfree(points);
+  
   if (!samples)
     return JS_UNDEFINED;
 
-//  for (int i = 0; i < arrlen(samples); i++)
-//    YughWarn("%g,%g", samples[i].x, samples[i].y);
-
   JSValue arr = vecarr2js(samples, arrlen(samples));  
-//  arrfree(samples);
+  arrfree(samples);
 
   return arr;
 }
@@ -497,6 +490,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   const char *str2 = NULL;
   const void *d1 = NULL;
   const void *d2 = NULL;
+  const void *v1 = NULL;
   gameobject *ids = NULL;
   gameobject *go = NULL;
   JSValue ret = JS_UNDEFINED;
@@ -759,7 +753,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 59:
-    ret = JS_NewInt64(js, point2segindex(js2vec2(argv[1]), js2cpvec2arr(argv[2]), js2number(argv[3])));
+    v1 = js2cpvec2arr(argv[2]);
+    ret = JS_NewInt64(js, point2segindex(js2vec2(argv[1]), v1, js2number(argv[3])));
     break;
 
   case 60:
@@ -857,7 +852,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 83:
-    draw_edge(js2cpvec2arr(argv[1]), js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, 0, js2color(argv[2]), 10);
+    v1 = js2cpvec2arr(argv[1]);
+    draw_edge(v1, js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, 0, js2color(argv[2]), 10);
     break;
 
   case 84:
@@ -869,7 +865,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 86:
-    ids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), js2cpvec2arr(argv[3]), js2int(argv[4]));
+    v1 = js2cpvec2arr(argv[3]);
+    ids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), v1, js2int(argv[4]));
     ret = gos2ref(ids);
     arrfree(ids);
     break;
@@ -1354,6 +1351,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   if (d1) free(d1);
   if (d2) free(d2);
 
+  if (v1) arrfree(v1);
+
   if (!JS_IsNull(ret)) {
     return ret;
   }
@@ -1750,14 +1749,17 @@ JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   struct phys2d_poly *poly = js2ptr(argv[1]);
+  HMM_Vec2 *v1 = NULL;
 
   if (!poly) return JS_UNDEFINED;
 
   switch (cmd) {
   case 0:
-    phys2d_poly_setverts(poly, js2cpvec2arr(argv[2]));
+    v1 = js2cpvec2arr(argv[2]);
+    phys2d_poly_setverts(poly, v1);
     break;
   }
+  if (v1) arrfree(v1);
 
   return JS_UNDEFINED;
 }
@@ -1765,15 +1767,9 @@ JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
 JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   gameobject *go = js2gameobject(argv[0]);
   struct phys2d_edge *edge = Make2DEdge(go);
-
-  int n = js_arrlen(argv[1]);
-  HMM_Vec2 points[n];
-
-  for (int i = 0; i < n; i++) {
-    points[i] = js2vec2(js_getpropidx(argv[1],i));
-    phys2d_edgeaddvert(edge);
-    phys2d_edge_setvert(edge, i, points[i].cp);
-  }
+  HMM_Vec2 *points = js2cpvec2arr(argv[1]);
+  phys2d_edge_update_verts(edge, points);
+  arrfree(points);
 
   JSValue edgeval = JS_NewObject(js);
   js_setprop_str(edgeval, "id", ptr2js(edge));
@@ -1790,16 +1786,19 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
     return JS_UNDEFINED;
   }
 
+  HMM_Vec2 *v1 = NULL;
+  
   switch (cmd) {
   case 0:
-    phys2d_edge_clearverts(edge);
-    phys2d_edge_addverts(edge, js2cpvec2arr(argv[2]));
+    v1 = js2cpvec2arr(argv[2]);
+    phys2d_edge_update_verts(edge,v1);
     break;
 
   case 1:
     edge->thickness = js2number(argv[2]);
     break;
   }
+  if (v1) arrfree(v1);
 
   return JS_UNDEFINED;
 }
@@ -1810,7 +1809,9 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
   double d = js2number(argv[2]);
   HMM_Vec2 *infl = inflatepoints(points,d,n);
   JSValue arr = vecarr2js(infl,arrlen(infl));
+  
   arrfree(infl);
+  arrfree(points);
   return arr;
 }
 
