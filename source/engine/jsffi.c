@@ -383,16 +383,24 @@ JSValue bb2js(struct boundingbox bb)
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   /*
-    0: hermite-cubic
-    1: catmull-rom
-    2: b-spline
-    3: bezier
+    0: catmull-rom
+    1: bezier
   */
-  int type = js2int(argv[1]);  
+
+  int type = js2int(argv[1]);
   int d = js2int(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
   HMM_Vec2 *points = js2cpvec2arr(argv[3]);
   float param = js2number(argv[4]);
-  HMM_Vec2 *samples = catmull_rom_ma_v2(points, param);
+  HMM_Vec2 *samples = NULL;
+  switch(type) {
+    case 0:
+      samples = catmull_rom_ma_v2(points, param);
+      break;
+    case 1:
+      samples = bezier_cb_ma_v2(points, param);
+      break;
+  }
+
   arrfree(points);
   
   if (!samples)
@@ -1815,19 +1823,6 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
   return arr;
 }
 
-/* These are anims for controlling properties on an object */
-JSValue duk_anim(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  return JS_UNDEFINED;
-}
-
-JSValue duk_make_timer(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-//  double secs = js2number(argv[1]);
-//  struct callee *c = make_callee(argv[0], argv[3]);
-//  int id = timer_make(secs, call_callee, c, 1, js2bool(argv[2]));
-//  return JS_NewInt64(js, id);
-  return JS_UNDEFINED;
-}
-
 JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int n = js_arrlen(argv[1]);
@@ -1847,29 +1842,6 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_UNDEFINED;
 }
 
-//#include "dlfcn.h"
-
-/*JSValue duk_cffi(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
-{
-  void *fn = dlsym(dlopen(NULL,0), "puts");
-  ffi_cif cif;
-  ffi_type *args[1];
-  void *values[1];
-  char *s;
-  ffi_arg rc;
-  args[0] = &ffi_type_pointer;
-  values[0] = &s;
-
-  if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, args) == FFI_OK) {
-    s = "Hello World!";
-    ffi_call(&cif, fn, &rc, values);
-    s = "This is cool";
-    ffi_call(&cif, fn, &rc, values);
-  }
-
-  return JS_UNDEFINED;
-}
-*/
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {
@@ -1896,7 +1868,6 @@ void ffi_load() {
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)
   DUK_FUNC(make_model,2);
-  DUK_FUNC(make_timer, 4)
 
   DUK_FUNC(cmd_points, 5);
 
@@ -1909,9 +1880,6 @@ void ffi_load() {
 
   DUK_FUNC(inflate_cpv, 3)
 
-//  DUK_FUNC(cffi,0);
-
-  DUK_FUNC(anim, 2)
   JS_FreeValue(js,globalThis);
 
   JS_NewClassID(&js_ptr_id);

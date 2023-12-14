@@ -335,18 +335,12 @@ function Color(from) {
 
 var Spline = {};
 Spline.sample_angle = function(type, points, angle) {
-  var s = spline_cmd(0, type, 2, points, angle);
-  return s;
+  return spline_cmd(0, type, points[0].length, points, angle);
 }
-Spline.sample = function(degrees, dimensions, type, ctrl_points, nsamples)
-{
-  var s = spline_cmd(0, degrees,dimensions,type,ctrl_points,nsamples);
-  console.warn(s);
-  return s;
-}
+
 Spline.type = {
   catmull: 0,
-  beziers: 1,
+  bezier: 1,
   bspline: 2,
   cubichermite: 3
 };

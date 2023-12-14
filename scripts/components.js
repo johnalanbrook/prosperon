@@ -610,16 +610,26 @@ component.edge2d = Object.copy(collider2d, {
       if (this.looped) spoints.push(spoints[0]);
       return spoints;
     }
-    
-    if (this.looped) {
-      spoints.unshift(spoints[spoints.length-1]);              
-      spoints.push(spoints[1]);
-      spoints.push(spoints[2]);
-    } else {
-      spoints.unshift(spoints[0].sub(spoints[1]).add(spoints[0]));
-      spoints.push(spoints[spoints.length-1].sub(spoints[spoints.length-2]).add(spoints[spoints.length-1]));
+
+    if (this.type === Spline.type.catmull) {
+      if (this.looped) {
+	spoints.unshift(spoints[spoints.length-1]);              
+	spoints.push(spoints[1]);
+	spoints.push(spoints[2]);
+      } else {
+	spoints.unshift(spoints[0].sub(spoints[1]).add(spoints[0]));
+	spoints.push(spoints[spoints.length-1].sub(spoints[spoints.length-2]).add(spoints[spoints.length-1]));
+      }
+      return Spline.sample_angle(this.type, spoints,this.angle);
     }
-    
+
+    var tp = [];
+    for (var i = 0; i < spoints.length-1; i++)
+      tp.push([spoints[i+1].sub(spoints[i]), spoints[i+1].sub(spoints[i])]);
+
+    spoints = spoints.map((p,i) => p.concat(tp[i]));
+    spoints = spoints.flat();
+
     return Spline.sample_angle(this.type, spoints, this.angle);
   },
 
@@ -728,6 +738,8 @@ bucket.inputs['C-l'].doc = "Toggle spline being looped.";
 
 bucket.inputs['C-c'] = function() { this.type = Spline.type.catmull; };
 bucket.inputs['C-c'].doc = "Set type of spline to catmull-rom.";
+
+bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; };
 
 bucket.inputs['C-o'] = function() { this.type = -1; };
 bucket.inputs['C-o'].doc = "Set spline to linear.";

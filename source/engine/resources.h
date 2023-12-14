@@ -26,4 +26,14 @@ char *seprint(char *fmt, ...);
 
 void pack_engine(const char *fname);
 
+static inline void *stbarrdup(void *mem, size_t size, int len) {
+  void *out = NULL;
+  arrsetlen(out, len);
+  memcpy(out,mem,size*len);
+  return out;
+}
+
+#define arrconcat(a,b) do{for (int i = 0; i < arrlen(b); i++) arrput(a,b[i]);}while(0)
+#define arrdup(a) (stbarrdup(a, sizeof(*a), arrlen(a)))
+
 #endif

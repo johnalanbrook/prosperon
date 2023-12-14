@@ -138,46 +138,28 @@ HMM_Vec4 spline_CT(HMM_Mat4 *C, float t)
   return HMM_MulM4V4(*C, T);
 }
 
-HMM_Mat4 make_G(HMM_Vec2 a, HMM_Vec2 b, HMM_Vec2 c, HMM_Vec2 d)
+HMM_Mat4 make_C(HMM_Vec2 *p, HMM_Mat4 *B)
 {
   HMM_Mat4 G;
-  G.Columns[0].xy = a;
-  G.Columns[1].xy = b;
-  G.Columns[2].xy = c;
-  G.Columns[3].xy = d;  
-  return G;
-}
-
-HMM_Mat4 make_C(HMM_Vec2 p0, HMM_Vec2 p1, HMM_Vec2 p2, HMM_Vec2 p3, HMM_Mat4 *B)
-{
-  HMM_Mat4 G = make_G(p0, p1, p2, p3);
+  G.Columns[0].xy = p[0];
+  G.Columns[1].xy = p[1];
+  G.Columns[2].xy = p[2];
+  G.Columns[3].xy = p[3];
   return HMM_MulM4(G, *B);
 }
 
-HMM_Mat4 catmull_C(HMM_Vec2 c0, HMM_Vec2 c1, HMM_Vec2 c2, HMM_Vec2 c3)
+HMM_Vec2 cubic_spline_d(HMM_Vec2 *p, HMM_Mat4 *m, float d)
 {
-  return make_C(c0,c1,c2,c3,&catmull_rom_m);
-}
-
-HMM_Vec2 cubic_spline_d(HMM_Vec2 p0, HMM_Vec2 p1, HMM_Vec2 p2, HMM_Vec2 p3, HMM_Mat4 *m, float d)
-{
-  HMM_Mat4 G = make_G(p0,p1,p2,p3);
-  HMM_Mat4 C = HMM_MulM4(G, *m);
+  HMM_Mat4 C = make_C(p, m);
   return spline_CT(&C, d).xy;
 }
 
-HMM_Vec2 *spline_v2(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d, HMM_Mat4 *m, int segs)
+HMM_Vec2 *spline_v2(HMM_Vec2 *p, HMM_Mat4 *m, int segs)
 {
   HMM_Vec2 *ret = NULL;
-  if (segs == 2) {
-    arrput(ret, *b);
-    arrput(ret, *c);
-    return ret;
-  }
   if (segs < 2) return NULL;
-
-  HMM_Mat4 G = make_G(*a, *b, *c, *d);
-  HMM_Mat4 C = HMM_MulM4(G, *m);
+ 
+  HMM_Mat4 C = make_C(p, m);
   float s = (float)1/segs;
 
   for (float t = 0; t < 1; t += s)
@@ -201,94 +183,45 @@ HMM_Vec2 *spline2d_min_seg(float u0, float u1, float min_seg, HMM_Mat4 *C, HMM_V
 
 HMM_Vec2 *catmull_rom_min_seg(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d, float min_seg)
 {
-  HMM_Vec2 p0 = HMM_MulV2F(HMM_SubV2(*c, *a), CAT_S);
-  HMM_Vec2 p3 = HMM_MulV2F(HMM_SubV2(*d, *b), CAT_S);
-
-  HMM_Mat4 G = make_G(p0, *b, *c, p3);
-  HMM_Mat4 C = HMM_MulM4(G, catmull_rom_m);
   HMM_Vec2 *ret = NULL;
   arrsetcap(ret, 1000);
   arrput(ret, *b);
-  spline2d_min_seg(0, 1, min_seg, &C, ret);
+//  spline2d_min_seg(0, 1, min_seg, &C, ret);
   return ret;
 }
 
-void *stbarrdup(void *mem, size_t size, int len) {
-  void *out = NULL;
-  arrsetlen(out, len);
-  memcpy(out,mem,size*len);
-  return out;
-}
-
-#define arrconcat(a,b) do{for (int i = 0; i < arrlen(b); i++) arrput(a,b[i]);}while(0)
-#define arrdup(a) (stbarrdup(a, sizeof(*a), arrlen(a)))
-
-static HMM_Vec2 *V2RET = NULL;
-static HMM_Vec3 *V3RET = NULL;
-static HMM_Vec4 *V4RET = NULL;
-
-#define SPLINE_MIN(DIM) \
-HMM_Vec##DIM *spline2d_min_angle_##DIM(float u0, float u1, float max_angle, HMM_Mat4 *C) \
-{ \
-  float umid = (u0 + u1)/2;\
-  HMM_Vec##DIM a = spline_CT(C, u0)._##DIM;\
-  HMM_Vec##DIM b = spline_CT(C, u1)._##DIM;\
-  HMM_Vec##DIM m = spline_CT(C, umid)._##DIM;\
-  if (HMM_AngleV##DIM(m,b) > max_angle) {\
-    spline2d_min_angle_##DIM(u0, umid, max_angle, C);\
-    spline2d_min_angle_##DIM(umid, u1, max_angle, C);\
-  }\
-  else\
-    arrput(V##DIM##RET,b);\
-}\
-
 HMM_Vec2 *spline2d_min_angle_2(float u0, float u1, float max_angle, HMM_Mat4 *C, HMM_Vec2 *arr) 
 {
-  float umid = (u0 + u1)/2;
-  HMM_Vec2 a = spline_CT(C, u0)._2;
-  HMM_Vec2 b = spline_CT(C, u1)._2;
-  HMM_Vec2 m = spline_CT(C, umid)._2;
-  if (fabs(HMM_AngleV2(m,b)) > max_angle) {
-    arr = spline2d_min_angle_2(u0, umid, max_angle, C, arr);
-    arr = spline2d_min_angle_2(umid, u1, max_angle, C, arr);
-  }
-  else
+  float ustep = (u1-u0)/4;
+  float um0 = u0+ustep;
+  float um1 = u0+(ustep*2);
+  float um2 = u0+(ustep*3);
+  
+  HMM_Vec2 m0 = spline_CT(C, um0)._2;
+  HMM_Vec2 m1 = spline_CT(C, um1)._2;
+  HMM_Vec2 m2 = spline_CT(C,um2)._2;
+
+  HMM_Vec2 a = spline_CT(C,u0)._2;
+  HMM_Vec2 b = spline_CT(C,u1)._2;
+  
+  float ab = HMM_DistV2(a,b);
+  float cdist = HMM_DistV2(a,m0) + HMM_DistV2(m0,m1) + HMM_DistV2(m1,m2) + HMM_DistV2(m2,b);
+
+  if (cdist-ab > max_angle) {
+    arr = spline2d_min_angle_2(u0,um1,max_angle,C,arr);
+    arr = spline2d_min_angle_2(um1,u1,max_angle,C,arr);    
+  } else
     arrput(arr,b);
-
+  
   return arr;
 }
 
-
-//SPLINE_MIN(2)
-SPLINE_MIN(3)
-
-/* Computes non even points to give the best looking curve  for a given catmull a,b,c,d */
-HMM_Vec2 *catmull_rom_min_angle(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d, float min_angle, HMM_Vec2 *arr)
+HMM_Vec2 *spline_min_angle(HMM_Vec2 *p, HMM_Mat4 *B, float min_angle, HMM_Vec2 *arr)
 {
-  HMM_Mat4 C = catmull_C(*a,*b,*c,*d);  
-  arr = spline2d_min_angle_2(0,1,min_angle*M_PI/180.0,&C, arr);
+  HMM_Mat4 C = make_C(p, B);
+  arr = spline2d_min_angle_2(0,1,min_angle, &C, arr);
   return arr;
 }
-
-#define CR_MA(DIM) \
-HMM_Vec##DIM *catmull_rom_ma_v##DIM(HMM_Vec##DIM *cp, float ma) \
-{ \
-  if (arrlen(cp) < 4) return NULL; \
-\
-  if (V##DIM##RET) arrfree(V##DIM##RET);\
-  arrsetcap(V##DIM##RET,100);\
-  int segments = arrlen(cp)-3;\
-  arrput(V##DIM##RET, cp[1]); \
-  for (int i = 1; i < arrlen(cp)-2; i++) { \
-    HMM_Vec##DIM p0 = HMM_MulV##DIM##F(HMM_SubV##DIM(cp[i+1], cp[i-1]), CAT_S);\
-    HMM_Vec##DIM p3 = HMM_MulV##DIM##F(HMM_SubV##DIM(cp[i+2], cp[i]), CAT_S);\
-    catmull_rom_min_angle(&p0, &cp[i], &cp[i+1], &p3, ma);\
-  }\
-  \
-  return arrdup(V##DIM##RET);\
-}\
-
-//CR_MA(2)
 
 HMM_Vec2 *catmull_rom_ma_v2(HMM_Vec2 *cp, float ma)
 {
@@ -298,14 +231,24 @@ HMM_Vec2 *catmull_rom_ma_v2(HMM_Vec2 *cp, float ma)
   int segments = arrlen(cp)-3;
   arrsetcap(ret,segments*(ma>=2 ? 3 : 7));  
   arrput(ret, cp[1]); 
-  for (int i = 1; i < arrlen(cp)-2; i++)
-    ret = catmull_rom_min_angle(&cp[i-1], &cp[i], &cp[i+1], &cp[i+2], ma, ret);
+  for (int i = 0; i < arrlen(cp)-3; i++)
+    ret = spline_min_angle(&cp[i], &catmull_rom_m, ma, ret);
 
   return ret;
 }
 
-//CR_MA(3)
-//CR_MA(4)
+HMM_Vec2 *bezier_cb_ma_v2(HMM_Vec2 *cp, float ma)
+{
+  if (arrlen(cp) < 4) return NULL;
+  HMM_Vec2 *ret = NULL;
+  int segments = arrlen(cp)-3;
+  arrsetcap(ret,segments*(ma>=2?3:7));
+  arrput(ret,cp[0]);
+  for (int i = 0; i < arrlen(cp)-3; i+=3)
+    ret = spline_min_angle(&cp[i], &bezier_m, ma, ret);
+
+  return ret;
+}
 
 HMM_Vec2 catmull_rom_query(HMM_Vec2 *cp, float d, HMM_Mat4 *G)
 {
@@ -320,13 +263,11 @@ HMM_Vec2 catmull_rom_query(HMM_Vec2 *cp, float d, HMM_Mat4 *G)
     p1++;
   }
 
-  HMM_Vec2 p0 = HMM_MulV2F(HMM_SubV2(cp[p1+1], cp[p1-1]), CAT_S);
-  HMM_Vec2 p3 = HMM_MulV2F(HMM_SubV2(cp[p1+2], cp[p1]), CAT_S);
-
-  return cubic_spline_d(p0, cp[p1], cp[p1+1], p3, G, d);
+   return cp[0];
+//  return cubic_spline_d(p0, cp[p1], cp[p1+1], p3, G, d);
 }
 
-float catmull_rom_seglen(float t0, float t1, float max_angle, HMM_Mat4 *Cd, HMM_Mat4 *C)
+float spline_seglen(float t0, float t1, float max_angle, HMM_Mat4 *Cd, HMM_Mat4 *C)
 {
   float total = 0;
   float step = 0.1;
@@ -343,8 +284,8 @@ float catmull_rom_seglen(float t0, float t1, float max_angle, HMM_Mat4 *Cd, HMM_
   HMM_Vec2 m = spline_CT(C, tmid).xy;
 
   if (HMM_AngleV2(m,b) > max_angle) {
-    total += catmull_rom_seglen(t0, tmid, max_angle, Cd, C);
-    total += catmull_rom_seglen(tmid, t1, max_angle, Cd, C);
+    total += spline_seglen(t0, tmid, max_angle, Cd, C);
+    total += spline_seglen(tmid, t1, max_angle, Cd, C);
   } else
    return HMM_LenV2(spline_CT(Cd, t0).xy)*(t1-t0);
 
@@ -358,12 +299,10 @@ float catmull_rom_len(HMM_Vec2 *cp)
   int segs = arrlen(cp)-3;
   float d_per_seg = (float)1/segs;
   float maxi = d_per_seg;
-  for (int i = 1; i < arrlen(cp)-2; i++) {
-    HMM_Vec2 p0 = HMM_MulV2F(HMM_SubV2(cp[i+1], cp[i-1]), CAT_S);
-    HMM_Vec2 p3 = HMM_MulV2F(HMM_SubV2(cp[i+2], cp[i]), CAT_S);
-    HMM_Mat4 C = make_C(p0, cp[i], cp[i+1], p3, &catmull_rom_m);
-    HMM_Mat4 Cd = make_C(p0, cp[i], cp[i+1], p3, &catmull_rom_dm);
-    len += catmull_rom_seglen(0, 1, 0.1, &Cd, &C);
+  for (int i = 0; i < arrlen(cp)-3; i++) {
+    HMM_Mat4 C = make_C(&cp[i], &catmull_rom_m);
+    HMM_Mat4 Cd = make_C(&cp[i], &catmull_rom_dm);
+    len += spline_seglen(0, 1, 0.1, &Cd, &C);
   }
   return len;
 }

@@ -7,7 +7,8 @@ HMM_Vec2 *catmull_rom_ma_v2(HMM_Vec2 *cp, float ma);
 HMM_Vec3 *catmull_rom_ma_v3(HMM_Vec3 *cp, float ma);
 HMM_Vec4 *catmull_rom_ma_v4(HMM_Vec4 *cp, float ma);
 
-HMM_Vec2 catmull_rom_query(HMM_Vec2 *cp, float d, HMM_Mat4 *G);
+HMM_Vec2 *bezier_cb_ma_v2(HMM_Vec2 *cp, float ma);
+HMM_Vec2 spline_query(HMM_Vec2 *cp, float d, HMM_Mat4 *basis);
 
 HMM_Vec2 catmull_rom_pos(HMM_Vec2 *cp, float d);
 HMM_Vec2 catmull_rom_tan(HMM_Vec2 *cp, float d);

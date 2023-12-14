@@ -13,6 +13,18 @@ var Shape = {
 };
 
 var Debug = {
+  fn_break(fn, obj) {
+    if (typeof fn !== 'function') return;
+    obj ??= globalThis;
+    
+    var newfn = function() {
+      console.log("broke");
+      fn();
+    };
+    obj[fn.name] = newfn;    
+  },
+
+
   draw_grid(width, span, color) {
     color = color ? color : Color.green;
     cmd(47, width, span, color);
