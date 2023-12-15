@@ -7,9 +7,7 @@ var Gizmos = {
 };
 
 var Shape = {
-  circle(pos, radius, color) {
-    cmd(115, pos, radius, color);
-  },
+  circle(pos, radius, color) { cmd(115, pos, radius, color); },
 };
 
 var Debug = {
@@ -24,7 +22,6 @@ var Debug = {
     obj[fn.name] = newfn;    
   },
 
-
   draw_grid(width, span, color) {
     color = color ? color : Color.green;
     cmd(47, width, span, color);
@@ -35,6 +32,8 @@ var Debug = {
     Shape.circle(pos, size, color);
 //    cmd(51, pos, size,color);
   },
+
+  coordinate(pos, size, color) { GUI.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color); },
   
   arrow(start, end, color, capsize) {
     color = color ? color : Color.red;
@@ -58,8 +57,8 @@ var Debug = {
   },
 
   numbered_point(pos, n) {
-    Debug.point(world2screen(pos), 3);
-    GUI.text(n, world2screen(pos).add([0,4]), 1);
+    Debug.point(pos, 3);
+    GUI.text(n, pos.add([0,4]), 1);
   },
 
   phys_drawing: false,
@@ -76,12 +75,14 @@ var Debug = {
     Register.debug.register(fn,obj);
   },
 
+  gameobject(go) {
+
+  },
+
   line(points, color, type, thickness) {
     thickness ??= 1;
+    type ??= 0;
     
-    if (!type)
-      type = 0;
-
     if (!color)
       color = Color.white;
       

@@ -7,7 +7,6 @@
 #include "gameobject.h"
 
 extern HMM_Vec3 eye;
-struct shader;
 
 typedef struct material {
   
@@ -51,9 +50,6 @@ struct model *MakeModel(const char *path);
 void loadmodel(struct model *model);
 
 void model_init();
-
-void draw_model(struct model *model, HMM_Mat4 amodel);
-void draw_models(struct model *model, struct shader *shader);
 
 struct drawmodel *make_drawmodel(gameobject *go);
 void draw_drawmodel(struct drawmodel *dm);

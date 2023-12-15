@@ -6,7 +6,6 @@
 #include "font.h"
 #include "gameobject.h"
 #include "log.h"
-#include "shader.h"
 #include "sprite.h"
 #include "window.h"
 #include "model.h"
@@ -528,7 +527,6 @@ void full_2d_pass(struct window *window)
 
   ////// TEXT && GUI
   debug_nextpass();
-  
   call_gui();
   debug_flush(&hudproj);
   text_flush(&hudproj);

@@ -5,7 +5,6 @@
 #include "gameobject.h"
 #include "log.h"
 #include "render.h"
-#include "shader.h"
 #include "stb_ds.h"
 #include "texture.h"
 #include "timer.h"

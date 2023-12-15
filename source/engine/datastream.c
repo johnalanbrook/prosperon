@@ -6,7 +6,6 @@
 #include "limits.h"
 #include "log.h"
 #include "resources.h"
-#include "shader.h"
 #include "sound.h"
 #include "texture.h"
 #include <stdbool.h>

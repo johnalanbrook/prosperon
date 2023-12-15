@@ -215,7 +215,7 @@ var editor = {
     Game.pause();
     Player.players[0].control(this);
     Player.players[0].uncontrol(limited_editor);
-    Register.gui.register(editor.ed_gui, editor);
+    Register.gui.register(editor.gui, editor);
     Register.draw.register(editor.draw, editor);
     Debug.register_call(editor.ed_debug, editor);
     Register.update.register(gui_controls.update, gui_controls);
@@ -367,6 +367,13 @@ var editor = {
 
   color_depths: [],
   draw() {
+    Debug.point(world2screen(this.cursor), 2, Color.green);
+    
+    this.selectlist.forEach(x => {
+      if ('gizmo' in x && typeof x['gizmo'] === 'function' )
+        x.gizmo();
+    });
+  
     Debug.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
 
     /* Draw selection box */
@@ -384,23 +391,22 @@ var editor = {
       Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
       Debug.line(bb2points(bb).wrapped(1), Color.white);
     }
+
+    Debug.coordinate([0,0]);
   },
 
-  ed_gui() {
+  gui() {
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
 
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
 
-    Debug.point(world2screen(this.cursor), 2, Color.green);
-
-    if (this.comp_info && this.sel_comp) {
+    if (this.comp_info && this.sel_comp)
       GUI.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
-    }
 
-    GUI.text("0,0", world2screen([0,0]));
-    GUI.text(editor.edit_level.worldpos().map(x => Math.round(x)), world2screen(editor.edit_level.worldpos()), 1, Color.red);
+
+//    GUI.text(editor.edit_level.worldpos().map(x => Math.round(x)), world2screen(editor.edit_level.worldpos()), 1, Color.red);
     GUI.text("+", world2screen(editor.edit_level.worldpos()), 1, Color.blue);
 
     var thiso = editor.get_this();
@@ -451,9 +457,6 @@ var editor = {
       GUI.text(sname, world2screen(x.worldpos()).add([0, 32]), 1, Color.editor.ur);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), world2screen(x.worldpos()), 1, Color.white);
 //      Debug.arrow(world2screen(x.worldpos()), world2screen(x.worldpos().add(x.up().scale(40))), Color.yellow, 1);
-
-      if ('gizmo' in x && typeof x['gizmo'] === 'function' )
-        x.gizmo();
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
@@ -1202,7 +1205,7 @@ editor.inputs.down = function() { this.key_move([0,-1]); };
 editor.inputs.down.rep = true;
 
 editor.inputs.tab = function() {
-  if (!this.selectlist.length === 1) return;
+  if (!(this.selectlist.length === 1)) return;
   if (!this.selectlist[0].components) return;
 
   var sel = this.selectlist[0].components;

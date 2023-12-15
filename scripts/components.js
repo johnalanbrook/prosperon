@@ -642,13 +642,18 @@ component.edge2d = Object.copy(collider2d, {
 
   /* EDITOR */
   gizmo() {
-    this.spoints().forEach(function(x) {
-      Debug.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
-    }, this);
-    
-    this.cpoints.forEach(function(x, i) {
-      Debug.numbered_point(this.gameobject.this2world(x), i);
-    }, this);
+    if (this.type === Spline.type.catmull) {
+      this.spoints().forEach(x => Debug.point(this.gameobject.this2world(x), 3, Color.teal));
+      this.cpoints.forEach((x,i) => Debug.numbered_point(this.gameobject.this2world(x), i));
+    } else {
+      for (var i = 1; i < this.cpoints.length; i+=2) {
+        Debug.point(this.gameobject.this2world(this.cpoints[i]), 3, Color.green);
+        Debug.line([this.gameobject.this2world(this.cpoints[i-1]), this.gameobject.this2world(this.cpoints[i])], Color.yellow);
+      }
+//      for (var i = 0; i < this.cpoints.length; i+=3)
+//        Debug.numbered_point(this.gameobject.this2world(this.cpoints[
+    }
+
   },
   
   finish_center(change) {

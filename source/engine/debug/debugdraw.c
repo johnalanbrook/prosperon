@@ -2,7 +2,6 @@
 
 #include "render.h"
 #include "yugine.h"
-#include "shader.h"
 #include "log.h"
 #include <assert.h>
 #include "debug.h"
@@ -23,6 +22,37 @@
 #include "font.h"
 
 #define v_amt 5000
+
+struct flush {
+  sg_shader shader;
+  sg_pipeline pipe;
+  sg_bindings bind;
+  void *verts;
+  int c;
+  int v;
+  int sc;
+  int sv;
+};
+typedef struct flush flush;
+
+static flush fpoint;
+static flush circle;
+
+void flushview(flush *f, HMM_Mat4 *view)
+{
+  sg_apply_pipeline(f->pipe);
+  sg_apply_bindings(&f->bind);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*view));
+  sg_draw(f->sc, f->c, 1);
+}
+
+void flushpass(flush *f)
+{
+  f->sc = f->c;
+  f->c = 0;
+  f->sv = f->v;
+  f->v = 0;
+}
 
 static sg_shader point_shader;
 static sg_pipeline point_pipe;

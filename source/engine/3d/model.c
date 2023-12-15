@@ -2,7 +2,6 @@
 
 #include "log.h"
 #include "resources.h"
-#include "shader.h"
 #include "stb_ds.h"
 #include "font.h"
 #include "window.h"

@@ -2,17 +2,17 @@
 
 Register functions with built-in drawing callbacks to have code execute at particular points in time. Some drawing functions take world coordinates, while others take screen coordinates.
 
-register_gui
+gui
 Called before nk_gui. Screen space.
 
-register_nk_gui
-Called during the Nuklear debug pass. Use Nuklear functions only.
-
-register_draw
+draw
 Called every frame. World space.
 
-register_debug
+debug
 Called if drawing physics. World space.
+
+gizmo
+Called usually for editor purposes. World space.
 
 # Mum
 
