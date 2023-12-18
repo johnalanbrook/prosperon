@@ -466,13 +466,8 @@ void render_winsize()
 }
 
 static cpBody *camera = NULL;
-void set_cam_body(cpBody *body) {
-  camera = body;
-}
-
-cpVect cam_pos() {
-  return camera ? cpBodyGetPosition(camera) : cpvzero;
-}
+void set_cam_body(cpBody *body) { camera = body; }
+cpVect cam_pos() { return camera ? cpBodyGetPosition(camera) : cpvzero; }
 
 static float zoom = 1.f;
 float cam_zoom() { return zoom; }

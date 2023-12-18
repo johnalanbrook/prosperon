@@ -69,11 +69,9 @@ HMM_Mat4 t3d_go2world(gameobject *go);
 HMM_Mat4 t3d_world2go(gameobject *go);
 
 HMM_Vec2 go_pos(gameobject *go);
-HMM_Vec2 go_worldpos(gameobject *go);
-//float go_angle(gameobject *go);
-float go_worldangle(gameobject *go);
-
-float go2angle(gameobject *go);
+void gameobject_setpos(gameobject *go, cpVect vec);
+float go_angle(gameobject *go);
+void gameobject_setangle(gameobject *go, float angle);
 
 gameobject *body2go(cpBody *body);
 gameobject *shape2go(cpShape *shape);
@@ -83,10 +81,6 @@ void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 /* Tries a few methods to select a gameobject; if none is selected returns -1 */
 gameobject *pos2gameobject(HMM_Vec2 pos);
 
-void gameobject_move(gameobject *go, HMM_Vec2 vec);
-void gameobject_rotate(gameobject *go, float as);
-void gameobject_setangle(gameobject *go, float angle);
-void gameobject_setpos(gameobject *go, cpVect vec);
 void gameobject_draw_debug(gameobject *go);
 void gameobject_draw_debugs();
 #endif

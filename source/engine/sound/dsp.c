@@ -9,6 +9,8 @@
 #include "stb_ds.h"
 #include "smbPitchShift.h"
 
+#include "pthread.h"
+
 #define PI 3.14159265
 
 dsp_node *masterbus = NULL;
@@ -21,7 +23,6 @@ void iir_free(struct dsp_iir *iir)
   free(iir->y);
   free(iir);
 }
-
 
 void interleave(soundbyte *a, soundbyte *b, soundbyte *stereo, int frames)
 {
@@ -117,10 +118,7 @@ void scale_soundbytes(soundbyte *a, float scale, int samples)
   for (int i = 0; i < samples; i++) a[i] *= scale;
 }
 
-void zero_soundbytes(soundbyte *a, int samples)
-{
-  memset(a, 0, sizeof(soundbyte)*samples);
-}
+void zero_soundbytes(soundbyte *a, int samples) { memset(a, 0, sizeof(soundbyte)*samples); }
 
 void set_soundbytes(soundbyte *a, soundbyte *b, int samples)
 {
@@ -151,13 +149,15 @@ dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int sam
 
 void node_free(dsp_node *node)
 {
-  YughWarn("FREEING A NODE");
+  if (node == masterbus) return; /* Simple check to not delete the masterbus */
+  pthread_mutex_lock(&soundrun);
   unplug_node(node);
   if (node->data)
     if (node->data_free) node->data_free(node->data);
     else free(node->data);
   
-  free(node);    
+  free(node);
+  pthread_mutex_unlock(&soundrun);
 }
 
 void dsp_node_free(dsp_node *node) { node_free(node); }

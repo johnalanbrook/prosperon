@@ -304,7 +304,7 @@ dam->update_activity(dam, &da, NULL, NULL);
     if (argc > i+1) argsize++;
   }
 
-  char cmdstr[argsize];
+  char cmdstr[argsize+1];
   cmdstr[0] = '\0';
 
   for (int i = 0; i < argc; i++) {

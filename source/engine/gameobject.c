@@ -11,27 +11,14 @@
 static gameobject **gameobjects;
 
 gameobject *body2go(cpBody *body) { return cpBodyGetUserData(body); }
-gameobject *shape2go(cpShape *shape)
-{
-  return ((struct phys2d_shape *)cpShapeGetUserData(shape))->go;
-}
+gameobject *shape2go(cpShape *shape) { return ((struct phys2d_shape *)cpShapeGetUserData(shape))->go; }
 
 HMM_Vec2 go_pos(gameobject *go)
 {
   cpVect p = cpBodyGetPosition(go->body);
   return (HMM_Vec2){p.x, p.y};
 }
-
-HMM_Vec2 go_worldpos(gameobject *go)
-{
-  HMM_Vec2 ret;
-  ret.cp = cpBodyGetPosition(go->body);
-  return ret;
-}
-
-float go_angle(gameobject *go) { return go_worldangle(go); }
-float go_worldangle(gameobject *go) { return cpBodyGetAngle(go->body); }
-float go2angle(gameobject *go) { return cpBodyGetAngle(go->body); }
+float go_angle(gameobject *go) { return cpBodyGetAngle(go->body); }
 
 transform3d go2t3(gameobject *go)
 {
@@ -212,8 +199,6 @@ void gameobject_clean(gameobject *go) {
 /* Really more of a "mark for deletion" ... */
 void gameobject_free(gameobject *go) {
   if (!go) return;
-  YughWarn("FREEING A GAMEOBJECT");  
-  JS_FreeValue(js, go->ref);
 
   for (int i = arrlen(gameobjects)-1; i >= 0; i--)
     if (gameobjects[i] == go) {

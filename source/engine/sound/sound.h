@@ -3,8 +3,10 @@
 
 #include "script.h"
 #include "samplerate.h"
+#include "pthread.h"
 
 typedef float soundbyte;
+extern pthread_mutex_t soundrun;
 
 struct dsp_node;
 

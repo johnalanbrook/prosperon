@@ -56,7 +56,7 @@ int make_sprite(gameobject *go) {
     .t = t2d_unit,
       .color = color_white,
       .emissive = {0,0,0,0},
-      .tex = texture_loadfromfile(NULL),
+      .tex = texture_pullfromfile(NULL),
       .go = go,
       .layer = 0,
       .next = -1,
@@ -83,27 +83,7 @@ struct sprite *id2sprite(int id) {
 
 static int sprite_count = 0;
 
-void sprite_flush() {
-  sprite_count = 0;
-}
-
-void sprite_io(struct sprite *sprite, FILE *f, int read) {
-  char path[100];
-  if (read) {
-    // fscanf(f, "%s", &path);
-    for (int i = 0; i < 100; i++) {
-      path[i] = fgetc(f);
-
-      if (path[i] == '\0') break;
-    }
-    fread(sprite, sizeof(*sprite), 1, f);
-    sprite_loadtex(sprite, path, ST_UNIT);
-  } else {
-    fputs(tex_get_path(sprite->tex), f);
-    fputc('\0', f);
-    fwrite(sprite, sizeof(*sprite), 1, f);
-  }
-}
+void sprite_flush() { sprite_count = 0; }
 
 int sprite_sort(int *a, int *b)
 {
@@ -140,7 +120,7 @@ void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect frame
     YughWarn("NO SPRITE!");
     return;
   }
-  sprite->tex = texture_loadfromfile(path);
+  sprite->tex = texture_pullfromfile(path);
   sprite_setframe(sprite, &frame);
 }
 
@@ -244,19 +224,12 @@ void sprite_draw(struct sprite *sprite) {
   HMM_Mat3 sm = transform2d2mat(sprite->t);
 
   tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, 0, sprite->emissive);
-
-}
-
-void sprite_setanim(struct sprite *sprite, struct TexAnim *anim, int frame) {
-  if (!sprite) return;
-  sprite->tex = anim->tex;
-  sprite->frame = anim->st_frames[frame];
 }
 
 void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
-  struct Texture *tex = texture_loadfromfile(img);
+  struct Texture *tex = texture_pullfromfile(img);
   tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, wrapscale, (struct rgba){0,0,0,0});
 }
 
@@ -264,7 +237,7 @@ void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba
 {
   sg_apply_pipeline(slice9_pipe);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
-  struct Texture *tex = texture_loadfromfile(img);
+  struct Texture *tex = texture_pullfromfile(img);
 
   struct glrect r = tex_get_rect(tex);
 

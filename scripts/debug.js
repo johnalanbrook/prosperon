@@ -113,6 +113,16 @@ var Debug = {
   },
 };
 
+Debug.assert = function(b, str)
+{
+  str ??= "";
+  
+  if (!b) {
+    console.error(`Assertion failed. ${str}`);
+    Game.quit();
+  }
+}
+
 Debug.Options = { };
 Debug.Options.Color = {
   set trigger(x) { cmd(17,x); },

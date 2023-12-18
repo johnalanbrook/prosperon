@@ -44,7 +44,7 @@ var component = {
   
   make(go) {
     var nc = Object.create(this);
-    nc.gameobject = go;
+//    nc.gameobject = go;
     Object.assign(nc, this._enghook(go.body));
     nc.sync();
     assign_impl(nc,this.impl);
@@ -571,7 +571,8 @@ component.edge2d = Object.copy(collider2d, {
     var spoints = this.cpoints.slice();
     
     if (this.flipx) {
-      for (var i = spoints.length-1; i >= 0; i--) {
+      var endcap = Spline.is_bezier(this.type) ? spoints.length-2 : spoints.length-1;
+      for (var i = endcap; i >= 0; i--) {
         var newpoint = spoints[i].slice();
 	newpoint.x = -newpoint.x;
         spoints.push(newpoint);
@@ -653,6 +654,11 @@ component.edge2d = Object.copy(collider2d, {
   pick(pos) {
     var i = Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints);
     var p = this.cpoints[i];
+    if (!p) return undefined;
+
+    if (Spline.is_catmull(this.type))
+      return make_point_obj(this,p);
+      
     var that = this.gameobject;
     var me = this;
     if (p) {
@@ -677,8 +683,6 @@ component.edge2d = Object.copy(collider2d, {
 	}
       return o;
     }
-      
-    return undefined;
   },
 
   pick_all() {
@@ -790,8 +794,6 @@ bucket.inputs['C-lm'] = function() {
 
   if (this.cpoints.length >= 2)
     idx = cmd(59, screen2world(Mouse.pos).sub(this.gameobject.pos), this.cpoints, 400);
-
-  console.say("new point");  
 
   if (idx === this.cpoints.length)
     this.cpoints.push(this.gameobject.world2this(screen2world(Mouse.pos)));

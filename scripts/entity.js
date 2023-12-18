@@ -56,6 +56,25 @@ actor.remaster = function(to){
 };
 
 var gameobject = {
+  check_dirty() {
+    this._ed.urdiff = this.json_obj();
+    this._ed.dirty = !this._ed.urdiff.empty;
+    var lur = ur[this.level.ur];
+    if (!lur) return;
+    var lur = lur.objects[this.toString()];
+    var d = ediff(this._ed.urdiff,lur);
+    if (!d || d.empty)
+      this._ed.inst = true;
+    else
+      this._ed.inst = false;
+  },
+  namestr() {
+    var s = this.toString();
+    if (this._ed.dirty)
+      if (this._ed.inst) s += "#";
+      else s += "*";
+    return s;
+  },
   full_path() {
     return this.path_from(Primum);
   },
@@ -115,9 +134,10 @@ var gameobject = {
         cmd(36,this.body,x)
       },
       get scale() {
-        if (!this.level) return this.gscale();
+        Debug.assert(this.level, `No level set on ${this.toString()}`);
         return this.gscale().map((x,i) => x/this.level.gscale()[i]);
       },
+      
       set scale(x) {
         if (typeof x === 'number')
 	  x = [x,x];
@@ -134,21 +154,18 @@ var gameobject = {
       },
 
       set pos(x) {
-        if (!this.level)
-	  this.set_worldpos(x);
-	else
-          this.set_worldpos(this.level.this2world(x));
+        Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
+        this.set_worldpos(this.level.this2world(x));
       },
       
-      get pos() { 
-        if (!this.level) return this.worldpos();
+      get pos() {
+        Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
         return this.level.world2this(this.worldpos());
       },
 
   get draw_layer() { return cmd(171, this.body); },
   set draw_layer(x) { cmd(172, this.body, x); },
 
-      
       get elasticity() { return cmd(107,this.body); },
       set elasticity(x) { cmd(106,this.body,x); },
 
@@ -186,7 +203,8 @@ var gameobject = {
       worldangle() { return Math.rad2deg(q_body(2,this.body))%360; },
       sworldangle(x) { set_body(0,this.body,Math.deg2rad(x)); },
       get angle() {
-        if (!this.level) return this.worldangle();
+        Debug.assert(this.level, `No level set on ${this.toString()}`);
+	
         return this.worldangle() - this.level.worldangle();
       },
       set angle(x) {
@@ -208,9 +226,7 @@ var gameobject = {
 	  set_body(0,this.body,x);
       },
 
-      rotate(x) {
-        this.sworldangle(this.worldangle()+x);
-      },
+      rotate(x) { this.sworldangle(this.worldangle()+x); },
       
       spawn_from_instance(inst) {
         return this.spawn(inst.ur, inst);
@@ -231,6 +247,7 @@ var gameobject = {
 
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
+    Debug.assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
     if (this.level === parent)
       return;
 
@@ -277,21 +294,21 @@ var gameobject = {
     set_body(13, this.body, x);
   },
 
-      pulse(vec) { set_body(4, this.body, vec);},
-      shove(vec) { set_body(12,this.body,vec);},
-      shove_at(vec, at) { set_body(14,this.body,vec,at); },
-      world2this(pos) { return cmd(70, this.body, pos); },
-      this2world(pos) { return cmd(71, this.body, pos); },
-      this2screen(pos) { return world2screen(this.this2world(pos)); },
+    pulse(vec) { set_body(4, this.body, vec);},
+    shove(vec) { set_body(12,this.body,vec);},
+    shove_at(vec, at) { set_body(14,this.body,vec,at); },
+    world2this(pos) { return cmd(70, this.body, pos); },
+    this2world(pos) { return cmd(71, this.body, pos); },
+    this2screen(pos) { return world2screen(this.this2world(pos)); },
     dir_world2this(dir) { return cmd(160, this.body, dir); },
     dir_this2world(dir) { return cmd(161, this.body, dir); },
       
-      set layer(x) { cmd(75,this.body,x); },
-      get layer() { cmd(77,this.body); },
-      alive() { return this.body >= 0; },
-      in_air() { return q_body(7, this.body);},
+    set layer(x) { cmd(75,this.body,x); },
+    get layer() { cmd(77,this.body); },
+    alive() { return this.body >= 0; },
+    in_air() { return q_body(7, this.body);},
 
-  hide() { this.components.forEach(function(x) { x.hide(); }); this.objects.forEach(function(x) { x.hide(); }); },
+  hide() { this.components.forEach(x=>x.hide()); this.objects.forEach(x=>x.hide());},
   show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
 
   get_relangle() {
@@ -487,6 +504,7 @@ var gameobject = {
 
   kill() {
     this.timers.forEach(t => t());
+    this.timers = undefined;
     
     if (this.level) {
       this.level.remove_obj(this);
@@ -496,19 +514,18 @@ var gameobject = {
     Player.do_uncontrol(this);
     Register.unregister_obj(this);
 
-    if (this.__proto__.instances)
-      this.__proto__.instances.remove(this);
+    this.__proto__.instances.remove(this);
 
     for (var key in this.components) {
       Register.unregister_obj(this.components[key]);
-      Log.info(`Destroying component ${key}`);
+      (`Destroying component ${key}`);
       this.components[key].kill();
       this.components.gameobject = undefined;
+      delete this.components[key];
     }
 
-    delete this.components;
-
     this.clear();
+    this.objects = undefined;
 
     if (typeof this.stop === 'function')
       this.stop();
@@ -520,10 +537,8 @@ var gameobject = {
   left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
 
   make(level, data) {
-    level ??= Primum;
     var obj = Object.create(this);
     obj.make = undefined;
-
 
     if (this.instances)
       this.instances.push(obj);
@@ -533,54 +548,31 @@ var gameobject = {
     obj.components = {};
     obj.objects = {};
     obj.timers = [];
+
     obj._ed = {
       selectable: true,
-      check_dirty() {
-        this.urdiff = obj.json_obj();
-        this.dirty = !this.urdiff.empty;
-	if (!obj.level) return;
-	var lur = ur[obj.level.ur];
-	if (!lur) return;
-	var lur = lur.objects[obj.toString()];
-	var d = ediff(this.urdiff,lur);
-	if (!d || d.empty)
-	  this.inst = true;
-	else
-	  this.inst = false;
-      },
-
       dirty: false,
       inst: false,
       urdiff: {},
-      namestr() {
-        var s = obj.toString();
-	if (this.dirty)
-	  if (this.inst) s += "#";
-	  else s += "*";
-
-	return s;
-      },
     };
 
     obj.ur = this.toString();
 
     obj.reparent(level);
-    
+
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
-    for (var prop in this) {
-      var p = this[prop];
-      if (typeof p !== 'object') continue;
+    for (var [prop,p] of Object.entries(this)) {
       if (typeof p.make === 'function') {
         obj[prop] = p.make(obj);
-	obj.components[prop] = obj[prop];
+        obj.components[prop] = obj[prop];
       }
     };
 
+    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');        
+
     if (this.objects)
       obj.make_objs(this.objects);
-
-    Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');    
 
     Object.dainty_assign(obj, this);
     obj.sync();
@@ -591,7 +583,7 @@ var gameobject = {
 
     if (typeof obj.warmup === 'function') obj.warmup();
     if (Game.playing() && typeof obj.start === 'function') obj.start();
-    
+
     return obj;
   },
 
@@ -669,6 +661,7 @@ gameobject.doc = {
   set_worldpos: `Function to set the position of the object in world coordinates.`,
   worldangle: `Function to get the angle of the entity in the world.`,
   rotate: `Function to rotate this object by x degrees.`,
+  move: 'Move an object by x,y,z. If the first parameter is an array, uses up to the first three array values.',
   pulse: `Apply an impulse to this body in world coordinates. Impulse is a short force.`,
   shove: `Apply a force to this body in world coordinates. Should be used over many frames.`,
   shove_at: 'Apply a force to this body, at a position relative to itself.',

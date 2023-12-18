@@ -337,6 +337,9 @@ Spline.sample_angle = function(type, points, angle) {
   return spline_cmd(0, type, points[0].length, points, angle);
 }
 
+Spline.is_bezier = function(t) { return t === Spline.type.bezier; }
+Spline.is_catmull = function(t) { return t === Spline.type.catmull; }
+
 Spline.bezier2catmull = function(b)
 {
   var c = [];
@@ -455,37 +458,15 @@ var Game = {
 
   },
 
-  quit()
-  {
-    sys_cmd(0);
-  },
-
-  pause()
-  {
-    sys_cmd(3);
-  },
-
-  stop()
-  {
-    Game.pause();
-  },
-
-  step()
-  {
-    sys_cmd(4);
-  },
-
+  quit() { sys_cmd(0); },
+  pause() { sys_cmd(3); },
+  stop() { Game.pause(); },
+  step() { sys_cmd(4);},
   editor_mode(m) { sys_cmd(10, m); },
-
   playing() { return sys_cmd(5); },
   paused() { return sys_cmd(6); },
-  stepping() {
-  return cmd(79); },
-
-  play()
-  {
-    sys_cmd(1);
-  },
+  stepping() { return cmd(79); },
+  play() { sys_cmd(1); },
   
   wait_fns: [],
 
@@ -525,15 +506,14 @@ Register.update.register(Game.exec, Game);
 
 load("scripts/entity.js");
 
-
 function world_start() {
   globalThis.Primum = Object.create(gameobject);
   Primum.objects = {};
+  Primum.check_dirty = function() {};
+  Primum.namestr = function(){};
   Primum._ed = {
     selectable:false,
-    check_dirty() {},
     dirty:false,
-    namestr(){},
   };
   Primum.toString = function() { return "Primum"; };
   Primum.ur = undefined;

@@ -472,8 +472,8 @@ Object.hide = function(obj,...props)
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
     if (!p) {
-      Log.warn(`No property of name ${prop}.`);
-      return;
+      Log.info(`No property of name ${prop}.`);
+      continue;
     }
     p.enumerable = false;
     Object.defineProperty(obj, prop, p);

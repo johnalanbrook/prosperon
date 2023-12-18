@@ -403,8 +403,6 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
       samples = bezier_cb_ma_v2(points, param);
       break;
   }
-  
-
 
   arrfree(points);
   
@@ -638,7 +636,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 30:
-    sprite_setanim(id2sprite(js2int(argv[1])), js2ptr(argv[2]), js2int(argv[3]));
     break;
 
   case 31:
@@ -784,6 +781,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 63:
+    set_cam_body(NULL);
     break;
 
   case 64:
@@ -996,7 +994,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 113:
-      js2gameobject(argv[1])->ref = argv[2];//JS_DupValue(js,argv[2]);
+      js2gameobject(argv[1])->ref = argv[2];
       break;
 
     case 114:
@@ -1511,7 +1509,6 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 }
 
 JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  YughWarn("MAKING GAMOBJECT");
   return gameobject2js(MakeGameobject());
 }
 
@@ -1646,19 +1643,6 @@ JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst
   JSValue sprite = JS_NewObject(js);
   js_setprop_str(sprite,"id",JS_NewInt64(js, make_sprite(js2gameobject(argv[0]))));
   return sprite;
-}
-
-/* Make anim from texture */
-JSValue duk_make_anim2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const char *path = JS_ToCString(js, argv[0]);
-  int frames = js2int(argv[1]);
-  int fps = js2int(argv[2]);
-
-  struct TexAnim *anim = anim2d_from_tex(path, frames, fps);
-
-  JS_FreeCString(js, path);
-
-  return ptr2js(anim);
 }
 
 JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1888,7 +1872,6 @@ void ffi_load() {
   DUK_FUNC(sys_cmd, 1)
 
   DUK_FUNC(make_sprite, 1)
-  DUK_FUNC(make_anim2d, 3)
   DUK_FUNC(spline_cmd, 6)
 
   DUK_FUNC(make_box2d, 3)

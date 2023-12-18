@@ -319,7 +319,7 @@ var editor = {
 //    this.backshots.push(this.edit_level.save());
     var dd = this.snapshots.pop();
     Object.dainty_assign(this.edit_level, dd);
-    this.edit_level._ed.check_dirty();
+    this.edit_level.check_dirty();
   },
   
   restore_buffer() {
@@ -395,7 +395,7 @@ var editor = {
     Debug.coordinate([0,0]);
   },
 
-  gui() {
+  gui() { 
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
 
@@ -429,14 +429,14 @@ var editor = {
       if (alldirty)
         lvl._ed.dirty = true;
       else {
-        lvl._ed.check_dirty();
+        lvl.check_dirty();
         if (lvl._ed.dirty) alldirty = true;
       }
     }
     lvlchain.reverse();
     lvlchain.forEach(function(x,i) {
       depth = i;
-      var lvlstr = x._ed.namestr();
+      var lvlstr = x.namestr();
       if (i === lvlchain.length-1) lvlstr += "[this]";
       GUI.text(lvlstr, [0, ypos], 1, editor.color_depths[depth]);
      
@@ -449,7 +449,7 @@ var editor = {
     
     this.selectlist.forEach(function(x) {
       var sname = x.__proto__.toString();
-      x._ed.check_dirty();
+      x.check_dirty();
       if (x._ed.dirty) sname += "*";
       
       GUI.text(sname, x.screenpos().add([0, 32]), 1, Color.editor.ur);
@@ -457,7 +457,7 @@ var editor = {
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
-      var p = x[1]._ed.namestr();
+      var p = x[1].namestr();
       GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
     });
 
@@ -554,7 +554,6 @@ var editor = {
   lvl_history: [],
 
   load(file) {
-    Log.warn("LOADING " + file);
     var ur = prototypes.get_ur(file);
     if (!ur) return;
     var obj = editor.edit_level.spawn(ur);
@@ -617,7 +616,7 @@ editor.inputs.post = function() {
 };
 editor.inputs.release_post = function() {
   editor.snapshot();
-  editor.edit_level._ed.check_dirty();
+  editor.edit_level.check_dirty();
 };
 editor.inputs['C-a'] = function() {
   if (!editor.selectlist.empty) { editor.unselect(); return; }
@@ -833,7 +832,7 @@ editor.inputs['C-s'] = function() {
   } else if (editor.selectlist.length === 1)
     saveobj = editor.selectlist[0];
 
-//  saveobj._ed.check_dirty();
+//  saveobj.check_dirty();
 //  if (!saveobj._ed.dirty) return;
 
   var savejs = saveobj.json_obj();
@@ -844,7 +843,7 @@ editor.inputs['C-s'] = function() {
   IO.slurpwrite(JSON.stringify(saveobj.__proto__,null,1), path);
   Log.warn(`Wrote to file ${path}`);
 
-  Object.values(saveobj.objects).forEach(function(x) { x._ed.check_dirty(); });
+  Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });
 
 
   Game.all_objects(function(x) {
@@ -852,7 +851,7 @@ editor.inputs['C-s'] = function() {
     if (!('_ed' in x)) return;
     if (x._ed.dirty) return;
     x.revert();
-    x._ed.check_dirty();
+    x.check_dirty();
   });
 };
 editor.inputs['C-s'].doc = "Save selected.";

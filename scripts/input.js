@@ -5,20 +5,10 @@ var Input = {
 
 var Mouse = {
   get pos() { return cmd(45); },
-
   screenpos() { return cmd(45); },
-
-  get worldpos() {
-    return screen2world(cmd(45));
-  },
-  
-  disabled() {
-    cmd(46, 1);
-  },
-  
-  normal() {
-    cmd(46, 0);
-  },
+  get worldpos() { return screen2world(cmd(45)); },
+  disabled() { cmd(46, 1); },
+  normal() { cmd(46, 0);},
 };
 
 Mouse.doc = {};
@@ -28,21 +18,10 @@ Mouse.disabled.doc = "Set the mouse to hidden. This locks it to the game and hid
 Mouse.normal.doc = "Set the mouse to show again after hiding.";
 
 var Keys = {
-  shift() {
-    return cmd(50, 340);// || cmd(50, 344);
-  },
-  
-  ctrl() {
-    return cmd(50, 341);// || cmd(50, 344);
-  },
-  
-  alt() {
-    return cmd(50, 342);// || cmd(50, 346);
-  },
-
-  super() {
-    return cmd(50, 343);// || cmd(50, 347);
-  },
+  shift() { return cmd(50, 340); },
+  ctrl() { return cmd(50, 341); },
+  alt() { return cmd(50, 342); },
+  super() { return cmd(50, 343); },
 };
 
 Input.state2str = function(state) {

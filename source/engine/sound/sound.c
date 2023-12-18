@@ -8,6 +8,9 @@
 #include "string.h"
 #include "time.h"
 #include <stdlib.h>
+#include "pthread.h"
+
+pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;
 
 #include "samplerate.h"
 
@@ -105,9 +108,10 @@ void change_samplerate(struct wav *w, int rate) {
   w->samplerate = rate;
 }
 
-void push_sound(soundbyte *buffer, int frames, int chan)
-{
+void push_sound(soundbyte *buffer, int frames, int chan) {
+  pthread_mutex_lock(&soundrun);
   set_soundbytes(buffer, dsp_node_out(masterbus), frames*chan);
+  pthread_mutex_unlock(&soundrun);
 }
 
 void filter_mod(pocketmod_context *mod, soundbyte *buffer, int frames)
