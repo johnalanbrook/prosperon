@@ -95,12 +95,11 @@ var timer = {
 load("scripts/animation.js");
 
 var Render = {
-  normal() {
-    cmd(67);
-  },
+  normal() { cmd(67);},
+  wireframe() { cmd(68); },
+
+  pass() {
   
-  wireframe() {
-    cmd(68);
   },
 };
 
@@ -125,7 +124,7 @@ function world2screen(worldpos) { return Game.camera.world2view(worldpos); }
 var Register = {
   kbm_input(mode, btn, state, ...args) {
     if (state === 'released') {
-      btn = btn.split('-').last;
+      btn = btn.split('-').last();
     }
    
     switch(mode) {
@@ -338,12 +337,85 @@ Spline.sample_angle = function(type, points, angle) {
   return spline_cmd(0, type, points[0].length, points, angle);
 }
 
+Spline.bezier2catmull = function(b)
+{
+  var c = [];
+  for (var i = 0; i < b.length; i += 3)
+    c.push(b[i]);
+  return c;
+}
+
+Spline.catmull2bezier = function(c)
+{
+  var b = [];
+  for (var i = 1; i < c.length-2; i++) {
+    b.push(c[i].slice());
+    b.push(c[i+1].sub(c[i-1]).scale(0.25).add(c[i]));
+    b.push(c[i].sub(c[i+2]).scale(0.25).add(c[i+1]));
+  }
+  b.push(c[c.length-2]);
+  return b;
+}
+
+Spline.catmull_loop = function(cp)
+{
+  cp = cp.slice();
+  cp.unshift(cp.last());
+  cp.push(cp[1]);
+  cp.push(cp[2]);
+  return cp;
+}
+
+Spline.catmull_caps = function(cp)
+{
+  cp = cp.slice();
+  cp.unshift(cp[0].sub(cp[1]).add(cp[0]));
+  cp.push(cp.last().sub(cp.at(-2).add(cp.last())));
+  return cp;
+}
+
+Spline.catmull2bezier.doc = "Given a set of control points C for a camtull-rom type curve, return a set of cubic bezier points to give the same curve."
+
 Spline.type = {
   catmull: 0,
   bezier: 1,
   bspline: 2,
   cubichermite: 3
 };
+
+Spline.bezier_tan_partner = function(points, i)
+{
+  if (i%3 === 0) return undefined;
+  var partner_i = (i%3) === 2 ? i-1 : i+1;
+  return points[i];
+}
+
+Spline.bezier_cp_mirror = function(points, i)
+{
+  if (i%3 === 0) return undefined;
+  var partner_i = (i%3) === 2 ? i+2 : i-2;
+  var node_i = (i%3) === 2 ? i+1 : i-1;
+  if (partner_i >= points.length || node_i >= points.length) return;
+  points[partner_i] = points[node_i].sub(points[i]).add(points[node_i]);
+}
+
+Spline.bezier_point_handles = function(points, i)
+{
+  if (!Spline.bezier_is_node(points,i)) return [];
+  var a = i-1;
+  var b = i+1;
+  var c = []
+  if (a > 0)
+    c.push(a);
+
+  if (b < points.length)
+    c.push(b);
+
+  return c;
+}
+
+Spline.bezier_is_node = function(points, i) { return i%3 === 0; }
+Spline.bezier_is_handle = function(points, i) { return !Spline.bezier_is_node(points,i); }
 
 load("scripts/components.js");
 

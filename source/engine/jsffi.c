@@ -69,10 +69,7 @@ JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
       (byte & 0x02 ? '1' : '0'), \
       (byte & 0x01 ? '1' : '0')
 
-void js_setprop_str(JSValue obj, const char *prop, JSValue v)
-{
-  JS_SetPropertyStr(js, obj, prop, v);
-}
+void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertyStr(js, obj, prop, v); }
 
 JSValue jstzone()
 {
@@ -140,18 +137,10 @@ int js2int(JSValue v) {
   return i;
 }
 
-JSValue int2js(int i) {
-  return JS_NewInt64(js, i);
-}
+JSValue int2js(int i) { return JS_NewInt64(js, i); }
 
-JSValue str2js(const char *c) {
-  return JS_NewString(js, c);
-}
-
-const char *js2str(JSValue v)
-{
-  return JS_ToCString(js, v);
-}
+JSValue str2js(const char *c) { return JS_NewString(js, c); }
+const char *js2str(JSValue v) { return JS_ToCString(js, v); }
 
 JSValue strarr2js(const char **c)
 {
@@ -197,7 +186,7 @@ struct glrect js2glrect(JSValue v) {
   return rect;
 }
 
-JSValue js_arridx(JSValue v, int idx) { return js_getpropidx( v, idx); }
+JSValue js_arridx(JSValue v, int idx) { return js_getpropidx(v, idx); }
 
 int js_arrlen(JSValue v) {
   int len;
@@ -270,9 +259,23 @@ cpBitmask js2bitmask(JSValue v) {
 HMM_Vec2 *js2cpvec2arr(JSValue v) {
   HMM_Vec2 *arr = NULL;
   int n = js_arrlen(v);
+  arrsetlen(arr,n);
+  
   for (int i = 0; i < n; i++)
-    arrput(arr, js2vec2(js_getpropidx( v, i)));
+    arr[i] = js2vec2(js_getpropidx( v, i));
+    
+  return arr;
+}
 
+HMM_Vec2 *jsfloat2vec(JSValue v)
+{
+  size_t s;
+  void *buf = JS_GetArrayBuffer(js, &s, v);
+  HMM_Vec2 *arr = NULL;
+  int n = s/2;
+  n /= sizeof(float);
+//  arrsetcap(arr,n);
+//  memcpy(arr,buf,s);
   return arr;
 }
 
@@ -400,6 +403,8 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
       samples = bezier_cb_ma_v2(points, param);
       break;
   }
+  
+
 
   arrfree(points);
   
@@ -573,8 +578,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 15:
-//    music_stop();
-    break;
+  gameobject_draw_debug(js2gameobject(argv[1]));
+  break;
 
   case 16:
 //    dbg_color = js2color(argv[1]);
@@ -1054,7 +1059,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 128:
-      YughWarn("%g",stm_ms(9737310));
       ret = JS_NewFloat64(js, stm_ns(js2uint64(argv[1])));
       break;
 
@@ -1842,6 +1846,34 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_UNDEFINED;
 }
 
+const char *STRTEST = "TEST STRING";
+
+JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  int cmd = js2int(argv[0]);
+  switch(cmd) {
+    case 0:
+    break;
+    case 1:
+    js2number(argv[1]);
+    break;
+    case 2:
+    js2cpvec2arr(argv[1]);
+    break;
+    case 3:
+    return num2js(1.0);
+    case 4:
+    js2str(argv[1]);
+    break;
+    case 5:
+    jsfloat2vec(argv[1]);
+    break;
+    case 6:
+    return JS_NewStringLen(js, STRTEST, sizeof(*STRTEST));
+  }
+  return JS_UNDEFINED;
+}
+
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {
@@ -1879,6 +1911,8 @@ void ffi_load() {
   DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)
+
+  DUK_FUNC(profile, 2)
 
   JS_FreeValue(js,globalThis);
 

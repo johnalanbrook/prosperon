@@ -2,6 +2,8 @@
 #define RESOURCES_H
 
 #include <stdio.h>
+#include "stb_ds.h"
+#include "string.h"
 
 extern char *DATA_PATH;
 

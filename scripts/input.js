@@ -4,9 +4,9 @@ var Input = {
 };
 
 var Mouse = {
-  get pos() {
-    return cmd(45);
-  },
+  get pos() { return cmd(45); },
+
+  screenpos() { return cmd(45); },
 
   get worldpos() {
     return screen2world(cmd(45));

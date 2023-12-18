@@ -1,13 +1,35 @@
-var Gizmos = {
-  pick_gameobject_points(worldpos, gameobject, points) {
-    var idx = Math.grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
-    if (idx === -1) return undefined;
-    return points[idx];
-  },
-};
-
+/* All draw in screen space */
 var Shape = {
   circle(pos, radius, color) { cmd(115, pos, radius, color); },
+  
+  point(pos,size,color) {
+    color ??= Color.blue;
+    Shape.circle(pos,size,color);
+  },
+  
+  arrow(start, end, color, capsize) {
+    color ??= Color.red;
+    capsize ??= 4;
+    cmd(81, start, end, color, capsize);
+  },
+  
+  poly(points, color) { cmd_points(0,points,color); },
+  
+  box(pos, wh, color) {
+    color ??= Color.white;
+    cmd(53, pos, wh, color);
+  },
+
+  line(points, color, type, thickness) {
+    thickness ??= 1;
+    type ??= 0;
+    color ??= Color.white;
+    
+    switch (type) {
+      case 0:
+        cmd(83, points, color, thickness);
+    }
+  },
 };
 
 var Debug = {
@@ -27,38 +49,17 @@ var Debug = {
     cmd(47, width, span, color);
   },
   
-  point(pos, size, color) {
-    color = color ? color : Color.blue;
-    Shape.circle(pos, size, color);
-//    cmd(51, pos, size,color);
-  },
-
   coordinate(pos, size, color) { GUI.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color); },
-  
-  arrow(start, end, color, capsize) {
-    color = color ? color : Color.red;
-    if (!capsize)
-      capsize = 4;
-    cmd(81, start, end, color, capsize);
-  },
-
-  poly(points, color) {
-    cmd_points(0,points,color);
-  },
 
   boundingbox(bb, color) {
     color ??= Color.white;
     cmd_points(0, bb2points(bb), color);
   },
-  
-  box(pos, wh, color) {
-    color ??= Color.white;
-    cmd(53, pos, wh, color);
-  },
 
-  numbered_point(pos, n) {
-    Debug.point(pos, 3);
-    GUI.text(n, pos.add([0,4]), 1);
+  numbered_point(pos, n, color) {
+    color ??= Color.white;
+    Shape.point(pos, 3, color);
+    GUI.text(n, pos.add([0,4]), 1, color);
   },
 
   phys_drawing: false,
@@ -75,22 +76,7 @@ var Debug = {
     Register.debug.register(fn,obj);
   },
 
-  gameobject(go) {
-
-  },
-
-  line(points, color, type, thickness) {
-    thickness ??= 1;
-    type ??= 0;
-    
-    if (!color)
-      color = Color.white;
-      
-    switch (type) {
-      case 0:
-        cmd(83, points, color, thickness);
-    }
-  },
+  gameobject(go) { cmd(15, go.body); },
 
   draw_bb: false,
   draw_gizmos: false,
@@ -136,8 +122,8 @@ Debug.Options.Color = {
 var Gizmos = {
   pick_gameobject_points(worldpos, gameobject, points) {
     var idx = Math.grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
-    if (idx === -1) return null;
-    return points[idx];
+    if (idx === -1) return undefined;
+    return idx;
   },
 };
 
@@ -146,17 +132,49 @@ var Profile = {
   ns(ticks) { return cmd(128, ticks); },
   us(ticks) { return cmd(129, ticks); },
   ms(ticks) { return cmd(130, ticks); },
+  best_t(ns) {
+    var e = ns;
+    var qq = 'ns';
+    if (e > 1000) {
+      e /= 1000;
+      qq = 'us';
+      if (e > 1000) {
+        e /= 1000;
+	qq = 'ms';
+      }
+    }
+    return {
+      time: e,
+      unit: qq
+    };
+  },
   cpu(fn, times, q) {
     times ??= 1;
-    q ??= "ns";
+    q ??= "unnamed";
     var start = Profile.tick_now();
     for (var i = 0; i < times; i++)
       fn();
+      
     var elapsed = Profile.tick_now() - start;
-    Log.say(`Profiled in ${Profile[q](elapsed)/times} avg ${q}.`);
+    var avgt = Profile.best_t(elapsed/times);
+    var totalt = Profile.best_t(elapsed);
+
+    console.say(`Profile [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
   },
 
   get fps() { return sys_cmd(8); },
+};
+
+
+
+Profile.test = {
+  barecall() { profile(0); },
+  unpack_num(n) { profile(1,n); },
+  unpack_array(n) { profile(2,n); },
+  pack_num() { profile(3); },
+  pack_string() { profile(6); },
+  unpack_string(s) { profile(4,s); },
+  unpack_32farr(a) { profile(5,a); },
 };
 
 Profile.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;

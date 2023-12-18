@@ -181,6 +181,7 @@ var gameobject = {
 	set_body(2,this.body,x);
 	this.objects.forEach((o,i) => o.set_worldpos(this.this2world(poses[i])));
       },
+      screenpos() { return world2screen(this.worldpos()); },
 
       worldangle() { return Math.rad2deg(q_body(2,this.body))%360; },
       sworldangle(x) { set_body(0,this.body,Math.deg2rad(x)); },
@@ -280,7 +281,8 @@ var gameobject = {
       shove(vec) { set_body(12,this.body,vec);},
       shove_at(vec, at) { set_body(14,this.body,vec,at); },
       world2this(pos) { return cmd(70, this.body, pos); },
-      this2world(pos) { return cmd(71, this.body,pos); },
+      this2world(pos) { return cmd(71, this.body, pos); },
+      this2screen(pos) { return world2screen(this.this2world(pos)); },
     dir_world2this(dir) { return cmd(160, this.body, dir); },
     dir_this2world(dir) { return cmd(161, this.body, dir); },
       

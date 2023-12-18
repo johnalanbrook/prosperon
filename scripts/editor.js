@@ -270,7 +270,7 @@ var editor = {
     if (!dif) return;
   
     if (this.snapshots.length !== 0) {
-      var ddif = ediff(dif, this.snapshots.last);
+      var ddif = ediff(dif, this.snapshots.last());
       if (!ddif) return;
       dif = ddif;
     }
@@ -344,7 +344,7 @@ var editor = {
       root = root ? root + "." : root;
       Object.entries(obj.objects).forEach(function(x) {
         var p = root + x[0];
-        GUI.text(p, world2screen(x[1].worldpos()), 1, editor.color_depths[depth]);
+        GUI.text(p, x[1].screenpos(), 1, editor.color_depths[depth]);
 	editor.draw_objects_names(x[1], p, depth+1);
       });
   },
@@ -367,14 +367,14 @@ var editor = {
 
   color_depths: [],
   draw() {
-    Debug.point(world2screen(this.cursor), 2, Color.green);
+    Shape.point(world2screen(this.cursor), 2, Color.green);
     
     this.selectlist.forEach(x => {
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
     });
   
-    Debug.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
+    Shape.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
 
     /* Draw selection box */
     if (this.sel_start) {
@@ -389,7 +389,7 @@ var editor = {
       wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
       var bb = cwh2bb(c,wh);
       Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
-      Debug.line(bb2points(bb).wrapped(1), Color.white);
+      Shape.line(bb2points(bb).wrapped(1), Color.white);
     }
 
     Debug.coordinate([0,0]);
@@ -405,9 +405,7 @@ var editor = {
     if (this.comp_info && this.sel_comp)
       GUI.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
 
-
-//    GUI.text(editor.edit_level.worldpos().map(x => Math.round(x)), world2screen(editor.edit_level.worldpos()), 1, Color.red);
-    GUI.text("+", world2screen(editor.edit_level.worldpos()), 1, Color.blue);
+    GUI.text("+", editor.edit_level.screenpos(), 1, Color.blue);
 
     var thiso = editor.get_this();
     var clvl = thiso;
@@ -454,21 +452,20 @@ var editor = {
       x._ed.check_dirty();
       if (x._ed.dirty) sname += "*";
       
-      GUI.text(sname, world2screen(x.worldpos()).add([0, 32]), 1, Color.editor.ur);
-      GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), world2screen(x.worldpos()), 1, Color.white);
-//      Debug.arrow(world2screen(x.worldpos()), world2screen(x.worldpos().add(x.up().scale(40))), Color.yellow, 1);
+      GUI.text(sname, x.screenpos().add([0, 32]), 1, Color.editor.ur);
+      GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1]._ed.namestr();
-      GUI.text(p, world2screen(x[1].worldpos().add([0,16])),1,editor.color_depths[depth]);
+      GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
     });
 
     var mg = physics.pos_query(Mouse.worldpos);
     
     if (mg) {
       var p = mg.path_from(thiso);
-      GUI.text(p, world2screen(Mouse.worldpos),1,Color.teal);
+      GUI.text(p, Mouse.screenpos(),1,Color.teal);
     }
 
     if (this.selectlist.length === 1) {
@@ -476,7 +473,7 @@ var editor = {
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].toString() + "]";
-        GUI.text(str, world2screen(this.selectlist[0].worldpos()).add([0,-16*(i++)]));
+        GUI.text(str, this.selectlist[0].screenpos().add([0,-16*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -486,7 +483,7 @@ var editor = {
 
     editor.edit_level.objects.forEach(function(obj) {
       if (!obj._ed.selectable)
-        GUI.image("icons/icons8-lock-16.png", world2screen(obj.worldpos()));
+        GUI.image("icons/icons8-lock-16.png", obj.screenpos());
     });
 
     Debug.draw_grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
@@ -1684,7 +1681,7 @@ var objectexplorer = Object.copy(inputpanel, {
     }
 
     if (!this.previous.empty)
-      items.push(Mum.text({str:"prev: " + this.previous.last, action: this.prev_obj}));
+      items.push(Mum.text({str:"prev: " + this.previous.last(), action: this.prev_obj}));
 
     Object.getOwnPropertyNames(this.obj).forEach(key => {
       var descriptor = Object.getOwnPropertyDescriptor(this.obj, key);

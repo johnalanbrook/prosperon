@@ -1,5 +1,3 @@
-/* Removing crud I don't like */
-/* Functions that lead to bloated error prone javascript */
 /* It is EMCA6 but without a lot of builtin objects and various functions. There are no:
    * Promises and so on (Generators, async)
    * WeakMaps and so on (weakset, weakref)
@@ -10,7 +8,7 @@
    In addition to the removal of a bunch of stuff as seen here.
    Access prototypes through __proto__ instead of the long-winded Object.getProtoTypeOf.
 */
-
+/*
 Object.getPrototypeOf = undefined;
 Object.setPrototypeOf = undefined;
 Reflect = undefined;
@@ -22,6 +20,7 @@ WeakMap = undefined;
 Promise = undefined;
 Set = undefined;
 WeakSet = undefined;
+*/
 
 var fmt = {};
 
@@ -1127,7 +1126,7 @@ Object.defineProperty(Array.prototype, 'find', {
 }});
 
 Object.defineProperty(Array.prototype, 'last', {
-  get: function() { return this[this.length-1]; },
+  value: function() { return this[this.length-1]; },
 });
 
 Object.defineProperty(Array.prototype, 'at', {

@@ -3,16 +3,16 @@
 Register functions with built-in drawing callbacks to have code execute at particular points in time. Some drawing functions take world coordinates, while others take screen coordinates.
 
 gui
-Called before nk_gui. Screen space.
+Called every frame.
 
 draw
-Called every frame. World space.
+Called every frame.
 
 debug
-Called if drawing physics. World space.
+Called if drawing physics.
 
 gizmo
-Called usually for editor purposes. World space.
+Called on an object if it is selected in the editor.
 
 # Mum
 

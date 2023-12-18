@@ -1,3 +1,7 @@
+/*
+  GUI functions take screen space coordinates
+*/
+
 var GUI = {
   text(str, pos, size, color, wrap, anchor, cursor) {
     size ??= 1;
@@ -271,7 +275,7 @@ GUI.window = function(pos, wh, color)
   var p = pos.slice();
   p.x += wh.x/2;
   p.y += wh.y/2;
-  Debug.box(p,wh,color);
+  Shape.box(p,wh,color);
 }
 
 GUI.flush = function() { cmd(141); };

@@ -110,6 +110,7 @@
 /* test the GC by forcing it before each object allocation */
 //#define FORCE_GC_AT_MALLOC
 
+
 #ifdef CONFIG_ATOMICS
 #include <pthread.h>
 #include <stdatomic.h>

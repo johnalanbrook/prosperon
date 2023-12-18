@@ -487,7 +487,7 @@ component.polygon2d = Object.copy(collider2d, {
   
   gizmo() {
     this.spoints.forEach(function(x) {
-      Debug.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
+      Shape.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
     }, this);
     
     this.points.forEach(function(x, i) {
@@ -499,7 +499,8 @@ component.polygon2d = Object.copy(collider2d, {
     if (!Object.hasOwn(this,'points'))
       this.points = deep_copy(this.__proto__.points);
       
-    var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
+    var i = Gizmos.pick_gameobject_points(pos, this.gameobject, this.points);
+    var p = this.points[i];
     if (p)
       return make_point_obj(this, p);
       
@@ -553,6 +554,7 @@ component.edge2d = Object.copy(collider2d, {
   thickness:0,
   /* if type === -1, point to point */
   type: Spline.type.catmull,
+  C: 1, /* when in bezier, continuity required. 0, 1 or 2. */
   looped: false,
   angle: 3, /* maximum angle between two segments */
   
@@ -612,30 +614,18 @@ component.edge2d = Object.copy(collider2d, {
     }
 
     if (this.type === Spline.type.catmull) {
-      if (this.looped) {
-	spoints.unshift(spoints[spoints.length-1]);              
-	spoints.push(spoints[1]);
-	spoints.push(spoints[2]);
-      } else {
-	spoints.unshift(spoints[0].sub(spoints[1]).add(spoints[0]));
-	spoints.push(spoints[spoints.length-1].sub(spoints[spoints.length-2]).add(spoints[spoints.length-1]));
-      }
+      if (this.looped)
+        spoints = Spline.catmull_loop(spoints);
+      else
+        spoints = Spline.catmull_caps(spoints);
+
       return Spline.sample_angle(this.type, spoints,this.angle);
     }
-
-    var tp = [];
-    for (var i = 0; i < spoints.length-1; i++)
-      tp.push([spoints[i+1].sub(spoints[i]), spoints[i+1].sub(spoints[i])]);
-
-    spoints = spoints.map((p,i) => p.concat(tp[i]));
-    spoints = spoints.flat();
 
     return Spline.sample_angle(this.type, spoints, this.angle);
   },
 
-  boundingbox() {
-    return points2bb(this.points.map(x => x.scale(this.gameobject.scale)));
-  },
+  boundingbox() { return points2bb(this.points.map(x => x.scale(this.gameobject.scale))); },
 
   hides: ['gameobject', 'id', 'shape'],
   _enghook: make_edge2d,
@@ -643,27 +633,50 @@ component.edge2d = Object.copy(collider2d, {
   /* EDITOR */
   gizmo() {
     if (this.type === Spline.type.catmull) {
-      this.spoints().forEach(x => Debug.point(this.gameobject.this2world(x), 3, Color.teal));
-      this.cpoints.forEach((x,i) => Debug.numbered_point(this.gameobject.this2world(x), i));
+      this.spoints().forEach(x => Shape.point(this.gameobject.this2screen(x), 3, Color.teal));
+      this.cpoints.forEach((x,i) => Debug.numbered_point(this.gameobject.this2screen(x), i));
     } else {
-      for (var i = 1; i < this.cpoints.length; i+=2) {
-        Debug.point(this.gameobject.this2world(this.cpoints[i]), 3, Color.green);
-        Debug.line([this.gameobject.this2world(this.cpoints[i-1]), this.gameobject.this2world(this.cpoints[i])], Color.yellow);
+      for (var i = 0; i < this.cpoints.length; i += 3)
+        Debug.numbered_point(this.gameobject.this2screen(this.cpoints[i]), i, Color.teal);
+	
+      for (var i = 1; i < this.cpoints.length; i+=3) {
+        Debug.numbered_point(this.gameobject.this2screen(this.cpoints[i]), i, Color.green);
+        Debug.numbered_point(this.gameobject.this2screen(this.cpoints[i+1]), i+1, Color.green);	
+        Shape.line([this.gameobject.this2screen(this.cpoints[i-1]), this.gameobject.this2screen(this.cpoints[i])], Color.yellow);
+        Shape.line([this.gameobject.this2screen(this.cpoints[i+1]), this.gameobject.this2screen(this.cpoints[i+2])], Color.yellow);	
       }
-//      for (var i = 0; i < this.cpoints.length; i+=3)
-//        Debug.numbered_point(this.gameobject.this2world(this.cpoints[
     }
-
   },
   
-  finish_center(change) {
-    this.cpoints = this.cpoints.map(function(x) { return x.sub(change); });
-  },
+  finish_center(change) { this.cpoints = this.cpoints.map(function(x) { return x.sub(change); }); },
 
   pick(pos) {
-    var p = Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints);
-    if (p)
-      return make_point_obj(this, p);
+    var i = Gizmos.pick_gameobject_points(pos, this.gameobject, this.cpoints);
+    var p = this.cpoints[i];
+    var that = this.gameobject;
+    var me = this;
+    if (p) {
+      var o = {
+        pos: p,
+	sync: me.sync.bind(me)
+      };
+      if (Spline.bezier_is_handle(this.cpoints,i))
+	o.move = function(d) {
+	  d = that.dir_world2this(d);
+	  p.x += d.x;
+	  p.y += d.y;
+	  Spline.bezier_cp_mirror(me.cpoints,i);
+	};
+      else
+        o.move = function(d) {
+	  d = that.dir_world2this(d);
+	  p.x += d.x;
+	  p.y += d.y;
+	  var pp = Spline.bezier_point_handles(me.cpoints,i);
+	  pp.forEach(ph => me.cpoints[ph] = me.cpoints[ph].add(d));
+	}
+      return o;
+    }
       
     return undefined;
   },
@@ -741,10 +754,25 @@ bucket.inputs['C-r'].doc = "Reverse the order of the spline's points.";
 bucket.inputs['C-l'] = function() { this.looped = !this.looped};
 bucket.inputs['C-l'].doc = "Toggle spline being looped.";
 
-bucket.inputs['C-c'] = function() { this.type = Spline.type.catmull; };
+bucket.inputs['C-c'] = function() {
+  switch(this.type) {
+    case Spline.type.bezier:
+      this.cpoints = Spline.bezier2catmull(this.cpoints);
+      break;
+  }
+  this.type = Spline.type.catmull;
+};
+
 bucket.inputs['C-c'].doc = "Set type of spline to catmull-rom.";
 
-bucket.inputs['C-b'] = function() { this.type = Spline.type.bezier; };
+bucket.inputs['C-b'] = function() {
+  switch(this.type) {
+    case Spline.type.catmull:
+      this.cpoints = Spline.catmull2bezier(Spline.catmull_caps(this.cpoints));
+      break;
+  }
+  this.type = Spline.type.bezier;
+};
 
 bucket.inputs['C-o'] = function() { this.type = -1; };
 bucket.inputs['C-o'].doc = "Set spline to linear.";
@@ -760,10 +788,10 @@ bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.
 bucket.inputs['C-lm'] = function() {
   var idx = 0;
 
-  if (this.cpoints.length >= 2) {
-    idx = cmd(59, screen2world(Mouse.pos).sub(this.gameobject.pos), this.cpoints, 1000);
-    if (idx === -1) return;
-  }
+  if (this.cpoints.length >= 2)
+    idx = cmd(59, screen2world(Mouse.pos).sub(this.gameobject.pos), this.cpoints, 400);
+
+  console.say("new point");  
 
   if (idx === this.cpoints.length)
     this.cpoints.push(this.gameobject.world2this(screen2world(Mouse.pos)));
@@ -836,30 +864,10 @@ component.circle2d.impl = Object.mix({
 /* ASSETS */
 
 var Texture = {
-  mipmaps(path, x) {
-    cmd(94, path, x);
-  },
+  mipmaps(path, x) { cmd(94, path, x); },
 
-  sprite(path, x) {
-    cmd(95, path, x);
-  },
+  sprite(path, x) { cmd(95, path, x); },
 };
 
-var Resources = {
-  load(path) {
-  if (path in this)
-    return this[path];
-
-  var src = {};
-  this[path] = src;
-  src.path = path;
-
-  if (!IO.exists(`${path}.asset`))
-    return this[path];
-
-  var data = JSON.parse(IO.slurp(`${path}.asset`));
-  Object.assign(src,data);
-  return this[path];
-
-  },
-};
+Texture.mipmaps.doc = "Return true if the texture has mipmaps.";
+Texture.sprite.do = "Return true if the texture is treated as a sprite.";
