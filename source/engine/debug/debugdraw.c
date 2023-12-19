@@ -442,10 +442,8 @@ HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
 
 void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
 {
-//  static_assert(sizeof(HMM_Vec2) == 2*sizeof(float));
-  if (thickness == 0) {
+  if (thickness == 0)
     draw_line(points,n,color,0,closed,0);
-  }
 
   /* todo: should be dashed, and filled. use a texture. */  
   /* draw polygon outline */
@@ -503,12 +501,12 @@ void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int cl
     HMM_Vec2 in_p[n];
     HMM_Vec2 out_p[n];
     
-    for (int i = 0, v = 0; i < n*2+1; i+=2, v++) {
+    for (int i = 1, v = 0; i < n*2+1; i+=2, v++) {
       in_p[v].x = vertices[i].pos.x;
       in_p[v].y = vertices[i].pos.y;
     }
 
-    for (int i = 1, v = 0; i < n*2; i+=2,v++) {
+    for (int i = 0, v = 0; i < n*2; i+=2,v++) {
       out_p[v].x = vertices[i].pos.x;
       out_p[v].y = vertices[i].pos.y;
     }

@@ -175,10 +175,6 @@ gameobject *MakeGameobject() {
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
   struct phys2d_shape *s = cpShapeGetUserData(shape);
-  if (s->data) {
-    free(s->data);
-    s->data = NULL;
-  }
   cpSpaceRemoveShape(space, shape);
   cpShapeFree(shape);
 }

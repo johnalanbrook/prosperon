@@ -4,28 +4,7 @@
 #include "transform.h"
 #include "HandmadeMath.h"
 
-struct follow {
-  float distance;
-  HMM_Vec3 offset;
-  HMM_Quat target_rot;
-};
-
-HMM_Vec3 follow_calccenter();
-HMM_Vec3 follow_postoffset();
-HMM_Vec3 extentsoffset();
-HMM_Vec3 framebasedveclerp();
-int lerpparam(float offset, float anchorwidth, float floatwidth);
-HMM_Vec3 vec3lerp(HMM_Vec3 from, HMM_Vec3 to, HMM_Vec3 a);
-void follow_calctargets();
-HMM_Vec3 follow_removelockedrot();
-void follow_targetoffset(struct follow *follow);
-int float_epsilon(float a, float b, float e);
-
 /*
-
-//////////////////////////////////////////////////////////////////////////
-// A good camera.
-//////////////////////////////////////////////////////////////////////////
 
 class ThirdPersonFollow {
 

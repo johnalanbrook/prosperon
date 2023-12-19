@@ -100,9 +100,8 @@ var gameobject = {
     
     delay(fn, seconds) {
       var t = timer.delay(fn.bind(this), seconds, false);
-      var killfn = function() { t.kill(); };
-      this.timers.push(killfn);
-      return killfn;
+      this.timers.push(t);
+      return t;
     },
 
     tween(prop, values, def){
@@ -300,6 +299,7 @@ var gameobject = {
     world2this(pos) { return cmd(70, this.body, pos); },
     this2world(pos) { return cmd(71, this.body, pos); },
     this2screen(pos) { return world2screen(this.this2world(pos)); },
+    screen2this(pos) { return this.world2this(screen2world(pos)); },
     dir_world2this(dir) { return cmd(160, this.body, dir); },
     dir_this2world(dir) { return cmd(161, this.body, dir); },
       
@@ -511,6 +511,8 @@ var gameobject = {
       this.level = undefined;
     }
 
+    
+
     Player.do_uncontrol(this);
     Register.unregister_obj(this);
 
@@ -520,7 +522,7 @@ var gameobject = {
       Register.unregister_obj(this.components[key]);
       (`Destroying component ${key}`);
       this.components[key].kill();
-      this.components.gameobject = undefined;
+      this.components[key].gameobject = undefined;
       delete this.components[key];
     }
 
@@ -563,6 +565,7 @@ var gameobject = {
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
 
     for (var [prop,p] of Object.entries(this)) {
+      if (!p) continue;
       if (typeof p.make === 'function') {
         obj[prop] = p.make(obj);
         obj.components[prop] = obj[prop];
@@ -589,7 +592,6 @@ var gameobject = {
 
   make_objs(objs) {
     for (var prop in objs) {
-      Log.warn(prop);
       var newobj = this.spawn_from_instance(objs[prop]);
       if (!newobj) continue;
       this.rename_obj(newobj.toString(), prop);

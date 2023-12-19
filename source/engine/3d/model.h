@@ -17,7 +17,7 @@ struct model;
 /* A single mesh */
 typedef struct mesh {
   sg_bindings bind; /* Encapsulates material, norms, etc */
-  uint32_t face_count;
+  uint32_t idx_count;
   struct model *model;
 } mesh;
 

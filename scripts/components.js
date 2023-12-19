@@ -44,7 +44,7 @@ var component = {
   
   make(go) {
     var nc = Object.create(this);
-//    nc.gameobject = go;
+    nc.gameobject = go;
     Object.assign(nc, this._enghook(go.body));
     nc.sync();
     assign_impl(nc,this.impl);
@@ -61,9 +61,7 @@ var component = {
   
   prepare_center() {},
   finish_center() {},
-  extend(spec) {
-    return Object.copy(this, spec);
-  },
+  extend(spec) { return Object.copy(this, spec); },
 };
 
 component.sprite = Object.copy(component, {
@@ -326,9 +324,7 @@ component.char2dimpl = {
     this.timer.stop();
   },
   
-  kill() {
-    cmd(9, this.id);
-  },
+  kill() { cmd(9, this.id); },
 
   add_anim(anim,name) {
     if (name in this) return;
@@ -338,6 +334,7 @@ component.char2dimpl = {
   },
 
   post() {
+  /*
     this.timer = timer.make(this.advance.bind(this), 1);
     this.timer.loop = true;
     Object.hide(this,'timer');
@@ -346,7 +343,7 @@ component.char2dimpl = {
       this.anims[k] = run_env(path + ".asset", path);
       this.add_anim(this.anims[k], k);
     }
-    Object.hide(this, 'acur');
+    Object.hide(this, 'acur');*/
   },
 };
 
@@ -452,7 +449,7 @@ component.polygon2d = Object.copy(collider2d, {
   flipy: false,
   
   boundingbox() {
-    return points2bb(this.spoints);
+    return points2bb(this.spoints());
   },
   
   hides: ['id', 'shape', 'gameobject'],
@@ -464,7 +461,7 @@ component.polygon2d = Object.copy(collider2d, {
   },
 
   /* EDITOR */  
-  get spoints() {
+  spoints() {
     var spoints = this.points.slice();
     
     if (this.flipx) {
@@ -486,13 +483,8 @@ component.polygon2d = Object.copy(collider2d, {
   },
   
   gizmo() {
-    this.spoints.forEach(function(x) {
-      Shape.point(world2screen(this.gameobject.this2world(x)), 3, Color.green);
-    }, this);
-    
-    this.points.forEach(function(x, i) {
-      Debug.numbered_point(this.gameobject.this2world(x), i);
-    }, this);
+    this.spoints().forEach(x => Shape.point(this.gameobject.this2screen(x), 3, Color.green));
+    this.points.forEach((x,i)=>Debug.numbered_point(this.gameobject.this2screen(x), i));
   },
 
   pick(pos) {
@@ -509,12 +501,8 @@ component.polygon2d = Object.copy(collider2d, {
 });
 
 component.polygon2d.impl = Object.mix(collider2d.impl, {
-  sync() {
-    cmd_poly2d(0, this.id, this.spoints);
-  },
-  query() {
-    return cmd(80, this.shape);
-  },
+  sync() { cmd_poly2d(0, this.id, this.spoints()); },
+  query() { return cmd(80, this.shape); },
 });
 
 var polygon2d = component.polygon2d;
@@ -685,11 +673,55 @@ component.edge2d = Object.copy(collider2d, {
     }
   },
 
+  rm_node(idx) {
+    if (idx < 0 || idx >= this.cpoints.length) return;
+    if (Spline.is_catmull(this.type))
+      this.cpoints.splice(idx,1);
+
+    if (Spline.is_bezier(this.type)) {
+      Debug.assert(Spline.bezier_is_node(this.cpoints, idx), 'Attempted to delete a bezier handle.');
+      if (idx === 0)
+        this.cpoints.splice(idx,2);
+      else if (idx === this.cpoints.length-1)
+        this.cpoints.splice(this.cpoints.length-2,2);
+      else
+        this.cpoints.splice(idx-1,3);
+    }
+  },
+
+  add_node(pos) {
+    pos = this.gameobject.world2this(pos);
+    var idx = 0;
+    if (Spline.is_catmull(this.type)) {
+      if (this.cpoints.length >= 2)
+	idx = cmd(59, pos, this.cpoints, 400);
+
+      if (idx === this.cpoints.length)
+	this.cpoints.push(pos);
+      else
+	this.cpoints.splice(idx, 0, pos);
+    }
+
+    if (Spline.is_bezier(this.type)) {
+      idx = cmd(59, pos, Spline.bezier_nodes(this.cpoints),400);
+      idx *= 3;
+      if (idx < 0) return;
+      var adds;
+      
+      if (idx === this.cpoints.length)
+        adds = [this.cpoints.at(-1).add([100,0]), pos.add([-100,0]), pos.slice()];
+      else if (idx === 0)
+        adds = [pos.slice(), pos.add([100,0]), this.cpoints[0].add([-100,0])];
+      else
+        adds = [pos.add([-100,0]), pos.slice(), pos.add([100,0])];
+
+      this.cpoints.splice(idx+1, 0, ...adds);
+    }
+  },
+
   pick_all() {
     var picks = [];
-    this.cpoints.forEach(function(x) {
-      picks.push(make_point_obj(this,x));
-    }, this);
+    this.cpoints.forEach(x =>picks.push(make_point_obj(this,x)));
     return picks;
   },
 });
@@ -782,32 +814,31 @@ bucket.inputs['C-o'] = function() { this.type = -1; };
 bucket.inputs['C-o'].doc = "Set spline to linear.";
 
 bucket.inputs['C-M-lm'] = function() {
-  var idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
-  if (idx === -1) return;
+  if (Spline.is_catmull(this.type)) {
+    var idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
+    if (idx === -1) return;
+  } else {
+    
+  }
 
   this.cpoints = this.cpoints.newfirst(idx);
 };
 bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
 
-bucket.inputs['C-lm'] = function() {
-  var idx = 0;
-
-  if (this.cpoints.length >= 2)
-    idx = cmd(59, screen2world(Mouse.pos).sub(this.gameobject.pos), this.cpoints, 400);
-
-  if (idx === this.cpoints.length)
-    this.cpoints.push(this.gameobject.world2this(screen2world(Mouse.pos)));
-  else
-    this.cpoints.splice(idx, 0, this.gameobject.world2this(screen2world(Mouse.pos)));
-};
+bucket.inputs['C-lm'] = function() { this.add_node(Mouse.worldpos); }
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
 bucket.inputs['C-M-lm'] = function() {
-  var idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
+  var idx = -1;
+  if (Spline.is_catmull(this.type))
+    idx = Math.grab_from_points(Mouse.worldpos, this.cpoints.map(p => this.gameobject.this2world(p)), 25);
+  else {
+    var nodes = Spline.bezier_nodes(this.cpoints);
+    idx = Math.grab_from_points(Mouse.worldpos, nodes.map(p => this.gameobject.this2world(p)), 25);
+    idx *= 3;
+  }
 
-  if (idx < 0  || idx > this.cpoints.length) return;
-
-  this.cpoints.splice(idx, 1);
+  this.rm_node(idx);
 };
 bucket.inputs['C-M-lm'].doc = "Remove point from the spline.";
 

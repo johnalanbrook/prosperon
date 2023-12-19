@@ -1095,8 +1095,10 @@ editor.inputs.mouse = {};
 editor.inputs.mouse.move = function(pos, dpos)
 {
   if (editor.mousejoy) {
-    if (editor.z_start)
+    if (editor.z_start) {
       editor.camera.zoom -= dpos.y/500;
+      console.say(editor.camera.zoom);
+    }
     else if (editor.joystart)
       editor.camera.pos = editor.camera.pos.sub(Game.camera.dir_view2world(dpos));
   }

@@ -37,7 +37,6 @@ struct TextureOptions {
     int sprite;
     int mips;
     unsigned int gamma:1;
-    int animation;
     int wrapx;
     int wrapy;
 };
@@ -65,14 +64,9 @@ void texture_sync(const char *path);
 
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
-void texanim_fromframes(struct TexAnim *anim, int frames);
-
 int gif_nframes(const char *path);
 
 struct glrect tex_get_rect(struct Texture *tex);
 HMM_Vec2 tex_get_dimensions(struct Texture *tex);
-struct glrect anim_get_rect(struct anim2d *anim);
-
-int anim_frames(struct TexAnim *a);
 
 #endif

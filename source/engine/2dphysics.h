@@ -30,7 +30,7 @@ struct phys2d_shape {
   void (*apply)(void *data);
 };
 
-/* Circles are the fastest collier type */
+/* Circles are the fastest colldier type */
 struct phys2d_circle {
   float radius;
   HMM_Vec2 offset;

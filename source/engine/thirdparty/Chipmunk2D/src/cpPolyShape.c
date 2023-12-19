@@ -286,8 +286,8 @@ cpPolyShapeGetRadius(const cpShape *shape)
 void
 cpPolyShapeSetVerts(cpShape *shape, int count, cpVect *verts, cpTransform transform)
 {
-	cpVect *hullVerts = (cpVect *)alloca(count*sizeof(cpVect));
-
+  cpVect hullVerts[count+1];
+  
 	// Transform the verts before building the hull in case of a negative scale.
 	for(int i=0; i<count; i++) hullVerts[i] = cpTransformPoint(transform, verts[i]);
 

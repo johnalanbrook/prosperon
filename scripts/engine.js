@@ -417,6 +417,15 @@ Spline.bezier_point_handles = function(points, i)
   return c;
 }
 
+Spline.bezier_nodes = function(points)
+{
+  var c = [];
+  for (var i = 0; i < points.length; i+=3)
+    c.push(points[i].slice());
+
+  return c;
+}
+
 Spline.bezier_is_node = function(points, i) { return i%3 === 0; }
 Spline.bezier_is_handle = function(points, i) { return !Spline.bezier_is_node(points,i); }
 

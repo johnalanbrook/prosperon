@@ -37,13 +37,14 @@ void set_cat_mask(int cat, unsigned int mask) { category_masks[cat] = mask; }
 
 cpTransform m3_to_cpt(HMM_Mat3 m)
 {
+  
   cpTransform t;
   t.a = m.Columns[0].x;
-  t.c = m.Columns[0].y;
-  t.tx = m.Columns[0].z;
-  t.b = m.Columns[1].x;
+  t.b = m.Columns[0].y;
+  t.tx = m.Columns[2].x;
+  t.c = m.Columns[1].x;
   t.d = m.Columns[1].y;
-  t.ty = m.Columns[1].z;
+  t.ty = m.Columns[2].y;
   return t;
 }
 
@@ -181,6 +182,7 @@ void phys2d_update(float deltaT) {
 void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->go = go;
   shape->data = data;
+  shape->t.scale = (HMM_Vec2){1.0,1.0};
   go_shape_apply(go->body, shape->shape, go);
   cpShapeSetCollisionType(shape->shape, (int)go);
   cpShapeSetUserData(shape->shape, shape);
@@ -336,8 +338,8 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
   if (!verts) return;
   if (poly->points)
     arrfree(poly->points);
-    
   arrsetlen(poly->points, arrlen(verts));
+  
   for (int i = 0; i < arrlen(verts); i++) {
     poly->points[i].X = verts[i].x;
     poly->points[i].Y = verts[i].y;
@@ -348,9 +350,10 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
 
 void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
+  assert(sizeof(poly->points[0]) == sizeof(cpVect));
   struct gameobject *go = poly->shape.go;
-  cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
-  cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, T);
+//  cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
+  cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, cpTransformIdentity);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
 }
@@ -400,9 +403,7 @@ float phys2d_edge_moi(struct phys2d_edge *edge, float m) {
   return moi;
 }
 
-void phys2d_edgedel(struct phys2d_edge *edge) {
-  phys2d_shape_del(&edge->shape);
-}
+void phys2d_edgedel(struct phys2d_edge *edge) { phys2d_shape_del(&edge->shape); }
 
 void phys2d_edgeaddvert(struct phys2d_edge *edge, HMM_Vec2 v) {
   arrput(edge->points, v);
@@ -567,7 +568,7 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
 
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
-  JS_SetPropertyStr(js, obj, "hit", hit->ref);
+  JS_SetPropertyStr(js, obj, "obj", hit->ref);
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);

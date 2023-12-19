@@ -105,7 +105,7 @@ JSValue gos2ref(gameobject **go)
 {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < arrlen(go); i++)
-    js_setprop_num(array,i,go[i]->ref);
+    js_setprop_num(array,i,JS_DupValue(js,go[i]->ref));
   return array;
 }
 
@@ -1905,4 +1905,3 @@ void ffi_load() {
   QJSCLASSPREP(dsp_node);
   QJSCLASSPREP(gameobject);
 }
-

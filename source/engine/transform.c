@@ -36,7 +36,9 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
   return mat3_t_pos(m, dir);
 }
 
-HMM_Mat3 transform2d2mat(transform2d trn) { return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale))); }
+HMM_Mat3 transform2d2mat(transform2d trn) {
+  return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale)));
+}
 
 transform2d mat2transform2d(HMM_Mat3 m)
 {
