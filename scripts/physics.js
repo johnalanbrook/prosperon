@@ -19,7 +19,10 @@ var physics = {
   get gravity() { return cmd(72); },
   set damping(x) { cmd(73,Math.clamp(x,0,1)); },
   get damping() { return cmd(74); },
-  pos_query(pos) { return cmd(44, pos); },
+  pos_query(pos, give) {
+    give ??= 25;
+    return cmd(44, pos, give);
+  },
   
   /* Returns a list of body ids that a box collides with */
   box_query(box) { return cmd(52, box.pos, box.wh); },

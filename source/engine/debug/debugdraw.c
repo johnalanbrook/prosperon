@@ -324,19 +324,12 @@ void debugdraw_init()
   });
 }
 
-void draw_line(HMM_Vec2 *a_points, int n, struct rgba color, float seg_len, int closed, float seg_speed)
+void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float seg_speed)
 {
   if (n < 2) return;
-  HMM_Vec2 *points = a_points;
+
   seg_speed = 1;
-  if (closed) {
-    n++;    
-    points = malloc(sizeof(HMM_Vec2) * n);
-    memcpy(points, a_points, sizeof(HMM_Vec2)*(n-1));
-
-    points[n-1] = points[0];
-  }
-
+  
   struct line_vert v[n];
   float dist = 0;
 
@@ -374,11 +367,11 @@ void draw_line(HMM_Vec2 *a_points, int n, struct rgba color, float seg_len, int 
   
   sg_append_buffer(line_bind.vertex_buffers[0], &vr);
   sg_append_buffer(line_bind.index_buffer, &ir);
-  
-  line_c += i_c;
-  line_v += n;
 
-  if (closed) free(points);
+  YughWarn("Drew %d line segments with %d verts and %d indexes, starting at %d and %d.", n-1, n, i_c, line_v, line_c);
+  
+  line_c += i_c+1;
+  line_v += n;
 }
 
 HMM_Vec2 center_of_vects(HMM_Vec2 *v, int n)
@@ -394,11 +387,7 @@ HMM_Vec2 center_of_vects(HMM_Vec2 *v, int n)
   return c;
 }
 
-float vecs2m(HMM_Vec2 a, HMM_Vec2 b)
-{
-  return (b.y-a.y)/(b.x-a.x);
-}
-
+/* Given a series of points p, computes a new series with them expanded on either side by d */
 HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
 {
   if (d == 0) {
@@ -440,10 +429,16 @@ HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
   return ret;
 }
 
-void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int closed, int flags, struct rgba line_color, float line_seg)
+/* Given a strip of points, draws them as segments. So 5 points is 4 segments, and ultimately 8 vertices */
+void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int flags, struct rgba line_color, float line_seg)
 {
-  if (thickness == 0)
-    draw_line(points,n,color,0,closed,0);
+  int closed = 0;
+  if (thickness <= 1) {
+    draw_line(points,n,color,0,0);
+    return;
+  }
+
+  return;
 
   /* todo: should be dashed, and filled. use a texture. */  
   /* draw polygon outline */
@@ -496,7 +491,7 @@ void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int cl
 
   /* Now drawing the line outlines */
   if (thickness == 1) {
-    draw_line(points,n,line_color,line_seg, closed, 0);
+    draw_line(points,n,line_color,line_seg, 0);
   } else {
     HMM_Vec2 in_p[n];
     HMM_Vec2 out_p[n];
@@ -518,12 +513,12 @@ void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int cl
       for (int i = n-1, v = n; i >= 0; i--,v++)
 	p[v] = out_p[i];
 
-      draw_line(p,n*2,line_color,line_seg,1,0);
+      draw_line(p,n*2,line_color,line_seg,0);
       return;
     }
 
-    draw_line(in_p,n,line_color,line_seg,1,0);
-    draw_line(out_p,n,line_color,line_seg,1,0);
+    draw_line(in_p,n,line_color,line_seg,0);
+    draw_line(out_p,n,line_color,line_seg,0);
   }
 }
 
@@ -553,13 +548,6 @@ void draw_box(HMM_Vec2 c, HMM_Vec2 wh, struct rgba color)
     };
 
     draw_poly(verts, 4, color);
-}
-
-void draw_arrow(HMM_Vec2 start, HMM_Vec2 end, struct rgba color, int capsize)
-{ 
-  HMM_Vec2 points[2] = {start, end};
-  draw_line(points, 2, color, 0, 0,0);
-  draw_cppoint(end, capsize, color);
 }
 
 void draw_grid(float width, float span, struct rgba color)

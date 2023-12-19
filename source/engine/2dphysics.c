@@ -282,7 +282,7 @@ void phys2d_applybox(struct phys2d_box *box) {
 
 void phys2d_dbgdrawbox(struct phys2d_box *box) {
   int n = cpPolyShapeGetCount(box->shape.shape);
-  HMM_Vec2 points[n * 2];
+  HMM_Vec2 points[n+1];
   struct gameobject *go = shape2go(box->shape.shape);
 
   for (int i = 0; i < n; i++) {
@@ -290,12 +290,13 @@ void phys2d_dbgdrawbox(struct phys2d_box *box) {
     p.cp = cpPolyShapeGetVert(box->shape.shape, i);
     points[i] = go2world(go, p);
   }
+  points[n] = points[0];
 
   struct rgba c = shape_color(box->shape.shape);
   struct rgba cl = c;
   cl.a = col_alpha;
   float seglen = cpShapeGetSensor(box->shape.shape) ? sensor_seg : 0;  
-  draw_line(points, n, cl,seglen, 1, 0);
+  draw_line(points, n, cl,seglen, 0);
   draw_poly(points, n, c);
 }
 /************** POLYGON ************/
@@ -364,14 +365,16 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
 
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
-    HMM_Vec2 points[n];
+    HMM_Vec2 points[n+1];
     HMM_Mat3 rt = t_go2world(shape2go(poly->shape.shape));
     for (int i = 0; i < n; i++)
       points[i] = mat_t_pos(rt, (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i));
 
+    points[n] = points[0];
+
     draw_poly(points, n, color);
     float seglen = cpShapeGetSensor(poly->shape.shape) ? sensor_seg : 0;
-    draw_line(points, n, line_color, seglen, 1, 0);
+    draw_line(points, n, line_color, seglen, 0);
   }
 }
 /****************** EDGE 2D**************/
@@ -503,7 +506,7 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
   struct rgba color = shape_color(edge->shapes[0]);
   struct rgba line_color = color;
   color.a = col_alpha;
-  draw_edge(drawpoints, arrlen(edge->points), color, edge->thickness * 2, 0,0, line_color, seglen);
+  draw_edge(drawpoints, arrlen(edge->points), color, edge->thickness * 2, 0, line_color, seglen);
   draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 

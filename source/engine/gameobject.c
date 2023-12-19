@@ -42,7 +42,7 @@ HMM_Mat3 t_world2go(gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
 HMM_Mat4 t3d_go2world(gameobject *go) { return transform3d2mat(go2t3(go)); }
 HMM_Mat4 t3d_world2go(gameobject *go) { return HMM_InvGeneralM4(t3d_go2world(go)); }
 
-gameobject *pos2gameobject(HMM_Vec2 pos) {
+gameobject *pos2gameobject(HMM_Vec2 pos, float give) {
   cpShape *hit = phys2d_query_pos(pos.cp);
 
   if (hit)
@@ -53,7 +53,7 @@ gameobject *pos2gameobject(HMM_Vec2 pos) {
     HMM_Vec2 gpos = go_pos(gameobjects[i]);
     float dist = HMM_DistV2(gpos,pos);
 
-    if (dist <= 25) return gameobjects[i];
+    if (dist <= give) return gameobjects[i];
   }
 
   return NULL;

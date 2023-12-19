@@ -79,7 +79,7 @@ gameobject *shape2go(cpShape *shape);
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 
 /* Tries a few methods to select a gameobject; if none is selected returns -1 */
-gameobject *pos2gameobject(HMM_Vec2 pos);
+gameobject *pos2gameobject(HMM_Vec2 pos, float give);
 
 void gameobject_draw_debug(gameobject *go);
 void gameobject_draw_debugs();

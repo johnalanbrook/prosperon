@@ -170,7 +170,7 @@ sg_buffer normal_floats(float *f, int verts, int comp)
 {
   uint32_t packed_norms[verts];
   for (int v = 0, i = 0; v < verts; v++, i+= comp)
-  packed_norms[v] = pack_int10_n2(i);
+    packed_norms[v] = pack_int10_n2(f+i);
 
   return sg_make_buffer(&(sg_buffer_desc){
     .data.ptr = packed_norms,

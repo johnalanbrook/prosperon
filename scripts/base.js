@@ -955,6 +955,14 @@ value: function(b) {
   return c;
 }});
 
+Object.defineProperty(Array.prototype, 'normalized', {
+  value: function() {
+    var c = this.slice();
+    var len = Vector.length(c);
+    return c.map(v => v/len);
+  }
+});
+
 Object.defineProperty(Array.prototype, 'newfirst', {
   value: function(i) {
     var c = this.slice();
@@ -1364,21 +1372,16 @@ Boundingbox.bl = function(bb) { return [bb.l, bb.b] };
 
 /* VECTORS */
 var Vector = {
-  x: 0,
-  y: 0,
   length(v) {
     var sum = v.reduce(function(acc, val) { return acc + val**2; }, 0);
     return Math.sqrt(sum);
   },
+  
   norm(v) {
     var len = Vector.length(v);
     return [v.x/len, v.y/len];
-    
   },
-  make(x, y) {
-    var vec = Object.create(this, {x:x, y:y});
-  },
-
+  
   project(a, b) {
     return cmd(85, a, b);
   },

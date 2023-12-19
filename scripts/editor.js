@@ -367,8 +367,6 @@ var editor = {
 
   color_depths: [],
   draw() {
-    Shape.point(world2screen(this.cursor), 2, Color.green);
-    
     this.selectlist.forEach(x => {
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
@@ -392,12 +390,14 @@ var editor = {
       Shape.line(bb2points(bb).wrapped(1), Color.white);
     }
 
-    Debug.coordinate([0,0]);
+
   },
 
   gui() { 
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
+    Debug.coordinate(world2screen([0,0]));
+    Shape.cross(Mouse.pos, 5);
 
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
@@ -405,7 +405,7 @@ var editor = {
     if (this.comp_info && this.sel_comp)
       GUI.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
 
-    GUI.text("+", editor.edit_level.screenpos(), 1, Color.blue);
+    Shape.cross(editor.edit_level.screenpos(),3,Color.blue);
 
     var thiso = editor.get_this();
     var clvl = thiso;
@@ -459,9 +459,11 @@ var editor = {
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
       GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
+      Shape.circle(x[1].screenpos(),10,Color.blue);
+      Shape.arrow(x[1].screenpos(), x[1].screenpos().add([0,50]), Color.red, 10);
     });
 
-    var mg = physics.pos_query(Mouse.worldpos);
+    var mg = physics.pos_query(Mouse.worldpos,10);
     
     if (mg) {
       var p = mg.path_from(thiso);
@@ -1095,10 +1097,8 @@ editor.inputs.mouse = {};
 editor.inputs.mouse.move = function(pos, dpos)
 {
   if (editor.mousejoy) {
-    if (editor.z_start) {
+    if (editor.z_start)
       editor.camera.zoom -= dpos.y/500;
-      console.say(editor.camera.zoom);
-    }
     else if (editor.joystart)
       editor.camera.pos = editor.camera.pos.sub(Game.camera.dir_view2world(dpos));
   }

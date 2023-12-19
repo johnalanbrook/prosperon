@@ -700,7 +700,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 44:
-    go = pos2gameobject(js2vec2(argv[1]));
+    go = pos2gameobject(js2vec2(argv[1]), js2number(argv[2]));
     ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
     break;
 
@@ -855,7 +855,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 81:
-    draw_arrow(js2vec2(argv[1]), js2vec2(argv[2]), js2color(argv[3]), js2int(argv[4]));
     break;
 
   case 82:
@@ -864,7 +863,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 83:
     v1 = js2cpvec2arr(argv[1]);
-    draw_edge(v1, js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, 0, js2color(argv[2]), 10);
+    draw_edge(v1, js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, js2color(argv[2]), 10);
     break;
 
   case 84:

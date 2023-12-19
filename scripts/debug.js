@@ -6,11 +6,41 @@ var Shape = {
     color ??= Color.blue;
     Shape.circle(pos,size,color);
   },
-  
-  arrow(start, end, color, capsize) {
+
+  /* size here is arm length - size of 2 is 4 height total */
+  cross(pos, size, color, angle) {
+    angle ??= 0;
     color ??= Color.red;
-    capsize ??= 4;
-    cmd(81, start, end, color, capsize);
+    var a = [
+      pos.add([0,size]),
+      pos.add([0,-size])
+    ];
+    var b = [
+      pos.add([size,0]),
+      pos.add([-size,0])
+    ];
+    
+    Shape.line(a,color);
+    Shape.line(b,color);
+  },
+  
+  arrow(start, end, color, wingspan, wingangle) {
+    color ??= Color.red;
+    wingspan ??= 4;
+    wingangle ??=10;
+    
+    var dir = end.sub(start).normalized();
+    var wing1 = [
+      Vector.rotate(dir, wingangle).scale(wingspan).add(end),
+      end
+    ];
+    var wing2 = [
+      Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
+      end
+    ];
+    Shape.line([start,end],color);
+    Shape.line(wing1,color);
+    Shape.line(wing2,color);
   },
   
   poly(points, color) { cmd_points(0,points,color); },
