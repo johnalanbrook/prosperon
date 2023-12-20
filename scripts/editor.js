@@ -542,7 +542,7 @@ var editor = {
   viewasset(path) {
     Log.info(path);
     var fn = function(x) { return path.endsWith(x); };
-    if (images.any(fn)) {
+    if (Resources.images.any(fn)) {
       var newtex = Object.copy(texgui, { path: path });
       this.addpanel(newtex);
     }
@@ -608,6 +608,23 @@ var editor = {
 }
 
 editor.inputs = {};
+editor.inputs.drop = function(str) {
+  if (!Resources.is_image(str)) {
+    console.warn("NOT AN IMAGE");
+    return;
+  }
+  if (this.sel_comp?.comp === 'sprite') {
+    this.sel_comp.path = str;
+    return;
+  }
+  
+  var mg = physics.pos_query(Mouse.worldpos,10);
+  if (!mg) return;
+  var img = mg.get_comp_by_name('sprite');
+  if (!img) return;
+  img[0].path = str;
+}
+
 editor.inputs.f9 = function() {
   Log.warn("CAPTURING");
   cmd(173, "capture.bmp", 0, 0, 500, 500);
@@ -1882,11 +1899,8 @@ var gen_notify = function(val, fn) {
   return panel;
 };
 
-var scripts = ["js"];
-var images = ["png", "jpg", "jpeg"];
-var sounds = ["wav", "mp3"];
 var allfiles = [];
-allfiles.push(scripts, images, sounds);
+allfiles.push(Resources.scripts, Resources.images, Resources.sounds);
 allfiles = allfiles.flat();
 
 var assetexplorer = Object.copy(openlevelpanel, {

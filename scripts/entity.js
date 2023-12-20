@@ -56,6 +56,14 @@ actor.remaster = function(to){
 };
 
 var gameobject = {
+  get_comp_by_name(name) {
+    var comps = [];
+    for (var c of Object.values(this.components))
+      if (c.comp === name) comps.push(c);
+
+    if (comps.length) return comps;
+    return undefined;
+  },
   check_dirty() {
     this._ed.urdiff = this.json_obj();
     this._ed.dirty = !this._ed.urdiff.empty;

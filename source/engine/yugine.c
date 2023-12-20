@@ -222,6 +222,11 @@ void c_event(const sapp_event *e)
     case SAPP_EVENTTYPE_QUIT_REQUESTED:
       window_quit();
       break;
+
+    case SAPP_EVENTTYPE_FILES_DROPPED:
+      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
+      input_dropped_files(sapp_get_num_dropped_files());
+      break;
   }
 
   if (editor_mode)

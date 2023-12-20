@@ -17,6 +17,19 @@ OS.exec = function(s)
   cmd(143, s);
 }
 
+var Resources = {};
+Resources.images = ["png", "jpg", "jpeg", "gif"];
+Resources.sounds =  ["wav", "mp3", "flac"];
+Resources.scripts = "js";
+Resources.is_image = function(path) {
+  var ext = path.ext();
+  return Resources.images.any(x => x === ext);
+}
+Resources.is_sound = function(path) {
+  var ext = path.ext();
+  return Resources.sounds.any(x => x === ext);
+}
+
 var Log = {
   set level(x) { cmd(92,x); },
   get level() { return cmd(93); },

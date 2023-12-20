@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <wchar.h>
 #include "resources.h"
+#include "jsffi.h"
 
 static int mouse_states[3] = {INPUT_UP};
 static int key_states[512] = {INPUT_UP};
@@ -183,6 +184,18 @@ void register_pawn(struct callee c) {
 
 void register_gamepad(struct callee c) {
   gamepad_callee = c;
+}
+
+void input_dropped_files(int n)
+{
+  
+  JSValue argv[4];
+  argv[0] = jstr("emacs");
+  argv[1] = jstr("drop");
+  argv[2] = jstr("pressed");
+  argv[3] = str2js(sapp_get_dropped_file_path(0));
+  script_callee(pawn_callee, 4, argv);
+  JS_FreeValue(js,argv[3]);
 }
 
 static void pawn_call_keydown(int key) {

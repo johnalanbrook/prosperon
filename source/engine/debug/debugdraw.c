@@ -351,7 +351,7 @@ void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float 
   
   uint16_t idxs[i_c];
   for (int i = 0, d = 0; i < n-1; i++, d+=2) {
-    idxs[d] = i + line_v;
+    idxs[d] = i + line_v + line_sv;
     idxs[d+1] = idxs[d]+1;
   }
   
@@ -368,9 +368,7 @@ void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float 
   sg_append_buffer(line_bind.vertex_buffers[0], &vr);
   sg_append_buffer(line_bind.index_buffer, &ir);
 
-  YughWarn("Drew %d line segments with %d verts and %d indexes, starting at %d and %d.", n-1, n, i_c, line_v, line_c);
-  
-  line_c += i_c+1;
+  line_c += i_c;
   line_v += n;
 }
 
@@ -434,11 +432,9 @@ void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int fl
 {
   int closed = 0;
   if (thickness <= 1) {
-    draw_line(points,n,color,0,0);
+    draw_line(points,n,line_color,0,0);
     return;
   }
-
-  return;
 
   /* todo: should be dashed, and filled. use a texture. */  
   /* draw polygon outline */

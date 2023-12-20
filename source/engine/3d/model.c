@@ -401,8 +401,5 @@ void draw_drawmodel(struct drawmodel *dm)
   draw_model(dm->model, rst);
 }
 
-void free_drawmodel(struct drawmodel *dm)
-{
-  free(dm);
-}
+void free_drawmodel(struct drawmodel *dm) { free(dm); }
 
