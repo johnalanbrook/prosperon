@@ -62,7 +62,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     char *buffer = malloc(len);
     sprintf(buffer, logfmt, file, line, logstr[priority], catstr[category], msg);
 
-    fprintf(stderr, buffer);
+    fprintf(stderr, "%s", buffer);
     fflush(stderr);
     
     free(msg);

@@ -20,6 +20,7 @@
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,6 +32,8 @@ static struct {
   char *key;
   struct model *value;
 } *modelhash = NULL;
+
+struct drawmodel **models = NULL;
 
 static void processnode();
 static void processmesh();
@@ -116,6 +119,8 @@ unsigned short pack_short_texcoord(float x, float y)
   return (((unsigned short)yc) << 8) | xc;
 }
 
+unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
+
 uint32_t pack_int10_n2(float *norm)
 {
   uint32_t ni[3];
@@ -144,7 +149,7 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
        free(imp);
      }
    } else
-     mesh->bind.fs.images[0] = texture_pullfromfile("k")->id;
+     mesh->bind.fs.images[0] = texture_pullfromfile("k")->id; 
      
    mesh->bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 /*     
@@ -157,9 +162,10 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
 
 sg_buffer texcoord_floats(float *f, int verts, int comp)
 {
-  unsigned short packed[verts];
-  for (int i = 0, v = 0; v < verts; i+=comp, v++)
-    packed[v] = pack_short_texcoord(f[i], f[i+1]);
+  int n = verts*comp;
+  unsigned short packed[n];
+  for (int i = 0, v = 0; i < n; i++)
+    packed[i] = pack_short_tex(f[i]);
 
   return sg_make_buffer(&(sg_buffer_desc){
     .data.ptr = packed,
@@ -390,7 +396,14 @@ struct drawmodel *make_drawmodel(gameobject *go)
   dm->model = NULL;
   dm->amodel = HMM_M4D(1.f);
   dm->go = go;
+  arrpush(models,dm);
   return dm;
+}
+
+void model_draw_all()
+{
+  for (int i = 0; i < arrlen(models); i++)
+    draw_drawmodel(models[i]);
 }
 
 void draw_drawmodel(struct drawmodel *dm)
@@ -401,5 +414,15 @@ void draw_drawmodel(struct drawmodel *dm)
   draw_model(dm->model, rst);
 }
 
-void free_drawmodel(struct drawmodel *dm) { free(dm); }
+void free_drawmodel(struct drawmodel *dm) {
+  int rm;
+  for (int i = 0; i < arrlen(models); i++)
+    if (models[i] == dm) {
+      rm = i;
+      break;
+    }
+
+  arrdelswap(models,rm);
+  free(dm);
+}
 

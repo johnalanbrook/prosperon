@@ -39,14 +39,6 @@ in float radius;
 
 void main()
 {
-  if (segsize<0)
-    return;
-
-  float f = atan(coords.y, coords.x) + PI;
-
-  if (mod(f, segsize) < segsize/2)
-    discard;
-
   float px = 1/radius;
   float R1 = 1.f;
   float R2 = 1.0 - fill;
@@ -57,6 +49,14 @@ void main()
   float sm2 = smoothstep(R2-px,R2,dist);
   float a = sm*sm2;
   color = mix(vec4(0,0,0,0), fcolor, a);
+
+  if (segsize<0)
+    return;
+
+  float f = atan(coords.y, coords.x) + PI;
+
+  if (mod(f, segsize) < segsize/2)
+    discard;
 }
 
 @end

@@ -53,6 +53,7 @@ struct gameobject {
 typedef struct gameobject gameobject;
 
 gameobject *MakeGameobject();
+int go_count();
 void gameobject_apply(gameobject *go);
 void gameobject_free(gameobject *go);
 void gameobjects_cleanup();

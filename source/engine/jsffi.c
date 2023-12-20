@@ -1120,7 +1120,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 143:
       str = JS_ToCString(js, argv[1]);
-//      system(str);
+      system(str);
       break;
 
     case 144:
@@ -1348,6 +1348,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 212:
       ret = jsdst();
+      break;
+    case 213:
+      free_drawmodel(js2ptr(argv[1]));
+      break;
+    case 214:
+      ret = int2js(go_count());
       break;
   }
 

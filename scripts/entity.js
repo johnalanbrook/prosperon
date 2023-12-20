@@ -191,7 +191,7 @@ var gameobject = {
       set_gravity(x) { cmd(167, this.body, x); },
       set timescale(x) { cmd(168,this.body,x); },
       get timescale() { return cmd(169,this.body); },
-      set phys(x) { console.warn(`Setting phys to ${x}`); set_body(1, this.body, x); },
+      set phys(x) { set_body(1, this.body, x); },
       get phys() { return q_body(0,this.body); },
       get velocity() { return q_body(3, this.body); },
       set velocity(x) { set_body(9, this.body, x); },
@@ -411,7 +411,12 @@ var gameobject = {
       /* Bounding box of the object in world dimensions */
       boundingbox() {
 	var boxes = [];
-	boxes.push({t:0, r:0,b:0,l:0});
+	boxes.push({
+	  t:0,
+	  r:0,
+	  b:0,
+	  l:0
+	});
 
 	for (var key in this.components) {
 	  if ('boundingbox' in this.components[key])
@@ -420,23 +425,11 @@ var gameobject = {
 	for (var key in this.objects)
 	  boxes.push(this.objects[key].boundingbox());
 
-	if (boxes.empty) return cwh2bb([0,0], [0,0]);
+	var bb = boxes.shift();
 
-	var bb = boxes[0];
-
-	boxes.forEach(function(x) {
-	  bb = bb_expand(bb, x);
-	});
-
-	var cwh = bb2cwh(bb);
-
-	if (!bb) return;
-
-	if (this.flipx) cwh.c.x *= -1;
-	if (this.flipy) cwh.c.y *= -1;
-
-	cwh.c = cwh.c.add(this.pos);
-	bb = cwh2bb(cwh.c, cwh.wh);
+	boxes.forEach(function(x) { bb = bb_expand(bb, x); });
+	
+	bb = movebb(bb, this.pos);
 
 	return bb ? bb : cwh2bb([0,0], [0,0]);
       },
@@ -519,8 +512,6 @@ var gameobject = {
       this.level = undefined;
     }
 
-    
-
     Player.do_uncontrol(this);
     Register.unregister_obj(this);
 
@@ -536,6 +527,7 @@ var gameobject = {
 
     this.clear();
     this.objects = undefined;
+    Event.rm_obj(this);
 
     if (typeof this.stop === 'function')
       this.stop();
@@ -633,16 +625,12 @@ var gameobject = {
   },
 
   register_hit(fn, obj) {
-    if (!obj)
-      obj = this;
-
+    obj ??= this;
     Signal.obj_begin(fn, obj, this);
   },
 
   register_separate(fn, obj) {
-    if (!obj)
-      obj = this;
-
+    obj ??= this;
     Signal.obj_separate(fn,obj,this);
   },
 }

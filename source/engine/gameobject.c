@@ -10,6 +10,8 @@
 
 static gameobject **gameobjects;
 
+int go_count() { return arrlen(gameobjects); }
+
 gameobject *body2go(cpBody *body) { return cpBodyGetUserData(body); }
 gameobject *shape2go(cpShape *shape) { return ((struct phys2d_shape *)cpShapeGetUserData(shape))->go; }
 

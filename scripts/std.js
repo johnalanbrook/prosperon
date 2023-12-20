@@ -4,18 +4,11 @@ function compile_env(str, env, file)
   return cmd(123, str, env, file);
 }
 
-function fcompile_env(file, env)
-{
-  return compile_env(IO.slurp(file), env, file);
-}
+function fcompile_env(file, env) { return compile_env(IO.slurp(file), env, file); }
 
-var OS = {
-  get cwd() { return cmd(144); },
-};
-OS.exec = function(s)
-{
-  cmd(143, s);
-}
+var OS = {};
+OS.cwd = function() { return cmd(144); }
+OS.exec = function(s) { cmd(143, s); }
 
 var Resources = {};
 Resources.images = ["png", "jpg", "jpeg", "gif"];

@@ -249,7 +249,7 @@ char *slurp_text(const char *filename, size_t *size)
 
 int cp(char *p1, char *p2)
 {
-  long len;
+  size_t len;
   void *data = slurp_file(p1, &len);
 
   FILE *f = fopen_mkdir(p2, "w");

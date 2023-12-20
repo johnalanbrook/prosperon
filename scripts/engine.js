@@ -234,41 +234,14 @@ register(9, Log.stack, this);
 Register.gamepad_playermap[0] = Player.players[0];
 
 var Signal = {
-  signals: [],
   obj_begin(fn, obj, go) {
-    this.signals.push([fn, obj]);
     register_collide(0, fn, obj, go.body);
   },
 
   obj_separate(fn, obj, go) {
-    this.signals.push([fn,obj]);
     register_collide(3,fn,obj,go.body);
   },
-
-  clear_obj(obj) {
-    this.signals.filter(function(x) { return x[1] !== obj; });
-  },
-
-  c:{},
-  register(name, fn) {
-    if (!this.c[name])
-      this.c[name] = [];
-
-    this.c[name].push(fn);
-  },
-
-  call(name, ...args) {
-    if (this.c[name])
-      this.c[name].forEach(function(fn) { fn.call(this, ...args); });
-  },
 };
-
-var game_quit = function()
-{
-  Primum.kill();
-}
-
-Signal.register("quit", game_quit);
 
 var Event = {
   events: {},
@@ -282,6 +255,10 @@ var Event = {
     this.events[name] = this.events[name].filter(x => x[0] !== obj);
   },
 
+  rm_obj(obj) {
+    Object.keys(this.events).forEach(name => Event.unobserve(name,obj));
+  },
+
   notify(name) {
     if (!this.events[name]) return;
     this.events[name].forEach(function(x) {
@@ -289,6 +266,8 @@ var Event = {
     });
   },
 };
+
+Event.observe('quit', undefined, function() { Primum.kill(); });
 
 var Window = {
   fullscreen(f) { cmd(145, f); },
@@ -335,6 +314,14 @@ function Color(from) {
 var Spline = {};
 Spline.sample_angle = function(type, points, angle) {
   return spline_cmd(0, type, points[0].length, points, angle);
+}
+
+Spline.bezier_loop = function(cp)
+{
+  cp.push(Vector.reflect_point(cp.at(-2),cp.at(-1)));
+  cp.push(Vector.reflect_point(cp[1],cp[0]));
+  cp.push(cp[0].slice());
+  return cp;
 }
 
 Spline.is_bezier = function(t) { return t === Spline.type.bezier; }
@@ -448,6 +435,10 @@ var Game = {
 
   edit: true,
 
+  object_count() {
+    return cmd(214);
+  },
+
   all_objects(fn) {
     /* Wind down from Primum */
   },
@@ -463,7 +454,7 @@ var Game = {
   },
 
   /* List of all objects spawned that have a specific tag */
-  find_tag(tag) {
+  find_tag(tag){
 
   },
 

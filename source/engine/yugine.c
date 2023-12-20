@@ -79,12 +79,9 @@ static int sim_play = SIM_PLAY;
 
 int editor_mode = 0;
 
-const char *engine_info()
-{
-  static char str[100];
-  snprintf(str, 100, "Yugine version %s, %s build.\nCopyright 2022-2023 odplot productions LLC.\n", VER, INFO);
-  return str;
-}
+#define ENGINEINFO "Yugine version " VER ", " INFO " build.\nCopyright 2022-2024."
+
+const char *engine_info() { return ENGINEINFO; }
 
 static int argc;
 static char **args;

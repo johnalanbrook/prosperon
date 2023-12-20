@@ -303,7 +303,7 @@ struct boundingbox text_bb(const unsigned char *text, float scale, float lw, flo
 
       while (!isspace(*line) && *line != '\0') {
         wordWidth += font->Characters[*line].Advance * tracking * scale; 
-       line++;
+        line++;
       }
 
       if (lw > 0 && (cursor.X + wordWidth) >= lw) {

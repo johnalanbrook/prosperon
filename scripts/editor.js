@@ -389,8 +389,6 @@ var editor = {
       Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
       Shape.line(bb2points(bb).wrapped(1), Color.white);
     }
-
-
   },
 
   gui() { 
@@ -459,8 +457,8 @@ var editor = {
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
       GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
-      Shape.circle(x[1].screenpos(),10,Color.blue);
-      Shape.arrow(x[1].screenpos(), x[1].screenpos().add([0,50]), Color.red, 10);
+      Shape.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
+      Shape.arrow(x[1].screenpos(), x[1].screenpos().add(x[1].up().scale(15)), Color.red, 10);
     });
 
     var mg = physics.pos_query(Mouse.worldpos,10);
@@ -469,6 +467,9 @@ var editor = {
       var p = mg.path_from(thiso);
       GUI.text(p, Mouse.screenpos(),1,Color.teal);
     }
+
+    if (this.rotlist.length === 1)
+      GUI.text(Math.trunc(this.rotlist[0].obj.angle), Mouse.screenpos(), 1, Color.teal);
 
     if (this.selectlist.length === 1) {
       var i = 1;
@@ -1143,6 +1144,8 @@ editor.inputs.mouse.move = function(pos, dpos)
   editor.rotlist?.forEach(function(x) {
     var anglediff = Math.atan2(relpos.y, relpos.x) - x.rotoffset;
     x.obj.angle = x.angle + Math.rad2deg(anglediff);
+    if (Keys.shift())
+      x.obj.angle = Math.nearest(x.obj.angle, 45);
     if (x.pos)
       x.obj.pos = x.pos.sub(x.offset).add(x.offset.rotate(anglediff));
   });
@@ -1151,7 +1154,6 @@ editor.inputs.mouse.move = function(pos, dpos)
 editor.inputs.mouse.scroll = function(scroll)
 {
   scroll.y *= -1;
-//  editor.grabselect?.forEach(x => x.move(Game.camera.dir_view2world(scroll)));
   editor.camera.move(Game.camera.dir_view2world(scroll.scale(-3)));
 }
 

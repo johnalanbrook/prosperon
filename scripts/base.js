@@ -787,12 +787,9 @@ Object.defineProperty(String.prototype, 'pct', {
 });
 
 Object.defineProperty(String.prototype, 'uc', { value: function() { return this.toUpperCase(); } });
-
 Object.defineProperty(String.prototype, 'lc', {value:function() { return this.toLowerCase(); }});
 
-
 /* ARRAY DEFS */
-
 Object.defineProperty(Array.prototype, 'copy', {
   value: function() {
     var c = [];
@@ -1199,6 +1196,10 @@ Math.grab_from_points = function(pos, points, slop) {
   return idx;
 };
 
+Math.nearest = function(n, incr)
+{
+  return Math.round(n/incr)*incr;
+}
 
 Number.prec = function(num)
 {
@@ -1424,6 +1425,10 @@ var Vector = {
   reflect(vec, plane) {
     var p = Vector.norm(plane);
     return vec.sub(p.scale(2*Vector.dot(vec, p)));
+  },
+
+  reflect_point(vec, point) {
+    return point.add(vec.sub(point).scale(-1));
   },
   
 };

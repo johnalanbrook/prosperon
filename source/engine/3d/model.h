@@ -53,6 +53,7 @@ void model_init();
 
 struct drawmodel *make_drawmodel(gameobject *go);
 void draw_drawmodel(struct drawmodel *dm);
+void model_draw_all();
 void free_drawmodel(struct drawmodel *dm);
 
 #endif

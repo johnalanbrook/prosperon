@@ -97,14 +97,13 @@ component.sprite.impl = {
   set layer(x) { cmd(60, this.id, x); },
   get layer() { return undefined; },
   emissive(x) { cmd(170, this.id, x); },
+  pick() { return this; },
+  move(d) { this.pos = this.pos.add(d); },
 
   boundingbox() {
-    return cwh2bb([0,0],[0,0]);
     var dim = this.dimensions();
-    dim = dim.scale(this.gameobject.scale);
-    var realpos = this.pos.copy();
-    realpos.x = realpos.x * dim.x + (dim.x/2);
-    realpos.y = realpos.y * dim.y + (dim.y/2);
+    dim = dim.scale(this.gameobject.gscale());
+    var realpos = dim.scale(0.5).add(this.pos);
     return cwh2bb(realpos,dim);
   },
 
@@ -123,6 +122,7 @@ component.model = Object.copy(component, {
 component.model.impl = {
   set path(x) { cmd(149, this.id, x); },
   draw() { cmd(150, this.id); },
+  kill() { cmd(213, this.id); },
 };
 
 var sprite = component.sprite;
@@ -134,15 +134,15 @@ sprite.doc = {
 };
 
 sprite.inputs = {};
-sprite.inputs.kp9 = function() { this.pos = [0,0]; };
-sprite.inputs.kp8 = function() { this.pos = [-0.5, 0]; };
-sprite.inputs.kp7 = function() { this.pos = [-1,0]; };
-sprite.inputs.kp6 = function() { this.pos = [0,-0.5]; };
-sprite.inputs.kp5 = function() { this.pos = [-0.5,-0.5]; };
-sprite.inputs.kp4 = function() { this.pos = [-1,-0.5]; };
-sprite.inputs.kp3 = function() { this.pos = [0, -1]; };
-sprite.inputs.kp2 = function() { this.pos = [-0.5,-1]; };
-sprite.inputs.kp1 = function() { this.pos = [-1,-1]; };
+sprite.inputs.kp9 = function() { this.pos = this.dimensions().scale([0,0]); };
+sprite.inputs.kp8 = function() { this.pos = this.dimensions().scale([-0.5, 0]); };
+sprite.inputs.kp7 = function() { this.pos = this.dimensions().scale([-1,0]); };
+sprite.inputs.kp6 = function() { this.pos = this.dimensions().scale([0,-0.5]); };
+sprite.inputs.kp5 = function() { this.pos = this.dimensions().scale([-0.5,-0.5]); };
+sprite.inputs.kp4 = function() { this.pos = this.dimensions().scale([-1,-0.5]); };
+sprite.inputs.kp3 = function() { this.pos = this.dimensions().scale([0, -1]); };
+sprite.inputs.kp2 = function() { this.pos = this.dimensions().scale([-0.5,-1]); };
+sprite.inputs.kp1 = function() { this.pos = this.dimensions().scale([-1,-1]); };
 Object.seal(sprite);
 
 var SpriteAnim = {
@@ -535,8 +535,6 @@ polygon2d.inputs['C-b'] = function() {
 };
 polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 
-//Object.freeze(polygon2d);
-
 component.edge2d = Object.copy(collider2d, {
   dimensions:2,
   thickness:0,
@@ -544,7 +542,7 @@ component.edge2d = Object.copy(collider2d, {
   type: Spline.type.catmull,
   C: 1, /* when in bezier, continuity required. 0, 1 or 2. */
   looped: false,
-  angle: 3, /* maximum angle between two segments */
+  angle: 0.5, /* smaller for smoother bezier */
   
   flipx: false,
   flipy: false,
@@ -559,8 +557,10 @@ component.edge2d = Object.copy(collider2d, {
     var spoints = this.cpoints.slice();
     
     if (this.flipx) {
-      var endcap = Spline.is_bezier(this.type) ? spoints.length-2 : spoints.length-1;
-      for (var i = endcap; i >= 0; i--) {
+      if (Spline.is_bezier(this.type))
+        spoints.push(Vector.reflect_point(spoints.at(-2), spoints.at(-1)));
+
+      for (var i = spoints.length-1; i >= 0; i--) {
         var newpoint = spoints[i].slice();
 	newpoint.x = -newpoint.x;
         spoints.push(newpoint);
@@ -568,6 +568,9 @@ component.edge2d = Object.copy(collider2d, {
     }
     
     if (this.flipy) {
+      if (Spline.is_bezier(this.type))
+        spoints.push(Vector.reflect(point(spoints.at(-2),spoints.at(-1))));
+	
       for (var i = spoints.length-1; i >= 0; i--) {
         var newpoint = spoints[i].slice();
 	newpoint.y = -newpoint.y;
@@ -610,6 +613,9 @@ component.edge2d = Object.copy(collider2d, {
 
       return Spline.sample_angle(this.type, spoints,this.angle);
     }
+
+    if (this.looped && Spline.is_bezier(this.type))
+      spoints = Spline.bezier_loop(spoints);
 
     return Spline.sample_angle(this.type, spoints, this.angle);
   },
@@ -875,7 +881,6 @@ component.circle2d = Object.copy(collider2d, {
   toString() { return "circle2d"; },
   
   boundingbox() {
-    var diameter = this.radius*2*this.gameobject.scale;
     return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
   },
 
