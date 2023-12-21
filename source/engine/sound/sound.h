@@ -44,7 +44,7 @@ void audio_close();
 struct wav *make_sound(const char *wav);
 void free_sound(const char *wav);
 void wav_norm_gain(struct wav *w, double lv);
-struct dsp_node *dsp_source(char *path);
+struct dsp_node *dsp_source(const char *path);
 struct dsp_node *dsp_mod(const char *path);
 
 int sound_finished(const struct sound *s);

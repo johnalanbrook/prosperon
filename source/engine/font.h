@@ -33,8 +33,8 @@ void font_init();
 struct sFont *MakeFont(const char *fontfile, int height);
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
 void text_settype(struct sFont *font);
-struct boundingbox text_bb(const unsigned char *text, float scale, float lw, float tracking);
-int renderText(const unsigned char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
+struct boundingbox text_bb(const char *text, float scale, float lw, float tracking);
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
 
 // void text_frame();
 void text_flush(HMM_Mat4 *proj);

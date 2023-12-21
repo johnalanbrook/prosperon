@@ -32,7 +32,7 @@ HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos) { return HMM_MulM4V4(m, (HMM_Vec4)
 
 HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
 {
-  m.Columns[4] = (HMM_Vec4){0,0,0,1};
+  m.Columns[3] = (HMM_Vec4){0,0,0,1};
   return mat3_t_pos(m, dir);
 }
 
@@ -60,4 +60,5 @@ transform3d mat2transform3d(HMM_Mat4 m)
 //  for (int i = 0; i < 2; i++)
 //    m.Columns[i].xyz = HMM_MulV3(m.Columns[i].xyz, t.scale.Elements[i]);
   t.rotation = HMM_M4ToQ_RH(m);
+  return t;
 }

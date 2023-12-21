@@ -140,7 +140,7 @@ JSValue int2js(int i) { return JS_NewInt64(js, i); }
 JSValue str2js(const char *c) { return JS_NewString(js, c); }
 const char *js2str(JSValue v) { return JS_ToCString(js, v); }
 
-JSValue strarr2js(const char **c)
+JSValue strarr2js(char **c)
 {
   JSValue arr = JS_NewArray(js);
   for (int i = 0; i < arrlen(c); i++)
@@ -306,7 +306,7 @@ JSValue vecarr2js(HMM_Vec2 *points, int n) {
 }
 
 JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const unsigned char *s = JS_ToCString(js, argv[0]);
+  const char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2vec2(argv[1]);
 
   float size = js2number(argv[2]);
@@ -497,10 +497,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   int cmd = js2int(argv[0]);
   const char *str = NULL;
   const char *str2 = NULL;
-  const void *d1 = NULL;
-  const void *d2 = NULL;
-  const void *v1 = NULL;
-  gameobject *ids = NULL;
+  void *d1 = NULL;
+  void *d2 = NULL;
+  void *v1 = NULL;
+  gameobject **ids = NULL;
+  int *intids = NULL;
   gameobject *go = NULL;
   JSValue ret = JS_UNDEFINED;
 
@@ -874,9 +875,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 86:
     v1 = js2cpvec2arr(argv[3]);
-    ids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), v1, js2int(argv[4]));
-    ret = gos2ref(ids);
-    arrfree(ids);
+    intids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), v1, js2int(argv[4]));
+    ret = ints2js(intids);
+    arrfree(intids);
     break;
 
   case 87:

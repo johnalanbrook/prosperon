@@ -292,7 +292,6 @@ void debugdraw_init()
     .cull_mode = SG_CULLMODE_BACK,
     .label = "grid pipeline",
     .colors[0].blend = blend_trans,
-    .label = "dbg grid",
   });
   
   grid_bind.vertex_buffers[0] = circle_bind.vertex_buffers[1];

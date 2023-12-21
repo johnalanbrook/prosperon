@@ -70,7 +70,7 @@ void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, struct mCamera *camera);
-void capture_screen(int x, int y, int w, int h, char *path);
+void capture_screen(int x, int y, int w, int h, const char *path);
 
 void render_winsize();
 
@@ -86,7 +86,7 @@ HMM_Vec2 screen2world(HMM_Vec2 pos);
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d);
 
 void gif_rec_start(int w, int h, int cpf, int bitdepth);
-void gif_rec_end(char *path);
+void gif_rec_end(const char *path);
 
 struct uv_n {
   unsigned short u;

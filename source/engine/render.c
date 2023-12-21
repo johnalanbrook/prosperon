@@ -42,7 +42,7 @@ static struct {
   double timer;
   double spf;
   int rec;
-  char *buffer;
+  uint8_t *buffer;
 } gif;
 
 static struct {
@@ -95,7 +95,7 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
   });
 }
 
-void gif_rec_end(char *path)
+void gif_rec_end(const char *path)
 {
   if (!gif.rec) return;
   
@@ -109,7 +109,7 @@ void gif_rec_end(char *path)
   gif.rec = 0;
 }
 
-void capture_screen(int x, int y, int w, int h, char *path)
+void capture_screen(int x, int y, int w, int h, const char *path)
 {
   int n = 4;
   void *data = malloc(w*h*n);
@@ -297,7 +297,7 @@ void render_init() {
 
   model_init();
   sg_color c;
-  rgba2floats(&c, editorClearColor);
+  rgba2floats((float*)&c, editorClearColor);
   pass_action = (sg_pass_action){
     .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c}
   };

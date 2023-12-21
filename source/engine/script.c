@@ -193,7 +193,7 @@ time_t jso_file(const char *file)
 JSValue script_runfile(const char *file)
 {
   size_t len;
-  const char *script = slurp_text(file, &len);
+  char *script = slurp_text(file, &len);
   if (!script) return JS_UNDEFINED;
 
   JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAGS);

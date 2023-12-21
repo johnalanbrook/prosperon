@@ -39,7 +39,6 @@ HMM_Vec4 sample_sampler(sampler *sampler, float time)
   float td = sampler->times[next_time]-sampler->times[previous_time];
   float t = (time - sampler->times[previous_time])/td;
 
-  
   switch(sampler->type) {
     case LINEAR:
       return sample_linear(sampler,t,previous_time,next_time);
@@ -51,4 +50,5 @@ HMM_Vec4 sample_sampler(sampler *sampler, float time)
       return sample_cubicspline(sampler,t, previous_time, next_time);
       break;
   }
+  return sample_cubicspline(sampler,t, previous_time, next_time);  
 }

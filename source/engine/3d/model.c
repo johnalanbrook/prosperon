@@ -6,7 +6,6 @@
 #include "font.h"
 #include "window.h"
 #include "gameobject.h"
-#include "libgen.h"
 
 //#include "diffuse.sglsl.h"
 #include "unlit.sglsl.h"
@@ -144,7 +143,7 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
        cgltf_buffer_view *buf = img->buffer_view;
        mesh->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
      } else {
-       const char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
+       char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
        mesh->bind.fs.images[0] = texture_pullfromfile(imp)->id;
        free(imp);
      }
@@ -257,6 +256,9 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
 
     case cgltf_attribute_type_texcoord:
       mesh->bind.vertex_buffers[1] = texcoord_floats(vs, verts, comp);
+      break;
+    case cgltf_attribute_type_invalid:
+      YughWarn("Invalid type.");
       break;
     }
   }

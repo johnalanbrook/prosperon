@@ -79,12 +79,13 @@ int gif_nframes(const char *path)
 /* If an empty string or null is put for path, loads default texture */
 struct Texture *texture_pullfromfile(const char *path) {
   if (!path) return texture_notex();
+  if (shlen(texhash) == 0) sh_new_arena(texhash);
 
   int index = shgeti(texhash, path);
   if (index != -1)
     return texhash[index].value;
 
-  long rawlen;
+  size_t rawlen;
   unsigned char *raw = slurp_file(path, &rawlen);
   
   if (!raw) return texture_notex();
@@ -109,8 +110,7 @@ struct Texture *texture_pullfromfile(const char *path) {
     tex->height = qoi.height;
     n = qoi.channels;
   } else if (!strcmp(ext, ".gif")) {
-    int *delays;
-    data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &tex->frames, &n, 4);
+    data = stbi_load_gif_from_memory(raw, rawlen, NULL, &tex->width, &tex->height, &tex->frames, &n, 4);
     tex->height *= tex->frames;
   } else if (!strcmp(ext, ".svg")) {
   #ifndef NSVG
@@ -186,9 +186,6 @@ struct Texture *texture_pullfromfile(const char *path) {
       .num_mipmaps = mips,
       .data = sg_img_data
     });
-
-  if (shlen(texhash) == 0)
-    sh_new_arena(texhash);
 
   shput(texhash, path, tex);
 
@@ -282,9 +279,7 @@ struct Texture *texture_fromdata(void *raw, long size)
   return tex;
 }
 
-struct Texture *texture_loadfromfile(const char *path) {
-  struct Texture *new = texture_pullfromfile(path);
-}
+struct Texture *texture_loadfromfile(const char *path) { return texture_pullfromfile(path); }
 
 struct glrect tex_get_rect(struct Texture *tex) { return ST_UNIT; }
 

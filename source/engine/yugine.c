@@ -119,10 +119,10 @@ static void process_frame()
     if (stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {
       double dt = stm_sec(stm_diff(frame_t, updatelast));
       updatelast = frame_t;
-      prof_start(&prof_update);
+//      prof_start(&prof_update);
 
       call_updates(dt * timescale);
-      prof(&prof_update);
+//      prof_lap(&prof_update);
 
       if (sim_play == SIM_STEP)
         sim_pause();
@@ -131,18 +131,18 @@ static void process_frame()
     physlag += elapsed;
     while (physlag > physMS) {
       physlag -= physMS;
-      prof_start(&prof_physics);
+//      prof_start(&prof_physics);
       phys_step = 1;
       phys2d_update(physMS * timescale);
       call_physics(physMS * timescale);
       phys_step = 0;
-      prof(&prof_physics);
+//      prof_lap(&prof_physics);
     }
   }
 
-    prof_start(&prof_draw);
+//    prof_start(&prof_draw);
     window_render(&mainwin);
-    prof(&prof_draw);
+//    prof_lap(&prof_draw);
     
     gameobjects_cleanup();
 }
@@ -224,6 +224,8 @@ void c_event(const sapp_event *e)
       input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
       input_dropped_files(sapp_get_num_dropped_files());
       break;
+    default:
+      break;
   }
 
   if (editor_mode)
@@ -258,7 +260,7 @@ static sapp_desc start_desc = {
     .logger.func = sg_logging,
 };
 
-void app_name(char *name) { start_desc.window_title = strdup(name); }
+void app_name(const char *name) { start_desc.window_title = strdup(name); }
 
 int main(int argc, char **argv) {
 #ifndef NDEBUG
@@ -267,7 +269,7 @@ int main(int argc, char **argv) {
   if (logout) {
     time_t now = time(NULL);
     char fname[100];
-    snprintf(fname, 100, "yugine-%d.log", now);
+    snprintf(fname, 100, "yugine-%ld.log", now);
     log_setfile(fname);
   }
 #endif

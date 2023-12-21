@@ -523,6 +523,7 @@ function world_start() {
   };
   Primum.toString = function() { return "Primum"; };
   Primum.ur = undefined;
+  Primum.kill = function() { this.clear(); };
 }
 
 load("scripts/physics.js");

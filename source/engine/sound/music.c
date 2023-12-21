@@ -13,10 +13,10 @@
 
 static struct {
   char *key;
-  tsf **value;
+  tsf *value;
 } *sf_hash = NULL;
 
-void dsp_midi_fillbuf(struct dsp_midi_song *song, void *out, int n)
+void dsp_midi_fillbuf(struct dsp_midi_song *restrict song, void *restrict out, int n)
 {
   soundbyte *o = out;
   tml_message *midi = song->midi;
@@ -60,7 +60,7 @@ tsf *make_soundfont(const char *path)
   int idx = shgeti(sf_hash, path);
   if (idx != -1) return sf_hash[idx].value;
   
-  long rawlen;
+  size_t rawlen;
   void *raw = slurp_file(path, &rawlen);
   tsf *sf = tsf_load_memory(raw,rawlen);
   free(raw);
@@ -83,7 +83,7 @@ void dsp_midi_free(struct dsp_midi_song *ms)
 
 dsp_node *dsp_midi(const char *midi, tsf *sf)
 {
-  long rawlen;
+  size_t rawlen;
   void *raw = slurp_file(midi, &rawlen);
   struct dsp_midi_song *ms = malloc(sizeof(*ms));
   ms->time = 0.0;

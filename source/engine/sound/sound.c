@@ -9,6 +9,7 @@
 #include "time.h"
 #include <stdlib.h>
 #include "pthread.h"
+#include "debug.h"
 
 pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;
 
@@ -121,7 +122,7 @@ void filter_mod(pocketmod_context *mod, soundbyte *buffer, int frames)
 
 dsp_node *dsp_mod(const char *path)
 {
-  long modsize;
+  size_t modsize;
   void *data = slurp_file(path, &modsize);
   pocketmod_context *mod = malloc(sizeof(*mod));
   pocketmod_init(mod, data, modsize, SAMPLERATE);
@@ -171,7 +172,7 @@ struct wav *make_sound(const char *wav) {
   }
 
   struct wav *mwav = malloc(sizeof(*mwav));
-  long rawlen;
+  size_t rawlen;
   void *raw = slurp_file(wav, &rawlen);
   if (!raw) {
     YughError("Could not find file %s.", wav);
@@ -282,7 +283,7 @@ static long src_cb(struct sound *s, float **data)
   return needed;
 }
 
-struct dsp_node *dsp_source(char *path)
+struct dsp_node *dsp_source(const char *path)
 {
   struct sound *self = malloc(sizeof(*self));
   self->frame = 0;

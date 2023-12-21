@@ -50,8 +50,10 @@ ifdef NQOA
   CPPFLAGS += -DNQOA
 endif
 
+CPPFLAGS += -ffast-math
+
 ifeq ($(DBG),1)
-  CPPFLAGS += -g #-fsanitize=address
+  CPPFLAGS += -g -fsanitize=address
   INFO += _dbg
 else
   CPPFLAGS += -DNDEBUG
@@ -76,7 +78,7 @@ else
   endif
 endif
 
-CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER
+CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DTINYSPLINE_FLOAT_PRECISION -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t
 
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
 # default, fast and medium available in game at runtime; best available in editor
@@ -166,7 +168,7 @@ ifdef STEAM
 #  BIN += /steam
 endif
 
-WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types -Wno-unused-function -Wno-unused-const-variable -Wno-address-of-temporary
+WARNING_FLAGS = -Wno-incompatible-function-pointer-types
 
 NAME = primum$(EXT)
 SEM = 0.0.1

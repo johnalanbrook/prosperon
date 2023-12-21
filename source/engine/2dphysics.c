@@ -62,7 +62,7 @@ int p_compare(void *a, void *b)
 {
   if (a > b) return 1;
   if (a < b) return -1;
-  if (a == b) return 0;
+  return 0;
 }
 
 gameobject **clean_ids(gameobject **ids)
@@ -105,7 +105,7 @@ int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n)
 }
 
 /* Return all gameobjects within the given box */
-gameobject *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
+gameobject **phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
   cpTransform T = {0};
   T.a = 1;
@@ -128,7 +128,7 @@ gameobject *phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   return clean_ids(qb.ids);
 }
 
-gameobject *phys2d_query_shape(struct phys2d_shape *shape)
+gameobject **phys2d_query_shape(struct phys2d_shape *shape)
 {
   gameobject **ids = NULL;
   cpSpaceShapeQuery(space, shape->shape, querylist, ids);
@@ -184,7 +184,7 @@ void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->data = data;
   shape->t.scale = (HMM_Vec2){1.0,1.0};
   go_shape_apply(go->body, shape->shape, go);
-  cpShapeSetCollisionType(shape->shape, (int)go);
+  cpShapeSetCollisionType(shape->shape, (cpCollisionType)go);
   cpShapeSetUserData(shape->shape, shape);
 }
 
@@ -221,7 +221,7 @@ void phys2d_circledel(struct phys2d_circle *c) {
   phys2d_shape_del(&c->shape);
 }
 
-void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
+void phys2d_dbgdrawcpcirc(cpShape *c) {
   HMM_Vec2 pos = mat_t_pos(t_go2world(shape2go(c)), (HMM_Vec2)cpCircleShapeGetOffset(c));
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
@@ -232,7 +232,7 @@ void phys2d_dbgdrawcpcirc(cpCircleShape *c) {
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
-  phys2d_dbgdrawcpcirc((cpCircleShape *)circle->shape.shape);
+  phys2d_dbgdrawcpcirc(circle->shape.shape);
 }
 
 void phys2d_applycircle(struct phys2d_circle *circle) {
@@ -308,7 +308,7 @@ struct phys2d_poly *Make2DPoly(gameobject *go) {
   arrsetlen(new->points, 0);
   new->radius = 0.f;
 
-  new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(go->body, 0, new->points, new->radius));
+  new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(go->body, 0, (cpVect*)new->points, new->radius));
   new->shape.debugdraw = phys2d_dbgdrawpoly;
   new->shape.moi = phys2d_poly_moi;
   new->shape.apply = phys2d_applypoly;
@@ -317,7 +317,7 @@ struct phys2d_poly *Make2DPoly(gameobject *go) {
 }
 
 float phys2d_poly_moi(struct phys2d_poly *poly, float m) {
-  float moi = cpMomentForPoly(m, arrlen(poly->points), poly->points, cpvzero, poly->radius);
+  float moi = cpMomentForPoly(m, arrlen(poly->points), (cpVect*)poly->points, cpvzero, poly->radius);
   if (isnan(moi)) {
 //    YughError("Polygon MOI returned an error. Returning 0.");
     return 0;
@@ -335,16 +335,14 @@ void phys2d_polyaddvert(struct phys2d_poly *poly) {
   arrput(poly->points, v2zero);
 }
 
-void phys2d_poly_setverts(struct phys2d_poly *poly, cpVect *verts) {
+void phys2d_poly_setverts(struct phys2d_poly *poly, HMM_Vec2 *verts) {
   if (!verts) return;
   if (poly->points)
     arrfree(poly->points);
   arrsetlen(poly->points, arrlen(verts));
   
-  for (int i = 0; i < arrlen(verts); i++) {
-    poly->points[i].X = verts[i].x;
-    poly->points[i].Y = verts[i].y;
-  }
+  for (int i = 0; i < arrlen(verts); i++)
+    poly->points[i] = verts[i];
     
   phys2d_applypoly(poly);
 }
@@ -354,7 +352,7 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   assert(sizeof(poly->points[0]) == sizeof(cpVect));
   struct gameobject *go = poly->shape.go;
 //  cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
-  cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), poly->points, cpTransformIdentity);
+  cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), (cpVect*)poly->points, cpTransformIdentity);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
 }
@@ -634,14 +632,14 @@ static cpBool script_phys_cb_separate(cpArbiter *arb, cpSpace *space, void *data
 }
 
 void phys2d_rm_go_handlers(gameobject *go) {
-  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (int)go);
+  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (cpCollisionType)go);
   handler->userData = NULL;
   handler->beginFunc = NULL;
   handler->separateFunc = NULL;
 }
 
 void phys2d_setup_handlers(gameobject *go) {
-  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (int)go);
+  cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (cpCollisionType)go);
   handler->userData = go;
   handler->beginFunc = script_phys_cb_begin;
   handler->separateFunc = script_phys_cb_separate;

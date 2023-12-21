@@ -13,7 +13,7 @@ void print_stacktrace();
 void yugine_init();
 
 const char *engine_info();
-void app_name(char *name);
+void app_name(const char *name);
 
 int frame_fps();
 double get_timescale();

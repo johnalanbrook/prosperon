@@ -118,7 +118,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
 
-  unsigned char *ttf_buffer = slurp_text(fontfile, NULL);
+  unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_packedchar glyphs[95];
@@ -251,7 +251,7 @@ void text_settype(struct sFont *mfont) {
   font = mfont;
 }
 
-unsigned char *esc_color(unsigned char *c, struct rgba *color, struct rgba defc)
+const char *esc_color(const char *c, struct rgba *color, struct rgba defc)
 {
   struct rgba d;
   if (!color) color = &d;
@@ -278,13 +278,13 @@ unsigned char *esc_color(unsigned char *c, struct rgba *color, struct rgba defc)
   return c;
 }
 
-struct boundingbox text_bb(const unsigned char *text, float scale, float lw, float tracking)
+struct boundingbox text_bb(const char *text, float scale, float lw, float tracking)
 {
   struct rgba dummy;
   HMM_Vec2 cursor = {0,0};
-  const unsigned char *c = text;
-  const unsigned char *line, *wordstart, *drawstart;
-  line = drawstart = (unsigned char *)text;
+  const char *c = text;
+  const char *line, *wordstart, *drawstart;
+  line = drawstart = text;
 
   while (*line != '\0') {
     if (isblank(*line)) {
@@ -332,13 +332,13 @@ void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
 
 
 /* pos given in screen coordinates */
-int renderText(const unsigned char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
+int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   int len = strlen(text);
 
   HMM_Vec2 cursor = pos;
 
-  const unsigned char *line, *wordstart, *drawstart;
-  line = drawstart = (unsigned char *)text;
+  const char *line, *wordstart, *drawstart;
+  line = drawstart = text;
 
   struct rgba usecolor = color;
   check_caret(caret, line-drawstart, cursor, scale, usecolor);

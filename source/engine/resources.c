@@ -72,11 +72,13 @@ char *get_filename_from_path(char *path, int extension) {
   return filename;
 }
 
-char *get_directory_from_path(char *path) {
+char *dirname(const char *path)
+{
   const char *dirpos = strrchr(path, '/');
-  char *directory = (char *)malloc(sizeof(char) * (dirpos - path + 1));
-  strncpy(directory, path, dirpos - path);
-  return directory;
+  if (!dirpos) return ".";
+  char *dir = malloc(dirpos-path+1);
+  strncpy(dir,path,dirpos-path);
+  return dir;
 }
 
 FILE *res_open(char *path, const char *tag) {
@@ -135,7 +137,7 @@ static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
   return 0;
 }
 
-char **ls(char *path)
+char **ls(const char *path)
 {
   if (ls_paths) {
     for (int i = 0; i < arrlen(ls_paths); i++)
@@ -189,13 +191,13 @@ void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)
     return data;
 }
 
-int fexists(char *path)
+int fexists(const char *path)
 {
   return !access(path,R_OK);
   
   int len = strlen(path);
   if (cdb_find(&game_cdb, path,len)) return 1;
-  else if (cdb_find(&core_cdb, path, len)) return 1;
+  else if (cdb_find(&corecdb, path, len)) return 1;
   else if (!access(path, R_OK)) return 1;
 
   return 0;
@@ -247,7 +249,7 @@ char *slurp_text(const char *filename, size_t *size)
   return retstr;
 }
 
-int cp(char *p1, char *p2)
+int cp(const char *p1, const char *p2)
 {
   size_t len;
   void *data = slurp_file(p1, &len);
@@ -275,7 +277,7 @@ void rek_mkdir(char *path) {
         printf("error while trying to create '%s'\n%m\n", path); 
 }
 
-FILE *fopen_mkdir(char *path, char *mode) {
+FILE *fopen_mkdir(const char *path, const char *mode) {
     char *sep = strrchr(path, '/');
     if(sep) { 
         char *path0 = strdup(path);

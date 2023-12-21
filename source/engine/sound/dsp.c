@@ -24,7 +24,7 @@ void iir_free(struct dsp_iir *iir)
   free(iir);
 }
 
-void interleave(soundbyte *a, soundbyte *b, soundbyte *stereo, int frames)
+void interleave(soundbyte *a, soundbyte *b, soundbyte *restrict stereo, int frames)
 {
   for (int i = 0; i < frames; i++) {
     stereo[i*2] = a[i];
@@ -32,7 +32,7 @@ void interleave(soundbyte *a, soundbyte *b, soundbyte *stereo, int frames)
   }
 }
 
-void deinterleave(soundbyte *stereo, soundbyte *out, int frames, int channels, int chout)
+void deinterleave(soundbyte *restrict stereo, soundbyte *restrict out, int frames, int channels, int chout)
 {
   chout--;
   for (int i = 0; i < frames; i++)
@@ -44,7 +44,7 @@ void mono_to_stero(soundbyte *a, soundbyte *stereo, int frames)
   interleave(a,a,stereo, frames);
 }
 
-void mono_expand(soundbyte *buffer, int to, int frames)
+void mono_expand(soundbyte *restrict buffer, int to, int frames)
 {
   soundbyte hold[frames];
   memcpy(hold, buffer, sizeof(soundbyte)*frames);
@@ -86,7 +86,7 @@ soundbyte *dsp_node_out(dsp_node *node)
   return node->cache;
 }
 
-void filter_am_mod(dsp_node *mod, soundbyte *buffer, int frames)
+void filter_am_mod(dsp_node *restrict mod, soundbyte *restrict buffer, int frames)
 {
   soundbyte *m = dsp_node_out(mod);
   for (int i = 0; i < frames*CHANNELS; i++) buffer[i] *= m[i];
@@ -98,7 +98,7 @@ dsp_node *dsp_am_mod(dsp_node *mod)
 }
 
 /* Add b into a */
-void sum_soundbytes(soundbyte *a, soundbyte *b, int samples)
+void sum_soundbytes(soundbyte *restrict a, soundbyte *restrict b, int samples)
 {
   for (int i = 0; i < samples; i++) a[i] += b[i];
 }
@@ -107,7 +107,7 @@ void norm_soundbytes(soundbyte *a, float lvl, int samples)
 {
   float tar = lvl;
   float max = 0 ;
-  for (int i = 0; i < samples; i++) max = (fabsf(a[i] > max) ? fabsf(a[i]) : max);
+  for (int i = 0; i < samples; i++) max = fabsf(a[i]) > max ? fabsf(a[i]) : max;
   float mult = max/tar;
   scale_soundbytes(a, mult, samples);
 }
@@ -118,7 +118,7 @@ void scale_soundbytes(soundbyte *a, float scale, int samples)
   for (int i = 0; i < samples; i++) a[i] *= scale;
 }
 
-void zero_soundbytes(soundbyte *a, int samples) { memset(a, 0, sizeof(soundbyte)*samples); }
+void zero_soundbytes(soundbyte *restrict a, int samples) { memset(a, 0, sizeof(soundbyte)*samples); }
 
 void set_soundbytes(soundbyte *a, soundbyte *b, int samples)
 {
@@ -152,9 +152,12 @@ void node_free(dsp_node *node)
   if (node == masterbus) return; /* Simple check to not delete the masterbus */
   pthread_mutex_lock(&soundrun);
   unplug_node(node);
-  if (node->data)
-    if (node->data_free) node->data_free(node->data);
-    else free(node->data);
+  if (node->data) {
+    if (node->data_free)
+      node->data_free(node->data);
+    else
+      free(node->data);
+  }
   
   free(node);
   pthread_mutex_unlock(&soundrun);
@@ -229,9 +232,9 @@ dsp_node *dsp_phasor(float amp, float freq, float (*filter)(float))
   return make_node(p, filter_phasor, NULL);
 }
 
-void filter_rectify(void *data, soundbyte *out, int n)
+void filter_rectify(void *restrict data, soundbyte *restrict out, int n)
 {
-  for (int i = 0; i < n; i++) out[i] = abs(out[i]);
+  for (int i = 0; i < n; i++) out[i] = fabsf(out[i]);
 }
 
 dsp_node *dsp_rectify()
@@ -246,7 +249,9 @@ soundbyte sample_whitenoise()
 
 void gen_whitenoise(void *data, soundbyte *out, int n)
 {
-  for (int i = 0; i < n; i++) out[i] = sample_whitenoise();
+  for (int i = 0; i < n; i++)
+    out[i] = sample_whitenoise();
+    
   mono_expand(out, CHANNELS, n);
 }
 
@@ -295,7 +300,7 @@ dsp_node *dsp_pinknoise()
   return make_node(pink, gen_pinknoise, iir_free);
 }
 
-void filter_rednoise(soundbyte *last, soundbyte *out, int frames)
+void filter_rednoise(soundbyte *restrict last, soundbyte *out, int frames)
 {
   gen_whitenoise(NULL, out, frames);
   for (int i = 0; i < frames*CHANNELS; i++) {
@@ -312,7 +317,7 @@ dsp_node *dsp_rednoise()
   return make_node(last,filter_rednoise, NULL);
 }
 
-void filter_pitchshift(float *octaves, soundbyte *buffer, int frames)
+void filter_pitchshift(float *restrict octaves, soundbyte *buffer, int frames)
 {
   soundbyte ch1[frames];
   for (int i = 0; i < frames; i++)
@@ -336,6 +341,7 @@ struct timescale
 
 static long *src_cb(struct timescale *ts, float **data)
 {
+  return NULL;
 }
 
 void filter_timescale(struct timescale *ts, soundbyte *buffer, int frames)
@@ -419,7 +425,7 @@ dsp_node *dsp_delay(double sec, double decay)
   return make_node(d, filter_delay, delay_free);
 }
 
-void filter_fwd_delay(delay *d, soundbyte *buf, int frames)
+void filter_fwd_delay(delay *restrict d, soundbyte *restrict buf, int frames)
 {
   for (int i = 0; i < frames*CHANNELS; i++) {
     ringpush(d->ring, buf[i]);  
@@ -505,7 +511,7 @@ dsp_node *dsp_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigne
     return make_node(adsr, dsp_adsr_fillbuf, NULL);
 }
 
-void filter_noise_gate(float *floor, soundbyte *out, int frames)
+void filter_noise_gate(float *restrict floor, soundbyte *restrict out, int frames)
 {
   for (int i = 0; i < frames*CHANNELS; i++) out[i] = fabsf(out[i]) < *floor ? 0.0 : out[i];
 }
@@ -517,7 +523,7 @@ dsp_node *dsp_noise_gate(float floor)
   return make_node(v, filter_noise_gate, NULL);
 }
 
-void filter_limiter(float *ceil, soundbyte *out, int n)
+void filter_limiter(float *restrict ceil, soundbyte *restrict out, int n)
 {
   for (int i = 0; i < n*CHANNELS; i++) out[i] = fabsf(out[i]) > *ceil ?  *ceil : out[i];
 }
@@ -598,7 +604,7 @@ void pan_frames(soundbyte *out, float deg, int frames)
   }
 }
 
-void dsp_mono(void *p, soundbyte *out, int n)
+void dsp_mono(void *p, soundbyte *restrict out, int n)
 {
     for (int i = 0; i < n; i++) {
         soundbyte val = (out[i*CHANNELS] + out[i*CHANNELS+1]) / 2;
@@ -614,7 +620,7 @@ struct bitcrush {
 };
 
 #define ROUND(f) ((float)((f>0.0)?floor(f+0.5):ceil(f-0.5)))
-void filter_bitcrush(struct bitcrush *b, soundbyte *out, int frames)
+void filter_bitcrush(struct bitcrush *restrict b, soundbyte *restrict out, int frames)
 {
   int max = pow(2,b->depth) - 1;
   int step = SAMPLERATE/b->sr;

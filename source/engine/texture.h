@@ -44,8 +44,8 @@ struct TextureOptions {
 /* Represents an actual texture on the GPU */
 struct Texture {
     sg_image id; /* ID reference for the GPU memory location of the texture */
-    uint16_t width;
-    uint16_t height;
+    int width;
+    int height;
     unsigned char *data;
     struct TextureOptions opts;
   int frames;  

@@ -138,7 +138,7 @@ HMM_Vec4 spline_CT(HMM_Mat4 *C, float t)
   return HMM_MulM4V4(*C, T);
 }
 
-HMM_Mat4 make_C(HMM_Vec2 *p, HMM_Mat4 *B)
+HMM_Mat4 make_C(const HMM_Vec2 *p, const HMM_Mat4 *B)
 {
   HMM_Mat4 G;
   G.Columns[0].xy = p[0];
@@ -179,6 +179,8 @@ HMM_Vec2 *spline2d_min_seg(float u0, float u1, float min_seg, HMM_Mat4 *C, HMM_V
   }
   else
     arrput(ret, b);
+
+  return ret;
 }
 
 HMM_Vec2 *catmull_rom_min_seg(HMM_Vec2 *a, HMM_Vec2 *b, HMM_Vec2 *c, HMM_Vec2 *d, float min_seg)
@@ -216,7 +218,7 @@ HMM_Vec2 *spline2d_min_angle_2(float u0, float u1, float max_angle, HMM_Mat4 *C,
   return arr;
 }
 
-HMM_Vec2 *spline_min_angle(HMM_Vec2 *p, HMM_Mat4 *B, float min_angle, HMM_Vec2 *arr)
+HMM_Vec2 *spline_min_angle(HMM_Vec2 *p, const HMM_Mat4 *B, float min_angle, HMM_Vec2 *arr)
 {
   HMM_Mat4 C = make_C(p, B);
   arr = spline2d_min_angle_2(0,1,min_angle, &C, arr);
@@ -250,7 +252,7 @@ HMM_Vec2 *bezier_cb_ma_v2(HMM_Vec2 *cp, float ma)
   return ret;
 }
 
-HMM_Vec2 catmull_rom_query(HMM_Vec2 *cp, float d, HMM_Mat4 *G)
+HMM_Vec2 catmull_rom_query(HMM_Vec2 *cp, float d, const HMM_Mat4 *G)
 {
   if (arrlen(cp) < 4 || d < 0 || d > 1) return HMM_V2(0,0);
 
@@ -315,5 +317,5 @@ HMM_Vec2 catmull_rom_wig(HMM_Vec2 *cp, float d) { return catmull_rom_query(cp,d,
 
 HMM_Vec2 catmull_rom_closest(HMM_Vec2 *cp, HMM_Vec2 p)
 {
-
+  return p;
 }
