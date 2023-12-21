@@ -74,9 +74,9 @@ void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertySt
 JSValue jstzone()
 {
   time_t t = time(NULL);
-  struct tm lt = {0};
-  localtime_r(&t, &lt);
-  return num2js(lt.tm_gmtoff);
+  time_t local_t = mktime(localtime(&t));
+  double diff = difftime(t, local_t);
+  return num2js(diff/3600);
 }
 
 int js2bool(JSValue v) { return JS_ToBool(js, v); }
@@ -86,9 +86,7 @@ JSValue bool2js(int b) { return JS_NewBool(js,b); }
 JSValue jsdst()
 {
   time_t t = time(NULL);
-  struct tm lt = {};
-  localtime_r(&t,&lt);
-  return bool2js(lt.tm_isdst);
+  return bool2js(localtime(&t)->tm_isdst);
 }
 
 JSValue jscurtime()

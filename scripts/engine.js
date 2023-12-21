@@ -324,6 +324,12 @@ Spline.bezier_loop = function(cp)
   return cp;
 }
 
+Spline.bezier_node_count = function(cp)
+{
+  if (cp.length === 4) return 2;
+  return 2 + (cp.length-4)/3;
+}
+
 Spline.is_bezier = function(t) { return t === Spline.type.bezier; }
 Spline.is_catmull = function(t) { return t === Spline.type.catmull; }
 

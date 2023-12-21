@@ -710,18 +710,20 @@ component.edge2d = Object.copy(collider2d, {
 
     if (Spline.is_bezier(this.type)) {
       idx = cmd(59, pos, Spline.bezier_nodes(this.cpoints),400);
-      idx *= 3;
-      if (idx < 0) return;
-      var adds;
-      
-      if (idx === this.cpoints.length)
-        adds = [this.cpoints.at(-1).add([100,0]), pos.add([-100,0]), pos.slice()];
-      else if (idx === 0)
-        adds = [pos.slice(), pos.add([100,0]), this.cpoints[0].add([-100,0])];
-      else
-        adds = [pos.add([-100,0]), pos.slice(), pos.add([100,0])];
 
-      this.cpoints.splice(idx+1, 0, ...adds);
+      if (idx < 0) return;
+      
+      if (idx === 0) {
+        this.cpoints.unshift(pos.slice(), pos.add([-100,0]), Vector.reflect_point(this.cpoints[1], this.cpoints[0]));
+	return;
+      }
+      if (idx === Spline.bezier_node_count(this.cpoints)) {
+        this.cpoints.push(Vector.reflect_point(this.cpoints.at(-2), this.cpoints.at(-1)), pos.add([-100,0]), pos.slice());
+	return;
+      }
+      idx = 2 + (idx-1)*3;
+      var adds = [pos.add([100,0]), pos.slice(), pos.add([-100,0])];
+      this.cpoints.splice(idx, 0, ...adds);
     }
   },
 
@@ -897,6 +899,10 @@ component.circle2d.impl = Object.mix({
 
   set offset(x) { cmd_circle2d(1,this.id,x); },
   get offset() { return cmd_circle2d(3,this.id); },
+
+  get pos() { return this.offset; },
+  set pos(x) { this.offset = x; },
+  
 }, collider2d.impl);;
 
 /* ASSETS */

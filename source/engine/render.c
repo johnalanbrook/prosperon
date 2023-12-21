@@ -504,7 +504,7 @@ void full_2d_pass(struct window *window)
              pos.x - zoom * window->rwidth / 2,
              pos.x + zoom * window->rwidth / 2,
              pos.y - zoom * window->rheight / 2,
-             pos.y + zoom * window->rheight / 2, -1000.f, 1000.f);
+             pos.y + zoom * window->rheight / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, window->rwidth, 0, window->rheight, -1.f, 1.f);
 

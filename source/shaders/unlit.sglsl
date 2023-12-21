@@ -7,11 +7,10 @@ out vec2 tex_coords;
 uniform vs_p {
 uniform mat4 vp;
 uniform mat4 model;
-uniform mat4 proj;
 };
 
 void main() {
-  gl_Position = proj * vp * vec4(vec3(model * vec4(a_pos,1.0)), 1.0);  
+  gl_Position = vp * vec4(vec3(model * vec4(a_pos,1.0)), 1.0);  
   tex_coords = a_tex_coords;
 }
 @end

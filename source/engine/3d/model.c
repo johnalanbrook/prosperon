@@ -365,21 +365,16 @@ struct model *MakeModel(const char *path)
 HMM_Vec3 eye = {0,0,100};
 
 void draw_model(struct model *model, HMM_Mat4 amodel) {
-  HMM_Mat4 proj = projection;//HMM_Perspective_RH_ZO(45, (float)mainwin.width / mainwin.height, 0.1, 10000);
+  HMM_Mat4 proj = projection;
   HMM_Vec3 center = {0.f, 0.f, 0.f};
-  HMM_Vec3 up = {0.f, 1.f, 0.f};
   HMM_Mat4 view = HMM_LookAt_RH(eye, center, vUP);
-
   HMM_Mat4 vp = HMM_MulM4(proj, view);
-  HMM_Mat4 mvp = HMM_MulM4(vp, amodel);
 
-  HMM_Vec3 lp = {1, 1, 1};
   HMM_Vec3 dir_dir = HMM_NormV3(HMM_SubV3(center, dirl_pos));
 
   vs_p_t vs_p;
-  memcpy(vs_p.vp, view.Elements, sizeof(float)*16);
+  memcpy(vs_p.vp, vp.Elements, sizeof(float)*16);
   memcpy(vs_p.model, amodel.Elements, sizeof(float)*16);
-  memcpy(vs_p.proj, proj.Elements, sizeof(float)*16);  
 
   sg_apply_pipeline(model_pipe);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vs_p));

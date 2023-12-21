@@ -458,7 +458,7 @@ var editor = {
       var p = x[1].namestr();
       GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
       Shape.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
-      Shape.arrow(x[1].screenpos(), x[1].screenpos().add(x[1].up().scale(15)), Color.red, 10);
+//      Shape.arrow(x[1].screenpos(), x[1].screenpos().add(x[1].up().scale(15)), Color.red, 10);
     });
 
     var mg = physics.pos_query(Mouse.worldpos,10);
@@ -614,6 +614,7 @@ editor.inputs.drop = function(str) {
     console.warn("NOT AN IMAGE");
     return;
   }
+  
   if (this.sel_comp?.comp === 'sprite') {
     this.sel_comp.path = str;
     return;
@@ -1195,6 +1196,24 @@ editor.inputs.g = function() {
     var o = editor.try_pick();
     if (!o) return;
     editor.selectlist = [o];
+  }
+  
+  if (editor.sel_comp) {
+    if ('pick' in editor.sel_comp) {
+      editor.grabselect = [editor.sel_comp.pick(Mouse.worldpos)];
+      return;
+    }
+
+    if ('pos' in editor.sel_comp) {
+      var comp = editor.sel_comp;
+      var o = {
+        pos: editor.sel_comp.pos,
+	move(d) { comp.pos = comp.pos.add(d); },
+	sync: comp.sync.bind(comp),
+      };
+      editor.grabselect = [o];
+      return;
+    }
   }
 
   if (editor.sel_comp && 'pick' in editor.sel_comp) {
