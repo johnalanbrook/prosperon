@@ -2,8 +2,7 @@
 #define FFI_H
 
 #include "quickjs/quickjs.h"
-#include <chipmunk/chipmunk.h>
-#include "2dphysics.h"
+#include "HandmadeMath.h"
 
 void ffi_load();
 

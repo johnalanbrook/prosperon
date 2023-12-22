@@ -596,3 +596,32 @@ sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
   free(fs);
   return ret;
 }
+
+
+struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {
+  struct boundingbox bb = {
+    .t = c.Y + wh.Y/2,
+    .b = c.Y - wh.Y/2,
+    .r = c.X + wh.X/2,
+    .l = c.X - wh.X/2
+  };
+
+  return bb;
+}
+
+float *rgba2floats(float *r, struct rgba c)
+{
+  r[0] = (float)c.r / RGBA_MAX;
+  r[1] = (float)c.g / RGBA_MAX;
+  r[2] = (float)c.b / RGBA_MAX;
+  r[3] = (float)c.a / RGBA_MAX;
+  return r;
+}
+
+sg_blend_state blend_trans = {
+  .enabled = true,
+  .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+  .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+  .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
+  .dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
+};

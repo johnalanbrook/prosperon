@@ -1,7 +1,6 @@
 #include "gameobject.h"
 
 #include "2dphysics.h"
-#include <chipmunk/chipmunk.h>
 #include <string.h>
 #include "debugdraw.h"
 #include "log.h"
@@ -177,6 +176,13 @@ gameobject *MakeGameobject() {
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
   struct phys2d_shape *s = cpShapeGetUserData(shape);
+  if (s) {
+    if (s->free)
+      s->free(s->data);
+    else
+      free(s->data);
+  }
+  
   cpSpaceRemoveShape(space, shape);
   cpShapeFree(shape);
 }

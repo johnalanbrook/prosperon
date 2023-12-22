@@ -2,8 +2,7 @@
 #define FONT_H
 
 #include "sokol/sokol_gfx.h"
-#include "texture.h"
-#include "2dphysics.h"
+#include "render.h"
 #include "HandmadeMath.h"
 
 struct shader;

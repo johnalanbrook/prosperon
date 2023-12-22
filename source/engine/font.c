@@ -1,7 +1,7 @@
 #include "font.h"
 
 #include "log.h"
-#include "render.h"
+
 #include <ctype.h>
 #include "log.h"
 #include <limits.h>
@@ -9,11 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <window.h>
-#include <chipmunk/chipmunk.h>
-#include "2dphysics.h"
 #include "resources.h"
 #include "debugdraw.h"
 #include "text.sglsl.h"
+#include "render.h"
 
 #include "stb_image_write.h"
 #include "stb_rect_pack.h"

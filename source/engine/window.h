@@ -1,11 +1,6 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-
-#include "render.h"
-#include <stdbool.h>
-#include <stdint.h>
-
 struct window {
   int id;
   int width;
@@ -13,18 +8,16 @@ struct window {
   double dpi;
   int rwidth;
   int rheight;
-  bool render;
-  bool mouseFocus;
-  bool keyboardFocus;
-  bool fullscreen;
-  bool minimized;
-  bool iconified;
-  bool focus;
-  bool shown;
+  int render;
+  int mouseFocus;
+  int keyboardFocus;
+  int fullscreen;
+  int minimized;
+  int iconified;
+  int focus;
+  int shown;
 };
-
 struct Texture;
-
 extern struct window mainwin;
 
 void window_resize(int width, int height);

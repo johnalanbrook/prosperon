@@ -71,7 +71,6 @@ void script_startup() {
 
 void script_stop()
 {
-  timers_free();
   script_evalf("Event.notify('quit');");
   send_signal("quit",0,NULL);
   

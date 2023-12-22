@@ -1,14 +1,12 @@
 #include "input.h"
 
-#include "jsffi.h"
+#include "sokol/sokol_app.h"
 #include "font.h"
 #include "log.h"
 #include "script.h"
 #include "stb_ds.h"
 #include "time.h"
-#include <stdio.h>
 #include <ctype.h>
-#include <wchar.h>
 #include "resources.h"
 #include "jsffi.h"
 
@@ -193,7 +191,8 @@ void input_dropped_files(int n)
   argv[0] = jstr("emacs");
   argv[1] = jstr("drop");
   argv[2] = jstr("pressed");
-  argv[3] = str2js(sapp_get_dropped_file_path(0));
+  char *path = rebase_path(sapp_get_dropped_file_path(0));
+  argv[3] = str2js(path);
   script_callee(pawn_callee, 4, argv);
   JS_FreeValue(js,argv[3]);
 }

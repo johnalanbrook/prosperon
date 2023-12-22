@@ -1,7 +1,6 @@
 #ifndef DEBUGDRAW_H
 #define DEBUGDRAW_H
 
-#include <chipmunk/chipmunk.h>
 #include "HandmadeMath.h"
 struct rgba;
 

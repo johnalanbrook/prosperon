@@ -11,9 +11,6 @@ extern float phys2d_gravity;
 extern int physOn;
 extern cpSpace *space;
 
-extern struct rgba color_white;
-extern struct rgba color_black;
-
 extern struct rgba disabled_color;
 extern struct rgba dynamic_color;
 extern struct rgba kinematic_color;
@@ -28,6 +25,7 @@ struct phys2d_shape {
   void (*debugdraw)(void *data);
   float (*moi)(void *data, float mass);
   void (*apply)(void *data);
+  void (*free)(void *data);
 };
 
 /* Circles are the fastest colldier type */
@@ -37,26 +35,11 @@ struct phys2d_circle {
   struct phys2d_shape shape;
 };
 
-/* A single segment */
-struct phys2d_segment {
-  HMM_Vec2 a;
-  HMM_Vec2 b;
-  float thickness;
-  struct phys2d_shape shape;
-};
-
 /* A convex polygon; defined as the convex hull around the given set of points */
 struct phys2d_poly {
   HMM_Vec2 *points;
   transform2d t;
   float radius;
-  struct phys2d_shape shape;
-};
-
-/* A box shape; a type of a polygon collider */
-struct phys2d_box {
-  transform2d t; /* Scale here is used as width/height */
-  float r; /* radius */
   struct phys2d_shape shape;
 };
 
@@ -75,13 +58,8 @@ void phys2d_applycircle(struct phys2d_circle *circle);
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle);
 float phys2d_circle_moi(struct phys2d_circle *c, float m);
 
-struct phys2d_box *Make2DBox(gameobject *go);
-void phys2d_boxdel(struct phys2d_box *box);
-void phys2d_applybox(struct phys2d_box *box);
-void phys2d_dbgdrawbox(struct phys2d_box *box);
-float phys2d_box_moi(struct phys2d_box *box, float m);
-
 struct phys2d_poly *Make2DPoly(gameobject *go);
+void phys2d_poly_free(struct phys2d_poly *poly);
 void phys2d_polydel(struct phys2d_poly *poly);
 void phys2d_applypoly(struct phys2d_poly *poly);
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly);
@@ -90,6 +68,7 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, HMM_Vec2 *verts);
 float phys2d_poly_moi(struct phys2d_poly *poly, float m);
 
 struct phys2d_edge *Make2DEdge(gameobject *go);
+void phys2d_edge_free(struct phys2d_edge *edge);
 void phys2d_edgedel(struct phys2d_edge *edge);
 void phys2d_applyedge(struct phys2d_edge *edge);
 void phys2d_dbgdrawedge(struct phys2d_edge *edge);
@@ -109,7 +88,6 @@ void phys2d_init();
 void phys2d_update(float deltaT);
 cpShape *phys2d_query_pos(cpVect pos);
 gameobject **phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh);
-
 
 struct shape_cb {
   struct phys2d_shape *shape;

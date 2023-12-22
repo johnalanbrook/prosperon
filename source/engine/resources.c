@@ -25,8 +25,8 @@
 
 #include "core.cdb.h"
 
-char *DATA_PATH = NULL;
-char *PREF_PATH = NULL;
+char *DATA_PATH = NULL; /* The top level asset path, where the executable resides */
+char *PREF_PATH = NULL; /* Path to where the program can write data to, usually for save files etc. */
 
 char **prefabs;
 
@@ -51,6 +51,7 @@ void resources_init() {
   int fd = open("test.cdb", O_RDONLY);
   cdb_init(&game_cdb, fd);
   cdb_initf(&corecdb, core_cdb, core_cdb_len);
+  printf("%s\n", DATA_PATH);
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -79,6 +80,16 @@ char *dirname(const char *path)
   char *dir = malloc(dirpos-path+1);
   strncpy(dir,path,dirpos-path);
   return dir;
+}
+
+char *rebase_path(const char *path)
+{
+  int off = 0;
+  while (path[off] == DATA_PATH[off]) {
+    off++;
+    if (!path[off] || !DATA_PATH[off]) break;
+  }
+  return path+off;
 }
 
 FILE *res_open(char *path, const char *tag) {

@@ -1,7 +1,6 @@
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 
-#include <chipmunk/chipmunk.h>
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
 #include "transform.h"

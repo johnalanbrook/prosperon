@@ -3,6 +3,7 @@
 #include "script.h"
 
 #include "anim.h"
+#include "timer.h"
 #include "debug.h"
 #include "debugdraw.h"
 #include "font.h"
@@ -1649,47 +1650,6 @@ JSValue duk_make_sprite(JSContext *js, JSValueConst this, int argc, JSValueConst
   return sprite;
 }
 
-JSValue duk_make_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  gameobject *go = js2gameobject(argv[0]);
-  HMM_Vec2 size = js2vec2(argv[1]);
-
-  struct phys2d_box *box = Make2DBox(go);
-  box->t.scale = js2vec2(argv[1]);
-  box->t.pos = js2vec2(argv[2]);
-
-  phys2d_applybox(box);
-
-  JSValue boxval = JS_NewObject(js);
-  js_setprop_str(boxval, "id", ptr2js(box));
-  js_setprop_str(boxval, "shape", ptr2js(&box->shape));
-  return boxval;
-}
-
-JSValue duk_cmd_box2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
-  struct phys2d_box *box = js2ptr(argv[1]);
-  HMM_Vec2 arg;
-
-  if (!box) return JS_UNDEFINED;
-
-  switch (cmd) {
-  case 0:
-    box->t.scale = js2vec2(argv[2]);
-    break;
-
-  case 1:
-    box->t.pos = js2vec2(argv[2]);
-    break;
-
-  case 2:
-    box->t.angle = js2number(argv[2]);
-    break;
-  }
-
-  phys2d_applybox(box);
-  return JS_UNDEFINED;
-}
-
 JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   gameobject *go = js2gameobject(argv[0]);
 
@@ -1878,8 +1838,6 @@ void ffi_load() {
   DUK_FUNC(make_sprite, 1)
   DUK_FUNC(spline_cmd, 6)
 
-  DUK_FUNC(make_box2d, 3)
-  DUK_FUNC(cmd_box2d, 6)
   DUK_FUNC(make_circle2d, 1)
   DUK_FUNC(cmd_circle2d, 6)
   DUK_FUNC(make_poly2d, 1)

@@ -1,12 +1,9 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include "sokol/sokol_app.h"
-
 #include "script.h"
-#include "window.h"
-#include <chipmunk/chipmunk.h>
 #include <stdint.h>
+#include "HandmadeMath.h"
 
 extern HMM_Vec2 mousewheel;
 extern HMM_Vec2 mouse_pos;

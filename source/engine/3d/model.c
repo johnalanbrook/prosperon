@@ -4,7 +4,6 @@
 #include "resources.h"
 #include "stb_ds.h"
 #include "font.h"
-#include "window.h"
 #include "gameobject.h"
 
 //#include "diffuse.sglsl.h"

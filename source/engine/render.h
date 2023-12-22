@@ -17,15 +17,10 @@
 
 #define RGBA_MAX 255
 
-struct mCamera;
-struct window;
+#include "window.h"
 
-extern struct shader *spriteShader;
-extern struct shader *animSpriteShader;
-
-extern sg_image ddimg;
-
-extern struct sprite *tsprite;
+extern struct rgba color_white;
+extern struct rgba color_black;
 
 extern int renderMode;
 
@@ -34,25 +29,16 @@ extern HMM_Vec3 dirl_pos;
 extern HMM_Mat4 projection;
 extern HMM_Mat4 hudproj;
 
+struct camera3d {
+  
+};
+
+typedef struct camera3d camera3d;
+
 struct draw_p {
   float x;
   float y;
 };
-
-extern float gridScale;
-extern float smallGridUnit;
-extern float bigGridUnit;
-extern float gridSmallThickness;
-extern float gridBigThickness;
-extern struct rgba gridBigColor;
-extern struct rgba gridSmallColor;
-extern float gridOpacity;
-extern float editorFOV;
-extern float shadowLookahead;
-extern char objectName[];
-extern int debugColorPickBO;
-
-extern struct gameobject *selectedobject;
 
 #include <chipmunk/chipmunk.h>
 
@@ -69,7 +55,7 @@ void openglRender(struct window *window);
 void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);
-void openglRender3d(struct window *window, struct mCamera *camera);
+void openglRender3d(struct window *window, camera3d *camera);
 void capture_screen(int x, int y, int w, int h, const char *path);
 
 void render_winsize();
@@ -116,32 +102,15 @@ struct rect {
   float h, w, x, y;
 };
 
-static struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {
-  struct boundingbox bb = {
-    .t = c.Y + wh.Y/2,
-    .b = c.Y - wh.Y/2,
-    .r = c.X + wh.X/2,
-    .l = c.X - wh.X/2
-  };
-
-  return bb;
-}
-
-static float *rgba2floats(float *r, struct rgba c)
-{
-  r[0] = (float)c.r / RGBA_MAX;
-  r[1] = (float)c.g / RGBA_MAX;
-  r[2] = (float)c.b / RGBA_MAX;
-  r[3] = (float)c.a / RGBA_MAX;
-  return r;
-}
-
-static sg_blend_state blend_trans = {
-  .enabled = true,
-  .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-  .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-  .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
-  .dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
+/* Normalized S,T coordinates for rendering */
+struct glrect {
+    float s0;
+    float s1;
+    float t0;
+    float t1;
 };
 
+struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh);
+float *rgba2floats(float *r, struct rgba c);
+extern sg_blend_state blend_trans;
 #endif

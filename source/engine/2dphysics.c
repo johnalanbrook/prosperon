@@ -78,12 +78,14 @@ gameobject **clean_ids(gameobject **ids)
   return ids;
 }
 
-void querylist(cpShape *shape, cpContactPointSet *points, gameobject **ids) { arrput(ids,shape2go(shape)); }
-
 typedef struct querybox {
   cpBB bb;
   gameobject **ids;
 } querybox;
+
+void querylist(cpShape *shape, cpContactPointSet *points, querybox *qb) {
+  arrput(qb->ids, shape2go(shape));
+}
 
 void querylistbodies(cpBody *body, querybox *qb) {
   if (cpBBContainsVect(qb->bb, cpBodyGetPosition(body)))
@@ -120,7 +122,7 @@ gameobject **phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
   qb.bb = bbox;
   qb.ids = NULL;
 
-  cpSpaceShapeQuery(space, box, querylist, qb.ids);
+  cpSpaceShapeQuery(space, box, querylist, &qb);
   cpSpaceEachBody(space, querylistbodies, &qb);
 
   cpShapeFree(box);
@@ -205,6 +207,7 @@ struct phys2d_circle *Make2DCircle(gameobject *go) {
   new->shape.debugdraw = phys2d_dbgdrawcircle;
   new->shape.moi = phys2d_circle_moi;
   new->shape.apply = phys2d_applycircle;
+  new->shape.free = NULL;
   init_phys2dshape(&new->shape, go, new);
   phys2d_applycircle(new);
 
@@ -244,61 +247,6 @@ void phys2d_applycircle(struct phys2d_circle *circle) {
   cpCircleShapeSetOffset(circle->shape.shape, HMM_MulV2(go->scale.XY, circle->offset).cp);
 }
 
-/************* BOX2D ************/
-
-struct phys2d_box *Make2DBox(gameobject *go) {
-  struct phys2d_box *new = malloc(sizeof(struct phys2d_box));
-  new->t = (transform2d){
-    .pos = {0,0},
-    .angle = 0,
-    .scale = {0,0}
-  };
-  new->r = 0.f;
-  new->shape.go = go;
-  new->shape.apply = phys2d_applybox;
-  phys2d_applybox(new);
-  new->shape.debugdraw = phys2d_dbgdrawbox;
-  new->shape.moi = phys2d_box_moi;
-
-  return new;
-}
-
-float phys2d_box_moi(struct phys2d_box *box, float m) {
-  return cpMomentForBox(m, box->t.scale.x, box->t.scale.y);
-}
-
-void phys2d_boxdel(struct phys2d_box *box) {
-  phys2d_shape_del(&box->shape);
-}
-
-void phys2d_applybox(struct phys2d_box *box) {
-  phys2d_boxdel(box);
-  struct gameobject *go = box->shape.go;
-  cpTransform T = m3_to_cpt(transform2d2mat(box->t));
-  cpVect verts[4] = {{-0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}, {-0.5, 0.5}};
-  box->shape.shape = cpSpaceAddShape(space, cpPolyShapeNew(go->body, 4, verts, T, box->r));
-  init_phys2dshape(&box->shape, box->shape.go, box);
-}
-
-void phys2d_dbgdrawbox(struct phys2d_box *box) {
-  int n = cpPolyShapeGetCount(box->shape.shape);
-  HMM_Vec2 points[n+1];
-  struct gameobject *go = shape2go(box->shape.shape);
-
-  for (int i = 0; i < n; i++) {
-    HMM_Vec2 p;
-    p.cp = cpPolyShapeGetVert(box->shape.shape, i);
-    points[i] = go2world(go, p);
-  }
-  points[n] = points[0];
-
-  struct rgba c = shape_color(box->shape.shape);
-  struct rgba cl = c;
-  cl.a = col_alpha;
-  float seglen = cpShapeGetSensor(box->shape.shape) ? sensor_seg : 0;  
-  draw_line(points, n, cl,seglen, 0);
-  draw_poly(points, n, c);
-}
 /************** POLYGON ************/
 
 struct phys2d_poly *Make2DPoly(gameobject *go) {
@@ -311,9 +259,16 @@ struct phys2d_poly *Make2DPoly(gameobject *go) {
   new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(go->body, 0, (cpVect*)new->points, new->radius));
   new->shape.debugdraw = phys2d_dbgdrawpoly;
   new->shape.moi = phys2d_poly_moi;
+  new->shape.free = phys2d_poly_free;
   new->shape.apply = phys2d_applypoly;
   init_phys2dshape(&new->shape, go, new);
   return new;
+}
+
+void phys2d_poly_free(struct phys2d_poly *poly)
+{
+  arrfree(poly->points);
+  free(poly);
 }
 
 float phys2d_poly_moi(struct phys2d_poly *poly, float m) {
@@ -339,6 +294,7 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, HMM_Vec2 *verts) {
   if (!verts) return;
   if (poly->points)
     arrfree(poly->points);
+    
   arrsetlen(poly->points, arrlen(verts));
   
   for (int i = 0; i < arrlen(verts); i++)
@@ -390,10 +346,20 @@ struct phys2d_edge *Make2DEdge(gameobject *go) {
   new->shape.moi = phys2d_edge_moi;
   new->shape.shape = NULL;
   new->shape.apply = NULL;
+  new->shape.free = phys2d_edge_free;
   new->draws = 0;
   phys2d_applyedge(new);
 
   return new;
+}
+
+void phys2d_edge_free(struct phys2d_edge *edge)
+{
+  for (int i = 0; i < arrlen(edge->shapes); i++)
+    cpShapeSetUserData(edge->shapes[i], NULL);
+  arrfree(edge->points);
+  arrfree(edge->shapes);
+  free(edge);
 }
 
 float phys2d_edge_moi(struct phys2d_edge *edge, float m) {
