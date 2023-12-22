@@ -3,6 +3,7 @@
 #include "log.h"
 #include "render.h"
 #include <ctype.h>
+#include "log.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -282,9 +283,8 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
 {
   struct rgba dummy;
   HMM_Vec2 cursor = {0,0};
-  const char *c = text;
-  const char *line, *wordstart, *drawstart;
-  line = drawstart = text;
+  const char *line, *wordstart;
+  line = text;
 
   while (*line != '\0') {
     if (isblank(*line)) {

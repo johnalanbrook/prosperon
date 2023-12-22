@@ -86,7 +86,11 @@ const char *engine_info() { return ENGINEINFO; }
 static int argc;
 static char **args;
 
-struct datastream *bjork;
+void seghandle()
+{
+  js_stacktrace();
+  exit(1);
+}
 
 void c_init() {
 
@@ -272,6 +276,12 @@ int main(int argc, char **argv) {
     snprintf(fname, 100, "yugine-%ld.log", now);
     log_setfile(fname);
   }
+/*  
+  signal(SIGSEGV, seghandle);
+  signal(SIGABRT, seghandle);
+  signal(SIGFPE, seghandle);
+  signal(SIGBUS, seghandle);
+*/
 #endif
 
 #ifdef STEAM

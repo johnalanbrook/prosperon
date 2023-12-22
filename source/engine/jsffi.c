@@ -866,7 +866,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 84:
-    ret = JS_NewString(js, consolelog);
+    ret = consolelog ? JS_NewString(js, consolelog) : JS_NewString(js,"");
     break;
 
   case 85:

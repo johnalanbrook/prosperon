@@ -80,12 +80,15 @@ var Log = {
   },    
 
   stack(skip = 0) {
-    var stack = (new Error()).stack;
+    var err = new Error();
+    var stack = err.stack;
     var n = stack.next('\n',0)+1;
     for (var i = 0; i < skip; i++)
       n = stack.next('\n', n)+1;
-
-    this.write(stack.slice(n));
+    Log.write(err.name);
+    Log.write(err.message);
+    Log.write(err.stack);
+//    Log.write(stack);
   },
 
   clear() {

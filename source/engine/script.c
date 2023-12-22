@@ -302,14 +302,6 @@ void script_callee(struct callee c, int argc, JSValue *argv) {
   js_callee_exec(&c, argc, argv);
 }
 
-struct callee make_callee(JSValue fn, JSValue obj)
-{
-  struct callee c;
-  c.fn = JS_DupValue(js, fn);
-  c.obj = JS_DupValue(js, obj);
-  return c;  
-}
-
 void free_callee(struct callee c)
 {
   JS_FreeValue(js,c.fn);

@@ -100,7 +100,6 @@ var gameobject = {
   
     clear() {
       for (var k in this.objects) {
-        Log.info(`Killing ${k}`);
 	this.objects[k].kill();
       };
       this.objects = {};
@@ -519,7 +518,6 @@ var gameobject = {
 
     for (var key in this.components) {
       Register.unregister_obj(this.components[key]);
-      (`Destroying component ${key}`);
       this.components[key].kill();
       this.components[key].gameobject = undefined;
       delete this.components[key];

@@ -1515,7 +1515,6 @@ var replpanel = Object.copy(inputpanel, {
     this.win.selectable = true;
     var log = cmd(84);
     log = log.slice(-5000);
-    
     return [
       Mum.text({str:log, anchor:[0,0], offset:[0,-300].sub(this.scrolloffset), selectable: true}),
       Mum.text({str:this.value,color:Color.green, offset:[0,-290], caret: this.caret})

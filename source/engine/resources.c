@@ -167,7 +167,7 @@ char *str_replace_ext(const char *s, const char *newext) {
 FILE *path_open(const char *tag, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  vsprintf(pathbuf, fmt, args);
+  vsnprintf(pathbuf, MAXPATH+1, fmt, args);
   va_end(args);
 
   FILE *f = fopen(pathbuf, tag);

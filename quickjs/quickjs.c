@@ -16202,6 +16202,14 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                                int argc, JSValue *argv, int flags)
 {
     JSRuntime *rt = caller_ctx->rt;
+/*    
+    JSValue nnjs = JS_GetPropertyStr(caller_ctx, func_obj, "name");
+    const char *nnn = JS_ToCString(caller_ctx, nnjs);
+    printf("fn %s", nnn);
+    js_free(&rt->malloc_state, nnn);
+    JS_FreeValue(caller_ctx, nnjs);
+*/
+
     JSContext *ctx;
     JSObject *p;
     JSFunctionBytecode *b;

@@ -28,13 +28,14 @@ FILE *logfile = NULL;
 #define ERROR_BUFFER 1024
 #define CONSOLE_BUF 1024*1024 /* 5MB */
 
-char *consolelog;
+char *consolelog = NULL;
 
 static FILE *sout;
 
 void log_init()
 {
   consolelog = malloc(CONSOLE_BUF+1);
+  consolelog[0] = '\0';
   sout = fdopen(dup(1),"w");
   sout = stdout;
 }
@@ -55,12 +56,12 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     int len = vsnprintf(NULL, 0, message, args)+1;
     char *msg = malloc(len);
     va_end(args);
-    vsprintf(msg, message, arg2);
+    vsnprintf(msg, len, message, arg2);
     va_end(arg2);
     
     len = snprintf(NULL, 0, logfmt, file,line,logstr[priority], catstr[category], msg)+1;
     char *buffer = malloc(len);
-    sprintf(buffer, logfmt, file, line, logstr[priority], catstr[category], msg);
+    snprintf(buffer, len, logfmt, file, line, logstr[priority], catstr[category], msg);
 
     fprintf(stderr, "%s", buffer);
     fflush(stderr);

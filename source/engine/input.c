@@ -223,19 +223,20 @@ void input_init() {
     mouse_states[i] = INPUT_UP;
 }
 
-char keybuf[50];
+#define KEYBUFLEN 50
+char keybuf[KEYBUFLEN];
 
 const char *keyname_extd(int key) {
 
   if (key > 289 && key < 302) {
     int num = key - 289;
-    sprintf(keybuf, "f%d", num);
+    snprintf(keybuf, KEYBUFLEN, "f%d", num);
     return keybuf;
   }
   
   if (key >= 320 && key <= 329) {
     int num = key - 320;
-    sprintf(keybuf, "kp%d", num);
+    snprintf(keybuf, KEYBUFLEN, "kp%d", num);
     return keybuf;
   }
 
