@@ -53,7 +53,7 @@ endif
 CPPFLAGS += -ffast-math
 
 ifeq ($(DBG),1)
-  CPPFLAGS += -g #-fsanitize=address
+  CPPFLAGS += -g -fsanitize=address
   INFO += _dbg
 else
   CPPFLAGS += -DNDEBUG

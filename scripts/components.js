@@ -40,6 +40,13 @@ var component = {
   enable() { this.enabled = true; },
   disable() { this.enabled = false; },
 
+  isComponent(c) {
+    if (typeof c !== 'object') return false;
+    if (typeof c.toString !== 'function') return false;
+    if (typeof c.make !== 'function') return false;
+    return (typeof component[c.toString()] === 'object');
+  },
+
   hides: ['gameobject', 'id'],
   
   make(go) {
@@ -81,7 +88,9 @@ component.sprite.impl = {
     cmd(12,this.id,x,this.rect);
   },
   get path() {
-    return cmd(116,this.id);
+    var s = cmd(116,this.id);
+    if (s === "icons/no_tex.gif") return undefined;
+    return s;
     //return prototypes.resavi(this.gameobject.__proto__.toString(), cmd(116,this.id));
   },
   toString() { return "sprite"; },
@@ -427,7 +436,7 @@ collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
-  toString() { return "poly2d"; },
+  toString() { return "polygon2d"; },
   flipx: false,
   flipy: false,
   

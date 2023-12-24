@@ -173,6 +173,10 @@ var gameobject = {
     else
       this._ed.inst = false;
   },
+  _ed: {
+    selectable: false,
+    dirty: false
+  },
   namestr() {
     var s = this.toString();
     if (this._ed.dirty)
@@ -334,7 +338,8 @@ var gameobject = {
     return bb.t-bb.b;
   },
 
-  move(vec) { this.pos = this.pos.add(vec); },
+  /* Moving, rotating, scaling functions, world relative */
+  move(vec) { this.set_worldpos(this.worldpos().add(vec)); },
   rotate(x) { this.sworldangle(this.worldangle()+x); },
   spread(vec) { this.sgscale(this.gscale().map((x,i)=>x*vec[i])); },
 
@@ -467,6 +472,7 @@ var gameobject = {
 	t.pos = this.pos;
 	t.angle = this.angle;
 	t.scale = this.scale;
+	t.scale = t.scale.map((x,i) => x/this.__proto__.scale[i]);
 	return t;
       },
 
@@ -548,7 +554,7 @@ var gameobject = {
     
     for (var [prop,p] of Object.entries(this)) {
       if (!p) continue;
-      if (typeof p.make === 'function') {
+      if (component.isComponent(p)) {
         obj[prop] = p.make(obj);
         obj.components[prop] = obj[prop];
       }

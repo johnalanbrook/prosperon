@@ -38,13 +38,12 @@ var editor = {
   /* Tries to select id */
   do_select(obj) {
     if (!obj) return;
-//    if (!obj || !obj._ed.selectable) return undefined;
+    if (!obj._ed.selectable) return undefined;
     
     if (obj.level !== this.edit_level) {
       var testlevel = obj.level;
-      while (testlevel && testlevel.level !== this.edit_level && testlevel !== testlevel.level)
+      while (testlevel && testlevel.level !== Primum && testlevel.level !== this.edit_level && testlevel !== testlevel.level)
          testlevel = testlevel.level;
-      
       return testlevel;
     }
     
@@ -227,6 +226,7 @@ var editor = {
     }
     this.selectlist = [];
     editor.camera = Primum.spawn(ur.camera2d);
+    editor.camera._ed.selectable = false;
     Game.view_camera(editor.camera);
   },
 
@@ -583,7 +583,7 @@ editor.inputs.drop = function(str) {
     return;
   }
 
-  if (this.selected.length === 0) {
+  if (this.selectlist.length === 0) {
     
   }
   
@@ -869,6 +869,7 @@ editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
+  return;
   gameobject.make(editor.edit_level);
   console.warn("MADE A NEW OBJECT");
 /*  if (editor.edit_level._ed.dirty) {
@@ -984,14 +985,7 @@ editor.inputs.lm.released = function() {
         var obj = editor.do_select(x);
 	if (obj)
 	  selects.push(obj);
-      },editor);
-      
-      var levels = editor.edit_level.objects.filter(function(x) { return x.file; });
-      var lvlpos = [];
-      levels.forEach(function(x) { lvlpos.push(x.pos); });
-      var lvlhits = physics.box_point_query(box, lvlpos);
-      
-      lvlhits.forEach(function(x) { selects.push(levels[x]); });
+      });
     }
 
     this.sel_start = undefined;
@@ -1101,6 +1095,7 @@ editor.inputs.mouse.move = function(pos, dpos)
   }
 
   editor.grabselect?.forEach(function(x) {
+    if (!x) return;
     x.move(Game.camera.dir_view2world(dpos));
     if ('sync' in x)
       x.sync();
@@ -1186,7 +1181,7 @@ editor.inputs.g = function() {
       var comp = editor.sel_comp;
       var o = {
         pos: editor.sel_comp.pos,
-	move(d) { comp.pos = comp.pos.add(d); },
+	move(d) { comp.pos = comp.pos.add(comp.gameobject.dir_world2this(d)); },
 	sync: comp.sync.bind(comp),
       };
       editor.grabselect = [o];

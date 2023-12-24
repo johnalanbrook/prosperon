@@ -240,11 +240,9 @@ void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
 
 void phys2d_applycircle(struct phys2d_circle *circle) {
   gameobject *go = circle->shape.go;
-
   float radius = circle->radius * HMM_MAX(HMM_ABS(go->scale.X), HMM_ABS(go->scale.Y));
   cpCircleShapeSetRadius(circle->shape.shape, radius);
-
-  cpCircleShapeSetOffset(circle->shape.shape, HMM_MulV2(go->scale.XY, circle->offset).cp);
+  cpCircleShapeSetOffset(circle->shape.shape, circle->offset.cp);
 }
 
 /************** POLYGON ************/
