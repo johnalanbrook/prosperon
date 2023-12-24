@@ -4,6 +4,7 @@
 #include <string.h>
 #include "debugdraw.h"
 #include "log.h"
+#include "math.h"
 
 #include "stb_ds.h"
 
@@ -129,7 +130,9 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
   }
 
   cpFloat d = isnan(go->damping) ? damping : d;
-  cpVect g = go->gravity ? gravity : go->cgravity.cp;
+  cpVect g = gravity;
+  if (isfinite(go->gravity.x) && isfinite(go->gravity.y))
+    g = go->gravity.cp;
   
   cpBodyUpdateVelocity(body,g,d,dt*go->timescale);
 
@@ -154,9 +157,8 @@ gameobject *MakeGameobject() {
       .next = -1,
       .drawlayer = 0,
       .shape_cbs = NULL,
-      .gravity = 1,
-      .cgravity = (HMM_Vec2){0,0},
-      .damping = NAN,
+      .gravity = (HMM_Vec2){INFINITY,INFINITY},
+      .damping = INFINITY,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
   };

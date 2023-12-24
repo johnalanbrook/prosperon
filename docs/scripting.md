@@ -27,7 +27,8 @@ Computation takes place in turns. Each entity has functions called, if they exis
 
 |function|description|
 |---|---|
-|start|called when the object is loaded|
+|load|called after the object is loaded, including in editor|
+|start|called when the object is loaded during gameplay|
 |update(dt)|called once per game frame tick|
 |physupdate(dt)|called once per physics tick|
 |stop|called when the object is killed|

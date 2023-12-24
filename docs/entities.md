@@ -15,3 +15,22 @@ Components, if they have a defined transform, are relative to the entity they re
 Entities are defined via a typical scene graph system. This allows for easy reuse of components when designing levels.
 
 When the game is run, the movement relationships are broken, and the physics system takes over. In the physics engine, each entity is a direct child of the world. Objects can still be constrained to other objects via the physics system.
+
+The transform properties have local, global, and screen space accessors. For example, for position ..
+
+- pos: the relative position of the object to its master
+- worldpos: the position of the object in the world
+- screenpos: the position of the object in screen space
+
+The core engine only remembers each object's world position. When its position is requested, it figures its position based on its parent.
+
+## Inheritence? Composition?
+
+The idea behind how the engine is oragnized is to encourage composition. Compisition creates cleaner objects than does inheritence, and is easier to understand. And yet, inheritence is useful for specific circumstances.
+
+- Creating a specific unique object in a level
+
+There are only two cases where inheritence can be utilized in this engine:
+1. Whole entities can be subtyped. Only values can be substituted. An ur-type must define all functions and behaviors of an object. but then that can be subtyped to change only a handful of properties.
+
+2. Entities can be subtyped when thrall to another entity. This can only be done once. Thrall objects, like components, can be defined only once on an ur-type. Sub types can only change parameters, and not of the sub objects.

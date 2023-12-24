@@ -1173,10 +1173,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = num2js(js2gameobject(argv[1])->damping);
       break;
     case 158:
-      js2gameobject(argv[1])->gravity = js2bool(argv[2]);
       break;
     case 159:
-      ret = bool2js(js2gameobject(argv[1])->gravity);
+      ret = vec2js(js2gameobject(argv[1])->gravity);
       break;
     case 160:
       ret = vec2js(mat_t_dir(t_world2go(js2gameobject(argv[1])), js2vec2(argv[2])));
@@ -1205,7 +1204,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = int2js(cp(str, str2));
       break;
     case 167:
-      js2gameobject(argv[1])->cgravity = js2vec2(argv[2]);
+      js2gameobject(argv[1])->gravity = js2vec2(argv[2]);
       break;
     case 168:
       js2gameobject(argv[1])->timescale = js2number(argv[2]);

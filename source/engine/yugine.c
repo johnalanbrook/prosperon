@@ -123,8 +123,8 @@ static void process_frame()
     if (stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {
       double dt = stm_sec(stm_diff(frame_t, updatelast));
       updatelast = frame_t;
+      
 //      prof_start(&prof_update);
-
       call_updates(dt * timescale);
 //      prof_lap(&prof_update);
 

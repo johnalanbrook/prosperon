@@ -1,20 +1,4 @@
-function deep_copy(from) {
-  if (typeof from !== 'object')
-    return from;
-
-  if (Array.isArray(from)) {
-    var c = [];
-    from.forEach(function(x,i) { c[i] = deep_copy(x); });
-    return c;
-  }
-    
-  var obj = {};
-  for (var key in from)
-    obj[key] = deep_copy(from[key]);
-
-  return obj;
-};
-
+function deep_copy(from) { return json.decode(json.encode(from)); }
 
 var walk_up_get_prop = function(obj, prop, endobj) {
   var props = [];
@@ -58,8 +42,7 @@ function deep_merge(target, source)
 
 function equal(x,y) {
   if (typeof x === 'object')
-    for (var key in x)
-      return equal(x[key],y[key]);
+    return json.encode(x) === json.encode(y);
 
   return x === y;
 };
@@ -82,11 +65,6 @@ function diffassign(target, from) {
     }
   }
 };
-
-function diffkey(from,to,key)
-{
-
-}
 
 function objdiff(from,to)
 {
@@ -118,9 +96,8 @@ function objdiff(from,to)
     }
 
     if (typeof v === 'number') {
-      var a = Number.prec(v);
-      if (!to || a !== to[key])
-	ret[key] = a;
+      if (!to || v !== to[key])
+	ret[key] = v;
       return;
     }
 
@@ -139,7 +116,6 @@ function valdiff(from,to)
   if (typeof from === 'undefined') return undefined;
 
   if (typeof from === 'number') {
-    if (Number.prec(from) !== Number.prec(to))
       return to;
       
     return undefined;
@@ -153,7 +129,16 @@ function valdiff(from,to)
   return undefined;
 }
 
+/* Returns the json encoded object, assuming it has an implementation it must check through */
+function impl_json(obj)
+{
+  
+}
 
+function ndiff(from,to)
+{
+  
+}
 
 function ediff(from,to)
 {
@@ -189,9 +174,8 @@ function ediff(from,to)
     }
 
     if (typeof v === 'number') {
-      var a = Number.prec(v);
-      if (!to || a !== to[key])
-	ret[key] = a;
+      if (!to || v !== to[key])
+	ret[key] = v;
       return;
     }
 

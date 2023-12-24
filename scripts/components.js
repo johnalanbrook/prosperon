@@ -97,7 +97,7 @@ component.sprite.impl = {
   set layer(x) { cmd(60, this.id, x); },
   get layer() { return undefined; },
   emissive(x) { cmd(170, this.id, x); },
-  pick() { return this; },
+  pickm() { return this; },
   move(d) { this.pos = this.pos.add(d); },
 
   boundingbox() {
@@ -183,10 +183,6 @@ var SpriteAnim = {
     }
     anim.dim = cmd(64,path);
     anim.dim.x /= frames;
-    anim.toJSON = function()
-    {
-      return anim.path;
-    }
     return anim;
   },
 
@@ -331,19 +327,6 @@ component.char2dimpl = {
     this[name] = function() {
       this.play_anim(anim);
     }
-  },
-
-  post() {
-  /*
-    this.timer = timer.make(this.advance.bind(this), 1);
-    this.timer.loop = true;
-    Object.hide(this,'timer');
-    for (var k in this.anims) {
-      var path = this.anims[k];
-      this.anims[k] = run_env(path + ".asset", path);
-      this.add_anim(this.anims[k], k);
-    }
-    Object.hide(this, 'acur');*/
   },
 };
 

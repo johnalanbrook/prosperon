@@ -36,8 +36,7 @@ struct gameobject {
   float timescale;
   float maxvelocity;
   float maxangularvelocity;
-  int gravity;
-  HMM_Vec2 cgravity;
+  HMM_Vec2 gravity; /* its own gravity */
   float damping;
   unsigned int layer;
   cpShapeFilter filter;

@@ -14,7 +14,6 @@ var editor = {
   machine: undefined,
   device_test: undefined,
   selectlist: [],
-  grablist: [],
   scalelist: [],
   rotlist: [],
   camera: undefined,
@@ -43,9 +42,8 @@ var editor = {
     
     if (obj.level !== this.edit_level) {
       var testlevel = obj.level;
-      while (testlevel && testlevel.level !== this.edit_level) {
+      while (testlevel && testlevel.level !== this.edit_level && testlevel !== testlevel.level)
          testlevel = testlevel.level;
-      }
       
       return testlevel;
     }
@@ -458,7 +456,6 @@ var editor = {
       var p = x[1].namestr();
       GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
       Shape.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
-//      Shape.arrow(x[1].screenpos(), x[1].screenpos().add(x[1].up().scale(15)), Color.red, 10);
     });
 
     var mg = physics.pos_query(Mouse.worldpos,10);
@@ -514,25 +511,7 @@ var editor = {
 
     this.curpanels.forEach(function(x) {
       if (x.on) x.gui();
-    });
-/*
-    var o = editor.get_that();
-
-    var pos = [6,600];
-    var offset = [0,0];
-    var os = Object.entries(o.objects);
-
-    GUI.text(o.toString(), pos.add(offset));
-    offset = offset.add([5,-16]);
-
-    os.forEach(function(x) {
-      GUI.text(x.toString(), pos.add(offset));
-      offset = offset.add([0,-16]);
-    });
-
-    GUI.text(JSON.stringify(o._ed.urdiff,null,1), [500,500]);
-*/
-    
+    });    
   },
   
   ed_debug() {
@@ -540,17 +519,6 @@ var editor = {
       this.selectlist.forEach(function(x) { Debug.draw_obj_phys(x); });
   },
   
-  viewasset(path) {
-    Log.info(path);
-    var fn = function(x) { return path.endsWith(x); };
-    if (Resources.images.any(fn)) {
-      var newtex = Object.copy(texgui, { path: path });
-      this.addpanel(newtex);
-    }
-    else if (sounds.any(fn))
-      Log.info("selected a sound");
-  },
-
   killring: [],
   killcom: [],
 
@@ -613,6 +581,10 @@ editor.inputs.drop = function(str) {
   if (!Resources.is_image(str)) {
     console.warn("NOT AN IMAGE");
     return;
+  }
+
+  if (this.selected.length === 0) {
+    
   }
   
   if (this.sel_comp?.comp === 'sprite') {
@@ -727,8 +699,8 @@ editor.inputs.m = function() {
 
     return;
   }
-  
-  editor.selectlist.forEach(x => x.mirror([1,0]));
+
+  editor.selectlist.forEach(obj => obj.scale = [-obj.scale[0], obj.scale[1]]);
 };
 editor.inputs.m.doc = "Mirror selected objects on the X axis.";
 
@@ -897,6 +869,8 @@ editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
+  gameobject.make(editor.edit_level);
+  console.warn("MADE A NEW OBJECT");
 /*  if (editor.edit_level._ed.dirty) {
     Log.info("Level has changed; save before starting a new one.");
     editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => editor.clear_level()));
@@ -967,13 +941,17 @@ editor.inputs['C-f1'].doc = "Enter basic edit mode.";
 editor.inputs['C-f2'] = function() { editor.edit_mode = "brush"; };
 editor.inputs['C-f2'].doc = "Enter brush mode.";
 
-
 editor.inputs.f2 = function() {
-  objectexplorer.on_close = save_configs;
-  objectexplorer.obj = configs;
+  if (this.selectlist.length !== 1) return;
+  objectexplorer.obj = this.selectlist[0];
   this.openpanel(objectexplorer);
 };
 editor.inputs.f2.doc = "Open configurations object.";
+
+editor.inputs.f3 = function() {
+  if (this.selectlist.length !== 1) return;
+  this.openpanel(componentexplorer);
+};
 
 editor.inputs.lm = function() { editor.sel_start = Mouse.worldpos; };
 editor.inputs.lm.doc = "Selection box.";
@@ -1144,9 +1122,9 @@ editor.inputs.mouse.move = function(pos, dpos)
 
   editor.rotlist?.forEach(function(x) {
     var anglediff = Math.atan2(relpos.y, relpos.x) - x.rotoffset;
-    x.obj.angle = x.angle + Math.rad2deg(anglediff);
+    x.obj.angle = x.angle + Math.rad2turn(anglediff);
     if (Keys.shift())
-      x.obj.angle = Math.nearest(x.obj.angle, 45);
+      x.obj.angle = Math.nearest(x.obj.angle, (1/24));
     if (x.pos)
       x.obj.pos = x.pos.sub(x.offset).add(x.offset.rotate(anglediff));
   });
@@ -1289,7 +1267,7 @@ editor.inputs['C-c'] = function() {
   this.killcom = physics.com(this.selectlist.map(x=>x.pos));  
 
   this.selectlist.forEach(function(x) {
-    this.killring.push(x.make_ur());
+    this.killring.push(x.instance_obj());
   },this);
 };
 editor.inputs['C-c'].doc = "Copy selected objects to killring.";
@@ -1686,7 +1664,6 @@ var objectexplorer = Object.copy(inputpanel, {
   previous: [],
   start() {
     this.previous = [];
-    Input.setnuke();
   },
 
   goto_obj(obj) {
@@ -1701,7 +1678,8 @@ var objectexplorer = Object.copy(inputpanel, {
 
   guibody() {
     var items = [];
-    items.push(Mum.text({str:"Examining " + this.obj.toString()}));
+    items.push(Mum.text({str:"Examining " + this.obj.toString() + " entity"}));
+    items.push(Mum.text({str: JSON.stringify(this.obj,undefined,1)}));
     return items;
       
     var n = 0;
@@ -1933,6 +1911,18 @@ var assetexplorer = Object.copy(openlevelpanel, {
       editor.sel_comp.asset = this.value;
     else
       editor.viewasset(this.value);
+  },
+});
+
+var componentexplorer = Object.copy(inputpanel, {
+  title: "component menu",
+  assets: ['sprite', 'model', 'edge2d', 'polygon2d', 'circle2d'],
+  click(name) {
+    if (editor.selectlist.length !== 1) return;
+    editor.selectlist[0].add_component(component[name]);
+  },
+  guibody() {
+    return componentexplorer.assets.map(x => Mum.text({str:x, action:this.click, color: Color.blue, hovered:{Color:Color.red}, selectable:true}));
   },
 });
 

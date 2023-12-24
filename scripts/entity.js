@@ -1,3 +1,16 @@
+function obj_unique_name(name, obj)
+{
+  name = name.replaceAll('.', '_');
+  if (!(name in obj)) return name;
+  var t = 1;
+  var n = name + t;
+  while (n in obj) {
+    t++;
+    n = name+t;
+  }
+  return n;
+}
+
 var actor = {};
 actor.spawn = function(script, config){
   if (typeof script !== 'string') return;
@@ -24,10 +37,7 @@ actor.kill = function(){
   this.padawans.forEach(p => p.kill());
   this.__dead__ = true;
 };
-actor.toJSON = function() {
-  if (this.__dead__) return undefined;
-  return this;
-}
+
 actor.delay = function(fn, seconds) {
   var t = Object.create(timer);
   t.remain = seconds;
@@ -53,6 +63,93 @@ actor.remaster = function(to){
   this.master.padawans.remove(this);
   this.master = to;
   to.padawans.push(this);
+};
+
+var gameobject_impl = {
+  get pos() {
+    Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
+    return this.level.world2this(this.worldpos());
+  },
+
+  set pos(x) {
+    Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
+    this.set_worldpos(this.level.this2world(x));
+  },
+
+  get angle() {
+    Debug.assert(this.level, `No level set on ${this.toString()}`);
+    return this.worldangle() - this.level.worldangle();
+  },
+  set angle(x) {
+    var diff = x - this.angle;
+
+    this.objects.forEach(function(x) {
+      x.rotate(diff);
+      x.pos = Vector.rotate(x.pos, diff);
+    });
+
+    this.sworldangle(x-this.level.worldangle());
+  },
+
+  get scale() {
+    Debug.assert(this.level, `No level set on ${this.toString()}`);
+    return this.gscale().map((x,i) => x/this.level.gscale()[i]);
+  },
+
+  set scale(x) {
+    if (typeof x === 'number')
+      x = [x,x];
+
+    var pct = this.scale.map((s,i) => x[i]/s);
+    this.spread(pct);
+    
+    /* TRANSLATE ALL SUB OBJECTS */
+    this.objects.forEach(obj => {
+      obj.spread(pct);
+      obj.pos = obj.pos.map((x,i)=>x*pct[i]);
+    });
+  },
+  
+  get draw_layer() { return cmd(171, this.body); },
+  set draw_layer(x) { cmd(172, this.body, x); },
+  set layer(x) { cmd(75,this.body,x); },
+  get layer() { cmd(77,this.body); },
+
+  set mass(x) { set_body(7,this.body,x); },
+  get mass() {
+    if (!(this.phys === Physics.dynamic))
+      return this.__proto__.mass;
+
+    return q_body(5, this.body);
+  },
+  get elasticity() { return cmd(107,this.body); },
+  set elasticity(x) { cmd(106,this.body,x); },
+  get friction() { return cmd(109,this.body); },
+  set friction(x) { cmd(108,this.body,x); },
+  set gravity(x) { cmd(167,this.body, x); },
+  get gravity() { return cmd(159,this.body); },
+  set timescale(x) { cmd(168,this.body,x); },
+  get timescale() { return cmd(169,this.body); },
+  set phys(x) { set_body(1, this.body, x); },
+  get phys() { return q_body(0,this.body); },
+  get velocity() { return q_body(3, this.body); },
+  set velocity(x) { set_body(9, this.body, x); },
+  get damping() { return cmd(157,this.body); },
+  set damping(x) { cmd(156, this.body, x); },
+  get angularvelocity() { return Math.rad2turn(q_body(4,this.body)); },
+  set angularvelocity(x) { set_body(8, this.body, Math.turn2rad(x)); },
+  get max_velocity() { return cmd(152, this.body); },
+  set max_velocity(x) { cmd(151, this.body, x); },
+  get max_angularvelocity() { return cmd(155,this.body); },
+  set max_angularvelocity(x) { cmd(154,this.body,x); },
+  get_moi() { return q_body(6, this.body); },
+  set_moi(x) {
+    if(x <= 0) {
+      Log.error("Cannot set moment of inertia to 0 or less.");
+      return;
+    }
+    set_body(13, this.body, x);
+  },
 };
 
 var gameobject = {
@@ -128,10 +225,6 @@ var gameobject = {
       return killfn;
     },
 
-      set max_velocity(x) { cmd(151, this.body, x); },
-      get max_velocity() { return cmd(152, this.body); },
-      set max_angularvelocity(x) { cmd(154, this.body, Math.deg2rad(x)); },
-      get max_angularvelocity() { return Math.rad2deg(cmd(155, this.body)); },
       set torque(x) { if (!(x >= 0 && x <= Infinity)) return; cmd(153, this.body, x); },
       gscale() { return cmd(103,this.body); },
       sgscale(x) {
@@ -139,65 +232,14 @@ var gameobject = {
 	  x = [x,x];
         cmd(36,this.body,x)
       },
-      get scale() {
-        Debug.assert(this.level, `No level set on ${this.toString()}`);
-        return this.gscale().map((x,i) => x/this.level.gscale()[i]);
-      },
       
-      set scale(x) {
-        if (typeof x === 'number')
-	  x = [x,x];
-	  
-        if (this.level) {
-	  var g = this.level.gscale();
-	  x = x.map((y,i) => y * g[i]);
-	 }
-
-	var pct = x.map(function(y,i) { return y/this.gscale()[i]; }, this);
-
-	this.sgscale(x);
-	/* TRANSLATE ALL SUB OBJECTS */
+      phys_material() {
+        var mat = {};
+	mat.elasticity = this.elasticity;
+	mat.friction = this.friction;
+	return mat;
       },
 
-      set pos(x) {
-        Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
-        this.set_worldpos(this.level.this2world(x));
-      },
-      
-      get pos() {
-        Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
-        return this.level.world2this(this.worldpos());
-      },
-
-  get draw_layer() { return cmd(171, this.body); },
-  set draw_layer(x) { cmd(172, this.body, x); },
-
-      get elasticity() { return cmd(107,this.body); },
-      set elasticity(x) { cmd(106,this.body,x); },
-
-      get friction() { return cmd(109,this.body); },
-      set friction(x) { cmd(108,this.body,x); },
-
-      set mass(x) { set_body(7,this.body,x); },
-      get mass() {
-        if (!(this.phys === Physics.dynamic))
-	  return this.__proto__.mass;
-	  
-        return q_body(5, this.body);
-      },
-      set gravity(x) { cmd(158,this.body, x); },
-      get gravity() { return cmd(159,this.body); },
-      set_gravity(x) { cmd(167, this.body, x); },
-      set timescale(x) { cmd(168,this.body,x); },
-      get timescale() { return cmd(169,this.body); },
-      set phys(x) { set_body(1, this.body, x); },
-      get phys() { return q_body(0,this.body); },
-      get velocity() { return q_body(3, this.body); },
-      set velocity(x) { set_body(9, this.body, x); },
-      get damping() { return cmd(157,this.body); },
-      set_damping(x) { cmd(156, this.body, x); },
-      get angularvelocity() { return Math.rad2deg(q_body(4, this.body)); },
-      set angularvelocity(x) { set_body(8, this.body, Math.deg2rad(x)); },
       worldpos() { return q_body(1,this.body); },
       set_worldpos(x) {
         var poses = this.objects.map(x => x.pos);
@@ -206,34 +248,9 @@ var gameobject = {
       },
       screenpos() { return world2screen(this.worldpos()); },
 
-      worldangle() { return Math.rad2deg(q_body(2,this.body))%360; },
-      sworldangle(x) { set_body(0,this.body,Math.deg2rad(x)); },
-      get angle() {
-        Debug.assert(this.level, `No level set on ${this.toString()}`);
-	
-        return this.worldangle() - this.level.worldangle();
-      },
-      set angle(x) {
-        var diff = x - this.angle;
-	var thatpos = this.pos;
-	this.objects.forEach(function(x) {
-	  x.rotate(diff);
-	  var opos = x.pos;
-	  var r = Vector.length(opos);
-	  var p = Math.rad2deg(Math.atan2(opos.y, opos.x));
-	  p += diff;
-	  p = Math.deg2rad(p);
-	  x.pos = [r*Math.cos(p), r*Math.sin(p)];
-	});
+      worldangle() { return Math.rad2turn(q_body(2,this.body)); },
+      sworldangle(x) { set_body(0,this.body,Math.turn2rad(x)); },
 
-        if (this.level)
-          set_body(0,this.body, Math.deg2rad(x - this.level.worldangle()));
-	else
-	  set_body(0,this.body,x);
-      },
-
-      rotate(x) { this.sworldangle(this.worldangle()+x); },
-      
       spawn_from_instance(inst) {
         return this.spawn(inst.ur, inst);
       },
@@ -290,16 +307,7 @@ var gameobject = {
   components: {},
   objects: {},
   level: undefined,
-  get_moi() { return q_body(6, this.body); },
   
-  set_moi(x) {
-    if(x <= 0) {
-      Log.error("Cannot set moment of inertia to 0 or less.");
-      return;
-    }
-    set_body(13, this.body, x);
-  },
-
     pulse(vec) { set_body(4, this.body, vec);},
     shove(vec) { set_body(12,this.body,vec);},
     shove_at(vec, at) { set_body(14,this.body,vec,at); },
@@ -310,18 +318,11 @@ var gameobject = {
     dir_world2this(dir) { return cmd(160, this.body, dir); },
     dir_this2world(dir) { return cmd(161, this.body, dir); },
       
-    set layer(x) { cmd(75,this.body,x); },
-    get layer() { cmd(77,this.body); },
     alive() { return this.body >= 0; },
     in_air() { return q_body(7, this.body);},
 
   hide() { this.components.forEach(x=>x.hide()); this.objects.forEach(x=>x.hide());},
   show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
-
-  get_relangle() {
-    if (!this.level) return this.angle;
-    return this.angle - this.level.angle;
-  },
 
   width() {
     var bb = this.boundingbox();
@@ -334,15 +335,11 @@ var gameobject = {
   },
 
   move(vec) { this.pos = this.pos.add(vec); },
-
-  rotate(amt) { this.angle += amt; },
+  rotate(x) { this.sworldangle(this.worldangle()+x); },
+  spread(vec) { this.sgscale(this.gscale().map((x,i)=>x*vec[i])); },
 
   /* Make a unique object the same as its prototype */
   revert() {
-//    var keys = Object.samenewkeys(this, this.__proto__);
-//    keys.unique.forEach(x => delete this[x]);
-//    keys.same.forEach(x => this[x] = this.__proto__[x]);
-    
     var jobj = this.json_obj();
     var lobj = this.level.__proto__.objects[this.toString()];
     delete jobj.objects;
@@ -433,8 +430,10 @@ var gameobject = {
 	return bb ? bb : cwh2bb([0,0], [0,0]);
       },
 
+      /* The unique components of this object. Its diff. */
       json_obj() {
         var d = ediff(this,this.__proto__);
+	
 	d ??= {};
  
 	var objects = {};
@@ -454,51 +453,34 @@ var gameobject = {
         return d;
       },
 
-      transform_obj() {
-        var t = this.json_obj();
-	Object.assign(t, this.transform());
-	return t;
-      },
-
+      /* The object needed to store an object as an instance of a level */
       instance_obj() {
-        var t = this.transform_obj();
+        var t = this.transform();
+	var j = this.json_obj();
+	Object.assign(t,j);
 	t.ur = this.ur;
 	return t;
       },
 
-      ur_obj() {
-        var ur = this.json_obj();
-	for (var k in ur) 
-	  if (ur[k].ur)
-	    delete ur[k];
-
-	return ur;
-      },
-      
-      make_ur() {
-        var thisur = this.json_obj();
-	thisur.pos = this.pos;
-	thisur.angle = this.angle;
-	return thisur;
-      },
-
       transform() {
         var t = {};
-	t.pos = this.pos.map(Number.prec);
-	t.angle = Number.prec(this.angle);
+	t.pos = this.pos;
+	t.angle = this.angle;
+	t.scale = this.scale;
 	return t;
       },
 
+      /* Velocity and angular velocity of the object */
       phys_obj() {
         var phys = {};
-	phys.velocity = this.velocity.map(Number.prec);
-	phys.angularvelocity = Number.prec(this.angularvelocity);
+	phys.velocity = this.velocity;
+	phys.angularvelocity = this.angularvelocity;
 	return phys;
      },
 
       dup(diff) {
         var n = this.level.spawn(this.__proto__);
-	Object.totalmerge(n, this.make_ur());
+	Object.totalmerge(n, this.instance_obj());
 	return n;
       },
 
@@ -531,14 +513,16 @@ var gameobject = {
       this.stop();
   },
 
-  up() { return [0,1].rotate(Math.deg2rad(this.angle));},
-  down() { return [0,-1].rotate(Math.deg2rad(this.angle));},
-  right() { return [1,0].rotate(Math.deg2rad(this.angle));},
-  left() { return [-1,0].rotate(Math.deg2rad(this.angle));},
+  up() { return [0,1].rotate(this.angle);},
+  down() { return [0,-1].rotate(this.angle);},
+  right() { return [1,0].rotate(this.angle);},
+  left() { return [-1,0].rotate(this.angle); },
 
   make(level, data) {
     var obj = Object.create(this);
+    
     obj.make = undefined;
+    Object.mixin(obj,gameobject_impl);
 
     if (this.instances)
       this.instances.push(obj);
@@ -561,7 +545,7 @@ var gameobject = {
     obj.reparent(level);
 
     cmd(113, obj.body, obj); // set the internal obj reference to this obj
-
+    
     for (var [prop,p] of Object.entries(this)) {
       if (!p) continue;
       if (typeof p.make === 'function') {
@@ -582,7 +566,7 @@ var gameobject = {
     if (data)
       Object.dainty_assign(obj,data);
 
-    if (typeof obj.warmup === 'function') obj.warmup();
+    if (typeof obj.load === 'function') obj.load();
     if (Game.playing() && typeof obj.start === 'function') obj.start();
 
     return obj;
@@ -617,9 +601,13 @@ var gameobject = {
     return this.objects[newname];
   },
 
-  add_component(comp) {
+  add_component(comp, data) {
+    data ??= undefined;
     if (typeof comp.make !== 'function') return;
-    return {comp:comp.toString()};
+    var name = obj_unique_name(comp.toString(), this);
+    this[name] = comp.make(this.body);
+    Object.assign(this[name], data);
+    return this[name];
   },
 
   register_hit(fn, obj) {
@@ -632,6 +620,7 @@ var gameobject = {
     Signal.obj_separate(fn,obj,this);
   },
 }
+Object.mixin(gameobject,gameobject_impl);
 
 gameobject.body = make_gameobject();
 cmd(113,gameobject.body, gameobject);
@@ -678,6 +667,7 @@ gameobject.doc = {
   level: "The entity this entity belongs to.",
   delay: 'Run the given function after the given number of seconds has elapsed.',
   cry: 'Make a sound. Can only make one at a time.',
+  add_component: 'Add a component to the object by name.',
 };
 
 /* Default objects */

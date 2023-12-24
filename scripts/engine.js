@@ -524,6 +524,7 @@ function world_start() {
   Primum.toString = function() { return "Primum"; };
   Primum.ur = undefined;
   Primum.kill = function() { this.clear(); };
+  gameobject.level = Primum;
 }
 
 load("scripts/physics.js");

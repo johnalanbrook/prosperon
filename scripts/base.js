@@ -1041,6 +1041,13 @@ Object.defineProperty(Array.prototype, 'mapc', {
   }
 });
 
+Object.defineProperty(Array.prototype, 'mapvec', {
+  value: function(fn, b) {
+    return this.map((x,i) => fn(x,b[i]));
+  }
+});
+    
+
 Object.defineProperty(Array.prototype, 'remove', {
  value: function(b) {
   var idx = this.indexOf(b);
@@ -1201,11 +1208,6 @@ Math.nearest = function(n, incr)
   return Math.round(n/incr)*incr;
 }
 
-Number.prec = function(num)
-{
-  return parseFloat(num.toFixed(3));
-}
-
 Number.hex = function(n)
 {
   var s = Math.floor(n).toString(16);
@@ -1257,9 +1259,13 @@ Math.angledist = function (a1, a2) {
     return wrap;
 };
 Math.angledist.doc = "Find the shortest angle between two angles.";
-Math.patan2 = function(p) { return Math.atan2(p.y,p.x); };
+Math.TAU = Math.PI*2;
 Math.deg2rad = function(deg) { return deg * 0.0174533; };
 Math.rad2deg = function(rad) { return rad / 0.0174533; };
+Math.deg2rad = function(x) { return x; };
+Math.rad2deg = function(x) { return x; };
+Math.turn2rad = function(x) { return x*Math.TAU; };
+Math.rad2turn = function(x) { return x/Math.TAU; };
 Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };
 
 /* BOUNDINGBOXES */
@@ -1397,12 +1403,13 @@ var Vector = {
   },
   
   angle(v) {
-    return Math.atan2(v.y, v.x);
+    return Math.rad2turn(Math.atan2(v.y, v.x));
   },
   
   rotate(v,angle) {
     var r = Vector.length(v);
     var p = Vector.angle(v) + angle;
+    p = Math.turn2rad(angle);
     return [r*Math.cos(p), r*Math.sin(p)];
   },
   
