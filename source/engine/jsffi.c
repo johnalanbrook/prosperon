@@ -1354,6 +1354,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 214:
       ret = int2js(go_count());
       break;
+    case 215:
+      ret = vec2js(js2sprite(argv[1])->t.scale);
+      break;
+    case 216:
+      js2sprite(argv[1])->t.scale = js2vec2(argv[2]);
+      break;
+    case 217:
+      ret = num2js(js2sprite(argv[1])->t.angle);
+      break;
+    case 218:
+      js2sprite(argv[1])->t.angle = js2number(argv[2]);
+      break;
   }
 
   if (str)

@@ -129,17 +129,17 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
     return;
   }
 
-  cpFloat d = isnan(go->damping) ? damping : d;
+  cpFloat d = isfinite(go->damping) ? go->damping : damping;
   cpVect g = gravity;
   if (isfinite(go->gravity.x) && isfinite(go->gravity.y))
     g = go->gravity.cp;
   
   cpBodyUpdateVelocity(body,g,d,dt*go->timescale);
 
-  if (!isinf(go->maxvelocity))
+  if (isfinite(go->maxvelocity))
     cpBodySetVelocity(body, cpvclamp(cpBodyGetVelocity(body), go->maxvelocity));
 
-  if (!isinf(go->maxangularvelocity)) {
+  if (isfinite(go->maxangularvelocity)) {
     float av = cpBodyGetAngularVelocity(body);
     if (fabs(av) > go->maxangularvelocity)
       cpBodySetAngularVelocity(body, copysignf(go->maxangularvelocity, av));

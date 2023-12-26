@@ -1249,14 +1249,16 @@ Math.snap = function(val, grid) {
 }
 
 Math.angledist = function (a1, a2) {
+    a1 = Math.turn2deg(a1);
+    a2 = Math.turn2deg(a2);
     var dist = a2 - a1;
     var wrap = dist >= 0 ? dist+360 : dist-360;
     wrap %= 360;
 
     if (Math.abs(dist) < Math.abs(wrap))
-      return dist;
+      return Math.deg2turn(dist);
 
-    return wrap;
+    return Math.deg2turn(wrap);
 };
 Math.angledist.doc = "Find the shortest angle between two angles.";
 Math.TAU = Math.PI*2;
@@ -1266,6 +1268,8 @@ Math.deg2rad = function(x) { return x; };
 Math.rad2deg = function(x) { return x; };
 Math.turn2rad = function(x) { return x*Math.TAU; };
 Math.rad2turn = function(x) { return x/Math.TAU; };
+Math.turn2deg = function(x) { return x*360; };
+Math.deg2turn = function(x) { return x/360; };
 Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };
 
 /* BOUNDINGBOXES */

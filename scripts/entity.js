@@ -93,7 +93,13 @@ var gameobject_impl = {
 
   get scale() {
     Debug.assert(this.level, `No level set on ${this.toString()}`);
-    return this.gscale().map((x,i) => x/this.level.gscale()[i]);
+    var pscale;
+    if (typeof this.__proto__.scale === 'object')
+      pscale = this.__proto__.scale;
+    else
+      pscale = [1,1,1];
+
+    return this.gscale().map((x,i) => x/(this.level.gscale()[i]*pscale[i]));
   },
 
   set scale(x) {
@@ -109,7 +115,7 @@ var gameobject_impl = {
       obj.pos = obj.pos.map((x,i)=>x*pct[i]);
     });
   },
-  
+
   get draw_layer() { return cmd(171, this.body); },
   set draw_layer(x) { cmd(172, this.body, x); },
   set layer(x) { cmd(75,this.body,x); },
@@ -207,7 +213,7 @@ var gameobject = {
     },
     
     delay(fn, seconds) {
-      var t = timer.delay(fn.bind(this), seconds, false);
+      var t = timer.delay(fn.bind(this), seconds);
       this.timers.push(t);
       return t;
     },
@@ -275,8 +281,11 @@ var gameobject = {
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
     Debug.assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
-    if (this.level === parent)
+    if (this.level === parent) {
+      console.warn("not reparenting ...");
+      console.warn(`${this.level} is the same as ${parent}`);
       return;
+    }
 
     this.level?.remove_obj(this);
     
@@ -453,6 +462,7 @@ var gameobject = {
 
 	delete d.pos;
 	delete d.angle;
+	delete d.scale;
 	delete d.velocity;
 	delete d.angularvelocity;
         return d;
@@ -547,6 +557,7 @@ var gameobject = {
     };
 
     obj.ur = this.toString();
+    obj.level = undefined;
 
     obj.reparent(level);
 

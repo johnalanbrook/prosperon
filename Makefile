@@ -53,11 +53,16 @@ endif
 CPPFLAGS += -ffast-math
 
 ifeq ($(DBG),1)
-  CPPFLAGS += -g -fsanitize=address
+  CPPFLAGS += -g
   INFO += _dbg
 else
   CPPFLAGS += -DNDEBUG
   LDFLAGS += -s
+endif
+
+ifeq ($(LEAK),1)
+  CPPFLAGS += -fsanitize=address
+  INFO += _leak
 endif
 
 ifeq ($(OPT),small)

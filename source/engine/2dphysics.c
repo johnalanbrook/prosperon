@@ -37,7 +37,6 @@ void set_cat_mask(int cat, unsigned int mask) { category_masks[cat] = mask; }
 
 cpTransform m3_to_cpt(HMM_Mat3 m)
 {
-  
   cpTransform t;
   t.a = m.Columns[0].x;
   t.b = m.Columns[0].y;
@@ -306,7 +305,8 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   assert(sizeof(poly->points[0]) == sizeof(cpVect));
   struct gameobject *go = poly->shape.go;
 //  cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
-  cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), (cpVect*)poly->points, cpTransformIdentity);
+  cpTransform T = m3_to_cpt(transform2d2mat(poly->shape.go->t));
+  cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), (cpVect*)poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
 }
@@ -320,7 +320,7 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
     HMM_Vec2 points[n+1];
     HMM_Mat3 rt = t_go2world(shape2go(poly->shape.shape));
     for (int i = 0; i < n; i++)
-      points[i] = mat_t_pos(rt, (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i));
+      points[i] = (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i);
 
     points[n] = points[0];
 

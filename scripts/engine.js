@@ -74,8 +74,10 @@ load("scripts/gui.js");
 var timer = {
   update(dt) {
     this.remain -= dt;
-    if (this.remain <= 0)
-      this.fire();
+    if (this.remain <= 0) {
+      this.fn();
+      this.kill();
+    }
   },
 
   kill() {
@@ -86,7 +88,7 @@ var timer = {
     var t = Object.create(this);
     t.time = secs;
     t.remain = secs;
-    t.fire = function() { fn(); t.kill(); };
+    t.fn = fn;
     Register.update.register(t.update, t);
     return function() { t.kill(); };
   },
@@ -522,7 +524,7 @@ function world_start() {
     dirty:false,
   };
   Primum.toString = function() { return "Primum"; };
-  Primum.ur = undefined;
+  Primum.ur = "Primum";
   Primum.kill = function() { this.clear(); };
   gameobject.level = Primum;
 }

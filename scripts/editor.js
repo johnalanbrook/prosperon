@@ -450,6 +450,7 @@ var editor = {
       
       GUI.text(sname, x.screenpos().add([0, 32]), 1, Color.editor.ur);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
+      Shape.cross(x.screenpos(), 10, Color.blue);
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
@@ -1963,26 +1964,6 @@ var entitylistpanel = Object.copy(inputpanel, {
   start() {
     this.level = editor.edit_level;
   },
-  
-/*  guibody() {
-    Nuke.newline(4);
-    Nuke.label("Object");
-    Nuke.label("Visible");
-    Nuke.label("Selectable");
-    Nuke.label("Selected?");
-    this.level.objects.forEach(function(x) {
-      if (Nuke.button(x.toString())) {
-        editor.selectlist = [];
-	editor.selectlist.push(x);
-      }
-      
-      x.visible = Nuke.checkbox(x.visible);
-      x._ed.selectable = Nuke.checkbox(x._ed.selectable);
-      
-      if (editor.selectlist.includes(x)) Nuke.label("T"); else Nuke.label("F");
-    });
-  },
-*/
 });
 
 var limited_editor = {};
