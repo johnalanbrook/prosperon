@@ -768,8 +768,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 60:
-    if (!id2sprite(js2int(argv[1]))) break;
-    id2sprite(js2int(argv[1]))->layer = js2int(argv[2]);
     break;
 
   case 61:
@@ -1365,6 +1363,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 218:
       js2sprite(argv[1])->t.angle = js2number(argv[2]);
+      break;
+    case 219:
+      js2sprite(argv[1])->drawmode = js2number(argv[2]);
+      break;
+    case 220:
+      ret = num2js(js2sprite(argv[1])->drawmode);
       break;
   }
 

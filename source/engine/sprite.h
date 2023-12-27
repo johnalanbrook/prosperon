@@ -7,6 +7,9 @@
 #include "transform.h"
 #include "gameobject.h"
 
+#define DRAW_SIMPLE 0
+#define DRAW_TILE 1
+
 struct sprite {
   transform2d t;
   struct rgba color;
@@ -15,8 +18,8 @@ struct sprite {
   struct Texture *tex;
   struct glrect frame;
   int enabled;
-  int layer;
   int next;
+  int drawmode;
 };
 
 int make_sprite(gameobject *go);

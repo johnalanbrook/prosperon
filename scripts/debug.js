@@ -44,6 +44,12 @@ var Shape = {
   },
   
   poly(points, color) { cmd_points(0,points,color); },
+
+  rectangle(lowerleft, upperright, color) {
+    var pos = lowerleft.add(upperright).map(x=>x/2);
+    var wh = [upperright.x-lowerleft.x,upperright.y-lowerleft.y];
+    Shape.box(pos,wh,color);
+  },
   
   box(pos, wh, color) {
     color ??= Color.white;

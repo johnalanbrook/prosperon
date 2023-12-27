@@ -31,10 +31,6 @@ uniform sampler smp;
 void main()
 {
   color = texture(sampler2D(image,smp), texcoords);
-  
-  if (color.a <= 0.1f)
-      discard;
-  
   color *= fcolor;
   color.xyz = mix(color.xyz, femissive.xyz, femissive.a);
 }
