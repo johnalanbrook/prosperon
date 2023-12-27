@@ -67,8 +67,8 @@ transform2d go2t(gameobject *go)
   t.pos.cp = cpBodyGetPosition(go->body);
   t.angle = cpBodyGetAngle(go->body);
   t.scale = go->scale.XY;
-  if (isnan(t.scale.X)) t.scale.X = 1;
-  if (isnan(t.scale.Y)) t.scale.Y = 1;
+  if (!isfinite(t.scale.X)) t.scale.X = 1;
+  if (!isfinite(t.scale.Y)) t.scale.Y = 1;
   return t;
 }
 

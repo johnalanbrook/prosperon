@@ -304,12 +304,15 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
   assert(sizeof(poly->points[0]) == sizeof(cpVect));
   struct gameobject *go = poly->shape.go;
-//  cpTransform T = m3_to_cpt(transform2d2mat(poly->t));
-  cpTransform T = m3_to_cpt(transform2d2mat(poly->shape.go->t));
+  transform2d t = go2t(shape2go(poly->shape.shape));
+  t.pos.cp = cpvzero;
+  t.angle = 0;
+  cpTransform T = m3_to_cpt(transform2d2mat(t));
   cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), (cpVect*)poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
 }
+
 void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
   struct rgba color = shape_color(poly->shape.shape);
   struct rgba line_color = color;
@@ -318,9 +321,11 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) >= 3) {
     int n = cpPolyShapeGetCount(poly->shape.shape);
     HMM_Vec2 points[n+1];
-    HMM_Mat3 rt = t_go2world(shape2go(poly->shape.shape));
+    transform2d t = go2t(shape2go(poly->shape.shape));
+    t.scale = (HMM_Vec2){1,1};
+    HMM_Mat3 rt = transform2d2mat(t);
     for (int i = 0; i < n; i++)
-      points[i] = (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i);
+      points[i] = mat_t_pos(rt, (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i));
 
     points[n] = points[0];
 
@@ -520,7 +525,7 @@ static struct postphys_cb *begins = NULL;
 void flush_collide_cbs() {
   for (int i = 0; i < arrlen(begins); i++) {
     script_callee(begins[i].c, 1, &begins[i].send);
-    JS_FreeValue(js, begins[i].send);
+//    JS_FreeValue(js, begins[i].send);
   }
 
   arrsetlen(begins,0);
@@ -545,7 +550,8 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
   struct postphys_cb cb;
   cb.c = c;
   cb.send = obj;
-  arrput(begins, cb);  
+  script_callee(c, 1, &obj);
+//  arrput(begins, cb);  
 }
 
 #define CTYPE_BEGIN 0

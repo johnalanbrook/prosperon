@@ -18,7 +18,7 @@ extern struct rgba static_color;
 extern struct rgba sleep_color;
 
 struct phys2d_shape {
-  cpShape *shape;
+  cpShape *shape; /* user data is this phys2d_shape */
   transform2d t;
   gameobject *go;
   void *data; /* The specific subtype; phys2d_circle, etc */

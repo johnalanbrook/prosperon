@@ -20,8 +20,6 @@ function assign_impl(obj, impl)
 
   Object.mixin(obj, impl);
 
-  if (obj.sync) obj.sync();
-
   for (var key in tmp)
     obj[key] = tmp[key];
 }
@@ -53,7 +51,6 @@ var component = {
     var nc = Object.create(this);
     nc.gameobject = go;
     Object.assign(nc, this._enghook(go.body));
-    nc.sync();
     assign_impl(nc,this.impl);
     Object.hide(nc, ...this.hides);
     nc.post();
@@ -497,14 +494,14 @@ component.polygon2d = Object.copy(collider2d, {
 });
 
 component.polygon2d.impl = Object.mix(collider2d.impl, {
-  sync() { cmd_poly2d(0, this.id, this.spoints()); },
+  sync() { cmd_poly2d(0, this.id, this.spoints());},
   query() { return cmd(80, this.shape); },
 });
 
 var polygon2d = component.polygon2d;
 
 polygon2d.inputs = {};
-polygon2d.inputs.post = function() { this.sync(); };
+//polygon2d.inputs.post = function() { this.sync(); };
 polygon2d.inputs.f10 = function() {
   this.points = sortpointsccw(this.points);
 };
@@ -587,7 +584,7 @@ component.edge2d = Object.copy(collider2d, {
 
   setpoints(points) {
     this.cpoints = points;
-    this.sync();
+//    this.sync();
   },
 
   post() {
@@ -747,7 +744,7 @@ component.edge2d.impl = Object.mix({
 var bucket = component.edge2d;
 bucket.spoints.doc = "Returns the controls points after modifiers are applied, such as it being hollow or mirrored on its axises.";
 bucket.inputs = {};
-bucket.inputs.post = function() { this.sync(); };
+//bucket.inputs.post = function() { this.sync(); };
 bucket.inputs.h = function() { this.hollow = !this.hollow; };
 bucket.inputs.h.doc = "Toggle hollow.";
 

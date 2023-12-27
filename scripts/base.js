@@ -407,9 +407,7 @@ Object.isAccessor = function(obj, prop)
 Object.mergekey = function(o1,o2,k)
 {
   if (!o2) return;
-  if (Object.isAccessor(o2,k))
-    Object.defineProperty(o1, k, Object.getOwnPropertyDescriptor(o2,k));
-  else if (typeof o2[k] === 'object') {
+  if (typeof o2[k] === 'object') {
     if (Array.isArray(o2[k]))
       o1[k] = deep_copy(o2[k]);
     else {
@@ -420,7 +418,8 @@ Object.mergekey = function(o1,o2,k)
         o1[k] = o2[k];
     }
    } else
-     o1[k] = o2[k];
+     Object.defineProperty(o1, k, Object.getOwnPropertyDescriptor(o2,k));   
+//     o1[k] = o2[k];
 }
 
 /* Same as merge from Ruby */
@@ -438,6 +437,8 @@ Object.totalmerge = function(target, ...objs)
   for (var obj of objs)
     for (var key in obj)
       Object.mergekey(target,obj,key);
+
+  return target;
 }
 
 /* Returns a new object with undefined, null, and empty values removed. */

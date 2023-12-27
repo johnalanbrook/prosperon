@@ -193,6 +193,7 @@ var editor = {
     Player.players[0].control(limited_editor);
     Register.unregister_obj(this);
     load("predbg.js");
+    console.warn(`starting game with ${this.dbg_ur}`);
     editor.dbg_play = Primum.spawn(this.dbg_ur);
     editor.dbg_play.pos = [0,0];
     load("debug.js");
@@ -605,9 +606,6 @@ editor.inputs.f9 = function() {
   cmd(173, "capture.bmp", 0, 0, 500, 500);
 }
 
-editor.inputs.post = function() {
-  if (editor.sel_comp && 'sync' in editor.sel_comp) editor.sel_comp.sync();
-};
 editor.inputs.release_post = function() {
   editor.snapshot();
   editor.edit_level.check_dirty();
@@ -839,7 +837,6 @@ editor.inputs['C-s'] = function() {
 
   Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });
 
-
   Game.all_objects(function(x) {
     if (typeof x !== 'object') return;
     if (!('_ed' in x)) return;
@@ -871,18 +868,8 @@ editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
   return;
-  gameobject.make(editor.edit_level);
-  console.warn("MADE A NEW OBJECT");
-/*  if (editor.edit_level._ed.dirty) {
-    Log.info("Level has changed; save before starting a new one.");
-    editor.openpanel(gen_notify("Level is changed. Are you sure you want to close it?", _ => editor.clear_level()));
-    return;
-  }
-
-  editor.clear_level();
-*/
 };
-editor.inputs['C-n'].doc = "Open a new level.";
+editor.inputs['C-n'].doc = "Create an empty object.";
 
 editor.inputs['C-o'] = function() {
   editor.openpanel(openlevelpanel);
@@ -1098,8 +1085,7 @@ editor.inputs.mouse.move = function(pos, dpos)
   editor.grabselect?.forEach(function(x) {
     if (!x) return;
     x.move(Game.camera.dir_view2world(dpos));
-    if ('sync' in x)
-      x.sync();
+    x.sync();
   });
   
   var relpos = Mouse.worldpos.sub(editor.cursor);
@@ -1767,7 +1753,6 @@ var objectexplorer = Object.copy(inputpanel, {
 //        this.obj[key] = this.obj[key];
     });
 
-//    Game.all_objects(function(x) { x.sync(); });
     return items;
   },
 
