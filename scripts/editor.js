@@ -609,6 +609,9 @@ editor.inputs.f9 = function() {
 editor.inputs.release_post = function() {
   editor.snapshot();
   editor.edit_level.check_dirty();
+
+  /* snap all objects to be pixel perfect */
+  editor.edit_level.obj_descend(o => o.pos = o.pos.map(x => Math.round(x)));
 };
 editor.inputs['C-a'] = function() {
   if (!editor.selectlist.empty) { editor.unselect(); return; }

@@ -550,8 +550,7 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
   struct postphys_cb cb;
   cb.c = c;
   cb.send = obj;
-  script_callee(c, 1, &obj);
-//  arrput(begins, cb);  
+  arrput(begins, cb);  
 }
 
 #define CTYPE_BEGIN 0

@@ -620,7 +620,7 @@ component.edge2d = Object.copy(collider2d, {
 
   /* EDITOR */
   gizmo() {
-    if (this.type === Spline.type.catmull) {
+    if (this.type === Spline.type.catmull || this.type === -1) {
       this.spoints().forEach(x => Shape.point(this.gameobject.this2screen(x), 3, Color.teal));
       this.cpoints.forEach((x,i) => Debug.numbered_point(this.gameobject.this2screen(x), i));
     } else {
@@ -643,7 +643,7 @@ component.edge2d = Object.copy(collider2d, {
     var p = this.cpoints[i];
     if (!p) return undefined;
 
-    if (Spline.is_catmull(this.type))
+    if (Spline.is_catmull(this.type) || this.type === -1)
       return make_point_obj(this,p);
       
     var that = this.gameobject;
@@ -691,7 +691,7 @@ component.edge2d = Object.copy(collider2d, {
   add_node(pos) {
     pos = this.gameobject.world2this(pos);
     var idx = 0;
-    if (Spline.is_catmull(this.type)) {
+    if (Spline.is_catmull(this.type) || this.type === -1) {
       if (this.cpoints.length >= 2)
 	idx = cmd(59, pos, this.cpoints, 400);
 

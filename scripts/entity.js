@@ -480,9 +480,10 @@ var gameobject = {
       transform() {
         var t = {};
 	t.pos = this.pos;
-	t.angle = this.angle;
+	t.angle = Math.places(this.angle,4);
 	t.scale = this.scale;
 	t.scale = t.scale.map((x,i) => x/this.__proto__.scale[i]);
+	t.scale = t.scale.map(x => Math.places(x,3));
 	return t;
       },
 
@@ -635,6 +636,12 @@ var gameobject = {
   register_separate(fn, obj) {
     obj ??= this;
     Signal.obj_separate(fn,obj,this);
+  },
+
+  obj_descend(fn) {
+    fn(this);
+    for (var o in this.objects)
+      this.objects[o].obj_descend(fn);
   },
 }
 Object.mixin(gameobject,gameobject_impl);

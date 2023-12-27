@@ -1209,6 +1209,12 @@ Math.nearest = function(n, incr)
   return Math.round(n/incr)*incr;
 }
 
+Math.places = function(n,digits)
+{
+  var div = Math.pow(10,digits);
+  return Math.round(n*div)/div;
+}
+
 Number.hex = function(n)
 {
   var s = Math.floor(n).toString(16);
@@ -1413,9 +1419,9 @@ var Vector = {
   
   rotate(v,angle) {
     var r = Vector.length(v);
-    var p = Vector.angle(v) + angle;
-    p = Math.turn2rad(angle);
-    return [r*Math.cos(p), r*Math.sin(p)];
+    angle += Vector.angle(v);
+    angle = Math.turn2rad(angle);
+    return [r*Math.cos(angle), r*Math.sin(angle)];
   },
   
   equal(v1, v2, tol) {
