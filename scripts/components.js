@@ -79,6 +79,8 @@ component.sprite = Object.copy(component, {
   _enghook: make_sprite,
 });
 
+Object.hide(component.sprite, 'rect');
+
 component.sprite.impl = {
   set path(x) {
     //cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
@@ -107,6 +109,7 @@ component.sprite.impl = {
   get drawmode() { return cmd(220,this.id); },
   set drawmode(x) { cmd(219,this.id,x); },
   emissive(x) { cmd(170, this.id, x); },
+  sync() { this.path = this.path; },
   pickm() { return this; },
   move(d) { this.pos = this.pos.add(d); },
 
@@ -118,9 +121,14 @@ component.sprite.impl = {
   },
 
   kill() { cmd(9,this.id); },
-  dimensions() { return cmd(64,this.path); },
-  width() { return cmd(64,this.path).x; },
-  height() { return cmd(64,this.path).y; },
+  dimensions() {
+    var dim = Resources.texture.dimensions(this.path);
+    dim.x *= (this.rect.s1-this.rect.s0);
+    dim.y *= (this.rect.t1-this.rect.t0);
+    return dim;
+  },
+  width() { return this.dimensions().x; },
+  height() { return this.dimensions().y; },
 };
 
 Object.freeze(sprite);
@@ -160,7 +168,7 @@ var SpriteAnim = {
     var anim = {};
     anim.frames = [];
     anim.path = path;
-    var frames = cmd(139,path);
+    var frames = Resources.gif.frames(path);
     var yslice = 1/frames;
     for (var f = 0; f < frames; f++) {
       var frame = {};
@@ -174,9 +182,10 @@ var SpriteAnim = {
       anim.frames.push(frame);
     }
     anim.loop = true;
-    var dim = cmd(64,path);
+    var dim = Resources.texture.dimensions(path);
     dim.y /= frames;
     anim.dim = dim;
+    anim.toJSON = function() { return {}; };
     return anim;
   },
 
@@ -191,7 +200,7 @@ var SpriteAnim = {
       frame.time = time;
       anim.frames.push(frame);
     }
-    anim.dim = cmd(64,path);
+    anim.dim = Resources.texture.dimensions(path);
     anim.dim.x /= frames;
     return anim;
   },
@@ -267,12 +276,7 @@ component.char2dimpl = {
   },
 
   anims:{},
-
-  sync() {
-    if (this.path)
-      cmd(12,this.id,this.path,this.rect);
-  },
-
+  acur:{},
   frame: 0,
 
   play_anim(anim) {
@@ -301,7 +305,8 @@ component.char2dimpl = {
   },
   
   setsprite() {
-    cmd(12, this.id, this.acur.path, this.acur.frames[this.frame].rect);
+    this.rect = this.acur.frames[this.frame].rect;
+    this.path = this.path;
   },
 
   advance() {
@@ -340,9 +345,7 @@ component.char2dimpl = {
   },
 };
 
-Object.assign(component.char2d, component.char2dimpl);
-
-component.char2d.doc = {
+component.char2dimpl.doc = {
   doc: "An animation player for sprites.",
   frame: "The current frame of animation.",
   anims: "A list of all animations in this player.",
@@ -356,6 +359,8 @@ component.char2d.doc = {
   play_anim: "Play a given animation object.",
   add_anim: "Add an animation object with the given name."
 };
+
+Object.hide(component.char2dimpl, "doc");
 
 /* Returns points specifying this geometry, with ccw */
 var Geometry = {

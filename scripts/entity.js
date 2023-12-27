@@ -480,10 +480,13 @@ var gameobject = {
       transform() {
         var t = {};
 	t.pos = this.pos;
+	if (t.pos.every(x=>x===0)) delete t.pos;
 	t.angle = Math.places(this.angle,4);
+	if (t.angle === 0) delete t.angle;
 	t.scale = this.scale;
 	t.scale = t.scale.map((x,i) => x/this.__proto__.scale[i]);
 	t.scale = t.scale.map(x => Math.places(x,3));
+	if (t.scale.every(x=>x===1)) delete t.scale;
 	return t;
       },
 

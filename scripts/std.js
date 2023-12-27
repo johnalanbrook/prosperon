@@ -23,6 +23,17 @@ Resources.is_sound = function(path) {
   return Resources.sounds.any(x => x === ext);
 }
 
+Resources.is_animation = function(path)
+{
+  if (path.ext() === 'gif' && Resources.gif.frames(path) > 1) return true;
+}
+
+Resources.texture = {};
+Resources.texture.dimensions = function(path) { return cmd(64,path); }
+
+Resources.gif = {};
+Resources.gif.frames = function(path) { return cmd(139,path); }
+
 var Log = {
   set level(x) { cmd(92,x); },
   get level() { return cmd(93); },
