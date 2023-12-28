@@ -213,10 +213,9 @@ struct phys2d_circle *Make2DCircle(gameobject *go) {
   return new;
 }
 
-float phys2d_circle_moi(struct phys2d_circle *c, float m) {
-  return 1;
-  //TODO: Calculate correctly
-  //return cpMomentForCircle(m, 0, c->radius, c->offset);
+float phys2d_circle_moi(struct phys2d_circle *c) {
+  float m = c->shape.go->mass;
+  return cpMomentForCircle(m, 0, cpCircleShapeGetRadius(c->shape.shape), cpCircleShapeGetOffset(c->shape.shape));
 }
 
 void phys2d_circledel(struct phys2d_circle *c) {
@@ -231,6 +230,18 @@ void phys2d_dbgdrawcpcirc(cpShape *c) {
   draw_circle(pos, radius, 1, color, seglen);
   color.a = col_alpha;
   draw_circle(pos,radius,radius,color,-1);
+}
+
+void phys2d_shape_apply(struct phys2d_shape *s)
+{
+  float moment = cpBodyGetMoment(s->go->body);
+  float moi = s->moi(s->data);
+
+  s->apply(s->data);
+  float newmoi = s->moi(s->data);
+  moment-=moi;
+  moment += newmoi;
+  cpBodySetMoment(s->go->body, moment);
 }
 
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
@@ -268,12 +279,16 @@ void phys2d_poly_free(struct phys2d_poly *poly)
   free(poly);
 }
 
-float phys2d_poly_moi(struct phys2d_poly *poly, float m) {
-  float moi = cpMomentForPoly(m, arrlen(poly->points), (cpVect*)poly->points, cpvzero, poly->radius);
-  if (isnan(moi)) {
-//    YughError("Polygon MOI returned an error. Returning 0.");
+float phys2d_poly_moi(struct phys2d_poly *poly) {
+  float m = poly->shape.go->mass;
+  int len = cpPolyShapeGetCount(poly->shape.shape);
+  cpVect points[len];
+  for (int i = 0; i < len; i++)
+    points[i] = cpPolyShapeGetVert(poly->shape.shape, i);
+
+  float moi = cpMomentForPoly(m, len, points, cpvzero, poly->radius);
+  if (!isfinite(moi))
     return 0;
-  }
 
   return moi;
 }
@@ -296,8 +311,8 @@ void phys2d_poly_setverts(struct phys2d_poly *poly, HMM_Vec2 *verts) {
   
   for (int i = 0; i < arrlen(verts); i++)
     poly->points[i] = verts[i];
-    
-  phys2d_applypoly(poly);
+
+  phys2d_shape_apply(&poly->shape);
 }
 
 void phys2d_applypoly(struct phys2d_poly *poly) {
@@ -365,7 +380,8 @@ void phys2d_edge_free(struct phys2d_edge *edge)
   free(edge);
 }
 
-float phys2d_edge_moi(struct phys2d_edge *edge, float m) {
+float phys2d_edge_moi(struct phys2d_edge *edge) {
+  float m = edge->shape.go->mass;
   float moi = 0;
   for (int i = 0; i < arrlen(edge->points) - 1; i++)
     moi += cpMomentForSegment(m, edge->points[i].cp, edge->points[i + 1].cp, edge->thickness);

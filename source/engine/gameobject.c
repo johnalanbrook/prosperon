@@ -93,16 +93,16 @@ void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
 }
 
 void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
-  float moment = cpBodyGetMoment(go->body);
+  float moment = cpBodyGetMoment(body);
   struct phys2d_shape *s = cpShapeGetUserData(shape);
   if (!s) {
-    cpBodySetMoment(go->body, moment + 1);
+    cpBodySetMoment(body, moment + 1);
     return;
   }
 
-  moment += s->moi(s->data, go->mass);
-  if (moment < 0) moment = 1;
-  cpBodySetMoment(go->body, 1);
+  moment += s->moi(s->data);
+  if (moment < 0) moment = 0;
+  cpBodySetMoment(body, moment);
 }
 
 void gameobject_apply(gameobject *go) {

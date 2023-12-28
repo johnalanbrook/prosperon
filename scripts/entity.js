@@ -193,7 +193,20 @@ var gameobject = {
   full_path() {
     return this.path_from(Primum);
   },
-
+  /* pin this object to the to object */
+  pin(to) {
+    var p = cmd(222,this.body, to.body);
+  },
+  pivot(to, piv) {
+    piv ??= this.worldpos();
+    var p = cmd(221,this.body,to.body,piv);
+  },
+  gear(to, phase, ratio) {
+    phase ??= 1;
+    ratio ??= 1;
+    var p = cmd(223,this.body,to.body,phase,ratio);
+  },
+  
     path_from(o) {
       var p = this.toString();
       var c = this.level;
@@ -516,8 +529,9 @@ var gameobject = {
 
     Player.do_uncontrol(this);
     Register.unregister_obj(this);
-
-    this.__proto__.instances.remove(this);
+    
+    if (this.__proto__.instances)
+      this.__proto__.instances.remove(this);
 
     for (var key in this.components) {
       Register.unregister_obj(this.components[key]);

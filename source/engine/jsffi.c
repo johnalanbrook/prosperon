@@ -1370,6 +1370,18 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 220:
       ret = num2js(js2sprite(argv[1])->drawmode);
       break;
+    case 221:
+      ret = ptr2js(cpPivotJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body,js2vec2(argv[3]).cp));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
+    case 222:
+      ret = ptr2js(cpPinJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, cpvzero,cpvzero));
+      cpSpaceAddConstraint(space, js2ptr(ret));
+      break;
+    case 223:
+      ret = ptr2js(cpGearJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4])));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
   }
 
   if (str)
@@ -1706,8 +1718,8 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
     case 3:
       return vec2js(circle->offset);
   }
-  
-  phys2d_applycircle(circle);
+  phys2d_shape_apply(&circle->shape);
+
   return JS_UNDEFINED;
 }
 

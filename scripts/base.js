@@ -1245,6 +1245,7 @@ Object.defineProperty(Number.prototype, 'lerp', {
 Math.clamp = function (x, l, h) { return x > h ? h : x < l ? l : x; }
 
 Math.random_range = function(min,max) { return Math.random() * (max-min) + min; };
+Math.rand_int = function(max) { return Math.floor(Math.random()*max); };
 
 Math.snap = function(val, grid) {
   if (!grid || grid === 1) return Math.round(val);
