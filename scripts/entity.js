@@ -266,13 +266,10 @@ var gameobject = {
       },
       
       spawn(ur, data) {
+        ur ??= gameobject;
 	if (typeof ur === 'string')
 	  ur = prototypes.get_ur(ur);
-        if (!ur) {
-	  Log.error("Failed to make UR from " + ur);
-	  return undefined;
-	}
-	
+
 	var go = ur.make(this, data);
 	Object.hide(this, go.toString());
         return go;
@@ -401,6 +398,7 @@ var gameobject = {
         register_collide(1, x.collide, x, obj.body, x.shape);
     });
   },
+  toString() { return "new_object"; },
   
     flipx() { return this.scale.x < 0; },
     flipy() { return this.scale.y < 0; },
@@ -505,6 +503,9 @@ var gameobject = {
       },
 
   kill() {
+    if (this.__kill) return;
+    this.__kill = true;
+    
     this.timers.forEach(t => t());
     this.timers = undefined;
     
@@ -544,8 +545,8 @@ var gameobject = {
     obj.make = undefined;
     Object.mixin(obj,gameobject_impl);
 
-    if (this.instances)
-      this.instances.push(obj);
+//    if (this.instances)
+//      this.instances.push(obj);
       
     obj.body = make_gameobject();
 
@@ -578,7 +579,7 @@ var gameobject = {
     Object.hide(obj, 'ur','body', 'components', 'objects', '_ed', 'level', 'timers');        
 
     if (this.objects)
-      obj.make_objs(this.objects);
+      obj.make_objs(this.objects)
 
     Object.dainty_assign(obj, this);
     obj.sync();
@@ -626,8 +627,11 @@ var gameobject = {
     data ??= undefined;
     if (typeof comp.make !== 'function') return;
     var name = obj_unique_name(comp.toString(), this);
-    this[name] = comp.make(this.body);
-    Object.assign(this[name], data);
+    this[name] = comp.make(this);
+    this[name].comp = comp.toString();
+    this.components[name] = this[name];
+    if (data)
+      Object.assign(this[name], data);
     return this[name];
   },
 
