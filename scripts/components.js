@@ -164,6 +164,12 @@ sprite.inputs.kp1 = function() { this.pos = this.dimensions().scale([-1,-1]); };
 Object.seal(sprite);
 
 var SpriteAnim = {
+  make(path) {
+    if (path.ext() === 'gif')
+      return SpriteAnim.gif(path);
+    else if (Resources.is_image(path))
+      return SpriteAnim.strip(path);
+  },
   gif(path) {
     var anim = {};
     anim.frames = [];
