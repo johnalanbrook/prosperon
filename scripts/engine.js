@@ -94,7 +94,7 @@ var timer = {
   },
 };
 
-load("scripts/animation.js");
+load("scripts/tween.js");
 
 var Render = {
   normal() { cmd(67);},
@@ -526,6 +526,7 @@ function world_start() {
   Primum.toString = function() { return "Primum"; };
   Primum.ur = "Primum";
   Primum.kill = function() { this.clear(); };
+  Primum.phys = 2;
   gameobject.level = Primum;
 }
 
@@ -535,7 +536,6 @@ Game.view_camera = function(cam)
 {
   Game.camera = cam;
   cmd(61, Game.camera.body);
-//  cam.zoom = cam.zoom;
 }
 
 Window.name = "Primum Machinam (V0.1)";

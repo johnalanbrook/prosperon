@@ -276,12 +276,12 @@ int main(int argc, char **argv) {
     snprintf(fname, 100, "yugine-%ld.log", now);
     log_setfile(fname);
   }
-/*  
+  
   signal(SIGSEGV, seghandle);
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
   signal(SIGBUS, seghandle);
-*/
+
 #endif
 
 #ifdef STEAM

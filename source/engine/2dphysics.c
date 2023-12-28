@@ -525,7 +525,7 @@ static struct postphys_cb *begins = NULL;
 void flush_collide_cbs() {
   for (int i = 0; i < arrlen(begins); i++) {
     script_callee(begins[i].c, 1, &begins[i].send);
-//    JS_FreeValue(js, begins[i].send);
+     JS_FreeValue(js, begins[i].send);
   }
 
   arrsetlen(begins,0);
@@ -538,7 +538,7 @@ void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter
 
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
-  JS_SetPropertyStr(js, obj, "obj", hit->ref);
+  JS_SetPropertyStr(js, obj, "obj", JS_DupValue(js,hit->ref));
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);

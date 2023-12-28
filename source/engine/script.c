@@ -73,10 +73,8 @@ void script_stop()
 {
   script_evalf("Event.notify('quit');");
   send_signal("quit",0,NULL);
-  
   for (int i = 0; i < shlen(jsstrs); i++)
     JS_FreeValue(js,jsstrs[i].value);
-    
   JS_FreeContext(js);
   JS_FreeRuntime(rt);
 }
@@ -185,6 +183,7 @@ time_t jso_file(const char *file)
   JSValue ret = JS_EvalFunction(js, obj);
   js_print_exception(ret);
   JS_FreeValue(js,ret);
+  JS_FreeValue(js,obj);
   free(byte);
   return file_mod_secs(file);
 }

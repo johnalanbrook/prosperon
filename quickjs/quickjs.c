@@ -81,8 +81,8 @@
 
 /* dump object free */
 #ifdef DBG
-//#define DUMP_FREE
-//#define DUMP_CLOSURE
+#define DUMP_FREE
+#define DUMP_CLOSURE
 /* dump the bytecode of the compiled functions: combination of bits
    1: dump pass 3 final byte code
    2: dump pass 2 code
@@ -91,7 +91,7 @@
   16: dump bytecode in hex
   32: dump line number table
  */
-//#define DUMP_BYTECODE  (1)
+#define DUMP_BYTECODE  (1)
 /* dump the occurence of the automatic GC */
 #define DUMP_GC
 /* dump objects freed by the garbage collector */
@@ -103,9 +103,9 @@
 #define DUMP_OBJECTS    /* dump objects in JS_FreeContext */
 #define DUMP_ATOMS      /* dump atoms in JS_FreeContext */
 #define DUMP_SHAPES     /* dump shapes in JS_FreeContext */
-//#define DUMP_MODULE_RESOLVE
-//#define DUMP_PROMISE
-//#define DUMP_READ_OBJECT
+#define DUMP_MODULE_RESOLVE
+#define DUMP_PROMISE
+#define DUMP_READ_OBJECT
 #endif
 /* test the GC by forcing it before each object allocation */
 //#define FORCE_GC_AT_MALLOC
