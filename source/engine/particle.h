@@ -3,34 +3,42 @@
 
 #include "HandmadeMath.h"
 #include "transform.h"
+#include "texture.h"
 
-struct particle {
+typedef struct particle {
   HMM_Vec3 pos;
   HMM_Vec3 v; /* velocity */
-  HMM_Quat angle;
-  HMM_Quat av; /* angular velocity */
-
-  union {
-    double life;
-    unsigned int next;
-  };
-};
+  float angle;
+  float av; /* angular velocity */
+  float scale;
+  double life;
+  rgba color;
+} particle;
 
 typedef struct emitter {
   struct particle *particles;
   transform3d t;
-  int max;
-  double life;
-  void (*seeder)(struct particle *p); /* Called to initialize each particle */
+  float explosiveness; /* 0 for a stream, 1 for all at once. Range of values allowed. */
+  int max; /* number of particles */
+  double life; /* how long a particle lasts */
+  double tte; /* time to emit */
+  rgba color;
+  float scale;
+  texture *texture;
 } emitter;
 
-struct emitter make_emitter();
-void free_emitter(struct emitter e);
+void particle_init();
 
-void start_emitter(struct emitter e);
-void pause_emitter(struct emitter e);
-void stop_emitter(struct emitter e);
+emitter *make_emitter();
+void free_emitter(emitter *e);
 
-void emitter_step(struct emitter e, double dt);
+void start_emitter(emitter *e);
+void pause_emitter(emitter *e);
+void stop_emitter(emitter *e);
+
+void emitter_emit(emitter *e, int count);
+void emitters_step(double dt);
+void emitters_draw();
+void emitter_step(emitter *e, double dt);
 
 #endif

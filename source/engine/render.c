@@ -7,6 +7,7 @@
 #include "gameobject.h"
 #include "log.h"
 #include "sprite.h"
+#include "particle.h"
 #include "window.h"
 #include "model.h"
 #include "stb_ds.h"
@@ -511,6 +512,8 @@ void full_2d_pass(struct window *window)
   sprite_draw_all();
   model_draw_all();
   call_draw();
+
+  emitters_draw();
 
   //// DEBUG
   if (debugDrawPhysics) {

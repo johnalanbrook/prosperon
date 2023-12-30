@@ -91,6 +91,8 @@ struct rgba {
   unsigned char a;
 };
 
+typedef struct rgba rgba;
+
 struct boundingbox {
   float t;
   float b;

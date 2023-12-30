@@ -76,6 +76,12 @@ int gif_nframes(const char *path)
   return t->frames;
 }
 
+int *gif_delays(const char *path)
+{
+  struct Texture *t = texture_pullfromfile(path);
+  return t->delays;
+}
+
 /* If an empty string or null is put for path, loads default texture */
 struct Texture *texture_pullfromfile(const char *path) {
   if (!path) return texture_notex();
@@ -110,7 +116,13 @@ struct Texture *texture_pullfromfile(const char *path) {
     tex->height = qoi.height;
     n = qoi.channels;
   } else if (!strcmp(ext, ".gif")) {
-    data = stbi_load_gif_from_memory(raw, rawlen, NULL, &tex->width, &tex->height, &tex->frames, &n, 4);
+    data = stbi_load_gif_from_memory(raw, rawlen, &tex->delays, &tex->width, &tex->height, &tex->frames, &n, 4);
+    int *dd = tex->delays;
+    tex->delays = NULL;
+    arrsetlen(tex->delays, tex->frames);
+    for (int i = 0; i < tex->frames;i++)
+      tex->delays[i] = dd[i];
+    free(dd);
     tex->height *= tex->frames;
   } else if (!strcmp(ext, ".svg")) {
   #ifndef NSVG

@@ -277,7 +277,6 @@ void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba
 
   sg_draw(sprite_count * 4, 4, 1);
   sprite_count++;
-  
 }
 
 void sprite_setframe(struct sprite *sprite, struct glrect *frame) {

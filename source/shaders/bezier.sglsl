@@ -1,0 +1,19 @@
+@vs vs
+in vec2 pos;
+
+uniform vs_p { mat4 proj; };
+
+void main()
+{
+  gl_Position = proj * vec4(pos,0.0,1.0);
+}
+@end
+
+@fs fs
+void main()
+{
+
+}
+@end
+
+@program particle vs fs

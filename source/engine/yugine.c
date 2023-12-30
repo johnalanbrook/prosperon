@@ -9,6 +9,7 @@
 #include "resources.h"
 #include "spline.h"
 #include <stdio.h>
+#include "particle.h"
 
 #include "datastream.h"
 
@@ -101,6 +102,11 @@ void c_init() {
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
   script_evalf("Game.init();");
+
+  particle_init();
+//  emitter *e = make_emitter();
+//  e->texture = texture_pullfromfile("bolt.gif");
+//  start_emitter(e);
 }
 
 int frame_fps() { return 1.0/sapp_frame_duration(); }
@@ -114,10 +120,7 @@ static void process_frame()
     /* Timers all update every frame - once per monitor refresh */
     timer_update(elapsed, timescale);
 
-  /* Update at a high level::
-   * Update scene graph
-   *
-  */
+  emitters_step(elapsed);
 
   if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
     if (stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {

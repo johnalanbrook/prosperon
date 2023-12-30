@@ -79,19 +79,61 @@ component.sprite = Object.copy(component, {
   _enghook: make_sprite,
 });
 
-Object.hide(component.sprite, 'rect');
-
 component.sprite.impl = {
+  toJSON() {
+    var j = {};
+    Object.keys(this).forEach(k => j[k] = this[k]);
+    delete j.rect;
+    return j;
+  },
+
   set path(x) {
-    //cmd(12,this.id,prototypes.resani(this.gameobject.__proto__.toString(), x),this.rect);
-    cmd(12,this.id,x,this.rect);
+    if (this.cancel) {
+      this.cancel();
+      this.cancel = undefined;
+    }
+    
+    if (!Resources.is_animation(x)) {
+      this.rect = component.sprite.rect;
+      cmd(12,this.id,x,this.rect);
+    }
+    else {
+      this.rect = SpriteAnim.make(x).frames[0].rect;
+      cmd(12,this.id,x,this.rect);
+    }
   },
   get path() {
     var s = cmd(116,this.id);
     if (s === "icons/no_tex.gif") return undefined;
     return s;
-    //return prototypes.resavi(this.gameobject.__proto__.toString(), cmd(116,this.id));
   },
+
+  play() {
+    var frame = 0;
+    var anim = SpriteAnim.make(this.path);
+    var advance = function() {
+      frame = (frame+1)%anim.frames.length;
+      this.rect = anim.frames[frame].rect;
+      cmd(12,this.id,this.path,this.rect);
+      this.cancel = this.gameobject.delay(advance.bind(this), anim.frames[frame].time);
+    }
+    advance.call(this);
+    
+  },
+  
+  stop() {
+    if (!this.cancel) return;
+    this.cancel();
+    this.cancel = undefined;
+  },
+  setframe(f) {
+    this.stop();
+    var anim = SpriteAnim.make(this.path);
+    if (!anim) return;
+    this.rect = anim.frames[f].rect;
+    cmd(12,this.id,this.path,this.rect);
+  },
+    
   toString() { return "sprite"; },
   hide() { this.enabled = false; },
   show() { this.enabled = true; },
@@ -163,12 +205,18 @@ sprite.inputs.kp2 = function() { this.pos = this.dimensions().scale([-0.5,-1]); 
 sprite.inputs.kp1 = function() { this.pos = this.dimensions().scale([-1,-1]); };
 Object.seal(sprite);
 
+/* sprite anim returns a data structure for the given file path
+  frames: array of frames
+    rect: frame rectangle
+    time: miliseconds to hold the frame for
+  loop: true if it should be looped
+*/
 var SpriteAnim = {
   make(path) {
     if (path.ext() === 'gif')
       return SpriteAnim.gif(path);
-    else if (Resources.is_image(path))
-      return SpriteAnim.strip(path);
+    else
+      return undefined;
   },
   gif(path) {
     var anim = {};
@@ -187,11 +235,13 @@ var SpriteAnim = {
       frame.time = 0.05;
       anim.frames.push(frame);
     }
+    var times = cmd(224,path);
+    for (var i = 0; i < frames; i++)
+      anim.frames[i].time = times[i]/1000;
     anim.loop = true;
     var dim = Resources.texture.dimensions(path);
     dim.y /= frames;
     anim.dim = dim;
-    anim.toJSON = function() { return {}; };
     return anim;
   },
 
@@ -267,106 +317,6 @@ SpriteAnim.gif.doc = 'Convert a gif.';
 SpriteAnim.strip.doc = 'Given a path and number of frames, converts a horizontal strip animation, where each cell is the same width.'
 SpriteAnim.aseprite.doc = 'Given an aseprite json metadata, returns an object of animations defined in the aseprite file.';
 SpriteAnim.find.doc = 'Given a path, find the relevant animation for the file.';
-
-/* Container to play sprites and anim2ds */
-
-component.char2d = Object.create(component.sprite);
-component.char2dimpl = {
-  boundingbox() {
-    var dim = this.acur.dim.slice();
-    dim = dim.scale(this.gameobject.scale);	
-    var realpos = this.pos.slice();
-    realpos.x = realpos.x * dim.x + (dim.x/2);
-    realpos.y = realpos.y * dim.y + (dim.y/2);
-    return cwh2bb(realpos,dim);
-  },
-
-  anims:{},
-  acur:{},
-  frame: 0,
-
-  play_anim(anim) {
-    this.acur = anim;
-    this.frame = 0;
-    this.gameobject.delay(this.advance.bind(this), this.acur.frames[this.frame].time);
-    this.setsprite();
-  },
-  
-  play(name) {
-    if (!(name in this)) {
-      Log.info("Can't find an animation named " + name);
-      return;
-    }
-    
-    if (this.acur === this[name]) {
-      this.timer.start();
-      return;
-    }
-    
-    this.acur = this[name];
-    this.frame = 0;
-    this.timer.time = this.acur.frames[this.frame].time;
-    this.timer.start();
-    this.setsprite();
-  },
-  
-  setsprite() {
-    this.rect = this.acur.frames[this.frame].rect;
-    this.path = this.path;
-  },
-
-  advance() {
-    this.frame = (this.frame + 1) % this.acur.frames.length;
-    this.setsprite();
-    this.gameobject.delay(this.advance.bind(this), this.acur.frames[this.frame].time);
-  },
-
-  devance() {
-    this.frame = (this.frame - 1);
-    if (this.frame === -1) this.frame = this.acur.frames-1;
-    this.setsprite();
-  },
-
-  setframe(frame) {
-    this.frame = frame;
-    this.setsprite();
-  },
-  
-  pause() {
-    this.timer.pause();
-  },
-
-  stop() {
-    this.setframe(0);
-    this.timer.stop();
-  },
-  
-  kill() { cmd(9, this.id); },
-
-  add_anim(anim,name) {
-    if (name in this) return;
-    this[name] = function() {
-      this.play_anim(anim);
-    }
-  },
-};
-
-component.char2dimpl.doc = {
-  doc: "An animation player for sprites.",
-  frame: "The current frame of animation.",
-  anims: "A list of all animations in this player.",
-  acur: "The currently playing animation object.",
-  advance: "Advance the animation by one frame.",
-  devance: "Go back one frame in the animation.",
-  setframe: "Set a specific frame of animation.",
-  stop: "Stops the animation and returns to the first frame.",
-  pause: "Pauses the animation sequence in place.",
-  play: "Given an animation string, play it. Equivalent to anim.[name].play().",
-  play_anim: "Play a given animation object.",
-  add_anim: "Add an animation object with the given name."
-};
-
-Object.hide(component.char2dimpl, "doc");
 
 /* Returns points specifying this geometry, with ccw */
 var Geometry = {
@@ -907,7 +857,8 @@ component.circle2d.impl = Object.mix({
   get pos() { return this.offset; },
   set pos(x) { this.offset = x; },
   
-}, collider2d.impl);;
+}, collider2d.impl);
+
 
 /* ASSETS */
 

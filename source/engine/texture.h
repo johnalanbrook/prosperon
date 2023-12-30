@@ -30,8 +30,11 @@ struct Texture {
     int height;
     unsigned char *data;
     struct TextureOptions opts;
-  int frames;  
+  int frames;
+  int *delays;
 };
+
+typedef struct Texture texture;
 
 struct Image {
   struct Texture *tex;
@@ -47,6 +50,7 @@ void texture_sync(const char *path);
 char * tex_get_path(struct Texture *tex);   // Get image path for texture
 
 int gif_nframes(const char *path);
+int *gif_delays(const char *path);
 
 struct glrect tex_get_rect(struct Texture *tex);
 HMM_Vec2 tex_get_dimensions(struct Texture *tex);

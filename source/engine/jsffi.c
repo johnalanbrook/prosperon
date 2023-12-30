@@ -1382,6 +1382,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = ptr2js(cpGearJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4])));
       cpSpaceAddConstraint(space,js2ptr(ret));
       break;
+    case 224:
+      str = js2str(argv[1]);
+      ret = ints2js(gif_delays(str));
+      break;
   }
 
   if (str)

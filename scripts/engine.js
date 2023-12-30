@@ -82,6 +82,7 @@ var timer = {
 
   kill() {
     Register.unregister_obj(this);
+    this.fn = undefined;
   },
   
   delay(fn, secs) {
