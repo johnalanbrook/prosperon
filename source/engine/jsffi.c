@@ -21,6 +21,7 @@
 #include "window.h"
 #include "spline.h"
 #include "yugine.h"
+#include "particle.h"
 #include <assert.h>
 #include "resources.h"
 #include <sokol/sokol_time.h>
@@ -158,11 +159,14 @@ double js2number(JSValue v) {
   return g;
 }
 
+void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
+
 JSValue float2js(double g) { return JS_NewFloat64(js, g);}
 JSValue num2js(double g) { return float2js(g); }
 struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
+emitter *js2emitter(JSValue v) { return (emitter*)js2ptr(v); }
 
-void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
+
 
 JSValue ptr2js(void *ptr) {
   JSValue obj = JS_NewObjectClass(js, js_ptr_id);
@@ -1419,6 +1423,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 233:
       js2sprite(argv[1])->parallax = js2number(argv[2]);
+      break;
+    case 234:
+      ret = ptr2js(make_emitter());
+      break;
+    case 235:
+      js2emitter(argv[1])->life = js2number(argv[2]);
+      break;
+    case 236:
+      emitter_emit(js2emitter(argv[1]), js2number(argv[2]));
       break;
   }
 

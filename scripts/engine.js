@@ -116,6 +116,7 @@ load("scripts/physics.js");
 load("scripts/input.js");
 load("scripts/sound.js");
 load("scripts/ai.js");
+load("scripts/geometry.js");
 
 function screen2world(screenpos) {
   if (Game.camera)

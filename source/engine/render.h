@@ -93,6 +93,10 @@ struct rgba {
 
 typedef struct rgba rgba;
 
+static inline rgba vec2rgba(HMM_Vec4 v) {
+  return (rgba){v.e[0]*255,v.e[1]*255,v.e[2]*255,v.e[3]*255};
+}
+
 struct boundingbox {
   float t;
   float b;

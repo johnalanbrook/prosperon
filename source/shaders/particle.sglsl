@@ -2,7 +2,7 @@
 in vec2 vertex;
 in vec2 apos;
 in float angle;
-in float scale;
+in vec2 scale;
 in vec4 vc;
 
 out vec4 fcolor;

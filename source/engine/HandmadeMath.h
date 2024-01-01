@@ -367,6 +367,7 @@ typedef union HMM_Vec4 {
   HMM_Quat quat;
 
   float Elements[4];
+  float e[4];
 
 #ifdef HANDMADE_MATH__USE_SSE
   __m128 SSE;
@@ -513,6 +514,10 @@ static inline float HMM_Clamp(float Min, float Value, float Max) {
   return Result;
 }
 
+static inline float frand(float max) {
+  return ((float)rand()/(float)(RAND_MAX))*max;
+}
+
 /*
  * Vector initialization
  */
@@ -650,6 +655,11 @@ static inline HMM_Vec4 HMM_SubV4(HMM_Vec4 Left, HMM_Vec4 Right) {
   {
     return HMM_V2(v.X*s, v.Y*s);    
   }
+
+static inline HMM_Vec3 HMM_ScaleV3(HMM_Vec3 v, double s)
+{
+  return HMM_V3(v.x*s,v.y*s,v.z*s);
+}
 
 static inline HMM_Vec2 HMM_MulV2(HMM_Vec2 Left, HMM_Vec2 Right) {
 

@@ -872,10 +872,29 @@ component.circle2d.impl = Object.mix({
 }, collider2d.impl);
 
 component.particle = Object.copy(component, {
+  make() {
+    var p = Object.create(this);
+    p.id = cmd(234);
+    return p;
+  },
   get pos() {},
   set pos(x) {},
   get angle() {},
   set angle(x) {},
+  get life() {},
+  set life(x) { cmd(235,this.id,x); },
+  get explosiveness() {},
+  set explosiveness(x) {},
+  get max() {},
+  set max(x) {},
+  emit(n) {
+    cmd(236,this.id,n);
+  },
+  play() {
+  },
+  pause() {
+    
+  },
 });
 
 

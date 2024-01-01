@@ -2,6 +2,7 @@
 #include "stb_ds.h"
 #include "render.h"
 #include "particle.sglsl.h"
+#include "2dphysics.h"
 #include "log.h"
 
 static emitter **emitters;
@@ -14,7 +15,7 @@ static int draw_count;
 struct par_vert {
   HMM_Vec2 pos;
   float angle;
-  float scale;
+  HMM_Vec2 scale;
   struct rgba color;
 };
 
@@ -30,7 +31,7 @@ void particle_init()
       .attrs = {
         [1].format = SG_VERTEXFORMAT_FLOAT2,
 	[2].format = SG_VERTEXFORMAT_FLOAT,
-	[3].format = SG_VERTEXFORMAT_FLOAT,
+	[3].format = SG_VERTEXFORMAT_FLOAT2,
 	[4].format = SG_VERTEXFORMAT_UBYTE4N,
 	[0].format = SG_VERTEXFORMAT_FLOAT2,
 	[0].buffer_index = 1
@@ -74,15 +75,23 @@ emitter *make_emitter() {
   emitter *e = NULL;
   e = malloc(sizeof(*e));
   e->max = 20;
-  arrsetlen(e->particles, e->max);
+  e->particles = NULL;
+  arrsetcap(e->particles, e->max);
   for (int i = 0; i < arrlen(e->particles); i++)
     e->particles[i].life = 0;
     
   e->life = 10;
-  e->explosiveness = 1;
+  e->explosiveness = 0;
   e->tte = lerp(e->life/e->max, 0, e->explosiveness);
-  e->color = color_white;
-  e->scale = 20;
+  e->color.times = NULL;
+  e->color.data = NULL;
+  e->color.type = LINEAR;
+  sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
+  e->scale = 1;
+  e->speed = 20;
+  e->gravity = 1;
+  e->on = 0;
+  e->texture = texture_pullfromfile("glass_chunk2.gif");
   arrpush(emitters,e);
   return e;
 }
@@ -97,37 +106,26 @@ void free_emitter(emitter *e)
     }
 }
 
-void start_emitter(emitter *e)
-{
-  
-}
-
-void pause_emitter(emitter *e) {
-
-}
-
-void stop_emitter(emitter *e) {
-
-}
+void start_emitter(emitter *e) { e->on = 1; }
+void stop_emitter(emitter *e) { e->on = 0; }
 
 int emitter_spawn(emitter *e)
 {
-  for (int i = 0; i < e->max; i++) {
-    if (e->particles[i].life > 0) continue;
-    e->particles[i].life = e->life;
-    e->particles[i].pos = (HMM_Vec3){0,0,0};
-    e->particles[i].v = (HMM_Vec3){20,1,0};
-    e->particles[i].angle = 0;
-    e->particles[i].av = 1;
-    return 1;
-  }
-  return 0;
+  particle p;
+  p.life = e->life;
+  p.pos = (HMM_Vec3){0,0,0};
+  p.v = (HMM_Vec3){frand(1)-0.5,frand(1)-0.5,0};
+  p.v = HMM_ScaleV3(HMM_NormV3(p.v), e->speed);
+  p.angle = 0;
+  p.av = 1;
+  arrput(e->particles,p);
+  return 1;
 }
 
 void emitter_emit(emitter *e, int count)
 {
   for (int i = 0; i < count; i++)
-    if (!emitter_spawn(e)) return;
+    emitter_spawn(e);
 }
 
 void emitters_step(double dt)
@@ -138,7 +136,6 @@ void emitters_step(double dt)
 
 void emitters_draw()
 {
-
   draw_count = 0;
 
   for (int i = 0; i < arrlen(emitters); i++) {
@@ -146,12 +143,11 @@ void emitters_draw()
     par_bind.fs.images[0] = e->texture->id;
     for (int j = 0; j < arrlen(e->particles); j++) {
       particle *p = &e->particles[j];
-      if (p->life <= 0) continue;
       struct par_vert pv;
       pv.pos = p->pos.xy;
       pv.angle = p->angle;
-      pv.scale = p->scale;
-      pv.color = p->color;
+      pv.scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
+      pv.color = vec2rgba(p->color);
       sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)});
       draw_count++;
     }
@@ -164,21 +160,24 @@ void emitters_draw()
 }
 
 void emitter_step(emitter *e, double dt) {
-  for (int i = 0; i < arrlen(e->particles); i++) {
-    if (e->particles[i].life <= 0) continue;
+  for (int i = arrlen(e->particles)-1; i >= 0; i--) {
+    if (e->gravity) 
+      e->particles[i].v = HMM_AddV3(e->particles[i].v, HMM_MulV3F((HMM_Vec3){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0}, dt));
+      
     e->particles[i].pos = HMM_AddV3(e->particles[i].pos, HMM_MulV3F(e->particles[i].v, dt));
     e->particles[i].angle += e->particles[i].av*dt;
     e->particles[i].life -= dt;
-    e->particles[i].color = e->color;
+    e->particles[i].color = sample_sampler(&e->color, (e->life-e->particles[i].life)/e->life);
     e->particles[i].scale = e->scale;
 
     if (e->particles[i].life <= 0)
-      e->particles[i].life = 0;
+      arrdelswap(e->particles,i);
   }
 
+  if (!e->on) return;
   e->tte-=dt;
   if (e->tte <= 0) {
-    emitter_emit(e,1);
+    emitter_spawn(e);
     e->tte = lerp(e->life/e->max,0,e->explosiveness);
   }
 }

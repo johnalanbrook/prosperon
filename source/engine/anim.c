@@ -2,12 +2,10 @@
 #include "log.h"
 #include "stb_ds.h"
 
-HMM_Vec4 sample_linear(sampler *sampler, float time, int prev, int next)
+void sampler_add(sampler *s, float time, HMM_Vec4 val)
 {
-  if (sampler->rotation)
-    return (HMM_Vec4)HMM_SLerp(sampler->data[prev].quat, time, sampler->data[next].quat);
-  else
-    return HMM_LerpV4(sampler->data[prev], time, sampler->data[next]);
+  arrput(s->times,time);
+  arrput(s->data,val);
 }
 
 HMM_Vec4 sample_cubicspline(sampler *sampler, float t, int prev, int next)
@@ -25,6 +23,8 @@ HMM_Vec4 sample_cubicspline(sampler *sampler, float t, int prev, int next)
 
 HMM_Vec4 sample_sampler(sampler *sampler, float time)
 {
+  if (arrlen(sampler->data) == 0) return (HMM_Vec4){0,0,0,0};
+  if (arrlen(sampler->data) == 1) return sampler->data[0];
   int previous_time=0;
   int next_time=0;
 
@@ -41,13 +41,16 @@ HMM_Vec4 sample_sampler(sampler *sampler, float time)
 
   switch(sampler->type) {
     case LINEAR:
-      return sample_linear(sampler,t,previous_time,next_time);
+      return HMM_LerpV4(sampler->data[previous_time],time,sampler->data[next_time]);
       break;
     case STEP:
       return sampler->data[previous_time];
       break;
     case CUBICSPLINE:
       return sample_cubicspline(sampler,t, previous_time, next_time);
+      break;
+    case SLERP:
+      return (HMM_Vec4)HMM_SLerp(sampler->data[previous_time].quat, time, sampler->data[next_time].quat);
       break;
   }
   return sample_cubicspline(sampler,t, previous_time, next_time);  

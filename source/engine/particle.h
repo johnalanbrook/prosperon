@@ -4,6 +4,7 @@
 #include "HandmadeMath.h"
 #include "transform.h"
 #include "texture.h"
+#include "anim.h"
 
 typedef struct particle {
   HMM_Vec3 pos;
@@ -12,7 +13,7 @@ typedef struct particle {
   float av; /* angular velocity */
   float scale;
   double life;
-  rgba color;
+  HMM_Vec4 color;
 } particle;
 
 typedef struct emitter {
@@ -22,9 +23,12 @@ typedef struct emitter {
   int max; /* number of particles */
   double life; /* how long a particle lasts */
   double tte; /* time to emit */
-  rgba color;
+  sampler color; /* color over particle lifetime */
   float scale;
+  float speed;
+  int gravity; /* true if affected by gravity */
   texture *texture;
+  int on;
 } emitter;
 
 void particle_init();
