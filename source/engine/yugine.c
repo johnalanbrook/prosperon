@@ -103,10 +103,10 @@ void c_init() {
   window_resize(sapp_width(), sapp_height());
   script_evalf("Game.init();");
 
-  particle_init();
-//  emitter *e = make_emitter();
-//  e->texture = texture_pullfromfile("bolt.gif");
-//  start_emitter(e);
+/*  particle_init();
+  emitter *e = make_emitter();
+  e->texture = texture_pullfromfile("bolt.gif");
+  start_emitter(e);*/
 }
 
 int frame_fps() { return 1.0/sapp_frame_duration(); }

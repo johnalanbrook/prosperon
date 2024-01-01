@@ -122,6 +122,8 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
   return p;
 }
 
+static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
+
 uint64_t js2uint64(JSValue v)
 {
   int64_t i;
@@ -1385,6 +1387,38 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 224:
       str = js2str(argv[1]);
       ret = ints2js(gif_delays(str));
+      break;
+    case 225:
+      ret = ptr2js(cpRotaryLimitJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4])));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
+    case 226:
+      ret = ptr2js(cpDampedRotarySpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]), js2number(argv[5])));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
+    case 227:
+      ret = ptr2js(cpDampedSpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6]), js2number(argv[7])));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
+    case 228:
+      ret = ptr2js(cpGrooveJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2vec2(argv[5]).cp));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
+    case 229:
+      ret = ptr2js(cpSlideJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6])));
+      cpSpaceAddConstraint(space,js2ptr(ret));
+      break;
+    case 230:
+      ret = ptr2js(cpSpaceAddConstraint(space, cpRatchetJointNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]), js2number(argv[4]))));
+      break;
+    case 231:
+      ret = ptr2js(cpSpaceAddConstraint(space, cpSimpleMotorNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]))));
+      break;
+    case 232:
+      ret = num2js(js2sprite(argv[1])->parallax);
+      break;
+    case 233:
+      js2sprite(argv[1])->parallax = js2number(argv[2]);
       break;
   }
 

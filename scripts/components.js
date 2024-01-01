@@ -144,6 +144,8 @@ component.sprite.impl = {
   get color() {return cmd(148,this.id);},
   get pos() { return cmd(111, this.id); },
   set pos(x) { cmd(37,this.id,x); },
+  get parallax() { return cmd(232, this.id); },
+  set parallax(x) { cmd(233,this.id,x); },
   get angle() { return cmd(217,this.id); },
   set angle(x) { cmd(218,this.id,x); },
   get scale() { return cmd(215, this.id); },
@@ -287,7 +289,7 @@ var SpriteAnim = {
     return anim;
     };
 
-    var json = IO.slurp(ase);
+    var json = IO.slurp(path);
     json = JSON.parse(json);
     var anims = {};
     var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);  
@@ -858,6 +860,13 @@ component.circle2d.impl = Object.mix({
   set pos(x) { this.offset = x; },
   
 }, collider2d.impl);
+
+component.particle = Object.copy(component, {
+  get pos() {},
+  set pos(x) {},
+  get angle() {},
+  set angle(x) {},
+});
 
 
 /* ASSETS */

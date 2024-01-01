@@ -79,8 +79,8 @@ emitter *make_emitter() {
     e->particles[i].life = 0;
     
   e->life = 10;
-  e->explosiveness = 0;
-  e->tte = e->life/e->max;
+  e->explosiveness = 1;
+  e->tte = lerp(e->life/e->max, 0, e->explosiveness);
   e->color = color_white;
   e->scale = 20;
   arrpush(emitters,e);
@@ -179,6 +179,6 @@ void emitter_step(emitter *e, double dt) {
   e->tte-=dt;
   if (e->tte <= 0) {
     emitter_emit(e,1);
-    e->tte = e->life/e->max;
+    e->tte = lerp(e->life/e->max,0,e->explosiveness);
   }
 }

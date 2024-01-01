@@ -20,6 +20,7 @@ struct sprite {
   int enabled;
   int next;
   int drawmode;
+  float parallax;
 };
 
 int make_sprite(gameobject *go);

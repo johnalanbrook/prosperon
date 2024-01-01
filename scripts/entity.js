@@ -197,14 +197,54 @@ var gameobject = {
   pin(to) {
     var p = cmd(222,this.body, to.body);
   },
+  slide(to, a, b, min, max) {
+    a ??= [0,0];
+    b ??= [0,0];
+    min ??= 0;
+    max ??= 50;
+    var p = cmd(229,this.body,to.body,a,b,min,max);
+  },
   pivot(to, piv) {
     piv ??= this.worldpos();
     var p = cmd(221,this.body,to.body,piv);
   },
-  gear(to, phase, ratio) {
+  /* groove is on to, from local points a and b, anchored to this at local anchor */
+  groove(to, a, b, anchor) {
+    anchor ??= [0,0];
+    var p = cmd(228, to.body, this.body, a, b, anchor);
+  },
+  damped_spring(to, length, stiffness, damping) {
+    length ??= Vector.length(this.worldpos(), to.worldpos());
+    stiffness ??= 1;
+    damping ??= 1;
+    var dc = 2*Math.sqrt(stiffness*this.mass);
+    var p = cmd(227, this.body, to.body, [0,0], [0,0], stiffness, damping*dc);
+  },
+  damped_rotary_spring(to, angle, stiffness, damping) {
+    angle ??= 0;
+    stiffness ??= 1;
+    damping ??= 1;
+    /* calculate actual damping value from the damping ratio */
+    /* damping = 1 is critical */
+    var dc = 2*Math.sqrt(stiffness*this.get_moi()); /* critical damping number */
+    /* zeta = actual/critical */
+    var p = cmd(226,this.body,to.body,angle,stiffness,damping*dc);
+  },
+  rotary_limit(to, min, max) {
+    var p = cmd(225,this.body,to.body, Math.turn2rad(min),Math.turn2rad(max));
+  },
+  ratchet(to,ratch) {
+    var phase = this.angle - to.angle;
+    var p = cmd(230, this.body, to.body, phase, Math.turn2rad(ratch));
+  },
+  gear(to, ratio) {
     phase ??= 1;
     ratio ??= 1;
+    var phase = this.angle - to.angle;
     var p = cmd(223,this.body,to.body,phase,ratio);
+  },
+  motor(to, rate) {
+    var p = cmd(231, this.body, to.body, rate);
   },
   
     path_from(o) {
@@ -713,6 +753,16 @@ gameobject.doc = {
   delay: 'Run the given function after the given number of seconds has elapsed.',
   cry: 'Make a sound. Can only make one at a time.',
   add_component: 'Add a component to the object by name.',
+  pin: 'Pin joint to another object. Acts as if a rigid rod is between the two objects.',
+  slide: 'Slide joint, similar to a pin but with min and max allowed distances.',
+  pivot: 'Pivot joint to an object, with the pivot given in world coordinates.',
+  groove: 'Groove joint. The groove is on to, from to local coordinates a and b, with this object anchored at anchor.',
+  damped_spring: 'Damped spring to another object. Length is the distance it wants to be, stiffness is the spring constant, and damping is the damping ratio. 1 is critical, < 1 is underdamped, > 1 is overdamped.',
+  damped_rotary_spring: 'Similar to damped spring but for rotation. Rest angle is the attempted angle.',
+  rotary_limit: 'Limit the angle relative to the to body between min and max.',
+  ratchet: 'Like a socket wrench, relative to to. ratch is the distance between clicks.',
+  gear: 'Keeps the angular velocity ratio of this body and to constant. Ratio is the gear ratio.',
+  motor: 'Keeps the relative angular velocity of this body to to at a constant rate. The most simple idea is for one of the bodies to be static, to the other is kept at rate.'
 };
 
 /* Default objects */

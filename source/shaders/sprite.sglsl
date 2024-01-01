@@ -15,7 +15,7 @@ void main()
   fcolor = vc;
   femissive = emissive;
   texcoords = uv;
-  gl_Position = proj * vec4(vertex, 0.0, 1.0);
+  gl_Position = proj * vec4(vertex, 0, 1.0);
 }
 @end
 

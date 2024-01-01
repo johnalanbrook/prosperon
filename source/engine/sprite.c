@@ -60,7 +60,8 @@ int make_sprite(gameobject *go) {
       .go = go,
       .next = -1,
       .enabled = 1,
-      .drawmode = DRAW_SIMPLE
+      .drawmode = DRAW_SIMPLE,
+      .parallax = 1
     };
   int id;
   freelist_grab(id, sprites);
@@ -143,6 +144,7 @@ void sprite_initialize() {
 	      [1].format = SG_VERTEXFORMAT_FLOAT2,
 	      [2].format = SG_VERTEXFORMAT_UBYTE4N,
 	      [3].format = SG_VERTEXFORMAT_UBYTE4N}},
+//	      [4].format = SG_VERTEXFORMAT_FLOAT}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
       .colors[0].blend = blend_trans,
@@ -183,7 +185,7 @@ void sprite_initialize() {
   });
 }
 
-void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive) {
+void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive, float parallax) {
   struct sprite_vert verts[4];
   float w = tex->width*st_s_w(r);
   float h = tex->height*st_s_h(r);
@@ -226,17 +228,20 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
 
 void sprite_draw(struct sprite *sprite) {
   if (!sprite->tex) return;
-  HMM_Mat3 m = t_go2world(sprite->go);
+  transform2d t = go2t(sprite->go);
+  t.pos.x += (cam_pos().x - (cam_pos().x/sprite->parallax));
+  t.pos.y += (cam_pos().y - (cam_pos().y/sprite->parallax));
+  HMM_Mat3 m = transform2d2mat(t);
   HMM_Mat3 sm = transform2d2mat(sprite->t);
 
-  tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->t.scale, sprite->emissive);
+  tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->t.scale, sprite->emissive, sprite->parallax);
 }
 
 void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_pullfromfile(img);
-  tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0});
+  tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
 }
 
 void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)

@@ -140,7 +140,11 @@ var Tween = {
     defn.fn = function(dt) {
       defn.accum += dt;
       if (defn.accum >= defn.time && defn.loop === 'hold') {
-        obj[target] = tvals[tvals.length-1];
+        if (typeof target === 'string')
+          obj[target] = tvals[tvals.length-1];
+	else
+	  target(tvals[tvals.length-1]);
+	  
         defn.pause();
 	defn.cb.call(obj);
 	return;
@@ -159,7 +163,10 @@ var Tween = {
       if (!defn.whole)
         nval = defn.ease(nval);
 
-      obj[target] = tvals[i].lerp(tvals[i+1], nval);
+      if (typeof target === 'string')
+        obj[target] = tvals[i].lerp(tvals[i+1], nval);
+      else
+        target(tvals[i].lerp(tvals[i+1],nval));
     };
 
     var playing = false;
@@ -171,7 +178,10 @@ var Tween = {
     };
     defn.restart = function() {
       defn.accum = 0;
-      obj[target] = tvals[0];
+      if (typeof target === 'string')
+        obj[target] = tvals[0];
+      else
+        target(tvals[0]);
     };
     defn.stop = function() { if (!playing) return; defn.pause(); defn.restart(); };
     defn.pause = function() {
