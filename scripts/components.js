@@ -92,14 +92,16 @@ component.sprite.impl = {
       this.cancel();
       this.cancel = undefined;
     }
-    
+
     if (!Resources.is_animation(x)) {
       this.rect = component.sprite.rect;
       cmd(12,this.id,x,this.rect);
     }
     else {
-      this.rect = SpriteAnim.make(x).frames[0].rect;
-      cmd(12,this.id,x,this.rect);
+      this.anims = SpriteAnim.make(x);
+      var anim = this.anims[0];
+      this.rect = anim.frames[0].rect;
+      cmd(12,this.id,anim.path,this.rect);
     }
   },
   get path() {
@@ -108,17 +110,19 @@ component.sprite.impl = {
     return s;
   },
 
-  play() {
+  play(name) {
+    if (!this.anims) return;
+    if (this.cancel) this.cancel();
+    name ??= 0;
     var frame = 0;
-    var anim = SpriteAnim.make(this.path);
+    var anim = this.anims[name];
     var advance = function() {
       frame = (frame+1)%anim.frames.length;
       this.rect = anim.frames[frame].rect;
-      cmd(12,this.id,this.path,this.rect);
+      cmd(12,this.id,anim.path,this.rect);
       this.cancel = this.gameobject.delay(advance.bind(this), anim.frames[frame].time);
     }
     advance.call(this);
-    
   },
   
   stop() {
@@ -127,11 +131,11 @@ component.sprite.impl = {
     this.cancel = undefined;
   },
   setframe(f) {
+    if (!this.anims) return;
     this.stop();
-    var anim = SpriteAnim.make(this.path);
-    if (!anim) return;
+    var anim = this.anims[0];
     this.rect = anim.frames[f].rect;
-    cmd(12,this.id,this.path,this.rect);
+    cmd(12,this.id,anim.path,this.rect);
   },
     
   toString() { return "sprite"; },
@@ -153,7 +157,7 @@ component.sprite.impl = {
   get drawmode() { return cmd(220,this.id); },
   set drawmode(x) { cmd(219,this.id,x); },
   emissive(x) { cmd(170, this.id, x); },
-  sync() { this.path = this.path; },
+  sync() { },
   pickm() { return this; },
   move(d) { this.pos = this.pos.add(d); },
 
@@ -217,6 +221,8 @@ var SpriteAnim = {
   make(path) {
     if (path.ext() === 'gif')
       return SpriteAnim.gif(path);
+    else if (path.ext() === 'ase')
+      return SpriteAnim.aseprite(path);
     else
       return undefined;
   },
@@ -244,7 +250,7 @@ var SpriteAnim = {
     var dim = Resources.texture.dimensions(path);
     dim.y /= frames;
     anim.dim = dim;
-    return anim;
+    return {0:anim};
   },
 
   strip(path, frames, time=0.05) {
@@ -292,9 +298,13 @@ var SpriteAnim = {
     var json = IO.slurp(path);
     json = JSON.parse(json);
     var anims = {};
-    var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);  
-    for (var tag of json.meta.frameTags) 
+    var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);
+    var f = 0;
+    for (var tag of json.meta.frameTags) {
       anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), json.meta);
+      anims[f] = anims[tag.name];
+      f++;
+    }
 
     return anims;
   },

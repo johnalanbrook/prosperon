@@ -26,6 +26,9 @@ Resources.is_sound = function(path) {
 Resources.is_animation = function(path)
 {
   if (path.ext() === 'gif' && Resources.gif.frames(path) > 1) return true;
+  if (path.ext() === 'ase') return true;
+  
+  return false;
 }
 
 Resources.texture = {};
