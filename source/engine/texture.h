@@ -55,4 +55,6 @@ int *gif_delays(const char *path);
 struct glrect tex_get_rect(struct Texture *tex);
 HMM_Vec2 tex_get_dimensions(struct Texture *tex);
 
+double perlin(double x, double y, double z);
+
 #endif

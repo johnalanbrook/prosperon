@@ -4,6 +4,7 @@
 #include "particle.sglsl.h"
 #include "2dphysics.h"
 #include "log.h"
+#include "simplex.h"
 
 static emitter **emitters;
 
@@ -11,6 +12,8 @@ static sg_shader par_shader;
 static sg_pipeline par_pipe;
 static sg_bindings par_bind;
 static int draw_count;
+
+#define MAX_PARTICLES 500000
 
 struct par_vert {
   HMM_Vec2 pos;
@@ -50,7 +53,7 @@ void particle_init()
   });
 
   par_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(par_vert)*500,
+    .size = sizeof(par_vert)*MAX_PARTICLES,
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
     .usage = SG_USAGE_STREAM,
     .label = "particle buffer"
@@ -82,7 +85,7 @@ emitter *make_emitter() {
     
   e->life = 10;
   e->explosiveness = 0;
-  e->tte = lerp(e->life/e->max, 0, e->explosiveness);
+  e->tte = lerp(e->explosiveness, e->life/e->max, 0);
   e->color.times = NULL;
   e->color.data = NULL;
   e->color.type = LINEAR;
@@ -134,25 +137,25 @@ void emitters_step(double dt)
     emitter_step(emitters[i], dt);
 }
 
+static struct par_vert pv[MAX_PARTICLES];
+
 void emitters_draw()
 {
-  draw_count = 0;
-
+  int draw_count = 0;
   for (int i = 0; i < arrlen(emitters); i++) {
     emitter *e = emitters[i];
     par_bind.fs.images[0] = e->texture->id;
     for (int j = 0; j < arrlen(e->particles); j++) {
       particle *p = &e->particles[j];
-      struct par_vert pv;
-      pv.pos = p->pos.xy;
-      pv.angle = p->angle;
-      pv.scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
-      pv.color = vec2rgba(p->color);
-      sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)});
-      draw_count++;
+      pv[j].pos = p->pos.xy;
+      pv[j].angle = p->angle;
+      pv[j].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
+      pv[j].color = vec2rgba(p->color);
     }
+    sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)*arrlen(e->particles)});
+    draw_count += arrlen(e->particles);
   }
-  if (draw_count == 0) return;
+
   sg_apply_pipeline(par_pipe);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
   sg_apply_bindings(&par_bind);
@@ -161,16 +164,25 @@ void emitters_draw()
 
 void emitter_step(emitter *e, double dt) {
   for (int i = arrlen(e->particles)-1; i >= 0; i--) {
+    particle p = e->particles[i];
     if (e->gravity) 
-      e->particles[i].v = HMM_AddV3(e->particles[i].v, HMM_MulV3F((HMM_Vec3){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0}, dt));
-      
-    e->particles[i].pos = HMM_AddV3(e->particles[i].pos, HMM_MulV3F(e->particles[i].v, dt));
-    e->particles[i].angle += e->particles[i].av*dt;
-    e->particles[i].life -= dt;
-    e->particles[i].color = sample_sampler(&e->color, (e->life-e->particles[i].life)/e->life);
-    e->particles[i].scale = e->scale;
+      p.v = HMM_AddV3(p.v, HMM_MulV3F((HMM_Vec3){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0}, dt));
 
-    if (e->particles[i].life <= 0)
+//    float freq = 1;
+//    p.v = HMM_AddV3(p.v, HMM_MulV3F((HMM_Vec3){Noise2D(p.pos.x*freq, p.pos.y*freq), Noise2D(p.pos.x*freq+5,p.pos.y*freq+5), 0}, 1000*dt));
+    p.v = HMM_AddV3(p.v, HMM_MulV3F((HMM_Vec3){frand(2)-1, frand(2)-1, 0}, 1000*dt));
+
+    p.pos = HMM_AddV3(p.pos, HMM_MulV3F(p.v, dt));
+    p.angle += p.av*dt;
+    p.life -= dt;
+    p.color = sample_sampler(&e->color, (e->life-p.life)/e->life);
+    p.scale = e->scale;
+    e->particles[i] = p;    
+
+    if (p.life <= 0)
+      arrdelswap(e->particles,i);
+
+    if (query_point(p.pos.xy))
       arrdelswap(e->particles,i);
   }
 
@@ -178,6 +190,6 @@ void emitter_step(emitter *e, double dt) {
   e->tte-=dt;
   if (e->tte <= 0) {
     emitter_spawn(e);
-    e->tte = lerp(e->life/e->max,0,e->explosiveness);
+    e->tte = lerp(e->explosiveness, e->life/e->max,0);
   }
 }

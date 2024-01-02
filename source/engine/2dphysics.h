@@ -112,6 +112,7 @@ void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(gameobject *go);
 gameobject **phys2d_query_shape(struct phys2d_shape *shape);
 int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n);
+int query_point(HMM_Vec2 pos);
 
 void flush_collide_cbs();
 

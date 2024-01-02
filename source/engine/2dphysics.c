@@ -57,6 +57,32 @@ cpShape *phys2d_query_pos(cpVect pos) {
   return find;
 }
 
+
+static int qhit;
+void qpoint(cpShape *shape, cpFloat dist, cpVect point, int *data)
+{
+  qhit++;
+}
+
+void bbhit(cpShape *shape, int *data)
+{
+  qhit++;
+}
+
+static cpShapeFilter ff = {
+  .group = CP_NO_GROUP,
+  .mask = CP_ALL_CATEGORIES,
+  .categories = CP_ALL_CATEGORIES,
+};
+
+int query_point(HMM_Vec2 pos)
+{
+  qhit = 0;
+//  cpSpacePointQuery(space, pos.cp, 0, filter, qpoint, &qhit);
+  cpSpaceBBQuery(space, cpBBNewForCircle(pos.cp, 2), ff, bbhit, &qhit);
+  return qhit;
+}
+
 int p_compare(void *a, void *b)
 {
   if (a > b) return 1;

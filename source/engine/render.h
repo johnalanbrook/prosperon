@@ -120,7 +120,7 @@ struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh);
 float *rgba2floats(float *r, struct rgba c);
 extern sg_blend_state blend_trans;
 
-static inline float lerp(float a, float b, float f)
+static inline float lerp(float f, float a, float b)
 {
   return a * (1.0-f)+(b*f);
 }
