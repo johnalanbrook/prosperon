@@ -155,6 +155,7 @@ static struct par_vert pv[MAX_PARTICLES];
 void parallel_pv(emitter *e, struct scheduler *sched, struct sched_task_partition t, sched_uint thread_num)
 {
   for (int i=t.start; i < t.end; i++) {
+    if (e->particles[i].life <= 0) continue;
     particle *p = &e->particles[i];
     pv[i].pos = p->pos.xy;
     pv[i].angle = p->angle;
@@ -172,7 +173,7 @@ void emitters_draw()
     par_bind.fs.images[0] = e->texture->id;
 
     struct sched_task task;
-    scheduler_add(&sched, &task, parallel_pv, e, arrlen(e->particles), arrlen(e->particles)/SCHED_DEFAULT);
+    scheduler_add(&sched, &task, parallel_pv, e, arrlen(e->particles), arrlen(e->particles)/sched.threads_num);
     scheduler_join(&sched, &task);
     
     sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)*arrlen(e->particles)});
@@ -191,6 +192,7 @@ static HMM_Vec4 g_accel;
 void parallel_step(emitter *e, struct scheduler *shed, struct sched_task_partition t, sched_uint thread_num)
 {
   for (int i = t.end-1; i >=0; i--) {
+    if (e->particles[i].life <= 0) continue;
     if (e->gravity) 
       e->particles[i].v = HMM_AddV4(e->particles[i].v, g_accel);
     e->particles[i].v = HMM_AddV4(e->particles[i].v, HMM_MulV4F((HMM_Vec4){frand(2)-1, frand(2)-1, 0,0}, 1000*dt));
@@ -200,10 +202,10 @@ void parallel_step(emitter *e, struct scheduler *shed, struct sched_task_partiti
     e->particles[i].color = sample_sampler(&e->color, (e->life-e->particles[i].life)/e->life);
     e->particles[i].scale = e->scale;
 
-   if (e->particles[i].life <= 0)
-     arrdelswap(e->particles, i);
-   else if (query_point(e->particles[i].pos.xy))
-     arrdelswap(e->particles,i);
+//   if (e->particles[i].life <= 0)
+//     arrdelswap(e->particles, i);
+//   else if (query_point(e->particles[i].pos.xy))
+//     arrdelswap(e->particles,i);
   }
 }
 
@@ -212,7 +214,7 @@ void emitter_step(emitter *e, double mdt) {
   g_accel = HMM_MulV4F((HMM_Vec4){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0, 0}, dt);
   if (arrlen(e->particles) == 0) return;
   struct sched_task task;
-  scheduler_add(&sched, &task, parallel_step, e, arrlen(e->particles), arrlen(e->particles));
+  scheduler_add(&sched, &task, parallel_step, e, arrlen(e->particles), arrlen(e->particles)/sched.threads_num);
   scheduler_join(&sched, &task);
 
   if (!e->on) return;

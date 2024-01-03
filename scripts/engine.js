@@ -81,7 +81,7 @@ var timer = {
   },
 
   kill() {
-    Register.unregister_obj(this);
+    this.end();
     this.fn = undefined;
   },
   
@@ -90,7 +90,7 @@ var timer = {
     t.time = secs;
     t.remain = secs;
     t.fn = fn;
-    Register.update.register(t.update, t);
+    t.end = Register.update.register(timer.update.bind(t));
     return function() { t.kill(); };
   },
 };
@@ -162,12 +162,7 @@ var Register = {
     });
   },
   
-  unregister_obj(obj) {
-    Register.registries.forEach(function(x) {
-      x.unregister_obj(obj);
-    });
-    Player.uncontrol(obj);
-  },
+  unregister_obj(obj) { Player.uncontrol(obj); },
 
   endofloop(fn) {
     if (!this.inloop)
@@ -186,34 +181,18 @@ var Register = {
   registries: [],
 
   add_cb(idx, name) {
-    var entries = [];
     var n = {};
+    var fns = [];
+    
     n.register = function(fn, obj) {
-      if (!obj) {
-        Log.error("Refusing to register a function without a destroying object.");
-	return;
-      }
-      entries.push({
-        fn: fn,
-	obj: obj
-      });
+      if (typeof fn !== 'function') return;
+      if (typeof obj === 'object')
+        fn = fn.bind(obj);
+      fns.push(fn);
+      return function() { fns.remove(fn); };
     }
-
-    n.unregister = function(fn) {
-      entries = entries.filter(function(e) { return e.fn !== fn; });
-    }
-
-    n.unregister_obj = function(obj) {
-      entries = entries.filter(function(e) { return e.obj !== obj; });
-    }
-
-    n.broadcast = function(...args) {
-      entries.forEach(x => x.fn.call(x.obj, ...args));
-    }
-
-    n.clear = function() {
-      entries = [];
-    }
+    n.broadcast = function(...args) { fns.forEach(x => x(...args)); }
+    n.clear = function() { fns = []; }
 
     register(idx, n.broadcast, n);
 

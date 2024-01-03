@@ -191,7 +191,8 @@ var editor = {
     Game.play();
     Player.players[0].uncontrol(this);
     Player.players[0].control(limited_editor);
-    Register.unregister_obj(this);
+    editor.cbs.forEach(cb => cb());
+    editor.cbs = [];
     load("predbg.js");
     console.warn(`starting game with ${this.dbg_ur}`);
     editor.dbg_play = Primum.spawn(this.dbg_ur);
@@ -205,18 +206,23 @@ var editor = {
     Game.play();
     Player.players[0].uncontrol(this);
     Player.players[0].control(limited_editor);
-    Register.unregister_obj(this);
+    editor.cbs.forEach(cb=>cb());
+    editor.cbs = [];
     load("game.js");
   },
+
+  cbs: [],
 
   enter_editor() {
     Game.pause();
     Player.players[0].control(this);
     Player.players[0].uncontrol(limited_editor);
-    Register.gui.register(editor.gui, editor);
-    Register.draw.register(editor.draw, editor);
-    Debug.register_call(editor.ed_debug, editor);
-    Register.update.register(gui_controls.update, gui_controls);
+    
+    editor.cbs.push(Register.gui.register(editor.gui.bind(editor)));
+    editor.cbs.push(Register.draw.register(editor.draw.bind(editor)));
+    editor.cbs.push(Register.debug.register(editor.ed_debug.bind(editor)));
+    editor.cbs.push(Register.update.register(gui_controls.update, gui_controls));
+    
     this.desktop = Primum.spawn(ur.arena);
     Primum.rename_obj(this.desktop.toString(), "desktop");
     this.edit_level = this.desktop;

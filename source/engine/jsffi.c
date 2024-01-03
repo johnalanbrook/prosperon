@@ -1478,11 +1478,9 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 4:
-    //       unregister_obj(obj);
     break;
 
   case 5:
-    //       unregister_gui(c);
     break;
 
   case 6:

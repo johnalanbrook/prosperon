@@ -35,3 +35,6 @@ Computation takes place in turns. Each entity has functions called, if they exis
 |debug|use draw functions with the object's world position, during debug pass|
 |gui|draw functions in screen space, during gameplay gui pass|
 |draw|draw functions in world space|
+
+## Guidelines
+When dealing with callbacks, callback registration can include objects or functions, but not both. You should either register an object to a list that always has 'update' called on them, or you should register the object's update function as a closure over the object.

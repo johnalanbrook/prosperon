@@ -173,7 +173,7 @@ var Tween = {
     
     defn.play = function() {
       if (playing) return;
-      Register.update.register(defn.fn, defn);
+      defn._end = Register.update.register(defn.fn.bind(defn));
       playing = true;
     };
     defn.restart = function() {
@@ -185,7 +185,7 @@ var Tween = {
     };
     defn.stop = function() { if (!playing) return; defn.pause(); defn.restart(); };
     defn.pause = function() {
-      Register.update.unregister(defn.fn);    
+      defn._end();
       if (!playing) return;
 
       playing = false;

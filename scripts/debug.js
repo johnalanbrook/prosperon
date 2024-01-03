@@ -108,10 +108,6 @@ var Debug = {
     cmd(82, obj.body);
   },
 
-  register_call(fn, obj) {
-    Register.debug.register(fn,obj);
-  },
-
   gameobject(go) { cmd(15, go.body); },
 
   draw_bb: false,

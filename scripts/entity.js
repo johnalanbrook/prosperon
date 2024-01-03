@@ -416,14 +416,19 @@ var gameobject = {
     this.sync();
   },
 
+  unregister() {
+    this.timers.forEach(t=>t());
+    this.timers = [];
+  },
+
   check_registers(obj) {
-    Register.unregister_obj(obj);
+    obj.unregister();
   
     if (typeof obj.update === 'function')
-      Register.update.register(obj.update, obj);
+      obj.timers.push(Register.update.register(obj.update.bind(obj)));
 
     if (typeof obj.physupdate === 'function')
-      Register.physupdate.register(obj.physupdate, obj);
+      obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
 
     if (typeof obj.collide === 'function')
       obj.register_hit(obj.collide, obj);
@@ -432,13 +437,13 @@ var gameobject = {
       obj.register_separate(obj.separate, obj);
 
     if (typeof obj.draw === 'function')
-      Register.draw.register(obj.draw,obj);
+      obj.timers.push(Register.draw.register(obj.draw.bind(obj)));
 
     if (typeof obj.debug === 'function')
-      Register.debug.register(obj.debug, obj);
+      obj.timers.push(Register.debug.register(obj.debug.bind(obj)));
 
     if (typeof obj.gui === 'function')
-      Register.gui.register(obj.gui,obj);
+      obj.timers.push(Register.gui.register(obj.gui.bind(obj)));
 
     for (var k in obj) {
       if (!k.startswith("on_")) continue;
@@ -560,7 +565,7 @@ var gameobject = {
     this.__kill = true;
     
     this.timers.forEach(t => t());
-    this.timers = undefined;
+    this.timers = [];
     
     if (this.level) {
       this.level.remove_obj(this);
@@ -568,13 +573,11 @@ var gameobject = {
     }
 
     Player.do_uncontrol(this);
-    Register.unregister_obj(this);
     
     if (this.__proto__.instances)
       this.__proto__.instances.remove(this);
 
     for (var key in this.components) {
-      Register.unregister_obj(this.components[key]);
       this.components[key].kill();
       this.components[key].gameobject = undefined;
       delete this.components[key];

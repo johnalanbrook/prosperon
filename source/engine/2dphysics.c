@@ -625,9 +625,9 @@ static cpBool handle_collision(cpArbiter *arb, int type) {
     break;
 
   case CTYPE_SEP:
-/*    if (JS_IsObject(go->cbs.separate.obj))
+    if (JS_IsObject(go->cbs.separate.obj))
       duk_call_phys_cb(norm1, go->cbs.separate, go2, arb);
-*/
+
     break;
   }
 
