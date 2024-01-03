@@ -1506,27 +1506,25 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   return JS_UNDEFINED;
 }
 
-void gameobject_add_shape_collider(gameobject *go, struct callee c, struct phys2d_shape *shape) {
+void gameobject_add_shape_collider(gameobject *go, JSValue fn, struct phys2d_shape *shape) {
   struct shape_cb shapecb;
   shapecb.shape = shape;
-  shapecb.cbs.begin = c;
+  shapecb.cbs.begin = fn;
   arrpush(go->shape_cbs, shapecb);
 }
 
 JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
-  gameobject *go = js2gameobject(argv[3]);
-  struct callee c;
-  c.fn = argv[1];
-  c.obj = argv[2];
+  gameobject *go = js2gameobject(argv[2]);
+  JSValue fn = argv[1];
 
   switch (cmd) {
   case 0:
-    go->cbs.begin = c;
+    go->cbs.begin = JS_DupValue(js,fn);
     break;
 
   case 1:
-    gameobject_add_shape_collider(go, c, js2ptr(argv[4]));
+    gameobject_add_shape_collider(go, JS_DupValue(js,fn), js2ptr(argv[3]));
     break;
 
   case 2:
@@ -1534,7 +1532,7 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
     break;
 
   case 3:
-    go->cbs.separate = c;
+    go->cbs.separate = JS_DupValue(js,fn);
     break;
   }
 

@@ -431,13 +431,13 @@ var gameobject = {
       obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
 
     if (typeof obj.collide === 'function')
-      obj.register_hit(obj.collide, obj);
+      Signal.obj_begin(obj.collide.bind(obj), obj);
 
     if (typeof obj.separate === 'function')
-      obj.register_separate(obj.separate, obj);
+      Signal.obj_separate(obj.separate.bind(obj), obj);
 
     if (typeof obj.draw === 'function')
-      obj.timers.push(Register.draw.register(obj.draw.bind(obj)));
+      obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
 
     if (typeof obj.debug === 'function')
       obj.timers.push(Register.debug.register(obj.debug.bind(obj)));
@@ -453,7 +453,7 @@ var gameobject = {
 
     obj.components.forEach(function(x) {
       if (typeof x.collide === 'function')
-        register_collide(1, x.collide, x, obj.body, x.shape);
+        register_collide(1, x.collide.bind(x), obj.body, x.shape);
     });
   },
   toString() { return "new_object"; },
@@ -566,13 +566,14 @@ var gameobject = {
     
     this.timers.forEach(t => t());
     this.timers = [];
+    Event.rm_obj(this);
+    Player.do_uncontrol(this);
+    register_collide(2, undefined, this.body);
     
     if (this.level) {
       this.level.remove_obj(this);
       this.level = undefined;
     }
-
-    Player.do_uncontrol(this);
     
     if (this.__proto__.instances)
       this.__proto__.instances.remove(this);
@@ -585,7 +586,7 @@ var gameobject = {
 
     this.clear();
     this.objects = undefined;
-    Event.rm_obj(this);
+
 
     if (typeof this.stop === 'function')
       this.stop();
@@ -602,9 +603,6 @@ var gameobject = {
     obj.make = undefined;
     Object.mixin(obj,gameobject_impl);
 
-//    if (this.instances)
-//      this.instances.push(obj);
-      
     obj.body = make_gameobject();
 
     obj.components = {};
@@ -690,16 +688,6 @@ var gameobject = {
     if (data)
       Object.assign(this[name], data);
     return this[name];
-  },
-
-  register_hit(fn, obj) {
-    obj ??= this;
-    Signal.obj_begin(fn, obj, this);
-  },
-
-  register_separate(fn, obj) {
-    obj ??= this;
-    Signal.obj_separate(fn,obj,this);
   },
 
   obj_descend(fn) {

@@ -254,6 +254,14 @@ void script_call_sym(JSValue sym) {
   call_callee(&c);
 }
 
+void script_call_fn_arg(JSValue fn, JSValue arg)
+{
+  if (!JS_IsFunction(js,fn)) return;
+  JSValue ret = JS_Call(js, fn, JS_GetGlobalObject(js), 1, &arg);
+  js_print_exception(ret);
+  JS_FreeValue(js, ret);
+}
+
 void out_memusage(const char *file)
 {
   FILE *f = fopen(file, "w");

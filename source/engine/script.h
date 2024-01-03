@@ -13,9 +13,12 @@ struct callee {
 };
 
 struct phys_cbs {
-  struct callee begin;
-  struct callee separate;
+  JSValue begin;
+  JSValue bhit;
+  JSValue separate;
+  JSValue shit;
 };
+void script_call_fn_arg(JSValue fn, JSValue arg);
 
 extern struct callee stacktrace_callee;
 extern JSValue num_cache[100];

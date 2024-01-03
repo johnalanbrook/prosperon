@@ -53,7 +53,6 @@ gameobject *MakeGameobject();
 int go_count();
 void gameobject_apply(gameobject *go);
 void gameobject_free(gameobject *go);
-void gameobjects_cleanup();
 
 transform2d go2t(gameobject *go);
 transform3d go2t3(gameobject *go);

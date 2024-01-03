@@ -163,8 +163,8 @@ gameobject *MakeGameobject() {
       .ref = JS_UNDEFINED,
   };
 
-  go.cbs.begin.obj = JS_UNDEFINED;
-  go.cbs.separate.obj = JS_UNDEFINED;
+  go.cbs.begin = JS_UNDEFINED;
+  go.cbs.separate = JS_UNDEFINED;
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
   cpBodySetVelocityUpdateFunc(go.body, velocityFn);
@@ -195,41 +195,23 @@ void rm_body_constraints(cpBody *body, cpConstraint *constraint, void *data)
   cpConstraintFree(constraint);
 }
 
-gameobject **go_toclean = NULL;
-
-/* Free this gameobject */
-void gameobject_clean(gameobject *go) {
+void gameobject_free(gameobject *go) {
   arrfree(go->shape_cbs);
+  go->ref = JS_UNDEFINED;  
   cpBodyEachShape(go->body, rm_body_shapes, NULL);
   cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
+
   go->body = NULL;
 
   free(go);
-}
-
-/* Really more of a "mark for deletion" ... */
-void gameobject_free(gameobject *go) {
-  if (!go) return;
-
-  for (int i = arrlen(gameobjects)-1; i >= 0; i--)
+  for (int i = arrlen(gameobjects)-1; i >= 0; i--) {
     if (gameobjects[i] == go) {
-      arrdelswap(gameobjects, i);
-      break;
+      arrdelswap(gameobjects,i);
+      return;
     }
-
-  if (cpSpaceIsLocked(space))
-    arrpush(go_toclean, go);
-  else
-    gameobject_clean(go);
-}
-
-void gameobjects_cleanup() {
-  for (int i = 0; i < arrlen(go_toclean); i++)
-    gameobject_clean(go_toclean[i]);
-
-  arrsetlen(go_toclean, 0);
+  }
 }
 
 void gameobject_setangle(gameobject *go, float angle) {

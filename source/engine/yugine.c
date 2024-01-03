@@ -148,8 +148,6 @@ static void process_frame()
 //    prof_start(&prof_draw);
     window_render(&mainwin);
 //    prof_lap(&prof_draw);
-    
-    gameobjects_cleanup();
 }
 
 void c_frame()

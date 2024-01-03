@@ -388,10 +388,6 @@ var collider2d = Object.copy(component, {
 
   kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
 
-  register_hit(fn, obj) {
-    register_collide(1, fn, obj, this.gameobject.body, this.shape);
-  },
-
   impl: {
     set sensor(x) { cmd(18,this.shape,x); },
     get sensor() { return cmd(21,this.shape); },

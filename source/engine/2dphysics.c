@@ -201,10 +201,7 @@ void phys2d_set_gravity(cpVect v) {
   cpSpaceSetGravity(space, v);
 }
 
-void phys2d_update(float deltaT) {
-  cpSpaceStep(space, deltaT);
-  flush_collide_cbs();
-}
+void phys2d_update(float deltaT) { cpSpaceStep(space, deltaT); }
 
 void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->go = go;
@@ -557,96 +554,92 @@ int shape_get_sensor(struct phys2d_shape *shape) {
 
 void phys2d_reindex_body(cpBody *body) { cpSpaceReindexShapesForBody(space, body); }
 
-struct postphys_cb {
-  struct callee c;
-  JSValue send;
-};
-
-static struct postphys_cb *begins = NULL;
-
-void flush_collide_cbs() {
-  for (int i = 0; i < arrlen(begins); i++) {
-    script_callee(begins[i].c, 1, &begins[i].send);
-     JS_FreeValue(js, begins[i].send);
-  }
-
-  arrsetlen(begins,0);
+int arb_valid(cpArbiter *arb)
+{
+  cpBody *body1;
+  cpBody *body2;
+  cpArbiterGetBodies(arb, &body1, &body2);
+  gameobject *go2 = cpBodyGetUserData(body2);
+  return !JS_IsUndefined(go2->ref);
 }
 
-void duk_call_phys_cb(HMM_Vec2 norm, struct callee c, gameobject *hit, cpArbiter *arb) {
+JSValue arb2js(cpArbiter *arb)
+{
+  cpBody *body1;
+  cpBody *body2;
+  cpArbiterGetBodies(arb, &body1, &body2);
+  gameobject *go2 = cpBodyGetUserData(body2);
+  if (JS_IsUndefined(go2->ref)) return JS_UNDEFINED;
   cpShape *shape1;
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
 
+  HMM_Vec2 norm;
+  norm.cp = cpArbiterGetNormal(arb);
+
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
-  JS_SetPropertyStr(js, obj, "obj", JS_DupValue(js,hit->ref));
+  JS_SetPropertyStr(js, obj, "obj", JS_DupValue(js,go2->ref));
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
+  
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);
   JS_SetPropertyStr(js, obj, "velocity", vec2js(srfv));
-//  srfv.cp = cpArbiterGetPointA(arb,0);
-//  JS_SetPropertyStr(js, obj, "pos", vec2js(srfv));
-//  JS_SetPropertyStr(js,obj,"depth", num2js(cpArbiterGetDepth(arb,0)));
 
-  struct postphys_cb cb;
-  cb.c = c;
-  cb.send = obj;
-  arrput(begins, cb);  
+  return obj;
 }
 
-#define CTYPE_BEGIN 0
-#define CTYPE_SEP 1
+void phys_run_post(cpSpace *space, JSValue *fn, JSValue *hit)
+{
+  script_call_fn_arg(*fn, *hit);
+  JS_FreeValue(js, *hit);
+}
 
-static cpBool handle_collision(cpArbiter *arb, int type) {
-  cpBody *body1;
-  cpBody *body2;
-  cpArbiterGetBodies(arb, &body1, &body2);
-  gameobject *go = cpBodyGetUserData(body1);
-  gameobject *go2 = cpBodyGetUserData(body2);
+/* TODO: Limitation, cannot handle multiple collision same frame */
+int script_phys_cb_begin(cpArbiter *arb, cpSpace *space, gameobject *go)
+{
+  if (!arb_valid(arb)) return 1;
+  
+  if (!JS_IsUndefined(go->cbs.begin) && cpSpaceAddPostStepCallback(space, phys_run_post, &go->cbs.begin, &go->cbs.bhit))
+    go->cbs.bhit = arb2js(arb);
+
   cpShape *shape1;
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
   struct phys2d_shape *pshape1 = cpShapeGetUserData(shape1);
-  struct phys2d_shape *pshape2 = cpShapeGetUserData(shape2);
 
-  HMM_Vec2 norm1;
-  norm1.cp = cpArbiterGetNormal(arb);
-
-  switch (type) {
-  case CTYPE_BEGIN:
-    for (int i = 0; i < arrlen(go->shape_cbs); i++)
-      if (go->shape_cbs[i].shape == pshape1)
-        duk_call_phys_cb(norm1, go->shape_cbs[i].cbs.begin, go2, arb);
-
-    if (JS_IsObject(go->cbs.begin.obj))
-      duk_call_phys_cb(norm1, go->cbs.begin, go2, arb);
-
-    break;
-
-  case CTYPE_SEP:
-    if (JS_IsObject(go->cbs.separate.obj))
-      duk_call_phys_cb(norm1, go->cbs.separate, go2, arb);
-
-    break;
+  for (int i = 0; i < arrlen(go->shape_cbs); i++) {
+    if (go->shape_cbs[i].shape != pshape1) continue;
+    if (!JS_IsUndefined(go->shape_cbs[i].cbs.begin) && cpSpaceAddPostStepCallback(space, phys_run_post, &go->shape_cbs[i].cbs.begin, &go->shape_cbs[i].cbs.bhit))
+      go->shape_cbs[i].cbs.bhit = arb2js(arb);
   }
-
   return 1;
 }
 
-static cpBool script_phys_cb_begin(cpArbiter *arb, cpSpace *space, void *data) {
-  return handle_collision(arb, CTYPE_BEGIN);
-}
-
-static cpBool script_phys_cb_separate(cpArbiter *arb, cpSpace *space, void *data) {
-  return handle_collision(arb, CTYPE_SEP);
+void script_phys_cb_separate(cpArbiter *arb, cpSpace *space, gameobject *go)
+{
+  if (!arb_valid(arb)) return;
+  if (JS_IsUndefined(go->cbs.separate)) return;
+  go->cbs.shit = arb2js(arb);
+  cpSpaceAddPostStepCallback(space, phys_run_post, &go->cbs.separate, &go->cbs.shit);
 }
 
 void phys2d_rm_go_handlers(gameobject *go) {
   cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (cpCollisionType)go);
-  handler->userData = NULL;
-  handler->beginFunc = NULL;
-  handler->separateFunc = NULL;
+  
+  if (!JS_IsUndefined(go->cbs.begin)) {
+    JS_FreeValue(js,go->cbs.begin);
+    go->cbs.begin = JS_UNDEFINED;
+  }
+  if (JS_IsFunction(js,go->cbs.separate)) {
+    JS_FreeValue(js,go->cbs.separate);
+    go->cbs.separate = JS_UNDEFINED;
+  }
+  
+  for (int i = 0; i < arrlen(go->shape_cbs); i++) {
+    JS_FreeValue(js, go->shape_cbs[i].cbs.begin);
+    go->shape_cbs[i].cbs.begin = JS_UNDEFINED;
+  }
 }
 
 void phys2d_setup_handlers(gameobject *go) {

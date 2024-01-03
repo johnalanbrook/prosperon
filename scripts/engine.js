@@ -217,12 +217,12 @@ register(9, Log.stack, this);
 Register.gamepad_playermap[0] = Player.players[0];
 
 var Signal = {
-  obj_begin(fn, obj, go) {
-    register_collide(0, fn, obj, go.body);
+  obj_begin(fn, go) {
+    register_collide(0, fn, go.body);
   },
 
-  obj_separate(fn, obj, go) {
-    register_collide(3,fn,obj,go.body);
+  obj_separate(fn, go) {
+    register_collide(3,fn, go.body);
   },
 };
 
