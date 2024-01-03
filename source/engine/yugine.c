@@ -12,9 +12,6 @@
 #include "particle.h"
 #include "simplex.h"
 
-#define FNL_IMPL
-#include "FastNoiseLite.h"
-
 #include "datastream.h"
 
 #include "timer.h"

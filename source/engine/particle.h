@@ -7,8 +7,8 @@
 #include "anim.h"
 
 typedef struct particle {
-  HMM_Vec3 pos;
-  HMM_Vec3 v; /* velocity */
+  HMM_Vec4 pos;
+  HMM_Vec4 v; /* velocity */
   float angle;
   float av; /* angular velocity */
   float scale;

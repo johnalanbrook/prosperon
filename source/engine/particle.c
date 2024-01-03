@@ -7,6 +7,9 @@
 #include "simplex.h"
 #include "pthread.h"
 
+#define SCHED_IMPLEMENTATION
+#include "sched.h"
+
 static emitter **emitters;
 
 static sg_shader par_shader;
@@ -15,6 +18,10 @@ static sg_bindings par_bind;
 static int draw_count;
 
 #define MAX_PARTICLES 1000000
+
+struct scheduler sched;
+void *mem;
+
 
 struct par_vert {
   HMM_Vec2 pos;
@@ -27,6 +34,11 @@ typedef struct par_vert par_vert;
 
 void particle_init()
 {
+  sched_size needed;
+  scheduler_init(&sched, &needed, 1, NULL);
+  mem = calloc(needed, 1);
+  scheduler_start(&sched,mem);
+  
   par_shader = sg_make_shader(particle_shader_desc(sg_query_backend()));
   
   par_pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -117,9 +129,9 @@ int emitter_spawn(emitter *e)
 {
   particle p;
   p.life = e->life;
-  p.pos = (HMM_Vec3){0,0,0};
-  p.v = (HMM_Vec3){frand(1)-0.5,frand(1)-0.5,0};
-  p.v = HMM_ScaleV3(HMM_NormV3(p.v), e->speed);
+  p.pos = (HMM_Vec4){0,0,0,0};
+  p.v = (HMM_Vec4){frand(1)-0.5,frand(1)-0.5,0,0};
+  p.v = HMM_MulV4F(HMM_NormV4(p.v), e->speed);
   p.angle = 0;
   p.av = 1;
   arrput(e->particles,p);
@@ -140,21 +152,28 @@ void emitters_step(double dt)
 
 static struct par_vert pv[MAX_PARTICLES];
 
+void parallel_pv(emitter *e, struct scheduler *sched, struct sched_task_partition t, sched_uint thread_num)
+{
+  for (int i=t.start; i < t.end; i++) {
+    particle *p = &e->particles[i];
+    pv[i].pos = p->pos.xy;
+    pv[i].angle = p->angle;
+    pv[i].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
+    pv[i].color = vec2rgba(p->color);
+  }
+}
+
 void emitters_draw()
 {
+  if (arrlen(emitters) == 0) return;
   int draw_count = 0;
   for (int i = 0; i < arrlen(emitters); i++) {
     emitter *e = emitters[i];
     par_bind.fs.images[0] = e->texture->id;
 
-    #pragma omp parallel for
-    for (int j = 0; j < arrlen(e->particles); j++) {
-      particle *p = &e->particles[j];
-      pv[j].pos = p->pos.xy;
-      pv[j].angle = p->angle;
-      pv[j].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
-      pv[j].color = vec2rgba(p->color);
-    }
+    struct sched_task task;
+    scheduler_add(&sched, &task, parallel_pv, e, arrlen(e->particles), arrlen(e->particles)/SCHED_DEFAULT);
+    scheduler_join(&sched, &task);
     
     sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)*arrlen(e->particles)});
     draw_count += arrlen(e->particles);
@@ -166,30 +185,35 @@ void emitters_draw()
   sg_draw(0, 4, draw_count);
 }
 
-void emitter_step(emitter *e, double dt) {
-  #pragma omp parallel for
-  for (int i = arrlen(e->particles)-1; i >= 0; i--) {
-    particle p = e->particles[i];
+static double dt;
+static HMM_Vec4 g_accel;
+
+void parallel_step(emitter *e, struct scheduler *shed, struct sched_task_partition t, sched_uint thread_num)
+{
+  for (int i = t.end-1; i >=0; i--) {
     if (e->gravity) 
-      p.v = HMM_AddV3(p.v, HMM_MulV3F((HMM_Vec3){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0}, dt));
+      e->particles[i].v = HMM_AddV4(e->particles[i].v, g_accel);
+    e->particles[i].v = HMM_AddV4(e->particles[i].v, HMM_MulV4F((HMM_Vec4){frand(2)-1, frand(2)-1, 0,0}, 1000*dt));
+    e->particles[i].pos = HMM_AddV4(e->particles[i].pos, HMM_MulV4F(e->particles[i].v, dt));
+    e->particles[i].angle += e->particles[i].av*dt;
+    e->particles[i].life -= dt;
+    e->particles[i].color = sample_sampler(&e->color, (e->life-e->particles[i].life)/e->life);
+    e->particles[i].scale = e->scale;
 
-//    float freq = 1;
-//    p.v = HMM_AddV3(p.v, HMM_MulV3F((HMM_Vec3){Noise2D(p.pos.x*freq, p.pos.y*freq), Noise2D(p.pos.x*freq+5,p.pos.y*freq+5), 0}, 1000*dt));
-    p.v = HMM_AddV3(p.v, HMM_MulV3F((HMM_Vec3){frand(2)-1, frand(2)-1, 0}, 1000*dt));
-
-    p.pos = HMM_AddV3(p.pos, HMM_MulV3F(p.v, dt));
-    p.angle += p.av*dt;
-    p.life -= dt;
-    p.color = sample_sampler(&e->color, (e->life-p.life)/e->life);
-    p.scale = e->scale;
-    e->particles[i] = p;    
-
-//    if (p.life <= 0)
-//      arrdelswap(e->particles,i);
-
-//    if (query_point(p.pos.xy))
-//      arrdelswap(e->particles,i);
+   if (e->particles[i].life <= 0)
+     arrdelswap(e->particles, i);
+   else if (query_point(e->particles[i].pos.xy))
+     arrdelswap(e->particles,i);
   }
+}
+
+void emitter_step(emitter *e, double mdt) {
+  dt = mdt;
+  g_accel = HMM_MulV4F((HMM_Vec4){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0, 0}, dt);
+  if (arrlen(e->particles) == 0) return;
+  struct sched_task task;
+  scheduler_add(&sched, &task, parallel_step, e, arrlen(e->particles), arrlen(e->particles));
+  scheduler_join(&sched, &task);
 
   if (!e->on) return;
   e->tte-=dt;

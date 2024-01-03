@@ -819,8 +819,6 @@ static inline float HMM_DotV2(HMM_Vec2 Left, HMM_Vec2 Right) {
   return (Left.X * Right.X) + (Left.Y * Right.Y);
 }
 
-
-
 static inline HMM_Vec2 HMM_ProjV2(HMM_Vec2 a, HMM_Vec2 b)
 {
   return HMM_MulV2F(b, HMM_DotV2(a,b)/HMM_DotV2(b,b));
