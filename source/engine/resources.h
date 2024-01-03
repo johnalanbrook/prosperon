@@ -14,7 +14,6 @@ char *get_directory_from_path(char *path);
 char *str_replace_ext(const char *s, const char *newext);
 FILE *res_open(char *path, const char *tag);
 FILE *path_open(const char *tag, const char *fmt, ...);
-char *make_path(const char *file);
 char **ls(const char *path);
 int cp(const char *p1, const char *p2);
 char *rebase_path(const char *path); /* given a global path, rebase to the local structure */

@@ -189,12 +189,19 @@ void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
   cpShapeFree(shape);
 }
 
+void rm_body_constraints(cpBody *body, cpConstraint *constraint, void *data)
+{
+  cpSpaceRemoveConstraint(space, constraint);
+  cpConstraintFree(constraint);
+}
+
 gameobject **go_toclean = NULL;
 
 /* Free this gameobject */
 void gameobject_clean(gameobject *go) {
   arrfree(go->shape_cbs);
   cpBodyEachShape(go->body, rm_body_shapes, NULL);
+  cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
   go->body = NULL;

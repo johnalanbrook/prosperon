@@ -186,13 +186,12 @@ void register_gamepad(struct callee c) {
 
 void input_dropped_files(int n)
 {
-  
   JSValue argv[4];
   argv[0] = jstr("emacs");
   argv[1] = jstr("drop");
   argv[2] = jstr("pressed");
   char *path = rebase_path(sapp_get_dropped_file_path(0));
-  argv[3] = str2js(path);
+  argv[3] = str2js(path+1);
   script_callee(pawn_callee, 4, argv);
   JS_FreeValue(js,argv[3]);
 }

@@ -108,8 +108,6 @@ void c_init() {
   script_evalf("Game.init();");
 
   particle_init();
-
-  YughWarn("simplex %.17lf", Noise3D(3.14,42,7.001));
 }
 
 int frame_fps() { return 1.0/sapp_frame_duration(); }
@@ -286,7 +284,7 @@ int main(int argc, char **argv) {
   signal(SIGSEGV, seghandle);
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
-  signal(SIGBUS, seghandle);
+//  signal(SIGBUS, seghandle);
 
 #endif
 

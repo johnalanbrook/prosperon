@@ -43,7 +43,6 @@ static struct cdb game_cdb;
 void resources_init() {
   DATA_PATH = malloc(MAXPATH);
   getcwd(DATA_PATH, MAXPATH);
-  strncat(DATA_PATH, "/", MAXPATH);
 
   if (!PREF_PATH)
     PREF_PATH = strdup("./tmp/");
@@ -51,7 +50,6 @@ void resources_init() {
   int fd = open("test.cdb", O_RDONLY);
   cdb_init(&game_cdb, fd);
   cdb_initf(&corecdb, core_cdb, core_cdb_len);
-  printf("%s\n", DATA_PATH);
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -183,12 +181,6 @@ FILE *path_open(const char *tag, const char *fmt, ...) {
 
   FILE *f = fopen(pathbuf, tag);
   return f;
-}
-
-char *make_path(const char *file) {
-  strncpy(pathbuf, DATA_PATH, MAXPATH);
-  strncat(pathbuf, file, MAXPATH);
-  return pathbuf;
 }
 
 void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)

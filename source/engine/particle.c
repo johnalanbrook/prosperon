@@ -5,6 +5,7 @@
 #include "2dphysics.h"
 #include "log.h"
 #include "simplex.h"
+#include "pthread.h"
 
 static emitter **emitters;
 
@@ -13,7 +14,7 @@ static sg_pipeline par_pipe;
 static sg_bindings par_bind;
 static int draw_count;
 
-#define MAX_PARTICLES 500000
+#define MAX_PARTICLES 1000000
 
 struct par_vert {
   HMM_Vec2 pos;
@@ -145,6 +146,8 @@ void emitters_draw()
   for (int i = 0; i < arrlen(emitters); i++) {
     emitter *e = emitters[i];
     par_bind.fs.images[0] = e->texture->id;
+
+    #pragma omp parallel for
     for (int j = 0; j < arrlen(e->particles); j++) {
       particle *p = &e->particles[j];
       pv[j].pos = p->pos.xy;
@@ -152,6 +155,7 @@ void emitters_draw()
       pv[j].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
       pv[j].color = vec2rgba(p->color);
     }
+    
     sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)*arrlen(e->particles)});
     draw_count += arrlen(e->particles);
   }
@@ -163,6 +167,7 @@ void emitters_draw()
 }
 
 void emitter_step(emitter *e, double dt) {
+  #pragma omp parallel for
   for (int i = arrlen(e->particles)-1; i >= 0; i--) {
     particle p = e->particles[i];
     if (e->gravity) 
@@ -179,11 +184,11 @@ void emitter_step(emitter *e, double dt) {
     p.scale = e->scale;
     e->particles[i] = p;    
 
-    if (p.life <= 0)
-      arrdelswap(e->particles,i);
+//    if (p.life <= 0)
+//      arrdelswap(e->particles,i);
 
-    if (query_point(p.pos.xy))
-      arrdelswap(e->particles,i);
+//    if (query_point(p.pos.xy))
+//      arrdelswap(e->particles,i);
   }
 
   if (!e->on) return;
