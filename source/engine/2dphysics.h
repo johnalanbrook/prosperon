@@ -99,7 +99,7 @@ struct shape_cb {
 void fire_hits();
 
 void phys2d_rm_go_handlers(gameobject *go);
-void phys2d_set_gravity(cpVect v);
+void phys2d_set_gravity(HMM_Vec2 v);
 
 void shape_enabled(struct phys2d_shape *shape, int enabled);
 int shape_is_enabled(struct phys2d_shape *shape);

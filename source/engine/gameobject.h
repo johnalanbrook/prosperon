@@ -5,6 +5,7 @@
 #include "HandmadeMath.h"
 #include "transform.h"
 #include "script.h"
+#include "warp.h"
 
 #define dag_rm(p,c) do{\
  for (int i = arrlen(p->children)-1; i--; i >=0) {\
@@ -40,6 +41,7 @@ struct gameobject {
   float damping;
   unsigned int layer;
   cpShapeFilter filter;
+//  warpmask warpmask;
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
   JSValue ref;

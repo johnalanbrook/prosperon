@@ -548,7 +548,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 8:
-    phys2d_set_gravity(js2vec2(argv[1]).cp);
+    phys2d_set_gravity(js2vec2(argv[1]));
     break;
 
   case 9:

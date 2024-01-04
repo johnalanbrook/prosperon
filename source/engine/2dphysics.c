@@ -189,16 +189,25 @@ struct rgba shape_color(cpShape *shape) {
   return static_color;
 }
 
+static warp_gravity *space_gravity;
+
 void phys2d_init()
 {
   space = cpSpaceNew();
   cpSpaceSetSleepTimeThreshold(space, 1);
   cpSpaceSetCollisionSlop(space, 0.01);
   cpSpaceSetCollisionBias(space, cpfpow(1.0-0.5, 165.f));
+  space_gravity = warp_gravity_make();
+  YughWarn("Made gravity with %d spherical", space_gravity->spherical);
 }
 
-void phys2d_set_gravity(cpVect v) {
-  cpSpaceSetGravity(space, v);
+void phys2d_set_gravity(HMM_Vec2 v)
+{
+  float str = HMM_LenV2(v);
+  HMM_Vec2 dir = HMM_NormV2(v);
+  space_gravity->strength = str;
+  space_gravity->t.scale = (HMM_Vec3){v.x,v.y, 0};
+  space_gravity->planar_force = (HMM_Vec3){v.x,v.y,0};
 }
 
 void phys2d_update(float deltaT) { cpSpaceStep(space, deltaT); }

@@ -22,7 +22,6 @@ static int draw_count;
 struct scheduler sched;
 void *mem;
 
-
 struct par_vert {
   HMM_Vec2 pos;
   float angle;
@@ -88,25 +87,19 @@ void particle_init()
 }
 
 emitter *make_emitter() {
-  emitter *e = NULL;
-  e = malloc(sizeof(*e));
+  emitter *e = calloc(sizeof(*e),1);
+  
   e->max = 20;
-  e->particles = NULL;
   arrsetcap(e->particles, e->max);
   for (int i = 0; i < arrlen(e->particles); i++)
     e->particles[i].life = 0;
     
   e->life = 10;
-  e->explosiveness = 0;
   e->tte = lerp(e->explosiveness, e->life/e->max, 0);
-  e->color.times = NULL;
-  e->color.data = NULL;
-  e->color.type = LINEAR;
+//  e->warp_mask = gravmask;
   sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
   e->scale = 1;
   e->speed = 20;
-  e->gravity = 1;
-  e->on = 0;
   e->texture = texture_pullfromfile("glass_chunk2.gif");
   arrpush(emitters,e);
   return e;
@@ -193,9 +186,10 @@ void parallel_step(emitter *e, struct scheduler *shed, struct sched_task_partiti
 {
   for (int i = t.end-1; i >=0; i--) {
     if (e->particles[i].life <= 0) continue;
-    if (e->gravity) 
+
+    if (e->warp_mask & gravmask)
       e->particles[i].v = HMM_AddV4(e->particles[i].v, g_accel);
-    e->particles[i].v = HMM_AddV4(e->particles[i].v, HMM_MulV4F((HMM_Vec4){frand(2)-1, frand(2)-1, 0,0}, 1000*dt));
+      
     e->particles[i].pos = HMM_AddV4(e->particles[i].pos, HMM_MulV4F(e->particles[i].v, dt));
     e->particles[i].angle += e->particles[i].av*dt;
     e->particles[i].life -= dt;

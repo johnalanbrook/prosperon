@@ -124,17 +124,19 @@ void gameobject_apply(gameobject *go) {
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
   gameobject *go = body2go(body);
+  cpVect pos = cpBodyGetPosition(body);  
+  HMM_Vec2 g = warp_force((HMM_Vec3){pos.x, pos.y, 0}, gravmask).xy;
   if (!go) {
-    cpBodyUpdateVelocity(body,gravity,damping,dt);
+    cpBodyUpdateVelocity(body,g.cp,damping,dt);
     return;
   }
 
   cpFloat d = isfinite(go->damping) ? go->damping : damping;
-  cpVect g = gravity;
+
   if (isfinite(go->gravity.x) && isfinite(go->gravity.y))
-    g = go->gravity.cp;
+    g = go->gravity;
   
-  cpBodyUpdateVelocity(body,g,d,dt*go->timescale);
+  cpBodyUpdateVelocity(body,g.cp,d,dt*go->timescale);
 
   if (isfinite(go->maxvelocity))
     cpBodySetVelocity(body, cpvclamp(cpBodyGetVelocity(body), go->maxvelocity));
