@@ -1433,6 +1433,36 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 236:
       emitter_emit(js2emitter(argv[1]), js2number(argv[2]));
       break;
+    case 237:
+      js2emitter(argv[1])->explosiveness = js2number(argv[2]);
+      break;
+    case 238:
+      js2emitter(argv[1])->t.pos.xy = js2vec2(argv[2]);
+      break;
+    case 239:
+      js2emitter(argv[1])->t.rotation.Elements[0] = js2number(argv[2]);
+      break;
+    case 240:
+      js2emitter(argv[1])->speed = js2number(argv[2]);
+      break;
+    case 241:
+      js2emitter(argv[1])->variation = js2number(argv[2]);
+      break;
+    case 242:
+      js2emitter(argv[1])->divergence = js2number(argv[2]);
+      break;
+    case 243:
+      js2emitter(argv[1])->scale = js2number(argv[2]);
+      break;
+    case 244:
+      js2emitter(argv[1])->scale_var = js2number(argv[2]);
+      break;
+    case 245:
+      js2emitter(argv[1])->grow_for = js2number(argv[2]);
+      break;
+    case 246:
+      js2emitter(argv[1])->shrink_for = js2number(argv[2]);
+      break;
   }
 
   if (str)

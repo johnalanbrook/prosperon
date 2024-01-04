@@ -62,7 +62,6 @@ endif
 
 ifeq ($(LEAK),1)
   CPPFLAGS += -fsanitize=address
-  INFO += _leak
 endif
 
 ifeq ($(OPT),small)

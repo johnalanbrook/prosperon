@@ -13,6 +13,7 @@ typedef struct particle {
   float angle;
   float av; /* angular velocity */
   float scale;
+  double time;
   double life;
   HMM_Vec4 color;
 } particle;
@@ -23,6 +24,7 @@ typedef struct emitter {
   float explosiveness; /* 0 for a stream, 1 for all at once. Range of values allowed. */
   int max; /* number of particles */
   double life; /* how long a particle lasts */
+  double life_var;
   /* PARTICLE GEN */
   float speed; /* initial speed of particle */
   float variation; /* variation on speed */
@@ -31,7 +33,7 @@ typedef struct emitter {
   float scale;
   float scale_var;
   float grow_for; /* seconds to grow from small until scale */
-  float fade_for; /* seconds to shrink to small prior to its death */
+  float shrink_for; /* seconds to shrink to small prior to its death */
   /* PARTICLE TYPE */
   texture *texture;
   /* ROTATION AND COLLISION */

@@ -6,6 +6,7 @@
 #include "log.h"
 #include "simplex.h"
 #include "pthread.h"
+#include "math.h"
 
 #define SCHED_IMPLEMENTATION
 #include "sched.h"
@@ -96,7 +97,6 @@ emitter *make_emitter() {
     
   e->life = 10;
   e->tte = lerp(e->explosiveness, e->life/e->max, 0);
-//  e->warp_mask = gravmask;
   sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
   e->scale = 1;
   e->speed = 20;
@@ -118,15 +118,25 @@ void free_emitter(emitter *e)
 void start_emitter(emitter *e) { e->on = 1; }
 void stop_emitter(emitter *e) { e->on = 0; }
 
+/* Variate a value around variance. Variance between 0 and 1. */
+
+float variate(float val, float variance)
+{
+  return val + val*(frand(variance)-(variance/2));
+}
+
 int emitter_spawn(emitter *e)
 {
   particle p;
   p.life = e->life;
-  p.pos = (HMM_Vec4){0,0,0,0};
-  p.v = (HMM_Vec4){frand(1)-0.5,frand(1)-0.5,0,0};
-  p.v = HMM_MulV4F(HMM_NormV4(p.v), e->speed);
+  p.pos = (HMM_Vec4){e->t.pos.x,e->t.pos.y,0,0};
+  float newan = e->t.rotation.Elements[0]+(2*HMM_PI*(frand(e->divergence)-(e->divergence/2)));
+  YughWarn("angle %g", newan);
+  HMM_Vec2 norm = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
+  p.v = HMM_MulV4F((HMM_Vec4){norm.x,norm.y,0,0}, variate(e->speed, e->variation));
   p.angle = 0;
-  p.av = 1;
+  p.scale = variate(e->scale, e->scale_var);
+//  p.av = 1;
   arrput(e->particles,p);
   return 1;
 }
@@ -148,11 +158,16 @@ static struct par_vert pv[MAX_PARTICLES];
 void parallel_pv(emitter *e, struct scheduler *sched, struct sched_task_partition t, sched_uint thread_num)
 {
   for (int i=t.start; i < t.end; i++) {
-    if (e->particles[i].life <= 0) continue;
+    if (e->particles[i].time >= e->particles[i].life) continue;
     particle *p = &e->particles[i];
     pv[i].pos = p->pos.xy;
     pv[i].angle = p->angle;
-    pv[i].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), p->scale);
+    float s = p->scale;
+    if (p->time < e->grow_for)
+      s = lerp(p->time/e->grow_for, 0, p->scale);
+    else if (p->time > (p->life - e->shrink_for))
+      s = lerp((p->time-(p->life-e->shrink_for))/e->shrink_for, p->scale, 0);
+    pv[i].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), s);
     pv[i].color = vec2rgba(p->color);
   }
 }
@@ -185,21 +200,21 @@ static HMM_Vec4 g_accel;
 void parallel_step(emitter *e, struct scheduler *shed, struct sched_task_partition t, sched_uint thread_num)
 {
   for (int i = t.end-1; i >=0; i--) {
-    if (e->particles[i].life <= 0) continue;
+    if (e->particles[i].time >= e->particles[i].life) continue;
 
     if (e->warp_mask & gravmask)
       e->particles[i].v = HMM_AddV4(e->particles[i].v, g_accel);
       
     e->particles[i].pos = HMM_AddV4(e->particles[i].pos, HMM_MulV4F(e->particles[i].v, dt));
     e->particles[i].angle += e->particles[i].av*dt;
-    e->particles[i].life -= dt;
-    e->particles[i].color = sample_sampler(&e->color, (e->life-e->particles[i].life)/e->life);
+    e->particles[i].time += dt;
+    e->particles[i].color = sample_sampler(&e->color, e->particles[i].time/e->particles[i].life);
     e->particles[i].scale = e->scale;
 
-//   if (e->particles[i].life <= 0)
-//     arrdelswap(e->particles, i);
-//   else if (query_point(e->particles[i].pos.xy))
-//     arrdelswap(e->particles,i);
+   if (e->particles[i].time >= e->particles[i].life)
+     arrdelswap(e->particles, i);
+   else if (query_point(e->particles[i].pos.xy))
+     arrdelswap(e->particles,i);
   }
 }
 

@@ -6,7 +6,7 @@ static warp_gravity **warps = NULL;
 
 warp_gravity *warp_gravity_make()
 {
-  warp_gravity *n = calloc(sizeof(*n),0);
+  warp_gravity *n = calloc(sizeof(*n),1);
   n->t.pos = (HMM_Vec3){0,0,0};
   n->strength = 9.8;
   n->t.scale = (HMM_Vec3){0,-1,0};
