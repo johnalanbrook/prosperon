@@ -20,4 +20,6 @@ JSValue number2js(double g);
 JSValue int2js(int i);
 JSValue str2js(const char *c);
 
+void nota_int(char *blob);
+
 #endif

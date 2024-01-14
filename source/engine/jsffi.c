@@ -1931,6 +1931,81 @@ JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   return JS_UNDEFINED;
 }
 
+#define GETBIT(BYTE,BIT) (BYTE >> (BIT-1) & 1)
+#define WRITEBITS(TO,FROM,TOOFFSET,FROMOFFSET,BITS) (
+#define NOTA_CONT(BYTE) GETBIT(BYTE,1)
+#define NOTA_BLOB(BYTE) (!GETBIT(BYTE,2) && !GETBIT(BYTE,3) && !GETBIT(BYTE,4))
+#define NOTA_TEXT(BYTE) (!GETBIT(BYTE,2) && !GETBIT(BYTE,3) && GETBIT(BYTE,4))
+#define NOTA_ARRAY(BYTE) (!GETBIT(BYTE,2) && GETBIT(BYTE,3) && !GETBIT(BYTE,4))
+#define NOTA_REC 0b00110000
+#define NOTA_FLOAT 0b01000000
+#define NOTA_INT(BYTE) (GETBIT(BYTE,2) && GETBIT(BYTE,3) && !GETBIT(BYTE,4))
+#define NOTA_SYM 0b01110000
+
+#define MASK(n) ((1ULL << n) -1)
+#define SMASK(n,s) (~(MASK(n) << s))
+#define NEWDATA(d,n,s) (((d) & MASK(n)) << s)
+#define SETBITS(d,nd,n,s) (((d) & SMASK(n,s)) | NEWDATA(nd,n,s))
+/*
+  d data
+  nd new data
+  n num bits
+  s startbit
+*/
+
+JSValue nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  if (argc < 2) return JS_UNDEFINED;
+  
+  JSValue obj = argv[0];
+  const char *f = js2str(argv[1]);
+  
+}
+
+JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  if (argc < 1) return JS_UNDEFINED;
+  size_t len;
+  char *blob = slurp_file(js2str(argv[0]), &len);
+  char *byte = blob;
+
+  char buf[8];
+  int bit = 0;
+  if (!NOTA_INT(*blob)) return JS_UNDEFINED;
+
+  SETBITS(*buf, (*blob)<<3, 3, bit);
+  byte++;
+  bit +=3;
+  
+  while (GETBIT(*byte, 1)) {
+    SETBITS(*buf, (*byte)<<7, 7, bit);
+    bit += 7;    
+  }
+
+  YughWarn("%#08x", buf);
+  return JS_UNDEFINED;
+}
+
+void nota_int(char *blob)
+{
+  char *byte = blob;
+
+  char buf[8] = {0};
+  int bit = 0;
+
+  SETBITS(*buf, (*blob)<<3, 3, bit);
+  byte++;
+  bit +=3;
+  
+  while (GETBIT(*byte, 1)) {
+    SETBITS(*buf, (*byte)<<7, 7, bit);
+    bit += 7;    
+  }
+
+  for (int i = 0; i < 8; i++)
+    YughWarn("%c", buf[i]);
+}
+
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {

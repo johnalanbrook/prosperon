@@ -283,6 +283,9 @@ int main(int argc, char **argv) {
 
 #endif
 
+
+  nota_int("\xe3\x74");
+
 #ifdef STEAM
 steaminit();
 #endif
