@@ -125,16 +125,13 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
 {
   gameobject *go = body2go(body);
   cpVect pos = cpBodyGetPosition(body);  
-  HMM_Vec2 g = warp_force((HMM_Vec3){pos.x, pos.y, 0}, gravmask).xy;
+  HMM_Vec2 g = warp_force((HMM_Vec3){pos.x, pos.y, 0}, go->warp_filter).xy;
   if (!go) {
     cpBodyUpdateVelocity(body,g.cp,damping,dt);
     return;
   }
 
   cpFloat d = isfinite(go->damping) ? go->damping : damping;
-
-  if (isfinite(go->gravity.x) && isfinite(go->gravity.y))
-    g = go->gravity;
   
   cpBodyUpdateVelocity(body,g.cp,d,dt*go->timescale);
 
@@ -159,7 +156,6 @@ gameobject *MakeGameobject() {
       .next = -1,
       .drawlayer = 0,
       .shape_cbs = NULL,
-      .gravity = (HMM_Vec2){INFINITY,INFINITY},
       .damping = INFINITY,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
@@ -193,8 +189,7 @@ void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
 
 void rm_body_constraints(cpBody *body, cpConstraint *constraint, void *data)
 {
-  cpSpaceRemoveConstraint(space, constraint);
-  cpConstraintFree(constraint);
+  constraint_break(cpConstraintGetUserData(constraint));
 }
 
 void gameobject_free(gameobject *go) {

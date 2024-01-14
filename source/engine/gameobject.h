@@ -34,13 +34,13 @@ struct gameobject {
   float mass;
   float f;   /* friction */
   float e;   /* elasticity */
+  float damping;
   float timescale;
   float maxvelocity;
   float maxangularvelocity;
-  HMM_Vec2 gravity; /* its own gravity */
-  float damping;
   unsigned int layer;
   cpShapeFilter filter;
+  unsigned int warp_filter;
 //  warpmask warpmask;
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
@@ -48,6 +48,21 @@ struct gameobject {
   HMM_Mat4 world;
   float drawlayer;
 };
+
+/*
+  Friction uses coulomb model. When shapes collide, their friction is multiplied. Some example values:
+  Steel on steel: 0.0005
+  Wood on steel: 0.0012
+  Wood on wood: 0.0015
+  => steel = 0.025
+  => wood = 0.04
+  => hardrubber = 0.31
+  => concrete = 0.05
+  => rubber = 0.5
+  Hardrubber on steel: 0.0077
+  Hardrubber on concrete: 0.015
+  Rubber on concrete: 0.025
+*/
 
 typedef struct gameobject gameobject;
 

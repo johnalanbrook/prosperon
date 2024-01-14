@@ -137,9 +137,9 @@ else
   ifeq ($(UNAME), Darwin)
     OS := macos
     CPPFLAGS += -arch $(ARCH)
-    CFLAGS += -x objective-c# -fopenmp=libomp
+    CFLAGS += -x objective-c
     CXXFLAGS += -std=c++11
-    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit# -fopenmp=libomp
+    LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
   endif
 endif
 

@@ -10,6 +10,10 @@
 #define TEX_HEIGHT 2
 #define TEX_DIFF 3
 
+#define FILTER_NEAREST SG_FILTER_NEAREST
+#define FILTER_NONE SG_FILTER_NONE
+#define FILTER_LINEAR SG_FILTER_LINEAR
+
 float st_s_w(struct glrect st);
 float st_s_h(struct glrect st);
 
@@ -17,29 +21,29 @@ extern struct glrect ST_UNIT;
 
 struct TextureOptions {
     int sprite;
-    int mips;
-    unsigned int gamma:1;
-    int wrapx;
-    int wrapy;
 };
 
 /* Represents an actual texture on the GPU */
 struct Texture {
-    sg_image id; /* ID reference for the GPU memory location of the texture */
-    int width;
-    int height;
-    unsigned char *data;
-    struct TextureOptions opts;
+  sg_image id; /* ID reference for the GPU memory location of the texture */
+  int width;
+  int height;
+  unsigned char *data;
+  struct TextureOptions opts;
   int frames;
   int *delays;
 };
 
-typedef struct Texture texture;
+typedef struct img_sampler{
+  int wrap_u;
+  int wrap_v;
+  int wrap_w;
+  int min_filter;
+  int mag_filter;
+  int mip_filter;
+} img_sampler;
 
-struct Image {
-  struct Texture *tex;
-  struct glrect frame;
-};
+typedef struct Texture texture;
 
 struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
 struct Texture *texture_fromdata(void *raw, long size);

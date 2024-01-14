@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "pthread.h"
 #include "debug.h"
+#include "jsffi.h"
 
 pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;
 
@@ -264,7 +265,8 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
   if(end) {
     if (s->loop)
       s->frame = 0;
-    call_env(s->hook, "this.end();");
+
+    script_call_sym(s->hook);
   }
 }
 

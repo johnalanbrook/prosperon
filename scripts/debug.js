@@ -217,7 +217,10 @@ Profile.test = {
   pack_string() { profile(6); },
   unpack_string(s) { profile(4,s); },
   unpack_32farr(a) { profile(5,a); },
+  call_fn_n(fn1, n) { profile(7,fn1,n,fn2); },
 };
+
+Profile.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 
 Profile.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
 

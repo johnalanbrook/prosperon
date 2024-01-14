@@ -4,7 +4,9 @@ Primum programs are organized into two different types of source files: scripts 
 
 Actors can be created with jso files. Make one by calling 'actor.spawn(file)'.
 
-Entities are specialized actors, that are in the world of the computer game. While calling delay on actor causes a delay relative to real-life time, delay on an entity causes a delay relative to the game world time.
+Entities are specialized actors, that are in the world of the computer game. While calling delay on actor causes a delay relative to real-life time, delay on an entity causes a delay relative to the game world time. Entities can be thought of as running in parallel, but on a single thread on a local computer. In addition, their timeframe can be thought of as in sync with the computer game world.
+
+The game itself has its own time and memory space.
 
 ## Scripts
 

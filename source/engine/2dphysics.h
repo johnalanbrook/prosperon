@@ -17,6 +17,16 @@ extern struct rgba kinematic_color;
 extern struct rgba static_color;
 extern struct rgba sleep_color;
 
+typedef struct constraint {
+  cpConstraint *c;
+  JSValue break_cb; /* function called when it is forcibly broken */
+  JSValue remove_cb; /* called when it is removed at all */
+} constraint;
+
+constraint *constraint_make(cpConstraint *c);
+void constraint_break(constraint *constraint);
+void constraint_free(constraint *constraint);
+
 struct phys2d_shape {
   cpShape *shape; /* user data is this phys2d_shape */
   transform2d t;

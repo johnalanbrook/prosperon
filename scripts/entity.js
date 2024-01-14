@@ -119,12 +119,14 @@ var gameobject_impl = {
   get draw_layer() { return cmd(171, this.body); },
   set draw_layer(x) { cmd(172, this.body, x); },
   set layer(x) { cmd(75,this.body,x); },
-  get layer() { cmd(77,this.body); },
+  get layer() { return cmd(77,this.body); },
+  set warp_layer(x) { cmd(251, this.body,x); },
+  get warp_layer() { return cmd(252, this.body); },
 
   set mass(x) { set_body(7,this.body,x); },
   get mass() {
     if (!(this.phys === Physics.dynamic))
-      return this.__proto__.mass;
+      return undefined;
 
     return q_body(5, this.body);
   },
@@ -132,8 +134,6 @@ var gameobject_impl = {
   set elasticity(x) { cmd(106,this.body,x); },
   get friction() { return cmd(109,this.body); },
   set friction(x) { cmd(108,this.body,x); },
-  set gravity(x) { cmd(167,this.body, x); },
-  get gravity() { return cmd(159,this.body); },
   set timescale(x) { cmd(168,this.body,x); },
   get timescale() { return cmd(169,this.body); },
   set phys(x) { set_body(1, this.body, x); },
@@ -203,6 +203,8 @@ var gameobject = {
     min ??= 0;
     max ??= 50;
     var p = cmd(229,this.body,to.body,a,b,min,max);
+    p.max_force = 500;
+    p.break();
   },
   pivot(to, piv) {
     piv ??= this.worldpos();
@@ -281,10 +283,9 @@ var gameobject = {
     },
 
     cry(file) {
-      var p = Sound.play(file, Sound.bus.sfx);
-      var killfn = p.kill.bind(p);
-      p.end = killfn;
-      this.timers.push(killfn);
+      this.crying =  Sound.play(file, Sound.bus.sfx);
+      var killfn = () => {this.crying = undefined; console.warn("killed"); }
+      this.crying.hook = killfn;
       return killfn;
     },
 
@@ -527,8 +528,8 @@ var gameobject = {
       /* The object needed to store an object as an instance of a level */
       instance_obj() {
         var t = this.transform();
-	var j = this.json_obj();
-	Object.assign(t,j);
+//	var j = this.json_obj();
+//	Object.assign(t,j);
 	t.ur = this.ur;
 	return t;
       },
@@ -715,7 +716,6 @@ gameobject.doc = {
   flipy: "Check if the object is flipped on its y axis.",
   elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find their resultant velocities.`,
   friction: `When one object touches another, friction slows them down.`,
-  gravity: 'True if this object should be affected by gravity.',
   mass: `The higher the mass of the object, the less forces will affect it.`,
   phys: `Set to 0, 1, or 2, representing static, kinematic, and dynamic.`,
   worldpos: `Function returns the world position of the object.`,
@@ -798,7 +798,7 @@ prototypes.from_file = function(file)
   try {
     if (jsonfile) json = JSON.parse(IO.slurp(jsonfile));
   } catch(e) {
-    Log.warn(`Unable to create json from ${jsonfile}`);
+    Log.warn(`Unable to create json from ${jsonfile}. ${e}`);
   }
 
   if (!json && !script) {

@@ -32,6 +32,8 @@
 
 #include "HandmadeMath.h"
 
+#define countof(x) (sizeof(x)/sizeof((x)[0]))
+
 static JSValue globalThis;
 
 static JSClassID js_ptr_id;
@@ -53,16 +55,49 @@ static JSValue TYPE##2js(TYPE *n) { \
   return j; }\
 
 
-QJSCLASS(dsp_node)
 QJSCLASS(gameobject)
+QJSCLASS(emitter)
+QJSCLASS(dsp_node)
+QJSCLASS(warp_gravity)
+QJSCLASS(warp_damp)
+QJSCLASS(material)
+QJSCLASS(mesh)
+
+/* qjs class colliders and constraints */
+/* constraint works for all constraints - 2d or 3d */
+static JSClassID js_constraint_id;
+static void js_constraint_finalizer(JSRuntime *rt, JSValue val) {
+  constraint *c = JS_GetOpaque(val, js_constraint_id);
+  constraint_free(c);
+}
+static JSClassDef js_constraint_class = {
+  "constraint",
+  .finalizer = js_constraint_finalizer
+};
+static constraint *js2constraint(JSValue val) { return JS_GetOpaque(val, js_constraint_id); }
+static JSValue constraint2js(constraint *c)
+{
+  JSValue j = JS_NewObjectClass(js, js_constraint_id);
+  JS_SetOpaque(j, c);
+  return j;
+}
+
+static JSValue sound_proto;
+sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
 
 #define QJSCLASSPREP(TYPE) \
 JS_NewClassID(&js_##TYPE##_id);\
 JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
 
+#define QJSCLASSPREP_FUNCS(TYPE) \
+QJSCLASSPREP(TYPE); \
+JSValue TYPE##_proto = JS_NewObject(js); \
+JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
+JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
+
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
-  (byte & 0x80 ? '1' : '0'),     \
+      (byte & 0x80 ? '1' : '0'), \
       (byte & 0x40 ? '1' : '0'), \
       (byte & 0x20 ? '1' : '0'), \
       (byte & 0x10 ? '1' : '0'), \
@@ -78,7 +113,7 @@ JSValue jstzone()
   time_t t = time(NULL);
   time_t local_t = mktime(localtime(&t));
   double diff = difftime(t, local_t);
-  return num2js(diff/3600);
+  return number2js(diff/3600);
 }
 
 int js2bool(JSValue v) { return JS_ToBool(js, v); }
@@ -95,7 +130,7 @@ JSValue jscurtime()
 {
   time_t t;
   time(&t);
-  JSValue jst = num2js(t);
+  JSValue jst = number2js(t);
   return jst;
 }
 
@@ -162,11 +197,8 @@ double js2number(JSValue v) {
 void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
 
 JSValue float2js(double g) { return JS_NewFloat64(js, g);}
-JSValue num2js(double g) { return float2js(g); }
+JSValue number2js(double g) { return float2js(g); }
 struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
-emitter *js2emitter(JSValue v) { return (emitter*)js2ptr(v); }
-
-
 
 JSValue ptr2js(void *ptr) {
   JSValue obj = JS_NewObjectClass(js, js_ptr_id);
@@ -246,6 +278,24 @@ HMM_Vec2 js2vec2(JSValue v)
   return v2;
 }
 
+HMM_Vec3 js2vec3(JSValue v)
+{
+  HMM_Vec3 v3;
+  v3.x = js2number(js_getpropidx(v,0));
+  v3.y = js2number(js_getpropidx(v,1));
+  v3.z = js2number(js_getpropidx(v,2));
+  return v3;
+}
+
+JSValue vec32js(HMM_Vec3 v)
+{
+  JSValue array = JS_NewArray(js);
+  js_setprop_num(array,0,number2js(v.x));
+  js_setprop_num(array,1,number2js(v.y));
+  js_setprop_num(array,2,number2js(v.z));
+  return array;
+}
+
 cpBitmask js2bitmask(JSValue v) {
   cpBitmask mask = 0;
   int len = js_arrlen(v);
@@ -299,8 +349,8 @@ void vec2float(HMM_Vec2 v, float *f) {
 
 JSValue vec2js(HMM_Vec2 v) {
   JSValue array = JS_NewArray(js);
-  js_setprop_num(array,0,num2js(v.x));
-  js_setprop_num(array,1,num2js(v.y));
+  js_setprop_num(array,0,number2js(v.x));
+  js_setprop_num(array,1,number2js(v.y));
   return array;
 }
 
@@ -523,20 +573,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     // set_pawn(js2ptrduk_get_heapptr(duk, 1));
     break;
 
-  case 2:
-//    gameobject_free(js2gameobject(argv[1]));
-    break;
-
   case 3:
     set_timescale(js2number(argv[1]));
     break;
 
   case 4:
     debug_draw_phys(JS_ToBool(js, argv[1]));
-    break;
-
-  case 5:
-//    renderMS = js2number(argv[1]);
     break;
 
   case 6:
@@ -574,31 +616,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     str2 = JS_ToCString(js, argv[2]);
     play_song(str, str2);
     break;
-
-  case 14:
-    str = JS_ToCString(js, argv[1]);
-    ret = ptr2js(dsp_source(str));
-    ((sound*)((dsp_node*)js2ptr(ret))->data)->hook = argv[2];
-    break;
-
   case 15:
   gameobject_draw_debug(js2gameobject(argv[1]));
   break;
 
-  case 16:
-//    dbg_color = js2color(argv[1]);
-    break;
-
-  case 17:
-//    trigger_color = js2color(argv[1]);
-    break;
-
   case 18:
     shape_set_sensor(js2ptr(argv[1]), JS_ToBool(js, argv[2]));
-    break;
-
-  case 19:
-//    mini_master(js2number(argv[1]));
     break;
 
   case 20:
@@ -639,9 +662,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 29:
     ret = JS_NewFloat64(js, js2timer(argv[1])->interval);
-    break;
-
-  case 30:
     break;
 
   case 31:
@@ -752,22 +772,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     gameobject_apply(js2gameobject(argv[1]));
     break;
 
-  case 55:
-    break;
-//    js2gameobject(argv[1])->flipx = JS_ToBool(js, argv[2]) ? -1 : 1;
-
-  case 56:
-//    js2gameobject(argv[1])->flipy = JS_ToBool(js, argv[2]) ? -1 : 1;
-    break;
-
-  case 57:
-//    ret = JS_NewBool(js, js2gameobject(argv[1])->flipx == -1 ? 1 : 0);
-    break;
-
-  case 58:
-//    ret = JS_NewBool(js, js2gameobject(argv[1])->flipy == -1 ? 1 : 0);
-    break;
-
   case 59:
     v1 = js2cpvec2arr(argv[2]);
     ret = JS_NewInt64(js, point2segindex(js2vec2(argv[1]), v1, js2number(argv[3])));
@@ -810,9 +814,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     opengl_rendermode(WIREFRAME);
     break;
 
-  case 69:
-    break;
-
   case 70:
     ret = vec2js(world2go(js2gameobject(argv[1]), js2vec2(argv[2])));
     break;
@@ -845,9 +846,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ret = int2js(js2gameobject(argv[1])->layer);
     break;
 
-  case 78:
-    break;
-
   case 79:
     ret = JS_NewBool(js, phys_stepping());
     break;
@@ -856,9 +854,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ids = phys2d_query_shape(js2ptr(argv[1]));
     ret = gos2ref(ids);
     arrfree(ids);
-    break;
-
-  case 81:
     break;
 
   case 82:
@@ -885,17 +880,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     arrfree(intids);
     break;
 
-  case 87:
-//    str = JS_ToCString(js, argv[1]);
-//    mini_music_play(str);
-    break;
-
   case 88:
-    ret = num2js(HMM_DotV2(js2vec2(argv[1]), js2vec2(argv[2])));
-    break;
-
-  case 89:
-//    mini_music_stop();
+    ret = number2js(HMM_DotV2(js2vec2(argv[1]), js2vec2(argv[2])));
     break;
 
   case 90:
@@ -916,76 +902,26 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ret = int2js(logLevel);
     break;
 
-  case 94:
-    str = JS_ToCString(js, argv[1]);
-    texture_pullfromfile(str)->opts.mips = js2bool(argv[2]);
-    texture_sync(str);
-    break;
-
-  case 95:
-    str = JS_ToCString(js, argv[1]);
-    texture_pullfromfile(str)->opts.sprite = js2bool(argv[2]);
-    texture_sync(str);
-    break;
-
   case 96:
     id2sprite(js2int(argv[1]))->color = js2color(argv[2]);
     break;
-
-  case 97:
-    eye = HMM_AddV3(eye, (HMM_Vec3){0, 0.01, 0});
-    break;
-
-  case 98:
-    eye = HMM_AddV3(eye, (HMM_Vec3){0, -0.01, 0});
-    break;
-
-  case 99:
-    eye = HMM_AddV3(eye, (HMM_Vec3){-0.01, 0, 0});
-    break;
-
-  case 100:
-    eye = HMM_AddV3(eye, (HMM_Vec3){0.01, 0,0});
-    break;
-
-  case 101:
-    eye = HMM_AddV3(eye, (HMM_Vec3){0,0,-0.01});
-    break;
-
-  case 102:
-    eye = HMM_AddV3(eye,(HMM_Vec3){0,0,0.01});
-    break;
-    
   case 103:
     ret = vec2js(js2gameobject(argv[1])->scale.XY);
     break;
-
-  case 104:
-//    ret = bool2js(js2gameobject(argv[1])->flipx == -1 ? 1 : 0);
-    break;
-
-  case 105:
-//    ret = bool2js(js2gameobject(argv[1])->flipy == -1 ? 1 : 0);
-    break;
-
   case 106:
     js2gameobject(argv[1])->e = js2number(argv[2]);
     break;
-
   case 107:
-    ret = num2js(js2gameobject(argv[1])->e);
+    ret = number2js(js2gameobject(argv[1])->e);
     break;
-
   case 108:
     js2gameobject(argv[1])->f = js2number(argv[2]);
     break;
-    
   case 109:
-    ret = num2js(js2gameobject(argv[1])->f);
+    ret = number2js(js2gameobject(argv[1])->f);
     break;
-    
   case 110:
-    ret = num2js(js2gameobject(argv[1])->e);
+    ret = number2js(js2gameobject(argv[1])->e);
     break;
 
     case 111:
@@ -993,7 +929,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 112:
-      ret = num2js(((struct phys2d_edge*)js2ptr(argv[1]))->thickness);
+      ret = number2js(((struct phys2d_edge*)js2ptr(argv[1]))->thickness);
       break;
 
     case 113:
@@ -1031,7 +967,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = str2js(engine_info());
       break;
     case 121:
-      ret = num2js(get_timescale());
+      ret = number2js(get_timescale());
       break;
     case 122:
       break;
@@ -1158,7 +1094,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
      js2gameobject(argv[1])->maxvelocity = js2number(argv[2]);
      break;
    case 152:
-     ret = num2js(js2gameobject(argv[1])->maxvelocity);
+     ret = number2js(js2gameobject(argv[1])->maxvelocity);
      break;
     case 153:
      cpBodySetTorque(js2gameobject(argv[1])->body, js2number(argv[2]));
@@ -1167,19 +1103,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       js2gameobject(argv[1])->maxangularvelocity = js2number(argv[2]);
       break;
     case 155:
-      ret = num2js(js2gameobject(argv[1])->maxangularvelocity);
+      ret = number2js(js2gameobject(argv[1])->maxangularvelocity);
       break;
 
     case 156:
       js2gameobject(argv[1])->damping = js2number(argv[2]);
       break;
     case 157:
-      ret = num2js(js2gameobject(argv[1])->damping);
-      break;
-    case 158:
-      break;
-    case 159:
-      ret = vec2js(js2gameobject(argv[1])->gravity);
+      ret = number2js(js2gameobject(argv[1])->damping);
       break;
     case 160:
       ret = vec2js(mat_t_dir(t_world2go(js2gameobject(argv[1])), js2vec2(argv[2])));
@@ -1200,27 +1131,23 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       unplug_node(js2ptr(argv[1]));
       break;
     case 165:
-//      ret = bool2js(sound_paused(js2ptr(argv[1])));
       break;
     case 166:
       str = js2str(argv[1]);
       str2 = js2str(argv[2]);
       ret = int2js(cp(str, str2));
       break;
-    case 167:
-      js2gameobject(argv[1])->gravity = js2vec2(argv[2]);
-      break;
     case 168:
       js2gameobject(argv[1])->timescale = js2number(argv[2]);
       break;
     case 169:
-      ret = num2js(js2gameobject(argv[1])->timescale);
+      ret = number2js(js2gameobject(argv[1])->timescale);
       break;
     case 170:
       id2sprite(js2int(argv[1]))->emissive = js2color(argv[2]);
       break;
     case 171:
-      ret = num2js(js2gameobject(argv[1])->drawlayer);
+      ret = number2js(js2gameobject(argv[1])->drawlayer);
       break;
     case 172:
      js2gameobject(argv[1])->drawlayer = js2number(argv[2]);
@@ -1233,20 +1160,8 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
      str = js2str(argv[1]);
      ds_openvideo(str);
      break;
-    case 175:
-      ret = num2js((js2dsp_node(argv[1]))->gain);
-      break;
-    case 176:
-      js2dsp_node(argv[1])->gain = js2number(argv[2]);
-      break;
     case 177:
       plugin_node(js2dsp_node(argv[1]), js2dsp_node(argv[2]));
-      break;
-    case 178:
-      ret = num2js(js2dsp_node(argv[1])->pan);
-      break;
-    case 179:
-      js2dsp_node(argv[1])->pan=js2number(argv[2]);
       break;
     case 180:
       ret = dsp_node2js(masterbus);
@@ -1257,13 +1172,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 182:
       str = js2str(argv[1]);
       ret = dsp_node2js(dsp_source(str));
-      ((sound*)js2dsp_node(ret)->data)->hook = JS_DupValue(js,argv[2]);
-      break;
-    case 183:
-      js2dsp_node(argv[1])->off = js2bool(argv[2]);
-      break;
-    case 184:
-      js2dsp_node(argv[1])->pass = js2bool(argv[2]);
+      JS_SetPrototype(js, ret, sound_proto);
       break;
     case 185:
       ret = dsp_node2js(dsp_delay(js2number(argv[1]), js2number(argv[2])));
@@ -1290,36 +1199,14 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 192:
       ret = dsp_node2js(dsp_noise_gate(js2number(argv[1])));
       break;
-    case 193:
-//      node_free(js2ptr(argv[1]));
-      break;
-    case 194:
-      ret = bool2js(((sound*)js2dsp_node(argv[1])->data)->loop);
-      break;
-    case 195:
-      ((sound*)js2dsp_node(argv[1])->data)->loop = js2bool(argv[2]);
-      break;
-    case 196:
-      ret = num2js(((sound*)js2dsp_node(argv[1])->data)->frame);
-      break;
     case 197:
-      ret = num2js(((sound*)js2dsp_node(argv[1])->data)->data->frames);    
+      ret = number2js(js2sound(argv[1])->data->frames);    
       break;
     case 198:
-      ret = num2js(SAMPLERATE);
-      break;
-    case 199:
-      ((sound*)js2dsp_node(argv[1])->data)->frame = js2number(argv[2]);
+      ret = number2js(SAMPLERATE);
       break;
     case 200:
       ret = dsp_node2js(dsp_pitchshift(js2number(argv[1])));
-      break;
-    case 201:
-      ret = num2js(((sound*)js2dsp_node(argv[1])->data)->timescale);
-      break;
-    case 202:
-      YughWarn("%g", js2number(argv[2]));
-      ((sound*)js2dsp_node(argv[1])->data)->timescale = js2number(argv[2]);
       break;
     case 203:
       ret = dsp_node2js(dsp_whitenoise());
@@ -1337,11 +1224,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 207:
       ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
-      break;
-    case 208:
-//      dag_set(js2gameobject(argv[1]), js2gameobject(argv[2]));
-      break;
-    case 209:
       break;
     case 210:
       ret = jscurtime();
@@ -1365,7 +1247,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       js2sprite(argv[1])->t.scale = js2vec2(argv[2]);
       break;
     case 217:
-      ret = num2js(js2sprite(argv[1])->t.angle);
+      ret = number2js(js2sprite(argv[1])->t.angle);
       break;
     case 218:
       js2sprite(argv[1])->t.angle = js2number(argv[2]);
@@ -1374,94 +1256,66 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       js2sprite(argv[1])->drawmode = js2number(argv[2]);
       break;
     case 220:
-      ret = num2js(js2sprite(argv[1])->drawmode);
+      ret = number2js(js2sprite(argv[1])->drawmode);
       break;
     case 221:
-      ret = ptr2js(cpPivotJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body,js2vec2(argv[3]).cp));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpPivotJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body,js2vec2(argv[3]).cp)));
       break;
     case 222:
-      ret = ptr2js(cpPinJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, cpvzero,cpvzero));
-      cpSpaceAddConstraint(space, js2ptr(ret));
+      ret = constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, cpvzero,cpvzero)));
       break;
     case 223:
-      ret = ptr2js(cpGearJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4])));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpGearJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]))));
       break;
     case 224:
       str = js2str(argv[1]);
       ret = ints2js(gif_delays(str));
       break;
     case 225:
-      ret = ptr2js(cpRotaryLimitJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4])));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpRotaryLimitJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]))));
       break;
     case 226:
-      ret = ptr2js(cpDampedRotarySpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]), js2number(argv[5])));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpDampedRotarySpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]), js2number(argv[5]))));
       break;
     case 227:
-      ret = ptr2js(cpDampedSpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6]), js2number(argv[7])));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpDampedSpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6]), js2number(argv[7]))));
       break;
     case 228:
-      ret = ptr2js(cpGrooveJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2vec2(argv[5]).cp));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpGrooveJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2vec2(argv[5]).cp)));
       break;
     case 229:
-      ret = ptr2js(cpSlideJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6])));
-      cpSpaceAddConstraint(space,js2ptr(ret));
+      ret = constraint2js(constraint_make(cpSlideJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6]))));
       break;
     case 230:
-      ret = ptr2js(cpSpaceAddConstraint(space, cpRatchetJointNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]), js2number(argv[4]))));
+      ret = constraint2js(constraint_make(cpRatchetJointNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]), js2number(argv[4]))));
       break;
     case 231:
-      ret = ptr2js(cpSpaceAddConstraint(space, cpSimpleMotorNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]))));
+      ret = constraint2js(constraint_make(cpSimpleMotorNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]))));
       break;
     case 232:
-      ret = num2js(js2sprite(argv[1])->parallax);
+      ret = number2js(js2sprite(argv[1])->parallax);
       break;
     case 233:
       js2sprite(argv[1])->parallax = js2number(argv[2]);
       break;
     case 234:
-      ret = ptr2js(make_emitter());
+      ret = emitter2js(make_emitter());
       break;
-    case 235:
-      js2emitter(argv[1])->life = js2number(argv[2]);
+    case 249:
+      str = JS_ToCString(js,argv[2]);
+      js2emitter(argv[1])->texture = texture_pullfromfile(str);
       break;
-    case 236:
-      emitter_emit(js2emitter(argv[1]), js2number(argv[2]));
+    case 251:
+      js2gameobject(argv[1])->warp_filter = js2bitmask(argv[2]);
       break;
-    case 237:
-      js2emitter(argv[1])->explosiveness = js2number(argv[2]);
+    case 252:
+      ret = bitmask2js(js2gameobject(argv[1])->warp_filter);
       break;
-    case 238:
-      js2emitter(argv[1])->t.pos.xy = js2vec2(argv[2]);
+    case 253:
+      ret = warp_gravity2js(warp_gravity_make());
       break;
-    case 239:
-      js2emitter(argv[1])->t.rotation.Elements[0] = js2number(argv[2]);
-      break;
-    case 240:
-      js2emitter(argv[1])->speed = js2number(argv[2]);
-      break;
-    case 241:
-      js2emitter(argv[1])->variation = js2number(argv[2]);
-      break;
-    case 242:
-      js2emitter(argv[1])->divergence = js2number(argv[2]);
-      break;
-    case 243:
-      js2emitter(argv[1])->scale = js2number(argv[2]);
-      break;
-    case 244:
-      js2emitter(argv[1])->scale_var = js2number(argv[2]);
-      break;
-    case 245:
-      js2emitter(argv[1])->grow_for = js2number(argv[2]);
-      break;
-    case 246:
-      js2emitter(argv[1])->shrink_for = js2number(argv[2]);
+    case 254:
+      ret = warp_damp2js(warp_damp_make());
       break;
   }
 
@@ -1506,13 +1360,6 @@ JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *a
   case 3:
     register_nk_gui(c);
     break;
-
-  case 4:
-    break;
-
-  case 5:
-    break;
-
   case 6:
     register_debug(c);
     break;
@@ -1600,14 +1447,8 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   case 6:
     return JS_NewBool(js, sim_paused());
 
-  case 7:
-    return gameobject2js(MakeGameobject());
-
   case 8:
     return JS_NewInt64(js, frame_fps());
-
-  case 9: /* Clear the level out */
-    break;
 
   case 10:
     editor_mode = js2bool(argv[1]);
@@ -1657,18 +1498,9 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     cpBodySetPosition(go->body, js2vec2(argv[2]).cp);
     break;
 
-  case 3:
-    break;
-
   case 4:
     cpBodyApplyImpulseAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
     return JS_UNDEFINED;
-
-  case 5:
-    break;
-
-  case 6:
-    break;
 
   case 7:
     go->mass = js2number(argv[2]);
@@ -1790,7 +1622,7 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
     break;
 
     case 2:
-      return num2js(circle->radius);
+      return number2js(circle->radius);
 
     case 3:
       return vec2js(circle->offset);
@@ -1841,6 +1673,174 @@ JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   return edgeval;
 }
 
+#define GETSET_PAIR(ID, ENTRY, TYPE) \
+JSValue ID##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+  js2##ID (this)->ENTRY = js2##TYPE (val); \
+  return JS_UNDEFINED; \
+} \
+\
+JSValue ID##_get_##ENTRY (JSContext *js, JSValue this) { \
+  return TYPE##2js(js2##ID (this)->ENTRY); \
+} \
+
+#define GETSET_PAIR_HOOK(ID, ENTRY) \
+JSValue ID##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+  ID *n = js2##ID (this); \
+  n->ENTRY = val; \
+  return JS_UNDEFINED; \
+} \
+\
+JSValue ID##_get_##ENTRY (JSContext *js, JSValue this) { \
+  ID *n = js2##ID (this); \
+  return n->ENTRY; \
+} \
+
+
+GETSET_PAIR(warp_gravity, strength, number)
+GETSET_PAIR(warp_gravity, decay, number)
+GETSET_PAIR(warp_gravity, spherical, bool)
+GETSET_PAIR(warp_gravity, mask, bitmask)
+GETSET_PAIR(warp_gravity, planar_force, vec3)
+
+#define CGETSET_ADD(ID, ENTRY) JS_CGETSET_DEF(#ENTRY, ID##_get_##ENTRY, ID##_set_##ENTRY)
+
+static const JSCFunctionListEntry js_warp_gravity_funcs [] = {
+  CGETSET_ADD(warp_gravity, strength),
+  CGETSET_ADD(warp_gravity, decay),
+  CGETSET_ADD(warp_gravity, spherical),
+  CGETSET_ADD(warp_gravity, mask),
+  CGETSET_ADD(warp_gravity, planar_force),  
+};
+
+GETSET_PAIR(warp_damp, damp, vec3)
+
+static const JSCFunctionListEntry js_warp_damp_funcs [] = {
+  CGETSET_ADD(warp_damp, damp)
+};
+
+GETSET_PAIR(emitter, life, number)
+GETSET_PAIR(emitter, life_var, number)
+GETSET_PAIR(emitter, speed, number)
+GETSET_PAIR(emitter, variation, number)
+GETSET_PAIR(emitter, divergence, number)
+GETSET_PAIR(emitter, scale, number)
+GETSET_PAIR(emitter, scale_var, number)
+GETSET_PAIR(emitter, grow_for, number)
+GETSET_PAIR(emitter, shrink_for, number)
+GETSET_PAIR(emitter, max, number)
+GETSET_PAIR(emitter, explosiveness, number)
+GETSET_PAIR(emitter, go, gameobject)
+GETSET_PAIR(emitter, bounce, number)
+GETSET_PAIR(emitter, collision_mask, bitmask)
+GETSET_PAIR(emitter, die_after_collision, bool)
+GETSET_PAIR(emitter, persist, number)
+GETSET_PAIR(emitter, persist_var, number)
+GETSET_PAIR(emitter, warp_mask, bitmask)
+
+JSValue js_emitter_start (JSContext *js, JSValue this)
+{
+  emitter *n = js2emitter(this);
+  start_emitter(n);
+  return JS_UNDEFINED;
+}
+
+JSValue js_emitter_stop(JSContext *js, JSValue this)
+{
+  emitter *n = js2emitter(this);
+  stop_emitter(n);
+  return JS_UNDEFINED;
+}
+
+JSValue js_emitter_emit(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  emitter *n = js2emitter(this);
+  emitter_emit(n, js2number(argv[0]));
+  return JS_UNDEFINED;
+}
+
+static const JSCFunctionListEntry js_emitter_funcs[] = {
+  CGETSET_ADD(emitter, life),
+  CGETSET_ADD(emitter, life_var),
+  CGETSET_ADD(emitter, speed),
+  CGETSET_ADD(emitter, variation),
+  CGETSET_ADD(emitter, divergence),
+  CGETSET_ADD(emitter, scale),
+  CGETSET_ADD(emitter, scale_var),
+  CGETSET_ADD(emitter, grow_for),
+  CGETSET_ADD(emitter, shrink_for),
+  CGETSET_ADD(emitter, max),
+  CGETSET_ADD(emitter, explosiveness),
+  CGETSET_ADD(emitter, go),
+  CGETSET_ADD(emitter, bounce),
+  CGETSET_ADD(emitter, collision_mask),
+  CGETSET_ADD(emitter, die_after_collision),
+  CGETSET_ADD(emitter, persist),
+  CGETSET_ADD(emitter, persist_var),
+  CGETSET_ADD(emitter, warp_mask),  
+  JS_CFUNC_DEF("start", 0, js_emitter_start),
+  JS_CFUNC_DEF("stop", 0, js_emitter_stop),
+  JS_CFUNC_DEF("emit", 1, js_emitter_emit)
+};
+
+GETSET_PAIR(dsp_node, pass, bool)
+GETSET_PAIR(dsp_node, off, bool)
+GETSET_PAIR(dsp_node, gain, number)
+GETSET_PAIR(dsp_node, pan, number)
+
+JSValue js_dsp_node_plugin(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  plugin_node(js2dsp_node(this), js2dsp_node(argv[0]));
+  return JS_UNDEFINED;
+}
+
+JSValue js_dsp_node_unplug(JSContext *js, JSValueConst this)
+{
+  unplug_node(js2dsp_node(this));
+  return JS_UNDEFINED;
+}
+
+static const JSCFunctionListEntry js_dsp_node_funcs[] = {
+  CGETSET_ADD(dsp_node, pass),
+  CGETSET_ADD(dsp_node, off),
+  CGETSET_ADD(dsp_node, gain),
+  CGETSET_ADD(dsp_node, pan),
+  JS_CFUNC_DEF("plugin", 1, js_dsp_node_plugin),
+  JS_CFUNC_DEF("unplug", 0, js_dsp_node_unplug)
+};
+
+GETSET_PAIR(sound, loop, bool)
+GETSET_PAIR(sound, timescale, number)
+GETSET_PAIR(sound, frame, number)
+GETSET_PAIR_HOOK(sound, hook)
+
+static const JSCFunctionListEntry js_sound_funcs[] = {
+  CGETSET_ADD(sound, loop),
+  CGETSET_ADD(sound, timescale),
+  CGETSET_ADD(sound, frame),
+  CGETSET_ADD(sound, hook)
+};
+
+JSValue constraint_set_max_force (JSContext *js, JSValue this, JSValue val) {
+  cpConstraintSetMaxForce(js2constraint(this)->c, js2number(val));
+  return JS_UNDEFINED;
+}
+
+JSValue constraint_get_max_force(JSContext *js, JSValue this) { return number2js(cpConstraintGetMaxForce(js2constraint(this)->c));
+}
+
+JSValue constraint_set_collide (JSContext *js, JSValue this, JSValue val) {
+  cpConstraintSetCollideBodies(js2constraint(this)->c, js2bool(val));
+  return JS_UNDEFINED;
+}
+
+JSValue constraint_get_collide(JSContext *js, JSValue this) { return bool2js(cpConstraintGetCollideBodies(js2constraint(this)->c));
+}
+
+static const JSCFunctionListEntry js_constraint_funcs[] = {
+  CGETSET_ADD(constraint, max_force),
+  CGETSET_ADD(constraint, collide),
+};
+     
 JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   int cmd = js2int(argv[0]);
   struct phys2d_edge *edge = js2ptr(argv[1]);
@@ -1913,7 +1913,7 @@ JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     js2cpvec2arr(argv[1]);
     break;
     case 3:
-    return num2js(1.0);
+    return number2js(1.0);
     case 4:
     js2str(argv[1]);
     break;
@@ -1922,6 +1922,11 @@ JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
     break;
     case 6:
     return JS_NewStringLen(js, STRTEST, sizeof(*STRTEST));
+    case 7:
+      for (int i = 0; i < js2number(argv[2]); i++)
+        script_call_sym(argv[1]);
+      script_call_sym(argv[3]);
+      break;
   }
   return JS_UNDEFINED;
 }
@@ -1964,10 +1969,18 @@ void ffi_load() {
   DUK_FUNC(profile, 2)
 
   JS_FreeValue(js,globalThis);
-
-  JS_NewClassID(&js_ptr_id);
-  JS_NewClass(JS_GetRuntime(js), js_ptr_id, &js_ptr_class);
-
-  QJSCLASSPREP(dsp_node);
+  
+  QJSCLASSPREP(ptr);
   QJSCLASSPREP(gameobject);
+  QJSCLASSPREP_FUNCS(dsp_node);
+  
+  sound_proto = JS_NewObject(js);
+  JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
+  JS_SetPrototype(js, sound_proto, dsp_node_proto);
+  
+  QJSCLASSPREP_FUNCS(emitter);
+  QJSCLASSPREP_FUNCS(warp_gravity);
+  QJSCLASSPREP_FUNCS(warp_damp);
+  
+  QJSCLASSPREP_FUNCS(constraint);
 }

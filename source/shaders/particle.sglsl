@@ -19,7 +19,6 @@ void main()
     cos(angle)*v.x-sin(angle)*v.y,
     sin(angle)*v.x+cos(angle)*v.y
   );
-  p += 0.5;
   p *= scale;
   p += apos;
 

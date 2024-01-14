@@ -3,7 +3,7 @@
 
 #include "HandmadeMath.h"
 
-typedef struct {
+typedef struct transform3d {
     HMM_Vec3 pos;
     HMM_Vec3 scale;
     HMM_Quat rotation;

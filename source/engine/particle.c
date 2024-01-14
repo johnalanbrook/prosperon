@@ -105,8 +105,9 @@ emitter *make_emitter() {
   return e;
 }
 
-void free_emitter(emitter *e)
+void emitter_free(emitter *e)
 {
+  YughWarn("kill emitter");
   arrfree(e->particles);
   for (int i = arrlen(emitters)-1; i >= 0; i--)
     if (emitters[i] == e) {
@@ -131,7 +132,6 @@ int emitter_spawn(emitter *e)
   p.life = e->life;
   p.pos = (HMM_Vec4){e->t.pos.x,e->t.pos.y,0,0};
   float newan = e->t.rotation.Elements[0]+(2*HMM_PI*(frand(e->divergence)-(e->divergence/2)));
-  YughWarn("angle %g", newan);
   HMM_Vec2 norm = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
   p.v = HMM_MulV4F((HMM_Vec4){norm.x,norm.y,0,0}, variate(e->speed, e->variation));
   p.angle = 0;

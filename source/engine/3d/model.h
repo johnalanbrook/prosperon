@@ -9,7 +9,7 @@
 extern HMM_Vec3 eye;
 
 typedef struct material {
-  
+
 } material;
 
 struct model;
@@ -18,7 +18,6 @@ struct model;
 typedef struct mesh {
   sg_bindings bind; /* Encapsulates material, norms, etc */
   uint32_t idx_count;
-  struct model *model;
 } mesh;
 
 /* A collection of meshes which create a full figure */
@@ -55,5 +54,11 @@ struct drawmodel *make_drawmodel(gameobject *go);
 void draw_drawmodel(struct drawmodel *dm);
 void model_draw_all();
 void free_drawmodel(struct drawmodel *dm);
+
+material *material_make();
+void material_free(material *mat);
+
+mesh *mesh_make();
+void mesh_free(mesh *m);
 
 #endif

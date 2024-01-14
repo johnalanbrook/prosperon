@@ -3,6 +3,7 @@
 
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
+#include "dsp.h"
 
 void ffi_load();
 
@@ -15,7 +16,7 @@ int js_print_exception(JSValue v);
 
 struct rgba js2color(JSValue v);
 double js2number(JSValue v);
-JSValue num2js(double g);
+JSValue number2js(double g);
 JSValue int2js(int i);
 JSValue str2js(const char *c);
 

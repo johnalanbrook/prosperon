@@ -287,7 +287,7 @@ void call_callee(struct callee *c) {
 }
 
 void callee_dbl(struct callee c, double d) {
-  JSValue v = num2js(d);
+  JSValue v = number2js(d);
   js_callee_exec(&c, 1, &v);
   JS_FreeValue(js, v);
 }

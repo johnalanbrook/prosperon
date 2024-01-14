@@ -270,6 +270,18 @@ json.decode = function(text, reviver)
   return JSON.parse(text,reviver);
 }
 
+json.readout = function(obj)
+{
+  var j = {};
+  for (var k in obj)
+    if (typeof obj[k] === 'function')
+      j[k] = 'function ' + obj[k].toString();
+    else
+      j[k] = obj[k];
+
+  return json.encode(j);
+}
+
 Object.methods = function(o)
 {
   var m = [];

@@ -79,6 +79,11 @@ component.sprite = Object.copy(component, {
   _enghook: make_sprite,
 });
 
+component.sprite.mode = {
+  simple: 0,
+  tile: 1
+};
+
 component.sprite.impl = {
   toJSON() {
     var j = {};
@@ -99,6 +104,7 @@ component.sprite.impl = {
     }
     else {
       this.anims = SpriteAnim.make(x);
+      Object.hide(this, 'anims');
       var anim = this.anims[0];
       this.rect = anim.frames[0].rect;
       cmd(12,this.id,anim.path,this.rect);
@@ -866,48 +872,3 @@ component.circle2d.impl = Object.mix({
   set pos(x) { this.offset = x; },
   
 }, collider2d.impl);
-
-component.particle = Object.copy(component, {
-  make() {
-    var p = Object.create(this);
-    p.id = cmd(234);
-    return p;
-  },
-  get pos() {},
-  set pos(x) {cmd(238,this.id,x);},
-  get angle() {},
-  set angle(x) {cmd(239,this.id,Math.turn2rad(x));},
-  get life() {},
-  set life(x) { cmd(235,this.id,x); },
-  get explosiveness() {},
-  set explosiveness(x) {cmd(237,this.id,x);},
-  set speed(x) { cmd(240,this.id,x); },
-  set speed_var(x) { cmd(241,this.id,x); },
-  set divergence(x) { cmd(242,this.id,x); },
-  set scale(x) { cmd(243,this.id,x); },
-  set scale_var(x) { cmd(244,this.id,x); },
-  set grow_for(x) { cmd(245,this.id,x); },
-  set shrink_for(x) {cmd(246,this.id,x); },
-  get max() {},
-  set max(x) {},
-  emit(n) {
-    cmd(236,this.id,n);
-  },
-  play() {
-  },
-  pause() {
-    
-  },
-});
-
-
-/* ASSETS */
-
-var Texture = {
-  mipmaps(path, x) { cmd(94, path, x); },
-
-  sprite(path, x) { cmd(95, path, x); },
-};
-
-Texture.mipmaps.doc = "Return true if the texture has mipmaps.";
-Texture.sprite.do = "Return true if the texture is treated as a sprite.";

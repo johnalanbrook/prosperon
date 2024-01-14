@@ -142,9 +142,9 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
        cgltf_buffer_view *buf = img->buffer_view;
        mesh->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
      } else {
-       char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
-       mesh->bind.fs.images[0] = texture_pullfromfile(imp)->id;
-       free(imp);
+//       char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
+//       mesh->bind.fs.images[0] = texture_pullfromfile(imp)->id;
+//       free(imp);
      }
    } else
      mesh->bind.fs.images[0] = texture_pullfromfile("k")->id; 
@@ -289,7 +289,6 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
 void model_add_cgltf_mesh(model *model, cgltf_mesh *gltf_mesh)
 {
   mesh mesh = {0};
-  mesh.model = model;
 
   for (int i = 0; i < gltf_mesh->primitives_count; i++)
     mesh_add_primitive(&mesh, &gltf_mesh->primitives[i]);

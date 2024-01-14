@@ -100,11 +100,7 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   struct Texture *tex = calloc(1, sizeof(*tex));
   tex->opts.sprite = 1;
-  tex->opts.mips = 0;
-  tex->opts.gamma = 0;
-  tex->opts.wrapx = 1;
-  tex->opts.wrapy = 1;
-
+  
   int n;
 
   char *ext = strrchr(path, '.');
@@ -224,10 +220,6 @@ struct Texture *texture_fromdata(void *raw, long size)
 {
   struct Texture *tex = calloc(1, sizeof(*tex));
   tex->opts.sprite = 1;
-  tex->opts.mips = 0;
-  tex->opts.gamma = 0;
-  tex->opts.wrapx = 1;
-  tex->opts.wrapy = 1;
 
   int n;
   void *data = stbi_load_from_memory(raw, size, &tex->width, &tex->height, &n, 4);

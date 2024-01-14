@@ -198,7 +198,6 @@ void phys2d_init()
   cpSpaceSetCollisionSlop(space, 0.01);
   cpSpaceSetCollisionBias(space, cpfpow(1.0-0.5, 165.f));
   space_gravity = warp_gravity_make();
-  YughWarn("Made gravity with %d spherical", space_gravity->spherical);
 }
 
 void phys2d_set_gravity(HMM_Vec2 v)
@@ -210,7 +209,45 @@ void phys2d_set_gravity(HMM_Vec2 v)
   space_gravity->planar_force = (HMM_Vec3){v.x,v.y,0};
 }
 
-void phys2d_update(float deltaT) { cpSpaceStep(space, deltaT); }
+constraint *constraint_make(cpConstraint *c)
+{
+  constraint *cp = malloc(sizeof(*cp));
+  cp->c = c;
+  cp->break_cb = JS_UNDEFINED;
+  cp->remove_cb = JS_UNDEFINED;
+  cpSpaceAddConstraint(space,c);
+  cpConstraintSetUserData(c, cp);
+  return cp;
+}
+
+void constraint_break(constraint *constraint)
+{
+  if (!constraint->c) return;
+  cpSpaceRemoveConstraint(space, constraint->c);
+  cpConstraintFree(constraint->c);
+  constraint->c = NULL;
+  script_call_sym(constraint->break_cb);
+}
+
+void constraint_free(constraint *constraint)
+{
+  constraint_break(constraint);
+  free(constraint);
+}
+
+void constraint_test(cpConstraint *constraint, float *dt)
+{
+  float max = cpConstraintGetMaxForce(constraint);
+  if (!isfinite(max)) return;
+  float force = cpConstraintGetImpulse(constraint)/ *dt;
+  if (force > max)
+    constraint_break(cpConstraintGetUserData(constraint));
+}
+
+void phys2d_update(float deltaT) {
+  cpSpaceStep(space, deltaT);
+  cpSpaceEachConstraint(space, constraint_test, &deltaT);
+}
 
 void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->go = go;
