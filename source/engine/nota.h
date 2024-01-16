@@ -13,6 +13,7 @@ int nota_type(char *nota);
 void nota_write_int(long long n, char *nota);
 long long nota_read_int(char *nota);
 char *nota_read_num(char *nota, long long *n);
+void nota_write_float(double n, char *nota);
 double nota_read_float(char *nota);
 void nota_write_bool(int b, char *nota);
 int nota_read_bool(char *nota);

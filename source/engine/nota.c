@@ -94,7 +94,8 @@ void nota_write_int(long long n, char *nota)
   
   nota[0] = NOTA_INT | sign;  
 
-  nota_continue_num(n, nota, 3);
+  nota = nota_continue_num(n, nota, 3);
+  *nota = 0;
   print_nota_hex(nota);
 }
 
@@ -156,7 +157,8 @@ void nota_write_float(double n, char *nota)
 
   nota_continue_num(sig, c, 7);
   
-  printf("float number %g\n", n* (sign ? -1 : 1));  
+  printf("float number %g\n", n* (sign ? -1 : 1));
+  printf("aka %d x 10^%d\n", sig, e);
   print_nota_hex(nota);
 }
 
@@ -164,18 +166,21 @@ double nota_read_float(char *nota)
 {
   printf("reading ...\n");
   print_nota_hex(nota);
-  long long sig;
-  long long e;
+  long long sig = 0;
+  long long e = 0;
 
   char *c = nota;
-  e = *c & NOTA_INT_DATA; /* first three bits */
-  while (CONTINUE(*(c++)))
+  e = (*c) & NOTA_INT_DATA; /* first three bits */
+  while (CONTINUE(*c)) {
     e = (e<<7) | (*c) & NOTA_DATA;
+    c++;
+  }
 
-  c++;
   sig = (*c) & NOTA_DATA;
-  while (CONTINUE(*(c++)))
+  while (CONTINUE(*c)) {
     sig = (sig<<7) | *c & NOTA_DATA;
+    c++;
+  }
 
   if (NOTA_SIG_SIGN(*nota)) sig *= -1;
   if (NOTA_EXP_SIGN(*nota)) e *= -1;
