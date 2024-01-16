@@ -1942,9 +1942,9 @@ JSValue nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   char nota[1024];
   
   if (JS_IsNumber(obj)) {
-    int64_t i;
-    JS_ToInt64(js, &i, obj);
-    nota_write_int(i, nota);
+    double n;
+    JS_ToFloat64(js, &n, obj);
+    nota_write_float(n, nota);
   } else if (JS_IsString(obj)) {
     char *str = js2str(obj);
     nota_write_text(str, nota);
@@ -1976,6 +1976,8 @@ JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
       return int2js(n);
     case NOTA_SYM:
       return bool2js(nota_read_bool(nota));
+    default:
+      return number2js(nota_read_float(nota));
   }
   return JS_UNDEFINED;
 }

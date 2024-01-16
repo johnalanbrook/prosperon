@@ -284,15 +284,6 @@ int main(int argc, char **argv) {
 
 #endif
 
-/*  char nota[1024];
-  nota_write_int(1234, nota);
-  nota_write_text("cat", nota);
-  nota_write_text("☃★♲", nota);
-  nota_write_text("𓂀𓃠𓅣𓂻𓂻𓂺𓁟𓂑𓃻𓇼𓊽𓂭𓎆𓍢𓏢𓐠", nota);
-  nota_write_text("test kim ☃★♲", nota);
-  char *re = nota_read_text(nota);
-  printf("%s\n", re);
-*/
 #ifdef STEAM
 steaminit();
 #endif

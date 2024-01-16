@@ -2,11 +2,14 @@
 #include "stdio.h"
 #include "math.h"
 #include "string.h"
+#include "stdlib.h"
 
 #define NOTA_CONT 0x80
 #define NOTA_DATA 0x7f
 #define NOTA_INT_DATA 0x07
 #define NOTA_INT_SIGN(CHAR) (CHAR & (1<<3))
+#define NOTA_SIG_SIGN(CHAR) (CHAR & (1<<3))
+#define NOTA_EXP_SIGN(CHAR) (CHAR & (1<<4))
 #define NOTA_TYPE 0x70
 #define NOTA_HEAD_DATA 0x0f
 #define CONTINUE(CHAR) (CHAR>>7)
@@ -22,7 +25,11 @@ int nota_type(char *nota) { return *nota & NOTA_TYPE; }
 
 int nota_bits(long long n, int sb)
 {
-  int bits = ilogb(n)+1;
+  int bits;
+  if (n == 0)
+    bits = 0;
+  else
+    bits = ilogb(n)+1;
   bits-=sb; /* start bit */
   int chars = bits/7;
   if (bits%7>0) chars++;
@@ -36,9 +43,12 @@ char *nota_continue_num(long long n, char *nota, int sb)
   bits -= sb;
   if (bits > 0)
     nota[0] |= NOTA_CONT;
+  else
+    nota[0] &= ~NOTA_CONT;
 
-  int shex = ~(~0 << sb);
-  nota[0] ^= shex & (n>>bits);
+  int shex = ~0 << sb;
+  nota[0] &= shex; /* clear shex bits */
+  nota[0] |= ~shex & (n>>bits);
   
   int i = 1;
   while (bits > 0) {
@@ -59,6 +69,9 @@ void print_nota_hex(char *nota)
     nota_read_num(nota, &chars);
     printf("print with %d points\n", chars);    
   }
+
+  if ((*nota>>5) == 2 || (*nota>>5) == 6)
+    chars = 1;
 
   for (int i = 0; i < chars+1; i++) {
     do {
@@ -96,15 +109,80 @@ char *nota_read_num(char *nota, long long *n)
   return nota;
 }
 
+#define NOTA_DBL_PREC 6
+#define xstr(s) str(s)
+#define str(s) #s
+
 void nota_write_float(double n, char *nota)
 {
-  printf("number %g\n", n);
+  if (n == 0) {
+    nota_write_int(0, nota);
+    return;
+  }
+  
+  int sign = n < 0 ? ~0 : 0;
+  if (sign) n *= -1;
+  char ns[2+NOTA_DBL_PREC+5];
+  snprintf(ns, 2+NOTA_DBL_PREC+5, "%." xstr (NOTA_DBL_PREC) "e", n);
+
+  int e = atoi(&ns[2+NOTA_DBL_PREC+1]);
+  ns[2+NOTA_DBL_PREC] = 0;
+
+  char *z = ns + 1 + NOTA_DBL_PREC;
+  while (*z == '0')
+    z--;
+
+  *(z+1) = 0;
+
+  int expadd = (ns+strlen(ns)) - strchr(ns,'.') - 1;
+  e-=expadd;
+  ns[1] = ns[0];
+  long long sig = atoll(ns+1);
+
+  if (e == 0) {
+    if (sign) sig*=-1;
+    nota_write_int(sig, nota);
+    return;
+  }
+
+  int expsign = e < 0 ? ~0 : 0;
+  if (expsign) e *= -1;
+
   nota[0] = NOTA_FLOAT;
+  nota[0] |= 0x10 & expsign;
+  nota[0] |= 0x08 & sign;
+  
+  char *c = nota_continue_num(e, nota, 3);
+
+  nota_continue_num(sig, c, 7);
+  
+  printf("float number %g\n", n* (sign ? -1 : 1));  
+  print_nota_hex(nota);
 }
 
 double nota_read_float(char *nota)
 {
+  printf("reading ...\n");
+  print_nota_hex(nota);
+  long long sig;
+  long long e;
 
+  char *c = nota;
+  e = *c & NOTA_INT_DATA; /* first three bits */
+  while (CONTINUE(*(c++)))
+    e = (e<<7) | (*c) & NOTA_DATA;
+
+  c++;
+  sig = (*c) & NOTA_DATA;
+  while (CONTINUE(*(c++)))
+    sig = (sig<<7) | *c & NOTA_DATA;
+
+  if (NOTA_SIG_SIGN(*nota)) sig *= -1;
+  if (NOTA_EXP_SIGN(*nota)) e *= -1;
+
+  printf("got %lld x 10^%lld\n", sig, exp);
+
+  return (double)sig * pow(10.0, e);
 }
 
 long long nota_read_int(char *nota)
