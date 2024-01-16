@@ -26,6 +26,8 @@
 #include "resources.h"
 #include <sokol/sokol_time.h>
 
+#include "nota.h"
+
 #include "render.h"
 
 #include "model.h"
@@ -1931,97 +1933,75 @@ JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   return JS_UNDEFINED;
 }
 
-#define GETBIT(BYTE,BIT) (BYTE >> (BIT-1) & 1)
-#define WRITEBITS(TO,FROM,TOOFFSET,FROMOFFSET,BITS) (
-#define NOTA_CONT(BYTE) GETBIT(BYTE,1)
-#define NOTA_BLOB(BYTE) (!GETBIT(BYTE,2) && !GETBIT(BYTE,3) && !GETBIT(BYTE,4))
-#define NOTA_TEXT(BYTE) (!GETBIT(BYTE,2) && !GETBIT(BYTE,3) && GETBIT(BYTE,4))
-#define NOTA_ARRAY(BYTE) (!GETBIT(BYTE,2) && GETBIT(BYTE,3) && !GETBIT(BYTE,4))
-#define NOTA_REC 0b00110000
-#define NOTA_FLOAT 0b01000000
-#define NOTA_INT(BYTE) (GETBIT(BYTE,2) && GETBIT(BYTE,3) && !GETBIT(BYTE,4))
-#define NOTA_SYM 0b01110000
-
-#define MASK(n) ((1ULL << n) -1)
-#define SMASK(n,s) (~(MASK(n) << s))
-#define NEWDATA(d,n,s) (((d) & MASK(n)) << s)
-#define SETBITS(d,nd,n,s) (((d) & SMASK(n,s)) | NEWDATA(nd,n,s))
-/*
-  d data
-  nd new data
-  n num bits
-  s startbit
-*/
-
 JSValue nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-  if (argc < 2) return JS_UNDEFINED;
+  printf("nota encode\n");
+  if (argc < 1) return JS_UNDEFINED;
   
   JSValue obj = argv[0];
-  const char *f = js2str(argv[1]);
+  char nota[1024];
   
+  if (JS_IsNumber(obj)) {
+    int64_t i;
+    JS_ToInt64(js, &i, obj);
+    nota_write_int(i, nota);
+  } else if (JS_IsString(obj)) {
+    char *str = js2str(obj);
+    nota_write_text(str, nota);
+  } else if (JS_IsBool(obj)) {
+    int b = js2bool(obj);
+    nota_write_bool(b, nota);
+  }
+  
+  return str2js(nota);
 }
 
 JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
-  size_t len;
-  char *blob = slurp_file(js2str(argv[0]), &len);
-  char *byte = blob;
 
-  char buf[8];
-  int bit = 0;
-  if (!NOTA_INT(*blob)) return JS_UNDEFINED;
+  char *nota = js2str(argv[0]);
+  int type = nota_type(nota);
+  long long n;
 
-  SETBITS(*buf, (*blob)<<3, 3, bit);
-  byte++;
-  bit +=3;
-  
-  while (GETBIT(*byte, 1)) {
-    SETBITS(*buf, (*byte)<<7, 7, bit);
-    bit += 7;    
+  switch(type) {
+    case NOTA_BLOB:
+      break;
+    case NOTA_TEXT:
+      return str2js(nota_read_text(nota));
+    case NOTA_INT:
+      printf("type int\n");
+      nota_read_num(nota, &n);
+      printf("num is %lld\n", n);
+      return int2js(n);
+    case NOTA_SYM:
+      return bool2js(nota_read_bool(nota));
   }
-
-  YughWarn("%#08x", buf);
   return JS_UNDEFINED;
 }
 
-void nota_int(char *blob)
-{
-  char *byte = blob;
+static const JSCFunctionListEntry nota_funcs[] = {
+  JS_CFUNC_DEF("encode", 1, nota_encode),
+  JS_CFUNC_DEF("decode", 1, nota_decode)
+};
 
-  char buf[8] = {0};
-  int bit = 0;
-
-  SETBITS(*buf, (*blob)<<3, 3, bit);
-  byte++;
-  bit +=3;
-  
-  while (GETBIT(*byte, 1)) {
-    SETBITS(*buf, (*byte)<<7, 7, bit);
-    bit += 7;    
-  }
-
-  for (int i = 0; i < 8; i++)
-    YughWarn("%c", buf[i]);
-}
 
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 
 void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
 
-  DUK_FUNC(yughlog, 4)
+  JSValue nota = JS_NewObject(js);
+  JS_SetPropertyFunctionList(js, nota, nota_funcs, countof(nota_funcs));
+  JS_SetPropertyStr(js, globalThis, "nota", nota);
 
+  DUK_FUNC(yughlog, 4)
   DUK_FUNC(make_gameobject, 0)
   DUK_FUNC(set_body, 3)
   DUK_FUNC(q_body, 2)
-
   DUK_FUNC(sys_cmd, 1)
-
   DUK_FUNC(make_sprite, 1)
   DUK_FUNC(spline_cmd, 6)
-
   DUK_FUNC(make_circle2d, 1)
   DUK_FUNC(cmd_circle2d, 6)
   DUK_FUNC(make_poly2d, 1)
@@ -2029,9 +2009,7 @@ void ffi_load() {
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)
   DUK_FUNC(make_model,2);
-
   DUK_FUNC(cmd_points, 5);
-
   DUK_FUNC(cmd, 6)
   DUK_FUNC(register, 3)
   DUK_FUNC(register_collide, 6)
