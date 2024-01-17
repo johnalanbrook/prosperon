@@ -10,16 +10,23 @@
 #define NOTA_SYM 0x70
 
 int nota_type(char *nota);
-void nota_write_int(long long n, char *nota);
-long long nota_read_int(char *nota);
-char *nota_read_num(char *nota, long long *n);
-void nota_write_float(double n, char *nota);
-double nota_read_float(char *nota);
-void nota_write_bool(int b, char *nota);
-int nota_read_bool(char *nota);
-void nota_write_blob(unsigned long long n, char *nota);
-void nota_write_array(unsigned long long n, char *nota);
-void nota_write_text(char *s, char *nota);
-char *nota_read_text(char *nota);
+
+char *nota_read_blob(long long *len, char *nota);
+char *nota_read_text(char *text, char *nota);
+char *nota_read_array(long long *len, char *nota);
+char *nota_read_record(long long *len, char *nota);
+char *nota_read_float(double *d, char *nota);
+char *nota_read_int(long long *l, char *nota);
+char *nota_read_bool(int *b, char *nota);
+
+char *nota_read_num(long long *n, char *nota);
+
+char *nota_write_blob(unsigned long long n, char *nota);
+char *nota_write_text(char *s, char *nota);
+char *nota_write_array(unsigned long long n, char *nota);
+char *nota_write_record(unsigned long long n, char *nota);
+char *nota_write_float(double n, char *nota);
+char *nota_write_int(long long n, char *nota);
+char *nota_write_bool(int b, char *nota);
 
 #endif

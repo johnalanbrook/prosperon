@@ -162,19 +162,9 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
 
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
-uint64_t js2uint64(JSValue v)
-{
-  int64_t i;
-  JS_ToInt64(js, &i, v);
-  uint64_t n = i;
-  return n;
-}
+uint64_t js2uint64(JSValue v) { return JS_VALUE_GET_INT(v); }
 
-int js2int(JSValue v) {
-  int32_t i;
-  JS_ToInt32(js, &i, v);
-  return i;
-}
+int js2int(JSValue v) { return JS_VALUE_GET_INT(v); }
 
 JSValue int2js(int i) { return JS_NewInt64(js, i); }
 
@@ -191,6 +181,7 @@ JSValue strarr2js(char **c)
 }
 
 double js2number(JSValue v) {
+  return JS_VALUE_GET_FLOAT64(v);
   double g;
   JS_ToFloat64(js, &g, v);
   return g;
@@ -231,6 +222,87 @@ int js_arrlen(JSValue v) {
   int len;
   JS_ToInt32(js, &len, js_getpropstr( v, "length"));
   return len;
+}
+
+char *js_nota_decode(JSValue *tmp, char *nota)
+{
+  int type = nota_type(nota);
+  JSValue ret;
+  JSValue ret2;
+  long long n;
+  double d;
+  int b;
+  
+  char *str = NULL;
+  switch(type) {
+    case NOTA_BLOB:
+      break;
+    case NOTA_TEXT:
+      nota = nota_read_text(str, nota);
+      *tmp = str2js(str);
+      return nota;
+    case NOTA_ARR:
+      nota = nota_read_array(&n, nota);
+      ret = JS_NewArray(js);
+      for (int i = 0; i < n; i++) {
+        nota = js_nota_decode(&ret2, nota);
+        JS_SetPropertyInt64(js, ret, i, ret2);
+      }
+      break;
+    case NOTA_REC:
+      break;
+    case NOTA_FLOAT:
+      nota = nota_read_float(&d, nota);
+      *tmp = number2js(d);
+      return nota;
+    case NOTA_INT:
+      nota = nota_read_int(&n, nota);
+      *tmp = int2js(n);
+      return nota;
+    case NOTA_SYM:
+      nota = nota_read_bool(&b, nota);
+      *tmp = bool2js(b);
+      return nota;
+  }
+}
+
+char *js_nota_encode(JSValue v, char *nota)
+{
+  int tag = JS_VALUE_GET_TAG(v);
+  char *str;
+  JSPropertyEnum *ptab;
+  uint32_t plen;
+  int n;
+  JSValue val;
+  
+  switch(tag) {
+    case JS_TAG_FLOAT64:
+      return nota_write_float(JS_VALUE_GET_FLOAT64(v), nota);
+    case JS_TAG_INT:
+      return nota_write_int(JS_VALUE_GET_INT(v), nota);
+    case JS_TAG_STRING:
+      return nota_write_text(JS_VALUE_GET_PTR(v), nota);
+    case JS_TAG_BOOL:
+      return nota_write_bool(JS_VALUE_GET_BOOL(v), nota);
+    case JS_TAG_OBJECT:
+      if (JS_IsArray(js, v)) {
+        int n = js_arrlen(v);
+        nota = nota_write_array(n, nota);
+        for (int i = 0; i < js_arrlen(v); i++)
+          nota = js_nota_encode(js_arridx(v, i), nota);
+        return nota;
+      }
+      
+      n = JS_GetOwnPropertyNames(js, &ptab, &plen, v, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
+      nota = nota_write_record(plen, nota);
+      for (int i = 0; i < plen; i++) {
+        /* todo: slower than atomtocstring */
+        val = JS_AtomToString(js, ptab[i].atom);
+        nota = nota_write_text(JS_VALUE_GET_PTR(v), nota);
+        nota = js_nota_encode(JS_GetProperty(js, v, ptab[i].atom), nota);
+      }
+      return nota;
+  }
 }
 
 struct rgba js2color(JSValue v) {
@@ -1935,25 +2007,14 @@ JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
 JSValue nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-  printf("nota encode\n");
   if (argc < 1) return JS_UNDEFINED;
   
   JSValue obj = argv[0];
-  char nota[1024];
+  char nota[100000];
+  char *e = js_nota_encode(obj, nota);
+  *e = 0;
   
-  if (JS_IsNumber(obj)) {
-    double n;
-    JS_ToFloat64(js, &n, obj);
-    nota_write_float(n, nota);
-  } else if (JS_IsString(obj)) {
-    char *str = js2str(obj);
-    nota_write_text(str, nota);
-  } else if (JS_IsBool(obj)) {
-    int b = js2bool(obj);
-    nota_write_bool(b, nota);
-  }
-  
-  return str2js(nota);
+  return JS_NewStringLen(js, nota, e-nota);
 }
 
 JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
@@ -1961,32 +2022,15 @@ JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   if (argc < 1) return JS_UNDEFINED;
 
   char *nota = js2str(argv[0]);
-  int type = nota_type(nota);
-  long long n;
-
-  switch(type) {
-    case NOTA_BLOB:
-      break;
-    case NOTA_TEXT:
-      return str2js(nota_read_text(nota));
-    case NOTA_INT:
-      printf("type int\n");
-      nota_read_num(nota, &n);
-      printf("num is %lld\n", n);
-      return int2js(n);
-    case NOTA_SYM:
-      return bool2js(nota_read_bool(nota));
-    default:
-      return number2js(nota_read_float(nota));
-  }
-  return JS_UNDEFINED;
+  JSValue ret;
+  js_nota_decode(&ret, nota);
+  return ret;
 }
 
 static const JSCFunctionListEntry nota_funcs[] = {
   JS_CFUNC_DEF("encode", 1, nota_encode),
   JS_CFUNC_DEF("decode", 1, nota_decode)
 };
-
 
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
 

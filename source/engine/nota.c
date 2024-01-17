@@ -23,6 +23,14 @@
 
 int nota_type(char *nota) { return *nota & NOTA_TYPE; }
 
+char *nota_skip(char *nota)
+{
+  while (CONTINUE(*nota))
+    nota++;
+
+  return nota+1;
+}
+
 int nota_bits(long long n, int sb)
 {
   int bits;
@@ -64,11 +72,16 @@ char *nota_continue_num(long long n, char *nota, int sb)
 
 void print_nota_hex(char *nota)
 {
-  long long chars = 0;
-  if (!((*nota>>4 & 0x07) ^ NOTA_TEXT>>4)) {
-    nota_read_num(nota, &chars);
-    printf("print with %d points\n", chars);    
+  while (*nota) {
+    printf("%02X ", (unsigned char)(*nota));
+    nota++;
   }
+  printf("\n");
+  
+  return;
+  long long chars = 0;
+  if (!((*nota>>4 & 0x07) ^ NOTA_TEXT>>4))
+    nota_read_num(&chars, nota);
 
   if ((*nota>>5) == 2 || (*nota>>5) == 6)
     chars = 1;
@@ -82,9 +95,8 @@ void print_nota_hex(char *nota)
   printf("\n");
 }
 
-void nota_write_int(long long n, char *nota)
+char *nota_write_int(long long n, char *nota)
 {
-  printf("number %lld\n", n);
   char sign = 0;
   
   if (n < 0) {
@@ -94,13 +106,14 @@ void nota_write_int(long long n, char *nota)
   
   nota[0] = NOTA_INT | sign;  
 
-  nota = nota_continue_num(n, nota, 3);
-  *nota = 0;
-  print_nota_hex(nota);
+  return nota_continue_num(n, nota, 3);
 }
 
-char *nota_read_num(char *nota, long long *n)
+char *nota_read_num(long long *n, char *nota)
 {
+  if (!n)
+    return nota_skip(nota);
+    
   *n = 0;
   *n |= (*nota) & NOTA_HEAD_DATA;
   
@@ -114,12 +127,10 @@ char *nota_read_num(char *nota, long long *n)
 #define xstr(s) str(s)
 #define str(s) #s
 
-void nota_write_float(double n, char *nota)
+char *nota_write_float(double n, char *nota)
 {
-  if (n == 0) {
-    nota_write_int(0, nota);
-    return;
-  }
+  if (n == 0)
+    return nota_write_int(0, nota);
   
   int sign = n < 0 ? ~0 : 0;
   if (sign) n *= -1;
@@ -140,11 +151,8 @@ void nota_write_float(double n, char *nota)
   ns[1] = ns[0];
   long long sig = atoll(ns+1);
 
-  if (e == 0) {
-    if (sign) sig*=-1;
-    nota_write_int(sig, nota);
-    return;
-  }
+  if (e == 0)
+    return nota_write_int(sig * (sign ? -1 : 1), nota);
 
   int expsign = e < 0 ? ~0 : 0;
   if (expsign) e *= -1;
@@ -155,26 +163,24 @@ void nota_write_float(double n, char *nota)
   
   char *c = nota_continue_num(e, nota, 3);
 
-  nota_continue_num(sig, c, 7);
-  
-  printf("float number %g\n", n* (sign ? -1 : 1));
-  printf("aka %d x 10^%d\n", sig, e);
-  print_nota_hex(nota);
+  return nota_continue_num(sig, c, 7);
 }
 
-double nota_read_float(char *nota)
+char *nota_read_float(double *d, char *nota)
 {
-  printf("reading ...\n");
   print_nota_hex(nota);
   long long sig = 0;
   long long e = 0;
 
   char *c = nota;
   e = (*c) & NOTA_INT_DATA; /* first three bits */
+
   while (CONTINUE(*c)) {
     e = (e<<7) | (*c) & NOTA_DATA;
     c++;
   }
+  
+  c++;
 
   sig = (*c) & NOTA_DATA;
   while (CONTINUE(*c)) {
@@ -185,38 +191,60 @@ double nota_read_float(char *nota)
   if (NOTA_SIG_SIGN(*nota)) sig *= -1;
   if (NOTA_EXP_SIGN(*nota)) e *= -1;
 
-  printf("got %lld x 10^%lld\n", sig, exp);
-
-  return (double)sig * pow(10.0, e);
+  *d = (double)sig * pow(10.0, e);
+  return nota;
 }
 
-long long nota_read_int(char *nota)
+char *nota_read_int(long long *n, char *nota)
 {
-  long long n = 0;
-  char *c = nota;
-  n |= (*c) & NOTA_INT_DATA; /* first three bits */
-  while (CONTINUE(*(c++)))
-    n = (n<<7) | (*c) & NOTA_DATA;
+  if (!n)
+    return nota_skip(nota);
 
-  if (NOTA_INT_SIGN(*nota)) n *= -1;
-  return n;
+  char *c = nota;
+  *n |= (*c) & NOTA_INT_DATA; /* first three bits */
+  while (CONTINUE(*(c++)))
+    *n = (*n<<7) | (*c) & NOTA_DATA;
+
+  if (NOTA_INT_SIGN(*nota)) *n *= -1;
+  
+  return c+1;
 }
 
 /* n is the number of bits */
-void nota_write_blob(unsigned long long n, char *nota)
+char *nota_write_blob(unsigned long long n, char *nota)
 {
-  printf("blob %lld\n", n);
   nota[0] = NOTA_BLOB;
-  nota_continue_num(n, nota, 4);
-  print_nota_hex(nota);
+  return nota_continue_num(n, nota, 4);
 }
 
-void nota_write_array(unsigned long long n, char *nota)
+char *nota_write_array(unsigned long long n, char *nota)
 {
-  printf("array %lld\n", n);
   nota[0] = NOTA_ARR;
-  nota_continue_num(n, nota, 4);
-  print_nota_hex(nota);
+  return nota_continue_num(n, nota, 4);
+}
+
+char *nota_read_array(long long *len, char *nota)
+{
+  if (!len) return nota;
+  return nota_read_num(len, nota);
+}
+
+char *nota_read_record(long long *len, char *nota)
+{
+  if (!len) return nota;
+  return nota_read_num(len, nota);
+}
+
+char *nota_read_blob(long long *len, char *nota)
+{
+  if (!len) return nota;
+  return nota_read_num(len, nota);
+}
+
+char *nota_write_record(unsigned long long n, char *nota)
+{
+  nota[0] = NOTA_REC;
+  return nota_continue_num(n, nota, 4);
 }
 
 /* kim is 7, 14, then 21 */
@@ -325,33 +353,36 @@ void kim_to_utf8(char *kim, char *utf, int runes)
   *utf = 0;
 }
 
-char *nota_read_text(char *nota)
+char *nota_read_text(char *text, char *nota)
 {
   long long chars;
-  nota = nota_read_num(nota, &chars);
-  printf("reading %d runes\n", chars);
+  nota = nota_read_num(&chars, nota);
   char utf[chars*4];
   kim_to_utf8(nota, utf, chars);
-  return strdup(utf);
+  text = strdup(utf);
+  return nota;
 }
 
-void nota_write_bool(int b, char *nota)
+char *nota_write_bool(int b, char *nota)
 {
   *nota = NOTA_SYM | (b ? NOTA_TRUE : NOTA_FALSE);
+  nota++;
+  return nota;
 }
 
-int nota_read_bool(char *nota)
+char *nota_read_bool(int *b, char *nota)
 {
-  return *nota & 0x0f;
+  if (b) *b = (*nota) & 0x0f;
+  return nota+1;
 }
 
-void nota_write_text(char *s, char *nota)
+char *nota_write_text(char *s, char *nota)
 {
   char *start = nota;
   nota[0] = NOTA_TEXT;
-  long n = utf8_count(s);
-  printf("text %s with %d points\n", s, n);  
+  long long n = utf8_count(s);
   nota = nota_continue_num(n,nota,4);
   utf8_to_kim(s, nota);
-  print_nota_hex(start);
+  return nota+n;
 }
+
