@@ -162,9 +162,17 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
 
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
-uint64_t js2uint64(JSValue v) { return JS_VALUE_GET_INT(v); }
+uint64_t js2uint64(JSValue v) {
+  uint64_t i;
+  JS_ToInt64(js, &i, v);
+  return i;
+}
 
-int js2int(JSValue v) { return JS_VALUE_GET_INT(v); }
+int js2int(JSValue v) {
+  int i;
+  JS_ToInt32(js, &i, v);
+  return i;
+}
 
 JSValue int2js(int i) { return JS_NewInt64(js, i); }
 
@@ -227,49 +235,61 @@ int js_arrlen(JSValue v) {
 char *js_nota_decode(JSValue *tmp, char *nota)
 {
   int type = nota_type(nota);
-  JSValue ret;
   JSValue ret2;
   long long n;
   double d;
   int b;
-  
-  char *str = NULL;
+  char *str;
+
   switch(type) {
     case NOTA_BLOB:
       break;
     case NOTA_TEXT:
-      nota = nota_read_text(str, nota);
+      nota = nota_read_text(&str, nota);
       *tmp = str2js(str);
-      return nota;
+      break;
     case NOTA_ARR:
       nota = nota_read_array(&n, nota);
-      ret = JS_NewArray(js);
+      *tmp = JS_NewArray(js);
       for (int i = 0; i < n; i++) {
         nota = js_nota_decode(&ret2, nota);
-        JS_SetPropertyInt64(js, ret, i, ret2);
+        JS_SetPropertyInt64(js, *tmp, i, ret2);
       }
       break;
     case NOTA_REC:
+      nota = nota_read_record(&n, nota);
+      printf("nota object with %d elements\n", n);
+      *tmp = JS_NewObject(js);
+      for (int i = 0; i < n; i++) {
+
+        nota = nota_read_text(&str, nota);
+        printf("looking at property %d named %s\n", i, str);	
+	nota = js_nota_decode(&ret2, nota);
+	JS_SetPropertyStr(js, *tmp, str, ret2);
+      }
       break;
-    case NOTA_FLOAT:
-      nota = nota_read_float(&d, nota);
-      *tmp = number2js(d);
-      return nota;
     case NOTA_INT:
       nota = nota_read_int(&n, nota);
       *tmp = int2js(n);
-      return nota;
+      break;
     case NOTA_SYM:
       nota = nota_read_bool(&b, nota);
       *tmp = bool2js(b);
-      return nota;
+      break;
+    default:
+    case NOTA_FLOAT:
+      nota = nota_read_float(&d, nota);
+      *tmp = number2js(d);
+      break;
   }
+
+  return nota;
 }
 
 char *js_nota_encode(JSValue v, char *nota)
 {
   int tag = JS_VALUE_GET_TAG(v);
-  char *str;
+  char *str = NULL;
   JSPropertyEnum *ptab;
   uint32_t plen;
   int n;
@@ -277,28 +297,40 @@ char *js_nota_encode(JSValue v, char *nota)
   
   switch(tag) {
     case JS_TAG_FLOAT64:
+//      printf("encode float\n");
       return nota_write_float(JS_VALUE_GET_FLOAT64(v), nota);
     case JS_TAG_INT:
+//      printf("encode int\n");
       return nota_write_int(JS_VALUE_GET_INT(v), nota);
     case JS_TAG_STRING:
-      return nota_write_text(JS_VALUE_GET_PTR(v), nota);
+//      printf("encode string\n");
+      str = js2str(v);
+      nota = nota_write_text(str, nota);
+      JS_FreeCString(js, str);
+      return nota;
     case JS_TAG_BOOL:
+//      printf("encode bool\n");
       return nota_write_bool(JS_VALUE_GET_BOOL(v), nota);
     case JS_TAG_OBJECT:
       if (JS_IsArray(js, v)) {
+//        printf("encode array\n");
         int n = js_arrlen(v);
         nota = nota_write_array(n, nota);
         for (int i = 0; i < js_arrlen(v); i++)
           nota = js_nota_encode(js_arridx(v, i), nota);
         return nota;
       }
+//      printf("encode object\n");
       
       n = JS_GetOwnPropertyNames(js, &ptab, &plen, v, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
       nota = nota_write_record(plen, nota);
       for (int i = 0; i < plen; i++) {
+        val = JS_GetProperty(js,v,ptab[i].atom);
+        if (JS_IsUndefined(val) || JS_IsNull(val)) continue;
         /* todo: slower than atomtocstring */
-        val = JS_AtomToString(js, ptab[i].atom);
-        nota = nota_write_text(JS_VALUE_GET_PTR(v), nota);
+        str = JS_AtomToCString(js, ptab[i].atom);
+//	printf("encoding object entry %s\n", str);
+        nota = nota_write_text(str, nota);
         nota = js_nota_encode(JS_GetProperty(js, v, ptab[i].atom), nota);
       }
       return nota;
@@ -491,7 +523,6 @@ struct rect js2rect(JSValue v) {
   rect.h = js2number(js_getpropstr(v, "h"));
   return rect;
 }
-
 
 JSValue rect2js(struct rect rect) {
   JSValue obj = JS_NewObject(js);
@@ -2012,16 +2043,16 @@ JSValue nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   JSValue obj = argv[0];
   char nota[100000];
   char *e = js_nota_encode(obj, nota);
-  *e = 0;
-  
-  return JS_NewStringLen(js, nota, e-nota);
+
+  return JS_NewArrayBufferCopy(js, nota, e-nota);
 }
 
 JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
 
-  char *nota = js2str(argv[0]);
+  size_t len;
+  char *nota = JS_GetArrayBuffer(js, &len, argv[0]);
   JSValue ret;
   js_nota_decode(&ret, nota);
   return ret;

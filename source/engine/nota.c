@@ -3,6 +3,7 @@
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
+#include "limits.h"
 
 #define NOTA_CONT 0x80
 #define NOTA_DATA 0x7f
@@ -31,18 +32,26 @@ char *nota_skip(char *nota)
   return nota+1;
 }
 
+char *nota_read_num(long long *n, char *nota)
+{
+  if (!n)
+    return nota_skip(nota);
+    
+  *n = 0;
+  *n |= (*nota) & NOTA_HEAD_DATA;
+  
+  while (CONTINUE(*(nota++)))
+    *n = (*n<<7) | (*nota) & NOTA_DATA;
+
+  return nota;
+}
+
 int nota_bits(long long n, int sb)
 {
-  int bits;
-  if (n == 0)
-    bits = 0;
-  else
-    bits = ilogb(n)+1;
+  if (n == 0) return sb;
+  int bits = sizeof(n)*CHAR_BIT - __builtin_clzll(n);
   bits-=sb; /* start bit */
-  int chars = bits/7;
-  if (bits%7>0) chars++;
-  bits = sb + (chars*7);
-  return bits;
+  return ((bits + 6) / 7)*7 + sb;
 }
 
 char *nota_continue_num(long long n, char *nota, int sb)
@@ -54,10 +63,10 @@ char *nota_continue_num(long long n, char *nota, int sb)
   else
     nota[0] &= ~NOTA_CONT;
 
-  int shex = ~0 << sb;
+  int shex = (~0) << sb;
   nota[0] &= shex; /* clear shex bits */
-  nota[0] |= ~shex & (n>>bits);
-  
+  nota[0] |= (~shex) & (n>>bits);
+
   int i = 1;
   while (bits > 0) {
     bits -= 7;
@@ -109,19 +118,6 @@ char *nota_write_int(long long n, char *nota)
   return nota_continue_num(n, nota, 3);
 }
 
-char *nota_read_num(long long *n, char *nota)
-{
-  if (!n)
-    return nota_skip(nota);
-    
-  *n = 0;
-  *n |= (*nota) & NOTA_HEAD_DATA;
-  
-  while (CONTINUE(*(nota++)))
-    *n = (*n<<7) | (*nota) & NOTA_DATA;
-
-  return nota;
-}
 
 #define NOTA_DBL_PREC 6
 #define xstr(s) str(s)
@@ -137,7 +133,7 @@ char *nota_write_float(double n, char *nota)
   char ns[2+NOTA_DBL_PREC+5];
   snprintf(ns, 2+NOTA_DBL_PREC+5, "%." xstr (NOTA_DBL_PREC) "e", n);
 
-  int e = atoi(&ns[2+NOTA_DBL_PREC+1]);
+  long long e = atoll(&ns[2+NOTA_DBL_PREC+1]);
   ns[2+NOTA_DBL_PREC] = 0;
 
   char *z = ns + 1 + NOTA_DBL_PREC;
@@ -160,15 +156,13 @@ char *nota_write_float(double n, char *nota)
   nota[0] = NOTA_FLOAT;
   nota[0] |= 0x10 & expsign;
   nota[0] |= 0x08 & sign;
-  
-  char *c = nota_continue_num(e, nota, 3);
 
+  char *c = nota_continue_num(e, nota, 3);
   return nota_continue_num(sig, c, 7);
 }
 
 char *nota_read_float(double *d, char *nota)
 {
-  print_nota_hex(nota);
   long long sig = 0;
   long long e = 0;
 
@@ -182,17 +176,15 @@ char *nota_read_float(double *d, char *nota)
   
   c++;
 
-  sig = (*c) & NOTA_DATA;
-  while (CONTINUE(*c)) {
+  do 
     sig = (sig<<7) | *c & NOTA_DATA;
-    c++;
-  }
+  while (CONTINUE(*(c++)));
 
   if (NOTA_SIG_SIGN(*nota)) sig *= -1;
   if (NOTA_EXP_SIGN(*nota)) e *= -1;
 
   *d = (double)sig * pow(10.0, e);
-  return nota;
+  return c;
 }
 
 char *nota_read_int(long long *n, char *nota)
@@ -200,14 +192,15 @@ char *nota_read_int(long long *n, char *nota)
   if (!n)
     return nota_skip(nota);
 
+  *n = 0;
   char *c = nota;
   *n |= (*c) & NOTA_INT_DATA; /* first three bits */
   while (CONTINUE(*(c++)))
     *n = (*n<<7) | (*c) & NOTA_DATA;
 
   if (NOTA_INT_SIGN(*nota)) *n *= -1;
-  
-  return c+1;
+
+  return c;
 }
 
 /* n is the number of bits */
@@ -310,13 +303,7 @@ void encode_kim(char **s, char *end, int code)
     return;
   }
   
-  int bits = 32 - __builtin_clz(code);
-  if (bits <= 7)
-    bits = 7;
-  else if (bits <= 14)
-    bits = 14;
-  else
-    bits = 21;
+  int bits = ((32 - __builtin_clz(code) + 6) / 7) * 7;
 
   while (bits > 7) {
     bits -= 7;
@@ -339,10 +326,12 @@ int decode_kim(char **s)
   return rune;
 }
 
-void utf8_to_kim(char *utf, char *kim)
+char *utf8_to_kim(char *utf, char *kim)
 {
   while (*utf)
     encode_kim(&kim, NULL, decode_utf8(&utf));
+
+  return kim;
 }
 
 void kim_to_utf8(char *kim, char *utf, int runes)
@@ -353,21 +342,20 @@ void kim_to_utf8(char *kim, char *utf, int runes)
   *utf = 0;
 }
 
-char *nota_read_text(char *text, char *nota)
+char *nota_read_text(char **text, char *nota)
 {
   long long chars;
   nota = nota_read_num(&chars, nota);
   char utf[chars*4];
   kim_to_utf8(nota, utf, chars);
-  text = strdup(utf);
+  *text = strdup(utf);
   return nota;
 }
 
 char *nota_write_bool(int b, char *nota)
 {
   *nota = NOTA_SYM | (b ? NOTA_TRUE : NOTA_FALSE);
-  nota++;
-  return nota;
+  return nota+1;
 }
 
 char *nota_read_bool(int *b, char *nota)
@@ -382,7 +370,6 @@ char *nota_write_text(char *s, char *nota)
   nota[0] = NOTA_TEXT;
   long long n = utf8_count(s);
   nota = nota_continue_num(n,nota,4);
-  utf8_to_kim(s, nota);
-  return nota+n;
+  return utf8_to_kim(s, nota);
 }
 

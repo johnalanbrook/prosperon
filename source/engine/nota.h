@@ -9,17 +9,21 @@
 #define NOTA_INT 0x60
 #define NOTA_SYM 0x70
 
+typedef struct NOTA {
+  char *head;
+} NOTA;
+
 int nota_type(char *nota);
 
 char *nota_read_blob(long long *len, char *nota);
-char *nota_read_text(char *text, char *nota);
+char *nota_read_text(char **text, char *nota);
 char *nota_read_array(long long *len, char *nota);
 char *nota_read_record(long long *len, char *nota);
 char *nota_read_float(double *d, char *nota);
 char *nota_read_int(long long *l, char *nota);
 char *nota_read_bool(int *b, char *nota);
 
-char *nota_read_num(long long *n, char *nota);
+void print_nota_hex(char *nota);
 
 char *nota_write_blob(unsigned long long n, char *nota);
 char *nota_write_text(char *s, char *nota);

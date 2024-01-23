@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include "particle.h"
 #include "simplex.h"
-#include "nota.h"
 
 #include "datastream.h"
 
