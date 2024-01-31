@@ -1,4 +1,3 @@
-
 var Sound = {
   bus: {},
   samplerate() { return cmd(198); },
@@ -108,9 +107,10 @@ Object.mixin(cmd(180).__proto__, {
   set volume(x) { this.gain = x; },
 });
 
-Object.mixin(DSP.source().__proto__, {
+/*Object.mixin(DSP.source().__proto__, {
   frames() { return cmd(197,this); },
   length() { return this.frames()/Sound.samplerate(); },
   time() { return this.frame/Sound.samplerate(); },
   pct() { return this.time()/this.length(); },
 });
+*/

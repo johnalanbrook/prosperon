@@ -162,8 +162,8 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
 
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
-uint64_t js2uint64(JSValue v) {
-  uint64_t i;
+int64_t js2int64(JSValue v) {
+  int64_t i;
   JS_ToInt64(js, &i, v);
   return i;
 }
@@ -247,6 +247,8 @@ char *js_nota_decode(JSValue *tmp, char *nota)
     case NOTA_TEXT:
       nota = nota_read_text(&str, nota);
       *tmp = str2js(str);
+      /* TODO: Avoid malloc and free here */
+      free(str);
       break;
     case NOTA_ARR:
       nota = nota_read_array(&n, nota);
@@ -258,14 +260,12 @@ char *js_nota_decode(JSValue *tmp, char *nota)
       break;
     case NOTA_REC:
       nota = nota_read_record(&n, nota);
-      printf("nota object with %d elements\n", n);
       *tmp = JS_NewObject(js);
       for (int i = 0; i < n; i++) {
-
         nota = nota_read_text(&str, nota);
-        printf("looking at property %d named %s\n", i, str);	
 	nota = js_nota_decode(&ret2, nota);
 	JS_SetPropertyStr(js, *tmp, str, ret2);
+	free(str);
       }
       break;
     case NOTA_INT:
@@ -273,8 +273,10 @@ char *js_nota_decode(JSValue *tmp, char *nota)
       *tmp = int2js(n);
       break;
     case NOTA_SYM:
-      nota = nota_read_bool(&b, nota);
-      *tmp = bool2js(b);
+      nota = nota_read_sym(&b, nota);
+      if (b == NOTA_NULL) *tmp = JS_UNDEFINED;
+      else
+        *tmp = bool2js(b);
       break;
     default:
     case NOTA_FLOAT:
@@ -297,42 +299,44 @@ char *js_nota_encode(JSValue v, char *nota)
   
   switch(tag) {
     case JS_TAG_FLOAT64:
-//      printf("encode float\n");
       return nota_write_float(JS_VALUE_GET_FLOAT64(v), nota);
     case JS_TAG_INT:
-//      printf("encode int\n");
       return nota_write_int(JS_VALUE_GET_INT(v), nota);
     case JS_TAG_STRING:
-//      printf("encode string\n");
       str = js2str(v);
       nota = nota_write_text(str, nota);
       JS_FreeCString(js, str);
       return nota;
     case JS_TAG_BOOL:
-//      printf("encode bool\n");
-      return nota_write_bool(JS_VALUE_GET_BOOL(v), nota);
+      return nota_write_sym(JS_VALUE_GET_BOOL(v), nota);
+    case JS_TAG_UNDEFINED:
+      return nota_write_sym(NOTA_NULL, nota);
+    case JS_TAG_NULL:
+      return nota_write_sym(NOTA_NULL, nota);
     case JS_TAG_OBJECT:
       if (JS_IsArray(js, v)) {
-//        printf("encode array\n");
         int n = js_arrlen(v);
         nota = nota_write_array(n, nota);
-        for (int i = 0; i < js_arrlen(v); i++)
+        for (int i = 0; i < n; i++)
           nota = js_nota_encode(js_arridx(v, i), nota);
         return nota;
       }
-//      printf("encode object\n");
-      
       n = JS_GetOwnPropertyNames(js, &ptab, &plen, v, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
       nota = nota_write_record(plen, nota);
+      
       for (int i = 0; i < plen; i++) {
         val = JS_GetProperty(js,v,ptab[i].atom);
-        if (JS_IsUndefined(val) || JS_IsNull(val)) continue;
-        /* todo: slower than atomtocstring */
         str = JS_AtomToCString(js, ptab[i].atom);
-//	printf("encoding object entry %s\n", str);
+	JS_FreeAtom(js, ptab[i].atom);
+	
         nota = nota_write_text(str, nota);
-        nota = js_nota_encode(JS_GetProperty(js, v, ptab[i].atom), nota);
+	JS_FreeCString(js, str);
+	
+        nota = js_nota_encode(val, nota);
+	JS_FreeValue(js,val);
       }
+      
+      js_free(js, ptab);
       return nota;
   }
 }
@@ -666,6 +670,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   int *intids = NULL;
   gameobject *go = NULL;
   JSValue ret = JS_UNDEFINED;
+  size_t plen = 0;
 
   switch (cmd) {
   case 0:
@@ -807,9 +812,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 39:
-    str = JS_ToCString(js, argv[1]);
+    str = JS_ToCStringLen(js, &plen, argv[1]);
     str2 = JS_ToCString(js, argv[2]);
-    ret = JS_NewInt64(js, slurp_write(str, str2));
+    ret = JS_NewInt64(js, slurp_write(str, str2, plen));
     break;
 
   case 40:
@@ -883,6 +888,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 60:
+    str = JS_GetArrayBuffer(js, &plen, argv[1]);
+    str2 = JS_ToCString(js, argv[2]);
+    ret = JS_NewInt64(js, slurp_write(str, str2, plen));
+    str = NULL;
     break;
 
   case 61:
@@ -959,6 +968,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ids = phys2d_query_shape(js2ptr(argv[1]));
     ret = gos2ref(ids);
     arrfree(ids);
+    break;
+
+  case 81:
+    str = JS_ToCString(js, argv[1]);
+    d1 = slurp_file(str, &plen);
+    ret = JS_NewArrayBufferCopy(js, d1, plen);
     break;
 
   case 82:
@@ -1101,15 +1116,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 128:
-      ret = JS_NewFloat64(js, stm_ns(js2uint64(argv[1])));
+      ret = JS_NewFloat64(js, stm_ns(js2int64(argv[1])));
       break;
 
     case 129:
-      ret = JS_NewFloat64(js, stm_us(js2uint64(argv[1])));
+      ret = JS_NewFloat64(js, stm_us(js2int64(argv[1])));
       break;
 
     case 130:
-      ret = JS_NewFloat64(js, stm_ms(js2uint64(argv[1])));
+      ret = JS_NewFloat64(js, stm_ms(js2int64(argv[1])));
       break;
 
     case 131:
@@ -2041,7 +2056,7 @@ JSValue nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   if (argc < 1) return JS_UNDEFINED;
   
   JSValue obj = argv[0];
-  char nota[100000];
+  char nota[1024*1024]; // 1MB
   char *e = js_nota_encode(obj, nota);
 
   return JS_NewArrayBufferCopy(js, nota, e-nota);
@@ -2107,6 +2122,7 @@ void ffi_load() {
   sound_proto = JS_NewObject(js);
   JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
   JS_SetPrototype(js, sound_proto, dsp_node_proto);
+  JS_FreeValue(js, sound_proto);
   
   QJSCLASSPREP_FUNCS(emitter);
   QJSCLASSPREP_FUNCS(warp_gravity);

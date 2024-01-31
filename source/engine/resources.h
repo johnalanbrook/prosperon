@@ -24,7 +24,7 @@ char *dirname(const char *path);
 
 void *slurp_file(const char *filename, size_t *size);
 char *slurp_text(const char *filename, size_t *size);
-int slurp_write(const char *txt, const char *filename);
+int slurp_write(const char *txt, const char *filename, size_t len);
 
 char *seprint(char *fmt, ...);
 

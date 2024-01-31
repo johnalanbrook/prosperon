@@ -6,6 +6,12 @@ function compile_env(str, env, file)
 
 function fcompile_env(file, env) { return compile_env(IO.slurp(file), env, file); }
 
+function buf2hex(buffer) { // buffer is an ArrayBuffer
+  return [...new Uint8Array(buffer)]
+      .map(x => x.toString(16).padStart(2, '0'))
+      .join(' ');
+}
+
 var OS = {};
 OS.cwd = function() { return cmd(144); }
 OS.exec = function(s) { cmd(143, s); }
@@ -140,7 +146,15 @@ var IO = {
     else
       throw new Error(`File ${file} does not exist; can't slurp`);
   },
-  slurpwrite(str, file) { return cmd(39, str, file); },
+  slurpbytes(file) {
+    return cmd(81, file);
+  },
+  slurpwrite(file, data) {
+    if (data.byteLength)
+      cmd(60, data, file);
+    else
+      return cmd(39, data, file);
+  },
   extensions(ext) {
     var paths = IO.ls();
     paths = paths.filter(function(str) { return str.ext() === ext; });
@@ -312,7 +326,6 @@ Cmdline.register_cmd("cjson", function(json) {
   }
 
   Log.say(j);
-//  IO.slurpwrite(JSON.stringify(j,undefined,2), f);
 
   STD.exit(0);
 }, "Clean up a jso file.");

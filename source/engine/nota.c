@@ -4,6 +4,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "limits.h"
+#include "kim.h"
 
 #define NOTA_CONT 0x80
 #define NOTA_DATA 0x7f
@@ -15,12 +16,10 @@
 #define NOTA_HEAD_DATA 0x0f
 #define CONTINUE(CHAR) (CHAR>>7)
 
-#define NOTA_FALSE 0x00
-#define NOTA_TRUE 0x01
-#define NOTA_PRIVATE 0x08
-#define NOTA_SYSTEM 0x09
-
 #define UTF8_DATA 0x3f
+
+/* define this to use native string instead of kim. Bytes are encoded instead of runes */
+#define NOTA_UTF8
 
 int nota_type(char *nota) { return *nota & NOTA_TYPE; }
 
@@ -240,136 +239,52 @@ char *nota_write_record(unsigned long long n, char *nota)
   return nota_continue_num(n, nota, 4);
 }
 
-/* kim is 7, 14, then 21 */
-
-int utf8_bytes(char *s)
+char *nota_write_sym(int sym, char *nota)
 {
-  int bytes = __builtin_clz(~(*s));
-  if (!bytes) return 1;
-  return bytes-24;
+  *nota = NOTA_SYM | sym;
+  return nota+1;
 }
 
-int utf8_count(char *s)
+char *nota_read_sym(int *sym, char *nota)
 {
-  int count = 0;
-  char *p = s;
-
-  while(*s) {
-    count++;
-    s += utf8_bytes(s);
-  }
-  
-  return count;
-}
-
-int decode_utf8(char **s) {
-  int k = **s ? __builtin_clz(~(**s << 24)) : 0;  // Count # of leading 1 bits.
-  int mask = (1 << (8 - k)) - 1;                  // All 1's with k leading 0's.
-  int value = **s & mask;
-  for (++(*s), --k; k > 0 && **s; --k, ++(*s)) {  // Note that k = #total bytes, or 0.
-    value <<= 6;
-    value += (**s & 0x3F);
-  }
-  return value;
-}
-
-void encode_utf8(char **s, char *end, int code) {
-  if (code < 255) {
-    **s = code;
-    (*s)++;
-    return;
-  }
-
-  char val[4];
-  int lead_byte_max = 0x7F;
-  int val_index = 0;
-  while (code > lead_byte_max) {
-    val[val_index++] = (code & 0x3F) | 0x80;
-    code >>= 6;
-    lead_byte_max >>= (val_index == 1 ? 2 : 1);
-  }
-  val[val_index++] = (code & lead_byte_max) | (~lead_byte_max << 1);
-  while (val_index-- && *s < end) {
-    **s = val[val_index];
-    (*s)++;
-  }
-}
-
-void encode_kim(char **s, char *end, int code)
-{
-  if (code < 255) {
-    **s = 0 | (NOTA_DATA & code);
-    (*s)++;
-    return;
-  }
-  
-  int bits = ((32 - __builtin_clz(code) + 6) / 7) * 7;
-
-  while (bits > 7) {
-    bits -= 7;
-    **s = NOTA_CONT | NOTA_DATA & (code >> bits);
-    (*s)++;
-  }
-  **s = NOTA_DATA & code;
-  (*s)++;
-}
-
-int decode_kim(char **s)
-{
-  int rune = **s & NOTA_DATA;
-  while (CONTINUE(**s)) {
-    rune <<= 7;
-    (*s)++;
-    rune |= **s & NOTA_DATA;
-  }
-  (*s)++;
-  return rune;
-}
-
-char *utf8_to_kim(char *utf, char *kim)
-{
-  while (*utf)
-    encode_kim(&kim, NULL, decode_utf8(&utf));
-
-  return kim;
-}
-
-void kim_to_utf8(char *kim, char *utf, int runes)
-{
-  for (int i = 0; i < runes; i++)
-    encode_utf8(&utf, utf+4, decode_kim(&kim));
-    
-  *utf = 0;
+  if (*sym) *sym = (*nota) & 0x0f;
+  return nota+1;
 }
 
 char *nota_read_text(char **text, char *nota)
 {
   long long chars;
   nota = nota_read_num(&chars, nota);
+
+#ifdef NOTA_UTF8
+  *text = calloc(chars+1,1);
+  memcpy(*text, nota, chars);
+  nota += chars;
+#else
   char utf[chars*4];
-  kim_to_utf8(nota, utf, chars);
-  *text = strdup(utf);
+  char *pp = utf;
+  kim_to_utf8(&nota, &pp, chars);
+  *pp = 0;
+  *text = strdup(utf);  
+#endif
+
   return nota;
-}
-
-char *nota_write_bool(int b, char *nota)
-{
-  *nota = NOTA_SYM | (b ? NOTA_TRUE : NOTA_FALSE);
-  return nota+1;
-}
-
-char *nota_read_bool(int *b, char *nota)
-{
-  if (b) *b = (*nota) & 0x0f;
-  return nota+1;
 }
 
 char *nota_write_text(char *s, char *nota)
 {
-  char *start = nota;
   nota[0] = NOTA_TEXT;
-  long long n = utf8_count(s);
+  
+#ifdef NOTA_UTF8
+  long long n = strlen(s);
   nota = nota_continue_num(n,nota,4);
-  return utf8_to_kim(s, nota);
+  memcpy(nota, s, n);
+  return nota+n;
+#else
+  long long n = utf8_count(s);
+  nota = nota_continue_num(n,nota,4);  
+  utf8_to_kim(&s, &nota);
+  return nota;
+#endif
 }
 

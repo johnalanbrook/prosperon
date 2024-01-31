@@ -562,7 +562,7 @@ var editor = {
     } else {
       var path = sub.replaceAll('.', '/') + ".json";
       var saveobj = obj.json_obj();
-      IO.slurpwrite(JSON.stringify(saveobj,null,1), path);
+      IO.slurpwrite(path, JSON.stringify(saveobj,null,1));
 
       if (obj === editor.edit_level) {
         if (obj === editor.desktop) {
@@ -841,7 +841,7 @@ editor.inputs['C-s'] = function() {
   if (savejs.objects) saveobj.__proto__.objects = savejs.objects;
   var path = prototypes.ur_stem(saveobj.ur.toString()) + ".json";
 
-  IO.slurpwrite(JSON.stringify(saveobj.__proto__,null,1), path);
+  IO.slurpwrite(path, JSON.stringify(saveobj.__proto__,null,1));
   Log.warn(`Wrote to file ${path}`);
 
   Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });

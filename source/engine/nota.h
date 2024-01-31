@@ -9,6 +9,12 @@
 #define NOTA_INT 0x60
 #define NOTA_SYM 0x70
 
+#define NOTA_FALSE 0x00
+#define NOTA_TRUE 0x01
+#define NOTA_PRIVATE 0x08
+#define NOTA_SYSTEM 0x09
+#define NOTA_NULL 0x02
+
 typedef struct NOTA {
   char *head;
 } NOTA;
@@ -21,7 +27,7 @@ char *nota_read_array(long long *len, char *nota);
 char *nota_read_record(long long *len, char *nota);
 char *nota_read_float(double *d, char *nota);
 char *nota_read_int(long long *l, char *nota);
-char *nota_read_bool(int *b, char *nota);
+char *nota_read_sym(int *sym, char *nota);
 
 void print_nota_hex(char *nota);
 
@@ -31,6 +37,6 @@ char *nota_write_array(unsigned long long n, char *nota);
 char *nota_write_record(unsigned long long n, char *nota);
 char *nota_write_float(double n, char *nota);
 char *nota_write_int(long long n, char *nota);
-char *nota_write_bool(int b, char *nota);
+char *nota_write_sym(int sym, char *nota);
 
 #endif

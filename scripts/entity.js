@@ -760,7 +760,6 @@ gameobject.doc = {
 var prototypes = {};
 prototypes.ur_ext = ".jso";
 prototypes.ur = {};
-prototypes.save_gameobjects = function() { slurpwrite(JSON.stringify(gameobjects,null,2), "proto.json"); };
 
 /* Makes a new ur-type from disk. If the ur doesn't exist, it searches on the disk to create it. */
 prototypes.from_file = function(file)

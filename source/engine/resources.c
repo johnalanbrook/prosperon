@@ -291,11 +291,12 @@ FILE *fopen_mkdir(const char *path, const char *mode) {
     return fopen(path,mode);
 }
 
-int slurp_write(const char *txt, const char *filename) {
+int slurp_write(const char *txt, const char *filename, size_t len) {
   FILE *f = fopen_mkdir(filename, "w");
   if (!f) return 1;
 
-  fputs(txt, f);
+  if (len < 0) len = strlen(txt);
+  fwrite(txt, len, 1, f);
   fclose(f);
   return 0;
 }

@@ -19,7 +19,6 @@ HMM_Vec2 mouse_delta = {0, 0};
 
 struct joystick {
   int id;
-  //GLFWgamepadstate state;
 };
 
 static int *downkeys = NULL;
