@@ -17,7 +17,7 @@
 #include "sprite.sglsl.h"
 #include "9slice.sglsl.h"
 
-struct TextureOptions TEX_SPRITE = {1, 0, 0};
+struct TextureOptions TEX_SPRITE = {1};
 
 static struct sprite *sprites = NULL;
 

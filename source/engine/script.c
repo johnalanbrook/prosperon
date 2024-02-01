@@ -73,6 +73,7 @@ void script_stop()
 {
   script_evalf("Event.notify('quit');");
   send_signal("quit",0,NULL);
+  ffi_stop();
   for (int i = 0; i < shlen(jsstrs); i++)
     JS_FreeValue(js,jsstrs[i].value);
   JS_FreeContext(js);

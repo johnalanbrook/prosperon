@@ -326,7 +326,7 @@ void debugdraw_init()
 void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float seg_speed)
 {
   if (n < 2) return;
-
+  
   seg_speed = 1;
   
   struct line_vert v[n];

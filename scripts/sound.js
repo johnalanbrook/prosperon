@@ -9,7 +9,7 @@ var Sound = {
     }
     var src = DSP.source(file);
     bus ??= Sound.bus.master;
-    src.plugin(bus);
+//    src.plugin(bus);
     return src;
   },
 };

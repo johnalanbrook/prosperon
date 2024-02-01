@@ -189,7 +189,6 @@ JSValue strarr2js(char **c)
 }
 
 double js2number(JSValue v) {
-  return JS_VALUE_GET_FLOAT64(v);
   double g;
   JS_ToFloat64(js, &g, v);
   return g;
@@ -420,7 +419,6 @@ cpBitmask js2bitmask(JSValue v) {
   return mask;
 }
 
-/* Does not need to be freed by returning; but not reentrant */
 HMM_Vec2 *js2cpvec2arr(JSValue v) {
   HMM_Vec2 *arr = NULL;
   int n = js_arrlen(v);
@@ -1439,21 +1437,13 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
   }
 
-  if (str)
-    JS_FreeCString(js, str);
-
-  if (str2)
-    JS_FreeCString(js, str2);
-
+  if (str) JS_FreeCString(js, str);
+  if (str2) JS_FreeCString(js, str2);
   if (d1) free(d1);
   if (d2) free(d2);
-
   if (v1) arrfree(v1);
 
-  if (!JS_IsNull(ret)) {
-    return ret;
-  }
-
+  if (!JS_IsNull(ret)) return ret;
   return JS_UNDEFINED;
 }
 
@@ -2122,11 +2112,15 @@ void ffi_load() {
   sound_proto = JS_NewObject(js);
   JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
   JS_SetPrototype(js, sound_proto, dsp_node_proto);
-  JS_FreeValue(js, sound_proto);
   
   QJSCLASSPREP_FUNCS(emitter);
   QJSCLASSPREP_FUNCS(warp_gravity);
   QJSCLASSPREP_FUNCS(warp_damp);
   
   QJSCLASSPREP_FUNCS(constraint);
+}
+
+void ffi_stop()
+{
+  JS_FreeValue(js, sound_proto);
 }
