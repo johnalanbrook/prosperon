@@ -877,7 +877,6 @@ editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
   editor.edit_level.spawn();
-  return;
 };
 editor.inputs['C-n'].doc = "Create an empty object.";
 

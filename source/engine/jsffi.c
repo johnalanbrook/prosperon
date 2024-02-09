@@ -1812,7 +1812,12 @@ GETSET_PAIR(warp_gravity, spherical, bool)
 GETSET_PAIR(warp_gravity, mask, bitmask)
 GETSET_PAIR(warp_gravity, planar_force, vec3)
 
-#define CGETSET_ADD(ID, ENTRY) JS_CGETSET_DEF(#ENTRY, ID##_get_##ENTRY, ID##_set_##ENTRY)
+#define MIST_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
+
+#define MIST_CGETSET_DEF(name, fgetter, fsetter) { name, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CGETSET, 0, .u = { .getset = { .get = { .getter = fgetter }, .set = { .setter = fsetter } } } }
+
+
+#define CGETSET_ADD(ID, ENTRY) MIST_CGETSET_DEF(#ENTRY, ID##_get_##ENTRY, ID##_set_##ENTRY)
 
 static const JSCFunctionListEntry js_warp_gravity_funcs [] = {
   CGETSET_ADD(warp_gravity, strength),
@@ -1887,9 +1892,9 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, persist),
   CGETSET_ADD(emitter, persist_var),
   CGETSET_ADD(emitter, warp_mask),  
-  JS_CFUNC_DEF("start", 0, js_emitter_start),
-  JS_CFUNC_DEF("stop", 0, js_emitter_stop),
-  JS_CFUNC_DEF("emit", 1, js_emitter_emit)
+  MIST_CFUNC_DEF("start", 0, js_emitter_start),
+  MIST_CFUNC_DEF("stop", 0, js_emitter_stop),
+  MIST_CFUNC_DEF("emit", 1, js_emitter_emit)
 };
 
 GETSET_PAIR(dsp_node, pass, bool)
@@ -1914,8 +1919,8 @@ static const JSCFunctionListEntry js_dsp_node_funcs[] = {
   CGETSET_ADD(dsp_node, off),
   CGETSET_ADD(dsp_node, gain),
   CGETSET_ADD(dsp_node, pan),
-  JS_CFUNC_DEF("plugin", 1, js_dsp_node_plugin),
-  JS_CFUNC_DEF("unplug", 0, js_dsp_node_unplug)
+  MIST_CFUNC_DEF("plugin", 1, js_dsp_node_plugin),
+  MIST_CFUNC_DEF("unplug", 0, js_dsp_node_unplug)
 };
 
 GETSET_PAIR(sound, loop, bool)
@@ -2064,8 +2069,8 @@ JSValue nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 }
 
 static const JSCFunctionListEntry nota_funcs[] = {
-  JS_CFUNC_DEF("encode", 1, nota_encode),
-  JS_CFUNC_DEF("decode", 1, nota_decode)
+  MIST_CFUNC_DEF("encode", 1, nota_encode),
+  MIST_CFUNC_DEF("decode", 1, nota_decode)
 };
 
 #define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
