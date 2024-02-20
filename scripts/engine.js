@@ -7,6 +7,9 @@ function load(file) {
 
 load("scripts/base.js");
 load("scripts/std.js");
+//load("scripts/lunr.js");
+var lunrtxt = load("scripts/lunr.js");
+eval(lunrtxt);
 
 function run(file)
 {
@@ -519,7 +522,7 @@ Game.view_camera = function(cam)
   cmd(61, Game.camera.body);
 }
 
-Window.name = "Primum Machinam (V0.1)";
+Window.name = "Prosperon (V0.1)";
 Window.width = 1280;
 Window.height = 720;
 

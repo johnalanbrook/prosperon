@@ -1,0 +1,94 @@
+a:link a:visited a:hover a:active {
+  color: green;
+}
+
+.title {
+  visibility: hidden;
+}
+
+.floathead {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  display flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #3876AD;
+}
+
+.floathead a {
+  float: left; /* Float links side by side */
+  line-height: 100%;
+  margin-left: 20px;
+  margin-top: auto;
+  margin-bottom: auto;
+  height: 3rem;
+  line-height: 3rem;
+  text-align: center; /* Center-align text */
+  font-size: 24px;
+  color: #61bcd7;
+}
+
+#content {
+  max-width: 800px;
+}
+
+.floathead a:hover {
+  color: white;
+}
+
+h1 {
+  color: #61BCD7;
+}
+
+#org-div-home-and-up {
+  position: sticky;
+  top: 20px;
+}
+
+.example {
+  background-color: #FFFFEC;
+  border-width: 2px;  
+  border-color: #61bcd7;
+  margin: 20px;
+  padding: 20px;
+  font-family: code;
+  font-size: 16px;
+  line-height: 1em;
+  white-space: pre-line;
+  display: inline-block;
+}
+
+@font-face {
+  font-family: "code";
+  src: url(dos.ttf);
+}
+
+.navbar {
+  background-color: #1678b2;
+}
+
+.scholium {
+  background-color: #F8F8F1;
+}
+
+.scholium .admonition-title {
+  background-color: #75FB4C;
+  color: black;
+}
+
+.navbar-brand span {
+  margin-top: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.terminal-prompt {
+  background-image: url(/prosperon_orb_horizontal.gif);
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.wm-page-toc-tree li:first-of-type{display:none}

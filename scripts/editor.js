@@ -302,7 +302,7 @@ var editor = {
   },
 
   redo() {
-    if (this.backshots.empty) {
+    if (Object.empty(this.backshots)) {
       Log.info("Nothing to redo.");
       return;
     }
@@ -316,7 +316,7 @@ var editor = {
   },
 
   undo() {
-    if (this.snapshots.empty) {
+    if (Object.empty(this.snapshots)) {
       Log.info("Nothing to undo.");
       return;
     }
@@ -620,7 +620,7 @@ editor.inputs.release_post = function() {
   editor.edit_level.obj_descend(o => o.pos = o.pos.map(x => Math.round(x)));
 };
 editor.inputs['C-a'] = function() {
-  if (!editor.selectlist.empty) { editor.unselect(); return; }
+  if (!Object.empty(editor.selectlist)) { editor.unselect(); return; }
   editor.unselect();
   editor.selectlist = editor.edit_level.objects.slice();
 };
@@ -912,7 +912,7 @@ editor.inputs['M-y'] = function() { editor.programmode = !editor.programmode; };
 editor.inputs['M-y'].doc = "Toggle program mode.";
 
 editor.inputs.minus = function() {
-  if (!editor.selectlist.empty) {
+  if (!Object.empty(editor.selectlist)) {
     editor.selectlist.forEach(function(x) { x.draw_layer--; });
     return;
   }
@@ -923,7 +923,7 @@ editor.inputs.minus = function() {
 editor.inputs.minus.doc = "Go down one working layer, or, move selected objects down one layer.";
 
 editor.inputs.plus = function() {
-  if (!editor.selectlist.empty) {
+  if (!Object.empty(editor.selectlist)) {
     editor.selectlist.forEach(x => x.draw_layer++);
     return;
   }
@@ -989,7 +989,7 @@ editor.inputs.lm.released = function() {
     selects = selects.flat();
     selects = selects.unique();
     
-    if (selects.empty) return;
+    if (Object.empty(selects)) return;
 
     if (Keys.shift()) {
       selects.forEach(function(x) {
@@ -1001,7 +1001,7 @@ editor.inputs.lm.released = function() {
       
     if (Keys.ctrl()) {
       selects.forEach(function(x) {
-        this.selectlist.remove(x);
+        delete this.selectlist[x.toString()];
       }, this);
 
       return;
@@ -1687,7 +1687,7 @@ var objectexplorer = Object.copy(inputpanel, {
       curobj = curobj.__proto__;
     }
 
-    if (!this.previous.empty)
+    if (!Object.empty(this.previous))
       items.push(Mum.text({str:"prev: " + this.previous.last(), action: this.prev_obj}));
 
     Object.getOwnPropertyNames(this.obj).forEach(key => {
@@ -1926,7 +1926,7 @@ function tab_complete(val, list) {
     
     var ret = undefined;
     var i = val.length;
-    while (!ret && !list.empty) {
+    while (!ret && !Object.empty(list)) {
       var char = list[0][i];
       if (!list.every(function(x) { return x[i] === char; }))
         ret = list[0].slice(0, i);

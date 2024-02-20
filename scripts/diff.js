@@ -48,7 +48,7 @@ function equal(x,y) {
 };
 
 function diffassign(target, from) {
-  if (from.empty) return;
+  if (Object.empty(from)) return;
 
   for (var e in from) {
     if (typeof from[e] === 'object') {
@@ -82,7 +82,7 @@ function objdiff(from,to)
 	ret[key] = Object.values(ediff(v, []));
 
       var diff = ediff(from[key], to[key]);
-      if (diff && !diff.empty)
+      if (diff && !Object.empty(diff))
 	ret[key] = Object.values(ediff(v,[]));
 
       return;
@@ -90,7 +90,7 @@ function objdiff(from,to)
 
     if (typeof v === 'object') {
       var diff = ediff(v, to[key]);
-      if (diff && !diff.empty)
+      if (diff && !Object.empty(diff))
 	  ret[key] = diff;	
       return;
     }
@@ -104,7 +104,7 @@ function objdiff(from,to)
     if (!to || v !== to[key])
       ret[key] = v;
   });
-  if (ret.empty) return undefined;
+  if (Object.empty(ret)) return undefined;
   
   return ret;
 }
@@ -160,7 +160,7 @@ function ediff(from,to)
       }
 
       var diff = ediff(from[key], to[key]);
-      if (diff && !diff.empty)
+      if (diff && !Object.empty(diff))
 	ret[key] = Object.values(ediff(v,[]));
 
       return;
@@ -168,7 +168,7 @@ function ediff(from,to)
 
     if (typeof v === 'object') {
       var diff = ediff(v, to[key]);
-      if (diff && !diff.empty)
+      if (diff && !Object.empty(diff))
 	  ret[key] = diff;	
       return;
     }
@@ -182,7 +182,7 @@ function ediff(from,to)
     if (!to || v !== to[key])
       ret[key] = v;
   });
-  if (ret.empty) return undefined;
+  if (Object.empty(ret)) return undefined;
   
   return ret;
 }

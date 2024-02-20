@@ -33,7 +33,7 @@ actor.die = function(actor){
 actor.timers = [];
 actor.kill = function(){
   this.timers.forEach(t => t.kill());
-  this.master.remove(this);
+  delete this.master[this.toString()];
   this.padawans.forEach(p => p.kill());
   this.__dead__ = true;
 };
@@ -43,7 +43,7 @@ actor.delay = function(fn, seconds) {
   t.remain = seconds;
   t.kill = () => {
     timer.kill.call(t);
-    this.timers.remove(t);
+    delete this.timers[t.toString()];
   }
   t.fire = () => {
     if (this.__dead__) return;
@@ -60,7 +60,7 @@ actor.master = undefined;
 actor.padawans = [];
 
 actor.remaster = function(to){
-  this.master.padawans.remove(this);
+  delete this.master.padawans[this.toString()];
   this.master = to;
   to.padawans.push(this);
 };
@@ -169,12 +169,12 @@ var gameobject = {
   },
   check_dirty() {
     this._ed.urdiff = this.json_obj();
-    this._ed.dirty = !this._ed.urdiff.empty;
+    this._ed.dirty = !Object.empty(this._ed.urdiff);
     var lur = ur[this.level.ur];
     if (!lur) return;
     var lur = lur.objects[this.toString()];
     var d = ediff(this._ed.urdiff,lur);
-    if (!d || d.empty)
+    if (!d || Object.empty(d))
       this._ed.inst = true;
     else
       this._ed.inst = false;
@@ -577,7 +577,7 @@ var gameobject = {
     }
     
     if (this.__proto__.instances)
-      this.__proto__.instances.remove(this);
+      delete this.__proto__.instances[this.toString()];
 
     for (var key in this.components) {
       this.components[key].kill();
@@ -905,7 +905,9 @@ prototypes.generate_ur = function(path)
 {
   var ob = IO.glob("**" + prototypes.ur_ext);
   ob = ob.concat(IO.glob("**.json"));
+
   ob = ob.map(function(path) { return path.set_ext(""); });
+  ob = ob.map(function(path) { return path[0] !== '.' ? path : undefined; });
   ob.forEach(function(name) { prototypes.get_ur(name); });
 }
 
@@ -988,9 +990,4 @@ prototypes.ur_pullout_folder = function(ur)
     var p = stem + e;
     if (IO.exists(p))
   */    
-}
-
-prototypes.ur_pushin_folder = function(ur)
-{
-
 }

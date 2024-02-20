@@ -24,26 +24,40 @@ WeakSet = undefined;
 
 var fmt = {};
 
+var roman_numerals = {
+  M: 1000,
+  CM: 900,
+  D: 500,
+  CD: 400,
+  C: 100,
+  XC: 90,
+  L: 50,
+  XL: 40,
+  X: 10,
+  IX: 9,
+  V: 5,
+  IV: 4,
+  I: 1
+};
+
+function roman2arabic(roman)
+{
+  var num = 0;
+  for (var i = 0; i < roman.length; i++) {
+    var rm = roman_numerals[roman[i]];
+    if (i + 1 < roman.length && rm < roman_numerals[roman[i+1]])
+      num -= rm;
+    else
+      num += rm;
+  }
+
+  return num;
+}
+
 function arabic2roman(num)
 {
   if (num <= 0 || num >= 4000)
     return "Invalid input. Roman numerals are not defined for numbers less than 1 or greater than 3999.";
-
-  var roman_numerals = {
-    M: 1000,
-    CM: 900,
-    D: 500,
-    CD: 400,
-    C: 100,
-    XC: 90,
-    L: 50,
-    XL: 40,
-    X: 10,
-    IX: 9,
-    V: 5,
-    IV: 4,
-    I: 1
-  };
 
   var result = '';
 
@@ -611,11 +625,9 @@ Object.defineProperty(Object.prototype, 'map', {
   }
 });
 
-Object.defineProperty(Object.prototype, 'empty', {
-  get: function() {
-    return Object.keys(this).empty;
-  },
-});
+Object.empty = function(obj) {
+  return Object.keys(obj).length === 0;
+}
 
 Object.defineProperty(Object.prototype, 'nth', {
   value: function(x) {
@@ -643,12 +655,6 @@ Object.defineProperty(Object.prototype, 'push', {
     }
     this[t] = val;
     return t;
-  }
-});
-
-Object.defineProperty(Object.prototype, 'remove', {
-  value: function(val) {
-    delete this[val.toString()];
   }
 });
 

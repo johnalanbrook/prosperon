@@ -134,7 +134,7 @@ struct Texture *texture_pullfromfile(const char *path) {
     free(svg);
     free(rast);
   #else
-    YughWarn("Primum was built without SVG capabilities.");
+    YughWarn("Prosperon was built without SVG capabilities.");
     return;
   #endif
   } else {

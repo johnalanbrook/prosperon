@@ -324,8 +324,11 @@ crossmac:
 clean:
 	@echo Cleaning project
 	@rm -rf bin dist
-	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer scripts/*.jso
+	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer scripts/*.jso TAGS
 	@make -C quickjs clean
+
+docs:
+	mkdocs build
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)
