@@ -2,8 +2,33 @@ a:link a:visited a:hover a:active {
   color: green;
 }
 
-.title {
-  visibility: hidden;
+#content {
+  margin-top: 50px;
+}
+
+html {
+  scroll-padding-top:50px;
+}
+
+#text-table-of-contents {
+  background-color: #ffffec;
+  border: solid;
+  border-width: 2px;
+  border-color: #61bcd7;  
+  padding: 10px;
+}
+
+.scholium {
+  background-color: #F5F5DE;
+  border: solid;
+  padding: 10px;
+  margin: 20px;
+  border-width: 2px;
+  border-color: #75FB4C;
+}
+
+.scholium p {
+  margin: 0;
 }
 
 .floathead {
@@ -48,17 +73,25 @@ h1 {
   top: 20px;
 }
 
+code {
+  font-family: code;
+  color: #61bcd7;
+}
+
 .example {
   background-color: #FFFFEC;
   border-width: 2px;  
   border-color: #61bcd7;
-  margin: 20px;
+  margin: 10px 20px;
   padding: 20px;
   font-family: code;
   font-size: 16px;
   line-height: 1em;
-  white-space: pre-line;
   display: inline-block;
+}
+
+.title {
+  font-family: arial;
 }
 
 @font-face {
@@ -68,15 +101,6 @@ h1 {
 
 .navbar {
   background-color: #1678b2;
-}
-
-.scholium {
-  background-color: #F8F8F1;
-}
-
-.scholium .admonition-title {
-  background-color: #75FB4C;
-  color: black;
 }
 
 .navbar-brand span {

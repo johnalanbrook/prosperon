@@ -1,4 +1,4 @@
 # Prosperon Engine
+A developer minded, 2D-first game engine.
 
-## Installation
-Run make.
+See the documentation [here](https://prosperon.dev/doc).

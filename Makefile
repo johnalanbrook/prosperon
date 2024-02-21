@@ -189,6 +189,7 @@ DIST = yugine-$(OS)$(ARCH)$(INFO)-$(COM)$(ZIP)
 DISTDIR = ./dist
 
 .DEFAULT_GOAL := all
+primum: all
 all: $(BIN)/$(NAME)
 	cp $(BIN)/$(NAME) .
 
@@ -327,8 +328,9 @@ clean:
 	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer scripts/*.jso TAGS
 	@make -C quickjs clean
 
-docs:
-	mkdocs build
+docs: doc/prosperon.org
+	make -C doc
+	mv doc/html .
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

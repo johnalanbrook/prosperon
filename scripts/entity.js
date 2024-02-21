@@ -54,7 +54,7 @@ actor.delay = function(fn, seconds) {
   this.timers.push(t);
   return function() { t.kill(); };
 };
-actor.clock = function(fn){};
+
 actor.master = undefined;
 
 actor.padawans = [];
