@@ -1,6 +1,7 @@
 #ifndef CIRCBUF_H
 #define CIRCBUF_H
 
+#include <stdlib.h>
 #include <stdint.h>
 
 static inline unsigned int powof2(unsigned int x)

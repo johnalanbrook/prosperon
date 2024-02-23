@@ -26,6 +26,9 @@
 #include "resources.h"
 #include <sokol/sokol_time.h>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "nota.h"
 
 #include "render.h"
@@ -1081,9 +1084,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = JS_NewInt64(js, file_mod_secs(str));
       break;
 
-    case 120:
-      ret = str2js(engine_info());
-      break;
     case 121:
       ret = number2js(get_timescale());
       break;
@@ -1194,7 +1194,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 147:
-      YughWarn("EXITING");
       exit(js2int(argv[1]));
       break;
     case 148:
@@ -1434,6 +1433,34 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 254:
       ret = warp_damp2js(warp_damp_make());
+      break;
+
+    case 255:
+      ret = str2js(VER);
+      break;
+
+    case 256:
+      ret = str2js(COM);
+      break;
+    case 257:
+      engine_start(argv[1]);
+      break;
+    case 258:
+      str = js2str(argv[1]);
+      ret = int2js(mkdir(str, 0777));
+      break;
+    case 259:
+      script_gc();
+      break;
+    case 260:
+      str = js2str(argv[1]);
+      d1 = script_compile(str, &plen);
+      ret = JS_NewArrayBufferCopy(js, d1, plen);
+      break;
+    case 261:
+      str = js2str(argv[1]);
+      d1 = slurp_file(str, &plen);
+      return script_run_bytecode(d1, plen);
       break;
   }
 
@@ -1816,7 +1843,6 @@ GETSET_PAIR(warp_gravity, planar_force, vec3)
 
 #define MIST_CGETSET_DEF(name, fgetter, fsetter) { name, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CGETSET, 0, .u = { .getset = { .get = { .getter = fgetter }, .set = { .setter = fsetter } } } }
 
-
 #define CGETSET_ADD(ID, ENTRY) MIST_CGETSET_DEF(#ENTRY, ID##_get_##ENTRY, ID##_set_##ENTRY)
 
 static const JSCFunctionListEntry js_warp_gravity_funcs [] = {
@@ -1872,6 +1898,10 @@ JSValue js_emitter_emit(JSContext *js, JSValueConst this, int argc, JSValue *arg
   emitter_emit(n, js2number(argv[0]));
   return JS_UNDEFINED;
 }
+
+static const JSCFunctionListEntry js_global_funcs[] = {
+  
+};
 
 static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, life),

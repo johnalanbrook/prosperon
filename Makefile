@@ -19,6 +19,7 @@ CC := $(notdir $(CC))
 
 DBG ?= 1
 OPT ?= 0
+LEAK ?= 0
 
 INFO :=
 LD = $(CC)
@@ -64,6 +65,8 @@ ifeq ($(LEAK),1)
   CPPFLAGS += -fsanitize=address
 endif
 
+CPPFLAGS += -DLEAK=$(LEAK)
+
 ifeq ($(OPT),small)
   CPPFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
   LDFLAGS += -flto
@@ -82,7 +85,7 @@ else
   endif
 endif
 
-CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t
+CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t
 
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
 # default, fast and medium available in game at runtime; best available in editor
@@ -177,7 +180,7 @@ WARNING_FLAGS = -Wno-incompatible-function-pointer-types
 NAME = primum$(EXT)
 SEM = 0.0.1
 COM != fossil describe
-VER = $(SEM)-$(COM)
+VER = $(SEM)
 
 LDLIBS := $(addprefix -l, $(LDLIBS))
 LDPATHS := $(addprefix -L, $(LDPATHS))
@@ -236,6 +239,7 @@ api.md: $(DOCMD)
 	@rm $^
 
 INPUT = editor DebugControls component.sprite component.polygon2d component.edge2d component.circle2d
+
 INPUTMD := $(addsuffix .input.md, $(INPUT))
 input.md: $(INPUTMD)
 	@(echo "# Input"; cat $^) > $@
@@ -251,7 +255,7 @@ input.md: $(INPUTMD)
 
 $(BIN)/libquickjs.a: $(QUICKJS_O)
 	make -C quickjs clean
-	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a libquickjs.lto.a HOST_CC=$(CC)
+	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a libquickjs.lto.a HOST_CC=$(CC) LEAK=$(LEAK)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 

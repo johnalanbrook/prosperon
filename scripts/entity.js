@@ -1,4 +1,4 @@
-function obj_unique_name(name, obj)
+prosp.obj_unique_name = function(name, obj)
 {
   name = name.replaceAll('.', '_');
   if (!(name in obj)) return name;
@@ -27,9 +27,13 @@ actor.spawn = function(script, config){
   this.padawans.push(padawan);
   return padawan;
 };
-actor.die = function(actor){
-  
+
+actor.spawn.doc = `Create a new actor, using this actor as the master, initializing it with 'script' and with data (as a JSON or Nota file) from 'config'.`;
+
+actor.die = function(e){
+  e.kill();
 };
+
 actor.timers = [];
 actor.kill = function(){
   this.timers.forEach(t => t.kill());
@@ -37,6 +41,8 @@ actor.kill = function(){
   this.padawans.forEach(p => p.kill());
   this.__dead__ = true;
 };
+
+actor.kill.doc = `Remove this actor and all its padawans from existence.`;
 
 actor.delay = function(fn, seconds) {
   var t = Object.create(timer);
@@ -54,6 +60,8 @@ actor.delay = function(fn, seconds) {
   this.timers.push(t);
   return function() { t.kill(); };
 };
+
+actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;
 
 actor.master = undefined;
 
@@ -682,7 +690,7 @@ var gameobject = {
   add_component(comp, data) {
     data ??= undefined;
     if (typeof comp.make !== 'function') return;
-    var name = obj_unique_name(comp.toString(), this);
+    var name = prosp.obj_unique_name(comp.toString(), this);
     this[name] = comp.make(this);
     this[name].comp = comp.toString();
     this.components[name] = this[name];
@@ -698,10 +706,6 @@ var gameobject = {
   },
 }
 Object.mixin(gameobject,gameobject_impl);
-
-gameobject.body = make_gameobject();
-cmd(113,gameobject.body, gameobject);
-Object.hide(gameobject, 'timescale');
 
 gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
@@ -865,14 +869,10 @@ prototypes.file2ur = function(file)
   return file;
 }
 
-/* Returns an ur, or makes it, for any given type of path
-   could be a file on a disk like ball/big.js
-   could be an ur path like ball.big
-*/
 prototypes.get_ur = function(name)
 {
   if (!name) {
-    Log.warn(`Can't get ur from an undefined.`);
+    console.error(`Can't get ur from an undefined.`);
     return;
   }
   var urpath = name;
@@ -884,12 +884,16 @@ prototypes.get_ur = function(name)
     if (ur)
       return ur;
     else {
-      Log.warn(`Could not find prototype using name ${name}.`);
+      console.warn(`Could not find prototype using name ${name}.`);
       return undefined;
     }
   } else
     return prototypes.ur[urpath];
 }
+
+prototypes.get_ur.doc = `Returns an ur, or makes it, for any given type of path
+   could be a file on a disk like ball/big.js
+   could be an ur path like ball.big`;
 
 prototypes.get_ur_file = function(path, ext)
 {
@@ -908,6 +912,8 @@ prototypes.generate_ur = function(path)
 
   ob = ob.map(function(path) { return path.set_ext(""); });
   ob = ob.map(function(path) { return path[0] !== '.' ? path : undefined; });
+  ob = ob.map(function(path) { return path[0] !== '_' ? path : undefined; });
+  ob = ob.filter(x => x !== undefined);
   ob.forEach(function(name) { prototypes.get_ur(name); });
 }
 

@@ -26,7 +26,7 @@ JSRuntime *rt = NULL;
 #ifndef NDEBUG
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT
 #else
-#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT// | JS_EVAL_FLAG_STRIP 
+#define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
 #endif
 
 static struct {
@@ -76,8 +76,11 @@ void script_stop()
   ffi_stop();
   for (int i = 0; i < shlen(jsstrs); i++)
     JS_FreeValue(js,jsstrs[i].value);
+
+#if LEAK
   JS_FreeContext(js);
   JS_FreeRuntime(rt);
+#endif
 }
 
 void script_gc()
@@ -134,14 +137,23 @@ void script_evalf(const char *format, ...)
   JS_FreeValue(js,obj);
 }
 
-uint8_t *compile_script(const char *file, size_t *len) {
-  char *script = slurp_text(file, len);
-  JSValue obj = JS_Eval(js, script, *len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
+uint8_t *script_compile(const char *file, size_t *len) {
+  size_t file_len;
+  char *script = slurp_text(file, &file_len);
+  JSValue obj = JS_Eval(js, script, file_len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
   free(script);
-  size_t out_len;
-  uint8_t *out = JS_WriteObject(js, &out_len, obj, JS_WRITE_OBJ_BYTECODE);
+  uint8_t *out = JS_WriteObject(js, len, obj, JS_WRITE_OBJ_BYTECODE);
   JS_FreeValue(js,obj);
   return out;
+}
+
+JSValue script_run_bytecode(uint8_t *code, size_t len)
+{
+  JSValue b = JS_ReadObject(js, code, len, JS_READ_OBJ_BYTECODE);
+  JSValue ret = JS_EvalFunction(js, b);
+  js_print_exception(ret);
+  JS_FreeValue(js,b);
+  JS_FreeValue(js,ret);
 }
 
 struct callee stacktrace_callee;
@@ -265,7 +277,7 @@ void script_call_fn_arg(JSValue fn, JSValue arg)
 
 void out_memusage(const char *file)
 {
-  FILE *f = fopen(file, "w");
+  FILE *f = fopen_mkdir(file, "w");
   JSMemoryUsage jsmem;
   JS_ComputeMemoryUsage(rt, &jsmem);
   JS_DumpMemoryUsage(f, &jsmem, rt);

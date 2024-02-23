@@ -876,6 +876,7 @@ editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
 editor.inputs['C-n'] = function() {
+  console.warn(`Spawning a new object on ${editor.edit_level.toString()}`);
   editor.edit_level.spawn();
 };
 editor.inputs['C-n'].doc = "Create an empty object.";

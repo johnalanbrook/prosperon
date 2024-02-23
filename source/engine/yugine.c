@@ -81,10 +81,6 @@ static int sim_play = SIM_PLAY;
 
 int editor_mode = 0;
 
-#define ENGINEINFO "Yugine version " VER ", " INFO " build.\nCopyright 2022-2024."
-
-const char *engine_info() { return ENGINEINFO; }
-
 static int argc;
 static char **args;
 
@@ -94,17 +90,18 @@ void seghandle()
   exit(1);
 }
 
-void c_init() {
+static JSValue c_init_fn;
 
+void c_init() {
   input_init();
   script_evalf("world_start();");
-  
   render_init();
   window_set_icon("icons/moon.gif");  
   window_resize(sapp_width(), sapp_height());
-  script_evalf("Game.init();");
-
   particle_init();
+
+  if (!JS_IsUndefined(c_init_fn))
+    script_call_sym(c_init_fn);
 }
 
 int frame_fps() { return 1.0/sapp_frame_duration(); }
@@ -158,7 +155,7 @@ void c_frame()
 
 void c_clean() {
   gif_rec_end("out.gif");
-  out_memusage("jsmem.txt");
+  out_memusage(".prosperon/jsmem.txt");
   script_stop();
   saudio_shutdown();
   sg_shutdown();
@@ -250,7 +247,7 @@ static sapp_desc start_desc = {
     .high_dpi = 0,
     .sample_count = 1,
     .fullscreen = 1,
-    .window_title = "Primum Machinam",
+    .window_title = "Prosperon",
     .enable_clipboard = false,
     .clipboard_size = 0,
     .enable_dragndrop = true,
@@ -303,14 +300,10 @@ sprintf(da.details, "COMPetitive");
 dam->update_activity(dam, &da, NULL, NULL);
 #endif
 
-  stm_setup(); /* time */
-  start_t = frame_t = stm_now();
-  physlast = updatelast = start_t;
-  sound_init();  
   resources_init();
-  phys2d_init();  
-  script_startup();
 
+  script_startup();
+  
   int argsize = 0;
   for (int i = 0; i < argc; i++) {
     argsize += strlen(argv[i]);
@@ -324,15 +317,27 @@ dam->update_activity(dam, &da, NULL, NULL);
     strcat(cmdstr, argv[i]);
     if (argc > i+1) strcat(cmdstr, " ");
   }
-
   script_evalf("cmd_args('%s');", cmdstr);
+
+  out_memusage(".prosperon/jsmem.txt");
+  script_stop();
+
+  return 0;
+}
+
+void engine_start(JSValue fn)
+{
+  c_init_fn = fn;
+  stm_setup(); /* time */
+  start_t = frame_t = stm_now();
+  physlast = updatelast = start_t;
+  sound_init();
+  phys2d_init();  
 
   start_desc.width = mainwin.width;
   start_desc.height = mainwin.height;
   start_desc.fullscreen = 0;
   sapp_run(&start_desc);
-
-  return 0;
 }
 
 double apptime() { return stm_sec(stm_diff(stm_now(), start_t)); }

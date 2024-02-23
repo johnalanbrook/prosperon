@@ -5,11 +5,19 @@ function load(file) {
   files[file] = modtime;
 }
 
+var cmd_args = function(cc)
+{
+  console.warn(cc);
+}
+
 load("scripts/base.js");
 load("scripts/std.js");
 //load("scripts/lunr.js");
-var lunrtxt = load("scripts/lunr.js");
-eval(lunrtxt);
+//var lunrtxt = load("scripts/lunr.js");
+//eval(lunrtxt);
+
+/* The global namespace file */
+var prosp = {};
 
 function run(file)
 {
@@ -23,11 +31,16 @@ function run(file)
   return cmd(117, file);
 }
 
+run.doc = `Load a given script file.`;
+load.doc = `Load a given script file.`;
+
 function run_env(file, env)
 {
   var script = IO.slurp(file);
   return function(){return eval(script);}.call(env);
 }
+
+run_env.doc = `Load a given script file, evaluating it in the context of the object 'env'.`;
 
 load("scripts/diff.js");
 Log.level = 1;
@@ -71,6 +84,62 @@ var Device = {
   macintosh: [512,342,9],
   gamegear: [160,144,3.2],
 };
+
+Device.doc = `Device resolutions given as [x,y,inches diagonal].`;
+
+var prosperon = {};
+prosperon.version = cmd(255);
+prosperon.revision = cmd(256);
+
+prosperon.semver = {};
+prosperon.semver.valid = function(v, range)
+{
+  v = v.split('.');
+  range = range.split('.');
+  if (v.length !== 3) return undefined;
+  if (range.length !== 3) return undefined;
+
+  if (range[0][0] === '^') {
+    range[0] = range[0].slice(1);
+    if (parseInt(v[0]) >= parseInt(range[0])) return true;
+    
+    return false;
+  }
+  
+  if (range[0] === '~') {
+    range[0] = range[0].slice(1);
+    for (var i = 0; i < 2; i++)
+      if (parseInt(v[i]) < parseInt(range[i])) return false;
+    return true;
+  }
+
+  return prosperon.semver.cmp(v.join('.'), range.join('.')) === 0;
+}
+
+prosperon.semver.cmp = function(v1, v2)
+{
+  var ver1 = v1.split('.');
+  var ver2 = v2.split('.');
+
+  for (var i = 0; i < 3; i++) {
+    var n1 = parseInt(ver1[i]);
+    var n2 = parseInt(ver2[i]);
+    if (n1 > n2)
+      return 1;
+    else if (n1 < n2)
+      return -1;
+  }
+  
+  return 0;
+}
+
+prosperon.semver.doc = "Functions for semantic versioning numbers. Semantic versioning is given as a triple digit number, as MAJOR.MINOR.PATCH.";
+prosperon.semver.cmp.doc = "Compare two semantic version numbers, given like X.X.X.";
+prosperon.semver.valid.doc = `Test if semantic version v is valid, given a range.
+Range is given by a semantic versioning number, prefixed with nothing, a ~, or a ^.
+~ means that MAJOR and MINOR must match exactly, but any PATCH greater or equal is valid.
+^ means that MAJOR must match exactly, but any MINOR and PATCH greater or equal is valid.`;
+
 
 load("scripts/gui.js");
 
@@ -253,8 +322,6 @@ var Event = {
   },
 };
 
-Event.observe('quit', undefined, function() { Primum.kill(); });
-
 var Window = {
   fullscreen(f) { cmd(145, f); },
   set width(w) { cmd(125, w); },
@@ -411,21 +478,13 @@ Spline.bezier_is_handle = function(points, i) { return !Spline.bezier_is_node(po
 load("scripts/components.js");
 
 var Game = {
-  init() {
-    if (!Game.edit) {
-      load("config.js");
-      load("game.js");
-    }
-    else {
-      load("scripts/editor.js");
-      load("editorconfig.js");
-      editor.enter_editor();
-    }
+  engine_start(fn) {
+    cmd(257, fn);
+    Sound.bus.master = cmd(180);
+    Sound.master = Sound.bus.master;    
   },
 
   native: Device.pc,
-
-  edit: true,
 
   object_count() {
     return cmd(214);
@@ -476,6 +535,9 @@ var Game = {
   },
 };
 
+Game.gc = function() { cmd(259); }
+Game.gc.doc = "Force the garbage collector to run.";
+
 Game.doc = {};
 Game.doc.object = "Returns the entity belonging to a given id.";
 Game.doc.quit = "Immediately quit the game.";
@@ -511,7 +573,11 @@ function world_start() {
   Primum.ur = "Primum";
   Primum.kill = function() { this.clear(); };
   Primum.phys = 2;
+  
   gameobject.level = Primum;
+  gameobject.body = make_gameobject();
+  cmd(113,gameobject.body, gameobject);
+  Object.hide(gameobject, 'timescale');
 }
 
 load("scripts/physics.js");
@@ -525,8 +591,3 @@ Game.view_camera = function(cam)
 Window.name = "Prosperon (V0.1)";
 Window.width = 1280;
 Window.height = 720;
-
-var Asset = {};
-Asset.doc = {
-  doc: "Functions to manage the loading and unloading of assets, like sounds and images."
-};

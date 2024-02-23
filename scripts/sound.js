@@ -77,8 +77,6 @@ var DSP = {
   },
 };
 
-Sound.bus.master = cmd(180);
-Sound.master = Sound.bus.master;
 
 Sound.play.doc = "Play the given file once.";
 Sound.doc = {};

@@ -1,15 +1,22 @@
 /* All draw in screen space */
 var Shape = {
-  circle(pos, radius, color) { cmd(115, pos, radius, color); },
-  
   point(pos,size,color) {
     color ??= Color.blue;
     Shape.circle(pos,size,color);
   },
 
+  line(points, color, thickness) {
+    thickness ??= 1;
+    color ??= Color.white;
+    cmd(83, points, color, thickness);
+  },
+
+  poly(points, color) { cmd_points(0,points,color); },
+
+  circle(pos, radius, color) { cmd(115, pos, radius, color); },
+
   /* size here is arm length - size of 2 is 4 height total */
-  cross(pos, size, color, angle) {
-    angle ??= 0;
+  cross(pos, size, color) {
     color ??= Color.red;
     var a = [
       pos.add([0,size]),
@@ -42,8 +49,6 @@ var Shape = {
     Shape.line(wing1,color);
     Shape.line(wing2,color);
   },
-  
-  poly(points, color) { cmd_points(0,points,color); },
 
   rectangle(lowerleft, upperright, color) {
     var pos = lowerleft.add(upperright).map(x=>x/2);
@@ -56,17 +61,16 @@ var Shape = {
     cmd(53, pos, wh, color);
   },
 
-  line(points, color, type, thickness) {
-    thickness ??= 1;
-    type ??= 0;
-    color ??= Color.white;
-    
-    switch (type) {
-      case 0:
-        cmd(83, points, color, thickness);
-    }
-  },
 };
+
+Shape.doc = "Draw shapes in screen space.";
+Shape.circle.doc = "Draw a circle at pos, with a given radius and color.";
+Shape.cross.doc = "Draw a cross centered at pos, with arm length size.";
+Shape.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
+Shape.poly.doc = "Draw a concave polygon from a set of points.";
+Shape.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
+Shape.box.doc = "Draw a box centered at pos, with width and height in the tuple wh.";
+Shape.line.doc = "Draw a line from a set of points, and a given thickness.";
 
 var Debug = {
   fn_break(fn, obj) {
@@ -352,11 +356,36 @@ console.clear = function()
   cmd(146);
 }
 
+console.assert = function(assertion, msg, objs)
+{
+  if (!assertion) {
+    console.error(msg);
+    console.stack();
+  }
+}
+
+var say = function(msg) {
+  console.say(msg);
+}
+
+say.doc = "Print to std out with an appended newline.";
+
+var gist = function(o)
+{
+  if (typeof o === 'object') return json.encode(o,null,1);
+  if (typeof o === 'string') return o;
+  return o.toString();
+}
+gist.doc = "Return the best string gist of an object.";
+
 var API = {};
 API.doc_entry = function(obj, key)
 {
-  var d = obj.doc;
-  var doc = "";
+  if (typeof key !== 'string') {
+    console.warn("Cannot print a key that isn't a string.");
+    return undefined;
+  }
+  
   var title = key;
   
   var o = obj[key];
@@ -364,23 +393,23 @@ API.doc_entry = function(obj, key)
     o = obj.impl[key];
 
   var t = typeof o;
-  if (t === 'object' && Array.isArray(o)) t = 'array';
-
-  if (t === 'function') {
+  if (Array.isArray(o)) t = "array";
+  else if (t === 'function') {
     title = o.toString().tofirst(')') + ")";
+    title = title.fromfirst('(');
+    title = key + "(" + title;
     if (o.doc) doc = o.doc;
     t = "";
-  }
-  if (t === 'undefined') t = "";
+  } else if (t === 'undefined') t = "";
 
-  if (t) t = "**" + t + "**";
+  if (t) t = "**" + t + "**\n";
 
-  if (!doc) {
-    if (d && d[key]) doc = d[key];
-    else return "";
-  }
+  var doc = "";
+  if (o.doc) doc = o.doc;
+  else if (obj.doc && obj.doc[key]) doc = obj.doc[key];
+  else if (Array.isArray(o)) doc = json.encode(o);
 
-  return `### \`${title}\`
+  return `## ${title}
 ${t}
 ${doc}
 `;
@@ -388,19 +417,38 @@ ${doc}
 
 API.print_doc =  function(name)
 {
-  var obj = eval(name);
-  if (!obj.doc) {
-    Log.warn(`Object has no doc sidecar.`);
-    return;
+  var obj = name;
+  if (typeof name === 'string') {
+    obj = eval(name);
+    if (!obj) {
+      console.warn(`Cannot print the API of '${name}', as it was not found.`);
+      return undefined;
+    }
+
+    obj = globalThis[name];
+  }
+    
+    obj = eval(name);
+
+  if (!Object.isObject(obj)) {
+    console.warn("Cannot print the API of something that isn't an object.");
+    return undefined;
   }
 
-  var mdoc = "# " + name + " API #\n";
+  if (!obj) {
+    console.warn(`Object '${name}' does not exist.`);
+    return;
+  }
+  
+  var mdoc = "# " + name + "\n";
   if (obj.doc?.doc) mdoc += obj.doc.doc + "\n";
   else if (typeof obj.doc === 'string') mdoc += obj.doc + "\n";
+  
   for (var key in obj) {
     if (key === 'doc') continue;
     if (key === 'toString') continue;
-    mdoc += API.doc_entry(obj, key);
+
+    mdoc += API.doc_entry(obj, key) + "\n";
   }
 
   return mdoc;

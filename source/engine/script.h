@@ -2,7 +2,6 @@
 #define SCRIPT_H
 
 #include "quickjs/quickjs.h"
-#include <chipmunk/chipmunk.h>
 #include <time.h>
 
 extern JSContext *js;
@@ -67,12 +66,15 @@ void call_nk_gui();
 void unregister_obj(JSValue obj);
 
 void send_signal(const char *signal, int argc, JSValue *argv);
+void script_gc();
 
 void register_physics(struct callee c);
 void call_physics(double dt);
 
 void register_draw(struct callee c);
 void call_draw();
-uint8_t *compile_script(const char *file, size_t *len);
+
+JSValue script_run_bytecode(uint8_t *code, size_t len);
+uint8_t *script_compile(const char *file, size_t *len);
 
 #endif

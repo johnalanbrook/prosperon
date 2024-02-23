@@ -21,7 +21,15 @@ warp_damp *warp_damp_make()
 }
 
 void warp_damp_free(warp_damp *d) { free(d); }
-void warp_gravity_free(warp_gravity *n) { free(n); }
+void warp_gravity_free(warp_gravity *n) {
+  for (int i = 0; i < arrlen(warps); i++) {
+    if (warps[i] == n) {
+      arrdelswap(warps, i);
+      break;
+    }
+  }
+  free(n);
+}
 
 HMM_Vec3 warp_damp_force(warp_damp *d, HMM_Vec3 pos, HMM_Vec3 vel)
 {

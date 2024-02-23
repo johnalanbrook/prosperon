@@ -77,11 +77,17 @@ The fundamental tool for building in Prosperon is the actor system. Actors run i
 
 The most masterful actor is the *Empyrean*. The first actor you create will have the Empyrean as its master. Subsequent actors can use any other actor as its master.
 
+| fn                 | description                                              |
+|--------------------+----------------------------------------------------------|
+| delay(fn, seconds) | Calls 'fn' after 'seconds' with the context of the actor |
+
 *** Actor Lifetime
 When an actor dies, all of the actors that have it as their master[fn::What a mouthful!] will die as well.
 
 *** Turns
 Actors get fragments of time called a *turn*. Actors which belong to different systems can have different lengths of turns.
+
+
 
 *** Actor files
 Actor files end with the extension *.jso*[fn::"Javascript object".]. They list a series of functions to call on a newly formed actor. Actors have a number of useful functions which are called as defined.
@@ -100,8 +106,8 @@ Create a new actor, then kill it.
 var act_die_call = function() {
   console.log(`Actor ${this.id} has died.`);
 }
-var act1 = Empyrean.new();
-var act2 = actor1.new();
+var act1 = Empyrean.spawn();
+var act2 = actor1.spawn();
 act1.stop = act_die_call;
 act2.stop = act_die_call;
 Empyrean.kill(); /* Error: The Empyrean cannot be killed */
@@ -119,8 +125,8 @@ this.stop = function() {
 #+end_src
 Now spawn two actors using it.
 #+begin_src
-var act1 = Empyrean.new("hello.jso");
-var act2 = act1.new("hello.jso");
+var act1 = Empyrean.spawn("hello.jso");
+var act2 = act1.spawn("hello.jso");
 #+end_src
 #+end_scholium
 
@@ -153,7 +159,7 @@ Entities can have *components*. Components are essentially javascript wrappers o
 #+begin_scholium
 For example, to render an image, set up a *sprite* component on an entity and point its path to an image on your harddrive.
 #+begin_src
-var ent = Empyrean.new();
+var ent = Empyrean.spawn();
 var spr = ent.add_component(component.sprite);
 spr.path = "image.png";
 #+end_src
@@ -249,10 +255,12 @@ Caution! Because the path is resolved during object load, you will need to fresh
 **** Links
 Links can be specified using the "#" sign. These are shortcuts you can specify for large projects. Specify them in the array ~Resources.links~.
 
-An example is of the form ~trees:/world/assets/nature/trees~. Links are called with ~#~, so you can now make a "fern" with ~Primum.new("#trees/fern.jso")~.
+An example is of the form ~trees:/world/assets/nature/trees~. Links are called with ~#~, so you can now make a "fern" with ~Primum.spawn("#trees/fern.jso")~.
 
 *** Ur auto creation
 Instead of coding all the ur type creation by hand, Prosperon can automatically search your project's folder and create the ur types for you. Any /[name].jso/ file is converted into an ur with the name. Any /[name].json/ file is then applied over it, should it exist. If there is a /.json/ file without a corresponding /.jso/, it can still be turned into an ur, if it is a valid ur format.
+
+Folders and files beginning with a '.' (hidden) or a '_' will be ignored for ur creation.
 
 The folder hierarchy of your file system determines the ur prototype chain. /.jso/ files inside of a folder will be subtyped off the folder ur name.
 
@@ -332,6 +340,9 @@ Game GUIs are written by registering an entity's *gui* property to a function.
 The GUI system which ships with Prosperon is called *MUM*. MUM is a declarative, immediate mode interface system. Immediate to eliminate the issue of data synchronization in the game.
 
 All GUI objects derive from MUM. MUM has a list of properties, used for rendering. Mum also has functions which cause drawing to appear on the screen.
+
+** Physics
+Prospeorn comes with the [[https://chipmunk-physics.net][Chipmunk]] physics engine built in. It is a fast, stable physics solution. All entities are assumed to be physics based objects, and components can be added to them to enable more physics features.
 
 * Editor Tour
 Prosperon's visual editor is an assistant for the creation and editing of your game entities and actors. In the editor, all ur types are loaded, and assets are constantly monitored for changes for hot reloading.

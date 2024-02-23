@@ -15,6 +15,8 @@ function buf2hex(buffer) { // buffer is an ArrayBuffer
 var OS = {};
 OS.cwd = function() { return cmd(144); }
 OS.exec = function(s) { cmd(143, s); }
+OS.cwd.doc = "Get the absolute path of the current working directory.";
+OS.exec.doc = "Run a command line instruction, and return when it finishes.";
 
 var Resources = {};
 Resources.images = ["png", "jpg", "jpeg", "gif"];
@@ -24,6 +26,7 @@ Resources.is_image = function(path) {
   var ext = path.ext();
   return Resources.images.any(x => x === ext);
 }
+
 Resources.is_sound = function(path) {
   var ext = path.ext();
   return Resources.sounds.any(x => x === ext);
@@ -91,13 +94,8 @@ var Log = {
     cmd(91,msg);
   },
 
-  say(msg) {
-    Log.write(msg + '\n');
-  },
-
-  repl(msg) {
-    cmd(142, msg + '\n');
-  },    
+  say(msg) { Log.write(msg + '\n'); },
+  repl(msg) { cmd(142, msg + '\n'); },    
 
   stack(skip = 0) {
     var err = new Error();
@@ -160,6 +158,12 @@ var IO = {
     paths = paths.filter(function(str) { return str.ext() === ext; });
     return paths;
   },
+  compile(script) {
+    return cmd(260, script);
+  },
+  run_bytecode(byte_file) {
+    return cmd(261, byte_file);
+  },
   ls() { return cmd(66); },
   /* Only works on text files currently */
   cp(f1, f2) {
@@ -170,6 +174,9 @@ var IO = {
   },
   rm(f) {
     return cmd(f);
+  },
+  mkdir(dir) {
+    cmd(258, dir);
   },
   glob(pat) {
     var paths = IO.ls();
@@ -187,7 +194,12 @@ IO.doc = {
   doc: "Functions for filesystem input/output commands.",
   exists: "Returns true if a file exists.",
   slurp: "Returns the contents of given file as a string.",
+  slurpbytes: "Return the contents of a file as a byte array.",
   slurpwrite: "Write a given string to a given file.",
+  cp: "Copy file f1 to f2.",
+  mv: "Rename file f1 to f2.",
+  rm: "Remove file f.",
+  mkdir: "Make dir.",
   ls: "List contents of the game directory.",
   glob: "Glob files in game directory.",
 };
@@ -214,6 +226,7 @@ Parser.replstrs = function(path)
 var Cmdline = {};
 
 Cmdline.cmds = [];
+Cmdline.orders = {};
 Cmdline.register_cmd = function(flag, fn, doc) {
   Cmdline.cmds.push({
     flag: flag,
@@ -222,10 +235,160 @@ Cmdline.register_cmd = function(flag, fn, doc) {
   });
 };
 
+Cmdline.register_order = function(order, fn, doc, usage) {
+  Cmdline.orders[order] = fn;
+  fn.doc = doc;
+  usage ??= "";
+  fn.usage = `${order} ${usage}`;
+}
+
+Cmdline.register_order("edit", function() {
+  if (!IO.exists(".prosperon")) {
+    IO.mkdir(".prosperon");
+    var project = {};
+    project.version = prosperon.version;
+    project.revision = prosperon.revision;
+    IO.slurpwrite(".prosperon/project", json.encode(project));
+  }
+  Game.engine_start(function() {
+    load("scripts/editor.js");
+    load("editorconfig.js");
+    editor.enter_editor();
+  });
+}, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");
+
+Cmdline.register_order("play", function() {
+  if (!IO.exists(".prosperon")) {
+    IO.mkdir(".prosperon");
+    var project = {};
+    project.version = prosperon.version;
+    project.revision = prosperon.revision;
+    IO.slurpwrite(".prosperon/project", json.encode(project));
+  }
+  Game.engine_start(function() {
+    load("config.js");
+    load("game.js");
+  });  
+}, "Play the game present in this folder.");
+
+Cmdline.register_order("pack", function(str) {
+  var packname;
+  if (str.length === 0)
+    packname = "test.cdb";
+  else if (str.length > 1) {
+    Log.warn("Give me a single filename for the pack.");
+    return;
+  } else
+    packname = str[0];
+
+  say(`Packing into ${packname}`);
+    
+  cmd(124, packname);
+}, "Pack the game into the given name.", "NAME");
+
+Cmdline.register_order("unpack", function() {
+  say("Unpacking not implemented.");
+}, "Unpack this binary's contents into this folder for editing.");
+
+Cmdline.register_order("build", function() {
+  say("Building not implemented.");
+}, "Build static assets for this project.");
+
+Cmdline.register_order("api", function(obj) {
+  if (!obj[0])
+    Cmdline.print_order("api");
+
+  load("scripts/editor.js");
+  var api = API.print_doc(obj[0]);
+  if (!api)
+    return;
+
+  say(api);
+}, "Print the API for an object as markdown. Give it a file to save the output to.", "OBJECT");
+
+Cmdline.register_order("compile", function(argv) {
+  for (var file of argv) {
+    var comp = IO.compile(file);
+    IO.slurpwrite(file + ".byte", comp);
+  }
+}, "Compile one or more provided files into bytecode.", "FILE ...");
+
+Cmdline.register_order("input", function(pawn) {
+  load("scripts/editor.js");
+  say(`## Input for ${pawn}`);
+  eval(`say(Input.print_md_kbm(${pawn}));`);
+}, "Print input documentation for a given object as markdown. Give it a file to save the output to", "OBJECT ?FILE?");
+
+Cmdline.register_order("run", function(script) {
+  script = script.join(" ");
+  if (!script) {
+    say("Need something to run.");
+    return;
+  }
+  
+  if (IO.exists(script))
+    try {
+      if (script.endswith(".byte"))
+        cmd(261, script);
+      else
+        run(script);
+    } catch(e) { }
+  else {
+    var ret = eval(script);
+    if (ret) say(ret);
+  }
+}, "Run a given script. SCRIPT can be the script itself, or a file containing the script", "SCRIPT");
+
+Cmdline.print_order = function(fn)
+{
+  if (typeof fn === 'string')
+    fn = Cmdline.orders[fn];
+    
+  if (!fn) return;
+  say(`Usage: prosperon ${fn.usage}`);
+  say(fn.doc);
+}
+
+Cmdline.register_order("help", function(order) {
+  
+  if (!Object.empty(order)) {
+    var orfn = Cmdline.orders[order];
+    
+    if (!orfn) {
+      console.warn(`No command named ${order}.`);
+      return;
+    }
+
+    Cmdline.print_order(orfn);
+    return;
+  }
+  
+  Cmdline.print_order("help");
+
+  for (var cmd of Object.keys(Cmdline.orders).sort())
+    say(cmd);
+
+  Cmdline.orders.version();
+}, "Give help with a specific command.", "TOPIC");
+
+Cmdline.register_order("version", function() {
+  say(`Prosperon version ${prosperon.version} [${prosperon.revision}]`);
+}, "Display Prosperon info.");
+
 function cmd_args(cmdargs)
 {
   var play = false;
-  var cmds = cmdargs.split(" ");
+  var cmds = cmdargs.split(/\s+/).slice(1);
+
+  if (cmds.length === 0)
+    cmds[0] = "play";
+  else if (!Cmdline.orders[cmds[0]]) {
+    console.warn(`Command ${cmds[0]} not found.`);
+    return;
+  }
+  
+  Cmdline.orders[cmds[0]](cmds.slice(1));
+  return;
 
   for (var i = 1; i < cmds.length; i++) {
     if (cmds[i][0] !== '-') {
@@ -256,51 +419,10 @@ STD.exit = function(status)
 {
   cmd(147,status);
 }
-Cmdline.register_cmd("p", function() { Game.edit = false; }, "Launch engine in play mode.");
-Cmdline.register_cmd("v", function() { Log.say(cmd(120)); STD.exit(0);}, "Display engine info.");
+
 Cmdline.register_cmd("l", function(n) {
   Log.level = n;
 }, "Set log level.");
-Cmdline.register_cmd("h", function(str) {
-  for (var cmd of Cmdline.cmds) {
-    Log.say(`-${cmd.flag}:  ${cmd.doc}`);
-  }
-  STD.exit(0);
-},
-"Help.");
-Cmdline.register_cmd("b", function(str) {
-  var packname;
-  if (str.length === 0)
-    packname = "test.cdb";
-  else if (str.length > 1) {
-    Log.warn("Give me a single filename for the pack.");
-    Game.quit();
-  } else
-    packname = str[0];
-
-  Log.warn(`Packing into ${packname}`);
-    
-  cmd(124, packname);
-  STD.exit(0);
-}, "Pack the game into the given name.");
-
-Cmdline.register_cmd("e", function(pawn) {
-  load("scripts/editor.js");
-  Log.write(`## Input for ${pawn}\n`);
-  eval(`Log.write(Input.print_md_kbm(${pawn}));`);
-  STD.exit(0);
-}, "Print input documentation for a given object in a markdown table." );
-
-Cmdline.register_cmd("t", function() {
-  Log.warn("Testing not implemented yet.");
-  STD.exit(0);  
-}, "Test suite.");
-
-Cmdline.register_cmd("d", function(obj) {
-  load("scripts/editor.js");
-  Log.say(API.print_doc(obj[0]));
-  STD.exit(0);
-}, "Print documentation for an object.");
 
 Cmdline.register_cmd("cjson", function(json) {
   var f = json[0];
@@ -329,9 +451,3 @@ Cmdline.register_cmd("cjson", function(json) {
 
   STD.exit(0);
 }, "Clean up a jso file.");
-
-Cmdline.register_cmd("r", function(script) {
-  try { run(script); } catch(e) { STD.exit(0); }
-  
-  STD.exit(0);
-}, "Run a script.");
