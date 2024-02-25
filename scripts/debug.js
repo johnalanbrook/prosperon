@@ -1,8 +1,8 @@
 /* All draw in screen space */
-var Shape = {
+Object.assign(render, {
   point(pos,size,color) {
     color ??= Color.blue;
-    Shape.circle(pos,size,color);
+    render.circle(pos,size,color);
   },
 
   line(points, color, thickness) {
@@ -27,8 +27,8 @@ var Shape = {
       pos.add([-size,0])
     ];
     
-    Shape.line(a,color);
-    Shape.line(b,color);
+    render.line(a,color);
+    render.line(b,color);
   },
   
   arrow(start, end, color, wingspan, wingangle) {
@@ -45,15 +45,15 @@ var Shape = {
       Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
       end
     ];
-    Shape.line([start,end],color);
-    Shape.line(wing1,color);
-    Shape.line(wing2,color);
+    render.line([start,end],color);
+    render.line(wing1,color);
+    render.line(wing2,color);
   },
 
   rectangle(lowerleft, upperright, color) {
     var pos = lowerleft.add(upperright).map(x=>x/2);
     var wh = [upperright.x-lowerleft.x,upperright.y-lowerleft.y];
-    Shape.box(pos,wh,color);
+    render.box(pos,wh,color);
   },
   
   box(pos, wh, color) {
@@ -61,16 +61,16 @@ var Shape = {
     cmd(53, pos, wh, color);
   },
 
-};
+});
 
-Shape.doc = "Draw shapes in screen space.";
-Shape.circle.doc = "Draw a circle at pos, with a given radius and color.";
-Shape.cross.doc = "Draw a cross centered at pos, with arm length size.";
-Shape.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
-Shape.poly.doc = "Draw a concave polygon from a set of points.";
-Shape.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
-Shape.box.doc = "Draw a box centered at pos, with width and height in the tuple wh.";
-Shape.line.doc = "Draw a line from a set of points, and a given thickness.";
+render.doc = "Draw shapes in screen space.";
+render.circle.doc = "Draw a circle at pos, with a given radius and color.";
+render.cross.doc = "Draw a cross centered at pos, with arm length size.";
+render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
+render.poly.doc = "Draw a concave polygon from a set of points.";
+render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
+render.box.doc = "Draw a box centered at pos, with width and height in the tuple wh.";
+render.line.doc = "Draw a line from a set of points, and a given thickness.";
 
 var Debug = {
   fn_break(fn, obj) {
@@ -98,7 +98,7 @@ var Debug = {
 
   numbered_point(pos, n, color) {
     color ??= Color.white;
-    Shape.point(pos, 3, color);
+    render.point(pos, 3, color);
     GUI.text(n, pos.add([0,4]), 1, color);
   },
 
@@ -127,12 +127,12 @@ var Debug = {
     if (this.draw_gizmos)
       Game.all_objects(function(x) {
         if (!x.icon) return;
-        GUI.image(x.icon, world2screen(x.pos));
+        GUI.image(x.icon, Window.world2screen(x.pos));
       });
 
     if (this.draw_names)
       Game.all_objects(function(x) {
-        GUI.text(x, world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
+        GUI.text(x, Window.world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
       });
 
     if (Debug.Options.gif.rec) {
@@ -173,7 +173,7 @@ var Gizmos = {
   },
 };
 
-var Profile = {
+Object.assign(profile, {
   tick_now() { return cmd(127); },
   ns(ticks) { return cmd(128, ticks); },
   us(ticks) { return cmd(129, ticks); },
@@ -197,23 +197,23 @@ var Profile = {
   cpu(fn, times, q) {
     times ??= 1;
     q ??= "unnamed";
-    var start = Profile.tick_now();
+    var start = profile.tick_now();
     for (var i = 0; i < times; i++)
       fn();
       
-    var elapsed = Profile.tick_now() - start;
-    var avgt = Profile.best_t(elapsed/times);
-    var totalt = Profile.best_t(elapsed);
+    var elapsed = profile.tick_now() - start;
+    var avgt = profile.best_t(elapsed/times);
+    var totalt = profile.best_t(elapsed);
 
-    console.say(`Profile [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
+    console.say(`profile [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
   },
 
   get fps() { return sys_cmd(8); },
-};
+});
 
 
 
-Profile.test = {
+profile.test = {
   barecall() { profile(0); },
   unpack_num(n) { profile(1,n); },
   unpack_array(n) { profile(2,n); },
@@ -224,9 +224,9 @@ Profile.test = {
   call_fn_n(fn1, n) { profile(7,fn1,n,fn2); },
 };
 
-Profile.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
+profile.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 
-Profile.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
+profile.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
 
 /* These controls are available during editing, and during play of debug builds */
 var DebugControls = {};
@@ -292,13 +292,11 @@ DebugControls.inputs.f9 = function() {
 DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
 DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
 DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; };
-DebugControls.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; Log.warn("GUI toggle debug");};
+DebugControls.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
 DebugControls.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
 
-DebugControls.inputs['M-1'] = Render.normal;
-Render.normal.doc = "Render mode for enabling all shaders and lighting effects.";
-DebugControls.inputs['M-2'] = Render.wireframe;
-Render.wireframe.doc = "Render mode to see wireframes of all models.";
+DebugControls.inputs['M-1'] = render.normal;
+DebugControls.inputs['M-2'] = render.wireframe;
 
 DebugControls.inputs['C-M-f'] = function() {};
 DebugControls.inputs['C-M-f'].doc = "Enter camera fly mode.";
@@ -327,7 +325,7 @@ var Time = {
 
   play() {
     if (!Time.stash) {
-      Log.warn("Tried to resume time without calling Time.pause first.");
+      console.warn("Tried to resume time without calling Time.pause first.");
       return;
     }
     Time.timescale = Time.stash;
@@ -346,40 +344,8 @@ Time.doc.play = "Resume the game after using Time.pause.";
 Player.players[0].control(DebugControls);
 Register.gui.register(Debug.draw, Debug);
 
-var console = Object.create(Log);
-console.log = function(str)
-{
-  console.say(time.text(time.now(), 'yyyy-m-dd hh:nn:ss') + "  " + str);
-}
-console.clear = function()
-{
-  cmd(146);
-}
-
-console.assert = function(assertion, msg, objs)
-{
-  if (!assertion) {
-    console.error(msg);
-    console.stack();
-  }
-}
-
-var say = function(msg) {
-  console.say(msg);
-}
-
-say.doc = "Print to std out with an appended newline.";
-
-var gist = function(o)
-{
-  if (typeof o === 'object') return json.encode(o,null,1);
-  if (typeof o === 'string') return o;
-  return o.toString();
-}
-gist.doc = "Return the best string gist of an object.";
-
-var API = {};
-API.doc_entry = function(obj, key)
+Debug.api = {};
+Debug.api.doc_entry = function(obj, key)
 {
   if (typeof key !== 'string') {
     console.warn("Cannot print a key that isn't a string.");
@@ -415,7 +381,7 @@ ${doc}
 `;
 }
 
-API.print_doc =  function(name)
+Debug.api.print_doc =  function(name)
 {
   var obj = name;
   if (typeof name === 'string') {
@@ -448,7 +414,7 @@ API.print_doc =  function(name)
     if (key === 'doc') continue;
     if (key === 'toString') continue;
 
-    mdoc += API.doc_entry(obj, key) + "\n";
+    mdoc += Debug.api.doc_entry(obj, key) + "\n";
   }
 
   return mdoc;

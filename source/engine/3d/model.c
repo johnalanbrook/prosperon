@@ -421,3 +421,12 @@ void free_drawmodel(struct drawmodel *dm) {
   free(dm);
 }
 
+void material_free(material *mat)
+{
+
+}
+
+void mesh_free(mesh *m)
+{
+
+}

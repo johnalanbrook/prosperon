@@ -189,8 +189,7 @@ void input_dropped_files(int n)
   argv[0] = jstr("emacs");
   argv[1] = jstr("drop");
   argv[2] = jstr("pressed");
-  char *path = rebase_path(sapp_get_dropped_file_path(0));
-  argv[3] = str2js(path+1);
+  argv[3] = str2js(sapp_get_dropped_file_path(0));
   script_callee(pawn_callee, 4, argv);
   JS_FreeValue(js,argv[3]);
 }
@@ -322,6 +321,15 @@ int key_is_num(int key) {
 
 void cursor_hide() { sapp_show_mouse(0); }
 void cursor_show() { sapp_show_mouse(1); }
+
+void cursor_img(const char *path)
+{
+/*  NSString *str = [NSString stringWithUTF8String:path];
+  NSImage *img = [[NSImage alloc] initWithContentsOfFile:str];
+  NSCursor *custom = [[NSCursor alloc] initWithImage:img hotSpot:NSMakePoint(0,0)];
+  [custom set];
+*/
+}
 
 int action_down(int key) { return key_states[key] == INPUT_DOWN; }
 int action_up(int key) { return key_states[key] == INPUT_UP; }

@@ -1,20 +1,26 @@
-var Sound = {
+var audio = {};
+audio.sound = {
   bus: {},
   samplerate() { return cmd(198); },
   sounds: [], /* array of loaded sound files */
   play(file, bus) {
-    if (!IO.exists(file)) {
-      Log.error(`Cannot play sound ${file}: does not exist.`);
+    if (!io.exists(file)) {
+      console.error(`Cannot play sound ${file}: does not exist.`);
       return;
     }
-    var src = DSP.source(file);
-    bus ??= Sound.bus.master;
+    var src = audio.dsp.source(file);
+    bus ??= sound.bus.master;
 //    src.plugin(bus);
     return src;
   },
+
+  doc: {
+    play: "Play the given file once.",
+    volume: "Set the volume. 0 is no sound and 100 is loudest."
+  },
 };
 
-var DSP = {
+audio.dsp = {
   mix(to) {
     var n = cmd(181);
     if (to) n.plugin(to);
@@ -31,8 +37,8 @@ var DSP = {
   },
   allpass(secs, decay) {
     var composite = {};
-    var fwd = DSP.fwd_delay(secs,-decay);
-    var fbk = DSP.delay(secs,decay);
+    var fwd = audio.dsp.fwd_delay(secs,-decay);
+    var fbk = audio.dsp.delay(secs,decay);
     composite.id = fwd.id;
     composite.plugin = composite.plugin.bind(fbk);
     composite.unplug = dsp_node.unplug.bind(fbk);
@@ -77,12 +83,7 @@ var DSP = {
   },
 };
 
-
-Sound.play.doc = "Play the given file once.";
-Sound.doc = {};
-Sound.doc.volume = "Set the master volume. 0 is no sound and 100 is loudest.";
-
-DSP.doc = {
+audio.dsp.doc = {
   delay: "Delays the input by secs, multiplied by decay",
   fwd_delay: "Forward feedback delays the input by secs, multiplied by decay",
   allpass: "Composite node of a delay and fwd_delay",
@@ -105,10 +106,10 @@ Object.mixin(cmd(180).__proto__, {
   set volume(x) { this.gain = x; },
 });
 
-/*Object.mixin(DSP.source().__proto__, {
+/*Object.mixin(audio.dsp.source().__proto__, {
   frames() { return cmd(197,this); },
-  length() { return this.frames()/Sound.samplerate(); },
-  time() { return this.frame/Sound.samplerate(); },
+  length() { return this.frames()/sound.samplerate(); },
+  time() { return this.frame/sound.samplerate(); },
   pct() { return this.time()/this.length(); },
 });
 */

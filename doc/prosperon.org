@@ -41,14 +41,29 @@ Poke around the example projects. You will find it refreshingly straight forward
 * Engine Tour
 Prosperon is built in a code-first fashion.
 
-** QuickJS (Javascript)
+** Scripting
 The scripting language used in Prosperon is Javascript, with QuickJS. It is [[https://tc39.es/ecma262/2023/][ES2023]] compliant. It is fast, and has a number of features that make it well suited for a video game engine, like ref counting. Read more about it [[https://bellard.org/quickjs/][here]].
 
 #+begin_scholium
 Javascript is used here mostly to set up objects and tear them down. Although computationally expensive tasks can be done using QuickJS, Prosperon makes it easy to extend with raw C.
 #+end_scholium
 
-** Script entry points
+*** How Prosperon games are structued
+Prosperon games are structured into two types of source files:
+- scripts
+- actors
+
+When any source file is executed, it is executed in its own space. Global properties are accessible, but any declared variables and functions are not automatically added to the global space. To add obejcts to the global space, it must be explicitly done, by assigning them to ~global~ or ~globalThis~.
+
+#+begin_src
+global.hellofn = function() { say("Hello, world!"); }; // hellofn is now callable anywhere
+#+end_src
+
+When a *script* is loaded, its statements are executed in order, in the context of the containing source. The containing source is accessible via the ~$~ variable. When ~load~ is called, an optional object is permitted to be supplied as the ~$~. This makes writing scripts with mixin functionality simple.
+
+The parameter ~$$~ is given to a persistent object that is available whenever a script is executing, per script.
+
+*** Script entry points
 The first way you can customize Prosperon is by adding scripts to the folder you're running it from. Any file ending with *.js* is a *script* which can be ran by Prosperon.
 
 | script          | When called                                 |

@@ -1,49 +1,37 @@
 "use math";
-var files = {};
-function load(file) {
-   var modtime = cmd(0, file);
-  files[file] = modtime;
-}
+globalThis.global = globalThis;
 
-var cmd_args = function(cc)
+function eval_env(script, env)
 {
-  console.warn(cc);
+  env ??= {};
+//  script = `function() { ${script} }.call();`;
+//  return eval(script);
+  
+  return function(str) { return eval(str); }.call(env, script);
 }
+eval_env.dov = `Counterpart to /load_env/, but with a string.`;
+
+function load_env(file,env)
+{
+  env ??= global;
+  var script = io.slurp(file);
+  eval_env(script, env);
+//  cmd(16, file, env);
+//  var script = io.slurp(file);
+//  cmd(123, script, env, file);
+}
+load_env.doc = `Load a given file with 'env' as **this**. Does not add to the global namespace.`;
+
+function load(file) { return load_env(file);}
+load.doc = `Load a given script file into the global namespace.`;
+
 
 load("scripts/base.js");
 load("scripts/std.js");
-//load("scripts/lunr.js");
-//var lunrtxt = load("scripts/lunr.js");
-//eval(lunrtxt);
 
-/* The global namespace file */
-var prosp = {};
-
-function run(file)
-{
-  var modtime = cmd(119, file);
-  if (modtime === 0) {
-    Log.stack();
-    return false;
-  }
-
-  files[file] = modtime;
-  return cmd(117, file);
-}
-
-run.doc = `Load a given script file.`;
-load.doc = `Load a given script file.`;
-
-function run_env(file, env)
-{
-  var script = IO.slurp(file);
-  return function(){return eval(script);}.call(env);
-}
-
-run_env.doc = `Load a given script file, evaluating it in the context of the object 'env'.`;
 
 load("scripts/diff.js");
-Log.level = 1;
+console.level = 1;
 
 load("scripts/color.js");
 
@@ -51,41 +39,6 @@ function bb2wh(bb) {
   return [bb.r-bb.l, bb.t-bb.b];
 };
 
-var Device = {
-  pc: [1920,1080],
-  macbook_m2: [2560,1664, 13.6],
-  ds_top: [400,240, 3.53],
-  ds_bottom: [320,240, 3.02],
-  playdate: [400,240,2.7],
-  switch: [1280,720, 6.2],
-  switch_lite: [1280,720,5.5],
-  switch_oled: [1280,720,7],
-  dsi: [256,192,3.268],
-  ds: [256,192, 3],
-  dsixl: [256,192,4.2],
-  ipad_air_m2: [2360,1640, 11.97],
-  iphone_se: [1334, 750, 4.7],
-  iphone_12_pro: [2532,1170,6.06],
-  iphone_15: [2556,1179,6.1],
-  gba: [240,160,2.9],
-  gameboy: [160,144,2.48],
-  gbc: [160,144,2.28],
-  steamdeck: [1280,800,7],
-  vita: [960,544,5],
-  psp: [480,272,4.3],
-  imac_m3: [4480,2520,23.5],
-  macbook_pro_m3: [3024,1964, 14.2],
-  ps1: [320,240,5],
-  ps2: [640,480],
-  snes: [256,224],
-  gamecube: [640,480],
-  n64: [320,240],
-  c64: [320,200],
-  macintosh: [512,342,9],
-  gamegear: [160,144,3.2],
-};
-
-Device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 
 var prosperon = {};
 prosperon.version = cmd(255);
@@ -169,33 +122,59 @@ var timer = {
 
 load("scripts/tween.js");
 
-var Render = {
+var render = {
   normal() { cmd(67);},
   wireframe() { cmd(68); },
-
-  pass() {
-  
-  },
+  pass() { },
 };
 
-Render.doc = {
+render.doc = {
   doc: "Functions for rendering modes.",
   normal: "Final render with all lighting.",
   wireframe: "Show only wireframes of models."
 };
+
+render.device = {
+  pc: [1920,1080],
+  macbook_m2: [2560,1664, 13.6],
+  ds_top: [400,240, 3.53],
+  ds_bottom: [320,240, 3.02],
+  playdate: [400,240,2.7],
+  switch: [1280,720, 6.2],
+  switch_lite: [1280,720,5.5],
+  switch_oled: [1280,720,7],
+  dsi: [256,192,3.268],
+  ds: [256,192, 3],
+  dsixl: [256,192,4.2],
+  ipad_air_m2: [2360,1640, 11.97],
+  iphone_se: [1334, 750, 4.7],
+  iphone_12_pro: [2532,1170,6.06],
+  iphone_15: [2556,1179,6.1],
+  gba: [240,160,2.9],
+  gameboy: [160,144,2.48],
+  gbc: [160,144,2.28],
+  steamdeck: [1280,800,7],
+  vita: [960,544,5],
+  psp: [480,272,4.3],
+  imac_m3: [4480,2520,23.5],
+  macbook_pro_m3: [3024,1964, 14.2],
+  ps1: [320,240,5],
+  ps2: [640,480],
+  snes: [256,224],
+  gamecube: [640,480],
+  n64: [320,240],
+  c64: [320,200],
+  macintosh: [512,342,9],
+  gamegear: [160,144,3.2],
+};
+
+render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 
 load("scripts/physics.js");
 load("scripts/input.js");
 load("scripts/sound.js");
 load("scripts/ai.js");
 load("scripts/geometry.js");
-
-function screen2world(screenpos) {
-  if (Game.camera)
-    return Game.camera.view2world(screenpos);
-  return screenpos;
-}
-function world2screen(worldpos) { return Game.camera.world2view(worldpos); }
 
 var Register = {
   kbm_input(mode, btn, state, ...args) {
@@ -228,7 +207,7 @@ var Register = {
     var rawfn = `gamepad_${btn}_${statestr}`;
     player.input(rawfn, ...args);
 
-    Action.actions.forEach(x => {
+    input.action.actions.forEach(x => {
       if (x.inputs.includes(btn))
         player.input(`action_${x.name}_${statestr}`, ...args);
     });
@@ -284,19 +263,9 @@ register(7, Register.kbm_input, Register);
 Register.add_cb(8, "gamepad_input");
 Register.add_cb(10, "draw");
 
-register(9, Log.stack, this);
+register(9, console.stack, this);
 
 Register.gamepad_playermap[0] = Player.players[0];
-
-var Signal = {
-  obj_begin(fn, go) {
-    register_collide(0, fn, go.body);
-  },
-
-  obj_separate(fn, go) {
-    register_collide(3,fn, go.body);
-  },
-};
 
 var Event = {
   events: {},
@@ -329,7 +298,7 @@ var Window = {
   get width() { return cmd(48); },
   get height() { return cmd(49); },
   get dimensions() { return [this.width, this.height]; },
-  set name(str) { cmd(134, str); },
+  title(str) { cmd(134, str); },
   boundingbox() {
     return {
       t: Window.height,
@@ -340,141 +309,18 @@ var Window = {
   },
 };
 
+Window.screen2world = function(screenpos) {
+  if (Game.camera)
+    return Game.camera.view2world(screenpos);
+  return screenpos;
+}
+Window.world2screen = function(worldpos) { return Game.camera.world2view(worldpos); }
+
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
 
-function reloadfiles() {
-  Object.keys(files).forEach(function (x) { load(x); });
-}
-
 load("scripts/debug.js");
-
-/*
-function Color(from) {
-  var color = Object.create(Array);
-  Object.defineProperty(color, 'r', setelem(0));
-  Object.defineProperty(color, 'g', setelem(1));
-  Object.defineProperty(color, 'b', setelem(2));
-  Object.defineProperty(color, 'a', setelem(3));
-
-  color.a = color.g = color.b = color.a = 1;
-  Object.assign(color, from);
-
-  return color;
-};
-*/
-
-var Spline = {};
-Spline.sample_angle = function(type, points, angle) {
-  return spline_cmd(0, type, points[0].length, points, angle);
-}
-
-Spline.bezier_loop = function(cp)
-{
-  cp.push(Vector.reflect_point(cp.at(-2),cp.at(-1)));
-  cp.push(Vector.reflect_point(cp[1],cp[0]));
-  cp.push(cp[0].slice());
-  return cp;
-}
-
-Spline.bezier_node_count = function(cp)
-{
-  if (cp.length === 4) return 2;
-  return 2 + (cp.length-4)/3;
-}
-
-Spline.is_bezier = function(t) { return t === Spline.type.bezier; }
-Spline.is_catmull = function(t) { return t === Spline.type.catmull; }
-
-Spline.bezier2catmull = function(b)
-{
-  var c = [];
-  for (var i = 0; i < b.length; i += 3)
-    c.push(b[i]);
-  return c;
-}
-
-Spline.catmull2bezier = function(c)
-{
-  var b = [];
-  for (var i = 1; i < c.length-2; i++) {
-    b.push(c[i].slice());
-    b.push(c[i+1].sub(c[i-1]).scale(0.25).add(c[i]));
-    b.push(c[i].sub(c[i+2]).scale(0.25).add(c[i+1]));
-  }
-  b.push(c[c.length-2]);
-  return b;
-}
-
-Spline.catmull_loop = function(cp)
-{
-  cp = cp.slice();
-  cp.unshift(cp.last());
-  cp.push(cp[1]);
-  cp.push(cp[2]);
-  return cp;
-}
-
-Spline.catmull_caps = function(cp)
-{
-  cp = cp.slice();
-  cp.unshift(cp[0].sub(cp[1]).add(cp[0]));
-  cp.push(cp.last().sub(cp.at(-2).add(cp.last())));
-  return cp;
-}
-
-Spline.catmull2bezier.doc = "Given a set of control points C for a camtull-rom type curve, return a set of cubic bezier points to give the same curve."
-
-Spline.type = {
-  catmull: 0,
-  bezier: 1,
-  bspline: 2,
-  cubichermite: 3
-};
-
-Spline.bezier_tan_partner = function(points, i)
-{
-  if (i%3 === 0) return undefined;
-  var partner_i = (i%3) === 2 ? i-1 : i+1;
-  return points[i];
-}
-
-Spline.bezier_cp_mirror = function(points, i)
-{
-  if (i%3 === 0) return undefined;
-  var partner_i = (i%3) === 2 ? i+2 : i-2;
-  var node_i = (i%3) === 2 ? i+1 : i-1;
-  if (partner_i >= points.length || node_i >= points.length) return;
-  points[partner_i] = points[node_i].sub(points[i]).add(points[node_i]);
-}
-
-Spline.bezier_point_handles = function(points, i)
-{
-  if (!Spline.bezier_is_node(points,i)) return [];
-  var a = i-1;
-  var b = i+1;
-  var c = []
-  if (a > 0)
-    c.push(a);
-
-  if (b < points.length)
-    c.push(b);
-
-  return c;
-}
-
-Spline.bezier_nodes = function(points)
-{
-  var c = [];
-  for (var i = 0; i < points.length; i+=3)
-    c.push(points[i].slice());
-
-  return c;
-}
-
-Spline.bezier_is_node = function(points, i) { return i%3 === 0; }
-Spline.bezier_is_handle = function(points, i) { return !Spline.bezier_is_node(points,i); }
-
+load('scripts/spline.js');
 load("scripts/components.js");
 
 var Game = {
@@ -484,7 +330,7 @@ var Game = {
     Sound.master = Sound.bus.master;    
   },
 
-  native: Device.pc,
+  native: render.device.pc,
 
   object_count() {
     return cmd(214);
@@ -588,6 +434,6 @@ Game.view_camera = function(cam)
   cmd(61, Game.camera.body);
 }
 
-Window.name = "Prosperon (V0.1)";
+Window.title(`Prosperon v${prosperon.version}`);
 Window.width = 1280;
 Window.height = 720;

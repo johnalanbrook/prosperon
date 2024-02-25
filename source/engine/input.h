@@ -18,6 +18,7 @@ void input_poll(double wait);
 
 void cursor_hide();
 void cursor_show();
+void cursor_img(const char *path);
 void set_mouse_mode(int mousemode);
 
 void input_mouse(int btn, int state, uint32_t mod);

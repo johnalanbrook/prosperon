@@ -1,4 +1,4 @@
-/* On collisions, entities are sent a 'hit' object, which looks like this: */
+/* On collisions, entities are sent a 'hit' object, which looks like this: 
 var HIT = {
   normal: "The normal of the collision point.",
   hit: "The gameobject of the object that collided.",
@@ -8,13 +8,13 @@ var HIT = {
   depth: "Depth of the contact.",
 };
 
-var Physics = {
+*/
+
+var physics = {
   dynamic: 0,
   kinematic: 1,
   static: 2,
-};
-
-var physics = {
+  
   pos_query(pos, give) {
     give ??= 25;
     return cmd(44, pos, give);
@@ -43,7 +43,7 @@ physics.doc.pos_query = "Returns any object colliding with the given point.";
 physics.doc.box_query = "Returns an array of body ids that collide with a given box.";
 physics.doc.box_point_query = "Returns the subset of points from a given list that are inside a given box.";
 
-var Collision = {
+physics.collision = {
   types: {},
   num: 32,
   set_collide(a, b, x) {
@@ -57,17 +57,17 @@ var Collision = {
   },
 };
 
-for (var i = 0; i < Collision.num; i++) {
-  Collision.types[i] = [];
-  for (var j = 0; j < Collision.num; j++)
-    Collision.types[i][j] = false;
+for (var i = 0; i < physics.collision.num; i++) {
+  physics.collision.types[i] = [];
+  for (var j = 0; j < physics.collision.num; j++)
+    physics.collision.types[i][j] = false;
 };
 
-Collision.sync();
+physics.collision.sync();
 
-var Warp = {};
-Warp.gravity = function() { return cmd(253); }
-Warp.damp = function() { return cmd(254); }
+physics.warp = {};
+physics.warp.gravity = function() { return cmd(253); }
+physics.warp.damp = function() { return cmd(254); }
 
-physics.gravity = Warp.gravity();
-physics.damp = Warp.damp();
+physics.gravity = physics.warp.gravity();
+physics.damp = physics.warp.damp();

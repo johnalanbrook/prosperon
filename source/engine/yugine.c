@@ -260,7 +260,7 @@ static sapp_desc start_desc = {
     .logger.func = sg_logging,
 };
 
-void app_name(const char *name) { start_desc.window_title = strdup(name); }
+void app_name(const char *name) { sapp_set_window_title(name); }
 
 int main(int argc, char **argv) {
 #ifndef NDEBUG

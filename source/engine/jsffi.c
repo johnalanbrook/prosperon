@@ -25,9 +25,17 @@
 #include <assert.h>
 #include "resources.h"
 #include <sokol/sokol_time.h>
+#include <sokol/sokol_app.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
+#include <limits.h>
+
+#if (defined(_WIN32) || defined(__WIN32__))
+#include <direct.h>
+#define mkdir(x,y) _mkdir(x)
+#endif
 
 #include "nota.h"
 
@@ -89,6 +97,11 @@ static JSValue constraint2js(constraint *c)
 
 static JSValue sound_proto;
 sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
+
+#define QJSGLOBALCLASS(NAME) \
+JSValue NAME = JS_NewObject(js); \
+JS_SetPropertyFunctionList(js, NAME, js_##NAME##_funcs, countof(js_##NAME##_funcs)); \
+JS_SetPropertyStr(js, globalThis, #NAME, NAME); \
 
 #define QJSCLASSPREP(TYPE) \
 JS_NewClassID(&js_##TYPE##_id);\
@@ -731,6 +744,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   gameobject_draw_debug(js2gameobject(argv[1]));
   break;
 
+  case 16:
+    str = js2str(argv[1]);
+    file_eval_env(str,argv[2]);
+    break;
+
+  case 17:
+    sapp_set_mouse_cursor(js2int(argv[1]));
+    break;
+
   case 18:
     shape_set_sensor(js2ptr(argv[1]), JS_ToBool(js, argv[2]));
     break;
@@ -1026,6 +1048,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   case 96:
     id2sprite(js2int(argv[1]))->color = js2color(argv[2]);
     break;
+
+  case 97:
+    str = js2str(argv[1]);
+    cursor_img(str);
+    break;
   case 103:
     ret = vec2js(js2gameobject(argv[1])->scale.XY);
     break;
@@ -1178,11 +1205,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 143:
       str = JS_ToCString(js, argv[1]);
-      system(str);
-      break;
-
-    case 144:
-      ret = str2js(DATA_PATH);
+      if (!getenv(str)) ret = JS_UNDEFINED;
+      else
+        ret = str2js(getenv(str));
       break;
 
     case 145:
@@ -1899,8 +1924,25 @@ JSValue js_emitter_emit(JSContext *js, JSValueConst this, int argc, JSValue *arg
   return JS_UNDEFINED;
 }
 
-static const JSCFunctionListEntry js_global_funcs[] = {
-  
+JSValue js_os_cwd(JSContext *js, JSValueConst this)
+{
+  char cwd[PATH_MAX];
+  getcwd(cwd, sizeof(cwd));
+  return str2js(cwd);
+}
+
+JSValue js_os_env(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *str = js2str(argv[0]);
+  JSValue ret = JS_UNDEFINED;
+  if (getenv(str)) ret = str2js(getenv(str));
+  JS_FreeCString(js,str);
+  return ret;
+}
+
+static const JSCFunctionListEntry js_os_funcs[] = {
+  MIST_CFUNC_DEF("cwd", 0, js_os_cwd),
+  MIST_CFUNC_DEF("env", 1, js_os_env),  
 };
 
 static const JSCFunctionListEntry js_emitter_funcs[] = {
@@ -2045,6 +2087,11 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
 const char *STRTEST = "TEST STRING";
 
+JSValue duk_profile_js2num(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+{
+  
+}
+
 JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int cmd = js2int(argv[0]);
@@ -2153,6 +2200,8 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(warp_damp);
   
   QJSCLASSPREP_FUNCS(constraint);
+
+  QJSGLOBALCLASS(os);
 }
 
 void ffi_stop()

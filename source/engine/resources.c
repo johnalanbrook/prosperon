@@ -25,9 +25,6 @@
 
 #include "core.cdb.h"
 
-char *DATA_PATH = NULL; /* The top level asset path, where the executable resides */
-char *PREF_PATH = NULL; /* Path to where the program can write data to, usually for save files etc. */
-
 char **prefabs;
 
 static const char *cur_ext = NULL;
@@ -35,18 +32,10 @@ struct dirent *c_dirent = NULL;
 
 char pathbuf[MAXPATH + 1];
 
-const char *DB_NAME = "test.db";
-
 static struct cdb corecdb;
 static struct cdb game_cdb;
 
 void resources_init() {
-  DATA_PATH = malloc(MAXPATH);
-  getcwd(DATA_PATH, MAXPATH);
-
-  if (!PREF_PATH)
-    PREF_PATH = strdup("./tmp/");
-
   int fd = open("test.cdb", O_RDONLY);
   cdb_init(&game_cdb, fd);
   cdb_initf(&corecdb, core_cdb, core_cdb_len);
@@ -80,23 +69,6 @@ char *dirname(const char *path)
   return dir;
 }
 
-char *rebase_path(const char *path)
-{
-  int off = 0;
-  while (path[off] == DATA_PATH[off]) {
-    off++;
-    if (!path[off] || !DATA_PATH[off]) break;
-  }
-  return path+off;
-}
-
-FILE *res_open(char *path, const char *tag) {
-  strncpy(pathbuf, DATA_PATH, MAXPATH);
-  strncat(pathbuf, path, MAXPATH);
-  FILE *f = fopen(pathbuf, tag);
-  return f;
-}
-
 char *seprint(char *fmt, ...)
 {
   va_list args;
@@ -115,27 +87,6 @@ char *seprint(char *fmt, ...)
 static char *ext_paths = NULL;
 
 #ifndef __EMSCRIPTEN__
-
-static int ext_check(const char *path, const struct stat *sb, int typeflag) {
-  if (typeflag == FTW_F) {
-    const char *ext = strrchr(path, '.');
-    if (ext != NULL && !strcmp(ext, cur_ext)) {
-      char newstr[255];
-      strncpy(newstr, path, 255);
-      arrput(prefabs, newstr);      
-    }
-  }
-
-  return 0;
-}
-
-void fill_extensions(char *paths, const char *path, const char *ext) {
-  cur_ext = ext;
-  arrfree(paths);
-  ext_paths = paths;
-  ftw(".", ext_check, 10);
-}
-
 static char **ls_paths = NULL;
 
 static int ls_ftw(const char *path, const struct stat *sb, int typeflag)

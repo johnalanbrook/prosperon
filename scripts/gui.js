@@ -199,7 +199,7 @@ Mum.button = Mum.text._int.extend({
  hovered:{
    color: Color.red
  },
- action() { Log.warn("Button has no action."); },
+ action() { console.warn("Button has no action."); },
 });
 
 Mum.window = Mum.extend({
@@ -229,7 +229,7 @@ Mum.window = Mum.extend({
 Mum.image = Mum.extend({
   start() {
     if (!this.path) {
-      Log.warn("Mum image needs a path.");
+      console.warn("Mum image needs a path.");
       this.draw = function(){};
       return;
     }
@@ -275,7 +275,7 @@ GUI.window = function(pos, wh, color)
   var p = pos.slice();
   p.x += wh.x/2;
   p.y += wh.y/2;
-  Shape.box(p,wh,color);
+  render.box(p,wh,color);
 }
 
 GUI.flush = function() { cmd(141); };

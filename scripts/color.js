@@ -20,18 +20,15 @@ Color.tohtml = function(v)
   return "#" + html.join('');
 }
 
-Color.toesc = function(v)
-{
-  return Esc.color(v);
-}
-
-var Esc = {};
-Esc.reset = "\x1b[0";
-Esc.color = function(v) {
+var esc = {};
+esc.reset = "\x1b[0";
+esc.color = function(v) {
   var c = v.map(function(n) { return Math.floor(n*255); });
   var truecolor = "\x1b[38;2;" + c.join(';') + ';';
   return truecolor;
 }
+
+esc.doc = "Functions and constants for ANSI escape sequences.";
 
 Color.Arkanoid = {
   orange: [255,143,0],

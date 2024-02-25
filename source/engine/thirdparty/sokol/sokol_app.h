@@ -3770,6 +3770,7 @@ _SOKOL_PRIVATE void _sapp_macos_update_cursor(sapp_mouse_cursor cursor, bool sho
         [_sapp.macos.cursors[cursor] set];
     }
     else {
+      printf("CURSOR\n");
         [[NSCursor arrowCursor] set];
     }
 }

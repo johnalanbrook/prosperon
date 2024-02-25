@@ -1,4 +1,4 @@
-var AI = {
+var ai = {
   race(list) {
     return function(dt) {
       var good = false;

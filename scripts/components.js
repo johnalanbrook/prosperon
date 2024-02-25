@@ -1,29 +1,3 @@
-function make_point_obj(o, p)
-{
-  return {
-    pos: p,
-    move(d) {
-      d = o.gameobject.dir_world2this(d);
-      p.x += d.x;
-      p.y += d.y;
-    },
-    sync: o.sync.bind(o)
-  }
-}
-
-function assign_impl(obj, impl)
-{
-  var tmp = {};
-  for (var key of Object.keys(impl))
-    if (typeof obj[key] !== 'undefined' && typeof obj[key] !== 'function')
-      tmp[key] = obj[key];
-
-  Object.mixin(obj, impl);
-
-  for (var key in tmp)
-    obj[key] = tmp[key];
-}
-
 var component = {
   components: [],
   toString() {
@@ -57,7 +31,7 @@ var component = {
     return nc;
   },
   
-  kill() { Log.info("Kill not created for this component yet"); },
+  kill() { console.info("Kill not created for this component yet"); },
   sync() {},
   post(){},
   gui() { },
@@ -67,6 +41,33 @@ var component = {
   finish_center() {},
   extend(spec) { return Object.copy(this, spec); },
 };
+
+component.util = {};
+component.util.make_point_obj = function(o, p)
+{
+  return {
+    pos: p,
+    move(d) {
+      d = o.gameobject.dir_world2this(d);
+      p.x += d.x;
+      p.y += d.y;
+    },
+    sync: o.sync.bind(o)
+  }
+}
+
+component.util.assign_impl = function(obj, impl)
+{
+  var tmp = {};
+  for (var key of Object.keys(impl))
+    if (typeof obj[key] !== 'undefined' && typeof obj[key] !== 'function')
+      tmp[key] = obj[key];
+
+  Object.mixin(obj, impl);
+
+  for (var key in tmp)
+    obj[key] = tmp[key];
+}
 
 component.sprite = Object.copy(component, {
   pos:[0,0],
@@ -301,7 +302,7 @@ var SpriteAnim = {
     return anim;
     };
 
-    var json = IO.slurp(path);
+    var json = io.slurp(path);
     json = JSON.parse(json);
     var anims = {};
     var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);
@@ -324,8 +325,8 @@ var SpriteAnim = {
   },
 
   find(path) {
-    if (!IO.exists(path + ".asset")) return;
-    var asset = JSON.parse(IO.slurp(path + ".asset"));
+    if (!io.exists(path + ".asset")) return;
+    var asset = JSON.parse(io.slurp(path + ".asset"));
     
   },
 };
@@ -336,57 +337,6 @@ SpriteAnim.strip.doc = 'Given a path and number of frames, converts a horizontal
 SpriteAnim.aseprite.doc = 'Given an aseprite json metadata, returns an object of animations defined in the aseprite file.';
 SpriteAnim.find.doc = 'Given a path, find the relevant animation for the file.';
 
-/* Returns points specifying this geometry, with ccw */
-var Geometry = {
-  box(w, h) {
-    w /= 2;
-    h /= 2;
-
-    var points = [
-      [w,h],
-      [-w,h],
-      [-w,-h],
-      [w,-h]
-    ];
-
-    return points;
-  },
-
-  arc(radius, angle, n, start) {
-    start ??= 0;
-    start = Math.deg2rad(start);
-    if (angle >= 360)
-      angle = 360;
-
-    if (n <= 1) return [];
-    var points = [];
-    
-    angle = Math.deg2rad(angle);
-    var arclen = angle/n;
-    for (var i = 0; i < n; i++)
-      points.push(Vector.rotate([radius,0], start + (arclen*i)));
-
-    return points;
-  },
-
-  circle(radius, n) {
-    if (n <= 1) return [];
-    return Geometry.arc(radius, 360, n);
-  },
-
-  ngon(radius, n) {
-    return Geometry.arc(radius,360,n);
-  },
-};
-
-Geometry.doc = {
-  doc: "Functions for creating a list of points for various geometric shapes.",
-  box: "Create a box.",
-  arc: "Create an arc, made of n points.",
-  circle: "Create a circle, made of n points.",
-  ngon: "Create a polygon of n sides.",
-};
-  
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
 var collider2d = Object.copy(component, {
   name: "collider 2d",
@@ -451,7 +401,7 @@ component.polygon2d = Object.copy(collider2d, {
   },
   
   gizmo() {
-    this.spoints().forEach(x => Shape.point(this.gameobject.this2screen(x), 3, Color.green));
+    this.spoints().forEach(x => render.point(this.gameobject.this2screen(x), 3, Color.green));
     this.points.forEach((x,i)=>Debug.numbered_point(this.gameobject.this2screen(x), i));
   },
 
@@ -478,7 +428,7 @@ var polygon2d = component.polygon2d;
 polygon2d.inputs = {};
 //polygon2d.inputs.post = function() { this.sync(); };
 polygon2d.inputs.f10 = function() {
-  this.points = sortpointsccw(this.points);
+  this.points = Math.sortpointsccw(this.points);
 };
 polygon2d.inputs.f10.doc = "Sort all points to be CCW order.";
 
@@ -596,7 +546,7 @@ component.edge2d = Object.copy(collider2d, {
   /* EDITOR */
   gizmo() {
     if (this.type === Spline.type.catmull || this.type === -1) {
-      this.spoints().forEach(x => Shape.point(this.gameobject.this2screen(x), 3, Color.teal));
+      this.spoints().forEach(x => render.point(this.gameobject.this2screen(x), 3, Color.teal));
       this.cpoints.forEach((x,i) => Debug.numbered_point(this.gameobject.this2screen(x), i));
     } else {
       for (var i = 0; i < this.cpoints.length; i += 3)
@@ -605,8 +555,8 @@ component.edge2d = Object.copy(collider2d, {
       for (var i = 1; i < this.cpoints.length; i+=3) {
         Debug.numbered_point(this.gameobject.this2screen(this.cpoints[i]), i, Color.green);
         Debug.numbered_point(this.gameobject.this2screen(this.cpoints[i+1]), i+1, Color.green);	
-        Shape.line([this.gameobject.this2screen(this.cpoints[i-1]), this.gameobject.this2screen(this.cpoints[i])], Color.yellow);
-        Shape.line([this.gameobject.this2screen(this.cpoints[i+1]), this.gameobject.this2screen(this.cpoints[i+2])], Color.yellow);	
+        render.line([this.gameobject.this2screen(this.cpoints[i-1]), this.gameobject.this2screen(this.cpoints[i])], Color.yellow);
+        render.line([this.gameobject.this2screen(this.cpoints[i+1]), this.gameobject.this2screen(this.cpoints[i+2])], Color.yellow);	
       }
     }
   },

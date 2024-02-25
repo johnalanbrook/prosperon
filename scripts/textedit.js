@@ -345,7 +345,7 @@ texteditor.open_fn = function(fnstr)
 {
   var fn = eval(fnstr);
   if (!fn) {
-    Log.warn(`${fnstr} is not a function.`);
+    console.warn(`${fnstr} is not a function.`);
     return;
   }
   this.src = fnstr;

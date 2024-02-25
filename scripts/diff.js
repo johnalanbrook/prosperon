@@ -26,14 +26,14 @@ function unmerge(target, source) {
 /* Deeply merge two objects, not clobbering objects on target with objects on source */
 function deep_merge(target, source)
 {
-  Log.warn("Doing a deep merge ...");
+  console.warn("Doing a deep merge ...");
   for (var key in source) {
     if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
-            Log.warn(`Deeper merge on ${key}`);
+            console.warn(`Deeper merge on ${key}`);
       deep_merge(target[key], source[key]);
     }
     else {
-      Log.warn(`Setting key ${key}`);    
+      console.warn(`Setting key ${key}`);    
       target[key] = source[key];
     }
   }
@@ -201,7 +201,7 @@ function samediff(from, to)
   var same = [];
   if (!to) return same;
   if (typeof to !== 'object') {
-    Log.warn("'To' must be an object. Got " + to);
+    console.warn("'To' must be an object. Got " + to);
     return same;
   }
   Object.keys(from).forEach(function(k) {

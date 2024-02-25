@@ -1,4 +1,4 @@
-var Input = {
+var input = {
   setgame() { cmd(77); },
   setnuke() { cmd(78); },
 };
@@ -6,9 +6,40 @@ var Input = {
 var Mouse = {
   get pos() { return cmd(45); },
   screenpos() { return cmd(45); },
-  get worldpos() { return screen2world(cmd(45)); },
+  get worldpos() { return Window.screen2world(cmd(45)); },
   disabled() { cmd(46, 1); },
   normal() { cmd(46, 0);},
+
+  mode(m) {
+    if (Mouse.custom[m])
+      cmd(97, Mouse.custom[m]);
+    else
+      cmd(17, m);
+  },
+  
+  set_custom_cursor(img, mode) {
+    mode ??= Mouse.cursor.default;
+    if (!img)
+      delete Mouse.custom[mode];
+    else {
+      cmd(97, img);
+      Mouse.custom[mode] = img;
+    }
+  },
+  custom:[],
+  cursor: {
+    default: 0,
+    arrow: 1,
+    ibeam: 2,
+    cross: 3,
+    hand: 4,
+    ew: 5,
+    ns: 6,
+    nwse: 7,
+    nesw: 8,
+    resize: 9,
+    no: 10
+  },
 };
 
 Mouse.doc = {};
@@ -24,7 +55,7 @@ var Keys = {
   super() { return cmd(50, 343); },
 };
 
-Input.state2str = function(state) {
+input.state2str = function(state) {
   if (typeof state === 'string') return state;
   switch (state) {
     case 0:
@@ -36,7 +67,7 @@ Input.state2str = function(state) {
   }
 }
 
-Input.print_pawn_kbm = function(pawn) {
+input.print_pawn_kbm = function(pawn) {
   if (!('inputs' in pawn)) return;
   var str = "";
   for (var key in pawn.inputs) {
@@ -46,7 +77,7 @@ Input.print_pawn_kbm = function(pawn) {
   return str;
 };
 
-Input.print_md_kbm = function(pawn) {
+input.print_md_kbm = function(pawn) {
   if (!('inputs' in pawn)) return;
 
   var str = "";
@@ -60,13 +91,13 @@ Input.print_md_kbm = function(pawn) {
   return str;
 };
 
-Input.has_bind = function(pawn, bind) {
+input.has_bind = function(pawn, bind) {
   return (typeof pawn.inputs?.[bind] === 'function');
 };
 
-var Action = {
+input.action = {
   add_new(name) {
-    var action = Object.create(Action);
+    var action = Object.create(input.action);
     action.name = name;
     action.inputs = [];
     this.actions.push(action);
@@ -167,7 +198,7 @@ var Player = {
 
   print_pawns() {
     for (var pawn of this.pawns.reversed())
-      Log.say(pawn.toString());
+      console.say(pawn.toString());
   },
 
   create() {

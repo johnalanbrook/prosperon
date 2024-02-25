@@ -277,7 +277,8 @@ void script_call_fn_arg(JSValue fn, JSValue arg)
 
 void out_memusage(const char *file)
 {
-  FILE *f = fopen_mkdir(file, "w");
+  FILE *f = fopen(file, "w");
+  if (!f) return;
   JSMemoryUsage jsmem;
   JS_ComputeMemoryUsage(rt, &jsmem);
   JS_DumpMemoryUsage(f, &jsmem, rt);

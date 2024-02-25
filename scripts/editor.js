@@ -303,7 +303,7 @@ var editor = {
 
   redo() {
     if (Object.empty(this.backshots)) {
-      Log.info("Nothing to redo.");
+      console.info("Nothing to redo.");
       return;
     }
 
@@ -317,7 +317,7 @@ var editor = {
 
   undo() {
     if (Object.empty(this.snapshots)) {
-      Log.info("Nothing to undo.");
+      console.info("Nothing to undo.");
       return;
     }
     this.unselect();
@@ -363,7 +363,7 @@ var editor = {
     this._sel_comp = x;
 
     if (this._sel_comp) {
-      Log.info("sel comp is now " + this._sel_comp);
+      console.info("sel comp is now " + this._sel_comp);
       Player.players[0].control(this._sel_comp);
     }
   },
@@ -377,7 +377,7 @@ var editor = {
         x.gizmo();
     });
   
-    Shape.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
+    render.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
 
     /* Draw selection box */
     if (this.sel_start) {
@@ -392,15 +392,14 @@ var editor = {
       wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
       var bb = cwh2bb(c,wh);
       Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
-      Shape.line(bb2points(bb).wrapped(1), Color.white);
+      render.line(bb2points(bb).wrapped(1), Color.white);
     }
   },
 
   gui() { 
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
-    Debug.coordinate(world2screen([0,0]));
-    Shape.cross(Mouse.pos, 5);
+    Debug.coordinate(Window.world2screen([0,0]));
 
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
@@ -408,7 +407,7 @@ var editor = {
     if (this.comp_info && this.sel_comp)
       GUI.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
 
-    Shape.cross(editor.edit_level.screenpos(),3,Color.blue);
+    render.cross(editor.edit_level.screenpos(),3,Color.blue);
 
     var thiso = editor.get_this();
     var clvl = thiso;
@@ -457,13 +456,13 @@ var editor = {
       
       GUI.text(sname, x.screenpos().add([0, 32]), 1, Color.editor.ur);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
-      Shape.cross(x.screenpos(), 10, Color.blue);
+      render.cross(x.screenpos(), 10, Color.blue);
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
       GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
-      Shape.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
+      render.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
     });
 
     var mg = physics.pos_query(Mouse.worldpos,10);
@@ -495,8 +494,8 @@ var editor = {
     });
 
     Debug.draw_grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
-    var startgrid = screen2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
-    var endgrid = screen2world([Window.width, Window.height]);
+    var startgrid = Window.screen2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
+    var endgrid = Window.screen2world([Window.width, Window.height]);
     
     var w_step = Math.round(editor.ruler_mark_px/Window.width * (endgrid.x-startgrid.x)/editor.grid_size)*editor.grid_size;
     if (w_step === 0) w_step = editor.grid_size;
@@ -505,12 +504,12 @@ var editor = {
     if (h_step === 0) h_step = editor.grid_size;
     
     while(startgrid[0] <= endgrid[0]) {
-      GUI.text(startgrid[0], [world2screen([startgrid[0], 0])[0],0]);
+      GUI.text(startgrid[0], [Window.world2screen([startgrid[0], 0])[0],0]);
       startgrid[0] += w_step;
     }
 
     while(startgrid[1] <= endgrid[1]) {
-      GUI.text(startgrid[1], [0, world2screen([0, startgrid[1]])[1]]);
+      GUI.text(startgrid[1], [0, Window.world2screen([0, startgrid[1]])[1]]);
       startgrid[1] += h_step;
     }
     
@@ -562,7 +561,7 @@ var editor = {
     } else {
       var path = sub.replaceAll('.', '/') + ".json";
       var saveobj = obj.json_obj();
-      IO.slurpwrite(path, JSON.stringify(saveobj,null,1));
+      io.slurpwrite(path, JSON.stringify(saveobj,null,1));
 
       if (obj === editor.edit_level) {
         if (obj === editor.desktop) {
@@ -608,7 +607,7 @@ editor.inputs.drop = function(str) {
 }
 
 editor.inputs.f9 = function() {
-  Log.warn("CAPTURING");
+  console.warn("CAPTURING");
   cmd(173, "capture.bmp", 0, 0, 500, 500);
 }
 
@@ -787,7 +786,7 @@ editor.inputs['C-M-p'] = function() {
   if (!Game.playing()) {
     editor.start_play_ed();
   }
-  Log.warn(`Starting edited level ...`);
+  console.warn(`Starting edited level ...`);
 };
 editor.inputs['C-M-p'].doc = "Start game from currently edited level.";
 
@@ -841,8 +840,8 @@ editor.inputs['C-s'] = function() {
   if (savejs.objects) saveobj.__proto__.objects = savejs.objects;
   var path = prototypes.ur_stem(saveobj.ur.toString()) + ".json";
 
-  IO.slurpwrite(path, JSON.stringify(saveobj.__proto__,null,1));
-  Log.warn(`Wrote to file ${path}`);
+  io.slurpwrite(path, JSON.stringify(saveobj.__proto__,null,1));
+  console.warn(`Wrote to file ${path}`);
 
   Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });
 
@@ -1504,11 +1503,11 @@ var replpanel = Object.copy(inputpanel, {
       ecode += `var ${key} = editor.edit_level.objects['${key}'];`;
 	
     ecode += this.value;
-    Log.say(this.value);
+    console.say(this.value);
     this.value = "";
     this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
-    Log.say(ret);
+    console.say(ret);
   },
 
   resetscroll() {
@@ -1544,7 +1543,7 @@ replpanel.inputs.tab = function() {
   if (eval(`typeof ${keyobj.tofirst('.')}`) === 'object' && eval(`typeof ${keyobj.replace('.', '?.')}`) === 'object')
     obj = eval(keyobj);
   else if (this.value.includes('.')){
-    Log.say(`${this.value} is not an object.`);
+    console.say(`${this.value} is not an object.`);
     return;
   } 
    
@@ -1575,17 +1574,17 @@ replpanel.inputs.tab = function() {
 
   keys = keys.map(function(x) {
     if (typeof obj[x] === 'function')
-      return Esc.color(Color.Apple.orange) + x + Esc.reset;
+      return esc.color(Color.Apple.orange) + x + esc.reset;
     if (Object.isObject(obj[x]))
-      return Esc.color(Color.Apple.purple) + x + Esc.reset;    
+      return esc.color(Color.Apple.purple) + x + esc.reset;    
     if (Array.isArray(obj[x]))
-      return Esc.color(Color.Apple.green) + x + Esc.reset;    
+      return esc.color(Color.Apple.green) + x + esc.reset;    
 
     return x;
   });
 
   if (keys.length > 1)
-    Log.repl(keys.join(', '));
+    console.repl(keys.join(', '));
 };
 replpanel.inputs['C-p'] = function()
 {
@@ -1992,7 +1991,7 @@ limited_editor.inputs['C-q'] = function()
 var limited_editing = {};
 limited_editing.inputs = {};
 
-if (IO.exists("editor.config"))
+if (io.exists("editor.config"))
   load_configs("editor.config");
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */

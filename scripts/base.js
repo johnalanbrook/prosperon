@@ -22,56 +22,54 @@ Set = undefined;
 WeakSet = undefined;
 */
 
-var fmt = {};
-
-var roman_numerals = {
+Number.roman = {
   M: 1000,
-  CM: 900,
   D: 500,
-  CD: 400,
   C: 100,
-  XC: 90,
   L: 50,
-  XL: 40,
   X: 10,
-  IX: 9,
   V: 5,
-  IV: 4,
   I: 1
 };
 
-function roman2arabic(roman)
-{
-  var num = 0;
-  for (var i = 0; i < roman.length; i++) {
-    var rm = roman_numerals[roman[i]];
-    if (i + 1 < roman.length && rm < roman_numerals[roman[i+1]])
-      num -= rm;
-    else
-      num += rm;
-  }
+var convert = {};
+convert.romanize = function(num) {
+  if (!+num) return false;
+  var digits = String(+num).split('');
+  var key = ['','C','CC','CCC','CD','D','DC','DCC','DCCC','CM',
+             '','X','XX','XXX','XL','L','LX','LXX','LXXX','XC',
+             '','I','II','III','IV','V','VI','VII','VIII','IX'];
+  var roman = '', i = 3;
+  while (i--) roman = (key[+digits.pop() + (i * 10)] || '') + roman;
+  return Array(+digits.join('') + 1).join('M') + roman;
+}
 
+convert.deromanize = function(str) {
+  var str = str.toUpperCase();
+  var validator = /^M*(?:D?C{0,3}|C[MD])(?:L?X{0,3}|X[CL])(?:V?I{0,3}|I[XV])$/;
+  var token = /[MDLV]|C[MD]?|X[CL]?|I[XV]?/g;
+  var key = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+  var num = 0, m;
+  if (!(str && validator.test(str))) return false;
+  while (m = token.exec(str)) num += key[m[0]];
   return num;
 }
 
-function arabic2roman(num)
-{
-  if (num <= 0 || num >= 4000)
-    return "Invalid input. Roman numerals are not defined for numbers less than 1 or greater than 3999.";
-
-  var result = '';
-
-  for (var key in roman_numerals) {
-    while (num >= roman_numerals[key]) {
-      result += key;
-      num -= roman_numerals[key];
-    }
-  }
-
-  return result;
+convert.buf2hex = function(buffer) { // buffer is an ArrayBuffer
+  return [...new Uint8Array(buffer)]
+      .map(x => x.toString(16).padStart(2, '0'))
+      .join(' ');
 }
 
-var timeparse = {
+/* Time values are always expressed in terms of real earth-seconds */
+var time = {
+  get hour2minute() { return this.hour/this.minute; },
+  get day2hour() { return this.day/this.hour; },
+  get minute2second() { return this.minute/this.second; },
+  get week2day() { return this.week/this.day; },
+};
+
+time.strparse = {
   yyyy: "year",
   mm: "month",
   m: "month",
@@ -87,29 +85,38 @@ var timeparse = {
   s: "second",
 };
 
-String.parse = function(str, p)
-{
-  var rec = {};
-  var fmts = Object.keys(p).sort(function(a,b) { return a.length > b.length; });
-}
-
-/* Time values are always expressed in terms of real earth-seconds */
-var time = {
-  get hour2minute() { return this.hour/this.minute; },
-  get day2hour() { return this.day/this.hour; },
-  get minute2second() { return this.minute/this.second; },
-  get week2day() { return this.week/this.day; },
+time.doc = {
+  doc: "Functions for manipulating time.",
+  second: "Earth-seconds in a second.",
+  minute: "Seconds in a minute.",
+  hour: "Seconds in an hour.",
+  day: "Seconds in a day.",
+  week: "Seconds in a week.",
+  weekdays: "Names of the days of the week.",
+  monthstr: "Full names of the months of the year.",
+  epoch: "Times are expressed in terms of day 0 at hms 0 of this year.",
+  now: "Get the time now.",
+  computer_zone: "Get the time zone of the running computer.",
+  computer_dst: "Return true if the computer is in daylight savings.",
+  yearsize: "Given a year, return the number of days in that year.",
+  monthdays: "Number of days in each month.",
+  fmt: "Default format for time.",
+  record: "Given a time, return an object with time fields.",
+  number: "Return the number representation of a given time.",
+  text: "Return a text formatted time."
 };
+  
+  
 
-time.second = 1; /* earth-seconds in a second */
-time.minute = 60; /* seconds in a minute */
-time.hour = 3_600; /* seconds in an hour */
-time.day = 86_400; /* seconds in a day */
-time.week = 604_800; /* seconds in a week */
+time.second = 1;
+time.minute = 60;
+time.hour = 3_600;
+time.day = 86_400;
+time.week = 604_800;
 time.weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 time.monthstr = ["January", "February", "March", 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-time.epoch = 1970; /* Times are expressed in terms of day 0 at hms 0 of this year */
+time.epoch = 1970;
 time.now = function() { return cmd(210);}
 time.computer_zone = function() { return cmd(211)/this.hour; }
 time.computer_dst = function() { return cmd(212); }
@@ -121,7 +128,6 @@ time.yearsize = function(y) {
     return 366;
   return 365;
 }
-time.yearsize.doc = "Given a year, return the number of days in that year.";
 
 time.monthdays = [31,28,31,30,31,30,31,31,30,31,30,31];
 time.zones = {};
@@ -329,6 +335,13 @@ json.readout = function(obj)
   return json.encode(j);
 }
 
+json.doc = {
+  doc: "json implementation.",
+  encode: "Encode a value to json.",
+  decode: "Decode a json string to a value.",
+  readout: "Encode an object fully, including function definitions."
+};
+
 Object.methods = function(o)
 {
   var m = [];
@@ -521,7 +534,7 @@ Object.copy = function(proto, ...objs)
   return c;
 }
 
-/* OBJECT DEFININTIONS */
+/* OBJECT DEFININTioNS */
 Object.defHidden = function(obj, prop)
 {
   Object.defineProperty(obj, prop, {enumerable:false, writable:true});
@@ -532,7 +545,7 @@ Object.hide = function(obj,...props)
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
     if (!p) {
-      Log.info(`No property of name ${prop}.`);
+      console.info(`No property of name ${prop}.`);
       continue;
     }
     p.enumerable = false;
@@ -545,7 +558,7 @@ Object.unhide = function(obj, ...props)
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
     if (!p) {
-      Log.warn(`No property of name ${prop}.`);
+      console.warn(`No property of name ${prop}.`);
       return;
     }
     p.enumerable = true;
@@ -868,22 +881,6 @@ Object.defineProperty(Array.prototype, 'dofilter', {
   }
 });
 
-
-function filterInPlace(a, condition, thisArg) {
-  let j = 0;
-
-  a.forEach((e, i) => { 
-    if (condition.call(thisArg, e, i, a)) {
-      if (i!==j) a[j] = e; 
-      j++;
-    }
-  });
-
-  a.length = j;
-  return a;
-}
-
-
 Object.defineProperty(Array.prototype, 'reversed', {
   value: function() {
     var c = this.slice();
@@ -897,6 +894,7 @@ Object.defineProperty(Array.prototype, 'rotate', {
   }
 });
 
+function make_swizz() {
 function setelem(n) {
   return {
     get: function() { return this[n]; },
@@ -969,7 +967,6 @@ swizz.forEach(function(x) {
   });
 });
 
-
 swizz = [];
 for (var i of nums)
   for (var j of nums)
@@ -995,7 +992,8 @@ swizz.forEach(function(x) {
   });
 
 });
-
+};
+make_swizz();
 
 Object.defineProperty(Array.prototype, 'add', {
 value: function(b) {
@@ -1083,9 +1081,6 @@ value: function(b) {
 
   return true;
 }});
-
-function add(x,y) { return x+y; };
-function mult(x,y) { return x*y; };
 
 Object.defineProperty(Array.prototype, 'mapc', {
   value: function(fn) {
@@ -1285,7 +1280,7 @@ Object.defineProperty(Object.prototype, 'lerp',{
     return obj;
 }});
 
-/* MATH EXTENSIONS */
+/* MATH EXTENSioNS */
 Object.defineProperty(Number.prototype, 'lerp', {
   value: function(to, t) {
     var s = this;
@@ -1332,6 +1327,8 @@ Math.deg2turn = function(x) { return x/360; };
 Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };
 
 /* BOUNDINGBOXES */
+var bbox = {};
+
 function cwh2bb(c, wh) {
   return {
     t: c.y+(wh.y/2),
@@ -1518,7 +1515,7 @@ function points2cm(points)
   return [x/n,y/n];
 };
 
-function sortpointsccw(points)
+Math.sortpointsccw = function(points)
 {
   var cm = points2cm(points);
   var cmpoints = points.map(function(x) { return x.sub(cm); });

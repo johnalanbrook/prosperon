@@ -1,4 +1,4 @@
-prosp.obj_unique_name = function(name, obj)
+prosperon.obj_unique_name = function(name, obj)
 {
   name = name.replaceAll('.', '_');
   if (!(name in obj)) return name;
@@ -15,7 +15,7 @@ var actor = {};
 actor.spawn = function(script, config){
   if (typeof script !== 'string') return;
   var padawan = Object.create(actor);
-  compile_env(script, padawan, "script");
+  eval_env(script, padawan);
 
   if (typeof config === 'object')
     Object.merge(padawan, config);
@@ -133,7 +133,7 @@ var gameobject_impl = {
 
   set mass(x) { set_body(7,this.body,x); },
   get mass() {
-    if (!(this.phys === Physics.dynamic))
+    if (!(this.phys === physics.dynamic))
       return undefined;
 
     return q_body(5, this.body);
@@ -159,7 +159,7 @@ var gameobject_impl = {
   get_moi() { return q_body(6, this.body); },
   set_moi(x) {
     if(x <= 0) {
-      Log.error("Cannot set moment of inertia to 0 or less.");
+      console.error("Cannot set moment of inertia to 0 or less.");
       return;
     }
     set_body(13, this.body, x);
@@ -291,7 +291,7 @@ var gameobject = {
     },
 
     cry(file) {
-      this.crying =  Sound.play(file, Sound.bus.sfx);
+      this.crying =  audio.sound.play(file, audio.sound.bus.sfx);
       var killfn = () => {this.crying = undefined; console.warn("killed"); }
       this.crying.hook = killfn;
       return killfn;
@@ -318,7 +318,7 @@ var gameobject = {
 	set_body(2,this.body,x);
 	this.objects.forEach((o,i) => o.set_worldpos(this.this2world(poses[i])));
       },
-      screenpos() { return world2screen(this.worldpos()); },
+      screenpos() { return Window.world2screen(this.worldpos()); },
 
       worldangle() { return Math.rad2turn(q_body(2,this.body)); },
       sworldangle(x) { set_body(0,this.body,Math.turn2rad(x)); },
@@ -385,8 +385,8 @@ var gameobject = {
     shove_at(vec, at) { set_body(14,this.body,vec,at); },
     world2this(pos) { return cmd(70, this.body, pos); },
     this2world(pos) { return cmd(71, this.body, pos); },
-    this2screen(pos) { return world2screen(this.this2world(pos)); },
-    screen2this(pos) { return this.world2this(screen2world(pos)); },
+    this2screen(pos) { return Window.world2screen(this.this2world(pos)); },
+    screen2this(pos) { return this.world2this(Window.screen2world(pos)); },
     dir_world2this(dir) { return cmd(160, this.body, dir); },
     dir_this2world(dir) { return cmd(161, this.body, dir); },
       
@@ -440,10 +440,10 @@ var gameobject = {
       obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
 
     if (typeof obj.collide === 'function')
-      Signal.obj_begin(obj.collide.bind(obj), obj);
+      register_collide(0, obj.collide.bind(obj), obj.body);
 
     if (typeof obj.separate === 'function')
-      Signal.obj_separate(obj.separate.bind(obj), obj);
+      register_collide(3,obj.separate.bind(obj), obj.body);
 
     if (typeof obj.draw === 'function')
       obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
@@ -668,7 +668,7 @@ var gameobject = {
 
   rename_obj(name, newname) {
     if (!this.objects[name]) {
-      Log.warn(`No object with name ${name}. Could not rename to ${newname}.`);
+      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
       return;
     }
     if (name === newname) {
@@ -690,7 +690,7 @@ var gameobject = {
   add_component(comp, data) {
     data ??= undefined;
     if (typeof comp.make !== 'function') return;
-    var name = prosp.obj_unique_name(comp.toString(), this);
+    var name = prosperon.obj_unique_name(comp.toString(), this);
     this[name] = comp.make(this);
     this[name].comp = comp.toString();
     this.components[name] = this[name];
@@ -797,20 +797,20 @@ prototypes.from_file = function(file)
   var script = undefined;
   var json = undefined;
 
-  if (jsfile) script = IO.slurp(jsfile);
+  if (jsfile) script = io.slurp(jsfile);
   try {
-    if (jsonfile) json = JSON.parse(IO.slurp(jsonfile));
+    if (jsonfile) json = JSON.parse(io.slurp(jsonfile));
   } catch(e) {
-    Log.warn(`Unable to create json from ${jsonfile}. ${e}`);
+    console.warn(`Unable to create json from ${jsonfile}. ${e}`);
   }
 
-  if (!json && !script) {
-    Log.warn(`Could not make ur from ${file}`);
+  if (!json && !jsfile) {
+    console.warn(`Could not make ur from ${file}`);
     return undefined;
   }
 
   if (script)
-    compile_env(script, newur, file);
+    load_env(jsfile, newur);
   
   json ??= {};
   Object.merge(newur,json);
@@ -871,8 +871,9 @@ prototypes.file2ur = function(file)
 
 prototypes.get_ur = function(name)
 {
+  if (!name) return;
   if (!name) {
-    console.error(`Can't get ur from an undefined.`);
+    console.error(`Can't get ur from ${name}.`);
     return;
   }
   var urpath = name;
@@ -899,16 +900,16 @@ prototypes.get_ur_file = function(path, ext)
 {
   var urpath = prototypes.ur2file(path);
   var file = urpath + ext;
-  if (IO.exists(file)) return file;
+  if (io.exists(file)) return file;
   file = urpath + "/" + path.split('.').at(-1) + ext;
-  if (IO.exists(file)) return file;
+  if (io.exists(file)) return file;
   return undefined;
 }
 
 prototypes.generate_ur = function(path)
 {
-  var ob = IO.glob("**" + prototypes.ur_ext);
-  ob = ob.concat(IO.glob("**.json"));
+  var ob = io.glob("**" + prototypes.ur_ext);
+  ob = ob.concat(io.glob("**.json"));
 
   ob = ob.map(function(path) { return path.set_ext(""); });
   ob = ob.map(function(path) { return path[0] !== '.' ? path : undefined; });
@@ -940,7 +941,7 @@ prototypes.resani = function(ur, path)
 
   var res = ur.replaceAll('.', '/');
   var restry = res + "/" + path;
-  while (!IO.exists(restry)) {
+  while (!io.exists(restry)) {
     res = res.updir() + "/";
     if (res === "/")
       return path;
@@ -953,15 +954,15 @@ prototypes.resani = function(ur, path)
 prototypes.ur_dir = function(ur)
 {
   var path = ur.replaceAll('.', '/');
-  Log.warn(path);
-  Log.warn(IO.exists(path));
-  Log.warn(`${path} does not exist; sending ${path.dir()}`);
+  console.warn(path);
+  console.warn(io.exists(path));
+  console.warn(`${path} does not exist; sending ${path.dir()}`);
 }
 
 prototypes.ur_json = function(ur)
 {
   var path = ur.replaceAll('.', '/');
-  if (IO.exists(path))
+  if (io.exists(path))
     path = path + "/" + path.name() + ".json";
   else
     path = path + ".json";
@@ -972,7 +973,7 @@ prototypes.ur_json = function(ur)
 prototypes.ur_stem =  function(ur)
 {
   var path = ur.replaceAll('.', '/');
-  if (IO.exists(path))
+  if (io.exists(path))
     return path + "/" + path.name();
   else
     return path;
@@ -983,7 +984,7 @@ prototypes.ur_file_exts = ['.jso', '.json'];
 prototypes.ur_folder = function(ur)
 {
   var path = ur.replaceAll('.', '/');
-  return IO.exists(path);
+  return io.exists(path);
 }
 
 prototypes.ur_pullout_folder = function(ur)
@@ -994,6 +995,6 @@ prototypes.ur_pullout_folder = function(ur)
   
 /*  prototypes.ur_file_exts.forEach(function(e) {
     var p = stem + e;
-    if (IO.exists(p))
+    if (io.exists(p))
   */    
 }
