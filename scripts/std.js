@@ -144,30 +144,11 @@ console.doc = {
 
 /*
   io path rules. Starts with, meaning:
-  "@": playerpath
-  "/": game room
-  "#": Force look locally (instead of in db first)
-    - This is combined with others. #/, #@, etc
-  "": Local path relative to script defined in
+  "@": user path
+  "/": game path
 */
   
-var io = {
-  exists(file) { return cmd(65, file);},
-  slurp(file) {
-    if (io.exists(file))
-      return cmd(38,file);
-    else
-      throw new Error(`File ${file} does not exist; can't slurp`);
-  },
-  slurpbytes(file) {
-    return cmd(81, file);
-  },
-  slurpwrite(file, data) {
-    if (data.byteLength)
-      cmd(60, data, file);
-    else
-      return cmd(39, data, file);
-  },
+io.mixin({
   extensions(ext) {
     var paths = io.ls();
     paths = paths.filter(function(str) { return str.ext() === ext; });
@@ -179,20 +160,7 @@ var io = {
   run_bytecode(byte_file) {
     return cmd(261, byte_file);
   },
-  ls() { return cmd(66); },
-  /* Only works on text files currently */
-  cp(f1, f2) {
-    cmd(166, f1, f2);
-  },
-  mv(f1, f2) {
-    return cmd(163, f1, f2);
-  },
-  rm(f) {
-    return cmd(f);
-  },
-  mkdir(dir) {
-    cmd(258, dir);
-  },
+
   glob(pat) {
     var paths = io.ls();
     pat = pat.replaceAll(/([\[\]\(\)\^\$\.\|\+])/g, "\\$1");
@@ -203,7 +171,7 @@ var io = {
     var regex = new RegExp("^"+pat+"$", "");
     return paths.filter(str => str.match(regex));
   },
-};
+});
 
 io.doc = {
   doc: "Functions for filesystem input/output commands.",
@@ -245,8 +213,8 @@ Cmdline.register_order("edit", function() {
   }
   
   Game.engine_start(function() {
-    load("scripts/editor.js");
-    load("editorconfig.js");
+    global.mixin(use("scripts/editor.js"));
+    use("editorconfig.js");
     editor.enter_editor();
   });
 }, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");
@@ -283,7 +251,6 @@ Cmdline.register_order("play", function() {
     load("game.js");
     if (project.icon) Window.icon(project.icon);
     if (project.title) Window.title(project.title);
-    say(project.title);
   });  
 }, "Play the game present in this folder.");
 
@@ -446,3 +413,12 @@ Cmdline.register_order("clean", function(argv) {
 Cmdline.register_cmd("l", function(n) {
   console.level = n;
 }, "Set log level.");
+
+return {
+  console,
+  Resources,
+  say,
+  io,
+  Cmdline,
+  cmd_args
+};

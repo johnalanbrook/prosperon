@@ -287,7 +287,7 @@ cdb: tools/cdb.c tools/libcdb.a
 source/engine/core.cdb.h: core.cdb
 	xxd -i $< > $@
 
-SCRIPTS := $(shell ls scripts/*.js)
+SCRIPTS := $(shell ls scripts/*.js*)
 SCRIPT_O := $(addsuffix o, $(SCRIPTS))
 CORE != (ls icons/* fonts/*)
 CORE := $(CORE) $(SCRIPTS)
@@ -301,17 +301,13 @@ CDB_C != find $(CDB) -name *.c
 packer: tools/packer.c tools/libcdb.a
 	cc $^ -I$(CDB) -o packer
 
-jso: tools/jso.c tools/libquickjs.a
+jsc: tools/jso.c tools/libquickjs.a
 	$(CC) $^ -lm -Iquickjs -o $@
 
 tools/libquickjs.a:
 	make -C quickjs clean
 	make -C quickjs OPT=$(OPT) AR=$(AR) libquickjs.a
 	cp -f quickjs/libquickjs.a tools
-
-%.jso: %.js jso
-	@echo Making $@ from $<
-	./jso $< > $@
 
 WINCC = x86_64-w64-mingw32-gcc
 #WINCC = i686-w64-mingw32-g++
@@ -329,7 +325,7 @@ crossmac:
 clean:
 	@echo Cleaning project
 	@rm -rf bin dist
-	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer scripts/*.jso TAGS
+	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS
 	@make -C quickjs clean
 
 docs: doc/prosperon.org

@@ -105,6 +105,7 @@ JSValue num_cache[100] = {0};
     const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
     const char *stack = JS_ToCString(js, val);
     YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
+    js_stacktrace();
 
     JS_FreeCString(js, name);
     JS_FreeCString(js, msg);
@@ -223,30 +224,11 @@ void script_eval_w_env(const char *s, JSValue env, const char *file) {
   JS_FreeValue(js, v);
 }
 
-struct callenv {
-  JSValue v;
-  const char *eval;
-};
-
-struct callenv *calls;
-
-void call_stack()
+JSValue eval_file_env(const char *script, const char *file, JSValue env)
 {
-  for (int i = 0; i < arrlen(calls); i++) {
-    JSValue v = JS_EvalThis(js, calls[i].v, calls[i].eval, strlen(calls[i].eval), calls[i].eval, JS_EVAL_FLAGS);
-    js_print_exception(v);
-    JS_FreeValue(js, v);
- }
-  arrfree(calls);
-}
-
-void call_env(JSValue env, const char *eval)
-{
-  if (!JS_IsObject(env)) { YughWarn("NOT AN ENV"); return; };
-  struct callenv c;
-  c.v = env;
-  c.eval = eval;
-  arrpush(calls, c);
+  JSValue v = JS_EvalThis(js, env, script, strlen(script), file, JS_EVAL_FLAGS);
+  js_print_exception(v);
+  return v;
 }
 
 void file_eval_env(const char *file, JSValue env)

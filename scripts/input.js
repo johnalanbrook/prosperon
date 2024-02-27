@@ -1,8 +1,3 @@
-var input = {
-  setgame() { cmd(77); },
-  setnuke() { cmd(78); },
-};
-
 var Mouse = {
   get pos() { return cmd(45); },
   screenpos() { return cmd(45); },
@@ -54,6 +49,8 @@ var Keys = {
   alt() { return cmd(50, 342); },
   super() { return cmd(50, 343); },
 };
+
+var input = {};
 
 input.state2str = function(state) {
   if (typeof state === 'string') return state;
@@ -229,3 +226,10 @@ Player.uncontrol.doc = "Uncontrol a previously controlled object.";
 Player.print_pawns.doc = "Print out a list of the current pawn control stack.";
 Player.doc = {};
 Player.doc.players = "A list of current players.";
+
+return {
+  Mouse,
+  Keys,
+  input,
+  Player,
+};

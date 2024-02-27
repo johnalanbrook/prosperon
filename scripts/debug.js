@@ -93,7 +93,7 @@ var Debug = {
 
   boundingbox(bb, color) {
     color ??= Color.white;
-    cmd_points(0, bb2points(bb), color);
+    cmd_points(0, bbox.topoints(bb), color);
   },
 
   numbered_point(pos, n, color) {
@@ -210,8 +210,6 @@ Object.assign(profile, {
 
   get fps() { return sys_cmd(8); },
 });
-
-
 
 profile.test = {
   barecall() { profile(0); },
@@ -418,4 +416,9 @@ Debug.api.print_doc =  function(name)
   }
 
   return mdoc;
+}
+
+return {
+  Debug,
+  Time,
 }

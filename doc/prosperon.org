@@ -48,20 +48,35 @@ The scripting language used in Prosperon is Javascript, with QuickJS. It is [[ht
 Javascript is used here mostly to set up objects and tear them down. Although computationally expensive tasks can be done using QuickJS, Prosperon makes it easy to extend with raw C.
 #+end_scholium
 
-*** How Prosperon games are structued
+*** How Prosperon games are structured
+Prosperon schews the CommonJS and ES module systems for a custom one suitable for a computer game actor model. It is more restricted than either system, while retaining their full power.
+
 Prosperon games are structured into two types of source files:
 - scripts
 - actors
 
-When any source file is executed, it is executed in its own space. Global properties are accessible, but any declared variables and functions are not automatically added to the global space. To add obejcts to the global space, it must be explicitly done, by assigning them to ~global~ or ~globalThis~.
+Scripts end with a return statement. A script can return a function, an object of functions, or any other sort of value.
 
+#+begin_scholium
+It is a common requirement to add some amount of functionality to an object. It can be easily done with a script file.
 #+begin_src
-global.hellofn = function() { say("Hello, world!"); }; // hellofn is now callable anywhere
+*script.js*
+function hello() { say("hello"); };
+return hello;
 #+end_src
+#+begin_src
+var o = {};
+o.use("hello.js");
+o.hello();
+#+end_src
+The ~use~ function on any object loads a module, and ~assign~s its return to the object.
+#+end_scholium
 
-When a *script* is loaded, its statements are executed in order, in the context of the containing source. The containing source is accessible via the ~$~ variable. When ~load~ is called, an optional object is permitted to be supplied as the ~$~. This makes writing scripts with mixin functionality simple.
+Scripts are loaded into memory only once. Further ~use~ statements only generate references to the statements. Because *scripts* are executed in a lambda environment, any ~var~ declared inside the script files are effectively private variables, persistent variables.
 
-The parameter ~$$~ is given to a persistent object that is available whenever a script is executing, per script.
+In a *script*, ~this~ refers to ~undefined~. It is nothng.
+
+In an *actor* source file, ~this~ refers to the actor. Actors do not end in a ~return~ statement. *actor* source is intended to set up a new agent in your game. Set up the new entity by loading modules and assigning functions to ~this~.
 
 *** Script entry points
 The first way you can customize Prosperon is by adding scripts to the folder you're running it from. Any file ending with *.js* is a *script* which can be ran by Prosperon.
@@ -92,16 +107,17 @@ The fundamental tool for building in Prosperon is the actor system. Actors run i
 
 The most masterful actor is the *Empyrean*. The first actor you create will have the Empyrean as its master. Subsequent actors can use any other actor as its master.
 
-| fn                 | description                                              |
-|--------------------+----------------------------------------------------------|
-| delay(fn, seconds) | Calls 'fn' after 'seconds' with the context of the actor |
+| fn                  | description                                              |
+|---------------------+----------------------------------------------------------|
+| spawn(text, config) | Creates an actor as the padawan of this one, using text  |
+| kill()              | Kills an actor                                           |
+| delay(fn, seconds)  | Calls 'fn' after 'seconds' with the context of the actor |
 
 *** Actor Lifetime
 When an actor dies, all of the actors that have it as their master[fn::What a mouthful!] will die as well.
 
 *** Turns
 Actors get fragments of time called a *turn*. Actors which belong to different systems can have different lengths of turns.
-
 
 
 *** Actor files
@@ -167,6 +183,8 @@ Game worlds are made of entities. Entities are a type of actor with a number of 
 #+begin_scholium
 The first and most masterful entity is the Primum. The Primum has no components, and its rotation and position are zero. It defines the center of the game.
 #+end_scholium
+
+In editor mode, when an entity moves, all of its *padawans* also move. When the game is actively simulating, this only holds if there are physical constraints between them.
 
 *** Adding Components
 Entities can have *components*. Components are essentially javascript wrappers over C code into the engine. Scripting is done to set the components up on entities, after which most of the work is done by the C plugin.

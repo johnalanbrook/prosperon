@@ -12,34 +12,37 @@ prosperon.obj_unique_name = function(name, obj)
 }
 
 var actor = {};
+var a_db = {};
+
 actor.spawn = function(script, config){
-  if (typeof script !== 'string') return;
+  if (typeof script !== 'string') return undefined;
+  if (!a_db[script]) a_db[script] = io.slurp(script);
   var padawan = Object.create(actor);
-  eval_env(script, padawan);
+  eval_env(a_db[script], padawan);
 
   if (typeof config === 'object')
-    Object.merge(padawan, config);
+    Object.merge(padawan,config);
 
   padawan.padawans = [];
   padawan.timers = [];
   padawan.master = this;
-  Object.hide(padawan, "master","timers");
+  Object.hide(padawan, "master","timers", "padawans");
   this.padawans.push(padawan);
   return padawan;
 };
 
 actor.spawn.doc = `Create a new actor, using this actor as the master, initializing it with 'script' and with data (as a JSON or Nota file) from 'config'.`;
 
-actor.die = function(e){
-  e.kill();
-};
-
 actor.timers = [];
 actor.kill = function(){
+  if (this.__dead__) return;
   this.timers.forEach(t => t.kill());
-  delete this.master[this.toString()];
+  if (this.master)
+    delete this.master[this.toString()];
   this.padawans.forEach(p => p.kill());
+  this.padawans = [];
   this.__dead__ = true;
+  if (typeof this.die === 'function') this.die();
 };
 
 actor.kill.doc = `Remove this actor and all its padawans from existence.`;
@@ -73,6 +76,13 @@ actor.remaster = function(to){
   to.padawans.push(this);
 };
 
+global.app = Object.create(actor);
+
+app.die = function()
+{
+  Game.quit();
+}
+
 var gameobject_impl = {
   get pos() {
     Debug.assert(this.level, `Entity ${this.toString()} has no level.`);
@@ -88,6 +98,7 @@ var gameobject_impl = {
     Debug.assert(this.level, `No level set on ${this.toString()}`);
     return this.worldangle() - this.level.worldangle();
   },
+  
   set angle(x) {
     var diff = x - this.angle;
 
@@ -329,8 +340,10 @@ var gameobject = {
       
       spawn(ur, data) {
         ur ??= gameobject;
-	if (typeof ur === 'string')
-	  ur = prototypes.get_ur(ur);
+	if (typeof ur === 'string') {
+	  //ur = prototypes.get_ur(ur);
+	  
+	}
 
 	var go = ur.make(this, data);
 	Object.hide(this, go.toString());
@@ -502,11 +515,11 @@ var gameobject = {
 
 	var bb = boxes.shift();
 
-	boxes.forEach(function(x) { bb = bb_expand(bb, x); });
+	boxes.forEach(function(x) { bb = bbox.expand(bb, x); });
 	
-	bb = movebb(bb, this.pos);
+	bb = bbox.move(bb, this.pos);
 
-	return bb ? bb : cwh2bb([0,0], [0,0]);
+	return bb ? bb : bbox.fromcwh([0,0], [0,0]);
       },
 
       /* The unique components of this object. Its diff. */
@@ -606,7 +619,7 @@ var gameobject = {
   right() { return [1,0].rotate(this.angle);},
   left() { return [-1,0].rotate(this.angle); },
 
-  make(level, data) {
+  make() {
     var obj = Object.create(this);
     
     obj.make = undefined;
@@ -997,4 +1010,11 @@ prototypes.ur_pullout_folder = function(ur)
     var p = stem + e;
     if (io.exists(p))
   */    
+}
+
+return {
+  gameobject,
+  actor,
+  prototypes,
+  ur
 }

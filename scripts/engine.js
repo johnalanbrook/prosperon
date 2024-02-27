@@ -1,44 +1,54 @@
 "use math";
 globalThis.global = globalThis;
 
-function eval_env(script, env)
+function use(file)
+{
+  if (use.files[file]) return use.files[file];
+  
+  var c = io.slurp(file);
+  
+  var script = `(function() { ${c} })();`;
+  use.files[file] = cmd(123,script,global,file);
+
+  return use.files[file];
+}
+use.files = {};
+
+function eval_env(script, env, file)
 {
   env ??= {};
-//  script = `function() { ${script} }.call();`;
+  file ??= "SCRIPT";
+//  script = `(function() { ${script} })();`;
+  eval(`(function() { ${script} }).call(env);`);
+//  cmd(123,script,global,file);
 //  return eval(script);
   
-  return function(str) { return eval(str); }.call(env, script);
+//  return function(str) { return eval(str); }.call(env, script);
 }
 eval_env.dov = `Counterpart to /load_env/, but with a string.`;
 
 function load_env(file,env)
 {
   env ??= global;
+//  var script = io.slurp(file);
   var script = io.slurp(file);
-  eval_env(script, env);
+  eval_env(script, env, file);
 //  cmd(16, file, env);
 //  var script = io.slurp(file);
 //  cmd(123, script, env, file);
 }
 load_env.doc = `Load a given file with 'env' as **this**. Does not add to the global namespace.`;
 
-function load(file) { return load_env(file);}
-load.doc = `Load a given script file into the global namespace.`;
+var load = use;
 
+Object.assign(global, use("scripts/base.js"));
+global.obscure('global');
+global.mixin(use("scripts/std.js"));
+global.mixin(use("scripts/diff.js"));
 
-load("scripts/base.js");
-load("scripts/std.js");
-
-
-load("scripts/diff.js");
 console.level = 1;
 
-load("scripts/color.js");
-
-function bb2wh(bb) {
-  return [bb.r-bb.l, bb.t-bb.b];
-};
-
+global.mixin(use("scripts/color.js"));
 
 var prosperon = {};
 prosperon.version = cmd(255);
@@ -94,7 +104,7 @@ Range is given by a semantic versioning number, prefixed with nothing, a ~, or a
 ^ means that MAJOR must match exactly, but any MINOR and PATCH greater or equal is valid.`;
 
 
-load("scripts/gui.js");
+global.mixin(use("scripts/gui.js"));
 
 var timer = {
   update(dt) {
@@ -170,11 +180,11 @@ render.device = {
 
 render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 
-load("scripts/physics.js");
-load("scripts/input.js");
-load("scripts/sound.js");
-load("scripts/ai.js");
-load("scripts/geometry.js");
+global.mixin(use("scripts/physics.js"));
+global.mixin(use("scripts/input.js"));
+global.mixin(use("scripts/sound.js"));
+global.mixin(use("scripts/ai.js"));
+global.mixin(use("scripts/geometry.js"));
 
 var Register = {
   kbm_input(mode, btn, state, ...args) {
@@ -310,18 +320,21 @@ var Window = {
 };
 
 Window.screen2world = function(screenpos) {
-  if (Game.camera)
-    return Game.camera.view2world(screenpos);
+//  if (Game.camera)
+//    return Game.camera.view2world(screenpos);
   return screenpos;
 }
-Window.world2screen = function(worldpos) { return Game.camera.world2view(worldpos); }
+Window.world2screen = function(worldpos) {
+  return worldpos;
+  return Game.camera.world2view(worldpos);
+}
 
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
 
-load("scripts/debug.js");
-load('scripts/spline.js');
-load("scripts/components.js");
+global.mixin(use("scripts/debug.js"));
+global.mixin(use("scripts/spline.js"));
+global.mixin(use("scripts/components.js"));
 
 var Game = {
   engine_start(fn) {
@@ -355,7 +368,10 @@ var Game = {
 
   },
 
-  quit() { sys_cmd(0); },
+  quit() {
+    sys_cmd(0);
+    return;
+  },
   pause() { sys_cmd(3); },
   stop() { Game.pause(); },
   step() { sys_cmd(4);},
@@ -404,7 +420,7 @@ Window.doc.boundingbox = "Boundingbox of the window, with top and right being it
 
 Register.update.register(Game.exec, Game);
 
-load("scripts/entity.js");
+global.mixin(use("scripts/entity.js"));
 
 function world_start() {
   globalThis.Primum = Object.create(gameobject);
@@ -424,9 +440,11 @@ function world_start() {
   gameobject.body = make_gameobject();
   cmd(113,gameobject.body, gameobject);
   Object.hide(gameobject, 'timescale');
+
+  global.world = Primum;
 }
 
-load("scripts/physics.js");
+global.mixin(use("scripts/physics.js"));
 
 Game.view_camera = function(cam)
 {
@@ -434,6 +452,10 @@ Game.view_camera = function(cam)
   cmd(61, Game.camera.body);
 }
 
+prototypes.generate_ur('scripts/camera.jso');
+
 Window.title(`Prosperon v${prosperon.version}`);
 Window.width = 1280;
 Window.height = 720;
+
+

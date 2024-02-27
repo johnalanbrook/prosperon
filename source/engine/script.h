@@ -23,7 +23,6 @@ extern struct callee stacktrace_callee;
 extern JSValue num_cache[100];
 
 JSValue jstr(const char *str);
-void call_stack();
 void js_stacktrace();
 void script_startup();
 void script_stop();
@@ -32,6 +31,7 @@ void script_evalf(const char *format, ...);
 int script_dofile(const char *file);
 time_t jso_file(const char *file);
 JSValue script_runfile(const char *file);
+JSValue eval_file_env(const char *script, const char *file, JSValue env);
 void script_update(double dt);
 void script_draw();
 void free_callee(struct callee c);
@@ -48,7 +48,6 @@ void call_callee(struct callee *c);
 void script_callee(struct callee c, int argc, JSValue *argv);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, JSValue env, const char *file);
-void call_env(JSValue env, const char *eval);
 void file_eval_env(const char *file, JSValue env);
 
 time_t file_mod_secs(const char *file);

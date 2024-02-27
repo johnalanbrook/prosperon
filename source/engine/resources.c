@@ -97,6 +97,7 @@ static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
   return 0;
 }
 
+// TODO: Not reentrant
 char **ls(const char *path)
 {
   if (ls_paths) {

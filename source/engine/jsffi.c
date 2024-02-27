@@ -828,18 +828,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     id2sprite(js2int(argv[1]))->t.pos = js2vec2(argv[2]);
     break;
 
-  case 38:
-    str = JS_ToCString(js, argv[1]);
-    d1 = slurp_text(str,NULL);
-    ret = JS_NewString(js, d1);
-    break;
-
-  case 39:
-    str = JS_ToCStringLen(js, &plen, argv[1]);
-    str2 = JS_ToCString(js, argv[2]);
-    ret = JS_NewInt64(js, slurp_write(str, str2, plen));
-    break;
-
   case 40:
     js2gameobject(argv[1])->filter.categories = js2bitmask(argv[2]);
     gameobject_apply(js2gameobject(argv[1]));
@@ -910,13 +898,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ret = JS_NewInt64(js, point2segindex(js2vec2(argv[1]), v1, js2number(argv[3])));
     break;
 
-  case 60:
-    str = JS_GetArrayBuffer(js, &plen, argv[1]);
-    str2 = JS_ToCString(js, argv[2]);
-    ret = JS_NewInt64(js, slurp_write(str, str2, plen));
-    str = NULL;
-    break;
-
   case 61:
     set_cam_body(js2gameobject(argv[1])->body);
     break;
@@ -932,11 +913,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   case 64:
     str = JS_ToCString(js, argv[1]);
     ret = vec2js(tex_get_dimensions(texture_pullfromfile(str)));
-    break;
-
-  case 65:
-    str = JS_ToCString(js, argv[1]);
-    ret = JS_NewBool(js, fexists(str));
     break;
 
   case 66:
@@ -991,12 +967,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ids = phys2d_query_shape(js2ptr(argv[1]));
     ret = gos2ref(ids);
     arrfree(ids);
-    break;
-
-  case 81:
-    str = JS_ToCString(js, argv[1]);
-    d1 = slurp_file(str, &plen);
-    ret = JS_NewArrayBufferCopy(js, d1, plen);
     break;
 
   case 82:
@@ -1114,13 +1084,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 121:
       ret = number2js(get_timescale());
       break;
-    case 122:
-      break;
 
     case 123:
       str = JS_ToCString(js, argv[1]);
       str2 = JS_ToCString(js, argv[3]);
-      script_eval_w_env(str, argv[2], str2);
+      ret = eval_file_env(str, str2, argv[2]);
       break;
 
     case 124:
@@ -1264,21 +1232,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js, argv[1]);
       ret = int2js(remove(str));
       break;
-    case 163:
-      str = JS_ToCString(js,argv[1]);
-      str2 = JS_ToCString(js,argv[2]);
-      ret = int2js(rename(str, str2));
-      break;
+
     case 164:
       unplug_node(js2ptr(argv[1]));
       break;
-    case 165:
-      break;
-    case 166:
-      str = js2str(argv[1]);
-      str2 = js2str(argv[2]);
-      ret = int2js(cp(str, str2));
-      break;
+
     case 168:
       js2gameobject(argv[1])->timescale = js2number(argv[2]);
       break;
@@ -1470,10 +1428,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 257:
       engine_start(argv[1]);
       break;
-    case 258:
-      str = js2str(argv[1]);
-      ret = int2js(mkdir(str, 0777));
-      break;
+
     case 259:
       script_gc();
       break;
@@ -1942,7 +1897,112 @@ JSValue js_os_env(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_CFUNC_DEF("cwd", 0, js_os_cwd),
-  MIST_CFUNC_DEF("env", 1, js_os_env),  
+  MIST_CFUNC_DEF("env", 1, js_os_env),
+};
+
+JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *file = JS_ToCString(js, argv[0]);
+  JSValue ret = JS_NewBool(js, fexists(file));
+  JS_FreeCString(js,file);
+  return ret;
+}
+
+JSValue js_io_ls(JSContext *js, JSValueConst this)
+{
+  return strarr2js(ls(","));
+}
+
+JSValue js_io_cp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f1, f2;
+  f1 = JS_ToCString(js, argv[0]);
+  f2 = JS_ToCString(js, argv[1]);
+  JSValue ret = int2js(cp(f1,f2));
+  JS_FreeCString(js,f1);
+  JS_FreeCString(js,f2);
+  return ret;
+}
+
+JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f1, f2;
+  f1 = JS_ToCString(js, argv[0]);
+  f2 = JS_ToCString(js, argv[1]);
+  JSValue ret = int2js(rename(f1,f2));
+  JS_FreeCString(js,f1);
+  JS_FreeCString(js,f2);
+  return ret;
+}
+
+JSValue js_io_rm(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *file = JS_ToCString(js, argv[0]);
+  JS_FreeCString(js,file);
+  return JS_UNDEFINED;
+}
+
+JSValue js_io_mkdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f = js2str(argv[0]);
+  JSValue ret = int2js(mkdir(f,0777));
+  JS_FreeCString(js,f);
+  return ret;
+}
+
+JSValue js_io_slurpbytes(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f = js2str(argv[0]);
+  size_t len;
+  char *d = slurp_file(f,&len);
+  JSValue ret = JS_NewArrayBufferCopy(js,d,len);
+  JS_FreeCString(js,f);
+  free(d);
+  return ret;
+}
+
+JSValue js_io_slurp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f = js2str(argv[0]);
+  size_t len;
+  char *s = slurp_text(f,&len);
+  JS_FreeCString(js,f);
+
+  if (!s) return JS_UNDEFINED;
+  
+  JSValue ret = JS_NewStringLen(js, s, len);
+  free(s);
+  return ret;
+}
+
+JSValue js_io_slurpwrite(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f = js2str(argv[0]);
+  size_t len;
+  char *data;
+  JSValue ret;
+  if (JS_IsString(argv[1])) {
+    data = JS_ToCStringLen(js, &len, argv[1]);
+    ret = int2js(slurp_write(data, f, len));
+    JS_FreeCString(js,data);
+  } else {
+    data = JS_GetArrayBuffer(js, &len, argv[1]);
+    ret = int2js(slurp_write(data, f, len));
+  }
+
+  return ret;
+}
+
+static const JSCFunctionListEntry js_io_funcs[] = {
+  MIST_CFUNC_DEF("exists", 1, js_io_exists),
+  MIST_CFUNC_DEF("ls", 0, js_io_ls),
+  MIST_CFUNC_DEF("cp", 2, js_io_cp),
+  MIST_CFUNC_DEF("mv", 2, js_io_mv),
+  MIST_CFUNC_DEF("rm", 1, js_io_rm),
+  MIST_CFUNC_DEF("mkdir", 1, js_io_mkdir),
+  MIST_CFUNC_DEF("slurp", 1, js_io_slurp),
+  MIST_CFUNC_DEF("slurpbytes", 1, js_io_slurpbytes),
+  MIST_CFUNC_DEF("slurpwrite", 2, js_io_slurpwrite),
 };
 
 static const JSCFunctionListEntry js_emitter_funcs[] = {
@@ -2202,6 +2262,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(constraint);
 
   QJSGLOBALCLASS(os);
+  QJSGLOBALCLASS(io);
 }
 
 void ffi_stop()

@@ -110,7 +110,6 @@ static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
   script_evalf("Register.appupdate.broadcast(%g);", elapsed);
-      call_stack();  
     input_poll(0);
     /* Timers all update every frame - once per monitor refresh */
     timer_update(elapsed, timescale);

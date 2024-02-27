@@ -38,7 +38,7 @@ var GUI = {
     color ??= Color.black;
     var wh = cmd(64,path);
     gui_img(path,pos, [1.0,1.0], 0.0, 0.0, [0.0,0.0], 0.0, Color.black);
-    return cwh2bb([0,0], wh);
+    return bbox.fromcwh([0,0], wh);
   },
 
   input_lmouse_pressed() {
@@ -69,11 +69,11 @@ var GUI = {
   }
 };
 
-var gui_controls = {};
-gui_controls.toString = function() { return "GUI controls"; };
-gui_controls.update = function() { };
+GUI.controls = {};
+GUI.controls.toString = function() { return "GUI controls"; };
+GUI.controls.update = function() { };
 
-gui_controls.set_mum = function(mum)
+GUI.controls.set_mum = function(mum)
 {
   mum.selected = true;
   
@@ -82,22 +82,22 @@ gui_controls.set_mum = function(mum)
 
   this.selected = mum;
 }
-gui_controls.check_bb = function(mum)
+GUI.controls.check_bb = function(mum)
 {
-  if (pointinbb(mum.bb, Mouse.pos))
-    gui_controls.set_mum(mum);
+  if (bbox.pointin(mum.bb, Mouse.pos))
+    GUI.controls.set_mum(mum);
 }
-gui_controls.inputs = {};
-gui_controls.inputs.fallthru = false;
-gui_controls.inputs.mouse = {};
-gui_controls.inputs.mouse.move = function(pos,dpos)
+GUI.controls.inputs = {};
+GUI.controls.inputs.fallthru = false;
+GUI.controls.inputs.mouse = {};
+GUI.controls.inputs.mouse.move = function(pos,dpos)
 {
 }
-gui_controls.inputs.mouse.scroll = function(scroll)
+GUI.controls.inputs.mouse.scroll = function(scroll)
 {
 }
 
-gui_controls.check_submit = function() {
+GUI.controls.check_submit = function() {
   if (this.selected && this.selected.action)
     this.selected.action(this.selected);
 }
@@ -159,7 +159,7 @@ Mum.text = Mum.extend({
   draw(cursor, cnt) {
     cnt ??= Mum;
     if (this.hide) return;
-    if (this.selectable) gui_controls.check_bb(this);
+    if (this.selectable) GUI.controls.check_bb(this);
     this.caret ??= -1;
 
 /*    if (!this.bb)
@@ -179,14 +179,14 @@ Mum.text = Mum.extend({
   },
   
   update_bb(cursor) {
-    this.bb = movebb(this.bb, cursor.sub(this.wh.scale(this.anchor)));
+    this.bb = bbox.move(this.bb, cursor.sub(this.wh.scale(this.anchor)));
   },
   
   calc_bb(cursor) {
     var bb = cmd(118,this.str, this.font_size, this.width);
-    this.wh = bb2wh(bb);
+    this.wh = bbox.towh(bb);
     var pos = cursor.add(this.wh.scale([0,1].sub(this.anchor))).add(this.offset);    
-    this.bb = movebb(bb,pos.add([this.wh.x/2,0]));
+    this.bb = bbox.move(bb,pos.add([this.wh.x/2,0]));
   },
   start() {
     this.calc_bb([0,0]);
@@ -205,17 +205,17 @@ Mum.button = Mum.text._int.extend({
 Mum.window = Mum.extend({
   start() {
     this.wh = [this.width, this.height];
-    this.bb = cwh2bb([0,0], this.wh);
+    this.bb = bbox.fromcwh([0,0], this.wh);
   },
   draw(cursor, cnt) {
     cnt ??= Mum;
     var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
     GUI.window(p,this.wh, this.color);
-    this.bb = bl2bb(p, this.wh);
+    this.bb = bbox.blwh(p, this.wh);
     GUI.flush();
     GUI.scissor(p.x,p.y,this.wh.x,this.wh.y);
     this.max_width = this.width;
-    if (this.selectable) gui_controls.check_bb(this);
+    if (this.selectable) GUI.controls.check_bb(this);
     var pos = [this.bb.l, this.bb.t].add(this.padding);
     this.items.forEach(function(item) {
       if (item.hide) return;
@@ -249,8 +249,8 @@ Mum.image = Mum.extend({
   },
 
   calc_bb(pos) {
-    this.bb = cwh2bb(this.wh.scale([0.5,0.5]), wh);
-    this.bb = movebb(this.bb, pos.sub(this.wh.scale(this.anchor)));
+    this.bb = bbox.fromcwh(this.wh.scale([0.5,0.5]), wh);
+    this.bb = bbox.move(this.bb, pos.sub(this.wh.scale(this.anchor)));
   }
 });
 
@@ -287,3 +287,8 @@ Mum.debug_colors = {
 };
 
 Object.values(Mum.debug_colors).forEach(function(v) { v.a = 100; });
+
+return {
+  GUI,
+  Mum
+};

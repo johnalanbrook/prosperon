@@ -197,3 +197,9 @@ ColorMap.doc = {
 };
 
 Object.freeze(ColorMap);
+
+return {
+  Color,
+  esc,
+  ColorMap
+}

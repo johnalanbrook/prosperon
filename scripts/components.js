@@ -367,7 +367,7 @@ component.polygon2d = Object.copy(collider2d, {
   flipy: false,
   
   boundingbox() {
-    return points2bb(this.spoints());
+    return bbox.frompoints(this.spoints());
   },
   
   hides: ['id', 'shape', 'gameobject'],
@@ -538,7 +538,7 @@ component.edge2d = Object.copy(collider2d, {
     return Spline.sample_angle(this.type, spoints, this.angle);
   },
 
-  boundingbox() { return points2bb(this.points.map(x => x.scale(this.gameobject.scale))); },
+  boundingbox() { return bbox.frompoints(this.points.map(x => x.scale(this.gameobject.scale))); },
 
   hides: ['gameobject', 'id', 'shape'],
   _enghook: make_edge2d,
@@ -822,3 +822,5 @@ component.circle2d.impl = Object.mix({
   set pos(x) { this.offset = x; },
   
 }, collider2d.impl);
+
+return {component};

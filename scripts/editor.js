@@ -2,7 +2,7 @@
   Editor-only variables on objects
   selectable
 */
-prototypes.generate_ur('.');
+//prototypes.generate_ur('.');
 
 var editor = {
   toString() { return "editor"; },
@@ -166,7 +166,7 @@ var editor = {
   },
 
   zoom_to_bb(bb) {
-    var cwh = bb2cwh(bb);
+    var cwh = bbox.tocwh(bb);
     
     var xscale = cwh.wh.x / Window.width;
     var yscale = cwh.wh.y / Window.height;
@@ -221,7 +221,7 @@ var editor = {
     editor.cbs.push(Register.gui.register(editor.gui.bind(editor)));
     editor.cbs.push(Register.draw.register(editor.draw.bind(editor)));
     editor.cbs.push(Register.debug.register(editor.ed_debug.bind(editor)));
-    editor.cbs.push(Register.update.register(gui_controls.update, gui_controls));
+    editor.cbs.push(Register.update.register(GUI.controls.update, GUI.controls));
     
     this.desktop = Primum.spawn(ur.arena);
     Primum.rename_obj(this.desktop.toString(), "desktop");
@@ -377,7 +377,7 @@ var editor = {
         x.gizmo();
     });
   
-    render.line(bb2points(cwh2bb([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
+    render.line(bbox.topoints(bbox.fromcwh([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
 
     /* Draw selection box */
     if (this.sel_start) {
@@ -390,9 +390,9 @@ var editor = {
       var wh = [];
       wh[0] = Math.abs(endpos[0] - this.sel_start[0]);
       wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
-      var bb = cwh2bb(c,wh);
+      var bb = bbox.fromcwh(c,wh);
       Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
-      render.line(bb2points(bb).wrapped(1), Color.white);
+      render.line(bbox.topoints(bb).wrapped(1), Color.white);
     }
   },
 
@@ -718,7 +718,7 @@ editor.inputs.q.doc = "Toggle help for the selected component.";
 editor.inputs.f = function() {
   if (editor.selectlist.length === 0) return;
   var bb = editor.selectlist[0].boundingbox();
-  editor.selectlist.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox()); });
+  editor.selectlist.forEach(function(obj) { bb = bbox.expand(bb, obj.boundingbox()); });
   editor.zoom_to_bb(bb);
 };
 editor.inputs.f.doc = "Find the selected objects.";
@@ -972,11 +972,9 @@ editor.inputs.lm.released = function() {
       var sel = editor.try_select();
       if (sel) selects.push(sel);
     } else {
-      var box = points2cwh(editor.sel_start, Mouse.worldpos);
+      var box = bbox.frompoints([editor.sel_start, Mouse.worldpos]);
     
-      box.pos = box.c;
-    
-      var hits = physics.box_query(box);
+      var hits = physics.box_query(bbox.tocwh(box));
 
       hits.forEach(function(x, i) {
         var obj = editor.do_select(x);
@@ -1466,10 +1464,10 @@ inputpanel.inputs['C-k'] = function() {
 
 inputpanel.inputs.lm = function()
 {
-  gui_controls.check_submit();
+  GUI.controls.check_submit();
 }
 
-load("scripts/textedit.js");
+//load("scripts/textedit.js");
 
 var replpanel = Object.copy(inputpanel, {
   title: "",
@@ -1998,3 +1996,7 @@ if (io.exists("editor.config"))
 Game.stop();
 Game.editor_mode(true);
 Debug.draw_phys(true);
+
+return {
+  editor
+}

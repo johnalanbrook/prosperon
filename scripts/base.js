@@ -572,6 +572,16 @@ Object.defineProperty(Object.prototype, 'obscure', {
   }
 });
 
+Object.defineProperty(Object.prototype, 'mixin', {
+  value: function(obj) {
+    if (typeof obj === 'string') {
+      obj = use(obj);
+      if (!obj) return;
+    }
+    Object.assign(this, obj);
+  },
+});
+
 Object.defineProperty(Object.prototype, 'hasOwn', {
   value: function(x) { return this.hasOwnProperty(x); }
 });
@@ -1329,7 +1339,7 @@ Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * ma
 /* BOUNDINGBOXES */
 var bbox = {};
 
-function cwh2bb(c, wh) {
+bbox.fromcwh = function(c, wh) {
   return {
     t: c.y+(wh.y/2),
     b: c.y-(wh.y/2),
@@ -1338,7 +1348,7 @@ function cwh2bb(c, wh) {
   };
 };
 
-function points2bb(points) {
+bbox.frompoints = function(points) {
     var b= {t:0,b:0,l:0,r:0};
     
     points.forEach(function(x) {
@@ -1351,7 +1361,7 @@ function points2bb(points) {
     return b;
 };
 
-function bb2points(bb)
+bbox.topoints = function(bb)
 {
   return [
    [bb.l,bb.t],
@@ -1361,20 +1371,7 @@ function bb2points(bb)
   ];
 }
 
-function points2cwh(start,end)
-{
-    var c = [];
-    c[0] = (end[0] - start[0]) / 2;
-    c[0] += start[0];
-    c[1] = (end[1] - start[1]) / 2; 
-    c[1] += start[1];
-    var wh = [];
-    wh[0] = Math.abs(end[0] - start[0]);
-    wh[1] = Math.abs(end[1] - start[1]);
-    return {c: c, wh: wh};
-}
-
-function bb2cwh(bb) {
+bbox.tocwh = function(bb) {
   if (!bb) return undefined;
   var cwh = {};
 
@@ -1386,7 +1383,11 @@ function bb2cwh(bb) {
   return cwh;
 };
 
-function pointinbb(bb, p)
+bbox.towh = function(bb) {
+  return [bb.r-bb.l, bb.t-bb.b];
+};
+
+bbox.pointin = function(bb, p)
 {
   if (bb.t < p.y || bb.b > p.y || bb.l > p.x || bb.r < p.x)
     return false;
@@ -1394,7 +1395,7 @@ function pointinbb(bb, p)
   return true;
 }
 
-function movebb(bb, pos) {
+bbox.move = function(bb, pos) {
   var newbb = Object.assign({}, bb);
   newbb.t += pos.y;
   newbb.b += pos.y;
@@ -1403,7 +1404,7 @@ function movebb(bb, pos) {
   return newbb;
 };
 
-function bb_expand(oldbb, x) {
+bbox.expand = function(oldbb, x) {
   if (!oldbb || !x) return;
   var bb = {};
   Object.assign(bb, oldbb);
@@ -1416,7 +1417,7 @@ function bb_expand(oldbb, x) {
   return bb;
 };
 
-function bl2bb(bl, wh)
+bbox.blwh = function(bl,wh)
 {
   return {
     b: bl.y,
@@ -1426,16 +1427,14 @@ function bl2bb(bl, wh)
   };
 }
 
-function bb_from_objects(objs) {
+bbox.blwh.doc = "Bounding box from (bottom left, width height)";
+
+bbox.fromobjs = function(objs)
+{
   var bb = objs[0].boundingbox;
-  objs.forEach(function(obj) { bb = bb_expand(bb, obj.boundingbox); });
+  objs.forEach(function(obj) { bb = bbox.expand(bb, obj.boundingbox); });
   return bb;
 };
-
-var Boundingbox = {};
-Boundingbox.width = function(bb) { return bb.r - bb.l; };
-Boundingbox.height = function(bb) { return bb.t - bb.b; };
-Boundingbox.bl = function(bb) { return [bb.l, bb.b] };
 
 /* VECTORS */
 var Vector = {
@@ -1527,3 +1526,12 @@ Math.sortpointsccw = function(points)
   
   return ccw.map(function(x) { return x.add(cm); });
 }
+
+return {
+  convert,
+  time,
+  json,
+  Vector,
+  bbox
+};
+

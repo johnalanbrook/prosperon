@@ -71,3 +71,7 @@ physics.warp.damp = function() { return cmd(254); }
 
 physics.gravity = physics.warp.gravity();
 physics.damp = physics.warp.damp();
+
+return {
+  physics
+}
