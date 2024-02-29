@@ -203,6 +203,7 @@ var Player = {
     n.pawns = [];
     n.gamepads = [];
     this.players.push(n);
+    this[this.players.length-1] = n;
     return n;
   },
 
@@ -227,9 +228,12 @@ Player.print_pawns.doc = "Print out a list of the current pawn control stack.";
 Player.doc = {};
 Player.doc.players = "A list of current players.";
 
+var player = Player;
+
 return {
   Mouse,
   Keys,
   input,
   Player,
+  player
 };

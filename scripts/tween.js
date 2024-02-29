@@ -196,3 +196,5 @@ var Tween = {
 };
 
 Tween.make = Tween.start;
+
+return {Tween, Ease};

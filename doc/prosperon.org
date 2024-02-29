@@ -119,7 +119,6 @@ When an actor dies, all of the actors that have it as their master[fn::What a mo
 *** Turns
 Actors get fragments of time called a *turn*. Actors which belong to different systems can have different lengths of turns.
 
-
 *** Actor files
 Actor files end with the extension *.jso*[fn::"Javascript object".]. They list a series of functions to call on a newly formed actor. Actors have a number of useful functions which are called as defined.
 
@@ -184,7 +183,11 @@ Game worlds are made of entities. Entities are a type of actor with a number of 
 The first and most masterful entity is the Primum. The Primum has no components, and its rotation and position are zero. It defines the center of the game.
 #+end_scholium
 
-In editor mode, when an entity moves, all of its *padawans* also move. When the game is actively simulating, this only holds if there are physical constraints between them.
+In editor mode, when an entity moves, all of its *padawans* also move.
+
+When the game is actively simulating, this only holds if there are physical constraints between them.
+
+Prosperon automatically generates physical pin constraints between objects with the appropriate physical properties.
 
 *** Adding Components
 Entities can have *components*. Components are essentially javascript wrappers over C code into the engine. Scripting is done to set the components up on entities, after which most of the work is done by the C plugin.
@@ -206,7 +209,7 @@ Components only work in the context of an entity. They have no meaning outside o
 While components can be added via scripting, it is easier to add them via the editor, as we will later see.
 
 *** Ur system
-The ur[fn::A German prefix meaning primitive, original, or earliest.] system is a prototypical inheritence system used by the actor files. When actor files are loaded, they are stored as an ur. Entities can be created from ur types using the *spawn* function.
+The ur[fn::A German prefix meaning primitive, original, or earliest.] system is a prototypical inheritence system used by the actor files. When actor files are loaded, they are stored as an ur. An *ur* represents a set of instructions to create the (text, config) needed to spawn an actor or entity.
 
 #+begin_scholium
 Create an ur from the *hello* files above, and then spawn it.
@@ -217,11 +220,21 @@ Primum.spawn(ur.hello);
 When creating an actor from source files, all of its setup must take place. In this example, the setup happens during *ur.create*, and spawning is simply a matter of prototyping it.
 #+end_scholium
 
-Each ur type has some useful fields.
+Each ur has the following fields.
 
-| field     | description                      |
-|-----------+----------------------------------|
-| instances | An array of instances of this ur |
+| field     | description                                                 |
+|-----------+-------------------------------------------------------------|
+| instances | An array of instances of this ur                            |
+| name      | Name of the ur                                              |
+| text      | Path to the script file                                     |
+| data      | Object to write to a newly generated actor                  |
+| proto     | An object that looks like a freshly made entity from the ur |
+
+An *ur* has a full path given like ~ur.goblin.big~. ~goblin~ and ~big~ can both possibly have a *.jso* script as well as a *data* file.
+
+When ~goblin.big~ is created, the new object has the ~goblin~ script run on it, followed by the ~big~ script. The ~data~ fields consist of objects prototyped from each other, so that the ~__proto__~ of ~big.data~ is ~goblin.data~. All fields of this objects are assigned to the ~big goblin~.
+
+The unaltered form of every ur-based-entity is saved in the ur's ~proto~ field. As you edit objects, the differences between how your object is now, compared to its ~ur.proto~ is a list of differences. These differences can be rolled into the ~ur~, or saved as a subtype.
 
 *** Prototyping Entities
 Ur types are the prototype of created entities. This makes it trivial to change huge swathes of the game, or make tiny adjustments to single objects, in a natural and intuitive way. When a value is changed on an entity, it is private. When a value is changed on an ur, it propogates to all entities. Values cannot be added or removed in subtypes.

@@ -117,7 +117,6 @@ char *nota_write_int(long long n, char *nota)
   return nota_continue_num(n, nota, 3);
 }
 
-
 #define NOTA_DBL_PREC 6
 #define xstr(s) str(s)
 #define str(s) #s

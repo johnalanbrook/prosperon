@@ -44,5 +44,4 @@ warp_damp *warp_damp_make();
 void warp_gravity_free(warp_gravity *g);
 void warp_damp_free(warp_damp *d);
 
-
 #endif

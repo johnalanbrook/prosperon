@@ -2,15 +2,12 @@
   Editor-only variables on objects
   selectable
 */
-//prototypes.generate_ur('.');
 
 var editor = {
   toString() { return "editor"; },
   grid_size: 100,
   ruler_mark_px: 100,
   grid_color: Color.green.alpha(0.3),
-
-  dbg_ur: "arena.level1",
   machine: undefined,
   device_test: undefined,
   selectlist: [],
@@ -40,10 +37,10 @@ var editor = {
     if (!obj) return;
     if (!obj._ed.selectable) return undefined;
     
-    if (obj.level !== this.edit_level) {
-      var testlevel = obj.level;
-      while (testlevel && testlevel.level !== Primum && testlevel.level !== this.edit_level && testlevel !== testlevel.level)
-         testlevel = testlevel.level;
+    if (obj.master !== this.edit_level) {
+      var testlevel = obj.master;
+      while (testlevel && testlevel.master !== world && testlevel.master !== this.edit_level && testlevel !== testlevel.master)
+         testlevel = testlevel.master;
       return testlevel;
     }
     
@@ -57,7 +54,7 @@ var editor = {
   curpanel: undefined,
 
   check_level_nested() {
-    if (this.edit_level.level) {
+    if (this.edit_level.master) {
       this.openpanel(gen_notify("Can't close a nested level. Save up to the root before continuing."));
       return true;
     }
@@ -186,45 +183,45 @@ var editor = {
 
   start_play_ed() {
     this.stash = this.desktop.instance_obj();
-    Primum.clear();
-    load("config.js");
+    world.clear();
+    global.mixin("config.js");
     Game.play();
-    Player.players[0].uncontrol(this);
-    Player.players[0].control(limited_editor);
+    player[0].uncontrol(this);
+    player[0].control(limited_editor);
     editor.cbs.forEach(cb => cb());
     editor.cbs = [];
-    load("predbg.js");
+    global.mixin("predbg.js");
     console.warn(`starting game with ${this.dbg_ur}`);
-    editor.dbg_play = Primum.spawn(this.dbg_ur);
+    editor.dbg_play = world.spawn(this.dbg_ur);
     editor.dbg_play.pos = [0,0];
-    load("debug.js");
+    global.mixin("debug.js");
   },
 
   start_play() {
-    Primum.clear();
-    load("config.js");
+    world.clear();
+    global.mixin("config.js");
     Game.play();
-    Player.players[0].uncontrol(this);
-    Player.players[0].control(limited_editor);
+    player[0].uncontrol(this);
+    player[0].control(limited_editor);
     editor.cbs.forEach(cb=>cb());
     editor.cbs = [];
-    load("game.js");
+    global.mixin("game.js");
   },
 
   cbs: [],
 
   enter_editor() {
     Game.pause();
-    Player.players[0].control(this);
-    Player.players[0].uncontrol(limited_editor);
+    player[0].control(this);
+    player[0].uncontrol(limited_editor);
     
     editor.cbs.push(Register.gui.register(editor.gui.bind(editor)));
     editor.cbs.push(Register.draw.register(editor.draw.bind(editor)));
     editor.cbs.push(Register.debug.register(editor.ed_debug.bind(editor)));
     editor.cbs.push(Register.update.register(GUI.controls.update, GUI.controls));
     
-    this.desktop = Primum.spawn(ur.arena);
-    Primum.rename_obj(this.desktop.toString(), "desktop");
+    this.desktop = world.spawn();
+    world.rename_obj(this.desktop.toString(), "desktop");
     this.edit_level = this.desktop;
     editor.edit_level._ed.selectable = false;
     if (this.stash) {
@@ -232,7 +229,7 @@ var editor = {
       Object.dainty_assign(this.desktop, this.stash);
     }
     this.selectlist = [];
-    editor.camera = Primum.spawn(ur.camera2d);
+    editor.camera = world.spawn("scripts/camera2d.jso");
     editor.camera._ed.selectable = false;
     Game.view_camera(editor.camera);
   },
@@ -244,11 +241,11 @@ var editor = {
   openpanel(panel) {
     if (this.curpanel) {
       this.curpanel.close();
-      Player.players[0].uncontrol(this.curpanel);
+      player[0].uncontrol(this.curpanel);
     }
       
     this.curpanel = panel;
-    Player.players[0].control(this.curpanel);
+    player[0].control(this.curpanel);
     this.curpanel.open();
   },
 
@@ -271,6 +268,7 @@ var editor = {
   },
 
   snapshot() {
+    return; // TODO: Implement
     var dif = this.edit_level.json_obj();
     if (!dif) return;
   
@@ -338,10 +336,6 @@ var editor = {
     }
   },
   
-  load_desktop(d) {
-    
-  },
-
   draw_objects_names(obj,root,depth){
       if (!obj) return;
       if (!obj.objects) return;
@@ -358,13 +352,13 @@ var editor = {
   get sel_comp() { return this._sel_comp; },
   set sel_comp(x) {
     if (this._sel_comp)
-      Player.players[0].uncontrol(this._sel_comp);
+      player[0].uncontrol(this._sel_comp);
     
     this._sel_comp = x;
 
     if (this._sel_comp) {
       console.info("sel comp is now " + this._sel_comp);
-      Player.players[0].control(this._sel_comp);
+      player[0].control(this._sel_comp);
     }
   },
 
@@ -413,9 +407,9 @@ var editor = {
     var clvl = thiso;
     
     var lvlchain = [];
-    while (clvl !== Primum) {
+    while (clvl !== world) {
       lvlchain.push(clvl);
-      clvl = clvl.level;
+      clvl = clvl.master;
     }
     lvlchain.push(clvl);
     
@@ -450,11 +444,7 @@ var editor = {
     GUI.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
     
     this.selectlist.forEach(function(x) {
-      var sname = x.__proto__.toString();
-      x.check_dirty();
-      if (x._ed.dirty) sname += "*";
-      
-      GUI.text(sname, x.screenpos().add([0, 32]), 1, Color.editor.ur);
+      GUI.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
       GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
       render.cross(x.screenpos(), 10, Color.blue);
     });
@@ -532,9 +522,7 @@ var editor = {
   lvl_history: [],
 
   load(file) {
-    var ur = prototypes.get_ur(file);
-    if (!ur) return;
-    var obj = editor.edit_level.spawn(ur);
+    var obj = editor.edit_level.spawn(Object.access(ur, file));
     obj.set_worldpos(Mouse.worldpos);
     this.selectlist = [obj];
   },
@@ -550,10 +538,11 @@ var editor = {
   /* Checking to save an entity as a subtype. */
   /* sub is the name of the (sub)type; obj is the object to save it as */
   saveas_check(sub, obj) {
+    return;
     if (!sub) return;
     obj ??= editor.selectlist[0];
     
-    var curur = prototypes.get_ur(sub);
+//    var curur = prototypes.get_ur(sub);
     
     if (curur) {
       notifypanel.action = editor.saveas;
@@ -570,7 +559,7 @@ var editor = {
 	  editor.selectlist = [nobj];
 	  return;
 	}
-	editor.edit_level = editor.edit_level.level;
+	editor.edit_level = editor.edit_level.master;
       }
 
       var t = obj.transform();
@@ -633,7 +622,7 @@ editor.inputs.n = function() {
   var o = editor.try_select();
   if (!o) return;
   if (o === editor.selectlist[0]) return;
-  if (o.level !== editor.selectlist[0].level) return;
+  if (o.master !== editor.selectlist[0].master) return;
 
   var tpos = editor.selectlist[0].pos;
   tpos.x *= -1;
@@ -646,7 +635,7 @@ editor.inputs['M-n'] = function()
   var o = editor.try_select();
   if (!o) return;
   if (o === editor.selectlist[0]) return;
-  if (o.level !== editor.selectlist[0].level) return;
+  if (o.master !== editor.selectlist[0].master) return;
 
   var tpos = editor.selectlist[0].pos;
   tpos.y *= -1;
@@ -662,7 +651,7 @@ editor.inputs['h'] = function() {
 };
 editor.inputs['h'].doc = "Toggle object hidden.";
 
-editor.inputs['C-h'] = function() { Primum.objects.forEach(function(x) { x.visible = true; }); };
+editor.inputs['C-h'] = function() { world.objects.forEach(function(x) { x.visible = true; }); };
 editor.inputs['C-h'].doc = "Unhide all objects.";
 
 editor.inputs['C-e'] = function() { editor.openpanel(assetexplorer); };
@@ -733,9 +722,9 @@ editor.inputs['C-f'] = function() {
 editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
 
 editor.inputs['C-F'] = function() {
-  if (editor.edit_level.level === Primum) return;
+  if (editor.edit_level.master === world) return;
 
-  editor.edit_level = editor.edit_level.level;
+  editor.edit_level = editor.edit_level.master;
   editor.unselect();
   editor.reset_undos();
 };
@@ -807,7 +796,7 @@ editor.inputs['C-space'] = function() {
 editor.inputs['C-space'].doc = "Search to execute a specific command.";
 
 editor.inputs['M-m'] = function() {
-//  Player.players[0].control(rebinder);
+//  player[0].control(rebinder);
 };
 editor.inputs['M-m'].doc = "Rebind a shortcut. Usage: M-m SHORTCUT TARGET";
 
@@ -838,7 +827,8 @@ editor.inputs['C-s'] = function() {
   var savejs = saveobj.json_obj();
   Object.merge(saveobj.__proto__, savejs);
   if (savejs.objects) saveobj.__proto__.objects = savejs.objects;
-  var path = prototypes.ur_stem(saveobj.ur.toString()) + ".json";
+//  var path = prototypes.ur_stem(saveobj.ur.toString()) + ".json";
+  path = "CHANGETHIS";
 
   io.slurpwrite(path, JSON.stringify(saveobj.__proto__,null,1));
   console.warn(`Wrote to file ${path}`);
@@ -1053,7 +1043,7 @@ editor.inputs['C-M-lm'] = function()
 {
   var go = physics.pos_query(Mouse.worldpos);
   if (!go) return;
-  editor.edit_level = go.level;
+  editor.edit_level = go.master;
 }
 
 editor.inputs['C-M-mm'] = function() {
@@ -1380,7 +1370,7 @@ var inputpanel = {
   start() {},
   
   close() {
-    Player.players[0].uncontrol(this);
+    player[0].uncontrol(this);
     this.on = false;
     if ('on_close' in this)
       this.on_close();
@@ -1505,6 +1495,7 @@ var replpanel = Object.copy(inputpanel, {
     this.value = "";
     this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
+    if (typeof ret === 'object') ret = json.encode(ret,null,1);
     console.say(ret);
   },
 
@@ -1797,7 +1788,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
   },
 
   start() {
-    this.allassets = prototypes.list.sort();
+    this.allassets = ur._list.sort();
     this.assets = this.allassets.slice();
     this.caret = 0;
     var click_ur = function(btn) {
@@ -1954,7 +1945,7 @@ var entitylistpanel = Object.copy(inputpanel, {
   title: "Level object list",
   level: {},
   start() {
-    this.level = editor.edit_level;
+    this.master = editor.edit_level;
   },
 });
 
@@ -1978,9 +1969,9 @@ limited_editor.inputs['M-p'] = function()
 
 limited_editor.inputs['C-q'] = function()
 {
-  Primum.clear();
-  load("editorconfig.js");
-  load("dbgret.js");
+  world.clear();
+  global.mixin("editorconfig.js");
+  global.mixin("dbgret.js");
   
   editor.enter_editor();
 }

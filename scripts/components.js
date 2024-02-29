@@ -42,8 +42,7 @@ var component = {
   extend(spec) { return Object.copy(this, spec); },
 };
 
-component.util = {};
-component.util.make_point_obj = function(o, p)
+var make_point_obj = function(o, p)
 {
   return {
     pos: p,
@@ -56,7 +55,7 @@ component.util.make_point_obj = function(o, p)
   }
 }
 
-component.util.assign_impl = function(obj, impl)
+var assign_impl = function(obj, impl)
 {
   var tmp = {};
   for (var key of Object.keys(impl))
@@ -172,7 +171,7 @@ component.sprite.impl = {
     var dim = this.dimensions();
     dim = dim.scale(this.gameobject.gscale());
     var realpos = dim.scale(0.5).add(this.pos);
-    return cwh2bb(realpos,dim);
+    return bbox.fromcwh(realpos,dim);
   },
 
   kill() { cmd(9,this.id); },
@@ -801,7 +800,7 @@ component.circle2d = Object.copy(collider2d, {
   toString() { return "circle2d"; },
   
   boundingbox() {
-    return cwh2bb(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
+    return bbox.fromcwh(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
   },
 
   hides: ['gameobject', 'id', 'shape', 'scale'],

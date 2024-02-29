@@ -4,16 +4,6 @@
 
 static warp_gravity **warps = NULL;
 
-warp_gravity *warp_gravity_make()
-{
-  warp_gravity *n = calloc(sizeof(*n),1);
-  n->strength = 9.8;
-  n->t.scale = (HMM_Vec3){0,-1,0};
-  n->planar_force = HMM_MulV3F(n->t.scale, n->strength);
-  arrput(warps, n);
-  return n;
-}
-
 warp_damp *warp_damp_make()
 {
   warp_damp *d = calloc(sizeof(*d),1);
@@ -21,6 +11,17 @@ warp_damp *warp_damp_make()
 }
 
 void warp_damp_free(warp_damp *d) { free(d); }
+
+warp_gravity *warp_gravity_make()
+{
+  warp_gravity *n = calloc(sizeof(*n),1);
+  n->strength = 9.8;
+  n->t.scale = (HMM_Vec3){0,-1,0};
+  n->planar_force = (HMM_Vec3){0,-1,0};
+  arrput(warps, n);
+  return n;
+}
+
 void warp_gravity_free(warp_gravity *n) {
   for (int i = 0; i < arrlen(warps); i++) {
     if (warps[i] == n) {
@@ -47,7 +48,7 @@ HMM_Vec3 warp_gravity_force(warp_gravity *g, HMM_Vec3 pos)
     HMM_Vec3 norm = HMM_NormV3(HMM_SubV3(g->t.pos, pos));
     return HMM_MulV3F(norm,g->strength);
   } else {
-    return g->planar_force;
+    return HMM_MulV3F(g->planar_force, g->strength);
   }
 }
 

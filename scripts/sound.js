@@ -113,3 +113,5 @@ Object.mixin(cmd(180).__proto__, {
   pct() { return this.time()/this.length(); },
 });
 */
+
+return {audio};

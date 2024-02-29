@@ -238,6 +238,10 @@ Cmdline.register_order("init", function() {
   
 }, "Turn the directory into a Prosperon game.");
 
+Cmdline.register_order("debug", function() {
+  Cmdline.orders.play();
+}, "Play the game with debugging enabled.");
+
 Cmdline.register_order("play", function() {
   if (!io.exists(".prosperon/project")) {
     say("No game to play. Try making one with 'prosperon init'.");
@@ -247,8 +251,8 @@ Cmdline.register_order("play", function() {
   var project = json.decode(io.slurp(".prosperon/project"));
   
   Game.engine_start(function() {
-    load("config.js");
-    load("game.js");
+    global.mixin("config.js");
+    global.mixin("game.js");
     if (project.icon) Window.icon(project.icon);
     if (project.title) Window.title(project.title);
   });  
@@ -379,35 +383,6 @@ function cmd_args(cmdargs)
 
 Cmdline.register_order("clean", function(argv) {
   say("Cleaning not implemented.");
-  return;
-  
-  var f = argv[0];
-  if (argv.length === 0) {
-    Cmdline.print_order("clean");
-    return;
-  }
-  
-  if (!io.exists(f)) {
-    say(`File ${f} does not exist.`);
-    return;
-  }
-
-  prototypes.generate_ur();
-
-  var j = json.decode(io.slurp(f));
-
-  for (var k in j)
-    if (k in j.objects)
-      delete j[k];
-
-  console.warn(j);
-
-  for (var k in j.objects) {
-    var o = j.objects[k];
-    samediff(o, ur[o.ur]);
-  }
-
-  say(j);
 }, "Clean up a given object file.", "JSON ...");
 
 Cmdline.register_cmd("l", function(n) {

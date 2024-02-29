@@ -14,18 +14,27 @@ function use(file)
 }
 use.files = {};
 
+function include(file,that)
+{
+  if (!that) return;
+  var c = io.slurp(file);
+  eval_env(c, that, file);
+}
+
 function eval_env(script, env, file)
 {
   env ??= {};
   file ??= "SCRIPT";
-//  script = `(function() { ${script} })();`;
-  eval(`(function() { ${script} }).call(env);`);
-//  cmd(123,script,global,file);
-//  return eval(script);
-  
-//  return function(str) { return eval(str); }.call(env, script);
+  script = `(function() { ${script} }).call(this);`;
+  return cmd(123,script,env,file);
 }
+
 eval_env.dov = `Counterpart to /load_env/, but with a string.`;
+
+function feval_env(file, env)
+{
+  eval_env(io.slurp(file), env, file);
+}
 
 function load_env(file,env)
 {
@@ -43,12 +52,12 @@ var load = use;
 
 Object.assign(global, use("scripts/base.js"));
 global.obscure('global');
-global.mixin(use("scripts/std.js"));
-global.mixin(use("scripts/diff.js"));
+global.mixin("scripts/std.js");
+global.mixin("scripts/diff.js");
 
 console.level = 1;
 
-global.mixin(use("scripts/color.js"));
+global.mixin("scripts/color.js");
 
 var prosperon = {};
 prosperon.version = cmd(255);
@@ -104,7 +113,7 @@ Range is given by a semantic versioning number, prefixed with nothing, a ~, or a
 ^ means that MAJOR must match exactly, but any MINOR and PATCH greater or equal is valid.`;
 
 
-global.mixin(use("scripts/gui.js"));
+global.mixin("scripts/gui.js");
 
 var timer = {
   update(dt) {
@@ -130,61 +139,13 @@ var timer = {
   },
 };
 
-load("scripts/tween.js");
-
-var render = {
-  normal() { cmd(67);},
-  wireframe() { cmd(68); },
-  pass() { },
-};
-
-render.doc = {
-  doc: "Functions for rendering modes.",
-  normal: "Final render with all lighting.",
-  wireframe: "Show only wireframes of models."
-};
-
-render.device = {
-  pc: [1920,1080],
-  macbook_m2: [2560,1664, 13.6],
-  ds_top: [400,240, 3.53],
-  ds_bottom: [320,240, 3.02],
-  playdate: [400,240,2.7],
-  switch: [1280,720, 6.2],
-  switch_lite: [1280,720,5.5],
-  switch_oled: [1280,720,7],
-  dsi: [256,192,3.268],
-  ds: [256,192, 3],
-  dsixl: [256,192,4.2],
-  ipad_air_m2: [2360,1640, 11.97],
-  iphone_se: [1334, 750, 4.7],
-  iphone_12_pro: [2532,1170,6.06],
-  iphone_15: [2556,1179,6.1],
-  gba: [240,160,2.9],
-  gameboy: [160,144,2.48],
-  gbc: [160,144,2.28],
-  steamdeck: [1280,800,7],
-  vita: [960,544,5],
-  psp: [480,272,4.3],
-  imac_m3: [4480,2520,23.5],
-  macbook_pro_m3: [3024,1964, 14.2],
-  ps1: [320,240,5],
-  ps2: [640,480],
-  snes: [256,224],
-  gamecube: [640,480],
-  n64: [320,240],
-  c64: [320,200],
-  macintosh: [512,342,9],
-  gamegear: [160,144,3.2],
-};
-
-render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
-
-global.mixin(use("scripts/physics.js"));
-global.mixin(use("scripts/input.js"));
-global.mixin(use("scripts/sound.js"));
-global.mixin(use("scripts/ai.js"));
-global.mixin(use("scripts/geometry.js"));
+global.mixin("scripts/tween.js");
+global.mixin("scripts/render.js");
+global.mixin("scripts/physics.js");
+global.mixin("scripts/input.js");
+global.mixin("scripts/sound.js");
+global.mixin("scripts/ai.js");
+global.mixin("scripts/geometry.js");
 
 var Register = {
   kbm_input(mode, btn, state, ...args) {
@@ -194,15 +155,15 @@ var Register = {
    
     switch(mode) {
       case "emacs":
-        Player.players[0].raw_input(btn, state, ...args);
+        player[0].raw_input(btn, state, ...args);
         break;
 
       case "mouse":
-        Player.players[0].mouse_input(btn, state, ...args);
+        player[0].mouse_input(btn, state, ...args);
 	break;
 
       case "char":
-        Player.players[0].char_input(btn);
+        player[0].char_input(btn);
 	break;
     };
   },
@@ -275,7 +236,7 @@ Register.add_cb(10, "draw");
 
 register(9, console.stack, this);
 
-Register.gamepad_playermap[0] = Player.players[0];
+Register.gamepad_playermap[0] = player[0];
 
 var Event = {
   events: {},
@@ -320,21 +281,21 @@ var Window = {
 };
 
 Window.screen2world = function(screenpos) {
-//  if (Game.camera)
-//    return Game.camera.view2world(screenpos);
+  if (Game.camera)
+    return Game.camera.view2world(screenpos);
+    
   return screenpos;
 }
 Window.world2screen = function(worldpos) {
-  return worldpos;
   return Game.camera.world2view(worldpos);
 }
 
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
 
-global.mixin(use("scripts/debug.js"));
-global.mixin(use("scripts/spline.js"));
-global.mixin(use("scripts/components.js"));
+global.mixin("scripts/debug.js");
+global.mixin("scripts/spline.js");
+global.mixin("scripts/components.js");
 
 var Game = {
   engine_start(fn) {
@@ -420,39 +381,39 @@ Window.doc.boundingbox = "Boundingbox of the window, with top and right being it
 
 Register.update.register(Game.exec, Game);
 
-global.mixin(use("scripts/entity.js"));
+global.mixin("scripts/actor.js");
+global.mixin("scripts/entity.js");
 
 function world_start() {
-  globalThis.Primum = Object.create(gameobject);
-  Primum.objects = {};
-  Primum.check_dirty = function() {};
-  Primum.namestr = function(){};
-  Primum._ed = {
+  globalThis.world = Object.create(gameobject);
+  world.objects = {};
+  world.check_dirty = function() {};
+  world.namestr = function(){};
+  world._ed = {
     selectable:false,
     dirty:false,
   };
-  Primum.toString = function() { return "Primum"; };
-  Primum.ur = "Primum";
-  Primum.kill = function() { this.clear(); };
-  Primum.phys = 2;
+  world.toString = function() { return "world"; };
+  world.master = gameobject;
+  world.ur = "world";
+  world.kill = function() { this.clear(); };
+  world.phys = 2;
   
-  gameobject.level = Primum;
+  gameobject.level = world;
   gameobject.body = make_gameobject();
   cmd(113,gameobject.body, gameobject);
   Object.hide(gameobject, 'timescale');
-
-  global.world = Primum;
+  var cam = world.spawn("scripts/camera2d.jso");
+  Game.view_camera(cam);
 }
 
-global.mixin(use("scripts/physics.js"));
+global.mixin("scripts/physics.js");
 
 Game.view_camera = function(cam)
 {
   Game.camera = cam;
   cmd(61, Game.camera.body);
 }
-
-prototypes.generate_ur('scripts/camera.jso');
 
 Window.title(`Prosperon v${prosperon.version}`);
 Window.width = 1280;

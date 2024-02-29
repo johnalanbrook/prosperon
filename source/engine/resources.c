@@ -148,10 +148,8 @@ void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)
 
 int fexists(const char *path)
 {
-  return !access(path,R_OK);
-  
   int len = strlen(path);
-  if (cdb_find(&game_cdb, path,len)) return 1;
+  if (cdb_find(&game_cdb, path, len)) return 1;
   else if (cdb_find(&corecdb, path, len)) return 1;
   else if (!access(path, R_OK)) return 1;
 

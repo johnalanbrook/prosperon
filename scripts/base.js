@@ -465,6 +465,18 @@ Object.containingKey = function(obj, prop)
   return o;
 }
 
+Object.access = function(obj, name)
+{
+  var dig = name.split('.');
+
+  for (var i of dig) {
+    obj = obj[i];
+    if (!obj) return undefined;
+  }
+  
+  return obj;
+}
+
 Object.isAccessor = function(obj, prop)
 {
   var o = Object.containingKey(obj,prop);
@@ -490,11 +502,11 @@ Object.mergekey = function(o1,o2,k)
         o1[k] = o2[k];
     }
    } else
-     Object.defineProperty(o1, k, Object.getOwnPropertyDescriptor(o2,k));   
-//     o1[k] = o2[k];
+     o1[k] = o2[k];
 }
 
 /* Same as merge from Ruby */
+/* Adds objs key by key to target */
 Object.merge = function(target, ...objs)
 {
   for (var obj of objs)
@@ -575,10 +587,12 @@ Object.defineProperty(Object.prototype, 'obscure', {
 Object.defineProperty(Object.prototype, 'mixin', {
   value: function(obj) {
     if (typeof obj === 'string') {
-      obj = use(obj);
-      if (!obj) return;
+      var script = io.slurp(obj);
+      obj = eval_env(script, this, obj);
     }
-    Object.assign(this, obj);
+    
+    if (obj)
+      Object.mixin(this, obj);
   },
 });
 
@@ -771,6 +785,28 @@ Object.defineProperty(String.prototype, 'set_ext', {
   value: function(val) { return this.strip_ext() + val; }
 });
 
+Object.defineProperty(String.prototype, 'folder_same_name', {
+  value: function() {
+    var dirs = this.dir().split('/');
+    return dirs.last() === this.name();
+  }
+});
+
+Object.defineProperty(String.prototype, 'up_path', {
+  value: function() {
+    var base = this.base();
+    var dirs = this.dir().split('/');
+    dirs.pop();
+    return dirs.join('/') + base;
+  }
+});
+
+Object.defineProperty(String.prototype, 'resolve', {
+  value: function(path) {
+    
+  },
+});
+
 Object.defineProperty(String.prototype, 'fromlast', {
   value: function(val) {
     var idx = this.lastIndexOf(val);
@@ -816,7 +852,10 @@ Object.defineProperty(String.prototype, 'base', {
 });
 
 Object.defineProperty(String.prototype, 'dir', {
-  value: function() { return this.tolast('/'); }
+  value: function() {
+    if (!this.includes('/')) return "";
+    return this.tolast('/');
+  }
 });
 
 Object.defineProperty(String.prototype, 'splice', {

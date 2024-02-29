@@ -11,9 +11,10 @@
 
 #define NOTA_FALSE 0x00
 #define NOTA_TRUE 0x01
+#define NOTA_NULL 0x02
+#define NOTA_INF 0x03
 #define NOTA_PRIVATE 0x08
 #define NOTA_SYSTEM 0x09
-#define NOTA_NULL 0x02
 
 typedef struct NOTA {
   char *head;

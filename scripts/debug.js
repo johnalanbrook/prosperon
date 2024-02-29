@@ -1,77 +1,3 @@
-/* All draw in screen space */
-Object.assign(render, {
-  point(pos,size,color) {
-    color ??= Color.blue;
-    render.circle(pos,size,color);
-  },
-
-  line(points, color, thickness) {
-    thickness ??= 1;
-    color ??= Color.white;
-    cmd(83, points, color, thickness);
-  },
-
-  poly(points, color) { cmd_points(0,points,color); },
-
-  circle(pos, radius, color) { cmd(115, pos, radius, color); },
-
-  /* size here is arm length - size of 2 is 4 height total */
-  cross(pos, size, color) {
-    color ??= Color.red;
-    var a = [
-      pos.add([0,size]),
-      pos.add([0,-size])
-    ];
-    var b = [
-      pos.add([size,0]),
-      pos.add([-size,0])
-    ];
-    
-    render.line(a,color);
-    render.line(b,color);
-  },
-  
-  arrow(start, end, color, wingspan, wingangle) {
-    color ??= Color.red;
-    wingspan ??= 4;
-    wingangle ??=10;
-    
-    var dir = end.sub(start).normalized();
-    var wing1 = [
-      Vector.rotate(dir, wingangle).scale(wingspan).add(end),
-      end
-    ];
-    var wing2 = [
-      Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
-      end
-    ];
-    render.line([start,end],color);
-    render.line(wing1,color);
-    render.line(wing2,color);
-  },
-
-  rectangle(lowerleft, upperright, color) {
-    var pos = lowerleft.add(upperright).map(x=>x/2);
-    var wh = [upperright.x-lowerleft.x,upperright.y-lowerleft.y];
-    render.box(pos,wh,color);
-  },
-  
-  box(pos, wh, color) {
-    color ??= Color.white;
-    cmd(53, pos, wh, color);
-  },
-
-});
-
-render.doc = "Draw shapes in screen space.";
-render.circle.doc = "Draw a circle at pos, with a given radius and color.";
-render.cross.doc = "Draw a cross centered at pos, with arm length size.";
-render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
-render.poly.doc = "Draw a concave polygon from a set of points.";
-render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
-render.box.doc = "Draw a box centered at pos, with width and height in the tuple wh.";
-render.line.doc = "Draw a line from a set of points, and a given thickness.";
-
 var Debug = {
   fn_break(fn, obj) {
     if (typeof fn !== 'function') return;
@@ -339,7 +265,7 @@ Time.doc.time = "Seconds elapsed since the game started.";
 Time.doc.pause = "Pause the game by setting the timescale to 0; remembers the current timescale on play.";
 Time.doc.play = "Resume the game after using Time.pause.";
 
-Player.players[0].control(DebugControls);
+player[0].control(DebugControls);
 Register.gui.register(Debug.draw, Debug);
 
 Debug.api = {};

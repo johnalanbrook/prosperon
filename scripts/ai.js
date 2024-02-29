@@ -38,7 +38,7 @@ var ai = {
     if (Vector.length(dir) < 10) return true;
     
     this.velocity = Vector.norm(this.randomloc.sub(this.pos)).scale(20);
-    return false;
+    return False;
     }
   },
 
@@ -61,3 +61,5 @@ var ai = {
     };
   },
 };
+
+return {ai};

@@ -48,7 +48,7 @@ void call_callee(struct callee *c);
 void script_callee(struct callee c, int argc, JSValue *argv);
 int script_has_sym(void *sym);
 void script_eval_w_env(const char *s, JSValue env, const char *file);
-void file_eval_env(const char *file, JSValue env);
+JSValue file_eval_env(const char *file, JSValue env);
 
 time_t file_mod_secs(const char *file);
 

@@ -212,8 +212,9 @@ double js2number(JSValue v) {
 
 void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
 
-JSValue float2js(double g) { return JS_NewFloat64(js, g);}
-JSValue number2js(double g) { return float2js(g); }
+JSValue number2js(double g) {
+  return JS_NewFloat64(js,g);
+}
 struct sprite *js2sprite(JSValue v) { return id2sprite(js2int(v)); }
 
 JSValue ptr2js(void *ptr) {
@@ -1085,6 +1086,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = number2js(get_timescale());
       break;
 
+    case 122:
+      str = JS_ToCString(js, argv[1]);
+      ret = file_eval_env(str, argv[2]);
+      break;
+
     case 123:
       str = JS_ToCString(js, argv[1]);
       str2 = JS_ToCString(js, argv[3]);
@@ -1137,7 +1143,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
       
     case 135:
-      ret = float2js(cam_zoom());
+      ret = number2js(cam_zoom());
       break;
 
     case 136:

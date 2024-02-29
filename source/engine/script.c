@@ -58,7 +58,7 @@ void script_startup() {
   rt = JS_NewRuntime();
   js = JS_NewContext(rt);
   
-  sh_new_arena(jsstrs);  
+  sh_new_arena(jsstrs);
 
   ffi_load();
 
@@ -231,7 +231,7 @@ JSValue eval_file_env(const char *script, const char *file, JSValue env)
   return v;
 }
 
-void file_eval_env(const char *file, JSValue env)
+JSValue file_eval_env(const char *file, JSValue env)
 {
   size_t len;
   char *script = slurp_text(file, &len);

@@ -32,6 +32,7 @@ function ediff(from,to)
     if (typeof v === 'function') return;
     if (typeof v === 'undefined') return;
 
+
     if (Array.isArray(v)) {
       if (!Array.isArray(to[key]) || v.length !== to[key].length) {
         var r = ediff(v,[]);
@@ -54,7 +55,8 @@ function ediff(from,to)
     }
 
     if (typeof v === 'number') {
-      if (!to || v !== to[key])
+      if (!isFinite(v)) v = null; // Squash infinity to null
+      if (v !== to[key])
 	ret[key] = v;
       return;
     }
@@ -67,7 +69,7 @@ function ediff(from,to)
   return ret;
 }
 
-ediff.doc = "Given a from and to object, returns an object that, if applied to from, will make it the same as to. Does not include deletion; it is only additive.";
+ediff.doc = "Given a from and to object, returns an object that, if applied to from, will make it the same as to. Does not include deletion; it is only additive. If one element in an array is different, the entire array is copied. Squashes infinite numbers to null for use in JSON.";
 
 function samediff(from, to)
 {
