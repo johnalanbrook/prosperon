@@ -817,8 +817,8 @@ component.circle2d.impl = Object.mix({
   set offset(x) { cmd_circle2d(1,this.id,x); },
   get offset() { return cmd_circle2d(3,this.id); },
 
-  get pos() { return this.offset; },
-  set pos(x) { this.offset = x; },
+  get pos() { return cmd_circle2d(3,this.id); },
+  set pos(x) { cmd_circle2d(1,this.id,x);  },
   
 }, collider2d.impl);
 

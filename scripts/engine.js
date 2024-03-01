@@ -236,7 +236,7 @@ Register.add_cb(10, "draw");
 
 register(9, console.stack, this);
 
-Register.gamepad_playermap[0] = player[0];
+Register.gamepad_playermap[0] = Player.players[0];
 
 var Event = {
   events: {},
@@ -418,5 +418,3 @@ Game.view_camera = function(cam)
 Window.title(`Prosperon v${prosperon.version}`);
 Window.width = 1280;
 Window.height = 720;
-
-

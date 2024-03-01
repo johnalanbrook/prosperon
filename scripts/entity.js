@@ -150,10 +150,9 @@ var gameobject = {
     return undefined;
   },
   check_dirty() {
-    // TODO: IMPLEMENT
-    return;
     this._ed.urdiff = this.json_obj();
     this._ed.dirty = !Object.empty(this._ed.urdiff);
+    return; // TODO: IMPLEMENT
     var lur = ur[this.master.ur];
     if (!lur) return;
     var lur = lur.objects[this.toString()];
@@ -306,6 +305,11 @@ var gameobject = {
       worldangle() { return Math.rad2turn(q_body(2,this.body)); },
       sworldangle(x) { set_body(0,this.body,Math.turn2rad(x)); },
 
+      get_ur() {
+//        if (this.ur === 'empty') return undefined;
+	return Object.access(ur,this.ur);
+      },
+
       /* spawn an entity
          text can be:
 	   the file path of a script
@@ -319,7 +323,7 @@ var gameobject = {
 	  text = text.name;
 
         if (typeof text === 'undefined')
-	  ent.ur = "new";
+	  ent.ur = "empty";
   	else if (typeof text !== 'string') {
 	  console.error(`Must pass in an ur type or a string to make an entity.`);
 	  return;
@@ -352,11 +356,15 @@ var gameobject = {
 
 	 cmd(113, ent.body, ent); // set the internal obj reference to this obj
 
-	 Object.hide(ent, 'ur','body', 'components', 'objects', '_ed', 'timers', 'master');
+	 Object.hide(ent, 'ur', 'body', 'components', 'objects', '_ed', 'timers', 'master');
+       if (ent.ur === 'empty') {
+         if (!ur.empty.proto) ur.empty.proto = json.decode(json.encode(ent));
+         return ent;
+       }
 
        if (ent.ur === 'script')
          eval_env(io.slurp(text), ent, ent.ur);
-       else if (ent.ur !== 'new')
+       else 
          apply_ur(ent.ur, ent);
 
 	 for (var [prop,p] of Object.entries(ent)) {
@@ -369,16 +377,18 @@ var gameobject = {
 	   ent.components[prop] = ent[prop];
 	 };
 
-
        check_registers(ent);
 	
         if (typeof ent.load === 'function') ent.load();
-	if (typeof ent.start === 'function') ent.start();
+	if (Game.playing())
+  	  if (typeof ent.start === 'function') ent.start();
 	
-        var mur = Object.access(ur,ent.ur);
+        var mur = ent.get_ur();
         if (mur && !mur.proto)
 	    mur.proto = json.decode(json.encode(ent));
-
+	    
+        ent.sync();
+	
 	 if (!Object.empty(ent.objects)) {
 	   var o = ent.objects;
 	   delete ent.objects;
@@ -412,13 +422,13 @@ var gameobject = {
       var str = name.replaceAll('.', '_');
       var n = 1;
       var t = str;
-      while (t in list) {
+      while (list.indexOf(t) !== -1) {
         t = str + n;
 	n++;
       }
       return t;
     };
-    
+
     var name = unique_name(Object.keys(parent.objects), this.ur);
 
     parent.objects[name] = this;
@@ -531,7 +541,7 @@ var gameobject = {
 
       /* The unique components of this object. Its diff. */
       json_obj() {
-        var u = Object.access(ur,this.ur);
+        var u = this.get_ur();
 	if (!u) return {};
 	var proto = u.proto;
 	var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
@@ -566,7 +576,7 @@ var gameobject = {
       },
 
       proto() {
-        var u = Object.access(ur,this.ur);
+        var u = this.get_ur();
 	if (!u) return {};
 	return u.proto;
       },
@@ -733,7 +743,10 @@ gameobject.doc = {
   rotary_limit: 'Limit the angle relative to the to body between min and max.',
   ratchet: 'Like a socket wrench, relative to to. ratch is the distance between clicks.',
   gear: 'Keeps the angular velocity ratio of this body and to constant. Ratio is the gear ratio.',
-  motor: 'Keeps the relative angular velocity of this body to to at a constant rate. The most simple idea is for one of the bodies to be static, to the other is kept at rate.'
+  motor: 'Keeps the relative angular velocity of this body to to at a constant rate. The most simple idea is for one of the bodies to be static, to the other is kept at rate.',
+  layer: 'Bitmask for collision layers.',
+  draw_layer: 'Layer for drawing. Higher numbers draw above lower ones.',
+  warp_layer: 'Bitmask for selecting what warps should affect this entity.',
 };
 
 var resavi = function(ur, path)
@@ -847,6 +860,10 @@ for (var file of io.glob("**.json")) {
   var topur = file2fqn(file);
   topur.data = file;
 }
+
+ur.empty = {
+  name: "empty"
+};
 
 return {
   gameobject,

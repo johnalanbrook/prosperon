@@ -82,7 +82,6 @@ void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
   cpShapeFilter filter;
   filter.group = (cpCollisionType)go;
   filter.categories = 1<<go->layer | editor_cat;
-//  filter.mask = CP_ALL_CATEGORIES;
   filter.mask = category_masks[go->layer] | editor_cat;
 //  filter.mask = CP_ALL_CATEGORIES;
   cpShapeSetFilter(shape, filter);

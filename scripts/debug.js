@@ -99,7 +99,7 @@ var Gizmos = {
   },
 };
 
-Object.assign(profile, {
+Object.assign(performance, {
   tick_now() { return cmd(127); },
   ns(ticks) { return cmd(128, ticks); },
   us(ticks) { return cmd(129, ticks); },
@@ -123,34 +123,43 @@ Object.assign(profile, {
   cpu(fn, times, q) {
     times ??= 1;
     q ??= "unnamed";
-    var start = profile.tick_now();
+    var start = performance.tick_now();
     for (var i = 0; i < times; i++)
       fn();
       
-    var elapsed = profile.tick_now() - start;
-    var avgt = profile.best_t(elapsed/times);
-    var totalt = profile.best_t(elapsed);
+    var elapsed = performance.tick_now() - start;
+    var avgt = performance.best_t(elapsed/times);
+    var totalt = performance.best_t(elapsed);
 
-    console.say(`profile [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
+    console.say(`performance [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
   },
 
   get fps() { return sys_cmd(8); },
+
+  measure(fn, str) {
+    str ??= 'unnamed';
+    var start = performance.tick_now();
+    fn();
+    var elapsed = performance.tick_now()-start;
+    elapsed = performance.best_t(elapsed);
+    say(`performance [${str}]: ${elapsed.time.toFixed(3)} ${elapsed.unit}`);
+  },
 });
 
-profile.test = {
-  barecall() { profile(0); },
-  unpack_num(n) { profile(1,n); },
-  unpack_array(n) { profile(2,n); },
-  pack_num() { profile(3); },
-  pack_string() { profile(6); },
-  unpack_string(s) { profile(4,s); },
-  unpack_32farr(a) { profile(5,a); },
-  call_fn_n(fn1, n) { profile(7,fn1,n,fn2); },
+performance.test = {
+  barecall() { performance(0); },
+  unpack_num(n) { performance(1,n); },
+  unpack_array(n) { performance(2,n); },
+  pack_num() { performance(3); },
+  pack_string() { performance(6); },
+  unpack_string(s) { performance(4,s); },
+  unpack_32farr(a) { performance(5,a); },
+  call_fn_n(fn1, n) { performance(7,fn1,n,fn2); },
 };
 
-profile.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
+performance.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 
-profile.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
+performance.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
 
 /* These controls are available during editing, and during play of debug builds */
 var DebugControls = {};
@@ -347,4 +356,6 @@ Debug.api.print_doc =  function(name)
 return {
   Debug,
   Time,
+  Gizmos,
+  performance
 }

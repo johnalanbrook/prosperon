@@ -4,6 +4,16 @@ this.view2world = function(pos) { return cmd(137,pos); };
 this.world2view = function(pos) { return cmd(136,pos); };
 this.realzoom = function() { return cmd(135); };
 
+this.right = function()
+{
+  return this.pos.x + (Window.width/2);
+}
+
+this.left = function()
+{
+  return this.pos.x - (Window.width/2);
+}
+
 this.mixin({
   get zoom() {
     var z = Game.native.y / Window.dimensions.y;

@@ -521,8 +521,8 @@ var editor = {
 
   lvl_history: [],
 
-  load(file) {
-    var obj = editor.edit_level.spawn(Object.access(ur, file));
+  load(urstr) {
+    var obj = editor.edit_level.spawn(urstr);
     obj.set_worldpos(Mouse.worldpos);
     this.selectlist = [obj];
   },
@@ -537,12 +537,41 @@ var editor = {
   
   /* Checking to save an entity as a subtype. */
   /* sub is the name of the (sub)type; obj is the object to save it as */
+  /* if saving subtype of 'empty', it appears on the top level */
   saveas_check(sub, obj) {
-    return;
-    if (!sub) return;
-    obj ??= editor.selectlist[0];
-    
-//    var curur = prototypes.get_ur(sub);
+    if (!sub) {
+      console.warn(`Cannot save an object to an empty ur.`);
+      return;
+    }
+
+    if (!obj) {
+      console.warn(`Specify an obejct to save.`);
+      return;
+    }
+
+    if (obj.ur === 'empty') {
+      /* make a new type path */
+      if (Object.access(ur,sub)) {
+        console.warn(`Ur named ${sub} already exists.`);
+	return;
+      }
+
+      var file = `${sub}.json`;
+      io.slurpwrite(file, json.encode(obj.json_obj(),null,1));
+      ur[sub] = {
+        name: sub,
+	data: file,
+	proto: json.decode(json.encode(obj))
+      }
+      obj.ur = sub;
+      
+      return;
+    } else if (!sub.startswith(obj.ur)) {
+      console.warn(`Cannot make an ur of type ${sub} from an object with the ur ${obj.ur}`);
+      return;
+    }
+
+    var curur = Object.access(ur,sub);
     
     if (curur) {
       notifypanel.action = editor.saveas;
@@ -572,16 +601,32 @@ var editor = {
   },
 }
 
+editor.new_object = function()
+{
+  var obj = editor.edit_level.spawn();
+  obj.set_worldpos(Mouse.worldpos);
+  this.selectlist = [obj];
+  return obj;
+}
+editor.new_object.doc = "Create an empty object.";
+
+editor.new_from_img = function(path)
+{
+  var o = editor.new_object();
+  o.add_component(component.sprite).path = path;
+  return o;
+}
+
 editor.inputs = {};
 editor.inputs.drop = function(str) {
+  str = str.slice(os.cwd().length+1);
   if (!Resources.is_image(str)) {
     console.warn("NOT AN IMAGE");
     return;
   }
 
-  if (this.selectlist.length === 0) {
-    
-  }
+  if (this.selectlist.length === 0)
+    return editor.new_from_img(str);
   
   if (this.sel_comp?.comp === 'sprite') {
     this.sel_comp.path = str;
@@ -821,20 +866,35 @@ editor.inputs['C-s'] = function() {
   } else if (editor.selectlist.length === 1)
     saveobj = editor.selectlist[0];
 
-//  saveobj.check_dirty();
-//  if (!saveobj._ed.dirty) return;
+  saveobj.check_dirty();
+  if (!saveobj._ed.dirty) {
+    console.warn(`Object ${saveobj.full_path()} does not need saved.`);
+    return;
+  }
 
   var savejs = saveobj.json_obj();
-  Object.merge(saveobj.__proto__, savejs);
-  if (savejs.objects) saveobj.__proto__.objects = savejs.objects;
-//  var path = prototypes.ur_stem(saveobj.ur.toString()) + ".json";
-  path = "CHANGETHIS";
+  var tur = saveobj.get_ur();
+  if (!tur) {
+    console.warn(`Can't save object because it has no ur.`);
+    return;
+  }
+  if (!tur.data) {
+    io.slurpwrite(tur.text.set_ext(".json"), json.encode(savejs,null,1));
+    tur.data = tur.text.set_ext(".json");
+  }
+  else {
+    var oldjs = json.decode(io.slurp(tur.data));
+    Object.merge(oldjs, savejs);
+    io.slurpwrite(tur.data, json.encode(oldjs,null,1));
+  }
 
-  io.slurpwrite(path, JSON.stringify(saveobj.__proto__,null,1));
-  console.warn(`Wrote to file ${path}`);
+  Object.merge(tur.proto, savejs);
+  saveobj.check_dirty();
 
-  Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });
+//  Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });
 
+  return;
+  
   Game.all_objects(function(x) {
     if (typeof x !== 'object') return;
     if (!('_ed' in x)) return;
@@ -847,7 +907,12 @@ editor.inputs['C-s'].doc = "Save selected.";
 
 editor.inputs['C-S'] = function() {
   if (editor.selectlist.length !== 1) return;
-  saveaspanel.stem = this.selectlist[0].ur;
+  if (this.selectlist[0].ur !== 'empty')
+    saveaspanel.stem = this.selectlist[0].ur + ".";
+  else
+    saveaspanel.stem = "";
+  
+  saveaspanel.obj = this.selectlist[0];
   editor.openpanel(saveaspanel);
 };
 editor.inputs['C-S'].doc = "Save selected as.";
@@ -864,11 +929,7 @@ editor.inputs.t.doc = "Lock selected objects to make them non selectable.";
 editor.inputs['M-t'] = function() { editor.edit_level.objects.forEach(function(x) { x._ed.selectable = true; }); };
 editor.inputs['M-t'].doc = "Unlock all objects in current level.";
 
-editor.inputs['C-n'] = function() {
-  console.warn(`Spawning a new object on ${editor.edit_level.toString()}`);
-  editor.edit_level.spawn();
-};
-editor.inputs['C-n'].doc = "Create an empty object.";
+editor.inputs['C-n'] = editor.new_object;
 
 editor.inputs['C-o'] = function() {
   editor.openpanel(openlevelpanel);
@@ -1823,13 +1884,17 @@ var openlevelpanel = Object.copy(inputpanel,  {
   },
 });
 
+/* Should set stem to the ur path folloed by a '.' before opening */
 var saveaspanel = Object.copy(inputpanel, {
-  get title() { return `save level as: ${this.stem}.`; },
+  get title() {
+    var full = this.stem ? this.stem : "";
+    return `save level as: ${full}.`;
+  },
 
   action() {
-    var savename = "";
-    if (this.stem) savename += this.stem + ".";
-    editor.saveas_check(savename + this.value, this.obj);
+    var saveur = this.value;
+    if (this.stem) saveur = this.stem + saveur;
+    editor.saveas_check(saveur, this.obj);
   },
 });
 

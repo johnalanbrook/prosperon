@@ -2153,12 +2153,12 @@ JSValue duk_cmd_points(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
 const char *STRTEST = "TEST STRING";
 
-JSValue duk_profile_js2num(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+JSValue duk_performance_js2num(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   
 }
 
-JSValue duk_profile(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+JSValue duk_performance(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
   int cmd = js2int(argv[0]);
   switch(cmd) {
@@ -2249,7 +2249,7 @@ void ffi_load() {
 
   DUK_FUNC(inflate_cpv, 3)
 
-  DUK_FUNC(profile, 2)
+  DUK_FUNC(performance, 2)
 
   JS_FreeValue(js,globalThis);
   
