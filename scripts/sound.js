@@ -10,7 +10,7 @@ audio.sound = {
     }
     var src = audio.dsp.source(file);
     bus ??= audio.sound.bus.master;
-//    src.plugin(bus);
+    src.plugin(bus);
     return src;
   },
 

@@ -109,7 +109,7 @@ var Mum = {
     selectable: false,
     selected: false,
     font_size: 1,
-    text_align: "left",
+    text_align: "left", /* left, center, right */
     scale: 1,
     angle: 0,
     anchor: [0,1],
@@ -157,6 +157,7 @@ var Mum = {
 
 Mum.text = Mum.extend({
   draw(cursor, cnt) {
+    cursor ??= [0,0];  
     cnt ??= Mum;
     if (this.hide) return;
     if (this.selectable) GUI.controls.check_bb(this);
@@ -175,6 +176,7 @@ Mum.text = Mum.extend({
     this.height = this.wh.y;
     var aa = [0,1].sub(params.anchor);
     var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
+    cmd(263, params.font);
     ui_text(params.str, pos, params.font_size, params.color, this.width, params.caret);
   },
   
@@ -208,6 +210,7 @@ Mum.window = Mum.extend({
     this.bb = bbox.fromcwh([0,0], this.wh);
   },
   draw(cursor, cnt) {
+    cursor ??= [0,0];
     cnt ??= Mum;
     var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
     GUI.window(p,this.wh, this.color);
@@ -256,6 +259,7 @@ Mum.image = Mum.extend({
 
 Mum.column = Mum.extend({
   draw(cursor, cnt) {
+    cursor ??= [0,0];  
     cnt ??= Mum;
     if (this.hide) return;
     cursor = cursor.add(this.offset);

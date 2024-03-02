@@ -30,6 +30,7 @@ struct sFont {
 
 void font_init();
 struct sFont *MakeFont(const char *fontfile, int height);
+void font_set(const char *path);
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
 void text_settype(struct sFont *font);
 struct boundingbox text_bb(const char *text, float scale, float lw, float tracking);

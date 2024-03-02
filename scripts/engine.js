@@ -143,7 +143,7 @@ global.mixin("scripts/tween.js");
 global.mixin("scripts/render.js");
 global.mixin("scripts/physics.js");
 global.mixin("scripts/input.js");
-global.mixin("scripts/sound.js");
+
 global.mixin("scripts/ai.js");
 global.mixin("scripts/geometry.js");
 
@@ -300,8 +300,6 @@ global.mixin("scripts/components.js");
 var Game = {
   engine_start(fn) {
     cmd(257, fn);
-    Sound.bus.master = cmd(180);
-    Sound.master = Sound.bus.master;    
   },
 
   native: render.device.pc,

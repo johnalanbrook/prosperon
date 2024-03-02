@@ -259,6 +259,7 @@ Cmdline.register_order("play", function() {
   if (project.title) Window.title(project.title);
   
   Game.engine_start(function() {
+    global.mixin("scripts/sound.js");  
     global.mixin("game.js");
     if (project.icon) Window.icon(project.icon);
   });  

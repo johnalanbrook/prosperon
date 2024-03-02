@@ -64,6 +64,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     snprintf(buffer, len, logfmt, file, line, logstr[priority], catstr[category], msg);
 
     fprintf(stderr, "%s", buffer);
+    if (priority >= 2)
+      js_stacktrace();
     fflush(stderr);
     
     free(msg);

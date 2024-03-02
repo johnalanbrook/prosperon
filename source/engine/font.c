@@ -17,10 +17,16 @@
 #include "stb_image_write.h"
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
+#include "stb_ds.h"
 
 #include "HandmadeMath.h"
 
 struct sFont *font;
+
+static struct {
+  char *key;
+  struct sFont *value;
+} *fonthash = NULL;
 
 #define max_chars 10000
 
@@ -78,11 +84,31 @@ void font_init() {
       .label = "text buffer"
     });
 
-  font = MakeFont("fonts/LessPerfectDOSVGA.ttf", 16);
-//  font = MakeFont("fonts/c64.ttf", 8);
-//  font = MakeFont("fonts/teenytinypixels.ttf", 16);  
+  font_set("fonts/LessPerfectDOSVGA.ttf");
   bind_text.fs.images[0] = font->texID;
   bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+}
+
+void font_set(const char *path)
+{
+  if (shlen(fonthash) == 0) sh_new_arena(fonthash);
+  int index = shgeti(fonthash, path);
+  if (index != -1) {
+    if (font == fonthash[index].value) return;
+    font = fonthash[index].value;
+    bind_text.fs.images[0] = font->texID;
+    return;
+  }
+
+  struct sFont *newfont = MakeFont(path, 16);
+  if (!newfont) {
+    YughError("Could not make font from %s.", path);
+    return;
+  }
+
+  font = newfont;
+  shput(fonthash, path, newfont);
+  bind_text.fs.images[0] = font->texID;  
 }
 
 struct sFont *MakeSDFFont(const char *fontfile, int height)
@@ -328,7 +354,6 @@ void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
   if (caret == l)
     draw_underline_cursor(pos,scale,color);
 }
-
 
 /* pos given in screen coordinates */
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {

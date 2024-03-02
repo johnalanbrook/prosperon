@@ -1452,6 +1452,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = js2str(argv[1]);
       save_qoa(str);
       break;
+    case 263:
+      str = js2str(argv[1]);
+      font_set(str);
+      break;
   }
 
   if (str) JS_FreeCString(js, str);
