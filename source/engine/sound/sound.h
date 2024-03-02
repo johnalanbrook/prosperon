@@ -33,10 +33,6 @@ typedef struct mp3 {
   
 } mp3;
 
-typedef struct qoa {
-//  struct qoa_desc desc;
-} qoa;
-
 void sound_init();
 void audio_open(const char *device);
 void audio_close();
@@ -60,5 +56,7 @@ float db2float(float db);
 
 float pct2db(float pct);
 float pct2mult(float pct);
+
+void save_qoa(char *file);
 
 #endif

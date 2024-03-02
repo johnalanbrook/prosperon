@@ -780,8 +780,14 @@ var resani = function(ur, path)
   return restry;
 }
 
-var ur = {};
-ur._list = [];
+var ur;
+
+if (io.exists(".prosperon/ur.json"))
+  ur = json.decode(io.slurp(".prosperon/ur.json"));
+else {
+  ur = {};
+  ur._list = [];
+}
 
 /* UR OBJECT
 ur {
@@ -852,14 +858,18 @@ function file2fqn(file)
 
 /* FIND ALL URS IN A PROJECT */
 for (var file of io.glob("**.jso")) {
+  if (file[0] === '.' || file[0] === '_') continue;
   var topur = file2fqn(file);
   topur.text = file;
 }
 
 for (var file of io.glob("**.json")) {
+  if (file[0] === '.' || file[0] === '_') continue;
   var topur = file2fqn(file);
   topur.data = file;
 }
+
+io.slurpwrite(".prosperon/ur.json", json.encode(ur));
 
 ur.empty = {
   name: "empty"

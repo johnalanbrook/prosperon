@@ -1,9 +1,11 @@
 os.cwd.doc = "Get the absolute path of the current working directory.";
 os.env.doc = "Return the value of the environment variable v.";
 
+var projectfile = ".prosperon/project.json";
+
 var Resources = {};
 Resources.images = ["png", "jpg", "jpeg", "gif"];
-Resources.sounds =  ["wav", "mp3", "flac"];
+Resources.sounds =  ["wav", "mp3", "flac", "qoa"];
 Resources.scripts = "js";
 Resources.is_image = function(path) {
   var ext = path.ext();
@@ -109,7 +111,6 @@ var console = {
     console.write(err.name);
     console.write(err.message);
     console.write(err.stack);
-//    console.write(stack);
   },
 
   clear() {
@@ -147,6 +148,11 @@ console.doc = {
   "@": user path
   "/": game path
 */
+
+var tmp = io.chmod;
+io.chmod = function(file,mode) {
+  return tmp(file,parseInt(mode,8));
+}
   
 io.mixin({
   extensions(ext) {
@@ -213,7 +219,7 @@ Cmdline.register_order("edit", function() {
   }
   
   Game.engine_start(function() {
-    global.mixin(use("scripts/editor.js"));
+    global.mixin("scripts/editor.js");
     use("editorconfig.js");
     editor.enter_editor();
   });
@@ -234,7 +240,7 @@ Cmdline.register_order("init", function() {
   var project = {};
   project.version = prosperon.version;
   project.revision = prosperon.revision;
-  io.slurpwrite(".prosperon/project", json.encode(project));
+  io.slurpwrite(projectfile, json.encode(project));
   
 }, "Turn the directory into a Prosperon game.");
 
@@ -243,25 +249,25 @@ Cmdline.register_order("debug", function() {
 }, "Play the game with debugging enabled.");
 
 Cmdline.register_order("play", function() {
-  if (!io.exists(".prosperon/project")) {
+  if (!io.exists(projectfile)) {
     say("No game to play. Try making one with 'prosperon init'.");
     return;
   }
 
-  var project = json.decode(io.slurp(".prosperon/project"));
+  var project = json.decode(io.slurp(projectfile));
+  global.mixin("config.js");
+  if (project.title) Window.title(project.title);
   
   Game.engine_start(function() {
-    global.mixin("config.js");
     global.mixin("game.js");
     if (project.icon) Window.icon(project.icon);
-    if (project.title) Window.title(project.title);
   });  
 }, "Play the game present in this folder.");
 
 Cmdline.register_order("pack", function(str) {
   var packname;
   if (str.length === 0)
-    packname = "test.cdb";
+    packname = "game.cdb";
   else if (str.length > 1) {
     console.warn("Give me a single filename for the pack.");
     return;
@@ -271,7 +277,70 @@ Cmdline.register_order("pack", function(str) {
   say(`Packing into ${packname}`);
     
   cmd(124, packname);
+  io.chmod(packname, 666);
 }, "Pack the game into the given name.", "NAME");
+
+Cmdline.register_order("cdb", function(argv) {
+  var cdb = "game.cdb";
+  if (!io.exists(cdb)) {
+    say(`No 'game.cdb' present.`);
+    return;
+  }
+  if (argv.length === 0) {
+    say(`cdb name: ${cdb}`);
+    
+  }
+}, "CDB commands.");
+
+Cmdline.register_order("qoa", function(argv) {
+  var sounds = Resources.sounds.filter(x => x !== "qoa");
+  for (var file of argv) {
+    if (!sounds.includes(file.ext())) continue;
+    say(`converting ${file}`);
+    cmd(262,file);
+  }
+}, "Convert file(s) to qoa.");
+
+Cmdline.register_order("about", function(argv) {
+  
+  if (!argv[0]) {
+    say('About your game');
+    say(`Prosperon version ${prosperon.version}`);
+    say(`Total entities ${ur._list.length}`);
+  }
+  switch (argv[0]) {
+    case "entities":
+      for (var i of ur._list) say(i);
+      break;
+  }
+}, "Get information about this game.");
+
+Cmdline.register_order("ur", function(argv) {
+  for (var i of ur._list.sort()) say(i);
+}, "Get information about the ur types in your game.");
+
+Cmdline.register_order("env", function(argv) {
+  if (argv.length > 2) return;
+  var gg = json.decode(io.slurp(projectfile));
+  if (argv.length === 0) {
+    say(json.encode(gg,null,1));
+    return;
+  }
+
+  if (argv.length === 1) {
+    var v = gg[argv[0]];
+    if (!v) {
+      say(`Value ${argv[0]} not found.`);
+      return;
+    }
+    say(`${argv[0]}:${v}`);
+  } else {
+    gg[argv[0]] = argv[1];
+    say(`Set ${argv[0]}:${v}`);
+    say(json.encode(gg,null,1));
+    io.slurpwrite(projectfile, json.encode(gg));
+  }
+}, "Get or set game variables.");
 
 Cmdline.register_order("unpack", function() {
   say("Unpacking not implemented.");
@@ -280,6 +349,32 @@ Cmdline.register_order("unpack", function() {
 Cmdline.register_order("build", function() {
   say("Building not implemented.");
 }, "Build static assets for this project.");
+
+Cmdline.register_order("nota", function(argv) {
+  for (var file of argv) {
+    if (!io.exists(file)) {
+      say(`File ${file} does not exist.`);
+      continue;
+    }
+
+    var obj = json.decode(io.slurp(file));
+    var nn = nota.encode(obj);
+    io.slurpwrite(file.set_ext(".nota"), nn);
+  }
+}, "Create a nota file from a json.");
+
+Cmdline.register_order("json", function(argv) {
+  for (var file of argv) {
+    if (!io.exists(file)) {
+      say(`File ${file} does not exist.`);
+      continue;
+    }
+    say(file.ext());
+    var obj = nota.decode(io.slurp(file));
+    var nn = json.encode(obj);
+    io.slurpwrite(file.set_ext(".json", nn));
+  }
+}, "Create a JSON from a nota.");
 
 Cmdline.register_order("api", function(obj) {
   if (!obj[0]) {
@@ -380,6 +475,7 @@ function cmd_args(cmdargs)
   
   Cmdline.orders[cmds[0]](cmds.slice(1));
 }
+
 
 Cmdline.register_order("clean", function(argv) {
   say("Cleaning not implemented.");

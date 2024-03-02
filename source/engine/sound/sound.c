@@ -4,7 +4,6 @@
 #include "math.h"
 #include "music.h"
 #include "resources.h"
-#include "stb_vorbis.h"
 #include "string.h"
 #include "time.h"
 #include <stdlib.h>
@@ -182,7 +181,6 @@ struct wav *make_sound(const char *wav) {
 
   if (!strcmp(ext, "wav"))
     mwav->data = drwav_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav->ch, &mwav->samplerate, &mwav->frames, NULL);
-
   else if (!strcmp(ext, "flac")) {
   #ifndef NFLAC  
     mwav->data = drflac_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav->ch, &mwav->samplerate, &mwav->frames, NULL);
@@ -228,6 +226,22 @@ struct wav *make_sound(const char *wav) {
   shput(wavhash, wav, mwav);
 
   return mwav;
+}
+
+void save_qoa(char *file)
+{
+  wav *wav = make_sound(file);
+  qoa_desc q;
+  q.channels = wav->ch;
+  q.samples = wav->frames;
+  q.samplerate = wav->samplerate;
+  unsigned int len;
+  void *raw = qoa_encode(wav->data, &q, &len);
+
+  file = str_replace_ext(file, ".qoa");
+  slurp_write(raw, file, len);
+  free(raw);
+  free_sound(wav);
 }
 
 void free_sound(const char *wav) {

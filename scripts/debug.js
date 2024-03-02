@@ -146,6 +146,8 @@ Object.assign(performance, {
   },
 });
 
+performance.now = performance.tick_now;
+
 performance.test = {
   barecall() { performance(0); },
   unpack_num(n) { performance(1,n); },

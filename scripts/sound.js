@@ -9,7 +9,7 @@ audio.sound = {
       return;
     }
     var src = audio.dsp.source(file);
-    bus ??= sound.bus.master;
+    bus ??= audio.sound.bus.master;
 //    src.plugin(bus);
     return src;
   },
@@ -105,6 +105,8 @@ Object.mixin(cmd(180).__proto__, {
   get volume() { return this.gain; },
   set volume(x) { this.gain = x; },
 });
+
+audio.sound.bus.master = cmd(180);
 
 /*Object.mixin(audio.dsp.source().__proto__, {
   frames() { return cmd(197,this); },

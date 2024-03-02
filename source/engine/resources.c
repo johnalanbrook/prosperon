@@ -36,7 +36,7 @@ static struct cdb corecdb;
 static struct cdb game_cdb;
 
 void resources_init() {
-  int fd = open("test.cdb", O_RDONLY);
+  int fd = open("game.cdb", O_RDONLY);
   cdb_init(&game_cdb, fd);
   cdb_initf(&corecdb, core_cdb, core_cdb_len);
 }
@@ -254,7 +254,7 @@ int slurp_write(const char *txt, const char *filename, size_t len) {
 #ifndef __EMSCRIPTEN__
 static struct cdb_make cdbm;
 
-static const char *pack_ext[] = {".qoi", ".qoa", ".js", ".wav", ".mp3", ".png", ".sf2", ".midi", ".lvl", ".glsl", ".ttf"};
+static const char *pack_ext[] = {".qoi", ".qoa", ".js", ".wav", ".mp3", ".png", ".sf2", ".midi", ".lvl", ".glsl", ".ttf", ".json", ".jso"};
 
 static int ftw_pack(const char *path, const struct stat *sb, int flag)
 {
@@ -265,7 +265,7 @@ static int ftw_pack(const char *path, const struct stat *sb, int flag)
   if (!ext)
     return 0;
 
-  for (int i = 0; i < 11; i++) {
+  for (int i = 0; i < 13; i++) {
     if (!strcmp(ext, pack_ext[i])) {
       pack = 1;
       break;
@@ -288,10 +288,15 @@ void pack_engine(const char *fname)
   int fd;
   char *key, *va;
   unsigned klen, vlen;
-  fd = open(fname, O_RDWR|O_CREAT);
+  fd = creat(fname, O_RDWR);
+  if (fd == -1) {
+    YughError("Couldn't make file at %s.", fname);
+    return;
+  }
   cdb_make_start(&cdbm, fd);
   ftw(".", ftw_pack, 20);
   cdb_make_finish(&cdbm);
+  close(fd);
 }
 #else
 void pack_engine(const char *fname){

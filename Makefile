@@ -178,7 +178,7 @@ endif
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types
 
 NAME = primum$(EXT)
-SEM = 0.0.1
+SEM = 0.3.0
 COM != fossil describe
 VER = $(SEM)
 

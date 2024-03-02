@@ -376,7 +376,7 @@ Window.doc = {};
 Window.doc.width = "Width of the game window.";
 Window.doc.height = "Height of the game window.";
 Window.doc.dimensions = "Window width and height packaged in an array [width,height]";
-Window.doc.name = "Name in the title bar of the window.";
+Window.doc.title = "Name in the title bar of the window.";
 Window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
 
 Register.update.register(Game.exec, Game);

@@ -1448,6 +1448,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       d1 = slurp_file(str, &plen);
       return script_run_bytecode(d1, plen);
       break;
+    case 262:
+      str = js2str(argv[1]);
+      save_qoa(str);
+      break;
   }
 
   if (str) JS_FreeCString(js, str);
@@ -1999,6 +2003,14 @@ JSValue js_io_slurpwrite(JSContext *js, JSValueConst this, int argc, JSValue *ar
   return ret;
 }
 
+JSValue js_io_chmod(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *f = js2str(argv[0]);
+  int mod = js2int(argv[1]);
+  chmod(f, mod);
+  return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_CFUNC_DEF("exists", 1, js_io_exists),
   MIST_CFUNC_DEF("ls", 0, js_io_ls),
@@ -2006,6 +2018,7 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_CFUNC_DEF("mv", 2, js_io_mv),
   MIST_CFUNC_DEF("rm", 1, js_io_rm),
   MIST_CFUNC_DEF("mkdir", 1, js_io_mkdir),
+  MIST_CFUNC_DEF("chmod", 2, js_io_chmod),
   MIST_CFUNC_DEF("slurp", 1, js_io_slurp),
   MIST_CFUNC_DEF("slurpbytes", 1, js_io_slurpbytes),
   MIST_CFUNC_DEF("slurpwrite", 2, js_io_slurpwrite),
