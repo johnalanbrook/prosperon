@@ -1,3 +1,6 @@
 [submodule "source/engine/thirdparty/sokol"]
 	path = source/engine/thirdparty/sokol
 	url = https://github.com/floooh/sokol.git
+[submodule "source/engine/thirdparty/stb"]
+	path = source/engine/thirdparty/stb
+	url = https://github.com/nothings/stb.git

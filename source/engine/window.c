@@ -13,7 +13,7 @@
 #include "stb_ds.h"
 
 #include "sokol/sokol_app.h"
-#include "stb_image_resize.h"
+#include "stb_image_resize2.h"
 
 struct window mainwin;
 
@@ -90,7 +90,7 @@ void window_seticon(struct window *w, struct Texture *tex)
 
   for (int i = 0; i < 4; i++) {
     sizes[i].data = malloc(4*sizes[i].size*sizes[i].size);
-    stbir_resize_uint8(tex->data, tex->width, tex->height, 0, sizes[i].data, sizes[i].size, sizes[i].size, 0, 4);
+    stbir_resize_uint8_linear(tex->data, tex->width, tex->height, 0, sizes[i].data, sizes[i].size, sizes[i].size, 0, 4);
   }
 
   sapp_icon_desc idsc = {

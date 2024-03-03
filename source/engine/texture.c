@@ -10,7 +10,7 @@
 #include "resources.h"
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize.h"
+#include "stb_image_resize2.h"
 
 #include <stdio.h>
 
@@ -179,7 +179,7 @@ struct Texture *texture_pullfromfile(const char *path) {
     mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
     mip_wh(tex->width, tex->height, &w, &h, i);
     mipdata[i] = malloc(w * h * 4);
-    stbir_resize_uint8(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
+    stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
     sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
     
     mipw = w;
@@ -261,7 +261,7 @@ struct Texture *texture_fromdata(void *raw, long size)
     mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
     mip_wh(tex->width, tex->height, &w, &h, i);
     mipdata[i] = malloc(w * h * 4);
-    stbir_resize_uint8(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
+    stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
     sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
     
     mipw = w;
