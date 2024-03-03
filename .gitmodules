@@ -13,3 +13,6 @@
 [submodule "source/engine/thirdparty/TinySoundFont"]
 	path = source/engine/thirdparty/TinySoundFont
 	url = https://github.com/schellingb/TinySoundFont.git
+[submodule "source/engine/thirdparty/dr_libs"]
+	path = source/engine/thirdparty/dr_libs
+	url = https://github.com/mackron/dr_libs.git
