@@ -14,20 +14,20 @@
 #include "resources.h"
 #include "yugine.h"
 #include "sokol/sokol_app.h"
+#define SOKOL_GLUE_IMPL
+#include "sokol/sokol_glue.h"
 #include "stb_image_write.h"
 
-#include "crt.sglsl.h"
 #include "box.sglsl.h"
 #include "shadow.sglsl.h"
 
 #include "sokol/sokol_gfx.h"
-#include "sokol/sokol_gfx_ext.h"
+#include "sokol_gfx_ext.h"
 
 #include "msf_gif.h"
 
 static struct {
-  sg_pass pass;
-  sg_pass_action pa;
+  sg_swapchain swap;
   sg_pipeline pipe;
   sg_bindings bind;
   sg_shader shader;
@@ -46,16 +46,6 @@ static struct {
   uint8_t *buffer;
 } gif;
 
-static struct {
-  sg_shader shader;
-  sg_pipeline pipe;
-  sg_bindings bind;
-  sg_pass pass;
-  sg_image img;
-  sg_image depth_img;
-} crt_post;
-
-
 MsfGifState gif_state = {};
 void gif_rec_start(int w, int h, int cpf, int bitdepth)
 {
@@ -72,7 +62,6 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
 
   sg_destroy_image(sg_gif.img);
   sg_destroy_image(sg_gif.depth);
-  sg_destroy_pass(sg_gif.pass);
 
   sg_gif.img = sg_make_image(&(sg_image_desc){
     .render_target = true,
@@ -86,14 +75,11 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
     .render_target = true,
     .width = gif.w,
     .height = gif.h,
-    .pixel_format = SG_PIXELFORMAT_DEPTH,
+//    .pixel_format = SG_PIXELFORMAT_DEPTH,
     .label = "gif depth",
   });
-  
-  sg_gif.pass = sg_make_pass(&(sg_pass_desc){
-    .color_attachments[0].image = sg_gif.img,
-    .depth_stencil_attachment.image = sg_gif.depth
-  });
+
+  sg_gif.swap = sglue_swapchain();
 }
 
 void gif_rec_end(const char *path)
@@ -240,14 +226,14 @@ void trace_fail_pipeline(sg_pipeline pip, void *data)
   YughError("Failed pipeline %s", sg_query_pipeline_desc(pip).label);
 }
 
-void trace_make_pass(const sg_pass_desc *d, sg_pass result, void *data)
+void trace_make_attachments(const sg_attachment_desc *d, sg_attachments result, void *data)
 {
-  YughInfo("Making pass %s", d->label);
+  YughInfo("Making attachments %s", "IMPLEMENT");
 }
 
 void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
 {
-  
+  YughInfo("Begin pass %s", pass.label);
 }
 
 static sg_trace_hooks hooks = {
@@ -261,33 +247,17 @@ static sg_trace_hooks hooks = {
   .fail_pipeline = trace_fail_pipeline,
   .apply_pipeline = trace_apply_pipeline,
   .begin_pass = trace_begin_pass,
-  .make_pass = trace_make_pass,
+  .make_attachments = trace_make_attachments,
 };
 
 void render_init() {
   mainwin.width = sapp_width();
   mainwin.height = sapp_height();
-
   sg_setup(&(sg_desc){
-      .context.d3d11.device = sapp_d3d11_get_device(),
-      .context.d3d11.device_context = sapp_d3d11_get_device_context(),
-      .context.d3d11.render_target_view_cb = sapp_d3d11_get_render_target_view,
-      .context.d3d11.depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view,
-      .context.metal.device = sapp_metal_get_device(),
-      .context.metal.renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
-      .context.metal.drawable_cb = sapp_metal_get_drawable,
-      .context.color_format = sapp_color_format(),
-      .context.depth_format = SG_PIXELFORMAT_DEPTH,
-      .context.sample_count = sapp_sample_count(),
-      .context.wgpu.device = sapp_wgpu_get_device(),
-      .context.wgpu.render_view_cb = sapp_wgpu_get_render_view,
-      .context.wgpu.resolve_view_cb = sapp_wgpu_get_resolve_view,
-      .context.wgpu.depth_stencil_view_cb = sapp_wgpu_get_depth_stencil_view,
-      .mtl_force_managed_storage_mode = 1,
-      .logger = {
-          .func = sg_logging,
-      },
-      .buffer_pool_size = 1024,
+    .environment = sglue_environment(),
+//    .mtl_force_managed_storage_mode = 1,
+    .logger = { .func = sg_logging },
+    .buffer_pool_size = 1024
   });
 
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
@@ -299,11 +269,11 @@ void render_init() {
   model_init();
   sg_color c;
   rgba2floats((float*)&c, editorClearColor);
+  
   pass_action = (sg_pass_action){
-    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c}
+    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
   };
 
-  crt_post.shader = sg_make_shader(crt_shader_desc(sg_query_backend()));
   sg_gif.shader = sg_make_shader(box_shader_desc(sg_query_backend()));
 
   sg_gif.pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -316,38 +286,6 @@ void render_init() {
     },
     .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8,
     .label = "gif pipe",
-  });
-
-  crt_post.pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = crt_post.shader,
-    .layout = {
-      .attrs = {
-        [0].format = SG_VERTEXFORMAT_FLOAT2,
-	[1].format = SG_VERTEXFORMAT_FLOAT2
-      }
-    },
-    .label = "crt post pipeline",
-  });
-
-  crt_post.img = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = mainwin.width,
-    .height = mainwin.height,
-    .label = "crt rt",
-  });
-
-  crt_post.depth_img = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = mainwin.width,
-    .height = mainwin.height,
-    .pixel_format = SG_PIXELFORMAT_DEPTH,
-    .label = "crt depth",
-  });
-
-  crt_post.pass = sg_make_pass(&(sg_pass_desc){
-    .color_attachments[0].image = crt_post.img,
-    .depth_stencil_attachment.image = crt_post.depth_img,
-    .label = "crt post pass",
   });
 
 #if defined SOKOL_GLCORE33 || defined SOKOL_GLES3
@@ -382,16 +320,8 @@ void render_init() {
     .size = sizeof(gif_quad),
     .data = gif_quad,
   });
-  sg_gif.bind.fs.images[0] = crt_post.img;
+//  sg_gif.bind.fs.images[0] = crt_post.img;
   sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
-
-  crt_post.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(crt_quad),
-    .data = crt_quad
-  });
-
-  crt_post.bind.fs.images[0] = crt_post.img;
-  crt_post.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 
 /*
   sg_image_desc shadow_desc = {
@@ -437,33 +367,7 @@ void render_init() {
 
 void render_winsize()
 {
-  sg_destroy_image(crt_post.img);
-  sg_destroy_image(crt_post.depth_img);
-  sg_destroy_pass(crt_post.pass);
-
-  crt_post.img = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = mainwin.width,
-    .height = mainwin.height,
-    .label = "crt img resize",
-  });
-
-  crt_post.depth_img = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = mainwin.width,
-    .height = mainwin.height,
-    .pixel_format = SG_PIXELFORMAT_DEPTH,
-    .label = "crt depth resize",
-  });
-
-  crt_post.pass = sg_make_pass(&(sg_pass_desc){
-    .color_attachments[0].image = crt_post.img,
-    .depth_stencil_attachment.image = crt_post.depth_img,
-    .label = "crt pass resize",
-  });
-
-  crt_post.bind.fs.images[0] = crt_post.img;
-  sg_gif.bind.fs.images[0] = crt_post.img;
+//  sg_gif.bind.fs.images[0] = crt_post.img;
 }
 
 static cpBody *camera = NULL;
@@ -508,7 +412,6 @@ void full_2d_pass(struct window *window)
              pos.y + zoom * window->rheight / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, window->rwidth, 0, window->rheight, -1.f, 1.f);
-
   sprite_draw_all();
   model_draw_all();
   call_draw();
@@ -555,12 +458,19 @@ void full_3d_pass(struct window *window)
 }
 
 void openglRender(struct window *window) {
-  sg_begin_pass(crt_post.pass, &pass_action);
+  sg_begin_pass(&(sg_pass){
+    .action = pass_action,
+    .swapchain = sglue_swapchain(),
+    .label =  "window pass"
+  });
   full_2d_pass(window);
   sg_end_pass();
 
-  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
-    sg_begin_pass(sg_gif.pass, &pass_action);
+/*  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
+    sg_begin_pass(&(sg_pass){
+      .action = pass_action,
+      .swapchain = sg_gif.swap
+    });
     sg_apply_pipeline(sg_gif.pipe);
     sg_apply_bindings(&sg_gif.bind);
     sg_draw(0,6,1);
@@ -570,13 +480,7 @@ void openglRender(struct window *window) {
     sg_query_image_pixels(sg_gif.img, crt_post.bind.fs.samplers[0], gif.buffer, gif.w*gif.h*4);
     msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }
-
-  sg_begin_default_pass(&pass_action, window->width, window->height);
-  sg_apply_pipeline(crt_post.pipe);
-  sg_apply_bindings(&crt_post.bind);
-  sg_draw(0,6,1);
-
-  sg_end_pass();  
+*/
 
   sg_commit();
 

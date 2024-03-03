@@ -8,7 +8,7 @@
 #include "sokol/sokol_args.h"
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
-#include "sokol/sokol_gfx_ext.h"
+#include "sokol_gfx_ext.h"
 
 #define MSF_GIF_IMPL
 #include "msf_gif.h"

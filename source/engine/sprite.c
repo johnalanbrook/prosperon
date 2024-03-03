@@ -151,7 +151,6 @@ void sprite_initialize() {
       .depth = {
         .write_enabled = true,
 	.compare = SG_COMPAREFUNC_LESS_EQUAL,
-	.pixel_format = SG_PIXELFORMAT_DEPTH
       }
   });
 

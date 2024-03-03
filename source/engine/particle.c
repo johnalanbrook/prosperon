@@ -60,8 +60,7 @@ void particle_init()
     .colors[0].blend = blend_trans,
     .depth = {
       .write_enabled = true,
-      .compare = SG_COMPAREFUNC_LESS_EQUAL,
-      .pixel_format = SG_PIXELFORMAT_DEPTH
+      .compare = SG_COMPAREFUNC_LESS_EQUAL
     }
   });
 
