@@ -155,8 +155,8 @@ endif
 OBJDIR = $(BIN)/obj
 
 # All other sources
-OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool'
-CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool'
+OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example'
+CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool|example'
 OBJS += $(CPPOBJS)
 OBJS += $(shell find source/engine -type f -name '*.m')
 OBJS := $(patsubst %.cpp, %.o, $(OBJS))
@@ -166,7 +166,7 @@ OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf
+includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont
 includeflag := $(addprefix -I, $(includeflag))
 
 # Adding different SDKs
