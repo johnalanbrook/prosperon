@@ -320,6 +320,7 @@ json.encode = function(value, space, replacer, whitelist)
 
 json.decode = function(text, reviver)
 {
+  if (!text) return undefined;
   return JSON.parse(text,reviver);
 }
 
@@ -859,7 +860,7 @@ Object.defineProperty(String.prototype, 'dir', {
 });
 
 Object.defineProperty(String.prototype, 'splice', {
-  value: function(index, str, ) {
+  value: function(index, str) {
     return this.slice(0,index) + str + this.slice(index);
   }
 });
@@ -878,6 +879,28 @@ Object.defineProperty(String.prototype, 'updir', {
     
     var dir = (this + "/").dir();
     return dir.dir();
+  }
+});
+
+Object.defineProperty(String.prototype, 'trimchr', {
+  value: function(chars) {
+    var start = this.length;
+    var end = 0;
+    for (var i = 0; i < this.length; i++) {
+      if (!chars.includes(this[i])) {
+        start = i;
+	break;
+      }
+    }
+
+    for (var i = this.length-1; i >= 0; i--) {
+      if (!chars.includes(this[i])) {
+        end = i+1;
+	break;
+      }
+    }
+
+    return this.substring(start,end);
   }
 });
 
@@ -1573,4 +1596,3 @@ return {
   Vector,
   bbox
 };
-

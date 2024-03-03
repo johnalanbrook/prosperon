@@ -1,5 +1,32 @@
 os.cwd.doc = "Get the absolute path of the current working directory.";
 os.env.doc = "Return the value of the environment variable v.";
+os.platform = "steam";
+if (os.sys === 'windows')
+  os.user = os.env("USERNAME");
+else
+  os.user = os.env("USER");
+
+var steam = {};
+steam.appid = 480;
+steam.userid = 8437843;
+
+os.home = os.env("HOME");
+
+steam.path = {
+  windows: `C:/Program Files (x86)/Steam/userdata/${steam.userid}/${steam.appid}`,
+  macos: `${os.home}/Library/Application Support/Steam/userdata/${steam.userid}/${steam.appid}`,
+  linux: `${os.home}/.local/share/Steam/userdata/${steam.userid}/${steam.appid}`
+};
+
+var otherpath = {
+  windows:`C:/Users/${os.user}/Saved Games`,
+  macos: `${os.home}/Library/Application Support`,
+  linux: `${os.home}/.local/share`
+}
+
+os.prefpath = function() {
+  return otherpath[os.sys()] + "/" + (Game.title ? Game.title : "Untitled Prosperon Game");
+}
 
 var projectfile = ".prosperon/project.json";
 
@@ -25,11 +52,36 @@ Resources.is_animation = function(path)
   return false;
 }
 
+Resources.is_path = function(str)
+{
+  return !/[\\\/:*?"<>|]/.test(str);
+}
+
 Resources.texture = {};
 Resources.texture.dimensions = function(path) { return cmd(64,path); }
 
 Resources.gif = {};
 Resources.gif.frames = function(path) { return cmd(139,path); }
+
+Resources.replpath = function(str, path)
+{
+  if (str[0] === "/")
+    return str.rm(0);
+
+  if (str[0] === "@")
+    return os.prefpath() + "/" + str.rm(0);
+
+  if (!path) return str;
+
+  var stem = path.dir();
+  while (stem) {
+    var tr = stem + "/" +str;
+    if (io.exists(tr)) return tr;
+    stem = steam.updir();
+  }
+  
+  return str;
+}
 
 Resources.replstrs = function(path)
 {
@@ -38,13 +90,8 @@ Resources.replstrs = function(path)
   var stem = path.dir();
 
   script = script.replace(regexp,function(str) {
-    if (str[1] === "/")
-      return str.rm(1);
-
-    if (str[1] === "@")
-      return str.rm(1).splice(1, "playerpath/");
-
-    return str.splice(1, stem + "/");
+    var newstr = Resources.replpath(str.trimchr('"'), path);
+    return `"${newstr}"`;
   });
 
   return script;
@@ -146,14 +193,65 @@ console.doc = {
 /*
   io path rules. Starts with, meaning:
   "@": user path
-  "/": game path
+  "/": root game path
+  "" : relative game path
 */
 
-var tmp = io.chmod;
+var tmpchm = io.chmod;
 io.chmod = function(file,mode) {
-  return tmp(file,parseInt(mode,8));
+  return tmpchm(file,parseInt(mode,8));
 }
-  
+
+
+var tmpslurp = io.slurp;
+io.slurp = function(path)
+{
+  path = Resources.replpath(path);
+  return tmpslurp(path);
+}
+
+var tmpslurpb = io.slurpbytes;
+io.slurpbytes = function(path)
+{
+  path = Resources.replpath(path);
+  return tmpslurpb(path);
+}
+
+io.mkpath = function(dir)
+{
+  var mkstack = [];
+  while (!io.exists(dir)) {
+    mkstack.push(dir.fromlast('/'));
+    dir = dir.dir();
+  }
+  for (var d of mkstack) {
+    dir = dir + "/" + d;
+    say(`making ${dir}`);
+    io.mkdir(dir);
+  }
+}
+
+var tmpslurpw = io.slurpwrite;
+io.slurpwrite = function(path, c)
+{
+  path = Resources.replpath(path);
+  io.mkpath(path.dir());
+  return tmpslurpw(path, c);
+}
+
+var tmpcp = io.cp;
+io.cp = function(f1,f2)
+{
+  io.mkpath(f2.dir());
+  tmpcp(f1,f2);
+}
+
+var tmprm = io.rm;
+io.rm = function(f)
+{
+  tmprm(Resources.replpath(f));
+}
+
 io.mixin({
   extensions(ext) {
     var paths = io.ls();
@@ -226,7 +324,7 @@ Cmdline.register_order("edit", function() {
 }, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");
 
 Cmdline.register_order("init", function() {
-  if (io.exists(".prosperon")) {
+  if (io.exists(projectfile)) {
     say("Already a game here.");
     return;
   }
@@ -255,6 +353,7 @@ Cmdline.register_order("play", function() {
   }
 
   var project = json.decode(io.slurp(projectfile));
+  Game.title = project.title;
   global.mixin("config.js");
   if (project.title) Window.title(project.title);
   
@@ -490,7 +589,7 @@ return {
   console,
   Resources,
   say,
-  io,
   Cmdline,
-  cmd_args
+  cmd_args,
+  steam
 };

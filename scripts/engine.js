@@ -4,7 +4,7 @@ globalThis.global = globalThis;
 function use(file)
 {
   if (use.files[file]) return use.files[file];
-  
+    
   var c = io.slurp(file);
   
   var script = `(function() { ${c} })();`;
@@ -52,7 +52,85 @@ var load = use;
 
 Object.assign(global, use("scripts/base.js"));
 global.obscure('global');
+global.mixin("scripts/render.js");
+
+global.Game = {
+  engine_start(fn) {
+    cmd(257, fn);
+  },
+
+  native: render.device.pc,
+
+  object_count() {
+    return cmd(214);
+  },
+
+  all_objects(fn) {
+    /* Wind down from Primum */
+  },
+
+  /* Returns a list of objects by name */
+  find(name) {
+    
+  },
+
+  /* Return a list of objects derived from a specific prototype */
+  find_proto(proto) {
+
+  },
+
+  /* List of all objects spawned that have a specific tag */
+  find_tag(tag){
+
+  },
+
+  quit() {
+    sys_cmd(0);
+    return;
+  },
+
+  pause() { sys_cmd(3); },
+  stop() { Game.pause(); },
+  step() { sys_cmd(4);},
+  editor_mode(m) { sys_cmd(10, m); },
+  playing() { return sys_cmd(5); },
+  paused() { return sys_cmd(6); },
+  stepping() { return cmd(79); },
+  play() { sys_cmd(1); },
+  
+  wait_fns: [],
+
+  wait_exec(fn) {
+    if (!phys_stepping())
+      fn();
+    else
+      this.wait_fns.push(fn);
+  },
+
+  exec() {
+    this.wait_fns.forEach(function(x) { x(); });
+
+    this.wait_fns = [];
+  },
+};
+
+Game.gc = function() { cmd(259); }
+Game.gc.doc = "Force the garbage collector to run.";
+
+Game.doc = {};
+Game.doc.object = "Returns the entity belonging to a given id.";
+Game.doc.quit = "Immediately quit the game.";
+Game.doc.pause = "Pause game simulation.";
+Game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and if the game is a debug build, starts its editor.";
+Game.doc.play = "Resume or start game simulation.";
+Game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
+Game.doc.dt = "Current frame dt.";
+Game.doc.view_camera = "Set the camera for the current view.";
+Game.doc.camera = "Current camera.";
+
+global.mixin("scripts/input.js");
 global.mixin("scripts/std.js");
+
 global.mixin("scripts/diff.js");
 
 console.level = 1;
@@ -140,9 +218,9 @@ var timer = {
 };
 
 global.mixin("scripts/tween.js");
-global.mixin("scripts/render.js");
+
 global.mixin("scripts/physics.js");
-global.mixin("scripts/input.js");
+
 
 global.mixin("scripts/ai.js");
 global.mixin("scripts/geometry.js");
@@ -297,78 +375,6 @@ global.mixin("scripts/debug.js");
 global.mixin("scripts/spline.js");
 global.mixin("scripts/components.js");
 
-var Game = {
-  engine_start(fn) {
-    cmd(257, fn);
-  },
-
-  native: render.device.pc,
-
-  object_count() {
-    return cmd(214);
-  },
-
-  all_objects(fn) {
-    /* Wind down from Primum */
-  },
-
-  /* Returns a list of objects by name */
-  find(name) {
-    
-  },
-
-  /* Return a list of objects derived from a specific prototype */
-  find_proto(proto) {
-
-  },
-
-  /* List of all objects spawned that have a specific tag */
-  find_tag(tag){
-
-  },
-
-  quit() {
-    sys_cmd(0);
-    return;
-  },
-  pause() { sys_cmd(3); },
-  stop() { Game.pause(); },
-  step() { sys_cmd(4);},
-  editor_mode(m) { sys_cmd(10, m); },
-  playing() { return sys_cmd(5); },
-  paused() { return sys_cmd(6); },
-  stepping() { return cmd(79); },
-  play() { sys_cmd(1); },
-  
-  wait_fns: [],
-
-  wait_exec(fn) {
-    if (!phys_stepping())
-      fn();
-    else
-      this.wait_fns.push(fn);
-  },
-
-  exec() {
-    this.wait_fns.forEach(function(x) { x(); });
-
-    this.wait_fns = [];
-  },
-};
-
-Game.gc = function() { cmd(259); }
-Game.gc.doc = "Force the garbage collector to run.";
-
-Game.doc = {};
-Game.doc.object = "Returns the entity belonging to a given id.";
-Game.doc.quit = "Immediately quit the game.";
-Game.doc.pause = "Pause game simulation.";
-Game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and if the game is a debug build, starts its editor.";
-Game.doc.play = "Resume or start game simulation.";
-Game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
-Game.doc.dt = "Current frame dt.";
-Game.doc.view_camera = "Set the camera for the current view.";
-Game.doc.camera = "Current camera.";
 
 Window.doc = {};
 Window.doc.width = "Width of the game window.";

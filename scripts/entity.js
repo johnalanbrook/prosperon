@@ -461,8 +461,8 @@ var gameobject = {
     alive() { return this.body >= 0; },
     in_air() { return q_body(7, this.body);},
 
-  hide() { this.components.forEach(x=>x.hide()); this.objects.forEach(x=>x.hide());},
-  show() { this.components.forEach(function(x) { x.show(); }); this.objects.forEach(function(x) { x.show(); }); },
+  hide() { this.components.forEach(x=>x.hide?.()); this.objects.forEach(x=>x.hide?.());},
+  show() { this.components.forEach(function(x) { x.show?.(); }); this.objects.forEach(function(x) { x.show?.(); }); },
 
   width() {
     var bb = this.boundingbox();
@@ -817,11 +817,15 @@ function apply_ur(u, e)
       return;
     }
 
-    if (topur.text)
-      feval_env(topur.text, e);
+    if (topur.text) {
+      var script = Resources.replstrs(topur.text);
+      eval_env(script, e, topur.text);
+    }
       
-    if (topur.data)
-      Object.merge(config, json.decode(io.slurp(topur.data)));
+    if (topur.data) {
+      var jss = Resources.replstrs(topur.data);
+      Object.merge(config, json.decode(jss));
+    }
   }
 
   Object.merge(e, config);

@@ -1909,9 +1909,22 @@ JSValue js_os_env(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
+JSValue js_os_sys(JSContext *js, JSValueConst this)
+{
+  #ifdef __linux__
+  return str2js("linux");
+  #elif defined(_WIN32) || defined(_WIN64)
+  return str2js("windows");
+  #elif defined(__APPLE__)
+  return str2js("macos");
+  #endif
+  return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_CFUNC_DEF("cwd", 0, js_os_cwd),
   MIST_CFUNC_DEF("env", 1, js_os_env),
+  MIST_CFUNC_DEF("sys", 0, js_os_sys),
 };
 
 JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
@@ -1952,6 +1965,7 @@ JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 JSValue js_io_rm(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char *file = JS_ToCString(js, argv[0]);
+  JSValue ret = int2js(remove(file));
   JS_FreeCString(js,file);
   return JS_UNDEFINED;
 }
@@ -1979,6 +1993,7 @@ JSValue js_io_slurp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
+
   char *s = slurp_text(f,&len);
   JS_FreeCString(js,f);
 

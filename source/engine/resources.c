@@ -207,7 +207,7 @@ int cp(const char *p1, const char *p2)
   size_t len;
   void *data = slurp_file(p1, &len);
 
-  FILE *f = fopen_mkdir(p2, "w");
+  FILE *f = fopen(p2, "w");
   if (!f) return 1;
   fwrite(data, len, 1, f);
   free(data);
@@ -215,34 +215,23 @@ int cp(const char *p1, const char *p2)
   return 0;
 }
 
-void rek_mkdir(char *path) {
-    char *sep = strrchr(path, '/');
-    if(sep != NULL) {
-        *sep = 0;
-        rek_mkdir(path);
-        *sep = '/';
-    }
-#if defined __WIN32    
-    if(mkdir(path) && errno != EEXIST)
-#else
-    if (mkdir(path, 0777) && errno != EEXIST)
-#endif    
-        printf("error while trying to create '%s'\n%m\n", path); 
-}
+int mkpath(char *dir, mode_t mode)
+{
+  if (!dir) {
+      errno = EINVAL;
+      return 1;
+  }
 
-FILE *fopen_mkdir(const char *path, const char *mode) {
-    char *sep = strrchr(path, '/');
-    if(sep) { 
-        char *path0 = strdup(path);
-        path0[ sep - path ] = 0;
-        rek_mkdir(path0);
-        free(path0);
-    }
-    return fopen(path,mode);
+  if (strlen(dir) == 1 && dir[0] == '/')
+      return 0;
+
+//  mkpath(dirname(strdupa(dir)), mode);
+
+  return mkdir(dir, mode);
 }
 
 int slurp_write(const char *txt, const char *filename, size_t len) {
-  FILE *f = fopen_mkdir(filename, "w");
+  FILE *f = fopen(filename, "w");
   if (!f) return 1;
 
   if (len < 0) len = strlen(txt);

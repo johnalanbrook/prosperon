@@ -16,7 +16,6 @@ FILE *path_open(const char *tag, const char *fmt, ...);
 char **ls(const char *path);
 int cp(const char *p1, const char *p2);
 int fexists(const char *path);
-FILE *fopen_mkdir(const char *path, const char *mode);
 
 char *dirname(const char *path);
 
