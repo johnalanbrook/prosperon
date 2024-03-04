@@ -65,3 +65,5 @@ shape.circle.points = function(radius, n) {
   if (n <= 1) return [];
   return shape.arc(radius, 360, n);
 };
+
+return {shape};

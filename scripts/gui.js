@@ -37,7 +37,7 @@ var GUI = {
   image(path,pos,color) {
     color ??= Color.black;
     var wh = cmd(64,path);
-    gui_img(path,pos, [1.0,1.0], 0.0, 0.0, [0.0,0.0], 0.0, Color.black);
+    gui_img(path,pos, [1.0,1.0], 0.0, false, [0.0,0.0], Color.white);
     return bbox.fromcwh([0,0], wh);
   },
 

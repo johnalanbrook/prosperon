@@ -1872,14 +1872,14 @@ GETSET_PAIR(emitter, persist, number)
 GETSET_PAIR(emitter, persist_var, number)
 GETSET_PAIR(emitter, warp_mask, bitmask)
 
-JSValue js_emitter_start (JSContext *js, JSValue this)
+JSValue js_emitter_start (JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   emitter *n = js2emitter(this);
   start_emitter(n);
   return JS_UNDEFINED;
 }
 
-JSValue js_emitter_stop(JSContext *js, JSValue this)
+JSValue js_emitter_stop(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   emitter *n = js2emitter(this);
   stop_emitter(n);
@@ -1893,10 +1893,15 @@ JSValue js_emitter_emit(JSContext *js, JSValueConst this, int argc, JSValue *arg
   return JS_UNDEFINED;
 }
 
-JSValue js_os_cwd(JSContext *js, JSValueConst this)
+JSValue js_os_cwd(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char cwd[PATH_MAX];
+  #ifndef __EMSCRIPTEN__
   getcwd(cwd, sizeof(cwd));
+  #else
+  cwd[0] = '.';
+  cwd[1] = 0;
+  #endif
   return str2js(cwd);
 }
 
@@ -1909,7 +1914,7 @@ JSValue js_os_env(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_os_sys(JSContext *js, JSValueConst this)
+JSValue js_os_sys(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   #ifdef __linux__
   return str2js("linux");
@@ -1935,14 +1940,14 @@ JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_ls(JSContext *js, JSValueConst this)
+JSValue js_io_ls(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
-  return strarr2js(ls(","));
+  return strarr2js(ls("."));
 }
 
 JSValue js_io_cp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
-  char *f1, f2;
+  char *f1, *f2;
   f1 = JS_ToCString(js, argv[0]);
   f2 = JS_ToCString(js, argv[1]);
   JSValue ret = int2js(cp(f1,f2));
@@ -1953,12 +1958,20 @@ JSValue js_io_cp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 
 JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
-  char *f1, f2;
+  char *f1, *f2;
   f1 = JS_ToCString(js, argv[0]);
   f2 = JS_ToCString(js, argv[1]);
   JSValue ret = int2js(rename(f1,f2));
   JS_FreeCString(js,f1);
   JS_FreeCString(js,f2);
+  return ret;
+}
+
+JSValue js_io_chdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+{
+  char *path = JS_ToCString(js, argv[0]);
+  JSValue ret = int2js(chdir(path));
+  JS_FreeCString(js,path);
   return ret;
 }
 
@@ -2036,6 +2049,7 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_CFUNC_DEF("cp", 2, js_io_cp),
   MIST_CFUNC_DEF("mv", 2, js_io_mv),
   MIST_CFUNC_DEF("rm", 1, js_io_rm),
+  MIST_CFUNC_DEF("chdir", 1, js_io_chdir),
   MIST_CFUNC_DEF("mkdir", 1, js_io_mkdir),
   MIST_CFUNC_DEF("chmod", 2, js_io_chmod),
   MIST_CFUNC_DEF("slurp", 1, js_io_slurp),
@@ -2078,7 +2092,7 @@ JSValue js_dsp_node_plugin(JSContext *js, JSValueConst this, int argc, JSValue *
   return JS_UNDEFINED;
 }
 
-JSValue js_dsp_node_unplug(JSContext *js, JSValueConst this)
+JSValue js_dsp_node_unplug(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   unplug_node(js2dsp_node(this));
   return JS_UNDEFINED;

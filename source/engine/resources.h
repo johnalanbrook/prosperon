@@ -6,6 +6,7 @@
 #include "string.h"
 
 extern char *DATA_PATH;
+extern int LOADED_GAME;
 
 void resources_init();
 char *get_filename_from_path(char *path, int extension);

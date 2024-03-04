@@ -24,9 +24,6 @@ LEAK ?= 0
 INFO :=
 LD = $(CC)
 
-#ifeq ($(CC), clang)
-#  AR = llvm-ar
-#endif
 ifeq ($(CC), x86_64-w64-mingw32-gcc)
   AR = x86_64-w64-mingw32-ar
 endif
@@ -52,6 +49,14 @@ ifdef NQOA
 endif
 
 CPPFLAGS += -ffast-math
+
+ifeq ($(CC), emcc)
+  LDFLAGS += #--closure 1
+  CPPFLAGS += -O0
+  OPT = 0
+  DBG = 0
+  AR = emar
+endif
 
 ifeq ($(DBG),1)
   CPPFLAGS += -g
@@ -123,12 +128,10 @@ ifeq ($(OS), Windows_NT)
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
   OS := Web
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=450MB
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=32MB
   CPPFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
-  CC = emcc
   EXT = .html
-
 else 
   UNAME != uname -s
   ifeq ($(UNAME), Linux)

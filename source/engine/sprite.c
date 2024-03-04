@@ -240,7 +240,7 @@ void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset,
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_pullfromfile(img);
-  tex_draw(tex, transform2d2mat(t), tex_get_rect(tex), color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
+  tex_draw(tex, transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
 }
 
 void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)
@@ -249,7 +249,7 @@ void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct Texture *tex = texture_pullfromfile(img);
 
-  struct glrect r = tex_get_rect(tex);
+  struct glrect r = ST_UNIT;
 
   struct slice9_vert verts[4];
   

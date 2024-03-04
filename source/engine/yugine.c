@@ -46,6 +46,7 @@
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"
 #include "sokol/sokol_args.h"
+#include "sokol/sokol_fetch.h"
 #include <stb_ds.h>
 #include <stb_truetype.h>
 #include "stb_image.h"
@@ -153,6 +154,7 @@ void c_frame()
 }
 
 void c_clean() {
+  sfetch_shutdown();
   gif_rec_end("out.gif");
   out_memusage(".prosperon/jsmem.txt");
   script_stop();
@@ -319,8 +321,12 @@ dam->update_activity(dam, &da, NULL, NULL);
     strcat(cmdstr, argv[i]);
     if (argc > i+1) strcat(cmdstr, " ");
   }
-  script_evalf("cmd_args('%s');", cmdstr);
 
+  while (!LOADED_GAME)
+    sfetch_dowork();
+
+  script_evalf("cmd_args('%s');", cmdstr);
+ 
   out_memusage(".prosperon/jsmem.txt");
   script_stop();
 

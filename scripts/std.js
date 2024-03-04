@@ -72,12 +72,12 @@ Resources.replpath = function(str, path)
     return os.prefpath() + "/" + str.rm(0);
 
   if (!path) return str;
-
+  
   var stem = path.dir();
   while (stem) {
     var tr = stem + "/" +str;
     if (io.exists(tr)) return tr;
-    stem = steam.updir();
+    stem = stem.updir();
   }
   
   return str;
@@ -219,6 +219,7 @@ io.slurpbytes = function(path)
 
 io.mkpath = function(dir)
 {
+  if (!dir) return;
   var mkstack = [];
   while (!io.exists(dir)) {
     mkstack.push(dir.fromlast('/'));
@@ -266,14 +267,15 @@ io.mixin({
   },
 
   glob(pat) {
-    var paths = io.ls();
+    var paths = io.ls('.');
     pat = pat.replaceAll(/([\[\]\(\)\^\$\.\|\+])/g, "\\$1");
     pat = pat.replaceAll('**', '.*');
     pat = pat.replaceAll(/[^\.]\*/g, '[^\\/]*');
     pat = pat.replaceAll('?', '.');
     
     var regex = new RegExp("^"+pat+"$", "");
-    return paths.filter(str => str.match(regex));
+    paths = paths.filter(str => str.match(regex)).sort();
+    return paths;
   },
 });
 
@@ -346,7 +348,12 @@ Cmdline.register_order("debug", function() {
   Cmdline.orders.play();
 }, "Play the game with debugging enabled.");
 
-Cmdline.register_order("play", function() {
+Cmdline.register_order("play", function(argv) {
+  if (argv[0])
+    io.chdir(argv[0]);
+
+  Game.loadurs();
+
   if (!io.exists(projectfile)) {
     say("No game to play. Try making one with 'prosperon init'.");
     return;
@@ -356,7 +363,7 @@ Cmdline.register_order("play", function() {
   Game.title = project.title;
   global.mixin("config.js");
   if (project.title) Window.title(project.title);
-  
+
   Game.engine_start(function() {
     global.mixin("scripts/sound.js");  
     global.mixin("game.js");

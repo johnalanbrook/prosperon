@@ -21,6 +21,9 @@
 #include <ftw.h>
 #endif
 
+#define SOKOL_FETCH_IMPL
+#include "sokol/sokol_fetch.h"
+
 #include "stb_ds.h"
 
 #include "core.cdb.h"
@@ -35,9 +38,43 @@ char pathbuf[MAXPATH + 1];
 static struct cdb corecdb;
 static struct cdb game_cdb;
 
+extern int LOADED_GAME = 0;
+uint8_t *gamebuf;
+
+static void response_cb(const sfetch_response_t *r)
+{
+  if (r->fetched) {
+    cdb_initf(&game_cdb, r->data.ptr, r->data.size);
+    LOADED_GAME = 1;
+  }
+  if (r->finished) {
+    LOADED_GAME = -1;
+    if (r->failed) {
+      printf("NO GAME\n");
+      LOADED_GAME = -1;
+
+    }
+  }
+}
+
 void resources_init() {
-  int fd = open("game.cdb", O_RDONLY);
-  cdb_init(&game_cdb, fd);
+  sfetch_setup(&(sfetch_desc_t){
+    .max_requests = 1024,
+    .num_channels = 4,
+    .num_lanes = 8,
+    .logger = { .func = sg_logging },
+  });
+  gamebuf = malloc(64*1024*1024);
+
+  sfetch_handle_t h = sfetch_send(&(sfetch_request_t){
+    .path="game.cdb",
+    .callback = response_cb,
+    .buffer = {
+      .ptr = gamebuf,
+      .size = 64*1024*1024
+    }
+  });
+
   cdb_initf(&corecdb, core_cdb, core_cdb_len);
 }
 
@@ -106,7 +143,8 @@ char **ls(const char *path)
 
     arrfree(ls_paths);
   }
-  ftw(".", ls_ftw, 10);
+  
+  ftw(path, ls_ftw, 10);
   return ls_paths;
 }
 
@@ -225,9 +263,11 @@ int mkpath(char *dir, mode_t mode)
   if (strlen(dir) == 1 && dir[0] == '/')
       return 0;
 
-//  mkpath(dirname(strdupa(dir)), mode);
-
-  return mkdir(dir, mode);
+#ifdef _WIN32
+  return mkdir(dir);
+#else
+  return mkdir(dir,mode);
+#endif
 }
 
 int slurp_write(const char *txt, const char *filename, size_t len) {
@@ -292,5 +332,5 @@ void pack_engine(const char *fname){
   YughError("Cannot pack engine on a web build.");
 }
 
-char **ls(char *path) { return NULL; }
+char **ls(const char *path) { return NULL; }
 #endif

@@ -5,7 +5,7 @@ actor.spawn = function(script, config){
   if (typeof script !== 'string') return undefined;
   if (!a_db[script]) a_db[script] = io.slurp(script);
   var padawan = Object.create(actor);
-  eval_env(a_db[script], padawan);
+  eval_env(a_db[script], padawan, script);
 
   if (typeof config === 'object')
     Object.merge(padawan,config);
@@ -20,12 +20,16 @@ actor.spawn = function(script, config){
 
 actor.spawn.doc = `Create a new actor, using this actor as the master, initializing it with 'script' and with data (as a JSON or Nota file) from 'config'.`;
 
+actor.rm_pawn = function(pawn)
+{
+  this.padawans.remove(pawn);
+}
+
 actor.timers = [];
 actor.kill = function(){
   if (this.__dead__) return;
   this.timers.forEach(t => t.kill());
-  if (this.master)
-    delete this.master[this.toString()];
+  if (this.master) this.master.rm_pawn(this);
   this.padawans.forEach(p => p.kill());
   this.padawans = [];
   this.__dead__ = true;
@@ -55,12 +59,6 @@ actor.delay = function(fn, seconds) {
 actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;
 
 actor.padawans = [];
-
-actor.remaster = function(to){
-  delete this.master.padawans[this.toString()];
-  this.master = to;
-  to.padawans.push(this);
-};
 
 global.app = Object.create(actor);
 

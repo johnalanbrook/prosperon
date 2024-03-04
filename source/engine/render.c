@@ -412,6 +412,7 @@ void full_2d_pass(struct window *window)
              pos.y + zoom * window->rheight / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, window->rwidth, 0, window->rheight, -1.f, 1.f);
+  
   sprite_draw_all();
   model_draw_all();
   call_draw();

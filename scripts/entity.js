@@ -780,7 +780,7 @@ var resani = function(ur, path)
   return restry;
 }
 
-var ur;
+global.ur = {};
 
 if (io.exists(".prosperon/ur.json"))
   ur = json.decode(io.slurp(".prosperon/ur.json"));
@@ -860,26 +860,27 @@ function file2fqn(file)
   return ur[fqn];
 }
 
-/* FIND ALL URS IN A PROJECT */
-for (var file of io.glob("**.jso")) {
-  if (file[0] === '.' || file[0] === '_') continue;
-  var topur = file2fqn(file);
-  topur.text = file;
-}
+Game.loadurs = function() {
+  ur = {};
+  ur._list = [];
+  /* FIND ALL URS IN A PROJECT */
+  for (var file of io.glob("**.jso")) {
+    if (file[0] === '.' || file[0] === '_') continue;
+    var topur = file2fqn(file);
+    topur.text = file;
+  }
 
-for (var file of io.glob("**.json")) {
-  if (file[0] === '.' || file[0] === '_') continue;
-  var topur = file2fqn(file);
-  topur.data = file;
-}
+  for (var file of io.glob("**.json")) {
+    if (file[0] === '.' || file[0] === '_') continue;
+    var topur = file2fqn(file);
+    topur.data = file;
+  }
 
-io.slurpwrite(".prosperon/ur.json", json.encode(ur));
-
-ur.empty = {
-  name: "empty"
+  ur.empty = {
+    name: "empty"
+  };
 };
 
 return {
-  gameobject,
-  ur
+  gameobject
 }

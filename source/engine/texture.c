@@ -285,8 +285,6 @@ struct Texture *texture_fromdata(void *raw, long size)
 
 struct Texture *texture_loadfromfile(const char *path) { return texture_pullfromfile(path); }
 
-struct glrect tex_get_rect(struct Texture *tex) { return ST_UNIT; }
-
 HMM_Vec2 tex_get_dimensions(struct Texture *tex) {
   if (!tex) return (HMM_Vec2){0,0};
   HMM_Vec2 d;
