@@ -365,8 +365,9 @@ Cmdline.register_order("play", function(argv) {
   if (project.title) Window.title(project.title);
 
   Game.engine_start(function() {
-    global.mixin("scripts/sound.js");  
-    global.mixin("game.js");
+    global.mixin("scripts/sound.js");
+    global.game = actor.spawn("game.js");
+    say(`spawned game with ${game.score} points`);
     if (project.icon) Window.icon(project.icon);
   });  
 }, "Play the game present in this folder.");
@@ -423,6 +424,7 @@ Cmdline.register_order("about", function(argv) {
 }, "Get information about this game.");
 
 Cmdline.register_order("ur", function(argv) {
+  Game.loadurs();
   for (var i of ur._list.sort()) say(i);
 }, "Get information about the ur types in your game.");
 

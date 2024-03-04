@@ -11,40 +11,6 @@ function obj_unique_name(name, obj)
   return n;
 }
 
-function check_registers(obj)
-{
-    if (typeof obj.update === 'function')
-      obj.timers.push(Register.update.register(obj.update.bind(obj)));
-
-    if (typeof obj.physupdate === 'function')
-      obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
-
-    if (typeof obj.collide === 'function')
-      register_collide(0, obj.collide.bind(obj), obj.body);
-
-    if (typeof obj.separate === 'function')
-      register_collide(3,obj.separate.bind(obj), obj.body);
-
-    if (typeof obj.draw === 'function')
-      obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
-
-    if (typeof obj.debug === 'function')
-      obj.timers.push(Register.debug.register(obj.debug.bind(obj)));
-
-    if (typeof obj.gui === 'function')
-      obj.timers.push(Register.gui.register(obj.gui.bind(obj)));
-
-    for (var k in obj) {
-      if (!k.startswith("on_")) continue;
-      var signal = k.fromfirst("on_");
-      Event.observe(signal, obj, obj[k]);
-    };
-
-    obj.components.forEach(function(x) {
-      if (typeof x.collide === 'function')
-        register_collide(1, x.collide.bind(x), obj.body, x.shape);
-    });
-}
 
 var gameobject_impl = {
   get pos() {
@@ -378,6 +344,11 @@ var gameobject = {
 	 };
 
        check_registers(ent);
+       ent.components.forEach(function(x) {
+	 if (typeof x.collide === 'function')
+	   register_collide(1, x.collide.bind(x), ent.body, x.shape);
+       });
+       
 	
         if (typeof ent.load === 'function') ent.load();
 	if (Game.playing())
@@ -748,37 +719,6 @@ gameobject.doc = {
   draw_layer: 'Layer for drawing. Higher numbers draw above lower ones.',
   warp_layer: 'Bitmask for selecting what warps should affect this entity.',
 };
-
-var resavi = function(ur, path)
-{
-  if (!ur) return path;
-  if (path[0] === '/') return path;
-
-  var res = ur.replaceAll('.', '/');
-  var dir = path.dir();
-  if (res.startsWith(dir))
-    return path.base();
-
-  return path;
-}
-
-var resani = function(ur, path)
-{
-  if (!path) return "";
-  if (!ur) return path;
-  if (path[0] === '/') return path.slice(1);
-
-  var res = ur.replaceAll('.', '/');
-  var restry = res + "/" + path;
-  while (!io.exists(restry)) {
-    res = res.updir() + "/";
-    if (res === "/")
-      return path;
-
-    restry = res + path;
-  }
-  return restry;
-}
 
 global.ur = {};
 

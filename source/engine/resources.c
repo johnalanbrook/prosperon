@@ -50,9 +50,7 @@ static void response_cb(const sfetch_response_t *r)
   if (r->finished) {
     LOADED_GAME = -1;
     if (r->failed) {
-      printf("NO GAME\n");
       LOADED_GAME = -1;
-
     }
   }
 }

@@ -144,14 +144,9 @@ void sprite_initialize() {
 	      [1].format = SG_VERTEXFORMAT_FLOAT2,
 	      [2].format = SG_VERTEXFORMAT_UBYTE4N,
 	      [3].format = SG_VERTEXFORMAT_UBYTE4N}},
-//	      [4].format = SG_VERTEXFORMAT_FLOAT}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
       .colors[0].blend = blend_trans,
-      .depth = {
-        .write_enabled = true,
-	.compare = SG_COMPAREFUNC_LESS_EQUAL,
-      }
   });
 
   bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){

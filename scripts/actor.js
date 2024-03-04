@@ -14,6 +14,7 @@ actor.spawn = function(script, config){
   padawan.timers = [];
   padawan.master = this;
   Object.hide(padawan, "master","timers", "padawans");
+  check_registers(padawan);
   this.padawans.push(padawan);
   return padawan;
 };
@@ -28,7 +29,9 @@ actor.rm_pawn = function(pawn)
 actor.timers = [];
 actor.kill = function(){
   if (this.__dead__) return;
-  this.timers.forEach(t => t.kill());
+  this.timers.forEach(t => t());
+  Player.do_uncontrol(this);
+  Event.rm_obj(this);
   if (this.master) this.master.rm_pawn(this);
   this.padawans.forEach(p => p.kill());
   this.padawans = [];
@@ -40,20 +43,9 @@ actor.kill = function(){
 actor.kill.doc = `Remove this actor and all its padawans from existence.`;
 
 actor.delay = function(fn, seconds) {
-  var t = Object.create(timer);
-  t.remain = seconds;
-  t.kill = () => {
-    timer.kill.call(t);
-    delete this.timers[t.toString()];
-  }
-  t.fire = () => {
-    if (this.__dead__) return;
-    fn();
-    t.kill();
-  };
-  Register.appupdate.register(t.update, t);
+  var t = timer.delay(fn.bind(this), seconds);
   this.timers.push(t);
-  return function() { t.kill(); };
+  return t;
 };
 
 actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;

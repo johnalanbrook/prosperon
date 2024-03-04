@@ -29,6 +29,38 @@ function eval_env(script, env, file)
   return cmd(123,script,env,file);
 }
 
+global.check_registers = function(obj)
+{
+    if (typeof obj.update === 'function')
+      obj.timers.push(Register.update.register(obj.update.bind(obj)));
+
+    if (typeof obj.physupdate === 'function')
+      obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
+
+    if (typeof obj.collide === 'function')
+      register_collide(0, obj.collide.bind(obj), obj.body);
+
+    if (typeof obj.separate === 'function')
+      register_collide(3,obj.separate.bind(obj), obj.body);
+
+    if (typeof obj.draw === 'function')
+      obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
+
+    if (typeof obj.debug === 'function')
+      obj.timers.push(Register.debug.register(obj.debug.bind(obj)));
+
+    if (typeof obj.gui === 'function')
+      obj.timers.push(Register.gui.register(obj.gui.bind(obj)));
+
+    for (var k in obj) {
+      if (!k.startswith("on_")) continue;
+      var signal = k.fromfirst("on_");
+      Event.observe(signal, obj, obj[k]);
+    };
+
+}
+
+
 eval_env.dov = `Counterpart to /load_env/, but with a string.`;
 
 function feval_env(file, env)

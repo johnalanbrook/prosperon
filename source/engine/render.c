@@ -75,7 +75,6 @@ void gif_rec_start(int w, int h, int cpf, int bitdepth)
     .render_target = true,
     .width = gif.w,
     .height = gif.h,
-//    .pixel_format = SG_PIXELFORMAT_DEPTH,
     .label = "gif depth",
   });
 
@@ -255,7 +254,6 @@ void render_init() {
   mainwin.height = sapp_height();
   sg_setup(&(sg_desc){
     .environment = sglue_environment(),
-//    .mtl_force_managed_storage_mode = 1,
     .logger = { .func = sg_logging },
     .buffer_pool_size = 1024
   });
@@ -320,7 +318,6 @@ void render_init() {
     .size = sizeof(gif_quad),
     .data = gif_quad,
   });
-//  sg_gif.bind.fs.images[0] = crt_post.img;
   sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 
 /*
@@ -367,7 +364,6 @@ void render_init() {
 
 void render_winsize()
 {
-//  sg_gif.bind.fs.images[0] = crt_post.img;
 }
 
 static cpBody *camera = NULL;
@@ -402,7 +398,7 @@ HMM_Vec3 dirl_pos = {4, 100, 20};
 
 void full_2d_pass(struct window *window)
 {
-  //////////// 2D projection
+  // 2D projection
   cpVect pos = cam_pos();
 
   projection = HMM_Orthographic_LH_NO(
