@@ -28,6 +28,11 @@
 
 #include "core.cdb.h"
 
+#if defined(_WIN32)
+#include <direct.h>
+#define mkdir(x,y) _mkdir(x)
+#endif
+
 char **prefabs;
 
 static const char *cur_ext = NULL;
@@ -251,21 +256,43 @@ int cp(const char *p1, const char *p2)
   return 0;
 }
 
-int mkpath(char *dir, mode_t mode)
+int mkpath(char *path, mode_t mode)
 {
-  if (!dir) {
-      errno = EINVAL;
-      return 1;
-  }
+    char tmp[256];
+    char *p = NULL;
+    size_t len;
+    struct stat sb;
 
-  if (strlen(dir) == 1 && dir[0] == '/')
-      return 0;
+    strncpy(tmp, path, sizeof(tmp));
+    len = strlen(tmp);
+    if (len > 0 && tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
 
-#ifdef _WIN32
-  return mkdir(dir);
-#else
-  return mkdir(dir,mode);
-#endif
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+            if (stat(tmp, &sb) != 0) {
+                if (errno != ENOENT || mkdir(tmp, mode) != 0) {
+                    return -1;
+                }
+            } else if (!S_ISDIR(sb.st_mode)) {
+                errno = ENOTDIR;
+                return -1;
+            }
+            *p = '/';
+        }
+    }
+
+    if (stat(tmp, &sb) != 0) {
+        if (errno != ENOENT || mkdir(tmp, mode) != 0) {
+            return -1;
+        }
+    } else if (!S_ISDIR(sb.st_mode)) {
+        errno = ENOTDIR;
+        return -1;
+    }
+
+    return 0;
 }
 
 int slurp_write(const char *txt, const char *filename, size_t len) {

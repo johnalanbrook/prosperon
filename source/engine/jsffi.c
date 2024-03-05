@@ -865,11 +865,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     break;
 
   case 48:
-    ret = JS_NewInt64(js, mainwin.width);
+    ret = JS_NewInt64(js, mainwin.rwidth);
     break;
 
   case 49:
-    ret = JS_NewInt64(js, mainwin.height);
+    ret = JS_NewInt64(js, mainwin.rheight);
     break;
 
   case 50:
@@ -1103,11 +1103,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 125:
-      mainwin.width = js2int(argv[1]);
+      mainwin.rwidth = js2int(argv[1]);
       break;
 
     case 126:
-      mainwin.height = js2int(argv[1]);
+      mainwin.rheight = js2int(argv[1]);
       break;
 
     case 127:
@@ -1455,6 +1455,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 263:
       str = js2str(argv[1]);
       font_set(str);
+      break;
+    case 264:
+      aspect_mode = js2int(argv[1]);
+      break;
+    case 265:
+      ret = vec2js((HMM_Vec2){mainwin.width, mainwin.height});
       break;
   }
 

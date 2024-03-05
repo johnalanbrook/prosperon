@@ -3,6 +3,10 @@
   selectable
 */
 
+global.mixin("config.js");
+Window.aspect(Window.mode.full);
+Game.loadurs();
+
 var editor = {
   toString() { return "editor"; },
   grid_size: 100,
@@ -370,8 +374,8 @@ var editor = {
       if ('gizmo' in x && typeof x['gizmo'] === 'function' )
         x.gizmo();
     });
-  
-    render.line(bbox.topoints(bbox.fromcwh([0,0],[Game.native.x,Game.native.y])).wrapped(1), Color.yellow);
+
+    render.line(bbox.topoints(bbox.fromcwh([0,0],[Game.width,Game.height])).wrapped(1), Color.green);
 
     /* Draw selection box */
     if (this.sel_start) {
@@ -393,7 +397,7 @@ var editor = {
   gui() { 
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
-    Debug.coordinate(Window.world2screen([0,0]));
+    GUI.text([0,0], Window.world2screen([0,0]));
 
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);

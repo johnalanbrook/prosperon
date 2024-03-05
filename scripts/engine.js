@@ -91,8 +91,6 @@ global.Game = {
     cmd(257, fn);
   },
 
-  native: render.device.pc,
-
   object_count() {
     return cmd(214);
   },
@@ -144,6 +142,11 @@ global.Game = {
 
     this.wait_fns = [];
   },
+
+  set width(w) { cmd(125, w); },
+  set height(h) { cmd(126, h); },
+  get width() { return cmd(48); },
+  get height() { return cmd(49); },
 };
 
 Game.gc = function() { cmd(259); }
@@ -372,13 +375,22 @@ var Event = {
   },
 };
 
+// Window
+
 var Window = {
   fullscreen(f) { cmd(145, f); },
-  set width(w) { cmd(125, w); },
-  set height(h) { cmd(126, h); },
-  get width() { return cmd(48); },
-  get height() { return cmd(49); },
-  get dimensions() { return [this.width, this.height]; },
+  dimensions() { return cmd(265); },
+  get width() { return this.dimensions().x; },
+  get height() { return this.dimensions().y; },
+  mode: {
+    stretch: 0,
+    keep: 1,
+    width: 2,
+    height: 3,
+    expand: 4,
+    full: 5
+  },
+  aspect(x) { cmd(264, x); },
   title(str) { cmd(134, str); },
   boundingbox() {
     return {
@@ -390,12 +402,16 @@ var Window = {
   },
 };
 
+Game.width = 1920;
+Game.height = 1080;
+
 Window.screen2world = function(screenpos) {
   if (Game.camera)
     return Game.camera.view2world(screenpos);
     
   return screenpos;
 }
+
 Window.world2screen = function(worldpos) {
   return Game.camera.world2view(worldpos);
 }
@@ -406,7 +422,6 @@ Window.icon.doc = "Set the icon of the window using the PNG image at path.";
 global.mixin("scripts/debug.js");
 global.mixin("scripts/spline.js");
 global.mixin("scripts/components.js");
-
 
 Window.doc = {};
 Window.doc.width = "Width of the game window.";
@@ -452,5 +467,3 @@ Game.view_camera = function(cam)
 }
 
 Window.title(`Prosperon v${prosperon.version}`);
-Window.width = 1280;
-Window.height = 720;

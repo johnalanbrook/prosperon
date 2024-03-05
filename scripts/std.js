@@ -361,13 +361,13 @@ Cmdline.register_order("play", function(argv) {
 
   var project = json.decode(io.slurp(projectfile));
   Game.title = project.title;
+  Window.aspect(Window.mode.expand);
   global.mixin("config.js");
   if (project.title) Window.title(project.title);
 
   Game.engine_start(function() {
     global.mixin("scripts/sound.js");
     global.game = actor.spawn("game.js");
-    say(`spawned game with ${game.score} points`);
     if (project.icon) Window.icon(project.icon);
   });  
 }, "Play the game present in this folder.");

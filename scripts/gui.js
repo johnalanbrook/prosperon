@@ -105,7 +105,7 @@ GUI.controls.check_submit = function() {
 var Mum = {
     padding:[0,0], /* Each element inset with this padding on all sides */
     offset:[0,0],
-    font: "fonts/LessPerfectDOSVGA.ttf",
+    font: "fonts/c64.ttf",
     selectable: false,
     selected: false,
     font_size: 1,

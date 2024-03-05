@@ -128,7 +128,7 @@ ifeq ($(OS), Windows_NT)
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 else ifeq ($(CC), emcc)
   OS := Web
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=32MB
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=128MB
   CPPFLAGS += -pthread
   LDLIBS +=  pthread quickjs GL openal c m dl
   EXT = .html

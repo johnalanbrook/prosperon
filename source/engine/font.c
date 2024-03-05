@@ -84,7 +84,8 @@ void font_init() {
       .label = "text buffer"
     });
 
-  font_set("fonts/LessPerfectDOSVGA.ttf");
+//  font_set("fonts/LessPerfectDOSVGA.ttf");
+  font_set("fonts/c64.ttf");
   bind_text.fs.images[0] = font->texID;
   bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 }
@@ -100,7 +101,7 @@ void font_set(const char *path)
     return;
   }
 
-  struct sFont *newfont = MakeFont(path, 16);
+  struct sFont *newfont = MakeFont(path, 8);
   if (!newfont) {
     YughError("Could not make font from %s.", path);
     return;
@@ -253,22 +254,19 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
   float lsize = 1.0 / 1024.0;
 
-  float oline = 1.0;
-  
-  vert.pos.x = cursor.X + c.Bearing[0] * scale + oline;
-  vert.pos.y = cursor.Y - c.Bearing[1] * scale - oline;
-  vert.wh.x = c.Size[0] * scale + (oline*2);
-  vert.wh.y = c.Size[1] * scale + (oline*2);
+  vert.pos.x = cursor.X + c.Bearing[0] * scale;
+  vert.pos.y = cursor.Y - c.Bearing[1] * scale;
+  vert.wh.x = c.Size[0] * scale;
+  vert.wh.y = c.Size[1] * scale;
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;
 
-  vert.uv.u = (c.rect.s0 - oline*lsize)*USHRT_MAX;
-  vert.uv.v = (c.rect.t0 - oline*lsize)*USHRT_MAX;
-  vert.st.u = (c.rect.s1-c.rect.s0+oline*lsize*2.0)*USHRT_MAX;
-  vert.st.v = (c.rect.t1-c.rect.t0+oline*lsize*2.0)*USHRT_MAX;
+  vert.uv.u = c.rect.s0*USHRT_MAX;
+  vert.uv.v = c.rect.t0*USHRT_MAX;
+  vert.st.u = (c.rect.s1-c.rect.s0)*USHRT_MAX;
+  vert.st.v = (c.rect.t1-c.rect.t0)*USHRT_MAX;
   vert.color = color;
 
-//  sg_append_buffer(bind_text.vertex_buffers[0], &vert, sizeof(struct text_vert));
   memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
   curchar++;
 }
@@ -400,8 +398,10 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       while (wordstart < line) {
 	if (*wordstart == '\e')
 	  wordstart = esc_color(wordstart, &usecolor, color);
-      
+
+	sdrawCharacter(font->Characters[*wordstart], HMM_AddV2(cursor, HMM_MulV2F((HMM_Vec2){1,-1},scale)), scale, (rgba){0,0,0,255});
         sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
+
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
 	check_caret(caret, wordstart-drawstart, cursor, scale, usecolor);	

@@ -6,24 +6,24 @@ this.realzoom = function() { return cmd(135); };
 
 this.right = function()
 {
-  return this.pos.x + (Window.width/2);
+  return this.pos.x + (Game.width/2);
 }
 
 this.left = function()
 {
-  return this.pos.x - (Window.width/2);
+  return this.pos.x - (Game.width/2);
 }
 
 this.mixin({
   get zoom() {
-    var z = Game.native.y / Window.dimensions.y;
-    return cmd(135)/z;
+//    var z = Game.native.y / Window.dimensions.y;
+    return cmd(135);///z;
   },
 
   set zoom(x) {
     x = Math.clamp(x,0.1,10);
-    var z = Game.native.y / Window.dimensions.y;
-    z *= x;
-    cmd(62,z);
+//    var z = Game.native.y / Window.dimensions.y;
+//    z *= x;
+    cmd(62,x);
   },
 });

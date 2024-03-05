@@ -26,10 +26,11 @@ void window_resize(int width, int height)
   mainwin.dpi = sapp_dpi_scale();
   mainwin.width = sapp_width();
   mainwin.height = sapp_height();
-  mainwin.rwidth = mainwin.width/mainwin.dpi;
-  mainwin.rheight = mainwin.height/mainwin.dpi;
-  
-  render_winsize();
+
+  float aspect = mainwin.width/mainwin.height;
+  float raspect = mainwin.rwidth/mainwin.rheight;
+  mainwin.pheight = mainwin.rheight;
+  mainwin.pwidth = mainwin.rwidth*aspect/raspect;
 
   JSValue vals[2] = { int2js(width), int2js(height) };
   send_signal("window_resize", 2, vals);

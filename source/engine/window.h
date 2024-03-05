@@ -3,11 +3,10 @@
 
 struct window {
   int id;
-  int width;
-  int height;
+  float width, height; // The actual width and height of the window
+  float rwidth, rheight; // The desired rendering resolution, what the assets are at
+  float pwidth, pheight; // The calculated width and height passed to rendering
   double dpi;
-  int rwidth;
-  int rheight;
   int render;
   int mouseFocus;
   int keyboardFocus;
