@@ -487,7 +487,7 @@ var editor = {
 
     editor.edit_level.objects.forEach(function(obj) {
       if (!obj._ed.selectable)
-        GUI.image("icons/icons8-lock-16.png", obj.screenpos());
+        GUI.text("lock", obj,screenpos());
     });
 
     Debug.draw_grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));

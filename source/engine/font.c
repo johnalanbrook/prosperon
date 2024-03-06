@@ -84,7 +84,6 @@ void font_init() {
       .label = "text buffer"
     });
 
-//  font_set("fonts/LessPerfectDOSVGA.ttf");
   font_set("fonts/c64.ttf");
   bind_text.fs.images[0] = font->texID;
   bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});

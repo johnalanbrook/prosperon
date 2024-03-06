@@ -284,26 +284,6 @@ int main(int argc, char **argv) {
 
 #endif
 
-#ifdef STEAM
-steaminit();
-#endif
-
-#ifdef DISCORD
-struct IDiscordCore *core;
-DiscordCreate(DISCORD_VERSION, &(struct DiscordCreateParams){
-  .client_id = 1176355046590533714,
-  .flags = DiscordCreateFlags_Default
-}, &core);
-struct IDiscordUserManager *dum;
-struct IDiscordActivityManager *dam;
-dam = core->get_activity_manager(core);
-
-struct DiscordActivity da;
-sprintf(da.state, "Playing Solo Pinball");
-sprintf(da.details, "COMPetitive");
-dam->update_activity(dam, &da, NULL, NULL);
-#endif
-
   resources_init();
 
   script_startup();
