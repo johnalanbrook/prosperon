@@ -345,7 +345,7 @@ Cmdline.register_order("init", function() {
 }, "Turn the directory into a Prosperon game.");
 
 Cmdline.register_order("debug", function() {
-  Cmdline.orders.play();
+  Cmdline.orders.play([]);
 }, "Play the game with debugging enabled.");
 
 Cmdline.register_order("play", function(argv) {

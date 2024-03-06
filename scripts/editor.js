@@ -7,6 +7,9 @@ global.mixin("config.js");
 Window.aspect(Window.mode.full);
 Game.loadurs();
 
+player[0].control(Debug);
+Register.gui.register(Debug.draw, Debug);
+
 var editor = {
   toString() { return "editor"; },
   grid_size: 100,
@@ -209,7 +212,7 @@ var editor = {
     player[0].control(limited_editor);
     editor.cbs.forEach(cb=>cb());
     editor.cbs = [];
-    global.mixin("game.js");
+    actor.spawn("game.js");
   },
 
   cbs: [],
@@ -622,6 +625,23 @@ editor.new_from_img = function(path)
 }
 
 editor.inputs = {};
+editor.inputs['C-b'] = function() {
+  if (this.selectlist.length !== 1) {
+    console.warn(`Can only bake a single object at a time.`);
+    return;
+  }
+
+  var obj = this.selectlist[0];
+
+  obj.components.forEach(function(c) {
+    if (typeof c.grow !== 'function') return;
+
+    c.grow(obj.scale);
+    c.sync?.();
+  });
+  obj.scale = [1,1,1];
+}
+
 editor.inputs.drop = function(str) {
   str = str.slice(os.cwd().length+1);
   if (!Resources.is_image(str)) {

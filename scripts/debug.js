@@ -164,18 +164,16 @@ performance.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 performance.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
 
 /* These controls are available during editing, and during play of debug builds */
-var DebugControls = {};
-DebugControls.toString = function() { return "Debug"; };
-DebugControls.inputs = {};
-DebugControls.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
-DebugControls.inputs.f1.doc = "Draw physics debugging aids.";
-//DebugControls.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
-//DebugControls.inputs.f3.doc = "Toggle drawing bounding boxes.";
-DebugControls.inputs.f4 = function() {
-//  Debug.draw_names = !Debug.draw_names;
-//  Debug.draw_gizmos = !Debug.draw_gizmos;
+Debug.inputs = {};
+Debug.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
+Debug.inputs.f1.doc = "Draw physics debugging aids.";
+//Debug.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
+//Debug.inputs.f3.doc = "Toggle drawing bounding boxes.";
+Debug.inputs.f4 = function() {
+  Debug.draw_names = !Debug.draw_names;
+  Debug.draw_gizmos = !Debug.draw_gizmos;
 };
-DebugControls.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
+Debug.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 
 Debug.Options.gif = {
   w: 640, /* Max width */
@@ -215,26 +213,26 @@ Debug.Options.gif = {
   },
 };
 
-DebugControls.inputs.f8 = function() {
+Debug.inputs.f8 = function() {
   var now = new Date();
   Debug.Options.gif.file = now.toISOString() + ".gif";
   Debug.Options.gif.start();
 };
-DebugControls.inputs.f9 = function() {
+Debug.inputs.f9 = function() {
   Debug.Options.gif.stop();
 }
 
-DebugControls.inputs.f10 = function() { Time.timescale = 0.1; };
-DebugControls.inputs.f10.doc = "Toggle timescale to 1/10.";
-DebugControls.inputs.f10.released = function () { Time.timescale = 1.0; };
-DebugControls.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
-DebugControls.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
+Debug.inputs.f10 = function() { Time.timescale = 0.1; };
+Debug.inputs.f10.doc = "Toggle timescale to 1/10.";
+Debug.inputs.f10.released = function () { Time.timescale = 1.0; };
+Debug.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
+Debug.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
 
-DebugControls.inputs['M-1'] = render.normal;
-DebugControls.inputs['M-2'] = render.wireframe;
+Debug.inputs['M-1'] = render.normal;
+Debug.inputs['M-2'] = render.wireframe;
 
-DebugControls.inputs['C-M-f'] = function() {};
-DebugControls.inputs['C-M-f'].doc = "Enter camera fly mode.";
+Debug.inputs['C-M-f'] = function() {};
+Debug.inputs['C-M-f'].doc = "Enter camera fly mode.";
 
 var Time = {
   set timescale(x) { cmd(3, x); },
@@ -275,9 +273,6 @@ Time.doc.renderMS = "Set the ms per render update.";
 Time.doc.time = "Seconds elapsed since the game started.";
 Time.doc.pause = "Pause the game by setting the timescale to 0; remembers the current timescale on play.";
 Time.doc.play = "Resume the game after using Time.pause.";
-
-player[0].control(DebugControls);
-Register.gui.register(Debug.draw, Debug);
 
 Debug.api = {};
 Debug.api.doc_entry = function(obj, key)

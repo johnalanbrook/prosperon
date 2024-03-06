@@ -42,11 +42,6 @@ var gameobject_impl = {
   get scale() {
     Debug.assert(this.master, `No master set on ${this.toString()}`);
     var pscale = [1,1,1];
-/*    if (typeof this.master.scale === 'object')
-      pscale = this.master.scale;
-    else
-      pscale = [1,1,1];
-*/
     return this.gscale().map((x,i) => x/(this.master.gscale()[i]*pscale[i]));
   },
 
@@ -55,11 +50,11 @@ var gameobject_impl = {
       x = [x,x];
 
     var pct = this.scale.map((s,i) => x[i]/s);
-    this.spread(pct);
+    this.grow(pct);
     
     /* TRANSLATE ALL SUB OBJECTS */
     this.objects.forEach(obj => {
-      obj.spread(pct);
+      obj.grow(pct);
       obj.pos = obj.pos.map((x,i)=>x*pct[i]);
     });
   },
@@ -448,7 +443,7 @@ var gameobject = {
   /* Moving, rotating, scaling functions, world relative */
   move(vec) { this.set_worldpos(this.worldpos().add(vec)); },
   rotate(x) { this.sworldangle(this.worldangle()+x); },
-  spread(vec) { this.sgscale(this.gscale().map((x,i)=>x*vec[i])); },
+  grow(vec) { this.sgscale(this.gscale().map((x,i)=>x*vec[i])); },
 
   /* Make a unique object the same as its prototype */
   revert() {
@@ -480,8 +475,8 @@ var gameobject = {
     disable() { this.components.forEach(function(x) { x.disable(); });},
     enable() { this.components.forEach(function(x) { x.enable(); });},
     sync() {
-     this.components.forEach(function(x) { x.sync(); });
-     this.objects.forEach(function(x) { x.sync(); });
+     this.components.forEach(function(x) { x.sync?.(); });
+     this.objects.forEach(function(x) { x.sync?.(); });
     },
 
       /* Bounding box of the object in world dimensions */

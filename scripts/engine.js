@@ -147,6 +147,7 @@ global.Game = {
   set height(h) { cmd(126, h); },
   get width() { return cmd(48); },
   get height() { return cmd(49); },
+  dimensions() { return [this.width,this.height]; },
 };
 
 Game.gc = function() { cmd(259); }
