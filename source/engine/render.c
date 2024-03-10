@@ -434,9 +434,9 @@ void full_2d_pass(struct window *window)
         sg_apply_viewportf(left,0,pwidth, window->height,1); // keep height
       break;
     case MODE_FULL:
-     usewidth = window->width;
-     useheight = window->height;
-     break;
+      usewidth = window->width;
+      useheight = window->height;
+      break;
   }
 
   // 2D projection

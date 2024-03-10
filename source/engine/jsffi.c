@@ -1458,9 +1458,16 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 264:
       aspect_mode = js2int(argv[1]);
+      window_resize(0,0);
       break;
     case 265:
       ret = vec2js((HMM_Vec2){mainwin.width, mainwin.height});
+      break;
+    case 266:
+      mainwin.width = js2number(argv[1]);
+      break;
+    case 267:
+      mainwin.height = js2number(argv[1]);
       break;
   }
 

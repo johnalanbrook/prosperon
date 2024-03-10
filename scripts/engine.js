@@ -383,13 +383,15 @@ var Window = {
   dimensions() { return cmd(265); },
   get width() { return this.dimensions().x; },
   get height() { return this.dimensions().y; },
+  set width(x) { cmd(266, x); },
+  set height(x) { cmd(267,x); },
   mode: {
-    stretch: 0,
-    keep: 1,
-    width: 2,
-    height: 3,
-    expand: 4,
-    full: 5
+    stretch: 0, // stretch to fill window
+    keep: 1, // keep exact dimensions
+    width: 2, // keep width
+    height: 3, // keep height
+    expand: 4, // expand width or height
+    full: 5 // expand out beyond window
   },
   aspect(x) { cmd(264, x); },
   title(str) { cmd(134, str); },

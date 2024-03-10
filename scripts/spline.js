@@ -51,11 +51,14 @@ Spline.catmull_loop = function(cp)
 
 Spline.catmull_caps = function(cp)
 {
+  if (cp.length < 2) return;
   cp = cp.slice();
   cp.unshift(cp[0].sub(cp[1]).add(cp[0]));
   cp.push(cp.last().sub(cp.at(-2).add(cp.last())));
   return cp;
 }
+
+Spline.catmull_caps.doc = "Given a set of control points cp, return the necessary caps added to the spline.";
 
 Spline.catmull2bezier.doc = "Given a set of control points C for a camtull-rom type curve, return a set of cubic bezier points to give the same curve."
 

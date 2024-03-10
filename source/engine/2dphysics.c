@@ -430,9 +430,9 @@ struct phys2d_edge *Make2DEdge(gameobject *go) {
   new->shape.go = go;
   new->shape.data = new;
   new->shape.debugdraw = phys2d_dbgdrawedge;
-  new->shape.moi = phys2d_edge_moi;
+  new->shape.moi = phys2d_edge_moi;  
   new->shape.shape = NULL;
-  new->shape.apply = NULL;
+  new->shape.apply = NULL; 
   new->shape.free = phys2d_edge_free;
   new->draws = 0;
   phys2d_applyedge(new);

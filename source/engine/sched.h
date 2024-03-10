@@ -284,7 +284,7 @@ SCHED_API void scheduler_stop(struct scheduler*, int doWait);
 /* windows requires Windows.h even if you use mingw */
 #if defined(_WIN32) || (defined(__MINGW32__) || defined(__MINGW64__))
     #define WIN32_LEAN_AND_MEAN
-    #include <Windows.h>
+    #include <windows.h>
 #endif
 
 /* make sure atomic and pointer types have correct size */

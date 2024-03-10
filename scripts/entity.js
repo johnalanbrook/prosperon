@@ -234,6 +234,7 @@ var gameobject = {
     },
 
     cry(file) {
+     return;
       this.crying =  audio.sound.play(file, audio.sound.bus.sfx);
       var killfn = () => {this.crying = undefined; console.warn("killed"); }
       this.crying.hook = killfn;
@@ -301,7 +302,8 @@ var gameobject = {
 	    
 	Object.mixin(ent,gameobject_impl);
 	ent.body = make_gameobject();
-
+	ent.warp_layer = [true];
+	ent.phys = 2;
 	ent.components = {};
 	ent.objects = {};
 	ent.timers = [];
@@ -673,7 +675,7 @@ gameobject.doc = {
   elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find their resultant velocities.`,
   friction: `When one object touches another, friction slows them down.`,
   mass: `The higher the mass of the object, the less forces will affect it.`,
-  phys: `Set to 0, 1, or 2, representing static, kinematic, and dynamic.`,
+  phys: `Set to 0, 1, or 2, representing dynamic, kinematic, and static.`,
   worldpos: `Function returns the world position of the object.`,
   set_worldpos: `Function to set the position of the object in world coordinates.`,
   worldangle: `Function to get the angle of the entity in the world.`,
@@ -737,6 +739,7 @@ ur {
 /* u is given as */
 function apply_ur(u, e)
 {
+  say(`applying ur ${u}`);
   if (typeof u !== 'string') {
     console.warn("Must give u as a string.");
     return;

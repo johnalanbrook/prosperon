@@ -18,7 +18,7 @@ NSSCDB_DIR = $(sysconfdir)
 DESTDIR=
 
 CC = cc
-CFLAGS = -O
+CFLAGS = -O2
 CDEFS = -D_FILE_OFFSET_BITS=64
 LD = $(CC)
 LDFLAGS =

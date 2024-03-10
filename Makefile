@@ -1,7 +1,6 @@
 MAKEFLAGS = --jobs=4
 UNAME != uname
 MAKEDIR != pwd
-
 # Options
 # DBG --- build with debugging symbols and logging
 
@@ -92,6 +91,8 @@ endif
 
 CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(VER)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t
 
+CPPFLAGS += -D_FILE_OFFSET_BITS=64 # for tinycdb
+
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
 # default, fast and medium available in game at runtime; best available in editor
 
@@ -120,7 +121,7 @@ endif
 ifeq ($(OS), Windows_NT)
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
-  LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m
+  LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
   EXT = .exe
   ARCH := x86_64
   PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
@@ -158,8 +159,8 @@ endif
 OBJDIR = $(BIN)/obj
 
 # All other sources
-OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example'
-CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool|example'
+OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main'
+CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
 OBJS += $(CPPOBJS)
 OBJS += $(shell find source/engine -type f -name '*.m')
 OBJS := $(patsubst %.cpp, %.o, $(OBJS))
@@ -220,19 +221,17 @@ $(DISTDIR)/$(DIST): $(BIN)/$(NAME)
 	@mkdir -p $(DISTDIR)
 	@$(PKGCMD)
 
-$(BIN)/libengine.a: source/engine/core.cdb.h $(OBJS)
+$(BIN)/libengine.a: $(OBJS) 
 	@$(AR) rcs $@ $(OBJS)
 
-$(BIN)/libcdb.a:
-	mkdir -p $(BIN)
+CDB_C != find $(CDB) -name *.c
+CDB_O := $(patsubst %.c, %.o, $(CDB_C))
+$(CDB)/libcdb.a:
 	rm -f $(CDB)/libcdb.a
-	make -C $(CDB) CC=$(CC) AR=$(AR) libcdb.a
-	cp $(CDB)/libcdb.a $(BIN)
-
-tools/libcdb.a:
-	make -C $(CDB) libcdb.a
-	mv $(CDB)/libcdb.a tools
-
+	make -C $(CDB) libcdb.a 
+	
+tools/libcdb.a: $(CDB)/libcdb.a
+	cp $(CDB)/libcdb.a tools
 
 DOCOS = Sound gameobject Game Window physics Profile Time Player Mouse IO Log ColorMap sprite SpriteAnim Render Geometry
 DOCHTML := $(addsuffix .api.html, $(DOCOS))
@@ -257,20 +256,20 @@ input.md: $(INPUTMD)
 	@echo Printing api for $*
 	@./primum -d $* > $@
 
-$(BIN)/libquickjs.a: $(QUICKJS_O)
+$(BIN)/libquickjs.a: 
 	make -C quickjs clean
 	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a HOST_CC=$(CC) LEAK=$(LEAK)
 	@mkdir -p $(BIN)
 	cp -rf quickjs/libquickjs.* $(BIN)
 
-$(OBJDIR)/%.o: %.c 
+$(OBJDIR)/%.o: %.c source/engine/core.cdb.h $(SHADERS)
 	@mkdir -p $(@D)
 	@echo Making C object $@
 	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(@D)
-	@echo Making C++ object $@ with $(CXX)
+	@echo Making C++ object $@
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.m
@@ -301,22 +300,20 @@ core.cdb: packer $(CORE)
 	chmod 644 out.cdb
 	mv out.cdb core.cdb
 
-CDB_C != find $(CDB) -name *.c
 packer: tools/packer.c tools/libcdb.a
 	cc $^ -I$(CDB) -o packer
 
 jsc: tools/jso.c tools/libquickjs.a
 	$(CC) $^ -lm -Iquickjs -o $@
 
-tools/libquickjs.a:
-	make -C quickjs clean
-	make -C quickjs OPT=$(OPT) AR=$(AR) libquickjs.a
-	cp -f quickjs/libquickjs.a tools
+tools/libquickjs.a: $(BIN)/libquickjs.a
+	cp -f $(BIN)/libquickjs.a tools
 
 WINCC = x86_64-w64-mingw32-gcc
 #WINCC = i686-w64-mingw32-g++
 .PHONY: crosswin
 crosswin:
+	make packer
 	make CC=$(WINCC) OS=Windows_NT
 
 crossmac:
@@ -326,15 +323,23 @@ crossmac:
 	mv primum primum_x86_64
 	lipo primum_arm64 primum_x86_64 -create -output primum
 
+crossweb:
+	make packer
+	make CC=emcc
+
 clean:
 	@echo Cleaning project
-	@rm -rf bin dist
-	@rm -f shaders/*.sglsl.h shaders/*.metal core.cdb jso cdb packer TAGS
+	rm -rf bin dist
+	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(CDB)/libcdb.a
+	rm -f $(CDB)/*.o
 	@make -C quickjs clean
 
 docs: doc/prosperon.org
 	make -C doc
 	mv doc/html .
+
+test:
+	@echo No tests yet ...
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

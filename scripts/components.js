@@ -527,6 +527,8 @@ component.edge2d = Object.copy(collider2d, {
 
   sample() {
     var spoints = this.spoints();
+    if (spoints.length === 0) return [];
+    
     if (this.type === -1) {
       if (this.looped) spoints.push(spoints[0]);
       return spoints;

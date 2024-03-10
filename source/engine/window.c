@@ -23,6 +23,8 @@ struct Texture *icon = NULL;
 
 void window_resize(int width, int height)
 {
+  width = sapp_width();
+  height = sapp_height();
   mainwin.dpi = sapp_dpi_scale();
   mainwin.width = sapp_width();
   mainwin.height = sapp_height();

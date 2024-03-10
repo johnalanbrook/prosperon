@@ -70,7 +70,10 @@ physics.warp.gravity = function() { return cmd(253); }
 physics.warp.damp = function() { return cmd(254); }
 
 physics.gravity = physics.warp.gravity();
+physics.gravity.mask = [true];
+physics.gravity.strength = 500;
 physics.damp = physics.warp.damp();
+physics.damp.mask = [true];
 
 return {
   physics

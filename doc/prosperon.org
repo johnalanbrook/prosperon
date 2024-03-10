@@ -106,7 +106,7 @@ Run ~prosperon~. You will see "Hello world!" in the console, and it shuts down.
 Using ~config.js~ and ~game.js~, you can write an entire game, without reaching any further. When you want to populate a world with independent actors, entities are what you will reach for.
 
 ** Actors
-The fundamental tool for building in Prosperon is the actor system. Actors run independently from each other. Actors are defined by a combination of code and data. All actors have a *master*[fn::I am aware of the ongoing controversy surrounding the use of this term. That is precisely why I have used it: there are a plethora of similar relationships in video games, and by using a term most teams would rather not used, I have saved left the field of avaialable ones wide open] which controls certain properties of the actor.
+The fundamental tool for building in Prosperon is the actor system. Actors run independently from each other. Actors are defined by a combination of code and data. All actors have a *master* which controls certain properties of the actor.
 
 The most masterful actor is the *Empyrean*. The first actor you create will have the Empyrean as its master. Subsequent actors can use any other actor as its master.
 
@@ -117,7 +117,7 @@ The most masterful actor is the *Empyrean*. The first actor you create will have
 | delay(fn, seconds)  | Calls 'fn' after 'seconds' with the context of the actor |
 
 *** Actor Lifetime
-When an actor dies, all of the actors that have it as their master[fn::What a mouthful!] will die as well.
+When an actor dies, all of the actors that have it as their master will die as well.
 
 *** Turns
 Actors get fragments of time called a *turn*. Actors which belong to different systems can have different lengths of turns.
