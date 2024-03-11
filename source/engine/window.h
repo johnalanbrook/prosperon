@@ -20,7 +20,6 @@ struct Texture;
 extern struct window mainwin;
 
 void window_resize(int width, int height);
-void window_quit();
 void window_focused(int focus);
 void window_iconified(int s);
 void window_suspended(int s);

@@ -13,12 +13,10 @@
 
 int logLevel = 0;
 
-/* Four levels of log:
-   0 info
-   1 warn
-   2 error
-   3 critical
-*/
+#define LOG_INFO 0
+#define LOG_WARN 1
+#define LOG_ERROR 2
+#define LOG_CRIT 3
 
 char *logstr[] = { "info", "warn", "error", "critical" };
 char *catstr[] = {"engine", "script", "render"};
@@ -64,8 +62,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     snprintf(buffer, len, logfmt, file, line, logstr[priority], catstr[category], msg);
 
     fprintf(stderr, "%s", buffer);
-    if (priority >= 2)
-      js_stacktrace();
+//    if (priority >= LOG_ERROR)
+//      js_stacktrace();
     fflush(stderr);
     
     free(msg);

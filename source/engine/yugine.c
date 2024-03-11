@@ -79,6 +79,7 @@ static float timescale = 1.f;
 #define SIM_STEP 2
 
 static int sim_play = SIM_PLAY;
+static int SAPP_STARTED = 0;
 
 int editor_mode = 0;
 
@@ -94,6 +95,7 @@ void seghandle()
 static JSValue c_init_fn;
 
 void c_init() {
+  SAPP_STARTED = 1;
   input_init();
   script_evalf("world_start();");
   render_init();
@@ -153,11 +155,16 @@ void c_frame()
   process_frame();
 }
 
-void c_clean() {
+void cleanup()
+{
   sfetch_shutdown();
-  gif_rec_end("out.gif");
   out_memusage(".prosperon/jsmem.txt");
   script_stop();
+}
+
+void c_clean() {
+  cleanup();
+  gif_rec_end("out.gif");
   saudio_shutdown();
   sg_shutdown();
 };
@@ -218,7 +225,7 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_QUIT_REQUESTED:
-      window_quit();
+      quit();
       break;
 
     case SAPP_EVENTTYPE_FILES_DROPPED:
@@ -329,3 +336,12 @@ void engine_start(JSValue fn)
 }
 
 double apptime() { return stm_sec(stm_diff(stm_now(), start_t)); }
+
+void quit() {
+  if (SAPP_STARTED)
+    sapp_quit();
+  else {
+    cleanup();
+    exit(0);
+  }
+}

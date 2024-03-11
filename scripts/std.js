@@ -136,6 +136,7 @@ var console = {
   critical(msg) {
     this.print(msg,3);
     this.stack(1);
+    Game.quit();
   },
 
   write(msg) {
@@ -145,7 +146,7 @@ var console = {
     cmd(91,msg);
   },
 
-  log(msg) { console.say(time.text(time.now(), 'yyyy-m-dd hh:nn:ss') + "  " + str); },
+  log(msg) { console.say(time.text(time.now(), 'yyyy-m-dd hh:nn:ss') + "  " + msg); },
   say(msg) { console.write(msg + '\n'); },
   repl(msg) { cmd(142, msg + '\n'); },    
 
@@ -162,13 +163,6 @@ var console = {
 
   clear() {
     cmd(146);
-  },
-
-  assert(assertion, msg, obj) {
-    if (!assertion) {
-      console.error(msg);
-      console.stack();
-    }
   },
 };
 
@@ -201,7 +195,6 @@ var tmpchm = io.chmod;
 io.chmod = function(file,mode) {
   return tmpchm(file,parseInt(mode,8));
 }
-
 
 var tmpslurp = io.slurp;
 io.slurp = function(path)

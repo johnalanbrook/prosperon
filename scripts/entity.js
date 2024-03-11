@@ -14,17 +14,17 @@ function obj_unique_name(name, obj)
 
 var gameobject_impl = {
   get pos() {
-    Debug.assert(this.master, `Entity ${this.toString()} has no master.`);
+    assert(this.master, `Entity ${this.toString()} has no master.`);
     return this.master.world2this(this.worldpos());
   },
 
   set pos(x) {
-    Debug.assert(this.master, `Entity ${this.toString()} has no master.`);
+    assert(this.master, `Entity ${this.toString()} has no master.`);
     this.set_worldpos(this.master.this2world(x));
   },
 
   get angle() {
-    Debug.assert(this.master, `No master set on ${this.toString()}`);
+    assert(this.master, `No master set on ${this.toString()}`);
     return this.worldangle() - this.master.worldangle();
   },
   
@@ -40,7 +40,7 @@ var gameobject_impl = {
   },
 
   get scale() {
-    Debug.assert(this.master, `No master set on ${this.toString()}`);
+    assert(this.master, `No master set on ${this.toString()}`);
     var pscale = [1,1,1];
     return this.gscale().map((x,i) => x/(this.master.gscale()[i]*pscale[i]));
   },
@@ -374,7 +374,7 @@ var gameobject = {
 
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
-    Debug.assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
+    assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
     if (this.master === parent) {
       console.warn("not reparenting ...");
       console.warn(`${this.master} is the same as ${parent}`);
@@ -739,7 +739,7 @@ ur {
 /* u is given as */
 function apply_ur(u, e)
 {
-  say(`applying ur ${u}`);
+  console.log(`applying ur ${u}`);
   if (typeof u !== 'string') {
     console.warn("Must give u as a string.");
     return;

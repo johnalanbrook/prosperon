@@ -333,7 +333,3 @@ void cursor_img(const char *path)
 
 int action_down(int key) { return key_states[key] == INPUT_DOWN; }
 int action_up(int key) { return key_states[key] == INPUT_UP; }
-
-void quit() {
-  sapp_quit();
-}

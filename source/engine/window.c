@@ -38,11 +38,6 @@ void window_resize(int width, int height)
   send_signal("window_resize", 2, vals);
 }
 
-void window_quit()
-{
-  quit();
-}
-
 void window_focused(int focus)
 {
   mainwin.focus = focus;

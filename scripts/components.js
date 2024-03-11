@@ -614,7 +614,7 @@ component.edge2d = Object.copy(collider2d, {
       this.points.splice(idx,1);
 
     if (Spline.is_bezier(this.type)) {
-      Debug.assert(Spline.bezier_is_node(this.points, idx), 'Attempted to delete a bezier handle.');
+      assert(Spline.bezier_is_node(this.points, idx), 'Attempted to delete a bezier handle.');
       if (idx === 0)
         this.points.splice(idx,2);
       else if (idx === this.points.length-1)

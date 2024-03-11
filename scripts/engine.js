@@ -116,7 +116,6 @@ global.Game = {
 
   quit() {
     sys_cmd(0);
-    return;
   },
 
   pause() { sys_cmd(3); },

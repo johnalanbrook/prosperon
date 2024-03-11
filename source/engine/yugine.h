@@ -18,6 +18,7 @@ void app_name(const char *name);
 
 int frame_fps();
 double get_timescale();
+void quit();
 
 double apptime();
 extern double renderMS;

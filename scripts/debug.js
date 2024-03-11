@@ -75,14 +75,11 @@ var Debug = {
   },
 };
 
-Debug.assert = function(b, str)
+function assert(op, str)
 {
-  str ??= "";
-  
-  if (!b) {
-    console.error(`Assertion failed. ${str}`);
-    Game.quit();
-  }
+  str ??= `assertion failed [value '${op}']`;
+  if (!op)
+    console.critical(`Assertion failed: ${str}`);
 }
 
 Debug.Options = { };
@@ -354,5 +351,6 @@ return {
   Debug,
   Time,
   Gizmos,
-  performance
+  performance,
+  assert
 }
