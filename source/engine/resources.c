@@ -43,7 +43,7 @@ char pathbuf[MAXPATH + 1];
 static struct cdb corecdb;
 static struct cdb game_cdb;
 
-extern int LOADED_GAME = 0;
+int LOADED_GAME = 0;
 uint8_t *gamebuf;
 
 static void response_cb(const sfetch_response_t *r)

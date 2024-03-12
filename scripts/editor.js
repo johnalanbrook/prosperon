@@ -25,7 +25,7 @@ var editor = {
   desktop: undefined, /* The editor desktop, where all editing objects live */
   working_layer: 0,
   get cursor() {
-    if (this.selectlist.length === 0 ) return Mouse.worldpos;
+    if (this.selectlist.length === 0 ) return Mouse.worldpos();
     return physics.com(this.selectlist.map(x => x.pos));
   },
   edit_mode: "basic",
@@ -35,7 +35,7 @@ var editor = {
   get_that() { return this.selectlist.length === 1 ? this.selectlist[0] : this.get_this(); },
 
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
-    var go = physics.pos_query(Mouse.worldpos);
+    var go = physics.pos_query(Mouse.worldpos());
     return this.do_select(go);
   },
     
@@ -382,7 +382,7 @@ var editor = {
 
     /* Draw selection box */
     if (this.sel_start) {
-      var endpos = Mouse.worldpos;
+      var endpos = Mouse.worldpos();
       var c = [];
       c[0] = (endpos[0] - this.sel_start[0]) / 2;
       c[0] += this.sel_start[0];
@@ -462,7 +462,7 @@ var editor = {
       render.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
     });
 
-    var mg = physics.pos_query(Mouse.worldpos,10);
+    var mg = physics.pos_query(Mouse.worldpos(),10);
     
     if (mg) {
       var p = mg.path_from(thiso);
@@ -530,7 +530,7 @@ var editor = {
 
   load(urstr) {
     var obj = editor.edit_level.spawn(urstr);
-    obj.set_worldpos(Mouse.worldpos);
+    obj.set_worldpos(Mouse.worldpos());
     this.selectlist = [obj];
   },
 
@@ -611,7 +611,7 @@ var editor = {
 editor.new_object = function()
 {
   var obj = editor.edit_level.spawn();
-  obj.set_worldpos(Mouse.worldpos);
+  obj.set_worldpos(Mouse.worldpos());
   this.selectlist = [obj];
   return obj;
 }
@@ -657,7 +657,7 @@ editor.inputs.drop = function(str) {
     return;
   }
   
-  var mg = physics.pos_query(Mouse.worldpos,10);
+  var mg = physics.pos_query(Mouse.worldpos(),10);
   if (!mg) return;
   var img = mg.get_comp_by_name('sprite');
   if (!img) return;
@@ -804,7 +804,7 @@ editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
 editor.inputs.r = function() {
   if (editor.sel_comp && 'angle' in editor.sel_comp) {
-    var relpos = Mouse.worldpos.sub(editor.sel_comp.gameobject.worldpos());
+    var relpos = Mouse.worldpos().sub(editor.sel_comp.gameobject.worldpos());
     editor.startoffset = Math.atan2(relpos.y, relpos.x);
     editor.startrot = editor.sel_comp.angle;
 
@@ -813,7 +813,7 @@ editor.inputs.r = function() {
 
   editor.rotlist = [];
   editor.selectlist.forEach(function(x) {
-    var relpos = Mouse.worldpos.sub(editor.cursor);
+    var relpos = Mouse.worldpos().sub(editor.cursor);
     editor.rotlist.push({
       obj: x,
       angle: x.angle,
@@ -1026,7 +1026,7 @@ editor.inputs.f3 = function() {
   this.openpanel(componentexplorer);
 };
 
-editor.inputs.lm = function() { editor.sel_start = Mouse.worldpos; };
+editor.inputs.lm = function() { editor.sel_start = Mouse.worldpos(); };
 editor.inputs.lm.doc = "Selection box.";
 
 editor.inputs.lm.released = function() {
@@ -1043,11 +1043,11 @@ editor.inputs.lm.released = function() {
     var selects = [];
     
     /* TODO: selects somehow gets undefined objects in here */
-    if (Vector.equal(Mouse.worldpos, editor.sel_start, 5)) {
+    if (Vector.equal(Mouse.worldpos(), editor.sel_start, 5)) {
       var sel = editor.try_select();
       if (sel) selects.push(sel);
     } else {
-      var box = bbox.frompoints([editor.sel_start, Mouse.worldpos]);
+      var box = bbox.frompoints([editor.sel_start, Mouse.worldpos()]);
     
       var hits = physics.box_query(bbox.tocwh(box));
 
@@ -1104,7 +1104,7 @@ editor.try_pick = function()
   editor.grabselect = [];
 
   if (editor.sel_comp && 'pick' in editor.sel_comp)
-    return editor.sel_comp.pick(Mouse.worldpos);
+    return editor.sel_comp.pick(Mouse.worldpos());
 
   return editor.try_select();
 }
@@ -1112,7 +1112,7 @@ editor.try_pick = function()
 editor.inputs.mm = function() {
     if (editor.brush_obj) {
       editor.selectlist = editor.dup_objects([editor.brush_obj]);
-      editor.selectlist[0].pos = Mouse.worldpos;
+      editor.selectlist[0].pos = Mouse.worldpos();
       editor.grabselect = editor.selectlist[0];
       return;
     }
@@ -1126,18 +1126,18 @@ editor.inputs['C-mm'] = editor.inputs.mm;
 
 editor.inputs['C-M-lm'] = function()
 {
-  var go = physics.pos_query(Mouse.worldpos);
+  var go = physics.pos_query(Mouse.worldpos());
   if (!go) return;
   editor.edit_level = go.master;
 }
 
 editor.inputs['C-M-mm'] = function() {
-  editor.mousejoy = Mouse.pos;
+  editor.mousejoy = Mouse.screenpos();
   editor.joystart = editor.camera.pos;
 };
 
 editor.inputs['C-M-rm'] = function() {
-  editor.mousejoy = Mouse.pos;
+  editor.mousejoy = Mouse.screenpos();
   editor.z_start = editor.camera.zoom;
   Mouse.disabled();
 };
@@ -1170,7 +1170,7 @@ editor.inputs.mouse.move = function(pos, dpos)
     x.sync();
   });
   
-  var relpos = Mouse.worldpos.sub(editor.cursor);
+  var relpos = Mouse.worldpos().sub(editor.cursor);
   var dist = Vector.length(relpos);
 
   editor.scalelist?.forEach(function(x) {
@@ -1205,7 +1205,7 @@ editor.inputs.mouse['C-scroll'] = function(scroll)
   editor.camera.zoom += scroll.y/100;
 }
 
-editor.inputs['C-M-S-lm'] = function() { editor.selectlist[0].set_center(Mouse.worldpos); };
+editor.inputs['C-M-S-lm'] = function() { editor.selectlist[0].set_center(Mouse.worldpos()); };
 editor.inputs['C-M-S-lm'].doc = "Set world center to mouse position.";
 
 editor.inputs.delete = function() {
@@ -1242,7 +1242,7 @@ editor.inputs.g = function() {
   
   if (editor.sel_comp) {
     if ('pick' in editor.sel_comp) {
-      editor.grabselect = [editor.sel_comp.pick(Mouse.worldpos)];
+      editor.grabselect = [editor.sel_comp.pick(Mouse.worldpos())];
       return;
     }
 
@@ -1259,7 +1259,7 @@ editor.inputs.g = function() {
   }
 
   if (editor.sel_comp && 'pick' in editor.sel_comp) {
-    var o = editor.sel_comp.pick(Mouse.worldpos);
+    var o = editor.sel_comp.pick(Mouse.worldpos());
     if (o) editor.grabselect = [o];
     return;
   }
@@ -1386,7 +1386,7 @@ compmode.inputs['C-x'] = function() {};
 
 editor.scalelist = [];
 editor.inputs.s = function() {
-  var scaleoffset = Vector.length(Mouse.worldpos.sub(editor.cursor));
+  var scaleoffset = Vector.length(Mouse.worldpos().sub(editor.cursor));
   editor.scalelist = [];
   
   if (editor.sel_comp) {
@@ -1593,7 +1593,7 @@ replpanel.inputs = Object.create(inputpanel.inputs);
 replpanel.inputs.block = true;
 replpanel.inputs.lm = function()
 {
-  var mg = physics.pos_query(Mouse.worldpos);
+  var mg = physics.pos_query(Mouse.worldpos());
   if (!mg) return;
   var p = mg.path_from(editor.get_this());
   this.value = p;

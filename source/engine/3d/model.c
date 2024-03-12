@@ -259,6 +259,11 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
     case cgltf_attribute_type_invalid:
       YughWarn("Invalid type.");
       break;
+      
+    case cgltf_attribute_type_custom:
+      break;
+    case cgltf_attribute_type_max_enum:
+      break;
     }
   }
 /*

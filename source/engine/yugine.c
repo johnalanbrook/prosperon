@@ -11,11 +11,12 @@
 #include <stdio.h>
 #include "particle.h"
 #include "simplex.h"
+#include "wchar.h"
+#include "locale.h"
 
 #include "datastream.h"
 
 #include "timer.h"
-
 #include "quickjs/quickjs.h"
 
 #include "jsffi.h"
@@ -96,7 +97,6 @@ static JSValue c_init_fn;
 
 void c_init() {
   SAPP_STARTED = 1;
-  input_init();
   script_evalf("world_start();");
   render_init();
   window_set_icon("icons/moon.gif");  
@@ -112,10 +112,9 @@ int frame_fps() { return 1.0/sapp_frame_duration(); }
 static void process_frame()
 {
   double elapsed = stm_sec(stm_laptime(&frame_t));
-  script_evalf("Register.appupdate.broadcast(%g);", elapsed);
-    input_poll(0);
-    /* Timers all update every frame - once per monitor refresh */
-    timer_update(elapsed, timescale);
+  script_evalf("prosperon.appupdate(%g);", elapsed);
+  /* Timers all update every frame - once per monitor refresh */
+  timer_update(elapsed, timescale);
 
   emitters_step(elapsed);
 
@@ -125,7 +124,7 @@ static void process_frame()
       updatelast = frame_t;
       
 //      prof_start(&prof_update);
-      call_updates(dt * timescale);
+      script_evalf("prosperon.update(%g);", dt*timescale);
 //      prof_lap(&prof_update);
 
       if (sim_play == SIM_STEP)
@@ -138,7 +137,7 @@ static void process_frame()
 //      prof_start(&prof_physics);
       phys_step = 1;
       phys2d_update(physMS * timescale);
-      call_physics(physMS * timescale);
+      script_evalf("prosperon.physupdate(%g);", physMS*timescale);
       phys_step = 0;
 //      prof_lap(&prof_physics);
     }
@@ -171,33 +170,37 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
+  char utf8str[6] = {0};
+  wchar_t wcode;
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
-      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
+      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, mainwin.height -e->mouse_y, e->mouse_dx, -e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
-      input_mouse_scroll(e->scroll_x, e->scroll_y, e->modifiers);
+      script_evalf("prosperon.mousescroll([%g, %g]);", e->scroll_x, e->scroll_y);
       break;
 
     case SAPP_EVENTTYPE_KEY_DOWN:
-      input_btn(e->key_code, e->key_repeat ? INPUT_REPEAT : INPUT_DOWN, e->modifiers);
+      script_evalf("prosperon.keydown(%d, %d);", e->key_code, e->key_repeat);
       break;
 
     case SAPP_EVENTTYPE_KEY_UP:
-      input_btn(e->key_code, INPUT_UP, e->modifiers);
+      script_evalf("prosperon.keyup(%d);", e->key_code);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_UP:
-      input_mouse(e->mouse_button, INPUT_UP, e->modifiers);
+      script_evalf("prosperon.mouseup(%d);", e->mouse_button);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_DOWN:
-      input_mouse(e->mouse_button, INPUT_DOWN, e->modifiers);
+      script_evalf("prosperon.mousedown(%d);", e->mouse_button);
       break;
 
     case SAPP_EVENTTYPE_CHAR:
-      input_key(e->char_code, e->modifiers);
+      if (e->char_code > 127) break; /* only dealing with ascii now */
+      wctomb(utf8str, wcode);
+      script_evalf("prosperon.textinput(`%ls`);", utf8str);
       break;
 
     case SAPP_EVENTTYPE_RESIZED:
@@ -229,7 +232,7 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_FILES_DROPPED:
-      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
+//      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
       input_dropped_files(sapp_get_num_dropped_files());
       break;
     default:
@@ -274,6 +277,7 @@ void app_name(const char *name) {
 }
 
 int main(int argc, char **argv) {
+  setlocale(LC_ALL, "en_US.utf8");
 #ifndef NDEBUG
   log_init();
   int logout = 0;

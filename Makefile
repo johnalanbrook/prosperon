@@ -180,7 +180,7 @@ ifdef STEAM
 #  BIN += /steam
 endif
 
-WARNING_FLAGS = -Wno-incompatible-function-pointer-types
+WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types
 
 NAME = primum$(EXT)
 SEM = 0.3.0

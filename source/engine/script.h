@@ -52,26 +52,8 @@ JSValue file_eval_env(const char *file, JSValue env);
 
 time_t file_mod_secs(const char *file);
 
-void register_update(struct callee c);
-void call_updates(double dt);
-void call_debugs();
-
-void unregister_gui(struct callee c);
-void register_gui(struct callee c);
-void register_debug(struct callee c);
-void register_nk_gui(struct callee c);
-void call_gui();
-void call_nk_gui();
-void unregister_obj(JSValue obj);
-
 void send_signal(const char *signal, int argc, JSValue *argv);
 void script_gc();
-
-void register_physics(struct callee c);
-void call_physics(double dt);
-
-void register_draw(struct callee c);
-void call_draw();
 
 JSValue script_run_bytecode(uint8_t *code, size_t len);
 uint8_t *script_compile(const char *file, size_t *len);

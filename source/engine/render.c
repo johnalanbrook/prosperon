@@ -452,14 +452,13 @@ void full_2d_pass(struct window *window)
   
   sprite_draw_all();
   model_draw_all();
-  call_draw();
-
+  script_evalf("prosperon.draw();");
   emitters_draw();
 
   //// DEBUG
   if (debugDrawPhysics) {
     gameobject_draw_debugs();
-    call_debugs();
+    script_evalf("prosperon.debug();");
   }
 
   debug_flush(&projection);
@@ -467,7 +466,7 @@ void full_2d_pass(struct window *window)
 
   ////// TEXT && GUI
   debug_nextpass();
-  call_gui();
+  script_evalf("prosperon.gui();");
   debug_flush(&hudproj);
   text_flush(&hudproj);
   sprite_flush();

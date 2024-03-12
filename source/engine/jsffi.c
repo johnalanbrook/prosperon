@@ -343,18 +343,20 @@ char *js_nota_encode(JSValue v, char *nota)
       for (int i = 0; i < plen; i++) {
         val = JS_GetProperty(js,v,ptab[i].atom);
         str = JS_AtomToCString(js, ptab[i].atom);
-	JS_FreeAtom(js, ptab[i].atom);
+      	JS_FreeAtom(js, ptab[i].atom);
 	
         nota = nota_write_text(str, nota);
-	JS_FreeCString(js, str);
+	      JS_FreeCString(js, str);
 	
         nota = js_nota_encode(val, nota);
-	JS_FreeValue(js,val);
+	      JS_FreeValue(js,val);
       }
-      
       js_free(js, ptab);
       return nota;
+    default:
+      return nota;
   }
+  return nota;
 }
 
 struct rgba js2color(JSValue v) {
@@ -852,10 +854,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
     break;
 
-  case 45:
-    ret = vec2js(mouse_pos);
-    break;
-
   case 46:
     set_mouse_mode(js2int(argv[1]));
     break;
@@ -870,10 +868,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
   case 49:
     ret = JS_NewInt64(js, mainwin.rheight);
-    break;
-
-  case 50:
-    ret = JS_NewBool(js, action_down(js2int(argv[1])));
     break;
 
   case 51:
@@ -1458,7 +1452,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 264:
       aspect_mode = js2int(argv[1]);
-      window_resize(0,0);
       break;
     case 265:
       ret = vec2js((HMM_Vec2){mainwin.width, mainwin.height});
@@ -1478,52 +1471,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   if (v1) arrfree(v1);
 
   if (!JS_IsNull(ret)) return ret;
-  return JS_UNDEFINED;
-}
-
-JSValue duk_register(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
-
-  struct callee c;
-  c.fn = argv[1];
-  c.obj = argv[2];
-
-  switch (cmd) {
-  case 0:
-    register_update(c);
-    break;
-
-  case 1:
-    register_physics(c);
-    break;
-
-  case 2:
-    register_gui(c);
-    break;
-
-  case 3:
-    register_nk_gui(c);
-    break;
-  case 6:
-    register_debug(c);
-    break;
-  case 7:
-    register_pawn(c);
-    break;
-
-  case 8:
-    register_gamepad(c);
-    break;
-
-  case 9:
-    stacktrace_callee = c;
-    break;
-
-  case 10:
-    register_draw(c);
-    break;
-  }
-
   return JS_UNDEFINED;
 }
 
@@ -2300,7 +2247,6 @@ void ffi_load() {
   DUK_FUNC(make_model,2);
   DUK_FUNC(cmd_points, 5);
   DUK_FUNC(cmd, 6)
-  DUK_FUNC(register, 3)
   DUK_FUNC(register_collide, 6)
 
   DUK_FUNC(ui_text, 8)

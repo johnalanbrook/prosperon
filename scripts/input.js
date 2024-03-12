@@ -1,7 +1,130 @@
+var keycodes = {
+  0x00E: "back",
+  0x00F: "tab",
+  0x01C: "enter",
+  0x001: "esc",
+  0x039: "space",
+  0x149: "pgup",    
+  0x151: "pgdown",
+  0x14F: "end",
+  0x147: "home",
+  0x14B: "left",
+  0x148: "up",
+  0x14D: "right",
+  0x150: "down",
+  0x152: "insert",
+  0x153: "delete",
+  45: "minus",
+};
+
+var mod = {
+  shift: 0,
+  ctrl: 0,
+  alt: 0,
+  super: 0
+};
+
+/*
+released
+rep
+pressed
+pressrep
+down
+*/
+
+function keyname_extd(key)
+{
+  if (key > 289 && key < 302) {
+    var num = key-289;
+    return `f${num}`;
+  }
+  
+  if (key >= 320 && key <= 329) {
+    var num = key-320;
+    return `kp${num}`;
+  }
+  
+  if (keycodes[key]) return keycodes[key];
+  if (key >= 32 && key <= 126) return String.fromCharCode(key).lc();
+  
+  return undefined;
+}
+
+prosperon.keys = [];
+
+function modstr()
+{
+  var s = "";
+  if (mod.ctrl) s += "C-";
+  if (mod.alt) s += "M-";
+  if (mod.super) s += "S-";
+  return s;
+}
+
+prosperon.keydown = function(key, repeat)
+{
+  prosperon.keys[key] = true;
+  
+  if (key == 341 || key == 345)
+    mod.ctrl = 1;
+  else if (key == 342 || key == 346)
+    mod.alt = 1;
+  else if (key == 343 || key == 347)
+    mod.super = 1;
+  else if (key == 340 || key == 344)
+    mod.shift = 1;
+  else {
+    var emacs = modstr() + keyname_extd(key);
+    player[0].raw_input(emacs, "pressrep");
+    if (repeat)
+      player[0].raw_input(emacs, "rep");
+    else
+      player[0].raw_input(emacs, "pressed");
+  }
+}
+
+prosperon.keyup = function(key)
+{
+  prosperon.keys[key] = false;
+  if (key == 341 || key == 345)
+    mod.ctrl = 0;
+  else if (key == 342 || key == 346)
+    mod.alt = 0;
+  else if (key == 343 || key == 347)
+    mod.super = 0;
+  else if (key == 340 || key == 344)
+    mod.shift = 0;
+  else {
+    var emacs = modstr() + keyname_extd(key);
+    player[0].raw_input(emacs, "released");
+  }
+}
+
+prosperon.droppedfile = function(path)
+{
+  player[0].raw_input("drop", "pressed", path);
+}
+
+var mousepos = [0,0];
+
+prosperon.textinput = function(){};
+prosperon.mousemove = function(pos, dx){
+  mousepos = pos;
+  player[0].mouse_input(modstr() + "move", pos, dx);
+};
+prosperon.mousescroll = function(dx){
+  player[0].mouse_input(modstr() + "scroll", dx);
+};
+prosperon.mousedown = function(b){
+  player[0].raw_input(modstr() + Mouse.button[b], "pressed");
+};
+prosperon.mouseup = function(b){
+  player[0].raw_input(modstr() + Mouse.button[b], "released");
+};
+
 var Mouse = {
-  get pos() { return cmd(45); },
-  screenpos() { return cmd(45); },
-  get worldpos() { return Window.screen2world(cmd(45)); },
+  screenpos() { return mousepos.slice(); },
+  worldpos() { return Window.screen2world(mousepos); },
   disabled() { cmd(46, 1); },
   normal() { cmd(46, 0);},
 
@@ -20,6 +143,12 @@ var Mouse = {
       cmd(97, img);
       Mouse.custom[mode] = img;
     }
+  },
+  
+  button: { /* left, right, middle mouse */
+    0: "lm", 
+    1: "rm",
+    2: "mm"
   },
   custom:[],
   cursor: {
@@ -44,10 +173,9 @@ Mouse.disabled.doc = "Set the mouse to hidden. This locks it to the game and hid
 Mouse.normal.doc = "Set the mouse to show again after hiding.";
 
 var Keys = {
-  shift() { return cmd(50, 340); },
-  ctrl() { return cmd(50, 341); },
-  alt() { return cmd(50, 342); },
-  super() { return cmd(50, 343); },
+  down(code) {
+    return prosperon.keys[code];
+  },
 };
 
 var input = {};
@@ -115,9 +243,9 @@ var Player = {
     for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.mouse?.[type] === 'function') {
         pawn.inputs.mouse[type].call(pawn,...args);
-	pawn.inputs.post?.call(pawn);
-	if (!pawn.inputs.fallthru)
- 	  return;
+	      pawn.inputs.post?.call(pawn);
+	      if (!pawn.inputs.fallthru)
+          return;
       }
     }
   },
@@ -126,9 +254,9 @@ var Player = {
     for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.char === 'function') {
         pawn.inputs.char.call(pawn, c);
-	pawn.inputs.post?.call(pawn);
-	if (!pawn.inputs.fallthru)	
-	  return;
+	      pawn.inputs.post?.call(pawn);
+	      if (!pawn.inputs.fallthru)	
+	      return;
       }
     };
   },
@@ -137,40 +265,41 @@ var Player = {
     for (var pawn of this.pawns.reversed()) {
       if (typeof pawn.inputs?.any === 'function') {
         pawn.inputs.any(cmd);
-	if (!pawn.inputs.fallthru)	
+        
+	      if (!pawn.inputs.fallthru)	
           return;
       }
 
       if (!pawn.inputs?.[cmd]) {
         if (pawn.inputs?.block) return;
-	continue;
+      	continue;
       }
 
-      var fn = null;
+      var   fn = null;
 
       switch (state) {
         case 'pressed':
-	  fn = pawn.inputs[cmd];
-	  break;
-	case 'rep':
-	  fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
-	  break;
-	case 'released':
-	  fn = pawn.inputs[cmd].released;
-	  break;
-	case 'down':
-	  fn = pawn.inputs[cmd].down;
+	        fn = pawn.inputs[cmd];
+	        break;
+      	case 'rep':
+    	    fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
+	        break;
+      	case 'released':
+      	  fn = pawn.inputs[cmd].released;
+    	    break;
+      	case 'down':
+    	   fn = pawn.inputs[cmd].down;
       }
 
       if (typeof fn === 'function') {
         fn.call(pawn, ... args);
-	pawn.inputs.post?.call(pawn);
+      	pawn.inputs.post?.call(pawn);
       }
 
       switch (state) {
         case 'released':
-	  pawn.inputs.release_post?.call(pawn);
-	  break;
+	      pawn.inputs.release_post?.call(pawn);
+	      break;
       }
 
       if (!pawn.inputs.fallthru) return;

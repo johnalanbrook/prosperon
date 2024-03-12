@@ -154,7 +154,7 @@ JSValue script_run_bytecode(uint8_t *code, size_t len)
   JSValue ret = JS_EvalFunction(js, b);
   js_print_exception(ret);
   JS_FreeValue(js,b);
-  JS_FreeValue(js,ret);
+  return ret;
 }
 
 struct callee stacktrace_callee;
@@ -167,7 +167,7 @@ time_t file_mod_secs(const char *file) {
 
 void js_stacktrace() {
 #ifndef NDEBUG
-  call_callee(&stacktrace_callee);
+  script_evalf("console.stack();");
 #endif
 }
 
@@ -238,7 +238,7 @@ JSValue file_eval_env(const char *file, JSValue env)
   JSValue v = JS_EvalThis(js, env, script, len, file, JS_EVAL_FLAGS);
   free(script);
   js_print_exception(v);
-  JS_FreeValue(js,v);
+  return v;
 }
 
 void script_call_sym(JSValue sym) {
@@ -325,35 +325,3 @@ void send_signal(const char *signal, int argc, JSValue *argv)
   JS_FreeValue(js, sig);
   JS_FreeValue(js, fn);
 }
-
-static struct callee update_callee;
-void register_update(struct callee c) {
-  update_callee = c;
-}
-
-void call_updates(double dt) {
-  callee_dbl(update_callee, dt);
-}
-
-static struct callee gui_callee;
-void register_gui(struct callee c) { gui_callee = c; }
-void call_gui() { js_callee_exec(&gui_callee, 0, NULL); }
-
-static struct callee nk_gui_callee;
-void register_nk_gui(struct callee c) { nk_gui_callee = c; }
-void call_nk_gui() { js_callee_exec(&nk_gui_callee, 0, NULL); }
-
-static struct callee physupdate_callee;
-void register_physics(struct callee c) { physupdate_callee = c; }
-void call_physics(double dt) {
-  callee_dbl(physupdate_callee, dt);
-}
-
-struct callee debug_callee;
-void register_debug(struct callee c) { debug_callee = c; }
-void call_debugs() { call_callee(&debug_callee); }
-
-static struct callee draw_callee;
-void register_draw(struct callee c) { draw_callee = c; }
-
-void call_draw() { call_callee(&draw_callee); }

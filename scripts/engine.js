@@ -57,9 +57,7 @@ global.check_registers = function(obj)
       var signal = k.fromfirst("on_");
       Event.observe(signal, obj, obj[k]);
     };
-
 }
-
 
 eval_env.dov = `Counterpart to /load_env/, but with a string.`;
 
@@ -88,6 +86,7 @@ global.mixin("scripts/render.js");
 
 global.Game = {
   engine_start(fn) {
+    console.warn("engine starting.");
     cmd(257, fn);
   },
 
@@ -163,16 +162,7 @@ Game.doc.dt = "Current frame dt.";
 Game.doc.view_camera = "Set the camera for the current view.";
 Game.doc.camera = "Current camera.";
 
-global.mixin("scripts/input.js");
-global.mixin("scripts/std.js");
-
-global.mixin("scripts/diff.js");
-
-console.level = 1;
-
-global.mixin("scripts/color.js");
-
-var prosperon = {};
+global.prosperon = {};
 prosperon.version = cmd(255);
 prosperon.revision = cmd(256);
 
@@ -225,7 +215,11 @@ Range is given by a semantic versioning number, prefixed with nothing, a ~, or a
 ~ means that MAJOR and MINOR must match exactly, but any PATCH greater or equal is valid.
 ^ means that MAJOR must match exactly, but any MINOR and PATCH greater or equal is valid.`;
 
-
+global.mixin("scripts/input.js");
+global.mixin("scripts/std.js");
+console.level = 1;
+global.mixin("scripts/diff.js");
+global.mixin("scripts/color.js");
 global.mixin("scripts/gui.js");
 
 var timer = {
@@ -253,10 +247,7 @@ var timer = {
 };
 
 global.mixin("scripts/tween.js");
-
 global.mixin("scripts/physics.js");
-
-
 global.mixin("scripts/ai.js");
 global.mixin("scripts/geometry.js");
 
@@ -315,7 +306,7 @@ var Register = {
 
   registries: [],
 
-  add_cb(idx, name) {
+  add_cb(name) {
     var n = {};
     var fns = [];
     
@@ -326,10 +317,8 @@ var Register = {
       fns.push(fn);
       return function() { fns.remove(fn); };
     }
-    n.broadcast = function(...args) { fns.forEach(x => x(...args)); }
+    prosperon[name] = function(...args) { fns.forEach(x => x(...args)); }
     n.clear = function() { fns = []; }
-
-    register(idx, n.broadcast, n);
 
     Register[name] = n;
     Register.registries.push(n);
@@ -338,16 +327,13 @@ var Register = {
   },
 };
 
-Register.add_cb(0, "update").doc = "Called once per frame.";
-Register.add_cb(11, "appupdate");
-Register.add_cb(1, "physupdate");
-Register.add_cb(2, "gui");
-Register.add_cb(6, "debug");
-register(7, Register.kbm_input, Register);
-Register.add_cb(8, "gamepad_input");
-Register.add_cb(10, "draw");
-
-register(9, console.stack, this);
+Register.add_cb("update").doc = "Called once per frame.";
+Register.add_cb("appupdate");
+Register.add_cb("physupdate");
+Register.add_cb("gui");
+Register.add_cb("debug");
+Register.add_cb("gamepad_input");
+Register.add_cb("draw");
 
 Register.gamepad_playermap[0] = Player.players[0];
 
