@@ -10,12 +10,14 @@
 #include "resources.h"
 #include "jsffi.h"
 
-static struct callee pawn_callee;
-static struct callee gamepad_callee;
-
 void input_dropped_files(int n)
 {
-  script_evalf("prosperon.droppedfile('%s');", sapp_get_dropped_file_path(0));
+  script_evalf("prosperon.droppedfile(`%s`);", sapp_get_dropped_file_path(0));
+}
+
+void input_clipboard_paste(char *str)
+{
+  script_evalf("prosperon.clipboardpaste(`%s`);", sapp_get_clipboard_string());
 }
 
 /*
@@ -29,9 +31,46 @@ void cursor_show() { sapp_show_mouse(1); }
 
 void cursor_img(const char *path)
 {
-/*  NSString *str = [NSString stringWithUTF8String:path];
-  NSImage *img = [[NSImage alloc] initWithContentsOfFile:str];
+/*  NSdesting *dest = [NSdesting destingWithUTF8desting:path];
+  NSImage *img = [[NSImage alloc] initWithContentsOfFile:dest];
   NSCursor *custom = [[NSCursor alloc] initWithImage:img hotSpot:NSMakePoint(0,0)];
   [custom set];
 */
+}
+
+static char *touch_jstrn(char *dest, int len, sapp_touchpoint *touch, int n)
+{
+  dest[0] = 0;
+  char touchdest[512] = {0};
+  strncat(dest,"[", 512);
+  for (int i = 0; i < n; i++) {
+    snprintf(touchdest, 512, "{id:%p, x:%g, y:%g},", touch[i].identifier, touch[i].pos_x, touch[i].pos_y);
+    strncat(dest,touchdest,512);
+  }
+  strncat(dest,"]", 512);
+  return dest;
+}
+
+void touch_start(sapp_touchpoint *touch, int n)
+{
+  char dest[512] = {0};
+  script_evalf("prosperon.touchpress(%s);", touch_jstrn(dest, 512, touch, n));
+}
+
+void touch_move(sapp_touchpoint *touch, int n)
+{
+  char dest[512] = {0};
+  script_evalf("prosperon.touchmove(%s);", touch_jstrn(dest,512,touch,n));
+}
+
+void touch_end(sapp_touchpoint *touch, int n)
+{
+  char dest[512] = {0};
+  script_evalf("prosperon.touchend(%s);", touch_jstrn(dest,512,touch,n));
+}
+
+void touch_cancelled(sapp_touchpoint *touch, int n)
+{
+  char dest[512] = {0};
+  script_evalf("prosperon.touchend(%s);", touch_jstrn(dest,512,touch,n));
 }

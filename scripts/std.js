@@ -1,11 +1,21 @@
 os.cwd.doc = "Get the absolute path of the current working directory.";
 os.env.doc = "Return the value of the environment variable v.";
 os.platform = "steam";
-if (os.sys === 'windows')
+if (os.sys() === 'windows')
   os.user = os.env("USERNAME");
 else
   os.user = os.env("USER");
+ 
+ 
+var appy = {};
+appy.inputs = {};
+if (os.sys() === 'macos') {
+  appy.inputs['S-q'] = function() { Game.quit(); };
+  appy.inputs['S-h'] = function() { };
+}
 
+player[0].control(appy);
+  
 var steam = {};
 steam.appid = 480;
 steam.userid = 8437843;

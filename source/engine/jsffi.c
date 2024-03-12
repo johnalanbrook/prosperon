@@ -1401,9 +1401,15 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 234:
       ret = emitter2js(make_emitter());
       break;
+    case 248:
+      ret = bool2js(sapp_keyboard_shown());
+      break;
     case 249:
       str = JS_ToCString(js,argv[2]);
       js2emitter(argv[1])->texture = texture_pullfromfile(str);
+      break;
+    case 250:
+      sapp_show_keyboard(js2bool(argv[1]));
       break;
     case 251:
       js2gameobject(argv[1])->warp_filter = js2bitmask(argv[2]);

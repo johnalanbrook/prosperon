@@ -30,25 +30,25 @@ void window_resize(int width, int height)
   float raspect = mainwin.rwidth/mainwin.rheight;
   mainwin.pheight = mainwin.rheight;
   mainwin.pwidth = mainwin.rwidth*aspect/raspect;
-
-  JSValue vals[2] = { int2js(width), int2js(height) };
-  send_signal("window_resize", 2, vals);
+  
+  script_evalf("prosperon.resize([%d,%d]);", width,height);
 }
 
 void window_focused(int focus)
 {
   mainwin.focus = focus;
+  script_evalf("prosperon.focus(%d);", focus);
 }
 
 void window_iconified(int s)
 {
   mainwin.iconified = s;
+  script_evalf("prosperon.iconified(%d);", s);
 }
-
 
 void window_suspended(int s)
 {
-  
+  script_evalf("prosperon.suspended(%d);", s);
 }
 
 void window_set_icon(const char *png) {

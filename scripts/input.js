@@ -1,22 +1,26 @@
 var keycodes = {
-  0x00E: "back",
-  0x00F: "tab",
-  0x01C: "enter",
-  0x001: "esc",
-  0x039: "space",
-  0x149: "pgup",    
-  0x151: "pgdown",
-  0x14F: "end",
-  0x147: "home",
-  0x14B: "left",
-  0x148: "up",
-  0x14D: "right",
-  0x150: "down",
-  0x152: "insert",
-  0x153: "delete",
+  259: "back",
+  258: "tab",
+  257: "enter",
+  1: "escape",
+  32: "space",
+  266: "pgup",    
+  267: "pgdown",
+  268: "home",
+  269: "end",
+  263: "left",
+  265: "up",
+  262: "right",
+  265: "down",
+  260: "insert",
+  261: "delete",
   45: "minus",
 };
 
+var codekeys = {};
+for (var code in keycodes)
+  codekeys[keycodes[code]] = code;
+  
 var mod = {
   shift: 0,
   ctrl: 0,
@@ -63,6 +67,7 @@ function modstr()
 
 prosperon.keydown = function(key, repeat)
 {
+
   prosperon.keys[key] = true;
   
   if (key == 341 || key == 345)
@@ -232,6 +237,13 @@ input.action = {
   actions: [],
 };
 
+input.keyboard_show = function(show)
+{
+  cmd(250,show); 
+}
+
+input.keyboard_shown = function() { return cmd(248); }
+
 /* May be a human player; may be an AI player */
 var Player = {
   players: [],
@@ -364,5 +376,7 @@ return {
   Keys,
   input,
   Player,
-  player
+  player,
+  keycodes,
+  codekeys
 };

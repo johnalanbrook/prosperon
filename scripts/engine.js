@@ -215,6 +215,17 @@ Range is given by a semantic versioning number, prefixed with nothing, a ~, or a
 ~ means that MAJOR and MINOR must match exactly, but any PATCH greater or equal is valid.
 ^ means that MAJOR must match exactly, but any MINOR and PATCH greater or equal is valid.`;
 
+prosperon.iconified = function(icon) {};
+prosperon.focus = function(focus) {};
+prosperon.resize = function(dimensions) {};
+prosperon.suspended = function(sus) {};
+prosperon.mouseenter = function(){};
+prosperon.mouseleave = function(){};
+prosperon.touchpress = function(touches){};
+prosperon.touchrelease = function(touches){};
+prosperon.touchmove = function(touches){};
+prosperon.clipboardpaste = function(str){};
+
 global.mixin("scripts/input.js");
 global.mixin("scripts/std.js");
 console.level = 1;

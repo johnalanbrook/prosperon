@@ -232,8 +232,29 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_FILES_DROPPED:
-//      input_mouse_move(e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy, e->modifiers);
       input_dropped_files(sapp_get_num_dropped_files());
+      break;
+      
+    case SAPP_EVENTTYPE_MOUSE_ENTER:
+      script_evalf("prosperon.mouseenter();");
+      break;
+    case SAPP_EVENTTYPE_MOUSE_LEAVE:
+      script_evalf("prosperon.mouseleave();");
+      break;
+    case SAPP_EVENTTYPE_TOUCHES_BEGAN:
+      touch_start(e->touches, e->num_touches);
+      break;
+    case SAPP_EVENTTYPE_TOUCHES_MOVED:
+      touch_move(e->touches, e->num_touches);
+      break;
+    case SAPP_EVENTTYPE_TOUCHES_ENDED:
+      touch_end(e->touches, e->num_touches);
+      break;
+    case SAPP_EVENTTYPE_TOUCHES_CANCELLED:
+      touch_cancelled(e->touches, e->num_touches);
+      break;
+    case SAPP_EVENTTYPE_CLIPBOARD_PASTED:
+      input_clipboard_paste(sapp_get_clipboard_string());
       break;
     default:
       break;
