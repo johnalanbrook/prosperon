@@ -159,7 +159,7 @@ endif
 OBJDIR = $(BIN)/obj
 
 # All other sources
-OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main'
+OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
 CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
 OBJS += $(CPPOBJS)
 OBJS += $(shell find source/engine -type f -name '*.m')
@@ -256,11 +256,12 @@ input.md: $(INPUTMD)
 	@echo Printing api for $*
 	@./primum -d $* > $@
 
+QUICKJS := source/engine/thirdparty/quickjs
 $(BIN)/libquickjs.a: 
-	make -C quickjs clean
-	make -C quickjs SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a HOST_CC=$(CC) LEAK=$(LEAK)
+	make -C $(QUICKJS) clean
+	make -C $(QUICKJS) SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a HOST_CC=$(CC) LEAK=$(LEAK)
 	@mkdir -p $(BIN)
-	cp -rf quickjs/libquickjs.* $(BIN)
+	cp -rf $(QUICKJS)/libquickjs.* $(BIN)
 
 $(OBJDIR)/%.o: %.c source/engine/core.cdb.h $(SHADERS)
 	@mkdir -p $(@D)
@@ -332,7 +333,7 @@ clean:
 	rm -rf bin dist
 	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(CDB)/libcdb.a
 	rm -f $(CDB)/*.o
-	@make -C quickjs clean
+	@make -C $(QUICKJS) clean
 
 docs: doc/prosperon.org
 	make -C doc
