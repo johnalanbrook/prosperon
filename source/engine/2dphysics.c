@@ -21,6 +21,7 @@ cpSpace *space = NULL;
 
 struct rgba color_white = {255,255,255,255};
 struct rgba color_black = {0,0,0,255};
+struct rgba color_clear = {0,0,0,0};
 
 struct rgba disabled_color = {148,148,148,255};
 struct rgba sleep_color = {255,140,228,255};
@@ -624,13 +625,13 @@ JSValue arb2js(cpArbiter *arb)
   norm.cp = cpArbiterGetNormal(arb);
 
   JSValue obj = JS_NewObject(js);
-  JS_SetPropertyStr(js, obj, "normal", vec2js(norm));
+  JS_SetPropertyStr(js, obj, "normal", vec22js(norm));
   JS_SetPropertyStr(js, obj, "obj", JS_DupValue(js,go2->ref));
   JS_SetPropertyStr(js, obj, "sensor", JS_NewBool(js, cpShapeGetSensor(shape2)));
   
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);
-  JS_SetPropertyStr(js, obj, "velocity", vec2js(srfv));
+  JS_SetPropertyStr(js, obj, "velocity", vec22js(srfv));
 
   return obj;
 }

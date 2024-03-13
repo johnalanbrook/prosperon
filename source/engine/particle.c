@@ -99,7 +99,7 @@ emitter *make_emitter() {
   sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
   e->scale = 1;
   e->speed = 20;
-  e->texture = texture_pullfromfile("glass_chunk2.gif");
+  e->texture = texture_from_file("glass_chunk2.gif");
   arrpush(emitters,e);
   return e;
 }

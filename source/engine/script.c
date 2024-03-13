@@ -295,7 +295,7 @@ void callee_int(struct callee c, int i) {
 }
 
 void callee_vec2(struct callee c, HMM_Vec2 vec) {
-  JSValue v = vec2js(vec);
+  JSValue v = vec22js(vec);
   js_callee_exec(&c, 1, &v);
   JS_FreeValue(js, v);
 }

@@ -143,19 +143,19 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
        mesh->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
      } else {
 //       char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
-//       mesh->bind.fs.images[0] = texture_pullfromfile(imp)->id;
+//       mesh->bind.fs.images[0] = texture_from_file(imp)->id;
 //       free(imp);
      }
    } else
-     mesh->bind.fs.images[0] = texture_pullfromfile("k")->id; 
+     mesh->bind.fs.images[0] = texture_from_file("k")->id; 
      
    mesh->bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 /*     
      cgltf_texture *tex;
      if (tex = mat->normal_texture.texture)
-       mesh->bind.fs.images[1] = texture_pullfromfile(tex->image->uri)->id;
+       mesh->bind.fs.images[1] = texture_from_file(tex->image->uri)->id;
      else
-       mesh->bind.fs.images[1] = texture_pullfromfile("k")->id;*/
+       mesh->bind.fs.images[1] = texture_from_file("k")->id;*/
 }
 
 sg_buffer texcoord_floats(float *f, int verts, int comp)

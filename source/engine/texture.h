@@ -14,25 +14,19 @@
 #define FILTER_NONE SG_FILTER_NONE
 #define FILTER_LINEAR SG_FILTER_LINEAR
 
-float st_s_w(struct glrect st);
-float st_s_h(struct glrect st);
-
-extern struct glrect ST_UNIT;
-
-struct TextureOptions {
-    int sprite;
-};
+extern struct rect ST_UNIT;
 
 /* Represents an actual texture on the GPU */
-struct Texture {
+struct texture {
   sg_image id; /* ID reference for the GPU memory location of the texture */
   int width;
   int height;
   unsigned char *data;
-  struct TextureOptions opts;
   int frames;
   int *delays;
 };
+
+typedef struct texture texture;
 
 typedef struct img_sampler{
   int wrap_u;
@@ -43,21 +37,21 @@ typedef struct img_sampler{
   int mip_filter;
 } img_sampler;
 
-typedef struct Texture texture;
+struct texture *texture_from_file(const char *path);   // Create texture from image
+struct texture *texture_fromdata(void *raw, long size);
 
-struct Texture *texture_pullfromfile(const char *path);   // Create texture from image
-struct Texture *texture_fromdata(void *raw, long size);
+void texture_free(texture *tex);
 
 /* Hot reloads a texture, if needed */
 void texture_sync(const char *path);
 
-char * tex_get_path(struct Texture *tex);   // Get image path for texture
+char * tex_get_path(struct texture *tex);   // Get image path for texture
 
 int gif_nframes(const char *path);
 int *gif_delays(const char *path);
 
-struct glrect tex_get_rect(struct Texture *tex);
-HMM_Vec2 tex_get_dimensions(struct Texture *tex);
+struct glrect tex_get_rect(struct texture *tex);
+HMM_Vec2 tex_get_dimensions(struct texture *tex);
 
 double perlin(double x, double y, double z);
 

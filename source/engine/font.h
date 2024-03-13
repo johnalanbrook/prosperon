@@ -14,7 +14,7 @@ struct Character {
   float Bearing[2];  // Offset from baseline to left/top of glyph
   int Advance; // Horizontal offset to advance to next glyph
   int leftbearing;
-  struct glrect rect;
+  struct rect rect;
 };
 
 struct sFont {

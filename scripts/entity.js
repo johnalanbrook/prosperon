@@ -1,16 +1,14 @@
-function obj_unique_name(name, obj)
-{
+function obj_unique_name(name, obj) {
   name = name.replaceAll('.', '_');
   if (!(name in obj)) return name;
   var t = 1;
   var n = name + t;
   while (n in obj) {
     t++;
-    n = name+t;
+    n = name + t;
   }
   return n;
 }
-
 
 var gameobject_impl = {
   get pos() {
@@ -27,7 +25,7 @@ var gameobject_impl = {
     assert(this.master, `No master set on ${this.toString()}`);
     return this.worldangle() - this.master.worldangle();
   },
-  
+
   set angle(x) {
     var diff = x - this.angle;
 
@@ -36,64 +34,64 @@ var gameobject_impl = {
       x.pos = Vector.rotate(x.pos, diff);
     });
 
-    this.sworldangle(x-this.master.worldangle());
+    this.sworldangle(x - this.master.worldangle());
   },
 
   get scale() {
     assert(this.master, `No master set on ${this.toString()}`);
-    var pscale = [1,1,1];
-    return this.gscale().map((x,i) => x/(this.master.gscale()[i]*pscale[i]));
+    var pscale = [1, 1, 1];
+    return this.gscale().map((x, i) => x / (this.master.gscale()[i] * pscale[i]));
   },
 
   set scale(x) {
     if (typeof x === 'number')
-      x = [x,x];
+      x = [x, x];
 
-    var pct = this.scale.map((s,i) => x[i]/s);
+    var pct = this.scale.map((s, i) => x[i] / s);
     this.grow(pct);
-    
+
     /* TRANSLATE ALL SUB OBJECTS */
     this.objects.forEach(obj => {
       obj.grow(pct);
-      obj.pos = obj.pos.map((x,i)=>x*pct[i]);
+      obj.pos = obj.pos.map((x, i) => x * pct[i]);
     });
   },
 
-  get draw_layer() { return cmd(171, this.body); },
-  set draw_layer(x) { cmd(172, this.body, x); },
-  set layer(x) { cmd(75,this.body,x); },
-  get layer() { return cmd(77,this.body); },
-  set warp_layer(x) { cmd(251, this.body,x); },
-  get warp_layer() { return cmd(252, this.body); },
+  get draw_layer() { return this.body.drawlayer; },
+  set draw_layer(x) { this.body.drawlayer = x; },
+  set layer(x) { this.body.layer = x; },
+  get layer() { return this.body.layer; },
+  set warp_layer(x) { this.body.warp_filter = x; },
+  get warp_layer() { return this.body.warp_filter; },
 
-  set mass(x) { set_body(7,this.body,x); },
+  set mass(x) { set_body(7, this.body, x); },
   get mass() {
     if (!(this.phys === physics.dynamic))
       return undefined;
 
     return q_body(5, this.body);
   },
-  get elasticity() { return cmd(107,this.body); },
-  set elasticity(x) { cmd(106,this.body,x); },
-  get friction() { return cmd(109,this.body); },
-  set friction(x) { cmd(108,this.body,x); },
-  set timescale(x) { cmd(168,this.body,x); },
-  get timescale() { return cmd(169,this.body); },
+  get elasticity() { return this.body.e; },
+  set elasticity(x) { this.body.e = x; },
+  get friction() { return this.body.f; },
+  set friction(x) { this.body.f = x; },
+  set timescale(x) { this.body.timescale = x; },
+  get timescale() { return this.body.timescale; },
   set phys(x) { set_body(1, this.body, x); },
-  get phys() { return q_body(0,this.body); },
+  get phys() { return q_body(0, this.body); },
   get velocity() { return q_body(3, this.body); },
   set velocity(x) { set_body(9, this.body, x); },
-  get damping() { return cmd(157,this.body); },
-  set damping(x) { cmd(156, this.body, x); },
-  get angularvelocity() { return Math.rad2turn(q_body(4,this.body)); },
+  get damping() { return this.body.damping; },
+  set damping(x) { this.body.damping = x },
+  get angularvelocity() { return Math.rad2turn(q_body(4, this.body)); },
   set angularvelocity(x) { set_body(8, this.body, Math.turn2rad(x)); },
-  get max_velocity() { return cmd(152, this.body); },
-  set max_velocity(x) { cmd(151, this.body, x); },
-  get max_angularvelocity() { return cmd(155,this.body); },
-  set max_angularvelocity(x) { cmd(154,this.body,x); },
+  get max_velocity() { return this.body.maxvelocity; },
+  set max_velocity(x) { this.body.maxvelocity = x; },
+  get max_angularvelocity() { return this.body.maxangularvelocity; },
+  set max_angularvelocity(x) { this.body.maxangularvelocity = x; },
   get_moi() { return q_body(6, this.body); },
   set_moi(x) {
-    if(x <= 0) {
+    if (x <= 0) {
       console.error("Cannot set moment of inertia to 0 or less.");
       return;
     }
@@ -117,7 +115,7 @@ var gameobject = {
     var lur = ur[this.master.ur];
     if (!lur) return;
     var lur = lur.objects[this.toString()];
-    var d = ediff(this._ed.urdiff,lur);
+    var d = ediff(this._ed.urdiff, lur);
     if (!d || Object.empty(d))
       this._ed.inst = true;
     else
@@ -127,7 +125,7 @@ var gameobject = {
     selectable: false,
     dirty: false
   },
-  
+
   namestr() {
     var s = this.toString();
     if (this._ed.dirty)
@@ -137,41 +135,41 @@ var gameobject = {
   },
 
   urstr() {
-    if (this._ed.dirty) return "*"+this.ur;
+    if (this._ed.dirty) return "*" + this.ur;
     return this.ur;
   },
-  
+
   full_path() {
     return this.path_from(world);
   },
   /* pin this object to the to object */
   pin(to) {
-    var p = cmd(222,this.body, to.body);
+    var p = cmd(222, this.body, to.body);
   },
   slide(to, a, b, min, max) {
-    a ??= [0,0];
-    b ??= [0,0];
+    a ??= [0, 0];
+    b ??= [0, 0];
     min ??= 0;
     max ??= 50;
-    var p = cmd(229,this.body,to.body,a,b,min,max);
+    var p = cmd(229, this.body, to.body, a, b, min, max);
     p.max_force = 500;
     p.break();
   },
   pivot(to, piv) {
     piv ??= this.worldpos();
-    var p = cmd(221,this.body,to.body,piv);
+    var p = cmd(221, this.body, to.body, piv);
   },
   /* groove is on to, from local points a and b, anchored to this at local anchor */
   groove(to, a, b, anchor) {
-    anchor ??= [0,0];
+    anchor ??= [0, 0];
     var p = cmd(228, to.body, this.body, a, b, anchor);
   },
   damped_spring(to, length, stiffness, damping) {
     length ??= Vector.length(this.worldpos(), to.worldpos());
     stiffness ??= 1;
     damping ??= 1;
-    var dc = 2*Math.sqrt(stiffness*this.mass);
-    var p = cmd(227, this.body, to.body, [0,0], [0,0], stiffness, damping*dc);
+    var dc = 2 * Math.sqrt(stiffness * this.mass);
+    var p = cmd(227, this.body, to.body, [0, 0], [0, 0], stiffness, damping * dc);
   },
   damped_rotary_spring(to, angle, stiffness, damping) {
     angle ??= 0;
@@ -179,14 +177,14 @@ var gameobject = {
     damping ??= 1;
     /* calculate actual damping value from the damping ratio */
     /* damping = 1 is critical */
-    var dc = 2*Math.sqrt(stiffness*this.get_moi()); /* critical damping number */
+    var dc = 2 * Math.sqrt(stiffness * this.get_moi()); /* critical damping number */
     /* zeta = actual/critical */
-    var p = cmd(226,this.body,to.body,angle,stiffness,damping*dc);
+    var p = cmd(226, this.body, to.body, angle, stiffness, damping * dc);
   },
   rotary_limit(to, min, max) {
-    var p = cmd(225,this.body,to.body, Math.turn2rad(min),Math.turn2rad(max));
+    var p = cmd(225, this.body, to.body, Math.turn2rad(min), Math.turn2rad(max));
   },
-  ratchet(to,ratch) {
+  ratchet(to, ratch) {
     var phase = this.angle - to.angle;
     var p = cmd(230, this.body, to.body, phase, Math.turn2rad(ratch));
   },
@@ -194,183 +192,187 @@ var gameobject = {
     phase ??= 1;
     ratio ??= 1;
     var phase = this.angle - to.angle;
-    var p = cmd(223,this.body,to.body,phase,ratio);
+    var p = cmd(223, this.body, to.body, phase, ratio);
   },
   motor(to, rate) {
     var p = cmd(231, this.body, to.body, rate);
   },
-  
-    path_from(o) {
-      var p = this.toString();
-      var c = this.master;
-      while (c && c !== o && c !== world) {
-        p = c.toString() + "." + p;
-	c = c.master;
-      }
-      if (c === world) p = "world." + p;
-      return p;
-    },
-  
-    clear() {
-      for (var k in this.objects) {
-	this.objects[k].kill();
-      };
-      this.objects = {};
-    },
-    
-    delay(fn, seconds) {
-      var t = timer.delay(fn.bind(this), seconds);
-      this.timers.push(t);
-      return t;
-    },
 
-    tween(prop, values, def){
-      var t = Tween.make(this, prop, values, def);
-      t.play();
-      
-      var k = function() { t.pause(); }
-      this.timers.push(k);
-      return k;
-    },
+  path_from(o) {
+    var p = this.toString();
+    var c = this.master;
+    while (c && c !== o && c !== world) {
+      p = c.toString() + "." + p;
+      c = c.master;
+    }
+    if (c === world) p = "world." + p;
+    return p;
+  },
 
-    cry(file) {
-     return;
-      this.crying =  audio.sound.play(file, audio.sound.bus.sfx);
-      var killfn = () => {this.crying = undefined; console.warn("killed"); }
-      this.crying.hook = killfn;
-      return killfn;
-    },
+  clear() {
+    for (var k in this.objects) {
+      this.objects[k].kill();
+    };
+    this.objects = {};
+  },
 
-      set torque(x) { if (!(x >= 0 && x <= Infinity)) return; cmd(153, this.body, x); },
-      gscale() { return cmd(103,this.body); },
-      sgscale(x) {
-        if (typeof x === 'number')
-	  x = [x,x];
-        cmd(36,this.body,x)
-      },
-      
-      phys_material() {
-        var mat = {};
-	mat.elasticity = this.elasticity;
-	mat.friction = this.friction;
-	return mat;
-      },
+  delay(fn, seconds) {
+    var t = timer.delay(fn.bind(this), seconds);
+    this.timers.push(t);
+    return t;
+  },
 
-      worldpos() { return q_body(1,this.body); },
-      set_worldpos(x) {
-        var poses = this.objects.map(x => x.pos);
-	set_body(2,this.body,x);
-	this.objects.forEach((o,i) => o.set_worldpos(this.this2world(poses[i])));
-      },
-      screenpos() { return Window.world2screen(this.worldpos()); },
+  tween(prop, values, def) {
+    var t = Tween.make(this, prop, values, def);
+    t.play();
 
-      worldangle() { return Math.rad2turn(q_body(2,this.body)); },
-      sworldangle(x) { set_body(0,this.body,Math.turn2rad(x)); },
+    var k = function() { t.pause(); }
+    this.timers.push(k);
+    return k;
+  },
 
-      get_ur() {
-//        if (this.ur === 'empty') return undefined;
-	return Object.access(ur,this.ur);
-      },
+  cry(file) {
+    return;
+    this.crying = audio.sound.play(file, audio.sound.bus.sfx);
+    var killfn = () => { this.crying = undefined;
+      console.warn("killed"); }
+    this.crying.hook = killfn;
+    return killfn;
+  },
 
-      /* spawn an entity
+  set torque(x) { if (!(x >= 0 && x <= Infinity)) return;
+    cmd(153, this.body, x); },
+  gscale() { return cmd(103, this.body); },
+  sgscale(x) {
+    if (typeof x === 'number')
+      x = [x, x];
+    cmd(36, this.body, x)
+  },
+
+  phys_material() {
+    var mat = {};
+    mat.elasticity = this.elasticity;
+    mat.friction = this.friction;
+    return mat;
+  },
+
+  worldpos() { return q_body(1, this.body); },
+  set_worldpos(x) {
+    var poses = this.objects.map(x => x.pos);
+    set_body(2, this.body, x);
+    this.objects.forEach((o, i) => o.set_worldpos(this.this2world(poses[i])));
+  },
+  screenpos() { return Window.world2screen(this.worldpos()); },
+
+  worldangle() { return Math.rad2turn(q_body(2, this.body)); },
+  sworldangle(x) { set_body(0, this.body, Math.turn2rad(x)); },
+
+  get_ur() {
+    //     if (this.ur === 'empty') return undefined;
+    return Object.access(ur, this.ur);
+  },
+
+  /* spawn an entity
          text can be:
-	   the file path of a script
-	   an ur object
-	   nothing
+	       the file path of a script
+	       an ur object
+	       nothing
       */
-      spawn(text) {
-	var ent = Object.create(gameobject);
-	
-        if (typeof text === 'object')
-	  text = text.name;
+  spawn(text) {
+    var ent = Object.create(gameobject);
 
-        if (typeof text === 'undefined')
-	  ent.ur = "empty";
-  	else if (typeof text !== 'string') {
-	  console.error(`Must pass in an ur type or a string to make an entity.`);
-	  return;
-	} else {
-	  if (Object.access(ur,text))
-	    ent.ur = text;
-	  else if (io.exists(text))
-	    ent.ur = "script";
-	  else {
-	    console.warn(`Cannot make an entity from '${text}'. Not a valid ur.`);
-	    return;
-	  }
-	}
-	    
-	Object.mixin(ent,gameobject_impl);
-	ent.body = make_gameobject();
-	ent.warp_layer = [true];
-	ent.phys = 2;
-	ent.components = {};
-	ent.objects = {};
-	ent.timers = [];
-	 
-	ent.reparent(this);
+    if (typeof text === 'object')
+      text = text.name;
 
-	 ent._ed = {
-	   selectable: true,
-	   dirty: false,
-	   inst: false,
-	   urdiff: {},
-	 };
+    if (typeof text === 'undefined')
+      ent.ur = "empty";
+    else if (typeof text !== 'string') {
+      console.error(`Must pass in an ur type or a string to make an entity.`);
+      return;
+    } else {
+      if (Object.access(ur, text))
+        ent.ur = text;
+      else if (io.exists(text))
+        ent.ur = "script";
+      else {
+        console.warn(`Cannot make an entity from '${text}'. Not a valid ur.`);
+        return;
+      }
+    }
 
-	 cmd(113, ent.body, ent); // set the internal obj reference to this obj
+    Object.mixin(ent, gameobject_impl);
+    ent.body = make_gameobject();
+    ent.warp_layer = [true];
+    ent.phys = 2;
+    ent.components = {};
+    ent.objects = {};
+    ent.timers = [];
 
-	 Object.hide(ent, 'ur', 'body', 'components', 'objects', '_ed', 'timers', 'master');
-       if (ent.ur === 'empty') {
-         if (!ur.empty.proto) ur.empty.proto = json.decode(json.encode(ent));
-         return ent;
-       }
+    ent.reparent(this);
 
-       if (ent.ur === 'script')
-         eval_env(io.slurp(text), ent, ent.ur);
-       else 
-         apply_ur(ent.ur, ent);
+    ent._ed = {
+      selectable: true,
+      dirty: false,
+      inst: false,
+      urdiff: {},
+    };
 
-	 for (var [prop,p] of Object.entries(ent)) {
-	   if (!p) continue;
-	   if (typeof p !== 'object') continue;
-	   if (component.isComponent(p)) continue;
-	   if (!p.comp) continue;
-	   ent[prop] = component[p.comp].make(ent);
-	   Object.merge(ent[prop], p);
-	   ent.components[prop] = ent[prop];
-	 };
+    cmd(113, ent.body, ent); // set the internal obj reference to this obj
 
-       check_registers(ent);
-       ent.components.forEach(function(x) {
-	 if (typeof x.collide === 'function')
-	   register_collide(1, x.collide.bind(x), ent.body, x.shape);
-       });
-       
-	
-        if (typeof ent.load === 'function') ent.load();
-	if (Game.playing())
-  	  if (typeof ent.start === 'function') ent.start();
-	
-        var mur = ent.get_ur();
-        if (mur && !mur.proto)
-	    mur.proto = json.decode(json.encode(ent));
-	    
-        ent.sync();
-	
-	 if (!Object.empty(ent.objects)) {
-	   var o = ent.objects;
-	   delete ent.objects;
-	   for (var i in o) {
-	     say(`MAKING ${i}`);
-	     var n = ent.spawn(ur[o[i].ur]);
-	     ent.rename_obj(n.toString(), i);
-	     delete o[i].ur;
-	     Object.assign(n, o[i]);
-	   }
-	 }
+    Object.hide(ent, 'ur', 'body', 'components', 'objects', '_ed', 'timers', 'master');
+    if (ent.ur === 'empty') {
+      if (!ur.empty.proto) ur.empty.proto = json.decode(json.encode(ent));
+      return ent;
+    }
 
-        return ent;
-      },
+    if (ent.ur === 'script')
+      eval_env(io.slurp(text), ent, ent.ur);
+    else
+      apply_ur(ent.ur, ent);
+
+    for (var [prop, p] of Object.entries(ent)) {
+      if (!p) continue;
+      if (typeof p !== 'object') continue;
+      if (component.isComponent(p)) continue;
+      if (!p.comp) continue;
+      ent[prop] = component[p.comp].make(ent);
+      Object.merge(ent[prop], p);
+      ent.components[prop] = ent[prop];
+    };
+
+    check_registers(ent);
+    ent.components.forEach(function(x) {
+      if (typeof x.collide === 'function')
+        register_collide(1, x.collide.bind(x), ent.body, x.shape);
+    });
+
+
+    if (typeof ent.load === 'function') ent.load();
+    if (Game.playing())
+      if (typeof ent.start === 'function') ent.start();
+
+    var mur = ent.get_ur();
+    if (mur && !mur.proto)
+      mur.proto = json.decode(json.encode(ent));
+
+    ent.sync();
+
+    if (!Object.empty(ent.objects)) {
+      var o = ent.objects;
+      delete ent.objects;
+      for (var i in o) {
+        say(`MAKING ${i}`);
+        var n = ent.spawn(ur[o[i].ur]);
+        ent.rename_obj(n.toString(), i);
+        delete o[i].ur;
+        Object.assign(n, o[i]);
+      }
+    }
+    
+    this.body.phys = this.body.phys; // simple way to sync
+
+    return ent;
+  },
 
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
@@ -382,9 +384,9 @@ var gameobject = {
     }
 
     this.master?.remove_obj(this);
-    
+
     this.master = parent;
-      
+
     function unique_name(list, name) {
       name ??= "new_object";
       var str = name.replaceAll('.', '_');
@@ -392,7 +394,7 @@ var gameobject = {
       var t = str;
       while (list.indexOf(t) !== -1) {
         t = str + n;
-	n++;
+        n++;
       }
       return t;
     };
@@ -403,34 +405,36 @@ var gameobject = {
     parent[name] = this;
     this.toString = function() { return name; };
   },
-  
-   remove_obj(obj) {
-     if (this[obj.toString()] === this.objects[obj.toString()])
-       delete this[obj.toString()];
-       
-     delete this.objects[obj.toString()];
-     delete this[obj.toString()];
-   },
+
+  remove_obj(obj) {
+    if (this[obj.toString()] === this.objects[obj.toString()])
+      delete this[obj.toString()];
+
+    delete this.objects[obj.toString()];
+    delete this[obj.toString()];
+  },
 
   components: {},
   objects: {},
   master: undefined,
-  
-    pulse(vec) { set_body(4, this.body, vec);},
-    shove(vec) { set_body(12,this.body,vec);},
-    shove_at(vec, at) { set_body(14,this.body,vec,at); },
-    world2this(pos) { return cmd(70, this.body, pos); },
-    this2world(pos) { return cmd(71, this.body, pos); },
-    this2screen(pos) { return Window.world2screen(this.this2world(pos)); },
-    screen2this(pos) { return this.world2this(Window.screen2world(pos)); },
-    dir_world2this(dir) { return cmd(160, this.body, dir); },
-    dir_this2world(dir) { return cmd(161, this.body, dir); },
-      
-    alive() { return this.body >= 0; },
-    in_air() { return q_body(7, this.body);},
 
-  hide() { this.components.forEach(x=>x.hide?.()); this.objects.forEach(x=>x.hide?.());},
-  show() { this.components.forEach(function(x) { x.show?.(); }); this.objects.forEach(function(x) { x.show?.(); }); },
+  pulse(vec) { set_body(4, this.body, vec); },
+  shove(vec) { set_body(12, this.body, vec); },
+  shove_at(vec, at) { set_body(14, this.body, vec, at); },
+  world2this(pos) { return cmd(70, this.body, pos); },
+  this2world(pos) { return cmd(71, this.body, pos); },
+  this2screen(pos) { return Window.world2screen(this.this2world(pos)); },
+  screen2this(pos) { return this.world2this(Window.screen2world(pos)); },
+  dir_world2this(dir) { return cmd(160, this.body, dir); },
+  dir_this2world(dir) { return cmd(161, this.body, dir); },
+
+  alive() { return this.body >= 0; },
+  in_air() { return q_body(7, this.body); },
+
+  hide() { this.components.forEach(x => x.hide?.());
+    this.objects.forEach(x => x.hide?.()); },
+  show() { this.components.forEach(function(x) { x.show?.(); });
+    this.objects.forEach(function(x) { x.show?.(); }); },
 
   width() {
     var bb = this.boundingbox();
@@ -439,13 +443,13 @@ var gameobject = {
 
   height() {
     var bb = this.boundingbox();
-    return bb.t-bb.b;
+    return bb.t - bb.b;
   },
 
   /* Moving, rotating, scaling functions, world relative */
   move(vec) { this.set_worldpos(this.worldpos().add(vec)); },
-  rotate(x) { this.sworldangle(this.worldangle()+x); },
-  grow(vec) { this.sgscale(this.gscale().map((x,i)=>x*vec[i])); },
+  rotate(x) { this.sworldangle(this.worldangle() + x); },
+  grow(vec) { this.sgscale(this.gscale().map((x, i) => x * vec[i])); },
 
   /* Make a unique object the same as its prototype */
   revert() {
@@ -462,155 +466,155 @@ var gameobject = {
   },
 
   toString() { return "new_object"; },
-  
+
   flipx() { return this.scale.x < 0; },
   flipy() { return this.scale.y < 0; },
-  
+
   mirror(plane) {
     this.scale = Vector.reflect(this.scale, plane);
   },
-  
-    save:true,
-    selectable:true,
-    ed_locked:false,
-    
-    disable() { this.components.forEach(function(x) { x.disable(); });},
-    enable() { this.components.forEach(function(x) { x.enable(); });},
-    sync() {
-     this.components.forEach(function(x) { x.sync?.(); });
-     this.objects.forEach(function(x) { x.sync?.(); });
-    },
 
-      /* Bounding box of the object in world dimensions */
-      boundingbox() {
-	var boxes = [];
-	boxes.push({
-	  t:0,
-	  r:0,
-	  b:0,
-	  l:0
-	});
+  save: true,
+  selectable: true,
+  ed_locked: false,
 
-	for (var key in this.components) {
-	  if ('boundingbox' in this.components[key])
-	    boxes.push(this.components[key].boundingbox());
-	}
-	for (var key in this.objects)
-	  boxes.push(this.objects[key].boundingbox());
+  disable() { this.components.forEach(function(x) { x.disable(); }); },
+  enable() { this.components.forEach(function(x) { x.enable(); }); },
+  sync() {
+    this.components.forEach(function(x) { x.sync?.(); });
+    this.objects.forEach(function(x) { x.sync?.(); });
+  },
 
-	var bb = boxes.shift();
+  /* Bounding box of the object in world dimensions */
+  boundingbox() {
+    var boxes = [];
+    boxes.push({
+      t: 0,
+      r: 0,
+      b: 0,
+      l: 0
+    });
 
-	boxes.forEach(function(x) { bb = bbox.expand(bb, x); });
-	
-	bb = bbox.move(bb, this.pos);
+    for (var key in this.components) {
+      if ('boundingbox' in this.components[key])
+        boxes.push(this.components[key].boundingbox());
+    }
+    for (var key in this.objects)
+      boxes.push(this.objects[key].boundingbox());
 
-	return bb ? bb : bbox.fromcwh([0,0], [0,0]);
-      },
+    var bb = boxes.shift();
 
-      /* The unique components of this object. Its diff. */
-      json_obj() {
-        var u = this.get_ur();
-	if (!u) return {};
-	var proto = u.proto;
-	var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
-	
-        var d = ediff(thiso,proto);
-	
-	d ??= {};
- 
-	var objects = {};
-	proto.objects ??= {};
-	var curobjs = {};
-	for (var o in this.objects)
-	  curobjs[o] = this.objects[o].instance_obj();
+    boxes.forEach(function(x) { bb = bbox.expand(bb, x); });
 
-        var odiff = ediff(curobjs, proto.objects);
-	if (odiff)
-	  d.objects = curobjs;
+    bb = bbox.move(bb, this.pos);
 
-	delete d.pos;
-	delete d.angle;
-	delete d.scale;
-	delete d.velocity;
-	delete d.angularvelocity;
-        return d;
-      },
+    return bb ? bb : bbox.fromcwh([0, 0], [0, 0]);
+  },
 
-      /* The object needed to store an object as an instance of a master */
-      instance_obj() {
-        var t = this.transform();
-	t.ur = this.ur;
-	return t;
-      },
+  /* The unique components of this object. Its diff. */
+  json_obj() {
+    var u = this.get_ur();
+    if (!u) return {};
+    var proto = u.proto;
+    var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
 
-      proto() {
-        var u = this.get_ur();
-	if (!u) return {};
-	return u.proto;
-      },
+    var d = ediff(thiso, proto);
 
-      transform() {
-        var t = {};
-	t.pos = this.pos;
-	if (t.pos.every(x=>x===0)) delete t.pos;
-	t.angle = Math.places(this.angle,4);
-	if (t.angle === 0) delete t.angle;
-	t.scale = this.scale;
-	t.scale = t.scale.map((x,i) => x/this.proto().scale[i]);
-	t.scale = t.scale.map(x => Math.places(x,3));
-	if (t.scale.every(x=>x===1)) delete t.scale;
-	return t;
-      },
+    d ??= {};
 
-      /* Velocity and angular velocity of the object */
-      phys_obj() {
-        var phys = {};
-	phys.velocity = this.velocity;
-	phys.angularvelocity = this.angularvelocity;
-	return phys;
-     },
+    var objects = {};
+    proto.objects ??= {};
+    var curobjs = {};
+    for (var o in this.objects)
+      curobjs[o] = this.objects[o].instance_obj();
 
-      dup(diff) {
-        var n = this.master.spawn(this.__proto__);
-	Object.totalmerge(n, this.instance_obj());
-	return n;
-      },
+    var odiff = ediff(curobjs, proto.objects);
+    if (odiff)
+      d.objects = curobjs;
+
+    delete d.pos;
+    delete d.angle;
+    delete d.scale;
+    delete d.velocity;
+    delete d.angularvelocity;
+    return d;
+  },
+
+  /* The object needed to store an object as an instance of a master */
+  instance_obj() {
+    var t = this.transform();
+    t.ur = this.ur;
+    return t;
+  },
+
+  proto() {
+    var u = this.get_ur();
+    if (!u) return {};
+    return u.proto;
+  },
+
+  transform() {
+    var t = {};
+    t.pos = this.pos;
+    if (t.pos.every(x => x === 0)) delete t.pos;
+    t.angle = Math.places(this.angle, 4);
+    if (t.angle === 0) delete t.angle;
+    t.scale = this.scale;
+    t.scale = t.scale.map((x, i) => x / this.proto().scale[i]);
+    t.scale = t.scale.map(x => Math.places(x, 3));
+    if (t.scale.every(x => x === 1)) delete t.scale;
+    return t;
+  },
+
+  /* Velocity and angular velocity of the object */
+  phys_obj() {
+    var phys = {};
+    phys.velocity = this.velocity;
+    phys.angularvelocity = this.angularvelocity;
+    return phys;
+  },
+
+  dup(diff) {
+    var n = this.master.spawn(this.__proto__);
+    Object.totalmerge(n, this.instance_obj());
+    return n;
+  },
 
   kill() {
     if (this.__kill) return;
     this.__kill = true;
-    
+
     this.timers.forEach(t => t());
     this.timers = [];
     Event.rm_obj(this);
     Player.do_uncontrol(this);
     register_collide(2, undefined, this.body);
-    
+
     if (this.master) {
       this.master.remove_obj(this);
       this.master = undefined;
     }
-    
+
     if (this.__proto__.instances)
       delete this.__proto__.instances[this.toString()];
 
     for (var key in this.components) {
-      this.components[key].kill();
+      this.components[key].kill?.();
       this.components[key].gameobject = undefined;
       delete this.components[key];
     }
 
     this.clear();
     this.objects = undefined;
-    
+
     if (typeof this.stop === 'function') this.stop();
     if (typeof this.die === 'function') this.die();
   },
 
-  up() { return [0,1].rotate(this.angle);},
-  down() { return [0,-1].rotate(this.angle);},
-  right() { return [1,0].rotate(this.angle);},
-  left() { return [-1,0].rotate(this.angle); },
+  up() { return [0, 1].rotate(this.angle); },
+  down() { return [0, -1].rotate(this.angle); },
+  right() { return [1, 0].rotate(this.angle); },
+  left() { return [-1, 0].rotate(this.angle); },
 
   make_objs(objs) {
     for (var prop in objs) {
@@ -659,7 +663,7 @@ var gameobject = {
       this.objects[o].obj_descend(fn);
   },
 }
-Object.mixin(gameobject,gameobject_impl);
+Object.mixin(gameobject, gameobject_impl);
 
 gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
@@ -737,14 +741,13 @@ ur {
 
 /* Apply an ur u to an entity e */
 /* u is given as */
-function apply_ur(u, e)
-{
+function apply_ur(u, e) {
   console.log(`applying ur ${u}`);
   if (typeof u !== 'string') {
     console.warn("Must give u as a string.");
     return;
   }
-  
+
   var urs = u.split('.');
   var config = {};
   var topur = ur;
@@ -759,7 +762,7 @@ function apply_ur(u, e)
       var script = Resources.replstrs(topur.text);
       eval_env(script, e, topur.text);
     }
-      
+
     if (topur.data) {
       var jss = Resources.replstrs(topur.data);
       Object.merge(config, json.decode(jss));
@@ -769,28 +772,27 @@ function apply_ur(u, e)
   Object.merge(e, config);
 }
 
-function file2fqn(file)
-{
+function file2fqn(file) {
   var fqn = file.strip_ext();
   if (fqn.folder_same_name())
     fqn = fqn.up_path();
 
-  fqn = fqn.replace('/','.');
+  fqn = fqn.replace('/', '.');
   var topur;
-  if (topur = Object.access(ur,fqn)) return topur;
+  if (topur = Object.access(ur, fqn)) return topur;
 
   var fqnlast = fqn.split('.').last();
 
-  if (topur = Object.access(ur,fqn.tolast('.'))) {
+  if (topur = Object.access(ur, fqn.tolast('.'))) {
     topur[fqnlast] = {
       name: fqn
     };
     ur._list.push(fqn);
-    return Object.access(ur,fqn);
+    return Object.access(ur, fqn);
   }
-  
+
   fqn = fqnlast;
-  
+
   ur[fqn] = {
     name: fqn
   };

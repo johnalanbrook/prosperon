@@ -19,25 +19,22 @@ var component = {
     return (typeof component[c.toString()] === 'object');
   },
 
-  hides: ['gameobject', 'id'],
-  
   make(go) {
     var nc = Object.create(this);
     nc.gameobject = go;
-    Object.assign(nc, this._enghook(go.body));
+    Object.mixin(nc, this._enghook(go.body));
     assign_impl(nc,this.impl);
-    Object.hide(nc, ...this.hides);
+    Object.hide(nc, ['gameobject', 'id']);
     nc.post();
     return nc;
   },
   
   kill() { console.info("Kill not created for this component yet"); },
-  sync() {},
+  sync(){},
   post(){},
-  gui() { },
-  gizmo() { },
+  gui(){},
+  gizmo(){},
   
-  prepare_center() {},
   finish_center() {},
   extend(spec) { return Object.copy(this, spec); },
 };
@@ -68,126 +65,95 @@ var assign_impl = function(obj, impl)
     obj[key] = tmp[key];
 }
 
-component.sprite = Object.copy(component, {
-  pos:[0,0],
-  color:[1,1,1,1],
-  layer:0,
-  enabled:true,
-  path: "",
-  rect: {s0:0, s1: 1, t0: 0, t1: 1},  
-  toString() { return "sprite"; },
-  _enghook: make_sprite,
-});
+function json_from_whitelist(whitelist)
+{
+  return function() {
+    var o = {};
+    for (var p of whitelist)
+      o[p] = this[p];
+    return o;
+  } 
+}
 
-component.sprite.mode = {
-  simple: 0,
-  tile: 1
-};
-
-component.sprite.impl = {
-  toJSON() {
-    var j = {};
-    Object.keys(this).forEach(k => j[k] = this[k]);
-    delete j.rect;
-    return j;
+Object.mixin(cmd(268,true), {
+  toJSON:json_from_whitelist([
+    "path",
+    "pos",
+    "scale",
+    "angle",
+    "color",
+    "emissive",
+    "parallax",
+    "frame"
+  ]),
+  anim:{},
+  playing: 0,
+  play(str) {
+    var sp = this;
+    str ??= 0;
+    var playing = this.anim[str];
+    if (!playing) return; //TODO: ERROR
+    var f = 0;
+    
+    function advance() {
+      sp.path = playing.path;
+      sp.frame = playing.frames[f].rect;
+      f = (f+1)%playing.frames.length;
+      if (f === 0)
+        sp.anim_done?.();
+      sp.gameobject?.delay(advance, playing.frames[f].time);
+    }
+    advance();
   },
-
-  set path(x) {
-    if (this.cancel) {
-      this.cancel();
-      this.cancel = undefined;
-    }
-
-    if (!Resources.is_animation(x)) {
-      this.rect = component.sprite.rect;
-      cmd(12,this.id,x,this.rect);
-    }
-    else {
-      this.anims = SpriteAnim.make(x);
-      Object.hide(this, 'anims');
-      var anim = this.anims[0];
-      this.rect = anim.frames[0].rect;
-      cmd(12,this.id,anim.path,this.rect);
-    }
+  stop() {},
+  set path(p) {
+    p = Resources.find_image(p);
+    if (!p) return;
+    if (p === this.path) return;
+    this.tex = cmd(269,p);
+    var anim = SpriteAnim.make(p);
+    if (!anim) return;
+    this.anim = anim;
+    this.play();
   },
   get path() {
-    var s = cmd(116,this.id);
-    if (s === "icons/no_tex.gif") return undefined;
-    return s;
+    return this.tex.path();
   },
-
-  play(name) {
-    if (!this.anims) return;
-    if (this.cancel) this.cancel();
-    name ??= 0;
-    var frame = 0;
-    var anim = this.anims[name];
-    var advance = function() {
-      frame = (frame+1)%anim.frames.length;
-      this.rect = anim.frames[frame].rect;
-      cmd(12,this.id,anim.path,this.rect);
-      this.cancel = this.gameobject.delay(advance.bind(this), anim.frames[frame].time);
-    }
-    advance.call(this);
-  },
-  
-  stop() {
-    if (!this.cancel) return;
-    this.cancel();
-    this.cancel = undefined;
-  },
-  setframe(f) {
-    if (!this.anims) return;
-    this.stop();
-    var anim = this.anims[0];
-    this.rect = anim.frames[f].rect;
-    cmd(12,this.id,anim.path,this.rect);
-  },
-    
   toString() { return "sprite"; },
-  hide() { this.enabled = false; },
-  show() { this.enabled = true; },
-  asset(str) { this.path = str; },
-  get enabled() { return cmd(114,this.id); },
-  set enabled(x) { cmd(20,this.id,x); },
-  set color(x) { cmd(96,this.id,x); },
-  get color() {return cmd(148,this.id);},
-  get pos() { return cmd(111, this.id); },
-  set pos(x) { cmd(37,this.id,x); },
-  get parallax() { return cmd(232, this.id); },
-  set parallax(x) { cmd(233,this.id,x); },
-  get angle() { return cmd(217,this.id); },
-  set angle(x) { cmd(218,this.id,x); },
-  get scale() { return cmd(215, this.id); },
-  set scale(x) { cmd(216, this.id, x); },
+  move(d) { this.pos = this.pos.add(d); },
   grow(x) {
     this.scale = this.scale.scale(x);
     this.pos = this.pos.scale(x);
   },
-  get drawmode() { return cmd(220,this.id); },
-  set drawmode(x) { cmd(219,this.id,x); },
-  emissive(x) { cmd(170, this.id, x); },
+  
   sync() { },
-  pickm() { return this; },
-  move(d) { this.pos = this.pos.add(d); },
-
+  pick() { return this; },
   boundingbox() {
     var dim = this.dimensions();
     dim = dim.scale(this.gameobject.gscale());
     var realpos = dim.scale(0.5).add(this.pos);
     return bbox.fromcwh(realpos,dim);
   },
-
-  kill() { cmd(9,this.id); },
+  
   dimensions() {
-    var dim = Resources.texture.dimensions(this.path);
-    dim.x *= (this.rect.s1-this.rect.s0);
-    dim.y *= (this.rect.t1-this.rect.t0);
+    var dim = [this.tex.width(), this.tex.height()];
+    dim.x *= this.frame.w;
+    dim.y *= this.frame.h;
     return dim;
   },
   width() { return this.dimensions().x; },
   height() { return this.dimensions().y; },
-};
+});
+
+cmd(268,true).make = function(go)
+{
+  var sp = cmd(268);
+  sp.go = go.body;
+  sp.gameobject = go;
+  return sp;
+}
+
+component.sprite = cmd(268,true);
 
 Object.freeze(sprite);
 
@@ -195,6 +161,7 @@ component.model = Object.copy(component, {
   path:"",
   _enghook: make_model,
 });
+
 component.model.impl = {
   set path(x) { cmd(149, this.id, x); },
   draw() { cmd(150, this.id); },
@@ -245,10 +212,10 @@ var SpriteAnim = {
     for (var f = 0; f < frames; f++) {
       var frame = {};
       frame.rect = {
-	s0: 0,
-	s1: 1,
-	t0: yslice*f,
-	t1: yslice*(f+1)
+    	  x: 0,
+	      w: 1,
+	      y: yslice*f,
+	      h: yslice
       };
       frame.time = 0.05;
       anim.frames.push(frame);
@@ -290,10 +257,10 @@ var SpriteAnim = {
       var f = ase_frame.frame;
       var frame = {};
       frame.rect = {
-	s0: f.x/dim.w,
-	s1: (f.x+f.w)/dim.w,
-	t0: f.y/dim.h,
-	t1: (f.y+f.h)/dim.h
+	      x: f.x/dim.w,
+	      w: f.w/dim.w,
+	      y: f.y/dim.h,
+	      h: f.h/dim.h
       };
       frame.time = ase_frame.duration / 1000;
       anim.frames.push(frame);
@@ -365,6 +332,10 @@ collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
 component.polygon2d = Object.copy(collider2d, {
+  toJSON:json_from_whitelist([
+    'points',
+    'sensor'
+  ]),
   toString() { return "polygon2d"; },
   flipx: false,
   flipy: false,
@@ -463,6 +434,13 @@ polygon2d.inputs['C-b'] = function() {
 polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
 
 component.edge2d = Object.copy(collider2d, {
+  toJSON:json_from_whitelist([
+    'sensor',
+    'thickness',
+    'points',
+    'hollow',
+    'hollowt',
+  ]),
   dimensions:2,
   thickness:0,
   /* if type === -1, point to point */
@@ -821,6 +799,11 @@ component.circle2d = Object.copy(collider2d, {
 });
 
 component.circle2d.impl = Object.mix({
+  toJSON:json_from_whitelist([
+    "pos",
+    "radius",
+  ]),
+
   set radius(x) { cmd_circle2d(0,this.id,x); },
   get radius() { return cmd_circle2d(2,this.id); },
 
@@ -840,4 +823,4 @@ component.circle2d.impl = Object.mix({
   
 }, collider2d.impl);
 
-return {component};
+return {component, SpriteAnim};

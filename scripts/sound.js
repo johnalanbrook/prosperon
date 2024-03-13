@@ -1,10 +1,14 @@
 var audio = {};
+
+var sound_pref = ['wav', 'flac', 'mp3', 'qoa'];
+
 audio.sound = {
   bus: {},
   samplerate() { return cmd(198); },
   sounds: [], /* array of loaded sound files */
   play(file, bus) {
-    if (!io.exists(file)) {
+    file = Resources.find_sound(file);
+    if (!file) {
       console.error(`Cannot play sound ${file}: does not exist.`);
       return;
     }

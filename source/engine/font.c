@@ -180,11 +180,11 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   for (unsigned char c = 32; c < 127; c++) {
     stbtt_packedchar glyph = glyphs[c - 32];
 
-    struct glrect r;
-    r.s0 = (glyph.x0) / (float)packsize;
-    r.s1 = (glyph.x1) / (float)packsize;
-    r.t0 = (glyph.y0) / (float)packsize;
-    r.t1 = (glyph.y1) / (float)packsize;
+    struct rect r;
+    r.x = (glyph.x0) / (float)packsize;
+    r.w = (glyph.x1-glyph.x0) / (float)packsize;
+    r.y = (glyph.y0) / (float)packsize;
+    r.h = (glyph.y1-glyph.y0) / (float)packsize;
 
     stbtt_GetCodepointHMetrics(&fontinfo, c, &newfont->Characters[c].Advance, &newfont->Characters[c].leftbearing);
     newfont->Characters[c].leftbearing *= newfont->emscale;
@@ -260,10 +260,10 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;
 
-  vert.uv.u = c.rect.s0*USHRT_MAX;
-  vert.uv.v = c.rect.t0*USHRT_MAX;
-  vert.st.u = (c.rect.s1-c.rect.s0)*USHRT_MAX;
-  vert.st.v = (c.rect.t1-c.rect.t0)*USHRT_MAX;
+  vert.uv.u = c.rect.x*USHRT_MAX;
+  vert.uv.v = c.rect.y*USHRT_MAX;
+  vert.st.u = c.rect.w*USHRT_MAX;
+  vert.st.v = c.rect.h*USHRT_MAX;
   vert.color = color;
 
   memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));

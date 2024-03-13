@@ -1,25 +1,17 @@
 #include "sprite.h"
 
-#include "datastream.h"
-#include "font.h"
 #include "gameobject.h"
 #include "log.h"
 #include "render.h"
 #include "stb_ds.h"
 #include "texture.h"
 #include "timer.h"
-#include <string.h>
-#include <ctype.h>
-#include <limits.h>
 #include "HandmadeMath.h"
-#include "freelist.h"
 
 #include "sprite.sglsl.h"
 #include "9slice.sglsl.h"
 
-struct TextureOptions TEX_SPRITE = {1};
-
-static struct sprite *sprites = NULL;
+static sprite **sprites = NULL;
 
 static sg_shader shader_sprite;
 static sg_pipeline pip_sprite;
@@ -51,89 +43,70 @@ struct slice9_vert {
   struct rgba color;
 };
 
-int make_sprite(gameobject *go) {
-  struct sprite sprite = {
-    .t = t2d_unit,
-      .color = color_white,
-      .emissive = {0,0,0,0},
-      .tex = texture_pullfromfile(NULL),
-      .go = go,
-      .next = -1,
-      .enabled = 1,
-      .drawmode = DRAW_SIMPLE,
-      .parallax = 1
-    };
-  int id;
-  freelist_grab(id, sprites);
-  sprites[id] = sprite;
-  return id;
-}
-
-void sprite_delete(int id) {
-  struct sprite *sp = id2sprite(id);
+sprite *sprite_make()
+{
+  sprite *sp = calloc(sizeof(*sp), 1);
+  sp->pos = (HMM_Vec2){0,0};
+  sp->scale = (HMM_Vec2){1,1};
+  sp->angle = 0;
+  sp->color = color_white;
+  sp->emissive = color_clear;
   sp->go = NULL;
-  sp->enabled = 0;
-  freelist_kill(sprites,id);
+  sp->tex = texture_from_file(NULL);
+  sp->frame = ST_UNIT;
+  sp->drawmode = DRAW_SIMPLE;
+  sp->enabled = 1;
+  sp->parallax = 1;
+  
+  arrpush(sprites,sp);
+  
+  return sp;
 }
 
-void sprite_enabled(int id, int e) { sprites[id].enabled = e; }
-
-struct sprite *id2sprite(int id) {
-  if (id < 0) return NULL;
-  return &sprites[id];
+void sprite_free(sprite *sprite)
+{
+  YughWarn("Freeing sprite %p.", sprite); 
+  
+  free(sprite);
+  for (int i = arrlen(sprites)-1; i >= 0; i--)
+    if (sprites[i] == sprite) {
+      arrdelswap(sprites,i);
+      return;
+    }
 }
 
 static int sprite_count = 0;
 
 void sprite_flush() { sprite_count = 0; }
 
-int sprite_sort(int *a, int *b)
+int sprite_sort(sprite **sa, sprite **sb)
 {
-  struct gameobject *goa = sprites[*a].go;
-  struct gameobject *gob = sprites[*b].go;
+  sprite *a = *sa;
+  sprite *b = *sb;
+  struct gameobject *goa = a->go;
+  struct gameobject *gob= b->go;
+  if (!goa && !gob) return 0;
+  if (!goa) return -1;
+  if (!gob) return 1;
   if (goa->drawlayer == gob->drawlayer) return 0;
   if (goa->drawlayer > gob->drawlayer) return 1;
   return -1;
 }
 
 void sprite_draw_all() {
+  if (arrlen(sprites) == 0) return;
+  
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
-  int *layers = NULL;
-  if (layers) arrfree(layers);
 
-  for (int i = 0; i < freelist_len(sprites); i++)
-    if (sprites[i].next == -1 && sprites[i].go != NULL && sprites[i].enabled) 
-      arrpush(layers, i);
+  qsort(sprites, arrlen(sprites), sizeof(*sprites), sprite_sort);
 
-  if (!layers || arrlen(layers) == 0) return;
-  if (arrlen(layers) > 1)
-    qsort(layers, arrlen(layers), sizeof(*layers), sprite_sort);
-
-  for (int i = 0; i < arrlen(layers); i++)
-    sprite_draw(&sprites[layers[i]]);
-
-  arrfree(layers);
-}
-
-
-void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect frame) {
-  if (!sprite) {
-    YughWarn("NO SPRITE!");
-    return;
-  }
-  sprite->tex = texture_pullfromfile(path);
-  sprite_setframe(sprite, &frame);
-}
-
-void sprite_settex(struct sprite *sprite, struct Texture *tex) {
-  sprite->tex = tex;
-  sprite_setframe(sprite, &ST_UNIT);
+  for (int i = 0; i < arrlen(sprites); i++)
+    sprite_draw(sprites[i]);
 }
 
 void sprite_initialize() {
-  freelist_size(sprites, 500);
-  
+
   shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
 
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
@@ -179,15 +152,15 @@ void sprite_initialize() {
   });
 }
 
-void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive, float parallax) {
+void tex_draw(struct texture *tex, HMM_Mat3 m, struct rect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive, float parallax) {
   struct sprite_vert verts[4];
-  float w = tex->width*st_s_w(r);
-  float h = tex->height*st_s_h(r);
+  float w = tex->width*r.w;
+  float h = tex->height*r.h;
   
   HMM_Vec2 sposes[4] = {
-    {0.0,0.0},
-    {w,0.0},
-    {0.0,h},
+    {0,0},
+    {w,0},
+    {0,h},
     {w,h}
   };
 
@@ -198,18 +171,18 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
   }
 
   if (wrap) {
-    r.s1 *= wrapscale.x;
-    r.t1 *= wrapscale.y;
+    r.w *= wrapscale.x;
+    r.h *= wrapscale.y;
   }
 
-  verts[0].uv.X = r.s0;
-  verts[0].uv.Y = r.t1;
-  verts[1].uv.X = r.s1;
-  verts[1].uv.Y = r.t1;
-  verts[2].uv.X = r.s0;
-  verts[2].uv.Y = r.t0;
-  verts[3].uv.X = r.s1;
-  verts[3].uv.Y = r.t0;
+  verts[0].uv.X = r.x;
+  verts[0].uv.Y = r.y+r.h;
+  verts[1].uv.X = r.x+r.w;
+  verts[1].uv.Y = r.y+r.h;
+  verts[2].uv.X = r.x;
+  verts[2].uv.Y = r.y;
+  verts[3].uv.X = r.x+r.w;
+  verts[3].uv.Y = r.y;
 
   bind_sprite.fs.images[0] = tex->id;
 
@@ -220,64 +193,31 @@ void tex_draw(struct Texture *tex, HMM_Mat3 m, struct glrect r, struct rgba colo
   sprite_count++;
 }
 
+transform2d sprite2t(sprite *s)
+{
+  return (transform2d){
+    .pos = s->pos,
+    .scale = s->scale,
+    .angle = s->angle
+  };
+}
+
 void sprite_draw(struct sprite *sprite) {
   if (!sprite->tex) return;
-  transform2d t = go2t(sprite->go);
+  transform2d t;
+  if (!sprite->go) t = t2d_unit;
+  else t = go2t(sprite->go);
+  
   t.pos.x += (cam_pos().x - (cam_pos().x/sprite->parallax));
   t.pos.y += (cam_pos().y - (cam_pos().y/sprite->parallax));
   HMM_Mat3 m = transform2d2mat(t);
-  HMM_Mat3 sm = transform2d2mat(sprite->t);
-
-  tex_draw(sprite->tex, HMM_MulM3(m, sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->t.scale, sprite->emissive, sprite->parallax);
+  HMM_Mat3 sm = transform2d2mat(sprite2t(sprite));
+  tex_draw(sprite->tex, HMM_MulM3(m,sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->scale, sprite->emissive, sprite->parallax);
 }
 
 void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
-  struct Texture *tex = texture_pullfromfile(img);
+  struct texture *tex = texture_from_file(img);
   tex_draw(tex, transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
-}
-
-void slice9_draw(const char *img, HMM_Vec2 pos, HMM_Vec2 dimensions, struct rgba color)
-{
-  sg_apply_pipeline(slice9_pipe);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
-  struct Texture *tex = texture_pullfromfile(img);
-
-  struct glrect r = ST_UNIT;
-
-  struct slice9_vert verts[4];
-  
-  HMM_Vec2 sposes[4] = {
-    {0.0,0.0},
-    {1.0,0.0},
-    {0.0,1.0},
-    {1.0,1.0},
-  };
-
-  for (int i = 0; i < 4; i++) {
-    verts[i].pos = HMM_MulV2(sposes[i], dimensions);
-    //verts[i].uv =z sposes[i];
-    verts[i].color = color;
-  }
-
-  verts[0].uv.u = r.s0 * USHRT_MAX;
-  verts[0].uv.v = r.t1 * USHRT_MAX;
-  verts[1].uv.u = r.s1 * USHRT_MAX;
-  verts[1].uv.v = r.t1 * USHRT_MAX;
-  verts[2].uv.u = r.s0 * USHRT_MAX;
-  verts[2].uv.v = r.t0 * USHRT_MAX;
-  verts[3].uv.u = r.s1 * USHRT_MAX;
-  verts[3].uv.v = r.t0 * USHRT_MAX;
-
-  bind_sprite.fs.images[0] = tex->id;
-  sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
-  sg_apply_bindings(&bind_sprite);
-
-  sg_draw(sprite_count * 4, 4, 1);
-  sprite_count++;
-}
-
-void sprite_setframe(struct sprite *sprite, struct glrect *frame) {
-  sprite->frame = *frame;
 }

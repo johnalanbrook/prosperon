@@ -2,7 +2,7 @@
 #define FREELIST_H
 
 /* Given a pointer to a struct, create a free list
-   Struct must have a 'next' field
+   Struct must have an 'unsigned int next' field
 */
 
 struct freelistheader
@@ -32,7 +32,7 @@ static inline unsigned int freelist_check(struct freelistheader *h, void *data, 
 #define freelist_size(p,l) do{p = freelist_make(sizeof(*p),l); for(int i = 0; i < l; i++) { p[i].next = i+1; }}while(0)
 #define freelist_len(p) (freelist_header(p)->len)
 #define freelist_first(p) (freelist_header(p)->first)
-#define freelist_grab(i,p) do{i=freelist_header(p)->first; freelist_header(p)->first = p[i].next; p[i].next = -1;freelist_header(p)->count++;}while(0)
+#define freelist_grab(p,i) do{i=freelist_header(p)->first; freelist_header(p)->first = p[i].next; p[i].next = -1;freelist_header(p)->count++;}while(0)
 #define freelist_kill(p,i) do{p[i].next = freelist_first(p);freelist_first(p)=i;freelist_header(p)->count--;}while(0)
 #define freelist_free(p) (free(freelist_header(p)))
 #define freelist_count(p) (freelist_header(p)->count)

@@ -16,7 +16,7 @@ struct window {
   int focus;
   int shown;
 };
-struct Texture;
+struct texture;
 extern struct window mainwin;
 
 void window_resize(int width, int height);
@@ -29,7 +29,7 @@ void window_togglefullscreen(struct window *w);
 void window_unfullscreen(struct window *w);
 
 void window_set_icon(const char *png);
-void window_seticon(struct window *w, struct Texture *icon);
+void window_seticon(struct window *w, struct texture *icon);
 
 void window_render(struct window *w);
 

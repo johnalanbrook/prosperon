@@ -21,6 +21,7 @@
 
 extern struct rgba color_white;
 extern struct rgba color_black;
+extern struct rgba color_clear;
 
 extern int renderMode;
 
@@ -105,16 +106,9 @@ struct boundingbox {
 };
 
 struct rect {
-  float h, w, x, y;
+  float x,y,w,h;
 };
-
-/* Normalized S,T coordinates for rendering */
-struct glrect {
-    float s0;
-    float s1;
-    float t0;
-    float t1;
-};
+typedef struct rect rect;
 
 struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh);
 float *rgba2floats(float *r, struct rgba c);

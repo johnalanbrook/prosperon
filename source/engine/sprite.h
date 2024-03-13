@@ -11,29 +11,29 @@
 #define DRAW_TILE 1
 
 struct sprite {
-  transform2d t;
+  HMM_Vec2 pos;
+  HMM_Vec2 scale;
+  float angle;
   struct rgba color;
   struct rgba emissive;
   gameobject *go;
-  struct Texture *tex;
-  struct glrect frame;
+  texture *tex;
+  struct rect frame;
   int enabled;
-  int next;
   int drawmode;
   float parallax;
+  unsigned int next;
 };
 
+typedef struct sprite sprite;
+
+sprite *sprite_make();
 int make_sprite(gameobject *go);
-struct sprite *id2sprite(int id);
+void sprite_free(sprite *sprite);
 void sprite_delete(int id);
-void sprite_enabled(int id, int e);
-void sprite_loadtex(struct sprite *sprite, const char *path, struct glrect rect);
-void sprite_settex(struct sprite *sprite, struct Texture *tex);
-void sprite_setframe(struct sprite *sprite, struct glrect *frame);
 void sprite_initialize();
 void sprite_draw(struct sprite *sprite);
 void sprite_draw_all();
-unsigned int incrementAnimFrame(unsigned int interval, struct sprite *sprite);
 void sprite_flush();
 
 void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);

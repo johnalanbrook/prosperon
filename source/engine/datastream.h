@@ -19,11 +19,11 @@ struct datastream {
   soundbyte *ring;
 };
 
-struct Texture;
+struct texture;
 
 void MakeDatastream();
 struct datastream *ds_openvideo(const char *path);
-struct Texture *ds_maketexture(struct datastream *);
+struct texture *ds_maketexture(struct datastream *);
 void ds_advance(struct datastream *ds, double);
 void ds_seek(struct datastream *ds, double);
 void ds_advanceframes(struct datastream *ds, int frames);

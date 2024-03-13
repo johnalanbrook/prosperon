@@ -19,7 +19,7 @@ struct window mainwin;
 
 static struct window *windows = NULL;
 
-struct Texture *icon = NULL;
+struct texture *icon = NULL;
 
 void window_resize(int width, int height)
 {
@@ -52,7 +52,7 @@ void window_suspended(int s)
 }
 
 void window_set_icon(const char *png) {
-  icon = texture_pullfromfile(png);
+  icon = texture_from_file(png);
   window_seticon(&mainwin, icon);
 }
 
@@ -71,7 +71,7 @@ void window_togglefullscreen(struct window *w) {
   mainwin.fullscreen = sapp_is_fullscreen();
 }
 
-void window_seticon(struct window *w, struct Texture *tex)
+void window_seticon(struct window *w, struct texture *tex)
 {
   struct isize {
     int size;

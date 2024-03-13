@@ -41,13 +41,26 @@ os.prefpath = function() {
 var projectfile = ".prosperon/project.json";
 
 var Resources = {};
-Resources.images = ["png", "jpg", "jpeg", "gif"];
-Resources.sounds =  ["wav", "mp3", "flac", "qoa"];
+Resources.images = ["png", "gif", "jpg", "jpeg"];
+Resources.sounds =  ["wav", 'flac', 'mp3', "qoa"];
 Resources.scripts = "js";
 Resources.is_image = function(path) {
   var ext = path.ext();
   return Resources.images.any(x => x === ext);
 }
+
+function find_ext(file, ext)
+{
+  if (io.exists(file)) return file;
+  for (var e of ext) {
+    var nf = `${file}.${e}`;
+    if (io.exists(nf)) return nf;
+  }
+  return;
+}
+
+Resources.find_image = function(file) { return find_ext(file,Resources.images); }
+Resources.find_sound = function(file) { return find_ext(file,Resources.sounds); }
 
 Resources.is_sound = function(path) {
   var ext = path.ext();

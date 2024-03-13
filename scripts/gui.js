@@ -40,6 +40,27 @@ var GUI = {
     gui_img(path,pos, [1.0,1.0], 0.0, false, [0.0,0.0], Color.white);
     return bbox.fromcwh([0,0], wh);
   },
+  
+  newmg(img) {
+    var def = {
+      path: "",
+      pos: [0,0],
+      size:[0,0],
+      frame: {
+        x: 0,
+        y: 0,
+        w: 1,
+        h: 1
+      },
+      angle: 0,
+      anchor: [0,0],
+      color: Color.white,
+    }
+    for (var i in def)
+      img[i] ??= def[i];
+      
+    gui_newmg
+  },
 
   input_lmouse_pressed() {
     if (GUI.selected)

@@ -21,15 +21,15 @@
 #include "nanosvgrast.h"
 #endif
 
-struct glrect ST_UNIT = {0.f, 1.f, 0.f, 1.f};
+struct rect ST_UNIT = {0.f, 0.f, 1.f, 1.f};
 
 static struct {
   char *key;
-  struct Texture *value;
+  struct texture *value;
 } *texhash = NULL;
 
-struct Texture *tex_default;
-struct Texture *texture_notex() { return texture_pullfromfile("icons/no_tex.gif"); }
+struct texture *tex_default;
+struct texture *texture_notex() { return texture_from_file("icons/no_tex.gif"); }
 
 unsigned int next_pow2(unsigned int v)
 {
@@ -72,18 +72,18 @@ int mip_wh(int w, int h, int *mw, int *mh, int lvl)
 
 int gif_nframes(const char *path)
 {
-  struct Texture *t = texture_pullfromfile(path);
+  struct texture *t = texture_from_file(path);
   return t->frames;
 }
 
 int *gif_delays(const char *path)
 {
-  struct Texture *t = texture_pullfromfile(path);
+  struct texture *t = texture_from_file(path);
   return t->delays;
 }
 
 /* If an empty string or null is put for path, loads default texture */
-struct Texture *texture_pullfromfile(const char *path) {
+struct texture *texture_from_file(const char *path) {
   if (!path) return texture_notex();
   if (shlen(texhash) == 0) sh_new_arena(texhash);
 
@@ -98,8 +98,7 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   unsigned char *data;
 
-  struct Texture *tex = calloc(1, sizeof(*tex));
-  tex->opts.sprite = 1;
+  struct texture *tex = calloc(1, sizeof(*tex));
   
   int n;
 
@@ -152,12 +151,7 @@ struct Texture *texture_pullfromfile(const char *path) {
   
   tex->data = data;
 
-  int filter;
-  if (tex->opts.sprite) {
-      filter = SG_FILTER_NEAREST;
-  } else {
-      filter = SG_FILTER_LINEAR;
-  }
+  int filter = SG_FILTER_NEAREST;
   
   sg_image_data sg_img_data;
   
@@ -199,13 +193,18 @@ struct Texture *texture_pullfromfile(const char *path) {
 
   for (int i = 1; i < mips; i++)
     free(mipdata[i]);
-
+    
   return tex;
 }
 
 void texture_sync(const char *path) { YughWarn("Need to implement texture sync."); }
 
-char *tex_get_path(struct Texture *tex) {
+void texture_free(texture *tex)
+{
+  
+}
+
+char *tex_get_path(struct texture *tex) {
   for (int i = 0; i < shlen(texhash); i++) {
     if (tex == texhash[i].value) {
       YughInfo("Found key %s", texhash[i].key);
@@ -216,10 +215,9 @@ char *tex_get_path(struct Texture *tex) {
   return "";
 }
 
-struct Texture *texture_fromdata(void *raw, long size)
+struct texture *texture_fromdata(void *raw, long size)
 {
-  struct Texture *tex = calloc(1, sizeof(*tex));
-  tex->opts.sprite = 1;
+  struct texture *tex = calloc(1, sizeof(*tex));
 
   int n;
   void *data = stbi_load_from_memory(raw, size, &tex->width, &tex->height, &n, 4);
@@ -234,12 +232,7 @@ struct Texture *texture_fromdata(void *raw, long size)
   
   tex->data = data;
 
-  int filter;
-  if (tex->opts.sprite) {
-      filter = SG_FILTER_NEAREST;
-  } else {
-      filter = SG_FILTER_LINEAR;
-  }
+  int filter = SG_FILTER_NEAREST;
   
   sg_image_data sg_img_data;
   
@@ -283,19 +276,13 @@ struct Texture *texture_fromdata(void *raw, long size)
   return tex;
 }
 
-struct Texture *texture_loadfromfile(const char *path) { return texture_pullfromfile(path); }
-
-HMM_Vec2 tex_get_dimensions(struct Texture *tex) {
+HMM_Vec2 tex_get_dimensions(struct texture *tex) {
   if (!tex) return (HMM_Vec2){0,0};
   HMM_Vec2 d;
   d.x = tex->width;
   d.y = tex->height;
   return d;
 }
-
-float st_s_w(struct glrect st) { return (st.s1 - st.s0); }
-
-float st_s_h(struct glrect st) { return (st.t1 - st.t0); }
 
 static double fade (double t) { return t*t*t*(t*(t*6-15)+10); }
 double grad (int hash, double x, double y, double z)
