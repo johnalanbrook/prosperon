@@ -4,10 +4,11 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define LOG_INFO 0
-#define LOG_WARN 1
-#define LOG_ERROR 2
-#define LOG_CRITICAL 3
+#define LOG_SPAM 0
+#define LOG_DEBUG 1
+#define LOG_INFO 2
+#define LOG_WARN 3
+#define LOG_ERROR 4
 
 #define LOG_ENGINE 0
 #define LOG_SCRIPT 1

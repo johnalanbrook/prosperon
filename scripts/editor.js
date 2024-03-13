@@ -3,8 +3,7 @@
   selectable
 */
 
-global.mixin("config.js");
-Window.aspect(Window.mode.full);
+Window.mode = Window.modetypes.full;
 Game.loadurs();
 
 player[0].control(Debug);
@@ -2074,7 +2073,7 @@ if (io.exists("editor.config"))
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
 Game.stop();
-Game.editor_mode(true);
+Window.editor = true;
 Debug.draw_phys(true);
 
 return {

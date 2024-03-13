@@ -229,7 +229,7 @@ CDB_O := $(patsubst %.c, %.o, $(CDB_C))
 $(CDB)/libcdb.a:
 	rm -f $(CDB)/libcdb.a
 	make -C $(CDB) libcdb.a 
-	
+
 tools/libcdb.a: $(CDB)/libcdb.a
 	cp $(CDB)/libcdb.a tools
 

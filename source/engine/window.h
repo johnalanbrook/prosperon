@@ -1,11 +1,15 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include <HandmadeMath.h>
+
 struct window {
   int id;
-  float width, height; // The actual width and height of the window
-  float rwidth, rheight; // The desired rendering resolution, what the assets are at
-  float pwidth, pheight; // The calculated width and height passed to rendering
+  HMM_Vec2 size; // Actual width and height of the window
+  HMM_Vec2 rendersize; // The desired rendering resolution, what the assets are at
+  HMM_Vec2 psize;
+  float left;
+  float top;
   double dpi;
   int render;
   int mouseFocus;
@@ -15,7 +19,14 @@ struct window {
   int iconified;
   int focus;
   int shown;
+  int mode;
+  int editor; // true if only should redraw on input
+  float aspect;
+  float raspect;
+  char *title;
+  int start;
 };
+typedef struct window window;
 struct texture;
 extern struct window mainwin;
 
@@ -24,10 +35,11 @@ void window_focused(int focus);
 void window_iconified(int s);
 void window_suspended(int s);
 
-void window_makefullscreen(struct window *w);
-void window_togglefullscreen(struct window *w);
-void window_unfullscreen(struct window *w);
 
+void window_apply(window *w);
+void window_free(window *w);
+
+void window_setfullscreen(window *w, int f);
 void window_set_icon(const char *png);
 void window_seticon(struct window *w, struct texture *icon);
 

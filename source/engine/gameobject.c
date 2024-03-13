@@ -130,7 +130,8 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
     return;
   }
 
-  cpFloat d = isfinite(go->damping) ? go->damping : damping;
+//  cpFloat d = isfinite(go->damping) ? go->damping : damping;
+  cpFloat d = damping;
   
   cpBodyUpdateVelocity(body,g.cp,d,dt*go->timescale);
 

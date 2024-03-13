@@ -553,8 +553,8 @@ void draw_grid(float width, float span, struct rgba color)
   float ubo[4];
   ubo[0] = offset.x;
   ubo[1] = offset.y;
-  ubo[2] = mainwin.width;
-  ubo[3] = mainwin.height;
+  ubo[2] = mainwin.size.x;
+  ubo[3] = mainwin.size.y;
 
   sg_apply_pipeline(grid_pipe);
   sg_apply_bindings(&grid_bind);

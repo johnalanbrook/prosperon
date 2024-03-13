@@ -13,12 +13,7 @@
 
 int logLevel = 0;
 
-#define LOG_INFO 0
-#define LOG_WARN 1
-#define LOG_ERROR 2
-#define LOG_CRIT 3
-
-char *logstr[] = { "info", "warn", "error", "critical" };
+char *logstr[] = { "spam", "debug", "info", "warn", "error"};
 char *catstr[] = {"engine", "script", "render"};
 
 FILE *logfile = NULL;

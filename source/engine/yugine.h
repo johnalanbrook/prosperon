@@ -14,8 +14,6 @@ void set_timescale(float val);
 void print_stacktrace();
 void engine_start(JSValue fn); /* fn runs after the engine starts */
 
-void app_name(const char *name);
-
 int frame_fps();
 double get_timescale();
 void quit();
@@ -24,5 +22,4 @@ double apptime();
 extern double renderMS;
 extern double physMS;
 extern double updateMS;
-extern int editor_mode;
 #endif

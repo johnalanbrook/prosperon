@@ -142,24 +142,25 @@ var console = {
 
     yughlog(lvl, lg, file, line);
   },
+  spam(msg) {
+    this.print(msg,0);
+  },
+
+  debug(msg) {
+    this.print(msg,1);
+  },
   
   info(msg) {
-    this.print(msg, 0);
+    this.print(msg, 2);
   },
 
   warn(msg) {
-    this.print(msg, 1);
+    this.print(msg, 3);
   },
 
   error(msg) {
-    this.print(msg, 2);
+    this.print(msg, 4);
     this.stack(1);
-  },
-
-  critical(msg) {
-    this.print(msg,3);
-    this.stack(1);
-    Game.quit();
   },
 
   write(msg) {
@@ -169,7 +170,6 @@ var console = {
     cmd(91,msg);
   },
 
-  log(msg) { console.say(time.text(time.now(), 'yyyy-m-dd hh:nn:ss') + "  " + msg); },
   say(msg) { console.write(msg + '\n'); },
   repl(msg) { cmd(142, msg + '\n'); },    
 
@@ -188,6 +188,8 @@ var console = {
     cmd(146);
   },
 };
+
+console.log = console.info;
 
 var say = function(msg) {
   console.say(msg);
@@ -377,10 +379,13 @@ Cmdline.register_order("play", function(argv) {
 
   var project = json.decode(io.slurp(projectfile));
   Game.title = project.title;
-  Window.aspect(Window.mode.expand);
+  Window.mode = Window.modetypes.expand;
   global.mixin("config.js");
-  if (project.title) Window.title(project.title);
+  if (project.title) Window.title = project.title;
 
+  if (Window.rendersize.equal([0,0])) Window.rendersize = Window.size;
+  console.info(`Starting game with window size ${Window.size} and render ${Window.rendersize}.`);
+  
   Game.engine_start(function() {
     global.mixin("scripts/sound.js");
     global.game = actor.spawn("game.js");

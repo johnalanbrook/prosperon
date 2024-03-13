@@ -59,8 +59,6 @@ void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, camera3d *camera);
 void capture_screen(int x, int y, int w, int h, const char *path);
 
-extern int aspect_mode;
-
 void debug_draw_phys(int draw);
 
 void set_cam_body(cpBody *body);

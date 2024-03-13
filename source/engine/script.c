@@ -207,7 +207,7 @@ JSValue script_runfile(const char *file)
   size_t len;
   char *script = slurp_text(file, &len);
   if (!script) return JS_UNDEFINED;
-
+  YughWarn("Eval %s.", file);
   JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAGS);
   js_print_exception(obj);
 

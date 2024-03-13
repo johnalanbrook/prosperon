@@ -250,8 +250,7 @@ static sg_trace_hooks hooks = {
 };
 
 void render_init() {
-  mainwin.width = sapp_width();
-  mainwin.height = sapp_height();
+  mainwin.size = (HMM_Vec2){sapp_width(), sapp_height()};
   sg_setup(&(sg_desc){
     .environment = sglue_environment(),
     .logger = { .func = sg_logging },
@@ -374,14 +373,14 @@ HMM_Vec2 world2screen(HMM_Vec2 pos)
 {
   pos = HMM_SubV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
   pos = HMM_ScaleV2(pos, 1.0/zoom);
-  pos = HMM_AddV2(pos, HMM_V2(mainwin.width/2.0, mainwin.height/2.0));
+  pos = HMM_AddV2(pos, HMM_ScaleV2(mainwin.size,0.5));
   return pos;
 }
 
 HMM_Vec2 screen2world(HMM_Vec2 pos)
 {
   pos = HMM_ScaleV2(pos, 1/mainwin.dpi);
-  pos = HMM_SubV2(pos, HMM_V2(mainwin.width/2.0, mainwin.height/2.0));
+  pos = HMM_SubV2(pos, HMM_ScaleV2(mainwin.size, 0.5));
   pos = HMM_ScaleV2(pos, zoom);
   pos = HMM_AddV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
   return pos;
@@ -399,43 +398,31 @@ HMM_Vec3 dirl_pos = {4, 100, 20};
 #define MODE_EXPAND 4
 #define MODE_FULL 5
 
-int aspect_mode = MODE_FULL;
-
 void full_2d_pass(struct window *window)
 {
-  float aspect = mainwin.width/mainwin.height;
-  float raspect = mainwin.rwidth/mainwin.rheight;
-  float pwidth = window->width*raspect/aspect;
-  float left = (window->width-pwidth)/2;
-  float pheight = window->height*aspect/raspect;
-  float top = (window->height-pheight)/2;
+  HMM_Vec2 usesize = window->rendersize;
 
-  float usewidth, useheight;
-  usewidth = window->rwidth;
-  useheight = window->rheight;
-
-  switch(aspect_mode) {
+  switch(window->mode) {
     case MODE_STRETCH:
-      sg_apply_viewportf(0,0,window->width,window->height,1);
+      sg_apply_viewportf(0,0,window->size.x,window->size.y,1);
       break;
     case MODE_WIDTH:
-      sg_apply_viewportf(0, top, window->width, pheight,1); // keep width
+      sg_apply_viewportf(0, window->top, window->size.x, window->psize.y,1); // keep width
       break;
     case MODE_HEIGHT:
-      sg_apply_viewportf(left,0,pwidth, window->height,1); // keep height
+      sg_apply_viewportf(window->left,0,window->psize.x, window->size.y,1); // keep height
       break;
     case MODE_KEEP:
-      sg_apply_viewportf(0,0,window->rwidth, window->rheight, 1); // no scaling
+      sg_apply_viewportf(0,0,window->rendersize.x, window->rendersize.y, 1); // no scaling
       break;
     case MODE_EXPAND:
-      if (aspect < raspect)
-        sg_apply_viewportf(0, top, window->width, pheight,1); // keep width
+      if (window->aspect < window->raspect)
+        sg_apply_viewportf(0, window->top, window->size.x, window->psize.y,1); // keep width
       else
-        sg_apply_viewportf(left,0,pwidth, window->height,1); // keep height
+        sg_apply_viewportf(window->left,0,window->psize.x, window->size.y,1); // keep height
       break;
     case MODE_FULL:
-      usewidth = window->width;
-      useheight = window->height;
+      usesize = window->size;
       break;
   }
 
@@ -443,12 +430,12 @@ void full_2d_pass(struct window *window)
   cpVect pos = cam_pos();
 
   projection = HMM_Orthographic_LH_NO(
-             pos.x - zoom * usewidth / 2,
-             pos.x + zoom * usewidth / 2,
-             pos.y - zoom * useheight / 2,
-             pos.y + zoom * useheight / 2, -10000.f, 10000.f);
+             pos.x - zoom * usesize.x / 2,
+             pos.x + zoom * usesize.x / 2,
+             pos.y - zoom * usesize.y / 2,
+             pos.y + zoom * usesize.y / 2, -10000.f, 10000.f);
 
-  hudproj = HMM_Orthographic_LH_ZO(0, usewidth, 0, useheight, -1.f, 1.f);
+  hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
   
   sprite_draw_all();
   model_draw_all();

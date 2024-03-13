@@ -3,7 +3,10 @@ globalThis.global = globalThis;
 
 function use(file)
 {
+
   if (use.files[file]) return use.files[file];
+  if (globalThis.console)
+    console.warn(`running ${file}`);
     
   var c = io.slurp(file);
   
@@ -17,6 +20,7 @@ use.files = {};
 function include(file,that)
 {
   if (!that) return;
+  if (globalThis.console) console.warn(`running ${file}`);
   var c = io.slurp(file);
   eval_env(c, that, file);
 }
@@ -25,7 +29,8 @@ function eval_env(script, env, file)
 {
   env ??= {};
   file ??= "SCRIPT";
-  script = `(function() { ${script} }).call(this);`;
+  if (globalThis.console) console.warn(`eval ${file}`);  
+  script = `(function() { ${script}; }).call(this);\n`;
   return cmd(123,script,env,file);
 }
 
@@ -120,7 +125,6 @@ global.Game = {
   pause() { sys_cmd(3); },
   stop() { Game.pause(); },
   step() { sys_cmd(4);},
-  editor_mode(m) { sys_cmd(10, m); },
   playing() { return sys_cmd(5); },
   paused() { return sys_cmd(6); },
   stepping() { return cmd(79); },
@@ -140,12 +144,6 @@ global.Game = {
 
     this.wait_fns = [];
   },
-
-  set width(w) { cmd(125, w); },
-  set height(h) { cmd(126, h); },
-  get width() { return cmd(48); },
-  get height() { return cmd(49); },
-  dimensions() { return [this.width,this.height]; },
 };
 
 Game.gc = function() { cmd(259); }
@@ -372,37 +370,16 @@ var Event = {
   },
 };
 
-// Window
-
-var Window = {
-  fullscreen(f) { cmd(145, f); },
-  dimensions() { return cmd(265); },
-  get width() { return this.dimensions().x; },
-  get height() { return this.dimensions().y; },
-  set width(x) { cmd(266, x); },
-  set height(x) { cmd(267,x); },
-  mode: {
-    stretch: 0, // stretch to fill window
-    keep: 1, // keep exact dimensions
-    width: 2, // keep width
-    height: 3, // keep height
-    expand: 4, // expand width or height
-    full: 5 // expand out beyond window
-  },
-  aspect(x) { cmd(264, x); },
-  title(str) { cmd(134, str); },
-  boundingbox() {
-    return {
-      t: Window.height,
-      b: 0,
-      r: Window.width,
-      l: 0
-    };
-  },
+Window.modetypes = { 
+  stretch: 0, // stretch to fill window
+  keep: 1, // keep exact dimensions
+  width: 2, // keep width
+  height: 3, // keep height
+  expand: 4, // expand width or height
+  full: 5 // expand out beyond window
 };
 
-Game.width = 1920;
-Game.height = 1080;
+Window.size = [640, 480];
 
 Window.screen2world = function(screenpos) {
   if (Game.camera)
@@ -465,4 +442,4 @@ Game.view_camera = function(cam)
   cmd(61, Game.camera.body);
 }
 
-Window.title(`Prosperon v${prosperon.version}`);
+Window.title = `Prosperon v${prosperon.version}`;

@@ -76,6 +76,7 @@ QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
 QJSCLASS(material)
 QJSCLASS(mesh)
+QJSCLASS(window)
 
 /* qjs class colliders and constraints */
 /* constraint works for all constraints - 2d or 3d */
@@ -752,13 +753,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     draw_grid(js2number(argv[1]), js2number(argv[2]), js2color(argv[3]));
     break;
 
-  case 48:
-    ret = JS_NewInt64(js, mainwin.rwidth);
-    break;
-
-  case 49:
-    ret = JS_NewInt64(js, mainwin.rheight);
-    break;
 
   case 51:
     draw_cppoint(js2vec2(argv[1]), js2number(argv[2]), js2color(argv[3]));
@@ -923,13 +917,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       pack_engine(str);
       break;
 
-    case 125:
-      mainwin.rwidth = js2int(argv[1]);
-      break;
-
-    case 126:
-      mainwin.rheight = js2int(argv[1]);
-      break;
 
     case 127:
       ret = JS_NewInt64(js, stm_now());
@@ -958,11 +945,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = JS_NewFloat64(js, apptime());
       break;
 
-    case 134:
-      str = JS_ToCString(js,argv[1]);
-      app_name(str);
-      break;
-      
     case 135:
       ret = number2js(cam_zoom());
       break;
@@ -993,10 +975,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       console_print(str);
       break;
 
-    case 145:
-      if (js2bool(argv[1])) window_makefullscreen(&mainwin);
-      else window_unfullscreen(&mainwin);
-      break;
     case 146:
       log_clear();
       break;
@@ -1198,18 +1176,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = js2str(argv[1]);
       font_set(str);
       break;
-    case 264:
-      aspect_mode = js2int(argv[1]);
-      break;
-    case 265:
-      ret = vec22js((HMM_Vec2){mainwin.width, mainwin.height});
-      break;
-    case 266:
-      mainwin.width = js2number(argv[1]);
-      break;
-    case 267:
-      mainwin.height = js2number(argv[1]);
-      break;
     case 268:
       if (js2bool(argv[1]))
         ret = JS_GetClassProto(js, js_sprite_id);
@@ -1294,10 +1260,6 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
   case 8:
     return JS_NewInt64(js, frame_fps());
-
-  case 10:
-    editor_mode = js2bool(argv[1]);
-    break;
   }
 
   return JS_UNDEFINED;
@@ -1503,6 +1465,18 @@ JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 #define GETSET_PAIR(ID, ENTRY, TYPE) \
 JSValue ID##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
   js2##ID (this)->ENTRY = js2##TYPE (val); \
+  return JS_UNDEFINED; \
+} \
+\
+JSValue ID##_get_##ENTRY (JSContext *js, JSValue this) { \
+  return TYPE##2js(js2##ID (this)->ENTRY); \
+} \
+
+#define GETSET_PAIR_APPLY(ID, ENTRY, TYPE) \
+JSValue ID##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+  ID *id = js2##ID (this); \
+  id->ENTRY = js2##TYPE (val); \
+  ID##_apply(id); \
   return JS_UNDEFINED; \
 } \
 \
@@ -1815,6 +1789,56 @@ static const JSCFunctionListEntry js_sound_funcs[] = {
   CGETSET_ADD(sound, hook)
 };
 
+static JSValue window_get_size(JSContext *js, JSValueConst this) { return vec22js(js2window(this)->size); }
+static JSValue window_set_size(JSContext *js, JSValueConst this, JSValue v) {
+  window *w = js2window(this);
+  if (!w->start)
+    w->size = js2vec2(v);
+    
+  return JS_UNDEFINED;
+}
+
+GETSET_PAIR_APPLY(window, rendersize, vec2)
+GETSET_PAIR(window, mode, number)
+
+static JSValue window_get_fullscreen(JSContext *js, JSValueConst this)
+{
+  return number2js(js2window(this)->fullscreen);
+}
+
+static JSValue window_set_fullscreen(JSContext *js, JSValueConst this, JSValue v)
+{
+  window_setfullscreen(js2window(this), js2bool(v));
+  return JS_UNDEFINED;
+}
+
+static JSValue window_set_title(JSContext *js, JSValueConst this, JSValue v)
+{
+  window *w = js2window(this);
+  if (w->title) JS_FreeCString(js, w->title);
+  w->title = js2str(v);
+  if (w->start)
+    sapp_set_window_title(w->title);
+  return JS_UNDEFINED;
+}
+
+static JSValue window_get_title(JSContext *js, JSValueConst this, JSValue v)
+{
+  if (!js2window(this)->title) return JS_UNDEFINED;
+  return str2js(js2window(this)->title);
+}
+
+GETSET_PAIR(window, editor, bool)
+
+static const JSCFunctionListEntry js_window_funcs[] = {
+  CGETSET_ADD(window, size),
+  CGETSET_ADD(window, rendersize),
+  CGETSET_ADD(window, mode),
+  CGETSET_ADD(window, fullscreen),
+  CGETSET_ADD(window, title),
+  CGETSET_ADD(window, editor)
+};
+
 #define GETSET_PAIR_BODY(ID, ENTRY, TYPE) \
 JSValue ID##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
   js2##ID (this)->ENTRY = js2##TYPE (val); \
@@ -2065,7 +2089,7 @@ void ffi_load() {
 
   DUK_FUNC(performance, 2)
 
-  JS_FreeValue(js,globalThis);
+
   
   QJSCLASSPREP(ptr);
   QJSCLASSPREP_FUNCS(gameobject);
@@ -2081,9 +2105,14 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(sprite);
   QJSCLASSPREP_FUNCS(texture);
   QJSCLASSPREP_FUNCS(constraint);
+  QJSCLASSPREP_FUNCS(window);
 
   QJSGLOBALCLASS(os);
   QJSGLOBALCLASS(io);
+
+  JS_SetPropertyStr(js, globalThis, "Window", window2js(&mainwin));
+
+  JS_FreeValue(js,globalThis);
 }
 
 void ffi_stop()

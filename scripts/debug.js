@@ -78,8 +78,10 @@ var Debug = {
 function assert(op, str)
 {
   str ??= `assertion failed [value '${op}']`;
-  if (!op)
-    console.critical(`Assertion failed: ${str}`);
+  if (!op) {
+    console.error(`Assertion failed: ${str}`);
+    Game.quit();
+  }
 }
 
 Debug.Options = { };

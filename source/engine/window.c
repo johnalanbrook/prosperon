@@ -15,7 +15,7 @@
 #include "sokol/sokol_app.h"
 #include "stb_image_resize2.h"
 
-struct window mainwin;
+struct window mainwin = {0};
 
 static struct window *windows = NULL;
 
@@ -23,15 +23,22 @@ struct texture *icon = NULL;
 
 void window_resize(int width, int height)
 {
-  mainwin.dpi = sapp_dpi_scale();
-  mainwin.width = width;
-  mainwin.height = height;
-  float aspect = mainwin.width/mainwin.height;
-  float raspect = mainwin.rwidth/mainwin.rheight;
-  mainwin.pheight = mainwin.rheight;
-  mainwin.pwidth = mainwin.rwidth*aspect/raspect;
+  window *w = &mainwin;
+  w->size.x = width;
+  w->size.y = height;
+  window_apply(w);
   
   script_evalf("prosperon.resize([%d,%d]);", width,height);
+}
+
+void window_apply(window *w)
+{
+  w->aspect = w->size.x/w->size.y;
+  w->raspect = w->rendersize.x/w->rendersize.y;
+  w->psize.x = w->size.x*(w->raspect/w->aspect);
+  w->psize.y = w->size.y*(w->aspect/w->raspect);
+  w->left = (w->size.x-w->psize.x)/2;
+  w->top = (w->size.y-w->psize.y)/2;
 }
 
 void window_focused(int focus)
@@ -56,19 +63,15 @@ void window_set_icon(const char *png) {
   window_seticon(&mainwin, icon);
 }
 
-void window_makefullscreen(struct window *w) {
-  if (!w->fullscreen)
-    window_togglefullscreen(w);
-}
-
-void window_unfullscreen(struct window *w) {
-  if (w->fullscreen)
-    window_togglefullscreen(w);
-}
-
-void window_togglefullscreen(struct window *w) {
+void window_setfullscreen(window *w, int f)
+{
+  if (w->fullscreen == f) return;
+  w->fullscreen = f;
+  
+  if (!w->start) return;
+  
+  if (sapp_is_fullscreen() == f) return;
   sapp_toggle_fullscreen();
-  mainwin.fullscreen = sapp_is_fullscreen();
 }
 
 void window_seticon(struct window *w, struct texture *tex)
@@ -104,4 +107,9 @@ void window_seticon(struct window *w, struct texture *tex)
 
 void window_render(struct window *w) {
   openglRender(w);
+}
+
+void window_free(window *w)
+{
+
 }

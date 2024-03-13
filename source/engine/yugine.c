@@ -80,9 +80,6 @@ static float timescale = 1.f;
 #define SIM_STEP 2
 
 static int sim_play = SIM_PLAY;
-static int SAPP_STARTED = 0;
-
-int editor_mode = 0;
 
 static int argc;
 static char **args;
@@ -96,7 +93,7 @@ void seghandle()
 static JSValue c_init_fn;
 
 void c_init() {
-  SAPP_STARTED = 1;
+  mainwin.start = 1;
   script_evalf("world_start();");
   render_init();
   window_set_icon("icons/moon.gif");  
@@ -150,7 +147,7 @@ static void process_frame()
 
 void c_frame()
 {
-  if (editor_mode) return;
+  if (mainwin.editor) return;
   process_frame();
 }
 
@@ -174,7 +171,7 @@ void c_event(const sapp_event *e)
   wchar_t wcode;
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
-      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, mainwin.height -e->mouse_y, e->mouse_dx, -e->mouse_dy);
+      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, mainwin.size.y -e->mouse_y, e->mouse_dx, -e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
@@ -260,7 +257,7 @@ void c_event(const sapp_event *e)
       break;
   }
 
-  if (editor_mode)
+  if (mainwin.editor)
     process_frame();
 }
 
@@ -279,7 +276,7 @@ static sapp_desc start_desc = {
     .high_dpi = 0,
     .sample_count = 1,
     .fullscreen = 1,
-    .window_title = "Prosperon",
+    .window_title = NULL,
     .enable_clipboard = false,
     .clipboard_size = 0,
     .enable_dragndrop = true,
@@ -291,11 +288,6 @@ static sapp_desc start_desc = {
     .event_cb = c_event,
     .logger.func = sg_logging,
 };
-
-void app_name(const char *name) {
-  start_desc.window_title = strdup(name);
-  sapp_set_window_title(name);
-}
 
 int main(int argc, char **argv) {
   setlocale(LC_ALL, "en_US.utf8");
@@ -354,16 +346,17 @@ void engine_start(JSValue fn)
   sound_init();
   phys2d_init();  
 
-  start_desc.width = mainwin.width;
-  start_desc.height = mainwin.height;
-  start_desc.fullscreen = 0;
+  start_desc.width = mainwin.size.x;
+  start_desc.height = mainwin.size.y;
+  start_desc.window_title = mainwin.title;
+  start_desc.fullscreen = mainwin.fullscreen;
   sapp_run(&start_desc);
 }
 
 double apptime() { return stm_sec(stm_diff(stm_now(), start_t)); }
 
 void quit() {
-  if (SAPP_STARTED)
+  if (mainwin.start)
     sapp_quit();
   else {
     cleanup();
