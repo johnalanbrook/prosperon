@@ -121,7 +121,10 @@ Resources.replstrs = function(path)
 }
 
 var console = {
-  print(msg, lvl) {
+  print(msg) { cmd(91, msg); },
+  say(msg) { console.print(msg + "\n"); },
+  
+  pprint(msg, lvl) {
     var lg;
     if (typeof msg === 'object') {
       lg = JSON.stringify(msg, null, 2);
@@ -142,34 +145,30 @@ var console = {
   },
 
   spam(msg) {
-    this.print(msg,0);
+    console.pprint(msg,0);
   },
 
   /* this always prints to stdout */
   debug(msg) {
-    this.print(msg,1);
+    console.pprint(msg,1);
   },
   
   info(msg) {
-    this.print(msg, 2);
+    console.pprint(msg, 2);
   },
 
   warn(msg) {
-    this.print(msg, 3);
+    console.pprint(msg, 3);
   },
 
   error(msg) {
-    this.print(msg + "\n" + console.stackstr(3), 4);
+    console.pprint(msg + "\n" + console.stackstr(3), 4);
   },
   
   panic(msg) {
-    this.print(msg + "\n" + console.stackstr(1), 5);
+    console.pprint(msg + "\n" + console.stackstr(1), 5);
   },
 
-  log(msg) {
-    if (typeof msg === 'object') msg = JSON.stringify(msg,null,1);
-    cmd(91, msg + '\n');
-  },
   stackstr(skip=0) {
     var err = new Error();
     var stack = err.stack.split('\n');
@@ -181,8 +180,9 @@ var console = {
   },
 };
 
-var say = console.log;
-say.doc = "Print to std out with an appended newline.";
+console.log = console.say;
+var say = console.say;
+var print = console.print;
 
 console.doc = {
   level: "Set level to output logging to console.",
@@ -599,6 +599,10 @@ Cmdline.register_order("clean", function(argv) {
   say("Cleaning not implemented.");
 }, "Clean up a given object file.", "JSON ...");
 
+Cmdline.register_order("test", function(argv) {
+  use("scripts/test.js");
+}, "Run tests.");
+
 Cmdline.register_cmd("l", function(n) {
   console.level = n;
 }, "Set log level.");
@@ -607,6 +611,7 @@ return {
   console,
   Resources,
   say,
+  print,
   Cmdline,
   cmd_args,
   steam
