@@ -18,6 +18,8 @@
 void log_init();
 void log_shutdown();
 
+extern int stdout_lvl;
+
 #ifndef NDEBUG
 #define YughLog(cat, pri, msg, ...) mYughLog(cat, pri, __LINE__, __FILE__, msg, ##__VA_ARGS__)
 #define YughSpam(msg,  ...) mYughLog(0, LOG_SPAM, __LINE__, __FILE__, msg, ##__VA_ARGS__);

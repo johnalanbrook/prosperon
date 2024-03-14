@@ -63,7 +63,7 @@ var Debug = {
 
     if (Debug.Options.gif.rec) {
       GUI.text("REC", [0,40], 1);
-      GUI.text(Time.seconds_to_timecode(Time.time - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
+      GUI.text(time.timecode(time.timenow() - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
     }
 
     GUI.text(Game.playing() ? "PLAYING"
@@ -98,54 +98,52 @@ var Gizmos = {
   },
 };
 
-Object.assign(performance, {
-  tick_now() { return cmd(127); },
-  ns(ticks) { return cmd(128, ticks); },
-  us(ticks) { return cmd(129, ticks); },
-  ms(ticks) { return cmd(130, ticks); },
-  best_t(ns) {
-    var e = ns;
+Object.assign(profile, {
+  best_t(t) {
     var qq = 'ns';
-    if (e > 1000) {
-      e /= 1000;
+    if (t > 1000) {
+      t /= 1000;
       qq = 'us';
-      if (e > 1000) {
-        e /= 1000;
+      if (t > 1000) {
+        t /= 1000;
 	qq = 'ms';
       }
     }
-    return {
-      time: e,
-      unit: qq
-    };
+    return `${t.toPrecision(4)} ${qq}`;
   },
   cpu(fn, times, q) {
     times ??= 1;
     q ??= "unnamed";
-    var start = performance.tick_now();
+    var start = profile.now();
     for (var i = 0; i < times; i++)
       fn();
       
-    var elapsed = performance.tick_now() - start;
-    var avgt = performance.best_t(elapsed/times);
-    var totalt = performance.best_t(elapsed);
+    var elapsed = profile.now() - start;
+    var avgt = profile.best_t(elapsed/times);
+    var totalt = profile.best_t(elapsed);
 
-    say(`performance [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
+    say(`profile [${q}]: ${profile.best_t(avgt)} average [${profile.best_t(totalt)} for ${times} loops]`);
   },
 
-  get fps() { return sys_cmd(8); },
+  time(fn) {
+    var start = profile.now();
+    fn();
+    return profile.lap(start);
+  },
+
+  lap(t) {
+    return profile.best_t(profile.now()-t);
+  },
 
   measure(fn, str) {
     str ??= 'unnamed';
-    var start = performance.tick_now();
+    var start = profile.now();
     fn();
-    var elapsed = performance.tick_now()-start;
-    elapsed = performance.best_t(elapsed);
-    say(`performance [${str}]: ${elapsed.time.toFixed(3)} ${elapsed.unit}`);
+    say(`profile [${str}]: ${profile.lap(start)}`);
   },
 });
 
-performance.now = performance.tick_now;
+
 
 performance.test = {
   barecall() { performance(0); },
@@ -160,7 +158,7 @@ performance.test = {
 
 performance.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 
-performance.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
+//performance.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
 
 /* These controls are available during editing, and during play of debug builds */
 Debug.inputs = {};
@@ -200,7 +198,7 @@ Debug.Options.gif = {
     cmd(131, w, h, this.cpf, this.depth);
     this.rec = true;
     this.fps = (1/this.cpf)*100;
-    this.start_time = Time.time;
+    this.start_time = time.now();
 
     timer.oneshot(this.stop.bind(this), this.secs, this, true);
   },
@@ -232,46 +230,6 @@ Debug.inputs['M-2'] = render.wireframe;
 
 Debug.inputs['C-M-f'] = function() {};
 Debug.inputs['C-M-f'].doc = "Enter camera fly mode.";
-
-var Time = {
-  set timescale(x) { cmd(3, x); },
-  get timescale() { return cmd(121); },
-  set updateMS(x) { cmd(6, x); },
-  set physMS(x) { cmd(7, x); },
-  set renderMS(x) { cmd(5, x); },
-
-  get time() { return cmd(133); },
-
-  seconds_to_timecode(secs, fps)
-  {
-    var s = Math.trunc(secs);
-    secs -= s;
-    var f = Math.trunc(fps * secs);
-    return `${s}:${f}`;
-  },
-
-  pause() {
-    Time.stash = Time.timescale;
-    Time.timescale = 0;
-  },
-
-  play() {
-    if (!Time.stash) {
-      console.warn("Tried to resume time without calling Time.pause first.");
-      return;
-    }
-    Time.timescale = Time.stash;
-  },
-};
-
-Time.doc = {};
-Time.doc.timescale = "Get and set the timescale. 1 is normal time; 0.5 is half speed; etc.";
-Time.doc.updateMS = "Set the ms per game update.";
-Time.doc.physMS = "Set the ms per physics update.";
-Time.doc.renderMS = "Set the ms per render update.";
-Time.doc.time = "Seconds elapsed since the game started.";
-Time.doc.pause = "Pause the game by setting the timescale to 0; remembers the current timescale on play.";
-Time.doc.play = "Resume the game after using Time.pause.";
 
 Debug.api = {};
 Debug.api.doc_entry = function(obj, key)
@@ -351,8 +309,6 @@ Debug.api.print_doc =  function(name)
 
 return {
   Debug,
-  Time,
   Gizmos,
-  performance,
   assert
 }

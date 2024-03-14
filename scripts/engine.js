@@ -1,11 +1,67 @@
 "use math";
+
+Object.assign(console, {
+  say(msg) { console.print(msg + "\n"); },
+  
+  pprint(msg, lvl = 0) {
+    if (typeof msg === 'object')
+      msg = JSON.stringify(msg, null, 2);
+
+    var file = "nofile";
+    var line = 0;
+    
+    var caller = (new Error()).stack.split('\n')[2];
+    if (caller) {
+      var m = caller.match(/\((.*)\:/)[1];
+      if (m) file = m;
+      m = caller.match(/\:(\d*)\)/)[1];
+      if (m) line = m;
+    }
+    
+    console.rec(lvl, msg, file, line);
+  },
+
+  spam(msg) { console.pprint(msg,0); },
+  debug(msg) { console.pprint(msg,1); },
+  info(msg) { console.pprint(msg, 2); },
+  warn(msg) { console.pprint(msg, 3); },
+  error(msg) { console.pprint(msg + "\n" + console.stackstr(2), 4);},
+  panic(msg) { console.pprint(msg + "\n" + console.stackstr(2), 5); },
+
+  stackstr(skip=0) {
+    var err = new Error();
+    var stack = err.stack.split('\n');
+    return stack.slice(skip,stack.length).join('\n');
+  },
+
+  stack(skip = 0) {
+    console.log(console.stackstr(skip+1));
+  },
+});
+
+console.log = console.say;
+var say = console.say;
+var print = console.print;
+
+console.doc = {
+  level: "Set level to output logging to console.",
+  info: "Output info level message.",
+  warn: "Output warn level message.",
+  error: "Output error level message, and print stacktrace.",
+  critical: "Output critical level message, and exit game immediately.",
+  write: "Write raw text to console.",
+  say: "Write raw text to console, plus a newline.",
+  stack: "Output a stacktrace to console.",
+  console: "Output directly to in game console.",
+  clear: "Clear console."
+};
+
 globalThis.global = globalThis;
 
 function use(file)
 {
   if (use.files[file]) return use.files[file];
-  if (globalThis.console)
-    console.info(`running ${file}`);
+  console.info(`running ${file}`);
     
   var c = io.slurp(file);
   
@@ -19,7 +75,7 @@ use.files = {};
 function include(file,that)
 {
   if (!that) return;
-  if (globalThis.console) console.info(`running ${file}`);
+  console.info(`running ${file}`);
   var c = io.slurp(file);
   eval_env(c, that, file);
 }
@@ -28,7 +84,7 @@ function eval_env(script, env, file)
 {
   env ??= {};
   file ??= "SCRIPT";
-  if (globalThis.console) console.info(`eval ${file}`);  
+  console.info(`eval ${file}`);  
   script = `(function() { ${script}; }).call(this);\n`;
   return cmd(123,script,env,file);
 }
@@ -159,7 +215,6 @@ Game.doc.dt = "Current frame dt.";
 Game.doc.view_camera = "Set the camera for the current view.";
 Game.doc.camera = "Current camera.";
 
-global.prosperon = {};
 prosperon.version = cmd(255);
 prosperon.revision = cmd(256);
 
@@ -225,7 +280,6 @@ prosperon.clipboardpaste = function(str){};
 
 global.mixin("scripts/input.js");
 global.mixin("scripts/std.js");
-console.level = 1;
 global.mixin("scripts/diff.js");
 global.mixin("scripts/color.js");
 global.mixin("scripts/gui.js");

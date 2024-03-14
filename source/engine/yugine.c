@@ -73,7 +73,7 @@ static int phys_step = 0;
 uint64_t start_t;
 uint64_t frame_t;
 
-static float timescale = 1.f;
+double timescale = 1.f;
 
 #define SIM_PLAY 0
 #define SIM_PAUSE 1
@@ -267,8 +267,6 @@ void sim_start() { sim_play = SIM_PLAY; }
 void sim_pause() { sim_play = SIM_PAUSE; }
 int phys_stepping() { return sim_play == SIM_STEP; }
 void sim_step() { sim_play = SIM_STEP; }
-void set_timescale(float val) { timescale = val; }
-double get_timescale() { return timescale; }
 
 static sapp_desc start_desc = {
     .width = 720,
@@ -302,7 +300,7 @@ int main(int argc, char **argv) {
 #endif
 
   resources_init();
-
+  stm_setup(); /* time */
   script_startup();
   
   int argsize = 0;
@@ -333,7 +331,7 @@ int main(int argc, char **argv) {
 void engine_start(JSValue fn)
 {
   c_init_fn = fn;
-  stm_setup(); /* time */
+
   start_t = frame_t = stm_now();
   physlast = updatelast = start_t;
   sound_init();

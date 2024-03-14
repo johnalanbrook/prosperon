@@ -12,11 +12,26 @@
 
 #include "script.h"
 
+#define ESC "\033["
+#define BLACK 30
+#define RED 31
+#define GREEN 32
+#define YELLOW 33
+#define BLUE 34
+#define MAGENTA 35
+#define CYAN 36
+#define WHITE 37
+
+#define COLOR(TXT, _C) ESC #_C "m" #TXT ESC "0m"
+
 char *logstr[] = { "spam", "debug", "info", "warn", "error", "panic"};
+char *logcolor[] = { COLOR(spam,37), COLOR(debug,32), COLOR(info,36), COLOR(warn,33), COLOR(error,31), COLOR(panic,45) };
 char *catstr[] = {"engine", "script", "render"};
 
 static FILE *logout; /* where logs are written to */
 static FILE *writeout; /* where console is written to */
+
+int stdout_lvl = LOG_PANIC;
 
 void log_init()
 {
@@ -49,8 +64,8 @@ void mYughLog(int category, int priority, int line, const char *file, const char
   va_end(args);
   fprintf(logout, "\n");
   
-  if (priority == LOG_DEBUG) {
-    printf(logfmt, file, line, timebuf, logstr[priority], catstr[category]);
+  if (priority == LOG_DEBUG || priority > stdout_lvl) {
+    printf(logfmt, file, line, timebuf, logcolor[priority], catstr[category]);
     va_list args;
     va_start(args,message);
     vprintf(message, args);

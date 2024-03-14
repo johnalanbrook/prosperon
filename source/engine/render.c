@@ -217,7 +217,7 @@ void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline id, void *data)
 
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
-  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);
+//  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);
 }
 
 void trace_fail_pipeline(sg_pipeline pip, void *data)
@@ -232,7 +232,7 @@ void trace_make_attachments(const sg_attachment_desc *d, sg_attachments result, 
 
 void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
 {
-  YughSpam("Begin pass %s", pass.label);
+//  YughSpam("Begin pass %s", pass.label);
 }
 
 static sg_trace_hooks hooks = {

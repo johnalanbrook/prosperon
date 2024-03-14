@@ -62,12 +62,12 @@ convert.buf2hex = function(buffer) { // buffer is an ArrayBuffer
 }
 
 /* Time values are always expressed in terms of real earth-seconds */
-var time = {
-  get hour2minute() { return this.hour/this.minute; },
-  get day2hour() { return this.day/this.hour; },
-  get minute2second() { return this.minute/this.second; },
-  get week2day() { return this.week/this.day; },
-};
+Object.assign(time, {
+  hour2minute() { return this.hour/this.minute; },
+  day2hour() { return this.day/this.hour; },
+  minute2second() { return this.minute/this.second; },
+  week2day() { return this.week/this.day; },
+});
 
 time.strparse = {
   yyyy: "year",
@@ -105,8 +105,6 @@ time.doc = {
   number: "Return the number representation of a given time.",
   text: "Return a text formatted time."
 };
-  
-  
 
 time.second = 1;
 time.minute = 60;
@@ -117,9 +115,6 @@ time.weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday
 time.monthstr = ["January", "February", "March", 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 time.epoch = 1970;
-time.now = function() { return cmd(210);}
-time.computer_zone = function() { return cmd(211)/this.hour; }
-time.computer_dst = function() { return cmd(212); }
 time.isleap = function(year) { return this.yearsize(year) === 366; }
 time.isleap.doc = "Return true if the given year is a leapyear.";
 
@@ -127,6 +122,13 @@ time.yearsize = function(y) {
   if (y%4 === 0 && (y%100 != 0 || y%400 === 0))
     return 366;
   return 365;
+}
+
+time.timecode = function(t, fps = 24)
+{
+  var s = Math.trunc(t);
+  t -= s;
+  return `${s}:${Math.trunc(fps*s)}`;
 }
 
 time.monthdays = [31,28,31,30,31,30,31,31,30,31,30,31];
@@ -215,9 +217,9 @@ time.number = function(rec)
         c += this.day*this.yearsize(i);
 
       c += (this.yearsize(year)-yday-1)*this.day;
-      c += (this.day2hour-hour-1)*this.hour;
-      c += (this.hour2minute-minute-1)*this.minute;
-      c += (this.minute2second-second);
+      c += (this.day2hour()-hour-1)*this.hour;
+      c += (this.hour2minute()-minute-1)*this.minute;
+      c += (this.minute2second()-second);
       c += zone*this.hour;
       c *= -1;
       return c;

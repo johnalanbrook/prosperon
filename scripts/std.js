@@ -120,82 +120,6 @@ Resources.replstrs = function(path)
   return script;
 }
 
-var console = {
-  print(msg) { cmd(91, msg); },
-  say(msg) { console.print(msg + "\n"); },
-  
-  pprint(msg, lvl) {
-    var lg;
-    if (typeof msg === 'object') {
-      lg = JSON.stringify(msg, null, 2);
-    } else {
-      lg = msg;
-    }
-
-    var stack = (new Error()).stack;
-    var n = stack.next('\n',0)+1;
-    n = stack.next('\n', n)+1;
-    var nnn = stack.slice(n);
-    var fmatch = nnn.match(/\(.*\:/);
-    var file = fmatch ? fmatch[0].shift(1).shift(-1) : "nofile";
-    var lmatch = nnn.match(/\:\d*\)/);
-    var line = lmatch ? lmatch[0].shift(1).shift(-1) : "0";
-
-    yughlog(lvl, lg, file, line);
-  },
-
-  spam(msg) {
-    console.pprint(msg,0);
-  },
-
-  /* this always prints to stdout */
-  debug(msg) {
-    console.pprint(msg,1);
-  },
-  
-  info(msg) {
-    console.pprint(msg, 2);
-  },
-
-  warn(msg) {
-    console.pprint(msg, 3);
-  },
-
-  error(msg) {
-    console.pprint(msg + "\n" + console.stackstr(3), 4);
-  },
-  
-  panic(msg) {
-    console.pprint(msg + "\n" + console.stackstr(1), 5);
-  },
-
-  stackstr(skip=0) {
-    var err = new Error();
-    var stack = err.stack.split('\n');
-    return stack.slice(skip,stack.length-10).join('\n');
-  },
-
-  stack(skip = 0) {
-    console.log(stackstr(skip+1));
-  },
-};
-
-console.log = console.say;
-var say = console.say;
-var print = console.print;
-
-console.doc = {
-  level: "Set level to output logging to console.",
-  info: "Output info level message.",
-  warn: "Output warn level message.",
-  error: "Output error level message, and print stacktrace.",
-  critical: "Output critical level message, and exit game immediately.",
-  write: "Write raw text to console.",
-  say: "Write raw text to console, plus a newline.",
-  stack: "Output a stacktrace to console.",
-  console: "Output directly to in game console.",
-  clear: "Clear console."
-};
 
 /*
   io path rules. Starts with, meaning:
@@ -608,10 +532,7 @@ Cmdline.register_cmd("l", function(n) {
 }, "Set log level.");
 
 return {
-  console,
   Resources,
-  say,
-  print,
   Cmdline,
   cmd_args,
   steam

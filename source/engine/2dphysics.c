@@ -592,7 +592,7 @@ int shape_get_sensor(struct phys2d_shape *shape) {
   if (!shape->shape) {
     struct phys2d_edge *edge = shape->data;
     if (arrlen(edge->shapes) > 0) return cpShapeGetSensor(edge->shapes[0]);
-    YughInfo("Attempted to get the sensor of an edge with no shapes. It has %d points.", arrlen(edge->points));
+    YughWarn("Attempted to get the sensor of an edge with no shapes. It has %d points.", arrlen(edge->points));
     return 0;
   }
 

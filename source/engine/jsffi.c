@@ -27,8 +27,11 @@
 #include <sokol/sokol_time.h>
 #include <sokol/sokol_app.h>
 
+#include <time.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #include <unistd.h>
 #include <limits.h>
 
@@ -129,31 +132,9 @@ JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 
 void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertyStr(js, obj, prop, v); }
 
-JSValue jstzone()
-{
-  time_t t = time(NULL);
-  time_t local_t = mktime(localtime(&t));
-  double diff = difftime(t, local_t);
-  return number2js(diff/3600);
-}
-
 int js2bool(JSValue v) { return JS_ToBool(js, v); }
 
 JSValue bool2js(int b) { return JS_NewBool(js,b); }
-
-JSValue jsdst()
-{
-  time_t t = time(NULL);
-  return bool2js(localtime(&t)->tm_isdst);
-}
-
-JSValue jscurtime()
-{
-  time_t t;
-  time(&t);
-  JSValue jst = number2js(t);
-  return jst;
-}
 
 void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(js, obj, i, v); }
 
@@ -689,21 +670,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     ret = JS_NewInt64(js, script_dofile(str));
     break;
 
-  case 3:
-    set_timescale(js2number(argv[1]));
-    break;
-
   case 4:
     debug_draw_phys(JS_ToBool(js, argv[1]));
     break;
 
-  case 6:
-    updateMS = js2number(argv[1]);
-    break;
-
-  case 7:
-    physMS = js2number(argv[1]);
-    break;
     
   case 15:
   gameobject_draw_debug(js2gameobject(argv[1]));
@@ -845,11 +815,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     window_set_icon(str);
     break;
 
-  case 91:
-    str = JS_ToCString(js, argv[1]);
-    log_print(str);
-    break;
-
   case 97:
     str = js2str(argv[1]);
     cursor_img(str);
@@ -886,10 +851,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = JS_NewInt64(js, file_mod_secs(str));
       break;
 
-    case 121:
-      ret = number2js(get_timescale());
-      break;
-
     case 122:
       str = JS_ToCString(js, argv[1]);
       ret = file_eval_env(str, argv[2]);
@@ -906,23 +867,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       pack_engine(str);
       break;
 
-
-    case 127:
-      ret = JS_NewInt64(js, stm_now());
-      break;
-
-    case 128:
-      ret = JS_NewFloat64(js, stm_ns(js2int64(argv[1])));
-      break;
-
-    case 129:
-      ret = JS_NewFloat64(js, stm_us(js2int64(argv[1])));
-      break;
-
-    case 130:
-      ret = JS_NewFloat64(js, stm_ms(js2int64(argv[1])));
-      break;
-
     case 131:
       gif_rec_start(js2int(argv[1]), js2int(argv[2]), js2int(argv[3]), js2int(argv[4]));
       break;
@@ -930,10 +874,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       str = JS_ToCString(js, argv[1]);
       gif_rec_end(str);
       break;
-    case 133:
-      ret = JS_NewFloat64(js, apptime());
-      break;
-
+      
     case 135:
       ret = number2js(cam_zoom());
       break;
@@ -957,11 +898,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 141:
       text_flush(&hudproj);
-      break;
-
-    case 142:
-      str = JS_ToCString(js, argv[1]);
-      log_print(str);
       break;
 
     case 149:
@@ -1056,15 +992,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
     case 207:
       ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
-      break;
-    case 210:
-      ret = jscurtime();
-      break;
-    case 211:
-      ret = jstzone();
-      break;
-    case 212:
-      ret = jsdst();
       break;
     case 213:
       free_drawmodel(js2ptr(argv[1]));
@@ -1242,9 +1169,6 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
   case 6:
     return JS_NewBool(js, sim_paused());
-
-  case 8:
-    return JS_NewInt64(js, frame_fps());
   }
 
   return JS_UNDEFINED;
@@ -1252,20 +1176,6 @@ JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
 JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   return gameobject2js(MakeGameobject());
-}
-
-JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
-  const char *s = JS_ToCString(js, argv[1]);
-  const char *f = JS_ToCString(js, argv[2]);
-  int line = js2int(argv[3]);
-
-  mYughLog(LOG_SCRIPT, cmd, line, f, s);
-
-  JS_FreeCString(js, s);
-  JS_FreeCString(js, f);
-
-  return JS_UNDEFINED;
 }
 
 JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
@@ -1490,9 +1400,13 @@ GETSET_PAIR(warp_gravity, planar_force, vec3)
 
 #define MIST_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
 
+#define MIST_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN)
+
 #define MIST_CGETSET_DEF(name, fgetter, fsetter) { name, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CGETSET, 0, .u = { .getset = { .get = { .getter = fgetter }, .set = { .setter = fsetter } } } }
 
 #define CGETSET_ADD(ID, ENTRY) MIST_CGETSET_DEF(#ENTRY, ID##_get_##ENTRY, ID##_set_##ENTRY)
+
+#define GGETSET_ADD(ENTRY)
 
 static const JSCFunctionListEntry js_warp_gravity_funcs [] = {
   CGETSET_ADD(warp_gravity, strength),
@@ -1582,9 +1496,92 @@ JSValue js_os_sys(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 }
 
 static const JSCFunctionListEntry js_os_funcs[] = {
-  MIST_CFUNC_DEF("cwd", 0, js_os_cwd),
-  MIST_CFUNC_DEF("env", 1, js_os_env),
-  MIST_CFUNC_DEF("sys", 0, js_os_sys),
+  MIST_FUNC_DEF(os, cwd, 0),
+  MIST_FUNC_DEF(os, env, 1),
+  MIST_FUNC_DEF(os, sys, 0)
+};
+
+#define GETSET_GLOBAL(ENTRY, TYPE) \
+JSValue global_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+  ENTRY = js2##TYPE (val); \
+  return JS_UNDEFINED; \
+} \
+\
+JSValue global_get_##ENTRY (JSContext *js, JSValue this) { \
+  return TYPE##2js(ENTRY); \
+} \
+
+GETSET_GLOBAL(physMS, number)
+GETSET_GLOBAL(timescale, number)
+GETSET_GLOBAL(updateMS, number)
+
+static const JSCFunctionListEntry js_prosperon_funcs[] = {
+  CGETSET_ADD(global, updateMS),
+  CGETSET_ADD(global, physMS),
+  CGETSET_ADD(global, timescale),
+};
+
+JSValue js_time_now(JSContext *js, JSValue this) {
+  struct timeval ct;
+  gettimeofday(&ct, NULL);
+  return number2js((double)ct.tv_sec+(double)(ct.tv_usec/1000000.0));
+}
+
+JSValue js_time_computer_dst(JSContext *js, JSValue this) {
+  time_t t = time(NULL);
+  return bool2js(localtime(&t)->tm_isdst);
+}
+
+JSValue js_time_computer_zone(JSContext *js, JSValue this) {
+  time_t t = time(NULL);
+  time_t local_t = mktime(localtime(&t));
+  double diff = difftime(t, local_t);
+  return number2js(diff/3600);
+}
+
+static const JSCFunctionListEntry js_time_funcs[] = {
+  MIST_FUNC_DEF(time, now, 0),
+  MIST_FUNC_DEF(time, computer_dst, 0),
+  MIST_FUNC_DEF(time, computer_zone, 0)
+};
+
+JSValue js_console_print(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  char *s = JS_ToCString(js,argv[0]);
+  log_print(s);
+  JS_FreeCString(js,s);
+  return JS_UNDEFINED;
+}
+
+JSValue js_console_rec(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  int level = js2int(argv[0]);
+  const char *msg = JS_ToCString(js, argv[1]);
+  const char *file = JS_ToCString(js, argv[2]);
+  int line = js2int(argv[3]);
+
+  mYughLog(LOG_SCRIPT, level, line, file, msg);
+
+  JS_FreeCString(js, msg);
+  JS_FreeCString(js, file);
+
+  return JS_UNDEFINED;
+}
+
+GETSET_GLOBAL(stdout_lvl, number)
+
+static const JSCFunctionListEntry js_console_funcs[] = {
+  MIST_FUNC_DEF(console,print,1),
+  MIST_FUNC_DEF(console,rec,4),
+  CGETSET_ADD(global, stdout_lvl)
+};
+
+JSValue js_profile_now(JSContext *js, JSValue this) { return number2js(stm_now()); }
+JSValue js_profile_fps(JSContext *js, JSValue this) { return number2js(frame_fps()); }
+
+static const JSCFunctionListEntry js_profile_funcs[] = {
+  MIST_FUNC_DEF(profile,now,0),
+  MIST_FUNC_DEF(profile,fps,0)
 };
 
 JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
@@ -2050,7 +2047,6 @@ void ffi_load() {
   JS_SetPropertyFunctionList(js, nota, nota_funcs, countof(nota_funcs));
   JS_SetPropertyStr(js, globalThis, "nota", nota);
 
-  DUK_FUNC(yughlog, 4)
   DUK_FUNC(make_gameobject, 0)
   DUK_FUNC(set_body, 3)
   DUK_FUNC(q_body, 2)
@@ -2094,6 +2090,10 @@ void ffi_load() {
 
   QJSGLOBALCLASS(os);
   QJSGLOBALCLASS(io);
+  QJSGLOBALCLASS(prosperon);
+  QJSGLOBALCLASS(time);
+  QJSGLOBALCLASS(console);
+  QJSGLOBALCLASS(profile);
 
   JS_SetPropertyStr(js, globalThis, "Window", window2js(&mainwin));
 
