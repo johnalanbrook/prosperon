@@ -130,7 +130,7 @@ Object.assign(performance, {
     var avgt = performance.best_t(elapsed/times);
     var totalt = performance.best_t(elapsed);
 
-    console.say(`performance [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
+    say(`performance [${q}]: ${avgt.time.toFixed(3)} ${avgt.unit} average [${totalt.time.toFixed(3)} ${totalt.unit} for ${times} loops]`);
   },
 
   get fps() { return sys_cmd(8); },

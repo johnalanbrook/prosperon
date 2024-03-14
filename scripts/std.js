@@ -121,8 +121,6 @@ Resources.replstrs = function(path)
 }
 
 var console = {
-  set level(x) { cmd(92,x); },
-  get level() { return cmd(93); },
   print(msg, lvl) {
     var lg;
     if (typeof msg === 'object') {
@@ -142,10 +140,12 @@ var console = {
 
     yughlog(lvl, lg, file, line);
   },
+
   spam(msg) {
     this.print(msg,0);
   },
 
+  /* this always prints to stdout */
   debug(msg) {
     this.print(msg,1);
   },
@@ -159,41 +159,29 @@ var console = {
   },
 
   error(msg) {
-    this.print(msg, 4);
-    this.stack(1);
+    this.print(msg + "\n" + console.stackstr(3), 4);
   },
-
-  write(msg) {
-    if (typeof msg === 'object')
-      msg = JSON.stringify(msg,null,2);
   
-    cmd(91,msg);
+  panic(msg) {
+    this.print(msg + "\n" + console.stackstr(1), 5);
   },
 
-  say(msg) { console.write(msg + '\n'); },
-  repl(msg) { cmd(142, msg + '\n'); },    
+  log(msg) {
+    if (typeof msg === 'object') msg = JSON.stringify(msg,null,1);
+    cmd(91, msg + '\n');
+  },
+  stackstr(skip=0) {
+    var err = new Error();
+    var stack = err.stack.split('\n');
+    return stack.slice(skip,stack.length-10).join('\n');
+  },
 
   stack(skip = 0) {
-    var err = new Error();
-    var stack = err.stack;
-    var n = stack.next('\n',0)+1;
-    for (var i = 0; i < skip; i++)
-      n = stack.next('\n', n)+1;
-    console.write(err.name);
-    console.write(err.message);
-    console.write(err.stack);
-  },
-
-  clear() {
-    cmd(146);
+    console.log(stackstr(skip+1));
   },
 };
 
-console.log = console.info;
-
-var say = function(msg) {
-  console.say(msg);
-}
+var say = console.log;
 say.doc = "Print to std out with an appended newline.";
 
 console.doc = {

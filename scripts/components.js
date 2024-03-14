@@ -24,7 +24,7 @@ var component = {
     nc.gameobject = go;
     Object.mixin(nc, this._enghook(go.body));
     assign_impl(nc,this.impl);
-    Object.hide(nc, ['gameobject', 'id']);
+    Object.hide(nc, 'gameobject', 'id');
     nc.post();
     return nc;
   },

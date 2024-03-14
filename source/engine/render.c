@@ -177,47 +177,47 @@ static struct {
 } sg_shadow;
 
 
-void trace_make_image(const sg_image_desc *d, sg_image result, void *data)
+void trace_make_image(const sg_image_desc *d, sg_image id, void *data)
 {
-  YughInfo("Making image %s", d->label);
+  YughSpam("Made image %s.", d->label);
 }
 
 void trace_init_image(sg_image id, const sg_image_desc *d, void *data)
 {
-  YughInfo("Init image %s", d->label);
+  YughSpam("Init image %s", d->label);
 }
 
-void trace_make_shader(const sg_shader_desc *d, sg_shader result, void *data)
+void trace_make_shader(const sg_shader_desc *d, sg_shader id, void *data)
 {
-  YughInfo("Making shader %s", d->label);
-  if (sg_query_shader_state(result) == SG_RESOURCESTATE_FAILED)
+  YughSpam("Making shader %s", d->label);
+  if (sg_query_shader_state(id) == SG_RESOURCESTATE_FAILED)
     YughError("FAILED MAKING A SHADER: %s\n%s\n%s", d->label);
 }
 
 void trace_fail_shader(sg_shader id, void *data)
 {
-  YughError("SHADER DID NOT COMPILE");
+  YughError("Shader %u did not compile.", id);
 }
 
-void trace_destroy_shader(sg_shader shd, void *data)
+void trace_destroy_shader(sg_shader id, void *data)
 {
-  YughInfo("DESTROYED SHADER");
+  YughSpam("Destroyed shader %u.", id);
 }
 
 void trace_fail_image(sg_image id, void *data)
 {
   sg_image_desc desc = sg_query_image_desc(id);
-  YughError("Failed to make image %s", desc.label);
+  YughError("Failed to make image %u %s", id, desc.label);
 }
 
-void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline result, void *data)
+void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline id, void *data)
 {
-  YughInfo("Making pipeline %s, id %d", d->label, result);
+  YughSpam("Making pipeline %u [%s].", id, d->label);
 }
 
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
-  YughInfo("Applying pipeline %d", pip);
+  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);
 }
 
 void trace_fail_pipeline(sg_pipeline pip, void *data)
@@ -227,12 +227,12 @@ void trace_fail_pipeline(sg_pipeline pip, void *data)
 
 void trace_make_attachments(const sg_attachment_desc *d, sg_attachments result, void *data)
 {
-  YughInfo("Making attachments %s", "IMPLEMENT");
+  YughSpam("Making attachments %s", "IMPLEMENT");
 }
 
 void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
 {
-  YughInfo("Begin pass %s", pass.label);
+  YughSpam("Begin pass %s", pass.label);
 }
 
 static sg_trace_hooks hooks = {

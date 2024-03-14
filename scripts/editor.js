@@ -1554,7 +1554,7 @@ var replpanel = Object.copy(inputpanel, {
 
   guibody() {
     this.win.selectable = true;
-    var log = cmd(84);
+    //var log = cmd(84);
     log = log.slice(-5000);
     return [
       Mum.text({str:log, anchor:[0,0], offset:[0,-300].sub(this.scrolloffset), selectable: true}),
@@ -1575,12 +1575,12 @@ var replpanel = Object.copy(inputpanel, {
       ecode += `var ${key} = editor.edit_level.objects['${key}'];`;
 	
     ecode += this.value;
-    console.say(this.value);
+    say(this.value);
     this.value = "";
     this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
     if (typeof ret === 'object') ret = json.encode(ret,null,1);
-    console.say(ret);
+    say(ret);
   },
 
   resetscroll() {
@@ -1616,7 +1616,7 @@ replpanel.inputs.tab = function() {
   if (eval(`typeof ${keyobj.tofirst('.')}`) === 'object' && eval(`typeof ${keyobj.replace('.', '?.')}`) === 'object')
     obj = eval(keyobj);
   else if (this.value.includes('.')){
-    console.say(`${this.value} is not an object.`);
+    say(`${this.value} is not an object.`);
     return;
   } 
    
@@ -1657,7 +1657,7 @@ replpanel.inputs.tab = function() {
   });
 
   if (keys.length > 1)
-    console.repl(keys.join(', '));
+    say(keys.join(', '));
 };
 replpanel.inputs['C-p'] = function()
 {

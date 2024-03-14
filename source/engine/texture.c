@@ -207,7 +207,7 @@ void texture_free(texture *tex)
 char *tex_get_path(struct texture *tex) {
   for (int i = 0; i < shlen(texhash); i++) {
     if (tex == texhash[i].value) {
-      YughInfo("Found key %s", texhash[i].key);
+      YughSpam("Found key %s", texhash[i].key);
       return texhash[i].key;
     }
   }

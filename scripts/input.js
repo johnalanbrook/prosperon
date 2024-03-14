@@ -336,7 +336,7 @@ var Player = {
 
   print_pawns() {
     for (var pawn of this.pawns.reversed())
-      console.say(pawn.toString());
+      say(pawn.toString());
   },
 
   create() {

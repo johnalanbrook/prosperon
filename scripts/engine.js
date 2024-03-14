@@ -3,10 +3,9 @@ globalThis.global = globalThis;
 
 function use(file)
 {
-
   if (use.files[file]) return use.files[file];
   if (globalThis.console)
-    console.warn(`running ${file}`);
+    console.info(`running ${file}`);
     
   var c = io.slurp(file);
   
@@ -20,7 +19,7 @@ use.files = {};
 function include(file,that)
 {
   if (!that) return;
-  if (globalThis.console) console.warn(`running ${file}`);
+  if (globalThis.console) console.info(`running ${file}`);
   var c = io.slurp(file);
   eval_env(c, that, file);
 }
@@ -29,7 +28,7 @@ function eval_env(script, env, file)
 {
   env ??= {};
   file ??= "SCRIPT";
-  if (globalThis.console) console.warn(`eval ${file}`);  
+  if (globalThis.console) console.info(`eval ${file}`);  
   script = `(function() { ${script}; }).call(this);\n`;
   return cmd(123,script,env,file);
 }
@@ -91,7 +90,7 @@ global.mixin("scripts/render.js");
 
 global.Game = {
   engine_start(fn) {
-    console.warn("engine starting.");
+    console.info("Starting rendering and sound ...");
     cmd(257, fn);
   },
 

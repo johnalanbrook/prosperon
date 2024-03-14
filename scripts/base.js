@@ -11,7 +11,7 @@
 /*
 Object.getPrototypeOf = undefined;
 Object.setPrototypeOf = undefined;
-Reflect = undefined;
+Reflect = undefined
 Symbol = undefined;
 URIError = undefined;
 Proxy = undefined;
@@ -558,7 +558,7 @@ Object.hide = function(obj,...props)
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
     if (!p) {
-      console.info(`No property of name ${prop}.`);
+      console.error(`No property of name ${prop}.`);
       continue;
     }
     p.enumerable = false;

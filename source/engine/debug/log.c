@@ -8,108 +8,70 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "yugine.h"
+#include "resources.h"
 
 #include "script.h"
 
-int logLevel = 0;
-
-char *logstr[] = { "spam", "debug", "info", "warn", "error"};
+char *logstr[] = { "spam", "debug", "info", "warn", "error", "panic"};
 char *catstr[] = {"engine", "script", "render"};
 
-FILE *logfile = NULL;
-
-#define ERROR_BUFFER 1024
-#define CONSOLE_BUF 1024*1024 /* 5MB */
-
-char *consolelog = NULL;
-
-static FILE *sout;
+static FILE *logout; /* where logs are written to */
+static FILE *writeout; /* where console is written to */
 
 void log_init()
 {
-  consolelog = malloc(CONSOLE_BUF+1);
-  consolelog[0] = '\0';
-  sout = fdopen(dup(1),"w");
-  sout = stdout;
+#ifndef NDEBUG
+  logout = fopen(".prosperon/log.txt", "w");
+  writeout = fopen(".prosperon/transcript.txt", "w");
+#endif
 }
 
-const char *logfmt = "%s:%d: %s, %s: %s\n";
+void log_shutdown()
+{
+  fclose(logout);
+  fclose(writeout);
+}
+
+const char *logfmt = "%s:%d: [%s] %s, %s: ";
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
 #ifndef NDEBUG
-  if (priority >= logLevel) {
-    time_t now = time(0);
-    struct tm *tinfo = localtime(&now);
+  time_t now = time(NULL);
+  struct tm *tinfo = localtime(&now);
+  char timebuf[80];
+  strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", tinfo);
 
-    double ticks = (double)clock()/CLOCKS_PER_SEC;
+  fprintf(logout, logfmt, file, line, timebuf, logstr[priority], catstr[category]);
 
-    va_list args, arg2;
-    va_start(args, message);
-    va_copy(arg2, args);
-    int len = vsnprintf(NULL, 0, message, args)+1;
-    char *msg = malloc(len);
+  va_list args;
+  va_start(args, message);
+  vfprintf(logout, message, args);
+  va_end(args);
+  fprintf(logout, "\n");
+  
+  if (priority == LOG_DEBUG) {
+    printf(logfmt, file, line, timebuf, logstr[priority], catstr[category]);
+    va_list args;
+    va_start(args,message);
+    vprintf(message, args);
     va_end(args);
-    vsnprintf(msg, len, message, arg2);
-    va_end(arg2);
-    
-    len = snprintf(NULL, 0, logfmt, file,line,logstr[priority], catstr[category], msg)+1;
-    char *buffer = malloc(len);
-    snprintf(buffer, len, logfmt, file, line, logstr[priority], catstr[category], msg);
-
-    fprintf(stderr, "%s", buffer);
-//    if (priority >= LOG_ERROR)
-//      js_stacktrace();
-    fflush(stderr);
-    
-    free(msg);
-    free(buffer);
+    printf("\n");
+    fflush(stdout);
   }
-
 #endif
 }
 
+/* print to stdout and console */
 void log_print(const char *str)
 {
-  fprintf(sout, "%s", str);
-  fflush(sout);
-  
 #ifndef NDEBUG
-  strncat(consolelog, str, CONSOLE_BUF);
-
-  if (logfile) {
-    fprintf(logfile, "%s", str);
-    fflush(logfile);
-  }
+  fprintf(writeout, str);
 #endif
-}
-
-void log_clear()
-{
-  consolelog[0] = 0;
-}
-
-void console_print(const char *str)
-{
-#ifndef NDEBUG
-  strncat(consolelog, str, CONSOLE_BUF);
-#endif
-}
-
-void log_setfile(char *file) {
-    freopen(file, "w", stderr);
-    freopen(file, "w", stdout);
-}
-
-void log_cat(FILE *f) {
-    char out[1024];
-
-    while (fgets(out, sizeof(out), f)) {
-        out[strcspn(out, "\n")] = '\0';
-        YughInfo(out);
-    }
+  printf(str);
+  fflush(stdout);
 }
 
 void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {
-  lvl = 3-lvl;
-  mYughLog(2, lvl, line, file, "tag: %s, id: %d, msg: %s", tag, id, msg);
+  lvl = LOG_PANIC-lvl;
+  mYughLog(LOG_RENDER, lvl, line, file, "tag: %s, id: %d, msg: %s", tag, id, msg);
 }

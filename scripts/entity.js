@@ -742,7 +742,7 @@ ur {
 /* Apply an ur u to an entity e */
 /* u is given as */
 function apply_ur(u, e) {
-  console.log(`applying ur ${u}`);
+  console.info(`Applying ur named ${u}.`);
   if (typeof u !== 'string') {
     console.warn("Must give u as a string.");
     return;

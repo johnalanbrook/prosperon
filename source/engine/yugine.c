@@ -84,12 +84,6 @@ static int sim_play = SIM_PLAY;
 static int argc;
 static char **args;
 
-void seghandle()
-{
-  js_stacktrace();
-  exit(1);
-}
-
 static JSValue c_init_fn;
 
 void c_init() {
@@ -153,9 +147,15 @@ void c_frame()
 
 void cleanup()
 {
-  sfetch_shutdown();
   out_memusage(".prosperon/jsmem.txt");
   script_stop();
+}
+
+void seghandle()
+{
+  js_stacktrace();
+  cleanup();
+  exit(1);
 }
 
 void c_clean() {
@@ -293,14 +293,7 @@ int main(int argc, char **argv) {
   setlocale(LC_ALL, "en_US.utf8");
 #ifndef NDEBUG
   log_init();
-  int logout = 0;
-  if (logout) {
-    time_t now = time(NULL);
-    char fname[100];
-    snprintf(fname, 100, "yugine-%ld.log", now);
-    log_setfile(fname);
-  }
-  
+
   signal(SIGSEGV, seghandle);
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);

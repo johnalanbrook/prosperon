@@ -6,12 +6,12 @@ this.realzoom = function() { return cmd(135); };
 
 this.right = function()
 {
-  return this.pos.x + (Game.width/2);
+  return this.pos.x + (Window.rendersize.x/2);
 }
 
 this.left = function()
 {
-  return this.pos.x - (Game.width/2);
+  return this.pos.x - (Window.rendersize.x/2);
 }
 
 this.mixin({

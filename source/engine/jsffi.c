@@ -825,10 +825,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     draw_edge(v1, js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, js2color(argv[2]), 10);
     break;
 
-  case 84:
-    ret = consolelog ? JS_NewString(js, consolelog) : JS_NewString(js,"");
-    break;
-
   case 85:
     ret = vec22js(HMM_ProjV2(js2vec2(argv[1]), js2vec2(argv[2])));
     break;
@@ -854,18 +850,11 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     log_print(str);
     break;
 
-  case 92:
-    logLevel = js2int(argv[1]);
-    break;
-
-  case 93:
-    ret = int2js(logLevel);
-    break;
-
   case 97:
     str = js2str(argv[1]);
     cursor_img(str);
     break;
+    
   case 103:
     ret = vec22js(js2gameobject(argv[1])->scale.XY);
     break;
@@ -972,11 +961,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
 
     case 142:
       str = JS_ToCString(js, argv[1]);
-      console_print(str);
-      break;
-
-    case 146:
-      log_clear();
+      log_print(str);
       break;
 
     case 149:
@@ -1275,7 +1260,7 @@ JSValue duk_yughlog(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
   const char *f = JS_ToCString(js, argv[2]);
   int line = js2int(argv[3]);
 
-  mYughLog(1, cmd, line, f, s);
+  mYughLog(LOG_SCRIPT, cmd, line, f, s);
 
   JS_FreeCString(js, s);
   JS_FreeCString(js, f);
