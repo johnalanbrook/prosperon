@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <signal.h>
+#include <fcntl.h>
 #include "yugine.h"
 #include "resources.h"
 
@@ -30,14 +32,19 @@ char *catstr[] = {"engine", "script", "render"};
 
 static FILE *logout; /* where logs are written to */
 static FILE *writeout; /* where console is written to */
+static FILE *dump; /* where data is dumped to */
 
-int stdout_lvl = LOG_PANIC;
+int stdout_lvl = LOG_ERROR;
 
 void log_init()
 {
 #ifndef NDEBUG
   logout = fopen(".prosperon/log.txt", "w");
   writeout = fopen(".prosperon/transcript.txt", "w");
+/*  int og = dup(1);
+  close(1);
+  int fd = open("out.txt", O_WRONLY | O_CREAT, 0644);
+  dup2(fd, 1);*/
 #endif
 }
 
@@ -64,7 +71,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
   va_end(args);
   fprintf(logout, "\n");
   
-  if (priority == LOG_DEBUG || priority > stdout_lvl) {
+  if (priority == LOG_DEBUG || priority >= stdout_lvl) {
     printf(logfmt, file, line, timebuf, logcolor[priority], catstr[category]);
     va_list args;
     va_start(args,message);
@@ -73,6 +80,9 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     printf("\n");
     fflush(stdout);
   }
+
+  if (priority >= LOG_ERROR)
+    raise(SIGINT);
 #endif
 }
 

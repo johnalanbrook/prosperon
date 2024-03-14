@@ -438,8 +438,6 @@ HMM_Vec2 *jsfloat2vec(JSValue v)
   HMM_Vec2 *arr = NULL;
   int n = s/2;
   n /= sizeof(float);
-//  arrsetcap(arr,n);
-//  memcpy(arr,buf,s);
   return arr;
 }
 
@@ -451,10 +449,6 @@ JSValue bitmask2js(cpBitmask mask) {
   return arr;
 }
 
-void vec2float(HMM_Vec2 v, float *f) {
-  f[0] = v.x;
-  f[1] = v.y;
-}
 
 JSValue vecarr2js(HMM_Vec2 *points, int n) {
   JSValue array = JS_NewArray(js);
@@ -673,11 +667,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   case 4:
     debug_draw_phys(JS_ToBool(js, argv[1]));
     break;
-
     
   case 15:
-  gameobject_draw_debug(js2gameobject(argv[1]));
-  break;
+    gameobject_draw_debug(js2gameobject(argv[1]));
+    break;
 
   case 16:
     str = js2str(argv[1]);
@@ -722,7 +715,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   case 47:
     draw_grid(js2number(argv[1]), js2number(argv[2]), js2color(argv[3]));
     break;
-
 
   case 51:
     draw_cppoint(js2vec2(argv[1]), js2number(argv[2]), js2color(argv[3]));
@@ -911,7 +903,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     case 153:
      cpBodySetTorque(js2gameobject(argv[1])->body, js2number(argv[2]));
      break;
-
 
     case 160:
       ret = vec22js(mat_t_dir(t_world2go(js2gameobject(argv[1])), js2vec2(argv[2])));
@@ -1390,7 +1381,6 @@ JSValue ID##_get_##ENTRY (JSContext *js, JSValue this) { \
   ID *n = js2##ID (this); \
   return n->ENTRY; \
 } \
-
 
 GETSET_PAIR(warp_gravity, strength, number)
 GETSET_PAIR(warp_gravity, decay, number)
@@ -2067,10 +2057,7 @@ void ffi_load() {
   DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)
-
   DUK_FUNC(performance, 2)
-
-
   
   QJSCLASSPREP(ptr);
   QJSCLASSPREP_FUNCS(gameobject);

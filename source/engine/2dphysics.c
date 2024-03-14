@@ -352,6 +352,10 @@ void phys2d_poly_free(struct phys2d_poly *poly)
 float phys2d_poly_moi(struct phys2d_poly *poly) {
   float m = poly->shape.go->mass;
   int len = cpPolyShapeGetCount(poly->shape.shape);
+  if (!len) {
+    YughWarn("Cannot evaluate the MOI of a polygon of length %d.", len);
+    return 0;
+  }
   cpVect points[len];
   for (int i = 0; i < len; i++)
     points[i] = cpPolyShapeGetVert(poly->shape.shape, i);

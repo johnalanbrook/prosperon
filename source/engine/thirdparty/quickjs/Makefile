@@ -179,6 +179,9 @@ LDEXPORT=
 else
 LDEXPORT=-rdynamic
 endif
+ifdef DUMP
+CFLAGS += -DDUMP
+endif
 
 ifndef CONFIG_COSMO
 ifndef CONFIG_DARWIN

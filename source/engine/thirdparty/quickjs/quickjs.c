@@ -105,6 +105,15 @@
 //#define DUMP_PROMISE
 //#define DUMP_READ_OBJECT
 
+#ifdef DUMP
+//#define DUMP_FREE
+#define DUMP_GC
+#define DUMP_GC_FREE
+#define DUMP_LEAKS 1
+//#define DUMP_OBJECTS
+//#define DUMP_CLOSURE
+#endif
+
 /* test the GC by forcing it before each object allocation */
 //#define FORCE_GC_AT_MALLOC
 

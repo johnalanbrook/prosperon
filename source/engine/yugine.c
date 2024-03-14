@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include "particle.h"
 #include "simplex.h"
-#include "wchar.h"
-#include "locale.h"
 
 #include "datastream.h"
 
@@ -167,8 +165,6 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
-  char utf8str[6] = {0};
-  wchar_t wcode;
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
       script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, mainwin.size.y -e->mouse_y, e->mouse_dx, -e->mouse_dy);
@@ -195,9 +191,7 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_CHAR:
-      if (e->char_code > 127) break; /* only dealing with ascii now */
-      wctomb(utf8str, wcode);
-      script_evalf("prosperon.textinput(`%ls`);", utf8str);
+      script_evalf("prosperon.textinput(`%lc`);", e->char_code);
       break;
 
     case SAPP_EVENTTYPE_RESIZED:
@@ -288,7 +282,6 @@ static sapp_desc start_desc = {
 };
 
 int main(int argc, char **argv) {
-  setlocale(LC_ALL, "en_US.utf8");
 #ifndef NDEBUG
   log_init();
 

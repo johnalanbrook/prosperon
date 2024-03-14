@@ -6,19 +6,12 @@ MAKEDIR != pwd
 
 CXX:=$(CC)
 
-ifeq ($(CXX), tcc)
-  CXX=clang
-endif
-
-ifeq ($(CC),cc)
-  CC=clang
-endif
 # Temp to strip long emcc paths to just emcc
 CC := $(notdir $(CC))
 
-DBG ?= 1
 OPT ?= 0
-LEAK ?= 0
+
+QJS :=
 
 INFO :=
 LD = $(CC)
@@ -57,19 +50,24 @@ ifeq ($(CC), emcc)
   AR = emar
 endif
 
-ifeq ($(DBG),1)
-  CPPFLAGS += -g
-  INFO += _dbg
-else
+ifdef NDEBUG
   CPPFLAGS += -DNDEBUG
   LDFLAGS += -s
+else
+  CPPFLAGS += -g
+  INFO += _dbg
 endif
 
-ifeq ($(LEAK),1)
+ifdef LEAK
   CPPFLAGS += -fsanitize=address
+  CPPFLAGS += -fsanitize=undefined
+  CPPFLAGS += -fno-omit-frame-pointer
+  QJS += LEAK
 endif
 
-CPPFLAGS += -DLEAK=$(LEAK)
+ifdef DUMP
+  QJS += DUMP
+endif
 
 ifeq ($(OPT),small)
   CPPFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
@@ -259,7 +257,7 @@ input.md: $(INPUTMD)
 QUICKJS := source/engine/thirdparty/quickjs
 $(BIN)/libquickjs.a: 
 	make -C $(QUICKJS) clean
-	make -C $(QUICKJS) SYSRT=$(SYSRT) TTARGET=$(TTARGET) ARCH=$(ARCH) DBG=$(DBG) OPT=$(OPT) AR=$(AR) OS=$(OS) libquickjs.a HOST_CC=$(CC) LEAK=$(LEAK)
+	make -C $(QUICKJS) AR=$(AR) HOST_CC=$(CC) LEAK=$(LEAK) DUMP=$(DUMP) libquickjs.a 
 	@mkdir -p $(BIN)
 	cp -rf $(QUICKJS)/libquickjs.* $(BIN)
 
