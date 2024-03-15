@@ -101,11 +101,10 @@ Object.mixin(cmd(268,true), {
       f = (f+1)%playing.frames.length;
       if (f === 0)
         sp.anim_done?.();
-      sp.gameobject?.delay(advance, playing.frames[f].time);
+      sp.ddd = sp.gameobject?.delay(advance, playing.frames[f].time);
     }
     advance();
   },
-  stop() {},
   set path(p) {
     p = Resources.find_image(p);
     if (!p) return;
@@ -118,6 +117,11 @@ Object.mixin(cmd(268,true), {
   },
   get path() {
     return this.tex.path();
+  },
+  kill() {
+    this.anim = undefined;
+    this.ddd?.();
+    delete this.ddd;
   },
   toString() { return "sprite"; },
   move(d) { this.pos = this.pos.add(d); },

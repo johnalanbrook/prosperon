@@ -227,7 +227,7 @@ void constraint_break(constraint *constraint)
   cpSpaceRemoveConstraint(space, constraint->c);
   cpConstraintFree(constraint->c);
   constraint->c = NULL;
-  script_call_sym(constraint->break_cb);
+  script_call_sym(constraint->break_cb,0,NULL);
 }
 
 void constraint_free(constraint *constraint)
@@ -642,7 +642,7 @@ JSValue arb2js(cpArbiter *arb)
 
 void phys_run_post(cpSpace *space, JSValue *fn, JSValue *hit)
 {
-  script_call_fn_arg(*fn, *hit);
+  script_call_sym(*fn, 1, hit);
   JS_FreeValue(js, *hit);
 }
 

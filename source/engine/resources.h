@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "stb_ds.h"
 #include "string.h"
+#include <time.h>
 
 extern char *DATA_PATH;
 extern int LOADED_GAME;
@@ -17,6 +18,7 @@ FILE *path_open(const char *tag, const char *fmt, ...);
 char **ls(const char *path);
 int cp(const char *p1, const char *p2);
 int fexists(const char *path);
+time_t file_mod_secs(const char *file);
 
 char *dirname(const char *path);
 

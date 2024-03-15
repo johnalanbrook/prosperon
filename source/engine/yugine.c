@@ -84,22 +84,24 @@ static char **args;
 
 static JSValue c_init_fn;
 
+static JSValue c_process_fn;
+
 void c_init() {
   mainwin.start = 1;
   script_evalf("world_start();");
   render_init();
   window_set_icon("icons/moon.gif");  
-  window_resize(sapp_width(), sapp_height());
   particle_init();
 
   if (!JS_IsUndefined(c_init_fn))
-    script_call_sym(c_init_fn);
+    script_call_sym(c_init_fn,0,NULL);
 }
 
 int frame_fps() { return 1.0/sapp_frame_duration(); }
 
 static void process_frame()
 {
+  script_call_sym(c_process_fn,0,NULL);
   double elapsed = stm_sec(stm_laptime(&frame_t));
   script_evalf("prosperon.appupdate(%g);", elapsed);
   /* Timers all update every frame - once per monitor refresh */
@@ -321,9 +323,10 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void engine_start(JSValue fn)
+void engine_start(JSValue fn, JSValue procfn)
 {
   c_init_fn = fn;
+  c_process_fn = procfn;
 
   start_t = frame_t = stm_now();
   physlast = updatelast = start_t;

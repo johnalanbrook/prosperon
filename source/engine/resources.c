@@ -137,6 +137,12 @@ static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
   return 0;
 }
 
+time_t file_mod_secs(const char *file) {
+  struct stat attr;
+  stat(file, &attr);
+  return attr.st_mtime;
+}
+
 // TODO: Not reentrant
 char **ls(const char *path)
 {

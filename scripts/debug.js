@@ -86,8 +86,8 @@ function assert(op, str)
 
 Debug.Options = { };
 Debug.Options.Color = {
-  set trigger(x) { cmd(17,x); },
-  set debug(x) { cmd(16, x); },
+  //set trigger(x) { cmd(17,x); },
+  //set debug(x) { cmd(16, x); },
 };
 
 var Gizmos = {
@@ -219,9 +219,9 @@ Debug.inputs.f9 = function() {
   Debug.Options.gif.stop();
 }
 
-Debug.inputs.f10 = function() { Time.timescale = 0.1; };
+Debug.inputs.f10 = function() { time.timescale = 0.1; };
 Debug.inputs.f10.doc = "Toggle timescale to 1/10.";
-Debug.inputs.f10.released = function () { Time.timescale = 1.0; };
+Debug.inputs.f10.released = function () { time.timescale = 1.0; };
 Debug.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
 Debug.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
 

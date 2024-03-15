@@ -659,22 +659,12 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
   size_t plen = 0;
 
   switch (cmd) {
-  case 0:
-    str = JS_ToCString(js, argv[1]);
-    ret = JS_NewInt64(js, script_dofile(str));
-    break;
-
   case 4:
     debug_draw_phys(JS_ToBool(js, argv[1]));
     break;
     
   case 15:
     gameobject_draw_debug(js2gameobject(argv[1]));
-    break;
-
-  case 16:
-    str = js2str(argv[1]);
-    file_eval_env(str,argv[2]);
     break;
 
   case 17:
@@ -828,11 +818,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       draw_circle(js2vec2(argv[1]), js2number(argv[2]), js2number(argv[2]), js2color(argv[3]), -1);
       break;
 
-    case 117:
-      str = JS_ToCString(js, argv[1]);
-      ret = script_runfile(str);
-      break;
-
     case 118:
       str = JS_ToCString(js,argv[1]);
       ret = bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
@@ -843,15 +828,10 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = JS_NewInt64(js, file_mod_secs(str));
       break;
 
-    case 122:
-      str = JS_ToCString(js, argv[1]);
-      ret = file_eval_env(str, argv[2]);
-      break;
-
     case 123:
       str = JS_ToCString(js, argv[1]);
       str2 = JS_ToCString(js, argv[3]);
-      ret = eval_file_env(str, str2, argv[2]);
+      ret = eval_script_env(str, argv[2], str2);
       break;
 
     case 124:
@@ -1055,7 +1035,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       ret = str2js(COM);
       break;
     case 257:
-      engine_start(argv[1]);
+      engine_start(argv[1], argv[2]);
       break;
 
     case 259:
@@ -1994,8 +1974,8 @@ JSValue duk_performance(JSContext *js, JSValueConst this, int argc, JSValueConst
     return JS_NewStringLen(js, STRTEST, sizeof(*STRTEST));
     case 7:
       for (int i = 0; i < js2number(argv[2]); i++)
-        script_call_sym(argv[1]);
-      script_call_sym(argv[3]);
+        script_call_sym(argv[1],0,NULL);
+      script_call_sym(argv[3],0,NULL);
       break;
   }
   return JS_UNDEFINED;

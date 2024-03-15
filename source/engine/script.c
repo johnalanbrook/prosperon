@@ -1,22 +1,8 @@
 #include "script.h"
-
 #include "log.h"
-#include "stdio.h"
-
 #include "jsffi.h"
-#include "font.h"
-
-#include "gameobject.h"
-
-#include "ftw.h"
-
 #include "stb_ds.h"
-
-#include "sys/stat.h"
-#include "sys/types.h"
-#include "time.h"
 #include "resources.h"
-#include "input.h"
 
 #include <stdarg.h>
 
@@ -29,53 +15,23 @@ JSRuntime *rt = NULL;
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
 #endif
 
-static struct {
-  char *key;
-  JSValue value;
-} *jsstrs = NULL;
-
-JSValue jstr(const char *str)
-{
-  int index = shgeti(jsstrs, str);
-  if (index != -1) return jsstrs[index].value;
-
-  JSValue v = str2js(str);
-  shput(jsstrs, str, v);
-  return v;
-}
-
-static int load_prefab(const char *fpath, const struct stat *sb, int typeflag) {
-  if (typeflag != FTW_F)
-    return 0;
-
-  if (!strcmp(".prefab", strrchr(fpath, '.')))
-    script_dofile(fpath);
-
-  return 0;
-}
-
 void script_startup() {
   rt = JS_NewRuntime();
   js = JS_NewContext(rt);
-  
-  sh_new_arena(jsstrs);
 
   ffi_load();
-
-  for (int i = 0; i < 100; i++)
-    num_cache[i] = int2js(i);
     
-  script_dofile("scripts/engine.js");  
-//  jso_file("scripts/engine.js");
+  size_t len;
+  char *eng = slurp_text("scripts/engine.js", &len);
+  eval_script_env("scripts/engine.js", JS_GetGlobalObject(js), eng);
+  free(eng);
 }
 
 void script_stop()
 {
   script_evalf("Event.notify('quit');");
-  send_signal("quit",0,NULL);
+  script_evalf("prosperon.quit();");
   ffi_stop();
-  for (int i = 0; i < shlen(jsstrs); i++)
-    JS_FreeValue(js,jsstrs[i].value);
 
 #if LEAK
   JS_FreeContext(js);
@@ -83,60 +39,7 @@ void script_stop()
 #endif
 }
 
-void script_gc()
-{
-  JS_RunGC(rt);
-}
-
-JSValue num_cache[100] = {0};
-
-/*int js_print_exception(JSValue v) {
-#ifndef NDEBUG
-  if (JS_IsException(v)) {
-    JSValue exception = JS_GetException(js);
-    
-    if (JS_IsNull(exception)) {
-      JS_FreeValue(js,exception);
-      return 0;
-    }
-      
-    JSValue val = JS_ToCStringJS_GetPropertyStr(js, exception, "stack");
-    const char *name = JS_ToCString(js, JS_GetPropertyStr(js, exception, "name"));
-    const char *msg = JS_ToCString(js, JS_GetPropertyStr(js, exception, "message"));
-    const char *stack = JS_ToCString(js, val);
-    YughLog(LOG_SCRIPT, LOG_ERROR, "%s :: %s\n%s", name, msg,stack);
-    js_stacktrace();
-
-    JS_FreeCString(js, name);
-    JS_FreeCString(js, msg);
-    JS_FreeCString(js, stack);
-    JS_FreeValue(js,val);
-    JS_FreeValue(js,exception);
-
-    return 1;
-  }
-#endif
-  return 0;
-}
-*/
-void script_run(const char *script, const char *file) {
-  JSValue obj = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS);
-  js_print_exception(obj);
-  JS_FreeValue(js,obj);
-}
-
-void script_evalf(const char *format, ...)
-{
-  char fmtbuf[4096];
-  va_list args;
-  va_start(args, format);
-  vsnprintf(fmtbuf, 4096, format, args);
-  va_end(args);
-
-  JSValue obj = JS_Eval(js, fmtbuf, strlen(fmtbuf), "C eval", JS_EVAL_FLAGS);
-  js_print_exception(obj);
-  JS_FreeValue(js,obj);
-}
+void script_gc() { JS_RunGC(rt); }
 
 uint8_t *script_compile(const char *file, size_t *len) {
   size_t file_len;
@@ -157,102 +60,35 @@ JSValue script_run_bytecode(uint8_t *code, size_t len)
   return ret;
 }
 
-struct callee stacktrace_callee;
-
-time_t file_mod_secs(const char *file) {
-  struct stat attr;
-  stat(file, &attr);
-  return attr.st_mtime;
-}
-
 void js_stacktrace() {
 #ifndef NDEBUG
   script_evalf("console.stack();");
 #endif
 }
 
-void js_dump_stack() {
-  js_stacktrace();
-}
-
-int script_dofile(const char *file) {
-  JSValue ret = script_runfile(file);
-  JS_FreeValue(js,ret);
-  return file_mod_secs(file);
-}
-
-JSValue script_runjso(const uint8_t *buf, size_t len)
+void script_evalf(const char *format, ...)
 {
-  JSValue obj = JS_ReadObject(js, buf, len, JS_EVAL_FLAGS);
-  JSValue ret = JS_EvalFunction(js, obj);
-  js_print_exception(ret);
-  return ret;
-}
+  char fmtbuf[4096];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(fmtbuf, 4096, format, args);
+  va_end(args);
 
-time_t jso_file(const char *file)
-{
-  size_t len;
-  uint8_t *byte = slurp_file(file, &len);
-  JSValue obj = JS_ReadObject(js, byte, len, JS_READ_OBJ_BYTECODE);
-  JSValue ret = JS_EvalFunction(js, obj);
-  js_print_exception(ret);
-  JS_FreeValue(js,ret);
-  JS_FreeValue(js,obj);
-  free(byte);
-  return file_mod_secs(file);
-}
-
-JSValue script_runfile(const char *file)
-{
-  size_t len;
-  char *script = slurp_text(file, &len);
-  if (!script) return JS_UNDEFINED;
-  YughWarn("Eval %s.", file);
-  JSValue obj = JS_Eval(js, script, len, file, JS_EVAL_FLAGS);
+  JSValue obj = JS_Eval(js, fmtbuf, strlen(fmtbuf), "C eval", JS_EVAL_FLAGS);
   js_print_exception(obj);
-
-  free(script);
-  return obj;
+  JS_FreeValue(js,obj);
 }
 
-/* env is an object in the scripting environment;
-   s is the function to call on that object
-*/
-void script_eval_w_env(const char *s, JSValue env, const char *file) {
-  JSValue v = JS_EvalThis(js, env, s, strlen(s), file, JS_EVAL_FLAGS);
-  js_print_exception(v);
-  JS_FreeValue(js, v);
-}
-
-JSValue eval_file_env(const char *script, const char *file, JSValue env)
+JSValue eval_script_env(const char *file, JSValue env, const char *script)
 {
   JSValue v = JS_EvalThis(js, env, script, strlen(script), file, JS_EVAL_FLAGS);
   js_print_exception(v);
   return v;
 }
 
-JSValue file_eval_env(const char *file, JSValue env)
-{
-  size_t len;
-  char *script = slurp_text(file, &len);
-  JSValue v = JS_EvalThis(js, env, script, len, file, JS_EVAL_FLAGS);
-  free(script);
-  js_print_exception(v);
-  return v;
-}
-
-void script_call_sym(JSValue sym) {
+void script_call_sym(JSValue sym, int argc, JSValue *argv) {
   if (!JS_IsFunction(js, sym)) return;
-  struct callee c;
-  c.fn = sym;
-  c.obj = JS_GetGlobalObject(js);
-  call_callee(&c);
-}
-
-void script_call_fn_arg(JSValue fn, JSValue arg)
-{
-  if (!JS_IsFunction(js,fn)) return;
-  JSValue ret = JS_Call(js, fn, JS_GetGlobalObject(js), 1, &arg);
+  JSValue ret = JS_Call(js, sym, JS_GetGlobalObject(js), argc, argv);
   js_print_exception(ret);
   JS_FreeValue(js, ret);
 }
@@ -265,63 +101,4 @@ void out_memusage(const char *file)
   JS_ComputeMemoryUsage(rt, &jsmem);
   JS_DumpMemoryUsage(f, &jsmem, rt);
   fclose(f);
-}
-
-JSValue js_callee_exec(struct callee *c, int argc, JSValue *argv)
-{
-  if (JS_IsUndefined(c->fn)) return JS_UNDEFINED;
-  if (JS_IsUndefined(c->obj)) return JS_UNDEFINED;
-  
-  JSValue ret = JS_Call(js, c->fn, c->obj, argc, argv);
-  js_print_exception(ret);
-  JS_FreeValue(js, ret);
-  return JS_UNDEFINED;
-}
-
-void call_callee(struct callee *c) {
-  js_callee_exec(c, 0, NULL);
-}
-
-void callee_dbl(struct callee c, double d) {
-  JSValue v = number2js(d);
-  js_callee_exec(&c, 1, &v);
-  JS_FreeValue(js, v);
-}
-
-void callee_int(struct callee c, int i) {
-  JSValue v = int2js(i);
-  js_callee_exec(&c, 1, &v);
-  JS_FreeValue(js, v);
-}
-
-void callee_vec2(struct callee c, HMM_Vec2 vec) {
-  JSValue v = vec22js(vec);
-  js_callee_exec(&c, 1, &v);
-  JS_FreeValue(js, v);
-}
-
-void script_callee(struct callee c, int argc, JSValue *argv) {
-  js_callee_exec(&c, argc, argv);
-}
-
-void free_callee(struct callee c)
-{
-  JS_FreeValue(js,c.fn);
-  JS_FreeValue(js,c.obj);
-}
-
-void send_signal(const char *signal, int argc, JSValue *argv)
-{
-  JSValue globalThis = JS_GetGlobalObject(js);
-  JSValue sig = JS_GetPropertyStr(js, globalThis, "Signal");
-  JS_FreeValue(js, globalThis);
-  JSValue fn = JS_GetPropertyStr(js, sig, "call");
-  JSValue args[argc+1];
-  args[0] = jstr(signal);
-  for (int i = 0; i < argc; i++)
-    args[1+i] = argv[i];
-    
-  JS_FreeValue(js,JS_Call(js, fn, sig, argc+1, args));
-  JS_FreeValue(js, sig);
-  JS_FreeValue(js, fn);
 }

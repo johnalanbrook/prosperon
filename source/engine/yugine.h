@@ -11,7 +11,7 @@ void sim_stop();
 void sim_step();
 int phys_stepping();
 void print_stacktrace();
-void engine_start(JSValue fn); /* fn runs after the engine starts */
+void engine_start(JSValue fn, JSValue proc_fn); /* fn runs after the engine starts */
 
 int frame_fps();
 void quit();

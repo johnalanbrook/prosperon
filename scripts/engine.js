@@ -66,7 +66,7 @@ function use(file)
   var c = io.slurp(file);
   
   var script = `(function() { ${c} })();`;
-  use.files[file] = cmd(123,script,global,file);
+  use.files[file] = cmd(123,file,global,script);
 
   return use.files[file];
 }
@@ -86,7 +86,7 @@ function eval_env(script, env, file)
   file ??= "SCRIPT";
   console.info(`eval ${file}`);  
   script = `(function() { ${script}; }).call(this);\n`;
-  return cmd(123,script,env,file);
+  return cmd(123,file,env,script);
 }
 
 global.check_registers = function(obj)
@@ -144,10 +144,15 @@ Object.assign(global, use("scripts/base.js"));
 global.obscure('global');
 global.mixin("scripts/render.js");
 
+function process()
+{
+  say ('holy cow');
+}
+
 global.Game = {
   engine_start(fn) {
     console.info("Starting rendering and sound ...");
-    cmd(257, fn);
+    cmd(257, fn, process);
   },
 
   object_count() {
@@ -277,6 +282,7 @@ prosperon.touchpress = function(touches){};
 prosperon.touchrelease = function(touches){};
 prosperon.touchmove = function(touches){};
 prosperon.clipboardpaste = function(str){};
+prosperon.quit = function(){};
 
 global.mixin("scripts/input.js");
 global.mixin("scripts/std.js");
@@ -295,7 +301,7 @@ var timer = {
 
   kill() {
     this.end();
-    this.fn = undefined;
+    delete this.fn;
   },
   
   delay(fn, secs) {
@@ -304,7 +310,9 @@ var timer = {
     t.remain = secs;
     t.fn = fn;
     t.end = Register.update.register(timer.update.bind(t));
-    return function() { t.kill(); };
+    var returnfn = timer.kill.bind(t);
+    returnfn.remain = secs;
+    return returnfn;
   },
 };
 
@@ -313,59 +321,11 @@ global.mixin("scripts/physics.js");
 global.mixin("scripts/ai.js");
 global.mixin("scripts/geometry.js");
 
+/*
+Factory for creating registries. Register one with 'X.register',
+which returns a function that, when invoked, cancels the registry.
+*/
 var Register = {
-  kbm_input(mode, btn, state, ...args) {
-    if (state === 'released') {
-      btn = btn.split('-').last();
-    }
-   
-    switch(mode) {
-      case "emacs":
-        player[0].raw_input(btn, state, ...args);
-        break;
-
-      case "mouse":
-        player[0].mouse_input(btn, state, ...args);
-	break;
-
-      case "char":
-        player[0].char_input(btn);
-	break;
-    };
-  },
-
-  gamepad_playermap: [],
-  gamepad_input(pad, btn, state, ...args) {
-    var player = this.gamepad_playermap[pad];
-    if (!player) return;
-
-    var statestr = Input.state2str(state);
-
-    var rawfn = `gamepad_${btn}_${statestr}`;
-    player.input(rawfn, ...args);
-
-    input.action.actions.forEach(x => {
-      if (x.inputs.includes(btn))
-        player.input(`action_${x.name}_${statestr}`, ...args);
-    });
-  },
-  
-  unregister_obj(obj) { Player.uncontrol(obj); },
-
-  endofloop(fn) {
-    if (!this.inloop)
-      fn();
-    else {
-      this.loopcbs.push(fn);
-    }
-  },
-
-  clear() {
-    Register.registries.forEach(function(n) {
-      n.entries = [];
-    });
-  },
-
   registries: [],
 
   add_cb(name) {
@@ -394,10 +354,7 @@ Register.add_cb("appupdate");
 Register.add_cb("physupdate");
 Register.add_cb("gui");
 Register.add_cb("debug");
-Register.add_cb("gamepad_input");
 Register.add_cb("draw");
-
-Register.gamepad_playermap[0] = Player.players[0];
 
 var Event = {
   events: {},

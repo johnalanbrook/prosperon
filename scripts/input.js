@@ -67,7 +67,6 @@ function modstr()
 
 prosperon.keydown = function(key, repeat)
 {
-
   prosperon.keys[key] = true;
   
   if (key == 341 || key == 345)

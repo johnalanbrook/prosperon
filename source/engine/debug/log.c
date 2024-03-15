@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include "yugine.h"
 #include "resources.h"
+#include "quickjs/quickjs.h"
 
 #include "script.h"
 
@@ -41,10 +42,8 @@ void log_init()
 #ifndef NDEBUG
   logout = fopen(".prosperon/log.txt", "w");
   writeout = fopen(".prosperon/transcript.txt", "w");
-/*  int og = dup(1);
-  close(1);
-  int fd = open("out.txt", O_WRONLY | O_CREAT, 0644);
-  dup2(fd, 1);*/
+  dump = fopen(".prosperon/quickjs.txt", "w");
+  quickjs_set_dumpout(dump);
 #endif
 }
 
@@ -52,6 +51,7 @@ void log_shutdown()
 {
   fclose(logout);
   fclose(writeout);
+  fclose(dump);
 }
 
 const char *logfmt = "%s:%d: [%s] %s, %s: ";

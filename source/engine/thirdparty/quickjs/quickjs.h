@@ -91,6 +91,8 @@ typedef struct JSRefCountHeader {
     int ref_count;
 } JSRefCountHeader;
 
+void quickjs_set_dumpout(FILE *f);
+
 #define JS_FLOAT64_NAN NAN
 
 #ifdef CONFIG_CHECK_JSVALUE

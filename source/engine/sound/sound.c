@@ -280,7 +280,7 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
     if (s->loop)
       s->frame = 0;
 
-    script_call_sym(s->hook);
+    script_call_sym(s->hook,0,NULL);
   }
 }
 

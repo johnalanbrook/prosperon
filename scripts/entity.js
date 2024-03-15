@@ -217,9 +217,23 @@ var gameobject = {
   },
 
   delay(fn, seconds) {
-    var t = timer.delay(fn.bind(this), seconds);
-    this.timers.push(t);
-    return t;
+    var timescale = this.timescale;
+    var timers = this.timers;
+    var thisfn = fn.bind(this);
+    var rm_register;
+    
+    var ud = function(dt) {
+      seconds -= dt*timescale;
+      if (seconds <= 0) {
+        thisfn();
+        rm_register();
+        rm_register = undefined;
+        thisfn = undefined;
+      }
+    }
+    
+    rm_register = Register.update.register(ud);
+    return rm_register;
   },
 
   tween(prop, values, def) {
@@ -602,6 +616,7 @@ var gameobject = {
       this.components[key].kill?.();
       this.components[key].gameobject = undefined;
       delete this.components[key];
+      delete this[key];
     }
 
     this.clear();
