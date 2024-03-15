@@ -35,4 +35,4 @@ say(`Failed tests are:`);
 for (var f of failed)
   say(f);
   
-Game.quit();
+os.quit();

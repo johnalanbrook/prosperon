@@ -5,7 +5,6 @@
 #include "render.h"
 #include "stb_ds.h"
 #include "texture.h"
-#include "timer.h"
 #include "HandmadeMath.h"
 
 #include "sprite.sglsl.h"

@@ -143,10 +143,47 @@ var load = use;
 Object.assign(global, use("scripts/base.js"));
 global.obscure('global');
 global.mixin("scripts/render.js");
+global.mixin("scripts/debug.js");
+
+var frame_t = profile.secs();
+var updateMS = 1/60;
+var physMS = 1/60;
+
+var sim = {
+  mode: "play",
+  play() { this.mode = "play"; os.reindex_static(); },
+  playing() { return this.mode === 'play'; },
+  pause() { this.mode = "pause"; console.stack(); },
+  paused() { return this.mode === 'pause'; },
+  step() { this.mode = 'step'; },
+  stepping() { return this.mode === 'step'; }
+}
+
+var physlag = 0;
+var timescale = 1;
 
 function process()
 {
-  say ('holy cow');
+  var dt = profile.secs() - frame_t;
+  frame_t = profile.secs();
+  
+  prosperon.appupdate(dt);
+  prosperon.emitters_step(dt);
+  
+  if (sim.mode === "play" || sim.mode === "step") {
+    prosperon.update(dt*game.timescale);
+    if (sim.mode === "step")
+      sim.pause();
+  }
+  
+  physlag += dt;
+  
+  while (physlag > physMS) {
+    physlag -= physMS;
+    prosperon.phys2d_step(physMS*timescale);
+    prosperon.physupdate(physMS*timescale);
+  }
+  prosperon.window_render();
 }
 
 global.Game = {
@@ -178,18 +215,6 @@ global.Game = {
 
   },
 
-  quit() {
-    sys_cmd(0);
-  },
-
-  pause() { sys_cmd(3); },
-  stop() { Game.pause(); },
-  step() { sys_cmd(4);},
-  playing() { return sys_cmd(5); },
-  paused() { return sys_cmd(6); },
-  stepping() { return cmd(79); },
-  play() { sys_cmd(1); },
-  
   wait_fns: [],
 
   wait_exec(fn) {
@@ -349,8 +374,8 @@ var Register = {
   },
 };
 
-Register.add_cb("update").doc = "Called once per frame.";
 Register.add_cb("appupdate");
+Register.add_cb("update").doc = "Called once per frame.";
 Register.add_cb("physupdate");
 Register.add_cb("gui");
 Register.add_cb("debug");
@@ -405,7 +430,7 @@ Window.world2screen = function(worldpos) {
 Window.icon = function(path) { cmd(90, path); };
 Window.icon.doc = "Set the icon of the window using the PNG image at path.";
 
-global.mixin("scripts/debug.js");
+
 global.mixin("scripts/spline.js");
 global.mixin("scripts/components.js");
 
@@ -453,3 +478,4 @@ Game.view_camera = function(cam)
 }
 
 Window.title = `Prosperon v${prosperon.version}`;
+Window.size = [500,500];

@@ -1,6 +1,5 @@
 #include "2dphysics.h"
 
-#include "debug.h"
 #include "gameobject.h"
 #include <string.h>
 

@@ -48,7 +48,7 @@ var Debug = {
     if (this.draw_bb)
       Game.all_objects(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
 
-    if (Game.paused()) GUI.text("PAUSED", [0,0],1);
+    if (sim.paused()) GUI.text("PAUSED", [0,0],1);
 
     if (this.draw_gizmos)
       Game.all_objects(function(x) {
@@ -66,10 +66,10 @@ var Debug = {
       GUI.text(time.timecode(time.timenow() - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
     }
 
-    GUI.text(Game.playing() ? "PLAYING"
-                         : Game.stepping() ?
+    GUI.text(sim.playing() ? "PLAYING"
+                         : sim.stepping() ?
 			 "STEP" :
-			 Game.paused() ?
+			 sim.paused() ?
 			 "PAUSED; EDITING" : 
 			 "EDIT", [0, 0], 1);
   },
@@ -80,7 +80,7 @@ function assert(op, str)
   str ??= `assertion failed [value '${op}']`;
   if (!op) {
     console.error(`Assertion failed: ${str}`);
-    Game.quit();
+    os.quit();
   }
 }
 
@@ -141,6 +141,8 @@ Object.assign(profile, {
     fn();
     say(`profile [${str}]: ${profile.lap(start)}`);
   },
+
+  secs() { return this.now()/1000000000; },
 });
 
 

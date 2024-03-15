@@ -4,7 +4,6 @@
 #include "yugine.h"
 #include "log.h"
 #include <assert.h>
-#include "debug.h"
 #include "window.h"
 #include "2dphysics.h"
 #include "stb_ds.h"

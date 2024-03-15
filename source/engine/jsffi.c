@@ -3,8 +3,6 @@
 #include "script.h"
 
 #include "anim.h"
-#include "timer.h"
-#include "debug.h"
 #include "debugdraw.h"
 #include "font.h"
 #include "gameobject.h"
@@ -205,8 +203,6 @@ JSValue ptr2js(void *ptr) {
   JS_SetOpaque(obj, ptr);
   return obj;
 }
-
-struct timer *js2timer(JSValue v) { return id2timer(js2int(v)); }
 
 double js_get_prop_number(JSValue v, const char *p) {
   double num;
@@ -758,10 +754,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     set_cat_mask(js2int(argv[1]), js2bitmask(argv[2]));
     break;
 
-  case 79:
-    ret = JS_NewBool(js, phys_stepping());
-    break;
-
   case 80:
     ids = phys2d_query_shape(js2ptr(argv[1]));
     ret = gos2ref(ids);
@@ -1114,37 +1106,6 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
   return JS_UNDEFINED;
 }
 
-JSValue duk_sys_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
-
-  switch (cmd) {
-  case 0:
-    quit();
-    break;
-
-  case 1:
-    sim_start();
-    cpSpaceReindexStatic(space);
-    break;
-
-  case 3:
-    sim_pause();
-    break;
-
-  case 4:
-    sim_step();
-    break;
-
-  case 5:
-    return JS_NewBool(js, sim_playing());
-
-  case 6:
-    return JS_NewBool(js, sim_paused());
-  }
-
-  return JS_UNDEFINED;
-}
-
 JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   return gameobject2js(MakeGameobject());
 }
@@ -1465,6 +1426,9 @@ JSValue js_os_sys(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
+JSValue js_os_quit(JSContext *js, JSValueConst this) { quit(); return JS_UNDEFINED; }
+JSValue js_os_reindex_static(JSContext *js, JSValueConst this) { cpSpaceReindexStatic(space); return JS_UNDEFINED; }
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
@@ -1481,14 +1445,28 @@ JSValue global_get_##ENTRY (JSContext *js, JSValue this) { \
   return TYPE##2js(ENTRY); \
 } \
 
-GETSET_GLOBAL(physMS, number)
-GETSET_GLOBAL(timescale, number)
-GETSET_GLOBAL(updateMS, number)
+JSValue js_prosperon_emitters_step(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  emitters_step(js2number(argv[0]));
+  return JS_UNDEFINED;
+}
+
+JSValue js_prosperon_phys2d_step(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  phys2d_update(js2number(argv[0]));
+  return JS_UNDEFINED;
+}
+
+JSValue js_prosperon_window_render(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  window_render(&mainwin);
+  return JS_UNDEFINED;
+}
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
-  CGETSET_ADD(global, updateMS),
-  CGETSET_ADD(global, physMS),
-  CGETSET_ADD(global, timescale),
+  MIST_FUNC_DEF(prosperon, emitters_step, 1),
+  MIST_FUNC_DEF(prosperon, phys2d_step, 1),
+  MIST_FUNC_DEF(prosperon, window_render, 0)
 };
 
 JSValue js_time_now(JSContext *js, JSValue this) {
@@ -1547,11 +1525,9 @@ static const JSCFunctionListEntry js_console_funcs[] = {
 };
 
 JSValue js_profile_now(JSContext *js, JSValue this) { return number2js(stm_now()); }
-JSValue js_profile_fps(JSContext *js, JSValue this) { return number2js(frame_fps()); }
 
 static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
-  MIST_FUNC_DEF(profile,fps,0)
 };
 
 JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
@@ -1780,15 +1756,12 @@ static JSValue window_get_title(JSContext *js, JSValueConst this, JSValue v)
   return str2js(js2window(this)->title);
 }
 
-GETSET_PAIR(window, editor, bool)
-
 static const JSCFunctionListEntry js_window_funcs[] = {
   CGETSET_ADD(window, size),
   CGETSET_ADD(window, rendersize),
   CGETSET_ADD(window, mode),
   CGETSET_ADD(window, fullscreen),
   CGETSET_ADD(window, title),
-  CGETSET_ADD(window, editor)
 };
 
 #define GETSET_PAIR_BODY(ID, ENTRY, TYPE) \
@@ -2020,7 +1993,6 @@ void ffi_load() {
   DUK_FUNC(make_gameobject, 0)
   DUK_FUNC(set_body, 3)
   DUK_FUNC(q_body, 2)
-  DUK_FUNC(sys_cmd, 1)
   DUK_FUNC(spline_cmd, 6)
   DUK_FUNC(make_circle2d, 1)
   DUK_FUNC(cmd_circle2d, 6)

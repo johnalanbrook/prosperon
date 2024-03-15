@@ -362,7 +362,7 @@ var gameobject = {
 
 
     if (typeof ent.load === 'function') ent.load();
-    if (Game.playing())
+    if (sim.playing())
       if (typeof ent.start === 'function') ent.start();
 
     var mur = ent.get_ur();

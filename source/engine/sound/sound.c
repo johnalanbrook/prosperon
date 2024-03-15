@@ -8,7 +8,6 @@
 #include "time.h"
 #include <stdlib.h>
 #include "pthread.h"
-#include "debug.h"
 #include "jsffi.h"
 
 pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;

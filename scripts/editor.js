@@ -191,7 +191,7 @@ var editor = {
     this.stash = this.desktop.instance_obj();
     world.clear();
     global.mixin("config.js");
-    Game.play();
+    sim.play();
     player[0].uncontrol(this);
     player[0].control(limited_editor);
     editor.cbs.forEach(cb => cb());
@@ -206,7 +206,7 @@ var editor = {
   start_play() {
     world.clear();
     global.mixin("config.js");
-    Game.play();
+    sim.play();
     player[0].uncontrol(this);
     player[0].control(limited_editor);
     editor.cbs.forEach(cb=>cb());
@@ -217,7 +217,7 @@ var editor = {
   cbs: [],
 
   enter_editor() {
-    Game.pause();
+    sim.pause();
     player[0].control(this);
     player[0].uncontrol(limited_editor);
     
@@ -832,15 +832,15 @@ editor.inputs.f6 = function() { editor.start_play(); }
 editor.inputs.f6.doc = "Start game as if the player started it.";
 
 editor.inputs['M-p'] = function() {
-  if (Game.playing())
-    Game.pause();
+  if (sim.playing())
+    sim.pause();
 
-  Game.step();
+  sim.step();
 }
 editor.inputs['M-p'].doc = "Do one time step, pausing if necessary.";
 
 editor.inputs['C-M-p'] = function() {
-  if (!Game.playing()) {
+  if (!sim.playing()) {
     editor.start_play_ed();
   }
   console.warn(`Starting edited level ...`);
@@ -1928,9 +1928,7 @@ var groupsaveaspanel = Object.copy(inputpanel, {
 
 var quitpanel = Object.copy(inputpanel, {
   title: "really quit?",
-  action() {
-    Game.quit();
-  },
+  action() { os.quit(); },
   
   guibody () {
     return Mum.text({str: "Really quit?"});
@@ -2043,16 +2041,16 @@ limited_editor.inputs = {};
 
 limited_editor.inputs['C-p'] = function()
 {
-  if (Game.playing())
-    Game.pause();
+  if (sim.playing())
+    sim.pause();
   else
-    Game.play();
+    sim.play();
 }
 
 limited_editor.inputs['M-p'] = function()
 {
-  Game.pause();
-  Game.step();
+  sim.pause();
+  sim.step();
 }
 
 limited_editor.inputs['C-q'] = function()
@@ -2072,7 +2070,7 @@ if (io.exists("editor.config"))
   load_configs("editor.config");
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
-Game.stop();
+sim.pause();
 Window.editor = true;
 Debug.draw_phys(true);
 

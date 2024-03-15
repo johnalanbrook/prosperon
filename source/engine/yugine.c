@@ -1,7 +1,5 @@
 #include "yugine.h"
-#include "font.h"
 #include "transform.h"
-#include "gameobject.h"
 #include "input.h"
 #include "render.h"
 #include "window.h"
@@ -14,7 +12,6 @@
 
 #include "datastream.h"
 
-#include "timer.h"
 #include "quickjs/quickjs.h"
 
 #include "jsffi.h"
@@ -52,26 +49,8 @@
 #include "stb_image_write.h"
 #include <pl_mpeg.h>
 
-#include "debug.h"
-
-static struct d_prof prof_draw;
-static struct d_prof prof_update;
-static struct d_prof prof_input;
-static struct d_prof prof_physics;
-
-double physlag = 0;
-double physMS = 1 / 60.f;
-uint64_t physlast = 0;
-
-double updateMS = 1/60.f;
-uint64_t updatelast = 0;
-
-static int phys_step = 0;
-
 uint64_t start_t;
 uint64_t frame_t;
-
-double timescale = 1.f;
 
 #define SIM_PLAY 0
 #define SIM_PAUSE 1
@@ -83,11 +62,11 @@ static int argc;
 static char **args;
 
 static JSValue c_init_fn;
-
 static JSValue c_process_fn;
 
 void c_init() {
   mainwin.start = 1;
+  window_resize(sapp_width(), sapp_height());
   script_evalf("world_start();");
   render_init();
   window_set_icon("icons/moon.gif");  
@@ -97,53 +76,7 @@ void c_init() {
     script_call_sym(c_init_fn,0,NULL);
 }
 
-int frame_fps() { return 1.0/sapp_frame_duration(); }
-
-static void process_frame()
-{
-  script_call_sym(c_process_fn,0,NULL);
-  double elapsed = stm_sec(stm_laptime(&frame_t));
-  script_evalf("prosperon.appupdate(%g);", elapsed);
-  /* Timers all update every frame - once per monitor refresh */
-  timer_update(elapsed, timescale);
-
-  emitters_step(elapsed);
-
-  if (sim_play == SIM_PLAY || sim_play == SIM_STEP) {
-    if (stm_sec(stm_diff(frame_t, updatelast)) > updateMS) {
-      double dt = stm_sec(stm_diff(frame_t, updatelast));
-      updatelast = frame_t;
-      
-//      prof_start(&prof_update);
-      script_evalf("prosperon.update(%g);", dt*timescale);
-//      prof_lap(&prof_update);
-
-      if (sim_play == SIM_STEP)
-        sim_pause();
-    }
-
-    physlag += elapsed;
-    while (physlag > physMS) {
-      physlag -= physMS;
-//      prof_start(&prof_physics);
-      phys_step = 1;
-      phys2d_update(physMS * timescale);
-      script_evalf("prosperon.physupdate(%g);", physMS*timescale);
-      phys_step = 0;
-//      prof_lap(&prof_physics);
-    }
-  }
-
-//    prof_start(&prof_draw);
-    window_render(&mainwin);
-//    prof_lap(&prof_draw);
-}
-
-void c_frame()
-{
-  if (mainwin.editor) return;
-  process_frame();
-}
+void c_frame() { script_call_sym(c_process_fn,0,NULL); }
 
 void cleanup()
 {
@@ -252,17 +185,7 @@ void c_event(const sapp_event *e)
     default:
       break;
   }
-
-  if (mainwin.editor)
-    process_frame();
 }
-
-int sim_playing() { return sim_play == SIM_PLAY; }
-int sim_paused() { return sim_play == SIM_PAUSE; }
-void sim_start() { sim_play = SIM_PLAY; }
-void sim_pause() { sim_play = SIM_PAUSE; }
-int phys_stepping() { return sim_play == SIM_STEP; }
-void sim_step() { sim_play = SIM_STEP; }
 
 static sapp_desc start_desc = {
     .width = 720,
@@ -290,8 +213,6 @@ int main(int argc, char **argv) {
   signal(SIGSEGV, seghandle);
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
-//  signal(SIGBUS, seghandle);
-
 #endif
 
   resources_init();
@@ -328,8 +249,6 @@ void engine_start(JSValue fn, JSValue procfn)
   c_init_fn = fn;
   c_process_fn = procfn;
 
-  start_t = frame_t = stm_now();
-  physlast = updatelast = start_t;
   sound_init();
   phys2d_init();  
 
@@ -340,7 +259,7 @@ void engine_start(JSValue fn, JSValue procfn)
   sapp_run(&start_desc);
 }
 
-double apptime() { return stm_sec(stm_diff(stm_now(), start_t)); }
+double apptime() { return stm_sec(stm_now()); }
 
 void quit() {
   if (mainwin.start)

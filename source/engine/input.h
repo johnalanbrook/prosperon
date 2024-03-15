@@ -18,8 +18,4 @@ void touch_cancelled(sapp_touchpoint *touch, int n);
 void input_dropped_files(int n);
 void input_clipboard_paste(char *str);
 
-const char *keyname_extd(int key);
-
-void quit();
-
 #endif

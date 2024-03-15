@@ -53,10 +53,6 @@ actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;
 actor.padawans = [];
 
 global.app = Object.create(actor);
-
-app.die = function()
-{
-  Game.quit();
-}
+app.die = function() { os.quit(); }
 
 return {actor, app};

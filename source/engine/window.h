@@ -20,7 +20,6 @@ struct window {
   int focus;
   int shown;
   int mode;
-  int editor; // true if only should redraw on input
   float aspect;
   float raspect;
   char *title;
@@ -34,7 +33,6 @@ void window_resize(int width, int height);
 void window_focused(int focus);
 void window_iconified(int s);
 void window_suspended(int s);
-
 
 void window_apply(window *w);
 void window_free(window *w);
