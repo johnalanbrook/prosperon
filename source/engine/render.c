@@ -143,7 +143,6 @@ float gridOpacity = 0.3f;
 // Debug render modes
 bool renderGizmos = false;
 bool showGrid = true;
-bool debugDrawPhysics = false;
 bool renderNav = false;
 
 // Lighting effect flags
@@ -157,10 +156,6 @@ struct gameobject *selectedobject = NULL;
 char objectName[200] = {'\0'}; // object name buffer
 
 sg_image ddimg;
-
-void debug_draw_phys(int draw) {
-  debugDrawPhysics = draw;
-}
 
 void opengl_rendermode(enum RenderMode r) {
   renderMode = r;
@@ -436,17 +431,12 @@ void full_2d_pass(struct window *window)
              pos.y + zoom * usesize.y / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
-  
+
   sprite_draw_all();
   model_draw_all();
-  script_evalf("prosperon.draw();");
   emitters_draw();
-
-  //// DEBUG
-  if (debugDrawPhysics) {
-    gameobject_draw_debugs();
-    script_evalf("prosperon.debug();");
-  }
+  
+  script_evalf("prosperon.draw();");
 
   debug_flush(&projection);
   text_flush(&projection);

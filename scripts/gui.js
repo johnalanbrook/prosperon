@@ -2,6 +2,8 @@
   GUI functions take screen space coordinates
 */
 
+gui.scissor_win = function() { gui.scissor(0,0,window.width,window.height); }
+
 var GUI = {
   text(str, pos, size, color, wrap, anchor, cursor) {
     size ??= 1;
@@ -27,12 +29,6 @@ var GUI = {
 
     return bb;
   },
-
-  scissor(x,y,w,h) {
-    cmd(140,x,y,w,h);
-  },
-  
-  scissor_win() { cmd(140,0,0,Window.width,Window.height); },
   
   image(path,pos,color) {
     color ??= Color.black;
@@ -197,7 +193,7 @@ Mum.text = Mum.extend({
     this.height = this.wh.y;
     var aa = [0,1].sub(params.anchor);
     var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
-    cmd(263, params.font);
+    gui.font_set(params.font);
     ui_text(params.str, pos, params.font_size, params.color, this.width, params.caret);
   },
   
@@ -236,8 +232,8 @@ Mum.window = Mum.extend({
     var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
     GUI.window(p,this.wh, this.color);
     this.bb = bbox.blwh(p, this.wh);
-    GUI.flush();
-    GUI.scissor(p.x,p.y,this.wh.x,this.wh.y);
+    gui.flush();
+    gui.scissor(p.x,p.y,this.wh.x,this.wh.y);
     this.max_width = this.width;
     if (this.selectable) GUI.controls.check_bb(this);
     var pos = [this.bb.l, this.bb.t].add(this.padding);
@@ -245,8 +241,8 @@ Mum.window = Mum.extend({
       if (item.hide) return;
       item.draw(pos.slice(),this);
     }, this);
-    GUI.flush();
-    GUI.scissor_win();
+    gui.flush();
+    gui.scissor_win();
   },
 });
 
@@ -302,8 +298,6 @@ GUI.window = function(pos, wh, color)
   p.y += wh.y/2;
   render.box(p,wh,color);
 }
-
-GUI.flush = function() { cmd(141); };
 
 Mum.debug_colors = {
   bounds: Color.red.slice(),

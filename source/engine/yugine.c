@@ -25,15 +25,6 @@
 
 #include <signal.h>
 #include <time.h>
-
-#ifdef STEAM
-#include "steamffi.h"
-#endif
-
-#ifdef DISCORD
-#include "discord.h"
-#endif
-
 #include "string.h"
 
 #include "render.h"
@@ -61,19 +52,15 @@ static int sim_play = SIM_PLAY;
 static int argc;
 static char **args;
 
-static JSValue c_init_fn;
 static JSValue c_process_fn;
 
 void c_init() {
   mainwin.start = 1;
   window_resize(sapp_width(), sapp_height());
-  script_evalf("world_start();");
+//  script_evalf("world_start();");
   render_init();
-  window_set_icon("icons/moon.gif");  
+  set_icon("icons/moon.gif");  
   particle_init();
-
-  if (!JS_IsUndefined(c_init_fn))
-    script_call_sym(c_init_fn,0,NULL);
 }
 
 void c_frame() { script_call_sym(c_process_fn,0,NULL); }
@@ -209,7 +196,6 @@ static sapp_desc start_desc = {
 int main(int argc, char **argv) {
 #ifndef NDEBUG
   log_init();
-
   signal(SIGSEGV, seghandle);
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
@@ -244,9 +230,8 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void engine_start(JSValue fn, JSValue procfn)
+void engine_start(JSValue procfn)
 {
-  c_init_fn = fn;
   c_process_fn = procfn;
 
   sound_init();

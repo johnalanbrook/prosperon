@@ -109,7 +109,7 @@ Object.mixin(cmd(268,true), {
     p = Resources.find_image(p);
     if (!p) return;
     if (p === this.path) return;
-    this.tex = cmd(269,p);
+    this.tex = texture.find(p);
     var anim = SpriteAnim.make(p);
     if (!anim) return;
     this.anim = anim;

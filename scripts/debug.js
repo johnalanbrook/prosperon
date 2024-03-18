@@ -12,7 +12,7 @@ var Debug = {
 
   draw_grid(width, span, color) {
     color = color ? color : Color.green;
-    cmd(47, width, span, color);
+    render.grid(width,span,color);
   },
   
   coordinate(pos, size, color) { GUI.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color); },
@@ -28,17 +28,8 @@ var Debug = {
     GUI.text(n, pos.add([0,4]), 1, color);
   },
 
-  phys_drawing: false,
-  draw_phys(on) {
-    this.phys_drawing = on;
-    cmd(4, this.phys_drawing);
-  },
-
-  draw_obj_phys(obj) {
-    cmd(82, obj.body);
-  },
-
-  gameobject(go) { cmd(15, go.body); },
+  draw_phys: false,
+  draw_obj_phys(obj) { debug.draw_gameobject(obj.body); },
 
   draw_bb: false,
   draw_gizmos: false,
@@ -46,19 +37,19 @@ var Debug = {
 
   draw() {
     if (this.draw_bb)
-      Game.all_objects(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
+      game.all_objects(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
 
     if (sim.paused()) GUI.text("PAUSED", [0,0],1);
 
     if (this.draw_gizmos)
-      Game.all_objects(function(x) {
+      game.all_objects(function(x) {
         if (!x.icon) return;
-        GUI.image(x.icon, Window.world2screen(x.pos));
+        GUI.image(x.icon, window.world2screen(x.pos));
       });
 
     if (this.draw_names)
-      Game.all_objects(function(x) {
-        GUI.text(x, Window.world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
+      game.all_objects(function(x) {
+        GUI.text(x, window.world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
       });
 
     if (Debug.Options.gif.rec) {
@@ -145,8 +136,6 @@ Object.assign(profile, {
   secs() { return this.now()/1000000000; },
 });
 
-
-
 performance.test = {
   barecall() { performance(0); },
   unpack_num(n) { performance(1,n); },
@@ -160,14 +149,12 @@ performance.test = {
 
 performance.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 
-//performance.cpu.doc = `Output the time it takes to do a given function n number of times. Provide 'q' as "ns", "us", or "ms" to output the time taken in the requested resolution.`;
-
 /* These controls are available during editing, and during play of debug builds */
 Debug.inputs = {};
-Debug.inputs.f1 = function () { Debug.draw_phys(!Debug.phys_drawing); };
+Debug.inputs.f1 = function () { Debug.draw_phys =  !Debug.draw_phys; };
 Debug.inputs.f1.doc = "Draw physics debugging aids.";
-//Debug.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
-//Debug.inputs.f3.doc = "Toggle drawing bounding boxes.";
+Debug.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
+Debug.inputs.f3.doc = "Toggle drawing bounding boxes.";
 Debug.inputs.f4 = function() {
   Debug.draw_names = !Debug.draw_names;
   Debug.draw_gizmos = !Debug.draw_gizmos;
@@ -189,7 +176,7 @@ Debug.Options.gif = {
     var w = this.w;
     var h = this.h;
     if (!this.stretch) {
-      var win = Window.height / Window.width;    
+      var win = window.height / window.width;    
       var gif = h/w;
       if (gif > win)
         h = w * win;

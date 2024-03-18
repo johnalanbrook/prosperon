@@ -233,9 +233,3 @@ void gameobject_draw_debug(gameobject *go) {
   cpVect pos = cpBodyGetPosition(go->body);
   cpBodyEachShape(go->body, body_draw_shapes_dbg, NULL);
 }
-
-void gameobject_draw_debugs()
-{
-  for (int i = 0; i < arrlen(gameobjects); i++)
-    gameobject_draw_debug(gameobjects[i]);
-}

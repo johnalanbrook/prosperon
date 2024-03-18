@@ -1512,22 +1512,15 @@ var Vector = {
     return [v.x/len, v.y/len];
   },
   
-  project(a, b) {
-    return cmd(85, a, b);
-  },
-
-  dot(a, b) {
-    return cmd(88,a,b);
-  },
+  project(a, b) { return cmd(85, a, b);},
+  dot(a, b) { return vector.dot(a,b); },
   
   random() {
     var vec = [Math.random()-0.5, Math.random()-0.5];
     return Vector.norm(vec);
   },
   
-  angle(v) {
-    return Math.rad2turn(Math.atan2(v.y, v.x));
-  },
+  angle(v) { return Math.rad2turn(Math.atan2(v.y, v.x)); },
   
   rotate(v,angle) {
     var r = Vector.length(v);

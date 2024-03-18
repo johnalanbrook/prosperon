@@ -260,7 +260,7 @@ var gameobject = {
   sgscale(x) {
     if (typeof x === 'number')
       x = [x, x];
-    cmd(36, this.body, x)
+    physics.sgscale(this.body, x)
   },
 
   phys_material() {
@@ -276,7 +276,7 @@ var gameobject = {
     set_body(2, this.body, x);
     this.objects.forEach((o, i) => o.set_worldpos(this.this2world(poses[i])));
   },
-  screenpos() { return Window.world2screen(this.worldpos()); },
+  screenpos() { return window.world2screen(this.worldpos()); },
 
   worldangle() { return Math.rad2turn(q_body(2, this.body)); },
   sworldangle(x) { set_body(0, this.body, Math.turn2rad(x)); },
@@ -437,8 +437,8 @@ var gameobject = {
   shove_at(vec, at) { set_body(14, this.body, vec, at); },
   world2this(pos) { return cmd(70, this.body, pos); },
   this2world(pos) { return cmd(71, this.body, pos); },
-  this2screen(pos) { return Window.world2screen(this.this2world(pos)); },
-  screen2this(pos) { return this.world2this(Window.screen2world(pos)); },
+  this2screen(pos) { return window.world2screen(this.this2world(pos)); },
+  screen2this(pos) { return this.world2this(window.screen2world(pos)); },
   dir_world2this(dir) { return cmd(160, this.body, dir); },
   dir_this2world(dir) { return cmd(161, this.body, dir); },
 
@@ -598,6 +598,7 @@ var gameobject = {
     if (this.__kill) return;
     this.__kill = true;
 
+    console.info(`killing ${this.toString()}`);
     this.timers.forEach(t => t());
     this.timers = [];
     Event.rm_obj(this);
@@ -815,7 +816,7 @@ function file2fqn(file) {
   return ur[fqn];
 }
 
-Game.loadurs = function() {
+game.loadurs = function() {
   ur = {};
   ur._list = [];
   /* FIND ALL URS IN A PROJECT */

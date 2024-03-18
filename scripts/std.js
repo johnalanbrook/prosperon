@@ -6,11 +6,10 @@ if (os.sys() === 'windows')
 else
   os.user = os.env("USER");
  
- 
 var appy = {};
 appy.inputs = {};
 if (os.sys() === 'macos') {
-  appy.inputs['S-q'] = function() { Game.quit(); };
+  appy.inputs['S-q'] = os.quit;
   appy.inputs['S-h'] = function() { };
 }
 
@@ -35,7 +34,7 @@ var otherpath = {
 }
 
 os.prefpath = function() {
-  return otherpath[os.sys()] + "/" + (Game.title ? Game.title : "Untitled Prosperon Game");
+  return otherpath[os.sys()] + "/" + (game.title ? game.title : "Untitled Prosperon Game");
 }
 
 var projectfile = ".prosperon/project.json";
@@ -191,12 +190,6 @@ io.mixin({
     paths = paths.filter(function(str) { return str.ext() === ext; });
     return paths;
   },
-  compile(script) {
-    return cmd(260, script);
-  },
-  run_bytecode(byte_file) {
-    return cmd(261, byte_file);
-  },
 
   glob(pat) {
     var paths = io.ls('.');
@@ -250,7 +243,7 @@ Cmdline.register_order("edit", function() {
     return;
   }
   
-  Game.engine_start(function() {
+  game.engine_start(function() {
     global.mixin("scripts/editor.js");
     use("editorconfig.js");
     editor.enter_editor();
@@ -258,16 +251,17 @@ Cmdline.register_order("edit", function() {
 }, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");
 
 Cmdline.register_order("init", function() {
+  say('top of init');
   if (io.exists(projectfile)) {
     say("Already a game here.");
     return;
   }
-
+  say('top of ls');
   if (!(io.ls().length === 0)) {
     say("Directory is not empty. Make an empty one and init there.");
     return;
   }
-
+  say('top of mkdir');
   io.mkdir(".prosperon");
   var project = {};
   project.version = prosperon.version;
@@ -284,7 +278,7 @@ Cmdline.register_order("play", function(argv) {
   if (argv[0])
     io.chdir(argv[0]);
 
-  Game.loadurs();
+  game.loadurs();
 
   if (!io.exists(projectfile)) {
     say("No game to play. Try making one with 'prosperon init'.");
@@ -292,18 +286,18 @@ Cmdline.register_order("play", function(argv) {
   }
 
   var project = json.decode(io.slurp(projectfile));
-  Game.title = project.title;
-  Window.mode = Window.modetypes.expand;
+  game.title = project.title;
+  window.mode = window.modetypes.expand;
   global.mixin("config.js");
-  if (project.title) Window.title = project.title;
+  if (project.title) window.title = project.title;
 
-  if (Window.rendersize.equal([0,0])) Window.rendersize = Window.size;
-  console.info(`Starting game with window size ${Window.size} and render ${Window.rendersize}.`);
+  if (window.rendersize.equal([0,0])) window.rendersize = window.size;
+  console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);
   
-  Game.engine_start(function() {
+  game.engine_start(function() {
     global.mixin("scripts/sound.js");
     global.game = actor.spawn("game.js");
-    if (project.icon) Window.icon(project.icon);
+    if (project.icon) window.set_icon(project.icon);
   });  
 }, "Play the game present in this folder.");
 
@@ -319,7 +313,7 @@ Cmdline.register_order("pack", function(str) {
 
   say(`Packing into ${packname}`);
     
-  cmd(124, packname);
+  io.pack_engine(packname);n
   io.chmod(packname, 666);
 }, "Pack the game into the given name.", "NAME");
 
@@ -340,7 +334,7 @@ Cmdline.register_order("qoa", function(argv) {
   for (var file of argv) {
     if (!sounds.includes(file.ext())) continue;
     say(`converting ${file}`);
-    cmd(262,file);
+    io.save_qoa(file);
   }
 }, "Convert file(s) to qoa.");
 
@@ -359,7 +353,7 @@ Cmdline.register_order("about", function(argv) {
 }, "Get information about this game.");
 
 Cmdline.register_order("ur", function(argv) {
-  Game.loadurs();
+  game.loadurs();
   for (var i of ur._list.sort()) say(i);
 }, "Get information about the ur types in your game.");
 
@@ -457,7 +451,7 @@ Cmdline.register_order("run", function(script) {
   if (io.exists(script))
     try {
       if (script.endswith("c"))
-        cmd(261, script);
+        io.run_bytecode(script);
       else
         load(script);
     } catch(e) { }

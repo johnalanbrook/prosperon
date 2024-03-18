@@ -1,9 +1,3 @@
-var render = {
-  normal() { cmd(67);},
-  wireframe() { cmd(68); },
-  pass() { },
-};
-
 render.doc = {
   doc: "Functions for rendering modes.",
   normal: "Final render with all lighting.",
@@ -50,17 +44,14 @@ render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 render.point =  function(pos,size,color) {
     color ??= Color.blue;
     render.circle(pos,size,color);
-  };
-
+};
+  
+var tmpline = render.line;
 render.line = function(points, color, thickness) {
     thickness ??= 1;
     color ??= Color.white;
-    cmd(83, points, color, thickness);
+    tmpline(points,color,thickness);
   };
-
-render.poly = function(points, color) { cmd_points(0,points,color); };
-
-render.circle = function(pos, radius, color) { cmd(115, pos, radius, color); };
 
 render.cross = function(pos, size, color) {
     color ??= Color.red;

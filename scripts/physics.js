@@ -10,7 +10,7 @@ var HIT = {
 
 */
 
-var physics = {
+Object.assign(physics, {
   dynamic: 0,
   kinematic: 1,
   static: 2,
@@ -36,7 +36,7 @@ var physics = {
     if (!Array.isArray(pos)) return [0,0];
     return pos.reduce((a,i) => a.add(i)).map(g => g/pos.length);
   },
-};
+});
 
 physics.doc = {};
 physics.doc.pos_query = "Returns any object colliding with the given point.";
@@ -53,7 +53,7 @@ physics.collision = {
   },
   sync() {
     for (var i = 0; i < this.num; i++)
-      cmd(76,i,this.types[i]);
+      physics.set_cat_mask(i,this.types[i]);
   },
 };
 

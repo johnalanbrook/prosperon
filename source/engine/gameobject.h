@@ -96,5 +96,4 @@ void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 gameobject *pos2gameobject(HMM_Vec2 pos, float give);
 
 void gameobject_draw_debug(gameobject *go);
-void gameobject_draw_debugs();
 #endif

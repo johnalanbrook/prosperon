@@ -12,16 +12,18 @@ Object.assign(console, {
     
     var caller = (new Error()).stack.split('\n')[2];
     if (caller) {
-      var m = caller.match(/\((.*)\:/)[1];
+      var md = caller.match(/\((.*)\:/);
+      var m = md ? md[1] : "SCRIPT";
       if (m) file = m;
-      m = caller.match(/\:(\d*)\)/)[1];
+      md = caller.match(/\:(\d*)\)/);
+      m = md ? md[1] : 0;
       if (m) line = m;
     }
     
     console.rec(lvl, msg, file, line);
   },
 
-  spam(msg) { console.pprint(msg,0); },
+  spam(msg) { console.pprint (msg,0); },
   debug(msg) { console.pprint(msg,1); },
   info(msg) { console.pprint(msg, 2); },
   warn(msg) { console.pprint(msg, 3); },
@@ -55,6 +57,8 @@ console.doc = {
   console: "Output directly to in game console.",
   clear: "Clear console."
 };
+
+console.stdout_lvl = 1;
 
 globalThis.global = globalThis;
 
@@ -129,13 +133,10 @@ function feval_env(file, env)
 function load_env(file,env)
 {
   env ??= global;
-//  var script = io.slurp(file);
   var script = io.slurp(file);
   eval_env(script, env, file);
-//  cmd(16, file, env);
-//  var script = io.slurp(file);
-//  cmd(123, script, env, file);
 }
+
 load_env.doc = `Load a given file with 'env' as **this**. Does not add to the global namespace.`;
 
 var load = use;
@@ -162,6 +163,13 @@ var sim = {
 var physlag = 0;
 var timescale = 1;
 
+var gggstart = game.engine_start;
+game.engine_start = function(s) {
+  gggstart(process);
+  world_start();
+  s();
+}
+
 function process()
 {
   var dt = profile.secs() - frame_t;
@@ -183,19 +191,13 @@ function process()
     prosperon.phys2d_step(physMS*timescale);
     prosperon.physupdate(physMS*timescale);
   }
+  
   prosperon.window_render();
 }
 
-global.Game = {
-  engine_start(fn) {
-    console.info("Starting rendering and sound ...");
-    cmd(257, fn, process);
-  },
+game.timescale = 1;
 
-  object_count() {
-    return cmd(214);
-  },
-
+Object.assign(game, {
   all_objects(fn) {
     /* Wind down from Primum */
   },
@@ -214,39 +216,17 @@ global.Game = {
   find_tag(tag){
 
   },
+});
 
-  wait_fns: [],
-
-  wait_exec(fn) {
-    if (!phys_stepping())
-      fn();
-    else
-      this.wait_fns.push(fn);
-  },
-
-  exec() {
-    this.wait_fns.forEach(function(x) { x(); });
-
-    this.wait_fns = [];
-  },
-};
-
-Game.gc = function() { cmd(259); }
-Game.gc.doc = "Force the garbage collector to run.";
-
-Game.doc = {};
-Game.doc.object = "Returns the entity belonging to a given id.";
-Game.doc.quit = "Immediately quit the game.";
-Game.doc.pause = "Pause game simulation.";
-Game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and if the game is a debug build, starts its editor.";
-Game.doc.play = "Resume or start game simulation.";
-Game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
-Game.doc.dt = "Current frame dt.";
-Game.doc.view_camera = "Set the camera for the current view.";
-Game.doc.camera = "Current camera.";
-
-prosperon.version = cmd(255);
-prosperon.revision = cmd(256);
+game.doc = {};
+game.doc.object = "Returns the entity belonging to a given id.";
+game.doc.pause = "Pause game simulation.";
+game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and if the game is a debug build, starts its editor.";
+game.doc.play = "Resume or start game simulation.";
+game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
+game.doc.dt = "Current frame dt.";
+game.doc.view_camera = "Set the camera for the current view.";
+game.doc.camera = "Current camera.";
 
 prosperon.semver = {};
 prosperon.semver.valid = function(v, range)
@@ -362,9 +342,13 @@ var Register = {
       if (typeof obj === 'object')
         fn = fn.bind(obj);
       fns.push(fn);
-      return function() { fns.remove(fn); };
+      return function() {
+        console.info(`removed from ${name}.`);
+        fns.remove(fn);
+      };
     }
     prosperon[name] = function(...args) { fns.forEach(x => x(...args)); }
+    prosperon[name].fns = fns;
     n.clear = function() { fns = []; }
 
     Register[name] = n;
@@ -405,7 +389,7 @@ var Event = {
   },
 };
 
-Window.modetypes = { 
+window.modetypes = { 
   stretch: 0, // stretch to fill window
   keep: 1, // keep exact dimensions
   width: 2, // keep width
@@ -414,39 +398,36 @@ Window.modetypes = {
   full: 5 // expand out beyond window
 };
 
-Window.size = [640, 480];
+window.size = [640, 480];
 
-Window.screen2world = function(screenpos) {
-  if (Game.camera)
-    return Game.camera.view2world(screenpos);
+window.screen2world = function(screenpos) {
+  if (game.camera)
+    return game.camera.view2world(screenpos);
     
   return screenpos;
 }
 
-Window.world2screen = function(worldpos) {
-  return Game.camera.world2view(worldpos);
+window.world2screen = function(worldpos) {
+  return game.camera.world2view(worldpos);
 }
 
-Window.icon = function(path) { cmd(90, path); };
-Window.icon.doc = "Set the icon of the window using the PNG image at path.";
-
+window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
 
 global.mixin("scripts/spline.js");
 global.mixin("scripts/components.js");
 
-Window.doc = {};
-Window.doc.width = "Width of the game window.";
-Window.doc.height = "Height of the game window.";
-Window.doc.dimensions = "Window width and height packaged in an array [width,height]";
-Window.doc.title = "Name in the title bar of the window.";
-Window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
-
-Register.update.register(Game.exec, Game);
+window.doc = {};
+window.doc.width = "Width of the game window.";
+window.doc.height = "Height of the game window.";
+window.doc.dimensions = "Window width and height packaged in an array [width,height]";
+window.doc.title = "Name in the title bar of the window.";
+window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
 
 global.mixin("scripts/actor.js");
 global.mixin("scripts/entity.js");
 
 function world_start() {
+  console.info("START WORLD");
   globalThis.world = Object.create(gameobject);
   world.objects = {};
   world.check_dirty = function() {};
@@ -466,16 +447,16 @@ function world_start() {
   cmd(113,gameobject.body, gameobject);
   Object.hide(gameobject, 'timescale');
   var cam = world.spawn("scripts/camera2d.jso");
-  Game.view_camera(cam);
+  game.view_camera(cam);
 }
 
 global.mixin("scripts/physics.js");
 
-Game.view_camera = function(cam)
+game.view_camera = function(cam)
 {
-  Game.camera = cam;
-  cmd(61, Game.camera.body);
+  game.camera = cam;
+  cmd(61, game.camera.body);
 }
 
-Window.title = `Prosperon v${prosperon.version}`;
-Window.size = [500,500];
+window.title = `Prosperon v${prosperon.version}`;
+window.size = [500,500];

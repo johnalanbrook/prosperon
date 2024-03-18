@@ -128,15 +128,15 @@ prosperon.mouseup = function(b){
 
 var Mouse = {
   screenpos() { return mousepos.slice(); },
-  worldpos() { return Window.screen2world(mousepos); },
-  disabled() { cmd(46, 1); },
-  normal() { cmd(46, 0);},
+  worldpos() { return window.screen2world(mousepos); },
+  disabled() { input.mouse_mode(1); },
+  normal() { input.mouse_mode(0); },
 
   mode(m) {
     if (Mouse.custom[m])
-      cmd(97, Mouse.custom[m]);
+      input.cursor_img(Mouse.custom[m]);
     else
-      cmd(17, m);
+      input.mouse_cursor(m);
   },
   
   set_custom_cursor(img, mode) {
@@ -144,7 +144,7 @@ var Mouse = {
     if (!img)
       delete Mouse.custom[mode];
     else {
-      cmd(97, img);
+      input.cursor_img(img);
       Mouse.custom[mode] = img;
     }
   },
@@ -181,8 +181,6 @@ var Keys = {
     return prosperon.keys[code];
   },
 };
-
-var input = {};
 
 input.state2str = function(state) {
   if (typeof state === 'string') return state;
@@ -235,13 +233,6 @@ input.action = {
   },
   actions: [],
 };
-
-input.keyboard_show = function(show)
-{
-  cmd(250,show); 
-}
-
-input.keyboard_shown = function() { return cmd(248); }
 
 /* May be a human player; may be an AI player */
 var Player = {

@@ -3,8 +3,8 @@
   selectable
 */
 
-Window.mode = Window.modetypes.full;
-Game.loadurs();
+window.mode = window.modetypes.full;
+game.loadurs();
 
 player[0].control(Debug);
 Register.gui.register(Debug.draw, Debug);
@@ -171,8 +171,8 @@ var editor = {
   zoom_to_bb(bb) {
     var cwh = bbox.tocwh(bb);
     
-    var xscale = cwh.wh.x / Window.width;
-    var yscale = cwh.wh.y / Window.height;
+    var xscale = cwh.wh.x / window.width;
+    var yscale = cwh.wh.y / window.height;
     
     var zoom = yscale > xscale ? yscale : xscale;
     
@@ -237,7 +237,7 @@ var editor = {
     this.selectlist = [];
     editor.camera = world.spawn("scripts/camera2d.jso");
     editor.camera._ed.selectable = false;
-    Game.view_camera(editor.camera);
+    game.view_camera(editor.camera);
   },
 
   end_debug() {
@@ -377,7 +377,7 @@ var editor = {
         x.gizmo();
     });
 
-    render.line(bbox.topoints(bbox.fromcwh([0,0],[Game.width,Game.height])).wrapped(1), Color.green);
+    render.line(bbox.topoints(bbox.fromcwh([0,0],[game.width,game.height])).wrapped(1), Color.green);
 
     /* Draw selection box */
     if (this.sel_start) {
@@ -399,7 +399,7 @@ var editor = {
   gui() { 
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
-    GUI.text([0,0], Window.world2screen([0,0]));
+    GUI.text([0,0], window.world2screen([0,0]));
 
     GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
     GUI.text("MODE: " + this.edit_mode, [0,500]);
@@ -490,22 +490,22 @@ var editor = {
     });
 
     Debug.draw_grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
-    var startgrid = Window.screen2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
-    var endgrid = Window.screen2world([Window.width, Window.height]);
+    var startgrid = window.screen2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
+    var endgrid = window.screen2world([window.width, window.height]);
     
-    var w_step = Math.round(editor.ruler_mark_px/Window.width * (endgrid.x-startgrid.x)/editor.grid_size)*editor.grid_size;
+    var w_step = Math.round(editor.ruler_mark_px/window.width * (endgrid.x-startgrid.x)/editor.grid_size)*editor.grid_size;
     if (w_step === 0) w_step = editor.grid_size;
     
-    var h_step = Math.round(editor.ruler_mark_px/Window.height * (endgrid.y-startgrid.y)/editor.grid_size)*editor.grid_size;
+    var h_step = Math.round(editor.ruler_mark_px/window.height * (endgrid.y-startgrid.y)/editor.grid_size)*editor.grid_size;
     if (h_step === 0) h_step = editor.grid_size;
     
     while(startgrid[0] <= endgrid[0]) {
-      GUI.text(startgrid[0], [Window.world2screen([startgrid[0], 0])[0],0]);
+      GUI.text(startgrid[0], [window.world2screen([startgrid[0], 0])[0],0]);
       startgrid[0] += w_step;
     }
 
     while(startgrid[1] <= endgrid[1]) {
-      GUI.text(startgrid[1], [0, Window.world2screen([0, startgrid[1]])[1]]);
+      GUI.text(startgrid[1], [0, window.world2screen([0, startgrid[1]])[1]]);
       startgrid[1] += h_step;
     }
     
@@ -663,10 +663,7 @@ editor.inputs.drop = function(str) {
   img[0].path = str;
 }
 
-editor.inputs.f9 = function() {
-  console.warn("CAPTURING");
-  cmd(173, "capture.bmp", 0, 0, 500, 500);
-}
+editor.inputs.f9 = function() { os.capture( "capture.bmp", 0, 0, 500, 500); }
 
 editor.inputs.release_post = function() {
   editor.snapshot();
@@ -918,7 +915,7 @@ editor.inputs['C-s'] = function() {
 
   return;
   
-  Game.all_objects(function(x) {
+  game.all_objects(function(x) {
     if (typeof x !== 'object') return;
     if (!('_ed' in x)) return;
     if (x._ed.dirty) return;
@@ -1160,12 +1157,12 @@ editor.inputs.mouse.move = function(pos, dpos)
     if (editor.z_start)
       editor.camera.zoom -= dpos.y/500;
     else if (editor.joystart)
-      editor.camera.pos = editor.camera.pos.sub(Game.camera.dir_view2world(dpos));
+      editor.camera.pos = editor.camera.pos.sub(game.camera.dir_view2world(dpos));
   }
 
   editor.grabselect?.forEach(function(x) {
     if (!x) return;
-    x.move(Game.camera.dir_view2world(dpos));
+    x.move(game.camera.dir_view2world(dpos));
     x.sync();
   });
   
@@ -1196,7 +1193,7 @@ editor.inputs.mouse.move = function(pos, dpos)
 editor.inputs.mouse.scroll = function(scroll)
 {
   scroll.y *= -1;
-  editor.camera.move(Game.camera.dir_view2world(scroll.scale(-3)));
+  editor.camera.move(game.camera.dir_view2world(scroll.scale(-3)));
 }
 
 editor.inputs.mouse['C-scroll'] = function(scroll)
@@ -1416,7 +1413,7 @@ var inputpanel = {
   toString() { return this.title; },  
   value: "",
   on: false,
-  pos:[100,Window.height-50],
+  pos:[100,window.height-50],
   wh:[350,600],
   anchor: [0,1],
   padding:[5,-15],
@@ -1779,16 +1776,8 @@ var objectexplorer = Object.copy(inputpanel, {
       switch (typeof val) {
         case 'object':
           if (val) {
-	    if (Array.isArray(val)) {
-//	      this.obj[key] = Nuke.pprop(key,val);
-	      break;
-	    }
-	      
-//	    Nuke.newline(2);
 	    items.push(Mum.text({str:name}));
 	    items.push(Mum.text({str:val.toString(), action: this.goto_obj.bind(val)}));
-	  } else {
-//    	      this.obj[key] = Nuke.pprop(key,val);
 	  }
 	  break;
 
@@ -1798,28 +1787,13 @@ var objectexplorer = Object.copy(inputpanel, {
 	  break;
 
 	default:
-	  if (!hidden) {// && Object.getOwnPropertyDescriptor(this.obj, key).writable) {
-//	    this.obj[key] = Nuke.pprop(key, this.obj[key]);
-
-/*	    if (key in this.obj.__proto__) {
-	      if (Nuke.button("delete " + key)) {
-	        if ("_"+key in this.obj)
-		  delete this.obj["_"+key];
-		else
-             	  delete this.obj[key];
-              }
-	    }*/
-	  }
-	  else {
-	    items.push(Mum.text({str:name}));
-	    items.push(Mum.text({str:val.toString()}));
-	  }
+	  items.push(Mum.text({str:name}));
+	  items.push(Mum.text({str:val.toString()}));
 	  break;
       }
     });
 
     items.push(Mum.text({str:"Properties that can be pulled in ..."}));
-//    Nuke.newline(3);
     var pullprops = [];
     for (var key in this.obj.__proto__) {
       if (!this.obj.hasOwn(key)) {
@@ -1832,25 +1806,12 @@ var objectexplorer = Object.copy(inputpanel, {
 
     pullprops.forEach(function(key) {
       items.push(Mum.text({str:key}));
-//        this.obj[key] = this.obj[key];
     });
 
     return items;
   },
 
 
-});
-
-var helppanel = Object.copy(inputpanel, {
-  title: "help",
-  
-  start() {
-    this.helptext = slurp("editor.adoc");
-  },
-  
-  guibody() {
-    Nuke.label(this.helptext);
-  },
 });
 
 var openlevelpanel = Object.copy(inputpanel,  {
@@ -2014,19 +1975,6 @@ function tab_complete(val, list) {
     return ret ? ret : val;
 }
 
-var texgui = Object.copy(inputpanel, {
-  get path() { return this._path; },
-  set path(x) {
-    this._path = x;
-    this.title = "texture " + x;
-  },
-  
-  guibody() {
-    Nuke.label("texture");
-    Nuke.img(this.path);
-  },
-});
-
 var entitylistpanel = Object.copy(inputpanel, {
   title: "Level object list",
   level: {},
@@ -2071,8 +2019,8 @@ if (io.exists("editor.config"))
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
 sim.pause();
-Window.editor = true;
-Debug.draw_phys(true);
+window.editor = true;
+Debug.draw_phys = true;
 
 return {
   editor

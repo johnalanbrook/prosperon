@@ -40,10 +40,16 @@ int stdout_lvl = LOG_ERROR;
 void log_init()
 {
 #ifndef NDEBUG
-  logout = fopen(".prosperon/log.txt", "w");
-  writeout = fopen(".prosperon/transcript.txt", "w");
-  dump = fopen(".prosperon/quickjs.txt", "w");
-  quickjs_set_dumpout(dump);
+  if (!fexists(".prosperon"))
+    logout = writeout = dump = stdout;
+  else {
+    logout = fopen(".prosperon/log.txt", "w");
+    writeout = fopen(".prosperon/transcript.txt", "w");
+    dump = fopen(".prosperon/quickjs.txt", "w");
+    quickjs_set_dumpout(dump);
+  }
+  
+  quickjs_set_dumpout(dump);  
 #endif
 }
 
