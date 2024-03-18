@@ -393,8 +393,36 @@ HMM_Vec3 dirl_pos = {4, 100, 20};
 #define MODE_EXPAND 4
 #define MODE_FULL 5
 
-void full_2d_pass(struct window *window)
+void full_3d_pass(struct window *window)
 {
+  HMM_Mat4 model = HMM_M4D(1.f);
+  float scale = 0.08;
+  model = HMM_MulM4(model, HMM_Scale((HMM_Vec3){scale,scale,scale}));
+
+  // Shadow pass
+//  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
+//  sg_apply_pipeline(sg_shadow.pipe);
+
+  HMM_Mat4 light_proj = HMM_Orthographic_RH_ZO(-100.f, 100.f, -100.f, 100.f, 1.f, 100.f);
+  HMM_Mat4 light_view = HMM_LookAt_RH(dirl_pos, (HMM_Vec3){0,0,0}, (HMM_Vec3){0,1,0});
+
+  HMM_Mat4 lsm = HMM_MulM4(light_proj, light_view);
+
+  HMM_Mat4 subo[2];
+  subo[0] = lsm;
+  subo[1] = model;
+
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(subo));
+}
+
+void openglRender(struct window *window) {
+  sg_swapchain sch = sglue_swapchain();
+  sg_begin_pass(&(sg_pass){
+    .action = pass_action,
+    .swapchain = sglue_swapchain(),
+    .label =  "window pass"
+  });
+
   HMM_Vec2 usesize = window->rendersize;
 
   switch(window->mode) {
@@ -432,54 +460,6 @@ void full_2d_pass(struct window *window)
 
   hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
 
-  sprite_draw_all();
-  model_draw_all();
-  emitters_draw();
-  
-  script_evalf("prosperon.draw();");
-
-  debug_flush(&projection);
-  text_flush(&projection);
-
-  ////// TEXT && GUI
-  debug_nextpass();
-  script_evalf("prosperon.gui();");
-  debug_flush(&hudproj);
-  text_flush(&hudproj);
-  sprite_flush();
-}
-
-void full_3d_pass(struct window *window)
-{
-  HMM_Mat4 model = HMM_M4D(1.f);
-  float scale = 0.08;
-  model = HMM_MulM4(model, HMM_Scale((HMM_Vec3){scale,scale,scale}));
-
-  // Shadow pass
-//  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
-//  sg_apply_pipeline(sg_shadow.pipe);
-
-  HMM_Mat4 light_proj = HMM_Orthographic_RH_ZO(-100.f, 100.f, -100.f, 100.f, 1.f, 100.f);
-  HMM_Mat4 light_view = HMM_LookAt_RH(dirl_pos, (HMM_Vec3){0,0,0}, (HMM_Vec3){0,1,0});
-
-  HMM_Mat4 lsm = HMM_MulM4(light_proj, light_view);
-
-  HMM_Mat4 subo[2];
-  subo[0] = lsm;
-  subo[1] = model;
-
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(subo));
-}
-
-void openglRender(struct window *window) {
-  sg_swapchain sch = sglue_swapchain();
-  sg_begin_pass(&(sg_pass){
-    .action = pass_action,
-    .swapchain = sglue_swapchain(),
-    .label =  "window pass"
-  });
-  full_2d_pass(window);
-  sg_end_pass();
 
 /*  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
     sg_begin_pass(&(sg_pass){
@@ -496,10 +476,6 @@ void openglRender(struct window *window) {
     msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }
 */
-
-  sg_commit();
-
-  debug_newframe();
 }
 
 sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
@@ -518,7 +494,6 @@ sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
   free(fs);
   return ret;
 }
-
 
 struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {
   struct boundingbox bb = {

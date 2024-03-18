@@ -5,7 +5,7 @@
 
 double apptime();
 void print_stacktrace();
-void engine_start(JSValue proc_fn); /* fn runs after the engine starts */
+void engine_start(JSValue start_fn, JSValue proc_fn); /* fn runs after the engine starts */
 
 void quit();
 

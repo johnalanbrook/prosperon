@@ -1501,60 +1501,53 @@ bbox.fromobjs = function(objs)
 };
 
 /* VECTORS */
-var Vector = {
-  length(v) {
-    var sum = v.reduce(function(acc, val) { return acc + val**2; }, 0);
-    return Math.sqrt(sum);
-  },
+var Vector = {};
+Vector.length = function(v) {
+  var sum = v.reduce(function(acc, val) { return acc + val**2; }, 0);
+  return Math.sqrt(sum);
+}
+Vector.norm = function(v) {
+  var len = Vector.length(v);
+  if (!len) return [0,0];
+  return [v.x/len, v.y/len];
+}
+Vector.project = function(a, b) { return vector.project(a,b); }
+Vector.dot = function(a, b) { return vector.dot(a,b); },
+Vector.random = function() {  
+  var vec = [Math.random()-0.5, Math.random()-0.5];
+  return Vector.norm(vec);
+}
   
-  norm(v) {
-    var len = Vector.length(v);
-    return [v.x/len, v.y/len];
-  },
+Vector.angle = function(v) { return Math.rad2turn(Math.atan2(v.y, v.x)); }
+Vector.rotate = function(v,angle) {  
+  var r = Vector.length(v);
+  angle += Vector.angle(v);
+  angle = Math.turn2rad(angle);
+  return [r*Math.cos(angle), r*Math.sin(angle)];
+}
   
-  project(a, b) { return cmd(85, a, b);},
-  dot(a, b) { return vector.dot(a,b); },
-  
-  random() {
-    var vec = [Math.random()-0.5, Math.random()-0.5];
-    return Vector.norm(vec);
-  },
-  
-  angle(v) { return Math.rad2turn(Math.atan2(v.y, v.x)); },
-  
-  rotate(v,angle) {
-    var r = Vector.length(v);
-    angle += Vector.angle(v);
-    angle = Math.turn2rad(angle);
-    return [r*Math.cos(angle), r*Math.sin(angle)];
-  },
-  
-  equal(v1, v2, tol) {
-    if (!tol)
-      return v1.equal(v2);
+Vector.equal = function(v1, v2, tol) {
+  if (!tol)
+    return v1.equal(v2);
 
-    var eql = true;
-    var c = v1.sub(v2);
+  var eql = true;
+  var c = v1.sub(v2);
 
-    c.forEach(function(x) {
-      if (!eql) return;
-      if (Math.abs(x) > tol)
-        eql = false;
-    });
+  c.forEach(function(x) {
+    if (!eql) return;
+    if (Math.abs(x) > tol)
+      eql = false;
+  });
 
-    return eql;
-  },
+  return eql;
+}
 
-  reflect(vec, plane) {
-    var p = Vector.norm(plane);
-    return vec.sub(p.scale(2*Vector.dot(vec, p)));
-  },
+Vector.reflect = function(vec, plane) {
+  var p = Vector.norm(plane);
+  return vec.sub(p.scale(2*Vector.dot(vec, p)));
+}
 
-  reflect_point(vec, point) {
-    return point.add(vec.sub(point).scale(-1));
-  },
-  
-};
+Vector.reflect_point = function(vec, point) { return point.add(vec.sub(point).scale(-1)); }
 
 /* POINT ASSISTANCE */
 

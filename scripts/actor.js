@@ -3,6 +3,7 @@ var a_db = {};
 
 actor.spawn = function(script, config){
   if (typeof script !== 'string') return undefined;
+  console.info(`spawning actor with script ${script}`);
   if (!a_db[script]) a_db[script] = io.slurp(script);
   var padawan = Object.create(actor);
   eval_env(a_db[script], padawan, script);

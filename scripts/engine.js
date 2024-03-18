@@ -165,9 +165,7 @@ var timescale = 1;
 
 var gggstart = game.engine_start;
 game.engine_start = function(s) {
-  gggstart(process);
-  world_start();
-  s();
+  gggstart(function() { world_start(); s(); }, process);  
 }
 
 function process()
@@ -177,6 +175,7 @@ function process()
   
   prosperon.appupdate(dt);
   prosperon.emitters_step(dt);
+  input.procdown();
   
   if (sim.mode === "play" || sim.mode === "step") {
     prosperon.update(dt*game.timescale);
@@ -191,8 +190,19 @@ function process()
     prosperon.phys2d_step(physMS*timescale);
     prosperon.physupdate(physMS*timescale);
   }
-  
+
   prosperon.window_render();
+  render.sprites();
+  render.models();
+  render.emitters();
+  prosperon.draw();
+  render.flush();
+  render.pass();
+  prosperon.gui();
+  render.flush_hud();
+
+  render.end_pass();
+  render.commit();
 }
 
 game.timescale = 1;

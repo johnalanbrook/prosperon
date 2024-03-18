@@ -20,7 +20,7 @@ var keycodes = {
 var codekeys = {};
 for (var code in keycodes)
   codekeys[keycodes[code]] = code;
-  
+
 var mod = {
   shift: 0,
   ctrl: 0,
@@ -67,7 +67,7 @@ function modstr()
 
 prosperon.keydown = function(key, repeat)
 {
-  prosperon.keys[key] = true;
+  prosperon.keys[key] = key;
   
   if (key == 341 || key == 345)
     mod.ctrl = 1;
@@ -204,6 +204,14 @@ input.print_pawn_kbm = function(pawn) {
   return str;
 };
 
+input.procdown = function()
+{
+    for (var k of prosperon.keys) {
+      if (!k) continue;
+      player[0].raw_input(keyname_extd(k), "down");
+    }
+}
+
 input.print_md_kbm = function(pawn) {
   if (!('inputs' in pawn)) return;
 
@@ -277,7 +285,7 @@ var Player = {
       	continue;
       }
 
-      var   fn = null;
+      var fn = null;
 
       switch (state) {
         case 'pressed':
@@ -364,7 +372,6 @@ var player = Player;
 return {
   Mouse,
   Keys,
-  input,
   Player,
   player,
   keycodes,

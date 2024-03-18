@@ -598,7 +598,6 @@ var gameobject = {
     if (this.__kill) return;
     this.__kill = true;
 
-    console.info(`killing ${this.toString()}`);
     this.timers.forEach(t => t());
     this.timers = [];
     Event.rm_obj(this);

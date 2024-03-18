@@ -153,26 +153,12 @@ JSValue js_getpropstr(JSValue v, const char *str)
 
 JSValue js_getpropidx(JSValue v, uint32_t i)
 {
-  JSValue p = JS_GetPropertyUint32(js,v,i);
+  JSValue p = JS_GetPropertyUint32(js, v, i);
   JS_FreeValue(js,p);
   return p;
 }
 
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
-
-int64_t js2int64(JSValue v) {
-  int64_t i;
-  JS_ToInt64(js, &i, v);
-  return i;
-}
-
-int js2int(JSValue v) {
-  int i;
-  JS_ToInt32(js, &i, v);
-  return i;
-}
-
-JSValue int2js(int i) { return JS_NewInt64(js, i); }
 
 JSValue str2js(const char *c) { return JS_NewString(js, c); }
 const char *js2str(JSValue v) { return JS_ToCString(js, v); }
@@ -194,23 +180,13 @@ double js2number(JSValue v) {
 
 void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
 
-JSValue number2js(double g) {
-  return JS_NewFloat64(js,g);
-}
+JSValue number2js(double g) { return JS_NewFloat64(js,g); }
 
 JSValue ptr2js(void *ptr) {
   JSValue obj = JS_NewObjectClass(js, js_ptr_id);
   JS_SetOpaque(obj, ptr);
   return obj;
 }
-
-double js_get_prop_number(JSValue v, const char *p) {
-  double num;
-  JS_ToFloat64(js, &num, js_getpropstr(v,p));
-  return num;
-}
-
-JSValue js_arridx(JSValue v, int idx) { return js_getpropidx(v, idx); }
 
 int js_arrlen(JSValue v) {
   int len;
@@ -256,7 +232,7 @@ char *js_do_nota_decode(JSValue *tmp, char *nota)
       break;
     case NOTA_INT:
       nota = nota_read_int(&n, nota);
-      *tmp = int2js(n);
+      *tmp = number2js(n);
       break;
     case NOTA_SYM:
       nota = nota_read_sym(&b, nota);
@@ -304,7 +280,7 @@ char *js_do_nota_encode(JSValue v, char *nota)
         int n = js_arrlen(v);
         nota = nota_write_array(n, nota);
         for (int i = 0; i < n; i++)
-          nota = js_do_nota_encode(js_arridx(v, i), nota);
+          nota = js_do_nota_encode(js_getpropidx(v, i), nota);
         return nota;
       }
       n = JS_GetOwnPropertyNames(js, &ptab, &plen, v, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
@@ -332,7 +308,7 @@ char *js_do_nota_encode(JSValue v, char *nota)
 struct rgba js2color(JSValue v) {
   JSValue c[4];
   for (int i = 0; i < 4; i++)
-    c[i] = js_arridx(v,i);
+    c[i] = js_getpropidx(v,i);
   float a = JS_IsUndefined(c[3]) ? 1.0 : js2number(c[3]);
   struct rgba color = {
     .r = js2number(c[0])*RGBA_MAX,
@@ -350,10 +326,10 @@ struct rgba js2color(JSValue v) {
 JSValue color2js(struct rgba color)
 {
   JSValue arr = JS_NewArray(js);
-  js_setprop_num(arr,0,JS_NewFloat64(js,(double)color.r/255));
-  js_setprop_num(arr,1,JS_NewFloat64(js,(double)color.g/255));  
-  js_setprop_num(arr,2,JS_NewFloat64(js,(double)color.b/255));
-  js_setprop_num(arr,3,JS_NewFloat64(js,(double)color.a/255));
+  js_setprop_num(arr,0,number2js((double)color.r/255));
+  js_setprop_num(arr,1,number2js((double)color.g/255));  
+  js_setprop_num(arr,2,number2js((double)color.b/255));
+  js_setprop_num(arr,3,number2js((double)color.a/255));
   return arr;
 }
 
@@ -445,7 +421,6 @@ JSValue bitmask2js(cpBitmask mask) {
   return arr;
 }
 
-
 JSValue vecarr2js(HMM_Vec2 *points, int n) {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < n; i++)
@@ -460,8 +435,8 @@ JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *ar
 
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
-  int wrap = js2int(argv[4]);
-  int cursor = js2int(argv[5]);
+  int wrap = js2number(argv[4]);
+  int cursor = js2number(argv[5]);
   JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, cursor, 1.0));
   JS_FreeCString(js, s);
   return ret;
@@ -512,32 +487,32 @@ struct rect js2rect(JSValue v) {
 
 JSValue rect2js(struct rect rect) {
   JSValue obj = JS_NewObject(js);
-  js_setprop_str(obj, "x", JS_NewFloat64(js, rect.x));
-  js_setprop_str(obj, "y", JS_NewFloat64(js, rect.y));
-  js_setprop_str(obj, "w", JS_NewFloat64(js, rect.w));
-  js_setprop_str(obj, "h", JS_NewFloat64(js, rect.h));
+  js_setprop_str(obj, "x", number2js(rect.x));
+  js_setprop_str(obj, "y", number2js(rect.y));
+  js_setprop_str(obj, "w", number2js(rect.w));
+  js_setprop_str(obj, "h", number2js(rect.h));
   return obj;
 }
 
 JSValue bb2js(struct boundingbox bb)
 {
   JSValue obj = JS_NewObject(js);
-  js_setprop_str(obj,"t", JS_NewFloat64(js,bb.t));
-  js_setprop_str(obj,"b", JS_NewFloat64(js,bb.b));
-  js_setprop_str(obj,"r", JS_NewFloat64(js,bb.r));
-  js_setprop_str(obj,"l", JS_NewFloat64(js,bb.l));
+  js_setprop_str(obj,"t", number2js(bb.t));
+  js_setprop_str(obj,"b", number2js(bb.b));
+  js_setprop_str(obj,"r", number2js(bb.r));
+  js_setprop_str(obj,"l", number2js(bb.l));
   return obj;
 }
 
 JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   /*
     0: catmull-rom
     1: bezier
   */
 
-  int type = js2int(argv[1]);
-  int d = js2int(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
+  int type = js2number(argv[1]);
+  int d = js2number(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
   HMM_Vec2 *points = js2cpvec2arr(argv[3]);
   float param = js2number(argv[4]);
   HMM_Vec2 *samples = NULL;
@@ -564,7 +539,7 @@ JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst 
 JSValue ints2js(int *ints) {
   JSValue arr = JS_NewArray(js);
   for (int i = 0; i < arrlen(ints); i++)
-    js_setprop_num(arr,i,int2js(ints[i]));
+    js_setprop_num(arr,i, number2js(ints[i]));
 
   return arr;
 }
@@ -642,7 +617,7 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
 }
 
 JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   const char *str = NULL;
   const char *str2 = NULL;
   void *d1 = NULL;
@@ -699,11 +674,6 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     add_zoom(js2number(argv[1]));
     break;
 
-  case 64:
-    str = JS_ToCString(js, argv[1]);
-    ret = vec22js(tex_get_dimensions(texture_from_file(str)));
-    break;
-
   case 70:
     ret = vec22js(world2go(js2gameobject(argv[1]), js2vec2(argv[2])));
     break;
@@ -723,13 +693,9 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
     draw_edge(v1, js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, js2color(argv[2]), 10);
     break;
 
-  case 85:
-    ret = vec22js(HMM_ProjV2(js2vec2(argv[1]), js2vec2(argv[2])));
-    break;
-
   case 86:
     v1 = js2cpvec2arr(argv[3]);
-    intids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), v1, js2int(argv[4]));
+    intids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), v1, js2number(argv[4]));
     ret = ints2js(intids);
     arrfree(intids);
     break;
@@ -758,7 +724,7 @@ JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) 
       break;
 
     case 131:
-      gif_rec_start(js2int(argv[1]), js2int(argv[2]), js2int(argv[3]), js2int(argv[4]));
+      gif_rec_start(js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]));
       break;
     case 132:
       str = JS_ToCString(js, argv[1]);
@@ -938,7 +904,7 @@ void gameobject_add_shape_collider(gameobject *go, JSValue fn, struct phys2d_sha
 }
 
 JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   gameobject *go = js2gameobject(argv[2]);
   JSValue fn = argv[1];
 
@@ -968,7 +934,7 @@ JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueC
 }
 
 JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   gameobject *go = js2gameobject(argv[1]);
   
   if (!go) return JS_UNDEFINED;
@@ -980,7 +946,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
     break;
 
   case 1:
-    go->bodytype = js2int(argv[2]);
+    go->bodytype = js2number(argv[2]);
     cpBodySetType(go->body, go->bodytype);
     gameobject_apply(go);
     break;
@@ -1025,7 +991,7 @@ JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *a
 }
 
 JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int q = js2int(argv[0]);
+  int q = js2number(argv[0]);
   gameobject *go = js2gameobject(argv[1]);
 
   if (!go) return JS_UNDEFINED;
@@ -1038,19 +1004,19 @@ JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *arg
     return vec22js((HMM_Vec2)cpBodyGetPosition(go->body));
 
   case 2:
-    return JS_NewFloat64(js, cpBodyGetAngle(go->body));
+    return number2js(cpBodyGetAngle(go->body));
 
   case 3:
     return vec22js((HMM_Vec2)cpBodyGetVelocity(go->body));
 
   case 4:
-    return JS_NewFloat64(js, cpBodyGetAngularVelocity(go->body));
+    return number2js(cpBodyGetAngularVelocity(go->body));
 
   case 5:
-    return JS_NewFloat64(js, cpBodyGetMass(go->body));
+    return number2js(cpBodyGetMass(go->body));
 
   case 6:
-    return JS_NewFloat64(js, cpBodyGetMoment(go->body));
+    return number2js(cpBodyGetMoment(go->body));
 
   case 7:
     return JS_NewBool(js, phys2d_in_air(go->body));
@@ -1080,7 +1046,7 @@ JSValue duk_make_model(JSContext *js, JSValueConst this, int argc, JSValueConst 
 }
 
 JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   struct phys2d_circle *circle = js2ptr(argv[1]);
 
   if (!circle) return JS_UNDEFINED;
@@ -1116,7 +1082,7 @@ JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst
 }
 
 JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   struct phys2d_poly *poly = js2ptr(argv[1]);
   HMM_Vec2 *v1 = NULL;
 
@@ -1206,6 +1172,14 @@ GETSET_PAIR(warp_gravity, planar_force, vec3)
 
 #define GGETSET_ADD(ENTRY)
 
+#define JSC_CCALL(NAME, FN) JSValue js_##NAME (JSContext *js, JSValueConst this, int argc, JSValue *argv) { \
+  {FN;} \
+  return JS_UNDEFINED; \
+} \
+
+#define JSC_RET(NAME, FN) JSValue js_##NAME (JSContext *js, JSValueConst this, int argc, JSValue *argv) { \
+  FN; } \
+
 static const JSCFunctionListEntry js_warp_gravity_funcs [] = {
   CGETSET_ADD(warp_gravity, strength),
   CGETSET_ADD(warp_gravity, decay),
@@ -1294,12 +1268,11 @@ JSValue js_os_sys(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
-JSValue js_os_quit(JSContext *js, JSValueConst this) { quit(); return JS_UNDEFINED; }
-JSValue js_os_reindex_static(JSContext *js, JSValueConst this) { cpSpaceReindexStatic(space); return JS_UNDEFINED; }
+JSC_CCALL(os_quit, quit();)
+JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
+JSC_CCALL(os_gc, script_gc());
 
 #define RETUN return JS_UNDEFINED
-
-JSValue js_os_gc(JSContext *js, JSValueConst this) { script_gc(); RETUN; }
 
 JSValue js_os_capture(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
   char *str = js2str(argv[0]);
@@ -1318,24 +1291,32 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, capture, 5),
 };
 
-JSValue js_render_normal(JSContext *js, JSValueConst this) { opengl_rendermode(LIT); RETUN; }
-JSValue js_render_wireframe(JSContext *js, JSValueConst this) { opengl_rendermode(WIREFRAME); RETUN; }
-JSValue js_render_grid(JSContext *js, JSValueConst this, int argc, JSValue *argv) { draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2])); RETUN; }
-JSValue js_render_point(JSContext *js, JSValueConst this, int argc, JSValue *argv) { draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])); RETUN;}
-JSValue js_render_circle(JSContext *js, JSValueConst this, int argc, JSValue *argv) { draw_circle(js2vec2(argv[0]), js2number(argv[1]), js2number(argv[2]), js2color(argv[3]), -1); RETUN; }
-JSValue js_render_poly(JSContext *js, JSValueConst this, int argc, JSValue *argv) { 
+JSC_CCALL(render_normal, opengl_rendermode(LIT))
+JSC_CCALL(render_wireframe, opengl_rendermode(WIREFRAME))
+JSC_CCALL(render_grid, draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2]));)
+JSC_CCALL(render_point, draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])))
+JSC_CCALL(render_circle, draw_circle(js2vec2(argv[0]), js2number(argv[1]), js2number(argv[2]), js2color(argv[3]), -1);)
+JSC_CCALL(render_poly, 
   int n = js_arrlen(argv[0]);
   HMM_Vec2 points[n];
   for (int i = 0; i < n; i++)
-    points[i] = js2vec2(js_arridx(argv[0], i));
+    points[i] = js2vec2(js_getpropidx(argv[0], i));
   draw_poly(points, n, js2color(argv[1]));
-  RETUN;
-}
-JSValue js_render_line(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
+)
+
+JSC_CCALL(render_line, 
   void *v1 = js2cpvec2arr(argv[0]);
   draw_edge(v1, js_arrlen(argv[0]), js2color(argv[1]), js2number(argv[2]), 0, js2color(argv[1]), 10);
-  RETUN;
-}
+)
+
+JSC_CCALL(render_sprites, sprite_draw_all())
+JSC_CCALL(render_models, model_draw_all())
+JSC_CCALL(render_emitters, emitters_draw())
+JSC_CCALL(render_flush, debug_flush(&projection); text_flush(&projection))
+JSC_CCALL(render_flush_hud, debug_flush(&hudproj); debug_flush(&hudproj); sprite_flush();)
+JSC_CCALL(render_pass, debug_nextpass())
+JSC_CCALL(render_end_pass, sg_end_pass())
+JSC_CCALL(render_commit, sg_commit(); debug_newframe();)
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, normal, 0),
@@ -1345,13 +1326,18 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, circle, 3),
   MIST_FUNC_DEF(render, poly, 2),
   MIST_FUNC_DEF(render, line, 3),
+  MIST_FUNC_DEF(render, sprites, 0),
+  MIST_FUNC_DEF(render, models, 0),
+  MIST_FUNC_DEF(render, emitters, 0),
+  MIST_FUNC_DEF(render, flush, 0),
+  MIST_FUNC_DEF(render, flush_hud, 0),
+  MIST_FUNC_DEF(render, pass, 0),
+  MIST_FUNC_DEF(render, end_pass, 0),
+  MIST_FUNC_DEF(render, commit, 0)
 };
 
-JSValue js_gui_flush(JSContext *js, JSValueConst this) { text_flush(&hudproj); RETUN; }
-JSValue js_gui_scissor(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
-  sg_apply_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
-  RETUN;
-}
+JSC_CCALL(gui_flush, text_flush(&hudproj));
+JSC_CCALL(gui_scissor, sg_apply_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
 
 DEF_FN_STR(font_set)
 
@@ -1363,12 +1349,15 @@ static const JSCFunctionListEntry js_gui_funcs[] = {
 
 JSValue js_vector_dot(JSContext *js, JSValueConst this, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
 
+JSC_RET(vector_project, return vec22js(HMM_ProjV2(js2vec2(argv[0]), js2vec2(argv[1])));)
+
 static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector,dot,2),
+  MIST_FUNC_DEF(vector,project,2),
 };
 
 JSValue js_game_engine_start(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
-  engine_start(argv[0]);
+  engine_start(argv[0],argv[1]);
   RETUN;
 }
 JSValue js_game_object_count(JSContext *js, JSValueConst this) { return number2js(go_count()); }
@@ -1378,10 +1367,10 @@ static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, object_count, 0)
 };
 
-JSValue js_input_show_keyboard(JSContext *js, JSValueConst this, int argc, JSValue *argv) { sapp_show_keyboard(js2bool(argv[0])); RETUN; }
+JSC_CCALL(input_show_keyboard, sapp_show_keyboard(js2bool(argv[0])))
 JSValue js_input_keyboard_shown(JSContext *js, JSValueConst this) { return bool2js(sapp_keyboard_shown()); }
-JSValue js_input_mouse_mode(JSContext *js, JSValueConst this, int argc, JSValue *argv) { set_mouse_mode(js2int(argv[0])); RETUN; }
-JSValue js_input_mouse_cursor(JSContext *js, JSValueConst this, int argc, JSValue *argv) { sapp_set_mouse_cursor(js2int(argv[0])); RETUN; }
+JSC_CCALL(input_mouse_mode, set_mouse_mode(js2number(argv[0])))
+JSC_CCALL(input_mouse_cursor, sapp_set_mouse_cursor(js2number(argv[0])))
 
 DEF_FN_STR(cursor_img)
 
@@ -1403,23 +1392,9 @@ JSValue global_get_##ENTRY (JSContext *js, JSValue this) { \
   return TYPE##2js(ENTRY); \
 } \
 
-JSValue js_prosperon_emitters_step(JSContext *js, JSValue this, int argc, JSValue *argv)
-{
-  emitters_step(js2number(argv[0]));
-  return JS_UNDEFINED;
-}
-
-JSValue js_prosperon_phys2d_step(JSContext *js, JSValue this, int argc, JSValue *argv)
-{
-  phys2d_update(js2number(argv[0]));
-  return JS_UNDEFINED;
-}
-
-JSValue js_prosperon_window_render(JSContext *js, JSValue this, int argc, JSValue *argv)
-{
-  window_render(&mainwin);
-  return JS_UNDEFINED;
-}
+JSC_CCALL(prosperon_emitters_step, emitters_step(js2number(argv[0])))
+JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
+JSC_CCALL(prosperon_window_render, openglRender(&mainwin))
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, emitters_step, 1),
@@ -1461,10 +1436,10 @@ JSValue js_console_print(JSContext *js, JSValue this, int argc, JSValue *argv)
 
 JSValue js_console_rec(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
-  int level = js2int(argv[0]);
+  int level = js2number(argv[0]);
   const char *msg = JS_ToCString(js, argv[1]);
   const char *file = JS_ToCString(js, argv[2]);
-  int line = js2int(argv[3]);
+  int line = js2number(argv[3]);
 
   mYughLog(LOG_SCRIPT, level, line, file, msg);
 
@@ -1506,7 +1481,7 @@ JSValue js_io_cp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   char *f1, *f2;
   f1 = JS_ToCString(js, argv[0]);
   f2 = JS_ToCString(js, argv[1]);
-  JSValue ret = int2js(cp(f1,f2));
+  JSValue ret = number2js(cp(f1,f2));
   JS_FreeCString(js,f1);
   JS_FreeCString(js,f2);
   return ret;
@@ -1517,7 +1492,7 @@ JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   char *f1, *f2;
   f1 = JS_ToCString(js, argv[0]);
   f2 = JS_ToCString(js, argv[1]);
-  JSValue ret = int2js(rename(f1,f2));
+  JSValue ret = number2js(rename(f1,f2));
   JS_FreeCString(js,f1);
   JS_FreeCString(js,f2);
   return ret;
@@ -1526,7 +1501,7 @@ JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 JSValue js_io_chdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char *path = JS_ToCString(js, argv[0]);
-  JSValue ret = int2js(chdir(path));
+  JSValue ret = number2js(chdir(path));
   JS_FreeCString(js,path);
   return ret;
 }
@@ -1534,7 +1509,7 @@ JSValue js_io_chdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 JSValue js_io_rm(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char *file = JS_ToCString(js, argv[0]);
-  JSValue ret = int2js(remove(file));
+  JSValue ret = number2js(remove(file));
   JS_FreeCString(js,file);
   return JS_UNDEFINED;
 }
@@ -1542,7 +1517,7 @@ JSValue js_io_rm(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 JSValue js_io_mkdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
-  JSValue ret = int2js(mkdir(f,0777));
+  JSValue ret = number2js(mkdir(f,0777));
   JS_FreeCString(js,f);
   return ret;
 }
@@ -1581,11 +1556,11 @@ JSValue js_io_slurpwrite(JSContext *js, JSValueConst this, int argc, JSValue *ar
   JSValue ret;
   if (JS_IsString(argv[1])) {
     data = JS_ToCStringLen(js, &len, argv[1]);
-    ret = int2js(slurp_write(data, f, len));
+    ret = number2js(slurp_write(data, f, len));
     JS_FreeCString(js,data);
   } else {
     data = JS_GetArrayBuffer(js, &len, argv[1]);
-    ret = int2js(slurp_write(data, f, len));
+    ret = number2js(slurp_write(data, f, len));
   }
 
   return ret;
@@ -1594,11 +1569,10 @@ JSValue js_io_slurpwrite(JSContext *js, JSValueConst this, int argc, JSValue *ar
 JSValue js_io_chmod(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
-  int mod = js2int(argv[1]);
+  int mod = js2number(argv[1]);
   chmod(f, mod);
   return JS_UNDEFINED;
 }
-
 
 DEF_FN_STR(save_qoa)
 
@@ -1653,7 +1627,7 @@ JSValue js_physics_sgscale(JSContext *js, JSValueConst this, int argc, JSValue *
   RETUN;
 }
 
-JSValue js_physics_set_cat_mask(JSContext *js, JSValueConst this, int argc, JSValue *argv) { set_cat_mask(js2int(argv[0]), js2bitmask(argv[1])); RETUN; }
+JSValue js_physics_set_cat_mask(JSContext *js, JSValueConst this, int argc, JSValue *argv) { set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])); RETUN; }
 
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, sgscale, 2),
@@ -1858,11 +1832,13 @@ JSValue js_texture_find(JSContext *js, JSValue this, int argc, JSValue *argv) {
   JS_FreeCString(js,str);
   return ret;
 }
+
 static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_FUNC_DEF(texture, width, 0),
   MIST_FUNC_DEF(texture, height, 0),
   MIST_FUNC_DEF(texture, path, 0),
   MIST_FUNC_DEF(texture, find, 1),
+  //MIST_FUNC_DEF(texture, dimensions, 1),
 };
 
 JSValue constraint_set_max_force (JSContext *js, JSValue this, JSValue val) {
@@ -1887,7 +1863,7 @@ static const JSCFunctionListEntry js_constraint_funcs[] = {
 };
      
 JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   struct phys2d_edge *edge = js2ptr(argv[1]);
 
   if (!edge) {
@@ -1914,7 +1890,7 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
 
 JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
   HMM_Vec2 *points = js2cpvec2arr(argv[0]);
-  int n = js2int(argv[1]);
+  int n = js2number(argv[1]);
   double d = js2number(argv[2]);
   HMM_Vec2 *infl = inflatepoints(points,d,n);
   JSValue arr = vecarr2js(infl,arrlen(infl));
@@ -1928,7 +1904,7 @@ const char *STRTEST = "TEST STRING";
 
 JSValue duk_performance(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
 {
-  int cmd = js2int(argv[0]);
+  int cmd = js2number(argv[0]);
   switch(cmd) {
     case 0:
     break;

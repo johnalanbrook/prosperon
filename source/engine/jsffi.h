@@ -18,7 +18,6 @@ int js_print_exception(JSValue v);
 struct rgba js2color(JSValue v);
 double js2number(JSValue v);
 JSValue number2js(double g);
-JSValue int2js(int i);
 JSValue str2js(const char *c);
 
 void nota_int(char *blob);

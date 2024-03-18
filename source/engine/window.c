@@ -105,10 +105,6 @@ void window_seticon(struct window *w, struct texture *tex)
     free(sizes[i].data);
 }
 
-void window_render(struct window *w) {
-  openglRender(w);
-}
-
 void window_free(window *w)
 {
 

@@ -32,7 +32,7 @@ var GUI = {
   
   image(path,pos,color) {
     color ??= Color.black;
-    var wh = cmd(64,path);
+    var wh = texture.dimensions(64,path);
     gui_img(path,pos, [1.0,1.0], 0.0, false, [0.0,0.0], Color.white);
     return bbox.fromcwh([0,0], wh);
   },
@@ -254,7 +254,7 @@ Mum.image = Mum.extend({
       return;
     }
 
-    var tex_wh = cmd(64, this.path);
+    var tex_wh = texture.dimensions(this.path);
     this.wh = tex_wh.slice();
     if (this.width !== 0) this.wh.x = this.width;
     if (this.height !== 0) this.wh.y = this.height;

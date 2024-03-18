@@ -82,7 +82,7 @@ Resources.is_path = function(str)
 }
 
 Resources.texture = {};
-Resources.texture.dimensions = function(path) { return cmd(64,path); }
+Resources.texture.dimensions = function(path) { texture.dimensions(path); }
 
 Resources.gif = {};
 Resources.gif.frames = function(path) { return cmd(139,path); }
@@ -295,6 +295,7 @@ Cmdline.register_order("play", function(argv) {
   console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);
   
   game.engine_start(function() {
+    console.info(`eng start`);
     global.mixin("scripts/sound.js");
     global.game = actor.spawn("game.js");
     if (project.icon) window.set_icon(project.icon);

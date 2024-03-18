@@ -52,15 +52,16 @@ static int sim_play = SIM_PLAY;
 static int argc;
 static char **args;
 
+static JSValue c_start;
 static JSValue c_process_fn;
 
 void c_init() {
   mainwin.start = 1;
   window_resize(sapp_width(), sapp_height());
-//  script_evalf("world_start();");
   render_init();
   set_icon("icons/moon.gif");  
   particle_init();
+  script_call_sym(c_start,0,NULL);
 }
 
 void c_frame() { script_call_sym(c_process_fn,0,NULL); }
@@ -230,8 +231,9 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void engine_start(JSValue procfn)
+void engine_start(JSValue start, JSValue procfn)
 {
+  c_start = start;
   c_process_fn = procfn;
 
   sound_init();
