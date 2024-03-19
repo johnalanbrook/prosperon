@@ -8,6 +8,7 @@
    In addition to the removal of a bunch of stuff as seen here.
    Access prototypes through __proto__ instead of the long-winded Object.getProtoTypeOf.
 */
+
 /*
 Object.getPrototypeOf = undefined;
 Object.setPrototypeOf = undefined;

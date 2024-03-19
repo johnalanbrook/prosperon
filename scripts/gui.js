@@ -13,11 +13,11 @@ var GUI = {
 
     cursor ??= -1;
 
-    var bb = cmd(118, str, size, wrap);
+    var bb = render.text_size(str, size, wrap);
     var w = bb.r*2;
     var h = bb.t*2;
 
-    //ui_text draws with an anchor on top left corner
+    //gui.text draws with an anchor on top left corner
     var p = pos.slice();
     p.x -= w * anchor.x;
     bb.r += (w*anchor.x);
@@ -25,7 +25,7 @@ var GUI = {
     p.y += h * (1 - anchor.y);
     bb.t += h*(1-anchor.y);
     bb.b += h*(1-anchor.y);
-    ui_text(str, p, size, color, wrap, cursor);
+    gui.text(str, p, size, color, wrap, cursor);
 
     return bb;
   },
@@ -194,7 +194,7 @@ Mum.text = Mum.extend({
     var aa = [0,1].sub(params.anchor);
     var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
     gui.font_set(params.font);
-    ui_text(params.str, pos, params.font_size, params.color, this.width, params.caret);
+    gui.text(params.str, pos, params.font_size, params.color, this.width, params.caret);
   },
   
   update_bb(cursor) {
@@ -202,7 +202,7 @@ Mum.text = Mum.extend({
   },
   
   calc_bb(cursor) {
-    var bb = cmd(118,this.str, this.font_size, this.width);
+    var bb = render.text_size(this.str, this.font_size, this.width);
     this.wh = bbox.towh(bb);
     var pos = cursor.add(this.wh.scale([0,1].sub(this.anchor))).add(this.offset);    
     this.bb = bbox.move(bb,pos.add([this.wh.x/2,0]));

@@ -75,12 +75,6 @@ function assert(op, str)
   }
 }
 
-Debug.Options = { };
-Debug.Options.Color = {
-  //set trigger(x) { cmd(17,x); },
-  //set debug(x) { cmd(16, x); },
-};
-
 var Gizmos = {
   pick_gameobject_points(worldpos, gameobject, points) {
     var idx = Math.grab_from_points(worldpos, points.map(gameobject.this2world,gameobject), 25);
@@ -161,6 +155,8 @@ Debug.inputs.f4 = function() {
 };
 Debug.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 
+Debug.Options = {};
+
 Debug.Options.gif = {
   w: 640, /* Max width */
   h: 480, /* Max height */
@@ -184,7 +180,7 @@ Debug.Options.gif = {
         w = h / win;
     }
 
-    cmd(131, w, h, this.cpf, this.depth);
+//    cmd(131, w, h, this.cpf, this.depth);
     this.rec = true;
     this.fps = (1/this.cpf)*100;
     this.start_time = time.now();
@@ -194,7 +190,7 @@ Debug.Options.gif = {
 
   stop() {
     if (!this.rec) return;
-    cmd(132, this.file);
+//    cmd(132, this.file);
     this.rec = false;
   },
 };

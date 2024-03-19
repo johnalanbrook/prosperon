@@ -75,7 +75,7 @@ function json_from_whitelist(whitelist)
   } 
 }
 
-Object.mixin(cmd(268,true), {
+Object.mixin(os.sprite(true), {
   toJSON:json_from_whitelist([
     "path",
     "pos",
@@ -149,28 +149,17 @@ Object.mixin(cmd(268,true), {
   height() { return this.dimensions().y; },
 });
 
-cmd(268,true).make = function(go)
+os.sprite(true).make = function(go)
 {
-  var sp = cmd(268);
+  var sp = os.sprite();
   sp.go = go.body;
   sp.gameobject = go;
   return sp;
 }
 
-component.sprite = cmd(268,true);
+component.sprite = os.sprite(true);
 
 Object.freeze(sprite);
-
-component.model = Object.copy(component, {
-  path:"",
-  _enghook: make_model,
-});
-
-component.model.impl = {
-  set path(x) { cmd(149, this.id, x); },
-  draw() { cmd(150, this.id); },
-  kill() { cmd(213, this.id); },
-};
 
 var sprite = component.sprite;
 
@@ -224,7 +213,7 @@ var SpriteAnim = {
       frame.time = 0.05;
       anim.frames.push(frame);
     }
-    var times = cmd(224,path);
+    var times = render.gif_times(path);
     for (var i = 0; i < frames; i++)
       anim.frames[i].time = times[i]/1000;
     anim.loop = true;
@@ -319,10 +308,10 @@ var collider2d = Object.copy(component, {
   kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
 
   impl: {
-    set sensor(x) { cmd(18,this.shape,x); },
-    get sensor() { return cmd(21,this.shape); },
-    set enabled(x) { cmd(22,this.shape,x); },
-    get enabled() { return cmd(23,this.shape); }
+    set sensor(x) { physics.shape_set_sensor(this.shape,x); },
+    get sensor() { return physics.shape_get_sensor(this.shape); },
+    set enabled(x) { physics.shape_set_enabled(this.shape,x); },
+    get enabled() { return physics.shape_get_enabled(this.shape); }
   },
 });
 
@@ -403,7 +392,7 @@ function pointscaler(x) {
 
 component.polygon2d.impl = Object.mix(collider2d.impl, {
   sync() { cmd_poly2d(0, this.id, this.spoints());},
-  query() { return cmd(80, this.shape); },
+  query() { return physics.shape_query(this.shape); },
   grow: pointscaler,
 });
 
@@ -611,7 +600,7 @@ component.edge2d = Object.copy(collider2d, {
     var idx = 0;
     if (Spline.is_catmull(this.type) || this.type === -1) {
       if (this.points.length >= 2)
-	idx = cmd(59, pos, this.points, 400);
+	idx = physics.closest_point(pos, this.points, 400);
 
       if (idx === this.points.length)
 	this.points.push(pos);
@@ -620,7 +609,7 @@ component.edge2d = Object.copy(collider2d, {
     }
 
     if (Spline.is_bezier(this.type)) {
-      idx = cmd(59, pos, Spline.bezier_nodes(this.points),400);
+      idx = physics.closest_point(pos, Spline.bezier_nodes(this.points),400);
 
       if (idx < 0) return;
       
@@ -649,7 +638,7 @@ component.edge2d.impl = Object.mix(collider2d.impl, {
   set thickness(x) {
     cmd_edge2d(1,this.id,x);
   },
-  get thickness() { return cmd(112,this.id); },
+  get thickness() { return physics.edge_thickness(this.id); },
   grow: pointscaler,
   sync() {
     var sensor = this.sensor;

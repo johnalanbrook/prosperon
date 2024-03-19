@@ -70,7 +70,7 @@ function use(file)
   var c = io.slurp(file);
   
   var script = `(function() { ${c} })();`;
-  use.files[file] = cmd(123,file,global,script);
+  use.files[file] = os.eval_env(file,global,script);
 
   return use.files[file];
 }
@@ -90,7 +90,7 @@ function eval_env(script, env, file)
   file ??= "SCRIPT";
   console.info(`eval ${file}`);  
   script = `(function() { ${script}; }).call(this);\n`;
-  return cmd(123,file,env,script);
+  return os.eval_env(file,env,script);
 }
 
 global.check_registers = function(obj)
@@ -437,8 +437,12 @@ global.mixin("scripts/actor.js");
 global.mixin("scripts/entity.js");
 
 function world_start() {
+  gameobject.body = make_gameobject();
+  gameobject.body.setref(gameobject);
+
   console.info("START WORLD");
   globalThis.world = Object.create(gameobject);
+  gameobject.level = world;  
   world.objects = {};
   world.check_dirty = function() {};
   world.namestr = function(){};
@@ -452,9 +456,6 @@ function world_start() {
   world.kill = function() { this.clear(); };
   world.phys = 2;
   
-  gameobject.level = world;
-  gameobject.body = make_gameobject();
-  cmd(113,gameobject.body, gameobject);
   Object.hide(gameobject, 'timescale');
   var cam = world.spawn("scripts/camera2d.jso");
   game.view_camera(cam);
@@ -465,7 +466,7 @@ global.mixin("scripts/physics.js");
 game.view_camera = function(cam)
 {
   game.camera = cam;
-  cmd(61, game.camera.body);
+  render.cam_body(game.camera.body);
 }
 
 window.title = `Prosperon v${prosperon.version}`;

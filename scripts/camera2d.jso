@@ -1,29 +1,23 @@
 this.phys = physics.kinematic;
 this.dir_view2world = function(dir) { return dir.scale(this.realzoom()); };
-this.view2world = function(pos) { return cmd(137,pos); };
-this.world2view = function(pos) { return cmd(136,pos); };
-this.realzoom = function() { return cmd(135); };
+this.view2world = function(pos) { return render.view2world(pos); };
+this.world2view = function(pos) { return render.world2view(pos); };
+this.realzoom = function() { return render.get_zoom(); };
 
-this.right = function()
-{
-  return this.pos.x + (window.rendersize.x/2);
-}
+this.right = function() { return this.pos.x + (window.rendersize.x/2); }
 
-this.left = function()
-{
-  return this.pos.x - (window.rendersize.x/2);
-}
+this.left = function() { return this.pos.x - (window.rendersize.x/2); }
 
 this.mixin({
   get zoom() {
 //    var z = game.native.y / window.dimensions.y;
-    return cmd(135);///z;
+    return render.get_zoom(); // /z
   },
 
   set zoom(x) {
     x = Math.clamp(x,0.1,10);
 //    var z = game.native.y / window.dimensions.y;
 //    z *= x;
-    cmd(62,x);
+    render.add_zoom(x);
   },
 });

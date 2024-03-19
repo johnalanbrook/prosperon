@@ -13,12 +13,12 @@ function obj_unique_name(name, obj) {
 var gameobject_impl = {
   get pos() {
     assert(this.master, `Entity ${this.toString()} has no master.`);
-    return this.master.world2this(this.worldpos());
+    return this.master.body.world2this(this.worldpos());
   },
 
   set pos(x) {
     assert(this.master, `Entity ${this.toString()} has no master.`);
-    this.set_worldpos(this.master.this2world(x));
+    this.set_worldpos(this.master.body.this2world(x));
   },
 
   get angle() {
@@ -64,12 +64,12 @@ var gameobject_impl = {
   set warp_layer(x) { this.body.warp_filter = x; },
   get warp_layer() { return this.body.warp_filter; },
 
-  set mass(x) { set_body(7, this.body, x); },
+  set mass(x) { this.body.mass = x; },
   get mass() {
     if (!(this.phys === physics.dynamic))
       return undefined;
 
-    return q_body(5, this.body);
+    return this.body.mass;
   },
   get elasticity() { return this.body.e; },
   set elasticity(x) { this.body.e = x; },
@@ -77,25 +77,25 @@ var gameobject_impl = {
   set friction(x) { this.body.f = x; },
   set timescale(x) { this.body.timescale = x; },
   get timescale() { return this.body.timescale; },
-  set phys(x) { set_body(1, this.body, x); },
-  get phys() { return q_body(0, this.body); },
-  get velocity() { return q_body(3, this.body); },
-  set velocity(x) { set_body(9, this.body, x); },
+  set phys(x) { this.body.phys = x; },
+  get phys() { return this.body.phys; },
+  get velocity() { return this.body.velocity; },
+  set velocity(x) { this.body.velocity = x; },
   get damping() { return this.body.damping; },
   set damping(x) { this.body.damping = x },
-  get angularvelocity() { return Math.rad2turn(q_body(4, this.body)); },
-  set angularvelocity(x) { set_body(8, this.body, Math.turn2rad(x)); },
+  get angularvelocity() { return Math.rad2turn(this.body.angularvelocity); },
+  set angularvelocity(x) { this.body.angularvelocity =  Math.turn2rad(x); },
   get max_velocity() { return this.body.maxvelocity; },
   set max_velocity(x) { this.body.maxvelocity = x; },
   get max_angularvelocity() { return this.body.maxangularvelocity; },
   set max_angularvelocity(x) { this.body.maxangularvelocity = x; },
-  get_moi() { return q_body(6, this.body); },
+  get_moi() { return this.body.moi; },
   set_moi(x) {
     if (x <= 0) {
       console.error("Cannot set moment of inertia to 0 or less.");
       return;
     }
-    set_body(13, this.body, x);
+    this.body.moi = x;
   },
 };
 
@@ -144,32 +144,32 @@ var gameobject = {
   },
   /* pin this object to the to object */
   pin(to) {
-    var p = cmd(222, this.body, to.body);
+    var p = joint.pin(this.body,to.body);
   },
   slide(to, a, b, min, max) {
     a ??= [0, 0];
     b ??= [0, 0];
     min ??= 0;
     max ??= 50;
-    var p = cmd(229, this.body, to.body, a, b, min, max);
+    var p = joint.slide(this.body, to.body, a, b, min, max);
     p.max_force = 500;
     p.break();
   },
   pivot(to, piv) {
     piv ??= this.worldpos();
-    var p = cmd(221, this.body, to.body, piv);
+    var p = joint.pivot(this.body, to.body, piv);
   },
   /* groove is on to, from local points a and b, anchored to this at local anchor */
   groove(to, a, b, anchor) {
     anchor ??= [0, 0];
-    var p = cmd(228, to.body, this.body, a, b, anchor);
+    var p = joint.groove(to.body, this.body, a, b, anchor);
   },
   damped_spring(to, length, stiffness, damping) {
     length ??= Vector.length(this.worldpos(), to.worldpos());
     stiffness ??= 1;
     damping ??= 1;
     var dc = 2 * Math.sqrt(stiffness * this.mass);
-    var p = cmd(227, this.body, to.body, [0, 0], [0, 0], stiffness, damping * dc);
+    var p = joint.damped_spring(this.body, to.body, [0, 0], [0, 0], stiffness, damping * dc);
   },
   damped_rotary_spring(to, angle, stiffness, damping) {
     angle ??= 0;
@@ -179,23 +179,23 @@ var gameobject = {
     /* damping = 1 is critical */
     var dc = 2 * Math.sqrt(stiffness * this.get_moi()); /* critical damping number */
     /* zeta = actual/critical */
-    var p = cmd(226, this.body, to.body, angle, stiffness, damping * dc);
+    var p = joint.damped_rotary(this.body, to.body, angle, stiffness, damping * dc);
   },
   rotary_limit(to, min, max) {
-    var p = cmd(225, this.body, to.body, Math.turn2rad(min), Math.turn2rad(max));
+    var p = joint.rotary(this.body, to.body, Math.turn2rad(min), Math.turn2rad(max));
   },
   ratchet(to, ratch) {
     var phase = this.angle - to.angle;
-    var p = cmd(230, this.body, to.body, phase, Math.turn2rad(ratch));
+    var p = joint.ratchet(this.body, to.body, phase, Math.turn2rad(ratch));
   },
   gear(to, ratio) {
     phase ??= 1;
     ratio ??= 1;
     var phase = this.angle - to.angle;
-    var p = cmd(223, this.body, to.body, phase, ratio);
+    var p = joint.gear(this.body, to.body, phase, ratio);
   },
   motor(to, rate) {
-    var p = cmd(231, this.body, to.body, rate);
+    var p = joint.motor(this.body, to.body, rate);
   },
 
   path_from(o) {
@@ -255,11 +255,13 @@ var gameobject = {
   },
 
   set torque(x) { if (!(x >= 0 && x <= Infinity)) return;
-    cmd(153, this.body, x); },
-  gscale() { return cmd(103, this.body); },
+    this.body.torque = x; },
+    
+  gscale() { return this.body.scale; },
   sgscale(x) {
     if (typeof x === 'number')
       x = [x, x];
+    
     physics.sgscale(this.body, x)
   },
 
@@ -270,16 +272,16 @@ var gameobject = {
     return mat;
   },
 
-  worldpos() { return q_body(1, this.body); },
+  worldpos() { return this.body.pos; },
   set_worldpos(x) {
     var poses = this.objects.map(x => x.pos);
-    set_body(2, this.body, x);
+    this.body.pos = x;
     this.objects.forEach((o, i) => o.set_worldpos(this.this2world(poses[i])));
   },
   screenpos() { return window.world2screen(this.worldpos()); },
 
-  worldangle() { return Math.rad2turn(q_body(2, this.body)); },
-  sworldangle(x) { set_body(0, this.body, Math.turn2rad(x)); },
+  worldangle() { return Math.rad2turn(this.body.angle); },
+  sworldangle(x) { this.body.angle = Math.turn2rad(x); },
 
   get_ur() {
     //     if (this.ur === 'empty') return undefined;
@@ -331,7 +333,7 @@ var gameobject = {
       urdiff: {},
     };
 
-    cmd(113, ent.body, ent); // set the internal obj reference to this obj
+    ent.body.setref(ent); // set the internal obj reference to this obj
 
     Object.hide(ent, 'ur', 'body', 'components', 'objects', '_ed', 'timers', 'master');
     if (ent.ur === 'empty') {
@@ -432,18 +434,14 @@ var gameobject = {
   objects: {},
   master: undefined,
 
-  pulse(vec) { set_body(4, this.body, vec); },
-  shove(vec) { set_body(12, this.body, vec); },
-  shove_at(vec, at) { set_body(14, this.body, vec, at); },
-  world2this(pos) { return cmd(70, this.body, pos); },
-  this2world(pos) { return cmd(71, this.body, pos); },
+  pulse(vec) { this.body.impulse(vec); },
+  shove(vec) { this.body.force(vec); },
+  shove_at(vec, at) { this.body.force_local(vec,at); },
   this2screen(pos) { return window.world2screen(this.this2world(pos)); },
   screen2this(pos) { return this.world2this(window.screen2world(pos)); },
-  dir_world2this(dir) { return cmd(160, this.body, dir); },
-  dir_this2world(dir) { return cmd(161, this.body, dir); },
-
+  
   alive() { return this.body >= 0; },
-  in_air() { return q_body(7, this.body); },
+  in_air() { return this.body.in_air(); },
 
   hide() { this.components.forEach(x => x.hide?.());
     this.objects.forEach(x => x.hide?.()); },

@@ -4,7 +4,8 @@ var sound_pref = ['wav', 'flac', 'mp3', 'qoa'];
 
 audio.sound = {
   bus: {},
-  samplerate() { return cmd(198); },
+  samplerate: dspsound.samplerate,
+  
   sounds: [], /* array of loaded sound files */
   play(file, bus) {
     file = Resources.find_sound(file);
@@ -24,68 +25,25 @@ audio.sound = {
   },
 };
 
-audio.dsp = {
-  mix(to) {
-    var n = cmd(181);
-    if (to) n.plugin(to);
-    return n;
-  },
-  source(path) {
-    return cmd(182,path);
-  },
-  delay(secs,decay) {
-    return cmd(185, secs, decay);
-  },
-  fwd_delay(secs, decay) {
-    return cmd(207,secs,decay);
-  },
-  allpass(secs, decay) {
-    var composite = {};
-    var fwd = audio.dsp.fwd_delay(secs,-decay);
-    var fbk = audio.dsp.delay(secs,decay);
-    composite.id = fwd.id;
-    composite.plugin = composite.plugin.bind(fbk);
-    composite.unplug = dsp_node.unplug.bind(fbk);
-    fwd.plugin(fbk);
-    return composite;
-  },
-  lpf(f) {
-    return cmd(186,f);
-  },
-  hpf(f) {
-    return cmd(187,f);
-  },
-  mod(path) {
-    return cmd(188,path);
-  },
-  midi(midi,sf) {
-    return cmd(206,midi,sf);
-  },
-  crush(rate, depth) {
-    return cmd(189,rate,depth);
-  },
-  compressor() {
-    return cmd(190);
-  },
-  limiter(ceil) {
-    return cmd(191,ceil);
-  },
-  noise_gate(floor) {
-    return cmd(192,floor);
-  },
-  pitchshift(octaves) {
-    return cmd(200,octaves);
-  },
-  noise() {
-    return cmd(203);
-  },
-  pink() {
-    return cmd(204);
-  },
-  red() {
-    return cmd(205);
-  },
+audio.dsp = {};
+Object.assign(audio.dsp, dspsound);
+
+audio.dsp.mix = function(to) {
+  var n = audio.dsp.mix();
+  if (to) n.plugin(to);
+  return n;
 };
+
+audio.dsp.allpass = function(secs, decay) {
+  var composite = {};
+  var fwd = audio.dsp.fwd_delay(secs,-decay);
+  var fbk = audio.dsp.delay(secs,decay);
+  composite.id = fwd.id;
+  composite.plugin = composite.plugin.bind(fbk);
+  composite.unplug = dsp_node.unplug.bind(fbk);
+  fwd.plugin(fbk);
+  return composite;
+}
 
 audio.dsp.doc = {
   delay: "Delays the input by secs, multiplied by decay",
@@ -103,17 +61,16 @@ audio.dsp.doc = {
   red: "Red noise"
 };
 
-Object.mixin(cmd(180).__proto__, {
+Object.mixin(dspsound.master().__proto__, {
   get db() { return 20*Math.log10(Math.abs(this.volume)); },
   set db(x) { x = Math.clamp(x,-100,0); this.volume = Math.pow(10, x/20); },
   get volume() { return this.gain; },
   set volume(x) { this.gain = x; },
 });
 
-audio.sound.bus.master = cmd(180);
+audio.sound.bus.master = dspsound.master();
 
 /*Object.mixin(audio.dsp.source().__proto__, {
-  frames() { return cmd(197,this); },
   length() { return this.frames()/sound.samplerate(); },
   time() { return this.frame/sound.samplerate(); },
   pct() { return this.time()/this.length(); },

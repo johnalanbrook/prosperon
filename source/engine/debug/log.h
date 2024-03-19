@@ -29,6 +29,7 @@ extern int stdout_lvl;
 #define YughCritical(msg, ...) mYughLog(0, LOG_PANIC, __LINE__, __FILE__, msg, ##__VA_ARGS__);
 #else
 #define YughLog(cat, pri, msg, ...)
+#define YughSpam(msg,...)
 #define YughInfo(msg, ...)
 #define YughWarn(msg, ...)
 #define YughError(msg, ...)

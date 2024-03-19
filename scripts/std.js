@@ -85,7 +85,7 @@ Resources.texture = {};
 Resources.texture.dimensions = function(path) { texture.dimensions(path); }
 
 Resources.gif = {};
-Resources.gif.frames = function(path) { return cmd(139,path); }
+Resources.gif.frames = function(path) { return render.gif_frames(path); }
 
 Resources.replpath = function(str, path)
 {

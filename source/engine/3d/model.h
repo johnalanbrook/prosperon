@@ -28,11 +28,11 @@ typedef struct model {
 } model;
 
 /* A model with draw information */ 
-struct drawmodel {
+typedef struct drawmodel {
   struct model *model;
   HMM_Mat4 amodel;
   gameobject *go;
-};
+} drawmodel;
 
 typedef struct bone {
   transform3d t;
@@ -53,7 +53,7 @@ void model_init();
 struct drawmodel *make_drawmodel(gameobject *go);
 void draw_drawmodel(struct drawmodel *dm);
 void model_draw_all();
-void free_drawmodel(struct drawmodel *dm);
+void drawmodel_free(struct drawmodel *dm);
 
 material *material_make();
 void material_free(material *mat);

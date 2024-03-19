@@ -88,15 +88,16 @@ render.arrow = function(start, end, color, wingspan, wingangle) {
   };
 
 render.rectangle = function(lowerleft, upperright, color) {
-    var pos = lowerleft.add(upperright).map(x=>x/2);
-    var wh = [upperright.x-lowerleft.x,upperright.y-lowerleft.y];
-    render.box(pos,wh,color);
-  };
+  var points = [lowerleft, lowerleft.add([upperright.x-lowerleft.x,0]), upperright, lowerleft.add([0,upperright.y-lowerleft.y])];
+  render.poly(points, color);
+};
   
 render.box = function(pos, wh, color) {
-    color ??= Color.white;
-    cmd(53, pos, wh, color);
-  };
+  color ??= Color.white;
+  var lower = pos.sub(wh.scale(0.5));
+  var upper = pos.add(wh.scale(0.5));
+  render.rectangle(lower,upper,color);
+};
 
 render.doc = "Draw shapes in screen space.";
 render.circle.doc = "Draw a circle at pos, with a given radius and color.";

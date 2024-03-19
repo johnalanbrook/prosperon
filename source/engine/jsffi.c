@@ -78,6 +78,7 @@ QJSCLASS(warp_damp)
 QJSCLASS(material)
 QJSCLASS(mesh)
 QJSCLASS(window)
+QJSCLASS(drawmodel)
 
 /* qjs class colliders and constraints */
 /* constraint works for all constraints - 2d or 3d */
@@ -128,13 +129,8 @@ JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
       (byte & 0x02 ? '1' : '0'), \
       (byte & 0x01 ? '1' : '0')
 
-void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertyStr(js, obj, prop, v); }
-
 int js2bool(JSValue v) { return JS_ToBool(js, v); }
-
 JSValue bool2js(int b) { return JS_NewBool(js,b); }
-
-void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(js, obj, i, v); }
 
 JSValue gos2ref(gameobject **go)
 {
@@ -144,6 +140,7 @@ JSValue gos2ref(gameobject **go)
   return array;
 }
 
+void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertyStr(js, obj, prop, v); }
 JSValue js_getpropstr(JSValue v, const char *str)
 {
   JSValue p = JS_GetPropertyStr(js,v,str);
@@ -151,6 +148,7 @@ JSValue js_getpropstr(JSValue v, const char *str)
   return p;
 }
 
+void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(js, obj, i, v); }
 JSValue js_getpropidx(JSValue v, uint32_t i)
 {
   JSValue p = JS_GetPropertyUint32(js, v, i);
@@ -161,7 +159,9 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
 JSValue str2js(const char *c) { return JS_NewString(js, c); }
-const char *js2str(JSValue v) { return JS_ToCString(js, v); }
+const char *js2str(JSValue v) {
+  return JS_ToCString(js, v);
+}
 
 JSValue strarr2js(char **c)
 {
@@ -172,6 +172,7 @@ JSValue strarr2js(char **c)
   return arr;
 }
 
+JSValue number2js(double g) { return JS_NewFloat64(js,g); }
 double js2number(JSValue v) {
   double g;
   JS_ToFloat64(js, &g, v);
@@ -179,8 +180,6 @@ double js2number(JSValue v) {
 }
 
 void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
-
-JSValue number2js(double g) { return JS_NewFloat64(js,g); }
 
 JSValue ptr2js(void *ptr) {
   JSValue obj = JS_NewObjectClass(js, js_ptr_id);
@@ -343,6 +342,8 @@ struct boundingbox js2bb(JSValue v)
   return bb;
 }
 
+cpVect js2cvec2(JSValue v) { return js2vec2(v).cp; }
+JSValue cvec22js(cpVect v) { return vec22js((HMM_Vec2)v); }
 
 HMM_Vec2 js2vec2(JSValue v)
 {
@@ -429,19 +430,6 @@ JSValue vecarr2js(HMM_Vec2 *points, int n) {
   return array;
 }
 
-JSValue duk_ui_text(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const char *s = JS_ToCString(js, argv[0]);
-  HMM_Vec2 pos = js2vec2(argv[1]);
-
-  float size = js2number(argv[2]);
-  struct rgba c = js2color(argv[3]);
-  int wrap = js2number(argv[4]);
-  int cursor = js2number(argv[5]);
-  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, cursor, 1.0));
-  JS_FreeCString(js, s);
-  return ret;
-}
-
 int js_print_exception(JSValue v)
 {
 #ifndef NDEBUG
@@ -463,17 +451,6 @@ int js_print_exception(JSValue v)
     return 1;
 #endif
   return 0;
-}
-
-JSValue duk_gui_img(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  const char *img = JS_ToCString(js, argv[0]);
-  transform2d t;
-  t.pos = js2vec2(argv[1]);
-  t.scale = js2vec2(argv[2]);
-  t.angle = js2number(argv[3]);
-  gui_draw_img(img, t, js2bool(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
-  JS_FreeCString(js, img);
-  return JS_UNDEFINED;
 }
 
 struct rect js2rect(JSValue v) {
@@ -502,38 +479,6 @@ JSValue bb2js(struct boundingbox bb)
   js_setprop_str(obj,"r", number2js(bb.r));
   js_setprop_str(obj,"l", number2js(bb.l));
   return obj;
-}
-
-JSValue duk_spline_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2number(argv[0]);
-  /*
-    0: catmull-rom
-    1: bezier
-  */
-
-  int type = js2number(argv[1]);
-  int d = js2number(argv[2]); /* dimensions: 1d, 2d, 3d ...*/
-  HMM_Vec2 *points = js2cpvec2arr(argv[3]);
-  float param = js2number(argv[4]);
-  HMM_Vec2 *samples = NULL;
-  switch(type) {
-    case 0:
-      samples = catmull_rom_ma_v2(points, param);
-      break;
-    case 1:
-      samples = bezier_cb_ma_v2(points, param);
-      break;
-  }
-
-  arrfree(points);
-  
-  if (!samples)
-    return JS_UNDEFINED;
-
-  JSValue arr = vecarr2js(samples, arrlen(samples));  
-  arrfree(samples);
-
-  return arr;
 }
 
 JSValue ints2js(int *ints) {
@@ -616,286 +561,6 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
   return best;
 }
 
-JSValue duk_cmd(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2number(argv[0]);
-  const char *str = NULL;
-  const char *str2 = NULL;
-  void *d1 = NULL;
-  void *d2 = NULL;
-  void *v1 = NULL;
-  gameobject **ids = NULL;
-  int *intids = NULL;
-  gameobject *go = NULL;
-  JSValue ret = JS_UNDEFINED;
-  size_t plen = 0;
-
-  switch (cmd) {
-  case 18:
-    shape_set_sensor(js2ptr(argv[1]), JS_ToBool(js, argv[2]));
-    break;
-
-  case 21:
-    ret = JS_NewBool(js, shape_get_sensor(js2ptr(argv[1])));
-    break;
-
-  case 22:
-    shape_enabled(js2ptr(argv[1]), JS_ToBool(js, argv[2]));
-    break;
-
-  case 23:
-    ret = JS_NewBool(js, shape_is_enabled(js2ptr(argv[1])));
-    break;
-
-  case 44:
-    go = pos2gameobject(js2vec2(argv[1]), js2number(argv[2]));
-    ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
-    break;
-
-  case 52:
-    ids = phys2d_query_box(js2vec2(argv[1]), js2vec2(argv[2]));
-    ret = gos2ref(ids);
-    arrfree(ids);
-    break;
-
-  case 53:
-    draw_box(js2vec2(argv[1]), js2vec2(argv[2]), js2color(argv[3]));
-    break;
-
-  case 59:
-    v1 = js2cpvec2arr(argv[2]);
-    ret = JS_NewInt64(js, point2segindex(js2vec2(argv[1]), v1, js2number(argv[3])));
-    break;
-
-  case 61:
-    set_cam_body(js2gameobject(argv[1])->body);
-    break;
-
-  case 62:
-    add_zoom(js2number(argv[1]));
-    break;
-
-  case 70:
-    ret = vec22js(world2go(js2gameobject(argv[1]), js2vec2(argv[2])));
-    break;
-
-  case 71:
-    ret = vec22js(go2world(js2gameobject(argv[1]), js2vec2(argv[2])));
-    break;
-
-  case 80:
-    ids = phys2d_query_shape(js2ptr(argv[1]));
-    ret = gos2ref(ids);
-    arrfree(ids);
-    break;
-
-  case 83:
-    v1 = js2cpvec2arr(argv[1]);
-    draw_edge(v1, js_arrlen(argv[1]), js2color(argv[2]), js2number(argv[3]), 0, js2color(argv[2]), 10);
-    break;
-
-  case 86:
-    v1 = js2cpvec2arr(argv[3]);
-    intids = phys2d_query_box_points(js2vec2(argv[1]), js2vec2(argv[2]), v1, js2number(argv[4]));
-    ret = ints2js(intids);
-    arrfree(intids);
-    break;
-    
-  case 103:
-    ret = vec22js(js2gameobject(argv[1])->scale.XY);
-    break;
-
-    case 112:
-      ret = number2js(((struct phys2d_edge*)js2ptr(argv[1]))->thickness);
-      break;
-
-    case 113:
-      js2gameobject(argv[1])->ref = argv[2];
-      break;
-
-    case 118:
-      str = JS_ToCString(js,argv[1]);
-      ret = bb2js(text_bb(str, js2number(argv[2]), js2number(argv[3]), 1.0));
-      break;
-
-    case 123:
-      str = JS_ToCString(js, argv[1]);
-      str2 = JS_ToCString(js, argv[3]);
-      ret = eval_script_env(str, argv[2], str2);
-      break;
-
-    case 131:
-      gif_rec_start(js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]));
-      break;
-    case 132:
-      str = JS_ToCString(js, argv[1]);
-      gif_rec_end(str);
-      break;
-      
-    case 135:
-      ret = number2js(cam_zoom());
-      break;
-
-    case 136:
-      ret = vec22js(world2screen(js2vec2(argv[1])));
-      break;
-
-    case 137:
-      ret = vec22js(screen2world(js2vec2(argv[1])));
-      break;
-
-    case 139:
-      str = JS_ToCString(js,argv[1]);
-      ret = JS_NewInt64(js, gif_nframes(str));
-      break;
-
-    case 149:
-      ((struct drawmodel *)js2ptr(argv[1]))->model = GetExistingModel(js2str(argv[2]));
-      break;
-
-    case 150:
-      draw_drawmodel(js2ptr(argv[1]));
-      break;
-
-    case 153:
-     cpBodySetTorque(js2gameobject(argv[1])->body, js2number(argv[2]));
-     break;
-
-    case 160:
-      ret = vec22js(mat_t_dir(t_world2go(js2gameobject(argv[1])), js2vec2(argv[2])));
-      break;
-    case 161:
-      ret = vec22js(mat_t_dir(t_go2world(js2gameobject(argv[1])), js2vec2(argv[2])));
-      break;
-
-    case 177:
-      plugin_node(js2dsp_node(argv[1]), js2dsp_node(argv[2]));
-      break;
-    case 180:
-      ret = dsp_node2js(masterbus);
-      break;
-    case 181:
-      ret = dsp_node2js(make_node(NULL,NULL,NULL));
-      break;
-    case 182:
-      str = js2str(argv[1]);
-      ret = dsp_node2js(dsp_source(str));
-      JS_SetPrototype(js, ret, sound_proto);
-      break;
-    case 185:
-      ret = dsp_node2js(dsp_delay(js2number(argv[1]), js2number(argv[2])));
-      break;
-    case 186:
-      ret = dsp_node2js(dsp_lpf(js2number(argv[1])));
-      break;
-    case 187:
-      ret = dsp_node2js(dsp_hpf(js2number(argv[1])));
-      break;
-    case 188:
-      str = js2str(argv[1]);
-      ret = dsp_node2js(dsp_mod(str));
-      break;
-    case 189:
-      ret = dsp_node2js(dsp_bitcrush(js2number(argv[1]), js2number(argv[2])));
-      break;
-    case 190:
-      ret = dsp_node2js(dsp_compressor());
-      break;
-    case 191:
-      ret = dsp_node2js(dsp_limiter(js2number(argv[1])));
-      break;
-    case 192:
-      ret = dsp_node2js(dsp_noise_gate(js2number(argv[1])));
-      break;
-    case 197:
-      ret = number2js(js2sound(argv[1])->data->frames);    
-      break;
-    case 198:
-      ret = number2js(SAMPLERATE);
-      break;
-    case 200:
-      ret = dsp_node2js(dsp_pitchshift(js2number(argv[1])));
-      break;
-    case 203:
-      ret = dsp_node2js(dsp_whitenoise());
-      break;
-    case 204:
-      ret = dsp_node2js(dsp_pinknoise());
-      break;
-    case 205:
-      ret = dsp_node2js(dsp_rednoise());
-      break;
-    case 206:
-      str = js2str(argv[1]);
-      str2 = js2str(argv[2]);
-      ret = dsp_node2js(dsp_midi(str, make_soundfont(str2)));
-      break;
-    case 207:
-      ret = dsp_node2js(dsp_fwd_delay(js2number(argv[1]), js2number(argv[2])));
-      break;
-    case 213:
-      free_drawmodel(js2ptr(argv[1]));
-      break;
-
-    case 221:
-      ret = constraint2js(constraint_make(cpPivotJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body,js2vec2(argv[3]).cp)));
-      break;
-    case 222:
-      ret = constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, cpvzero,cpvzero)));
-      break;
-    case 223:
-      ret = constraint2js(constraint_make(cpGearJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]))));
-      break;
-    case 224:
-      str = js2str(argv[1]);
-      ret = ints2js(gif_delays(str));
-      break;
-    case 225:
-      ret = constraint2js(constraint_make(cpRotaryLimitJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]))));
-      break;
-    case 226:
-      ret = constraint2js(constraint_make(cpDampedRotarySpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2number(argv[3]), js2number(argv[4]), js2number(argv[5]))));
-      break;
-    case 227:
-      ret = constraint2js(constraint_make(cpDampedSpringNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6]), js2number(argv[7]))));
-      break;
-    case 228:
-      ret = constraint2js(constraint_make(cpGrooveJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2vec2(argv[5]).cp)));
-      break;
-    case 229:
-      ret = constraint2js(constraint_make(cpSlideJointNew(js2gameobject(argv[1])->body, js2gameobject(argv[2])->body, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp, js2number(argv[5]), js2number(argv[6]))));
-      break;
-    case 230:
-      ret = constraint2js(constraint_make(cpRatchetJointNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]), js2number(argv[4]))));
-      break;
-    case 231:
-      ret = constraint2js(constraint_make(cpSimpleMotorNew(js2body(argv[1]), js2body(argv[2]), js2number(argv[3]))));
-      break;
-
-    case 253:
-      ret = warp_gravity2js(warp_gravity_make());
-      break;
-    case 254:
-      ret = warp_damp2js(warp_damp_make());
-      break;
-
-    case 268:
-      if (js2bool(argv[1]))
-        ret = JS_GetClassProto(js, js_sprite_id);
-      else
-        ret = sprite2js(sprite_make());
-      break;
-  }
-
-  if (str) JS_FreeCString(js, str);
-  if (str2) JS_FreeCString(js, str2);
-  if (d1) free(d1);
-  if (d2) free(d2);
-  if (v1) arrfree(v1);
-
-  if (!JS_IsNull(ret)) return ret;
-  return JS_UNDEFINED;
-}
-
 void gameobject_add_shape_collider(gameobject *go, JSValue fn, struct phys2d_shape *shape) {
   struct shape_cb shapecb;
   shapecb.shape = shape;
@@ -924,102 +589,6 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
   case 3:
     go->cbs.separate = JS_DupValue(js,fn);
     break;
-  }
-
-  return JS_UNDEFINED;
-}
-
-JSValue duk_make_gameobject(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  return gameobject2js(MakeGameobject());
-}
-
-JSValue duk_set_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int cmd = js2number(argv[0]);
-  gameobject *go = js2gameobject(argv[1]);
-  
-  if (!go) return JS_UNDEFINED;
-
-  /* TODO: Possible that reindexing shapes only needs done for static shapes? */
-  switch (cmd) {
-  case 0:
-    gameobject_setangle(go, js2number(argv[2]));
-    break;
-
-  case 1:
-    go->bodytype = js2number(argv[2]);
-    cpBodySetType(go->body, go->bodytype);
-    gameobject_apply(go);
-    break;
-
-  case 2:
-    cpBodySetPosition(go->body, js2vec2(argv[2]).cp);
-    break;
-
-  case 4:
-    cpBodyApplyImpulseAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
-    return JS_UNDEFINED;
-
-  case 7:
-    go->mass = js2number(argv[2]);
-    if (go->bodytype == CP_BODY_TYPE_DYNAMIC)
-      cpBodySetMass(go->body, go->mass);
-    break;
-
-  case 8:
-    cpBodySetAngularVelocity(go->body, js2number(argv[2]));
-    return JS_UNDEFINED;
-
-  case 9:
-    cpBodySetVelocity(go->body, js2vec2(argv[2]).cp);
-    return JS_UNDEFINED;
-
-  case 12:
-    cpBodyApplyForceAtWorldPoint(go->body, js2vec2(argv[2]).cp, cpBodyGetPosition(go->body));
-    return JS_UNDEFINED;
-
-  case 13:
-    cpBodySetMoment(go->body, js2number(argv[2]));
-    return JS_UNDEFINED;
-  case 14:
-    cpBodyApplyForceAtLocalPoint(go->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp);
-    return JS_UNDEFINED;
-  }
-
-  cpSpaceReindexShapesForBody(space, go->body);
-
-  return JS_UNDEFINED;
-}
-
-JSValue duk_q_body(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
-  int q = js2number(argv[0]);
-  gameobject *go = js2gameobject(argv[1]);
-
-  if (!go) return JS_UNDEFINED;
-
-  switch (q) {
-  case 0:
-    return JS_NewInt64(js, cpBodyGetType(go->body));
-
-  case 1:
-    return vec22js((HMM_Vec2)cpBodyGetPosition(go->body));
-
-  case 2:
-    return number2js(cpBodyGetAngle(go->body));
-
-  case 3:
-    return vec22js((HMM_Vec2)cpBodyGetVelocity(go->body));
-
-  case 4:
-    return number2js(cpBodyGetAngularVelocity(go->body));
-
-  case 5:
-    return number2js(cpBodyGetMass(go->body));
-
-  case 6:
-    return number2js(cpBodyGetMoment(go->body));
-
-  case 7:
-    return JS_NewBool(js, phys2d_in_air(go->body));
   }
 
   return JS_UNDEFINED;
@@ -1194,6 +763,18 @@ static const JSCFunctionListEntry js_warp_damp_funcs [] = {
   CGETSET_ADD(warp_damp, damp)
 };
 
+JSC_CCALL(drawmodel_draw, draw_drawmodel(js2drawmodel(this)))
+JSC_CCALL(drawmodel_path,
+  char *s = js2str(argv[0]);
+  js2drawmodel(this)->model = GetExistingModel(s);
+  JS_FreeCString(js,s);
+)
+
+static const JSCFunctionListEntry js_drawmodel_funcs[] = {
+  MIST_FUNC_DEF(drawmodel, draw, 0),
+  MIST_FUNC_DEF(drawmodel, path, 1)
+};
+
 GETSET_PAIR(emitter, life, number)
 GETSET_PAIR(emitter, life_var, number)
 GETSET_PAIR(emitter, speed, number)
@@ -1271,6 +852,14 @@ JSValue js_os_sys(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 JSC_CCALL(os_quit, quit();)
 JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
 JSC_CCALL(os_gc, script_gc());
+JSC_CCALL(os_eval_env,
+  char *s1 = js2str(argv[0]);
+  char *s2 = js2str(argv[2]);
+  JSValue ret = eval_script_env(s1, argv[1], s2);
+  JS_FreeCString(js,s1);
+  JS_FreeCString(js,s2);
+  return ret;
+)
 
 #define RETUN return JS_UNDEFINED
 
@@ -1281,7 +870,13 @@ JSValue js_os_capture(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   RETUN;
 }
 
+JSC_CCALL(os_sprite,
+  if (js2bool(argv[0])) return JS_GetClassProto(js,js_sprite_id);
+  return sprite2js(sprite_make());
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
+  MIST_FUNC_DEF(os,sprite,1),
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
   MIST_FUNC_DEF(os, sys, 0),
@@ -1289,6 +884,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),
   MIST_FUNC_DEF(os, capture, 5),
+  MIST_FUNC_DEF(os, eval_env, 3),
 };
 
 JSC_CCALL(render_normal, opengl_rendermode(LIT))
@@ -1317,8 +913,40 @@ JSC_CCALL(render_flush_hud, debug_flush(&hudproj); debug_flush(&hudproj); sprite
 JSC_CCALL(render_pass, debug_nextpass())
 JSC_CCALL(render_end_pass, sg_end_pass())
 JSC_CCALL(render_commit, sg_commit(); debug_newframe();)
+JSC_CCALL(render_text_size,
+  char *s = js2str(argv[0]);
+  JSValue ret = bb2js(text_bb(s, js2number(argv[1]), js2number(argv[2]), 1));
+  JS_FreeCString(js,s);
+  return ret;
+)
+JSC_CCALL(render_gif_times,
+  char *s = js2str(argv[0]);
+  JSValue ret = ints2js(gif_delays(s));
+  JS_FreeCString(js,s);
+  return ret;
+)
+
+JSC_CCALL(render_gif_frames,
+  char *s = js2str(argv[0]);
+  JSValue ret = number2js(gif_nframes(s));
+  JS_FreeCString(js,s);
+  return ret;
+)
+
+JSC_CCALL(render_cam_body, set_cam_body(js2gameobject(argv[0])->body))
+JSC_CCALL(render_add_zoom, add_zoom(js2number(argv[0])))
+JSC_CCALL(render_get_zoom, return number2js(cam_zoom()))
+JSC_CCALL(render_world2screen, return vec22js(world2screen(js2vec2(argv[0]))))
+JSC_CCALL(render_screen2world, return vec22js(screen2world(js2vec2(argv[0]))))
 
 static const JSCFunctionListEntry js_render_funcs[] = {
+  MIST_FUNC_DEF(render,cam_body, 1),
+  MIST_FUNC_DEF(render,add_zoom,1),
+  MIST_FUNC_DEF(render,get_zoom,0),
+  MIST_FUNC_DEF(render,world2screen,1),
+  MIST_FUNC_DEF(render,screen2world,1),
+  MIST_FUNC_DEF(render,gif_frames,1),
+  MIST_FUNC_DEF(render, gif_times, 1),
   MIST_FUNC_DEF(render, normal, 0),
   MIST_FUNC_DEF(render, wireframe, 0),
   MIST_FUNC_DEF(render, grid, 3),
@@ -1333,18 +961,71 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flush_hud, 0),
   MIST_FUNC_DEF(render, pass, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
-  MIST_FUNC_DEF(render, commit, 0)
+  MIST_FUNC_DEF(render, commit, 0),
+  MIST_FUNC_DEF(render, text_size, 3)
 };
 
 JSC_CCALL(gui_flush, text_flush(&hudproj));
 JSC_CCALL(gui_scissor, sg_apply_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
+JSC_CCALL(gui_text,
+  const char *s = JS_ToCString(js, argv[0]);
+  HMM_Vec2 pos = js2vec2(argv[1]);
+
+  float size = js2number(argv[2]);
+  struct rgba c = js2color(argv[3]);
+  int wrap = js2number(argv[4]);
+  int cursor = js2number(argv[5]);
+  JSValue ret = JS_NewInt64(js, renderText(s, pos, size, c, wrap, cursor, 1.0));
+  JS_FreeCString(js, s);
+  return ret;
+)
+
+JSC_CCALL(gui_img,
+  const char *img = JS_ToCString(js, argv[0]);
+  transform2d t;
+  t.pos = js2vec2(argv[1]);
+  t.scale = js2vec2(argv[2]);
+  t.angle = js2number(argv[3]);
+  gui_draw_img(img, t, js2bool(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
+  JS_FreeCString(js, img);
+)
+
 
 DEF_FN_STR(font_set)
 
 static const JSCFunctionListEntry js_gui_funcs[] = {
   MIST_FUNC_DEF(gui, flush, 0),
   MIST_FUNC_DEF(gui, scissor, 4),
+  MIST_FUNC_DEF(gui, text, 6),
+  MIST_FUNC_DEF(gui, img, 7),
   MIST_FN_STR(font_set),
+};
+
+JSC_CCALL(spline_catmull,
+  HMM_Vec2 *points = js2cpvec2arr(argv[0]);
+  float param = js2number(argv[1]);
+  HMM_Vec2 *samples = catmull_rom_ma_v2(points,param);
+  arrfree(points);
+  if (!samples) return JS_UNDEFINED;
+  JSValue arr = vecarr2js(samples, arrlen(samples));
+  arrfree(samples);
+  return arr;
+)
+
+JSC_CCALL(spline_bezier,
+  HMM_Vec2 *points = js2cpvec2arr(argv[0]);
+  float param = js2number(argv[1]);
+  HMM_Vec2 *samples = catmull_rom_ma_v2(points,param);
+  arrfree(points);
+  if (!samples) return JS_UNDEFINED;
+  JSValue arr = vecarr2js(samples, arrlen(samples));
+  arrfree(samples);
+  return arr;
+)
+
+static const JSCFunctionListEntry js_spline_funcs[] = {
+  MIST_FUNC_DEF(spline, catmull, 2),
+  MIST_FUNC_DEF(spline, bezier, 2)
 };
 
 JSValue js_vector_dot(JSContext *js, JSValueConst this, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
@@ -1629,9 +1310,56 @@ JSValue js_physics_sgscale(JSContext *js, JSValueConst this, int argc, JSValue *
 
 JSValue js_physics_set_cat_mask(JSContext *js, JSValueConst this, int argc, JSValue *argv) { set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])); RETUN; }
 
+JSC_CCALL(physics_box_query,
+  int *ids = phys2d_query_box(js2vec2(argv[0]), js2vec2(argv[1]));
+  JSValue ret = gos2ref(ids);
+  arrfree(ids);
+  return ret;
+)
+
+JSC_CCALL(physics_pos_query,
+  gameobject *go = pos2gameobject(js2vec2(argv[0]), js2number(argv[1]));
+  JSValue ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
+  return ret;
+)
+
+JSC_CCALL(physics_box_point_query,
+  void *v = js2cpvec2arr(argv[2]);
+  int *intids = phys2d_query_box_points(js2vec2(argv[0]), js2vec2(argv[1]), v, js_arrlen(argv[2]));
+  JSValue ret = ints2js(intids);
+  arrfree(intids);
+  return ret;
+)
+
+JSC_CCALL(physics_query_shape,
+  int *ids = phys2d_query_shape(js2ptr(argv[0]));
+  JSValue ret = gos2ref(ids);
+  arrfree(ids);
+  return ret;
+)
+
+JSC_CCALL(physics_closest_point,
+  void *v1 = js2cpvec2arr(argv[1]);
+  JSValue ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
+  arrfree(v1);
+  return ret;
+)
+
+JSC_CCALL(physics_make_gravity, return warp_gravity2js(warp_gravity_make()))
+JSC_CCALL(physics_make_damp, return warp_damp2js(warp_damp_make()))
+JSC_CCALL(physics_edge_thickness, return number2js(((struct phys2d_edge*)js2ptr(argv[0]))->thickness))
+
 static const JSCFunctionListEntry js_physics_funcs[] = {
+  MIST_FUNC_DEF(physics,edge_thickness,1),
   MIST_FUNC_DEF(physics, sgscale, 2),
-  MIST_FUNC_DEF(physics, set_cat_mask, 2)
+  MIST_FUNC_DEF(physics, set_cat_mask, 2),
+  MIST_FUNC_DEF(physics, box_query, 2),
+  MIST_FUNC_DEF(physics, pos_query, 2),
+  MIST_FUNC_DEF(physics, box_point_query, 3),
+  MIST_FUNC_DEF(physics, query_shape, 1),
+  MIST_FUNC_DEF(physics, closest_point, 3),
+  MIST_FUNC_DEF(physics, make_damp, 0),
+  MIST_FUNC_DEF(physics, make_gravity, 0)
 };
 
 static const JSCFunctionListEntry js_emitter_funcs[] = {
@@ -1689,12 +1417,14 @@ GETSET_PAIR(sound, loop, bool)
 GETSET_PAIR(sound, timescale, number)
 GETSET_PAIR(sound, frame, number)
 GETSET_PAIR_HOOK(sound, hook)
+JSC_CCALL(sound_frames, return number2js(js2sound(this)->data->frames))
 
 static const JSCFunctionListEntry js_sound_funcs[] = {
   CGETSET_ADD(sound, loop),
   CGETSET_ADD(sound, timescale),
   CGETSET_ADD(sound, frame),
-  CGETSET_ADD(sound, hook)
+  CGETSET_ADD(sound, hook),
+  MIST_FUNC_DEF(sound, frames, 0),
 };
 
 static JSValue window_get_size(JSContext *js, JSValueConst this) { return vec22js(js2window(this)->size); }
@@ -1765,6 +1495,34 @@ JSValue ID##_get_##ENTRY (JSContext *js, JSValue this) { \
   return TYPE##2js(js2##ID (this)->ENTRY); \
 } \
 
+#define BODY_GETSET(ENTRY, CPENTRY, TYPE) \
+JSValue gameobject_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+  cpBody *b = js2gameobject(this)->body; \
+  cpBodySet##CPENTRY (b, js2##TYPE (val)); \
+  return JS_UNDEFINED; \
+} \
+\
+JSValue gameobject_get_##ENTRY (JSContext *js, JSValue this) { \
+  cpBody *b = js2gameobject(this)->body; \
+  return TYPE##2js (cpBodyGet##CPENTRY (b)); \
+} \
+
+BODY_GETSET(pos, Position, cvec2)
+BODY_GETSET(angle, Angle, number)
+GETSET_PAIR(gameobject, scale, vec3)
+BODY_GETSET(velocity, Velocity, cvec2)
+BODY_GETSET(angularvelocity, AngularVelocity, number)
+BODY_GETSET(moi, Moment, number)
+BODY_GETSET(phys, Type, number)
+BODY_GETSET(torque, Torque, number)
+JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
+JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
+JSC_CCALL(gameobject_force_local, cpBodyApplyForceAtLocalPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp))
+JSC_CCALL(gameobject_in_air, return bool2js(phys2d_in_air(js2gameobject(this)->body)))
+JSC_CCALL(gameobject_world2this, return vec22js(world2go(js2gameobject(this), js2vec2(argv[0]))))
+JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js2vec2(argv[0]))))
+JSC_CCALL(gameobject_dir_world2this, return vec22js(mat_t_dir(t_world2go(js2gameobject(this)), js2vec2(argv[0]))))
+JSC_CCALL(gameobject_dir_this2world, return vec22js(mat_t_dir(t_go2world(js2gameobject(this)), js2vec2(argv[0]))))
 GETSET_PAIR_BODY(gameobject, f, number)
 GETSET_PAIR_BODY(gameobject, e, number)
 GETSET_PAIR_BODY(gameobject, mass, number)
@@ -1774,21 +1532,138 @@ GETSET_PAIR(gameobject, maxvelocity, number)
 GETSET_PAIR(gameobject, maxangularvelocity, number)
 GETSET_PAIR_BODY(gameobject, layer, number)
 GETSET_PAIR(gameobject, warp_filter, bitmask)
-GETSET_PAIR(gameobject, scale, vec3)
 GETSET_PAIR(gameobject, drawlayer, number)
+JSC_CCALL(gameobject_setref, js2gameobject(this)->ref = argv[0]);
+
+JSValue duk_make_gameobject(JSContext *js, JSValue this) { return gameobject2js(MakeGameobject()); }
 
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject, f),
   CGETSET_ADD(gameobject, e),
   CGETSET_ADD(gameobject,mass),
   CGETSET_ADD(gameobject,damping),
+  CGETSET_ADD(gameobject, scale),
   CGETSET_ADD(gameobject,timescale),
   CGETSET_ADD(gameobject,maxvelocity),
   CGETSET_ADD(gameobject,maxangularvelocity),
   CGETSET_ADD(gameobject,layer),
   CGETSET_ADD(gameobject,warp_filter),
   CGETSET_ADD(gameobject,scale),
-  CGETSET_ADD(gameobject,drawlayer)
+  CGETSET_ADD(gameobject,drawlayer),
+  CGETSET_ADD(gameobject, pos),
+  CGETSET_ADD(gameobject, angle),
+  CGETSET_ADD(gameobject, velocity),
+  CGETSET_ADD(gameobject, angularvelocity),
+  CGETSET_ADD(gameobject, moi),
+  CGETSET_ADD(gameobject, phys),
+  CGETSET_ADD(gameobject, torque),
+  MIST_FUNC_DEF(gameobject, impulse, 1),
+  MIST_FUNC_DEF(gameobject, force, 1),
+  MIST_FUNC_DEF(gameobject, force_local, 2),
+  MIST_FUNC_DEF(gameobject, in_air, 0),
+  MIST_FUNC_DEF(gameobject, world2this, 1),
+  MIST_FUNC_DEF(gameobject, this2world, 1),
+  MIST_FUNC_DEF(gameobject, dir_world2this, 1),
+  MIST_FUNC_DEF(gameobject, dir_this2world, 1),
+  MIST_FUNC_DEF(gameobject,setref,1),
+};
+
+JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
+JSC_CCALL(joint_pivot, return constraint2js(constraint_make(cpPivotJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body,js2vec2(argv[2]).cp))))
+JSC_CCALL(joint_gear, return constraint2js(constraint_make(cpGearJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3])))))
+JSC_CCALL(joint_rotary, return constraint2js(constraint_make(cpRotaryLimitJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3])))))
+JSC_CCALL(joint_damped_rotary, return constraint2js(constraint_make(cpDampedRotarySpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))))
+JSC_CCALL(joint_damped_spring, return constraint2js(constraint_make(cpDampedSpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5]), js2number(argv[6])))))
+JSC_CCALL(joint_groove, return constraint2js(constraint_make(cpGrooveJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp))))
+JSC_CCALL(joint_slide, return constraint2js(constraint_make(cpSlideJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5])))))
+JSC_CCALL(joint_ratchet, return constraint2js(constraint_make(cpRatchetJointNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2]), js2number(argv[3])))))
+JSC_CCALL(joint_motor, return constraint2js(constraint_make(cpSimpleMotorNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2])))))
+
+static const JSCFunctionListEntry js_joint_funcs[] = {
+  MIST_FUNC_DEF(joint, pin, 2),
+  MIST_FUNC_DEF(joint, pivot, 3),
+  MIST_FUNC_DEF(joint, gear, 4),
+  MIST_FUNC_DEF(joint, rotary, 4),
+  MIST_FUNC_DEF(joint, damped_rotary, 5),
+  MIST_FUNC_DEF(joint, damped_spring, 7),
+  MIST_FUNC_DEF(joint, groove, 5),
+  MIST_FUNC_DEF(joint, slide, 6),
+  MIST_FUNC_DEF(joint, ratchet, 4),
+  MIST_FUNC_DEF(joint, motor, 3)
+};
+
+JSC_CCALL(dspsound_noise, return dsp_node2js(dsp_whitenoise()))
+JSC_CCALL(dspsound_pink, return dsp_node2js(dsp_pinknoise()))
+JSC_CCALL(dspsound_red, return dsp_node2js(dsp_rednoise()))
+JSC_CCALL(dspsound_pitchshift, return dsp_node2js(dsp_pitchshift(js2number(argv[0]))))
+JSC_CCALL(dspsound_noise_gate, return dsp_node2js(dsp_noise_gate(js2number(argv[0]))))
+JSC_CCALL(dspsound_limiter, return dsp_node2js(dsp_limiter(js2number(argv[0]))))
+JSC_CCALL(dspsound_compressor, return dsp_node2js(dsp_compressor()))
+JSC_CCALL(dspsound_crush, return dsp_node2js(dsp_bitcrush(js2number(argv[0]), js2number(argv[1]))))
+JSC_CCALL(dspsound_lpf, return dsp_node2js(dsp_lpf(js2number(argv[0]))))
+JSC_CCALL(dspsound_hpf, return dsp_node2js(dsp_hpf(js2number(argv[0]))))
+JSC_CCALL(dspsound_delay, return dsp_node2js(dsp_delay(js2number(argv[0]), js2number(argv[1]))))
+JSC_CCALL(dspsound_fwd_delay, return dsp_node2js(dsp_fwd_delay(js2number(argv[0]), js2number(argv[1]))))
+JSC_CCALL(dspsound_source,
+  char *s = js2str(argv[0]);
+  JSValue ret = dsp_node2js(dsp_source(s));
+  JS_FreeCString(js,s);
+  JS_SetPrototype(js, ret, sound_proto);
+  return ret;
+)
+JSC_CCALL(dspsound_mix, return dsp_node2js(make_node(NULL,NULL,NULL)))
+JSC_CCALL(dspsound_master, return dsp_node2js(masterbus))
+JSC_CCALL(dspsound_plugin_node, plugin_node(js2dsp_node(argv[0]), js2dsp_node(argv[1])))
+JSC_CCALL(dspsound_samplerate, return number2js(SAMPLERATE))
+JSC_CCALL(dspsound_mod,
+  char *s = js2str(argv[0]);
+  JSValue ret = dsp_node2js(dsp_mod(s));
+  JS_FreeCString(js,s);
+  return ret;
+)
+JSC_CCALL(dspsound_midi,
+  char *s1;
+  char *s2;
+  s1 = js2str(argv[0]);
+  s2 = js2str(argv[1]);
+  JSValue ret = dsp_node2js(dsp_midi(s1, make_soundfont(s2)));
+  JS_FreeCString(js,s1);
+  JS_FreeCString(js,s2);
+  return ret;
+)
+
+static const JSCFunctionListEntry js_dspsound_funcs[] = {
+  MIST_FUNC_DEF(dspsound, noise, 0),
+  MIST_FUNC_DEF(dspsound, pink, 0),
+  MIST_FUNC_DEF(dspsound, red, 0),
+  MIST_FUNC_DEF(dspsound, pitchshift, 1),
+  MIST_FUNC_DEF(dspsound, noise_gate, 1),
+  MIST_FUNC_DEF(dspsound, limiter, 1),
+  MIST_FUNC_DEF(dspsound, compressor, 0),
+  MIST_FUNC_DEF(dspsound, crush, 2),
+  MIST_FUNC_DEF(dspsound, lpf, 1),
+  MIST_FUNC_DEF(dspsound, hpf, 1),
+  MIST_FUNC_DEF(dspsound, delay, 2),
+  MIST_FUNC_DEF(dspsound, fwd_delay, 2),
+  MIST_FUNC_DEF(dspsound, source, 1),
+  MIST_FUNC_DEF(dspsound, mix, 0),
+  MIST_FUNC_DEF(dspsound, master, 0),
+  MIST_FUNC_DEF(dspsound, plugin_node, 2),
+  MIST_FUNC_DEF(dspsound, samplerate, 0),
+  MIST_FUNC_DEF(dspsound, midi, 2),
+  MIST_FUNC_DEF(dspsound, mod, 1)
+};
+
+JSC_CCALL(shape_set_sensor, shape_set_sensor(js2ptr(argv[0]), js2bool(argv[1])))
+JSC_CCALL(shape_get_sensor, shape_get_sensor(js2ptr(argv[0])))
+JSC_CCALL(shape_set_enabled, shape_enabled(js2ptr(argv[0]), js2bool(argv[1])))
+JSC_CCALL(shape_get_enabled, shape_is_enabled(js2ptr(argv[0])))
+
+static const JSCFunctionListEntry js_shape_funcs[] = {
+  MIST_FUNC_DEF(shape, set_sensor, 2),
+  MIST_FUNC_DEF(shape, get_sensor, 1),
+  MIST_FUNC_DEF(shape, set_enabled, 2),
+  MIST_FUNC_DEF(shape, get_enabled, 1)
 };
 
 GETSET_PAIR(sprite, color, color)
@@ -1838,7 +1713,7 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_FUNC_DEF(texture, height, 0),
   MIST_FUNC_DEF(texture, path, 0),
   MIST_FUNC_DEF(texture, find, 1),
-  //MIST_FUNC_DEF(texture, dimensions, 1),
+//  MIST_FUNC_DEF(texture, dimensions, 1),
 };
 
 JSValue constraint_set_max_force (JSContext *js, JSValue this, JSValue val) {
@@ -1966,9 +1841,6 @@ void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
 
   DUK_FUNC(make_gameobject, 0)
-  DUK_FUNC(set_body, 3)
-  DUK_FUNC(q_body, 2)
-  DUK_FUNC(spline_cmd, 6)
   DUK_FUNC(make_circle2d, 1)
   DUK_FUNC(cmd_circle2d, 6)
   DUK_FUNC(make_poly2d, 1)
@@ -1976,11 +1848,7 @@ void ffi_load() {
   DUK_FUNC(make_edge2d, 3)
   DUK_FUNC(cmd_edge2d, 6)
   DUK_FUNC(make_model,2);
-  DUK_FUNC(cmd, 6)
   DUK_FUNC(register_collide, 6)
-
-  DUK_FUNC(ui_text, 8)
-  DUK_FUNC(gui_img, 10)
 
   DUK_FUNC(inflate_cpv, 3)
   DUK_FUNC(performance, 2)
@@ -2000,6 +1868,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(texture);
   QJSCLASSPREP_FUNCS(constraint);
   QJSCLASSPREP_FUNCS(window);
+  QJSCLASSPREP_FUNCS(drawmodel);
 
   QJSGLOBALCLASS(os);
   QJSGLOBALCLASS(nota);
@@ -2015,6 +1884,10 @@ void ffi_load() {
   QJSGLOBALCLASS(render);
   QJSGLOBALCLASS(physics);
   QJSGLOBALCLASS(vector);
+  QJSGLOBALCLASS(spline);
+  QJSGLOBALCLASS(joint);
+  QJSGLOBALCLASS(dspsound);
+  QJSGLOBALCLASS(shape);
   
   JS_SetPropertyStr(js, prosperon, "version", str2js(VER));
   JS_SetPropertyStr(js, prosperon, "revision", str2js(COM));

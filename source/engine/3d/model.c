@@ -414,7 +414,7 @@ void draw_drawmodel(struct drawmodel *dm)
   draw_model(dm->model, rst);
 }
 
-void free_drawmodel(struct drawmodel *dm) {
+void drawmodel_free(struct drawmodel *dm) {
   int rm;
   for (int i = 0; i < arrlen(models); i++)
     if (models[i] == dm) {

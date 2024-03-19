@@ -1,6 +1,8 @@
 var Spline = {};
 Spline.sample_angle = function(type, points, angle) {
-  return spline_cmd(0, type, points[0].length, points, angle);
+  if (type === 0) return spline.catmull(points, angle);
+  else if (type === 1) return spline.bezier(points,angle);
+  return undefined;
 }
 
 Spline.bezier_loop = function(cp)

@@ -2,7 +2,7 @@ MAKEFLAGS = --jobs=4
 UNAME != uname
 MAKEDIR != pwd
 # Options
-# DBG --- build with debugging symbols and logging
+# NDEBUG --- build with debugging symbols and logging
 
 CXX:=$(CC)
 
@@ -46,7 +46,7 @@ ifeq ($(CC), emcc)
   LDFLAGS += #--closure 1
   CPPFLAGS += -O0
   OPT = 0
-  DBG = 0
+  NDEBUG = 1
   AR = emar
 endif
 
