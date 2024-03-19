@@ -247,7 +247,7 @@ var gameobject = {
 
   cry(file) {
     return;
-    this.crying = audio.sound.play(file, audio.sound.bus.sfx);
+    this.crying = audio.play(file, audio.bus.sfx);
     var killfn = () => { this.crying = undefined;
       console.warn("killed"); }
     this.crying.hook = killfn;

@@ -1,32 +1,21 @@
 var audio = {};
 
-var sound_pref = ['wav', 'flac', 'mp3', 'qoa'];
-
-audio.sound = {
-  bus: {},
-  samplerate: dspsound.samplerate,
-  
-  sounds: [], /* array of loaded sound files */
-  play(file, bus) {
-    file = Resources.find_sound(file);
-    if (!file) {
-      console.error(`Cannot play sound ${file}: does not exist.`);
-      return;
-    }
-    var src = audio.dsp.source(file);
-    bus ??= audio.sound.bus.master;
-    src.plugin(bus);
-    return src;
-  },
-
-  doc: {
-    play: "Play the given file once.",
-    volume: "Set the volume. 0 is no sound and 100 is loudest."
-  },
-};
-
+audio.samplerate = dspsound.samplerate();
+audio.play = function(file,bus) {
+  bus ??= audio.bus.master;
+  file = Resources.find_sound(file);
+  if (!file) {
+    console.error(`Cannot play sound ${file}: does not exist.`);
+    return;
+  }
+  var src = audio.dsp.source(file);
+  src.plugin(bus);
+  return src;
+}
+audio.bus = {};
+audio.bus.master = dspsound.master();
 audio.dsp = {};
-Object.assign(audio.dsp, dspsound);
+audio.dsp = dspsound;
 
 audio.dsp.mix = function(to) {
   var n = audio.dsp.mix();
@@ -61,17 +50,15 @@ audio.dsp.doc = {
   red: "Red noise"
 };
 
-Object.mixin(dspsound.master().__proto__, {
+Object.mixin(audio.bus.master.__proto__, {
   get db() { return 20*Math.log10(Math.abs(this.volume)); },
   set db(x) { x = Math.clamp(x,-100,0); this.volume = Math.pow(10, x/20); },
   get volume() { return this.gain; },
   set volume(x) { this.gain = x; },
 });
 
-audio.sound.bus.master = dspsound.master();
-
 /*Object.mixin(audio.dsp.source().__proto__, {
-  length() { return this.frames()/sound.samplerate(); },
+  length() { return this.frames()/audio.samplerate(); },
   time() { return this.frame/sound.samplerate(); },
   pct() { return this.time()/this.length(); },
 });

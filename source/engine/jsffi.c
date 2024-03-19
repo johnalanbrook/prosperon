@@ -2,7 +2,6 @@
 
 #include "script.h"
 
-#include "anim.h"
 #include "debugdraw.h"
 #include "font.h"
 #include "gameobject.h"
@@ -568,7 +567,7 @@ void gameobject_add_shape_collider(gameobject *go, JSValue fn, struct phys2d_sha
   arrpush(go->shape_cbs, shapecb);
 }
 
-JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_register_collide(JSContext *js, JSValue this, int argc, JSValue *argv) {
   int cmd = js2number(argv[0]);
   gameobject *go = js2gameobject(argv[2]);
   JSValue fn = argv[1];
@@ -594,7 +593,7 @@ JSValue duk_register_collide(JSContext *js, JSValueConst this, int argc, JSValue
   return JS_UNDEFINED;
 }
 
-JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_make_circle2d(JSContext *js, JSValue this, int argc, JSValue *argv) {
   gameobject *go = js2gameobject(argv[0]);
 
   struct phys2d_circle *circle = Make2DCircle(go);
@@ -605,7 +604,7 @@ JSValue duk_make_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCon
   return circleval;
 }
 
-JSValue duk_make_model(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+JSValue duk_make_model(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   gameobject *go = js2gameobject(argv[0]);
   struct drawmodel *dm = make_drawmodel(go);
@@ -614,7 +613,7 @@ JSValue duk_make_model(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return ret;
 }
 
-JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_cmd_circle2d(JSContext *js, JSValue this, int argc, JSValue *argv) {
   int cmd = js2number(argv[0]);
   struct phys2d_circle *circle = js2ptr(argv[1]);
 
@@ -640,7 +639,7 @@ JSValue duk_cmd_circle2d(JSContext *js, JSValueConst this, int argc, JSValueCons
   return JS_UNDEFINED;
 }
 
-JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_make_poly2d(JSContext *js, JSValue this, int argc, JSValue *argv) {
   gameobject *go = js2gameobject(argv[0]);
   struct phys2d_poly *poly = Make2DPoly(go);
   phys2d_poly_setverts(poly, NULL);
@@ -650,7 +649,7 @@ JSValue duk_make_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst
   return polyval;
 }
 
-JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_cmd_poly2d(JSContext *js, JSValue this, int argc, JSValue *argv) {
   int cmd = js2number(argv[0]);
   struct phys2d_poly *poly = js2ptr(argv[1]);
   HMM_Vec2 *v1 = NULL;
@@ -668,7 +667,7 @@ JSValue duk_cmd_poly2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_UNDEFINED;
 }
 
-JSValue duk_make_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_make_edge2d(JSContext *js, JSValue this, int argc, JSValue *argv) {
   gameobject *go = js2gameobject(argv[0]);
   struct phys2d_edge *edge = Make2DEdge(go);
   HMM_Vec2 *points = js2cpvec2arr(argv[1]);
@@ -716,7 +715,7 @@ JSValue ID##_get_##ENTRY (JSContext *js, JSValue this) { \
 } \
 
 
-#define DEF_FN_STR(NAME) JSValue js_##NAME (JSContext *js, JSValueConst this, int argc, JSValue *argv) { \
+#define DEF_FN_STR(NAME) JSValue js_##NAME (JSContext *js, JSValue this, int argc, JSValue *argv) { \
   char *str = js2str(argv[0]); \
   NAME (str); \
   JS_FreeCString(js,str); \
@@ -741,12 +740,12 @@ GETSET_PAIR(warp_gravity, planar_force, vec3)
 
 #define GGETSET_ADD(ENTRY)
 
-#define JSC_CCALL(NAME, FN) JSValue js_##NAME (JSContext *js, JSValueConst this, int argc, JSValue *argv) { \
+#define JSC_CCALL(NAME, FN) JSValue js_##NAME (JSContext *js, JSValue this, int argc, JSValue *argv) { \
   {FN;} \
   return JS_UNDEFINED; \
 } \
 
-#define JSC_RET(NAME, FN) JSValue js_##NAME (JSContext *js, JSValueConst this, int argc, JSValue *argv) { \
+#define JSC_RET(NAME, FN) JSValue js_##NAME (JSContext *js, JSValue this, int argc, JSValue *argv) { \
   FN; } \
 
 static const JSCFunctionListEntry js_warp_gravity_funcs [] = {
@@ -809,14 +808,14 @@ JSValue js_emitter_stop(JSContext *js, JSValue this, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
-JSValue js_emitter_emit(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_emitter_emit(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   emitter *n = js2emitter(this);
   emitter_emit(n, js2number(argv[0]));
   return JS_UNDEFINED;
 }
 
-JSValue js_os_cwd(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_os_cwd(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char cwd[PATH_MAX];
   #ifndef __EMSCRIPTEN__
@@ -828,7 +827,7 @@ JSValue js_os_cwd(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return str2js(cwd);
 }
 
-JSValue js_os_env(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_os_env(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *str = js2str(argv[0]);
   JSValue ret = JS_UNDEFINED;
@@ -837,7 +836,7 @@ JSValue js_os_env(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_os_sys(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   #ifdef __linux__
   return str2js("linux");
@@ -863,7 +862,7 @@ JSC_CCALL(os_eval_env,
 
 #define RETUN return JS_UNDEFINED
 
-JSValue js_os_capture(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
+JSValue js_os_capture(JSContext *js, JSValue this, int argc, JSValue *argv) {
   char *str = js2str(argv[0]);
   capture_screen(js2number(argv[1]), js2number(argv[2]), js2number(argv[4]), js2number(argv[5]), str);
   JS_FreeCString(js,str);
@@ -1028,7 +1027,7 @@ static const JSCFunctionListEntry js_spline_funcs[] = {
   MIST_FUNC_DEF(spline, bezier, 2)
 };
 
-JSValue js_vector_dot(JSContext *js, JSValueConst this, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
+JSValue js_vector_dot(JSContext *js, JSValue this, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
 
 JSC_RET(vector_project, return vec22js(HMM_ProjV2(js2vec2(argv[0]), js2vec2(argv[1])));)
 
@@ -1037,11 +1036,11 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector,project,2),
 };
 
-JSValue js_game_engine_start(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
+JSValue js_game_engine_start(JSContext *js, JSValue this, int argc, JSValue *argv) {
   engine_start(argv[0],argv[1]);
   RETUN;
 }
-JSValue js_game_object_count(JSContext *js, JSValueConst this) { return number2js(go_count()); }
+JSValue js_game_object_count(JSContext *js, JSValue this) { return number2js(go_count()); }
 
 static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, engine_start, 2),
@@ -1049,7 +1048,7 @@ static const JSCFunctionListEntry js_game_funcs[] = {
 };
 
 JSC_CCALL(input_show_keyboard, sapp_show_keyboard(js2bool(argv[0])))
-JSValue js_input_keyboard_shown(JSContext *js, JSValueConst this) { return bool2js(sapp_keyboard_shown()); }
+JSValue js_input_keyboard_shown(JSContext *js, JSValue this) { return bool2js(sapp_keyboard_shown()); }
 JSC_CCALL(input_mouse_mode, set_mouse_mode(js2number(argv[0])))
 JSC_CCALL(input_mouse_cursor, sapp_set_mouse_cursor(js2number(argv[0])))
 
@@ -1144,7 +1143,7 @@ static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
 };
 
-JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_exists(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *file = JS_ToCString(js, argv[0]);
   JSValue ret = JS_NewBool(js, fexists(file));
@@ -1152,12 +1151,12 @@ JSValue js_io_exists(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_ls(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_ls(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   return strarr2js(ls("."));
 }
 
-JSValue js_io_cp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_cp(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f1, *f2;
   f1 = JS_ToCString(js, argv[0]);
@@ -1168,7 +1167,7 @@ JSValue js_io_cp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_mv(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f1, *f2;
   f1 = JS_ToCString(js, argv[0]);
@@ -1179,7 +1178,7 @@ JSValue js_io_mv(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_chdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_chdir(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *path = JS_ToCString(js, argv[0]);
   JSValue ret = number2js(chdir(path));
@@ -1187,7 +1186,7 @@ JSValue js_io_chdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_rm(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_rm(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *file = JS_ToCString(js, argv[0]);
   JSValue ret = number2js(remove(file));
@@ -1195,7 +1194,7 @@ JSValue js_io_rm(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
-JSValue js_io_mkdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_mkdir(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   JSValue ret = number2js(mkdir(f,0777));
@@ -1203,7 +1202,7 @@ JSValue js_io_mkdir(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_slurpbytes(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_slurpbytes(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
@@ -1214,7 +1213,7 @@ JSValue js_io_slurpbytes(JSContext *js, JSValueConst this, int argc, JSValue *ar
   return ret;
 }
 
-JSValue js_io_slurp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_slurp(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
@@ -1229,7 +1228,7 @@ JSValue js_io_slurp(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_slurpwrite(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_slurpwrite(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
@@ -1247,7 +1246,7 @@ JSValue js_io_slurpwrite(JSContext *js, JSValueConst this, int argc, JSValue *ar
   return ret;
 }
 
-JSValue js_io_chmod(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_io_chmod(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   int mod = js2number(argv[1]);
@@ -1257,7 +1256,7 @@ JSValue js_io_chmod(JSContext *js, JSValueConst this, int argc, JSValue *argv)
 
 DEF_FN_STR(save_qoa)
 
-JSValue js_io_compile(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
+JSValue js_io_compile(JSContext *js, JSValue this, int argc, JSValue *argv) {
   size_t len;
   char *str = js2str(argv[0]);
   void *d = script_compile(str, &len);
@@ -1267,7 +1266,7 @@ JSValue js_io_compile(JSContext *js, JSValueConst this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_run_bytecode(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
+JSValue js_io_run_bytecode(JSContext *js, JSValue this, int argc, JSValue *argv) {
   size_t len;
   char *str = js2str(argv[0]);
   void *d = slurp_file(str, &len);
@@ -1295,20 +1294,20 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FN_STR(pack_engine)
 };
 
-JSValue js_debug_draw_gameobject(JSContext *js, JSValueConst this, int argc, JSValue *argv) { gameobject_draw_debug(js2gameobject(argv[0])); RETUN; }
+JSValue js_debug_draw_gameobject(JSContext *js, JSValue this, int argc, JSValue *argv) { gameobject_draw_debug(js2gameobject(argv[0])); RETUN; }
 
 static const JSCFunctionListEntry js_debug_funcs[] = {
   MIST_FUNC_DEF(debug, draw_gameobject, 1)
 };
 
-JSValue js_physics_sgscale(JSContext *js, JSValueConst this, int argc, JSValue *argv) {
+JSValue js_physics_sgscale(JSContext *js, JSValue this, int argc, JSValue *argv) {
   js2gameobject(argv[0])->scale.xy = js2vec2(argv[1]);
   gameobject_apply(js2gameobject(argv[0]));
   cpSpaceReindexShapesForBody(space, js2gameobject(argv[0])->body);
   RETUN;
 }
 
-JSValue js_physics_set_cat_mask(JSContext *js, JSValueConst this, int argc, JSValue *argv) { set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])); RETUN; }
+JSValue js_physics_set_cat_mask(JSContext *js, JSValue this, int argc, JSValue *argv) { set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])); RETUN; }
 
 JSC_CCALL(physics_box_query,
   int *ids = phys2d_query_box(js2vec2(argv[0]), js2vec2(argv[1]));
@@ -1359,7 +1358,7 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, query_shape, 1),
   MIST_FUNC_DEF(physics, closest_point, 3),
   MIST_FUNC_DEF(physics, make_damp, 0),
-  MIST_FUNC_DEF(physics, make_gravity, 0)
+  MIST_FUNC_DEF(physics, make_gravity, 0),
 };
 
 static const JSCFunctionListEntry js_emitter_funcs[] = {
@@ -1392,14 +1391,15 @@ GETSET_PAIR(dsp_node, off, bool)
 GETSET_PAIR(dsp_node, gain, number)
 GETSET_PAIR(dsp_node, pan, number)
 
-JSValue js_dsp_node_plugin(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_dsp_node_plugin(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   plugin_node(js2dsp_node(this), js2dsp_node(argv[0]));
-  return JS_UNDEFINED;
+  return JS_DupValue(js,this);
 }
 
-JSValue js_dsp_node_unplug(JSContext *js, JSValueConst this, int argc, JSValue *argv)
+JSValue js_dsp_node_unplug(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
+  JS_FreeValue(js,this);
   unplug_node(js2dsp_node(this));
   return JS_UNDEFINED;
 }
@@ -1427,8 +1427,8 @@ static const JSCFunctionListEntry js_sound_funcs[] = {
   MIST_FUNC_DEF(sound, frames, 0),
 };
 
-static JSValue window_get_size(JSContext *js, JSValueConst this) { return vec22js(js2window(this)->size); }
-static JSValue window_set_size(JSContext *js, JSValueConst this, JSValue v) {
+static JSValue window_get_size(JSContext *js, JSValue this) { return vec22js(js2window(this)->size); }
+static JSValue window_set_size(JSContext *js, JSValue this, JSValue v) {
   window *w = js2window(this);
   if (!w->start)
     w->size = js2vec2(v);
@@ -1439,18 +1439,18 @@ static JSValue window_set_size(JSContext *js, JSValueConst this, JSValue v) {
 GETSET_PAIR_APPLY(window, rendersize, vec2)
 GETSET_PAIR(window, mode, number)
 
-static JSValue window_get_fullscreen(JSContext *js, JSValueConst this)
+static JSValue window_get_fullscreen(JSContext *js, JSValue this)
 {
   return number2js(js2window(this)->fullscreen);
 }
 
-static JSValue window_set_fullscreen(JSContext *js, JSValueConst this, JSValue v)
+static JSValue window_set_fullscreen(JSContext *js, JSValue this, JSValue v)
 {
   window_setfullscreen(js2window(this), js2bool(v));
   return JS_UNDEFINED;
 }
 
-static JSValue window_set_title(JSContext *js, JSValueConst this, JSValue v)
+static JSValue window_set_title(JSContext *js, JSValue this, JSValue v)
 {
   window *w = js2window(this);
   if (w->title) JS_FreeCString(js, w->title);
@@ -1460,7 +1460,7 @@ static JSValue window_set_title(JSContext *js, JSValueConst this, JSValue v)
   return JS_UNDEFINED;
 }
 
-static JSValue window_get_title(JSContext *js, JSValueConst this, JSValue v)
+static JSValue window_get_title(JSContext *js, JSValue this, JSValue v)
 {
   if (!js2window(this)->title) return JS_UNDEFINED;
   return str2js(js2window(this)->title);
@@ -1468,7 +1468,7 @@ static JSValue window_get_title(JSContext *js, JSValueConst this, JSValue v)
 
 DEF_FN_STR(set_icon)
 
-JSValue js_window_icon(JSContext *js, JSValueConst this, int argc, JSValue *argv) { 
+JSValue js_window_icon(JSContext *js, JSValue this, int argc, JSValue *argv) { 
   char *str = js2str(argv[0]);
   set_icon(str);
   JS_FreeCString(js,str);
@@ -1654,16 +1654,16 @@ static const JSCFunctionListEntry js_dspsound_funcs[] = {
   MIST_FUNC_DEF(dspsound, mod, 1)
 };
 
-JSC_CCALL(shape_set_sensor, shape_set_sensor(js2ptr(argv[0]), js2bool(argv[1])))
-JSC_CCALL(shape_get_sensor, shape_get_sensor(js2ptr(argv[0])))
-JSC_CCALL(shape_set_enabled, shape_enabled(js2ptr(argv[0]), js2bool(argv[1])))
-JSC_CCALL(shape_get_enabled, shape_is_enabled(js2ptr(argv[0])))
+JSC_CCALL(pshape_set_sensor, shape_set_sensor(js2ptr(argv[0]), js2bool(argv[1])))
+JSC_CCALL(pshape_get_sensor, shape_get_sensor(js2ptr(argv[0])))
+JSC_CCALL(pshape_set_enabled, shape_enabled(js2ptr(argv[0]), js2bool(argv[1])))
+JSC_CCALL(pshape_get_enabled, shape_is_enabled(js2ptr(argv[0])))
 
-static const JSCFunctionListEntry js_shape_funcs[] = {
-  MIST_FUNC_DEF(shape, set_sensor, 2),
-  MIST_FUNC_DEF(shape, get_sensor, 1),
-  MIST_FUNC_DEF(shape, set_enabled, 2),
-  MIST_FUNC_DEF(shape, get_enabled, 1)
+static const JSCFunctionListEntry js_pshape_funcs[] = {
+  MIST_FUNC_DEF(pshape, set_sensor, 2),
+  MIST_FUNC_DEF(pshape, get_sensor, 1),
+  MIST_FUNC_DEF(pshape, set_enabled, 2),
+  MIST_FUNC_DEF(pshape, get_enabled, 1)
 };
 
 GETSET_PAIR(sprite, color, color)
@@ -1737,7 +1737,7 @@ static const JSCFunctionListEntry js_constraint_funcs[] = {
   CGETSET_ADD(constraint, collide),
 };
      
-JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_cmd_edge2d(JSContext *js, JSValue this, int argc, JSValue *argv) {
   int cmd = js2number(argv[0]);
   struct phys2d_edge *edge = js2ptr(argv[1]);
 
@@ -1763,7 +1763,7 @@ JSValue duk_cmd_edge2d(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_UNDEFINED;
 }
 
-JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst *argv) {
+JSValue duk_inflate_cpv(JSContext *js, JSValue this, int argc, JSValue *argv) {
   HMM_Vec2 *points = js2cpvec2arr(argv[0]);
   int n = js2number(argv[1]);
   double d = js2number(argv[2]);
@@ -1777,7 +1777,7 @@ JSValue duk_inflate_cpv(JSContext *js, JSValueConst this, int argc, JSValueConst
 
 const char *STRTEST = "TEST STRING";
 
-JSValue duk_performance(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+JSValue duk_performance(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   int cmd = js2number(argv[0]);
   switch(cmd) {
@@ -1808,7 +1808,7 @@ JSValue duk_performance(JSContext *js, JSValueConst this, int argc, JSValueConst
   return JS_UNDEFINED;
 }
 
-JSValue js_nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+JSValue js_nota_encode(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
   
@@ -1819,7 +1819,7 @@ JSValue js_nota_encode(JSContext *js, JSValueConst this, int argc, JSValueConst 
   return JS_NewArrayBufferCopy(js, nota, e-nota);
 }
 
-JSValue js_nota_decode(JSContext *js, JSValueConst this, int argc, JSValueConst *argv)
+JSValue js_nota_decode(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
 
@@ -1887,7 +1887,7 @@ void ffi_load() {
   QJSGLOBALCLASS(spline);
   QJSGLOBALCLASS(joint);
   QJSGLOBALCLASS(dspsound);
-  QJSGLOBALCLASS(shape);
+  QJSGLOBALCLASS(pshape);
   
   JS_SetPropertyStr(js, prosperon, "version", str2js(VER));
   JS_SetPropertyStr(js, prosperon, "revision", str2js(COM));

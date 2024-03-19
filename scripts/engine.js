@@ -196,6 +196,7 @@ function process()
   render.models();
   render.emitters();
   prosperon.draw();
+  if (Debug.draw_phys) game.all_objects(function(o) { debug.draw_gameobject(o); });
   render.flush();
   render.pass();
   prosperon.gui();
@@ -207,10 +208,15 @@ function process()
 
 game.timescale = 1;
 
+var eachobj = function(obj,fn)
+{
+  fn(obj);
+  for (var o in obj.objects)
+    eachobj(obj.objects[o],fn);
+}
+
 Object.assign(game, {
-  all_objects(fn) {
-    /* Wind down from Primum */
-  },
+  all_objects(fn) { eachobj(world,fn); },
 
   /* Returns a list of objects by name */
   find(name) {

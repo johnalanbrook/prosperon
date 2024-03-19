@@ -43,10 +43,46 @@ actor.kill = function(){
 
 actor.kill.doc = `Remove this actor and all its padawans from existence.`;
 
+actor.interval = function(fn, seconds) {
+  var cur;
+  var stop = function() {
+    cur();
+  }
+  
+  var f = function() {
+    fn.call(this);
+    cur = this.delay(f,seconds);
+  }
+  
+  cur = this.delay(f,seconds);
+  
+  return stop;
+}
+
 actor.delay = function(fn, seconds) {
-  var t = timer.delay(fn.bind(this), seconds);
-  this.timers.push(t);
-  return t;
+  var that = this;
+  var stop = function() {
+    that.timers.remove(stop);
+    rm();
+  }
+
+  function execute() {
+    fn.call(that);
+    stop();
+  }
+  
+  stop.remain = seconds;
+  stop.seconds = seconds;
+  function update(dt) {
+    stop.remain -= dt;
+    if (stop.remain <= 0)
+     execute();
+  }
+  
+  var rm = Register.appupdate.register(update);
+  
+  this.timers.push(stop);
+  return stop;
 };
 
 actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;

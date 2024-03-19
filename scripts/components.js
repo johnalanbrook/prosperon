@@ -308,10 +308,10 @@ var collider2d = Object.copy(component, {
   kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
 
   impl: {
-    set sensor(x) { physics.shape_set_sensor(this.shape,x); },
-    get sensor() { return physics.shape_get_sensor(this.shape); },
-    set enabled(x) { physics.shape_set_enabled(this.shape,x); },
-    get enabled() { return physics.shape_get_enabled(this.shape); }
+    set sensor(x) { pshape.set_sensor(this.shape,x); },
+    get sensor() { return pshape.get_sensor(this.shape); },
+    set enabled(x) { pshape.set_enabled(this.shape,x); },
+    get enabled() { return pshape.get_enabled(this.shape); }
   },
 });
 

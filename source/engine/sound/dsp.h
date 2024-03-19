@@ -22,6 +22,7 @@ typedef struct dsp_node {
   int off; /* True if the filter shouldn't output */
   float gain; /* Between 0 and 1, to attenuate this output */
   float pan; /* Between -100 and +100, panning left to right in the speakers */
+  int id;
 } dsp_node;
 
 void dsp_init();

@@ -136,6 +136,8 @@ void dsp_node_run(dsp_node *node)
   }
 }
 
+static int node_count = 0;
+
 dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int samples), void (*fr)(void *data))
 {
   dsp_node *self = malloc(sizeof(dsp_node));
@@ -144,12 +146,17 @@ dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int sam
   self->proc = proc;
   self->pass = 0;
   self->gain = 1;
+  self->id = node_count++;
+  YughSpam("Made node %d.", self->id);
   return self;
 }
 
 void node_free(dsp_node *node)
 {
-  if (node == masterbus) return; /* Simple check to not delete the masterbus */
+  if (node == masterbus) {
+    YughWarn("Attempted to delete the master bus.");
+    return; /* Simple check to not delete the masterbus */
+  }
   pthread_mutex_lock(&soundrun);
   unplug_node(node);
   if (node->data) {
@@ -158,7 +165,8 @@ void node_free(dsp_node *node)
     else
       free(node->data);
   }
-  
+
+  YughSpam("Freed node %d.", node->id);
   free(node);
   pthread_mutex_unlock(&soundrun);
 }

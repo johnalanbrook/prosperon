@@ -297,7 +297,7 @@ Cmdline.register_order("play", function(argv) {
   game.engine_start(function() {
     console.info(`eng start`);
     global.mixin("scripts/sound.js");
-    global.game = actor.spawn("game.js");
+    global.app = actor.spawn("game.js");
     if (project.icon) window.set_icon(project.icon);
   });  
 }, "Play the game present in this folder.");
