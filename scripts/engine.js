@@ -188,7 +188,10 @@ function process()
     prosperon.physupdate(phys_step*timescale);
   }
 
-  prosperon.window_render();
+  if (!game.camera)  
+    prosperon.window_render(world, 1);
+  else
+    prosperon.window_render(game.camera, game.camera.zoom);
   render.sprites();
   render.models();
   render.emitters();
@@ -221,7 +224,6 @@ game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and 
 game.doc.play = "Resume or start game simulation.";
 game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
 game.doc.dt = "Current frame dt.";
-game.doc.view_camera = "Set the camera for the current view.";
 game.doc.camera = "Current camera.";
 
 prosperon.semver = {};
@@ -433,17 +435,11 @@ function world_start() {
   world.ur = "world";
   world.kill = function() { this.clear(); };
   world.phys = 2;
-  var cam = world.spawn("scripts/camera2d.jso");
-  game.view_camera(cam);
+  world.zoom = 1;
+  game.cam = world;
 }
 
 global.mixin("scripts/physics.js");
-
-game.view_camera = function(cam)
-{
-  game.camera = cam;
-  render.cam_body(game.camera);
-}
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500,500];

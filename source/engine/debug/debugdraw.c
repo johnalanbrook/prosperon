@@ -546,8 +546,8 @@ void draw_box(HMM_Vec2 c, HMM_Vec2 wh, struct rgba color)
 
 void draw_grid(float width, float span, struct rgba color)
 {
-  HMM_Vec2 offset = (HMM_Vec2)cam_pos();
-  offset = HMM_MulV2F(offset, 1/cam_zoom());
+  HMM_Vec2 offset = campos;
+  offset = HMM_MulV2F(offset, 1/camzoom);
 
   float ubo[4];
   ubo[0] = offset.x;
@@ -562,7 +562,7 @@ void draw_grid(float width, float span, struct rgba color)
 
   fs_params_t pt;
   pt.thickness = (float)width;
-  pt.span = span/cam_zoom();
+  pt.span = span/camzoom;
   memcpy(&pt.color, col, sizeof(float)*4);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(ubo));
   sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE_REF(pt));

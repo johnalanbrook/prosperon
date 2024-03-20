@@ -844,16 +844,10 @@ JSC_CCALL(render_commit, sg_commit(); debug_newframe();)
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_SCALL(render_gif_times, ret = ints2js(gif_delays(str)))
 JSC_SCALL(render_gif_frames, ret = number2js(gif_nframes(str)))
-JSC_CCALL(render_cam_body, set_cam_body(js2gameobject(argv[0])->body))
-JSC_CCALL(render_add_zoom, add_zoom(js2number(argv[0])))
-JSC_CCALL(render_get_zoom, return number2js(cam_zoom()))
 JSC_CCALL(render_world2screen, return vec22js(world2screen(js2vec2(argv[0]))))
 JSC_CCALL(render_screen2world, return vec22js(screen2world(js2vec2(argv[0]))))
 
 static const JSCFunctionListEntry js_render_funcs[] = {
-  MIST_FUNC_DEF(render,cam_body, 1),
-  MIST_FUNC_DEF(render,add_zoom,1),
-  MIST_FUNC_DEF(render,get_zoom,0),
   MIST_FUNC_DEF(render,world2screen,1),
   MIST_FUNC_DEF(render,screen2world,1),
   MIST_FUNC_DEF(render,gif_frames,1),
@@ -982,7 +976,7 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 
 JSC_CCALL(prosperon_emitters_step, emitters_step(js2number(argv[0])))
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
-JSC_CCALL(prosperon_window_render, openglRender(&mainwin))
+JSC_CCALL(prosperon_window_render, openglRender(&mainwin, js2gameobject(argv[0]), js2number(argv[1])))
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, emitters_step, 1),

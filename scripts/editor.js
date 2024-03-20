@@ -31,8 +31,6 @@ var editor = {
 
   get_this() { return this.edit_level; },
 
-  get_that() { return this.selectlist.length === 1 ? this.selectlist[0] : this.get_this(); },
-
   try_select() { /* nullify true if it should set selected to null if it doesn't find an object */
     var go = physics.pos_query(Mouse.worldpos());
     return this.do_select(go);
@@ -237,13 +235,9 @@ var editor = {
     this.selectlist = [];
     editor.camera = world.spawn("scripts/camera2d.jso");
     editor.camera._ed.selectable = false;
-    game.view_camera(editor.camera);
+    game.camera = editor.camera;
   },
-
-  end_debug() {
-    
-  },
-   
+  
   openpanel(panel) {
     if (this.curpanel) {
       this.curpanel.close();

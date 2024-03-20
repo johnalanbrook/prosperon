@@ -207,8 +207,8 @@ void sprite_draw(struct sprite *sprite) {
   if (!sprite->go) t = t2d_unit;
   else t = go2t(sprite->go);
   
-  t.pos.x += (cam_pos().x - (cam_pos().x/sprite->parallax));
-  t.pos.y += (cam_pos().y - (cam_pos().y/sprite->parallax));
+  t.pos.x += (campos.x - (campos.x/sprite->parallax));
+  t.pos.y += (campos.y - (campos.y/sprite->parallax));
   HMM_Mat3 m = transform2d2mat(t);
   HMM_Mat3 sm = transform2d2mat(sprite2t(sprite));
   tex_draw(sprite->tex, HMM_MulM3(m,sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->scale, sprite->emissive, sprite->parallax);

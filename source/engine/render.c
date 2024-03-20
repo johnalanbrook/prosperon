@@ -26,6 +26,9 @@
 
 #include "msf_gif.h"
 
+HMM_Vec2 campos = {0,0};
+float camzoom = 1;
+
 static struct {
   sg_swapchain swap;
   sg_pipeline pipe;
@@ -356,18 +359,10 @@ void render_init() {
 
 }
 
-static cpBody *camera = NULL;
-void set_cam_body(cpBody *body) { camera = body; }
-cpVect cam_pos() { return camera ? cpBodyGetPosition(camera) : cpvzero; }
-
-static float zoom = 1.f;
-float cam_zoom() { return zoom; }
-void add_zoom(float val) { zoom = val; }
-
 HMM_Vec2 world2screen(HMM_Vec2 pos)
 {
-  pos = HMM_SubV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
-  pos = HMM_ScaleV2(pos, 1.0/zoom);
+  pos = HMM_SubV2(pos, campos);
+  pos = HMM_ScaleV2(pos, 1.0/camzoom);
   pos = HMM_AddV2(pos, HMM_ScaleV2(mainwin.size,0.5));
   return pos;
 }
@@ -376,8 +371,8 @@ HMM_Vec2 screen2world(HMM_Vec2 pos)
 {
   pos = HMM_ScaleV2(pos, 1/mainwin.dpi);
   pos = HMM_SubV2(pos, HMM_ScaleV2(mainwin.size, 0.5));
-  pos = HMM_ScaleV2(pos, zoom);
-  pos = HMM_AddV2(pos, HMM_V2(cam_pos().x, cam_pos().y));
+  pos = HMM_ScaleV2(pos, camzoom);
+  pos = HMM_AddV2(pos, campos);
   return pos;
 }
 
@@ -415,7 +410,7 @@ void full_3d_pass(struct window *window)
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(subo));
 }
 
-void openglRender(struct window *window) {
+void openglRender(struct window *window, gameobject *cam, float zoom) {
   sg_swapchain sch = sglue_swapchain();
   sg_begin_pass(&(sg_pass){
     .action = pass_action,
@@ -450,13 +445,14 @@ void openglRender(struct window *window) {
   }
 
   // 2D projection
-  cpVect pos = cam_pos();
+  campos = go_pos(cam);
+  camzoom = zoom;
 
   projection = HMM_Orthographic_LH_NO(
-             pos.x - zoom * usesize.x / 2,
-             pos.x + zoom * usesize.x / 2,
-             pos.y - zoom * usesize.y / 2,
-             pos.y + zoom * usesize.y / 2, -10000.f, 10000.f);
+             campos.x - camzoom * usesize.x / 2,
+             campos.x + camzoom * usesize.x / 2,
+             campos.y - camzoom * usesize.y / 2,
+             campos.y + camzoom * usesize.y / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
 

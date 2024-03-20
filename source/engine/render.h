@@ -14,6 +14,7 @@
 
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
+#include "gameobject.h"
 
 #define RGBA_MAX 255
 
@@ -52,17 +53,16 @@ enum RenderMode {
 };
 
 void render_init();
-void openglRender(struct window *window);
+extern HMM_Vec2 campos;
+extern float camzoom;
+
+void openglRender(struct window *window, gameobject *cam, float zoom);
 void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);
 void openglRender3d(struct window *window, camera3d *camera);
 void capture_screen(int x, int y, int w, int h, const char *path);
 
-void set_cam_body(cpBody *body);
-cpVect cam_pos();
-float cam_zoom();
-void add_zoom(float val);
 HMM_Vec2 world2screen(HMM_Vec2 pos);
 HMM_Vec2 screen2world(HMM_Vec2 pos);
 

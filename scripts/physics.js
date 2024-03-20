@@ -1,7 +1,7 @@
 /* On collisions, entities are sent a 'hit' object, which looks like this: 
 var HIT = {
   normal: "The normal of the collision point.",
-  hit: "The gameobject of the object that collided.",
+  obj: "The gameobject of the object that collided.",
   sensor: "Boolean for if the colliding object was a sensor.",
   velocity: "Velocity of the contact.",
   pos: "Position in world space of the contact.",
