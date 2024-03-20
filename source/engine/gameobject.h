@@ -27,7 +27,7 @@
 }while(0)
 
 struct gameobject {
-  cpBodyType bodytype;
+  cpBodyType phys;
   cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
   HMM_Vec3 scale; /* local */  
   int next;
@@ -41,7 +41,6 @@ struct gameobject {
   unsigned int layer;
   cpShapeFilter filter;
   unsigned int warp_filter;
-//  warpmask warpmask;
   struct phys_cbs cbs;
   struct shape_cb *shape_cbs;
   JSValue ref;

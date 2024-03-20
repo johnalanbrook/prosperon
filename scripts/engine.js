@@ -88,7 +88,7 @@ function eval_env(script, env, file)
 {
   env ??= {};
   file ??= "SCRIPT";
-  console.info(`eval ${file}`);  
+  console.spam(`eval ${file}`);  
   script = `(function() { ${script}; }).call(this);\n`;
   return os.eval_env(file,env,script);
 }
@@ -102,10 +102,10 @@ global.check_registers = function(obj)
       obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
 
     if (typeof obj.collide === 'function')
-      register_collide(0, obj.collide.bind(obj), obj.body);
+      physics.collide_begin(obj.collide.bind(obj), obj.body);
 
     if (typeof obj.separate === 'function')
-      register_collide(3,obj.separate.bind(obj), obj.body);
+      physics.collide_separate(obj.separate.bind(obj), obj.body);
 
     if (typeof obj.draw === 'function')
       obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
@@ -146,7 +146,7 @@ global.obscure('global');
 global.mixin("scripts/render.js");
 global.mixin("scripts/debug.js");
 
-var frame_t = profile.secs();
+var frame_t = profile.secs(profile.now());
 var updateMS = 1/60;
 var physMS = 1/60;
 
@@ -170,8 +170,8 @@ game.engine_start = function(s) {
 
 function process()
 {
-  var dt = profile.secs() - frame_t;
-  frame_t = profile.secs();
+  var dt = profile.secs(profile.now()) - frame_t;
+  frame_t = profile.secs(profile.now());
   
   prosperon.appupdate(dt);
   prosperon.emitters_step(dt);
@@ -286,7 +286,10 @@ prosperon.touchpress = function(touches){};
 prosperon.touchrelease = function(touches){};
 prosperon.touchmove = function(touches){};
 prosperon.clipboardpaste = function(str){};
-prosperon.quit = function(){};
+prosperon.quit = function(){
+  for (var i in debug.log.time)
+    console.warn(debug.log.time[i].map(x=>profile.ms(x)));
+};
 
 global.mixin("scripts/input.js");
 global.mixin("scripts/std.js");
@@ -342,7 +345,7 @@ var Register = {
         fn = fn.bind(obj);
       fns.push(fn);
       return function() {
-        console.info(`removed from ${name}.`);
+        console.spam(`removed from ${name}.`);
         fns.remove(fn);
       };
     }
@@ -426,7 +429,7 @@ global.mixin("scripts/actor.js");
 global.mixin("scripts/entity.js");
 
 function world_start() {
-  gameobject.body = make_gameobject();
+  gameobject.body = os.make_gameobject();
   gameobject.body.setref(gameobject);
 
   console.info("START WORLD");

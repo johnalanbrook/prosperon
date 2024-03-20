@@ -338,7 +338,7 @@ component.polygon2d = Object.copy(collider2d, {
   },
   
   hides: ['id', 'shape', 'gameobject'],
-  _enghook: make_poly2d,
+  _enghook: os.make_poly2d,
   points:[],
   setpoints(points) {
     this.points = points;
@@ -391,7 +391,7 @@ function pointscaler(x) {
 }
 
 component.polygon2d.impl = Object.mix(collider2d.impl, {
-  sync() { cmd_poly2d(0, this.id, this.spoints());},
+  sync() { poly2d.setverts(this.id,this.spoints()); },
   query() { return physics.shape_query(this.shape); },
   grow: pointscaler,
 });
@@ -523,7 +523,7 @@ component.edge2d = Object.copy(collider2d, {
   boundingbox() { return bbox.frompoints(this.points.map(x => x.scale(this.gameobject.scale))); },
 
   hides: ['gameobject', 'id', 'shape'],
-  _enghook: make_edge2d,
+  _enghook: os.make_edge2d,
 
   /* EDITOR */
   gizmo() {
@@ -635,16 +635,14 @@ component.edge2d = Object.copy(collider2d, {
 });
 
 component.edge2d.impl = Object.mix(collider2d.impl, {
-  set thickness(x) {
-    cmd_edge2d(1,this.id,x);
-  },
-  get thickness() { return physics.edge_thickness(this.id); },
+  set thickness(x) { edge2d.set_thickness(this.id,x); },
+  get thickness() { return edge2d.get_thickness(this.id); },
   grow: pointscaler,
   sync() {
     var sensor = this.sensor;
     var points = this.sample();
     if (!points) return;
-    cmd_edge2d(0,this.id,points);
+    edge2d.setverts(this.id,points);
     this.sensor = sensor;
   },
 });
@@ -788,7 +786,7 @@ component.circle2d = Object.copy(collider2d, {
   },
 
   hides: ['gameobject', 'id', 'shape', 'scale'],
-  _enghook: make_circle2d,
+  _enghook: os.make_circle2d,
 });
 
 component.circle2d.impl = Object.mix({
@@ -797,17 +795,17 @@ component.circle2d.impl = Object.mix({
     "radius",
   ]),
 
-  set radius(x) { cmd_circle2d(0,this.id,x); },
-  get radius() { return cmd_circle2d(2,this.id); },
+  set radius(x) { circle2d.set_radius(this.id,x); circle2d.sync(this.id); },
+  get radius() { return circle2d.get_radius(this.id); },
 
   set scale(x) { this.radius = x; },
   get scale() { return this.radius; },
 
-  set offset(x) { cmd_circle2d(1,this.id,x); },
-  get offset() { return cmd_circle2d(3,this.id); },
+  set offset(x) { circle2d.set_offset(this.id,x); circle2d.sync(this.id); },
+  get offset() { circle2d.get_offset(this.id); },
 
-  get pos() { return cmd_circle2d(3,this.id); },
-  set pos(x) { cmd_circle2d(1,this.id,x);  },
+  get pos() { return this.offset; },
+  set pos(x) { this.offset = x; },
 
   grow(x) {
     if (typeof x === 'number') this.scale *= x;

@@ -66,65 +66,35 @@ var Gizmos = {
   },
 };
 
-Object.assign(profile, {
-  best_t(t) {
-    var qq = 'ns';
+profile.best_t = function(t) {
+  var qq = 'ns';
+  if (t > 1000) {
+    t /= 1000;
+    qq = 'us';
     if (t > 1000) {
       t /= 1000;
-      qq = 'us';
-      if (t > 1000) {
-        t /= 1000;
-	qq = 'ms';
-      }
+qq = 'ms';
     }
-    return `${t.toPrecision(4)} ${qq}`;
-  },
-  cpu(fn, times, q) {
-    times ??= 1;
-    q ??= "unnamed";
-    var start = profile.now();
-    for (var i = 0; i < times; i++)
-      fn();
-      
-    var elapsed = profile.now() - start;
-    var avgt = profile.best_t(elapsed/times);
-    var totalt = profile.best_t(elapsed);
+  }
+  return `${t.toPrecision(4)} ${qq}`;
+}
 
-    say(`profile [${q}]: ${profile.best_t(avgt)} average [${profile.best_t(totalt)} for ${times} loops]`);
-  },
-
-  time(fn) {
-    var start = profile.now();
+profile.cpu = function(fn, times, q) {
+  times ??= 1;
+  q ??= "unnamed";
+  var start = profile.now();
+  for (var i = 0; i < times; i++)
     fn();
-    return profile.lap(start);
-  },
+    
+  var elapsed = profile.now() - start;
+  var avgt = profile.best_t(elapsed/times);
+  var totalt = profile.best_t(elapsed);
 
-  lap(t) {
-    return profile.best_t(profile.now()-t);
-  },
+  say(`profile [${q}]: ${profile.best_t(avgt)} average [${profile.best_t(totalt)} for ${times} loops]`);
+}
 
-  measure(fn, str) {
-    str ??= 'unnamed';
-    var start = profile.now();
-    fn();
-    say(`profile [${str}]: ${profile.lap(start)}`);
-  },
-
-  secs() { return this.now()/1000000000; },
-});
-
-performance.test = {
-  barecall() { performance(0); },
-  unpack_num(n) { performance(1,n); },
-  unpack_array(n) { performance(2,n); },
-  pack_num() { performance(3); },
-  pack_string() { performance(6); },
-  unpack_string(s) { performance(4,s); },
-  unpack_32farr(a) { performance(5,a); },
-  call_fn_n(fn1, n) { performance(7,fn1,n,fn2); },
-};
-
-performance.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
+profile.ms = function(t) { return t/1000000; }
+profile.secs = function(t) { return t/1000000000; }
 
 /* These controls are available during editing, and during play of debug builds */
 debug.inputs = {};
@@ -271,6 +241,16 @@ debug.api.print_doc =  function(name)
   }
 
   return mdoc;
+}
+
+debug.log = {};
+
+debug.log.time = function(fn, name, avg=0)
+{
+  debug.log.time[name] ??= [];
+  var start = profile.now();
+  fn();
+  debug.log.time[name].push(profile.now()-start);
 }
 
 return {

@@ -315,9 +315,11 @@ var gameobject = {
         return;
       }
     }
+    
+    console.info(`Creating entity of type ${ent.ur}`);
 
     Object.mixin(ent, gameobject_impl);
-    ent.body = make_gameobject();
+    ent.body = os.make_gameobject();
     ent.warp_layer = [true];
     ent.phys = 2;
     ent.components = {};
@@ -359,7 +361,7 @@ var gameobject = {
     check_registers(ent);
     ent.components.forEach(function(x) {
       if (typeof x.collide === 'function')
-        register_collide(1, x.collide.bind(x), ent.body, x.shape);
+        physics.collide_shape(x.collide.bind(x), ent.body, x.shape);
     });
 
 
@@ -595,12 +597,13 @@ var gameobject = {
   kill() {
     if (this.__kill) return;
     this.__kill = true;
+    console.info(`Killing entity of type ${this.ur}`);
 
     this.timers.forEach(t => t());
     this.timers = [];
     Event.rm_obj(this);
     Player.do_uncontrol(this);
-    register_collide(2, undefined, this.body);
+    physics.collide_rm(this.body);
 
     if (this.master) {
       this.master.remove_obj(this);
@@ -755,7 +758,6 @@ ur {
 /* Apply an ur u to an entity e */
 /* u is given as */
 function apply_ur(u, e) {
-  console.info(`Applying ur named ${u}.`);
   if (typeof u !== 'string') {
     console.warn("Must give u as a string.");
     return;

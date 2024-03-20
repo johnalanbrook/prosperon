@@ -105,10 +105,10 @@ void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
 }
 
 void gameobject_apply(gameobject *go) {
-  cpBodySetType(go->body, go->bodytype);
+  cpBodySetType(go->body, go->phys);
   cpBodyEachShape(go->body, go_shape_apply, go);
 
-  if (go->bodytype == CP_BODY_TYPE_DYNAMIC) {
+  if (go->phys == CP_BODY_TYPE_DYNAMIC) {
     cpBodySetMass(go->body, go->mass);
     cpBodySetMoment(go->body, 0.f);
     cpBodyEachShape(go->body, go_shape_moi, go);
@@ -149,7 +149,7 @@ gameobject *MakeGameobject() {
   gameobject *ngo = malloc(sizeof(*ngo));
   gameobject go = {
       .scale = (HMM_Vec3){1.f,1.f,1.f},
-      .bodytype = CP_BODY_TYPE_STATIC,
+      .phys = CP_BODY_TYPE_STATIC,
       .maxvelocity = INFINITY,
       .maxangularvelocity = INFINITY,
       .mass = 1.f,
