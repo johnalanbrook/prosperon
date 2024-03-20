@@ -1312,36 +1312,36 @@ static const JSCFunctionListEntry js_window_funcs[] = {
 
 JSC_GETSET_BODY(pos, Position, cvec2)
 JSC_GETSET_BODY(angle, Angle, number)
-JSC_GETSET(gameobject, scale, vec3)
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
 JSC_GETSET_BODY(angularvelocity, AngularVelocity, number)
 JSC_GETSET_BODY(moi, Moment, number)
-//JSC_GETSET_BODY(phys, Type, number)
-JSC_GETSET(gameobject, phys, number)
 JSC_GETSET_BODY(torque, Torque, number)
 JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_force_local, cpBodyApplyForceAtLocalPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp))
+JSC_GETSET_APPLY(gameobject, friction, number)
+JSC_GETSET_APPLY(gameobject, elasticity, number)
+JSC_GETSET_APPLY(gameobject, mass, number)
+JSC_GETSET_APPLY(gameobject, phys, number)
+JSC_GETSET_APPLY(gameobject, layer, number)
+JSC_GETSET(gameobject, scale, vec3)
+JSC_GETSET(gameobject, damping, number)
+JSC_GETSET(gameobject, timescale, number)
+JSC_GETSET(gameobject, maxvelocity, number)
+JSC_GETSET(gameobject, maxangularvelocity, number)
+JSC_GETSET(gameobject, warp_filter, bitmask)
+JSC_GETSET(gameobject, drawlayer, number)
+JSC_CCALL(gameobject_setref, js2gameobject(this)->ref = argv[0]);
+JSC_CCALL(gameobject_sync, gameobject_apply(js2gameobject(this)))
 JSC_CCALL(gameobject_in_air, return boolean2js(phys2d_in_air(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_world2this, return vec22js(world2go(js2gameobject(this), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_dir_world2this, return vec22js(mat_t_dir(t_world2go(js2gameobject(this)), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_dir_this2world, return vec22js(mat_t_dir(t_go2world(js2gameobject(this)), js2vec2(argv[0]))))
-JSC_GETSET_APPLY(gameobject, f, number)
-JSC_GETSET_APPLY(gameobject, e, number)
-JSC_GETSET_APPLY(gameobject, mass, number)
-JSC_GETSET(gameobject, damping, number)
-JSC_GETSET(gameobject, timescale, number)
-JSC_GETSET(gameobject, maxvelocity, number)
-JSC_GETSET(gameobject, maxangularvelocity, number)
-JSC_GETSET_APPLY(gameobject, layer, number)
-JSC_GETSET(gameobject, warp_filter, bitmask)
-JSC_GETSET(gameobject, drawlayer, number)
-JSC_CCALL(gameobject_setref, js2gameobject(this)->ref = argv[0]);
 
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
-  CGETSET_ADD(gameobject, f),
-  CGETSET_ADD(gameobject, e),
+  CGETSET_ADD(gameobject, friction),
+  CGETSET_ADD(gameobject, elasticity),
   CGETSET_ADD(gameobject,mass),
   CGETSET_ADD(gameobject,damping),
   CGETSET_ADD(gameobject, scale),
@@ -1368,6 +1368,7 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, dir_world2this, 1),
   MIST_FUNC_DEF(gameobject, dir_this2world, 1),
   MIST_FUNC_DEF(gameobject,setref,1),
+  MIST_FUNC_DEF(gameobject, sync, 0),
 };
 
 JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
@@ -1584,13 +1585,9 @@ void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
   
   QJSCLASSPREP(ptr);
+  
   QJSCLASSPREP_FUNCS(gameobject);
   QJSCLASSPREP_FUNCS(dsp_node);
-  
-  sound_proto = JS_NewObject(js);
-  JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
-  JS_SetPrototype(js, sound_proto, dsp_node_proto);
-  
   QJSCLASSPREP_FUNCS(emitter);
   QJSCLASSPREP_FUNCS(warp_gravity);
   QJSCLASSPREP_FUNCS(warp_damp);
@@ -1628,6 +1625,10 @@ void ffi_load() {
   JS_SetPropertyStr(js, prosperon, "revision", str2js(COM));
   JS_SetPropertyStr(js, globalThis, "window", window2js(&mainwin));
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
+
+  sound_proto = JS_NewObject(js);
+  JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
+  JS_SetPrototype(js, sound_proto, dsp_node_proto);
 
   JS_FreeValue(js,globalThis);
 }

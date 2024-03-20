@@ -75,8 +75,8 @@ transform2d go2t(gameobject *go)
 unsigned int editor_cat = 1<<31;
 
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
-  cpShapeSetFriction(shape, go->f);
-  cpShapeSetElasticity(shape, go->e);
+  cpShapeSetFriction(shape, go->friction);
+  cpShapeSetElasticity(shape, go->elasticity);
   cpShapeSetCollisionType(shape, (cpCollisionType)go);
 
   cpShapeFilter filter;
@@ -105,6 +105,7 @@ void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
 }
 
 void gameobject_apply(gameobject *go) {
+  YughInfo("Applying gameobject %p", go);
   cpBodySetType(go->body, go->phys);
   cpBodyEachShape(go->body, go_shape_apply, go);
 
@@ -115,8 +116,6 @@ void gameobject_apply(gameobject *go) {
 
     if (cpBodyGetMoment(go->body) <= 0.f)
       cpBodySetMoment(go->body, 1.f);
-
-    return;
   }
 }
 

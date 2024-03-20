@@ -32,8 +32,8 @@ struct gameobject {
   HMM_Vec3 scale; /* local */  
   int next;
   float mass;
-  float f;   /* friction */
-  float e;   /* elasticity */
+  float friction;
+  float elasticity;
   float damping;
   float timescale;
   float maxvelocity;

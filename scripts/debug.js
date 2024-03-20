@@ -14,7 +14,7 @@ debug.draw_bb = false;
 debug.draw_gizmos = false;
 debug.draw_names = false;
 debug.draw = function() {
-  if (this.draw_phys) game.all_objects(function(x) { debug.draw_gameobject(x.body); });
+  if (this.draw_phys) game.all_objects(function(x) { debug.draw_gameobject(x); });
   
   if (this.draw_bb)
     game.all_objects(function(x) { debug.boundingbox(x.boundingbox(), Color.debug.boundingbox.alpha(0.05)); });

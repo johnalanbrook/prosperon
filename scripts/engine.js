@@ -58,8 +58,6 @@ console.doc = {
   clear: "Clear console."
 };
 
-console.stdout_lvl = 1;
-
 globalThis.global = globalThis;
 
 function use(file)
@@ -102,10 +100,10 @@ global.check_registers = function(obj)
       obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
 
     if (typeof obj.collide === 'function')
-      physics.collide_begin(obj.collide.bind(obj), obj.body);
+      physics.collide_begin(obj.collide.bind(obj), obj);
 
     if (typeof obj.separate === 'function')
-      physics.collide_separate(obj.separate.bind(obj), obj.body);
+      physics.collide_separate(obj.separate.bind(obj), obj);
 
     if (typeof obj.draw === 'function')
       obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
@@ -428,26 +426,13 @@ global.mixin("scripts/actor.js");
 global.mixin("scripts/entity.js");
 
 function world_start() {
-  gameobject.body = os.make_gameobject();
-  gameobject.body.setref(gameobject);
-
-  console.info("START WORLD");
-  globalThis.world = Object.create(gameobject);
-  gameobject.level = world;  
+  globalThis.world = os.make_gameobject();
+  world.setref(world);
   world.objects = {};
-  world.check_dirty = function() {};
-  world.namestr = function(){};
-  world._ed = {
-    selectable:false,
-    dirty:false,
-  };
   world.toString = function() { return "world"; };
-  world.master = gameobject;
   world.ur = "world";
   world.kill = function() { this.clear(); };
   world.phys = 2;
-  
-  Object.hide(gameobject, 'timescale');
   var cam = world.spawn("scripts/camera2d.jso");
   game.view_camera(cam);
 }
@@ -457,7 +442,7 @@ global.mixin("scripts/physics.js");
 game.view_camera = function(cam)
 {
   game.camera = cam;
-  render.cam_body(game.camera.body);
+  render.cam_body(game.camera);
 }
 
 window.title = `Prosperon v${prosperon.version}`;

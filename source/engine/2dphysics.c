@@ -309,6 +309,7 @@ void phys2d_shape_apply(struct phys2d_shape *s)
   float newmoi = s->moi(s->data);
   moment-=moi;
   moment += newmoi;
+  if (moment < 0) moment = 0;
   cpBodySetMoment(s->go->body, moment);
 }
 

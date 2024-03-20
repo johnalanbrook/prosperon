@@ -13,12 +13,12 @@ function obj_unique_name(name, obj) {
 var gameobject_impl = {
   get pos() {
     assert(this.master, `Entity ${this.toString()} has no master.`);
-    return this.master.body.world2this(this.worldpos());
+    return this.master.world2this(this.worldpos());
   },
 
   set pos(x) {
     assert(this.master, `Entity ${this.toString()} has no master.`);
-    this.set_worldpos(this.master.body.this2world(x));
+    this.set_worldpos(this.master.this2world(x));
   },
 
   get angle() {
@@ -56,47 +56,6 @@ var gameobject_impl = {
       obj.pos = obj.pos.map((x, i) => x * pct[i]);
     });
   },
-
-  get draw_layer() { return this.body.drawlayer; },
-  set draw_layer(x) { this.body.drawlayer = x; },
-  set layer(x) { this.body.layer = x; },
-  get layer() { return this.body.layer; },
-  set warp_layer(x) { this.body.warp_filter = x; },
-  get warp_layer() { return this.body.warp_filter; },
-
-  set mass(x) { this.body.mass = x; },
-  get mass() {
-    if (!(this.phys === physics.dynamic))
-      return undefined;
-
-    return this.body.mass;
-  },
-  get elasticity() { return this.body.e; },
-  set elasticity(x) { this.body.e = x; },
-  get friction() { return this.body.f; },
-  set friction(x) { this.body.f = x; },
-  set timescale(x) { this.body.timescale = x; },
-  get timescale() { return this.body.timescale; },
-  set phys(x) { this.body.phys = x; },
-  get phys() { return this.body.phys; },
-  get velocity() { return this.body.velocity; },
-  set velocity(x) { this.body.velocity = x; },
-  get damping() { return this.body.damping; },
-  set damping(x) { this.body.damping = x },
-  get angularvelocity() { return Math.rad2turn(this.body.angularvelocity); },
-  set angularvelocity(x) { this.body.angularvelocity =  Math.turn2rad(x); },
-  get max_velocity() { return this.body.maxvelocity; },
-  set max_velocity(x) { this.body.maxvelocity = x; },
-  get max_angularvelocity() { return this.body.maxangularvelocity; },
-  set max_angularvelocity(x) { this.body.maxangularvelocity = x; },
-  get_moi() { return this.body.moi; },
-  set_moi(x) {
-    if (x <= 0) {
-      console.error("Cannot set moment of inertia to 0 or less.");
-      return;
-    }
-    this.body.moi = x;
-  },
 };
 
 var gameobject = {
@@ -108,6 +67,7 @@ var gameobject = {
     if (comps.length) return comps;
     return undefined;
   },
+  
   check_dirty() {
     this._ed.urdiff = this.json_obj();
     this._ed.dirty = !Object.empty(this._ed.urdiff);
@@ -121,6 +81,7 @@ var gameobject = {
     else
       this._ed.inst = false;
   },
+  
   _ed: {
     selectable: false,
     dirty: false
@@ -144,32 +105,32 @@ var gameobject = {
   },
   /* pin this object to the to object */
   pin(to) {
-    var p = joint.pin(this.body,to.body);
+    var p = joint.pin(this,to);
   },
   slide(to, a, b, min, max) {
     a ??= [0, 0];
     b ??= [0, 0];
     min ??= 0;
     max ??= 50;
-    var p = joint.slide(this.body, to.body, a, b, min, max);
+    var p = joint.slide(this, to, a, b, min, max);
     p.max_force = 500;
     p.break();
   },
   pivot(to, piv) {
     piv ??= this.worldpos();
-    var p = joint.pivot(this.body, to.body, piv);
+    var p = joint.pivot(this, to, piv);
   },
   /* groove is on to, from local points a and b, anchored to this at local anchor */
   groove(to, a, b, anchor) {
     anchor ??= [0, 0];
-    var p = joint.groove(to.body, this.body, a, b, anchor);
+    var p = joint.groove(to, this, a, b, anchor);
   },
   damped_spring(to, length, stiffness, damping) {
     length ??= Vector.length(this.worldpos(), to.worldpos());
     stiffness ??= 1;
     damping ??= 1;
     var dc = 2 * Math.sqrt(stiffness * this.mass);
-    var p = joint.damped_spring(this.body, to.body, [0, 0], [0, 0], stiffness, damping * dc);
+    var p = joint.damped_spring(this, to, [0, 0], [0, 0], stiffness, damping * dc);
   },
   damped_rotary_spring(to, angle, stiffness, damping) {
     angle ??= 0;
@@ -179,23 +140,23 @@ var gameobject = {
     /* damping = 1 is critical */
     var dc = 2 * Math.sqrt(stiffness * this.get_moi()); /* critical damping number */
     /* zeta = actual/critical */
-    var p = joint.damped_rotary(this.body, to.body, angle, stiffness, damping * dc);
+    var p = joint.damped_rotary(this, to, angle, stiffness, damping * dc);
   },
   rotary_limit(to, min, max) {
-    var p = joint.rotary(this.body, to.body, Math.turn2rad(min), Math.turn2rad(max));
+    var p = joint.rotary(this, to, Math.turn2rad(min), Math.turn2rad(max));
   },
   ratchet(to, ratch) {
     var phase = this.angle - to.angle;
-    var p = joint.ratchet(this.body, to.body, phase, Math.turn2rad(ratch));
+    var p = joint.ratchet(this, to, phase, Math.turn2rad(ratch));
   },
   gear(to, ratio) {
     phase ??= 1;
     ratio ??= 1;
     var phase = this.angle - to.angle;
-    var p = joint.gear(this.body, to.body, phase, ratio);
+    var p = joint.gear(this, to, phase, ratio);
   },
   motor(to, rate) {
-    var p = joint.motor(this.body, to.body, rate);
+    var p = joint.motor(this, to, rate);
   },
 
   path_from(o) {
@@ -254,15 +215,12 @@ var gameobject = {
     return killfn;
   },
 
-  set torque(x) { if (!(x >= 0 && x <= Infinity)) return;
-    this.body.torque = x; },
-    
-  gscale() { return this.body.scale; },
+  gscale() { return this.scale; },
   sgscale(x) {
     if (typeof x === 'number')
       x = [x, x];
     
-    physics.sgscale(this.body, x)
+    physics.sgscale(this, x)
   },
 
   phys_material() {
@@ -272,21 +230,18 @@ var gameobject = {
     return mat;
   },
 
-  worldpos() { return this.body.pos; },
+  worldpos() { return this.pos; },
   set_worldpos(x) {
     var poses = this.objects.map(x => x.pos);
-    this.body.pos = x;
+    this.pos = x;
     this.objects.forEach((o, i) => o.set_worldpos(this.this2world(poses[i])));
   },
   screenpos() { return window.world2screen(this.worldpos()); },
 
-  worldangle() { return Math.rad2turn(this.body.angle); },
-  sworldangle(x) { this.body.angle = Math.turn2rad(x); },
+  worldangle() { return Math.rad2turn(this.angle); },
+  sworldangle(x) { this.angle = Math.turn2rad(x); },
 
-  get_ur() {
-    //     if (this.ur === 'empty') return undefined;
-    return Object.access(ur, this.ur);
-  },
+  get_ur() { return Object.access(ur, this.ur); },
 
   /* spawn an entity
          text can be:
@@ -295,8 +250,8 @@ var gameobject = {
 	       nothing
       */
   spawn(text) {
-    var ent = Object.create(gameobject);
-
+    var ent = os.make_gameobject();
+    
     if (typeof text === 'object')
       text = text.name;
 
@@ -318,8 +273,6 @@ var gameobject = {
     
     console.info(`Creating entity of type ${ent.ur}`);
 
-    Object.mixin(ent, gameobject_impl);
-    ent.body = os.make_gameobject();
     ent.warp_layer = [true];
     ent.phys = 2;
     ent.components = {};
@@ -335,9 +288,9 @@ var gameobject = {
       urdiff: {},
     };
 
-    ent.body.setref(ent); // set the internal obj reference to this obj
+    ent.setref(ent);
 
-    Object.hide(ent, 'ur', 'body', 'components', 'objects', '_ed', 'timers', 'master');
+    Object.hide(ent, 'ur', 'components', 'objects', '_ed', 'timers', 'master');
     if (ent.ur === 'empty') {
       if (!ur.empty.proto) ur.empty.proto = json.decode(json.encode(ent));
       return ent;
@@ -361,9 +314,8 @@ var gameobject = {
     check_registers(ent);
     ent.components.forEach(function(x) {
       if (typeof x.collide === 'function')
-        physics.collide_shape(x.collide.bind(x), ent.body, x.shape);
+        physics.collide_shape(x.collide.bind(x), ent, x.shape);
     });
-
 
     if (typeof ent.load === 'function') ent.load();
     if (sim.playing())
@@ -374,6 +326,7 @@ var gameobject = {
       mur.proto = json.decode(json.encode(ent));
 
     ent.sync();
+    console.info(`entity is type ${ent.phys}`);
 
     if (!Object.empty(ent.objects)) {
       var o = ent.objects;
@@ -386,8 +339,8 @@ var gameobject = {
         Object.assign(n, o[i]);
       }
     }
-    
-    this.body.phys = this.body.phys; // simple way to sync
+
+    console.info(`Made object with mass ${ent.mass} and moi ${ent.moi}`);
 
     return ent;
   },
@@ -436,17 +389,14 @@ var gameobject = {
   objects: {},
   master: undefined,
 
-  pulse(vec) { this.body.impulse(vec); },
-  shove(vec) { this.body.force(vec); },
-  shove_at(vec, at) { this.body.force_local(vec,at); },
   this2screen(pos) { return window.world2screen(this.this2world(pos)); },
   screen2this(pos) { return this.world2this(window.screen2world(pos)); },
   
-  alive() { return this.body >= 0; },
-  in_air() { return this.body.in_air(); },
+  in_air() { return this.in_air(); },
 
   hide() { this.components.forEach(x => x.hide?.());
     this.objects.forEach(x => x.hide?.()); },
+    
   show() { this.components.forEach(function(x) { x.show?.(); });
     this.objects.forEach(function(x) { x.show?.(); }); },
 
@@ -484,21 +434,11 @@ var gameobject = {
   flipx() { return this.scale.x < 0; },
   flipy() { return this.scale.y < 0; },
 
-  mirror(plane) {
-    this.scale = Vector.reflect(this.scale, plane);
-  },
-
-  save: true,
-  selectable: true,
-  ed_locked: false,
+  mirror(plane) { this.scale = Vector.reflect(this.scale, plane); },
 
   disable() { this.components.forEach(function(x) { x.disable(); }); },
   enable() { this.components.forEach(function(x) { x.enable(); }); },
-  sync() {
-    this.components.forEach(function(x) { x.sync?.(); });
-    this.objects.forEach(function(x) { x.sync?.(); });
-  },
-
+  
   /* Bounding box of the object in world dimensions */
   boundingbox() {
     var boxes = [];
@@ -603,7 +543,7 @@ var gameobject = {
     this.timers = [];
     Event.rm_obj(this);
     Player.do_uncontrol(this);
-    physics.collide_rm(this.body);
+    physics.collide_rm(this);
 
     if (this.master) {
       this.master.remove_obj(this);
@@ -679,7 +619,16 @@ var gameobject = {
       this.objects[o].obj_descend(fn);
   },
 }
-Object.mixin(gameobject, gameobject_impl);
+
+var gop = os.make_gameobject().__proto__;
+Object.mixin(gop, gameobject);
+var gsync = gop.sync;
+gop.sync = function() {
+  gsync.call(this);
+  this.components.forEach(function(x) { x.sync?.(); });
+  this.objects.forEach(function(x) { x.sync(); });
+}
+
 
 gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
@@ -835,7 +784,3 @@ game.loadurs = function() {
     name: "empty"
   };
 };
-
-return {
-  gameobject
-}

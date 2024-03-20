@@ -201,6 +201,7 @@ int main(int argc, char **argv) {
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
 #endif
+  phys2d_init();  
 
   resources_init();
   stm_setup(); /* time */
@@ -237,7 +238,6 @@ void engine_start(JSValue start, JSValue procfn)
   c_process_fn = procfn;
 
   sound_init();
-  phys2d_init();  
 
   start_desc.width = mainwin.size.x;
   start_desc.height = mainwin.size.y;

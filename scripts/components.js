@@ -22,7 +22,7 @@ var component = {
   make(go) {
     var nc = Object.create(this);
     nc.gameobject = go;
-    Object.mixin(nc, this._enghook(go.body));
+    Object.mixin(nc, this._enghook(go));
     assign_impl(nc,this.impl);
     Object.hide(nc, 'gameobject', 'id');
     nc.post();
@@ -152,7 +152,7 @@ Object.mixin(os.sprite(true), {
 os.sprite(true).make = function(go)
 {
   var sp = os.sprite();
-  sp.go = go.body;
+  sp.go = go;
   sp.gameobject = go;
   return sp;
 }
