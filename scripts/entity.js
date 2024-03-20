@@ -689,7 +689,7 @@ gameobject.doc = {
   scale: "Scale of the object, relative to its master.",
   flipx: "Check if the object is flipped on its x axis.",
   flipy: "Check if the object is flipped on its y axis.",
-  elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find their resultant velocities.`,
+  elasticity: `When two objects collide, their elasticities are multiplied together. Their velocities are then multiplied by this value to find √their resultant velocities.`,
   friction: `When one object touches another, friction slows them down.`,
   mass: `The higher the mass of the object, the less forces will affect it.`,
   phys: `Set to 0, 1, or 2, representing dynamic, kinematic, and static.`,

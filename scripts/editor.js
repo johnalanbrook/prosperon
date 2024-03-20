@@ -6,8 +6,8 @@
 window.mode = window.modetypes.full;
 game.loadurs();
 
-player[0].control(Debug);
-Register.gui.register(Debug.draw, Debug);
+player[0].control(debug);
+Register.gui.register(debug.draw, debug);
 
 var editor = {
   toString() { return "editor"; },
@@ -391,7 +391,7 @@ var editor = {
       wh[0] = Math.abs(endpos[0] - this.sel_start[0]);
       wh[1] = Math.abs(endpos[1] - this.sel_start[1]);
       var bb = bbox.fromcwh(c,wh);
-      Debug.boundingbox(bb, Color.Editor.select.alpha(0.1));
+      render.boundingbox(bb, Color.Editor.select.alpha(0.1));
       render.line(bbox.topoints(bb).wrapped(1), Color.white);
     }
   },
@@ -489,7 +489,7 @@ var editor = {
         GUI.text("lock", obj,screenpos());
     });
 
-    Debug.draw_grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
+    render.grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
     var startgrid = window.screen2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
     var endgrid = window.screen2world([window.width, window.height]);
     
@@ -518,8 +518,8 @@ var editor = {
   },
   
   ed_debug() {
-    if (!Debug.phys_drawing)
-      this.selectlist.forEach(function(x) { Debug.draw_obj_phys(x); });
+    if (!debug.phys_drawing)
+      this.selectlist.forEach(function(x) { debug.draw_obj_phys(x); });
   },
   
   killring: [],
@@ -2020,7 +2020,7 @@ if (io.exists("editor.config"))
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
 sim.pause();
 window.editor = true;
-Debug.draw_phys = true;
+debug.draw_phys = true;
 
 return {
   editor

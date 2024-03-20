@@ -369,7 +369,7 @@ component.polygon2d = Object.copy(collider2d, {
   
   gizmo() {
     this.spoints().forEach(x => render.point(this.gameobject.this2screen(x), 3, Color.green));
-    this.points.forEach((x,i)=>Debug.numbered_point(this.gameobject.this2screen(x), i));
+    this.points.forEach((x,i)=>render.coordinate(this.gameobject.this2screen(x), i));
   },
 
   pick(pos) {
@@ -529,14 +529,14 @@ component.edge2d = Object.copy(collider2d, {
   gizmo() {
     if (this.type === Spline.type.catmull || this.type === -1) {
       this.spoints().forEach(x => render.point(this.gameobject.this2screen(x), 3, Color.teal));
-      this.points.forEach((x,i) => Debug.numbered_point(this.gameobject.this2screen(x), i));
+      this.points.forEach((x,i) => render.coordinate(this.gameobject.this2screen(x), i));
     } else {
       for (var i = 0; i < this.points.length; i += 3)
-        Debug.numbered_point(this.gameobject.this2screen(this.points[i]), i, Color.teal);
+        render.coordinate(this.gameobject.this2screen(this.points[i]), i, Color.teal);
 	
       for (var i = 1; i < this.points.length; i+=3) {
-        Debug.numbered_point(this.gameobject.this2screen(this.points[i]), i, Color.green);
-        Debug.numbered_point(this.gameobject.this2screen(this.points[i+1]), i+1, Color.green);	
+        render.coordinate(this.gameobject.this2screen(this.points[i]), i, Color.green);
+        render.coordinate(this.gameobject.this2screen(this.points[i+1]), i+1, Color.green);	
         render.line([this.gameobject.this2screen(this.points[i-1]), this.gameobject.this2screen(this.points[i])], Color.yellow);
         render.line([this.gameobject.this2screen(this.points[i+1]), this.gameobject.this2screen(this.points[i+2])], Color.yellow);	
       }

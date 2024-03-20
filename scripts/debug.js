@@ -1,70 +1,53 @@
-var Debug = {
-  fn_break(fn, obj) {
-    if (typeof fn !== 'function') return;
-    obj ??= globalThis;
-    
-    var newfn = function() {
-      console.log("broke");
-      fn();
-    };
-    obj[fn.name] = newfn;    
-  },
-
-  draw_grid(width, span, color) {
-    color = color ? color : Color.green;
-    render.grid(width,span,color);
-  },
+debug.fn_break = function(fn,obj) {
+  if (typeof fn !== 'function') return;
+  obj ??= globalThis;
   
-  coordinate(pos, size, color) { GUI.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color); },
+  var newfn = function() {
+    console.log("broke");
+    fn();
+  };
+  obj[fn.name] = newfn;   
+}
 
-  boundingbox(bb, color) {
-    color ??= Color.white;
-    cmd_points(0, bbox.topoints(bb), color);
-  },
+debug.draw_phys = false;
+debug.draw_bb = false;
+debug.draw_gizmos = false;
+debug.draw_names = false;
+debug.draw = function() {
+  if (this.draw_phys) game.all_objects(function(x) { debug.draw_gameobject(x.body); });
+  
+  if (this.draw_bb)
+    game.all_objects(function(x) { debug.boundingbox(x.boundingbox(), Color.debug.boundingbox.alpha(0.05)); });
 
-  numbered_point(pos, n, color) {
-    color ??= Color.white;
-    render.point(pos, 3, color);
-    GUI.text(n, pos.add([0,4]), 1, color);
-  },
 
-  draw_phys: false,
-  draw_obj_phys(obj) { debug.draw_gameobject(obj.body); },
 
-  draw_bb: false,
-  draw_gizmos: false,
-  draw_names: false,
+  if (this.draw_gizmos)
+    game.all_objects(function(x) {
+      if (!x.icon) return;
+      GUI.image(x.icon, window.world2screen(x.pos));
+    });
 
-  draw() {
-    if (this.draw_bb)
-      game.all_objects(function(x) { Debug.boundingbox(x.boundingbox(), Color.Debug.boundingbox.alpha(0.05)); });
+  if (this.draw_names)
+    game.all_objects(function(x) {
+      GUI.text(x, window.world2screen(x.pos).add([0,32]), 1, Color.debug.names);
+    });
 
-    if (sim.paused()) GUI.text("PAUSED", [0,0],1);
+  if (debug.gif.rec) {
+    GUI.text("REC", [0,40], 1);
+    GUI.text(time.timecode(time.timenow() - debug.gif.start_time, debug.gif.fps), [0,30], 1);
+  }
+  
+  return;
+  
+  if (sim.paused()) GUI.text("PAUSED", [0,0],1);  
 
-    if (this.draw_gizmos)
-      game.all_objects(function(x) {
-        if (!x.icon) return;
-        GUI.image(x.icon, window.world2screen(x.pos));
-      });
-
-    if (this.draw_names)
-      game.all_objects(function(x) {
-        GUI.text(x, window.world2screen(x.pos).add([0,32]), 1, Color.Debug.names);
-      });
-
-    if (Debug.Options.gif.rec) {
-      GUI.text("REC", [0,40], 1);
-      GUI.text(time.timecode(time.timenow() - Debug.Options.gif.start_time, Debug.Options.gif.fps), [0,30], 1);
-    }
-
-    GUI.text(sim.playing() ? "PLAYING"
-                         : sim.stepping() ?
-			 "STEP" :
-			 sim.paused() ?
-			 "PAUSED; EDITING" : 
-			 "EDIT", [0, 0], 1);
-  },
-};
+  GUI.text(sim.playing() ? "PLAYING"
+                       : sim.stepping() ?
+		 "STEP" :
+		 sim.paused() ?
+		 "PAUSED; EDITING" : 
+		 "EDIT", [0, 0], 1);
+}
 
 function assert(op, str)
 {
@@ -144,20 +127,18 @@ performance.test = {
 performance.test.call_fn_n.doc = "Calls fn1 n times, and then fn2.";
 
 /* These controls are available during editing, and during play of debug builds */
-Debug.inputs = {};
-Debug.inputs.f1 = function () { Debug.draw_phys =  !Debug.draw_phys; };
-Debug.inputs.f1.doc = "Draw physics debugging aids.";
-Debug.inputs.f3 = function() { Debug.draw_bb = !Debug.draw_bb; };
-Debug.inputs.f3.doc = "Toggle drawing bounding boxes.";
-Debug.inputs.f4 = function() {
-  Debug.draw_names = !Debug.draw_names;
-  Debug.draw_gizmos = !Debug.draw_gizmos;
+debug.inputs = {};
+debug.inputs.f1 = function () { debug.draw_phys =  !debug.draw_phys; };
+debug.inputs.f1.doc = "Draw physics debugging aids.";
+debug.inputs.f3 = function() { debug.draw_bb = !debug.draw_bb; };
+debug.inputs.f3.doc = "Toggle drawing bounding boxes.";
+debug.inputs.f4 = function() {
+  debug.draw_names = !debug.draw_names;
+  debug.draw_gizmos = !debug.draw_gizmos;
 };
-Debug.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
+debug.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 
-Debug.Options = {};
-
-Debug.Options.gif = {
+debug.gif = {
   w: 640, /* Max width */
   h: 480, /* Max height */
   stretch: false, /* True if you want to stretch */
@@ -195,29 +176,29 @@ Debug.Options.gif = {
   },
 };
 
-Debug.inputs.f8 = function() {
+debug.inputs.f8 = function() {
   var now = new Date();
-  Debug.Options.gif.file = now.toISOString() + ".gif";
-  Debug.Options.gif.start();
+  debug.gif.file = now.toISOString() + ".gif";
+  debug.gif.start();
 };
-Debug.inputs.f9 = function() {
-  Debug.Options.gif.stop();
+debug.inputs.f9 = function() {
+  debug.gif.stop();
 }
 
-Debug.inputs.f10 = function() { time.timescale = 0.1; };
-Debug.inputs.f10.doc = "Toggle timescale to 1/10.";
-Debug.inputs.f10.released = function () { time.timescale = 1.0; };
-Debug.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
-Debug.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
+debug.inputs.f10 = function() { time.timescale = 0.1; };
+debug.inputs.f10.doc = "Toggle timescale to 1/10.";
+debug.inputs.f10.released = function () { time.timescale = 1.0; };
+debug.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
+debug.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
 
-Debug.inputs['M-1'] = render.normal;
-Debug.inputs['M-2'] = render.wireframe;
+debug.inputs['M-1'] = render.normal;
+debug.inputs['M-2'] = render.wireframe;
 
-Debug.inputs['C-M-f'] = function() {};
-Debug.inputs['C-M-f'].doc = "Enter camera fly mode.";
+debug.inputs['C-M-f'] = function() {};
+debug.inputs['C-M-f'].doc = "Enter camera fly mode.";
 
-Debug.api = {};
-Debug.api.doc_entry = function(obj, key)
+debug.api = {};
+debug.api.doc_entry = function(obj, key)
 {
   if (typeof key !== 'string') {
     console.warn("Cannot print a key that isn't a string.");
@@ -253,7 +234,7 @@ ${doc}
 `;
 }
 
-Debug.api.print_doc =  function(name)
+debug.api.print_doc =  function(name)
 {
   var obj = name;
   if (typeof name === 'string') {
@@ -286,14 +267,14 @@ Debug.api.print_doc =  function(name)
     if (key === 'doc') continue;
     if (key === 'toString') continue;
 
-    mdoc += Debug.api.doc_entry(obj, key) + "\n";
+    mdoc += debug.api.doc_entry(obj, key) + "\n";
   }
 
   return mdoc;
 }
 
 return {
-  Debug,
+  debug,
   Gizmos,
   assert
 }

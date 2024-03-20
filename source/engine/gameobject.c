@@ -201,7 +201,7 @@ void gameobject_free(gameobject *go) {
   cpBodyFree(go->body);
 
   go->body = NULL;
-
+  
   free(go);
   for (int i = arrlen(gameobjects)-1; i >= 0; i--) {
     if (gameobjects[i] == go) {
@@ -230,6 +230,5 @@ void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
 void gameobject_draw_debug(gameobject *go) {
   if (!go || !go->body) return;
 
-  cpVect pos = cpBodyGetPosition(go->body);
   cpBodyEachShape(go->body, body_draw_shapes_dbg, NULL);
 }

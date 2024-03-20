@@ -422,7 +422,7 @@ Cmdline.register_order("api", function(obj) {
   }
 
   load("scripts/editor.js");
-  var api = Debug.api.print_doc(obj[0]);
+  var api = debug.api.print_doc(obj[0]);
   if (!api)
     return;
 

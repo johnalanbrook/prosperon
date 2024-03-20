@@ -69,23 +69,34 @@ render.cross = function(pos, size, color) {
   };
   
 render.arrow = function(start, end, color, wingspan, wingangle) {
-    color ??= Color.red;
-    wingspan ??= 4;
-    wingangle ??=10;
-    
-    var dir = end.sub(start).normalized();
-    var wing1 = [
-      Vector.rotate(dir, wingangle).scale(wingspan).add(end),
-      end
-    ];
-    var wing2 = [
-      Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
-      end
-    ];
-    render.line([start,end],color);
-    render.line(wing1,color);
-    render.line(wing2,color);
-  };
+  color ??= Color.red;
+  wingspan ??= 4;
+  wingangle ??=10;
+  
+  var dir = end.sub(start).normalized();
+  var wing1 = [
+    Vector.rotate(dir, wingangle).scale(wingspan).add(end),
+    end
+  ];
+  var wing2 = [
+    Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
+    end
+  ];
+  render.line([start,end],color);
+  render.line(wing1,color);
+  render.line(wing2,color);
+};
+
+render.coordinate = function(pos, size, color) {
+    color ??= Color.white;
+    GUI.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
+    render.point(pos, 2, color);
+}
+
+render.boundingbox = function(bb, color) {
+  color ??= Color.white;
+  cmd_points(0, bbox.topoints(bb), color);
+}
 
 render.rectangle = function(lowerleft, upperright, color) {
   var points = [lowerleft, lowerleft.add([upperright.x-lowerleft.x,0]), upperright, lowerleft.add([0,upperright.y-lowerleft.y])];

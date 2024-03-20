@@ -52,10 +52,16 @@ static JSValue globalThis;
 static JSClassID js_ptr_id;
 static JSClassDef js_ptr_class = { "POINTER" };
 
+JSValue str2js(const char *c) { return JS_NewString(js, c); }
+const char *js2str(JSValue v) {
+  return JS_ToCString(js, v);
+}
+
 #define QJSCLASS(TYPE)\
 static JSClassID js_ ## TYPE ## _id;\
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
 TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
+YughSpam("Freeing " #TYPE " at %p", n); \
 TYPE##_free(n);}\
 static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
@@ -64,6 +70,7 @@ static JSClassDef js_##TYPE##_class = {\
 static TYPE *js2##TYPE (JSValue val) { return JS_GetOpaque(val,js_##TYPE##_id); }\
 static JSValue TYPE##2js(TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
+  YughSpam("Created " #TYPE " at %p", n); \
   JS_SetOpaque(j,n);\
   return j; }\
 
@@ -131,6 +138,15 @@ JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 int js2bool(JSValue v) { return JS_ToBool(js, v); }
 JSValue bool2js(int b) { return JS_NewBool(js,b); }
 
+void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(js, obj, i, v); }
+
+JSValue js_getpropidx(JSValue v, uint32_t i)
+{
+  JSValue p = JS_GetPropertyUint32(js, v, i);
+  JS_FreeValue(js,p);
+  return p;
+}
+
 JSValue gos2ref(gameobject **go)
 {
   JSValue array = JS_NewArray(js);
@@ -147,20 +163,8 @@ JSValue js_getpropstr(JSValue v, const char *str)
   return p;
 }
 
-void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(js, obj, i, v); }
-JSValue js_getpropidx(JSValue v, uint32_t i)
-{
-  JSValue p = JS_GetPropertyUint32(js, v, i);
-  JS_FreeValue(js,p);
-  return p;
-}
-
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
-JSValue str2js(const char *c) { return JS_NewString(js, c); }
-const char *js2str(JSValue v) {
-  return JS_ToCString(js, v);
-}
 
 JSValue strarr2js(char **c)
 {

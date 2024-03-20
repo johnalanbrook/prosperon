@@ -73,6 +73,7 @@ actor.delay = function(fn, seconds) {
   
   stop.remain = seconds;
   stop.seconds = seconds;
+  
   function update(dt) {
     stop.remain -= dt;
     if (stop.remain <= 0)

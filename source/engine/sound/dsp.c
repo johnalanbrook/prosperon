@@ -147,7 +147,6 @@ dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int sam
   self->pass = 0;
   self->gain = 1;
   self->id = node_count++;
-  YughSpam("Made node %d.", self->id);
   return self;
 }
 
@@ -166,7 +165,6 @@ void node_free(dsp_node *node)
       free(node->data);
   }
 
-  YughSpam("Freed node %d.", node->id);
   free(node);
   pthread_mutex_unlock(&soundrun);
 }

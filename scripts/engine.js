@@ -196,7 +196,7 @@ function process()
   render.models();
   render.emitters();
   prosperon.draw();
-  if (Debug.draw_phys) game.all_objects(function(o) { debug.draw_gameobject(o); });
+  debug.draw();
   render.flush();
   render.pass();
   prosperon.gui();
@@ -215,24 +215,7 @@ var eachobj = function(obj,fn)
     eachobj(obj.objects[o],fn);
 }
 
-Object.assign(game, {
-  all_objects(fn) { eachobj(world,fn); },
-
-  /* Returns a list of objects by name */
-  find(name) {
-    
-  },
-
-  /* Return a list of objects derived from a specific prototype */
-  find_proto(proto) {
-
-  },
-
-  /* List of all objects spawned that have a specific tag */
-  find_tag(tag){
-
-  },
-});
+game.all_objects = function(fn) { eachobj(world,fn); };
 
 game.doc = {};
 game.doc.object = "Returns the entity belonging to a given id.";
