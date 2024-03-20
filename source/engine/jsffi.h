@@ -6,7 +6,6 @@
 #include "dsp.h"
 
 void ffi_load();
-void ffi_stop();
 
 JSValue vec22js(HMM_Vec2 v);
 HMM_Vec2 js2vec2(JSValue v);

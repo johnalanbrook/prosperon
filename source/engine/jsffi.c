@@ -1626,8 +1626,3 @@ void ffi_load() {
 
   JS_FreeValue(js,globalThis);
 }
-
-void ffi_stop()
-{
-  JS_FreeValue(js, sound_proto);
-}

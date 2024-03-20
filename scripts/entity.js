@@ -274,7 +274,6 @@ var gameobject = {
     console.info(`Creating entity of type ${ent.ur}`);
 
     ent.warp_layer = [true];
-    ent.phys = 2;
     ent.components = {};
     ent.objects = {};
     ent.timers = [];
@@ -326,7 +325,6 @@ var gameobject = {
       mur.proto = json.decode(json.encode(ent));
 
     ent.sync();
-    console.info(`entity is type ${ent.phys}`);
 
     if (!Object.empty(ent.objects)) {
       var o = ent.objects;
@@ -339,8 +337,6 @@ var gameobject = {
         Object.assign(n, o[i]);
       }
     }
-
-    console.info(`Made object with mass ${ent.mass} and moi ${ent.moi}`);
 
     return ent;
   },

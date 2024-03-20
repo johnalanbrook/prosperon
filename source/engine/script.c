@@ -29,9 +29,7 @@ void script_startup() {
 
 void script_stop()
 {
-  script_evalf("Event.notify('quit');");
   script_evalf("prosperon.quit();");
-  ffi_stop();
 
 #if LEAK
   JS_FreeContext(js);
