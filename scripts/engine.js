@@ -70,7 +70,7 @@ function use(file)
   var c = io.slurp(file);
   
   var script = `(function() { ${c} })();`;
-  use.files[file] = os.eval_env(file,global,script);
+  use.files[file] = os.eval_env(file,script,global);
 
   return use.files[file];
 }
@@ -90,7 +90,7 @@ function eval_env(script, env, file)
   file ??= "SCRIPT";
   console.spam(`eval ${file}`);  
   script = `(function() { ${script}; }).call(this);\n`;
-  return os.eval_env(file,env,script);
+  return os.eval_env(file,script,env);
 }
 
 global.check_registers = function(obj)
@@ -147,8 +147,7 @@ global.mixin("scripts/render.js");
 global.mixin("scripts/debug.js");
 
 var frame_t = profile.secs(profile.now());
-var updateMS = 1/60;
-var physMS = 1/60;
+var phys_step = 1/60;
 
 var sim = {
   mode: "play",
@@ -185,10 +184,10 @@ function process()
   
   physlag += dt;
   
-  while (physlag > physMS) {
-    physlag -= physMS;
-    prosperon.phys2d_step(physMS*timescale);
-    prosperon.physupdate(physMS*timescale);
+  while (physlag > phys_step) {
+    physlag -= phys_step;
+    prosperon.phys2d_step(phys_step*timescale);
+    prosperon.physupdate(phys_step*timescale);
   }
 
   prosperon.window_render();

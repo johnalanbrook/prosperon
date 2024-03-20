@@ -477,7 +477,7 @@ component.edge2d = Object.copy(collider2d, {
     }
 
     if (this.hollow) {
-      var hpoints = inflate_cpv(spoints, spoints.length, this.hollowt);
+      var hpoints = vector.inflate(spoints, this.hollowt);
       if (hpoints.length === spoints.length) return spoints;
       var arr1 = hpoints.filter(function(x,i) { return i % 2 === 0; });
       var arr2 = hpoints.filter(function(x,i) { return i % 2 !== 0; });

@@ -47,6 +47,8 @@ struct phys2d_circle {
   struct phys2d_shape shape;
 };
 
+typedef struct phys2d_circle circle2d;
+
 /* A convex polygon; defined as the convex hull around the given set of points */
 struct phys2d_poly {
   HMM_Vec2 *points;
@@ -66,6 +68,7 @@ struct phys2d_edge {
 
 struct phys2d_circle *Make2DCircle(gameobject *go);
 void phys2d_circledel(struct phys2d_circle *c);
+void circle2d_free(circle2d *c);
 void phys2d_applycircle(struct phys2d_circle *circle);
 void phys2d_dbgdrawcircle(struct phys2d_circle *circle);
 float phys2d_circle_moi(struct phys2d_circle *c);

@@ -287,9 +287,8 @@ float phys2d_circle_moi(struct phys2d_circle *c) {
   return cpMomentForCircle(m, 0, cpCircleShapeGetRadius(c->shape.shape), cpCircleShapeGetOffset(c->shape.shape));
 }
 
-void phys2d_circledel(struct phys2d_circle *c) {
-  phys2d_shape_del(&c->shape);
-}
+void phys2d_circledel(struct phys2d_circle *c) { phys2d_shape_del(&c->shape); }
+void circle2d_free(circle2d *c) { phys2d_circledel(c); }
 
 void phys2d_dbgdrawcpcirc(cpShape *c) {
   HMM_Vec2 pos = mat_t_pos(t_go2world(shape2go(c)), (HMM_Vec2)cpCircleShapeGetOffset(c));
