@@ -40,8 +40,11 @@ int stdout_lvl = LOG_ERROR;
 void log_init()
 {
 #ifndef NDEBUG
-  if (!fexists(".prosperon"))
-    logout = writeout = dump = stdout;
+  if (!fexists(".prosperon")) {
+    logout = tmpfile();
+    dump = tmpfile();
+    writeout = stdout;
+  }
   else {
     logout = fopen(".prosperon/log.txt", "w");
     writeout = fopen(".prosperon/transcript.txt", "w");
@@ -98,7 +101,6 @@ void log_print(const char *str)
 #ifndef NDEBUG
   fprintf(writeout, str);
 #endif
-  printf(str);
   fflush(stdout);
 }
 

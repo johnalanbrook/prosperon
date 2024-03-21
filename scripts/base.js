@@ -590,11 +590,9 @@ Object.defineProperty(Object.prototype, 'obscure', {
 
 Object.defineProperty(Object.prototype, 'mixin', {
   value: function(obj) {
-    if (typeof obj === 'string') {
-      var script = io.slurp(obj);
-      obj = eval_env(script, this, obj);
-    }
-    
+    if (typeof obj === 'string')
+      obj = use(obj, this);
+      
     if (obj)
       Object.mixin(this, obj);
   },

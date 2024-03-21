@@ -748,8 +748,7 @@ JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
 JSC_CCALL(os_quit, quit();)
 JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
 JSC_CCALL(os_gc, script_gc());
-JSC_SSCALL(os_eval_env, ret = eval_script_env(str, argv[2], str2))
-
+JSC_SSCALL(os_eval, ret = script_eval(str, str2))
 JSC_SCALL(os_capture, capture_screen(js2number(argv[1]), js2number(argv[2]), js2number(argv[4]), js2number(argv[5]), str))
 
 JSC_CCALL(os_sprite,
@@ -807,7 +806,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),
   MIST_FUNC_DEF(os, capture, 5),
-  MIST_FUNC_DEF(os, eval_env, 3),
+  MIST_FUNC_DEF(os, eval, 2),
   MIST_FUNC_DEF(os, make_gameobject, 0),
   MIST_FUNC_DEF(os, make_circle2d, 1),
   MIST_FUNC_DEF(os, make_poly2d, 1),
@@ -1101,26 +1100,6 @@ JSValue js_io_chmod(JSContext *js, JSValue this, int argc, JSValue *argv)
 
 JSC_SCALL(io_save_qoa, save_qoa(str))
 
-JSValue js_io_compile(JSContext *js, JSValue this, int argc, JSValue *argv) {
-  size_t len;
-  char *str = js2str(argv[0]);
-  void *d = script_compile(str, &len);
-  JSValue ret = JS_NewArrayBufferCopy(js,d,len);
-  JS_FreeCString(js,str);
-  free(d);
-  return ret;
-}
-
-JSValue js_io_run_bytecode(JSContext *js, JSValue this, int argc, JSValue *argv) {
-  size_t len;
-  char *str = js2str(argv[0]);
-  void *d = slurp_file(str, &len);
-  JSValue ret = script_run_bytecode(d, len);
-  JS_FreeCString(js,str);
-  free(d);
-  return ret;
-}
-
 JSC_SCALL(io_pack_engine, pack_engine(str))
 
 static const JSCFunctionListEntry js_io_funcs[] = {
@@ -1136,7 +1115,7 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, slurpbytes, 1),
   MIST_FUNC_DEF(io, slurpwrite, 2),
   MIST_FUNC_DEF(io, save_qoa,1),
-  MIST_FUNC_DEF(io, pack_engine, 1)
+  MIST_FUNC_DEF(io, pack_engine, 1),
 };
 
 JSC_CCALL(debug_draw_gameobject, gameobject_draw_debug(js2gameobject(argv[0]));)
@@ -1580,6 +1559,8 @@ void ffi_load() {
   
   QJSCLASSPREP(ptr);
   
+  QJSGLOBALCLASS(os);
+  
   QJSCLASSPREP_FUNCS(gameobject);
   QJSCLASSPREP_FUNCS(dsp_node);
   QJSCLASSPREP_FUNCS(emitter);
@@ -1591,7 +1572,6 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(window);
   QJSCLASSPREP_FUNCS(drawmodel);
 
-  QJSGLOBALCLASS(os);
   QJSGLOBALCLASS(nota);
   QJSGLOBALCLASS(input);
   QJSGLOBALCLASS(io);

@@ -39,30 +39,6 @@ os.prefpath = function() {
 
 var projectfile = ".prosperon/project.json";
 
-var Resources = {};
-Resources.scripts = ["jso", "js"];
-Resources.images = ["png", "gif", "jpg", "jpeg"];
-Resources.sounds =  ["wav", 'flac', 'mp3', "qoa"];
-Resources.scripts = "js";
-Resources.is_image = function(path) {
-  var ext = path.ext();
-  return Resources.images.any(x => x === ext);
-}
-
-function find_ext(file, ext)
-{
-  if (io.exists(file)) return file;
-  for (var e of ext) {
-    var nf = `${file}.${e}`;
-    if (io.exists(nf)) return nf;
-  }
-  return;
-}
-
-Resources.find_image = function(file) { return find_ext(file,Resources.images); }
-Resources.find_sound = function(file) { return find_ext(file,Resources.sounds); }
-Resources.find_script = function(file) { return find_ext(file,Resources.scripts); }
-
 Resources.is_sound = function(path) {
   var ext = path.ext();
   return Resources.sounds.any(x => x === ext);
@@ -89,6 +65,7 @@ Resources.gif.frames = function(path) { return render.gif_frames(path); }
 
 Resources.replpath = function(str, path)
 {
+  if (!str) return str;
   if (str[0] === "/")
     return str.rm(0);
 
@@ -421,7 +398,7 @@ Cmdline.register_order("api", function(obj) {
     return;
   }
 
-  load("scripts/editor.js");
+  use("scripts/editor.js");
   var api = debug.api.print_doc(obj[0]);
   if (!api)
     return;
@@ -429,15 +406,8 @@ Cmdline.register_order("api", function(obj) {
   say(api);
 }, "Print the API for an object as markdown. Give it a file to save the output to.", "OBJECT");
 
-Cmdline.register_order("compile", function(argv) {
-  for (var file of argv) {
-    var comp = io.compile(file);
-    io.slurpwrite(file + "c", comp);
-  }
-}, "Compile one or more provided files into bytecode.", "FILE ...");
-
 Cmdline.register_order("input", function(pawn) {
-  load("scripts/editor.js");
+  use("scripts/editor.js");
   say(`## Input for ${pawn}`);
   eval(`say(input.print_md_kbm(${pawn}));`);
 }, "Print input documentation for a given object as markdown. Give it a file to save the output to", "OBJECT ?FILE?");
@@ -449,17 +419,7 @@ Cmdline.register_order("run", function(script) {
     return;
   }
   
-  if (io.exists(script))
-    try {
-      if (script.endswith("c"))
-        io.run_bytecode(script);
-      else
-        load(script);
-    } catch(e) { }
-  else {
-    var ret = eval(script);
-    if (ret) say(ret);
-  }
+  say(use(script));
 }, "Run a given script. SCRIPT can be the script itself, or a file containing the script", "SCRIPT");
 
 Cmdline.orders.script = Cmdline.orders.run;
@@ -514,7 +474,6 @@ function cmd_args(cmdargs)
   
   Cmdline.orders[cmds[0]](cmds.slice(1));
 }
-
 
 Cmdline.register_order("clean", function(argv) {
   say("Cleaning not implemented.");

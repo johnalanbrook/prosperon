@@ -58,6 +58,7 @@ static JSValue c_process_fn;
 void c_init() {
   mainwin.start = 1;
   window_resize(sapp_width(), sapp_height());
+  phys2d_init();  
   render_init();
   set_icon("icons/moon.gif");  
   particle_init();
@@ -201,7 +202,7 @@ int main(int argc, char **argv) {
   signal(SIGABRT, seghandle);
   signal(SIGFPE, seghandle);
 #endif
-  phys2d_init();  
+
 
   resources_init();
   stm_setup(); /* time */

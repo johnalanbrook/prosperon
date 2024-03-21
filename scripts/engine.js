@@ -1,5 +1,41 @@
 "use math";
 
+globalThis.Resources = {};
+Resources.scripts = ["jsoc", "jsc", "jso", "js"];
+Resources.images = ["png", "gif", "jpg", "jpeg"];
+Resources.sounds =  ["wav", 'flac', 'mp3', "qoa"];
+Resources.is_image = function(path) {
+  var ext = path.ext();
+  return Resources.images.any(x => x === ext);
+}
+
+function find_ext(file, ext)
+{
+  if (io.exists(file)) return file;
+  for (var e of ext) {
+    var nf = `${file}.${e}`;
+    if (io.exists(nf)) return nf;
+  }
+  return;
+}
+
+Resources.find_image = function(file) { return find_ext(file,Resources.images); }
+Resources.find_sound = function(file) { return find_ext(file,Resources.sounds); }
+Resources.find_script = function(file) { return find_ext(file,Resources.scripts); }
+
+profile.best_t = function(t) {
+  var qq = 'ns';
+  if (t > 1000) {
+    t /= 1000;
+    qq = 'us';
+    if (t > 1000) {
+      t /= 1000;
+qq = 'ms';
+    }
+  }
+  return `${t.toPrecision(4)} ${qq}`;
+}
+
 Object.assign(console, {
   say(msg) { console.print(msg + "\n"); },
   
@@ -60,36 +96,29 @@ console.doc = {
 
 globalThis.global = globalThis;
 
-function use(file)
+function use(file, env, script)
 {
-  if (use.files[file]) return use.files[file];
-  console.info(`running ${file}`);
-    
-  var c = io.slurp(file);
+  file = Resources.find_script(file);
+  console.info(`loading up ${file}`);
+  var st = profile.now();
+  env ??= {};  
   
-  var script = `(function() { ${c} })();`;
-  use.files[file] = os.eval_env(file,script,global);
-
-  return use.files[file];
+  if (use.cache[file]) {
+    var ret = use.cache[file].call(env);
+    console.info(`CACHE eval ${file} in ${profile.best_t(profile.now()-st)}`);
+    return;
+  }
+  
+  script ??= io.slurp(file);
+  script = `(function() { ${script}; })`;
+  var fn = os.eval(file,script);
+  use.cache[file] = fn;
+  var ret = fn.call(env);
+  console.info(`eval ${file} in ${profile.best_t(profile.now()-st)}`);  
+  return ret;
 }
-use.files = {};
 
-function include(file,that)
-{
-  if (!that) return;
-  console.info(`running ${file}`);
-  var c = io.slurp(file);
-  eval_env(c, that, file);
-}
-
-function eval_env(script, env, file)
-{
-  env ??= {};
-  file ??= "SCRIPT";
-  console.spam(`eval ${file}`);  
-  script = `(function() { ${script}; }).call(this);\n`;
-  return os.eval_env(file,script,env);
-}
+use.cache = {};
 
 global.check_registers = function(obj)
 {
@@ -121,28 +150,10 @@ global.check_registers = function(obj)
     };
 }
 
-eval_env.dov = `Counterpart to /load_env/, but with a string.`;
-
-function feval_env(file, env)
-{
-  eval_env(io.slurp(file), env, file);
-}
-
-function load_env(file,env)
-{
-  env ??= global;
-  var script = io.slurp(file);
-  eval_env(script, env, file);
-}
-
-load_env.doc = `Load a given file with 'env' as **this**. Does not add to the global namespace.`;
-
-var load = use;
-
-Object.assign(global, use("scripts/base.js"));
+Object.assign(global, use("scripts/base"));
 global.obscure('global');
-global.mixin("scripts/render.js");
-global.mixin("scripts/debug.js");
+global.mixin("scripts/render");
+global.mixin("scripts/debug");
 
 var frame_t = profile.secs(profile.now());
 var phys_step = 1/60;
@@ -162,7 +173,11 @@ var timescale = 1;
 
 var gggstart = game.engine_start;
 game.engine_start = function(s) {
-  gggstart(function() { world_start(); s(); }, process);  
+  gggstart(function() {
+      world_start();
+      go_init();
+      s();
+  }, process);  
 }
 
 function process()
@@ -290,11 +305,11 @@ prosperon.quit = function(){
     console.warn(debug.log.time[i].map(x=>profile.ms(x)));
 };
 
-global.mixin("scripts/input.js");
-global.mixin("scripts/std.js");
-global.mixin("scripts/diff.js");
-global.mixin("scripts/color.js");
-global.mixin("scripts/gui.js");
+global.mixin("scripts/input");
+global.mixin("scripts/std");
+global.mixin("scripts/diff");
+global.mixin("scripts/color");
+global.mixin("scripts/gui");
 
 var timer = {
   update(dt) {
@@ -322,10 +337,10 @@ var timer = {
   },
 };
 
-global.mixin("scripts/tween.js");
-global.mixin("scripts/physics.js");
-global.mixin("scripts/ai.js");
-global.mixin("scripts/geometry.js");
+global.mixin("scripts/tween");
+global.mixin("scripts/physics");
+global.mixin("scripts/ai");
+global.mixin("scripts/geometry");
 
 /*
 Factory for creating registries. Register one with 'X.register',
@@ -414,8 +429,8 @@ window.world2screen = function(worldpos) {
 
 window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
 
-global.mixin("scripts/spline.js");
-global.mixin("scripts/components.js");
+global.mixin("scripts/spline");
+global.mixin("scripts/components");
 
 window.doc = {};
 window.doc.width = "Width of the game window.";
@@ -424,8 +439,8 @@ window.doc.dimensions = "Window width and height packaged in an array [width,hei
 window.doc.title = "Name in the title bar of the window.";
 window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
 
-global.mixin("scripts/actor.js");
-global.mixin("scripts/entity.js");
+global.mixin("scripts/actor");
+global.mixin("scripts/entity");
 
 function world_start() {
   globalThis.world = os.make_gameobject();
@@ -439,7 +454,7 @@ function world_start() {
   game.cam = world;
 }
 
-global.mixin("scripts/physics.js");
+global.mixin("scripts/physics");
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500,500];

@@ -23,7 +23,7 @@ void script_startup() {
     
   size_t len;
   char *eng = slurp_text("scripts/engine.js", &len);
-  eval_script_env("scripts/engine.js", JS_GetGlobalObject(js), eng);
+  script_eval("scripts/engine.js", eng);
   free(eng);
 }
 
@@ -38,25 +38,6 @@ void script_stop()
 }
 
 void script_gc() { JS_RunGC(rt); }
-
-uint8_t *script_compile(const char *file, size_t *len) {
-  size_t file_len;
-  char *script = slurp_text(file, &file_len);
-  JSValue obj = JS_Eval(js, script, file_len, file, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAGS);
-  free(script);
-  uint8_t *out = JS_WriteObject(js, len, obj, JS_WRITE_OBJ_BYTECODE);
-  JS_FreeValue(js,obj);
-  return out;
-}
-
-JSValue script_run_bytecode(uint8_t *code, size_t len)
-{
-  JSValue b = JS_ReadObject(js, code, len, JS_READ_OBJ_BYTECODE);
-  JSValue ret = JS_EvalFunction(js, b);
-  js_print_exception(ret);
-  JS_FreeValue(js,b);
-  return ret;
-}
 
 void js_stacktrace() {
 #ifndef NDEBUG
@@ -77,11 +58,11 @@ void script_evalf(const char *format, ...)
   JS_FreeValue(js,obj);
 }
 
-JSValue eval_script_env(const char *file, JSValue env, const char *script)
+JSValue script_eval(const char *file, const char *script)
 {
-  JSValue v = JS_EvalThis(js, env, script, strlen(script), file, JS_EVAL_FLAGS);
+  JSValue v = JS_Eval(js, script, strlen(script), file, JS_EVAL_FLAGS | JS_EVAL_FLAG_COMPILE_ONLY);
   js_print_exception(v);
-  return v;
+  return JS_EvalFunction(js, v);
 }
 
 void script_call_sym(JSValue sym, int argc, JSValue *argv) {

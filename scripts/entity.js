@@ -296,7 +296,7 @@ var gameobject = {
     }
 
     if (ent.ur === 'script')
-      eval_env(io.slurp(text), ent, ent.ur);
+      use(text, ent);
     else
       apply_ur(ent.ur, ent);
 
@@ -616,15 +616,16 @@ var gameobject = {
   },
 }
 
-var gop = os.make_gameobject().__proto__;
-Object.mixin(gop, gameobject);
-var gsync = gop.sync;
-gop.sync = function() {
-  gsync.call(this);
-  this.components.forEach(function(x) { x.sync?.(); });
-  this.objects.forEach(function(x) { x.sync(); });
+function go_init() {
+  var gop = os.make_gameobject().__proto__;
+  Object.mixin(gop, gameobject);
+  var gsync = gop.sync;
+  gop.sync = function() {
+    gsync.call(this);
+    this.components.forEach(function(x) { x.sync?.(); });
+    this.objects.forEach(function(x) { x.sync(); });
+  }
 }
-
 
 gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
@@ -720,7 +721,7 @@ function apply_ur(u, e) {
 
     if (topur.text) {
       var script = Resources.replstrs(topur.text);
-      eval_env(script, e, topur.text);
+      use(topur.text, e, script);
     }
 
     if (topur.data) {
@@ -780,3 +781,5 @@ game.loadurs = function() {
     name: "empty"
   };
 };
+
+return { go_init }

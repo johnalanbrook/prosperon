@@ -19,8 +19,6 @@ debug.draw = function() {
   if (this.draw_bb)
     game.all_objects(function(x) { debug.boundingbox(x.boundingbox(), Color.debug.boundingbox.alpha(0.05)); });
 
-
-
   if (this.draw_gizmos)
     game.all_objects(function(x) {
       if (!x.icon) return;
@@ -65,19 +63,6 @@ var Gizmos = {
     return idx;
   },
 };
-
-profile.best_t = function(t) {
-  var qq = 'ns';
-  if (t > 1000) {
-    t /= 1000;
-    qq = 'us';
-    if (t > 1000) {
-      t /= 1000;
-qq = 'ms';
-    }
-  }
-  return `${t.toPrecision(4)} ${qq}`;
-}
 
 profile.cpu = function(fn, times, q) {
   times ??= 1;
