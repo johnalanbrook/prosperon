@@ -1402,6 +1402,21 @@ Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * ma
 /* BOUNDINGBOXES */
 var bbox = {};
 
+bbox.overlap = function(box1, box2) {
+  return (
+    box1.l > box2.l &&
+    box1.r < box2.r &&
+    box1.t < box2.t &&
+    box1.b > box2.b
+  );
+  return (
+    box1.l > box2.r ||
+    box1.r < box2.l ||
+    box1.t > box2.b ||
+    box1.b < box2.t
+  );
+}
+
 bbox.fromcwh = function(c, wh) {
   return {
     t: c.y+(wh.y/2),

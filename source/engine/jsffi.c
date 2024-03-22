@@ -805,6 +805,7 @@ JSC_CCALL(os_make_edge2d,
 
 JSC_SCALL(os_make_texture,
   ret = texture2js(texture_from_file(str));
+  YughInfo("MADE TEXTURE");
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
@@ -1608,8 +1609,13 @@ void ffi_load() {
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
 
   sound_proto = JS_NewObject(js);
+  JS_SetPropertyStr(js,globalThis, "sound_proto", sound_proto);
   JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
   JS_SetPrototype(js, sound_proto, dsp_node_proto);
+  
+  JS_FreeValue(js,globalThis);  
+}
 
-  JS_FreeValue(js,globalThis);
+void ffi_stop()
+{
 }

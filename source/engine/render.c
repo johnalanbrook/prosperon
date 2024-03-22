@@ -115,56 +115,12 @@ void capture_screen(int x, int y, int w, int h, const char *path)
 
 int renderMode = LIT;
 
-struct shader *spriteShader = NULL;
-struct shader *wireframeShader = NULL;
-struct shader *animSpriteShader = NULL;
-static struct shader *textShader;
-
 struct rgba editorClearColor = {35,60,92,255};
-
-float shadowLookahead = 8.5f;
-
-struct rgba gridSmallColor = {
-  .r = 255 * 0.35f,
-  .g = 255,
-  .b = 255 * 0.9f
-};
-
-struct rgba gridBigColor = {
-  .r = 255 * 0.92f,
-  .g = 255 * 0.92f,
-  .b = 255 * 0.68f
-};
-
-float gridScale = 500.f;
-float smallGridUnit = 1.f;
-float bigGridUnit = 10.f;
-float gridSmallThickness = 2.f;
-float gridBigThickness = 7.f;
-float gridOpacity = 0.3f;
-
-// Debug render modes
-bool renderGizmos = false;
-bool showGrid = true;
-bool renderNav = false;
-
-// Lighting effect flags
-bool renderAO = true;
-bool renderDynamicShadows = true;
-bool renderRefraction = true;
-bool renderReflection = true;
-
-///// for editing
-struct gameobject *selectedobject = NULL;
-char objectName[200] = {'\0'}; // object name buffer
-
-sg_image ddimg;
 
 void opengl_rendermode(enum RenderMode r) {
   renderMode = r;
 }
 
-sg_pipeline mainpip;
 sg_pass_action pass_action = {0};
 
 static struct {
@@ -309,47 +265,6 @@ void render_init() {
     .data = gif_quad,
   });
   sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
-
-/*
-  sg_image_desc shadow_desc = {
-    .render_target = true,
-    .width = 1024,
-    .height = 1024,
-    .pixel_format = SG_PIXELFORMAT_R32F,
-  };
-  sg_image depth_img = sg_make_image(&shadow_desc);
-  shadow_desc.pixel_format = sapp_depth_format();
-  ddimg = sg_make_image(&shadow_desc);
-
-  sg_shadow.pass = sg_make_pass(&(sg_pass_desc){
-    .color_attachments[0].image = depth_img,
-    .depth_stencil_attachment.image = ddimg,
-  });
-  
-  sg_shadow.pass_action = (sg_pass_action) {
-    .colors[0] = { .action=SG_ACTION_CLEAR, .value = {1,1,1,1} } };
-
-  sg_shadow.shader = sg_make_shader(shadow_shader_desc(sg_query_backend()));
-
-  sg_shadow.pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = sg_shadow.shader,
-    .layout = {
-      .attrs = {
-        [0].format = SG_VERTEXFORMAT_FLOAT3,
-      }
-    },
-    .depth = {
-      .compare = SG_COMPAREFUNC_LESS_EQUAL,
-      .write_enabled = true,
-      .pixel_format = sapp_depth_format()
-    },
-    .colors[0].pixel_format = SG_PIXELFORMAT_R32F,
-    .index_type = SG_INDEXTYPE_UINT16,
-    .cull_mode = SG_CULLMODE_BACK,
-  });
-    
-*/
-
 }
 
 HMM_Vec2 world2screen(HMM_Vec2 pos)
@@ -380,28 +295,6 @@ HMM_Vec3 dirl_pos = {4, 100, 20};
 #define MODE_HEIGHT 3
 #define MODE_EXPAND 4
 #define MODE_FULL 5
-
-void full_3d_pass(struct window *window)
-{
-  HMM_Mat4 model = HMM_M4D(1.f);
-  float scale = 0.08;
-  model = HMM_MulM4(model, HMM_Scale((HMM_Vec3){scale,scale,scale}));
-
-  // Shadow pass
-//  sg_begin_pass(sg_shadow.pass, &sg_shadow.pass_action);
-//  sg_apply_pipeline(sg_shadow.pipe);
-
-  HMM_Mat4 light_proj = HMM_Orthographic_RH_ZO(-100.f, 100.f, -100.f, 100.f, 1.f, 100.f);
-  HMM_Mat4 light_view = HMM_LookAt_RH(dirl_pos, (HMM_Vec3){0,0,0}, (HMM_Vec3){0,1,0});
-
-  HMM_Mat4 lsm = HMM_MulM4(light_proj, light_view);
-
-  HMM_Mat4 subo[2];
-  subo[0] = lsm;
-  subo[1] = model;
-
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(subo));
-}
 
 void openglRender(struct window *window, gameobject *cam, float zoom) {
   sg_swapchain sch = sglue_swapchain();
@@ -448,7 +341,7 @@ void openglRender(struct window *window, gameobject *cam, float zoom) {
              campos.y + camzoom * usesize.y / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
-
+  return;
 
 /*  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
     sg_begin_pass(&(sg_pass){

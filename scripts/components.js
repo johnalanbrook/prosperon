@@ -93,11 +93,14 @@ Object.mixin(os.sprite(true), {
     this.del_anim = function() {
       sp = undefined;
       advance = undefined;
+      this.del_anim = undefined;
+      stop();
     }
     str ??= 0;
     var playing = this.anim[str];
     if (!playing) return;
     var f = 0;
+    var stop;
     
     function advance() {
       if (!sp) this.del_anim();
@@ -106,17 +109,23 @@ Object.mixin(os.sprite(true), {
       sp.frame = playing.frames[f].rect;
       f = (f+1)%playing.frames.length;
       if (f === 0) sp.anim_done?.();
-      sp.gameobject.delay(advance, playing.frames[f].time);
+      stop = sp.gameobject.delay(advance, playing.frames[f].time);
     }
     
     advance();
+  },
+  stop() {
+    this.del_anim?.();
   },
   set path(p) {
     p = Resources.find_image(p);
     if (!p) return;
     if (p === this.path) return;
     this._p = p;    
+    this.del_anime?.();
     this.tex(game.texture(p));
+    this.texture = game.texture(p);
+    this.tex(this.texture);
     
     var anim = SpriteAnim.make(p);
     if (!anim) return;
@@ -148,7 +157,7 @@ Object.mixin(os.sprite(true), {
   },
   
   dimensions() {
-    var dim = [this.tex.width(), this.tex.height()];
+    var dim = [this.texture.width, this.texture.height];
     dim.x *= this.frame.w;
     dim.y *= this.frame.h;
     return dim;
@@ -167,8 +176,6 @@ os.sprite(true).make = function(go)
 
 component.sprite = os.sprite(true);
 
-Object.freeze(sprite);
-
 var sprite = component.sprite;
 
 sprite.doc = {
@@ -177,16 +184,33 @@ sprite.doc = {
   pos: "The offset position of the sprite, relative to its entity."
 };
 
+sprite.anchor = function(anch) {
+  var off = [0,0];
+  switch(anch) {
+    case "ll": break;
+    case "lm": off = [-0.5,0]; break;
+    case "lr": off = [-1,0]; break;
+    case "ml": off = [0,-0.5]; break;
+    case "mm": off = [-0.5,-0.5]; break;
+    case "mr": off = [-1,-0.5]; break;
+    case "ul": off = [0,-1]; break;
+    case "um": off = [-0.5,-1]; break;
+    case "ur": off = [-1,-1]; break;
+  } 
+  this.pos = this.dimensions().scale(off);
+}
+
 sprite.inputs = {};
-sprite.inputs.kp9 = function() { this.pos = this.dimensions().scale([0,0]); };
-sprite.inputs.kp8 = function() { this.pos = this.dimensions().scale([-0.5, 0]); };
-sprite.inputs.kp7 = function() { this.pos = this.dimensions().scale([-1,0]); };
-sprite.inputs.kp6 = function() { this.pos = this.dimensions().scale([0,-0.5]); };
-sprite.inputs.kp5 = function() { this.pos = this.dimensions().scale([-0.5,-0.5]); };
-sprite.inputs.kp4 = function() { this.pos = this.dimensions().scale([-1,-0.5]); };
-sprite.inputs.kp3 = function() { this.pos = this.dimensions().scale([0, -1]); };
-sprite.inputs.kp2 = function() { this.pos = this.dimensions().scale([-0.5,-1]); };
-sprite.inputs.kp1 = function() { this.pos = this.dimensions().scale([-1,-1]); };
+sprite.inputs.kp9 = function() { this.anchor("ll"); }
+sprite.inputs.kp8 = function() { this.anchor("lm"); }
+sprite.inputs.kp7 = function() { this.anchor("lr"); }
+sprite.inputs.kp6 = function() { this.anchor("ml"); }
+sprite.inputs.kp5 = function() { this.anchor("mm"); }
+sprite.inputs.kp4 = function() { this.anchor("mr"); }
+sprite.inputs.kp3 = function() { this.anchor("ur"); }
+sprite.inputs.kp2 = function() { this.anchor("um"); }
+sprite.inputs.kp1 = function() { this.anchor("ul"); }
+
 Object.seal(sprite);
 
 /* sprite anim returns a data structure for the given file path
@@ -796,7 +820,7 @@ component.circle2d = Object.copy(collider2d, {
   toString() { return "circle2d"; },
   
   boundingbox() {
-    return bbox.fromcwh(this.offset.scale(this.gameobject.scale), [this.radius,this.radius]);
+    return bbox.fromcwh([0,0], [this.radius,this.radius]);
   },
 
   hides: ['gameobject', 'id', 'shape', 'scale'],

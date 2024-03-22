@@ -202,7 +202,6 @@ int main(int argc, char **argv) {
   signal(SIGFPE, seghandle);
 #endif
 
-
   resources_init();
   stm_setup(); /* time */
   script_startup();
@@ -226,9 +225,6 @@ int main(int argc, char **argv) {
 
   script_evalf("cmd_args('%s');", cmdstr);
  
-  out_memusage(".prosperon/jsmem.txt");
-  script_stop();
-
   return 0;
 }
 

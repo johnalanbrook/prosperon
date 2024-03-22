@@ -462,3 +462,8 @@ global.mixin("scripts/physics");
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500,500];
+window.boundingbox = function() {
+  var pos = game.camera.pos;
+  var wh = window.rendersize.scale(game.camera.zoom);
+  return bbox.fromcwh(pos,wh);
+}
