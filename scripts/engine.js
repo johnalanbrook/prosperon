@@ -176,6 +176,7 @@ game.engine_start = function(s) {
   gggstart(function() {
       world_start();
       go_init();
+      window.set_icon(os.make_texture("icons/moon.gif"))
       s();
   }, process);  
 }
@@ -235,11 +236,17 @@ game.all_objects = function(fn) { eachobj(world,fn); };
 game.doc = {};
 game.doc.object = "Returns the entity belonging to a given id.";
 game.doc.pause = "Pause game simulation.";
-game.doc.stop = "Stop game simulation. This does the same thing as 'pause', and if the game is a debug build, starts its editor.";
 game.doc.play = "Resume or start game simulation.";
-game.doc.editor_mode = "Set to true for the game to only update on input; otherwise the game updates every frame.";
 game.doc.dt = "Current frame dt.";
 game.doc.camera = "Current camera.";
+
+game.texture = function(path)
+{
+  game.texture.cache[path] ??= os.make_texture(path);  
+  return game.texture.cache[path];
+}
+game.texture.cache = {};
+
 
 prosperon.semver = {};
 prosperon.semver.valid = function(v, range)
@@ -337,9 +344,7 @@ var timer = {
   },
 };
 
-global.mixin("scripts/tween");
 global.mixin("scripts/physics");
-global.mixin("scripts/ai");
 global.mixin("scripts/geometry");
 
 /*
@@ -359,7 +364,6 @@ var Register = {
         fn = fn.bind(obj);
       fns.push(fn);
       return function() {
-        console.spam(`removed from ${name}.`);
         fns.remove(fn);
       };
     }

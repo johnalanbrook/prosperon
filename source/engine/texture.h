@@ -37,21 +37,10 @@ typedef struct img_sampler{
   int mip_filter;
 } img_sampler;
 
-struct texture *texture_from_file(const char *path);   // Create texture from image
-struct texture *texture_fromdata(void *raw, long size);
-
+texture *texture_from_file(const char *path);
 void texture_free(texture *tex);
 
-/* Hot reloads a texture, if needed */
-void texture_sync(const char *path);
-
-char * tex_get_path(struct texture *tex);   // Get image path for texture
-
-int gif_nframes(const char *path);
-int *gif_delays(const char *path);
-
-struct glrect tex_get_rect(struct texture *tex);
-HMM_Vec2 tex_get_dimensions(struct texture *tex);
+struct texture *texture_fromdata(void *raw, long size);
 
 double perlin(double x, double y, double z);
 

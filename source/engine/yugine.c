@@ -60,7 +60,6 @@ void c_init() {
   window_resize(sapp_width(), sapp_height());
   phys2d_init();  
   render_init();
-  set_icon("icons/moon.gif");  
   particle_init();
   script_call_sym(c_start,0,NULL);
 }

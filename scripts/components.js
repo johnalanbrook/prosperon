@@ -90,38 +90,46 @@ Object.mixin(os.sprite(true), {
   playing: 0,
   play(str) {
     var sp = this;
+    this.del_anim = function() {
+      sp = undefined;
+      advance = undefined;
+    }
     str ??= 0;
     var playing = this.anim[str];
-    if (!playing) return; //TODO: ERROR
+    if (!playing) return;
     var f = 0;
     
     function advance() {
+      if (!sp) this.del_anim();
+      if (!sp.gameobject) return;
       sp.path = playing.path;
       sp.frame = playing.frames[f].rect;
       f = (f+1)%playing.frames.length;
-      if (f === 0)
-        sp.anim_done?.();
-      sp.ddd = sp.gameobject?.delay(advance, playing.frames[f].time);
+      if (f === 0) sp.anim_done?.();
+      sp.gameobject.delay(advance, playing.frames[f].time);
     }
+    
     advance();
   },
   set path(p) {
     p = Resources.find_image(p);
     if (!p) return;
     if (p === this.path) return;
-    this.tex = texture.find(p);
+    this._p = p;    
+    this.tex(game.texture(p));
+    
     var anim = SpriteAnim.make(p);
     if (!anim) return;
     this.anim = anim;
     this.play();
   },
   get path() {
-    return this.tex.path();
+    return this._p;
   },
   kill() {
+    this.del_anim?.();
     this.anim = undefined;
-    this.ddd?.();
-    delete this.ddd;
+    this.gameobject = undefined;
   },
   toString() { return "sprite"; },
   move(d) { this.pos = this.pos.add(d); },
@@ -197,10 +205,14 @@ var SpriteAnim = {
       return undefined;
   },
   gif(path) {
+    console.info(`making an anim from ${path}`);
     var anim = {};
     anim.frames = [];
     anim.path = path;
-    var frames = Resources.gif.frames(path);
+    var tex = game.texture(path);
+    var frames = tex.frames;
+    console.info(`frames are ${frames}`);    
+    if (frames === 1) return undefined;
     var yslice = 1/frames;
     for (var f = 0; f < frames; f++) {
       var frame = {};
@@ -213,11 +225,13 @@ var SpriteAnim = {
       frame.time = 0.05;
       anim.frames.push(frame);
     }
-    var times = render.gif_times(path);
+    var times = tex.delays;
+    console.info(`times are ${times}, num ${times.length}`);
     for (var i = 0; i < frames; i++)
       anim.frames[i].time = times[i]/1000;
     anim.loop = true;
-    var dim = Resources.texture.dimensions(path);
+    var dim = [tex.width,tex.height];
+    console.info(`dimensions are ${dim}`);
     dim.y /= frames;
     anim.dim = dim;
     return {0:anim};

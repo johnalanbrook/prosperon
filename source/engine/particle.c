@@ -99,7 +99,7 @@ emitter *make_emitter() {
   sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
   e->scale = 1;
   e->speed = 20;
-  e->texture = texture_from_file("glass_chunk2.gif");
+  e->texture = NULL;
   arrpush(emitters,e);
   return e;
 }
@@ -166,7 +166,7 @@ void parallel_pv(emitter *e, struct scheduler *sched, struct sched_task_partitio
       s = lerp(p->time/e->grow_for, 0, p->scale);
     else if (p->time > (p->life - e->shrink_for))
       s = lerp((p->time-(p->life-e->shrink_for))/e->shrink_for, p->scale, 0);
-    pv[i].scale = HMM_ScaleV2(tex_get_dimensions(e->texture), s);
+    pv[i].scale = HMM_ScaleV2((HMM_Vec2){e->texture->width,e->texture->height}, s);
     pv[i].color = vec2rgba(p->color);
   }
 }

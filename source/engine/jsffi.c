@@ -76,6 +76,8 @@ const char *js2str(JSValue v) {
 
 #define MIST_CGETSET_DEF(name, fgetter, fsetter) { name, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CGETSET, 0, .u = { .getset = { .get = { .getter = fgetter }, .set = { .setter = fsetter } } } }
 
+#define MIST_GET(name, fgetter) { #fgetter , JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CGETSET, 0, .u = { .getset = { .get = { .getter = js_##name##_get_##fgetter } } } }
+
 #define CGETSET_ADD(ID, ENTRY) MIST_CGETSET_DEF(#ENTRY, js_##ID##_get_##ENTRY, js_##ID##_set_##ENTRY)
 
 #define JSC_CCALL(NAME, FN) JSValue js_##NAME (JSContext *js, JSValue this, int argc, JSValue *argv) { \
@@ -125,8 +127,12 @@ JSValue js_gameobject_get_##ENTRY (JSContext *js, JSValue this) { \
   return TYPE##2js (cpBodyGet##CPENTRY (b)); \
 } \
 
+#define JSC_GET(ID, ENTRY, TYPE) \
+JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue this) { \
+  return TYPE##2js(js2##ID (this)->ENTRY); } \
+
 #define QJSCLASS(TYPE)\
-static JSClassID js_ ## TYPE ## _id;\
+static JSClassID js_##TYPE##_id;\
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
 TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
 YughSpam("Freeing " #TYPE " at %p", n); \
@@ -797,6 +803,11 @@ JSC_CCALL(os_make_edge2d,
   return edgeval;
 )
 
+JSC_SCALL(os_make_texture,
+  ret = texture2js(texture_from_file(str));
+  JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os,sprite,1),
   MIST_FUNC_DEF(os, cwd, 0),
@@ -812,6 +823,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_poly2d, 1),
   MIST_FUNC_DEF(os, make_edge2d, 1),
   MIST_FUNC_DEF(os, make_model, 2),
+  MIST_FUNC_DEF(os, make_texture, 1),
 };
 
 JSC_CCALL(render_normal, opengl_rendermode(LIT))
@@ -841,16 +853,12 @@ JSC_CCALL(render_pass, debug_nextpass())
 JSC_CCALL(render_end_pass, sg_end_pass())
 JSC_CCALL(render_commit, sg_commit(); debug_newframe();)
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
-JSC_SCALL(render_gif_times, ret = ints2js(gif_delays(str)))
-JSC_SCALL(render_gif_frames, ret = number2js(gif_nframes(str)))
 JSC_CCALL(render_world2screen, return vec22js(world2screen(js2vec2(argv[0]))))
 JSC_CCALL(render_screen2world, return vec22js(screen2world(js2vec2(argv[0]))))
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render,world2screen,1),
   MIST_FUNC_DEF(render,screen2world,1),
-  MIST_FUNC_DEF(render,gif_frames,1),
-  MIST_FUNC_DEF(render, gif_times, 1),
   MIST_FUNC_DEF(render, normal, 0),
   MIST_FUNC_DEF(render, wireframe, 0),
   MIST_FUNC_DEF(render, grid, 3),
@@ -1271,8 +1279,7 @@ static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
   return JS_UNDEFINED;
 }
 JSC_CCALL(window_get_title, return str2js(js2window(this)->title))
-JSC_SCALL(window_set_icon, set_icon(str))
-JSC_SCALL(window_icon, set_icon(str))
+JSC_CCALL(window_set_icon, window_seticon(&mainwin, js2texture(argv[0])))
 
 static const JSCFunctionListEntry js_window_funcs[] = {
   CGETSET_ADD(window, size),
@@ -1435,12 +1442,13 @@ JSC_GETSET(sprite, scale, vec2)
 JSC_GETSET(sprite, angle, number)
 JSC_GETSET(sprite, frame, rect)
 JSC_GETSET(sprite,go,gameobject)
+JSC_CCALL(sprite_tex, js2sprite(this)->tex = js2texture(argv[0]))
 
 static const JSCFunctionListEntry js_sprite_funcs[] = {
   CGETSET_ADD(sprite,pos),
   CGETSET_ADD(sprite,scale),
   CGETSET_ADD(sprite,angle),
-  CGETSET_ADD(sprite,tex),
+  MIST_FUNC_DEF(sprite, tex, 1),
   CGETSET_ADD(sprite,color),
   CGETSET_ADD(sprite,emissive),
   CGETSET_ADD(sprite,enabled),
@@ -1449,17 +1457,16 @@ static const JSCFunctionListEntry js_sprite_funcs[] = {
   CGETSET_ADD(sprite,go)
 };
 
-GETFN(texture,width,number)
-GETFN(texture,height,number)
-JSC_CCALL(texture_path, return str2js(tex_get_path(js2texture(this))))
-JSC_SCALL(texture_find, ret = texture2js(texture_from_file(str)))
+JSC_GET(texture, width, number)
+JSC_GET(texture, height, number)
+JSC_GET(texture, frames, number)
+JSC_GET(texture, delays, ints)
 
 static const JSCFunctionListEntry js_texture_funcs[] = {
-  MIST_FUNC_DEF(texture, width, 0),
-  MIST_FUNC_DEF(texture, height, 0),
-  MIST_FUNC_DEF(texture, path, 0),
-  MIST_FUNC_DEF(texture, find, 1),
-//  MIST_FUNC_DEF(texture, dimensions, 1),
+  MIST_GET(texture, width),
+  MIST_GET(texture, height),
+  MIST_GET(texture, frames),
+  MIST_GET(texture, delays),
 };
 
 JSValue js_constraint_set_max_force (JSContext *js, JSValue this, JSValue val) {

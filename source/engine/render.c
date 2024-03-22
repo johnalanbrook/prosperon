@@ -174,12 +174,6 @@ static struct {
   sg_shader shader;
 } sg_shadow;
 
-
-void trace_make_image(const sg_image_desc *d, sg_image id, void *data)
-{
-  YughSpam("Made image %s.", d->label);
-}
-
 void trace_init_image(sg_image id, const sg_image_desc *d, void *data)
 {
   YughSpam("Init image %s", d->label);
@@ -238,7 +232,6 @@ static sg_trace_hooks hooks = {
   .make_shader = trace_make_shader,
   .destroy_shader = trace_destroy_shader,
   .fail_image = trace_fail_image,
-  .make_image = trace_make_image,
   .init_image = trace_init_image,
   .make_pipeline = trace_make_pipeline,
   .fail_pipeline = trace_fail_pipeline,

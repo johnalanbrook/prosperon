@@ -51,7 +51,7 @@ sprite *sprite_make()
   sp->color = color_white;
   sp->emissive = color_clear;
   sp->go = NULL;
-  sp->tex = texture_from_file(NULL);
+  sp->tex = NULL;
   sp->frame = ST_UNIT;
   sp->drawmode = DRAW_SIMPLE;
   sp->enabled = 1;
@@ -64,8 +64,6 @@ sprite *sprite_make()
 
 void sprite_free(sprite *sprite)
 {
-  YughWarn("Freeing sprite %p.", sprite); 
-  
   free(sprite);
   for (int i = arrlen(sprites)-1; i >= 0; i--)
     if (sprites[i] == sprite) {
@@ -215,6 +213,7 @@ void sprite_draw(struct sprite *sprite) {
 }
 
 void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
+  return;
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   struct texture *tex = texture_from_file(img);

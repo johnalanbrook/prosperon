@@ -178,23 +178,33 @@ var gameobject = {
   },
 
   delay(fn, seconds) {
-    var timescale = this.timescale;
-    var timers = this.timers;
-    var thisfn = fn.bind(this);
-    var rm_register;
+    var that = this;
     
-    var ud = function(dt) {
-      seconds -= dt*timescale;
-      if (seconds <= 0) {
-        thisfn();
-        rm_register();
-        rm_register = undefined;
-        thisfn = undefined;
-      }
+    var stop = function() { 
+      that.timers.remove(stop);
+      execute = undefined;
+      stop = undefined;
+      rm();
+      rm = undefined;
+      update = undefined;
     }
     
-    rm_register = Register.update.register(ud);
-    return rm_register;
+    function execute() {
+      fn.call(that);
+      stop?.();
+    }
+    
+    stop.remain = seconds;
+    stop.seconds = seconds;
+    
+    function update(dt) {
+      stop.remain -= dt;
+      if (stop.remain <= 0) execute();
+    }
+    
+    var rm = Register.update.register(update);
+    this.timers.push(stop);
+    return stop;
   },
 
   tween(prop, values, def) {
@@ -535,7 +545,10 @@ var gameobject = {
     this.__kill = true;
     console.info(`Killing entity of type ${this.ur}`);
 
+    console.info(`killing ${this.timers.length} timers.`);
     this.timers.forEach(t => t());
+    console.info(`now there are ${this.timers.length}`);
+    for (var i of this.timers) console.info(i);
     this.timers = [];
     Event.rm_obj(this);
     Player.do_uncontrol(this);
@@ -679,7 +692,7 @@ gameobject.doc = {
   gear: 'Keeps the angular velocity ratio of this body and to constant. Ratio is the gear ratio.',
   motor: 'Keeps the relative angular velocity of this body to to at a constant rate. The most simple idea is for one of the bodies to be static, to the other is kept at rate.',
   layer: 'Bitmask for collision layers.',
-  draw_layer: 'Layer for drawing. Higher numbers draw above lower ones.',
+  drawlayer: 'Layer for drawing. Higher numbers draw above lower ones.',
   warp_layer: 'Bitmask for selecting what warps should affect this entity.',
 };
 

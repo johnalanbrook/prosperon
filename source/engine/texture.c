@@ -4,7 +4,6 @@
 #include "render.h"
 #include "sokol/sokol_gfx.h"
 #include <math.h>
-#include <stb_ds.h>
 #include <stb_image.h>
 
 #include "resources.h"
@@ -22,14 +21,6 @@
 #endif
 
 struct rect ST_UNIT = {0.f, 0.f, 1.f, 1.f};
-
-static struct {
-  char *key;
-  struct texture *value;
-} *texhash = NULL;
-
-struct texture *tex_default;
-struct texture *texture_notex() { return texture_from_file("icons/no_tex.gif"); }
 
 unsigned int next_pow2(unsigned int v)
 {
@@ -70,31 +61,14 @@ int mip_wh(int w, int h, int *mw, int *mh, int lvl)
   return 0;
 }
 
-int gif_nframes(const char *path)
-{
-  struct texture *t = texture_from_file(path);
-  return t->frames;
-}
-
-int *gif_delays(const char *path)
-{
-  struct texture *t = texture_from_file(path);
-  return t->delays;
-}
-
 /* If an empty string or null is put for path, loads default texture */
 struct texture *texture_from_file(const char *path) {
-  if (!path) return texture_notex();
-  if (shlen(texhash) == 0) sh_new_arena(texhash);
-
-  int index = shgeti(texhash, path);
-  if (index != -1)
-    return texhash[index].value;
+  if (!path) return NULL;
 
   size_t rawlen;
   unsigned char *raw = slurp_file(path, &rawlen);
   
-  if (!raw) return texture_notex();
+  if (!raw) return NULL;
 
   unsigned char *data;
 
@@ -115,8 +89,7 @@ struct texture *texture_from_file(const char *path) {
     int *dd = tex->delays;
     tex->delays = NULL;
     arrsetlen(tex->delays, tex->frames);
-    for (int i = 0; i < tex->frames;i++)
-      tex->delays[i] = dd[i];
+    for (int i = 0; i < tex->frames; i++) tex->delays[i] = dd[i];
     free(dd);
     tex->height *= tex->frames;
   } else if (!strcmp(ext, ".svg")) {
@@ -141,10 +114,8 @@ struct texture *texture_from_file(const char *path) {
   }
   free(raw);
 
-  if (data == NULL) {
-    YughError("STBI failed to load file %s with message: %s\nOpening default instead.", path, stbi_failure_reason());
-    return texture_notex();
-  }
+  if (data == NULL)
+    return NULL;
 
   unsigned int nw = next_pow2(tex->width);
   unsigned int nh = next_pow2(tex->height);
@@ -181,15 +152,13 @@ struct texture *texture_from_file(const char *path) {
   }
 
   tex->id = sg_make_image(&(sg_image_desc){
-      .type = SG_IMAGETYPE_2D,
-      .width = tex->width,
-      .height = tex->height,
-      .usage = SG_USAGE_IMMUTABLE,
-      .num_mipmaps = mips,
-      .data = sg_img_data
-    });
-
-  shput(texhash, path, tex);
+    .type = SG_IMAGETYPE_2D,
+    .width = tex->width,
+    .height = tex->height,
+    .usage = SG_USAGE_IMMUTABLE,
+    .num_mipmaps = mips,
+    .data = sg_img_data
+  });
 
   for (int i = 1; i < mips; i++)
     free(mipdata[i]);
@@ -197,22 +166,13 @@ struct texture *texture_from_file(const char *path) {
   return tex;
 }
 
-void texture_sync(const char *path) { YughWarn("Need to implement texture sync."); }
-
 void texture_free(texture *tex)
 {
-  
-}
-
-char *tex_get_path(struct texture *tex) {
-  for (int i = 0; i < shlen(texhash); i++) {
-    if (tex == texhash[i].value) {
-      YughSpam("Found key %s", texhash[i].key);
-      return texhash[i].key;
-    }
-  }
-
-  return "";
+  if (!tex) return;
+  free(tex->data);
+  if (tex->delays) arrfree(tex->delays);
+  sg_destroy_image(tex->id);
+  free(tex);
 }
 
 struct texture *texture_fromdata(void *raw, long size)
@@ -222,10 +182,8 @@ struct texture *texture_fromdata(void *raw, long size)
   int n;
   void *data = stbi_load_from_memory(raw, size, &tex->width, &tex->height, &n, 4);
 
-  if (data == NULL) {
-    YughError("Given raw data not valid. Loading default instead.");
-    return texture_notex();
-  }
+  if (data == NULL)
+    NULL;
 
   unsigned int nw = next_pow2(tex->width);
   unsigned int nh = next_pow2(tex->height);
@@ -274,14 +232,6 @@ struct texture *texture_fromdata(void *raw, long size)
     free(mipdata[i]);
 
   return tex;
-}
-
-HMM_Vec2 tex_get_dimensions(struct texture *tex) {
-  if (!tex) return (HMM_Vec2){0,0};
-  HMM_Vec2 d;
-  d.x = tex->width;
-  d.y = tex->height;
-  return d;
 }
 
 static double fade (double t) { return t*t*t*(t*(t*6-15)+10); }
