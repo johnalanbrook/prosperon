@@ -281,7 +281,7 @@ var gameobject = {
       }
     }
     
-    console.info(`Creating entity of type ${ent.ur}`);
+    console.spam(`Creating entity of type ${ent.ur}`);
 
     ent.warp_layer = [true];
     ent.components = {};
@@ -543,12 +543,9 @@ var gameobject = {
   kill() {
     if (this.__kill) return;
     this.__kill = true;
-    console.info(`Killing entity of type ${this.ur}`);
+    console.spam(`Killing entity of type ${this.ur}`);
 
-    console.info(`killing ${this.timers.length} timers.`);
     this.timers.forEach(t => t());
-    console.info(`now there are ${this.timers.length}`);
-    for (var i of this.timers) console.info(i);
     this.timers = [];
     Event.rm_obj(this);
     Player.do_uncontrol(this);

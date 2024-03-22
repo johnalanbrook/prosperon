@@ -105,7 +105,7 @@ void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
 }
 
 void gameobject_apply(gameobject *go) {
-  YughInfo("Applying gameobject %p", go);
+  YughSpam("Applying gameobject %p", go);
   cpBodySetType(go->body, go->phys);
   cpBodyEachShape(go->body, go_shape_apply, go);
 

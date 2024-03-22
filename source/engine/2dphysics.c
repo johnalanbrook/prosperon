@@ -641,7 +641,6 @@ JSValue arb2js(cpArbiter *arb)
 
 void phys_run_post(cpSpace *space, JSValue *fn, JSValue *hit)
 {
-  YughInfo("Run post for %p", fn);
   JSValue hh = *hit;
   script_call_sym(*fn, 1, &hh);
   JS_FreeValue(js, hh);
@@ -651,10 +650,10 @@ void phys_run_post(cpSpace *space, JSValue *fn, JSValue *hit)
 int script_phys_cb_begin(cpArbiter *arb, cpSpace *space, gameobject *go)
 {
   if (!arb_valid(arb)) return 1;
-  YughInfo("Adding begin callbacks for go %p", go);
+  YughSpam("Adding begin callbacks for go %p", go);
   
   if (!JS_IsUndefined(go->cbs.begin) && cpSpaceAddPostStepCallback(space, phys_run_post, &go->cbs.begin, &go->cbs.bhit)) {
-    YughInfo("Added begin for %p", &go->cbs.begin);
+    YughSpam("Added begin for %p", &go->cbs.begin);
     go->cbs.bhit = arb2js(arb);
   }
 

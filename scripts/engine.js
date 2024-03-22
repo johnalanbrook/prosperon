@@ -99,7 +99,6 @@ globalThis.global = globalThis;
 function use(file, env, script)
 {
   file = Resources.find_script(file);
-  console.info(`loading up ${file}`);
   var st = profile.now();
   env ??= {};  
   
