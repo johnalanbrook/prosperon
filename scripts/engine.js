@@ -47,7 +47,7 @@ Object.assign(console, {
     var line = 0;
     
     var caller = (new Error()).stack.split('\n')[2];
-    if (caller) {
+    if (caller) { 
       var md = caller.match(/\((.*)\:/);
       var m = md ? md[1] : "SCRIPT";
       if (m) file = m;
@@ -77,6 +77,7 @@ Object.assign(console, {
   },
 });
 
+console.stdout_lvl = 1;
 console.log = console.say;
 var say = console.say;
 var print = console.print;

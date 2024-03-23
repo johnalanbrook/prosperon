@@ -291,7 +291,7 @@ Cmdline.register_order("pack", function(str) {
 
   say(`Packing into ${packname}`);
     
-  io.pack_engine(packname);n
+  io.pack_engine(packname);
   io.chmod(packname, 666);
 }, "Pack the game into the given name.", "NAME");
 

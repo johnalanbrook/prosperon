@@ -21,5 +21,9 @@ primum.exe
 core.cdb.h
 jsc
 .DS_Store
-primum.html
+*.html
 .vscode
+primum*
+Prosperon*
+*.icns
+game.cdb

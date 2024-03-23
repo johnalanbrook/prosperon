@@ -805,7 +805,7 @@ JSC_CCALL(os_make_edge2d,
 
 JSC_SCALL(os_make_texture,
   ret = texture2js(texture_from_file(str));
-  YughInfo("MADE TEXTURE");
+  YughInfo("Made texture with %s", str);
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 

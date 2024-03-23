@@ -11,8 +11,6 @@ CC := $(notdir $(CC))
 
 OPT ?= 0
 
-QJS :=
-
 INFO :=
 LD = $(CC)
 
@@ -40,10 +38,8 @@ ifdef NQOA
   CPPFLAGS += -DNQOA
 endif
 
-CPPFLAGS += -ffast-math
-
 ifeq ($(CC), emcc)
-  LDFLAGS += #--closure 1
+  LDFLAGS += #--closure 1 --emrun
   CPPFLAGS += -O0
   OPT = 0
   NDEBUG = 1
@@ -52,49 +48,41 @@ endif
 
 ifdef NDEBUG
   CPPFLAGS += -DNDEBUG
-  LDFLAGS += -s
 else
-  CPPFLAGS += -g
-  INFO += _dbg
+  CPPFLAGS += -g -DDUMP
+  INFO :=$(INFO)_dbg
 endif
 
 ifdef LEAK
-  CPPFLAGS += -fsanitize=address
-  CPPFLAGS += -fsanitize=undefined
-  CPPFLAGS += -fno-omit-frame-pointer
-  QJS += LEAK
-endif
-
-ifdef DUMP
-  QJS += DUMP
+  CPPFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -DLEAK
 endif
 
 ifeq ($(OPT),small)
-  CPPFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables
+  CPPFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections 
+
   LDFLAGS += -flto
 
   ifeq ($(CC), emcc)
     LDFLAGS += --closure 1
   endif
 
-  INFO := $(addsuffix _small,$(INFO))
+  INFO :=$(INFO)_small
+else ifeq ($(OPT), 1)
+  CPPFLAGS += -O2 -flto
+  INFO :=$(INFO)_opt
 else
-  ifeq ($(OPT), 1)
-    CPPFLAGS += -O2 -flto
-    INFO := $(addsuffix _opt,$(INFO))
-  else
-    CPPFLAGS += -O0
-  endif
+	CPPFLAGS += -O2
 endif
 
-CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t
+CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
 
 CPPFLAGS += -D_FILE_OFFSET_BITS=64 # for tinycdb
+CPPFLAGS += -DCONFIG_VERSION=\"2024-02-14\" -DCONFIG_BIGNUM #for quickjs
 
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
 # default, fast and medium available in game at runtime; best available in editor
 
-PKGCMD = tar --directory $(BIN) --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
+PKGCMD = tar --directory --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
 ZIP = .tar.gz
 UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
 
@@ -102,30 +90,28 @@ ifeq ($(ARCH),)
   ARCH != uname -m
 endif
 
-STEAMPATH = steam/sdk/redistributable_bin
-DISCORDPATH = discord/lib
+INFO :=$(INFO)_$(ARCH)
 
-ifdef DISCORD
-  LDPATHS += $(DISCORDPATH)/$(ARCH)
-  LDLIBS += discord_game_sdk
-  CPPFLAGS += -DDISCORD
-endif
-
-ifdef STEAM
-  LDLIBS += steam_api
-  LDPATHS += $(STEAMPATH)/$(ARCH)
-endif
-
-ifeq ($(OS), Windows_NT)
+ifeq ($(OS), Windows_NT) # then WINDOWS
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
   EXT = .exe
-  ARCH := x86_64
-  PKGCMD = cd $(BIN); zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
+  PKGCMD = zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
-else ifeq ($(CC), emcc)
+	INFO :=$(INFO)_win
+else ifeq ($(OS), IOS)
+  CC = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+	SDK = iphoneos
+	SDK_PATH = /Applications/Xcode.app/Contents/Developer/Platforms/$(SDK).platform/Developer/SDKs/$(SDK).sdk
+	CFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
+	LDFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
+	LDFLAGS += -framework Foundation -framework UIKit -framework AudioToolbox -framework Metal -framework MetalKit -framework AVFoundation
+	CXXFLAGS += -std=c++11
+	CFLAGS += -x objective-c
+	INFO :=$(INFO)_ios
+else ifeq ($(CC), emcc) # Then WEB
   OS := Web
   LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=128MB
   CPPFLAGS += -pthread
@@ -133,10 +119,11 @@ else ifeq ($(CC), emcc)
   EXT = .html
 else 
   UNAME != uname -s
-  ifeq ($(UNAME), Linux)
+  ifeq ($(UNAME), Linux) # then LINUX
     OS := Linux
     LDFLAGS += -pthread -rdynamic
     LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
+		INFO :=$(INFO)_linux
   endif
 
   ifeq ($(UNAME), Darwin)
@@ -145,42 +132,28 @@ else
     CFLAGS += -x objective-c
     CXXFLAGS += -std=c++11
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
+		INFO :=$(INFO)_macos
   endif
 endif
-
-BIN = bin/$(OS)/$(ARCH)$(INFO)
-
-ifdef STEAM
-  BIN := $(addsuffix /steam, $(BIN))
-endif
-
-OBJDIR = $(BIN)/obj
 
 # All other sources
 OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
 CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
 OBJS += $(CPPOBJS)
 OBJS += $(shell find source/engine -type f -name '*.m')
-OBJS := $(patsubst %.cpp, %.o, $(OBJS))
-OBJS := $(patsubst %.c, %.o,$(OBJS))
-OBJS := $(patsubst %.m, %.o, $(OBJS))
-OBJS := $(addprefix $(BIN)/obj/, $(OBJS))
+OBJS := $(patsubst %.cpp, %$(INFO).o, $(OBJS))
+OBJS := $(patsubst %.c, %$(INFO).o,$(OBJS))
+OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
 includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
 includeflag := $(addprefix -I, $(includeflag))
 
-# Adding different SDKs
-ifdef STEAM
-  includeflag += -Isteam/sdk/public
-  CPPFLAGS += -DSTEAM
-#  BIN += /steam
-endif
-
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types
 
-NAME = primum$(EXT)
+APP = prosperon
+NAME = $(APP)$(INFO)$(EXT)
 SEM != git describe --tags --abbrev=0
 COM != git rev-parse --short HEAD
 
@@ -190,116 +163,78 @@ LDPATHS := $(addprefix -L, $(LDPATHS))
 DEPENDS = $(OBJS:.o=.d)
 -include $(DEPENDS)
 
-DIST = yugine-$(OS)$(ARCH)$(INFO)-$(COM)$(ZIP)
-DISTDIR = ./dist
-
 .DEFAULT_GOAL := all
-primum: all
-all: $(BIN)/$(NAME)
-	cp $(BIN)/$(NAME) .
+all: $(NAME)
+	cp -f $(NAME) $(APP)
 
 DESTDIR ?= ~/.bin
-
-CDB = source/engine/thirdparty/tinycdb
 
 SHADERS = $(shell ls source/shaders/*.sglsl)
 SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 
-install: $(BIN)/$(NAME)
-	cp -f $(BIN)/$(NAME) $(DESTDIR)
+install: $(NAME)
+	cp -f $(NAME) $(DESTDIR)/$(APP)
 
-$(BIN)/$(NAME): $(BIN)/libengine.a $(BIN)/libquickjs.a
+$(NAME): libengine$(INFO).a libquickjs$(INFO).a
 	@echo Linking $(NAME)
-	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L$(BIN) $(LDPATHS) $(LDLIBS) -o $@
+	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-$(DISTDIR)/$(DIST): $(BIN)/$(NAME)
-	@echo Creating distribution $(DIST)
-	@mkdir -p $(DISTDIR)
-	@$(PKGCMD)
-
-$(BIN)/libengine.a: $(OBJS) 
-	@$(AR) rcs $@ $(OBJS)
-
-CDB_C != find $(CDB) -name *.c
-CDB_O := $(patsubst %.c, %.o, $(CDB_C))
-$(CDB)/libcdb.a:
-	rm -f $(CDB)/libcdb.a
-	make -C $(CDB) libcdb.a 
-
-tools/libcdb.a: $(CDB)/libcdb.a
-	cp $(CDB)/libcdb.a tools
-
-DOCOS = Sound gameobject Game Window physics Profile Time Player Mouse IO Log ColorMap sprite SpriteAnim Render Geometry
-DOCHTML := $(addsuffix .api.html, $(DOCOS))
-DOCMD := $(addsuffix .api.md, $(DOCOS))
-
-api.md: $(DOCMD)
-	@(echo "# API"; cat $^) > $@
-	@rm $^
-
-INPUT = editor DebugControls component.sprite component.polygon2d component.edge2d component.circle2d
-
-INPUTMD := $(addsuffix .input.md, $(INPUT))
-input.md: $(INPUTMD)
-	@(echo "# Input"; cat $^) > $@
-	@rm $^
-
-%.input.md: primum $(SCRIPTS)
-	@echo Printing controls for $*
-	@./primum -e $* > $@
-
-%.api.md: primum $(SCRIPTS)
-	@echo Printing api for $*
-	@./primum -d $* > $@
+libengine$(INFO).a: $(OBJS) 
+	$(AR) rcs $@ $(OBJS)
 
 QUICKJS := source/engine/thirdparty/quickjs
-$(BIN)/libquickjs.a: 
-	make -C $(QUICKJS) clean
-	make -C $(QUICKJS) AR=$(AR) HOST_CC=$(CC) LEAK=$(LEAK) DUMP=$(DUMP) libquickjs.a 
-	@mkdir -p $(BIN)
-	cp -rf $(QUICKJS)/libquickjs.* $(BIN)
-
-$(OBJDIR)/%.o: %.c source/engine/core.cdb.h $(SHADERS)
-	@mkdir -p $(@D)
+libquickjs$(INFO).a: $(QUICKJS)/libregexp$(INFO).o $(QUICKJS)/quickjs$(INFO).o $(QUICKJS)/libunicode$(INFO).o $(QUICKJS)/cutils$(INFO).o $(QUICKJS)/libbf$(INFO).o
+	$(AR) rcs $@ $^
+	
+%$(INFO).o: %.c $(SHADERS) source/engine/core.cdb.h
 	@echo Making C object $@
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: %.cpp
-	@mkdir -p $(@D)
+%$(INFO).o: %.cpp
 	@echo Making C++ object $@
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: %.m
-	@mkdir -p $(@D)
+%$(INFO).o: %.m
 	@echo Making Objective-C object $@
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 shaders: $(SHADERS)
 	@echo Making shaders
 
 %.sglsl.h:%.sglsl
 	@echo Creating shader $^
-	@./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
+	./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
+
+CDB = source/engine/thirdparty/tinycdb
+CDB_C != find $(CDB) -name *.c
+CDB_O := $(patsubst %.c, %.o, $(CDB_C))
+CDB_O := $(notdir $(CDB_O))
+tools/libcdb.a: $(CDB_C)
+	cc -c $^
+	$(AR) rcs $@ $(CDB_O)
 
 cdb: tools/cdb.c tools/libcdb.a
+	@echo Making cdb
 	cc $^ -I$(CDB) -o cdb
-
-source/engine/core.cdb.h: core.cdb
-	xxd -i $< > $@
-
-SCRIPTS := $(shell ls scripts/*.js*)
-SCRIPT_O := $(addsuffix o, $(SCRIPTS))
-CORE != (ls icons/* fonts/*)
-CORE := $(CORE) $(SCRIPTS)
+	
+packer: tools/packer.c tools/libcdb.a
+	@echo Making packer
+	cc $^ -I$(CDB) -o packer
 
 core.cdb: packer $(CORE)
 	./packer $(CORE)
 	chmod 644 out.cdb
 	mv out.cdb core.cdb
 
-packer: tools/packer.c tools/libcdb.a
-	cc $^ -I$(CDB) -o packer
+source/engine/core.cdb.h: core.cdb
+	@echo Packing core.cdb.h
+	xxd -i $< > $@
+
+SCRIPTS := $(shell ls scripts/*.js*)
+SCRIPT_O := $(addsuffix o, $(SCRIPTS))
+CORE != (ls icons/* fonts/*)
+CORE := $(CORE) $(SCRIPTS)
 
 jsc: tools/jso.c tools/libquickjs.a
 	$(CC) $^ -lm -Iquickjs -o $@
@@ -308,36 +243,49 @@ tools/libquickjs.a: $(BIN)/libquickjs.a
 	cp -f $(BIN)/libquickjs.a tools
 
 WINCC = x86_64-w64-mingw32-gcc
-#WINCC = i686-w64-mingw32-g++
-.PHONY: crosswin
-crosswin:
-	make packer
-	make CC=$(WINCC) OS=Windows_NT
+crosswin: packer
+	make CC=$(WINCC) OS=Windows_NT ARCH=x86_64 DEBUG=$(DEBUG) OPT=$(OPT)
+	
+crossios:
+	make OS=IOS ARCH=arm64 DEBUG=$(DEBUG) OPT=$(OPT)
 
-crossmac:
-	make ARCH=arm64
-	mv primum primum_arm64
-	make ARCH=x86_64
-	mv primum primum_x86_64
-	lipo primum_arm64 primum_x86_64 -create -output primum
+ICNSIZE = 16 32 128 256 512 1024
+Prosperon.icns: icons/moon.gif
+	mkdir -p Prosperon.iconset
+	for i in $(ICNSIZE); do magick icons/moon.gif -size $${i}x$${i} Prosperon.iconset/icon_$${i}x$${i}.png; done
+	iconutil -c icns Prosperon.iconset
+
+crossmac: Prosperon.icns
+	make ARCH=arm64 DEBUG=$(DEBUG) OPT=$(OPT)
+	mv $(APP) mac_arm64
+	make ARCH=x86_64 DEBUG=$(DEBUG) OPT=$(OPT)
+	mv $(APP) mac_x86_64
+	lipo mac_arm64 mac_x86_64 -create -output $(APP)_mac
+	rm mac_arm64 mac_x86_64
+	rm -rf Prosperon.app
+	mkdir Prosperon.app
+	mkdir Prosperon.app/Contents
+	mkdir Prosperon.app/Contents/MacOS
+	mkdir Prosperon.app/Contents/Resources
+	mv $(NAME) Prosperon.app/Contents/MacOS/Prosperon
+	cp Info.plist Prosperon.app/Contents
+	cp Prosperon.icns Prosperon.app/Contents/Resources
 
 crossweb:
-	make packer
 	make CC=emcc
+	
+playweb:
+	make crossweb
+	emrun $(NAME).html
 
 clean:
 	@echo Cleaning project
-	rm -rf bin dist
-	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(CDB)/libcdb.a
-	rm -f $(CDB)/*.o
-	@make -C $(QUICKJS) clean
+	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a **.a **.o **.d $(APP)* *.icns
+	rm -rf Prosperon.app 
 
 docs: doc/prosperon.org
 	make -C doc
 	mv doc/html .
-
-test:
-	@echo No tests yet ...
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

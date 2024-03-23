@@ -90,8 +90,9 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     fflush(stdout);
   }
 
-  if (priority >= LOG_ERROR)
-    raise(SIGINT);
+  //if (priority >= LOG_ERROR)
+  //js_stacktrace();
+  //raise(SIGINT);
 #endif
 }
 
