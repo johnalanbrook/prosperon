@@ -93,6 +93,7 @@ endif
 INFO :=$(INFO)_$(ARCH)
 
 ifeq ($(OS), Windows_NT) # then WINDOWS
+  DEPS += resource.o
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
@@ -165,17 +166,16 @@ DEPENDS = $(OBJS:.o=.d)
 
 .DEFAULT_GOAL := all
 all: $(NAME)
-	cp -f $(NAME) $(APP)
-
-DESTDIR ?= ~/.bin
+	cp -f $(NAME) $(APP)$(EXT)
 
 SHADERS = $(shell ls source/shaders/*.sglsl)
 SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 
+DESTDIR ?= ~/.bin
 install: $(NAME)
 	cp -f $(NAME) $(DESTDIR)/$(APP)
 
-$(NAME): libengine$(INFO).a libquickjs$(INFO).a
+$(NAME): libengine$(INFO).a libquickjs$(INFO).a $(DEPS)
 	@echo Linking $(NAME)
 	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
@@ -242,17 +242,27 @@ jsc: tools/jso.c tools/libquickjs.a
 tools/libquickjs.a: $(BIN)/libquickjs.a
 	cp -f $(BIN)/libquickjs.a tools
 
+ICNSIZE = 16 32 128 256 512 1024
+ICNNAME := $(addsuffix .png, $(ICNSIZE))
+ICON = icons/moon.gif
+icon.ico: $(ICON)
+	for i in $(ICNSIZE); do convert $^ -thumbnail $${i}x$${i} $${i}.png; done
+	convert $(ICNNAME) icon.ico
+	rm $(ICNNAME)
+
+resource.o: resource.rc resource.manifest icon.ico
+	x86_64-w64-mingw32-windres -i $< -o $@
+
 WINCC = x86_64-w64-mingw32-gcc
-crosswin: packer
+crosswin: packer resource.o
 	make CC=$(WINCC) OS=Windows_NT ARCH=x86_64 DEBUG=$(DEBUG) OPT=$(OPT)
 	
 crossios:
 	make OS=IOS ARCH=arm64 DEBUG=$(DEBUG) OPT=$(OPT)
 
-ICNSIZE = 16 32 128 256 512 1024
-Prosperon.icns: icons/moon.gif
+Prosperon.icns: $(ICON)
 	mkdir -p Prosperon.iconset
-	for i in $(ICNSIZE); do magick icons/moon.gif -size $${i}x$${i} Prosperon.iconset/icon_$${i}x$${i}.png; done
+	for i in $(ICNSIZE); do magick $^ -size $${i}x$${i} Prosperon.iconset/icon_$${i}x$${i}.png; done
 	iconutil -c icns Prosperon.iconset
 
 crossmac: Prosperon.icns
@@ -280,7 +290,7 @@ playweb:
 
 clean:
 	@echo Cleaning project
-	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a **.a **.o **.d $(APP)* *.icns
+	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a **.a **.o **.d $(APP)* *.icns *.ico
 	rm -rf Prosperon.app 
 
 docs: doc/prosperon.org
