@@ -45,7 +45,7 @@ struct gameobject {
   struct shape_cb *shape_cbs;
   JSValue ref;
   HMM_Mat4 world;
-  float drawlayer;
+  float drawlayer; 
 };
 
 /*

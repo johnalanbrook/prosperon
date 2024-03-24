@@ -37,7 +37,7 @@ qq = 'ms';
 }
 
 Object.assign(console, {
-  say(msg) { console.print(msg + "\n"); },
+  say(msg) { console.print(msg + "\n"); }, 
   
   pprint(msg, lvl = 0) {
     if (typeof msg === 'object')

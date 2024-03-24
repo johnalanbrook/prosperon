@@ -809,11 +809,16 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
+JSC_SCALL(os_system,
+  system(str);
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os,sprite,1),
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
   MIST_FUNC_DEF(os, sys, 0),
+  MIST_FUNC_DEF(os, system, 1),
   MIST_FUNC_DEF(os, quit, 0),
   MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),

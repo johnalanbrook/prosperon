@@ -37,6 +37,13 @@ os.prefpath = function() {
   return otherpath[os.sys()] + "/" + (game.title ? game.title : "Untitled Prosperon Game");
 }
 
+os.openurl = function(url) {
+  if (os.sys() === 'windows')
+    os.system(`start ${url}`);
+  else
+    os.system(`open ${url}`);
+}
+
 var projectfile = ".prosperon/project.json";
 
 Resources.is_sound = function(path) {

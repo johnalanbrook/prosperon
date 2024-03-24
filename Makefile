@@ -173,6 +173,7 @@ SHADERS = $(shell ls source/shaders/*.sglsl)
 SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 
 install: $(NAME)
+	@echo Copying to destination
 	cp -f $(NAME) $(DESTDIR)/$(APP)
 
 $(NAME): libengine$(INFO).a libquickjs$(INFO).a
@@ -180,14 +181,15 @@ $(NAME): libengine$(INFO).a libquickjs$(INFO).a
 	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-libengine$(INFO).a: $(OBJS) 
+libengine$(INFO).a: $(OBJS)
+	@echo Archiving $@
 	$(AR) rcs $@ $(OBJS)
 
 QUICKJS := source/engine/thirdparty/quickjs
 libquickjs$(INFO).a: $(QUICKJS)/libregexp$(INFO).o $(QUICKJS)/quickjs$(INFO).o $(QUICKJS)/libunicode$(INFO).o $(QUICKJS)/cutils$(INFO).o $(QUICKJS)/libbf$(INFO).o
 	$(AR) rcs $@ $^
 	
-%$(INFO).o: %.c $(SHADERS) source/engine/core.cdb.h
+%$(INFO).o: %.c $(SHADERS)
 	@echo Making C object $@
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -206,6 +208,10 @@ shaders: $(SHADERS)
 	@echo Creating shader $^
 	./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
 
+SCRIPTS := $(shell ls scripts/*.js*)
+CORE != (ls icons/* fonts/*)
+CORE := $(CORE) $(SCRIPTS)
+
 CDB = source/engine/thirdparty/tinycdb
 CDB_C != find $(CDB) -name *.c
 CDB_O := $(patsubst %.c, %.o, $(CDB_C))
@@ -223,18 +229,14 @@ packer: tools/packer.c tools/libcdb.a
 	cc $^ -I$(CDB) -o packer
 
 core.cdb: packer $(CORE)
+	@echo Packing core.cdb
 	./packer $(CORE)
 	chmod 644 out.cdb
 	mv out.cdb core.cdb
 
 source/engine/core.cdb.h: core.cdb
-	@echo Packing core.cdb.h
+	@echo Making $@
 	xxd -i $< > $@
-
-SCRIPTS := $(shell ls scripts/*.js*)
-SCRIPT_O := $(addsuffix o, $(SCRIPTS))
-CORE != (ls icons/* fonts/*)
-CORE := $(CORE) $(SCRIPTS)
 
 jsc: tools/jso.c tools/libquickjs.a
 	$(CC) $^ -lm -Iquickjs -o $@
