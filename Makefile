@@ -129,6 +129,7 @@ else
 
   ifeq ($(UNAME), Darwin)
     OS := macos
+		PLATFORM := osx
     CPPFLAGS += -arch $(ARCH)
     CFLAGS += -x objective-c
     CXXFLAGS += -std=c++11
@@ -146,10 +147,12 @@ OBJS := $(patsubst %.cpp, %$(INFO).o, $(OBJS))
 OBJS := $(patsubst %.c, %$(INFO).o,$(OBJS))
 OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
+STEAM = steam/sdk
+
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
 includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
-includeflag += steam/public
+includeflag += $(STEAM)/public
 includeflag += source
 includeflag := $(addprefix -I, $(includeflag))
 
@@ -160,9 +163,9 @@ NAME = $(APP)$(INFO)$(EXT)
 SEM != git describe --tags --abbrev=0
 COM != git rev-parse --short HEAD
 
-LDLIBS += steam_api64
+LDLIBS += steam_api
 LDLIBS := $(addprefix -l, $(LDLIBS))
-LDPATHS := steam/redistributable_bin/win64
+LDPATHS := $(STEAM)/redistributable_bin/$(PLATFORM)
 LDPATHS := $(addprefix -L, $(LDPATHS))
 
 DEPENDS = $(OBJS:.o=.d)
@@ -185,7 +188,7 @@ $(NAME): libengine$(INFO).a libquickjs$(INFO).a $(DEPS)
 	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-libengine$(INFO).a: source/engine/core.cdb.h $(OBJS)
+libengine$(INFO).a: $(OBJS)
 	@echo Archiving $@
 	$(AR) rcs $@ $(OBJS)
 
@@ -193,7 +196,7 @@ QUICKJS := source/engine/thirdparty/quickjs
 libquickjs$(INFO).a: $(QUICKJS)/libregexp$(INFO).o $(QUICKJS)/quickjs$(INFO).o $(QUICKJS)/libunicode$(INFO).o $(QUICKJS)/cutils$(INFO).o $(QUICKJS)/libbf$(INFO).o
 	$(AR) rcs $@ $^
 	
-%$(INFO).o: %.c $(SHADERS)
+%$(INFO).o: %.c $(SHADERS) source/engine/core.cdb.h
 	@echo Making C object $@
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 

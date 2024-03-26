@@ -540,10 +540,6 @@ var gameobject = {
     return n;
   },
 
-  dead() {
-    return this.__kill;
-  },
-
   kill() {
     if (this.__kill) return;
     this.__kill = true;

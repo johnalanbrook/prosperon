@@ -15,7 +15,6 @@ if (os.sys() === 'macos') {
 
 player[0].control(appy);
   
-var steam = {};
 steam.appid = 480;
 steam.userid = 8437843;
 

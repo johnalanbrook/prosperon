@@ -4,9 +4,12 @@
 #include "jsffi.h"
 
 #ifdef __cplusplus
-extern "C" int js_steam_init(JSContext *js);
-#else
-int js_steam_init(JSContext *js);
+extern "C" {
+#endif
+JSValue js_init_steam(JSContext *js);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif
