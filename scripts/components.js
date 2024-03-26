@@ -89,11 +89,14 @@ Object.mixin(os.sprite(true), {
   anim:{},
   playing: 0,
   play(str) {
+    console.trace();
+    this.del_anim?.();
     var sp = this;
     this.del_anim = function() {
       sp = undefined;
       advance = undefined;
       this.del_anim = undefined;
+      this.anim_done = undefined;
       stop();
     }
     str ??= 0;
@@ -101,17 +104,19 @@ Object.mixin(os.sprite(true), {
     if (!playing) return;
     var f = 0;
     var stop;
+    sp.path = playing.path;
     
     function advance() {
       if (!sp) this.del_anim();
       if (!sp.gameobject) return;
-      sp.path = playing.path;
+      //sp.path = playing.path;
       sp.frame = playing.frames[f].rect;
       f = (f+1)%playing.frames.length;
       if (f === 0) sp.anim_done?.();
       stop = sp.gameobject.delay(advance, playing.frames[f].time);
     }
-    
+    this.tex(game.texture(playing.path));
+    console.info(`playing anim: ${json.encode(playing)}`);
     advance();
   },
   stop() {
@@ -119,11 +124,13 @@ Object.mixin(os.sprite(true), {
   },
   set path(p) {
     p = Resources.find_image(p);
-    if (!p) return;
+    if (!p) {
+      console.warn(`Could not find image ${p}.`);
+      return;
+    }
     if (p === this.path) return;
     this._p = p;    
-    this.del_anime?.();
-    this.tex(game.texture(p));
+    this.del_anim?.();
     this.texture = game.texture(p);
     this.tex(this.texture);
     
@@ -131,6 +138,8 @@ Object.mixin(os.sprite(true), {
     if (!anim) return;
     this.anim = anim;
     this.play();
+    
+    this.pos = this.dimensions().scale(this.anchor);
   },
   get path() {
     return this._p;
@@ -146,7 +155,7 @@ Object.mixin(os.sprite(true), {
     this.scale = this.scale.scale(x);
     this.pos = this.pos.scale(x);
   },
-  
+  anchor:[0,0],
   sync() { },
   pick() { return this; },
   boundingbox() {
@@ -184,7 +193,7 @@ sprite.doc = {
   pos: "The offset position of the sprite, relative to its entity."
 };
 
-sprite.anchor = function(anch) {
+sprite.setanchor = function(anch) {
   var off = [0,0];
   switch(anch) {
     case "ll": break;
@@ -197,19 +206,20 @@ sprite.anchor = function(anch) {
     case "um": off = [-0.5,-1]; break;
     case "ur": off = [-1,-1]; break;
   } 
+  this.anchor = off;
   this.pos = this.dimensions().scale(off);
 }
 
 sprite.inputs = {};
-sprite.inputs.kp9 = function() { this.anchor("ll"); }
-sprite.inputs.kp8 = function() { this.anchor("lm"); }
-sprite.inputs.kp7 = function() { this.anchor("lr"); }
-sprite.inputs.kp6 = function() { this.anchor("ml"); }
-sprite.inputs.kp5 = function() { this.anchor("mm"); }
-sprite.inputs.kp4 = function() { this.anchor("mr"); }
-sprite.inputs.kp3 = function() { this.anchor("ur"); }
-sprite.inputs.kp2 = function() { this.anchor("um"); }
-sprite.inputs.kp1 = function() { this.anchor("ul"); }
+sprite.inputs.kp9 = function() { this.setanchor("ll"); }
+sprite.inputs.kp8 = function() { this.setanchor("lm"); }
+sprite.inputs.kp7 = function() { this.setanchor("lr"); }
+sprite.inputs.kp6 = function() { this.setanchor("ml"); }
+sprite.inputs.kp5 = function() { this.setanchor("mm"); }
+sprite.inputs.kp4 = function() { this.setanchor("mr"); }
+sprite.inputs.kp3 = function() { this.setanchor("ur"); }
+sprite.inputs.kp2 = function() { this.setanchor("um"); }
+sprite.inputs.kp1 = function() { this.setanchor("ul"); }
 
 Object.seal(sprite);
 
@@ -219,14 +229,23 @@ Object.seal(sprite);
     time: miliseconds to hold the frame for
   loop: true if it should be looped
 */
+var animcache = {};
 var SpriteAnim = {
   make(path) {
-    if (path.ext() === 'gif')
-      return SpriteAnim.gif(path);
+    if (animcache[path]) return animcache[path];
+    var anim;
+    if (io.exists(path.set_ext(".json")))
+      anim = SpriteAnim.aseprite(path.set_ext(".json"));
+    else if (path.ext() === 'gif')
+      anim = SpriteAnim.gif(path);
     else if (path.ext() === 'ase')
-      return SpriteAnim.aseprite(path);
+      anim = SpriteAnim.aseprite(path);
     else
       return undefined;
+      
+    animcache[path] = anim;
+    console.spam(`Created animation like this:\n${json.encode(animcache[path])}`);
+    return animcache[path];
   },
   gif(path) {
     console.info(`making an anim from ${path}`);
@@ -250,7 +269,6 @@ var SpriteAnim = {
       anim.frames.push(frame);
     }
     var times = tex.delays;
-    console.info(`times are ${times}, num ${times.length}`);
     for (var i = 0; i < frames; i++)
       anim.frames[i].time = times[i]/1000;
     anim.loop = true;
@@ -278,38 +296,37 @@ var SpriteAnim = {
   },
 
   aseprite(path) {
-  function aseframeset2anim(frameset, meta) {
-    var anim = {};
-    anim.frames = [];
-    anim.path = meta.image;
-    var dim = meta.size;
-
-    var ase_make_frame = function(ase_frame,i) {
-      var f = ase_frame.frame;
-      var frame = {};
-      frame.rect = {
-	      x: f.x/dim.w,
-	      w: f.w/dim.w,
-	      y: f.y/dim.h,
-	      h: f.h/dim.h
+    function aseframeset2anim(frameset, meta) {
+      var anim = {};
+      anim.frames = [];
+      anim.path = path.dir() + "/" + meta.image;
+      var dim = meta.size;
+  
+      var ase_make_frame = function(ase_frame) {
+        var f = ase_frame.frame;
+        var frame = {};
+        frame.rect = {
+	        x: f.x/dim.w,
+	        w: f.w/dim.w,
+	        y: f.y/dim.h,
+	        h: f.h/dim.h
+        };
+        frame.time = ase_frame.duration / 1000;
+        anim.frames.push(frame);
       };
-      frame.time = ase_frame.duration / 1000;
-      anim.frames.push(frame);
+
+      frameset.forEach(ase_make_frame);
+      anim.dim = frameset[0].sourceSize;
+      anim.loop = true;
+      return anim;
     };
 
-    frameset.forEach(ase_make_frame);
-    anim.dim = [frameset[0].sourceSize.x, frameset[0].sourceSize.y];
-    anim.loop = true;
-    return anim;
-    };
-
-    var json = io.slurp(path);
-    json = JSON.parse(json);
+    var data = json.decode(io.slurp(path));
     var anims = {};
-    var frames = Array.isArray(json.frames) ? json.frames : Object.values(json.frames);
+    var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
     var f = 0;
-    for (var tag of json.meta.frameTags) {
-      anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), json.meta);
+    for (var tag of data.meta.frameTags) {
+      anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), data.meta);
       anims[f] = anims[tag.name];
       f++;
     }

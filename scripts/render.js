@@ -89,7 +89,7 @@ render.arrow = function(start, end, color, wingspan, wingangle) {
 
 render.coordinate = function(pos, size, color) {
     color ??= Color.white;
-    GUI.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
+    render.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
     render.point(pos, 2, color);
 }
 
@@ -109,6 +109,39 @@ render.box = function(pos, wh, color) {
   var upper = pos.add(wh.scale(0.5));
   render.rectangle(lower,upper,color);
 };
+
+render.text = function(str, pos, size, color, wrap, anchor, cursor) {
+  size ??= 1;
+  color ??= Color.white;
+  wrap ??= -1;
+  anchor ??= [0,1];
+  
+  cursor ??= -1;
+  
+  var bb = render.text_size(str, size, wrap);
+  var w = bb.r*2;
+  var h = bb.t*2;
+  
+  //gui.text draws with an anchor on top left corner
+  var p = pos.slice();
+  p.x -= w * anchor.x;
+  bb.r += (w*anchor.x);
+  bb.l += (w*anchor.x);
+  p.y += h * (1 - anchor.y);
+  bb.t += h*(1-anchor.y);
+  bb.b += h*(1-anchor.y);
+  gui.text(str, p, size, color, wrap, cursor);
+  
+  return bb;
+};
+
+render.image = function(tex, pos, rotation, color) {
+  color ??= Color.black;
+  rotation ??= 0;
+//  var wh = texture.dimensions(64,path);
+  gui.img(tex,pos, [1.0,1.0], 0.0, false, [0.0,0.0], Color.white);
+//  return bbox.fromcwh([0,0], wh);
+}
 
 render.doc = "Draw shapes in screen space.";
 render.circle.doc = "Draw a circle at pos, with a given radius and color.";

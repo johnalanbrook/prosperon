@@ -5,7 +5,6 @@ this.world2view = function(pos) { return render.world2view(pos); };
 this.realzoom = function() { return render.get_zoom(); };
 
 this.right = function() { return this.pos.x + (window.rendersize.x/2); }
-
 this.left = function() { return this.pos.x - (window.rendersize.x/2); }
 
 this.zoom = 1;

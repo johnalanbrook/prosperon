@@ -36,6 +36,6 @@ void sprite_draw(struct sprite *sprite);
 void sprite_draw_all();
 void sprite_flush();
 
-void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
+void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
 
 #endif

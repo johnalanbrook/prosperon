@@ -116,16 +116,17 @@ struct texture *texture_from_file(const char *path) {
 
   if (data == NULL)
     return NULL;
-
-  unsigned int nw = next_pow2(tex->width);
-  unsigned int nh = next_pow2(tex->height);
   
   tex->data = data;
+  
+  unsigned int nw = next_pow2(tex->width);
+  unsigned int nh = next_pow2(tex->height);
 
   int filter = SG_FILTER_NEAREST;
   
   sg_image_data sg_img_data;
-  
+  sg_img_data.subimage[0][0] = (sg_range){.ptr = data, .size=tex->width*tex->height*4};
+  /*
   int mips = mip_levels(tex->width, tex->height)+1;
 
   YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
@@ -141,7 +142,7 @@ struct texture *texture_from_file(const char *path) {
     
   for (int i = 1; i < mips; i++) {
     int w, h, mipw, miph;
-    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
+    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); // mipw miph are previous iteration 
     mip_wh(tex->width, tex->height, &w, &h, i);
     mipdata[i] = malloc(w * h * 4);
     stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
@@ -150,18 +151,18 @@ struct texture *texture_from_file(const char *path) {
     mipw = w;
     miph = h;
   }
-
+*/
   tex->id = sg_make_image(&(sg_image_desc){
     .type = SG_IMAGETYPE_2D,
     .width = tex->width,
     .height = tex->height,
     .usage = SG_USAGE_IMMUTABLE,
-    .num_mipmaps = mips,
+    //.num_mipmaps = mips,
     .data = sg_img_data
   });
 
-  for (int i = 1; i < mips; i++)
-    free(mipdata[i]);
+  /*for (int i = 1; i < mips; i++)
+    free(mipdata[i]);*/
     
   return tex;
 }

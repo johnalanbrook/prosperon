@@ -27,19 +27,19 @@ debug.draw = function() {
 
   if (this.draw_names)
     game.all_objects(function(x) {
-      GUI.text(x, window.world2screen(x.pos).add([0,32]), 1, Color.debug.names);
+      render.text(x, window.world2screen(x.pos).add([0,32]), 1, Color.debug.names);
     });
 
   if (debug.gif.rec) {
-    GUI.text("REC", [0,40], 1);
-    GUI.text(time.timecode(time.timenow() - debug.gif.start_time, debug.gif.fps), [0,30], 1);
+    render.text("REC", [0,40], 1);
+    render.text(time.timecode(time.timenow() - debug.gif.start_time, debug.gif.fps), [0,30], 1);
   }
   
   return;
   
-  if (sim.paused()) GUI.text("PAUSED", [0,0],1);  
+  if (sim.paused()) render.text("PAUSED", [0,0],1);  
 
-  GUI.text(sim.playing() ? "PLAYING"
+  render.text(sim.playing() ? "PLAYING"
                        : sim.stepping() ?
 		 "STEP" :
 		 sim.paused() ?

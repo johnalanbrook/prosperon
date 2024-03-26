@@ -1,5 +1,37 @@
 "use math";
 
+globalThis.json = {};
+json.encode = function(value, replacer, space, whitelist)
+{
+  space ??= 1;
+  return JSON.stringify(value, replacer, space);
+}
+
+json.decode = function(text, reviver)
+{
+  if (!text) return undefined;
+  return JSON.parse(text,reviver);
+}
+
+json.readout = function(obj)
+{
+  var j = {};
+  for (var k in obj)
+    if (typeof obj[k] === 'function')
+      j[k] = 'function ' + obj[k].toString();
+    else
+      j[k] = obj[k];
+
+  return json.encode(j);
+}
+
+json.doc = {
+  doc: "json implementation.",
+  encode: "Encode a value to json.",
+  decode: "Decode a json string to a value.",
+  readout: "Encode an object fully, including function definitions."
+};
+
 globalThis.Resources = {};
 Resources.scripts = ["jsoc", "jsc", "jso", "js"];
 Resources.images = ["png", "gif", "jpg", "jpeg"];
@@ -79,6 +111,7 @@ Object.assign(console, {
 
 console.stdout_lvl = 1;
 console.log = console.say;
+console.trace = console.stack;
 var say = console.say;
 var print = console.print;
 
@@ -217,7 +250,6 @@ function process()
   render.pass();
   prosperon.gui();
   render.flush_hud();
-
   render.end_pass();
   render.commit();
 }
@@ -242,7 +274,14 @@ game.doc.camera = "Current camera.";
 
 game.texture = function(path)
 {
-  game.texture.cache[path] ??= os.make_texture(path);  
+  if (game.texture.cache[path]) return game.texture.cache[path];
+  
+  if (!io.exists(path)) {
+    console.warn(`Missing texture: ${path}`);
+    game.texture.cache[path] = game.texture("icons/no_tex.gif");
+  } else
+    game.texture.cache[path] ??= os.make_texture(path);  
+    
   return game.texture.cache[path];
 }
 game.texture.cache = {};

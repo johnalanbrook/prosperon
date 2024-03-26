@@ -899,13 +899,11 @@ JSC_CCALL(gui_text,
 )
 
 JSC_CCALL(gui_img,
-  const char *img = JS_ToCString(js, argv[0]);
   transform2d t;
   t.pos = js2vec2(argv[1]);
   t.scale = js2vec2(argv[2]);
   t.angle = js2number(argv[3]);
-  gui_draw_img(img, t, js2boolean(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
-  JS_FreeCString(js, img);
+  gui_draw_img(js2texture(argv[0]), t, js2boolean(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
 )
 
 JSC_SCALL(gui_font_set, font_set(str))

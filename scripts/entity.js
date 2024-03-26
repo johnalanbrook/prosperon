@@ -184,7 +184,7 @@ var gameobject = {
       that.timers.remove(stop);
       execute = undefined;
       stop = undefined;
-      rm();
+      rm?.();
       rm = undefined;
       update = undefined;
     }
@@ -570,7 +570,6 @@ var gameobject = {
     this.objects = undefined;
 
     if (typeof this.stop === 'function') this.stop();
-    if (typeof this.die === 'function') this.die();
   },
 
   up() { return [0, 1].rotate(this.angle); },

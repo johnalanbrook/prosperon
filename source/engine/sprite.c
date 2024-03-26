@@ -111,9 +111,9 @@ void sprite_initialize() {
       .layout = {
           .attrs = {
               [0].format = SG_VERTEXFORMAT_FLOAT2,
-	      [1].format = SG_VERTEXFORMAT_FLOAT2,
-	      [2].format = SG_VERTEXFORMAT_UBYTE4N,
-	      [3].format = SG_VERTEXFORMAT_UBYTE4N}},
+	            [1].format = SG_VERTEXFORMAT_FLOAT2,
+	            [2].format = SG_VERTEXFORMAT_UBYTE4N,
+	            [3].format = SG_VERTEXFORMAT_UBYTE4N}},
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .label = "sprite pipeline",
       .colors[0].blend = blend_trans,
@@ -134,10 +134,10 @@ void sprite_initialize() {
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2,
-	[1].format = SG_VERTEXFORMAT_FLOAT2,
-	[2].format = SG_VERTEXFORMAT_USHORT4N,
-	[3].format = SG_VERTEXFORMAT_FLOAT2,
-	[4].format = SG_VERTEXFORMAT_UBYTE4N
+	      [1].format = SG_VERTEXFORMAT_FLOAT2,
+	      [2].format = SG_VERTEXFORMAT_USHORT4N,
+	      [3].format = SG_VERTEXFORMAT_FLOAT2,
+	      [4].format = SG_VERTEXFORMAT_UBYTE4N
       }},
     .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
   });
@@ -212,10 +212,8 @@ void sprite_draw(struct sprite *sprite) {
   tex_draw(sprite->tex, HMM_MulM3(m,sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->scale, sprite->emissive, sprite->parallax);
 }
 
-void gui_draw_img(const char *img, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
-  return;
-  sg_apply_pipeline(pip_sprite);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
-  struct texture *tex = texture_from_file(img);
+void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
+  //sg_apply_pipeline(pip_sprite);
+  //sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
   tex_draw(tex, transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
 }

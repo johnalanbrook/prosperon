@@ -343,7 +343,7 @@ var editor = {
       root = root ? root + "." : root;
       Object.entries(obj.objects).forEach(function(x) {
         var p = root + x[0];
-        GUI.text(p, x[1].screenpos(), 1, editor.color_depths[depth]);
+        render.text(p, x[1].screenpos(), 1, editor.color_depths[depth]);
 	editor.draw_objects_names(x[1], p, depth+1);
       });
   },
@@ -393,13 +393,13 @@ var editor = {
   gui() { 
     /* Clean out killed objects */
     this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
-    GUI.text([0,0], window.world2screen([0,0]));
+    render.text([0,0], window.world2screen([0,0]));
 
-    GUI.text("WORKING LAYER: " + this.working_layer, [0,520]);
-    GUI.text("MODE: " + this.edit_mode, [0,500]);
+    render.text("WORKING LAYER: " + this.working_layer, [0,520]);
+    render.text("MODE: " + this.edit_mode, [0,500]);
 
     if (this.comp_info && this.sel_comp)
-      GUI.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
+      render.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
 
     render.cross(editor.edit_level.screenpos(),3,Color.blue);
 
@@ -434,24 +434,24 @@ var editor = {
       depth = i;
       var lvlstr = x.namestr();
       if (i === lvlchain.length-1) lvlstr += "[this]";
-      GUI.text(lvlstr, [0, ypos], 1, editor.color_depths[depth]);
+      render.text(lvlstr, [0, ypos], 1, editor.color_depths[depth]);
      
-      GUI.text("^^^^^^", [0,ypos+=5],1);
+      render.text("^^^^^^", [0,ypos+=5],1);
       ypos += 15;
     });
 
     depth++;
-    GUI.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
+    render.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
     
     this.selectlist.forEach(function(x) {
-      GUI.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
-      GUI.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
+      render.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
+      render.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
       render.cross(x.screenpos(), 10, Color.blue);
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
-      GUI.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
+      render.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
       render.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
     });
 
@@ -459,18 +459,18 @@ var editor = {
     
     if (mg) {
       var p = mg.path_from(thiso);
-      GUI.text(p, Mouse.screenpos(),1,Color.teal);
+      render.text(p, Mouse.screenpos(),1,Color.teal);
     }
 
     if (this.rotlist.length === 1)
-      GUI.text(Math.trunc(this.rotlist[0].obj.angle), Mouse.screenpos(), 1, Color.teal);
+      render.text(Math.trunc(this.rotlist[0].obj.angle), Mouse.screenpos(), 1, Color.teal);
 
     if (this.selectlist.length === 1) {
       var i = 1;
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].toString() + "]";
-        GUI.text(str, this.selectlist[0].screenpos().add([0,-16*(i++)]));
+        render.text(str, this.selectlist[0].screenpos().add([0,-16*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -480,7 +480,7 @@ var editor = {
 
     editor.edit_level.objects.forEach(function(obj) {
       if (!obj._ed.selectable)
-        GUI.text("lock", obj,screenpos());
+        render.text("lock", obj,screenpos());
     });
 
     render.grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
@@ -494,12 +494,12 @@ var editor = {
     if (h_step === 0) h_step = editor.grid_size;
     
     while(startgrid[0] <= endgrid[0]) {
-      GUI.text(startgrid[0], [window.world2screen([startgrid[0], 0])[0],0]);
+      render.text(startgrid[0], [window.world2screen([startgrid[0], 0])[0],0]);
       startgrid[0] += w_step;
     }
 
     while(startgrid[1] <= endgrid[1]) {
-      GUI.text(startgrid[1], [0, window.world2screen([0, startgrid[1]])[1]]);
+      render.text(startgrid[1], [0, window.world2screen([0, startgrid[1]])[1]]);
       startgrid[1] += h_step;
     }
     

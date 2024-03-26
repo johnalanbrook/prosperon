@@ -5,38 +5,6 @@
 gui.scissor_win = function() { gui.scissor(0,0,window.width,window.height); }
 
 var GUI = {
-  text(str, pos, size, color, wrap, anchor, cursor) {
-    size ??= 1;
-    color ??= Color.white;
-    wrap ??= -1;
-    anchor ??= [0,1];
-
-    cursor ??= -1;
-
-    var bb = render.text_size(str, size, wrap);
-    var w = bb.r*2;
-    var h = bb.t*2;
-
-    //gui.text draws with an anchor on top left corner
-    var p = pos.slice();
-    p.x -= w * anchor.x;
-    bb.r += (w*anchor.x);
-    bb.l += (w*anchor.x);
-    p.y += h * (1 - anchor.y);
-    bb.t += h*(1-anchor.y);
-    bb.b += h*(1-anchor.y);
-    gui.text(str, p, size, color, wrap, cursor);
-
-    return bb;
-  },
-  
-  image(path,pos,color) {
-    color ??= Color.black;
-    var wh = texture.dimensions(64,path);
-    gui_img(path,pos, [1.0,1.0], 0.0, false, [0.0,0.0], Color.white);
-    return bbox.fromcwh([0,0], wh);
-  },
-  
   newmg(img) {
     var def = {
       path: "",

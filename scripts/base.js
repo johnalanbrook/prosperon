@@ -315,37 +315,6 @@ time.text = function(num, fmt, zone)
   return fmt;
 }
 
-var json = {};
-json.encode = function(value, space, replacer, whitelist)
-{
-  return JSON.stringify(value, space, replacer);
-}
-
-json.decode = function(text, reviver)
-{
-  if (!text) return undefined;
-  return JSON.parse(text,reviver);
-}
-
-json.readout = function(obj)
-{
-  var j = {};
-  for (var k in obj)
-    if (typeof obj[k] === 'function')
-      j[k] = 'function ' + obj[k].toString();
-    else
-      j[k] = obj[k];
-
-  return json.encode(j);
-}
-
-json.doc = {
-  doc: "json implementation.",
-  encode: "Encode a value to json.",
-  decode: "Decode a json string to a value.",
-  readout: "Encode an object fully, including function definitions."
-};
-
 Object.methods = function(o)
 {
   var m = [];
