@@ -138,8 +138,8 @@ else
 endif
 
 # All other sources
-OBJS != find source/engine -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
-CPPOBJS != find source/engine -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
+OBJS != find source -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
+CPPOBJS != find source -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
 OBJS += $(CPPOBJS)
 OBJS += $(shell find source/engine -type f -name '*.m')
 OBJS := $(patsubst %.cpp, %$(INFO).o, $(OBJS))
@@ -149,6 +149,8 @@ OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
 includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
+includeflag += steam/public
+includeflag += source
 includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types
@@ -158,7 +160,9 @@ NAME = $(APP)$(INFO)$(EXT)
 SEM != git describe --tags --abbrev=0
 COM != git rev-parse --short HEAD
 
+LDLIBS += steam_api64
 LDLIBS := $(addprefix -l, $(LDLIBS))
+LDPATHS := steam/redistributable_bin/win64
 LDPATHS := $(addprefix -L, $(LDPATHS))
 
 DEPENDS = $(OBJS:.o=.d)
@@ -181,7 +185,7 @@ $(NAME): libengine$(INFO).a libquickjs$(INFO).a $(DEPS)
 	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-libengine$(INFO).a: $(OBJS)
+libengine$(INFO).a: source/engine/core.cdb.h $(OBJS)
 	@echo Archiving $@
 	$(AR) rcs $@ $(OBJS)
 
@@ -195,7 +199,7 @@ libquickjs$(INFO).a: $(QUICKJS)/libregexp$(INFO).o $(QUICKJS)/quickjs$(INFO).o $
 
 %$(INFO).o: %.cpp
 	@echo Making C++ object $@
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
 
 %$(INFO).o: %.m
 	@echo Making Objective-C object $@
@@ -292,7 +296,8 @@ playweb:
 
 clean:
 	@echo Cleaning project
-	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a **.a **.o **.d $(APP)* *.icns *.ico
+	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(APP)* *.icns *.ico
+	find . -type f -name "*.[oad]" -delete
 	rm -rf Prosperon.app 
 
 docs: doc/prosperon.org

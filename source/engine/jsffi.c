@@ -1563,10 +1563,11 @@ static const JSCFunctionListEntry js_nota_funcs[] = {
   MIST_FUNC_DEF(nota, decode, 1)
 };
 
-#define DUK_FUNC(NAME, ARGS) JS_SetPropertyStr(js, globalThis, #NAME, JS_NewCFunction(js, duk_##NAME, #NAME, ARGS));
+#include "steam.h"
 
 void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
+  js_steam_init(js);
   
   QJSCLASSPREP(ptr);
   

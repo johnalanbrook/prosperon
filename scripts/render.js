@@ -136,11 +136,10 @@ render.text = function(str, pos, size, color, wrap, anchor, cursor) {
 };
 
 render.image = function(tex, pos, rotation, color) {
-  color ??= Color.black;
+  color ??= Color.white;
   rotation ??= 0;
-//  var wh = texture.dimensions(64,path);
-  gui.img(tex,pos, [1.0,1.0], 0.0, false, [0.0,0.0], Color.white);
-//  return bbox.fromcwh([0,0], wh);
+  gui.img(tex,pos, [1.0,1.0], 0.0, false, [0.0,0.0], color); 
+  return bbox.fromcwh([0,0], [tex.width,tex.height]);
 }
 
 render.doc = "Draw shapes in screen space.";

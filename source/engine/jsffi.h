@@ -3,7 +3,6 @@
 
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
-#include "dsp.h"
 
 void ffi_load();
 void ffi_stop();
