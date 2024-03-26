@@ -17,6 +17,8 @@ extern struct rgba kinematic_color;
 extern struct rgba static_color;
 extern struct rgba sleep_color;
 
+extern cpShapeFilter allfilter;
+
 typedef struct constraint {
   cpConstraint *c;
   JSValue break_cb; /* function called when it is forcibly broken */
@@ -102,6 +104,7 @@ void phys2d_edge_set_enabled(struct phys2d_edge *edge, int enabled);
 void phys2d_init();
 void phys2d_update(float deltaT);
 cpShape *phys2d_query_pos(cpVect pos);
+void phys2d_query_ray(HMM_Vec2 start, HMM_Vec2 end, float radius, cpShapeFilter filter, JSValue cb);
 gameobject **phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh);
 
 struct shape_cb {

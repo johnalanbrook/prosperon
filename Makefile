@@ -14,6 +14,11 @@ OPT ?= 0
 INFO :=
 LD = $(CC)
 
+STEAM = steam/sdk
+STEAMAPI = steam_api
+
+LDFLAGS += -Wl,-rpath=./
+
 ifeq ($(CC), x86_64-w64-mingw32-gcc)
   AR = x86_64-w64-mingw32-ar
 endif
@@ -93,7 +98,9 @@ endif
 INFO :=$(INFO)_$(ARCH)
 
 ifeq ($(OS), Windows_NT) # then WINDOWS
+	PLATFORM := win64
   DEPS += resource.o
+	STEAMAPI := steam_api64
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
@@ -122,6 +129,7 @@ else
   UNAME != uname -s
   ifeq ($(UNAME), Linux) # then LINUX
     OS := Linux
+		PLATFORM := linux64
     LDFLAGS += -pthread -rdynamic
     LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
 		INFO :=$(INFO)_linux
@@ -147,7 +155,6 @@ OBJS := $(patsubst %.cpp, %$(INFO).o, $(OBJS))
 OBJS := $(patsubst %.c, %$(INFO).o,$(OBJS))
 OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
-STEAM = steam/sdk
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
@@ -163,7 +170,7 @@ NAME = $(APP)$(INFO)$(EXT)
 SEM != git describe --tags --abbrev=0
 COM != git rev-parse --short HEAD
 
-LDLIBS += steam_api
+LDLIBS += $(STEAMAPI)
 LDLIBS := $(addprefix -l, $(LDLIBS))
 LDPATHS := $(STEAM)/redistributable_bin/$(PLATFORM)
 LDPATHS := $(addprefix -L, $(LDPATHS))

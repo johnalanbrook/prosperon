@@ -1079,11 +1079,28 @@ JSC_CCALL(physics_collide_rm, phys2d_rm_go_handlers(js2gameobject(argv[0])))
 JSC_CCALL(physics_collide_separate, js2gameobject(argv[1])->cbs.separate = JS_DupValue(js,argv[0]))
 JSC_CCALL(physics_collide_shape, gameobject_add_shape_collider(js2gameobject(argv[1]), JS_DupValue(js,argv[0]), js2ptr(argv[2])))
 
+static void ray_query_fn(cpShape *shape, float t, cpVect n, float a, JSValue *cb)
+{
+  JSValue argv[3] = {
+    JS_DupValue(js, shape2go(shape)->ref),
+    vec22js((HMM_Vec2)n),
+    number2js(a)
+  };
+  script_call_sym(*cb, 3, argv);
+  for (int i = 0; i < 3; i++)
+    JS_FreeValue(js, argv[i]);
+}
+
+JSC_CCALL(physics_ray_query,
+  cpSpaceSegmentQuery(space, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp, js2number(argv[2]), allfilter, ray_query_fn, &argv[3]);
+);
+
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, sgscale, 2),
   MIST_FUNC_DEF(physics, set_cat_mask, 2),
   MIST_FUNC_DEF(physics, box_query, 2),
   MIST_FUNC_DEF(physics, pos_query, 2),
+  MIST_FUNC_DEF(physics, ray_query, 2),
   MIST_FUNC_DEF(physics, box_point_query, 3),
   MIST_FUNC_DEF(physics, query_shape, 1),
   MIST_FUNC_DEF(physics, closest_point, 3),

@@ -116,7 +116,6 @@ Object.mixin(os.sprite(true), {
       stop = sp.gameobject.delay(advance, playing.frames[f].time);
     }
     this.tex(game.texture(playing.path));
-    console.info(`playing anim: ${json.encode(playing)}`);
     advance();
   },
   stop() {

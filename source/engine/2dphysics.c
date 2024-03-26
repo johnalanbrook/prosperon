@@ -69,7 +69,7 @@ void bbhit(cpShape *shape, int *data)
   qhit++;
 }
 
-static cpShapeFilter ff = {
+cpShapeFilter allfilter = {
   .group = CP_NO_GROUP,
   .mask = CP_ALL_CATEGORIES,
   .categories = CP_ALL_CATEGORIES,
@@ -79,7 +79,7 @@ int query_point(HMM_Vec2 pos)
 {
   qhit = 0;
 //  cpSpacePointQuery(space, pos.cp, 0, filter, qpoint, &qhit);
-  cpSpaceBBQuery(space, cpBBNewForCircle(pos.cp, 2), ff, bbhit, &qhit);
+  cpSpaceBBQuery(space, cpBBNewForCircle(pos.cp, 2), allfilter, bbhit, &qhit);
   return qhit;
 }
 
