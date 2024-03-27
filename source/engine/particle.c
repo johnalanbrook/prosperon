@@ -171,7 +171,7 @@ void parallel_pv(emitter *e, struct scheduler *sched, struct sched_task_partitio
   }
 }
 
-void emitters_draw()
+void emitters_draw(HMM_Mat4 *proj)
 {
   if (arrlen(emitters) == 0) return;
   int draw_count = 0;
@@ -188,7 +188,7 @@ void emitters_draw()
   }
 
   sg_apply_pipeline(par_pipe);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
   sg_apply_bindings(&par_bind);
   sg_draw(0, 4, draw_count);
 }

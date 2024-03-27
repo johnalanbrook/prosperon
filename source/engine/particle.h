@@ -70,7 +70,7 @@ void stop_emitter(emitter *e);
 
 void emitter_emit(emitter *e, int count);
 void emitters_step(double dt);
-void emitters_draw();
+void emitters_draw(HMM_Mat4 *proj);
 void emitter_step(emitter *e, double dt);
 
 #endif

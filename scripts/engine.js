@@ -241,17 +241,20 @@ function process()
     prosperon.window_render(world, 1);
   else
     prosperon.window_render(game.camera, game.camera.zoom);
-  render.sprites();
-  render.models();
-  render.emitters();
-  prosperon.draw();
-  debug.draw();
+    
+  render.set_camera();
+  render.sprites(); // blits all sprites
+  render.models(); // blits all models
+  render.emitters(); // blits emitters
+  prosperon.draw(); // draw calls
+  debug.draw(); // calls needed debugs
   render.flush();
-  render.pass();
+  
+  render.set_window();
   prosperon.gui();
-  render.flush_hud();
+  render.flush();
+  
   render.end_pass();
-  render.commit();
 }
 
 game.timescale = 1;

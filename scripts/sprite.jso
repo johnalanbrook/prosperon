@@ -1,0 +1,2 @@
+this.phys = physics.static;
+this.add_component(component.sprite);

@@ -286,6 +286,7 @@ HMM_Vec2 screen2world(HMM_Vec2 pos)
 
 HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};
+HMM_Mat4 useproj = {0};
 
 HMM_Vec3 dirl_pos = {4, 100, 20};
 
@@ -341,7 +342,6 @@ void openglRender(struct window *window, gameobject *cam, float zoom) {
              campos.y + camzoom * usesize.y / 2, -10000.f, 10000.f);
 
   hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
-  return;
 
 /*  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
     sg_begin_pass(&(sg_pass){

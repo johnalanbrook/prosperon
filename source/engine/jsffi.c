@@ -744,15 +744,19 @@ JSC_CCALL(render_line,
 
 JSC_CCALL(render_sprites, sprite_draw_all())
 JSC_CCALL(render_models, model_draw_all())
-JSC_CCALL(render_emitters, emitters_draw())
-JSC_CCALL(render_flush, debug_flush(&projection); text_flush(&projection))
-JSC_CCALL(render_flush_hud, debug_flush(&hudproj); debug_flush(&hudproj); sprite_flush();)
-JSC_CCALL(render_pass, debug_nextpass())
-JSC_CCALL(render_end_pass, sg_end_pass())
-JSC_CCALL(render_commit, sg_commit(); debug_newframe();)
+JSC_CCALL(render_emitters, emitters_draw(&useproj))
+JSC_CCALL(render_flush, debug_flush(&useproj); text_flush(&useproj))
+JSC_CCALL(render_end_pass,
+  sg_end_pass();
+  sg_commit();
+  debug_newframe();
+  sprite_flush();
+)
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_CCALL(render_world2screen, return vec22js(world2screen(js2vec2(argv[0]))))
 JSC_CCALL(render_screen2world, return vec22js(screen2world(js2vec2(argv[0]))))
+JSC_CCALL(render_set_camera, useproj = projection)
+JSC_CCALL(render_set_window, useproj = hudproj)
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render,world2screen,1),
@@ -768,14 +772,13 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, models, 0),
   MIST_FUNC_DEF(render, emitters, 0),
   MIST_FUNC_DEF(render, flush, 0),
-  MIST_FUNC_DEF(render, flush_hud, 0),
-  MIST_FUNC_DEF(render, pass, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
-  MIST_FUNC_DEF(render, commit, 0),
-  MIST_FUNC_DEF(render, text_size, 3)
+  MIST_FUNC_DEF(render, text_size, 3),
+  MIST_FUNC_DEF(render, set_camera, 0),
+  MIST_FUNC_DEF(render, set_window, 0),
 };
 
-JSC_CCALL(gui_flush, text_flush(&hudproj));
+JSC_CCALL(gui_flush, text_flush(&useproj));
 JSC_CCALL(gui_scissor, sg_apply_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
 JSC_CCALL(gui_text,
   const char *s = JS_ToCString(js, argv[0]);

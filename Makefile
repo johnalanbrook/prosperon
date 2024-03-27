@@ -14,10 +14,14 @@ OPT ?= 0
 INFO :=
 LD = $(CC)
 
+
 STEAM = steam/sdk
 STEAMAPI = steam_api
 
-LDFLAGS += -Wl,-rpath=./
+CCC != $(CC) -v
+ifneq ($(findstring clangcc , $(CCC)),)
+	LDFLAGS += -Wl,-rpath=./
+endif
 
 ifeq ($(CC), x86_64-w64-mingw32-gcc)
   AR = x86_64-w64-mingw32-ar

@@ -92,18 +92,17 @@ Object.mixin(os.sprite(true), {
     console.trace();
     this.del_anim?.();
     var sp = this;
+    var stop;
     this.del_anim = function() {
       sp = undefined;
       advance = undefined;
       this.del_anim = undefined;
-      this.anim_done = undefined;
       stop();
     }
     str ??= 0;
     var playing = this.anim[str];
     if (!playing) return;
     var f = 0;
-    var stop;
     sp.path = playing.path;
     
     function advance() {
@@ -112,7 +111,10 @@ Object.mixin(os.sprite(true), {
       //sp.path = playing.path;
       sp.frame = playing.frames[f].rect;
       f = (f+1)%playing.frames.length;
-      if (f === 0) sp.anim_done?.();
+      if (f === 0) {
+        sp.anim_done?.();
+        if (!sp.loop) { sp.stop(); return; }
+      }
       stop = sp.gameobject.delay(advance, playing.frames[f].time);
     }
     this.tex(game.texture(playing.path));

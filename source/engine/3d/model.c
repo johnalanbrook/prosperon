@@ -369,11 +369,10 @@ struct model *MakeModel(const char *path)
 /* eye position */
 HMM_Vec3 eye = {0,0,100};
 
-void draw_model(struct model *model, HMM_Mat4 amodel) {
-  HMM_Mat4 proj = projection;
+void draw_model(struct model *model, HMM_Mat4 amodel, HMM_Mat4 *proj) {
   HMM_Vec3 center = {0.f, 0.f, 0.f};
   HMM_Mat4 view = HMM_LookAt_RH(eye, center, vUP);
-  HMM_Mat4 vp = HMM_MulM4(proj, view);
+  HMM_Mat4 vp = HMM_MulM4(*proj, view);
 
   HMM_Vec3 dir_dir = HMM_NormV3(HMM_SubV3(center, dirl_pos));
 
@@ -411,7 +410,7 @@ void draw_drawmodel(struct drawmodel *dm)
   if (!dm->model) return;
   struct gameobject *go = dm->go;
   HMM_Mat4 rst = t3d_go2world(go);
-  draw_model(dm->model, rst);
+  draw_model(dm->model, rst, &useproj);
 }
 
 void drawmodel_free(struct drawmodel *dm) {

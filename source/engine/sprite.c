@@ -94,16 +94,15 @@ void sprite_draw_all() {
   if (arrlen(sprites) == 0) return;
   
   sg_apply_pipeline(pip_sprite);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(projection));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(useproj));
 
   qsort(sprites, arrlen(sprites), sizeof(*sprites), sprite_sort);
-
+  
   for (int i = 0; i < arrlen(sprites); i++)
     sprite_draw(sprites[i]);
 }
 
 void sprite_initialize() {
-
   shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
 
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
@@ -213,7 +212,12 @@ void sprite_draw(struct sprite *sprite) {
 }
 
 void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
-  //sg_apply_pipeline(pip_sprite);
-  //sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(hudproj));
+  sg_apply_pipeline(pip_sprite);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(useproj));
   tex_draw(tex, transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
+}
+
+void slice9_draw(texture *tex, transform2d *t, HMM_Vec4 border, struct rgba color)
+{
+  
 }

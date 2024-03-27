@@ -142,6 +142,8 @@ void debug_flush(HMM_Mat4 *view)
     sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*view));
     sg_draw(circle_sc,4,circle_count);
   }
+  
+  debug_nextpass();
 }
 
 void debug_nextpass()
@@ -174,7 +176,7 @@ void debug_newframe()
 }
 
 static sg_shader_uniform_block_desc projection_ubo = {
-  .size = sizeof(projection),
+  .size = sizeof(useproj),
   .uniforms = {
     [0] = { .name = "proj", .type = SG_UNIFORMTYPE_MAT4 },
   }
@@ -196,8 +198,8 @@ void debugdraw_init()
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
-	[1].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
-	[2].format = SG_VERTEXFORMAT_FLOAT /* radius */
+	      [1].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
+	      [2].format = SG_VERTEXFORMAT_FLOAT /* radius */
       }
     },
     .primitive_type = SG_PRIMITIVETYPE_POINTS,
@@ -217,10 +219,10 @@ void debugdraw_init()
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
-	[1].format = SG_VERTEXFORMAT_FLOAT, /* dist */
-	[2].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
-	[3].format = SG_VERTEXFORMAT_FLOAT, /* seg length */
-	[4].format = SG_VERTEXFORMAT_FLOAT /* dashed line speed */
+	      [1].format = SG_VERTEXFORMAT_FLOAT, /* dist */
+	      [2].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
+	      [3].format = SG_VERTEXFORMAT_FLOAT, /* seg length */
+	      [4].format = SG_VERTEXFORMAT_FLOAT /* dashed line speed */
       }
     },
     .primitive_type = SG_PRIMITIVETYPE_LINES,
@@ -245,13 +247,13 @@ void debugdraw_init()
       .shader = csg,
       .layout = {
         .attrs = {
-	  [0].format = SG_VERTEXFORMAT_FLOAT2,
-	  [0].buffer_index = 1,
-	  [1].format = SG_VERTEXFORMAT_FLOAT2,
-	  [2].format = SG_VERTEXFORMAT_FLOAT,
-	  [3].format = SG_VERTEXFORMAT_UBYTE4N,
-	  [4].format = SG_VERTEXFORMAT_FLOAT,
-	  [5].format = SG_VERTEXFORMAT_FLOAT
+	      [0].format = SG_VERTEXFORMAT_FLOAT2,
+	      [0].buffer_index = 1,
+	      [1].format = SG_VERTEXFORMAT_FLOAT2,
+	      [2].format = SG_VERTEXFORMAT_FLOAT,
+	      [3].format = SG_VERTEXFORMAT_UBYTE4N,
+	      [4].format = SG_VERTEXFORMAT_FLOAT,
+	      [5].format = SG_VERTEXFORMAT_FLOAT
 	},
       .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE,
     },
@@ -300,8 +302,8 @@ void debugdraw_init()
     .shader = poly_shader,
     .layout = {
       .attrs = { [0].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
-		 [1].format = SG_VERTEXFORMAT_FLOAT2, /* uv */
-		 [2].format = SG_VERTEXFORMAT_UBYTE4N /* color rgba */
+		             [1].format = SG_VERTEXFORMAT_FLOAT2, /* uv */
+		             [2].format = SG_VERTEXFORMAT_UBYTE4N /* color rgba */
        }
     },
     .index_type = SG_INDEXTYPE_UINT32,
