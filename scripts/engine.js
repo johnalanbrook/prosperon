@@ -115,6 +115,8 @@ console.trace = console.stack;
 var say = console.say;
 var print = console.print;
 
+console.warn("GOT HERE");
+
 console.doc = {
   level: "Set level to output logging to console.",
   info: "Output info level message.",

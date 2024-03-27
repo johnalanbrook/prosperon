@@ -12,9 +12,9 @@ Jenkinsfile
 *.gz
 *.tar
 .nova/
-packer
+packer*
 primum
-sokol-shdc
+sokol-shdc*
 source/shaders/*.h
 core.cdb
 primum.exe

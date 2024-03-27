@@ -14,17 +14,12 @@ OPT ?= 0
 INFO :=
 LD = $(CC)
 
-
 STEAM = steam/sdk
 STEAMAPI = steam_api
 
 CCC != $(CC) -v
 ifneq ($(findstring clangcc , $(CCC)),)
 	LDFLAGS += -Wl,-rpath=./
-endif
-
-ifeq ($(CC), x86_64-w64-mingw32-gcc)
-  AR = x86_64-w64-mingw32-ar
 endif
 
 ifdef NEDITOR
@@ -159,7 +154,6 @@ OBJS := $(patsubst %.cpp, %$(INFO).o, $(OBJS))
 OBJS := $(patsubst %.c, %$(INFO).o,$(OBJS))
 OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
-
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
 includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
@@ -196,28 +190,28 @@ install: $(NAME)
 
 $(NAME): libengine$(INFO).a libquickjs$(INFO).a $(DEPS)
 	@echo Linking $(NAME)
-	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
+	$(CROSSWIN)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
 libengine$(INFO).a: $(OBJS)
 	@echo Archiving $@
-	$(AR) rcs $@ $(OBJS)
+	$(CROSSWIN)$(AR) rcs $@ $(OBJS)
 
 QUICKJS := source/engine/thirdparty/quickjs
 libquickjs$(INFO).a: $(QUICKJS)/libregexp$(INFO).o $(QUICKJS)/quickjs$(INFO).o $(QUICKJS)/libunicode$(INFO).o $(QUICKJS)/cutils$(INFO).o $(QUICKJS)/libbf$(INFO).o
-	$(AR) rcs $@ $^
+	$(CROSSWIN)$(AR) rcs $@ $^
 	
-%$(INFO).o: %.c $(SHADERS) source/engine/core.cdb.h
+%$(INFO).o: %.c $(SHADERS)
 	@echo Making C object $@
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CROSSWIN)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %$(INFO).o: %.cpp
 	@echo Making C++ object $@
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
+	$(CROSSWIN)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
 
 %$(INFO).o: %.m
 	@echo Making Objective-C object $@
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CROSSWIN)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 shaders: $(SHADERS)
 	@echo Making shaders
@@ -236,7 +230,7 @@ CDB_O := $(patsubst %.c, %.o, $(CDB_C))
 CDB_O := $(notdir $(CDB_O))
 tools/libcdb.a: $(CDB_C)
 	cc -c $^
-	$(AR) rcs $@ $(CDB_O)
+	$(CROSSWIN)$(AR) rcs $@ $(CDB_O)
 
 cdb: tools/cdb.c tools/libcdb.a
 	@echo Making cdb
@@ -271,11 +265,10 @@ icon.ico: $(ICON)
 	rm $(ICNNAME)
 
 resource.o: resource.rc resource.manifest icon.ico
-	x86_64-w64-mingw32-windres -i $< -o $@
+	$(CROSSWIN)windres -i $< -o $@
 
-WINCC = x86_64-w64-mingw32-gcc
 crosswin: packer resource.o
-	make CC=$(WINCC) OS=Windows_NT ARCH=x86_64 DEBUG=$(DEBUG) OPT=$(OPT)
+	make CROSSWIN=x86_64-w64-mingw32- CC=$(CROSSWIN)gcc OS=Windows_NT ARCH=x86_64 DEBUG=$(DEBUG) OPT=$(OPT)
 	
 crossios:
 	make OS=IOS ARCH=arm64 DEBUG=$(DEBUG) OPT=$(OPT)

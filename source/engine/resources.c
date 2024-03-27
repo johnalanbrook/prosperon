@@ -205,6 +205,7 @@ int fexists(const char *path)
 
 void *os_slurp(const char *file, size_t *size)
 {
+  YughInfo("Slurping %s from the OS.\n", file);
   FILE *f;
 
   jump:
