@@ -1,42 +1,33 @@
-#include <string.h>
-#include <stddef.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include "miniz.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
+#include <string.h>
 
-#include "cdb.h"
-
-static struct cdb_make cdbm;
-
-/* Take all input files and zip them into a cdb */
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
-  static int cmd = 0;
-  static char *file = "out.cdb";
-  int fd;
-  char *key, *va;
-  unsigned klen, vlen;
-  fd = open(file,O_RDWR|O_CREAT);
+    if (argc < 3) {
+        printf("Usage: %s zip_archive file1 [file2 ...]\n", argv[0]);
+        return 1;
+    }
 
-  cdb_make_start(&cdbm, fd);
+    // Open the zip file for writing
+    mz_bool status;
+    mz_zip_archive zip_archive;
+    memset(&zip_archive, 0, sizeof(zip_archive));
+    printf("Creating a zip archive named %s.\n", argv[1]);
+    status = mz_zip_writer_init_file(&zip_archive, argv[1], 0);
+    if (!status) {
+        printf("Error: could not open zip file for writing.\n%s\n", mz_error(status));
+        return 1;
+    }
 
-  for (int i = 1; i < argc; i++) {
-    FILE *f;
-    char *file = argv[i];
-    f = fopen(file, "rb");
-    fseek(f,0,SEEK_END);
-    size_t fsize = ftell(f);
-    rewind(f);
-    void *slurp = malloc(fsize);
-    fread(slurp,fsize,1,f);
-    fclose(f);
-    cdb_make_add(&cdbm, file, strlen(file), slurp, fsize);
-    free(slurp);
-  }
-  cdb_make_finish(&cdbm);
+    // Add files to the zip archive
+    for (int i = 2; i < argc; ++i)
+      mz_zip_writer_add_file(&zip_archive, argv[i], argv[i], NULL, 0, MZ_DEFAULT_COMPRESSION);
 
-  return 0;
+    // Close the zip file
+    mz_zip_writer_finalize_archive(&zip_archive);
+    mz_zip_writer_end(&zip_archive);
+
+    return 0;
 }

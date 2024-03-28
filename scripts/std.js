@@ -278,7 +278,6 @@ Cmdline.register_order("play", function(argv) {
   console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);
   
   game.engine_start(function() {
-    console.info(`eng start`);
     global.mixin("scripts/sound.js");
     global.app = actor.spawn("game.js");
     if (project.icon) window.set_icon(project.icon);
@@ -297,7 +296,7 @@ Cmdline.register_order("pack", function(str) {
 
   say(`Packing into ${packname}`);
     
-  io.pack_engine(packname);
+//  io.pack_engine(packname);
   io.chmod(packname, 666);
 }, "Pack the game into the given name.", "NAME");
 
@@ -477,8 +476,10 @@ function cmd_args(cmdargs)
     console.warn(`Command ${cmds[0]} not found.`);
     return;
   }
-  
+
   Cmdline.orders[cmds[0]](cmds.slice(1));
+  if (!game.startengine)
+    os.exit(0);
 }
 
 Cmdline.register_order("clean", function(argv) {

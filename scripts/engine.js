@@ -115,8 +115,6 @@ console.trace = console.stack;
 var say = console.say;
 var print = console.print;
 
-console.warn("GOT HERE");
-
 console.doc = {
   level: "Set level to output logging to console.",
   info: "Output info level message.",
@@ -143,7 +141,7 @@ function use(file, env, script)
     console.info(`CACHE eval ${file} in ${profile.best_t(profile.now()-st)}`);
     return;
   }
-  
+  console.info(`slurping ${file}`);
   script ??= io.slurp(file);
   script = `(function() { ${script}; })`;
   var fn = os.eval(file,script);
@@ -208,6 +206,7 @@ var timescale = 1;
 
 var gggstart = game.engine_start;
 game.engine_start = function(s) {
+  game.startengine = 1;
   gggstart(function() {
       world_start();
       go_init();
@@ -215,6 +214,8 @@ game.engine_start = function(s) {
       s();
   }, process);  
 }
+
+game.startengine = 0;
 
 function process()
 {

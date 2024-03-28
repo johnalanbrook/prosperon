@@ -644,6 +644,7 @@ JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
 }
 
 JSC_CCALL(os_quit, quit();)
+JSC_CCALL(os_exit, exit(js2number(argv[0]));)
 JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
 JSC_CCALL(os_gc, script_gc());
 JSC_SSCALL(os_eval, ret = script_eval(str, str2))
@@ -712,6 +713,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, sys, 0),
   MIST_FUNC_DEF(os, system, 1),
   MIST_FUNC_DEF(os, quit, 0),
+  MIST_FUNC_DEF(os, exit, 1),
   MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),
   MIST_FUNC_DEF(os, capture, 5),
@@ -1007,8 +1009,6 @@ JSValue js_io_chmod(JSContext *js, JSValue this, int argc, JSValue *argv)
 
 JSC_SCALL(io_save_qoa, save_qoa(str))
 
-JSC_SCALL(io_pack_engine, pack_engine(str))
-
 static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, exists,1),
   MIST_FUNC_DEF(io, ls, 0),
@@ -1022,7 +1022,6 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, slurpbytes, 1),
   MIST_FUNC_DEF(io, slurpwrite, 2),
   MIST_FUNC_DEF(io, save_qoa,1),
-  MIST_FUNC_DEF(io, pack_engine, 1),
 };
 
 JSC_CCALL(debug_draw_gameobject, gameobject_draw_debug(js2gameobject(argv[0]));)

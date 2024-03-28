@@ -79,8 +79,6 @@ else
 endif
 
 CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
-
-CPPFLAGS += -D_FILE_OFFSET_BITS=64 # for tinycdb
 CPPFLAGS += -DCONFIG_VERSION=\"2024-02-14\" -DCONFIG_BIGNUM #for quickjs
 
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
@@ -149,14 +147,17 @@ endif
 OBJS != find source -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
 CPPOBJS != find source -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
 OBJS += $(CPPOBJS)
+OBJS += source/engine/yugine.c
 OBJS += $(shell find source/engine -type f -name '*.m')
+QUICKJS := source/engine/thirdparty/quickjs
+OBJS += $(addprefix $(QUICKJS)/, libregexp.c quickjs.c libunicode.c cutils.c libbf.c)
 OBJS := $(patsubst %.cpp, %$(INFO).o, $(OBJS))
 OBJS := $(patsubst %.c, %$(INFO).o,$(OBJS))
 OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/tinycdb source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
+includeflag += $(engineincs) source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
 includeflag += $(STEAM)/public
 includeflag += source
 includeflag := $(addprefix -I, $(includeflag))
@@ -188,20 +189,12 @@ install: $(NAME)
 	@echo Copying to destination
 	cp -f $(NAME) $(DESTDIR)/$(APP)
 
-$(NAME): libengine$(INFO).a libquickjs$(INFO).a $(DEPS)
+$(NAME): $(OBJS) $(DEPS)
 	@echo Linking $(NAME)
 	$(CROSSWIN)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-libengine$(INFO).a: $(OBJS)
-	@echo Archiving $@
-	$(CROSSWIN)$(AR) rcs $@ $(OBJS)
-
-QUICKJS := source/engine/thirdparty/quickjs
-libquickjs$(INFO).a: $(QUICKJS)/libregexp$(INFO).o $(QUICKJS)/quickjs$(INFO).o $(QUICKJS)/libunicode$(INFO).o $(QUICKJS)/cutils$(INFO).o $(QUICKJS)/libbf$(INFO).o
-	$(CROSSWIN)$(AR) rcs $@ $^
-	
-%$(INFO).o: %.c $(SHADERS)
+%$(INFO).o: %.c source/engine/core.cdb.h $(SHADERS)
 	@echo Making C object $@
 	$(CROSSWIN)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -224,37 +217,17 @@ SCRIPTS := $(shell ls scripts/*.js*)
 CORE != (ls icons/* fonts/*)
 CORE := $(CORE) $(SCRIPTS)
 
-CDB = source/engine/thirdparty/tinycdb
-CDB_C != find $(CDB) -name *.c
-CDB_O := $(patsubst %.c, %.o, $(CDB_C))
-CDB_O := $(notdir $(CDB_O))
-tools/libcdb.a: $(CDB_C)
-	cc -c $^
-	$(CROSSWIN)$(AR) rcs $@ $(CDB_O)
-
-cdb: tools/cdb.c tools/libcdb.a
-	@echo Making cdb
-	cc $^ -I$(CDB) -o cdb
-	
-packer: tools/packer.c tools/libcdb.a
+packer$(EXT): tools/packer.c source/engine/miniz.c
 	@echo Making packer
-	cc $^ -I$(CDB) -o packer
+	$(CC) -O2 $^ -Isource/engine -o packer
 
-core.cdb: packer $(CORE)
+core.cdb: packer$(EXT) $(CORE)
 	@echo Packing core.cdb
-	./packer $(CORE)
-	chmod 644 out.cdb
-	mv out.cdb core.cdb
+	./packer$(EXT) $@ $(CORE)
 
 source/engine/core.cdb.h: core.cdb
 	@echo Making $@
 	xxd -i $< > $@
-
-jsc: tools/jso.c tools/libquickjs.a
-	$(CC) $^ -lm -Iquickjs -o $@
-
-tools/libquickjs.a: $(BIN)/libquickjs.a
-	cp -f $(BIN)/libquickjs.a tools
 
 ICNSIZE = 16 32 128 256 512 1024
 ICNNAME := $(addsuffix .png, $(ICNSIZE))

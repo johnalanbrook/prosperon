@@ -62,6 +62,7 @@ void c_init() {
   render_init();
   particle_init();
   script_call_sym(c_start,0,NULL);
+  JS_FreeValue(js, c_start);
 }
 
 void c_frame() { script_call_sym(c_process_fn,0,NULL); }
@@ -194,7 +195,7 @@ static sapp_desc start_desc = {
     .logger.func = sg_logging,
 };
 
-int main(int argc, char **argv) {
+sapp_desc sokol_main(int argc, char **argv) {
 #ifndef NDEBUG
   log_init();
   signal(SIGSEGV, seghandle);
@@ -224,14 +225,13 @@ int main(int argc, char **argv) {
     sfetch_dowork();
 
   script_evalf("cmd_args('%s');", cmdstr);
- 
-  return 0;
+  return start_desc;
 }
 
 void engine_start(JSValue start, JSValue procfn)
 {
-  c_start = start;
-  c_process_fn = procfn;
+  c_start = JS_DupValue(js,start);
+  c_process_fn = JS_DupValue(js,procfn);
 
   sound_init();
 
@@ -239,7 +239,6 @@ void engine_start(JSValue start, JSValue procfn)
   start_desc.height = mainwin.size.y;
   start_desc.window_title = mainwin.title;
   start_desc.fullscreen = mainwin.fullscreen;
-  sapp_run(&start_desc);
 }
 
 double apptime() { return stm_sec(stm_now()); }

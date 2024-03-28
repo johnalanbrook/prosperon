@@ -15,7 +15,7 @@
 #include "font.h"
 
 #include <fcntl.h>
-#include "cdb.h"
+#include "miniz.h"
 
 #ifndef __EMSCRIPTEN__
 #include <ftw.h>
@@ -40,8 +40,8 @@ struct dirent *c_dirent = NULL;
 
 char pathbuf[MAXPATH + 1];
 
-static struct cdb corecdb;
-static struct cdb game_cdb;
+static mz_zip_archive corecdb;
+static mz_zip_archive game_cdb;
 
 int LOADED_GAME = 0;
 uint8_t *gamebuf;
@@ -49,7 +49,7 @@ uint8_t *gamebuf;
 static void response_cb(const sfetch_response_t *r)
 {
   if (r->fetched) {
-    cdb_initf(&game_cdb, r->data.ptr, r->data.size);
+    mz_zip_reader_init_mem(&game_cdb, r->data.ptr, r->data.size,0);
     LOADED_GAME = 1;
   }
   if (r->finished) {
@@ -78,7 +78,7 @@ void resources_init() {
     }
   });
 
-  cdb_initf(&corecdb, core_cdb, core_cdb_len);
+  mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -160,6 +160,7 @@ char **ls(const char *path)
 #else
 void fill_extensions(char *paths, const char *path, const char *ext)
 {};
+char **ls(const char *path) { return NULL; }
 #endif
 
 char *str_replace_ext(const char *s, const char *newext) {
@@ -172,32 +173,11 @@ char *str_replace_ext(const char *s, const char *newext) {
   return ret;
 }
 
-FILE *path_open(const char *tag, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vsnprintf(pathbuf, MAXPATH+1, fmt, args);
-  va_end(args);
-
-  FILE *f = fopen(pathbuf, tag);
-  return f;
-}
-
-void *cdb_slurp(struct cdb *cdb, const char *file, size_t *size)
-{
-    unsigned vlen, vpos;
-    vpos = cdb_datapos(cdb);
-    vlen = cdb_datalen(cdb);
-    char *data = malloc(vlen+1);
-    cdb_read(cdb, data, vlen, vpos);
-    if (size) *size = vlen;
-    return data;
-}
-
 int fexists(const char *path)
 {
   int len = strlen(path);
-  if (cdb_find(&game_cdb, path, len)) return 1;
-  else if (cdb_find(&corecdb, path, len)) return 1;
+  if (mz_zip_reader_locate_file(&game_cdb, path, NULL, 0) != -1) return 1;
+  else if (mz_zip_reader_locate_file(&corecdb, path, NULL, 0) != -1) return 1;
   else if (!access(path, R_OK)) return 1;
 
   return 0;
@@ -205,7 +185,6 @@ int fexists(const char *path)
 
 void *os_slurp(const char *file, size_t *size)
 {
-  YughInfo("Slurping %s from the OS.\n", file);
   FILE *f;
 
   jump:
@@ -227,12 +206,13 @@ void *os_slurp(const char *file, size_t *size)
 
 void *slurp_file(const char *filename, size_t *size)
 {
+  void *ret;
   if (!access(filename, R_OK))
     return os_slurp(filename, size);
-  else if (cdb_find(&game_cdb, filename, strlen(filename)))
-    return cdb_slurp(&game_cdb, filename, size);
-  else if (cdb_find(&corecdb, filename, strlen(filename)))
-    return cdb_slurp(&corecdb, filename, size);
+  else if (ret = mz_zip_reader_extract_file_to_heap(&game_cdb, filename, size, 0))
+    return ret;
+  else if (ret = mz_zip_reader_extract_file_to_heap(&corecdb, filename, size, 0))
+    return ret;
 
   return NULL;
 }
@@ -311,58 +291,3 @@ int slurp_write(const char *txt, const char *filename, size_t len) {
   fclose(f);
   return 0;
 }
-
-#ifndef __EMSCRIPTEN__
-static struct cdb_make cdbm;
-
-static const char *pack_ext[] = {".qoi", ".qoa", ".js", ".wav", ".mp3", ".png", ".sf2", ".midi", ".lvl", ".glsl", ".ttf", ".json", ".jso"};
-
-static int ftw_pack(const char *path, const struct stat *sb, int flag)
-{
-  if (flag != FTW_F) return 0;
-  int pack = 0;
-  char *ext = strrchr(path, '.');
-
-  if (!ext)
-    return 0;
-
-  for (int i = 0; i < 13; i++) {
-    if (!strcmp(ext, pack_ext[i])) {
-      pack = 1;
-      break;
-    }
-  }
-
-  if (!pack) return 0;
-
-  size_t len;
-  void *file = slurp_file(path, &len);
-  cdb_make_add(&cdbm, &path[2], strlen(&path[2]), file, len);
-    
-  free(file);
-
-  return 0;
-}
-
-void pack_engine(const char *fname)
-{
-  int fd;
-  char *key, *va;
-  unsigned klen, vlen;
-  fd = creat(fname, O_RDWR);
-  if (fd == -1) {
-    YughError("Couldn't make file at %s.", fname);
-    return;
-  }
-  cdb_make_start(&cdbm, fd);
-  ftw(".", ftw_pack, 20);
-  cdb_make_finish(&cdbm);
-  close(fd);
-}
-#else
-void pack_engine(const char *fname){
-  YughError("Cannot pack engine on a web build.");
-}
-
-char **ls(const char *path) { return NULL; }
-#endif

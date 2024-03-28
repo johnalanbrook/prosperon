@@ -73,11 +73,9 @@ JSValue script_eval(const char *file, const char *script)
 
 void script_call_sym(JSValue sym, int argc, JSValue *argv) {
   if (!JS_IsFunction(js, sym)) return;
-  JSValue g = JS_GetGlobalObject(js);
-  JSValue ret = JS_Call(js, sym, JS_GetGlobalObject(js), argc, argv);
+  JSValue ret = JS_Call(js, sym, JS_UNDEFINED, argc, argv);
   js_print_exception(ret);
   JS_FreeValue(js, ret);
-  JS_FreeValue(js,g);
 }
 
 void out_memusage(const char *file)
