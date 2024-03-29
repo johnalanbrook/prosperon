@@ -244,8 +244,7 @@ var SpriteAnim = {
     else
       return undefined;
       
-    animcache[path] = anim;
-    console.spam(`Created animation like this:\n${json.encode(animcache[path])}`);
+    animcache[path] = anim; 
     return animcache[path];
   },
   gif(path) {

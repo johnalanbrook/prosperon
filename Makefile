@@ -1,4 +1,4 @@
-MAKEFLAGS = --jobs=4
+MAKEFLAGS = --jobs=8
 UNAME != uname
 MAKEDIR != pwd
 # Options
@@ -184,6 +184,8 @@ all: $(NAME)
 SHADERS = $(shell ls source/shaders/*.sglsl)
 SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
 
+prereqs: $(SHADERS) source/engine/core.cdb.h
+
 DESTDIR ?= ~/.bin
 install: $(NAME)
 	@echo Copying to destination
@@ -191,20 +193,20 @@ install: $(NAME)
 
 $(NAME): $(OBJS) $(DEPS)
 	@echo Linking $(NAME)
-	$(CROSSWIN)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
+	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-%$(INFO).o: %.c source/engine/core.cdb.h $(SHADERS)
+%$(INFO).o: %.c 
 	@echo Making C object $@
-	$(CROSSWIN)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %$(INFO).o: %.cpp
 	@echo Making C++ object $@
-	$(CROSSWIN)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
 
 %$(INFO).o: %.m
 	@echo Making Objective-C object $@
-	$(CROSSWIN)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 shaders: $(SHADERS)
 	@echo Making shaders
@@ -238,11 +240,8 @@ icon.ico: $(ICON)
 	rm $(ICNNAME)
 
 resource.o: resource.rc resource.manifest icon.ico
-	$(CROSSWIN)windres -i $< -o $@
+	windres -i $< -o $@
 
-crosswin: packer resource.o
-	make CROSSWIN=x86_64-w64-mingw32- CC=$(CROSSWIN)gcc OS=Windows_NT ARCH=x86_64 DEBUG=$(DEBUG) OPT=$(OPT)
-	
 crossios:
 	make OS=IOS ARCH=arm64 DEBUG=$(DEBUG) OPT=$(OPT)
 

@@ -208,7 +208,7 @@ var gameobject = {
   },
 
   tween(prop, values, def) {
-    var t = Tween.make(this, prop, values, def);
+    var t = Tween.make(this, prop, values, def); 
     t.play();
 
     var k = function() { t.pause(); }
@@ -217,7 +217,6 @@ var gameobject = {
   },
 
   cry(file) {
-    return;
     this.crying = audio.play(file, audio.bus.sfx);
     var killfn = () => { this.crying = undefined;
       console.warn("killed"); }
@@ -227,7 +226,7 @@ var gameobject = {
 
   gscale() { return this.scale; },
   sgscale(x) {
-    if (typeof x === 'number')
+    if (typeof x === 'number') 
       x = [x, x];
     
     physics.sgscale(this, x)
