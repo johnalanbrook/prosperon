@@ -280,7 +280,7 @@ Cmdline.register_order("play", function(argv) {
   game.engine_start(function() {
     global.mixin("scripts/sound.js");
     global.app = actor.spawn("game.js");
-    if (project.icon) window.set_icon(project.icon);
+    if (project.icon) window.set_icon(game.texture(project.icon));
   });  
 }, "Play the game present in this folder.");
 

@@ -2,26 +2,28 @@ var ai = {
   race(list) {
     return function(dt) {
       var good = false;
-      list.forEach(function(x) { if (x.call(this,dt)) good = true; }, this);
+      for (var i = 0; i < list.length; i++)
+        if (list[i].call(this,dt)) good=true;
+        
       return good;
     };
-  },
-  
-  do(times, list) {
-    
   },
 
   sequence(list) {
     var i = 0;
-    return function(dt) {
+    var fn = function(dt) {
       while (i !== list.length) {
         if (list[i].call(this,dt))
-	  i++;
-	else
-	  return false;
+	       i++;
+	      else
+	       return false;
       }
+      if (fn.done) fn.done();
       return true;
     };
+    
+    fn.restart = function() { i = 0; };
+    return fn;
   },
 
   parallel(list) {
@@ -31,22 +33,12 @@ var ai = {
       return good;
     };
   },
-
-  moveto() {
-    return function(dt) {
-    var dir = this.randomloc.sub(this.pos);
-    if (Vector.length(dir) < 10) return true;
-    
-    this.velocity = Vector.norm(this.randomloc.sub(this.pos)).scale(20);
-    return False;
-    }
-  },
-
-  move() {
-    return function(dt) {
-      this.velocity = this.left().scale(20);
-      return false;
-    }
+  
+  dofor(secs, fn) {
+    return ai.race([
+      ai.wait(secs),
+      fn
+    ]);
   },
 
   wait(secs) {
@@ -54,8 +46,10 @@ var ai = {
     var accum = 0;
     return function(dt) {
       accum += dt;
-      if (accum >= secs)
+      if (accum >= secs) {
+        accum = 0;
         return true;
+      }
 	
       return false;
     };

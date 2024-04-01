@@ -17,13 +17,12 @@ out vec4 frag_color;
 
 uniform texture2D diffuse;
 uniform sampler smp;
+uniform mpara {
+  uniform vec2 screensize;
+};
 
 void main()
 {
-  frag_color = texture(sampler2D(diffuse,smp), TexCoords);
-  return;
-/*  vec2 screensize = textureSize(diffuse,0);
-  
   vec4 color = texture(sampler2D(diffuse,smp), TexCoords);
   float avg = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
   frag_color = vec4(avg,avg,avg,1.0);
@@ -39,7 +38,7 @@ void main()
   float b = color.b;
 
   frag_color = vec4(r, g*0.99, b, 1.0) * clamp(line_intensity, 0.85, 1.0);
-*/
+
 }
 @end
 

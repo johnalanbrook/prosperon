@@ -24,6 +24,8 @@
 #include "sokol/sokol_gfx.h"
 #include "sokol_gfx_ext.h"
 
+#include "crt.sglsl.h"
+
 #include "msf_gif.h"
 
 HMM_Vec2 campos = {0,0};
@@ -37,6 +39,12 @@ static struct {
   sg_image img;
   sg_image depth;
 } sg_gif;
+
+static struct {
+  sg_pipeline pipe;
+  sg_bindings bind;
+  sg_shader shader;
+} sg_crt;
 
 static struct {
   int w;
@@ -217,7 +225,7 @@ void render_init() {
   pass_action = (sg_pass_action){
     .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
   };
-
+  
   sg_gif.shader = sg_make_shader(box_shader_desc(sg_query_backend()));
 
   sg_gif.pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -225,14 +233,13 @@ void render_init() {
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2,
-	[1].format = SG_VERTEXFORMAT_FLOAT2
+      	[1].format = SG_VERTEXFORMAT_FLOAT2
       }
     },
     .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8,
     .label = "gif pipe",
   });
 
-#if defined SOKOL_GLCORE33 || defined SOKOL_GLES3
   float crt_quad[] = {
     -1, 1, 0, 1,
     -1, -1, 0, 0,
@@ -241,16 +248,7 @@ void render_init() {
     1, -1, 1, 0,
     1, 1, 1, 1
   };
-#else
-  float crt_quad[] = {
-    -1, 1, 0, 0,
-    -1, -1, 0, 1,
-    1, -1, 1, 1,
-    -1, 1, 0, 0,
-    1, -1, 1, 1,
-    1, 1, 1, 0
-  };
-#endif
+
   float gif_quad[] = {
     -1, 1, 0, 1,
     -1, -1, 0, 0,
@@ -265,6 +263,24 @@ void render_init() {
     .data = gif_quad,
   });
   sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+  
+  sg_crt.shader = sg_make_shader(crt_shader_desc(sg_query_backend()));
+  sg_crt.pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = sg_crt.shader,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT2,
+        [1].format = SG_VERTEXFORMAT_FLOAT2
+      }
+    },
+    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+  });
+  
+  sg_crt.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(crt_quad),
+    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .usage = SG_USAGE_IMMUTABLE
+  });
 }
 
 HMM_Vec2 world2screen(HMM_Vec2 pos)
@@ -358,23 +374,6 @@ void openglRender(struct window *window, gameobject *cam, float zoom) {
     msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
   }
 */
-}
-
-sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d)
-{
-  YughInfo("Making shader with %s and %s", v, f);
-  char *vs = slurp_text(v, NULL);
-  char *fs = slurp_text(f, NULL);
-
-  d->vs.source = vs;
-  d->fs.source = fs;
-  d->label = v;
-
-  sg_shader ret = sg_make_shader(d);
-  
-  free(vs);
-  free(fs);
-  return ret;
 }
 
 struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {

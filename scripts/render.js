@@ -135,10 +135,12 @@ render.text = function(str, pos, size, color, wrap, anchor, cursor) {
   return bb;
 };
 
-render.image = function(tex, pos, rotation, color) {
+render.image = function(tex, pos, rotation, color, dimensions) {
   color ??= Color.white;
   rotation ??= 0;
-  gui.img(tex,pos, [1.0,1.0], 0.0, false, [0.0,0.0], color); 
+  dimensions ??= [tex.width, tex.height];
+  var scale = [dimensions.x/tex.width, dimensions.y/tex.height];
+  gui.img(tex,pos, scale, 0.0, false, [0.0,0.0], color); 
   return bbox.fromcwh([0,0], [tex.width,tex.height]);
 }
 

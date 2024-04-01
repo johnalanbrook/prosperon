@@ -17,6 +17,33 @@ audio.bus.master = dspsound.master();
 audio.dsp = {};
 audio.dsp = dspsound;
 
+var cries = [];
+audio.cry = function(file)
+{
+  var player = audio.play(file);
+  cries.push(player);
+  var hook = function() { console.warn("ENDED SOUND!!!!"); cries.remove(player); player = undefined; hook = undefined;}
+  player.hook = hook;
+}
+
+var song;
+
+audio.music = function(file, fade) {
+  fade ??= 0;
+  if (!fade) {
+    song = audio.play(file);
+    console.info("STRAIGHT PLAY");
+    return;
+  }
+  
+  var temp = audio.play(file);
+  temp.volume = 0;
+  var temp2 = song;
+  tween(temp, 'volume', 1, fade);
+  tween(temp2, 'volume', 0, fade);
+  song = temp;
+}
+
 audio.dsp.mix = function(to) {
   var n = audio.dsp.mix();
   if (to) n.plugin(to);

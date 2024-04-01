@@ -115,7 +115,7 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_CHAR:
-      script_evalf("prosperon.textinput(`%lc`);", e->char_code);
+      script_evalf("prosperon.textinput(`\\%lc`);", e->char_code);
       break;
 
     case SAPP_EVENTTYPE_RESIZED:

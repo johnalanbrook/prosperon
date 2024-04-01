@@ -278,7 +278,7 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
   if(end) {
     if (s->loop)
       s->frame = 0;
-
+    YughInfo("CALLING HOOK");
     script_call_sym(s->hook,0,NULL);
   }
 }

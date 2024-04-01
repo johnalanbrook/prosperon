@@ -362,6 +362,8 @@ global.mixin("scripts/std");
 global.mixin("scripts/diff");
 global.mixin("scripts/color");
 global.mixin("scripts/gui");
+global.mixin("scripts/tween");
+global.mixin("scripts/ai");
 
 var timer = {
   update(dt) {

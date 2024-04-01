@@ -322,6 +322,7 @@ var SpriteAnim = {
     };
 
     var data = json.decode(io.slurp(path));
+    if (!data?.meta?.app.includes("aseprite")) return;
     var anims = {};
     var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
     var f = 0;

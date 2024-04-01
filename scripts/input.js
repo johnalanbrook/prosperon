@@ -2,7 +2,7 @@ var keycodes = {
   259: "back",
   258: "tab",
   257: "enter",
-  1: "escape",
+  256: "escape",
   32: "space",
   266: "pgup",    
   267: "pgdown",
@@ -111,7 +111,7 @@ prosperon.droppedfile = function(path)
 
 var mousepos = [0,0];
 
-prosperon.textinput = function(){};
+prosperon.textinput = function(l){};
 prosperon.mousemove = function(pos, dx){
   mousepos = pos;
   player[0].mouse_input(modstr() + "move", pos, dx);

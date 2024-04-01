@@ -67,8 +67,6 @@ void capture_screen(int x, int y, int w, int h, const char *path);
 HMM_Vec2 world2screen(HMM_Vec2 pos);
 HMM_Vec2 screen2world(HMM_Vec2 pos);
 
-sg_shader sg_compile_shader(const char *v, const char *f, sg_shader_desc *d);
-
 void gif_rec_start(int w, int h, int cpf, int bitdepth);
 void gif_rec_end(const char *path);
 

@@ -103,6 +103,21 @@ Ease.elastic = {
 Ease.elastic.c4 = 2*Math.PI/3;
 Ease.elastic.c5 = 2*Math.PI / 4.5;
 
+var tween = function(obj, val, to, time)
+{
+  var start = profile.secs(profile.now());
+  var startval = obj[val];
+  var update = function(dt) {
+    var elapsed = profile.secs(profile.now()) - start;
+    obj[val] = startval.lerp(to, elapsed/time);
+    if (elapsed >= time) {
+      obj[val] = to;
+      stop();
+    }
+  };
+  var stop = Register.update.register(update);
+}
+
 var Tween = {
   default: {
     loop: "restart",
@@ -142,12 +157,12 @@ var Tween = {
       if (defn.accum >= defn.time && defn.loop === 'hold') {
         if (typeof target === 'string')
           obj[target] = tvals[tvals.length-1];
-	else
-	  target(tvals[tvals.length-1]);
+        else
+          target(tvals[tvals.length-1]);
 	  
         defn.pause();
-	defn.cb.call(obj);
-	return;
+	      defn.cb.call(obj);
+	      return;
       }
 
       defn.pct = (defn.accum % defn.time) / defn.time;
@@ -197,4 +212,4 @@ var Tween = {
 
 Tween.make = Tween.start;
 
-return {Tween, Ease};
+return {Tween, Ease, tween};
