@@ -1,5 +1,58 @@
 "use math";
 
+Object.defineProperty(String.prototype, 'tolast', {
+  value: function(val) {
+    var idx = this.lastIndexOf(val);
+    if (idx === -1) return this.slice();
+    return this.slice(0,idx);
+  }
+});
+
+Object.defineProperty(String.prototype, 'dir', {
+  value: function() {
+    if (!this.includes('/')) return "";
+    return this.tolast('/');
+  }
+});
+
+globalThis.Resources = {};
+
+Resources.replpath = function(str, path)
+{
+  if (!str) return str;
+  if (str[0] === "/")
+    return str.rm(0);
+
+  if (str[0] === "@")
+    return os.prefpath() + "/" + str.rm(0);
+
+  if (!path) return str;
+  
+  var stem = path.dir();
+  while (stem) {
+    var tr = stem + "/" +str;
+    if (io.exists(tr)) return tr;
+    stem = stem.updir();
+  }
+  
+  return str;
+}
+
+Resources.replstrs = function(path)
+{
+  if (!path) return;
+  var script = io.slurp(path);
+  var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
+  var stem = path.dir();
+
+  script = script.replace(regexp,function(str) {
+    var newstr = Resources.replpath(str.trimchr('"'), path);
+    return `"${newstr}"`;
+  });
+
+  return script;
+}
+
 globalThis.json = {};
 json.encode = function(value, replacer, space, whitelist)
 {
@@ -32,7 +85,6 @@ json.doc = {
   readout: "Encode an object fully, including function definitions."
 };
 
-globalThis.Resources = {};
 Resources.scripts = ["jsoc", "jsc", "jso", "js"];
 Resources.images = ["png", "gif", "jpg", "jpeg"];
 Resources.sounds =  ["wav", 'flac', 'mp3', "qoa"];
@@ -142,8 +194,8 @@ function use(file, env, script)
     return;
   }
   console.info(`slurping ${file}`);
-  script ??= io.slurp(file);
-  script = `(function() { ${script}; })`;
+  script ??= Resources.replstrs(file);
+  script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file,script);
   use.cache[file] = fn;
   var ret = fn.call(env);

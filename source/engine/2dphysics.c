@@ -103,65 +103,6 @@ gameobject **clean_ids(gameobject **ids)
   return ids;
 }
 
-typedef struct querybox {
-  cpBB bb;
-  gameobject **ids;
-} querybox;
-
-void querylist(cpShape *shape, cpContactPointSet *points, querybox *qb) {
-  arrput(qb->ids, shape2go(shape));
-}
-
-void querylistbodies(cpBody *body, querybox *qb) {
-  if (cpBBContainsVect(qb->bb, cpBodyGetPosition(body)))
-    arrput(qb->ids,body2go(body));
-}
-
-/* Return all points from a list of points in the given boundingbox */
-int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n) {
-  cpBB bbox;
-  bbox = cpBBExpand(bbox, cpvadd(pos.cp, cpvmult(wh.cp,0.5)));
-  bbox = cpBBExpand(bbox, cpvsub(pos.cp, cpvmult(wh.cp,0.5)));
-  int *hits = NULL;
-
-  for (int i = 0; i < n; i++)
-    if (cpBBContainsVect(bbox, points[i].cp))
-      arrpush(hits, i);
-
-  return hits;
-}
-
-/* Return all gameobjects within the given box */
-gameobject **phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh) {
-  cpShape *box = cpBoxShapeNew(NULL, wh.x, wh.y, 0.f);
-  cpTransform T = {0};
-  T.a = 1;
-  T.d = 1;
-  T.tx = pos.x;
-  T.ty = pos.y;
-  cpShapeUpdate(box, T);
-
-  cpBB bbox = cpShapeGetBB(box);
-
-  querybox qb;
-  qb.bb = bbox;
-  qb.ids = NULL;
-
-  cpSpaceShapeQuery(space, box, querylist, &qb);
-  cpSpaceEachBody(space, querylistbodies, &qb);
-
-  cpShapeFree(box);
-
-  return clean_ids(qb.ids);
-}
-
-gameobject **phys2d_query_shape(struct phys2d_shape *shape)
-{
-  gameobject **ids = NULL;
-  cpSpaceShapeQuery(space, shape->shape, querylist, ids);
-  return clean_ids(ids);
-}
-
 int cpshape_enabled(cpShape *c) {
   cpShapeFilter filter = cpShapeGetFilter(c);
   if (filter.categories == ~CP_ALL_CATEGORIES && filter.mask == ~CP_ALL_CATEGORIES)

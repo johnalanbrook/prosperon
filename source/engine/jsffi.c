@@ -701,10 +701,7 @@ JSC_SCALL(os_make_texture,
   YughInfo("Made texture with %s", str);
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
-
-JSC_SCALL(os_system,
-  system(str);
-)
+JSC_SCALL(os_system, system(str); )
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os,sprite,1),
@@ -1038,31 +1035,9 @@ JSC_CCALL(physics_sgscale,
 
 JSC_CCALL(physics_set_cat_mask, set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])))
 
-JSC_CCALL(physics_box_query,
-  int *ids = phys2d_query_box(js2vec2(argv[0]), js2vec2(argv[1]));
-  JSValue ret = gos2ref(ids);
-  arrfree(ids);
-  return ret;
-)
-
 JSC_CCALL(physics_pos_query,
   gameobject *go = pos2gameobject(js2vec2(argv[0]), js2number(argv[1]));
   JSValue ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
-  return ret;
-)
-
-JSC_CCALL(physics_box_point_query,
-  void *v = js2cpvec2arr(argv[2]);
-  int *intids = phys2d_query_box_points(js2vec2(argv[0]), js2vec2(argv[1]), v, js_arrlen(argv[2]));
-  JSValue ret = ints2js(intids);
-  arrfree(intids);
-  return ret;
-)
-
-JSC_CCALL(physics_query_shape,
-  int *ids = phys2d_query_shape(js2ptr(argv[0]));
-  JSValue ret = gos2ref(ids);
-  arrfree(ids);
   return ret;
 )
 
@@ -1080,6 +1055,36 @@ JSC_CCALL(physics_collide_begin, js2gameobject(argv[1])->cbs.begin = JS_DupValue
 JSC_CCALL(physics_collide_rm, phys2d_rm_go_handlers(js2gameobject(argv[0])))
 JSC_CCALL(physics_collide_separate, js2gameobject(argv[1])->cbs.separate = JS_DupValue(js,argv[0]))
 JSC_CCALL(physics_collide_shape, gameobject_add_shape_collider(js2gameobject(argv[1]), JS_DupValue(js,argv[0]), js2ptr(argv[2])))
+
+void bb_query_fn(cpShape *shape, JSValue *cb)
+{
+  JSValue go = JS_DupValue(js,shape2go(shape)->ref);
+  script_call_sym(*cb, 1, &go);
+  JS_FreeValue(js, go);
+}
+
+JSC_CCALL(physics_box_query,
+  HMM_Vec2 pos = js2vec2(argv[0]);
+  HMM_Vec2 wh = js2vec2(argv[1]);
+  cpBB bbox;
+  bbox.l = pos.x-wh.x/2;
+  bbox.r = pos.x+wh.x/2;
+  bbox.t = pos.y+wh.y/2;
+  bbox.b = pos.y-wh.y/2;
+  cpSpaceBBQuery(space, bbox, allfilter, bb_query_fn, &argv[3]);
+  return ret;
+)
+
+static void shape_query_fn(cpShape *shape, cpContactPointSet *points, JSValue *cb)
+{
+  JSValue go = JS_DupValue(js,shape2go(shape)->ref);
+  script_call_sym(*cb, 1, &go);
+  JS_FreeValue(js, go);
+}
+
+JSC_CCALL(physics_shape_query,
+  cpSpaceShapeQuery(space, ((struct phys2d_shape*)js2ptr(argv[0]))->shape, shape_query_fn, &argv[1]);
+)
 
 static void ray_query_fn(cpShape *shape, float t, cpVect n, float a, JSValue *cb)
 {
@@ -1100,11 +1105,10 @@ JSC_CCALL(physics_ray_query,
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, sgscale, 2),
   MIST_FUNC_DEF(physics, set_cat_mask, 2),
-  MIST_FUNC_DEF(physics, box_query, 2),
   MIST_FUNC_DEF(physics, pos_query, 2),
   MIST_FUNC_DEF(physics, ray_query, 2),
-  MIST_FUNC_DEF(physics, box_point_query, 3),
-  MIST_FUNC_DEF(physics, query_shape, 1),
+  MIST_FUNC_DEF(physics, box_query, 2),
+  MIST_FUNC_DEF(physics, shape_query, 1),
   MIST_FUNC_DEF(physics, closest_point, 3),
   MIST_FUNC_DEF(physics, make_damp, 0),
   MIST_FUNC_DEF(physics, make_gravity, 0),
@@ -1206,9 +1210,11 @@ static const JSCFunctionListEntry js_window_funcs[] = {
 };
 
 JSC_GETSET_BODY(pos, Position, cvec2)
-JSC_GETSET_BODY(angle, Angle, number)
+JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
+JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
-JSC_GETSET_BODY(angularvelocity, AngularVelocity, number)
+JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
+JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
 JSC_GETSET_BODY(moi, Moment, number)
 JSC_GETSET_BODY(torque, Torque, number)
 JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))

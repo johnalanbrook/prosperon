@@ -69,42 +69,6 @@ Resources.texture.dimensions = function(path) { texture.dimensions(path); }
 Resources.gif = {};
 Resources.gif.frames = function(path) { return render.gif_frames(path); }
 
-Resources.replpath = function(str, path)
-{
-  if (!str) return str;
-  if (str[0] === "/")
-    return str.rm(0);
-
-  if (str[0] === "@")
-    return os.prefpath() + "/" + str.rm(0);
-
-  if (!path) return str;
-  
-  var stem = path.dir();
-  while (stem) {
-    var tr = stem + "/" +str;
-    if (io.exists(tr)) return tr;
-    stem = stem.updir();
-  }
-  
-  return str;
-}
-
-Resources.replstrs = function(path)
-{
-  var script = io.slurp(path);
-  var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
-  var stem = path.dir();
-
-  script = script.replace(regexp,function(str) {
-    var newstr = Resources.replpath(str.trimchr('"'), path);
-    return `"${newstr}"`;
-  });
-
-  return script;
-}
-
-
 /*
   io path rules. Starts with, meaning:
   "@": user path

@@ -105,7 +105,6 @@ void phys2d_init();
 void phys2d_update(float deltaT);
 cpShape *phys2d_query_pos(cpVect pos);
 void phys2d_query_ray(HMM_Vec2 start, HMM_Vec2 end, float radius, cpShapeFilter filter, JSValue cb);
-gameobject **phys2d_query_box(HMM_Vec2 pos, HMM_Vec2 wh);
 
 struct shape_cb {
   struct phys2d_shape *shape;
@@ -126,8 +125,6 @@ struct rgba shape_color_s(cpShape *shape);
 
 void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(gameobject *go);
-gameobject **phys2d_query_shape(struct phys2d_shape *shape);
-int *phys2d_query_box_points(HMM_Vec2 pos, HMM_Vec2 wh, HMM_Vec2 *points, int n);
 int query_point(HMM_Vec2 pos);
 
 void flush_collide_cbs();

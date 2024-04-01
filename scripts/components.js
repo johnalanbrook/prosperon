@@ -124,6 +124,7 @@ Object.mixin(os.sprite(true), {
     this.del_anim?.();
   },
   set path(p) {
+    console.info(`setting path to ${p}`);
     p = Resources.find_image(p);
     if (!p) {
       console.warn(`Could not find image ${p}.`);

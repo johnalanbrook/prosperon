@@ -10,6 +10,8 @@ function obj_unique_name(name, obj) {
   return n;
 }
 
+var urcache = {};
+
 var gameobject_impl = {
   get pos() {
     assert(this.master, `Entity ${this.toString()} has no master.`);
@@ -232,13 +234,6 @@ var gameobject = {
     physics.sgscale(this, x)
   },
 
-  phys_material() {
-    var mat = {};
-    mat.elasticity = this.elasticity;
-    mat.friction = this.friction;
-    return mat;
-  },
-
   worldpos() { return this.pos; },
   set_worldpos(x) {
     var poses = this.objects.map(x => x.pos);
@@ -247,45 +242,33 @@ var gameobject = {
   },
   screenpos() { return window.world2screen(this.worldpos()); },
 
-  worldangle() { return Math.rad2turn(this.angle); },
-  sworldangle(x) { this.angle = Math.turn2rad(x); },
+  worldangle() { return this.angle; },
+  sworldangle(x) { this.angle = x; },
 
-  get_ur() { return Object.access(ur, this.ur); },
+  get_ur() { return urcache[this.ur]; },
 
   /* spawn an entity
-         text can be:
-	       the file path of a script
-	       an ur object
-	       nothing
-      */
-  spawn(text) {
-    var ent = os.make_gameobject();
-    
-    if (typeof text === 'object')
-      text = text.name;
-
-    if (typeof text === 'undefined')
-      ent.ur = "empty";
-    else if (typeof text !== 'string') {
-      console.error(`Must pass in an ur type or a string to make an entity.`);
-      return;
-    } else {
-      if (Object.access(ur, text))
-        ent.ur = text;
-      else if (io.exists(text))
-        ent.ur = "script";
-      else {
-        console.warn(`Cannot make an entity from '${text}'. Not a valid ur.`);
-        return;
-      }
-    }
-    
-    console.spam(`Creating entity of type ${ent.ur}`);
-
-    ent.warp_layer = [true];
-    ent.components = {};
-    ent.objects = {};
+      text can be:
+      the file path of a script
+      an ur object
+      nothing
+  */
+  spawn(text, config, callback) {
+    var ent = os.make_gameobject();    
+    ent.setref(ent);
+    ent.components ??= {};
+    ent.objects ??= {};
     ent.timers = [];
+    if (typeof text === 'object') // assume it's an ur
+    {
+      config = text.data;
+      text = text.text;
+    }
+
+    if (text)
+      use(text, ent);
+    if (config)
+      Object.assign(ent, json.decode(io.slurp(config)));
 
     ent.reparent(this);
 
@@ -296,18 +279,7 @@ var gameobject = {
       urdiff: {},
     };
 
-    ent.setref(ent);
-
-    Object.hide(ent, 'ur', 'components', 'objects', '_ed', 'timers', 'master');
-    if (ent.ur === 'empty') {
-      if (!ur.empty.proto) ur.empty.proto = json.decode(json.encode(ent));
-      return ent;
-    }
-
-    if (ent.ur === 'script')
-      use(text, ent);
-    else
-      apply_ur(ent.ur, ent);
+    ent.ur = text + "+" + config;
 
     for (var [prop, p] of Object.entries(ent)) {
       if (!p) continue;
@@ -328,6 +300,10 @@ var gameobject = {
     if (typeof ent.load === 'function') ent.load();
     if (sim.playing())
       if (typeof ent.start === 'function') ent.start();
+
+    ent.objects ??= {};
+    ent.components ??= {};
+    Object.hide(ent, 'ur', 'components', 'objects', '_ed', 'timers', 'master');
 
     var mur = ent.get_ur();
     if (mur && !mur.proto)
@@ -784,10 +760,6 @@ game.loadurs = function() {
     var topur = file2fqn(file);
     topur.data = file;
   }
-
-  ur.empty = {
-    name: "empty"
-  };
 };
 
 return { go_init }

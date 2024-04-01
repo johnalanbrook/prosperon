@@ -1039,12 +1039,9 @@ editor.inputs.lm.released = function() {
     } else {
       var box = bbox.frompoints([editor.sel_start, Mouse.worldpos()]);
     
-      var hits = physics.box_query(bbox.tocwh(box));
-
-      hits.forEach(function(x, i) {
-        var obj = editor.do_select(x);
-	if (obj)
-	  selects.push(obj);
+      physics.box_query(bbox.tocwh(box), function(entity) {
+        var obj = editor.do_select(entity);
+        if (obj) selects.push(obj);
       });
     }
 

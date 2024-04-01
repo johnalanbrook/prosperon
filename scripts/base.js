@@ -786,14 +786,6 @@ Object.defineProperty(String.prototype, 'fromlast', {
   }
 });
 
-Object.defineProperty(String.prototype, 'tolast', {
-  value: function(val) {
-    var idx = this.lastIndexOf(val);
-    if (idx === -1) return this.slice();
-    return this.slice(0,idx);
-  }
-});
-
 Object.defineProperty(String.prototype, 'tofirst', {
   value: function(val) {
     var idx = this.indexOf(val);
@@ -820,13 +812,6 @@ Object.defineProperty(String.prototype, 'name', {
 
 Object.defineProperty(String.prototype, 'base', {
   value: function() { return this.fromlast('/'); }
-});
-
-Object.defineProperty(String.prototype, 'dir', {
-  value: function() {
-    if (!this.includes('/')) return "";
-    return this.tolast('/');
-  }
 });
 
 Object.defineProperty(String.prototype, 'splice', {

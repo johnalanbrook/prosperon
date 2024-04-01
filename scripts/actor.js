@@ -1,6 +1,6 @@
 var actor = {};
 
-actor.spawn = function(script, config){
+actor.spawn = function(script, config, callback){
   if (typeof script !== 'string') return undefined;
   console.info(`spawning actor with script ${script}`);
   var padawan = Object.create(actor);

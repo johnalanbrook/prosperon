@@ -32,7 +32,6 @@ audio.music = function(file, fade) {
   fade ??= 0;
   if (!fade) {
     song = audio.play(file);
-    console.info("STRAIGHT PLAY");
     return;
   }
   

@@ -7,7 +7,6 @@ var HIT = {
   pos: "Position in world space of the contact.",
   depth: "Depth of the contact.",
 };
-
 */
 
 var pq = physics.pos_query;
@@ -16,10 +15,13 @@ physics.pos_query = function(pos,give) {
   pq(pos,give);
 }
 
-var bpq = physics.box_point_query;
 physics.box_point_query = function(box,points) {
   if (!box || !points) return [];
-  return bpq(box.pos,box.wh,points,points.length)
+  var bbox = bbox.fromcwh(box.pos,box.wh);
+  var inside = [];
+  for (var i in points)
+    if (bbox.pointin(bbox,points[i])) inside.push[i];
+  return inside;
 }
 
 Object.assign(physics, {
@@ -35,7 +37,7 @@ Object.assign(physics, {
 
 physics.doc = {};
 physics.doc.pos_query = "Returns any object colliding with the given point.";
-physics.doc.box_query = "Returns an array of body ids that collide with a given box.";
+physics.doc.box_query = "Calls a given function on every shape object in the given bbox.";
 physics.doc.box_point_query = "Returns the subset of points from a given list that are inside a given box.";
 
 physics.collision = {
