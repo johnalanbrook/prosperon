@@ -3,6 +3,7 @@
 
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
+#include <stdarg.h>
 
 #define MIST_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
 
@@ -93,6 +94,8 @@ static JSValue TYPE##2js(TYPE *n) { \
   YughSpam("Created " #TYPE " at %p", n); \
   JS_SetOpaque(j,n);\
   return j; }\
+\
+static JSValue js_##TYPE##_memid (JSContext *js, JSValue this) { return str2js("%p", js2##TYPE(this)); } \
 
 #define QJSGLOBALCLASS(NAME) \
 JSValue NAME = JS_NewObject(js); \
@@ -108,7 +111,9 @@ JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
 QJSCLASSPREP(TYPE); \
 JSValue TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
+JS_SetPropertyStr(js, TYPE##_proto, "memid", JS_NewCFunction(js, &js_##TYPE##_memid, "memid", 0)); \
 JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
+
 
 #define countof(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -125,7 +130,7 @@ int js_print_exception(JSValue v);
 struct rgba js2color(JSValue v);
 double js2number(JSValue v);
 JSValue number2js(double g);
-JSValue str2js(const char *c);
+JSValue str2js(const char *c, ...);
 
 void nota_int(char *blob);
 

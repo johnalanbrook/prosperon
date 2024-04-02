@@ -58,14 +58,14 @@ actor.interval = function(fn, seconds) {
 }
 
 actor.delay = function(fn, seconds) {
-  var that = this;
+  var timers = this.timers;
   var stop = function() {
-    that.timers.remove(stop);
+    timers.remove(stop);
     rm();
   }
 
   function execute() {
-    fn.call(that);
+    fn();
     stop();
   }
   
@@ -80,7 +80,7 @@ actor.delay = function(fn, seconds) {
   
   var rm = Register.appupdate.register(update);
   
-  this.timers.push(stop);
+  timers.push(stop);
   return stop;
 };
 

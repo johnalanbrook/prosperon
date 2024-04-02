@@ -11,6 +11,7 @@ appy.inputs = {};
 if (os.sys() === 'macos') {
   appy.inputs['S-q'] = os.quit;
   appy.inputs['S-h'] = function() { };
+  appy.inputs['S-g'] = os.gc;
 }
 
 player[0].control(appy);

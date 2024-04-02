@@ -89,33 +89,33 @@ Object.mixin(os.sprite(true), {
   anim:{},
   playing: 0,
   play(str) {
-    console.trace();
     this.del_anim?.();
-    var sp = this;
+    var self = this;
     var stop;
-    this.del_anim = function() {
-      sp = undefined;
+    self.del_anim = function() {
+      self.del_anim = undefined;
+      self = undefined;
       advance = undefined;
-      this.del_anim = undefined;
       stop();
     }
     str ??= 0;
-    var playing = this.anim[str];
+    var playing = self.anim[str];
     if (!playing) return;
     var f = 0;
-    sp.path = playing.path;
+    self.path = playing.path;
     
     function advance() {
-      if (!sp) this.del_anim();
-      if (!sp.gameobject) return;
-      //sp.path = playing.path;
-      sp.frame = playing.frames[f].rect;
+      if (!self) return;
+      if (!self.gameobject) return;
+      //self.path = playing.path;
+      self.frame = playing.frames[f].rect;
       f = (f+1)%playing.frames.length;
       if (f === 0) {
-        sp.anim_done?.();
-        if (!sp.loop) { sp.stop(); return; }
+        self.anim_done?.();
+        self.anim_done = undefined;
+//        if (!self.loop) { self.stop(); return; }
       }
-      stop = sp.gameobject.delay(advance, playing.frames[f].time);
+      stop = self.gameobject.delay(advance, playing.frames[f].time);
     }
     this.tex(game.texture(playing.path));
     advance();
@@ -124,7 +124,6 @@ Object.mixin(os.sprite(true), {
     this.del_anim?.();
   },
   set path(p) {
-    console.info(`setting path to ${p}`);
     p = Resources.find_image(p);
     if (!p) {
       console.warn(`Could not find image ${p}.`);
@@ -347,7 +346,6 @@ var SpriteAnim = {
   find(path) {
     if (!io.exists(path + ".asset")) return;
     var asset = JSON.parse(io.slurp(path + ".asset"));
-    
   },
 };
 

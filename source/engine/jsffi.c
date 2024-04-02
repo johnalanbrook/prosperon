@@ -43,9 +43,18 @@ static JSValue globalThis;
 static JSClassID js_ptr_id;
 static JSClassDef js_ptr_class = { "POINTER" };
 
-JSValue str2js(const char *c) {
+JSValue str2js(const char *c, ...) {
   if (!c) return JS_UNDEFINED;
-  return JS_NewString(js, c);
+  char *result = NULL;
+  va_list args;
+  va_start(args, c);
+  va_list args2;
+  va_copy(args2,args);
+  char buf[1+vsnprintf(NULL, 0, c, args)];
+  va_end(args);
+  vsnprintf(buf, sizeof buf, c, args2);
+  va_end(args2);
+  return JS_NewString(js, buf);
 }
 
 const char *js2str(JSValue v) {
@@ -67,25 +76,7 @@ QJSCLASS(material)
 QJSCLASS(mesh)
 QJSCLASS(window)
 QJSCLASS(drawmodel)
-
-/* qjs class colliders and constraints */
-/* constraint works for all constraints - 2d or 3d */
-static JSClassID js_constraint_id;
-static void js_constraint_finalizer(JSRuntime *rt, JSValue val) {
-  constraint *c = JS_GetOpaque(val, js_constraint_id);
-  constraint_free(c);
-}
-static JSClassDef js_constraint_class = {
-  "constraint",
-  .finalizer = js_constraint_finalizer
-};
-static constraint *js2constraint(JSValue val) { return JS_GetOpaque(val, js_constraint_id); }
-static JSValue constraint2js(constraint *c)
-{
-  JSValue j = JS_NewObjectClass(js, js_constraint_id);
-  JS_SetOpaque(j, c);
-  return j;
-}
+QJSCLASS(constraint)
 
 static JSValue sound_proto;
 sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }

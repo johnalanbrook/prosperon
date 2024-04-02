@@ -180,10 +180,9 @@ var gameobject = {
   },
 
   delay(fn, seconds) {
-    var that = this;
-    
+    var timers = this.timers;
     var stop = function() { 
-      that.timers.remove(stop);
+      timers.remove(stop);
       execute = undefined;
       stop = undefined;
       rm?.();
@@ -192,7 +191,7 @@ var gameobject = {
     }
     
     function execute() {
-      fn.call(that);
+      fn();
       stop?.();
     }
     
@@ -205,7 +204,7 @@ var gameobject = {
     }
     
     var rm = Register.update.register(update);
-    this.timers.push(stop);
+    timers.push(stop);
     return stop;
   },
 
@@ -256,20 +255,20 @@ var gameobject = {
   spawn(text, config, callback) {
     var ent = os.make_gameobject();    
     ent.setref(ent);
-    ent.components ??= {};
-    ent.objects ??= {};
+    ent.components = {};
+    ent.objects = {};
     ent.timers = [];
     if (typeof text === 'object') // assume it's an ur
     {
       config = text.data;
       text = text.text;
     }
-
+    
     if (text)
       use(text, ent);
     if (config)
       Object.assign(ent, json.decode(io.slurp(config)));
-
+      
     ent.reparent(this);
 
     ent._ed = {
@@ -301,8 +300,6 @@ var gameobject = {
     if (sim.playing())
       if (typeof ent.start === 'function') ent.start();
 
-    ent.objects ??= {};
-    ent.components ??= {};
     Object.hide(ent, 'ur', 'components', 'objects', '_ed', 'timers', 'master');
 
     var mur = ent.get_ur();
@@ -310,16 +307,17 @@ var gameobject = {
       mur.proto = json.decode(json.encode(ent));
 
     ent.sync();
-
+    
     if (!Object.empty(ent.objects)) {
       var o = ent.objects;
       delete ent.objects;
       for (var i in o) {
-        say(`MAKING ${i}`);
+        console.info(`MAKING ${i}`);
         var n = ent.spawn(ur[o[i].ur]);
         ent.rename_obj(n.toString(), i);
         delete o[i].ur;
         Object.assign(n, o[i]);
+        n.sync();
       }
     }
 
@@ -537,14 +535,19 @@ var gameobject = {
     for (var key in this.components) {
       this.components[key].kill?.();
       this.components[key].gameobject = undefined;
+      this[key].enabled = false;
       delete this.components[key];
       delete this[key];
     }
+    delete this.components;
 
     this.clear();
-    this.objects = undefined;
-
     if (typeof this.stop === 'function') this.stop();
+    
+    for (var i in this) {
+      if (typeof this[i] === 'object') delete this[i];
+      if (typeof this[i] === 'function') delete this[i];
+    }
   },
 
   up() { return [0, 1].rotate(this.angle); },
@@ -581,7 +584,6 @@ var gameobject = {
   },
 
   add_component(comp, data, name) {
-    data ??= undefined;
     if (typeof comp.make !== 'function') return;
     name ??= comp.toString();
     name = obj_unique_name(name, this);
@@ -607,7 +609,7 @@ function go_init() {
   gop.sync = function() {
     gsync.call(this);
     this.components.forEach(function(x) { x.sync?.(); });
-    this.objects.forEach(function(x) { x.sync(); });
+    this.objects.forEach(function(x) { x.sync?.(); });
   }
 }
 

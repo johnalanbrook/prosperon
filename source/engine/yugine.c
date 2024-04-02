@@ -65,7 +65,10 @@ void c_init() {
   JS_FreeValue(js, c_start);
 }
 
-void c_frame() { script_call_sym(c_process_fn,0,NULL); }
+void c_frame() {
+  script_call_sym(c_process_fn,0,NULL); 
+  fflush(stdout);
+}
 
 void cleanup()
 {

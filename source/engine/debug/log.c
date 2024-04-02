@@ -87,7 +87,6 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     vprintf(message, args);
     va_end(args);
     printf("\n");
-    fflush(stdout);
   }
 
   //if (priority >= LOG_ERROR)

@@ -98,8 +98,10 @@ void sprite_draw_all() {
 
   qsort(sprites, arrlen(sprites), sizeof(*sprites), sprite_sort);
   
-  for (int i = 0; i < arrlen(sprites); i++)
+  for (int i = 0; i < arrlen(sprites); i++) {
+    if (!sprites[i]->enabled) continue;
     sprite_draw(sprites[i]);
+  }
 }
 
 void sprite_initialize() {
