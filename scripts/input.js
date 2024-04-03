@@ -317,12 +317,6 @@ var Player = {
       if (pawn.inputs.block) return;      
     }
   },
-  
-  do_uncontrol(pawn) {
-    this.players.forEach(function(p) {
-      p.pawns = p.pawns.filter(x => x !== pawn);
-    });
-  },
 
   obj_controlled(obj) {
     for (var p in Player.players) {
@@ -357,6 +351,13 @@ var Player = {
     this.pawns = this.pawns.filter(x => x !== pawn);
   },
 };
+
+input.do_uncontrol = function(pawn)
+{
+  Player.players.forEach(function(p) {
+    p.pawns = p.pawns.filter(x => x !== pawn);
+  });
+}
 
 for (var i = 0; i < 4; i++) {
   Player.create();

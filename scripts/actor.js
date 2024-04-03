@@ -29,7 +29,7 @@ actor.timers = [];
 actor.kill = function(){
   if (this.__dead__) return;
   this.timers.forEach(t => t());
-  Player.do_uncontrol(this);
+  input.do_uncontrol(this);
   Event.rm_obj(this);
   if (this.master) this.master.rm_pawn(this);
   this.padawans.forEach(p => p.kill());

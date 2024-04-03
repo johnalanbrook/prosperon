@@ -197,7 +197,7 @@ transform2d sprite2t(sprite *s)
   return (transform2d){
     .pos = s->pos,
     .scale = s->scale,
-    .angle = s->angle
+    .angle = HMM_TurnToRad*s->angle
   };
 }
 

@@ -322,6 +322,8 @@ var gameobject = {
     }
     
     if (ent.tag) game.tag_add(ent.tag, ent);
+    
+    if (callback) callback(ent);
 
     return ent;
   },
@@ -523,7 +525,7 @@ var gameobject = {
     this.timers.forEach(t => t());
     this.timers = [];
     Event.rm_obj(this);
-    Player.do_uncontrol(this);
+    input.do_uncontrol(this);
     physics.collide_rm(this);
 
     if (this.master) {
@@ -670,7 +672,7 @@ gameobject.doc = {
   motor: 'Keeps the relative angular velocity of this body to to at a constant rate. The most simple idea is for one of the bodies to be static, to the other is kept at rate.',
   layer: 'Bitmask for collision layers.',
   drawlayer: 'Layer for drawing. Higher numbers draw above lower ones.',
-  warp_layer: 'Bitmask for selecting what warps should affect this entity.',
+  warp_filter: 'Bitmask for selecting what warps should affect this entity.',
 };
 
 global.ur = {};
