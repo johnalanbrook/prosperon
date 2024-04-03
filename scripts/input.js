@@ -1,4 +1,4 @@
-var keycodes = {
+input.keycodes = {
   259: "back",
   258: "tab",
   257: "enter",
@@ -17,9 +17,9 @@ var keycodes = {
   45: "minus",
 };
 
-var codekeys = {};
-for (var code in keycodes)
-  codekeys[keycodes[code]] = code;
+input.codekeys = {};
+for (var code in input.keycodes)
+  input.codekeys[input.keycodes[code]] = code;
 
 var mod = {
   shift: 0,
@@ -48,7 +48,7 @@ function keyname_extd(key)
     return `kp${num}`;
   }
   
-  if (keycodes[key]) return keycodes[key];
+  if (input.keycodes[key]) return input.keycodes[key];
   if (key >= 32 && key <= 126) return String.fromCharCode(key).lc();
   
   return undefined;
@@ -120,32 +120,32 @@ prosperon.mousescroll = function(dx){
   player[0].mouse_input(modstr() + "scroll", dx);
 };
 prosperon.mousedown = function(b){
-  player[0].raw_input(modstr() + Mouse.button[b], "pressed");
+  player[0].raw_input(modstr() + input.mouse.button[b], "pressed");
 };
 prosperon.mouseup = function(b){
-  player[0].raw_input(modstr() + Mouse.button[b], "released");
+  player[0].raw_input(modstr() + input.mouse.button[b], "released");
 };
 
-var Mouse = {
+input.mouse = {
   screenpos() { return mousepos.slice(); },
-  worldpos() { return window.screen2world(mousepos); },
+  worldpos() { return game.camera.view2world(mousepos); },
   disabled() { input.mouse_mode(1); },
   normal() { input.mouse_mode(0); },
 
   mode(m) {
-    if (Mouse.custom[m])
-      input.cursor_img(Mouse.custom[m]);
+    if (input.mouse.custom[m])
+      input.cursor_img(input.mouse.custom[m]);
     else
       input.mouse_cursor(m);
   },
   
   set_custom_cursor(img, mode) {
-    mode ??= Mouse.cursor.default;
+    mode ??= input.mouse.cursor.default;
     if (!img)
-      delete Mouse.custom[mode];
+      delete input.mouse.custom[mode];
     else {
       input.cursor_img(img);
-      Mouse.custom[mode] = img;
+      input.mouse.custom[mode] = img;
     }
   },
   
@@ -170,17 +170,18 @@ var Mouse = {
   },
 };
 
-Mouse.doc = {};
-Mouse.doc.pos = "The screen position of the mouse.";
-Mouse.doc.worldpos = "The position in the game world of the mouse.";
-Mouse.disabled.doc = "Set the mouse to hidden. This locks it to the game and hides it, but still provides movement and click events.";
-Mouse.normal.doc = "Set the mouse to show again after hiding.";
+input.mouse.doc = {};
+input.mouse.doc.pos = "The screen position of the mouse.";
+input.mouse.doc.worldpos = "The position in the game world of the mouse.";
+input.mouse.disabled.doc = "Set the mouse to hidden. This locks it to the game and hides it, but still provides movement and click events.";
+input.mouse.normal.doc = "Set the mouse to show again after hiding.";
 
-var Keys = {
-  down(code) {
-    return prosperon.keys[code];
-  },
-};
+input.keyboard = {};
+input.keyboard.down = function(code) {
+  if (typeof code === 'number') return prosperon.keys[code];
+  if (typeof code === 'string') return prosperon.keys[keyname_extd(code)];
+  return undefined;
+}
 
 input.state2str = function(state) {
   if (typeof state === 'string') return state;
@@ -370,10 +371,5 @@ Player.doc.players = "A list of current players.";
 var player = Player;
 
 return {
-  Mouse,
-  Keys,
-  Player,
-  player,
-  keycodes,
-  codekeys
+  player
 };

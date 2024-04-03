@@ -254,7 +254,6 @@ var sim = {
 }
 
 var physlag = 0;
-var timescale = 1;
 
 var gggstart = game.engine_start;
 game.engine_start = function(s) {
@@ -288,8 +287,8 @@ function process()
   
   while (physlag > phys_step) {
     physlag -= phys_step;
-    prosperon.phys2d_step(phys_step*timescale);
-    prosperon.physupdate(phys_step*timescale);
+    prosperon.phys2d_step(phys_step*game.timescale);
+    prosperon.physupdate(phys_step*game.timescale);
   }
 
   if (!game.camera)  
@@ -314,20 +313,43 @@ function process()
 
 game.timescale = 1;
 
-var eachobj = function(obj,fn)
-{
-  fn(obj);
-  for (var o in obj.objects)
-    eachobj(obj.objects[o],fn);
+game.all_objects = function(fn) {
+  var eachobj = function(obj,fn)
+  {
+    fn(obj);
+    for (var o in obj.objects)
+      eachobj(obj.objects[o],fn);
+  }
+  
+  eachobj(world,fn);
+};
+
+game.tags = {};
+game.tag_add = function(tag, obj) {
+  game.tags[tag] ??= {};
+  game.tags[tag][obj.guid] = obj;
 }
 
-game.all_objects = function(fn) { eachobj(world,fn); };
+game.tag_rm = function(tag, obj) {
+  delete game.tags[tag][obj.guid];
+}
+
+game.tag_clear_guid = function(guid)
+{
+  for (var tag in game.tags)
+    delete game.tags[tag][guid];
+}
+
+game.objects_with_tag = function(tag)
+{
+  if (!game.tags[tag]) return;
+  return Object.values(game.tags[tag]);
+}
 
 game.doc = {};
 game.doc.object = "Returns the entity belonging to a given id.";
 game.doc.pause = "Pause game simulation.";
 game.doc.play = "Resume or start game simulation.";
-game.doc.dt = "Current frame dt.";
 game.doc.camera = "Current camera.";
 
 game.texture = function(path)
@@ -343,7 +365,6 @@ game.texture = function(path)
   return game.texture.cache[path];
 }
 game.texture.cache = {};
-
 
 prosperon.semver = {};
 prosperon.semver.valid = function(v, range)
@@ -518,17 +539,6 @@ window.modetypes = {
 };
 
 window.size = [640, 480];
-
-window.screen2world = function(screenpos) {
-  if (game.camera)
-    return game.camera.view2world(screenpos);
-    
-  return screenpos;
-}
-
-window.world2screen = function(worldpos) {
-  return game.camera.world2view(worldpos);
-}
 
 window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
 

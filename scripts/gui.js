@@ -69,7 +69,7 @@ GUI.controls.set_mum = function(mum)
 }
 GUI.controls.check_bb = function(mum)
 {
-  if (bbox.pointin(mum.bb, Mouse.screenpos()))
+  if (bbox.pointin(mum.bb, input.mouse.screenpos()))
     GUI.controls.set_mum(mum);
 }
 GUI.controls.inputs = {};

@@ -76,6 +76,7 @@ function json_from_whitelist(whitelist)
 }
 
 Object.mixin(os.sprite(true), {
+  loop: true,
   toJSON:json_from_whitelist([
     "path",
     "pos",
@@ -96,7 +97,7 @@ Object.mixin(os.sprite(true), {
       self.del_anim = undefined;
       self = undefined;
       advance = undefined;
-      stop();
+      stop?.();
     }
     str ??= 0;
     var playing = self.anim[str];
@@ -112,8 +113,7 @@ Object.mixin(os.sprite(true), {
       f = (f+1)%playing.frames.length;
       if (f === 0) {
         self.anim_done?.();
-        self.anim_done = undefined;
-//        if (!self.loop) { self.stop(); return; }
+        if (!self.loop) { self.stop(); return; }
       }
       stop = self.gameobject.delay(advance, playing.frames[f].time);
     }
@@ -149,6 +149,7 @@ Object.mixin(os.sprite(true), {
     this.del_anim?.();
     this.anim = undefined;
     this.gameobject = undefined;
+    this.anim_done = undefined;
   },
   toString() { return "sprite"; },
   move(d) { this.pos = this.pos.add(d); },
@@ -461,14 +462,14 @@ polygon2d.inputs.f10 = function() {
 polygon2d.inputs.f10.doc = "Sort all points to be CCW order.";
 
 polygon2d.inputs['C-lm'] = function() {
-  this.points.push(this.gameobject.world2this(Mouse.worldpos()));
+  this.points.push(this.gameobject.world2this(input.mouse.worldpos()));
 };
 polygon2d.inputs['C-lm'].doc = "Add a point to location of mouse.";
 polygon2d.inputs.lm = function(){};
 polygon2d.inputs.lm.released = function(){};
 
 polygon2d.inputs['C-M-lm'] = function() {
-  var idx = Math.grab_from_points(Mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
+  var idx = Math.grab_from_points(input.mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
   this.points.splice(idx, 1);
 };
@@ -777,7 +778,7 @@ bucket.inputs['C-o'].doc = "Set spline to linear.";
 
 bucket.inputs['C-M-lm'] = function() {
   if (Spline.is_catmull(this.type)) {
-    var idx = Math.grab_from_points(Mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
+    var idx = Math.grab_from_points(input.mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
     if (idx === -1) return;
   } else {
     
@@ -787,16 +788,16 @@ bucket.inputs['C-M-lm'] = function() {
 };
 bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
 
-bucket.inputs['C-lm'] = function() { this.add_node(Mouse.worldpos()); }
+bucket.inputs['C-lm'] = function() { this.add_node(input.mouse.worldpos()); }
 bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
 bucket.inputs['C-M-lm'] = function() {
   var idx = -1;
   if (Spline.is_catmull(this.type))
-    idx = Math.grab_from_points(Mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
+    idx = Math.grab_from_points(input.mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
   else {
     var nodes = Spline.bezier_nodes(this.points);
-    idx = Math.grab_from_points(Mouse.worldpos(), nodes.map(p => this.gameobject.this2world(p)), 25);
+    idx = Math.grab_from_points(input.mouse.worldpos(), nodes.map(p => this.gameobject.this2world(p)), 25);
     idx *= 3;
   }
 

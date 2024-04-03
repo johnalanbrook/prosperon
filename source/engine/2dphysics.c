@@ -582,9 +582,9 @@ JSValue arb2js(cpArbiter *arb)
 
 void phys_run_post(cpSpace *space, JSValue *fn, JSValue *hit)
 {
-  JSValue hh = *hit;
-  script_call_sym(*fn, 1, &hh);
-  JS_FreeValue(js, hh);
+  script_call_sym(*fn, 1, hit);
+  JS_FreeValue(js, *hit);
+  JS_FreeValue(js, *fn);
 }
 
 /* TODO: Limitation, cannot handle multiple collision same frame */
@@ -595,6 +595,7 @@ int script_phys_cb_begin(cpArbiter *arb, cpSpace *space, gameobject *go)
   
   if (!JS_IsUndefined(go->cbs.begin) && cpSpaceAddPostStepCallback(space, phys_run_post, &go->cbs.begin, &go->cbs.bhit)) {
     YughSpam("Added begin for %p", &go->cbs.begin);
+    JS_DupValue(js, go->cbs.begin);
     go->cbs.bhit = arb2js(arb);
   }
 

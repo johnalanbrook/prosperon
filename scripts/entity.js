@@ -239,7 +239,7 @@ var gameobject = {
     this.pos = x;
     this.objects.forEach((o, i) => o.set_worldpos(this.this2world(poses[i])));
   },
-  screenpos() { return window.world2screen(this.worldpos()); },
+  screenpos() { return game.camera.world2view(this.worldpos()); },
 
   worldangle() { return this.angle; },
   sworldangle(x) { this.angle = x; },
@@ -253,11 +253,20 @@ var gameobject = {
       nothing
   */
   spawn(text, config, callback) {
-    var ent = os.make_gameobject();    
+    var ent = os.make_gameobject();
+    ent.guid = prosperon.guid();
     ent.setref(ent);
     ent.components = {};
     ent.objects = {};
     ent.timers = [];
+    ent.reparent(this);
+    ent._ed = {
+      selectable: true,
+      dirty: false,
+      inst: false,
+      urdiff: {},
+    };
+    
     if (typeof text === 'object') // assume it's an ur
     {
       config = text.data;
@@ -268,15 +277,6 @@ var gameobject = {
       use(text, ent);
     if (config)
       Object.assign(ent, json.decode(io.slurp(config)));
-      
-    ent.reparent(this);
-
-    ent._ed = {
-      selectable: true,
-      dirty: false,
-      inst: false,
-      urdiff: {},
-    };
 
     ent.ur = text + "+" + config;
 
@@ -320,6 +320,8 @@ var gameobject = {
         n.sync();
       }
     }
+    
+    if (ent.tag) game.tag_add(ent.tag, ent);
 
     return ent;
   },
@@ -368,8 +370,8 @@ var gameobject = {
   objects: {},
   master: undefined,
 
-  this2screen(pos) { return window.world2screen(this.this2world(pos)); },
-  screen2this(pos) { return this.world2this(window.screen2world(pos)); },
+  this2screen(pos) { return game.camera.world2view(this.this2world(pos)); },
+  screen2this(pos) { return this.world2this(game.camera.view2world(pos)); },
   
   in_air() { return this.in_air(); },
 
@@ -543,6 +545,8 @@ var gameobject = {
 
     this.clear();
     if (typeof this.stop === 'function') this.stop();
+    
+    game.tag_clear_guid(this.guid);
     
     for (var i in this) {
       if (typeof this[i] === 'object') delete this[i];

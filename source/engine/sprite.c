@@ -85,8 +85,9 @@ int sprite_sort(sprite **sa, sprite **sb)
   if (!goa && !gob) return 0;
   if (!goa) return -1;
   if (!gob) return 1;
-  if (goa->drawlayer == gob->drawlayer) return 0;
   if (goa->drawlayer > gob->drawlayer) return 1;
+  if (gob->drawlayer > goa->drawlayer) return -1;
+  if (*sa > *sb) return 1;
   return -1;
 }
 

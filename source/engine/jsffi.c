@@ -714,8 +714,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_texture, 1),
 };
 
-JSC_CCALL(render_normal, opengl_rendermode(LIT))
-JSC_CCALL(render_wireframe, opengl_rendermode(WIREFRAME))
 JSC_CCALL(render_grid, draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2]));)
 JSC_CCALL(render_point, draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])))
 JSC_CCALL(render_circle, draw_circle(js2vec2(argv[0]), js2number(argv[1]), js2number(argv[2]), js2color(argv[3]), -1);)
@@ -743,16 +741,10 @@ JSC_CCALL(render_end_pass,
   sprite_flush();
 )
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
-JSC_CCALL(render_world2screen, return vec22js(world2screen(js2vec2(argv[0]))))
-JSC_CCALL(render_screen2world, return vec22js(screen2world(js2vec2(argv[0]))))
 JSC_CCALL(render_set_camera, useproj = projection)
 JSC_CCALL(render_set_window, useproj = hudproj)
 
 static const JSCFunctionListEntry js_render_funcs[] = {
-  MIST_FUNC_DEF(render,world2screen,1),
-  MIST_FUNC_DEF(render,screen2world,1),
-  MIST_FUNC_DEF(render, normal, 0),
-  MIST_FUNC_DEF(render, wireframe, 0),
   MIST_FUNC_DEF(render, grid, 3),
   MIST_FUNC_DEF(render, point, 3),
   MIST_FUNC_DEF(render, circle, 3),
@@ -873,11 +865,21 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 JSC_CCALL(prosperon_emitters_step, emitters_step(js2number(argv[0])))
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
 JSC_CCALL(prosperon_window_render, openglRender(&mainwin, js2gameobject(argv[0]), js2number(argv[1])))
+JSC_CCALL(prosperon_guid,
+  uint8_t bytes[16];
+  for (int i = 0; i < 16; i++) bytes[i] = rand()%256;
+  char uuid[37];
+  snprintf(uuid, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+  bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+  bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]);
+  return str2js(uuid);
+)
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, emitters_step, 1),
   MIST_FUNC_DEF(prosperon, phys2d_step, 1),
-  MIST_FUNC_DEF(prosperon, window_render, 0)
+  MIST_FUNC_DEF(prosperon, window_render, 0),
+  MIST_FUNC_DEF(prosperon, guid, 0),
 };
 
 JSC_CCALL(time_now, 
@@ -1085,18 +1087,50 @@ static void ray_query_fn(cpShape *shape, float t, cpVect n, float a, JSValue *cb
     number2js(a)
   };
   script_call_sym(*cb, 3, argv);
-  for (int i = 0; i < 3; i++)
-    JS_FreeValue(js, argv[i]);
+  for (int i = 0; i < 3; i++) JS_FreeValue(js, argv[i]);
 }
 
 JSC_CCALL(physics_ray_query,
   cpSpaceSegmentQuery(space, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp, js2number(argv[2]), allfilter, ray_query_fn, &argv[3]);
 );
 
+static void point_query_fn(cpShape *shape, float dist, cpVect point, JSValue *cb)
+{
+  JSValue argv[3] = {
+    JS_DupValue(js, shape2go(shape)->ref),
+    vec22js((HMM_Vec2)point),
+    number2js(dist)
+  };
+  script_call_sym(*cb, 3, argv);
+  for (int i = 0; i < 3; i++) JS_FreeValue(js, argv[i]);
+}
+
+JSC_CCALL(physics_point_query,
+  cpSpacePointQuery(space, js2vec2(argv[0]).cp, js2number(argv[1]), allfilter, point_query_fn, &argv[2]);
+);
+
+JSValue pointinfo2js(cpPointQueryInfo info)
+{
+  JSValue o = JS_NewObject(js);
+  JS_SetPropertyStr(js, o, "distance", number2js(info.distance));
+  JS_SetPropertyStr(js, o, "point", vec22js((HMM_Vec2)info.point));
+  JS_SetPropertyStr(js, o, "entity", JS_DupValue(js, shape2go(info.shape)->ref));
+  return o;
+}
+
+JSC_CCALL(physics_point_query_nearest,
+  cpPointQueryInfo info;
+  cpShape *sh = cpSpacePointQueryNearest(space, js2vec2(argv[0]).cp, js2number(argv[1]), allfilter, &info);
+  if (!sh) return JS_UNDEFINED;
+  return pointinfo2js(info);
+)
+
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, sgscale, 2),
   MIST_FUNC_DEF(physics, set_cat_mask, 2),
   MIST_FUNC_DEF(physics, pos_query, 2),
+  MIST_FUNC_DEF(physics, point_query, 3),
+  MIST_FUNC_DEF(physics, point_query_nearest, 3),
   MIST_FUNC_DEF(physics, ray_query, 2),
   MIST_FUNC_DEF(physics, box_query, 2),
   MIST_FUNC_DEF(physics, shape_query, 1),
@@ -1200,7 +1234,13 @@ static const JSCFunctionListEntry js_window_funcs[] = {
   MIST_FUNC_DEF(window, set_icon, 1)
 };
 
-JSC_GETSET_BODY(pos, Position, cvec2)
+JSValue js_gameobject_set_pos(JSContext *js, JSValue this, JSValue val) {
+  gameobject *go = js2gameobject(this);
+  cpBodySetPosition(go->body, js2vec2(val).cp);
+  if (go->phys == CP_BODY_TYPE_STATIC)
+    cpSpaceReindexShapesForBody(space, go->body);
+}
+JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return vec22js((HMM_Vec2)cpBodyGetPosition(js2gameobject(this)->body)); }
 JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
 JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)

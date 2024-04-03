@@ -246,6 +246,7 @@ Cmdline.register_order("play", function(argv) {
     global.mixin("scripts/sound.js");
     global.app = actor.spawn("game.js");
     if (project.icon) window.set_icon(game.texture(project.icon));
+    game.camera = world.spawn("scripts/camera2d");
   });  
 }, "Play the game present in this folder.");
 

@@ -22,12 +22,12 @@ debug.draw = function() {
   if (this.draw_gizmos)
     game.all_objects(function(x) {
       if (!x.icon) return;
-      GUI.image(x.icon, window.world2screen(x.pos));
+      GUI.image(x.icon, game.camera.world2view(x.pos));
     });
 
   if (this.draw_names)
     game.all_objects(function(x) {
-      render.text(x, window.world2screen(x.pos).add([0,32]), 1, Color.debug.names);
+      render.text(x, game.camera.view2screen(x.pos).add([0,32]), 1, Color.debug.names);
     });
 
   if (debug.gif.rec) {
@@ -41,10 +41,10 @@ debug.draw = function() {
 
   render.text(sim.playing() ? "PLAYING"
                        : sim.stepping() ?
-		 "STEP" :
-		 sim.paused() ?
-		 "PAUSED; EDITING" : 
-		 "EDIT", [0, 0], 1);
+		                   "STEP" :
+		                   sim.paused() ?
+		                   "PAUSED; EDITING" : 
+		                   "EDIT", [0, 0], 1);
 }
 
 function assert(op, str)

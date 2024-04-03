@@ -121,18 +121,13 @@ void capture_screen(int x, int y, int w, int h, const char *path)
 
 #include "HandmadeMath.h"
 
-int renderMode = LIT;
-
 struct rgba editorClearColor = {35,60,92,255};
-
-void opengl_rendermode(enum RenderMode r) {
-  renderMode = r;
-}
 
 sg_pass_action pass_action = {0};
 
 static struct {
   sg_pass_action pass_action;
+
   sg_pass pass;
   sg_pipeline pipe;
   sg_shader shader;
@@ -281,23 +276,6 @@ void render_init() {
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
     .usage = SG_USAGE_IMMUTABLE
   });
-}
-
-HMM_Vec2 world2screen(HMM_Vec2 pos)
-{
-  pos = HMM_SubV2(pos, campos);
-  pos = HMM_ScaleV2(pos, 1.0/camzoom);
-  pos = HMM_AddV2(pos, HMM_ScaleV2(mainwin.size,0.5));
-  return pos;
-}
-
-HMM_Vec2 screen2world(HMM_Vec2 pos)
-{
-  pos = HMM_ScaleV2(pos, 1/mainwin.dpi);
-  pos = HMM_SubV2(pos, HMM_ScaleV2(mainwin.size, 0.5));
-  pos = HMM_ScaleV2(pos, camzoom);
-  pos = HMM_AddV2(pos, campos);
-  return pos;
 }
 
 HMM_Mat4 projection = {0.f};
