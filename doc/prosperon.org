@@ -212,7 +212,9 @@ Components only work in the context of an entity. They have no meaning outside o
 While components can be added via scripting, it is easier to add them via the editor, as we will later see.
 
 *** Ur system
-The ur[fn::A German prefix meaning primitive, original, or earliest.] system is a prototypical inheritence system used by the actor files. When actor files are loaded, they are stored as an ur. An *ur* represents a set of instructions to create the (text, config) needed to spawn an actor or entity.
+The ur[fn::A German prefix meaning primitive, original, or earliest.] system is a prototypical inheritence system used by the actor files. When actor files are loaded, they are stored as an ur. An *ur* holds a list of (text, config) required to create an entity.
+
+When prosperon starts, it searches for urs by name. Any file ending in ".jso" or ".json" will be interpereted as an ur, with same named jso and json being applied as (text, config) for an ur. A jso or json alone also constitute an ur.
 
 #+begin_scholium
 Create an ur from the *hello* files above, and then spawn it.

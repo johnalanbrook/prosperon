@@ -190,6 +190,8 @@ Cmdline.register_order("edit", function() {
     say("No game to edit. Try making one with 'prosperon init'.");
     return;
   }
+
+  window.size = [1280, 720];
   
   game.engine_start(function() {
     global.mixin("scripts/editor.js");

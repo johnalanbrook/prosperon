@@ -51,10 +51,7 @@ gameobject *pos2gameobject(HMM_Vec2 pos, float give) {
     return shape2go(hit);
 
   for (int i = 0; i < arrlen(gameobjects); i++) {
-    if (!gameobjects[i]->body) continue;
-    HMM_Vec2 gpos = go_pos(gameobjects[i]);
-    float dist = HMM_DistV2(gpos,pos);
-
+    float dist = HMM_DistV2(go_pos(gameobjects[i]),pos);
     if (dist <= give) return gameobjects[i];
   }
 

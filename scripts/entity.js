@@ -83,15 +83,10 @@ var gameobject = {
     else
       this._ed.inst = false;
   },
-  
-  _ed: {
-    selectable: false,
-    dirty: false
-  },
 
   namestr() {
     var s = this.toString();
-    if (this._ed.dirty)
+    if (this._ed?.dirty)
       if (this._ed.inst) s += "#";
       else s += "*";
     return s;
@@ -259,17 +254,11 @@ var gameobject = {
     ent.components = {};
     ent.objects = {};
     ent.timers = [];
-    ent.reparent(this);
-    ent._ed = {
-      selectable: true,
-      dirty: false,
-      inst: false,
-      urdiff: {},
-    };
     
-    if (typeof text === 'object') // assume it's an ur
+    if (typeof text === 'object' && text) // assume it's an ur
     {
       config = text.data;
+      ent.ur = text.name;
       text = text.text;
     }
     
@@ -278,7 +267,8 @@ var gameobject = {
     if (config)
       Object.assign(ent, json.decode(io.slurp(config)));
 
-    ent.ur = text + "+" + config;
+    ent.ur ??= text + "+" + config;
+    ent.reparent(this);
 
     for (var [prop, p] of Object.entries(ent)) {
       if (!p) continue;
@@ -300,11 +290,17 @@ var gameobject = {
     if (sim.playing())
       if (typeof ent.start === 'function') ent.start();
 
-    Object.hide(ent, 'ur', 'components', 'objects', '_ed', 'timers', 'master');
+    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');    
 
-    var mur = ent.get_ur();
-    if (mur && !mur.proto)
-      mur.proto = json.decode(json.encode(ent));
+    ent._ed = {
+      selectable: true,
+      dirty: false,
+      inst: false,
+      urdiff: {},
+      fresh: json.decode(json.encode(ent)),
+    };
+
+    Object.hide(ent, '_ed');
 
     ent.sync();
     
@@ -450,22 +446,19 @@ var gameobject = {
 
   /* The unique components of this object. Its diff. */
   json_obj() {
-    var u = this.get_ur();
-    if (!u) return {};
-    var proto = u.proto;
+    var fresh = this._ed.fresh;
     var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
-
-    var d = ediff(thiso, proto);
+    var d = ediff(thiso, fresh);
 
     d ??= {};
 
     var objects = {};
-    proto.objects ??= {};
+    fresh.objects ??= {};
     var curobjs = {};
     for (var o in this.objects)
       curobjs[o] = this.objects[o].instance_obj();
 
-    var odiff = ediff(curobjs, proto.objects);
+    var odiff = ediff(curobjs, fresh.objects);
     if (odiff)
       d.objects = curobjs;
 
@@ -484,12 +477,6 @@ var gameobject = {
     return t;
   },
 
-  proto() {
-    var u = this.get_ur();
-    if (!u) return {};
-    return u.proto;
-  },
-
   transform() {
     var t = {};
     t.pos = this.pos;
@@ -497,7 +484,7 @@ var gameobject = {
     t.angle = Math.places(this.angle, 4);
     if (t.angle === 0) delete t.angle;
     t.scale = this.scale;
-    t.scale = t.scale.map((x, i) => x / this.proto().scale[i]);
+    t.scale = t.scale.map((x, i) => x / this._ed.fresh.scale[i]);
     t.scale = t.scale.map(x => Math.places(x, 3));
     if (t.scale.every(x => x === 1)) delete t.scale;
     return t;
@@ -599,12 +586,6 @@ var gameobject = {
     if (data)
       Object.assign(this[name], data);
     return this[name];
-  },
-
-  obj_descend(fn) {
-    fn(this);
-    for (var o in this.objects)
-      this.objects[o].obj_descend(fn);
   },
 }
 

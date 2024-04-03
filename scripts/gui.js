@@ -1,64 +1,41 @@
 /*
-  GUI functions take screen space coordinates
+  gui functions take screen space coordinates
 */
 
 gui.scissor_win = function() { gui.scissor(0,0,window.width,window.height); }
 
-var GUI = {
-  newmg(img) {
-    var def = {
-      path: "",
-      pos: [0,0],
-      size:[0,0],
-      frame: {
-        x: 0,
-        y: 0,
-        w: 1,
-        h: 1
-      },
-      angle: 0,
-      anchor: [0,0],
-      color: Color.white,
-    }
-    for (var i in def)
-      img[i] ??= def[i];
-      
-    gui_newmg
-  },
+gui.input_lmouse_pressed = function() {
+  if (gui.selected)
+    gui.selected.action();
+};
 
-  input_lmouse_pressed() {
-    if (GUI.selected)
-      GUI.selected.action();
-  },
-
-  input_s_pressed() {
-    if (GUI.selected?.down) {
-      GUI.selected.selected = false;
-      GUI.selected = GUI.selected.down;
-      GUI.selected.selected = true;
-    }
-  },
-
-  input_w_pressed() {
-    if (GUI.selected?.up) {
-      GUI.selected.selected = false;
-      GUI.selected = GUI.selected.up;
-      GUI.selected.selected = true;
-    }
-  },
-
-  input_enter_pressed() {
-    if (GUI.selected) {
-      GUI.selected.action();
-    }
+gui.input_s_pressed = function() {
+  if (gui.selected?.down) {
+    gui.selected.selected = false;
+    gui.selected = gui.selected.down;
+    gui.selected.selected = true;
   }
 };
 
-GUI.controls = {};
-GUI.controls.toString = function() { return "GUI controls"; };
-GUI.controls.update = function() { };
+gui.input_w_pressed = function() {
+  if (gui.selected?.up) {
+    gui.selected.selected = false;
+    gui.selected = gui.selected.up;
+    gui.selected.selected = true;
+  }
+};
 
-GUI.controls.set_mum = function(mum)
+gui.input_enter_pressed = function() {
+  if (gui.selected) {
+    gui.selected.action();
+  }
+}
+
+gui.controls = {};
+gui.controls.toString = function() { return "gui controls"; };
+gui.controls.update = function() { };
+
+gui.controls.set_mum = function(mum)
 {
   mum.selected = true;
   
@@ -67,22 +44,22 @@ GUI.controls.set_mum = function(mum)
 
   this.selected = mum;
 }
-GUI.controls.check_bb = function(mum)
+gui.controls.check_bb = function(mum)
 {
   if (bbox.pointin(mum.bb, input.mouse.screenpos()))
-    GUI.controls.set_mum(mum);
+    gui.controls.set_mum(mum);
 }
-GUI.controls.inputs = {};
-GUI.controls.inputs.fallthru = false;
-GUI.controls.inputs.mouse = {};
-GUI.controls.inputs.mouse.move = function(pos,dpos)
+gui.controls.inputs = {};
+gui.controls.inputs.fallthru = false;
+gui.controls.inputs.mouse = {};
+gui.controls.inputs.mouse.move = function(pos,dpos)
 {
 }
-GUI.controls.inputs.mouse.scroll = function(scroll)
+gui.controls.inputs.mouse.scroll = function(scroll)
 {
 }
 
-GUI.controls.check_submit = function() {
+gui.controls.check_submit = function() {
   if (this.selected && this.selected.action)
     this.selected.action(this.selected);
 }
@@ -145,7 +122,7 @@ Mum.text = Mum.extend({
     cursor ??= [0,0];  
     cnt ??= Mum;
     if (this.hide) return;
-    if (this.selectable) GUI.controls.check_bb(this);
+    if (this.selectable) gui.controls.check_bb(this);
     this.caret ??= -1;
 
 /*    if (!this.bb)
@@ -162,7 +139,7 @@ Mum.text = Mum.extend({
     var aa = [0,1].sub(params.anchor);
     var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
     gui.font_set(params.font);
-    gui.text(params.str, pos, params.font_size, params.color, this.width, params.caret);
+    render.text(params.str, pos, params.font_size, params.color, this.width, undefined, params.caret);
   },
   
   update_bb(cursor) {
@@ -198,12 +175,12 @@ Mum.window = Mum.extend({
     cursor ??= [0,0];
     cnt ??= Mum;
     var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
-    GUI.window(p,this.wh, this.color);
+    render.window(p,this.wh, this.color);
     this.bb = bbox.blwh(p, this.wh);
     gui.flush();
     gui.scissor(p.x,p.y,this.wh.x,this.wh.y);
     this.max_width = this.width;
-    if (this.selectable) GUI.controls.check_bb(this);
+    if (this.selectable) gui.controls.check_bb(this);
     var pos = [this.bb.l, this.bb.t].add(this.padding);
     this.items.forEach(function(item) {
       if (item.hide) return;
@@ -259,14 +236,6 @@ Mum.column = Mum.extend({
   },
 });
 
-GUI.window = function(pos, wh, color)
-{
-  var p = pos.slice();
-  p.x += wh.x/2;
-  p.y += wh.y/2;
-  render.box(p,wh,color);
-}
-
 Mum.debug_colors = {
   bounds: Color.red.slice(),
   margin: Color.blue.slice(),
@@ -275,7 +244,4 @@ Mum.debug_colors = {
 
 Object.values(Mum.debug_colors).forEach(function(v) { v.a = 100; });
 
-return {
-  GUI,
-  Mum
-};
+return { Mum };

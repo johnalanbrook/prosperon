@@ -1,5 +1,5 @@
 this.phys = physics.kinematic;
-this.dir_view2world = function(dir) { return dir.scale(this.realzoom()); };
+this.dir_view2world = function(dir) { return dir.scale(this.zoom); };
 this.view2world = function(pos) {
   pos = pos.scale([window.rendersize.x/window.size.x, window.rendersize.y/window.size.y]);
   pos = pos.sub(window.rendersize.scale(0.5));
@@ -10,14 +10,11 @@ this.view2world = function(pos) {
 this.world2view = function(pos) {
   pos = pos.sub(this.pos);
   pos = pos.scale(1.0/this.zoom);
-  pos = pos.add(window.rendersize);
+  pos = pos.add(window.rendersize.scale(0.5));
   return pos;
 };
-this.realzoom = function() { return render.get_zoom(); };
 
-this.screenright = function() {
-  return this.view2world(window.size).x;
-}
+this.screenright = function() { return this.view2world(window.size).x; }
 this.screenleft = function() { return this.pos.x - (window.rendersize.x/2); }
 
 this.zoom = 1;

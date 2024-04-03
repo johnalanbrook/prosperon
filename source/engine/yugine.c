@@ -92,6 +92,7 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
+  char lcfmt[5];
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
       script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, mainwin.size.y -e->mouse_y, e->mouse_dx, -e->mouse_dy);
@@ -118,7 +119,8 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_CHAR:
-      script_evalf("prosperon.textinput(`\\%lc`);", e->char_code);
+      snprintf(lcfmt, 5, "%lc", e->char_code);
+      script_evalf("prosperon.textinput(`%s`);", lcfmt);
       break;
 
     case SAPP_EVENTTYPE_RESIZED:

@@ -489,6 +489,7 @@ component.edge2d = Object.copy(collider2d, {
     'points',
     'hollow',
     'hollowt',
+    'angle',
   ]),
   dimensions:2,
   thickness:0,
@@ -516,7 +517,7 @@ component.edge2d = Object.copy(collider2d, {
 
       for (var i = spoints.length-1; i >= 0; i--) {
         var newpoint = spoints[i].slice();
-	newpoint.x = -newpoint.x;
+	      newpoint.x = -newpoint.x;
         spoints.push(newpoint);
       }
     }
@@ -527,8 +528,8 @@ component.edge2d = Object.copy(collider2d, {
 	
       for (var i = spoints.length-1; i >= 0; i--) {
         var newpoint = spoints[i].slice();
-	newpoint.y = -newpoint.y;
-	spoints.push(newpoint);
+        newpoint.y = -newpoint.y;
+        spoints.push(newpoint);
       }
     }
 
@@ -585,7 +586,7 @@ component.edge2d = Object.copy(collider2d, {
   gizmo() {
     if (this.type === Spline.type.catmull || this.type === -1) {
       this.spoints().forEach(x => render.point(this.gameobject.this2screen(x), 3, Color.teal));
-      this.points.forEach((x,i) => render.coordinate(this.gameobject.this2screen(x), i));
+      this.points.forEach((x,i) => render.coordinate(this.gameobject.this2screen(x)));
     } else {
       for (var i = 0; i < this.points.length; i += 3)
         render.coordinate(this.gameobject.this2screen(this.points[i]), i, Color.teal);
@@ -614,23 +615,23 @@ component.edge2d = Object.copy(collider2d, {
     if (p) {
       var o = {
         pos: p,
-	sync: me.sync.bind(me)
+	      sync: me.sync.bind(me)
       };
       if (Spline.bezier_is_handle(this.points,i))
-	o.move = function(d) {
-	  d = that.dir_world2this(d);
-	  p.x += d.x;
-	  p.y += d.y;
-	  Spline.bezier_cp_mirror(me.points,i);
-	};
+        o.move = function(d) {
+        d = that.dir_world2this(d);
+        p.x += d.x;
+        p.y += d.y;
+        Spline.bezier_cp_mirror(me.points,i);
+	    };
       else
         o.move = function(d) {
-	  d = that.dir_world2this(d);
-	  p.x += d.x;
-	  p.y += d.y;
-	  var pp = Spline.bezier_point_handles(me.points,i);
-	  pp.forEach(ph => me.points[ph] = me.points[ph].add(d));
-	}
+          d = that.dir_world2this(d);
+          p.x += d.x;
+          p.y += d.y;
+          var pp = Spline.bezier_point_handles(me.points,i);
+          pp.forEach(ph => me.points[ph] = me.points[ph].add(d));
+	      }
       return o;
     }
   },

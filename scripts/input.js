@@ -1,5 +1,5 @@
 input.keycodes = {
-  259: "back",
+  259: "backspace",
   258: "tab",
   257: "enter",
   256: "escape",
@@ -111,7 +111,9 @@ prosperon.droppedfile = function(path)
 
 var mousepos = [0,0];
 
-prosperon.textinput = function(l){};
+prosperon.textinput = function(c){
+  player[0].raw_input("char", "pressed", c);
+};
 prosperon.mousemove = function(pos, dx){
   mousepos = pos;
   player[0].mouse_input(modstr() + "move", pos, dx);
@@ -126,48 +128,46 @@ prosperon.mouseup = function(b){
   player[0].raw_input(modstr() + input.mouse.button[b], "released");
 };
 
-input.mouse = {
-  screenpos() { return mousepos.slice(); },
-  worldpos() { return game.camera.view2world(mousepos); },
-  disabled() { input.mouse_mode(1); },
-  normal() { input.mouse_mode(0); },
-
-  mode(m) {
-    if (input.mouse.custom[m])
-      input.cursor_img(input.mouse.custom[m]);
-    else
-      input.mouse_cursor(m);
-  },
+input.mouse = {};
+input.mouse.screenpos = function() { return mousepos.slice(); };
+input.mouse.worldpos = function() { return game.camera.view2world(mousepos); };
+input.mouse.disabled = function() { input.mouse_mode(1); };
+input.mouse.normal = function() { input.mouse_mode(0); };
+input.mouse.mode = function(m) {
+  if (input.mouse.custom[m])
+    input.cursor_img(input.mouse.custom[m]);
+  else
+    input.mouse_cursor(m);
+};
   
-  set_custom_cursor(img, mode) {
-    mode ??= input.mouse.cursor.default;
-    if (!img)
-      delete input.mouse.custom[mode];
-    else {
-      input.cursor_img(img);
-      input.mouse.custom[mode] = img;
-    }
-  },
+input.mouse.set_custom_cursor = function(img, mode) {
+  mode ??= input.mouse.cursor.default;
+  if (!img)
+    delete input.mouse.custom[mode];
+  else {
+    input.cursor_img(img);
+    input.mouse.custom[mode] = img;
+  }
+};
   
-  button: { /* left, right, middle mouse */
-    0: "lm", 
-    1: "rm",
-    2: "mm"
-  },
-  custom:[],
-  cursor: {
-    default: 0,
-    arrow: 1,
-    ibeam: 2,
-    cross: 3,
-    hand: 4,
-    ew: 5,
-    ns: 6,
-    nwse: 7,
-    nesw: 8,
-    resize: 9,
-    no: 10
-  },
+input.mouse.button = { /* left, right, middle mouse */
+  0: "lm", 
+  1: "rm",
+  2: "mm"
+};
+input.mouse.custom = [];
+input.mouse.cursor = {
+  default: 0,
+  arrow: 1,
+  ibeam: 2,
+  cross: 3,
+  hand: 4,
+  ew: 5,
+  ns: 6,
+  nwse: 7,
+  nesw: 8,
+  resize: 9,
+  no: 10
 };
 
 input.mouse.doc = {};

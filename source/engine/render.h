@@ -29,14 +29,7 @@ extern HMM_Vec3 dirl_pos;
 
 extern HMM_Mat4 projection;
 extern HMM_Mat4 hudproj;
-
 extern HMM_Mat4 useproj;
-
-struct camera3d {
-  
-};
-
-typedef struct camera3d camera3d;
 
 struct draw_p {
   float x;
@@ -61,11 +54,7 @@ void openglRender(struct window *window, gameobject *cam, float zoom);
 void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);
-void openglRender3d(struct window *window, camera3d *camera);
 void capture_screen(int x, int y, int w, int h, const char *path);
-
-HMM_Vec2 world2screen(HMM_Vec2 pos);
-HMM_Vec2 screen2world(HMM_Vec2 pos);
 
 void gif_rec_start(int w, int h, int cpf, int bitdepth);
 void gif_rec_end(const char *path);

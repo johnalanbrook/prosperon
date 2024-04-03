@@ -6,6 +6,8 @@
 window.mode = window.modetypes.full;
 game.loadurs();
 
+console.info(`window size: ${window.size}, render size: ${window.rendersize}`);
+
 player[0].control(debug);
 Register.gui.register(debug.draw, debug);
 
@@ -222,7 +224,7 @@ var editor = {
     editor.cbs.push(Register.gui.register(editor.gui.bind(editor)));
     editor.cbs.push(Register.draw.register(editor.draw.bind(editor)));
     editor.cbs.push(Register.debug.register(editor.ed_debug.bind(editor)));
-    editor.cbs.push(Register.update.register(GUI.controls.update, GUI.controls));
+    editor.cbs.push(Register.update.register(gui.controls.update, gui.controls));
     
     this.desktop = world.spawn();
     world.rename_obj(this.desktop.toString(), "desktop");
@@ -392,7 +394,6 @@ var editor = {
 
   gui() { 
     /* Clean out killed objects */
-    this.selectlist = this.selectlist.filter(function(x) { return x.alive; });
     render.text([0,0], game.camera.world2view([0,0]));
 
     render.text("WORKING LAYER: " + this.working_layer, [0,520]);
@@ -422,9 +423,11 @@ var editor = {
     var depth = 0;
     var alldirty = false;
     for (var lvl of lvlchain) {
+      if (!lvl._ed) continue;
       if (alldirty)
         lvl._ed.dirty = true;
       else {
+        if (!lvl._ed) continue;
         lvl.check_dirty();
         if (lvl._ed.dirty) alldirty = true;
       }
@@ -442,7 +445,6 @@ var editor = {
 
     depth++;
     render.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
-    
     this.selectlist.forEach(function(x) {
       render.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
       render.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
@@ -452,7 +454,8 @@ var editor = {
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
       render.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
-      render.circle(x[1].screenpos(),10,Color.blue.alpha(0.3));
+      render.point(x[1].screenpos(),5,Color.blue.alpha(0.3));
+      render.point(x[1].screenpos(), 1, Color.red);
     });
 
     var mg = physics.pos_query(input.mouse.worldpos(),10);
@@ -522,9 +525,12 @@ var editor = {
   lvl_history: [],
 
   load(urstr) {
-    var obj = editor.edit_level.spawn(urstr);
+    var mur = ur[urstr];
+    if (!mur) return;
+    var obj = editor.edit_level.spawn(mur);
     obj.set_worldpos(input.mouse.worldpos());
     this.selectlist = [obj];
+    console.warn(`made something and now the selected objects is ${this.selectlist.length} long.`);
   },
 
   load_prev() {
@@ -553,15 +559,15 @@ var editor = {
       /* make a new type path */
       if (Object.access(ur,sub)) {
         console.warn(`Ur named ${sub} already exists.`);
-	return;
+	      return;
       }
 
       var file = `${sub}.json`;
       io.slurpwrite(file, json.encode(obj.json_obj(),null,1));
       ur[sub] = {
         name: sub,
-	data: file,
-	proto: json.decode(json.encode(obj))
+        data: file,
+        proto: json.decode(json.encode(obj))
       }
       obj.ur = sub;
       
@@ -583,12 +589,12 @@ var editor = {
 
       if (obj === editor.edit_level) {
         if (obj === editor.desktop) {
-	  obj.clear();
-    	  var nobj = editor.edit_level.spawn(sub);
-	  editor.selectlist = [nobj];
-	  return;
-	}
-	editor.edit_level = editor.edit_level.master;
+	        obj.clear();
+    	    var nobj = editor.edit_level.spawn(sub);
+          editor.selectlist = [nobj];
+          return;
+      	}
+	      editor.edit_level = editor.edit_level.master;
       }
 
       var t = obj.transform();
@@ -664,7 +670,7 @@ editor.inputs.release_post = function() {
   editor.edit_level.check_dirty();
 
   /* snap all objects to be pixel perfect */
-  editor.edit_level.obj_descend(o => o.pos = o.pos.map(x => Math.round(x)));
+  game.all_objects(o => o.pos = o.pos.map(x => Math.round(x)), editor.edit_level);
 };
 editor.inputs['C-a'] = function() {
   if (!Object.empty(editor.selectlist)) { editor.unselect(); return; }
@@ -1404,7 +1410,7 @@ var inputpanel = {
   toString() { return this.title; },  
   value: "",
   on: false,
-  pos:[100,window.height-50],
+  pos:[100,window.size.y-50],
   wh:[350,600],
   anchor: [0,1],
   padding:[5,-15],
@@ -1422,7 +1428,7 @@ var inputpanel = {
     ];
     else
       this.win.items = itms;
-    this.win.draw(this.pos.slice());
+    this.win.draw([100, window.size.y-50]);
   },
   
   guibody() {
@@ -1479,10 +1485,7 @@ var inputpanel = {
 
 inputpanel.inputs = {};
 
-inputpanel.inputs.post = function()
-{
-  this.keycb();
-}
+inputpanel.inputs.post = function() { this.keycb(); }
 
 inputpanel.inputs.char = function(c) {
   this.value = this.value.slice(0,this.caret) + c + this.value.slice(this.caret);
@@ -1524,26 +1527,20 @@ inputpanel.inputs['C-k'] = function() {
   this.value = this.value.slice(0,this.caret);
 };
 
-inputpanel.inputs.lm = function()
-{
-  GUI.controls.check_submit();
-}
-
-//load("scripts/textedit.js");
+inputpanel.inputs.lm = function() { gui.controls.check_submit(); }
 
 var replpanel = Object.copy(inputpanel, {
   title: "",
   closeonsubmit:false,
   wh: [700,300],
   pos: [50,50],
-  anchor: [0,0],
+  anchor: [0,1],
   padding: [0,0],
   scrolloffset: [0,0],
 
   guibody() {
     this.win.selectable = true;
-    var log = "";
-    log = log.slice(-5000);
+    var log = console.transcript;
     return [
       Mum.text({str:log, anchor:[0,0], offset:[0,-300].sub(this.scrolloffset), selectable: true}),
       Mum.text({str:this.value,color:Color.green, offset:[0,-290], caret: this.caret})
@@ -1801,8 +1798,6 @@ var objectexplorer = Object.copy(inputpanel, {
 
     return items;
   },
-
-
 });
 
 var openlevelpanel = Object.copy(inputpanel,  {
@@ -2004,9 +1999,6 @@ limited_editor.inputs['C-q'] = function()
 /* This is used for editing during a paused game */
 var limited_editing = {};
 limited_editing.inputs = {};
-
-if (io.exists("editor.config"))
-  load_configs("editor.config");
 
 /* This is the editor level & camera - NOT the currently edited level, but a level to hold editor things */
 sim.pause();

@@ -608,111 +608,6 @@ JSC_CCALL(emitter_start, start_emitter(js2emitter(this)))
 JSC_CCALL(emitter_stop, stop_emitter(js2emitter(this)))
 JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0])))
 
-JSValue js_os_cwd(JSContext *js, JSValue this, int argc, JSValue *argv)
-{
-  char cwd[PATH_MAX];
-  #ifndef __EMSCRIPTEN__
-  getcwd(cwd, sizeof(cwd));
-  #else
-  cwd[0] = '.';
-  cwd[1] = 0;
-  #endif
-  return str2js(cwd);
-}
-
-JSC_SCALL(os_env, ret = str2js(getenv(str)))
-
-JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
-{
-  #ifdef __linux__
-  return str2js("linux");
-  #elif defined(_WIN32) || defined(_WIN64)
-  return str2js("windows");
-  #elif defined(__APPLE__)
-  return str2js("macos");
-  #endif
-  return JS_UNDEFINED;
-}
-
-JSC_CCALL(os_quit, quit();)
-JSC_CCALL(os_exit, exit(js2number(argv[0]));)
-JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
-JSC_CCALL(os_gc, script_gc());
-JSC_SSCALL(os_eval, ret = script_eval(str, str2))
-JSC_SCALL(os_capture, capture_screen(js2number(argv[1]), js2number(argv[2]), js2number(argv[4]), js2number(argv[5]), str))
-
-JSC_CCALL(os_sprite,
-  if (js2boolean(argv[0])) return JS_GetClassProto(js,js_sprite_id);
-  return sprite2js(sprite_make());
-)
-
-JSC_CCALL(os_make_gameobject, return gameobject2js(MakeGameobject()))
-JSC_CCALL(os_make_circle2d,
-  gameobject *go = js2gameobject(argv[0]);
-  struct phys2d_circle *circle = Make2DCircle(go);
-  JSValue circleval = JS_NewObject(js);
-  js_setprop_str(circleval, "id", ptr2js(circle));
-  js_setprop_str(circleval, "shape", ptr2js(&circle->shape));
-  return circleval;
-)
-
-JSC_CCALL(os_make_model,
-  gameobject *go = js2gameobject(argv[0]);
-  struct drawmodel *dm = make_drawmodel(go);
-  JSValue ret = JS_NewObject(js);
-  js_setprop_str(ret, "id", ptr2js(dm));
-  return ret;
-)
-
-JSC_CCALL(os_make_poly2d,
-  gameobject *go = js2gameobject(argv[0]);
-  struct phys2d_poly *poly = Make2DPoly(go);
-  phys2d_poly_setverts(poly, NULL);
-  JSValue polyval = JS_NewObject(js);
-  js_setprop_str(polyval, "id", ptr2js(poly));
-  js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
-  return polyval;
-)
-
-JSC_CCALL(os_make_edge2d,
-  gameobject *go = js2gameobject(argv[0]);
-  struct phys2d_edge *edge = Make2DEdge(go);
-  HMM_Vec2 *points = js2cpvec2arr(argv[1]);
-  phys2d_edge_update_verts(edge, points);
-  arrfree(points);
-  
-  JSValue edgeval = JS_NewObject(js);
-  js_setprop_str(edgeval, "id", ptr2js(edge));
-  js_setprop_str(edgeval, "shape", ptr2js(&edge->shape));
-  return edgeval;
-)
-
-JSC_SCALL(os_make_texture,
-  ret = texture2js(texture_from_file(str));
-  YughInfo("Made texture with %s", str);
-  JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
-)
-JSC_SCALL(os_system, system(str); )
-
-static const JSCFunctionListEntry js_os_funcs[] = {
-  MIST_FUNC_DEF(os,sprite,1),
-  MIST_FUNC_DEF(os, cwd, 0),
-  MIST_FUNC_DEF(os, env, 1),
-  MIST_FUNC_DEF(os, sys, 0),
-  MIST_FUNC_DEF(os, system, 1),
-  MIST_FUNC_DEF(os, quit, 0),
-  MIST_FUNC_DEF(os, exit, 1),
-  MIST_FUNC_DEF(os, reindex_static, 0),
-  MIST_FUNC_DEF(os, gc, 0),
-  MIST_FUNC_DEF(os, capture, 5),
-  MIST_FUNC_DEF(os, eval, 2),
-  MIST_FUNC_DEF(os, make_gameobject, 0),
-  MIST_FUNC_DEF(os, make_circle2d, 1),
-  MIST_FUNC_DEF(os, make_poly2d, 1),
-  MIST_FUNC_DEF(os, make_edge2d, 1),
-  MIST_FUNC_DEF(os, make_model, 2),
-  MIST_FUNC_DEF(os, make_texture, 1),
-};
 
 JSC_CCALL(render_grid, draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2]));)
 JSC_CCALL(render_point, draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])))
@@ -1030,8 +925,7 @@ JSC_CCALL(physics_set_cat_mask, set_cat_mask(js2number(argv[0]), js2bitmask(argv
 
 JSC_CCALL(physics_pos_query,
   gameobject *go = pos2gameobject(js2vec2(argv[0]), js2number(argv[1]));
-  JSValue ret = go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
-  return ret;
+  return go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
 )
 
 JSC_CCALL(physics_closest_point,
@@ -1207,8 +1101,14 @@ static JSValue js_window_set_size(JSContext *js, JSValue this, JSValue v) {
     
   return JS_UNDEFINED;
 }
-
-JSC_GETSET_APPLY(window, rendersize, vec2)
+static JSValue js_window_get_rendersize(JSContext *js, JSValue this) {
+  window *w = js2window(this);
+  if (w->rendersize.x == 0 || w->rendersize.y == 0) return vec22js(w->size);
+  return vec22js(w->rendersize);
+}
+static JSValue js_window_set_rendersize(JSContext *js, JSValue this, JSValue v) {
+  js2window(this)->rendersize = js2vec2(v);
+}
 JSC_GETSET(window, mode, number)
 static JSValue js_window_get_fullscreen(JSContext *js, JSValue this) { return boolean2js(js2window(this)->fullscreen); }
 static JSValue js_window_set_fullscreen(JSContext *js, JSValue this, JSValue v) { window_setfullscreen(js2window(this), js2boolean(v)); }
@@ -1235,12 +1135,13 @@ static const JSCFunctionListEntry js_window_funcs[] = {
 };
 
 JSValue js_gameobject_set_pos(JSContext *js, JSValue this, JSValue val) {
-  gameobject *go = js2gameobject(this);
-  cpBodySetPosition(go->body, js2vec2(val).cp);
-  if (go->phys == CP_BODY_TYPE_STATIC)
-    cpSpaceReindexShapesForBody(space, go->body);
+  cpBody *b = js2gameobject(this)->body;
+  cpBodySetPosition(b, js2cvec2(val));
+  if (cpBodyGetType(b) == CP_BODY_TYPE_STATIC)
+    cpSpaceReindexShapesForBody(space, b);
+  return JS_UNDEFINED;
 }
-JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return vec22js((HMM_Vec2)cpBodyGetPosition(js2gameobject(this)->body)); }
+JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
 JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
 JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
@@ -1509,6 +1410,117 @@ JSValue js_nota_decode(JSContext *js, JSValue this, int argc, JSValue *argv)
 static const JSCFunctionListEntry js_nota_funcs[] = {
   MIST_FUNC_DEF(nota, encode, 1),
   MIST_FUNC_DEF(nota, decode, 1)
+};
+
+
+JSValue js_os_cwd(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  char cwd[PATH_MAX];
+  #ifndef __EMSCRIPTEN__
+  getcwd(cwd, sizeof(cwd));
+  #else
+  cwd[0] = '.';
+  cwd[1] = 0;
+  #endif
+  return str2js(cwd);
+}
+
+JSC_SCALL(os_env, ret = str2js(getenv(str)))
+
+JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
+{
+  #ifdef __linux__
+  return str2js("linux");
+  #elif defined(_WIN32) || defined(_WIN64)
+  return str2js("windows");
+  #elif defined(__APPLE__)
+  return str2js("macos");
+  #endif
+  return JS_UNDEFINED;
+}
+
+JSC_CCALL(os_quit, quit();)
+JSC_CCALL(os_exit, exit(js2number(argv[0]));)
+JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
+JSC_CCALL(os_gc, script_gc());
+JSC_SSCALL(os_eval, ret = script_eval(str, str2))
+JSC_SCALL(os_capture, capture_screen(js2number(argv[1]), js2number(argv[2]), js2number(argv[4]), js2number(argv[5]), str))
+
+JSC_CCALL(os_sprite,
+  if (js2boolean(argv[0])) return JS_GetClassProto(js,js_sprite_id);
+  return sprite2js(sprite_make());
+)
+
+JSC_CCALL(os_make_gameobject,
+  ret = gameobject2js(MakeGameobject());
+  JS_SetPropertyFunctionList(js, ret, js_gameobject_funcs, countof(js_gameobject_funcs));
+  return ret;
+)
+JSC_CCALL(os_make_circle2d,
+  gameobject *go = js2gameobject(argv[0]);
+  struct phys2d_circle *circle = Make2DCircle(go);
+  JSValue circleval = JS_NewObject(js);
+  js_setprop_str(circleval, "id", ptr2js(circle));
+  js_setprop_str(circleval, "shape", ptr2js(&circle->shape));
+  return circleval;
+)
+
+JSC_CCALL(os_make_model,
+  gameobject *go = js2gameobject(argv[0]);
+  struct drawmodel *dm = make_drawmodel(go);
+  JSValue ret = JS_NewObject(js);
+  js_setprop_str(ret, "id", ptr2js(dm));
+  return ret;
+)
+
+JSC_CCALL(os_make_poly2d,
+  gameobject *go = js2gameobject(argv[0]);
+  struct phys2d_poly *poly = Make2DPoly(go);
+  phys2d_poly_setverts(poly, NULL);
+  JSValue polyval = JS_NewObject(js);
+  js_setprop_str(polyval, "id", ptr2js(poly));
+  js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
+  return polyval;
+)
+
+JSC_CCALL(os_make_edge2d,
+  gameobject *go = js2gameobject(argv[0]);
+  struct phys2d_edge *edge = Make2DEdge(go);
+  HMM_Vec2 *points = js2cpvec2arr(argv[1]);
+  phys2d_edge_update_verts(edge, points);
+  arrfree(points);
+  
+  JSValue edgeval = JS_NewObject(js);
+  js_setprop_str(edgeval, "id", ptr2js(edge));
+  js_setprop_str(edgeval, "shape", ptr2js(&edge->shape));
+  return edgeval;
+)
+
+JSC_SCALL(os_make_texture,
+  ret = texture2js(texture_from_file(str));
+  YughInfo("Made texture with %s", str);
+  JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
+)
+JSC_SCALL(os_system, system(str); )
+
+static const JSCFunctionListEntry js_os_funcs[] = {
+  MIST_FUNC_DEF(os,sprite,1),
+  MIST_FUNC_DEF(os, cwd, 0),
+  MIST_FUNC_DEF(os, env, 1),
+  MIST_FUNC_DEF(os, sys, 0),
+  MIST_FUNC_DEF(os, system, 1),
+  MIST_FUNC_DEF(os, quit, 0),
+  MIST_FUNC_DEF(os, exit, 1),
+  MIST_FUNC_DEF(os, reindex_static, 0),
+  MIST_FUNC_DEF(os, gc, 0),
+  MIST_FUNC_DEF(os, capture, 5),
+  MIST_FUNC_DEF(os, eval, 2),
+  MIST_FUNC_DEF(os, make_gameobject, 0),
+  MIST_FUNC_DEF(os, make_circle2d, 1),
+  MIST_FUNC_DEF(os, make_poly2d, 1),
+  MIST_FUNC_DEF(os, make_edge2d, 1),
+  MIST_FUNC_DEF(os, make_model, 2),
+  MIST_FUNC_DEF(os, make_texture, 1),
 };
 
 #include "steam.h"

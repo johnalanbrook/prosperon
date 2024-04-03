@@ -36,8 +36,8 @@ function ediff(from,to)
     if (Array.isArray(v)) {
       if (!Array.isArray(to[key]) || v.length !== to[key].length) {
         var r = ediff(v,[]);
-	if (r) ret[key] = Object.values(r);
-	return;
+        if (r) ret[key] = Object.values(r);
+        return;
       }
 
       var diff = ediff(from[key], to[key]);
@@ -47,14 +47,14 @@ function ediff(from,to)
       return;
     }
 
-    if (typeof v === 'object') {
+    if (typeof v === 'object' && v !== null) {
       var diff = ediff(v, to[key]);
       if (diff && !Object.empty(diff))
-	  ret[key] = diff;	
+	     ret[key] = diff;	
       return;
     }
 
-    if (typeof v === 'number') {
+    if (typeof v === 'number' || v === null) {
       if (!isFinite(v)) v = null; // Squash infinity to null
       if (v !== to[key])
 	ret[key] = v;

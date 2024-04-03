@@ -120,52 +120,52 @@ qq = 'ms';
   return `${t.toPrecision(4)} ${qq}`;
 }
 
-Object.assign(console, {
-  say(msg) { console.print(msg + "\n"); }, 
-  
-  pprint(msg, lvl = 0) {
-    if (typeof msg === 'object')
-      msg = JSON.stringify(msg, null, 2);
-
-    var file = "nofile";
-    var line = 0;
-    
-    var caller = (new Error()).stack.split('\n')[2];
-    if (caller) { 
-      var md = caller.match(/\((.*)\:/);
-      var m = md ? md[1] : "SCRIPT";
-      if (m) file = m;
-      md = caller.match(/\:(\d*)\)/);
-      m = md ? md[1] : 0;
-      if (m) line = m;
-    }
-    
-    console.rec(lvl, msg, file, line);
-  },
-
-  spam(msg) { console.pprint (msg,0); },
-  debug(msg) { console.pprint(msg,1); },
-  info(msg) { console.pprint(msg, 2); },
-  warn(msg) { console.pprint(msg, 3); },
-  error(msg) { console.pprint(msg + "\n" + console.stackstr(2), 4);},
-  panic(msg) { console.pprint(msg + "\n" + console.stackstr(2), 5); },
-
-  stackstr(skip=0) {
-    var err = new Error();
-    var stack = err.stack.split('\n');
-    return stack.slice(skip,stack.length).join('\n');
-  },
-
-  stack(skip = 0) {
-    console.log(console.stackstr(skip+1));
-  },
-});
-
-console.stdout_lvl = 1;
+console.transcript = "";
+console.say = function(msg) {
+  msg += "\n";
+  console.print(msg);
+  console.transcript += msg;
+};
 console.log = console.say;
-console.trace = console.stack;
 var say = console.say;
 var print = console.print;
+
+console.pprint = function(msg,lvl = 0) {  
+  if (typeof msg === 'object')
+    msg = JSON.stringify(msg, null, 2);
+
+  var file = "nofile";
+  var line = 0;
+  
+  var caller = (new Error()).stack.split('\n')[2];
+  if (caller) { 
+    var md = caller.match(/\((.*)\:/);
+    var m = md ? md[1] : "SCRIPT";
+    if (m) file = m;
+    md = caller.match(/\:(\d*)\)/);
+    m = md ? md[1] : 0;
+    if (m) line = m;
+  }
+  
+  console.rec(lvl, msg, file, line);
+};
+
+console.spam = function(msg) { console.pprint (msg,0); };
+console.debug = function(msg) { console.pprint(msg,1); };
+console.info = function(msg) { console.pprint(msg, 2); };
+console.warn = function(msg) { console.pprint(msg, 3); };
+console.error = function(msg) { console.pprint(msg + "\n" + console.stackstr(2), 4);};
+console.panic = function(msg) { console.pprint(msg + "\n" + console.stackstr(2), 5); };
+console.stackstr = function(skip=0) {
+  var err = new Error();
+  var stack = err.stack.split('\n');
+  return stack.slice(skip,stack.length).join('\n');
+};
+
+console.stack = function(skip = 0) { console.log(console.stackstr(skip+1)); };
+
+console.stdout_lvl = 1;
+console.trace = console.stack;
 
 console.doc = {
   level: "Set level to output logging to console.",
@@ -243,15 +243,14 @@ global.mixin("scripts/debug");
 var frame_t = profile.secs(profile.now());
 var phys_step = 1/60;
 
-var sim = {
-  mode: "play",
-  play() { this.mode = "play"; os.reindex_static(); },
-  playing() { return this.mode === 'play'; },
-  pause() { this.mode = "pause"; console.stack(); },
-  paused() { return this.mode === 'pause'; },
-  step() { this.mode = 'step'; },
-  stepping() { return this.mode === 'step'; }
-}
+var sim = {};
+sim.mode = "play";
+sim.play = function() { this.mode = "play"; os.reindex_static(); };
+sim.playing = function() { return this.mode === 'play'; };
+sim.pause = function() { this.mode = "pause"; };
+sim.paused = function() { return this.mode === 'pause'; };
+sim.step = function() { this.mode = 'step'; };
+sim.stepping = function() { return this.mode === 'step'; }
 
 var physlag = 0;
 
@@ -313,7 +312,8 @@ function process()
 
 game.timescale = 1;
 
-game.all_objects = function(fn) {
+game.all_objects = function(fn, startobj) {
+  startobj ??= world;
   var eachobj = function(obj,fn)
   {
     fn(obj);
@@ -321,7 +321,7 @@ game.all_objects = function(fn) {
       eachobj(obj.objects[o],fn);
   }
   
-  eachobj(world,fn);
+  eachobj(startobj,fn);
 };
 
 game.tags = {};

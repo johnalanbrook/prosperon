@@ -22,7 +22,7 @@ debug.draw = function() {
   if (this.draw_gizmos)
     game.all_objects(function(x) {
       if (!x.icon) return;
-      GUI.image(x.icon, game.camera.world2view(x.pos));
+      gui.image(x.icon, game.camera.world2view(x.pos));
     });
 
   if (this.draw_names)
@@ -143,12 +143,11 @@ debug.inputs.f9 = function() {
 debug.inputs.f10 = function() { time.timescale = 0.1; };
 debug.inputs.f10.doc = "Toggle timescale to 1/10.";
 debug.inputs.f10.released = function () { time.timescale = 1.0; };
-debug.inputs.f12 = function() { GUI.defaults.debug = !GUI.defaults.debug; console.warn("GUI toggle debug");};
-debug.inputs.f12.doc = "Toggle drawing GUI debugging aids.";
+debug.inputs.f12 = function() { gui.defaults.debug = !gui.defaults.debug; console.warn("gui toggle debug");};
+debug.inputs.f12.doc = "Toggle drawing gui debugging aids.";
 
 debug.inputs['M-1'] = render.normal;
 debug.inputs['M-2'] = render.wireframe;
-
 debug.inputs['C-M-f'] = function() {};
 debug.inputs['C-M-f'].doc = "Enter camera fly mode.";
 

@@ -48,13 +48,7 @@ cpTransform m3_to_cpt(HMM_Mat3 m)
 }
 
 cpShape *phys2d_query_pos(cpVect pos) {
-  cpShapeFilter filter;
-  filter.group = CP_NO_GROUP;
-  filter.mask = CP_ALL_CATEGORIES;
-  filter.categories = CP_ALL_CATEGORIES;
-  cpShape *find = cpSpacePointQueryNearest(space, pos, 0.f, filter, NULL);
-
-  return find;
+  return cpSpacePointQueryNearest(space, pos, 0.f, allfilter, NULL);
 }
 
 

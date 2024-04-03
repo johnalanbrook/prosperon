@@ -88,14 +88,13 @@ render.arrow = function(start, end, color, wingspan, wingangle) {
 };
 
 render.coordinate = function(pos, size, color) {
-    color ??= Color.white;
-    render.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
-    render.point(pos, 2, color);
+  render.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
+  render.point(pos, 2, color);
 }
 
 render.boundingbox = function(bb, color) {
   color ??= Color.white;
-  cmd_points(0, bbox.topoints(bb), color);
+  render.poly(bbox.topoints(bb), color);
 }
 
 render.rectangle = function(lowerleft, upperright, color) {
@@ -110,6 +109,12 @@ render.box = function(pos, wh, color) {
   render.rectangle(lower,upper,color);
 };
 
+render.window = function(pos, wh, color) {
+  var p = pos.slice();
+  p = p.add(wh.scale(0.5));
+  render.box(p,wh,color);
+};
+
 render.text = function(str, pos, size, color, wrap, anchor, cursor) {
   size ??= 1;
   color ??= Color.white;
@@ -122,7 +127,7 @@ render.text = function(str, pos, size, color, wrap, anchor, cursor) {
   var w = bb.r*2;
   var h = bb.t*2;
   
-  //gui.text draws with an anchor on top left corner
+  //render.text draws with an anchor on top left corner
   var p = pos.slice();
   p.x -= w * anchor.x;
   bb.r += (w*anchor.x);

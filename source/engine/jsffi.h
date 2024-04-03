@@ -114,7 +114,6 @@ JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYP
 JS_SetPropertyStr(js, TYPE##_proto, "memid", JS_NewCFunction(js, &js_##TYPE##_memid, "memid", 0)); \
 JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 
-
 #define countof(x) (sizeof(x)/sizeof((x)[0]))
 
 void ffi_load();
