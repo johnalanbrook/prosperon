@@ -61,10 +61,6 @@ const char *js2str(JSValue v) {
   return JS_ToCString(js, v);
 }
 
-/* support functions for these macros when they involve a JSValue */
-JSValue js2JSValue(JSValue v) { return v; }
-JSValue JSValue2js(JSValue v) { return v; }
-
 QJSCLASS(gameobject)
 QJSCLASS(emitter)
 QJSCLASS(dsp_node)
@@ -1082,14 +1078,12 @@ static const JSCFunctionListEntry js_dsp_node_funcs[] = {
 JSC_GETSET(sound, loop, boolean)
 JSC_GETSET(sound, timescale, number)
 JSC_GETSET(sound, frame, number)
-JSC_GETSET_HOOK(sound, hook)
 JSC_CCALL(sound_frames, return number2js(js2sound(this)->data->frames))
 
 static const JSCFunctionListEntry js_sound_funcs[] = {
   CGETSET_ADD(sound, loop),
   CGETSET_ADD(sound, timescale),
   CGETSET_ADD(sound, frame),
-  CGETSET_ADD(sound, hook),
   MIST_FUNC_DEF(sound, frames, 0),
 };
 
@@ -1164,8 +1158,7 @@ JSC_GETSET(gameobject, maxvelocity, number)
 JSC_GETSET(gameobject, maxangularvelocity, number)
 JSC_GETSET(gameobject, warp_filter, bitmask)
 JSC_GETSET(gameobject, drawlayer, number)
-JSC_CCALL(gameobject_setref, js2gameobject(this)->ref = argv[0]);
-JSC_CCALL(gameobject_sync, gameobject_apply(js2gameobject(this)))
+JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
 JSC_CCALL(gameobject_in_air, return boolean2js(phys2d_in_air(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_world2this, return vec22js(world2go(js2gameobject(this), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js2vec2(argv[0]))))
@@ -1200,8 +1193,7 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, this2world, 1),
   MIST_FUNC_DEF(gameobject, dir_world2this, 1),
   MIST_FUNC_DEF(gameobject, dir_this2world, 1),
-  MIST_FUNC_DEF(gameobject,setref,1),
-  MIST_FUNC_DEF(gameobject, sync, 0),
+  MIST_FUNC_DEF(gameobject, selfsync, 0),
 };
 
 JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
@@ -1454,6 +1446,7 @@ JSC_CCALL(os_sprite,
 JSC_CCALL(os_make_gameobject,
   ret = gameobject2js(MakeGameobject());
   JS_SetPropertyFunctionList(js, ret, js_gameobject_funcs, countof(js_gameobject_funcs));
+  js2gameobject(ret)->ref = ret;
   return ret;
 )
 JSC_CCALL(os_make_circle2d,

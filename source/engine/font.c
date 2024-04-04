@@ -50,15 +50,15 @@ void font_init() {
       .shader = fontshader,
       .layout = {
           .attrs = {
-              [0].format = SG_VERTEXFORMAT_FLOAT2, /* verts */
-	      [0].buffer_index = 1,
-	      [1].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
-	      [2].format = SG_VERTEXFORMAT_FLOAT2, /* width and height */
-              [3].format = SG_VERTEXFORMAT_USHORT2N, /* uv pos */
-	      [4].format = SG_VERTEXFORMAT_USHORT2N, /* uv width and height */
-              [5].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
+            [0].format = SG_VERTEXFORMAT_FLOAT2, /* verts */
+            [0].buffer_index = 1,
+            [1].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
+            [2].format = SG_VERTEXFORMAT_FLOAT2, /* width and height */
+            [3].format = SG_VERTEXFORMAT_USHORT2N, /* uv pos */
+            [4].format = SG_VERTEXFORMAT_USHORT2N, /* uv width and height */
+            [5].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
           },
-	.buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
+	      .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
       },
       .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
       .colors[0].blend = blend_trans,
@@ -244,7 +244,7 @@ void text_flush(HMM_Mat4 *proj) {
 }
 
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
-  if (curchar+1 >=  max_chars)
+  if (curchar-10 >=  max_chars)
     return;
 
   struct rgba colorbox = {0,0,0,255};
@@ -395,15 +395,15 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
       }
 
       while (wordstart < line) {
-	if (*wordstart == '\e')
-	  wordstart = esc_color(wordstart, &usecolor, color);
+        if (*wordstart == '\e')
+          wordstart = esc_color(wordstart, &usecolor, color);
 
-	sdrawCharacter(font->Characters[*wordstart], HMM_AddV2(cursor, HMM_MulV2F((HMM_Vec2){1,-1},scale)), scale, (rgba){0,0,0,255});
+	      sdrawCharacter(font->Characters[*wordstart], HMM_AddV2(cursor, HMM_MulV2F((HMM_Vec2){1,-1},scale)), scale, (rgba){0,0,0,255});
         sdrawCharacter(font->Characters[*wordstart], cursor, scale, usecolor);
 
         cursor.X += font->Characters[*wordstart].Advance * tracking * scale;
         wordstart++;
-	check_caret(caret, wordstart-drawstart, cursor, scale, usecolor);	
+	      check_caret(caret, wordstart-drawstart, cursor, scale, usecolor);	
       }
     }
   }

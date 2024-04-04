@@ -17,7 +17,6 @@ typedef struct sound {
     int loop;
     float timescale;
     SRC_STATE *src;
-    JSValue hook;
 } sound;
 
 /* Represents a sound file source, fulled loaded*/

@@ -882,6 +882,11 @@ Object.defineProperty(String.prototype, 'uc', { value: function() { return this.
 Object.defineProperty(String.prototype, 'lc', {value:function() { return this.toLowerCase(); }});
 
 /* ARRAY DEFS */
+Object.defineProperty(Array.prototype, 'aspect', {
+  value: function() { 
+    return this.x/this.y;
+  }
+});
 Object.defineProperty(Array.prototype, 'copy', {
   value: function() {
     var c = [];

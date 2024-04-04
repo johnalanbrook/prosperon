@@ -192,10 +192,14 @@ Cmdline.register_order("edit", function() {
   }
 
   window.size = [1280, 720];
+
+  window.mode = window.modetypes.full;
+  sim.pause();
   
   game.engine_start(function() {
     global.mixin("scripts/editor.js");
     use("editorconfig.js");
+    use("config.js");
     editor.enter_editor();
   });
 }, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");

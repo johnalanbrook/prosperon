@@ -278,13 +278,11 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
   if(end) {
     if (s->loop)
       s->frame = 0;
-    script_call_sym(s->hook,0,NULL);
   }
 }
 
 void free_source(struct sound *s)
 {
-  JS_FreeValue(js, s->hook);
   src_delete(s->src);
   free(s);
 }
@@ -305,7 +303,6 @@ struct dsp_node *dsp_source(const char *path)
   self->loop = false;
   self->src = src_callback_new(src_cb, SRC_SINC_MEDIUM_QUALITY, 2, NULL, self);
   self->timescale = 1;
-  self->hook = JS_UNDEFINED;
   dsp_node *n = make_node(self, sound_fillbuf, free_source);
   return n;
 }

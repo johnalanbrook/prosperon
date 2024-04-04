@@ -42,7 +42,7 @@ function ediff(from,to)
 
       var diff = ediff(from[key], to[key]);
       if (diff && !Object.empty(diff))
-	ret[key] = Object.values(ediff(v,[]));
+	      ret[key] = Object.values(ediff(v,[]));
 
       return;
     }

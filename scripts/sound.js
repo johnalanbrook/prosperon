@@ -1,4 +1,5 @@
 var audio = {};
+var cries = {};
 
 audio.samplerate = dspsound.samplerate();
 audio.play = function(file,bus) {
@@ -10,6 +11,7 @@ audio.play = function(file,bus) {
   }
   var src = audio.dsp.source(file);
   src.plugin(bus);
+  src.guid = prosperon.guid();
   return src;
 }
 audio.bus = {};
@@ -17,14 +19,23 @@ audio.bus.master = dspsound.master();
 audio.dsp = {};
 audio.dsp = dspsound;
 
-var cries = [];
 audio.cry = function(file)
 {
   var player = audio.play(file);
-  cries.push(player);
-  var hook = function() { console.warn("ENDED SOUND!!!!"); cries.remove(player); player = undefined; hook = undefined;}
-  player.hook = hook;
+  player.guid = prosperon.guid();
+  cries[player.guid] = player;
+  player.ended = function() { delete cries[player.guid]; player = undefined; }
+  return player.ended;
 }
+
+var killer = Register.appupdate.register(function() {
+  for (var i in cries) {
+    var cry = cries[i];
+    if (!cry.ended) continue;
+    if (cry.frame < cry.lastframe || cry.frame === cry.lastframe) cry.ended();
+    cry.lastframe = cry.frame;
+  }
+});
 
 var song;
 

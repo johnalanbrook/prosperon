@@ -241,7 +241,7 @@ global.mixin("scripts/render");
 global.mixin("scripts/debug");
 
 var frame_t = profile.secs(profile.now());
-var phys_step = 1/60;
+var phys_step = 1/240;
 
 var sim = {};
 sim.mode = "play";
@@ -280,14 +280,14 @@ function process()
     prosperon.update(dt*game.timescale);
     if (sim.mode === "step")
       sim.pause();
-  }
-  
-  physlag += dt;
-  
-  while (physlag > phys_step) {
-    physlag -= phys_step;
-    prosperon.phys2d_step(phys_step*game.timescale);
-    prosperon.physupdate(phys_step*game.timescale);
+
+    physlag += dt;
+
+    while (physlag > phys_step) {
+      physlag -= phys_step;
+      prosperon.phys2d_step(phys_step*game.timescale);
+      prosperon.physupdate(phys_step*game.timescale);
+    }
   }
 
   if (!game.camera)  
@@ -312,15 +312,15 @@ function process()
 
 game.timescale = 1;
 
+var eachobj = function(obj,fn)
+{
+  fn(obj);
+  for (var o in obj.objects)
+    eachobj(obj.objects[o],fn);
+}
+
 game.all_objects = function(fn, startobj) {
   startobj ??= world;
-  var eachobj = function(obj,fn)
-  {
-    fn(obj);
-    for (var o in obj.objects)
-      eachobj(obj.objects[o],fn);
-  }
-  
   eachobj(startobj,fn);
 };
 
@@ -529,11 +529,13 @@ var Event = {
   },
 };
 
+// window.rendersize is the resolution the game renders at
+// window.size is the physical size of the window on the desktop
 window.modetypes = { 
-  stretch: 0, // stretch to fill window
-  keep: 1, // keep exact dimensions
-  width: 2, // keep width
-  height: 3, // keep height
+  stretch: 0, // stretch render to fill window
+  keep: 1, // keep render exact dimensions, with no stretching
+  width: 2, // keep render at width
+  height: 3, // keep render at height
   expand: 4, // expand width or height
   full: 5 // expand out beyond window
 };
@@ -546,8 +548,6 @@ global.mixin("scripts/spline");
 global.mixin("scripts/components");
 
 window.doc = {};
-window.doc.width = "Width of the game window.";
-window.doc.height = "Height of the game window.";
 window.doc.dimensions = "Window width and height packaged in an array [width,height]";
 window.doc.title = "Name in the title bar of the window.";
 window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
@@ -557,7 +557,6 @@ global.mixin("scripts/entity");
 
 function world_start() {
   globalThis.world = os.make_gameobject();
-  world.setref(world);
   world.objects = {};
   world.toString = function() { return "world"; };
   world.ur = "world";

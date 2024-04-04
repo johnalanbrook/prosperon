@@ -10,8 +10,6 @@ function obj_unique_name(name, obj) {
   return n;
 }
 
-var urcache = {};
-
 var gameobject_impl = {
   get pos() {
     assert(this.master, `Entity ${this.toString()} has no master.`);
@@ -74,7 +72,7 @@ var gameobject = {
     this._ed.urdiff = this.json_obj();
     this._ed.dirty = !Object.empty(this._ed.urdiff);
     return; // TODO: IMPLEMENT
-    var lur = ur[this.master.ur];
+    var lur = this.master.ur;
     if (!lur) return;
     var lur = lur.objects[this.toString()];
     var d = ediff(this._ed.urdiff, lur);
@@ -93,8 +91,9 @@ var gameobject = {
   },
 
   urstr() {
-    if (this._ed.dirty) return "*" + this.ur;
-    return this.ur;
+    var str = this.ur.name;
+    if (this._ed.dirty) str = "*" + str;
+    return str;
   },
 
   full_path() {
@@ -213,11 +212,7 @@ var gameobject = {
   },
 
   cry(file) {
-    this.crying = audio.play(file, audio.bus.sfx);
-    var killfn = () => { this.crying = undefined;
-      console.warn("killed"); }
-    this.crying.hook = killfn;
-    return killfn;
+    return audio.cry(file);
   },
 
   gscale() { return this.scale; },
@@ -239,7 +234,7 @@ var gameobject = {
   worldangle() { return this.angle; },
   sworldangle(x) { this.angle = x; },
 
-  get_ur() { return urcache[this.ur]; },
+  get_ur() { return this.ur; },
 
   /* spawn an entity
       text can be:
@@ -250,24 +245,33 @@ var gameobject = {
   spawn(text, config, callback) {
     var ent = os.make_gameobject();
     ent.guid = prosperon.guid();
-    ent.setref(ent);
     ent.components = {};
     ent.objects = {};
     ent.timers = [];
     
     if (typeof text === 'object' && text) // assume it's an ur
-    {
-      config = text.data;
-      ent.ur = text.name;
-      text = text.text;
-    }
-    
-    if (text)
-      use(text, ent);
-    if (config)
-      Object.assign(ent, json.decode(io.slurp(config)));
+      ent.ur = text;
+    else 
+      ent.ur = getur(text, config);
 
-    ent.ur ??= text + "+" + config;
+    text = ent.ur.text;
+    config = [ent.ur.data, config];
+
+    if (typeof text === 'string')
+      use(text, ent);
+    else if (Array.isArray(text))
+      text.forEach(path => use(path,ent));
+
+    if (typeof config === 'string')
+      Object.assign(ent, json.decode(Resources.replstrs(config)));
+    else if (Array.isArray(config))
+      config.forEach(function(path) {
+        if (typeof path === 'string')
+          Object.assign(ent, json.decode(Resources.replstrs(path)));
+        else if (typeof path === 'object')
+          Object.assign(ent,path);
+      });
+
     ent.reparent(this);
 
     for (var [prop, p] of Object.entries(ent)) {
@@ -296,8 +300,7 @@ var gameobject = {
       selectable: true,
       dirty: false,
       inst: false,
-      urdiff: {},
-      fresh: json.decode(json.encode(ent)),
+      urdiff: {}
     };
 
     Object.hide(ent, '_ed');
@@ -308,18 +311,18 @@ var gameobject = {
       var o = ent.objects;
       delete ent.objects;
       for (var i in o) {
-        console.info(`MAKING ${i}`);
-        var n = ent.spawn(ur[o[i].ur]);
-        ent.rename_obj(n.toString(), i);
+        var newur = o[i].ur;
         delete o[i].ur;
-        Object.assign(n, o[i]);
-        n.sync();
+        var n = ent.spawn(ur[newur], o[i]);
+        ent.rename_obj(n.toString(), i);
       }
     }
     
     if (ent.tag) game.tag_add(ent.tag, ent);
     
     if (callback) callback(ent);
+
+    ent.ur.fresh ??= json.decode(json.encode(ent));
 
     return ent;
   },
@@ -349,7 +352,7 @@ var gameobject = {
       return t;
     };
 
-    var name = unique_name(Object.keys(parent.objects), this.ur);
+    var name = unique_name(Object.keys(parent.objects), this.ur.name);
 
     parent.objects[name] = this;
     parent[name] = this;
@@ -446,7 +449,7 @@ var gameobject = {
 
   /* The unique components of this object. Its diff. */
   json_obj() {
-    var fresh = this._ed.fresh;
+    var fresh = this.ur.fresh;
     var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
     var d = ediff(thiso, fresh);
 
@@ -473,7 +476,7 @@ var gameobject = {
   /* The object needed to store an object as an instance of a master */
   instance_obj() {
     var t = this.transform();
-    t.ur = this.ur;
+    t.ur = this.ur.name;
     return t;
   },
 
@@ -484,7 +487,7 @@ var gameobject = {
     t.angle = Math.places(this.angle, 4);
     if (t.angle === 0) delete t.angle;
     t.scale = this.scale;
-    t.scale = t.scale.map((x, i) => x / this._ed.fresh.scale[i]);
+    t.scale = t.scale.map((x, i) => x / this.ur.fresh.scale[i]);
     t.scale = t.scale.map(x => Math.places(x, 3));
     if (t.scale.every(x => x === 1)) delete t.scale;
     return t;
@@ -499,7 +502,7 @@ var gameobject = {
   },
 
   dup(diff) {
-    var n = this.master.spawn(this.__proto__);
+    var n = this.master.spawn(this.ur);
     Object.totalmerge(n, this.instance_obj());
     return n;
   },
@@ -592,9 +595,8 @@ var gameobject = {
 function go_init() {
   var gop = os.make_gameobject().__proto__;
   Object.mixin(gop, gameobject);
-  var gsync = gop.sync;
   gop.sync = function() {
-    gsync.call(this);
+    this.selfsync();
     this.components.forEach(function(x) { x.sync?.(); });
     this.objects.forEach(function(x) { x.sync?.(); });
   }
@@ -734,10 +736,33 @@ function file2fqn(file) {
   return ur[fqn];
 }
 
+var getur = function(text, data)
+{
+  var urstr = text + "+" + data;
+  if (!ur[urstr]) {
+    ur[urstr] = {
+      name: urstr,
+      text: text,
+      data: data
+    }
+  }
+  return ur[urstr];
+}
+
 game.loadurs = function() {
   ur = {};
   ur._list = [];
   /* FIND ALL URS IN A PROJECT */
+  for (var file of io.glob("**.ur")) {
+    var urname = file.name();
+    if (ur[urname]) {
+      console.warn(`Tried to make another ur with the name ${urname} from ${file}, but it already exists.`);
+      continue;
+    }
+    var urjson = json.decode(io.slurp(file));
+    urjson.name = urname;
+    ur[urname] = urjson;
+  }
   for (var file of io.glob("**.jso")) {
     if (file[0] === '.' || file[0] === '_') continue;
     var topur = file2fqn(file);

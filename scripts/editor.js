@@ -3,13 +3,14 @@
   selectable
 */
 
-window.mode = window.modetypes.full;
 game.loadurs();
 
 console.info(`window size: ${window.size}, render size: ${window.rendersize}`);
 
 player[0].control(debug);
 Register.gui.register(debug.draw, debug);
+
+var show_frame = true;
 
 var editor = {
   toString() { return "editor"; },
@@ -38,8 +39,7 @@ var editor = {
     return this.do_select(go);
   },
     
-  /* Tries to select id */
-  do_select(obj) {
+  do_select(obj) { /* select an object, if it is selectable given the current editor state */
     if (!obj) return;
     if (!obj._ed.selectable) return undefined;
     
@@ -394,13 +394,16 @@ var editor = {
 
   gui() { 
     /* Clean out killed objects */
+    if (show_frame)
+      render.line(shape.box(window.rendersize.x, window.rendersize.y).wrapped(1).map(p => game.camera.world2view(p)), Color.yellow);
+
     render.text([0,0], game.camera.world2view([0,0]));
 
     render.text("WORKING LAYER: " + this.working_layer, [0,520]);
     render.text("MODE: " + this.edit_mode, [0,500]);
 
     if (this.comp_info && this.sel_comp)
-      render.text(Input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
+      render.text(input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
 
     render.cross(editor.edit_level.screenpos(),3,Color.blue);
 
@@ -530,7 +533,6 @@ var editor = {
     var obj = editor.edit_level.spawn(mur);
     obj.set_worldpos(input.mouse.worldpos());
     this.selectlist = [obj];
-    console.warn(`made something and now the selected objects is ${this.selectlist.length} long.`);
   },
 
   load_prev() {
@@ -567,7 +569,7 @@ var editor = {
       ur[sub] = {
         name: sub,
         data: file,
-        proto: json.decode(json.encode(obj))
+        fresh: json.decode(json.encode(obj))
       }
       obj.ur = sub;
       
@@ -667,7 +669,8 @@ editor.inputs.f9 = function() { os.capture( "capture.bmp", 0, 0, 500, 500); }
 
 editor.inputs.release_post = function() {
   editor.snapshot();
-  editor.edit_level.check_dirty();
+
+  editor.selectlist?.forEach(x => x.check_dirty());
 
   /* snap all objects to be pixel perfect */
   game.all_objects(o => o.pos = o.pos.map(x => Math.round(x)), editor.edit_level);
@@ -765,11 +768,11 @@ editor.inputs.m = function() {
 };
 editor.inputs.m.doc = "Mirror selected objects on the X axis.";
 
-
 editor.inputs.q = function() { editor.comp_info = !editor.comp_info; };
 editor.inputs.q.doc = "Toggle help for the selected component.";
 
 editor.inputs.f = function() {
+  return;
   if (editor.selectlist.length === 0) return;
   var bb = editor.selectlist[0].boundingbox();
   editor.selectlist.forEach(function(obj) { bb = bbox.expand(bb, obj.boundingbox()); });
@@ -787,6 +790,7 @@ editor.inputs['C-f'] = function() {
 editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
 
 editor.inputs['C-F'] = function() {
+  console.info("PRESSED C-F");
   if (editor.edit_level.master === world) return;
 
   editor.edit_level = editor.edit_level.master;
@@ -901,14 +905,13 @@ editor.inputs['C-s'] = function() {
   if (!tur.data) {
     io.slurpwrite(tur.text.set_ext(".json"), json.encode(savejs,null,1));
     tur.data = tur.text.set_ext(".json");
-  }
-  else {
+  } else {
     var oldjs = json.decode(io.slurp(tur.data));
     Object.merge(oldjs, savejs);
     io.slurpwrite(tur.data, json.encode(oldjs,null,1));
   }
 
-  Object.merge(tur.proto, savejs);
+  Object.merge(tur.fresh, savejs);
   saveobj.check_dirty();
 
 //  Object.values(saveobj.objects).forEach(function(x) { x.check_dirty(); });
@@ -1484,6 +1487,7 @@ var inputpanel = {
 };
 
 inputpanel.inputs = {};
+inputpanel.inputs.block = true;
 
 inputpanel.inputs.post = function() { this.keycb(); }
 

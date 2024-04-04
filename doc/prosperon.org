@@ -216,6 +216,15 @@ The ur[fn::A German prefix meaning primitive, original, or earliest.] system is 
 
 When prosperon starts, it searches for urs by name. Any file ending in ".jso" or ".json" will be interpereted as an ur, with same named jso and json being applied as (text, config) for an ur. A jso or json alone also constitute an ur.
 
+An ur can also be defined by a json file. If an ur is found, it takes predecent over auto generated urs. The json of an ur looks like this:
+
+| field | description |
+|----|----|
+| text | Path to a script file, or array of script files, to apply to the object |
+| data | Path to a json file, or array of json files, to apply to the object |
+
+Any ur file with this sort of json creates an ur which can be created in the game. A file named "box.ur" will be ingested and be available as "ur.box". When saving differences, it creates a json file with the same name as an ur (in this case, "box.json").
+
 #+begin_scholium
 Create an ur from the *hello* files above, and then spawn it.
 #+begin_src
@@ -224,6 +233,10 @@ Primum.spawn(ur.hello);
 #+end_src
 When creating an actor from source files, all of its setup must take place. In this example, the setup happens during *ur.create*, and spawning is simply a matter of prototyping it.
 #+end_scholium
+
+This method allows high composability of game objects.
+
+If an entity is created without an ur, is ur is defined as its given text and data. It cannot be saved. It must be given a new ur name.
 
 Each ur has the following fields.
 

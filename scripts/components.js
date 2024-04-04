@@ -425,7 +425,7 @@ component.polygon2d = Object.copy(collider2d, {
   
   gizmo() {
     this.spoints().forEach(x => render.point(this.gameobject.this2screen(x), 3, Color.green));
-    this.points.forEach((x,i)=>render.coordinate(this.gameobject.this2screen(x), i));
+    this.points.forEach((x,i)=>render.coordinate(this.gameobject.this2screen(x)));
   },
 
   pick(pos) {
@@ -589,11 +589,11 @@ component.edge2d = Object.copy(collider2d, {
       this.points.forEach((x,i) => render.coordinate(this.gameobject.this2screen(x)));
     } else {
       for (var i = 0; i < this.points.length; i += 3)
-        render.coordinate(this.gameobject.this2screen(this.points[i]), i, Color.teal);
+        render.coordinate(this.gameobject.this2screen(this.points[i]), 1, Color.teal);
 	
       for (var i = 1; i < this.points.length; i+=3) {
-        render.coordinate(this.gameobject.this2screen(this.points[i]), i, Color.green);
-        render.coordinate(this.gameobject.this2screen(this.points[i+1]), i+1, Color.green);	
+        render.coordinate(this.gameobject.this2screen(this.points[i]), 1, Color.green);
+        render.coordinate(this.gameobject.this2screen(this.points[i+1]), 1, Color.green);	
         render.line([this.gameobject.this2screen(this.points[i-1]), this.gameobject.this2screen(this.points[i])], Color.yellow);
         render.line([this.gameobject.this2screen(this.points[i+1]), this.gameobject.this2screen(this.points[i+2])], Color.yellow);	
       }
@@ -707,7 +707,6 @@ component.edge2d.impl = Object.mix(collider2d.impl, {
 var bucket = component.edge2d;
 bucket.spoints.doc = "Returns the controls points after modifiers are applied, such as it being hollow or mirrored on its axises.";
 bucket.inputs = {};
-//bucket.inputs.post = function() { this.sync(); };
 bucket.inputs.h = function() { this.hollow = !this.hollow; };
 bucket.inputs.h.doc = "Toggle hollow.";
 

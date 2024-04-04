@@ -112,7 +112,7 @@ void quickjs_set_dumpout(FILE *f)
 //#define DUMP_READ_OBJECT
 
 #ifdef DUMP
-#define DUMP_FREE
+//#define DUMP_FREE
 #define DUMP_MEM
 #define DUMP_CLOSURE
 #define DUMP_GC

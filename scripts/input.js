@@ -309,8 +309,8 @@ var Player = {
 
       switch (state) {
         case 'released':
-	      pawn.inputs.release_post?.call(pawn);
-	      break;
+          pawn.inputs.release_post?.call(pawn);
+          break;
       }
 
       if (!pawn.inputs.fallthru) return;
