@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "particle.h"
 #include "simplex.h"
+#include <wctype.h>
 
 #include "datastream.h"
 
@@ -119,6 +120,7 @@ void c_event(const sapp_event *e)
       break;
 
     case SAPP_EVENTTYPE_CHAR:
+      if (iswcntrl(e->char_code)) break;
       snprintf(lcfmt, 5, "%lc", e->char_code);
       script_evalf("prosperon.textinput(`%s`);", lcfmt);
       break;

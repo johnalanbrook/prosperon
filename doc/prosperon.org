@@ -238,6 +238,10 @@ This method allows high composability of game objects.
 
 If an entity is created without an ur, is ur is defined as its given text and data. It cannot be saved. It must be given a new ur name.
 
+Objects can be composed on the fly by stringing together urs. For example, a "2x.json" might define scale as 2x. Then, you can create a goblin with `ur.goblin`, or a large goblin with `ur.goblin.2x`. This creates a goblin object, and then applies the 2x scripts and jsons onto the object.
+
+*** Urs in game
+
 Each ur has the following fields.
 
 | field     | description                                                 |

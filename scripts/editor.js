@@ -1246,8 +1246,8 @@ editor.inputs.g = function() {
       var comp = editor.sel_comp;
       var o = {
         pos: editor.sel_comp.pos,
-	move(d) { comp.pos = comp.pos.add(comp.gameobject.dir_world2this(d)); },
-	sync: comp.sync.bind(comp),
+      	move(d) { comp.pos = comp.pos.add(comp.gameobject.dir_world2this(d)); },
+	      sync: comp.sync.bind(comp),
       };
       editor.grabselect = [o];
       return;
@@ -1423,14 +1423,12 @@ var inputpanel = {
     var itms = this.guibody();
     if (!Array.isArray(itms)) itms = [itms];
     if (this.title)
-    this.win.items = [
-      Mum.column({items: [
-        Mum.text({str:this.title}),
-	...itms
-       ]})
-    ];
+      this.win.items = [
+        Mum.column({items: [Mum.text({str:this.title}), ...itms ]})
+      ];
     else
       this.win.items = itms;
+      
     this.win.draw([100, window.size.y-50]);
   },
   

@@ -32,7 +32,8 @@ var killer = Register.appupdate.register(function() {
   for (var i in cries) {
     var cry = cries[i];
     if (!cry.ended) continue;
-    if (cry.frame < cry.lastframe || cry.frame === cry.lastframe) cry.ended();
+    if (cry.frame < cry.lastframe || cry.frame === cry.frames())
+      cry.ended();
     cry.lastframe = cry.frame;
   }
 });
