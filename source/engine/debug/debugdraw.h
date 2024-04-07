@@ -9,7 +9,7 @@ void draw_cppoint(HMM_Vec2 point, float r, struct rgba color);
 void draw_points(HMM_Vec2 *points, int n, float size, struct rgba color);
 
 void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float seg_speed);
-void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int flags, struct rgba line_color, float line_seg);
+void draw_edge(HMM_Vec2 *points, int n, struct rgba color, float thickness, int flags, struct rgba line_color, float line_seg);
 
 /* pixels - how many pixels thick, segsize - dashed line seg len */
 void draw_circle(HMM_Vec2 c, float radius, float pixels, struct rgba color, float seg);

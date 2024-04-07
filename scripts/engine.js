@@ -54,9 +54,8 @@ Resources.replstrs = function(path)
 }
 
 globalThis.json = {};
-json.encode = function(value, replacer, space, whitelist)
+json.encode = function(value, replacer, space = 1)
 {
-  space ??= 1;
   return JSON.stringify(value, replacer, space);
 }
 
@@ -182,11 +181,10 @@ console.doc = {
 
 globalThis.global = globalThis;
 
-function use(file, env, script)
+function use(file, env = {}, script)
 {
   file = Resources.find_script(file);
   var st = profile.now();
-  env ??= {};  
   
   if (use.cache[file]) {
     var ret = use.cache[file].call(env);
@@ -313,10 +311,7 @@ var eachobj = function(obj,fn)
     eachobj(obj.objects[o],fn);
 }
 
-game.all_objects = function(fn, startobj) {
-  startobj ??= world;
-  eachobj(startobj,fn);
-};
+game.all_objects = function(fn, startobj = world) { eachobj(startobj,fn); };
 
 game.tags = {};
 game.tag_add = function(tag, obj) {

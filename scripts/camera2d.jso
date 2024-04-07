@@ -32,4 +32,13 @@ this.world2view = function(pos) {
 this.screenright = function() { return this.view2world(window.size).x; }
 this.screenleft = function() { return this.view2world([0,0]).x; }
 
-this.zoom = 1;
+var zoom = 1;
+
+Object.mixin(self, {
+  set zoom(x) {
+    zoom = x;
+    if (zoom <= 0.1) zoom = 0.1;
+  },
+  get zoom() { return zoom; }
+}
+);

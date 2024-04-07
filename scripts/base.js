@@ -135,11 +135,10 @@ time.timecode = function(t, fps = 24)
 time.monthdays = [31,28,31,30,31,30,31,31,30,31,30,31];
 time.zones = {};
 time.zones['-12'] = 'IDLW';
-time.record = function(num, zone)
+time.record = function(num, zone = this.computer_zone())
 {
   if (typeof num === 'object') return num;
   else if (typeof num === 'number') {
-    zone ??= this.computer_zone();
     var monthdays = this.monthdays.slice();
     var rec = {
       second: 0,
@@ -261,9 +260,8 @@ time.number = function(rec)
 time.fmt = "vB mB d h:nn:ss TZz a y c";
 
 /* If num is a number, converts to a rec first. */
-time.text = function(num, fmt, zone)
+time.text = function(num, fmt = this.fmt, zone)
 {
-  fmt ??= this.fmt;
   var rec = num;
   
   if (typeof rec === 'number')
@@ -325,9 +323,8 @@ Object.methods = function(o)
 }
 Object.methods.doc = "Retun an array of all functions an object has access to.";
 
-Object.dig = function(obj, path, def)
+Object.dig = function(obj, path, def = {})
 {
-  def ??= {};
   var pp = path.split('.');
   for (var i = 0; i < pp.length-1; i++) {
     obj = obj[pp[i]] = obj[pp[i]] || {};
@@ -335,17 +332,6 @@ Object.dig = function(obj, path, def)
   obj[pp[pp.length-1]] = def;
   return def;
 }
-
-Object.samenewkeys = function(a,b)
-{
-  b ??= a.__proto__;
-  var ret = {};
-  ret.same = [];
-  ret.unique = [];
-  Object.keys(a).forEach(key => (key in b) ? ret.same.push(key) : ret.unique.push(key));
-  return ret;
-}
-Object.samenewkeys.doc = "Return an object listing which keys are the same and unique on a compared to b.";
 
 Object.rkeys = function(o)
 {
@@ -821,10 +807,7 @@ Object.defineProperty(String.prototype, 'splice', {
 });
 
 Object.defineProperty(String.prototype, 'rm', {
-  value: function(index, endidx) {
-    endidx ??= index+1;
-    return this.slice(0,index) + this.slice(endidx);
-  }
+  value: function(index, endidx = index+1) { return this.slice(0,index) + this.slice(endidx); }
 });
 
 Object.defineProperty(String.prototype, 'updir', {

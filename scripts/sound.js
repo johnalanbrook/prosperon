@@ -2,8 +2,7 @@ var audio = {};
 var cries = {};
 
 audio.samplerate = dspsound.samplerate();
-audio.play = function(file,bus) {
-  bus ??= audio.bus.master;
+audio.play = function(file,bus = audio.bus.master) {
   file = Resources.find_sound(file);
   if (!file) {
     console.error(`Cannot play sound ${file}: does not exist.`);
@@ -40,8 +39,7 @@ var killer = Register.appupdate.register(function() {
 
 var song;
 
-audio.music = function(file, fade) {
-  fade ??= 0;
+audio.music = function(file, fade = 0) {
   if (!fade) {
     song = audio.play(file);
     return;

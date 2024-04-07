@@ -178,10 +178,9 @@ Cmdline.register_cmd = function(flag, fn, doc) {
   });
 };
 
-Cmdline.register_order = function(order, fn, doc, usage) {
+Cmdline.register_order = function(order, fn, doc, usage = "") {
   Cmdline.orders[order] = fn;
   fn.doc = doc;
-  usage ??= "";
   fn.usage = `${order} ${usage}`;
 }
 

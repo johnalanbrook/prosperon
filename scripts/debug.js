@@ -1,6 +1,5 @@
-debug.fn_break = function(fn,obj) {
+debug.fn_break = function(fn,obj = globalThis) {
   if (typeof fn !== 'function') return;
-  obj ??= globalThis;
   
   var newfn = function() {
     console.log("broke");
@@ -47,11 +46,10 @@ debug.draw = function() {
 		                   "EDIT", [0, 0], 1);
 }
 
-function assert(op, str)
+function assert(op, str = `assertion failed [value '${op}']`)
 {
-  str ??= `assertion failed [value '${op}']`;
   if (!op) {
-    console.error(`Assertion failed: ${str}`);
+    console.error(str);
     os.quit();
   }
 }
@@ -64,9 +62,7 @@ var Gizmos = {
   },
 };
 
-profile.cpu = function(fn, times, q) {
-  times ??= 1;
-  q ??= "unnamed";
+profile.cpu = function(fn, times = 1, q = "unnamed") {
   var start = profile.now();
   for (var i = 0; i < times; i++)
     fn();

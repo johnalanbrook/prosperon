@@ -10,10 +10,7 @@ var HIT = {
 */
 
 var pq = physics.pos_query;
-physics.pos_query = function(pos,give) {
-  give ??= 25;
-  return pq(pos,give);
-}
+physics.pos_query = function(pos,give = 25) { return pq(pos,give); }
 
 physics.box_point_query = function(box,points) {
   if (!box || !points) return [];

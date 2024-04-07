@@ -141,8 +141,7 @@ input.mouse.mode = function(m) {
     input.mouse_cursor(m);
 };
   
-input.mouse.set_custom_cursor = function(img, mode) {
-  mode ??= input.mouse.cursor.default;
+input.mouse.set_custom_cursor = function(img, mode = input.mouse.cursor.default) {
   if (!img)
     delete input.mouse.custom[mode];
   else {

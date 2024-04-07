@@ -2,11 +2,9 @@ var shape = {};
 shape.sphere = {};
 shape.circle = {};
 shape.sphere.volume = function(r) { return Math.pi*r*r*r*4/3; };
-shape.sphere.random = function(r,theta,phi)
+shape.sphere.random = function(r,theta = [0,1], phi = [-0.5,0.5])
 {
   if (typeof r === 'number') r = [r,r];
-  theta ??= [0,1];
-  phi ??= [-0.5,0.5];
   if (typeof theta === 'number') theta = [theta,theta];
   if (typeof phi === 'number') phi = [phi,phi];
   
@@ -44,8 +42,7 @@ shape.ngon = function(radius, n) {
   return shape.arc(radius,360,n);
 };
 
-shape.arc = function(radius, angle, n, start) {
-  start ??= 0;
+shape.arc = function(radius, angle, n, start = 0) {
   start = Math.deg2rad(start);
   if (angle >= 360)
     angle = 360;

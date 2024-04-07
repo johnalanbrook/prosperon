@@ -428,10 +428,10 @@ HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
 }
 
 /* Given a strip of points, draws them as segments. So 5 points is 4 segments, and ultimately 8 vertices */
-void draw_edge(HMM_Vec2 *points, int n, struct rgba color, int thickness, int flags, struct rgba line_color, float line_seg)
+void draw_edge(HMM_Vec2 *points, int n, struct rgba color, float thickness, int flags, struct rgba line_color, float line_seg)
 {
   int closed = 0;
-  if (thickness <= 1) {
+  if (thickness <= 0) {
     draw_line(points,n,line_color,0,0);
     return;
   }

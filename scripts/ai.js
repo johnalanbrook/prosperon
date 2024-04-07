@@ -41,8 +41,7 @@ var ai = {
     ]);
   },
 
-  wait(secs) {
-    secs ??= 1;
+  wait(secs = 1) {
     var accum = 0;
     return function(dt) {
       accum += dt;

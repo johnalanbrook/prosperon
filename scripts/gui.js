@@ -118,9 +118,7 @@ var Mum = {
 }
 
 Mum.text = Mum.extend({
-  draw(cursor, cnt) {
-    cursor ??= [0,0];  
-    cnt ??= Mum;
+  draw(cursor = [0,0], cnt = Mum) {
     if (this.hide) return;
     if (this.selectable) gui.controls.check_bb(this);
     this.caret ??= -1;
@@ -171,9 +169,7 @@ Mum.window = Mum.extend({
     this.wh = [this.width, this.height];
     this.bb = bbox.fromcwh([0,0], this.wh);
   },
-  draw(cursor, cnt) {
-    cursor ??= [0,0];
-    cnt ??= Mum;
+  draw(cursor = [0,0], cnt = Mum) {
     var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
     render.window(p,this.wh, this.color);
     this.bb = bbox.blwh(p, this.wh);
@@ -220,9 +216,7 @@ Mum.image = Mum.extend({
 });
 
 Mum.column = Mum.extend({
-  draw(cursor, cnt) {
-    cursor ??= [0,0];  
-    cnt ??= Mum;
+  draw(cursor = [0,0], cnt = Mum) {
     if (this.hide) return;
     cursor = cursor.add(this.offset);
     this.max_width = cnt.width;

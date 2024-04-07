@@ -90,7 +90,7 @@ Object.mixin(os.sprite(true), {
   ]),
   anim:{},
   playing: 0,
-  play(str) {
+  play(str = 0) {
     this.del_anim?.();
     var self = this;
     var stop;
@@ -100,7 +100,6 @@ Object.mixin(os.sprite(true), {
       advance = undefined;
       stop?.();
     }
-    str ??= 0;
     var playing = self.anim[str];
     if (!playing) return;
     var f = 0;

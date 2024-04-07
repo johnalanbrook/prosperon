@@ -41,20 +41,16 @@ render.device = {
 render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 
 /* All draw in screen space */
-render.point =  function(pos,size,color) {
-    color ??= Color.blue;
+render.point =  function(pos,size,color = Color.blue) {
     render.circle(pos,size,size,color);
 };
   
 var tmpline = render.line;
-render.line = function(points, color, thickness) {
-    thickness ??= 1;
-    color ??= Color.white;
+render.line = function(points, color = Color.white, thickness = 1) {
     tmpline(points,color,thickness);
   };
 
-render.cross = function(pos, size, color) {
-    color ??= Color.red;
+render.cross = function(pos, size, color = Color.red) {
     var a = [
       pos.add([0,size]),
       pos.add([0,-size])
@@ -68,11 +64,7 @@ render.cross = function(pos, size, color) {
     render.line(b,color);
   };
   
-render.arrow = function(start, end, color, wingspan, wingangle) {
-  color ??= Color.red;
-  wingspan ??= 4;
-  wingangle ??=10;
-  
+render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
   var dir = end.sub(start).normalized();
   var wing1 = [
     Vector.rotate(dir, wingangle).scale(wingspan).add(end),
@@ -92,8 +84,7 @@ render.coordinate = function(pos, size, color) {
   render.point(pos, 2, color);
 }
 
-render.boundingbox = function(bb, color) {
-  color ??= Color.white;
+render.boundingbox = function(bb, color = Color.white) {
   render.poly(bbox.topoints(bb), color);
 }
 
@@ -102,8 +93,7 @@ render.rectangle = function(lowerleft, upperright, color) {
   render.poly(points, color);
 };
   
-render.box = function(pos, wh, color) {
-  color ??= Color.white;
+render.box = function(pos, wh, color = Color.white) {
   var lower = pos.sub(wh.scale(0.5));
   var upper = pos.add(wh.scale(0.5));
   render.rectangle(lower,upper,color);
@@ -115,14 +105,7 @@ render.window = function(pos, wh, color) {
   render.box(p,wh,color);
 };
 
-render.text = function(str, pos, size, color, wrap, anchor, cursor) {
-  size ??= 1;
-  color ??= Color.white;
-  wrap ??= -1;
-  anchor ??= [0,1];
-  
-  cursor ??= -1;
-  
+render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
   var bb = render.text_size(str, size, wrap);
   var w = bb.r*2;
   var h = bb.t*2;
@@ -140,10 +123,7 @@ render.text = function(str, pos, size, color, wrap, anchor, cursor) {
   return bb;
 };
 
-render.image = function(tex, pos, rotation, color, dimensions) {
-  color ??= Color.white;
-  rotation ??= 0;
-  dimensions ??= [tex.width, tex.height];
+render.image = function(tex, pos, rotation = 0, color = Color.white, dimensions = [tex.width, tex.height]) {
   var scale = [dimensions.x/tex.width, dimensions.y/tex.height];
   gui.img(tex,pos, scale, 0.0, false, [0.0,0.0], color); 
   return bbox.fromcwh([0,0], [tex.width,tex.height]);

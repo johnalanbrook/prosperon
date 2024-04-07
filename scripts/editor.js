@@ -338,10 +338,9 @@ var editor = {
     }
   },
   
-  draw_objects_names(obj,root,depth){
+  draw_objects_names(obj,root,depth = 0){
       if (!obj) return;
       if (!obj.objects) return;
-      depth ??= 0;
       root = root ? root + "." : root;
       Object.entries(obj.objects).forEach(function(x) {
         var p = root + x[0];
@@ -450,7 +449,7 @@ var editor = {
     render.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
     this.selectlist.forEach(function(x) {
       render.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
-      render.text(x.worldpos().map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
+      render.text(x.pos.map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
       render.cross(x.screenpos(), 10, Color.blue);
     });
 
@@ -531,7 +530,7 @@ var editor = {
     var mur = ur[urstr];
     if (!mur) return;
     var obj = editor.edit_level.spawn(mur);
-    obj.set_worldpos(input.mouse.worldpos());
+    obj.set_pos(input.mouse.worldpos());
     this.selectlist = [obj];
   },
 
@@ -612,7 +611,7 @@ var editor = {
 editor.new_object = function()
 {
   var obj = editor.edit_level.spawn();
-  obj.set_worldpos(input.mouse.worldpos());
+  obj.set_pos(input.mouse.worldpos());
   this.selectlist = [obj];
   return obj;
 }
@@ -804,7 +803,7 @@ editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
 editor.inputs.r = function() {
   if (editor.sel_comp && 'angle' in editor.sel_comp) {
-    var relpos = input.mouse.worldpos().sub(editor.sel_comp.gameobject.worldpos());
+    var relpos = input.mouse.worldpos().sub(editor.sel_comp.gameobject.pos);
     editor.startoffset = Math.atan2(relpos.y, relpos.x);
     editor.startrot = editor.sel_comp.angle;
 

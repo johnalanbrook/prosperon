@@ -10,54 +10,6 @@ function obj_unique_name(name, obj) {
   return n;
 }
 
-var gameobject_impl = {
-  get pos() {
-    assert(this.master, `Entity ${this.toString()} has no master.`);
-    return this.master.world2this(this.worldpos());
-  },
-
-  set pos(x) {
-    assert(this.master, `Entity ${this.toString()} has no master.`);
-    this.set_worldpos(this.master.this2world(x));
-  },
-
-  get angle() {
-    assert(this.master, `No master set on ${this.toString()}`);
-    return this.worldangle() - this.master.worldangle();
-  },
-
-  set angle(x) {
-    var diff = x - this.angle;
-
-    this.objects.forEach(function(x) {
-      x.rotate(diff);
-      x.pos = Vector.rotate(x.pos, diff);
-    });
-
-    this.sworldangle(x - this.master.worldangle());
-  },
-
-  get scale() {
-    assert(this.master, `No master set on ${this.toString()}`);
-    var pscale = [1, 1, 1];
-    return this.gscale().map((x, i) => x / (this.master.gscale()[i] * pscale[i]));
-  },
-
-  set scale(x) {
-    if (typeof x === 'number')
-      x = [x, x];
-
-    var pct = this.scale.map((s, i) => x[i] / s);
-    this.grow(pct);
-
-    /* TRANSLATE ALL SUB OBJECTS */
-    this.objects.forEach(obj => {
-      obj.grow(pct);
-      obj.pos = obj.pos.map((x, i) => x * pct[i]);
-    });
-  },
-};
-
 var gameobject = {
   get_comp_by_name(name) {
     var comps = [];
@@ -103,35 +55,23 @@ var gameobject = {
   pin(to) {
     var p = joint.pin(this,to);
   },
-  slide(to, a, b, min, max) {
-    a ??= [0, 0];
-    b ??= [0, 0];
-    min ??= 0;
-    max ??= 50;
+  slide(to, a = [0,0], b = [0,0], min = 0, max = 50) {
     var p = joint.slide(this, to, a, b, min, max);
     p.max_force = 500;
     p.break();
   },
-  pivot(to, piv) {
-    piv ??= this.worldpos();
+  pivot(to, piv = this.pos) {
     var p = joint.pivot(this, to, piv);
   },
   /* groove is on to, from local points a and b, anchored to this at local anchor */
-  groove(to, a, b, anchor) {
-    anchor ??= [0, 0];
+  groove(to, a, b, anchor = [0,0]) {
     var p = joint.groove(to, this, a, b, anchor);
   },
-  damped_spring(to, length, stiffness, damping) {
-    length ??= Vector.length(this.worldpos(), to.worldpos());
-    stiffness ??= 1;
-    damping ??= 1;
+  damped_spring(to, length = Vector.length(this.pos,to.pos), stiffness = 1, damping = 1) {
     var dc = 2 * Math.sqrt(stiffness * this.mass);
     var p = joint.damped_spring(this, to, [0, 0], [0, 0], stiffness, damping * dc);
   },
-  damped_rotary_spring(to, angle, stiffness, damping) {
-    angle ??= 0;
-    stiffness ??= 1;
-    damping ??= 1;
+  damped_rotary_spring(to, angle = 0, stiffness = 1, damping = 1) {
     /* calculate actual damping value from the damping ratio */
     /* damping = 1 is critical */
     var dc = 2 * Math.sqrt(stiffness * this.get_moi()); /* critical damping number */
@@ -145,9 +85,7 @@ var gameobject = {
     var phase = this.angle - to.angle;
     var p = joint.ratchet(this, to, phase, Math.turn2rad(ratch));
   },
-  gear(to, ratio) {
-    phase ??= 1;
-    ratio ??= 1;
+  gear(to, ratio = 1, phase = 0) {
     var phase = this.angle - to.angle;
     var p = joint.gear(this, to, phase, ratio);
   },
@@ -202,37 +140,57 @@ var gameobject = {
     return stop;
   },
 
-  tween(prop, values, def) {
-    var t = Tween.make(this, prop, values, def); 
-    t.play();
-
-    var k = function() { t.pause(); }
-    this.timers.push(k);
-    return k;
-  },
-
   cry(file) {
     return audio.cry(file);
   },
 
-  gscale() { return this.scale; },
-  sgscale(x) {
-    if (typeof x === 'number') 
-      x = [x, x];
-    
-    physics.sgscale(this, x)
-  },
-
-  worldpos() { return this.pos; },
-  set_worldpos(x) {
-    var poses = this.objects.map(x => x.pos);
+  set_pos(x, relative = world) {
+    var move = x.sub(this.pos);
     this.pos = x;
-    this.objects.forEach((o, i) => o.set_worldpos(this.this2world(poses[i])));
+    this.objects.forEach(x => x.move(move));
   },
-  screenpos() { return game.camera.world2view(this.worldpos()); },
-
-  worldangle() { return this.angle; },
-  sworldangle(x) { this.angle = x; },
+  
+  set_angle(x, relative = world) {
+    var diff = x - this.angle;
+    this.angle = x;
+    this.objects.forEach(obj => {
+      obj.rotate(diff);
+      obj.set_pos(Vector.rotate(obj.pos, diff));
+    });
+  },
+  
+  set_scale(x, relative = world) {
+    if (typeof x === 'number') x = [x,x,x];
+    var pct = this.scale.map((s,i) => x[i]/s);
+    this.scale = x;
+    this.objects.forEach(obj => {
+      obj.grow(pct);
+      obj.set_pos(obj.pos.map((x,i) => x*pct[i]));
+    });
+  },
+  
+  get_pos(relative = world) {
+    if (relative === world) return this.pos;
+    return this.pos.sub(relative.pos);
+  },
+  
+  get_angle(relative = world) {
+    if (relative === world) return this.angle;
+    return this.master.angle - this.angle;
+  },
+  
+  get_scale(relative = world) {
+    if (relative === world) return this.scale;
+    var masterscale = this.master.scale;
+    return this.scale.map((x,i) => x/masterscale[i]);
+  },
+  
+  /* Moving, rotating, scaling functions, world relative */
+  move(vec) { this.set_pos(this.pos.add(vec)); },
+  rotate(x) { this.set_angle(this.angle + x); },
+  grow(vec) { this.set_scale(this.scale.map((x, i) => x * vec[i])); },
+  
+  screenpos() { return game.camera.world2view(this.pos); },
 
   get_ur() { return this.ur; },
 
@@ -290,8 +248,8 @@ var gameobject = {
     if (sim.playing())
       if (typeof ent.start === 'function') ent.start();
 
-    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');    
-
+    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');
+    
     ent._ed = {
       selectable: true,
       dirty: false,
@@ -336,8 +294,7 @@ var gameobject = {
 
     this.master = parent;
 
-    function unique_name(list, name) {
-      name ??= "new_object";
+    function unique_name(list, name = "new_object") {
       var str = name.replaceAll('.', '_');
       var n = 1;
       var t = str;
@@ -387,11 +344,6 @@ var gameobject = {
     var bb = this.boundingbox();
     return bb.t - bb.b;
   },
-
-  /* Moving, rotating, scaling functions, world relative */
-  move(vec) { this.set_worldpos(this.worldpos().add(vec)); },
-  rotate(x) { this.sworldangle(this.worldangle() + x); },
-  grow(vec) { this.sgscale(this.gscale().map((x, i) => x * vec[i])); },
 
   /* Make a unique object the same as its prototype */
   revert() {
@@ -574,9 +526,8 @@ var gameobject = {
     return this.objects[newname];
   },
 
-  add_component(comp, data, name) {
+  add_component(comp, data, name = comp.toString()) {
     if (typeof comp.make !== 'function') return;
-    name ??= comp.toString();
     name = obj_unique_name(name, this);
     this[name] = comp.make(this);
     this[name].comp = comp.toString();
@@ -613,7 +564,7 @@ gameobject.doc = {
   mass: `The higher the mass of the object, the less forces will affect it.`,
   phys: `Set to 0, 1, or 2, representing dynamic, kinematic, and static.`,
   worldpos: `Function returns the world position of the object.`,
-  set_worldpos: `Function to set the position of the object in world coordinates.`,
+  set_pos: `Function to set the position of the object in world coordinates.`,
   worldangle: `Function to get the angle of the entity in the world.`,
   rotate: `Function to rotate this object by x degrees.`,
   move: 'Move an object by x,y,z. If the first parameter is an array, uses up to the first three array values.',

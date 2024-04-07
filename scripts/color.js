@@ -173,9 +173,8 @@ ColorMap.Viridis = ColorMap.makemap({
 
 Color.normalize(ColorMap);
 
-ColorMap.sample = function(t, map)
+ColorMap.sample = function(t, map = this)
 {
-  map ??= this;
   if (t < 0) return map[0];
   if (t > 1) return map[1];
 
