@@ -213,12 +213,6 @@ global.check_registers = function(obj)
     if (typeof obj.physupdate === 'function')
       obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
 
-    if (typeof obj.collide === 'function')
-      physics.collide_begin(obj.collide.bind(obj), obj);
-
-    if (typeof obj.separate === 'function')
-      physics.collide_separate(obj.separate.bind(obj), obj);
-
     if (typeof obj.draw === 'function')
       obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
 

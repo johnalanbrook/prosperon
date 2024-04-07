@@ -263,13 +263,13 @@ var gameobject = {
       text.forEach(path => use(path,ent));
 
     if (typeof config === 'string')
-      Object.assign(ent, json.decode(Resources.replstrs(config)));
+      Object.merge(ent, json.decode(Resources.replstrs(config)));
     else if (Array.isArray(config))
       config.forEach(function(path) {
         if (typeof path === 'string')
-          Object.assign(ent, json.decode(Resources.replstrs(path)));
+          Object.merge(ent, json.decode(Resources.replstrs(path)));
         else if (typeof path === 'object')
-          Object.assign(ent,path);
+          Object.merge(ent,path);
       });
 
     ent.reparent(this);
@@ -285,10 +285,6 @@ var gameobject = {
     };
 
     check_registers(ent);
-    ent.components.forEach(function(x) {
-      if (typeof x.collide === 'function')
-        physics.collide_shape(x.collide.bind(x), ent, x.shape);
-    });
 
     if (typeof ent.load === 'function') ent.load();
     if (sim.playing())
@@ -516,7 +512,6 @@ var gameobject = {
     this.timers = [];
     Event.rm_obj(this);
     input.do_uncontrol(this);
-    physics.collide_rm(this);
 
     if (this.master) {
       this.master.remove_obj(this);
@@ -627,7 +622,6 @@ gameobject.doc = {
   shove_at: 'Apply a force to this body, at a position relative to itself.',
   max_velocity: 'The max linear velocity this object can travel.',
   max_angularvelocity: 'The max angular velocity this object can rotate.',
-  in_air: `Return true if the object is in the air.`,
   on_ground: `Return true if the object is on the ground.`,
   spawn: `Create an instance of a supplied ur-type on this object. Optionally provide a data object to modify the created entity.`,
   hide: `Make this object invisible.`,

@@ -31,6 +31,7 @@ void constraint_free(constraint *constraint);
 
 struct phys2d_shape {
   cpShape *shape; /* user data is this phys2d_shape */
+  JSValue ref;
   transform2d t;
   gameobject *go;
   void *data; /* The specific subtype; phys2d_circle, etc */
@@ -113,7 +114,6 @@ struct shape_cb {
 
 void fire_hits();
 
-void phys2d_rm_go_handlers(gameobject *go);
 void phys2d_set_gravity(HMM_Vec2 v);
 
 void shape_enabled(struct phys2d_shape *shape, int enabled);
@@ -127,10 +127,8 @@ void shape_gui(struct phys2d_shape *shape);
 void phys2d_setup_handlers(gameobject *go);
 int query_point(HMM_Vec2 pos);
 
-void flush_collide_cbs();
-
 void phys2d_reindex_body(cpBody *body);
 extern unsigned int category_masks[32];
 void set_cat_mask(int cat, unsigned int mask);
-int phys2d_in_air(cpBody *body);
+
 #endif

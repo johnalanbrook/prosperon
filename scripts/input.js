@@ -92,6 +92,7 @@ prosperon.keyup = function(key)
   prosperon.keys[key] = false;
   if (key == 341 || key == 345)
     mod.ctrl = 0;
+
   else if (key == 342 || key == 346)
     mod.alt = 0;
   else if (key == 343 || key == 347)

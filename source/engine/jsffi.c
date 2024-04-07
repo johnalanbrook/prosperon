@@ -934,11 +934,6 @@ JSC_CCALL(physics_closest_point,
 JSC_CCALL(physics_make_gravity, return warp_gravity2js(warp_gravity_make()))
 JSC_CCALL(physics_make_damp, return warp_damp2js(warp_damp_make()))
 
-JSC_CCALL(physics_collide_begin, js2gameobject(argv[1])->cbs.begin = JS_DupValue(js,argv[0]))
-JSC_CCALL(physics_collide_rm, phys2d_rm_go_handlers(js2gameobject(argv[0])))
-JSC_CCALL(physics_collide_separate, js2gameobject(argv[1])->cbs.separate = JS_DupValue(js,argv[0]))
-JSC_CCALL(physics_collide_shape, gameobject_add_shape_collider(js2gameobject(argv[1]), JS_DupValue(js,argv[0]), js2ptr(argv[2])))
-
 void bb_query_fn(cpShape *shape, JSValue *cb)
 {
   JSValue go = JS_DupValue(js,shape2go(shape)->ref);
@@ -1027,10 +1022,6 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, closest_point, 3),
   MIST_FUNC_DEF(physics, make_damp, 0),
   MIST_FUNC_DEF(physics, make_gravity, 0),
-  MIST_FUNC_DEF(physics, collide_begin, 2),
-  MIST_FUNC_DEF(physics, collide_rm, 1),
-  MIST_FUNC_DEF(physics, collide_separate, 2),
-  MIST_FUNC_DEF(physics, collide_shape, 3)
 };
 
 static const JSCFunctionListEntry js_emitter_funcs[] = {
@@ -1159,7 +1150,6 @@ JSC_GETSET(gameobject, maxangularvelocity, number)
 JSC_GETSET(gameobject, warp_filter, bitmask)
 JSC_GETSET(gameobject, drawlayer, number)
 JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
-JSC_CCALL(gameobject_in_air, return boolean2js(phys2d_in_air(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_world2this, return vec22js(world2go(js2gameobject(this), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_dir_world2this, return vec22js(mat_t_dir(t_world2go(js2gameobject(this)), js2vec2(argv[0]))))
@@ -1188,7 +1178,6 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, impulse, 1),
   MIST_FUNC_DEF(gameobject, force, 1),
   MIST_FUNC_DEF(gameobject, force_local, 2),
-  MIST_FUNC_DEF(gameobject, in_air, 0),
   MIST_FUNC_DEF(gameobject, world2this, 1),
   MIST_FUNC_DEF(gameobject, this2world, 1),
   MIST_FUNC_DEF(gameobject, dir_world2this, 1),
@@ -1266,9 +1255,9 @@ static const JSCFunctionListEntry js_dspsound_funcs[] = {
 };
 
 JSC_CCALL(pshape_set_sensor, shape_set_sensor(js2ptr(argv[0]), js2boolean(argv[1])))
-JSC_CCALL(pshape_get_sensor, shape_get_sensor(js2ptr(argv[0])))
+JSC_CCALL(pshape_get_sensor, return boolean2js(shape_get_sensor(js2ptr(argv[0]))))
 JSC_CCALL(pshape_set_enabled, shape_enabled(js2ptr(argv[0]), js2boolean(argv[1])))
-JSC_CCALL(pshape_get_enabled, shape_is_enabled(js2ptr(argv[0])))
+JSC_CCALL(pshape_get_enabled, return boolean2js(shape_is_enabled(js2ptr(argv[0]))))
 
 static const JSCFunctionListEntry js_pshape_funcs[] = {
   MIST_FUNC_DEF(pshape, set_sensor, 2),
@@ -1455,15 +1444,8 @@ JSC_CCALL(os_make_circle2d,
   JSValue circleval = JS_NewObject(js);
   js_setprop_str(circleval, "id", ptr2js(circle));
   js_setprop_str(circleval, "shape", ptr2js(&circle->shape));
+  circle->shape.ref = argv[1];
   return circleval;
-)
-
-JSC_CCALL(os_make_model,
-  gameobject *go = js2gameobject(argv[0]);
-  struct drawmodel *dm = make_drawmodel(go);
-  JSValue ret = JS_NewObject(js);
-  js_setprop_str(ret, "id", ptr2js(dm));
-  return ret;
 )
 
 JSC_CCALL(os_make_poly2d,
@@ -1473,6 +1455,7 @@ JSC_CCALL(os_make_poly2d,
   JSValue polyval = JS_NewObject(js);
   js_setprop_str(polyval, "id", ptr2js(poly));
   js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
+  poly->shape.ref = argv[1];
   return polyval;
 )
 
@@ -1486,6 +1469,7 @@ JSC_CCALL(os_make_edge2d,
   JSValue edgeval = JS_NewObject(js);
   js_setprop_str(edgeval, "id", ptr2js(edge));
   js_setprop_str(edgeval, "shape", ptr2js(&edge->shape));
+  edge->shape.ref = argv[1];
   return edgeval;
 )
 
@@ -1494,6 +1478,15 @@ JSC_SCALL(os_make_texture,
   YughInfo("Made texture with %s", str);
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
+
+JSC_CCALL(os_make_model,
+  gameobject *go = js2gameobject(argv[0]);
+  struct drawmodel *dm = make_drawmodel(go);
+  JSValue ret = JS_NewObject(js);
+  js_setprop_str(ret, "id", ptr2js(dm));
+  return ret;
+)
+
 JSC_SCALL(os_system, system(str); )
 
 static const JSCFunctionListEntry js_os_funcs[] = {
@@ -1509,9 +1502,9 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, capture, 5),
   MIST_FUNC_DEF(os, eval, 2),
   MIST_FUNC_DEF(os, make_gameobject, 0),
-  MIST_FUNC_DEF(os, make_circle2d, 1),
-  MIST_FUNC_DEF(os, make_poly2d, 1),
-  MIST_FUNC_DEF(os, make_edge2d, 1),
+  MIST_FUNC_DEF(os, make_circle2d, 2),
+  MIST_FUNC_DEF(os, make_poly2d, 2),
+  MIST_FUNC_DEF(os, make_edge2d, 2),
   MIST_FUNC_DEF(os, make_model, 2),
   MIST_FUNC_DEF(os, make_texture, 1),
 };

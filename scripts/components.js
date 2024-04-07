@@ -22,10 +22,11 @@ var component = {
   make(go) {
     var nc = Object.create(this);
     nc.gameobject = go;
-    Object.mixin(nc, this._enghook(go));
+    Object.mixin(nc, this._enghook(go, nc));
     assign_impl(nc,this.impl);
     Object.hide(nc, 'gameobject', 'id');
     nc.post();
+    nc.make = undefined;
     return nc;
   },
   
@@ -358,11 +359,6 @@ SpriteAnim.find.doc = 'Given a path, find the relevant animation for the file.';
 
 /* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
 var collider2d = Object.copy(component, {
-  name: "collider 2d",
-  sensor: false,
-
-  kill() {}, /* No killing is necessary - it is done through the gameobject's kill */
-
   impl: {
     set sensor(x) { pshape.set_sensor(this.shape,x); },
     get sensor() { return pshape.get_sensor(this.shape); },
