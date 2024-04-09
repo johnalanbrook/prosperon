@@ -152,7 +152,7 @@ var gameobject = {
   get scale() { return this.rscale; },
 
   set_pos(x, relative = world) {
-    var newpos = x.add(relative.pos);
+    var newpos = relative.this2world(x);
     var move = newpos.sub(this.pos);
     this.rpos = newpos;
     this.objects.forEach(x => x.move(move));
@@ -181,7 +181,8 @@ var gameobject = {
   
   get_pos(relative = world) {
     if (relative === world) return this.pos;
-    return this.pos.sub(relative.pos);
+    return relative.world2this(this.pos);
+    //return this.pos.sub(relative.pos);
   },
   
   get_angle(relative = world) {
@@ -325,15 +326,14 @@ var gameobject = {
 
     parent.objects[name] = this;
     parent[name] = this;
+    Object.hide(parent, name);
     this.toString = function() { return name; };
   },
 
   remove_obj(obj) {
-    if (this[obj.toString()] === this.objects[obj.toString()])
-      delete this[obj.toString()];
-
     delete this.objects[obj.toString()];
     delete this[obj.toString()];
+    Object.unhide(this, obj.toString());
   },
 
   components: {},
@@ -419,7 +419,6 @@ var gameobject = {
 
     d ??= {};
 
-    var objects = {};
     fresh.objects ??= {};
     var curobjs = {};
     for (var o in this.objects)
@@ -446,15 +445,9 @@ var gameobject = {
 
   transform() {
     var t = {};
-    t.pos = this.get_pos(this.master);
-    if (t.pos.every(x => x === 0)) delete t.pos;
+    t.pos = this.get_pos(this.master).map(x => Math.places(x, 0));
     t.angle = Math.places(this.get_angle(this.master), 4);
-    if (t.angle === 0) delete t.angle;
-    return t;
-    t.scale = this.get_scale(this.master);
-    t.scale = t.scale.map((x, i) => x / this.ur.fresh.scale[i]);
-    t.scale = t.scale.map(x => Math.places(x, 3));
-    if (t.scale.every(x => x === 1)) delete t.scale;
+    t.scale = this.get_scale(this.master).map(x => Math.places(x, 2));;
     return t;
   },
 
@@ -466,9 +459,16 @@ var gameobject = {
     return phys;
   },
 
+  phys_mat() { 
+   return {
+      friction: this.friction,
+      elasticity: this.elasticity
+    }
+  },
+
   dup(diff) {
     var n = this.master.spawn(this.ur);
-    Object.totalmerge(n, this.instance_obj());
+    Object.totalmerge(n, this.transform());
     return n;
   },
 

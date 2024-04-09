@@ -129,6 +129,15 @@ render.image = function(tex, pos, rotation = 0, color = Color.white, dimensions 
   return bbox.fromcwh([0,0], [tex.width,tex.height]);
 }
 
+render.fontcache = {};
+render.set_font = function(path, size) {
+  var fontstr = `${path}-${size}`;
+  if (!render.fontcache[fontstr]) render.fontcache[fontstr] = os.make_font(path, size);
+
+  gui.font_set(render.fontcache[fontstr]);
+  render.font = render.fontcache[fontstr];
+}
+
 render.doc = "Draw shapes in screen space.";
 render.circle.doc = "Draw a circle at pos, with a given radius and color.";
 render.cross.doc = "Draw a cross centered at pos, with arm length size.";

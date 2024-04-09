@@ -133,52 +133,9 @@ static struct {
   sg_shader shader;
 } sg_shadow;
 
-void trace_init_image(sg_image id, const sg_image_desc *d, void *data)
-{
-  YughSpam("Init image %s", d->label);
-}
-
-void trace_make_shader(const sg_shader_desc *d, sg_shader id, void *data)
-{
-  YughSpam("Making shader %s", d->label);
-  if (sg_query_shader_state(id) == SG_RESOURCESTATE_FAILED)
-    YughError("FAILED MAKING A SHADER: %s\n%s\n%s", d->label);
-}
-
-void trace_fail_shader(sg_shader id, void *data)
-{
-  YughError("Shader %u did not compile.", id);
-}
-
-void trace_destroy_shader(sg_shader id, void *data)
-{
-  YughSpam("Destroyed shader %u.", id);
-}
-
-void trace_fail_image(sg_image id, void *data)
-{
-  sg_image_desc desc = sg_query_image_desc(id);
-  YughError("Failed to make image %u %s", id, desc.label);
-}
-
-void trace_make_pipeline(const sg_pipeline_desc *d, sg_pipeline id, void *data)
-{
-  YughSpam("Making pipeline %u [%s].", id, d->label);
-}
-
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
 //  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);
-}
-
-void trace_fail_pipeline(sg_pipeline pip, void *data)
-{
-  YughError("Failed pipeline %s", sg_query_pipeline_desc(pip).label);
-}
-
-void trace_make_attachments(const sg_attachment_desc *d, sg_attachments result, void *data)
-{
-  YughSpam("Making attachments %s", "IMPLEMENT");
 }
 
 void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
@@ -186,17 +143,79 @@ void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
 //  YughSpam("Begin pass %s", pass.label);
 }
 
+#define SG_TRACE_SET(NAME) \
+void trace_alloc_##NAME (sg_##NAME id, void *data) \
+{ \
+  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
+  YughSpam("Alloc " #NAME " %d [%s]", id, desc.label); \
+} \
+\
+void trace_dealloc_##NAME(sg_##NAME id, void *data) \
+{ \
+  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
+  YughSpam("Dealloc " #NAME " %d [%s]", id, desc.label); \
+} \
+\
+void trace_make_##NAME(sg_##NAME##_desc *desc, void *data) \
+{ \
+  YughSpam("Make " #NAME " [%s]", desc->label); \
+} \
+\
+void trace_destroy_##NAME(sg_##NAME id, void *data) \
+{ \
+  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
+  YughSpam("Destroy " #NAME " %d [%s]", id, desc.label); \
+} \
+\
+void trace_init_##NAME(sg_##NAME id, sg_##NAME##_desc *desc, void *data) \
+{ \
+  YughSpam("Init " #NAME " %d [%s]", id, desc->label); \
+} \
+\
+void trace_uninit_##NAME(sg_##NAME id, void *data) \
+{ \
+  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
+  YughSpam("Init " #NAME " %d [%s]", id, desc.label); \
+} \
+\
+void trace_fail_##NAME(sg_##NAME id, void *data) \
+{ \
+  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
+  YughError("Failed " #NAME " %d: %s", id, desc.label); \
+} \
+
+SG_TRACE_SET(buffer)
+SG_TRACE_SET(image)
+SG_TRACE_SET(sampler)
+SG_TRACE_SET(shader)
+SG_TRACE_SET(pipeline)
+SG_TRACE_SET(attachments)
+
+#define SG_HOOK_SET(NAME) \
+.alloc_##NAME = trace_alloc_##NAME, \
+.dealloc_##NAME = trace_dealloc_##NAME, \
+.init_##NAME = trace_init_##NAME, \
+.uninit_##NAME = trace_uninit_##NAME, \
+.fail_##NAME = trace_fail_##NAME, \
+.destroy_##NAME = trace_destroy_##NAME, \
+.make_##NAME = trace_make_##NAME \
+
+void trace_append_buffer(sg_buffer id, sg_range *data, void *user)
+{
+  sg_buffer_desc desc = sg_query_buffer_desc(id);
+  YughSpam("Appending buffer %d [%s]", id, desc.label);
+}
+
 static sg_trace_hooks hooks = {
-  .fail_shader = trace_fail_shader,
-  .make_shader = trace_make_shader,
-  .destroy_shader = trace_destroy_shader,
-  .fail_image = trace_fail_image,
-  .init_image = trace_init_image,
-  .make_pipeline = trace_make_pipeline,
-  .fail_pipeline = trace_fail_pipeline,
   .apply_pipeline = trace_apply_pipeline,
   .begin_pass = trace_begin_pass,
-  .make_attachments = trace_make_attachments,
+  SG_HOOK_SET(buffer),
+  SG_HOOK_SET(image),
+  SG_HOOK_SET(shader),
+  SG_HOOK_SET(sampler),
+  SG_HOOK_SET(pipeline),
+  SG_HOOK_SET(attachments),
+  .append_buffer = trace_append_buffer
 };
 
 void render_init() {
@@ -256,6 +275,7 @@ void render_init() {
   sg_gif.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(gif_quad),
     .data = gif_quad,
+    .label = "gif vert buffer",
   });
   sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
   
@@ -274,7 +294,8 @@ void render_init() {
   sg_crt.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(crt_quad),
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
-    .usage = SG_USAGE_IMMUTABLE
+    .usage = SG_USAGE_IMMUTABLE,
+    .label = "crt vert buffer",
   });
 }
 

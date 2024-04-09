@@ -357,10 +357,8 @@ var editor = {
     
     this._sel_comp = x;
 
-    if (this._sel_comp) {
-      console.info("sel comp is now " + this._sel_comp);
+    if (this._sel_comp)
       player[0].control(this._sel_comp);
-    }
   },
 
   time: 0,
@@ -399,7 +397,7 @@ var editor = {
     render.text([0,0], game.camera.world2view([0,0]));
 
     render.text("WORKING LAYER: " + this.working_layer, [0,520]);
-    render.text("MODE: " + this.edit_mode, [0,500]);
+    render.text("MODE: " + this.edit_mode, [0,520-render.font.linegap]);
 
     if (this.comp_info && this.sel_comp)
       render.text(input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
@@ -440,23 +438,23 @@ var editor = {
       var lvlstr = x.namestr();
       if (i === lvlchain.length-1) lvlstr += "[this]";
       render.text(lvlstr, [0, ypos], 1, editor.color_depths[depth]);
-     
-      render.text("^^^^^^", [0,ypos+=5],1);
-      ypos += 15;
+      ypos += render.font.linegap;
+      render.text("^^^^^^", [0,ypos],1);
+      ypos += render.font.linegap;
     });
 
     depth++;
     render.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
     
     this.selectlist.forEach(function(x) {
-      render.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
-      render.text(x.pos.map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
+      render.text(x.urstr(), x.screenpos().add([0, render.font.linegap*2]), 1, Color.editor.ur);
+      render.text(x.pos.map(function(x) { return Math.round(x); }), x.screenpos());
       render.cross(x.screenpos(), 10, Color.blue);
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
-      render.text(p, x[1].screenpos().add([0,16]),1,editor.color_depths[depth]);
+      render.text(p, x[1].screenpos().add([0,render.font.linegap]),1,editor.color_depths[depth]);
       render.point(x[1].screenpos(),5,Color.blue.alpha(0.3));
       render.point(x[1].screenpos(), 1, Color.red);
     });
@@ -476,7 +474,7 @@ var editor = {
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].toString() + "]";
-        render.text(str, this.selectlist[0].screenpos().add([0,-16*(i++)]));
+        render.text(str, this.selectlist[0].screenpos().add([0,-render.font.linegap*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -692,9 +690,9 @@ editor.inputs.n = function() {
   if (o === editor.selectlist[0]) return;
   if (o.master !== editor.selectlist[0].master) return;
 
-  var tpos = editor.selectlist[0].pos;
+  var tpos = editor.selectlist[0].get_pos(editor.selectlist[0].master);
   tpos.x *= -1;
-  o.pos = tpos;
+  o.set_pos(tpos, o.master);
 };
 editor.inputs.n.doc = "Set the hovered object's position to mirror the selected object's position on the X axis."
 editor.inputs['M-n'] = function()
@@ -742,7 +740,6 @@ editor.inputs['C-d'] = function() {
   editor.selectlist = duped;
 };
 editor.inputs['C-d'].doc = "Duplicate all selected objects.";
-
 
 editor.inputs['C-m'] = function() {
   if (editor.sel_comp) {
@@ -968,6 +965,10 @@ editor.inputs['C-y'] = function() {
   texteditor.start();
 };
 editor.inputs['C-y'].doc = "Open script editor for the level.";
+
+editor.inputs['C-p'] = function() {
+  os.system("prosperon");
+}
 
 editor.inputs['M-y'] = function() { editor.programmode = !editor.programmode; };
 editor.inputs['M-y'].doc = "Toggle program mode.";

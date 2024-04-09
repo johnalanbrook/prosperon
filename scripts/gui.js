@@ -136,7 +136,7 @@ Mum.text = Mum.extend({
     this.height = this.wh.y;
     var aa = [0,1].sub(params.anchor);
     var pos = cursor.add(params.wh.scale(aa)).add(params.offset);
-    gui.font_set(params.font);
+//    gui.font_set(params.font);
     render.text(params.str, pos, params.font_size, params.color, this.width, undefined, params.caret);
   },
   

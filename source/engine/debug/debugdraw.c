@@ -209,7 +209,8 @@ void debugdraw_init()
   
   point_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct point_vertex)*v_amt,
-    .usage = SG_USAGE_STREAM
+    .usage = SG_USAGE_STREAM,
+    .label = "point vertex buffer"
   });
   
   line_shader = sg_make_shader(line_shader_desc(sg_query_backend()));
@@ -233,13 +234,15 @@ void debugdraw_init()
   
   line_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct line_vert)*v_amt,
-    .usage = SG_USAGE_STREAM
+    .usage = SG_USAGE_STREAM,
+    .label = "line vertex buffer",
   });
   
   line_bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(uint16_t)*v_amt,
     .usage = SG_USAGE_STREAM,
-    .type = SG_BUFFERTYPE_INDEXBUFFER
+    .type = SG_BUFFERTYPE_INDEXBUFFER,
+    .label = "line index buffer",
   });
 
   csg = sg_make_shader(circle_shader_desc(sg_query_backend()));
@@ -266,6 +269,7 @@ void debugdraw_init()
   circle_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct circle_vertex)*v_amt,
     .usage = SG_USAGE_STREAM,
+    .label = "circle vert buffer",
   });
 
   float circleverts[8] = {
@@ -278,6 +282,7 @@ void debugdraw_init()
   circle_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
     .data = (sg_range){.ptr = circleverts, .size = sizeof(float)*8},
     .usage = SG_USAGE_IMMUTABLE,
+    .label = "circle quarter buffer",
   });
 
   grid_shader = sg_make_shader(grid_shader_desc(sg_query_backend()));
@@ -315,12 +320,14 @@ void debugdraw_init()
     .size = sizeof(struct poly_vertex)*v_amt,
     .usage = SG_USAGE_STREAM,
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .label = "poly vert buffer",
   });
   
   poly_bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(uint32_t)*6*v_amt,
     .usage = SG_USAGE_STREAM,
-    .type = SG_BUFFERTYPE_INDEXBUFFER
+    .type = SG_BUFFERTYPE_INDEXBUFFER,
+    .label = "poly index buffer"
   });
 }
 

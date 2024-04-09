@@ -80,7 +80,8 @@ void particle_init()
 
   par_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
     .data = (sg_range){.ptr = circleverts, .size = sizeof(float)*8},
-    .usage = SG_USAGE_IMMUTABLE
+    .usage = SG_USAGE_IMMUTABLE,
+    .label = "particle quater buffer"
   });
 
   par_bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});

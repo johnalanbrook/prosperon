@@ -148,6 +148,7 @@ void sprite_initialize() {
     .size = sizeof(struct slice9_vert) * 100,
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
     .usage = SG_USAGE_STREAM,
+    .label = "slice9 buffer"
   });
 }
 

@@ -167,7 +167,9 @@ sg_buffer texcoord_floats(float *f, int verts, int comp)
 
   return sg_make_buffer(&(sg_buffer_desc){
     .data.ptr = packed,
-    .data.size = sizeof(unsigned short) * verts});
+    .data.size = sizeof(unsigned short) * verts,
+    .label = "tex coord vert buffer",
+  });
 }
 
 sg_buffer normal_floats(float *f, int verts, int comp)
@@ -178,7 +180,9 @@ sg_buffer normal_floats(float *f, int verts, int comp)
 
   return sg_make_buffer(&(sg_buffer_desc){
     .data.ptr = packed_norms,
-    .data.size = sizeof(uint32_t) * verts});
+    .data.size = sizeof(uint32_t) * verts,
+    .label = "normal vert buffer",
+  });
 }
 
 HMM_Vec3 index_to_vert(uint32_t idx, float *f)
@@ -195,9 +199,11 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
     memcpy(idxs, cgltf_buffer_view_data(prim->indices->buffer_view), sizeof(uint16_t) * c);
 
     mesh->bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-	.data.ptr = idxs,
-	.data.size = sizeof(uint16_t) * c,
-	.type = SG_BUFFERTYPE_INDEXBUFFER});
+    .data.ptr = idxs,
+    .data.size = sizeof(uint16_t) * c,
+    .type = SG_BUFFERTYPE_INDEXBUFFER,
+    .label = "mesh index buffer",
+  });
 
     mesh->idx_count = c;
   } else {
@@ -232,8 +238,10 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
     switch (attribute.type) {
       case cgltf_attribute_type_position:
       mesh->bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-	  .data.ptr = vs,
-	  .data.size = sizeof(float) * n});
+        .data.ptr = vs,
+        .data.size = sizeof(float) * n,
+        .label = "mesh vert buffer"
+        });
       break;
 
     case cgltf_attribute_type_normal:

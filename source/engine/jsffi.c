@@ -65,6 +65,7 @@ QJSCLASS(gameobject)
 QJSCLASS(emitter)
 QJSCLASS(dsp_node)
 QJSCLASS(texture)
+QJSCLASS(font)
 QJSCLASS(sprite)
 QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
@@ -674,7 +675,7 @@ JSC_CCALL(gui_img,
   gui_draw_img(js2texture(argv[0]), t, js2boolean(argv[4]), js2vec2(argv[5]), 1.0, js2color(argv[6]));
 )
 
-JSC_SCALL(gui_font_set, font_set(str))
+JSC_CCALL(gui_font_set, font_set(js2font(argv[0])))
 
 static const JSCFunctionListEntry js_gui_funcs[] = {
   MIST_FUNC_DEF(gui, flush, 0),
@@ -1134,7 +1135,7 @@ JSValue js_gameobject_set_rscale(JSContext *js, JSValue this, JSValue val) { js2
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
 JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
 JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
-JSC_GETSET_BODY(moi, Moment, number)
+//JSC_GETSET_BODY(moi, Moment, number)
 JSC_GETSET_BODY(torque, Torque, number)
 JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
@@ -1167,12 +1168,12 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject,layer),
   CGETSET_ADD(gameobject,warp_filter),
   CGETSET_ADD(gameobject,drawlayer),
-  CGETSET_ADD(gameobject, rpos),
-  CGETSET_ADD(gameobject, rangle),
-  CGETSET_ADD(gameobject, rscale),  
+  CGETSET_ADD_HID(gameobject, rpos),
+  CGETSET_ADD_HID(gameobject, rangle),
+  CGETSET_ADD_HID(gameobject, rscale),  
   CGETSET_ADD(gameobject, velocity),
   CGETSET_ADD(gameobject, angularvelocity),
-  CGETSET_ADD(gameobject, moi),
+//  CGETSET_ADD(gameobject, moi),
   CGETSET_ADD(gameobject, phys),
   CGETSET_ADD(gameobject, torque),
   MIST_FUNC_DEF(gameobject, impulse, 1),
@@ -1301,6 +1302,14 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, height),
   MIST_GET(texture, frames),
   MIST_GET(texture, delays),
+};
+
+JSC_GETSET(font, linegap, number)
+JSC_GET(font, height, number)
+
+static const JSCFunctionListEntry js_font_funcs[] = {
+  CGETSET_ADD(font, linegap),
+  MIST_GET(font, height),
 };
 
 JSValue js_constraint_set_max_force (JSContext *js, JSValue this, JSValue val) {
@@ -1487,6 +1496,8 @@ JSC_CCALL(os_make_model,
   return ret;
 )
 
+JSC_CCALL(os_make_font, return font2js(MakeFont(js2str(argv[0]), js2number(argv[1]))))
+
 JSC_SCALL(os_system, system(str); )
 
 static const JSCFunctionListEntry js_os_funcs[] = {
@@ -1507,6 +1518,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_edge2d, 2),
   MIST_FUNC_DEF(os, make_model, 2),
   MIST_FUNC_DEF(os, make_texture, 1),
+  MIST_FUNC_DEF(os, make_font, 2),
 };
 
 #include "steam.h"
@@ -1515,7 +1527,7 @@ void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
   
   QJSCLASSPREP(ptr);
-  
+    
   QJSGLOBALCLASS(os);
   
   QJSCLASSPREP_FUNCS(gameobject);
@@ -1525,6 +1537,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(warp_damp);
   QJSCLASSPREP_FUNCS(sprite);
   QJSCLASSPREP_FUNCS(texture);
+  QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(constraint);
   QJSCLASSPREP_FUNCS(window);
   QJSCLASSPREP_FUNCS(drawmodel);

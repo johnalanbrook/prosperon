@@ -560,7 +560,7 @@ JSValue arb2js(cpArbiter *arb)
   JS_SetPropertyStr(js, obj, "normal", vec22js((HMM_Vec2)cpArbiterGetNormal(arb)));
   JS_SetPropertyStr(js, obj, "obj", JS_DupValue(js,go2->ref));
   JS_SetPropertyStr(js, obj, "shape", JS_DupValue(js, pshape->ref));
-  JS_SetPropertyStr(js, obj, "point", vec22js((HMM_Vec2)cpArbiterGetPointA(arb, 0)));
+//  JS_SetPropertyStr(js, obj, "point", vec22js((HMM_Vec2)cpArbiterGetPointA(arb, 0)));
   
   HMM_Vec2 srfv;
   srfv.cp = cpArbiterGetSurfaceVelocity(arb);
