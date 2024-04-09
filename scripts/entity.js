@@ -143,29 +143,39 @@ var gameobject = {
   cry(file) {
     return audio.cry(file);
   },
+  
+  set pos(x) { this.set_pos(x); },
+  get pos() { return this.rpos; },
+  set angle(x) { this.set_angle(x); },
+  get angle() { return this.rangle; },
+  set scale(x) { this.set_scale(x); },
+  get scale() { return this.rscale; },
 
   set_pos(x, relative = world) {
-    var move = x.sub(this.pos);
-    this.pos = x;
+    var newpos = x.add(relative.pos);
+    var move = newpos.sub(this.pos);
+    this.rpos = newpos;
     this.objects.forEach(x => x.move(move));
   },
   
   set_angle(x, relative = world) {
-    var diff = x - this.angle;
-    this.angle = x;
+    var newangle = relative.angle + x;
+    var diff = newangle - this.angle;
+    this.rangle = newangle;
     this.objects.forEach(obj => {
       obj.rotate(diff);
-      obj.set_pos(Vector.rotate(obj.pos, diff));
+      obj.set_pos(Vector.rotate(obj.get_pos(obj.master), diff), obj.master);
     });
   },
   
   set_scale(x, relative = world) {
     if (typeof x === 'number') x = [x,x,x];
-    var pct = this.scale.map((s,i) => x[i]/s);
-    this.scale = x;
+    var newscale = relative.scale.map((s,i) => x[i]*s);
+    var pct = this.scale.map((s,i) => newscale[i]/s);
+    this.rscale = newscale;
     this.objects.forEach(obj => {
       obj.grow(pct);
-      obj.set_pos(obj.pos.map((x,i) => x*pct[i]));
+      obj.set_pos(obj.get_pos(obj.master).map((x,i) => x*pct[i]), obj.master);
     });
   },
   
@@ -176,19 +186,22 @@ var gameobject = {
   
   get_angle(relative = world) {
     if (relative === world) return this.angle;
-    return this.master.angle - this.angle;
+    return this.angle - relative.angle;
   },
   
   get_scale(relative = world) {
     if (relative === world) return this.scale;
-    var masterscale = this.master.scale;
+    var masterscale = relative.scale;
     return this.scale.map((x,i) => x/masterscale[i]);
   },
   
   /* Moving, rotating, scaling functions, world relative */
   move(vec) { this.set_pos(this.pos.add(vec)); },
   rotate(x) { this.set_angle(this.angle + x); },
-  grow(vec) { this.set_scale(this.scale.map((x, i) => x * vec[i])); },
+  grow(vec) { 
+    if (typeof vec === 'number') vec = [vec,vec,vec];
+    this.set_scale(this.scale.map((x, i) => x * vec[i]));
+  },
   
   screenpos() { return game.camera.world2view(this.pos); },
 
@@ -277,6 +290,9 @@ var gameobject = {
     if (callback) callback(ent);
 
     ent.ur.fresh ??= json.decode(json.encode(ent));
+    ent.ur.fresh.objects = {};
+    for (var i in ent.objects)
+      ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
 
     return ent;
   },
@@ -430,11 +446,12 @@ var gameobject = {
 
   transform() {
     var t = {};
-    t.pos = this.pos;
+    t.pos = this.get_pos(this.master);
     if (t.pos.every(x => x === 0)) delete t.pos;
-    t.angle = Math.places(this.angle, 4);
+    t.angle = Math.places(this.get_angle(this.master), 4);
     if (t.angle === 0) delete t.angle;
-    t.scale = this.scale;
+    return t;
+    t.scale = this.get_scale(this.master);
     t.scale = t.scale.map((x, i) => x / this.ur.fresh.scale[i]);
     t.scale = t.scale.map(x => Math.places(x, 3));
     if (t.scale.every(x => x === 1)) delete t.scale;

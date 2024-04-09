@@ -447,6 +447,7 @@ var editor = {
 
     depth++;
     render.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
+    
     this.selectlist.forEach(function(x) {
       render.text(x.urstr(), x.screenpos().add([0, 32]), 1, Color.editor.ur);
       render.text(x.pos.map(function(x) { return Math.round(x); }), x.screenpos(), 1, Color.white);
@@ -468,7 +469,7 @@ var editor = {
     }
 
     if (this.rotlist.length === 1)
-      render.text(Math.trunc(this.rotlist[0].obj.angle), input.mouse.screenpos(), 1, Color.teal);
+      render.text(Math.places(this.rotlist[0].angle, 3), input.mouse.screenpos(), 1, Color.teal);
 
     if (this.selectlist.length === 1) {
       var i = 1;
@@ -639,7 +640,7 @@ editor.inputs['C-b'] = function() {
     c.grow(obj.scale);
     c.sync?.();
   });
-  obj.scale = [1,1,1];
+  obj.set_scale([1,1,1]);
 }
 
 editor.inputs.drop = function(str) {
@@ -763,7 +764,7 @@ editor.inputs.m = function() {
     return;
   }
 
-  editor.selectlist.forEach(obj => obj.scale = [-obj.scale[0], obj.scale[1]]);
+  editor.selectlist.forEach(obj => obj.grow([-1,1,1]));
 };
 editor.inputs.m.doc = "Mirror selected objects on the X axis.";
 
@@ -798,29 +799,16 @@ editor.inputs['C-F'] = function() {
 };
 editor.inputs['C-F'].doc = "Tunnel out of the level you are editing, saving it in the process.";
 
-editor.inputs['C-r'] = function() { editor.selectlist.forEach(function(x) { x.angle = -x.angle; }); };
+editor.inputs['C-r'] = function() { editor.selectlist.forEach(function(x) { x.rotate(-x.angle*2); }); }
 editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
 editor.inputs.r = function() {
   if (editor.sel_comp && 'angle' in editor.sel_comp) {
     var relpos = input.mouse.worldpos().sub(editor.sel_comp.gameobject.pos);
-    editor.startoffset = Math.atan2(relpos.y, relpos.x);
-    editor.startrot = editor.sel_comp.angle;
-
     return;
   }
 
-  editor.rotlist = [];
-  editor.selectlist.forEach(function(x) {
-    var relpos = input.mouse.worldpos().sub(editor.cursor);
-    editor.rotlist.push({
-      obj: x,
-      angle: x.angle,
-      pos: x.pos,
-      offset: x.pos.sub(editor.cursor),
-      rotoffset: Math.atan2(relpos.y, relpos.x),
-    });
-  });
+  editor.rotlist = editor.selectlist;
 };
 editor.inputs.r.doc = "Rotate selected using the mouse while held down.";
 editor.inputs.r.released = function() { editor.rotlist = []; }
@@ -1160,32 +1148,25 @@ editor.inputs.mouse.move = function(pos, dpos)
   }
 
   editor.grabselect?.forEach(function(x) {
-    if (!x) return;
     x.move(game.camera.dir_view2world(dpos));
     x.sync();
   });
   
   var relpos = input.mouse.worldpos().sub(editor.cursor);
-  var dist = Vector.length(relpos);
+  var lastpos = relpos.sub(dpos);
+    
+  var dist = Vector.length(relpos.add(dpos)) - Vector.length(relpos);
+  var scalediff = 1+(dist/editor.scaleoffset);
+      
+  editor.scalelist?.forEach(function(x) { x.grow(scalediff); });
 
-  editor.scalelist?.forEach(function(x) {
-    var scalediff = dist / x.scaleoffset;
-    if (typeof x.obj.scale === 'number')
-      x.obj.scale = x.scale * scalediff;
-    else {
-      x.obj.scale = x.scale.map(x=> x * scalediff);
-      if (x.offset)
-        x.obj.pos = editor.cursor.add(x.offset.scale(scalediff));
-    }
-  });
-
+  var anglediff = Math.atan2(relpos.y, relpos.x) - Math.atan2(lastpos.y, lastpos.x);
   editor.rotlist?.forEach(function(x) {
-    var anglediff = Math.atan2(relpos.y, relpos.x) - x.rotoffset;
-    x.obj.angle = x.angle + Math.rad2turn(anglediff);
-    if (input.keyboard.down('shift'))
-      x.obj.angle = Math.nearest(x.obj.angle, (1/24));
-    if (x.pos)
-      x.obj.pos = x.pos.sub(x.offset).add(x.offset.rotate(anglediff));
+    x.rotate(anglediff/(2*Math.PI));
+    if (input.keyboard.down('shift')) {
+      var rotate = Math.nearest(x.angle, 1/24) - x.angle;
+      x.rotate(rotate)
+    }
   });
 }
 
@@ -1211,11 +1192,7 @@ editor.inputs.delete.doc = "Delete selected objects.";
 editor.inputs['S-d'] = editor.inputs.delete;
 editor.inputs['C-k'] = editor.inputs.delete;
 
-editor.inputs['C-u'] = function() {
-  this.selectlist.forEach(function(x) {
-    x.revert();
-  });
-};
+editor.inputs['C-u'] = function() { this.selectlist.forEach(x => x.revert()); };
 editor.inputs['C-u'].doc = "Revert selected objects back to their prefab form.";
 
 editor.inputs['M-u'] = function() {
@@ -1381,27 +1358,16 @@ compmode.inputs['C-x'] = function() {};
 
 editor.scalelist = [];
 editor.inputs.s = function() {
-  var scaleoffset = Vector.length(input.mouse.worldpos().sub(editor.cursor));
+  editor.scaleoffset = Vector.length(input.mouse.worldpos().sub(editor.cursor));
   editor.scalelist = [];
   
   if (editor.sel_comp) {
     if (!('scale' in editor.sel_comp)) return;
-    editor.scalelist.push({
-      obj: editor.sel_comp,
-      scale: editor.sel_comp.scale,
-      scaleoffset: scaleoffset,
-    });
+    editor.scalelist.push(editor.sel_comp);
     return;
   }
 
-  editor.selectlist.forEach(function(x) {
-    editor.scalelist.push({
-      obj: x,
-      scale: x.scale,
-      offset: x.pos.sub(editor.cursor),
-      scaleoffset: scaleoffset,
-    });
-  });
+  editor.scalelist = editor.selectlist;
 };
 editor.inputs.s.doc = "Scale selected.";
 

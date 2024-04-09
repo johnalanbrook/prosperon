@@ -1119,16 +1119,18 @@ static const JSCFunctionListEntry js_window_funcs[] = {
   MIST_FUNC_DEF(window, set_icon, 1)
 };
 
-JSValue js_gameobject_set_pos(JSContext *js, JSValue this, JSValue val) {
+JSValue js_gameobject_set_rpos(JSContext *js, JSValue this, JSValue val) {
   cpBody *b = js2gameobject(this)->body;
   cpBodySetPosition(b, js2cvec2(val));
   if (cpBodyGetType(b) == CP_BODY_TYPE_STATIC)
     cpSpaceReindexShapesForBody(space, b);
   return JS_UNDEFINED;
 }
-JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
-JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
-JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
+JSValue js_gameobject_get_rpos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
+JSValue js_gameobject_set_rangle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
+JSValue js_gameobject_get_rangle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
+JSValue js_gameobject_get_rscale(JSContext *js, JSValue this) { return vec32js(js2gameobject(this)->scale); }
+JSValue js_gameobject_set_rscale(JSContext *js, JSValue this, JSValue val) { js2gameobject(this)->scale = js2vec3(val); }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
 JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
 JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
@@ -1142,7 +1144,6 @@ JSC_GETSET_APPLY(gameobject, elasticity, number)
 JSC_GETSET_APPLY(gameobject, mass, number)
 JSC_GETSET_APPLY(gameobject, phys, number)
 JSC_GETSET_APPLY(gameobject, layer, number)
-JSC_GETSET(gameobject, scale, vec3)
 JSC_GETSET(gameobject, damping, number)
 JSC_GETSET(gameobject, timescale, number)
 JSC_GETSET(gameobject, maxvelocity, number)
@@ -1160,16 +1161,15 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject, elasticity),
   CGETSET_ADD(gameobject,mass),
   CGETSET_ADD(gameobject,damping),
-  CGETSET_ADD(gameobject, scale),
   CGETSET_ADD(gameobject,timescale),
   CGETSET_ADD(gameobject,maxvelocity),
   CGETSET_ADD(gameobject,maxangularvelocity),
   CGETSET_ADD(gameobject,layer),
   CGETSET_ADD(gameobject,warp_filter),
-  CGETSET_ADD(gameobject,scale),
   CGETSET_ADD(gameobject,drawlayer),
-  CGETSET_ADD(gameobject, pos),
-  CGETSET_ADD(gameobject, angle),
+  CGETSET_ADD(gameobject, rpos),
+  CGETSET_ADD(gameobject, rangle),
+  CGETSET_ADD(gameobject, rscale),  
   CGETSET_ADD(gameobject, velocity),
   CGETSET_ADD(gameobject, angularvelocity),
   CGETSET_ADD(gameobject, moi),
