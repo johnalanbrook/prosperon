@@ -344,6 +344,20 @@ Object.rkeys = function(o)
   return keys;
 }
 
+Object.readonly = function(o, name, msg)
+{
+  var tmp = {};
+  var prop = Object.getOwnPropertyDescriptor(o, name);
+  if (!prop) {
+    console.error(`Attempted to make property ${name} readonly, but it doesn't exist on ${o}.`);
+    return;
+  }
+  Object.defineProperty(tmp, name, prop);
+  prop.get = function() { return tmp[name]; }
+  prop.set = function() { console.warn(`Attempted to set readonly property ${name}`); }
+  Object.defineProperty(o, name, prop);
+}
+
 Object.extend = function(from)
 {
   var n = {};

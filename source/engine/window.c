@@ -15,7 +15,12 @@
 #include "sokol/sokol_app.h"
 #include "stb_image_resize2.h"
 
-struct window mainwin = {0};
+struct window mainwin = {
+  .sample_count = 1,
+  .vsync = 1,
+  .enable_clipboard = 0,
+  .enable_dragndrop = 0,
+};
 
 static struct window *windows = NULL;
 

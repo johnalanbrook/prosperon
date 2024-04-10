@@ -232,122 +232,122 @@ Object.seal(sprite);
   loop: true if it should be looped
 */
 var animcache = {};
-var SpriteAnim = {
-  make(path) {
-    if (animcache[path]) return animcache[path];
-    var anim;
-    if (io.exists(path.set_ext(".json")))
-      anim = SpriteAnim.aseprite(path.set_ext(".json"));
-    else if (path.ext() === 'gif')
-      anim = SpriteAnim.gif(path);
-    else if (path.ext() === 'ase')
-      anim = SpriteAnim.aseprite(path);
-    else
-      return undefined;
-      
-    animcache[path] = anim; 
-    return animcache[path];
-  },
-  gif(path) {
-    console.info(`making an anim from ${path}`);
+var SpriteAnim = {};
+SpriteAnim.make = function(path) {
+  if (animcache[path]) return animcache[path];
+  var anim;
+  if (io.exists(path.set_ext(".ase")))
+    anim = SpriteAnim.aseprite(path.set_ext(".ase"));
+  else if (io.exists(path.set_ext(".json")))
+    anim = SpriteAnim.aseprite(path.set_ext(".json"));
+  else if (path.ext() === 'ase')  
+    anim = SpriteAnim.aseprite(path);  
+  else if (path.ext() === 'gif')
+    anim = SpriteAnim.gif(path);
+  else
+    return undefined;
+    
+  animcache[path] = anim; 
+  return animcache[path];
+};
+SpriteAnim.gif = function(path) {
+  console.info(`making an anim from ${path}`);
+  var anim = {};
+  anim.frames = [];
+  anim.path = path;
+  var tex = game.texture(path);
+  var frames = tex.frames;
+  console.info(`frames are ${frames}`);    
+  if (frames === 1) return undefined;
+  var yslice = 1/frames;
+  for (var f = 0; f < frames; f++) {
+    var frame = {};
+    frame.rect = {
+      x: 0,
+      w: 1,
+      y: yslice*f,
+      h: yslice
+    };
+    frame.time = 0.05;
+    anim.frames.push(frame);
+  }
+  var times = tex.delays;
+  for (var i = 0; i < frames; i++)
+    anim.frames[i].time = times[i]/1000;
+  anim.loop = true;
+  var dim = [tex.width,tex.height];
+  console.info(`dimensions are ${dim}`);
+  dim.y /= frames;
+  anim.dim = dim;
+  return {0:anim};
+};
+
+SpriteAnim.strip = function(path, frames, time=0.05) {
+  var anim = {};
+  anim.frames = [];
+  anim.path = path;
+  var xslice = 1/frames;
+  for (var f = 0; f < frames; f++) {
+    var frame = {};
+    frame.rect = {s0:xslice*f, s1: xslice*(f+1), t0:0, t1:1};
+    frame.time = time;
+    anim.frames.push(frame);
+  }
+  anim.dim = Resources.texture.dimensions(path);
+  anim.dim.x /= frames;
+  return anim;
+};
+
+SpriteAnim.aseprite = function(path) {
+  function aseframeset2anim(frameset, meta) {
     var anim = {};
     anim.frames = [];
-    anim.path = path;
-    var tex = game.texture(path);
-    var frames = tex.frames;
-    console.info(`frames are ${frames}`);    
-    if (frames === 1) return undefined;
-    var yslice = 1/frames;
-    for (var f = 0; f < frames; f++) {
+    anim.path = path.dir() + "/" + meta.image;
+    var dim = meta.size;
+
+    var ase_make_frame = function(ase_frame) {
+      var f = ase_frame.frame;
       var frame = {};
       frame.rect = {
-    	  x: 0,
-	      w: 1,
-	      y: yslice*f,
-	      h: yslice
+        x: f.x/dim.w,
+        w: f.w/dim.w,
+        y: f.y/dim.h,
+        h: f.h/dim.h
       };
-      frame.time = 0.05;
+      frame.time = ase_frame.duration / 1000;
       anim.frames.push(frame);
-    }
-    var times = tex.delays;
-    for (var i = 0; i < frames; i++)
-      anim.frames[i].time = times[i]/1000;
-    anim.loop = true;
-    var dim = [tex.width,tex.height];
-    console.info(`dimensions are ${dim}`);
-    dim.y /= frames;
-    anim.dim = dim;
-    return {0:anim};
-  },
-
-  strip(path, frames, time=0.05) {
-    var anim = {};
-    anim.frames = [];
-    anim.path = path;
-    var xslice = 1/frames;
-    for (var f = 0; f < frames; f++) {
-      var frame = {};
-      frame.rect = {s0:xslice*f, s1: xslice*(f+1), t0:0, t1:1};
-      frame.time = time;
-      anim.frames.push(frame);
-    }
-    anim.dim = Resources.texture.dimensions(path);
-    anim.dim.x /= frames;
-    return anim;
-  },
-
-  aseprite(path) {
-    function aseframeset2anim(frameset, meta) {
-      var anim = {};
-      anim.frames = [];
-      anim.path = path.dir() + "/" + meta.image;
-      var dim = meta.size;
-  
-      var ase_make_frame = function(ase_frame) {
-        var f = ase_frame.frame;
-        var frame = {};
-        frame.rect = {
-	        x: f.x/dim.w,
-	        w: f.w/dim.w,
-	        y: f.y/dim.h,
-	        h: f.h/dim.h
-        };
-        frame.time = ase_frame.duration / 1000;
-        anim.frames.push(frame);
-      };
-
-      frameset.forEach(ase_make_frame);
-      anim.dim = frameset[0].sourceSize;
-      anim.loop = true;
-      return anim;
     };
 
-    var data = json.decode(io.slurp(path));
-    if (!data?.meta?.app.includes("aseprite")) return;
-    var anims = {};
-    var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
-    var f = 0;
-    for (var tag of data.meta.frameTags) {
-      anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), data.meta);
-      anims[f] = anims[tag.name];
-      f++;
-    }
+    frameset.forEach(ase_make_frame);
+    anim.dim = frameset[0].sourceSize;
+    anim.loop = true;
+    return anim;
+  };
 
-    return anims;
-  },
+  var data = json.decode(io.slurp(path));
+  if (!data?.meta?.app.includes("aseprite")) return;
+  var anims = {};
+  var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
+  var f = 0;
+  for (var tag of data.meta.frameTags) {
+    anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), data.meta);
+    anims[f] = anims[tag.name];
+    f++;
+  }
 
-  validate(anim)
-  {
-    if (!Object.isObject(anim)) return false;
-    if (typeof anim.path !== 'string') return false;
-    if (typeof anim.dim !== 'object') return false;
-    return true;
-  },
+  return anims;
+};
 
-  find(path) {
-    if (!io.exists(path + ".asset")) return;
-    var asset = JSON.parse(io.slurp(path + ".asset"));
-  },
+SpriteAnim.validate = function(anim) {
+  if (!Object.isObject(anim)) return false;
+  if (typeof anim.path !== 'string') return false;
+  if (typeof anim.dim !== 'object') return false;
+  return true;
+};
+
+SpriteAnim.find = function(path) {
+  if (!io.exists(path + ".asset")) return;
+  var asset = JSON.parse(io.slurp(path + ".asset"));
 };
 
 SpriteAnim.doc = 'Functions to create Primum animations from varying sources.';

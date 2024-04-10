@@ -625,7 +625,7 @@ JSC_CCALL(render_line,
 JSC_CCALL(render_sprites, sprite_draw_all())
 JSC_CCALL(render_models, model_draw_all())
 JSC_CCALL(render_emitters, emitters_draw(&useproj))
-JSC_CCALL(render_flush, debug_flush(&useproj); text_flush(&useproj))
+JSC_CCALL(render_flush, debug_flush(&useproj); text_flush(&useproj); )
 JSC_CCALL(render_end_pass,
   sg_end_pass();
   sg_commit();
@@ -821,6 +821,16 @@ static const JSCFunctionListEntry js_console_funcs[] = {
   MIST_FUNC_DEF(console,print,1),
   MIST_FUNC_DEF(console,rec,4),
   CGETSET_ADD(global, stdout_lvl)
+};
+
+JSC_GETSET_GLOBAL(CHANNELS, number)
+JSC_GETSET_GLOBAL(BUF_FRAMES, number)
+JSC_GETSET_GLOBAL(SAMPLERATE, number)
+
+static const JSCFunctionListEntry js_audio_funcs[] = {
+  CGETSET_ADD_NAME(global, CHANNELS, channels),
+  CGETSET_ADD_NAME(global, BUF_FRAMES, buffer_frames),
+  CGETSET_ADD_NAME(global, SAMPLERATE, samplerate),
 };
 
 JSC_CCALL(profile_now, return number2js(stm_now()))
@@ -1110,6 +1120,11 @@ static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
 }
 JSC_CCALL(window_get_title, return str2js(js2window(this)->title))
 JSC_CCALL(window_set_icon, window_seticon(&mainwin, js2texture(argv[0])))
+JSC_GETSET(window, vsync, boolean)
+JSC_GETSET(window, enable_clipboard, boolean)
+JSC_GETSET(window, enable_dragndrop, boolean)
+JSC_GETSET(window, high_dpi, boolean)
+JSC_GETSET(window, sample_count, number)
 
 static const JSCFunctionListEntry js_window_funcs[] = {
   CGETSET_ADD(window, size),
@@ -1117,6 +1132,11 @@ static const JSCFunctionListEntry js_window_funcs[] = {
   CGETSET_ADD(window, mode),
   CGETSET_ADD(window, fullscreen),
   CGETSET_ADD(window, title),
+  CGETSET_ADD(window, vsync),
+  CGETSET_ADD(window, enable_clipboard),
+  CGETSET_ADD(window, enable_dragndrop),
+  CGETSET_ADD(window, high_dpi),
+  CGETSET_ADD(window, sample_count),
   MIST_FUNC_DEF(window, set_icon, 1)
 };
 
@@ -1229,7 +1249,6 @@ JSC_SCALL(dspsound_source,
 JSC_CCALL(dspsound_mix, return dsp_node2js(make_node(NULL,NULL,NULL)))
 JSC_CCALL(dspsound_master, return dsp_node2js(masterbus))
 JSC_CCALL(dspsound_plugin_node, plugin_node(js2dsp_node(argv[0]), js2dsp_node(argv[1]));)
-JSC_CCALL(dspsound_samplerate, return number2js(SAMPLERATE))
 JSC_SCALL(dspsound_mod, ret = dsp_node2js(dsp_mod(str))) 
 JSC_SSCALL(dspsound_midi, ret = dsp_node2js(dsp_midi(str, make_soundfont(str2))))
 
@@ -1250,7 +1269,6 @@ static const JSCFunctionListEntry js_dspsound_funcs[] = {
   MIST_FUNC_DEF(dspsound, mix, 0),
   MIST_FUNC_DEF(dspsound, master, 0),
   MIST_FUNC_DEF(dspsound, plugin_node, 2),
-  MIST_FUNC_DEF(dspsound, samplerate, 0),
   MIST_FUNC_DEF(dspsound, midi, 2),
   MIST_FUNC_DEF(dspsound, mod, 1)
 };
@@ -1548,6 +1566,7 @@ void ffi_load() {
   QJSGLOBALCLASS(prosperon);
   QJSGLOBALCLASS(time);
   QJSGLOBALCLASS(console);
+  QJSGLOBALCLASS(audio);
   QJSGLOBALCLASS(profile);
   QJSGLOBALCLASS(game);
   QJSGLOBALCLASS(gui);

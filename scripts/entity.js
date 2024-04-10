@@ -279,6 +279,7 @@ var gameobject = {
       var o = ent.objects;
       delete ent.objects;
       for (var i in o) {
+        console.info(`creating ${i} on ${ent.toString()}`);
         var newur = o[i].ur;
         delete o[i].ur;
         var n = ent.spawn(ur[newur], o[i]);

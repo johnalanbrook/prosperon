@@ -1,7 +1,11 @@
-var audio = {};
+/* This file runs after the audio system is initiated */
+
 var cries = {};
 
-audio.samplerate = dspsound.samplerate();
+Object.readonly(audio, 'samplerate');
+Object.readonly(audio, 'channels');
+Object.readonly(audio, 'buffer_frames');
+
 audio.play = function(file,bus = audio.bus.master) {
   file = Resources.find_sound(file);
   if (!file) {

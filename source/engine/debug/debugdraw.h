@@ -20,7 +20,6 @@ void draw_grid(float width, float span, struct rgba color);
 
 void debug_flush(HMM_Mat4 *view);
 void debug_newframe();
-void debug_nextpass();
 
 HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n);
 

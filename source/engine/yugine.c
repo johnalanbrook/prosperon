@@ -246,6 +246,11 @@ void engine_start(JSValue start, JSValue procfn)
   start_desc.height = mainwin.size.y;
   start_desc.window_title = mainwin.title;
   start_desc.fullscreen = mainwin.fullscreen;
+  start_desc.swap_interval = mainwin.vsync;
+  start_desc.enable_dragndrop = mainwin.enable_dragndrop;
+  start_desc.enable_clipboard = mainwin.enable_clipboard;
+  start_desc.high_dpi = mainwin.high_dpi;
+  start_desc.sample_count = mainwin.sample_count;
 }
 
 double apptime() { return stm_sec(stm_now()); }

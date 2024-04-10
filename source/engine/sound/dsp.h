@@ -1,9 +1,9 @@
 #ifndef DSP_H
 #define DSP_H
 
-#define SAMPLERATE 44100
-#define BUF_FRAMES 2048 /* At 48k, 128 needed for 240fps consistency */
-#define CHANNELS 2
+extern int SAMPLERATE;
+extern int BUF_FRAMES;
+extern int CHANNELS;
 
 #include "sound.h"
 #include "cbuf.h"
@@ -15,14 +15,13 @@ typedef struct dsp_node {
   void (*proc)(void *dsp, soundbyte *buf, int samples); /* processor */
   void *data; /* Node specific data to use in the proc function, passed in as dsp */
   void (*data_free)(void *data);
-  soundbyte cache[BUF_FRAMES*CHANNELS]; /* Cached process */
+  soundbyte *cache;
   struct dsp_node **ins; /* Array of in nodes */
   struct dsp_node *out; /* node this one is connected to */
   int pass; /* True if the filter should be bypassed */
   int off; /* True if the filter shouldn't output */
   float gain; /* Between 0 and 1, to attenuate this output */
   float pan; /* Between -100 and +100, panning left to right in the speakers */
-  int id;
 } dsp_node;
 
 void dsp_init();

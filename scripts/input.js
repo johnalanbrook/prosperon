@@ -1,20 +1,20 @@
 input.keycodes = {
-  259: "backspace",
-  258: "tab",
+  32: "space",  
+  45: "minus",  
+  256: "escape",  
   257: "enter",
-  256: "escape",
-  32: "space",
+  258: "tab",
+  259: "backspace",
+  260: "insert",
+  261: "delete",
+  262: "right",  
+  263: "left",
+  264: "down",  
+  265: "up",
   266: "pgup",    
   267: "pgdown",
   268: "home",
   269: "end",
-  263: "left",
-  265: "up",
-  262: "right",
-  265: "down",
-  260: "insert",
-  261: "delete",
-  45: "minus",
 };
 
 input.codekeys = {};
@@ -117,7 +117,7 @@ prosperon.textinput = function(c){
 };
 prosperon.mousemove = function(pos, dx){
   mousepos = pos;
-  player[0].mouse_input(modstr() + "move", pos, dx);
+  player[0].mouse_input("move", pos, dx);
 };
 prosperon.mousescroll = function(dx){
   player[0].mouse_input(modstr() + "scroll", dx);
@@ -126,7 +126,7 @@ prosperon.mousedown = function(b){
   player[0].raw_input(modstr() + input.mouse.button[b], "pressed");
 };
 prosperon.mouseup = function(b){
-  player[0].raw_input(modstr() + input.mouse.button[b], "released");
+  player[0].raw_input(input.mouse.button[b], "released");
 };
 
 input.mouse = {};

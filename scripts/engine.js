@@ -250,10 +250,16 @@ var gggstart = game.engine_start;
 game.engine_start = function(s) {
   game.startengine = 1;
   gggstart(function() {
-      world_start();
-      go_init();
-      window.set_icon(os.make_texture("icons/moon.gif"))
-      s();
+    global.mixin("scripts/sound.js");
+    world_start();
+    go_init();
+    window.set_icon(os.make_texture("icons/moon.gif"))
+    Object.readonly(window.__proto__, 'vsync');
+    Object.readonly(window.__proto__, 'enable_dragndrop');
+    Object.readonly(window.__proto__, 'enable_clipboard');
+    Object.readonly(window.__proto__, 'high_dpi');
+    Object.readonly(window.__proto__, 'sample_count');
+    s();
   }, process);  
 }
 
@@ -307,8 +313,13 @@ game.timescale = 1;
 var eachobj = function(obj,fn)
 {
   fn(obj);
-  for (var o in obj.objects)
+  for (var o in obj.objects) {
+    if (obj.objects[o] === obj) {
+      //console.error(`Object ${obj.toString()} is referenced by itself.`);
+      continue;
+    }
     eachobj(obj.objects[o],fn);
+  }
 }
 
 game.all_objects = function(fn, startobj = world) { eachobj(startobj,fn); };
@@ -552,6 +563,7 @@ function world_start() {
   world.kill = function() { this.clear(); };
   world.phys = 2;
   world.zoom = 1;
+  world._ed = { selectable: false };
   game.cam = world;
 }
 

@@ -250,9 +250,9 @@ Cmdline.register_order("play", function(argv) {
   console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);
   
   game.engine_start(function() {
-    global.mixin("scripts/sound.js");
     global.app = actor.spawn("game.js");
     if (project.icon) window.set_icon(game.texture(project.icon));
+    render.set_font("fonts/c64.ttf", 8);    
     game.camera = world.spawn("scripts/camera2d");
   });  
 }, "Play the game present in this folder.");

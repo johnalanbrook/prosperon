@@ -20,7 +20,7 @@
 
 #include "font.h"
 
-#define v_amt 5000
+#define v_amt 500000
 
 struct flush {
   sg_shader shader;
@@ -372,6 +372,7 @@ void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float 
     .size = sizeof(uint16_t)*i_c
   };
   
+  if (sg_query_buffer_will_overflow(line_bind.vertex_buffers[0], vr.size) || sg_query_buffer_will_overflow(line_bind.index_buffer, ir.size)) return;
   sg_append_buffer(line_bind.vertex_buffers[0], &vr);
   sg_append_buffer(line_bind.index_buffer, &ir);
 

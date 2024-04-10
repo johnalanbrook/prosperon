@@ -8,7 +8,6 @@ game.loadurs();
 console.info(`window size: ${window.size}, render size: ${window.rendersize}`);
 
 player[0].control(debug);
-Register.gui.register(debug.draw, debug);
 
 var show_frame = true;
 
@@ -423,7 +422,7 @@ var editor = {
     var depth = 0;
     var alldirty = false;
     for (var lvl of lvlchain) {
-      if (!lvl._ed) continue;
+      if (!lvl._ed?.selectable) continue;
       if (alldirty)
         lvl._ed.dirty = true;
       else {
@@ -461,7 +460,7 @@ var editor = {
 
     var mg = physics.pos_query(input.mouse.worldpos(),10);
     
-    if (mg) {
+    if (mg && mg._ed?.selectable) {
       var p = mg.path_from(thiso);
       render.text(p, input.mouse.screenpos(),1,Color.teal);
     }

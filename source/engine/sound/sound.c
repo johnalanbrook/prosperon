@@ -137,6 +137,10 @@ void sound_init() {
     .buffer_frames = BUF_FRAMES,
     .logger.func = sg_logging,
   });
+
+  SAMPLERATE = saudio_sample_rate();
+  CHANNELS = saudio_channels();
+  BUF_FRAMES = saudio_buffer_frames();
 }
 
 typedef struct {

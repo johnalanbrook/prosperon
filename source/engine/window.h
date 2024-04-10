@@ -23,6 +23,11 @@ struct window {
   float aspect;
   float raspect;
   char *title;
+  int vsync;
+  int enable_clipboard;
+  int enable_dragndrop;
+  int high_dpi;
+  int sample_count;
   int start;
 };
 typedef struct window window;

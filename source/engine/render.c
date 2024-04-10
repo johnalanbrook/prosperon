@@ -295,6 +295,8 @@ void render_init() {
     .size = sizeof(crt_quad),
     .type = SG_BUFFERTYPE_VERTEXBUFFER,
     .usage = SG_USAGE_IMMUTABLE,
+    .data = SG_RANGE(crt_quad),
+    
     .label = "crt vert buffer",
   });
 }

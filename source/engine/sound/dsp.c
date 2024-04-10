@@ -13,6 +13,10 @@
 
 #define PI 3.14159265
 
+int SAMPLERATE = 44100;
+int BUF_FRAMES = 2048;
+int CHANNELS = 2;
+
 dsp_node *masterbus = NULL;
 
 void iir_free(struct dsp_iir *iir)
@@ -143,10 +147,10 @@ dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int sam
   dsp_node *self = malloc(sizeof(dsp_node));
   memset(self, 0, sizeof(*self));
   self->data = data;
+  self->cache = calloc(BUF_FRAMES*CHANNELS*sizeof(soundbyte),1);
   self->proc = proc;
   self->pass = 0;
   self->gain = 1;
-  self->id = node_count++;
   return self;
 }
 
