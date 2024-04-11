@@ -641,62 +641,37 @@ ur {
 
 /* Apply an ur u to an entity e */
 /* u is given as */
-function apply_ur(u, e) {
+function apply_ur(u, ent) {
   if (typeof u !== 'string') {
     console.warn("Must give u as a string.");
     return;
   }
 
   var urs = u.split('.');
-  var config = {};
-  var topur = ur;
-  for (var i = 0; i < urs.length; i++) {
-    topur = topur[urs[i]];
-    if (!topur) {
-      console.warn(`Ur given by ${u} does not exist. Stopped at ${urs[i]}.`);
-      return;
-    }
-
-    if (topur.text) {
-      var script = Resources.replstrs(topur.text);
-      use(topur.text, e, script);
-    }
-
-    if (topur.data) {
-      var jss = Resources.replstrs(topur.data);
-      Object.merge(config, json.decode(jss));
+  if (!urs.every(u => ur[u])) {
+    console.error(`Attempted to make ur combo ${u} but not every ur in the chain exists.`);
+    return;
+  }
+  
+  for (var u of urs) {
+    var text = u.text;
+    var data = u.data;
+    if (typeof text === 'string')
+      use(text, ent);
+    else if (Array.isArray(text))
+      text.forEach(path => use(path,ent));
+    
+    if (typeof data === 'string')
+      Object.merge(ent, json.decode(Resources.replstrs(data)));
+    else if (Array.isArray(data)) {
+      data.forEach(function(path)) {
+        if (typeof path === 'string')
+          Object.merge(ent, json.decode(Resources.replstrs(data)));
+        else if (typeof path === 'object')
+          Object.merge(ent,path);
+      });
     }
   }
-
-  Object.merge(e, config);
-}
-
-function file2fqn(file) {
-  var fqn = file.strip_ext();
-  if (fqn.folder_same_name())
-    fqn = fqn.up_path();
-
-  fqn = fqn.replace('/', '.');
-  var topur;
-  if (topur = Object.access(ur, fqn)) return topur;
-
-  var fqnlast = fqn.split('.').last();
-
-  if (topur = Object.access(ur, fqn.tolast('.'))) {
-    topur[fqnlast] = {
-      name: fqn
-    };
-    ur._list.push(fqn);
-    return Object.access(ur, fqn);
-  }
-
-  fqn = fqnlast;
-
-  ur[fqn] = {
-    name: fqn
-  };
-  ur._list.push(fqn);
-  return ur[fqn];
 }
 
 var getur = function(text, data)
@@ -712,30 +687,52 @@ var getur = function(text, data)
   return ur[urstr];
 }
 
+var ur_from_file = function(file) {
+  var urname = file.name();
+  if (ur[urname]) {
+    console.warn(`Tried to make another ur with the name ${urname} from ${file}, but it already exists.`);
+    return undefined;
+  }
+  var newur = {
+    name: urname
+  };
+  ur[urname] = newur;
+  ur._list.push(urname);
+  return newur;
+}
+
 game.loadurs = function() {
   ur = {};
   ur._list = [];
   /* FIND ALL URS IN A PROJECT */
   for (var file of io.glob("**.ur")) {
-    var urname = file.name();
-    if (ur[urname]) {
-      console.warn(`Tried to make another ur with the name ${urname} from ${file}, but it already exists.`);
-      continue;
-    }
+    var newur = ur_from_file(file);
+    if (!newur) continue;
     var urjson = json.decode(io.slurp(file));
-    urjson.name = urname;
-    ur[urname] = urjson;
+    Object.assign(newur, urjson);
   }
+  
   for (var file of io.glob("**.jso")) {
     if (file[0] === '.' || file[0] === '_') continue;
-    var topur = file2fqn(file);
-    topur.text = file;
+    var newur = ur_from_file(file);
+    if (!newur) continue;
+    var datastr = file.set_ext(".json");
+    var data;
+    if (io.exists(datastr))
+      data = datastr;
+    Object.assign(newur, {
+      text: file,
+      data: datastr
+    };
   }
 
   for (var file of io.glob("**.json")) {
     if (file[0] === '.' || file[0] === '_') continue;
-    var topur = file2fqn(file);
-    topur.data = file;
+    var newur = ur_from_file(file);
+    if (!newur) continue;
+    Object.assign(newur, {
+      data: file
+    });
   }
 };
 

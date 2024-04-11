@@ -288,7 +288,7 @@ const char *esc_color(const char *c, struct rgba *color, struct rgba defc)
 
 struct boundingbox text_bb(const char *text, float scale, float lw, float tracking)
 {
-  if (!use_font) return;
+  if (!use_font) return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){0,0});
   struct rgba dummy;
   HMM_Vec2 cursor = {0,0};
   const char *line, *wordstart;
@@ -342,7 +342,7 @@ void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking) {
   if (!use_font) {
     YughError("Cannot render text before a font is set.");
-    return;
+    return pos.y;
   }
 
   int len = strlen(text);

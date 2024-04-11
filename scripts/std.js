@@ -200,7 +200,6 @@ Cmdline.register_order("edit", function() {
     use("editorconfig.js");
     use("config.js");
     render.set_font("fonts/c64.ttf", 8);
-    console.info(`set font with linegap ${render.font.linegap}`);
     editor.enter_editor();
   });
 }, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");

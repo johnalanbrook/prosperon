@@ -109,6 +109,26 @@ struct circle_vertex {
   float fill;
 };
 
+void debug_nextpass()
+{
+  point_sc = point_c;
+  point_c = 0;
+
+  circle_sc = circle_count;
+  circle_count = 0;
+
+  line_sv = line_v;
+  line_v = 0;
+  line_sc = line_c;
+  line_c = 0;
+
+  poly_sc = poly_c;
+  poly_c = 0;
+
+  poly_sv = poly_v;
+  poly_v = 0;
+}
+
 /* Writes debug data to buffers, and draws */
 void debug_flush(HMM_Mat4 *view)
 {
@@ -144,26 +164,6 @@ void debug_flush(HMM_Mat4 *view)
   }
   
   debug_nextpass();
-}
-
-void debug_nextpass()
-{
-  point_sc = point_c;
-  point_c = 0;
-
-  circle_sc = circle_count;
-  circle_count = 0;
-
-  line_sv = line_v;
-  line_v = 0;
-  line_sc = line_c;
-  line_c = 0;
-
-  poly_sc = poly_c;
-  poly_c = 0;
-
-  poly_sv = poly_v;
-  poly_v = 0;
 }
 
 void debug_newframe()
