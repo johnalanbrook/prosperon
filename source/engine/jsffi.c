@@ -517,13 +517,6 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
   return best;
 }
 
-void gameobject_add_shape_collider(gameobject *go, JSValue fn, struct phys2d_shape *shape) {
-  struct shape_cb shapecb;
-  shapecb.shape = shape;
-  shapecb.cbs.begin = fn;
-  arrpush(go->shape_cbs, shapecb);
-}
-
 circle2d *js2circle2d(JSValue v) { return js2ptr(v); }
 
 JSC_CCALL(circle2d_set_radius, js2circle2d(argv[0])->radius = js2number(argv[1]))
@@ -653,7 +646,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
 };
 
 JSC_CCALL(gui_flush, text_flush(&useproj));
-JSC_CCALL(gui_scissor, sg_apply_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
+JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
 JSC_CCALL(gui_text,
   const char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2vec2(argv[1]);
@@ -733,11 +726,8 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
 
 JSC_CCALL(game_engine_start, engine_start(argv[0],argv[1]))
 
-JSValue js_game_object_count(JSContext *js, JSValue this) { return number2js(go_count()); }
-
 static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, engine_start, 2),
-  MIST_FUNC_DEF(game, object_count, 0)
 };
 
 JSC_CCALL(input_show_keyboard, sapp_show_keyboard(js2boolean(argv[0])))
@@ -930,11 +920,6 @@ JSC_CCALL(physics_sgscale,
 
 JSC_CCALL(physics_set_cat_mask, set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])))
 
-JSC_CCALL(physics_pos_query,
-  gameobject *go = pos2gameobject(js2vec2(argv[0]), js2number(argv[1]));
-  return go ? JS_DupValue(js,go->ref) : JS_UNDEFINED;
-)
-
 JSC_CCALL(physics_closest_point,
   void *v1 = js2cpvec2arr(argv[1]);
   JSValue ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
@@ -1024,10 +1009,9 @@ JSC_CCALL(physics_point_query_nearest,
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, sgscale, 2),
   MIST_FUNC_DEF(physics, set_cat_mask, 2),
-  MIST_FUNC_DEF(physics, pos_query, 2),
   MIST_FUNC_DEF(physics, point_query, 3),
-  MIST_FUNC_DEF(physics, point_query_nearest, 3),
-  MIST_FUNC_DEF(physics, ray_query, 2),
+  MIST_FUNC_DEF(physics, point_query_nearest, 2),
+  MIST_FUNC_DEF(physics, ray_query, 4),
   MIST_FUNC_DEF(physics, box_query, 2),
   MIST_FUNC_DEF(physics, shape_query, 1),
   MIST_FUNC_DEF(physics, closest_point, 3),
@@ -1471,7 +1455,7 @@ JSC_CCALL(os_make_circle2d,
   JSValue circleval = JS_NewObject(js);
   js_setprop_str(circleval, "id", ptr2js(circle));
   js_setprop_str(circleval, "shape", ptr2js(&circle->shape));
-  circle->shape.ref = argv[1];
+  circle->shape.ref = JS_DupValue(js,argv[1]);
   return circleval;
 )
 
@@ -1482,7 +1466,7 @@ JSC_CCALL(os_make_poly2d,
   JSValue polyval = JS_NewObject(js);
   js_setprop_str(polyval, "id", ptr2js(poly));
   js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
-  poly->shape.ref = argv[1];
+  poly->shape.ref = JS_DupValue(js,argv[1]);
   return polyval;
 )
 
@@ -1496,7 +1480,7 @@ JSC_CCALL(os_make_edge2d,
   JSValue edgeval = JS_NewObject(js);
   js_setprop_str(edgeval, "id", ptr2js(edge));
   js_setprop_str(edgeval, "shape", ptr2js(&edge->shape));
-  edge->shape.ref = argv[1];
+  edge->shape.ref = JS_DupValue(js, argv[1]);
   return edgeval;
 )
 

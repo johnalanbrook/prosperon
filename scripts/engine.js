@@ -312,17 +312,20 @@ game.timescale = 1;
 
 var eachobj = function(obj,fn)
 {
-  fn(obj);
+  var val = fn(obj);
+  if (val) return val;
   for (var o in obj.objects) {
-    if (obj.objects[o] === obj) {
-      //console.error(`Object ${obj.toString()} is referenced by itself.`);
-      continue;
-    }
-    eachobj(obj.objects[o],fn);
+    if (obj.objects[o] === obj)
+      console.error(`Object ${obj.toString()} is referenced by itself.`);
+    val = eachobj(obj.objects[o],fn);
+    if (val) return val;
   }
 }
 
-game.all_objects = function(fn, startobj = world) { eachobj(startobj,fn); };
+game.all_objects = function(fn, startobj = world) { return eachobj(startobj,fn); };
+game.find_object = function(fn, startobj = world) {
+
+}
 
 game.tags = {};
 game.tag_add = function(tag, obj) {

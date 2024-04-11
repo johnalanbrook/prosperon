@@ -8,12 +8,12 @@
 
 #include "stb_ds.h"
 
-static gameobject **gameobjects;
-
-int go_count() { return arrlen(gameobjects); }
-
 gameobject *body2go(cpBody *body) { return cpBodyGetUserData(body); }
-gameobject *shape2go(cpShape *shape) { return ((struct phys2d_shape *)cpShapeGetUserData(shape))->go; }
+gameobject *shape2go(cpShape *shape) {
+  struct phys2d_shape *pshape = cpShapeGetUserData(shape);
+  if (!pshape) return NULL;
+  return pshape->go;
+}
 
 HMM_Vec2 go_pos(gameobject *go)
 {
@@ -43,20 +43,6 @@ HMM_Mat3 t_go2world(gameobject *go) { return transform2d2mat(go2t(go)); }
 HMM_Mat3 t_world2go(gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
 HMM_Mat4 t3d_go2world(gameobject *go) { return transform3d2mat(go2t3(go)); }
 HMM_Mat4 t3d_world2go(gameobject *go) { return HMM_InvGeneralM4(t3d_go2world(go)); }
-
-gameobject *pos2gameobject(HMM_Vec2 pos, float give) {
-  cpShape *hit = phys2d_query_pos(pos.cp);
-
-  if (hit)
-    return shape2go(hit);
-
-  for (int i = 0; i < arrlen(gameobjects); i++) {
-    float dist = HMM_DistV2(go_pos(gameobjects[i]),pos);
-    if (dist <= give) return gameobjects[i];
-  }
-
-  return NULL;
-}
 
 transform2d go2t(gameobject *go)
 {
@@ -151,14 +137,10 @@ gameobject *MakeGameobject() {
       .mass = 1.f,
       .next = -1,
       .drawlayer = 0,
-      .shape_cbs = NULL,
       .damping = INFINITY,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
   };
-
-  go.cbs.begin = JS_UNDEFINED;
-  go.cbs.separate = JS_UNDEFINED;
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
   cpBodySetVelocityUpdateFunc(go.body, velocityFn);
@@ -166,18 +148,22 @@ gameobject *MakeGameobject() {
   *ngo = go;
   cpBodySetUserData(go.body, ngo);
   phys2d_setup_handlers(ngo);
-  arrpush(gameobjects, ngo);
   return ngo;
 }
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
   struct phys2d_shape *s = cpShapeGetUserData(shape);
+  
   if (s) {
+    JS_FreeValue(js, s->ref);
+    s->ref = JS_UNDEFINED;
     if (s->free)
       s->free(s->data);
     else
       free(s->data);
   }
+
+  cpShapeSetFilter(shape, nofilter);
   
   cpSpaceRemoveShape(space, shape);
   cpShapeFree(shape);
@@ -189,22 +175,12 @@ void rm_body_constraints(cpBody *body, cpConstraint *constraint, void *data)
 }
 
 void gameobject_free(gameobject *go) {
-  arrfree(go->shape_cbs);
   go->ref = JS_UNDEFINED;  
   cpBodyEachShape(go->body, rm_body_shapes, NULL);
   cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
-
-  go->body = NULL;
-  
   free(go);
-  for (int i = arrlen(gameobjects)-1; i >= 0; i--) {
-    if (gameobjects[i] == go) {
-      arrdelswap(gameobjects,i);
-      return;
-    }
-  }
 }
 
 void gameobject_setangle(gameobject *go, float angle) {

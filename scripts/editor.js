@@ -458,7 +458,7 @@ var editor = {
       render.point(x[1].screenpos(), 1, Color.red);
     });
 
-    var mg = physics.pos_query(input.mouse.worldpos(),10);
+    var mg = physics.pos_query(input.mouse.worldpos());
     
     if (mg && mg._ed?.selectable) {
       var p = mg.path_from(thiso);
@@ -655,7 +655,7 @@ editor.inputs.drop = function(str) {
     return;
   }
   
-  var mg = physics.pos_query(input.mouse.worldpos(),10);
+  var mg = physics.pos_query(input.mouse.worldpos());
   if (!mg) return;
   var img = mg.get_comp_by_name('sprite');
   if (!img) return;
@@ -785,16 +785,14 @@ editor.inputs['C-f'] = function() {
 };
 editor.inputs['C-f'].doc = "Tunnel into the selected level object to edit it.";
 
-editor.inputs['C-F'] = function() {
-  console.info("PRESSED C-F");
-  if (editor.edit_level.master === world) return;
+editor.inputs['M-f'] = function() {
+    if (editor.edit_level.master === world) return;
 
   editor.edit_level = editor.edit_level.master;
   editor.unselect();
   editor.reset_undos();
 };
-editor.inputs['C-F'].doc = "Tunnel out of the level you are editing, saving it in the process.";
-
+editor.inputs['M-f'].doc = "Tunnel out of the level you are editing, saving it in the process.";
 editor.inputs['C-r'] = function() { editor.selectlist.forEach(function(x) { x.rotate(-x.angle*2); }); }
 editor.inputs['C-r'].doc = "Negate the selected's angle.";
 
@@ -1532,7 +1530,7 @@ var replpanel = Object.copy(inputpanel, {
     this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
     if (typeof ret === 'object') ret = json.encode(ret,null,1);
-    say(ret);
+    if (ret) say(ret);
   },
 
   resetscroll() {

@@ -203,7 +203,7 @@ SG_TRACE_SET(attachments)
 void trace_append_buffer(sg_buffer id, sg_range *data, void *user)
 {
   sg_buffer_desc desc = sg_query_buffer_desc(id);
-  YughSpam("Appending buffer %d [%s]", id, desc.label);
+//  YughSpam("Appending buffer %d [%s]", id, desc.label);
 }
 
 static sg_trace_hooks hooks = {

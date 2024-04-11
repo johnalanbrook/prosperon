@@ -41,8 +41,6 @@ struct gameobject {
   unsigned int layer;
   cpShapeFilter filter;
   unsigned int warp_filter;
-  struct phys_cbs cbs;
-  struct shape_cb *shape_cbs;
   JSValue ref;
   HMM_Mat4 world;
   float drawlayer; 
@@ -66,7 +64,6 @@ struct gameobject {
 typedef struct gameobject gameobject;
 
 gameobject *MakeGameobject();
-int go_count();
 void gameobject_apply(gameobject *go);
 void gameobject_free(gameobject *go);
 
@@ -92,7 +89,6 @@ gameobject *shape2go(cpShape *shape);
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 
 /* Tries a few methods to select a gameobject; if none is selected returns -1 */
-gameobject *pos2gameobject(HMM_Vec2 pos, float give);
 
 void gameobject_draw_debug(gameobject *go);
 #endif

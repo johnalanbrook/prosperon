@@ -2,7 +2,7 @@
   gui functions take screen space coordinates
 */
 
-gui.scissor_win = function() { gui.scissor(0,0,window.width,window.height); }
+gui.scissor_win = function() { gui.scissor(0,0,window.size.x,window.y); }
 
 gui.input_lmouse_pressed = function() {
   if (gui.selected)
@@ -174,7 +174,6 @@ Mum.window = Mum.extend({
     render.window(p,this.wh, this.color);
     this.bb = bbox.blwh(p, this.wh);
     gui.flush();
-    gui.scissor(p.x,p.y,this.wh.x,this.wh.y);
     this.max_width = this.width;
     if (this.selectable) gui.controls.check_bb(this);
     var pos = [this.bb.l, this.bb.t].add(this.padding);

@@ -238,8 +238,10 @@ var gameobject = {
       Object.merge(ent, json.decode(Resources.replstrs(config)));
     else if (Array.isArray(config))
       config.forEach(function(path) {
-        if (typeof path === 'string')
+        if (typeof path === 'string') {
+          console.info(`ingesting ${path} ...`);
           Object.merge(ent, json.decode(Resources.replstrs(path)));
+        }
         else if (typeof path === 'object')
           Object.merge(ent,path);
       });
@@ -278,6 +280,7 @@ var gameobject = {
     if (!Object.empty(ent.objects)) {
       var o = ent.objects;
       delete ent.objects;
+      ent.objects = {};
       for (var i in o) {
         console.info(`creating ${i} on ${ent.toString()}`);
         var newur = o[i].ur;
@@ -302,6 +305,7 @@ var gameobject = {
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
     assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
+    console.info(`parenting ${this.toString()} to ${parent.toString()}`);
     if (this.master === parent) {
       console.warn("not reparenting ...");
       console.warn(`${this.master} is the same as ${parent}`);
@@ -363,18 +367,7 @@ var gameobject = {
   },
 
   /* Make a unique object the same as its prototype */
-  revert() {
-    var jobj = this.json_obj();
-    var lobj = this.master.__proto__.objects[this.toString()];
-    delete jobj.objects;
-    Object.keys(jobj).forEach(function(x) {
-      if (lobj && x in lobj)
-        this[x] = lobj[x];
-      else
-        this[x] = this.__proto__[x];
-    }, this);
-    this.sync();
-  },
+  revert() { Object.merge(this, this.ur.fresh); },
 
   toString() { return "new_object"; },
 
@@ -487,9 +480,6 @@ var gameobject = {
       this.master.remove_obj(this);
       this.master = undefined;
     }
-
-    if (this.__proto__.instances)
-      delete this.__proto__.instances[this.toString()];
 
     for (var key in this.components) {
       this.components[key].kill?.();
@@ -664,7 +654,7 @@ function apply_ur(u, ent) {
     if (typeof data === 'string')
       Object.merge(ent, json.decode(Resources.replstrs(data)));
     else if (Array.isArray(data)) {
-      data.forEach(function(path)) {
+      data.forEach(function(path) {
         if (typeof path === 'string')
           Object.merge(ent, json.decode(Resources.replstrs(data)));
         else if (typeof path === 'object')
@@ -716,14 +706,13 @@ game.loadurs = function() {
     if (file[0] === '.' || file[0] === '_') continue;
     var newur = ur_from_file(file);
     if (!newur) continue;
-    var datastr = file.set_ext(".json");
-    var data;
-    if (io.exists(datastr))
-      data = datastr;
-    Object.assign(newur, {
-      text: file,
-      data: datastr
-    };
+    newur.text = file;    
+
+    var data = file.set_ext(".json");
+    if (io.exists(data)) {
+      console.info(`Found matching json ${data} for ${file}`);
+      newur.data = data;
+    }
   }
 
   for (var file of io.glob("**.json")) {

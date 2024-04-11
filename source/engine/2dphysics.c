@@ -67,6 +67,12 @@ void bbhit(cpShape *shape, int *data)
   qhit++;
 }
 
+cpShapeFilter nofilter = {
+  .group = CP_NO_GROUP,
+  .mask = ~CP_ALL_CATEGORIES,
+  .categories = ~CP_ALL_CATEGORIES
+};
+
 cpShapeFilter allfilter = {
   .group = CP_NO_GROUP,
   .mask = CP_ALL_CATEGORIES,
@@ -508,10 +514,13 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
 
 /************ COLLIDER ****************/
 void shape_enabled(struct phys2d_shape *shape, int enabled) {
-  if (enabled)
-    cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_ALL);
-  else
-    cpShapeSetFilter(shape->shape, CP_SHAPE_FILTER_NONE);
+  cpShapeFilter set = enabled ? CP_SHAPE_FILTER_ALL : CP_SHAPE_FILTER_NONE;
+  if (!shape->shape) {
+    struct phys2d_edge *edge = shape->data;
+    for (int i = 0; i < arrlen(edge->shapes[i]); i++)
+      cpShapeSetFilter(edge->shapes[i], set);
+  } else
+    cpShapeSetFilter(shape->shape, set);
 }
 
 int shape_is_enabled(struct phys2d_shape *shape) {
@@ -578,6 +587,7 @@ void phys_run_post(cpSpace *space, JSValue *fn, JSValue *hit)
 
 void register_hit(cpArbiter *arb, gameobject *go, const char *name)
 {
+  if (JS_IsUndefined(go->ref)) return;
   JSValue cb = JS_GetPropertyStr(js, go->ref, name);
   if (!JS_IsUndefined(cb)) {
     JSValue jarb = arb2js(arb);
@@ -588,7 +598,9 @@ void register_hit(cpArbiter *arb, gameobject *go, const char *name)
   }
   
   cpShape *s1, *s2;
-  cpArbiterGetShapes(arb, &s1, &s2);
+  cpArbiterGetShapes(arb, &s1, &s2);  
+  if (JS_IsUndefined(shape2go(s1)->ref)) return;
+  if (JS_IsUndefined(shape2go(s2)->ref)) return;
   struct phys2d_shape *pshape1 = cpShapeGetUserData(s1);
   
   if (JS_IsUndefined(pshape1->ref)) return;
@@ -603,12 +615,11 @@ void register_hit(cpArbiter *arb, gameobject *go, const char *name)
 }
 
 void script_phys_cb_begin(cpArbiter *arb, cpSpace *space, gameobject *go) { register_hit(arb, go, "collide"); }
-
 void script_phys_cb_separate(cpArbiter *arb, cpSpace *space, gameobject *go) { register_hit(arb, go, "separate"); }
 
 void phys2d_setup_handlers(gameobject *go) {
   cpCollisionHandler *handler = cpSpaceAddWildcardHandler(space, (cpCollisionType)go);
   handler->userData = go;
-  handler->postSolveFunc = script_phys_cb_begin;
+  handler->beginFunc = script_phys_cb_begin;
   handler->separateFunc = script_phys_cb_separate;
 }

@@ -18,6 +18,7 @@ extern struct rgba static_color;
 extern struct rgba sleep_color;
 
 extern cpShapeFilter allfilter;
+extern cpShapeFilter nofilter;
 
 typedef struct constraint {
   cpConstraint *c;

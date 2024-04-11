@@ -9,8 +9,18 @@ var HIT = {
 };
 */
 
-var pq = physics.pos_query;
-physics.pos_query = function(pos,give = 25) { return pq(pos,give); }
+physics.pos_query = function(pos, start = world, give = 10) {
+  var ret;
+  ret = physics.point_query_nearest(pos, 0);
+
+  if (ret)
+    return ret.entity;
+
+  return game.all_objects(function(o) {
+    var dist = Vector.length(o.pos.sub(pos));
+    if (dist <= give) return o;
+  });
+}
 
 physics.box_point_query = function(box,points) {
   if (!box || !points) return [];
