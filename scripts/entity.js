@@ -220,14 +220,42 @@ var gameobject = {
     ent.components = {};
     ent.objects = {};
     ent.timers = [];
+        
+    Object.mixin(ent, {
+      set category(n) {
+        if (n === 0) {
+          this.categories = n;
+          return;
+        }
+        var cat = (1 << (n-1));
+        this.categories = cat;
+      },
+      get category() {
+        if (this.categories === 0) return 0;
+        var pos = 0;
+        var num = this.categories;
+        while (num > 0) {
+            if (num & 1) {
+                break;
+            }
+            pos++;
+            num >>>= 1;
+        }
+        
+        return pos+1;
+      }
+    });
     
-    if (typeof text === 'object' && text) // assume it's an ur
+    if (typeof text === 'object' && text) {// assume it's an ur
       ent.ur = text;
-    else 
+      text = ent.ur.text;
+      config = [ent.ur.data, config].filter(x => x).flat();
+    }
+    else {
       ent.ur = getur(text, config);
-
-    text = ent.ur.text;
-    config = [ent.ur.data, config];
+      text = ent.ur.text;
+      config = [ent.ur.data, config];
+    }
 
     if (typeof text === 'string')
       use(text, ent);
@@ -264,7 +292,7 @@ var gameobject = {
     if (sim.playing())
       if (typeof ent.start === 'function') ent.start();
 
-    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');
+    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master', 'categories');
     
     ent._ed = {
       selectable: true,
@@ -406,7 +434,7 @@ var gameobject = {
   },
 
   /* The unique components of this object. Its diff. */
-  json_obj() {
+  json_obj(depth=0) {
     var fresh = this.ur.fresh;
     var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
     var d = ediff(thiso, fresh);
@@ -698,7 +726,8 @@ game.loadurs = function() {
   for (var file of io.glob("**.ur")) {
     var newur = ur_from_file(file);
     if (!newur) continue;
-    var urjson = json.decode(io.slurp(file));
+    var uur = Resources.replstrs(file);
+    var urjson = json.decode(uur);
     Object.assign(newur, urjson);
   }
   
@@ -724,5 +753,32 @@ game.loadurs = function() {
     });
   }
 };
+
+game.ur = {};
+game.ur.load = function(str) {}
+game.ur.add_data = function(str, data)
+{
+  var nur = ur[str];
+  if (!nur) {
+    console.warn(`Cannot add data to the ur ${str}.`);
+    return;
+  }
+  if (!Array.isArray(ur.data)) {
+    var arr = [];
+    if (ur.data) arr.push(ur.data);
+    ur.data = arr;
+  }
+  
+  ur.data.push(data);
+}
+
+game.ur.save = function(str)
+{
+  var nur = ur[str];
+  if (!nur) {
+    console.warn(`Cannot save ur ${str}.`);
+    return;
+  }
+}
 
 return { go_init }

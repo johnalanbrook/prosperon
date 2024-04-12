@@ -336,18 +336,11 @@ JSValue vec32js(HMM_Vec3 v)
 }
 
 cpBitmask js2bitmask(JSValue v) {
-  cpBitmask mask = 0;
-  int len = js_arrlen(v);
-
-  for (int i = 0; i < len; i++) {
-    int val = js2boolean(js_getpropidx( v, i));
-    if (!val) continue;
-
-    mask |= 1 << i;
-  }
-
-  return mask;
+  cpBitmask a;
+  JS_ToUint32(js, &a, v);
+  return a;
 }
+JSValue bitmask2js(cpBitmask mask) { return JS_NewUint32(js, mask); }
 
 HMM_Vec2 *js2cpvec2arr(JSValue v) {
   HMM_Vec2 *arr = NULL;
@@ -367,14 +360,6 @@ HMM_Vec2 *jsfloat2vec(JSValue v)
   HMM_Vec2 *arr = NULL;
   int n = s/2;
   n /= sizeof(float);
-  return arr;
-}
-
-JSValue bitmask2js(cpBitmask mask) {
-  JSValue arr = JS_NewArray(js);
-  for (int i = 0; i < 11; i++)
-    js_setprop_num(arr,i,boolean2js(mask & 1 << i));
-
   return arr;
 }
 
@@ -918,8 +903,6 @@ JSC_CCALL(physics_sgscale,
   cpSpaceReindexShapesForBody(space, js2gameobject(argv[0])->body);
 )
 
-JSC_CCALL(physics_set_cat_mask, set_cat_mask(js2number(argv[0]), js2bitmask(argv[1])))
-
 JSC_CCALL(physics_closest_point,
   void *v1 = js2cpvec2arr(argv[1]);
   JSValue ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
@@ -945,7 +928,7 @@ JSC_CCALL(physics_box_query,
   bbox.r = pos.x+wh.x/2;
   bbox.t = pos.y+wh.y/2;
   bbox.b = pos.y-wh.y/2;
-  cpSpaceBBQuery(space, bbox, allfilter, bb_query_fn, &argv[3]);
+  cpSpaceBBQuery(space, bbox, CP_SHAPE_FILTER_ALL, bb_query_fn, &argv[3]);
   return ret;
 )
 
@@ -972,7 +955,7 @@ static void ray_query_fn(cpShape *shape, float t, cpVect n, float a, JSValue *cb
 }
 
 JSC_CCALL(physics_ray_query,
-  cpSpaceSegmentQuery(space, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp, js2number(argv[2]), allfilter, ray_query_fn, &argv[3]);
+  cpSpaceSegmentQuery(space, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp, js2number(argv[2]), CP_SHAPE_FILTER_ALL, ray_query_fn, &argv[3]);
 );
 
 static void point_query_fn(cpShape *shape, float dist, cpVect point, JSValue *cb)
@@ -987,7 +970,7 @@ static void point_query_fn(cpShape *shape, float dist, cpVect point, JSValue *cb
 }
 
 JSC_CCALL(physics_point_query,
-  cpSpacePointQuery(space, js2vec2(argv[0]).cp, js2number(argv[1]), allfilter, point_query_fn, &argv[2]);
+  cpSpacePointQuery(space, js2vec2(argv[0]).cp, js2number(argv[1]), CP_SHAPE_FILTER_ALL, point_query_fn, &argv[2]);
 );
 
 JSValue pointinfo2js(cpPointQueryInfo info)
@@ -1001,14 +984,13 @@ JSValue pointinfo2js(cpPointQueryInfo info)
 
 JSC_CCALL(physics_point_query_nearest,
   cpPointQueryInfo info;
-  cpShape *sh = cpSpacePointQueryNearest(space, js2vec2(argv[0]).cp, js2number(argv[1]), allfilter, &info);
+  cpShape *sh = cpSpacePointQueryNearest(space, js2vec2(argv[0]).cp, js2number(argv[1]), CP_SHAPE_FILTER_ALL, &info);
   if (!sh) return JS_UNDEFINED;
   return pointinfo2js(info);
 )
 
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, sgscale, 2),
-  MIST_FUNC_DEF(physics, set_cat_mask, 2),
   MIST_FUNC_DEF(physics, point_query, 3),
   MIST_FUNC_DEF(physics, point_query_nearest, 2),
   MIST_FUNC_DEF(physics, ray_query, 4),
@@ -1153,8 +1135,10 @@ JSC_GETSET(gameobject, damping, number)
 JSC_GETSET(gameobject, timescale, number)
 JSC_GETSET(gameobject, maxvelocity, number)
 JSC_GETSET(gameobject, maxangularvelocity, number)
-JSC_GETSET(gameobject, warp_filter, bitmask)
+JSC_GETSET(gameobject, warp_mask, bitmask)
 JSC_GETSET(gameobject, drawlayer, number)
+JSC_GETSET(gameobject, categories, bitmask)
+JSC_GETSET(gameobject, mask, bitmask)
 JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
 JSC_CCALL(gameobject_world2this, return vec22js(world2go(js2gameobject(this), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js2vec2(argv[0]))))
@@ -1170,8 +1154,10 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject,maxvelocity),
   CGETSET_ADD(gameobject,maxangularvelocity),
   CGETSET_ADD(gameobject,layer),
-  CGETSET_ADD(gameobject,warp_filter),
+  CGETSET_ADD(gameobject,warp_mask),
   CGETSET_ADD(gameobject,drawlayer),
+  CGETSET_ADD(gameobject, categories),
+  CGETSET_ADD(gameobject, mask),
   CGETSET_ADD_HID(gameobject, rpos),
   CGETSET_ADD_HID(gameobject, rangle),
   CGETSET_ADD_HID(gameobject, rscale),  

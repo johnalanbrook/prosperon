@@ -39,8 +39,9 @@ struct gameobject {
   float maxvelocity;
   float maxangularvelocity;
   unsigned int layer;
-  cpShapeFilter filter;
-  unsigned int warp_filter;
+  cpBitmask categories;
+  cpBitmask mask;
+  unsigned int warp_mask;
   JSValue ref;
   HMM_Mat4 world;
   float drawlayer; 

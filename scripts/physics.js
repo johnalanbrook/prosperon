@@ -47,33 +47,11 @@ physics.doc.pos_query = "Returns any object colliding with the given point.";
 physics.doc.box_query = "Calls a given function on every shape object in the given bbox.";
 physics.doc.box_point_query = "Returns the subset of points from a given list that are inside a given box.";
 
-physics.collision = {
-  types: {},
-  num: 32,
-  set_collide(a, b, x) {
-    this.types[a][b] = x;
-    this.types[b][a] = x;
-    this.sync();
-  },
-  sync() {
-    for (var i = 0; i < this.num; i++)
-      physics.set_cat_mask(i,this.types[i]);
-  },
-};
-
-for (var i = 0; i < physics.collision.num; i++) {
-  physics.collision.types[i] = [];
-  for (var j = 0; j < physics.collision.num; j++)
-    physics.collision.types[i][j] = false;
-};
-
-physics.collision.sync();
-
 physics.gravity = physics.make_gravity();
-physics.gravity.mask = [true];
+physics.gravity.mask = ~1;
 physics.gravity.strength = 500;
 physics.damp = physics.make_damp();
-physics.damp.mask = [true];
+physics.damp.mask = ~1;
 
 return {
   physics

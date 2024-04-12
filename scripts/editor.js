@@ -1530,7 +1530,7 @@ var replpanel = Object.copy(inputpanel, {
     this.caret = 0;
     var ret = function() {return eval(ecode);}.call(repl_obj);
     if (typeof ret === 'object') ret = json.encode(ret,null,1);
-    if (ret) say(ret);
+    if (typeof ret !== 'undefined') say(ret);
   },
 
   resetscroll() {

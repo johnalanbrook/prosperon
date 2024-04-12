@@ -35,10 +35,6 @@ static int cb_idx = 0;
 static const unsigned char col_alpha = 40;
 static const float sensor_seg = 10;
 
-unsigned int category_masks[32];
-
-void set_cat_mask(int cat, unsigned int mask) { category_masks[cat] = mask; }
-
 cpTransform m3_to_cpt(HMM_Mat3 m)
 {
   cpTransform t;
@@ -52,7 +48,7 @@ cpTransform m3_to_cpt(HMM_Mat3 m)
 }
 
 cpShape *phys2d_query_pos(cpVect pos) {
-  return cpSpacePointQueryNearest(space, pos, 0.f, allfilter, NULL);
+  return cpSpacePointQueryNearest(space, pos, 0.f, CP_SHAPE_FILTER_ALL, NULL);
 }
 
 
@@ -67,23 +63,11 @@ void bbhit(cpShape *shape, int *data)
   qhit++;
 }
 
-cpShapeFilter nofilter = {
-  .group = CP_NO_GROUP,
-  .mask = ~CP_ALL_CATEGORIES,
-  .categories = ~CP_ALL_CATEGORIES
-};
-
-cpShapeFilter allfilter = {
-  .group = CP_NO_GROUP,
-  .mask = CP_ALL_CATEGORIES,
-  .categories = CP_ALL_CATEGORIES,
-};
-
 int query_point(HMM_Vec2 pos)
 {
   qhit = 0;
 //  cpSpacePointQuery(space, pos.cp, 0, filter, qpoint, &qhit);
-  cpSpaceBBQuery(space, cpBBNewForCircle(pos.cp, 2), allfilter, bbhit, &qhit);
+  cpSpaceBBQuery(space, cpBBNewForCircle(pos.cp, 2), CP_SHAPE_FILTER_ALL, bbhit, &qhit);
   return qhit;
 }
 
@@ -599,8 +583,13 @@ void register_hit(cpArbiter *arb, gameobject *go, const char *name)
   
   cpShape *s1, *s2;
   cpArbiterGetShapes(arb, &s1, &s2);  
-  if (JS_IsUndefined(shape2go(s1)->ref)) return;
-  if (JS_IsUndefined(shape2go(s2)->ref)) return;
+  gameobject *g1, *g2;
+  g1 = shape2go(s1);
+  g2 = shape2go(g2);
+  if (!g1) return;
+  if (!g2) return;
+  if (JS_IsUndefined(g1->ref)) return;
+  if (JS_IsUndefined(g2->ref)) return;
   struct phys2d_shape *pshape1 = cpShapeGetUserData(s1);
   
   if (JS_IsUndefined(pshape1->ref)) return;
@@ -614,7 +603,7 @@ void register_hit(cpArbiter *arb, gameobject *go, const char *name)
   }
 }
 
-void script_phys_cb_begin(cpArbiter *arb, cpSpace *space, gameobject *go) { register_hit(arb, go, "collide"); }
+int script_phys_cb_begin(cpArbiter *arb, cpSpace *space, gameobject *go) { register_hit(arb, go, "collide"); return 1; }
 void script_phys_cb_separate(cpArbiter *arb, cpSpace *space, gameobject *go) { register_hit(arb, go, "separate"); }
 
 void phys2d_setup_handlers(gameobject *go) {

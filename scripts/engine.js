@@ -524,10 +524,10 @@ var Event = {
     Object.keys(this.events).forEach(name => Event.unobserve(name,obj));
   },
 
-  notify(name) {
+  notify(name, ...args) {
     if (!this.events[name]) return;
     this.events[name].forEach(function(x) {
-      x[1].call(x[0]);
+      x[1].call(x[0], ...args);
     });
   },
 };

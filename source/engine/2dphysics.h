@@ -17,9 +17,6 @@ extern struct rgba kinematic_color;
 extern struct rgba static_color;
 extern struct rgba sleep_color;
 
-extern cpShapeFilter allfilter;
-extern cpShapeFilter nofilter;
-
 typedef struct constraint {
   cpConstraint *c;
   JSValue break_cb; /* function called when it is forcibly broken */
@@ -129,7 +126,5 @@ void phys2d_setup_handlers(gameobject *go);
 int query_point(HMM_Vec2 pos);
 
 void phys2d_reindex_body(cpBody *body);
-extern unsigned int category_masks[32];
-void set_cat_mask(int cat, unsigned int mask);
 
 #endif

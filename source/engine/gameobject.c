@@ -55,8 +55,6 @@ transform2d go2t(gameobject *go)
   return t;
 }
 
-unsigned int editor_cat = 1<<31;
-
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
   cpShapeSetFriction(shape, go->friction);
   cpShapeSetElasticity(shape, go->elasticity);
@@ -64,8 +62,8 @@ void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
 
   cpShapeFilter filter;
   filter.group = (cpCollisionType)go;
-  filter.categories = 1<<go->layer | editor_cat;
-  filter.mask = category_masks[go->layer] | editor_cat;
+  filter.categories = go->categories;
+  filter.mask = go->mask;
 //  filter.mask = CP_ALL_CATEGORIES;
   cpShapeSetFilter(shape, filter);
 
@@ -106,7 +104,7 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
 {
   gameobject *go = body2go(body);
   cpVect pos = cpBodyGetPosition(body);  
-  HMM_Vec2 g = warp_force((HMM_Vec3){pos.x, pos.y, 0}, go->warp_filter).xy;
+  HMM_Vec2 g = warp_force((HMM_Vec3){pos.x, pos.y, 0}, go->warp_mask).xy;
   if (!go) {
     cpBodyUpdateVelocity(body,g.cp,damping,dt);
     return;
@@ -140,6 +138,9 @@ gameobject *MakeGameobject() {
       .damping = INFINITY,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
+      .mask = ~0,
+      .categories = 1,
+      .warp_mask = ~0
   };
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
@@ -163,7 +164,7 @@ void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
       free(s->data);
   }
 
-  cpShapeSetFilter(shape, nofilter);
+  cpShapeSetFilter(shape, CP_SHAPE_FILTER_NONE);
   
   cpSpaceRemoveShape(space, shape);
   cpShapeFree(shape);
