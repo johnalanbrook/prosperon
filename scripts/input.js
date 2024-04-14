@@ -36,6 +36,8 @@ pressrep
 down
 */
 
+function keycode(name) { return charCodeAt(name); }
+
 function keyname_extd(key)
 {
   if (key > 289 && key < 302) {
@@ -67,7 +69,7 @@ function modstr()
 
 prosperon.keydown = function(key, repeat)
 {
-  prosperon.keys[key] = key;
+  prosperon.keys[key] = true;
   
   if (key == 341 || key == 345)
     mod.ctrl = 1;
@@ -179,7 +181,7 @@ input.mouse.normal.doc = "Set the mouse to show again after hiding.";
 input.keyboard = {};
 input.keyboard.down = function(code) {
   if (typeof code === 'number') return prosperon.keys[code];
-  if (typeof code === 'string') return prosperon.keys[keyname_extd(code)];
+  if (typeof code === 'string') return (prosperon.keys[code.uc().charCodeAt()] || prosperon.keys[code.lc().charCodeAt()]);
   return undefined;
 }
 

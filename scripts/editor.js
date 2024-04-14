@@ -1919,7 +1919,7 @@ function tab_complete(val, list) {
         ret = list[0].slice(0, i);
       else {
         i++;
-	list.dofilter(function(x) { return x.length-1 > i; });
+	      list.dofilter(function(x) { return x.length-1 > i; });
       }
     }
 

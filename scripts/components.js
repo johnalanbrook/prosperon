@@ -234,7 +234,7 @@ Object.seal(sprite);
 var animcache = {};
 var SpriteAnim = {};
 SpriteAnim.make = function(path) {
-  if (animcache[path]) return animcache[path];
+  if (path in animcache) return animcache[path];
   var anim;
   if (io.exists(path.set_ext(".ase")))
     anim = SpriteAnim.aseprite(path.set_ext(".ase"));
@@ -245,7 +245,7 @@ SpriteAnim.make = function(path) {
   else if (path.ext() === 'gif')
     anim = SpriteAnim.gif(path);
   else
-    return undefined;
+    anim = undefined;
     
   animcache[path] = anim; 
   return animcache[path];

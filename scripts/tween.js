@@ -120,7 +120,7 @@ var tween = function(obj, val, to, time)
 
 var Tween = {
   default: {
-    loop: "restart",
+    loop: "hold",
     /*
       loop types
       none: when done, return to first value

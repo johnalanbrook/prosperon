@@ -25,6 +25,8 @@ audio.dsp = dspsound;
 audio.cry = function(file)
 {
   var player = audio.play(file);
+  if (!player) return;
+  
   player.guid = prosperon.guid();
   cries[player.guid] = player;
   player.ended = function() { delete cries[player.guid]; player = undefined; }
@@ -46,15 +48,19 @@ var song;
 audio.music = function(file, fade = 0) {
   if (!fade) {
     song = audio.play(file);
+    song.loop = true;
     return;
   }
   
   var temp = audio.play(file);
+  if (!temp) return;
+  
   temp.volume = 0;
   var temp2 = song;
   tween(temp, 'volume', 1, fade);
   tween(temp2, 'volume', 0, fade);
   song = temp;
+  song.loop = true;
 }
 
 audio.dsp.mix = function(to) {

@@ -1,3 +1,5 @@
+globalThis.entityreport = {};
+
 function obj_unique_name(name, obj) {
   name = name.replaceAll('.', '_');
   if (!(name in obj)) return name;
@@ -129,6 +131,7 @@ var gameobject = {
     
     stop.remain = seconds;
     stop.seconds = seconds;
+    stop.pct = function() { return 1 - (stop.remain/stop.seconds); };
     
     function update(dt) {
       stop.remain -= dt;
@@ -140,9 +143,7 @@ var gameobject = {
     return stop;
   },
 
-  cry(file) {
-    return audio.cry(file);
-  },
+  cry(file) { return audio.cry(file); },
   
   set pos(x) { this.set_pos(x); },
   get pos() { return this.rpos; },
@@ -215,6 +216,7 @@ var gameobject = {
       nothing
   */
   spawn(text, config, callback) {
+    var st = profile.now();
     var ent = os.make_gameobject();
     ent.guid = prosperon.guid();
     ent.components = {};
@@ -327,13 +329,14 @@ var gameobject = {
     for (var i in ent.objects)
       ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
 
+    profile.addreport(entityreport, ent.ur.name, st);
     return ent;
   },
 
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
     assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
-    console.info(`parenting ${this.toString()} to ${parent.toString()}`);
+    console.spam(`parenting ${this.toString()} to ${parent.toString()}`);
     if (this.master === parent) {
       console.warn("not reparenting ...");
       console.warn(`${this.master} is the same as ${parent}`);
@@ -731,7 +734,7 @@ game.loadurs = function() {
     Object.assign(newur, urjson);
   }
   
-  for (var file of io.glob("**.jso")) {
+  for (var file of io.glob("**.jso").filter(f => !ur[f.name()])) {
     if (file[0] === '.' || file[0] === '_') continue;
     var newur = ur_from_file(file);
     if (!newur) continue;
@@ -744,7 +747,7 @@ game.loadurs = function() {
     }
   }
 
-  for (var file of io.glob("**.json")) {
+  for (var file of io.glob("**.json").filter(f => !ur[f.name()])) {
     if (file[0] === '.' || file[0] === '_') continue;
     var newur = ur_from_file(file);
     if (!newur) continue;

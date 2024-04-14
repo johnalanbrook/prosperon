@@ -119,6 +119,27 @@ qq = 'ms';
   return `${t.toPrecision(4)} ${qq}`;
 }
 
+profile.report = function(start, msg = "[undefined report]")
+{
+  console.info(`${msg} in ${profile.best_t(profile.now()-start)}`);
+}
+
+profile.addreport = function(cache, line, start)
+{
+  cache[line] ??= [];
+  cache[line].push(profile.now()-start);
+}
+
+profile.printreport = function(cache, name)
+{
+  var report = name + "\n";
+  for (var i in cache) {
+    report += `${i}    ${profile.best_t(profcache[i].reduce((a,b) => a+b)/profcache[i].length)}\n`;
+  }
+  
+  return report;
+}
+
 console.transcript = "";
 console.say = function(msg) {
   msg += "\n";
@@ -181,14 +202,19 @@ console.doc = {
 
 globalThis.global = globalThis;
 
+var profcache = {};
+
 function use(file, env = {}, script)
 {
   file = Resources.find_script(file);
   var st = profile.now();
   
+  profcache[file] ??= [];
+  
   if (use.cache[file]) {
     var ret = use.cache[file].call(env);
-    console.info(`CACHE eval ${file} in ${profile.best_t(profile.now()-st)}`);
+    profile.report(st, `CACHE eval ${file}`);
+    profile.addreport(profcache, file, st);
     return;
   }
   console.info(`slurping ${file}`);
@@ -197,7 +223,8 @@ function use(file, env = {}, script)
   var fn = os.eval(file,script);
   use.cache[file] = fn;
   var ret = fn.call(env);
-  console.info(`eval ${file} in ${profile.best_t(profile.now()-st)}`);  
+  profile.report(st, `eval ${file}`);
+  profile.addreport(profcache, file, st);
   return ret;
 }
 
@@ -429,6 +456,10 @@ prosperon.touchrelease = function(touches){};
 prosperon.touchmove = function(touches){};
 prosperon.clipboardpaste = function(str){};
 prosperon.quit = function(){
+  console.info(profile.printreport(profcache, "USE REPORT"));
+  console.info(profile.printreport(entityreport, "ENTITY REPORT"));
+  
+  console.info("QUITTING");
   for (var i in debug.log.time)
     console.warn(debug.log.time[i].map(x=>profile.ms(x)));
 };
@@ -567,6 +598,8 @@ function world_start() {
   world.phys = 2;
   world.zoom = 1;
   world._ed = { selectable: false };
+  world.ur = {};
+  world.ur.fresh = {};
   game.cam = world;
 }
 

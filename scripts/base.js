@@ -898,14 +898,12 @@ Object.defineProperty(Array.prototype, 'copy', {
 
 Object.defineProperty(Array.prototype, 'dofilter', {
   value: function(fn) {
-    var j = 0;
-    this.forEach(function(val,i) {
-      if (fn(val)) {
-        if (i !== j) this[j] = val;
-	j++;
+    for (let i = 0; i < this.length; i++) {
+      if (!fn.call(this, this[i], i, this)) {
+        this.splice(i, 1);
+        i--;
       }
-    }, this);
-    this.length = j;
+    }
     return this;
   }
 });
@@ -1095,13 +1093,19 @@ Object.defineProperty(Array.prototype, 'scale', {
     return this.map(function(x) { return x*s; });
 }});
 
+Object.defineProperty(Array.prototype, 'sorted', {
+  value: function() {
+    return this.toSorted();
+  }
+});
+
 Object.defineProperty(Array.prototype, 'equal', {
 value: function(b) {
   if (this.length !== b.length) return false;
   if (b == null) return false;
   if (this === b) return true;
 
-  return JSON.stringify(this.sort()) === JSON.stringify(b.sort());
+  return JSON.stringify(this.sorted()) === JSON.stringify(b.sorted());
   
   for (var i = 0; i < this.length; i++) {
     if (!this[i] === b[i])

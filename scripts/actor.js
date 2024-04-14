@@ -71,6 +71,7 @@ actor.delay = function(fn, seconds) {
   
   stop.remain = seconds;
   stop.seconds = seconds;
+  stop.pct = function() { return 1-(stop.remain / stop.seconds); };
   
   function update(dt) {
     stop.remain -= dt;

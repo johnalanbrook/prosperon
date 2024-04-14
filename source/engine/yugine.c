@@ -200,6 +200,7 @@ static sapp_desc start_desc = {
     .cleanup_cb = c_clean,
     .event_cb = c_event,
     .logger.func = sg_logging,
+    .win32_console_create = false,
 };
 
 sapp_desc sokol_main(int argc, char **argv) {

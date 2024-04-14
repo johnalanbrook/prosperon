@@ -101,7 +101,7 @@ ifeq ($(OS), Windows_NT) # then WINDOWS
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
-  EXT = .exe
+
   PKGCMD = zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
