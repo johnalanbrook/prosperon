@@ -147,8 +147,8 @@ console.say = function(msg) {
   console.transcript += msg;
 };
 console.log = console.say;
-var say = console.say;
-var print = console.print;
+globalThis.say = console.say;
+globalThis.print = console.print;
 
 console.pprint = function(msg,lvl = 0) {  
   if (typeof msg === 'object')
@@ -213,17 +213,14 @@ function use(file, env = {}, script)
   
   if (use.cache[file]) {
     var ret = use.cache[file].call(env);
-    profile.report(st, `CACHE eval ${file}`);
     profile.addreport(profcache, file, st);
     return;
   }
-  console.info(`slurping ${file}`);
   script ??= Resources.replstrs(file);
   script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file,script);
   use.cache[file] = fn;
   var ret = fn.call(env);
-  profile.report(st, `eval ${file}`);
   profile.addreport(profcache, file, st);
   return ret;
 }

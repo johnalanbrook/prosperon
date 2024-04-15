@@ -106,6 +106,7 @@ void log_print(const char *str)
 {
 #ifndef NDEBUG
   fprintf(writeout, str);
+  fprintf(stdout, str);
 #endif
   fflush(stdout);
 }

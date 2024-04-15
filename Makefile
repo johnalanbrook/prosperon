@@ -15,7 +15,7 @@ INFO :=
 LD = $(CC)
 
 STEAM = steam/sdk
-STEAMAPI = steam_api
+STEAMAPI = 
 
 CCC != $(CC) -v
 ifneq ($(findstring clangcc , $(CCC)),)
@@ -43,8 +43,7 @@ ifdef NQOA
 endif
 
 ifeq ($(CC), emcc)
-  LDFLAGS += #--closure 1 --emrun
-  CPPFLAGS += -O0
+  LDFLAGS += --closure 1 --emrun --preload-file game.cdb
   OPT = 0
   NDEBUG = 1
   AR = emar
@@ -118,9 +117,10 @@ else ifeq ($(OS), IOS)
 	INFO :=$(INFO)_ios
 else ifeq ($(CC), emcc) # Then WEB
   OS := Web
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -pthread -sTOTAL_MEMORY=128MB
-  CPPFLAGS += -pthread
-  LDLIBS +=  pthread quickjs GL openal c m dl
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sTOTAL_MEMORY=128MB -sSTACK_SIZE=5MB
+  CPPFLAGS += -dNSTEAM -sASSERTIONS=2
+  LDLIBS += GL openal c m dl
+	STEAMAPI := 
   EXT = .html
 else 
   UNAME != uname -s
@@ -219,13 +219,13 @@ SCRIPTS := $(shell ls scripts/*.js*)
 CORE != (ls icons/* fonts/*)
 CORE := $(CORE) $(SCRIPTS)
 
-packer$(EXT): tools/packer.c source/engine/miniz.c
+packer: tools/packer.c source/engine/miniz.c
 	@echo Making packer
 	$(CC) -O2 $^ -Isource/engine -o packer
 
-core.cdb: packer$(EXT) $(CORE)
+core.cdb: packer $(CORE)
 	@echo Packing core.cdb
-	./packer$(EXT) $@ $(CORE)
+	./packer $@ $(CORE)
 
 source/engine/core.cdb.h: core.cdb
 	@echo Making $@
@@ -268,10 +268,11 @@ crossmac: Prosperon.icns
 
 crossweb:
 	make CC=emcc
+	mv $(APP)_$(ARCH).html index.html
 	
 playweb:
 	make crossweb
-	emrun $(NAME).html
+	emrun index.html
 
 clean:
 	@echo Cleaning project

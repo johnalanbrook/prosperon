@@ -229,8 +229,8 @@ sapp_desc sokol_main(int argc, char **argv) {
     if (argc > i+1) strcat(cmdstr, " ");
   }
 
-  while (!LOADED_GAME)
-    sfetch_dowork();
+//  while (!LOADED_GAME)
+//    sfetch_dowork();
 
   script_evalf("cmd_args('%s');", cmdstr);
   return start_desc;
