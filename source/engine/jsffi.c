@@ -1559,7 +1559,7 @@ void ffi_load() {
   JS_SetPropertyStr(js, globalThis, "window", window2js(&mainwin));
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
   
-  JS_SetPropertyStr(js, globalThis, "steam", js_init_steam(js));
+  //JS_SetPropertyStr(js, globalThis, "steam", js_init_steam(js));
 
   sound_proto = JS_NewObject(js);
   JS_SetPropertyStr(js,globalThis, "sound_proto", sound_proto);
