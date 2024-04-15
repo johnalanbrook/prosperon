@@ -16,17 +16,17 @@ if (os.sys() === 'macos') {
 
 player[0].control(appy);
   
-steam.appid = 480;
-steam.userid = 8437843;
+//steam.appid = 480;
+//steam.userid = 8437843;
 
 os.home = os.env("HOME");
 
-steam.path = {
+/*steam.path = {
   windows: `C:/Program Files (x86)/Steam/userdata/${steam.userid}/${steam.appid}`,
   macos: `${os.home}/Library/Application Support/Steam/userdata/${steam.userid}/${steam.appid}`,
   linux: `${os.home}/.local/share/Steam/userdata/${steam.userid}/${steam.appid}`
 };
-
+*/
 var otherpath = {
   windows:`C:/Users/${os.user}/Saved Games`,
   macos: `${os.home}/Library/Application Support`,
@@ -468,6 +468,6 @@ Cmdline.register_cmd("l", function(n) {
 return {
   Resources,
   Cmdline,
-  cmd_args,
-  steam
+  cmd_args
 };
+
