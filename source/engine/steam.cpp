@@ -1,5 +1,5 @@
 #include "steam.h"
-
+/*
 #include <steam/steam_api.h>
 #include <steam/steam_api_flat.h>
 
@@ -19,3 +19,4 @@ JSValue js_init_steam(JSContext *js)
   JS_SetPropertyFunctionList(js, steam, js_steam_funcs, countof(js_steam_funcs));
   return steam;
 }
+*/
