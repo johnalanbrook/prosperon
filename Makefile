@@ -58,6 +58,7 @@ endif
 
 ifdef LEAK
   CPPFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -DLEAK
+	INFO := $(INFO)_leak
 endif
 
 ifeq ($(OPT),small)

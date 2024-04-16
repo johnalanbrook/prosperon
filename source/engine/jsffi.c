@@ -101,14 +101,6 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
   return p;
 }
 
-JSValue gos2ref(gameobject **go)
-{
-  JSValue array = JS_NewArray(js);
-  for (int i = 0; i < arrlen(go); i++)
-    js_setprop_num(array,i,JS_DupValue(js,go[i]->ref));
-  return array;
-}
-
 void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertyStr(js, obj, prop, v); }
 JSValue js_getpropstr(JSValue v, const char *str)
 {
@@ -1549,7 +1541,6 @@ void ffi_load() {
   QJSGLOBALCLASS(dspsound);
   QJSGLOBALCLASS(pshape);
   QJSGLOBALCLASS(performance);
-  
   QJSGLOBALCLASS(circle2d);
   QJSGLOBALCLASS(poly2d);
   QJSGLOBALCLASS(edge2d);
@@ -1560,15 +1551,11 @@ void ffi_load() {
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
   
   //JS_SetPropertyStr(js, globalThis, "steam", js_init_steam(js));
-
+  
   sound_proto = JS_NewObject(js);
   JS_SetPropertyStr(js,globalThis, "sound_proto", sound_proto);
   JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
   JS_SetPrototype(js, sound_proto, dsp_node_proto);
   
   JS_FreeValue(js,globalThis);  
-}
-
-void ffi_stop()
-{
 }

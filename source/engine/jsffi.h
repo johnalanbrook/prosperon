@@ -120,7 +120,6 @@ JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 #define countof(x) (sizeof(x)/sizeof((x)[0]))
 
 void ffi_load();
-void ffi_stop();
 
 JSValue vec22js(HMM_Vec2 v);
 HMM_Vec2 js2vec2(JSValue v);

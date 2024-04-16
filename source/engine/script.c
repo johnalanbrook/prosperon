@@ -24,7 +24,7 @@ void script_startup() {
   size_t len;
   char *eng = slurp_text("scripts/engine.js", &len);
   JSValue v = script_eval("scripts/engine.js", eng);
-  JS_FreeValue(js,v);
+  JS_FreeValue(js, v);
   free(eng);
 }
 static int stopped = 0;
@@ -35,17 +35,19 @@ void script_stop()
 return;
 #endif
   printf("FREEING CONTEXT\n");
-  ffi_stop();
-  JS_FreeContext(js);
+
   script_gc();
-  JS_FreeRuntime(rt);
+
+  JS_FreeContext(js);
   js = NULL;
+  JS_FreeRuntime(rt);
   rt = NULL;
 }
 
 void script_gc() { JS_RunGC(rt); }
 
 void js_stacktrace() {
+  if (!js) return;
 #ifndef NDEBUG
   script_evalf("console.stack();");
 #endif
@@ -53,13 +55,19 @@ void js_stacktrace() {
 
 void script_evalf(const char *format, ...)
 {
-  char fmtbuf[4096];
+  JSValue obj;
   va_list args;
   va_start(args, format);
-  vsnprintf(fmtbuf, 4096, format, args);
+  int len = vsnprintf(NULL, 0, format, args);
+  va_end(args);
+  
+  char *eval = malloc(len+1);
+  va_start(args, format);
+  vsnprintf(eval, len+1, format, args);
   va_end(args);
 
-  JSValue obj = JS_Eval(js, fmtbuf, strlen(fmtbuf), "C eval", JS_EVAL_FLAGS);
+  obj = JS_Eval(js, eval, len, "C eval", JS_EVAL_FLAGS);
+  free(eval);
   js_print_exception(obj);
   JS_FreeValue(js,obj);
 }

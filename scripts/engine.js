@@ -156,6 +156,7 @@ console.pprint = function(msg,lvl = 0) {
 
   var file = "nofile";
   var line = 0;
+  console.rec(0,msg,file,line);
   
   var caller = (new Error()).stack.split('\n')[2];
   if (caller) { 
@@ -453,12 +454,12 @@ prosperon.touchrelease = function(touches){};
 prosperon.touchmove = function(touches){};
 prosperon.clipboardpaste = function(str){};
 prosperon.quit = function(){
-  console.info(profile.printreport(profcache, "USE REPORT"));
-  console.info(profile.printreport(entityreport, "ENTITY REPORT"));
+  say(profile.printreport(profcache, "USE REPORT"));
+  say(profile.printreport(entityreport, "ENTITY REPORT"));
   
   console.info("QUITTING");
   for (var i in debug.log.time)
-    console.warn(debug.log.time[i].map(x=>profile.ms(x)));
+    say(debug.log.time[i].map(x=>profile.ms(x)));
 };
 
 global.mixin("scripts/input");
