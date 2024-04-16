@@ -15,6 +15,14 @@ Object.defineProperty(String.prototype, 'dir', {
   }
 });
 
+Object.defineProperty(String.prototype, 'folder', {
+  value: function() {
+    var dir = this.dir();
+    if (!dir) return "";
+    else return dir + "/";
+  }
+});
+
 globalThis.Resources = {};
 
 Resources.replpath = function(str, path)

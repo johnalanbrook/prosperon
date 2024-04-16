@@ -302,7 +302,7 @@ SpriteAnim.aseprite = function(path) {
   function aseframeset2anim(frameset, meta) {
     var anim = {};
     anim.frames = [];
-    anim.path = path.dir() + "/" + meta.image;
+    anim.path = path.folder() + meta.image;
     var dim = meta.size;
 
     var ase_make_frame = function(ase_frame) {
@@ -329,6 +329,10 @@ SpriteAnim.aseprite = function(path) {
   var anims = {};
   var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
   var f = 0;
+  if (data.meta.frameTags.length === 0) {
+    anims[0] = aseframeset2anim(frames, data.meta);
+    return anims;
+  }
   for (var tag of data.meta.frameTags) {
     anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to+1), data.meta);
     anims[f] = anims[tag.name];

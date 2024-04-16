@@ -365,6 +365,7 @@ JSValue vecarr2js(HMM_Vec2 *points, int n) {
 
 int js_print_exception(JSValue v)
 {
+  if (!js) return 0;
 #ifndef NDEBUG
   if (!JS_IsException(v))
     return 0;
