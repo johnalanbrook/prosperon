@@ -85,6 +85,7 @@ io.chmod = function(file,mode) {
 var tmpslurp = io.slurp;
 io.slurp = function(path)
 {
+  say(`SLURPING ${path}`);
   path = Resources.replpath(path);
   return tmpslurp(path);
 }
@@ -228,24 +229,34 @@ Cmdline.register_order("debug", function() {
 }, "Play the game with debugging enabled.");
 
 Cmdline.register_order("play", function(argv) {
+  say("SELECTED PLAY");
   if (argv[0])
     io.chdir(argv[0]);
 
   game.loadurs();
+  say("AFTER LOADURS");
 
   if (!io.exists(projectfile)) {
     say("No game to play. Try making one with 'prosperon init'.");
     return;
   }
+  say("AFTER EXIST CHECK");
 
   var project = json.decode(io.slurp(projectfile));
+  say(`project title is ${project.title}`);
+  say(json.encode(project));
   game.title = project.title;
   window.mode = window.modetypes.expand;
+  say("BEFORE CONFIG");
   global.mixin("config.js");
-  if (project.title) window.title = project.title;
+  say("AFTER CONFIG");
+  //if (project.title) window.title = project.title;
 
+/*
   if (window.rendersize.equal([0,0])) window.rendersize = window.size;
   console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);
+*/  
+  say("NOW ENGINESTART");
   
   game.engine_start(function() {
     render.set_font("fonts/c64.ttf", 8);
@@ -253,6 +264,7 @@ Cmdline.register_order("play", function(argv) {
     if (project.icon) window.set_icon(game.texture(project.icon));
     game.camera = world.spawn("scripts/camera2d");
   });  
+  say("FINISHED ENGINESTART");
 }, "Play the game present in this folder.");
 
 Cmdline.register_order("pack", function(str) {
@@ -438,6 +450,7 @@ Cmdline.register_order("version", function() {
 
 function cmd_args(cmdargs)
 {
+  say("HERE COME THE CMD ARGS");
   var play = false;
   var cmds = cmdargs.split(/\s+/).slice(1);
 

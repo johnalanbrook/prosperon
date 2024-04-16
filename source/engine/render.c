@@ -226,7 +226,9 @@ void render_init() {
     .buffer_pool_size = 1024
   });
 
+#ifndef NDEBUG
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
+#endif
 
   font_init();
   debugdraw_init();

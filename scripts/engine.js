@@ -152,6 +152,7 @@ console.transcript = "";
 console.say = function(msg) {
   msg += "\n";
   console.print(msg);
+  return;
   console.transcript += msg;
 };
 console.log = console.say;
@@ -159,6 +160,7 @@ globalThis.say = console.say;
 globalThis.print = console.print;
 
 console.pprint = function(msg,lvl = 0) {  
+
   if (typeof msg === 'object')
     msg = JSON.stringify(msg, null, 2);
 
@@ -283,6 +285,7 @@ var gggstart = game.engine_start;
 game.engine_start = function(s) {
   game.startengine = 1;
   gggstart(function() {
+    say(`start of gggstart`);
     global.mixin("scripts/sound.js");
     world_start();
     go_init();

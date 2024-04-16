@@ -57,16 +57,19 @@ static JSValue c_start;
 static JSValue c_process_fn;
 
 void c_init() {
+  printf("C INIT\n");
   mainwin.start = 1;
   window_resize(sapp_width(), sapp_height());
   phys2d_init();  
   render_init();
   particle_init();
+  printf("RUNNING START\n");
   script_call_sym(c_start,0,NULL);
   JS_FreeValue(js, c_start);
 }
 
 void c_frame() {
+  printf("FRAME\n");
   script_call_sym(c_process_fn,0,NULL); 
   fflush(stdout);
 }
@@ -200,11 +203,11 @@ static sapp_desc start_desc = {
     .frame_cb = c_frame,
     .cleanup_cb = c_clean,
     .event_cb = c_event,
-    .logger.func = sg_logging,
-    .win32_console_create = false,
+    .logger.func = sg_logging
 };
 
-sapp_desc sokol_main(int argc, char **argv) {
+void main(int argc, char **argv) {
+  printf("ENTERED MAIN\n");
 #ifndef NDEBUG
   log_init();
   signal(SIGSEGV, seghandle);
@@ -213,6 +216,7 @@ sapp_desc sokol_main(int argc, char **argv) {
 #endif
 
   resources_init();
+  printf("SETUP TIME\n");
   stm_setup(); /* time */
   script_startup();
   
@@ -225,16 +229,24 @@ sapp_desc sokol_main(int argc, char **argv) {
   char cmdstr[argsize+1];
   cmdstr[0] = '\0';
 
-  for (int i = 0; i < argc; i++) {
+  for (int i = 0; i < argc; i++)
+ {
     strcat(cmdstr, argv[i]);
     if (argc > i+1) strcat(cmdstr, " ");
   }
 
-//  while (!LOADED_GAME)
+  //while (!LOADED_GAME)
 //    sfetch_dowork();
+  printf("NOW SEND CMD ARGS\n");
 
   script_evalf("cmd_args('%s');", cmdstr);
-  return start_desc;
+  printf("AND SETUP START DESC\n");
+  start_desc.logger.func = NULL;
+  start_desc.enable_dragndrop = false;
+  
+  printf("NOW SAPPRUN\n");
+  sapp_run(&start_desc);
+//  return start_desc;
 }
 
 void engine_start(JSValue start, JSValue procfn)
@@ -243,7 +255,7 @@ void engine_start(JSValue start, JSValue procfn)
   c_process_fn = JS_DupValue(js,procfn);
 
   sound_init();
-
+  return;
   start_desc.width = mainwin.size.x;
   start_desc.height = mainwin.size.y;
   start_desc.window_title = mainwin.title;
@@ -253,6 +265,8 @@ void engine_start(JSValue start, JSValue procfn)
   start_desc.enable_clipboard = mainwin.enable_clipboard;
   start_desc.high_dpi = mainwin.high_dpi;
   start_desc.sample_count = mainwin.sample_count;
+  
+  printf("END OF ENGINESTART\n");
 }
 
 double apptime() { return stm_sec(stm_now()); }

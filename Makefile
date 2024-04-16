@@ -43,7 +43,8 @@ ifdef NQOA
 endif
 
 ifeq ($(CC), emcc)
-  LDFLAGS += --closure 1 --emrun --preload-file game.cdb
+  LDFLAGS += --emrun --preload-file game.cdb --preload-file config.js -sNO_EXIT_RUNTIME
+	CPPFLAGS += -g -Wbad-function-cast -Wcast-function-type -sALLOW_MEMORY_GROWTH
   OPT = 0
   NDEBUG = 1
   AR = emar
@@ -119,7 +120,7 @@ else ifeq ($(OS), IOS)
 else ifeq ($(CC), emcc) # Then WEB
   OS := Web
   LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sTOTAL_MEMORY=128MB -sSTACK_SIZE=5MB
-  CPPFLAGS += -dNSTEAM -sASSERTIONS=2
+  CPPFLAGS += -DNSTEAM
   LDLIBS += GL openal c m dl
 	STEAMAPI := 
   EXT = .html

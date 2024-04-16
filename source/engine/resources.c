@@ -60,7 +60,11 @@ static void response_cb(const sfetch_response_t *r)
   }
 }
 
+void *gamedata;
+
 void resources_init() {
+  printf("INIT RESOURCES\n");
+  /*
   sfetch_setup(&(sfetch_desc_t){
     .max_requests = 1024,
     .num_channels = 4,
@@ -77,8 +81,12 @@ void resources_init() {
       .size = 64*1024*1024
     }
   });
-
+  */
   mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);
+  printf("SLURP GAME\n");
+  size_t gamesize;
+  gamedata = slurp_file("game.cdb", &gamesize);
+  mz_zip_reader_init_mem(&game_cdb, gamedata, gamesize, 0);
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -185,6 +193,7 @@ int fexists(const char *path)
 
 void *os_slurp(const char *file, size_t *size)
 {
+  printf("SLURPING %s FROM OS\n", file);
   FILE *f;
 
   jump:

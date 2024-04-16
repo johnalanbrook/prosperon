@@ -104,9 +104,12 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 /* print to stdout and console */
 void log_print(const char *str)
 {
+
 #ifndef NDEBUG
-  fprintf(writeout, str);
   fprintf(stdout, str);
+  fprintf(writeout, str);
+#else
+  printf(str);
 #endif
   fflush(stdout);
 }

@@ -1070,6 +1070,7 @@ static JSValue js_window_set_fullscreen(JSContext *js, JSValue this, JSValue v) 
 
 static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
 {
+  return JS_UNDEFINED;
   window *w = js2window(this);
   if (w->title) JS_FreeCString(js, w->title);
   w->title = js2str(v);
@@ -1077,7 +1078,9 @@ static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
     sapp_set_window_title(w->title);
   return JS_UNDEFINED;
 }
-JSC_CCALL(window_get_title, return str2js(js2window(this)->title))
+JSC_CCALL(window_get_title, 
+  return JS_UNDEFINED;
+return str2js(js2window(this)->title))
 JSC_CCALL(window_set_icon, window_seticon(&mainwin, js2texture(argv[0])))
 JSC_GETSET(window, vsync, boolean)
 JSC_GETSET(window, enable_clipboard, boolean)
