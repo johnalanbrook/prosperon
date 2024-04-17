@@ -152,7 +152,6 @@ console.transcript = "";
 console.say = function(msg) {
   msg += "\n";
   console.print(msg);
-  return;
   console.transcript += msg;
 };
 console.log = console.say;

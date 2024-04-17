@@ -8,6 +8,7 @@ game.loadurs();
 console.info(`window size: ${window.size}, render size: ${window.rendersize}`);
 
 player[0].control(debug);
+render.clear_color([35,60,92,255].map(x => x/255));
 
 var show_frame = true;
 
@@ -486,7 +487,7 @@ var editor = {
         render.text("lock", obj,screenpos());
     });
 
-    render.grid(1, editor.grid_size, Color.Editor.grid.alpha(0.3));
+    render.grid(1, editor.grid_size, editor.grid_color);
     var startgrid = game.camera.view2world([-20,0]).map(function(x) { return Math.snap(x, editor.grid_size); });
     var endgrid = game.camera.view2world([window.width, window.height]);
     

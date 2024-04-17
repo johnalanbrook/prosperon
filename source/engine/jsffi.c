@@ -611,6 +611,11 @@ JSC_CCALL(render_end_pass,
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_CCALL(render_set_camera, useproj = projection)
 JSC_CCALL(render_set_window, useproj = hudproj)
+JSC_CCALL(render_clear_color,
+  sg_color c;
+  rgba2floats(&c, js2color(argv[0]));
+  pass_action.colors[0].clear_value = c;
+)
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, grid, 3),
@@ -626,6 +631,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, text_size, 3),
   MIST_FUNC_DEF(render, set_camera, 0),
   MIST_FUNC_DEF(render, set_window, 0),
+  MIST_FUNC_DEF(render, clear_color, 1),
 };
 
 JSC_CCALL(gui_flush, text_flush(&useproj));
@@ -898,8 +904,19 @@ static const JSCFunctionListEntry js_io_funcs[] = {
 
 JSC_CCALL(debug_draw_gameobject, gameobject_draw_debug(js2gameobject(argv[0]));)
 
+JSC_GETSET_GLOBAL(disabled_color, color)
+JSC_GETSET_GLOBAL(sleep_color, color)
+JSC_GETSET_GLOBAL(dynamic_color, color)
+JSC_GETSET_GLOBAL(kinematic_color, color)
+JSC_GETSET_GLOBAL(static_color, color)
+
 static const JSCFunctionListEntry js_debug_funcs[] = {
-  MIST_FUNC_DEF(debug, draw_gameobject, 1)
+  MIST_FUNC_DEF(debug, draw_gameobject, 1),
+  CGETSET_ADD(global, disabled_color),
+  CGETSET_ADD(global, sleep_color),
+  CGETSET_ADD(global, dynamic_color),
+  CGETSET_ADD(global, kinematic_color),
+  CGETSET_ADD(global, static_color),
 };
 
 JSC_CCALL(physics_sgscale,

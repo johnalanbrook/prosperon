@@ -30,6 +30,7 @@ extern HMM_Vec3 dirl_pos;
 extern HMM_Mat4 projection;
 extern HMM_Mat4 hudproj;
 extern HMM_Mat4 useproj;
+extern sg_pass_action pass_action;
 
 struct draw_p {
   float x;

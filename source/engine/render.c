@@ -121,9 +121,6 @@ void capture_screen(int x, int y, int w, int h, const char *path)
 
 #include "HandmadeMath.h"
 
-//struct rgba editorClearColor = {35,60,92,255};
-struct rgba editorClearColor = {0,0,0,255};
-
 sg_pass_action pass_action = {0};
 
 static struct {
@@ -236,9 +233,8 @@ void render_init() {
   sprite_initialize();
 
   model_init();
-  sg_color c;
-  rgba2floats((float*)&c, editorClearColor);
   
+  sg_color c = (sg_color){0,0,0,1};
   pass_action = (sg_pass_action){
     .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
   };
