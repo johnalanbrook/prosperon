@@ -97,21 +97,20 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     raise(SIGTRAP);
     #endif
   }
-
 #endif
 }
 
 /* print to stdout and console */
 void log_print(const char *str)
 {
-
 #ifndef NDEBUG
   fprintf(stdout, str);
   fprintf(writeout, str);
+  fflush(stdout);
 #else
   printf(str);
-#endif
   fflush(stdout);
+#endif
 }
 
 void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {

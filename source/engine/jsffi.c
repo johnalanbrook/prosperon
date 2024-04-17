@@ -1063,14 +1063,14 @@ static JSValue js_window_get_rendersize(JSContext *js, JSValue this) {
 }
 static JSValue js_window_set_rendersize(JSContext *js, JSValue this, JSValue v) {
   js2window(this)->rendersize = js2vec2(v);
+  return JS_UNDEFINED;
 }
 JSC_GETSET(window, mode, number)
 static JSValue js_window_get_fullscreen(JSContext *js, JSValue this) { return boolean2js(js2window(this)->fullscreen); }
-static JSValue js_window_set_fullscreen(JSContext *js, JSValue this, JSValue v) { window_setfullscreen(js2window(this), js2boolean(v)); }
+static JSValue js_window_set_fullscreen(JSContext *js, JSValue this, JSValue v) { window_setfullscreen(js2window(this), js2boolean(v)); return JS_UNDEFINED; }
 
 static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
 {
-  return JS_UNDEFINED;
   window *w = js2window(this);
   if (w->title) JS_FreeCString(js, w->title);
   w->title = js2str(v);
@@ -1078,9 +1078,7 @@ static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
     sapp_set_window_title(w->title);
   return JS_UNDEFINED;
 }
-JSC_CCALL(window_get_title, 
-  return JS_UNDEFINED;
-return str2js(js2window(this)->title))
+JSC_CCALL(window_get_title, return str2js(js2window(this)->title))
 JSC_CCALL(window_set_icon, window_seticon(&mainwin, js2texture(argv[0])))
 JSC_GETSET(window, vsync, boolean)
 JSC_GETSET(window, enable_clipboard, boolean)
@@ -1110,12 +1108,12 @@ JSValue js_gameobject_set_rpos(JSContext *js, JSValue this, JSValue val) {
   return JS_UNDEFINED;
 }
 JSValue js_gameobject_get_rpos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
-JSValue js_gameobject_set_rangle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
+JSValue js_gameobject_set_rangle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); return JS_UNDEFINED; }
 JSValue js_gameobject_get_rangle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
 JSValue js_gameobject_get_rscale(JSContext *js, JSValue this) { return vec32js(js2gameobject(this)->scale); }
-JSValue js_gameobject_set_rscale(JSContext *js, JSValue this, JSValue val) { js2gameobject(this)->scale = js2vec3(val); }
+JSValue js_gameobject_set_rscale(JSContext *js, JSValue this, JSValue val) { js2gameobject(this)->scale = js2vec3(val); return JS_UNDEFINED; }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
-JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); }
+JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); return JS_UNDEFINED;}
 JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
 //JSC_GETSET_BODY(moi, Moment, number)
 JSC_GETSET_BODY(torque, Torque, number)

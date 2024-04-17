@@ -2,7 +2,6 @@
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
-#define SOKOL_NO_ENTRY
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"
 #include "sokol/sokol_args.h"

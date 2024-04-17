@@ -17,6 +17,15 @@ LD = $(CC)
 STEAM = steam/sdk
 STEAMAPI = 
 
+
+ifeq ($(CC), emcc)
+	LDFLAGS += --preload-file game.zip --preload-file config.js --preload-file game.js
+	CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=5MB -sALLOW_MEMORY_GROWTH
+	OPT = 0
+	NDEBUG = 1
+	AR = emar
+endif
+
 CCC != $(CC) -v
 ifneq ($(findstring clangcc , $(CCC)),)
 	LDFLAGS += -Wl,-rpath=./
@@ -40,14 +49,6 @@ endif
 
 ifdef NQOA
   CPPFLAGS += -DNQOA
-endif
-
-ifeq ($(CC), emcc)
-  LDFLAGS += --emrun --preload-file game.cdb --preload-file config.js -sNO_EXIT_RUNTIME
-	CPPFLAGS += -g -Wbad-function-cast -Wcast-function-type -sALLOW_MEMORY_GROWTH
-  OPT = 0
-  NDEBUG = 1
-  AR = emar
 endif
 
 ifdef NDEBUG
@@ -119,7 +120,7 @@ else ifeq ($(OS), IOS)
 	INFO :=$(INFO)_ios
 else ifeq ($(CC), emcc) # Then WEB
   OS := Web
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sTOTAL_MEMORY=128MB -sSTACK_SIZE=5MB
+  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
   CPPFLAGS += -DNSTEAM
   LDLIBS += GL openal c m dl
 	STEAMAPI := 
@@ -270,11 +271,6 @@ crossmac: Prosperon.icns
 
 crossweb:
 	make CC=emcc
-	mv $(APP)_$(ARCH).html index.html
-	
-playweb:
-	make crossweb
-	emrun index.html
 
 clean:
 	@echo Cleaning project

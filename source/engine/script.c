@@ -34,10 +34,8 @@ void script_stop()
 #ifndef LEAK
 return;
 #endif
-  printf("FREEING CONTEXT\n");
 
   script_gc();
-
   JS_FreeContext(js);
   js = NULL;
   JS_FreeRuntime(rt);

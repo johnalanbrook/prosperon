@@ -121,7 +121,8 @@ void capture_screen(int x, int y, int w, int h, const char *path)
 
 #include "HandmadeMath.h"
 
-struct rgba editorClearColor = {35,60,92,255};
+//struct rgba editorClearColor = {35,60,92,255};
+struct rgba editorClearColor = {0,0,0,255};
 
 sg_pass_action pass_action = {0};
 

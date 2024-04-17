@@ -63,7 +63,6 @@ static void response_cb(const sfetch_response_t *r)
 void *gamedata;
 
 void resources_init() {
-  printf("INIT RESOURCES\n");
   /*
   sfetch_setup(&(sfetch_desc_t){
     .max_requests = 1024,
@@ -74,7 +73,7 @@ void resources_init() {
   gamebuf = malloc(64*1024*1024);
 
   sfetch_handle_t h = sfetch_send(&(sfetch_request_t){
-    .path="game.cdb",
+    .path="game.zip",
     .callback = response_cb,
     .buffer = {
       .ptr = gamebuf,
@@ -83,9 +82,8 @@ void resources_init() {
   });
   */
   mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);
-  printf("SLURP GAME\n");
   size_t gamesize;
-  gamedata = slurp_file("game.cdb", &gamesize);
+  gamedata = slurp_file("game.zip", &gamesize);
   mz_zip_reader_init_mem(&game_cdb, gamedata, gamesize, 0);
 }
 
@@ -193,7 +191,6 @@ int fexists(const char *path)
 
 void *os_slurp(const char *file, size_t *size)
 {
-  printf("SLURPING %s FROM OS\n", file);
   FILE *f;
 
   jump:
