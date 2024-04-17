@@ -230,7 +230,7 @@ Cmdline.register_order("debug", function() {
 Cmdline.register_order("play", function(argv) {
   if (argv[0])
     io.chdir(argv[0]);
-
+    
   game.loadurs();
 
   if (!io.exists(projectfile)) {
@@ -267,9 +267,17 @@ Cmdline.register_order("pack", function(str) {
     packname = str[0];
 
   say(`Packing into ${packname}`);
-    
-//  io.pack_engine(packname);
-  io.chmod(packname, 666);
+  
+  io.pack_start(packname);
+  var files = io.ls('.');
+  files = files.filter(f => !f.startsWith('.git'));
+  files = files.filter(f => !f.startsWith('.nova'));
+  files = files.filter(f => !f.includes('.DS_Store'));
+  files = files.filter(f => !f.startsWith('.gitignore'));
+  say(files);
+  for (var f of files)
+    io.pack_add(f);
+  io.pack_end();
 }, "Pack the game into the given name.", "NAME");
 
 Cmdline.register_order("cdb", function(argv) {

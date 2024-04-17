@@ -18,6 +18,9 @@ char **ls(const char *path);
 int cp(const char *p1, const char *p2);
 int fexists(const char *path);
 time_t file_mod_secs(const char *file);
+void pack_start(const char *name);
+void pack_add(const char *path);
+void pack_end();
 
 char *dirname(const char *path);
 
@@ -26,15 +29,5 @@ char *slurp_text(const char *filename, size_t *size);
 int slurp_write(const char *txt, const char *filename, size_t len);
 
 char *seprint(char *fmt, ...);
-
-static inline void *stbarrdup(void *mem, size_t size, int len) {
-  void *out = NULL;
-  arrsetlen(out, len);
-  memcpy(out,mem,size*len);
-  return out;
-}
-
-#define arrconcat(a,b) do{for (int i = 0; i < arrlen(b); i++) arrput(a,b[i]);}while(0)
-#define arrdup(a) (stbarrdup(a, sizeof(*a), arrlen(a)))
 
 #endif

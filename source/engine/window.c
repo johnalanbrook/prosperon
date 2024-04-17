@@ -20,6 +20,8 @@ struct window mainwin = {
   .vsync = 1,
   .enable_clipboard = 0,
   .enable_dragndrop = 0,
+  .size =  (HMM_Vec2){640,400},
+  .rendersize = (HMM_Vec2){640,400},
 };
 
 static struct window *windows = NULL;

@@ -4,6 +4,10 @@ MAKEDIR != pwd
 # Options
 # NDEBUG --- build with debugging symbols and logging
 
+ifeq ($(ARCH),)
+	ARCH != uname -m
+endif
+
 CXX:=$(CC)
 
 # Temp to strip long emcc paths to just emcc
@@ -17,13 +21,13 @@ LD = $(CC)
 STEAM = steam/sdk
 STEAMAPI = 
 
-
 ifeq ($(CC), emcc)
-	LDFLAGS += --preload-file game.zip --preload-file config.js --preload-file game.js
+	LDFLAGS += -sUSE_WEBGPU --shell-file shell.html
 	CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=5MB -sALLOW_MEMORY_GROWTH
 	OPT = 0
 	NDEBUG = 1
 	AR = emar
+	ARCH:= wasm
 endif
 
 CCC != $(CC) -v
@@ -90,11 +94,7 @@ PKGCMD = tar --directory --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(D
 ZIP = .tar.gz
 UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
 
-ifeq ($(ARCH),)
-  ARCH != uname -m
-endif
-
-INFO :=$(INFO)_$(ARCH)
+INFO := $(INFO)_$(ARCH)
 
 ifeq ($(OS), Windows_NT) # then WINDOWS
 	PLATFORM := win64
@@ -167,6 +167,9 @@ includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types
 
+ifeq ($(INFO),_)
+	INFO := 
+endif
 APP = prosperon
 NAME = $(APP)$(INFO)$(EXT)
 SEM != git describe --tags --abbrev=0
@@ -271,6 +274,7 @@ crossmac: Prosperon.icns
 
 crossweb:
 	make CC=emcc
+	mv $(APP).html index.html
 
 clean:
 	@echo Cleaning project

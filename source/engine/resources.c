@@ -45,46 +45,57 @@ static mz_zip_archive game_cdb;
 
 int LOADED_GAME = 0;
 uint8_t *gamebuf;
+void *zipbuf;
+
+sfetch_handle_t game_h;
 
 static void response_cb(const sfetch_response_t *r)
 {
   if (r->fetched) {
-    mz_zip_reader_init_mem(&game_cdb, r->data.ptr, r->data.size,0);
-    LOADED_GAME = 1;
+    zipbuf = malloc(r->data.size);
+    memcpy(zipbuf, r->data.ptr, r->data.size);
+    mz_zip_reader_init_mem(&game_cdb, zipbuf, r->data.size,0);
+    
   }
   if (r->finished) {
-    LOADED_GAME = -1;
-    if (r->failed) {
+    LOADED_GAME = 1;
+    void *buf = sfetch_unbind_buffer(r->handle);
+    free(buf);
+    if (r->failed)
       LOADED_GAME = -1;
-    }
   }
 }
 
 void *gamedata;
 
 void resources_init() {
-  /*
   sfetch_setup(&(sfetch_desc_t){
     .max_requests = 1024,
     .num_channels = 4,
     .num_lanes = 8,
     .logger = { .func = sg_logging },
   });
-  gamebuf = malloc(64*1024*1024);
-
-  sfetch_handle_t h = sfetch_send(&(sfetch_request_t){
+  mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);  
+  
+#ifdef __EMSCRIPTEN__
+  gamebuf = malloc(8*1024*1024);
+  game_h = sfetch_send(&(sfetch_request_t){
     .path="game.zip",
     .callback = response_cb,
     .buffer = {
       .ptr = gamebuf,
-      .size = 64*1024*1024
+      .size = 8*1024*1024
     }
   });
-  */
-  mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);
+#else
   size_t gamesize;
-  gamedata = slurp_file("game.zip", &gamesize);
-  mz_zip_reader_init_mem(&game_cdb, gamedata, gamesize, 0);
+  gamebuf = slurp_file("game.zip", &gamesize);
+  if (gamebuf) {
+    mz_zip_reader_init_mem(&game_cdb, gamebuf, gamesize, 0);
+    free(gamebuf);
+    return;
+  }
+#endif
 }
 
 char *get_filename_from_path(char *path, int extension) {
@@ -163,10 +174,31 @@ char **ls(const char *path)
   return ls_paths;
 }
 
+static mz_zip_archive ar;
+
+void pack_start(const char *name)
+{
+  memset(&ar, 0, sizeof(ar));
+  int status = mz_zip_writer_init_file(&ar, name, 0);
+
+}
+
+void pack_add(const char *path) 
+{
+  mz_zip_writer_add_file(&ar, path, path, NULL, 0, MZ_BEST_COMPRESSION);
+}
+
+void pack_end()
+{
+  mz_zip_writer_finalize_archive(&ar);
+  mz_zip_writer_end(&ar);
+}
+
 #else
 void fill_extensions(char *paths, const char *path, const char *ext)
 {};
 char **ls(const char *path) { return NULL; }
+void pack(const char *name, const char *dir) {}
 #endif
 
 char *str_replace_ext(const char *s, const char *newext) {

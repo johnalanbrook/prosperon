@@ -53,8 +53,10 @@ static int sim_play = SIM_PLAY;
 static int argc;
 static char **args;
 
-static JSValue c_start;
-static JSValue c_process_fn;
+static JSValue c_start = JS_UNDEFINED;
+static JSValue c_process_fn = JS_UNDEFINED;
+
+static int PLAYSTART = 0;
 
 void c_init() {
   mainwin.start = 1;
@@ -62,13 +64,28 @@ void c_init() {
   phys2d_init();  
   render_init();
   particle_init();
-  script_call_sym(c_start,0,NULL);
-  JS_FreeValue(js, c_start);
+  if (!JS_IsUndefined(c_start)) {
+    script_call_sym(c_start,0,NULL);
+    JS_FreeValue(js, c_start);
+  }
 }
 
 void c_frame() {
+  sfetch_dowork();
+#ifdef __EMSCRIPTEN__
+  if (PLAYSTART)
+    script_call_sym(c_process_fn,0,NULL); 
+  else if (LOADED_GAME) {
+    PLAYSTART = 1;
+    printf("LOADED GAME\n");
+    script_evalf("cmd_args('play');");
+    script_call_sym(c_start,0,NULL);
+    JS_FreeValue(js, c_start);
+    window_resize(sapp_width(), sapp_height());    
+  }
+#else
   script_call_sym(c_process_fn,0,NULL); 
-  fflush(stdout);
+#endif 
 }
 
 void cleanup()
@@ -216,6 +233,7 @@ sapp_desc sokol_main(int argc, char **argv) {
   stm_setup(); /* time */
   script_startup();
   
+#ifndef __EMSCRIPTEN__
   int argsize = 0;
   for (int i = 0; i < argc; i++) {
     argsize += strlen(argv[i]);
@@ -225,15 +243,13 @@ sapp_desc sokol_main(int argc, char **argv) {
   char cmdstr[argsize+1];
   cmdstr[0] = '\0';
 
-  for (int i = 0; i < argc; i++)
- {
+  for (int i = 0; i < argc; i++) {
     strcat(cmdstr, argv[i]);
     if (argc > i+1) strcat(cmdstr, " ");
   }
-
-  //while (!LOADED_GAME)
-//    sfetch_dowork();
+  
   script_evalf("cmd_args('%s');", cmdstr);
+#endif
   
   return start_desc;
 }

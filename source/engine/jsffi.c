@@ -120,6 +120,11 @@ JSValue strarr2js(char **c)
   return arr;
 }
 
+JSValue js2strarr(JSValue v)
+{
+  
+}
+
 JSValue number2js(double g) { return JS_NewFloat64(js,g); }
 double js2number(JSValue v) {
   double g;
@@ -869,6 +874,10 @@ JSValue js_io_chmod(JSContext *js, JSValue this, int argc, JSValue *argv)
 
 JSC_SCALL(io_save_qoa, save_qoa(str))
 
+JSC_SCALL(io_pack_start, pack_start(str))
+JSC_SCALL(io_pack_add, pack_add(str))
+JSC_CCALL(io_pack_end, pack_end())
+
 static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, exists,1),
   MIST_FUNC_DEF(io, ls, 0),
@@ -882,6 +891,9 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, slurpbytes, 1),
   MIST_FUNC_DEF(io, slurpwrite, 2),
   MIST_FUNC_DEF(io, save_qoa,1),
+  MIST_FUNC_DEF(io, pack_start, 1),
+  MIST_FUNC_DEF(io, pack_add, 1),
+  MIST_FUNC_DEF(io, pack_end, 0)
 };
 
 JSC_CCALL(debug_draw_gameobject, gameobject_draw_debug(js2gameobject(argv[0]));)
