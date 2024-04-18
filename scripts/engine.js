@@ -253,6 +253,9 @@ global.check_registers = function(obj)
 
     if (typeof obj.gui === 'function')
       obj.timers.push(Register.gui.register(obj.gui.bind(obj)));
+    
+    if (typeof obj.screengui === 'function')
+      obj.timers.push(Register.screengui.register(obj.screengui.bind(obj)));
 
     for (var k in obj) {
       if (!k.startswith("on_")) continue;
@@ -335,8 +338,11 @@ function process()
   debug.draw(); // calls needed debugs
   render.flush();
   
-  render.set_window();
+  render.hud_res(window.rendersize);
   prosperon.gui();
+  render.flush();
+  render.hud_res(window.size);
+  prosperon.screengui();
   render.flush();
   
   render.end_pass();
@@ -379,7 +385,7 @@ game.tag_clear_guid = function(guid)
 
 game.objects_with_tag = function(tag)
 {
-  if (!game.tags[tag]) return;
+  if (!game.tags[tag]) return [];
   return Object.values(game.tags[tag]);
 }
 
@@ -545,6 +551,7 @@ Register.add_cb("physupdate");
 Register.add_cb("gui");
 Register.add_cb("debug");
 Register.add_cb("draw");
+Register.add_cb("screengui");
 
 var Event = {
   events: {},
@@ -611,6 +618,9 @@ function world_start() {
 }
 
 global.mixin("scripts/physics");
+global.mixin("scripts/widget");
+
+globalThis.mum = app.spawn("scripts/mum");
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500,500];

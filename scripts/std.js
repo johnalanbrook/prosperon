@@ -44,7 +44,7 @@ os.openurl = function(url) {
     os.system(`open ${url}`);
 }
 
-var projectfile = ".prosperon/project.json";
+var projectfile = "project.prosperon";
 
 Resources.is_sound = function(path) {
   var ext = path.ext();
@@ -204,28 +204,30 @@ Cmdline.register_order("edit", function() {
 }, "Edit the project in this folder. Give it the name of an UR to edit that specific object.", "?UR?");
 
 Cmdline.register_order("init", function() {
-  say('top of init');
   if (io.exists(projectfile)) {
     say("Already a game here.");
     return;
   }
-  say('top of ls');
+
   if (!(io.ls().length === 0)) {
     say("Directory is not empty. Make an empty one and init there.");
     return;
   }
-  say('top of mkdir');
+
   io.mkdir(".prosperon");
   var project = {};
   project.version = prosperon.version;
   project.revision = prosperon.revision;
   io.slurpwrite(projectfile, json.encode(project));
-  
 }, "Turn the directory into a Prosperon game.");
 
 Cmdline.register_order("debug", function() {
   Cmdline.orders.play([]);
 }, "Play the game with debugging enabled.");
+
+Cmdline.register_order("web", function() {
+  Cmdline.orders.play([]);
+}, "Play the game in a web browser.");
 
 Cmdline.register_order("play", function(argv) {
   if (argv[0])
@@ -243,7 +245,6 @@ Cmdline.register_order("play", function(argv) {
   window.mode = window.modetypes.expand;
   global.mixin("config.js");
   if (project.title) window.title = project.title;
-
 
   if (window.rendersize.equal([0,0])) window.rendersize = window.size;
   console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);

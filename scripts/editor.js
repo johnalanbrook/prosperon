@@ -1372,129 +1372,6 @@ editor.inputs.s.doc = "Scale selected.";
 
 editor.inputs.s.released = function() { this.scalelist = []; };
 
-var inputpanel = {
-  title: "untitled",
-  toString() { return this.title; },  
-  value: "",
-  on: false,
-  pos:[100,window.size.y-50],
-  wh:[350,600],
-  anchor: [0,1],
-  padding:[5,-15],
-
-  gui() {
-    this.win ??= Mum.window({width:this.wh.x,height:this.wh.y, color:Color.black.alpha(0.1), anchor:this.anchor, padding:this.padding});
-    var itms = this.guibody();
-    if (!Array.isArray(itms)) itms = [itms];
-    if (this.title)
-      this.win.items = [
-        Mum.column({items: [Mum.text({str:this.title}), ...itms ]})
-      ];
-    else
-      this.win.items = itms;
-      
-    this.win.draw([100, window.size.y-50]);
-  },
-  
-  guibody() {
-    return [
-      Mum.text({str:this.value, color:Color.green}),
-      Mum.button({str:"SUBMIT", action:this.submit.bind(this)})
-    ];
-  },
-  
-  open() {
-    this.on = true;
-    this.value = "";
-    this.start();
-    this.keycb();
-  },
-  
-  start() {},
-  
-  close() {
-    player[0].uncontrol(this);
-    this.on = false;
-    if ('on_close' in this)
-      this.on_close();
-  },
-
-  action() {
-
-  },
-
-  closeonsubmit: true,
-  submit() {
-    if (!this.submit_check()) return;
-    this.action();
-    if (this.closeonsubmit)
-      this.close();
-  },
-
-  submit_check() { return true; },
-
-  keycb() {},
-
-  caret: 0,
-
-  reset_value() {
-    this.value = "";
-    this.caret = 0;
-  },
-  
-  input_backspace_pressrep() {
-    this.value = this.value.slice(0,-1);
-    this.keycb();
-  },
-};
-
-inputpanel.inputs = {};
-inputpanel.inputs.block = true;
-
-inputpanel.inputs.post = function() { this.keycb(); }
-
-inputpanel.inputs.char = function(c) {
-  this.value = this.value.slice(0,this.caret) + c + this.value.slice(this.caret);
-  this.caret++;
-}
-inputpanel.inputs['C-d'] = function() { this.value = this.value.slice(0,this.caret) + this.value.slice(this.caret+1); };
-inputpanel.inputs['C-d'].rep = true;
-inputpanel.inputs.tab = function() {
-  this.value = tab_complete(this.value, this.assets);
-  this.caret = this.value.length;
-}
-inputpanel.inputs.escape = function() { this.close(); }
-inputpanel.inputs['C-b'] = function() {
-  if (this.caret === 0) return;
-  this.caret--;
-};
-inputpanel.inputs['C-b'].rep = true;
-inputpanel.inputs['C-u'] = function()
-{
-  this.value = this.value.slice(this.caret);
-  this.caret = 0;
-}
-inputpanel.inputs['C-f'] = function() {
-  if (this.caret === this.value.length) return;
-  this.caret++;
-};
-inputpanel.inputs['C-f'].rep = true;
-inputpanel.inputs['C-a'] = function() { this.caret = 0; };
-inputpanel.inputs['C-e'] = function() { this.caret = this.value.length; };
-inputpanel.inputs.backspace = function() {
-  if (this.caret === 0) return;
-  this.value = this.value.slice(0,this.caret-1) + this.value.slice(this.caret);
-  this.caret--;
-};
-inputpanel.inputs.backspace.rep = true;
-inputpanel.inputs.enter = function() { this.submit(); }
-
-inputpanel.inputs['C-k'] = function() {
-  this.value = this.value.slice(0,this.caret);
-};
-
-inputpanel.inputs.lm = function() { gui.controls.check_submit(); }
-
 var replpanel = Object.copy(inputpanel, {
   title: "",
   closeonsubmit:false,
@@ -1579,11 +1456,11 @@ replpanel.inputs.tab = function() {
 
   var comp = "";
   if (stub)
-    comp = tab_complete(stub, keys);
+    comp = input.tabcomplete(stub, keys);
   else if (!this.value.includes('.'))
-    comp = tab_complete(o, keys);
+    comp = input.tabcomplete(o, keys);
   else
-    comp = tab_complete("",keys);
+    comp = input.tabcomplete("",keys);
   
   if (stub)
     this.value = o + '.' + comp;
@@ -1848,33 +1725,6 @@ var quitpanel = Object.copy(inputpanel, {
   },
 });
 
-var notifypanel = Object.copy(inputpanel, {
-  title: "notification",
-  msg: "Refusing to save. File already exists.",
-  action() {
-    this.close();
-  },
-  
-  guibody() {
-    return Mum.column({items: [
-      Mum.text({str:this.msg}),
-      Mum.button({str:"OK", action:this.close.bind(this)})
-    ]});
-  },
-});
-
-var gen_notify = function(val, fn) {
-  var panel = Object.create(notifypanel);
-  panel.msg = val;
-  panel.yes = fn;
-  panel.inputs = {};
-  panel.inputs.y = function() { panel.yes(); panel.close(); };
-  panel.inputs.y.doc = "Confirm yes.";
-  panel.inputs.enter = function() { panel.close(); };
-  panel.inputs.enter.doc = "Close.";
-  return panel;
-};
-
 var allfiles = [];
 allfiles.push(Resources.scripts, Resources.images, Resources.sounds);
 allfiles = allfiles.flat();
@@ -1903,29 +1753,6 @@ var componentexplorer = Object.copy(inputpanel, {
     return componentexplorer.assets.map(x => Mum.text({str:x, action:this.click, color: Color.blue, hovered:{Color:Color.red}, selectable:true}));
   },
 });
-
-function tab_complete(val, list) {
-    if (!val) return val;
-    list.dofilter(function(x) { return x.startsWith(val); });
-
-    if (list.length === 1) {
-      return list[0];
-    }
-    
-    var ret = undefined;
-    var i = val.length;
-    while (!ret && !Object.empty(list)) {
-      var char = list[0][i];
-      if (!list.every(function(x) { return x[i] === char; }))
-        ret = list[0].slice(0, i);
-      else {
-        i++;
-	      list.dofilter(function(x) { return x.length-1 > i; });
-      }
-    }
-
-    return ret ? ret : val;
-}
 
 var entitylistpanel = Object.copy(inputpanel, {
   title: "Level object list",

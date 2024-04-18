@@ -610,7 +610,10 @@ JSC_CCALL(render_end_pass,
 )
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_CCALL(render_set_camera, useproj = projection)
-JSC_CCALL(render_set_window, useproj = hudproj)
+JSC_CCALL(render_hud_res,
+  HMM_Vec2 xy = js2vec2(argv[0]);
+  useproj = HMM_Orthographic_LH_ZO(0, xy.x, 0, xy.y, -1, 1);
+)
 JSC_CCALL(render_clear_color,
   sg_color c;
   rgba2floats(&c, js2color(argv[0]));
@@ -630,7 +633,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
   MIST_FUNC_DEF(render, set_camera, 0),
-  MIST_FUNC_DEF(render, set_window, 0),
+  MIST_FUNC_DEF(render, hud_res, 1),
   MIST_FUNC_DEF(render, clear_color, 1),
 };
 

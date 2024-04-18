@@ -195,6 +195,9 @@ void pack_end()
 }
 
 #else
+void pack_start(const char *name){}
+void pack_add(const char *path){}
+void pack_end() {}
 void fill_extensions(char *paths, const char *path, const char *ext)
 {};
 char **ls(const char *path) { return NULL; }

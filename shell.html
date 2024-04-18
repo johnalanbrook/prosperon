@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Emscripten-Generated Code</title>
+  <style>
+      body {
+        margin: 0;
+      }
+      #canvas-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <script type='text/javascript'>
+    window.onload = function () { window.focus(); }
+    window.onclick = function () { window.focus(); }
+    </script>
+    
+    <div id="canvas-container">
+    <canvas class="game" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+  </div>
+    <script type="text/javascript">
+      var Module = {
+          preRun: [],
+          postRun: [],
+          print: (function() {
+              return function(text) {
+                  text = Array.prototype.slice.call(arguments).join(' ');
+                  console.log(text);
+              };
+          })(),
+          printErr: function(text) {
+              text = Array.prototype.slice.call(arguments).join(' ');
+              console.error(text);
+          },
+          canvas: (function() {
+              var canvas = document.getElementById('canvas');
+              canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
+              return canvas;
+          })(),
+          setStatus: function(text) { },
+          monitorRunDependencies: function(left) { },
+      };
+      window.onerror = function(event) {
+          console.log("onerror: " + event.message);
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

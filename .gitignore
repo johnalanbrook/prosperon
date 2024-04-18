@@ -2,6 +2,7 @@
 .obj/
 bin/
 build/
+*.zip
 *.o
 *.a
 *.d

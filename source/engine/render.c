@@ -304,8 +304,6 @@ HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};
 HMM_Mat4 useproj = {0};
 
-HMM_Vec3 dirl_pos = {4, 100, 20};
-
 #define MODE_STRETCH 0
 #define MODE_KEEP 1
 #define MODE_WIDTH 2
@@ -356,8 +354,6 @@ void openglRender(struct window *window, gameobject *cam, float zoom) {
              campos.x + camzoom * usesize.x / 2,
              campos.y - camzoom * usesize.y / 2,
              campos.y + camzoom * usesize.y / 2, -10000.f, 10000.f);
-
-  hudproj = HMM_Orthographic_LH_ZO(0, usesize.x, 0, usesize.y, -1.f, 1.f);
 
 /*  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
     sg_begin_pass(&(sg_pass){

@@ -10,29 +10,18 @@ endif
 
 CXX:=$(CC)
 
-# Temp to strip long emcc paths to just emcc
-CC := $(notdir $(CC))
-
 OPT ?= 0
-
-INFO :=
 LD = $(CC)
 
 STEAM = steam/sdk
 STEAMAPI = 
 
-ifeq ($(CC), emcc)
-	LDFLAGS += -sUSE_WEBGPU --shell-file shell.html
-	CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=5MB -sALLOW_MEMORY_GROWTH
-	OPT = 0
+ifeq ($(CROSS)$(CC), emcc)
+	LDFLAGS += --shell-file shell.html --closure 1
+	CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB
 	NDEBUG = 1
-	AR = emar
 	ARCH:= wasm
-endif
-
-CCC != $(CC) -v
-ifneq ($(findstring clangcc , $(CCC)),)
-	LDFLAGS += -Wl,-rpath=./
+	OPT=small
 endif
 
 ifdef NEDITOR
@@ -68,17 +57,13 @@ ifdef LEAK
 endif
 
 ifeq ($(OPT),small)
-  CPPFLAGS += -Oz -flto -fno-ident -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections 
+  CPPFLAGS += -Os -flto -fno-ident -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections
 
   LDFLAGS += -flto
 
-  ifeq ($(CC), emcc)
-    LDFLAGS += --closure 1
-  endif
-
   INFO :=$(INFO)_small
 else ifeq ($(OPT), 1)
-  CPPFLAGS += -O2 -flto
+  CPPFLAGS += -O3 -flto
   INFO :=$(INFO)_opt
 else
 	CPPFLAGS += -O2
@@ -103,11 +88,11 @@ ifeq ($(OS), Windows_NT) # then WINDOWS
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
-
   PKGCMD = zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
   ZIP = .zip
   UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
 	INFO :=$(INFO)_win
+	EXT = .exe
 else ifeq ($(OS), IOS)
   CC = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 	SDK = iphoneos
@@ -118,7 +103,7 @@ else ifeq ($(OS), IOS)
 	CXXFLAGS += -std=c++11
 	CFLAGS += -x objective-c
 	INFO :=$(INFO)_ios
-else ifeq ($(CC), emcc) # Then WEB
+else ifeq ($(OS), wasm) # Then WEB
   OS := Web
   LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
   CPPFLAGS += -DNSTEAM
@@ -199,20 +184,20 @@ install: $(NAME)
 
 $(NAME): $(OBJS) $(DEPS)
 	@echo Linking $(NAME)
-	$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
+	$(CROSS)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
 %$(INFO).o: %.c 
 	@echo Making C object $@
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CROSS)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %$(INFO).o: %.cpp
 	@echo Making C++ object $@
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
+	$(CROSS)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fpermissive -c $< -o $@
 
 %$(INFO).o: %.m
 	@echo Making Objective-C object $@
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CROSS)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 shaders: $(SHADERS)
 	@echo Making shaders
@@ -246,7 +231,7 @@ icon.ico: $(ICON)
 	rm $(ICNNAME)
 
 resource.o: resource.rc resource.manifest icon.ico
-	windres -i $< -o $@
+	$(CROSS)windres -i $< -o $@
 
 crossios:
 	make OS=IOS ARCH=arm64 DEBUG=$(DEBUG) OPT=$(OPT)
@@ -271,11 +256,14 @@ crossmac: Prosperon.icns
 	mv $(NAME) Prosperon.app/Contents/MacOS/Prosperon
 	cp Info.plist Prosperon.app/Contents
 	cp Prosperon.icns Prosperon.app/Contents/Resources
+	
+crosswin:
+	make CROSS=x86_64-w64-mingw32- OS=Windows_NT CC=gcc
 
 crossweb:
-	make CC=emcc
+	make CROSS=em OS=wasm
 	mv $(APP).html index.html
-
+	
 clean:
 	@echo Cleaning project
 	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(APP)* *.icns *.ico

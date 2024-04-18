@@ -245,6 +245,29 @@ input.action = {
   actions: [],
 };
 
+input.tabcomplete = function(val, list) {
+    if (!val) return val;
+    list.dofilter(function(x) { return x.startsWith(val); });
+
+    if (list.length === 1) {
+      return list[0];
+    }
+    
+    var ret = undefined;
+    var i = val.length;
+    while (!ret && !Object.empty(list)) {
+      var char = list[0][i];
+      if (!list.every(function(x) { return x[i] === char; }))
+        ret = list[0].slice(0, i);
+      else {
+        i++;
+        list.dofilter(function(x) { return x.length-1 > i; });
+      }
+    }
+
+    return ret ? ret : val;
+}
+
 /* May be a human player; may be an AI player */
 var Player = {
   players: [],
