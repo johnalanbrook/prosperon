@@ -70,9 +70,8 @@ QJSCLASS(sprite)
 QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
 QJSCLASS(material)
-QJSCLASS(mesh)
+QJSCLASS(model)
 QJSCLASS(window)
-QJSCLASS(drawmodel)
 QJSCLASS(constraint)
 
 static JSValue sound_proto;
@@ -350,6 +349,16 @@ HMM_Vec2 *js2cpvec2arr(JSValue v) {
   return arr;
 }
 
+HMM_Vec3 *js2cpvec3arr(JSValue v)
+{
+  HMM_Vec3 *arr = NULL;
+  int n = js_arrlen(v);
+  arrsetlen(arr,n);
+  for (int i = 0; i < n; i++)
+    arr[i] = js2vec3(js_getpropidx(v,i));
+  return arr;
+}
+
 HMM_Vec2 *jsfloat2vec(JSValue v)
 {
   size_t s;
@@ -549,14 +558,6 @@ static const JSCFunctionListEntry js_warp_damp_funcs [] = {
   CGETSET_ADD(warp_damp, damp)
 };
 
-JSC_CCALL(drawmodel_draw, draw_drawmodel(js2drawmodel(this)))
-JSC_SCALL(drawmodel_path, js2drawmodel(this)->model = GetExistingModel(str))
-
-static const JSCFunctionListEntry js_drawmodel_funcs[] = {
-  MIST_FUNC_DEF(drawmodel, draw, 0),
-  MIST_FUNC_DEF(drawmodel, path, 1)
-};
-
 JSC_GETSET(emitter, life, number)
 JSC_GETSET(emitter, life_var, number)
 JSC_GETSET(emitter, speed, number)
@@ -581,7 +582,6 @@ JSC_CCALL(emitter_start, start_emitter(js2emitter(this)))
 JSC_CCALL(emitter_stop, stop_emitter(js2emitter(this)))
 JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0])))
 
-
 JSC_CCALL(render_grid, draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2]));)
 JSC_CCALL(render_point, draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])))
 JSC_CCALL(render_circle, draw_circle(js2vec2(argv[0]), js2number(argv[1]), js2number(argv[2]), js2color(argv[3]), -1);)
@@ -596,10 +596,16 @@ JSC_CCALL(render_poly,
 JSC_CCALL(render_line, 
   void *v1 = js2cpvec2arr(argv[0]);
   draw_edge(v1, js_arrlen(argv[0]), js2color(argv[1]), js2number(argv[2]), 0, js2color(argv[1]), 10);
+  arrfree(v1);
 )
 
+JSC_CCALL(render_line3d,
+  void *v1 = js2cpvec3arr(argv[0]);
+  draw_line3d(v1, js_arrlen(argv[0]), js2color(argv[1]), 0, 0);
+  arrfree(v1);
+);
+
 JSC_CCALL(render_sprites, sprite_draw_all())
-JSC_CCALL(render_models, model_draw_all())
 JSC_CCALL(render_emitters, emitters_draw(&useproj))
 JSC_CCALL(render_flush, debug_flush(&useproj); text_flush(&useproj); )
 JSC_CCALL(render_end_pass,
@@ -612,7 +618,7 @@ JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2numb
 JSC_CCALL(render_set_camera, useproj = projection)
 JSC_CCALL(render_hud_res,
   HMM_Vec2 xy = js2vec2(argv[0]);
-  useproj = HMM_Orthographic_LH_ZO(0, xy.x, 0, xy.y, -1, 1);
+  useproj = HMM_Orthographic_RH_ZO(0, xy.x, 0, xy.y, -1, 1);
 )
 JSC_CCALL(render_clear_color,
   sg_color c;
@@ -626,8 +632,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, circle, 3),
   MIST_FUNC_DEF(render, poly, 2),
   MIST_FUNC_DEF(render, line, 3),
+  MIST_FUNC_DEF(render, line3d, 2),
   MIST_FUNC_DEF(render, sprites, 0),
-  MIST_FUNC_DEF(render, models, 0),
   MIST_FUNC_DEF(render, emitters, 0),
   MIST_FUNC_DEF(render, flush, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
@@ -1026,6 +1032,14 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, make_gravity, 0),
 };
 
+JSC_CCALL(model_draw_go,
+  model_draw_go(js2model(this), js2gameobject(argv[0]), js2gameobject(argv[1]))
+);
+
+static const JSCFunctionListEntry js_model_funcs[] = {
+  MIST_FUNC_DEF(model, draw_go, 1)
+};
+
 static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, life),
   CGETSET_ADD(emitter, life_var),
@@ -1171,6 +1185,24 @@ JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js
 JSC_CCALL(gameobject_dir_world2this, return vec22js(mat_t_dir(t_world2go(js2gameobject(this)), js2vec2(argv[0]))))
 JSC_CCALL(gameobject_dir_this2world, return vec22js(mat_t_dir(t_go2world(js2gameobject(this)), js2vec2(argv[0]))))
 
+JSC_CCALL(gameobject_rotate3d,
+  HMM_Vec3 rot = js2vec3(argv[0]);
+  HMM_Quat qrot = HMM_QFromAxisAngle_RH((HMM_Vec3){1,0,0}, rot.x);
+  qrot = HMM_MulQ(qrot, HMM_QFromAxisAngle_RH((HMM_Vec3){0,1,0}, rot.y));
+  qrot = HMM_MulQ(qrot, HMM_QFromAxisAngle_RH((HMM_Vec3){0,0,1}, rot.z));
+  gameobject *go = js2gameobject(this);
+  go->quat = HMM_MulQ(go->quat, qrot);
+  return JS_UNDEFINED;
+)
+
+JSC_CCALL(gameobject_lookat,
+  HMM_Vec3 point = js2vec3(argv[0]);
+  gameobject *go = js2gameobject(this);
+  HMM_Vec3 pos = go_pos3d(go);
+  HMM_Mat4 m = HMM_LookAt_RH(pos, point, (HMM_Vec3){0,1,0});
+  go->quat = HMM_M4ToQ_RH(m);
+)
+
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject, friction),
   CGETSET_ADD(gameobject, elasticity),
@@ -1200,6 +1232,8 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, dir_world2this, 1),
   MIST_FUNC_DEF(gameobject, dir_this2world, 1),
   MIST_FUNC_DEF(gameobject, selfsync, 0),
+  MIST_FUNC_DEF(gameobject, rotate3d, 1),
+  MIST_FUNC_DEF(gameobject, lookat, 1)
 };
 
 JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
@@ -1367,7 +1401,10 @@ const char *STRTEST = "TEST STRING";
 
 JSC_CCALL(performance_barecall,)
 JSC_CCALL(performance_unpack_num, int i = js2number(argv[0]))
-JSC_CCALL(performance_unpack_array, js2cpvec2arr(argv[0]))
+JSC_CCALL(performance_unpack_array,
+  void *v = js2cpvec2arr(argv[0]);
+  arrfree(v);
+)
 JSC_CCALL(performance_pack_num, return number2js(1.0))
 JSC_CCALL(performance_pack_string, return JS_NewStringLen(js, STRTEST, sizeof(*STRTEST)))
 JSC_CCALL(performance_unpack_string, js2str(argv[0]))
@@ -1502,17 +1539,11 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
-JSC_CCALL(os_make_model,
-  gameobject *go = js2gameobject(argv[0]);
-  struct drawmodel *dm = make_drawmodel(go);
-  JSValue ret = JS_NewObject(js);
-  js_setprop_str(ret, "id", ptr2js(dm));
-  return ret;
-)
-
 JSC_CCALL(os_make_font, return font2js(MakeFont(js2str(argv[0]), js2number(argv[1]))))
 
 JSC_SCALL(os_system, system(str); )
+
+JSC_SCALL(os_make_model, return model2js(model_make(str)))
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os,sprite,1),
@@ -1530,9 +1561,9 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_circle2d, 2),
   MIST_FUNC_DEF(os, make_poly2d, 2),
   MIST_FUNC_DEF(os, make_edge2d, 2),
-  MIST_FUNC_DEF(os, make_model, 2),
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_font, 2),
+  MIST_FUNC_DEF(os, make_model, 1)
 };
 
 #include "steam.h"
@@ -1554,7 +1585,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(constraint);
   QJSCLASSPREP_FUNCS(window);
-  QJSCLASSPREP_FUNCS(drawmodel);
+  QJSCLASSPREP_FUNCS(model);
 
   QJSGLOBALCLASS(nota);
   QJSGLOBALCLASS(input);

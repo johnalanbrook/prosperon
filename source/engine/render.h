@@ -37,6 +37,12 @@ struct draw_p {
   float y;
 };
 
+struct draw_p3 {
+  float x;
+  float y;
+  float z;
+};
+
 #include <chipmunk/chipmunk.h>
 
 enum RenderMode {

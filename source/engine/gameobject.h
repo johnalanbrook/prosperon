@@ -30,6 +30,7 @@ struct gameobject {
   cpBodyType phys;
   cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
   HMM_Vec3 scale; /* local */  
+  HMM_Quat quat;
   int next;
   float mass;
   float friction;
@@ -78,6 +79,8 @@ HMM_Mat3 t_go2world(gameobject *go);
 HMM_Mat3 t_world2go(gameobject *go);
 HMM_Mat4 t3d_go2world(gameobject *go);
 HMM_Mat4 t3d_world2go(gameobject *go);
+
+HMM_Vec3 go_pos3d(gameobject *go);
 
 HMM_Vec2 go_pos(gameobject *go);
 void gameobject_setpos(gameobject *go, cpVect vec);

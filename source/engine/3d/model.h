@@ -23,42 +23,23 @@ typedef struct mesh {
 /* A collection of meshes which create a full figure */
 typedef struct model {
   struct mesh *meshes;
-  const char *path;
   HMM_Mat4 matrix;
 } model;
-
-/* A model with draw information */ 
-typedef struct drawmodel {
-  struct model *model;
-  HMM_Mat4 amodel;
-  gameobject *go;
-} drawmodel;
 
 typedef struct bone {
   transform3d t;
   struct bone *children;
 } bone;
 
-/* Get the model at a path, or create and return if it doesn't exist */
-struct model *GetExistingModel(const char *path);
-
 /* Make a Model struct */
-struct model *MakeModel(const char *path);
+struct model *model_make(const char *path);
+void model_free(model *m);
 
-/* Load a model from memory into the GPU */
-void loadmodel(struct model *model);
+void model_draw_go(model *m, gameobject *go, gameobject *cam);
 
 void model_init();
 
-struct drawmodel *make_drawmodel(gameobject *go);
-void draw_drawmodel(struct drawmodel *dm);
-void model_draw_all();
-void drawmodel_free(struct drawmodel *dm);
-
 material *material_make();
 void material_free(material *mat);
-
-mesh *mesh_make();
-void mesh_free(mesh *m);
 
 #endif

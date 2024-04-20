@@ -47,8 +47,8 @@ render.point =  function(pos,size,color = Color.blue) {
   
 var tmpline = render.line;
 render.line = function(points, color = Color.white, thickness = 1) {
-    tmpline(points,color,thickness);
-  };
+  tmpline(points,color,thickness);
+};
 
 render.cross = function(pos, size, color = Color.red) {
     var a = [

@@ -332,11 +332,12 @@ function process()
     
   render.set_camera();
   render.sprites(); // blits all sprites
-  render.models(); // blits all models
   render.emitters(); // blits emitters
   prosperon.draw(); // draw calls
   debug.draw(); // calls needed debugs
   render.flush();
+  
+  prosperon.hook3d?.();
   
   render.hud_res(window.rendersize);
   prosperon.gui();

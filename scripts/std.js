@@ -45,6 +45,7 @@ os.openurl = function(url) {
 }
 
 var projectfile = "project.prosperon";
+io.dumpfolder = '.prosperon';
 
 Resources.is_sound = function(path) {
   var ext = path.ext();
@@ -185,7 +186,7 @@ Cmdline.register_order = function(order, fn, doc, usage = "") {
 }
 
 Cmdline.register_order("edit", function() {
-  if (!io.exists(".prosperon")) {
+  if (!io.exists(projectfile)) {
     say("No game to edit. Try making one with 'prosperon init'.");
     return;
   }
@@ -209,12 +210,12 @@ Cmdline.register_order("init", function() {
     return;
   }
 
-  if (!(io.ls().length === 0)) {
+  if (!(io.ls().filter(x => x[0] !== '.').length === 0)) {
     say("Directory is not empty. Make an empty one and init there.");
     return;
   }
 
-  io.mkdir(".prosperon");
+  io.mkdir(io.dumpfolder);
   var project = {};
   project.version = prosperon.version;
   project.revision = prosperon.revision;

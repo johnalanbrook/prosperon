@@ -895,9 +895,12 @@ static inline HMM_Vec2 HMM_V2Rotate(HMM_Vec2 v, float angle)
   return (HMM_Vec2){r*cos(angle), r*sin(angle)};
 }
 
-
 static inline float HMM_LenV3(HMM_Vec3 A) {
   return HMM_SqrtF(HMM_LenSqrV3(A));
+}
+
+static inline float HMM_DistV3(HMM_Vec3 a, HMM_Vec3 b) {
+  return HMM_LenV3(HMM_SubV3(a,b));
 }
 
 static inline float HMM_AngleV3(HMM_Vec3 a, HMM_Vec3 b)

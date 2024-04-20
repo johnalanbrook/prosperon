@@ -349,7 +349,7 @@ void openglRender(struct window *window, gameobject *cam, float zoom) {
   campos = go_pos(cam);
   camzoom = zoom;
 
-  projection = HMM_Orthographic_LH_NO(
+  projection = HMM_Orthographic_RH_NO(
              campos.x - camzoom * usesize.x / 2,
              campos.x + camzoom * usesize.x / 2,
              campos.y - camzoom * usesize.y / 2,

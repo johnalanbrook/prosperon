@@ -1,5 +1,5 @@
 @vs lvs
-in vec2 apos;
+in vec3 apos;
 in float adist;
 in vec4 acolor;
 in float aseglen;
@@ -14,7 +14,7 @@ uniform lvs_params { mat4 proj; };
 
 void main()
 {
-  gl_Position = proj * vec4(apos, 0.0, 1.0);
+  gl_Position = proj * vec4(apos, 1.0);
   fcolor = acolor;
   dist = adist;
   seg_len = aseglen;

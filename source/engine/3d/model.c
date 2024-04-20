@@ -26,13 +26,6 @@
 
 #include "sokol/sokol_gfx.h"
 
-static struct {
-  char *key;
-  struct model *value;
-} *modelhash = NULL;
-
-struct drawmodel **models = NULL;
-
 static void processnode();
 static void processmesh();
 static void processtexture();
@@ -55,23 +48,6 @@ struct mesh_v {
 };
 
 void model_init() {
-/*  model_shader = sg_make_shader(diffuse_shader_desc(sg_query_backend()));
-
-  model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
-      .shader = model_shader,
-      .layout = {
-          .attrs = {
-              [0].format = SG_VERTEXFORMAT_FLOAT3,
-              [1].format = SG_VERTEXFORMAT_USHORT2N,
-          },
-      },
-      .index_type = SG_INDEXTYPE_UINT16,
-      .cull_mode = SG_CULLMODE_FRONT,
-      .depth.write_enabled = true,
-      .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
-  });
-*/
-
   model_shader = sg_make_shader(unlit_shader_desc(sg_query_backend()));
 
   model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -79,8 +55,8 @@ void model_init() {
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT3,
-	[1].format = SG_VERTEXFORMAT_USHORT2N,
-	[1].buffer_index = 1,
+	      [1].format = SG_VERTEXFORMAT_USHORT2N,
+	      [1].buffer_index = 1,
       },
     },
     .index_type = SG_INDEXTYPE_UINT16,
@@ -88,15 +64,6 @@ void model_init() {
     .depth.write_enabled = true,
     .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
   });
-}
-
-struct model *GetExistingModel(const char *path) {
-  if (!path || path[0] == '\0') return NULL;
-
-  int index = shgeti(modelhash, path);
-  if (index != -1) return modelhash[index].value;
-
-  return MakeModel(path);
 }
 
 cgltf_attribute *get_attr_type(cgltf_primitive *p, cgltf_attribute_type t)
@@ -141,13 +108,10 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
      if (img->buffer_view) {
        cgltf_buffer_view *buf = img->buffer_view;
        mesh->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
-     } else {
-//       char *imp = seprint("%s/%s", dirname(mesh->model->path), img->uri);
-//       mesh->bind.fs.images[0] = texture_from_file(imp)->id;
-//       free(imp);
-     }
+     } else
+       mesh->bind.fs.images[0] = texture_from_file(img->uri)->id;
    } else
-     mesh->bind.fs.images[0] = texture_from_file("k")->id; 
+     mesh->bind.fs.images[0] = texture_from_file("icons/moon.gif")->id; 
      
    mesh->bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 /*     
@@ -245,8 +209,8 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_normal:
-      has_norm = 1;
-      mesh->bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
+//      has_norm = 1;
+//      mesh->bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_tangent:
@@ -337,7 +301,7 @@ void model_process_scene(model *model, cgltf_scene *scene)
     model_process_node(model, scene->nodes[i]);
 }
 
-struct model *MakeModel(const char *path)
+struct model *model_make(const char *path)
 {
   YughInfo("Making the model from %s.", path);
   cgltf_options options = {0};
@@ -357,8 +321,6 @@ struct model *MakeModel(const char *path)
   }
 
   struct model *model = calloc(1, sizeof(*model));
-  
-  model->path = path;
 
   if (data->scenes_count == 0 || data->scenes_count > 1) return NULL;
   model_process_scene(model, data->scene);
@@ -369,76 +331,34 @@ struct model *MakeModel(const char *path)
   for (int i = 0; i < data->animations_count; i++)
     model_add_cgltf_anim(model, &data->animations[i]);
 
-  shput(modelhash, path, model);
-
   return model;
 }
 
-/* eye position */
-HMM_Vec3 eye = {0,0,100};
+void model_free(model *m)
+{
 
-void draw_model(struct model *model, HMM_Mat4 amodel, HMM_Mat4 *proj) {
-  HMM_Vec3 center = {0.f, 0.f, 0.f};
-  HMM_Mat4 view = HMM_LookAt_RH(eye, center, vUP);
-  HMM_Mat4 vp = HMM_MulM4(*proj, view);
+}
 
-  HMM_Vec3 dir_dir = HMM_NormV3(HMM_SubV3(center, dirl_pos));
-
+void model_draw_go(model *model, gameobject *go, gameobject *cam)
+{
+  HMM_Mat4 view = t3d_go2world(cam);
+  HMM_Mat4 proj = HMM_Perspective_RH_NO(20, 1, 0.01, 10000);
+  HMM_Mat4 vp = HMM_MulM4(proj, view);
+  
   vs_p_t vs_p;
   memcpy(vs_p.vp, vp.Elements, sizeof(float)*16);
-  memcpy(vs_p.model, amodel.Elements, sizeof(float)*16);
-
+  memcpy(vs_p.model, t3d_go2world(go).Elements, sizeof(float)*16);
+  
   sg_apply_pipeline(model_pipe);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vs_p));
-
+  
   for (int i = 0; i < arrlen(model->meshes); i++) {
     sg_apply_bindings(&model->meshes[i].bind);
     sg_draw(0, model->meshes[i].idx_count, 1);    
   }
 }
 
-struct drawmodel *make_drawmodel(gameobject *go)
-{
-  struct drawmodel *dm = malloc(sizeof(struct drawmodel));
-  dm->model = NULL;
-  dm->amodel = HMM_M4D(1.f);
-  dm->go = go;
-  arrpush(models,dm);
-  return dm;
-}
-
-void model_draw_all()
-{
-  for (int i = 0; i < arrlen(models); i++)
-    draw_drawmodel(models[i]);
-}
-
-void draw_drawmodel(struct drawmodel *dm)
-{
-  if (!dm->model) return;
-  struct gameobject *go = dm->go;
-  HMM_Mat4 rst = t3d_go2world(go);
-  draw_model(dm->model, rst, &useproj);
-}
-
-void drawmodel_free(struct drawmodel *dm) {
-  int rm;
-  for (int i = 0; i < arrlen(models); i++)
-    if (models[i] == dm) {
-      rm = i;
-      break;
-    }
-
-  arrdelswap(models,rm);
-  free(dm);
-}
-
 void material_free(material *mat)
-{
-
-}
-
-void mesh_free(mesh *m)
 {
 
 }

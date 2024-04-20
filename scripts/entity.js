@@ -644,8 +644,8 @@ gameobject.doc = {
 
 global.ur = {};
 
-if (io.exists(".prosperon/ur.json"))
-  ur = json.decode(io.slurp(".prosperon/ur.json"));
+if (io.exists(`${io.dumpfolder}/ur.json`))
+  ur = json.decode(io.slurp(`${io.dumpfolder}/ur.json`));
 else {
   ur = {};
   ur._list = [];

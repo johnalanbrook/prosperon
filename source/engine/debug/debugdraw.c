@@ -15,6 +15,8 @@
 #include "line.sglsl.h"
 #include "grid.sglsl.h"
 
+#include "grid3d.sglsl.h"
+
 #define PAR_STREAMLINES_IMPLEMENTATION
 #include "par/par_streamlines.h"
 
@@ -57,7 +59,7 @@ static sg_shader point_shader;
 static sg_pipeline point_pipe;
 static sg_bindings point_bind;
 struct point_vertex {
-  struct draw_p pos;
+  struct draw_p3 pos;
   struct rgba color;
   float radius;
 };
@@ -108,6 +110,9 @@ struct circle_vertex {
   float segsize;
   float fill;
 };
+
+static sg_pipeline g3_pipe;
+static sg_shader g3_shader;
 
 void debug_nextpass()
 {
@@ -191,6 +196,14 @@ static sg_shader_uniform_block_desc time_ubo = {
 
 void debugdraw_init()
 {
+/*
+  g3_shader = sg_make_shader(grid3d_shader_desc(sg_query_backend()));
+  g3_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = g3_shader,
+    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+    .index_type = SG_INDEXTYPE_UINT32
+  });
+*/
   point_shader = sg_make_shader(point_shader_desc(sg_query_backend()));
   
   point_pipe = sg_make_pipeline(&(sg_pipeline_desc){
@@ -219,7 +232,7 @@ void debugdraw_init()
     .shader = line_shader,
     .layout = {
       .attrs = {
-        [0].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
+        [0].format = SG_VERTEXFORMAT_FLOAT3, /* pos */
 	      [1].format = SG_VERTEXFORMAT_FLOAT, /* dist */
 	      [2].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
 	      [3].format = SG_VERTEXFORMAT_FLOAT, /* seg length */
@@ -331,7 +344,7 @@ void debugdraw_init()
   });
 }
 
-void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float seg_speed)
+void draw_line3d(HMM_Vec3 *points, int n, struct rgba color, float seg_len, float seg_speed)
 {
   if (n < 2) return;
   
@@ -339,7 +352,7 @@ void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float 
   
   struct line_vert v[n];
   float dist = 0;
-
+  
   for (int i = 0; i < n; i++) {
     v[i].pos.x = points[i].x;
     v[i].pos.y = points[i].y;
@@ -347,10 +360,10 @@ void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float 
     v[i].seg_len = seg_len;
     v[i].seg_speed = seg_speed;
   }
-
+  
   v[0].dist = 0;
   for (int i = 1; i < n; i++) {
-    dist += HMM_DistV2(points[i-1], points[i]);
+    dist += HMM_DistV3(points[i-1], points[i]);
     v[i].dist = dist;    
   }
   
@@ -375,9 +388,20 @@ void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float 
   if (sg_query_buffer_will_overflow(line_bind.vertex_buffers[0], vr.size) || sg_query_buffer_will_overflow(line_bind.index_buffer, ir.size)) return;
   sg_append_buffer(line_bind.vertex_buffers[0], &vr);
   sg_append_buffer(line_bind.index_buffer, &ir);
-
+  
   line_c += i_c;
   line_v += n;
+}
+
+void draw_line(HMM_Vec2 *points, int n, struct rgba color, float seg_len, float seg_speed)
+{
+  if (n < 2) return;
+  
+  HMM_Vec3 points3[n];
+  for (int i = 0; i < n; i++)
+    points3[i].xy = points[i];
+    
+  draw_line3d(points3, n, color, seg_len, seg_speed);
 }
 
 HMM_Vec2 center_of_vects(HMM_Vec2 *v, int n)

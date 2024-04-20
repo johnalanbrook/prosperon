@@ -31,9 +31,7 @@ transform3d go2t3(gameobject *go)
   t.pos.Z = go->drawlayer;
   t.scale = go->scale;
   t.scale.Z = go->scale.X;
-  t.rotation = HMM_QFromAxisAngle_RH(vFWD, go_angle(go));
-  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vRIGHT, -t.pos.Y/100), t.rotation);
-  t.rotation = HMM_MulQ(HMM_QFromAxisAngle_RH(vUP, t.pos.X/100), t.rotation);
+  t.rotation = go->quat;
   return t;
 }
 
@@ -140,7 +138,8 @@ gameobject *MakeGameobject() {
       .ref = JS_UNDEFINED,
       .mask = ~0,
       .categories = 1,
-      .warp_mask = ~0
+      .warp_mask = ~0,
+      .quat = HMM_QFromAxisAngle_RH((HMM_Vec3){0,1,0}, 0)
   };
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
@@ -198,6 +197,12 @@ void gameobject_setpos(gameobject *go, cpVect vec) {
 void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
   struct phys2d_shape *s = cpShapeGetUserData(shape);
   s->debugdraw(s->data);
+}
+
+HMM_Vec3 go_pos3d(gameobject *go)
+{
+  HMM_Vec2 pos2d = go_pos(go);
+  return (HMM_Vec3){pos2d.x, pos2d.y, go->drawlayer};
 }
 
 void gameobject_draw_debug(gameobject *go) {
