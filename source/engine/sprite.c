@@ -10,11 +10,9 @@
 #include "sprite.sglsl.h"
 #include "9slice.sglsl.h"
 
-static sprite **sprites = NULL;
-
 static sg_shader shader_sprite;
 static sg_pipeline pip_sprite;
-static sg_bindings bind_sprite;
+sg_bindings bind_sprite;
 
 struct sprite_vert {
   HMM_Vec2 pos;
@@ -50,82 +48,48 @@ sprite *sprite_make()
   sp->angle = 0;
   sp->color = color_white;
   sp->emissive = color_clear;
-  sp->go = NULL;
-  sp->tex = NULL;
   sp->frame = ST_UNIT;
-  sp->drawmode = DRAW_SIMPLE;
-  sp->enabled = 1;
   sp->parallax = 1;
-  
-  arrpush(sprites,sp);
   
   return sp;
 }
 
-void sprite_free(sprite *sprite)
-{
-  free(sprite);
-  for (int i = arrlen(sprites)-1; i >= 0; i--)
-    if (sprites[i] == sprite) {
-      arrdelswap(sprites,i);
-      return;
-    }
-}
+void sprite_free(sprite *sprite) { free(sprite); }
 
+static int sprite_draws = 0;
 static int sprite_count = 0;
+static texture *loadedtex;
 
-void sprite_flush() { sprite_count = 0; }
-
-int sprite_sort(sprite **sa, sprite **sb)
-{
-  sprite *a = *sa;
-  sprite *b = *sb;
-  struct gameobject *goa = a->go;
-  struct gameobject *gob= b->go;
-  if (!goa && !gob) return 0;
-  if (!goa) return -1;
-  if (!gob) return 1;
-  if (goa->drawlayer > gob->drawlayer) return 1;
-  if (gob->drawlayer > goa->drawlayer) return -1;
-  if (*sa > *sb) return 1;
-  return -1;
+void sprite_flush() {
+  if (!loadedtex) return;
+  sg_apply_bindings(&bind_sprite);
+  sg_draw(sprite_count * 4, 4, sprite_draws);
+  sprite_count += sprite_draws;
+  sprite_draws = 0;
 }
-
-void sprite_draw_all() {
-  if (arrlen(sprites) == 0) return;
-  
-  sg_apply_pipeline(pip_sprite);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(useproj));
-
-  qsort(sprites, arrlen(sprites), sizeof(*sprites), sprite_sort);
-  
-  for (int i = 0; i < arrlen(sprites); i++) {
-    if (!sprites[i]->enabled) continue;
-    sprite_draw(sprites[i]);
-  }
-}
+void sprite_newframe() { sprite_count = 0; sprite_draws = 0;}
 
 void sprite_initialize() {
   shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
 
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
-      .shader = shader_sprite,
-      .layout = {
-          .attrs = {
-              [0].format = SG_VERTEXFORMAT_FLOAT2,
-	            [1].format = SG_VERTEXFORMAT_FLOAT2,
-	            [2].format = SG_VERTEXFORMAT_UBYTE4N,
-	            [3].format = SG_VERTEXFORMAT_UBYTE4N}},
-      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-      .label = "sprite pipeline",
-      .colors[0].blend = blend_trans,
+    .shader = shader_sprite,
+    .layout = {
+      .attrs = {
+        [0].format = SG_VERTEXFORMAT_FLOAT2,
+        [1].format = SG_VERTEXFORMAT_FLOAT2,
+        [2].format = SG_VERTEXFORMAT_UBYTE4N,
+        [3].format = SG_VERTEXFORMAT_UBYTE4N}},
+    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+    .label = "sprite pipeline",
+    .colors[0].blend = blend_trans,
   });
 
   bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(struct sprite_vert) * num_spriteverts,
-      .type = SG_BUFFERTYPE_VERTEXBUFFER,
-      .usage = SG_USAGE_STREAM,
-      .label = "sprite vertex buffer",
+    .size = sizeof(struct sprite_vert) * num_spriteverts,
+    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .usage = SG_USAGE_STREAM,
+    .label = "sprite vertex buffer",
   });
   bind_sprite.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
 
@@ -152,10 +116,16 @@ void sprite_initialize() {
   });
 }
 
-void tex_draw(struct texture *tex, HMM_Mat3 m, struct rect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive, float parallax) {
+void sprite_pipe()
+{
+  sg_apply_pipeline(pip_sprite);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(useproj));
+}
+
+void tex_draw(HMM_Mat3 m, struct rect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive, float parallax) {
   struct sprite_vert verts[4];
-  float w = tex->width*r.w;
-  float h = tex->height*r.h;
+  float w = loadedtex->width*r.w;
+  float h = loadedtex->height*r.h;
   
   HMM_Vec2 sposes[4] = {
     {0,0},
@@ -184,13 +154,8 @@ void tex_draw(struct texture *tex, HMM_Mat3 m, struct rect r, struct rgba color,
   verts[3].uv.X = r.x+r.w;
   verts[3].uv.Y = r.y;
 
-  bind_sprite.fs.images[0] = tex->id;
-
   sg_append_buffer(bind_sprite.vertex_buffers[0], SG_RANGE_REF(verts));
-  sg_apply_bindings(&bind_sprite);
-
-  sg_draw(sprite_count * 4, 4, 1);
-  sprite_count++;
+  sprite_draws++;
 }
 
 transform2d sprite2t(sprite *s)
@@ -202,23 +167,26 @@ transform2d sprite2t(sprite *s)
   };
 }
 
-void sprite_draw(struct sprite *sprite) {
-  if (!sprite->tex) return;
-  transform2d t;
-  if (!sprite->go) t = t2d_unit;
-  else t = go2t(sprite->go);
-  
+void sprite_tex(texture *t)
+{
+  loadedtex = t;
+  bind_sprite.fs.images[0] = t->id;
+}
+
+void sprite_draw(struct sprite *sprite, gameobject *go) {
+  transform2d t = go2t(go);
   t.pos.x += (campos.x - (campos.x/sprite->parallax));
   t.pos.y += (campos.y - (campos.y/sprite->parallax));
   HMM_Mat3 m = transform2d2mat(t);
   HMM_Mat3 sm = transform2d2mat(sprite2t(sprite));
-  tex_draw(sprite->tex, HMM_MulM3(m,sm), sprite->frame, sprite->color, sprite->drawmode, (HMM_Vec2){0,0}, sprite->scale, sprite->emissive, sprite->parallax);
+  tex_draw(HMM_MulM3(m,sm), sprite->frame, sprite->color, 0, (HMM_Vec2){0,0}, sprite->scale, sprite->emissive, sprite->parallax);
 }
 
 void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color) {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(useproj));
-  tex_draw(tex, transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
+  sprite_tex(tex);
+  tex_draw(transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0}, 0);
 }
 
 void slice9_draw(texture *tex, transform2d *t, HMM_Vec4 border, struct rgba color)

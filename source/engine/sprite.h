@@ -16,25 +16,24 @@ struct sprite {
   float angle;
   struct rgba color;
   struct rgba emissive;
-  gameobject *go;
-  texture *tex;
   struct rect frame;
-  int enabled;
   int drawmode;
   float parallax;
-  unsigned int next;
 };
 
 typedef struct sprite sprite;
 
+extern sg_bindings bind_sprite;
+
 sprite *sprite_make();
-int make_sprite(gameobject *go);
 void sprite_free(sprite *sprite);
-void sprite_delete(int id);
+void sprite_tex(texture *t);
 void sprite_initialize();
-void sprite_draw(struct sprite *sprite);
+void sprite_draw(struct sprite *sprite, gameobject *go);
+void sprite_pipe();
 void sprite_draw_all();
 void sprite_flush();
+void sprite_newframe();
 
 void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
 

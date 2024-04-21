@@ -320,18 +320,27 @@ function process()
 
     while (physlag > phys_step) {
       physlag -= phys_step;
+      var st = profile.now();
       prosperon.phys2d_step(phys_step*game.timescale);
       prosperon.physupdate(phys_step*game.timescale);
+      profile.addreport(profcache, "physics step", st);
     }
   }
-
+  var st = profile.now();
   if (!game.camera)  
     prosperon.window_render(world, 1);
   else
     prosperon.window_render(game.camera, game.camera.zoom);
     
   render.set_camera();
-  render.sprites(); // blits all sprites
+  
+  os.sprite_pipe();
+  allsprites.forEach(function(x) {
+    render.set_sprite_tex(x.texture);    
+    x.draw(x.go);
+    render.sprite_flush();                
+  });
+  render.sprite_flush();
   render.emitters(); // blits emitters
   prosperon.draw(); // draw calls
   debug.draw(); // calls needed debugs
@@ -347,6 +356,7 @@ function process()
   render.flush();
   
   render.end_pass();
+  profile.addreport(profcache, "render frame", st);
 }
 
 game.timescale = 1;

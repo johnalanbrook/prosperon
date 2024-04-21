@@ -117,7 +117,7 @@ Object.mixin(os.sprite(true), {
       }
       stop = self.gameobject.delay(advance, playing.frames[f].time);
     }
-    this.tex(game.texture(playing.path));
+
     advance();
   },
   stop() {
@@ -133,7 +133,6 @@ Object.mixin(os.sprite(true), {
     this._p = p;    
     this.del_anim?.();
     this.texture = game.texture(p);
-    this.tex(this.texture);
     
     var anim = SpriteAnim.make(p);
     if (!anim) return;
@@ -150,6 +149,7 @@ Object.mixin(os.sprite(true), {
     this.anim = undefined;
     this.gameobject = undefined;
     this.anim_done = undefined;
+    delete allsprites[this.guid];
   },
   toString() { return "sprite"; },
   move(d) { this.pos = this.pos.add(d); },
@@ -176,12 +176,14 @@ Object.mixin(os.sprite(true), {
   width() { return this.dimensions().x; },
   height() { return this.dimensions().y; },
 });
-
+globalThis.allsprites = {};
 os.sprite(true).make = function(go)
 {
   var sp = os.sprite();
   sp.go = go;
   sp.gameobject = go;
+  sp.guid = prosperon.guid();
+  allsprites[sp.guid] = sp;
   return sp;
 }
 

@@ -605,14 +605,13 @@ JSC_CCALL(render_line3d,
   arrfree(v1);
 );
 
-JSC_CCALL(render_sprites, sprite_draw_all())
 JSC_CCALL(render_emitters, emitters_draw(&useproj))
 JSC_CCALL(render_flush, debug_flush(&useproj); text_flush(&useproj); )
 JSC_CCALL(render_end_pass,
   sg_end_pass();
   sg_commit();
   debug_newframe();
-  sprite_flush();
+  sprite_newframe();
 )
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_CCALL(render_set_camera, useproj = projection)
@@ -626,6 +625,9 @@ JSC_CCALL(render_clear_color,
   pass_action.colors[0].clear_value = c;
 )
 
+JSC_CCALL(render_set_sprite_tex, sprite_tex(js2texture(argv[0])))
+JSC_CCALL(render_sprite_flush, sprite_flush())
+
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, grid, 3),
   MIST_FUNC_DEF(render, point, 3),
@@ -633,7 +635,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, poly, 2),
   MIST_FUNC_DEF(render, line, 3),
   MIST_FUNC_DEF(render, line3d, 2),
-  MIST_FUNC_DEF(render, sprites, 0),
   MIST_FUNC_DEF(render, emitters, 0),
   MIST_FUNC_DEF(render, flush, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
@@ -641,6 +642,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, set_camera, 0),
   MIST_FUNC_DEF(render, hud_res, 1),
   MIST_FUNC_DEF(render, clear_color, 1),
+  MIST_FUNC_DEF(render, set_sprite_tex, 1),
+  MIST_FUNC_DEF(render, sprite_flush, 0),
 };
 
 JSC_CCALL(gui_flush, text_flush(&useproj));
@@ -1317,27 +1320,22 @@ static const JSCFunctionListEntry js_pshape_funcs[] = {
 
 JSC_GETSET(sprite, color, color)
 JSC_GETSET(sprite, emissive, color)
-JSC_GETSET(sprite, enabled, boolean)
 JSC_GETSET(sprite, parallax, number)
-JSC_GETSET(sprite, tex, texture)
 JSC_GETSET(sprite, pos, vec2)
 JSC_GETSET(sprite, scale, vec2)
 JSC_GETSET(sprite, angle, number)
 JSC_GETSET(sprite, frame, rect)
-JSC_GETSET(sprite,go,gameobject)
-JSC_CCALL(sprite_tex, js2sprite(this)->tex = js2texture(argv[0]))
+JSC_CCALL(sprite_draw, sprite_draw(js2sprite(this), js2gameobject(argv[0])))
 
 static const JSCFunctionListEntry js_sprite_funcs[] = {
   CGETSET_ADD(sprite,pos),
   CGETSET_ADD(sprite,scale),
   CGETSET_ADD(sprite,angle),
-  MIST_FUNC_DEF(sprite, tex, 1),
   CGETSET_ADD(sprite,color),
   CGETSET_ADD(sprite,emissive),
-  CGETSET_ADD(sprite,enabled),
   CGETSET_ADD(sprite,parallax),
   CGETSET_ADD(sprite,frame),
-  CGETSET_ADD(sprite,go)
+  MIST_FUNC_DEF(sprite, draw, 1)
 };
 
 JSC_GET(texture, width, number)
@@ -1545,6 +1543,8 @@ JSC_SCALL(os_system, system(str); )
 
 JSC_SCALL(os_make_model, return model2js(model_make(str)))
 
+JSC_CCALL(os_sprite_pipe, sprite_pipe())
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os,sprite,1),
   MIST_FUNC_DEF(os, cwd, 0),
@@ -1563,7 +1563,8 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_edge2d, 2),
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_font, 2),
-  MIST_FUNC_DEF(os, make_model, 1)
+  MIST_FUNC_DEF(os, make_model, 1),
+  MIST_FUNC_DEF(os, sprite_pipe, 0)
 };
 
 #include "steam.h"
