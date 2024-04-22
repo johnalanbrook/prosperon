@@ -928,12 +928,6 @@ static const JSCFunctionListEntry js_debug_funcs[] = {
   CGETSET_ADD(global, static_color),
 };
 
-JSC_CCALL(physics_sgscale,
-  js2gameobject(argv[0])->scale.xy = js2vec2(argv[1]);
-  gameobject_apply(js2gameobject(argv[0]));
-  cpSpaceReindexShapesForBody(space, js2gameobject(argv[0])->body);
-)
-
 JSC_CCALL(physics_closest_point,
   void *v1 = js2cpvec2arr(argv[1]);
   JSValue ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
@@ -1021,7 +1015,6 @@ JSC_CCALL(physics_point_query_nearest,
 )
 
 static const JSCFunctionListEntry js_physics_funcs[] = {
-  MIST_FUNC_DEF(physics, sgscale, 2),
   MIST_FUNC_DEF(physics, point_query, 3),
   MIST_FUNC_DEF(physics, point_query_nearest, 2),
   MIST_FUNC_DEF(physics, ray_query, 4),

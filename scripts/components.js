@@ -162,7 +162,7 @@ Object.mixin(os.sprite(true), {
   pick() { return this; },
   boundingbox() {
     var dim = this.dimensions();
-    dim = dim.scale(this.gameobject.gscale());
+    dim = dim.scale(this.gameobject.scale);
     var realpos = dim.scale(0.5).add(this.pos);
     return bbox.fromcwh(realpos,dim);
   },
