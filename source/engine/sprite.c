@@ -78,7 +78,6 @@ void sprite_initialize() {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2
       },
-      .buffers[1].step_func = SG_VERTEXSTEP_PER_INSTANCE
     },
     .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
     .label = "sprite pipeline",
@@ -110,6 +109,7 @@ void sprite_pipe()
 {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vp, SG_RANGE_REF(useproj));
+  sg_apply_bindings(&bind_sprite);
 }
 
 void tex_draw(HMM_Mat3 m, struct rect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive) {
@@ -171,10 +171,7 @@ void sprite_draw(struct sprite *sprite, gameobject *go) {
   spv.size = sprite->spritesize;
   spv.offset = sprite->spriteoffset;
   spv.model = HMM_MulM4(m,sm);
-  sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sprite, SG_RANGE_REF(spv));  
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vp, SG_RANGE_REF(useproj));
-  sg_apply_bindings(&bind_sprite);
   sg_draw(0,4,1);
 }
 

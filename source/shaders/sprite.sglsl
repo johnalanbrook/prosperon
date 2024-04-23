@@ -24,8 +24,11 @@ uniform sprite {
 
 void main()
 {
-  texcoords = spriteoff + spritesize*vertex;
-  gl_Position = proj * vec4(vertex, 0, 1.0);
+  texcoords = vertex;
+  texcoords.y = 1 - texcoords.y;
+  gl_Position = proj * model * vec4(vertex, 0, 1.0);
+  fcolor = vcolor;
+  femissive = vemissive;
 }
 @end
 

@@ -90,15 +90,42 @@ unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
 
 uint32_t pack_int10_n2(float *norm)
 {
-  uint32_t ni[3];
+  /*float x = norm[0];
+  float y = norm[1];
+  float z = norm[2];
+  const uint32_t xs = x < 0;
+  const uint32_t ys = y < 0;
+  const uint32_t zs = z < 0;
+  uint32_t vi =
+      zs << 29 | ((uint32_t)(z * 511 + (zs << 9)) & 511) << 20 |
+      ys << 19 | ((uint32_t)(y * 511 + (ys << 9)) & 511) << 10 |
+      xs << 9  | ((uint32_t)(x * 511 + (xs << 9)) & 511);
+  return vi;
+  int16_t ni[3];
+  printf("accessing norm %g,%g,%g\n", norm[0], norm[1], norm[2]);
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; i++) 
+    ni[i] = (int16_t)(norm[i]*512.0f);
+
+  uint32_t combined = (((uint32_t)ni[2]) << 20) | (((uint32_t)ni[1]) << 10) | ((uint32_t)ni[0]);
+  return combined;
+uint32_t ni[3];
+    for (int i = 0; i < 3; i++) {
     ni[i] = fabs(norm[i]) * 511.0 + 0.5;
     ni[i] = (ni[i] > 511) ? 511 : ni[i];
     ni[i] = ( norm[i] < 0.0 ) ? -ni[i] : ni[i];
   }
 
-  return (ni[0] & 0x3FF) | ( (ni[1] & 0x3FF) << 10) | ( (ni[2] & 0x3FF) << 20) | ( (0 & 0x3) << 30);
+  return (ni[0] | ( (ni[1]) << 10) | ( (ni[2] << 20) | ( (0 & 0x3) << 30)));*/
+
+      // Pack the floats into a 32-bit unsigned integer
+    uint32_t packedValue = 0;
+    packedValue |= (uint32_t)((int32_t)(norm[0] * 0x1ff) & 0x3ff) << 20;
+    packedValue |= (uint32_t)((int32_t)(norm[1] * 0x1ff) & 0x3ff) << 10;
+    packedValue |= (uint32_t)((int32_t)(norm[2] * 0x1ff) & 0x3ff);
+    //packedValue |= (uint32_t)((int32_t)(0 * 0x1ff) & 0x3ff) >> 8;
+
+    return packedValue;
 }
 
 void mesh_add_material(mesh *mesh, cgltf_material *mat)
@@ -122,25 +149,27 @@ sg_buffer texcoord_floats(float *f, int verts, int comp)
 {
   int n = verts*comp;
   unsigned short packed[n];
-  for (int i = 0, v = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
     packed[i] = pack_short_tex(f[i]);
 
   return sg_make_buffer(&(sg_buffer_desc){
-    .data.ptr = packed,
-    .data.size = sizeof(unsigned short) * verts,
+    .data = SG_RANGE(packed),
     .label = "tex coord vert buffer",
   });
 }
 
 sg_buffer normal_floats(float *f, int verts, int comp)
 {
+  return sg_make_buffer(&(sg_buffer_desc){
+    .data.ptr = f,
+    .data.size = sizeof(*f)*verts*comp
+  });
   uint32_t packed_norms[verts];
   for (int v = 0, i = 0; v < verts; v++, i+= comp)
     packed_norms[v] = pack_int10_n2(f+i);
 
   return sg_make_buffer(&(sg_buffer_desc){
-    .data.ptr = packed_norms,
-    .data.size = sizeof(uint32_t) * verts,
+    .data = SG_RANGE(packed_norms),
     .label = "normal vert buffer",
   });
 }
@@ -207,6 +236,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
 
     case cgltf_attribute_type_normal:
       has_norm = 1;
+      YughInfo("Found normals.");
       mesh->bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
       break;
 
@@ -223,7 +253,10 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_texcoord:
-      mesh->bind.vertex_buffers[1] = texcoord_floats(vs, verts, comp);
+      mesh->bind.vertex_buffers[1] = texcoord_floats(vs, verts, comp); /*sg_make_buffer(&(sg_buffer_desc){
+        .data.ptr = vs,
+        .data.size=sizeof(*vs)*verts*comp
+      });*/
       break;
     case cgltf_attribute_type_invalid:
       YughWarn("Invalid type.");
@@ -237,6 +270,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
   }
 
   if (!has_norm) {
+    YughInfo("Making normals.");
     cgltf_attribute *pa = get_attr_type(prim, cgltf_attribute_type_position);
     int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
     int comp = 3;

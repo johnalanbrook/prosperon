@@ -336,13 +336,13 @@ function process()
     
   render.set_camera();
   
-  os.sprite_pipe();
+  /*os.sprite_pipe();
   allsprites.forEach(function(x) {
     render.set_sprite_tex(x.texture);    
     x.draw(x.go);
     render.sprite_flush();                
   });
-  render.sprite_flush();
+  render.sprite_flush();*/
   render.emitters(); // blits emitters
   prosperon.draw(); // draw calls
   debug.draw(); // calls needed debugs

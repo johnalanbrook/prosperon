@@ -1,3 +1,4 @@
+
 @vs vsg3
 // Shared set between most vertex shaders
 uniform ViewUniforms {

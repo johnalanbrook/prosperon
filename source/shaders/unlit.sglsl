@@ -1,7 +1,7 @@
 @vs vs
 in vec3 a_pos;
 in vec2 a_tex_coords;
-in vec3 a_norm;
+in vec4 a_norm;
 
 out vec2 tex_coords;
 out vec3 normal;
@@ -12,9 +12,9 @@ uniform mat4 model;
 };
 
 void main() {
-  gl_Position = vp * vec4(vec3(model * vec4(a_pos,1.0)), 1.0);  
+  gl_Position = vp * model * vec4(a_pos,1.0);
   tex_coords = a_tex_coords;
-  normal = a_norm;
+  normal = a_norm.xyz;
 }
 @end
 
@@ -29,7 +29,7 @@ uniform sampler smp;
 void main() {
   vec3 lightDir = normalize(vec3(0.5f, 0.5f, 1.0f));
   float diff = max(dot(normal, lightDir), 0.0f);
-  color = texture(sampler2D(diffuse,smp),tex_coords);
+  color = texture(sampler2D(diffuse,smp),tex_coords)*diff;
 }
 @end
 
