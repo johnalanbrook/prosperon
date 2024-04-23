@@ -1,20 +1,30 @@
 @vs vs
 in vec2 vertex;
-in vec2 uv;
-in vec4 vc;
-in vec4 emissive;
 
 out vec2 texcoords;
 out vec4 fcolor;
 out vec4 femissive;
 
-uniform vs_p { mat4 proj; };
+uniform app {
+  float time;
+  vec2 window;
+};
+
+uniform vp {
+  mat4 proj;
+};
+
+uniform sprite {
+  vec4 vcolor;
+  vec4 vemissive;
+  vec2 spritesize;
+  vec2 spriteoff;
+  mat4 model;
+};
 
 void main()
 {
-  fcolor = vc;
-  femissive = emissive;
-  texcoords = uv;
+  texcoords = spriteoff + spritesize*vertex;
   gl_Position = proj * vec4(vertex, 0, 1.0);
 }
 @end
@@ -23,6 +33,7 @@ void main()
 in vec2 texcoords;
 in vec4 fcolor;
 in vec4 femissive;
+
 out vec4 color;
 
 uniform texture2D image;
@@ -33,6 +44,8 @@ void main()
   color = texture(sampler2D(image,smp), texcoords);
   color *= fcolor;
   color.xyz = mix(color.xyz, femissive.xyz, femissive.a);
+  color.a = 1.0;
+  
 }
 @end
 

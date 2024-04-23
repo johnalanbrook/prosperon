@@ -57,6 +57,8 @@ void model_init() {
         [0].format = SG_VERTEXFORMAT_FLOAT3,
 	      [1].format = SG_VERTEXFORMAT_USHORT2N,
 	      [1].buffer_index = 1,
+        [2].format = SG_VERTEXFORMAT_FLOAT3,
+        [2].buffer_index = 2
       },
     },
     .index_type = SG_INDEXTYPE_UINT16,
@@ -112,14 +114,8 @@ void mesh_add_material(mesh *mesh, cgltf_material *mat)
        mesh->bind.fs.images[0] = texture_from_file(img->uri)->id;
    } else
      mesh->bind.fs.images[0] = texture_from_file("icons/moon.gif")->id; 
-     
-   mesh->bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
-/*     
-     cgltf_texture *tex;
-     if (tex = mat->normal_texture.texture)
-       mesh->bind.fs.images[1] = texture_from_file(tex->image->uri)->id;
-     else
-       mesh->bind.fs.images[1] = texture_from_file("k")->id;*/
+    
+   mesh->bind.fs.samplers[0] = std_sampler;
 }
 
 sg_buffer texcoord_floats(float *f, int verts, int comp)
@@ -187,6 +183,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
   }
   free(idxs);
 
+  printf("adding material\n");
   mesh_add_material(mesh, prim->material);
   int has_norm = 0;  
 
@@ -209,8 +206,8 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_normal:
-//      has_norm = 1;
-//      mesh->bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
+      has_norm = 1;
+      mesh->bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_tangent:
@@ -238,7 +235,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
       break;
     }
   }
-/*
+
   if (!has_norm) {
     cgltf_attribute *pa = get_attr_type(prim, cgltf_attribute_type_position);
     int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
@@ -260,7 +257,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
      mesh->bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
        .data.ptr = face_norms,
        .data.size = sizeof(uint32_t) * verts});
-  }*/
+  }
 }
 
 void model_add_cgltf_mesh(model *model, cgltf_mesh *gltf_mesh)

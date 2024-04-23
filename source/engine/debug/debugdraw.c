@@ -285,7 +285,7 @@ void debugdraw_init()
     .label = "circle vert buffer",
   });
 
-  float circleverts[8] = {
+  float circleverts[] = {
     -1,-1,
     -1,1,
     1,-1,
@@ -293,7 +293,7 @@ void debugdraw_init()
   };
 
   circle_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-    .data = (sg_range){.ptr = circleverts, .size = sizeof(float)*8},
+    .data = (sg_range){.ptr = circleverts, .size = sizeof(circleverts)},
     .usage = SG_USAGE_IMMUTABLE,
     .label = "circle quarter buffer",
   });

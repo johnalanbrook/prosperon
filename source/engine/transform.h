@@ -27,6 +27,8 @@ HMM_Vec3 trans_down(const transform3d *trans);
 HMM_Vec3 trans_right(const transform3d *trans);
 HMM_Vec3 trans_left(const transform3d *trans);
 
+HMM_Mat4 transform2d2mat4(transform2d trn);
+
 /* Transform a position via the matrix */
 HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos);
 /* Transform a direction via the matrix - does not take into account translation of matrix */

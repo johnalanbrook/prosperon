@@ -22,8 +22,6 @@
 
 struct sFont *use_font;
 
-#define max_chars 100000
-
 static sg_shader fontshader;
 static sg_bindings bind_text;
 static sg_pipeline pipe_text;
@@ -38,19 +36,18 @@ struct text_vert {
 static struct text_vert *text_buffer;
 
 void font_init() {
-  text_buffer = malloc(sizeof(*text_buffer)*max_chars);
   fontshader = sg_make_shader(text_shader_desc(sg_query_backend()));
   pipe_text = sg_make_pipeline(&(sg_pipeline_desc){
       .shader = fontshader,
       .layout = {
           .attrs = {
-            [0].format = SG_VERTEXFORMAT_FLOAT2, /* verts */
-            [0].buffer_index = 1,
-            [1].format = SG_VERTEXFORMAT_FLOAT2, /* pos */
-            [2].format = SG_VERTEXFORMAT_FLOAT2, /* width and height */
-            [3].format = SG_VERTEXFORMAT_USHORT2N, /* uv pos */
-            [4].format = SG_VERTEXFORMAT_USHORT2N, /* uv width and height */
-            [5].format = SG_VERTEXFORMAT_UBYTE4N, /* color */
+            [ATTR_vs_vert].format = SG_VERTEXFORMAT_FLOAT2,
+            [ATTR_vs_vert].buffer_index = 1,
+            [ATTR_vs_pos].format = SG_VERTEXFORMAT_FLOAT2,
+            [ATTR_vs_wh].format = SG_VERTEXFORMAT_FLOAT2,
+            [ATTR_vs_uv].format = SG_VERTEXFORMAT_USHORT2N,
+            [ATTR_vs_st].format = SG_VERTEXFORMAT_USHORT2N,
+            [ATTR_vs_vColor].format = SG_VERTEXFORMAT_UBYTE4N,
           },
 	      .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
       },
@@ -59,27 +56,16 @@ void font_init() {
       .label = "text",
     });
     
-  float text_verts[8] = {
-    0,0,
-    0,1,
-    1,0,
-    1,1
-  };
-    
-  bind_text.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-    .data = SG_RANGE(text_verts),
-    .usage = SG_USAGE_IMMUTABLE,
-    .label = "text rectangle buffer",
-  });
-
+  bind_text.vertex_buffers[1] = sprite_quad;
+  
   bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(struct text_vert)*max_chars,
+      .size = sizeof(struct text_vert),
       .type = SG_BUFFERTYPE_VERTEXBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"
     });
 
-  bind_text.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+  bind_text.fs.samplers[0] = std_sampler;
 }
 
 void font_free(font *f)
@@ -192,8 +178,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   return newfont;
 }
 
-static int curchar = 0;
-
 void draw_underline_cursor(HMM_Vec2 pos, float scale, struct rgba color)
 {
   pos.Y -= 2;
@@ -218,24 +202,29 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
 }
 
 void text_flush(HMM_Mat4 *proj) {
-  if (curchar == 0) return;
+  if (arrlen(text_buffer) ==  0) return;
+
   sg_range verts;
   verts.ptr = text_buffer;
-  verts.size = sizeof(struct text_vert) * curchar;
-  int offset = sg_append_buffer(bind_text.vertex_buffers[0], &verts);
+  verts.size = sizeof(struct text_vert) * arrlen(text_buffer);
+  if (sg_query_buffer_will_overflow(bind_text.vertex_buffers[0], verts.size))
+    bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+      .size = verts.size,
+      .type = SG_BUFFERTYPE_VERTEXBUFFER,
+      .usage = SG_USAGE_STREAM,
+      .label = "text buffer"
+    });
+    
+  sg_append_buffer(bind_text.vertex_buffers[0], &verts);
   
-  bind_text.vertex_buffer_offsets[0] = offset;
   sg_apply_pipeline(pipe_text);
   sg_apply_bindings(&bind_text);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
-  sg_draw(0, 4, curchar);
-  curchar = 0;
+  sg_draw(0, 4, arrlen(text_buffer));
+  arrsetlen(text_buffer, 0);
 }
 
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
-  if (curchar-10 >=  max_chars)
-    return;
-
   struct rgba colorbox = {0,0,0,255};
   
   struct text_vert vert;
@@ -255,8 +244,7 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
   vert.st.v = c.rect.h*USHRT_MAX;
   vert.color = color;
 
-  memcpy(text_buffer + curchar, &vert, sizeof(struct text_vert));
-  curchar++;
+  arrput(text_buffer, vert);
 }
 
 const char *esc_color(const char *c, struct rgba *color, struct rgba defc)

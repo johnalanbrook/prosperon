@@ -40,6 +40,15 @@ HMM_Mat3 transform2d2mat(transform2d trn) {
   return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale)));
 }
 
+HMM_Mat4 transform2d2mat4(transform2d trn)
+{
+  transform3d t3d;
+  t3d.pos.xy = trn.pos;
+  t3d.scale.xy = trn.scale;
+  t3d.rotation = HMM_QFromAxisAngle_RH((HMM_Vec3){0,0,-1}, trn.angle);
+  return transform3d2mat(t3d);
+}
+
 transform2d mat2transform2d(HMM_Mat3 m)
 {
   transform2d t;

@@ -301,9 +301,11 @@ game.engine_start = function(s) {
 }
 
 game.startengine = 0;
+var frames = [];
 
 function process()
 {
+  var startframe = profile.now();
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
   
@@ -357,6 +359,16 @@ function process()
   
   render.end_pass();
   profile.addreport(profcache, "render frame", st);
+  frames.push(profile.secs(profile.now()-startframe));
+  if (frames.length > 20) frames.shift();
+}
+
+globalThis.fps = function()
+{
+  var sum = 0;
+  for (var i = 0; i < frames.length; i++)
+    sum += frames[i];
+  return frames.length/sum; 
 }
 
 game.timescale = 1;

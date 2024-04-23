@@ -569,7 +569,6 @@ JSC_GETSET(emitter, grow_for, number)
 JSC_GETSET(emitter, shrink_for, number)
 JSC_GETSET(emitter, max, number)
 JSC_GETSET(emitter, explosiveness, number)
-JSC_GETSET(emitter, go, gameobject)
 JSC_GETSET(emitter, bounce, number)
 JSC_GETSET(emitter, collision_mask, bitmask)
 JSC_GETSET(emitter, die_after_collision, boolean)
@@ -611,7 +610,6 @@ JSC_CCALL(render_end_pass,
   sg_end_pass();
   sg_commit();
   debug_newframe();
-  sprite_newframe();
 )
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_CCALL(render_set_camera, useproj = projection)
@@ -1055,7 +1053,6 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, shrink_for),
   CGETSET_ADD(emitter, max),
   CGETSET_ADD(emitter, explosiveness),
-  CGETSET_ADD(emitter, go),
   CGETSET_ADD(emitter, bounce),
   CGETSET_ADD(emitter, collision_mask),
   CGETSET_ADD(emitter, die_after_collision),
@@ -1320,11 +1317,11 @@ static const JSCFunctionListEntry js_pshape_funcs[] = {
 
 JSC_GETSET(sprite, color, color)
 JSC_GETSET(sprite, emissive, color)
-JSC_GETSET(sprite, parallax, number)
 JSC_GETSET(sprite, pos, vec2)
 JSC_GETSET(sprite, scale, vec2)
 JSC_GETSET(sprite, angle, number)
-JSC_GETSET(sprite, frame, rect)
+JSC_GETSET(sprite, spriteoffset, vec2)
+JSC_GETSET(sprite, spritesize, vec2)
 JSC_CCALL(sprite_draw, sprite_draw(js2sprite(this), js2gameobject(argv[0])))
 
 static const JSCFunctionListEntry js_sprite_funcs[] = {
@@ -1333,8 +1330,8 @@ static const JSCFunctionListEntry js_sprite_funcs[] = {
   CGETSET_ADD(sprite,angle),
   CGETSET_ADD(sprite,color),
   CGETSET_ADD(sprite,emissive),
-  CGETSET_ADD(sprite,parallax),
-  CGETSET_ADD(sprite,frame),
+  CGETSET_ADD(sprite, spriteoffset),
+  CGETSET_ADD(sprite, spritesize),
   MIST_FUNC_DEF(sprite, draw, 1)
 };
 

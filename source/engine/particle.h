@@ -26,7 +26,6 @@ typedef struct particle {
 typedef struct emitter {
   struct particle *particles;
   transform3d t;
-  gameobject *go;
   HMM_Vec3 *mesh; /* list of points to optionally spawn from */
   HMM_Vec3 *norm; /* norm at each point */
   int type; /* spray, cloud, or mesh */
@@ -70,6 +69,7 @@ void stop_emitter(emitter *e);
 
 void emitter_emit(emitter *e, int count);
 void emitters_step(double dt);
+void emitter_draw(emitter *e, gameobject *go);
 void emitters_draw(HMM_Mat4 *proj);
 void emitter_step(emitter *e, double dt);
 

@@ -31,6 +31,9 @@
 HMM_Vec2 campos = {0,0};
 float camzoom = 1;
 
+sg_buffer sprite_quad;
+sg_sampler std_sampler;
+
 static struct {
   sg_swapchain swap;
   sg_pipeline pipe;
@@ -223,6 +226,22 @@ void render_init() {
     .logger = { .func = sg_logging },
     .buffer_pool_size = 1024
   });
+    
+  float quad[] = {
+  0,0,
+  1,0,
+  0,1,
+  1,1
+  };
+  
+  sprite_quad = sg_make_buffer(&(sg_buffer_desc){
+    .data = quad,
+    .size = sizeof(quad),
+    .usage = SG_USAGE_IMMUTABLE,
+    .label = "sprite quad"
+  });
+  
+  std_sampler = sg_make_sampler(&(sg_sampler_desc){});
 
 #ifndef NDEBUG
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
@@ -276,7 +295,7 @@ void render_init() {
     .data = gif_quad,
     .label = "gif vert buffer",
   });
-  sg_gif.bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+  sg_gif.bind.fs.samplers[0] = std_sampler;
   
   sg_crt.shader = sg_make_shader(crt_shader_desc(sg_query_backend()));
   sg_crt.pipe = sg_make_pipeline(&(sg_pipeline_desc){

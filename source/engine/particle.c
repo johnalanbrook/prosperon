@@ -46,11 +46,11 @@ void particle_init()
     .layout = {
       .attrs = {
         [1].format = SG_VERTEXFORMAT_FLOAT2,
-	[2].format = SG_VERTEXFORMAT_FLOAT,
-	[3].format = SG_VERTEXFORMAT_FLOAT2,
-	[4].format = SG_VERTEXFORMAT_UBYTE4N,
-	[0].format = SG_VERTEXFORMAT_FLOAT2,
-	[0].buffer_index = 1
+	      [2].format = SG_VERTEXFORMAT_FLOAT,
+	      [3].format = SG_VERTEXFORMAT_FLOAT2,
+	      [4].format = SG_VERTEXFORMAT_UBYTE4N,
+	      [0].format = SG_VERTEXFORMAT_FLOAT2,
+	      [0].buffer_index = 1
       },
     .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE,
     },
@@ -78,13 +78,8 @@ void particle_init()
     1,1,
   };
 
-  par_bind.vertex_buffers[1] = sg_make_buffer(&(sg_buffer_desc){
-    .data = (sg_range){.ptr = circleverts, .size = sizeof(float)*8},
-    .usage = SG_USAGE_IMMUTABLE,
-    .label = "particle quater buffer"
-  });
-
-  par_bind.fs.samplers[0] = sg_make_sampler(&(sg_sampler_desc){});
+  par_bind.vertex_buffers[1] = sprite_quad;
+  par_bind.fs.samplers[0] = std_sampler;
 }
 
 emitter *make_emitter() {
@@ -170,6 +165,20 @@ void parallel_pv(emitter *e, struct scheduler *sched, struct sched_task_partitio
     pv[i].scale = HMM_ScaleV2((HMM_Vec2){e->texture->width,e->texture->height}, s);
     pv[i].color = vec2rgba(p->color);
   }
+}
+
+void emitter_draw(emitter *e, gameobject *go)
+{
+  sg_apply_pipeline(par_pipe);
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(useproj));
+  sg_apply_bindings(&par_bind);
+  par_bind.fs.images[0] = e->texture->id;
+  struct sched_task task;
+  scheduler_add(&sched, &task, parallel_pv, e, arrlen(e->particles), arrlen(e->particles)/sched.threads_num);
+  scheduler_join(&sched, &task);
+  sg_append_buffer(par_bind.vertex_buffers[0], &(sg_range){.ptr=&pv, .size=sizeof(struct par_vert)*arrlen(e->particles)});
+  draw_count += arrlen(e->particles);
+  sg_draw(0,4,draw_count);
 }
 
 void emitters_draw(HMM_Mat4 *proj)

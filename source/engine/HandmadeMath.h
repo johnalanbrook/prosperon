@@ -221,6 +221,7 @@ typedef union HMM_Vec2 {
 } HMM_Vec2;
 
 static const HMM_Vec2 v2zero = {0,0};
+static const HMM_Vec2 v2one = {1,1};
 
 typedef union HMM_Vec3 {
   struct

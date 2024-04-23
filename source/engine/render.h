@@ -32,6 +32,9 @@ extern HMM_Mat4 hudproj;
 extern HMM_Mat4 useproj;
 extern sg_pass_action pass_action;
 
+extern sg_buffer sprite_quad;
+extern sg_sampler std_sampler;
+
 struct draw_p {
   float x;
   float y;
