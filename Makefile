@@ -66,7 +66,7 @@ else ifeq ($(OPT), 1)
   CPPFLAGS += -O3 -flto
   INFO :=$(INFO)_opt
 else
-	CPPFLAGS += -O2
+	CPPFLAGS += -O0
 endif
 
 CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
@@ -204,7 +204,7 @@ shaders: $(SHADERS)
 
 %.sglsl.h:%.sglsl
 	@echo Creating shader $^
-	./sokol-shdc --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
+	./sokol-shdc -r --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
 
 SCRIPTS := $(shell ls scripts/*.js*)
 CORE != (ls icons/* fonts/*)

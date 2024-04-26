@@ -189,6 +189,12 @@
 #define HMM_MOD(a, m) (((a) % (m)) >= 0 ? ((a) % (m)) : (((a) % (m)) + (m)))
 #define HMM_SQUARE(x) ((x) * (x))
 
+#define HMMFMT_VEC3 "[%g,%g,%g]"
+#define HMMPRINT_VEC3(vec) vec.x, vec.y, vec.z
+
+#define FMT_VEC4 "[%g,%g,%g,%g]"
+#define PRINT_VEC4(vec) vec.x, vec.y, vec.z, vec.w
+
 typedef union HMM_Vec2 {
   struct
   {
@@ -291,8 +297,11 @@ typedef union HMM_Quat {
 
     float W;
   };
-
+  
+  struct {float x, y, z, w;};
+  
   float Elements[4];
+  float e[4];
 
 #ifdef HANDMADE_MATH__USE_SSE
   __m128 SSE;
@@ -366,6 +375,7 @@ typedef union HMM_Vec4 {
   };
 
   HMM_Quat quat;
+  struct {float x, y, z, w; };
 
   float Elements[4];
   float e[4];
@@ -375,6 +385,8 @@ typedef union HMM_Vec4 {
 #endif
 
 } HMM_Vec4;
+
+static const HMM_Vec4 v4zero = {0,0,0,0};
 
 typedef union HMM_Mat2 {
   float Elements[2][2];
@@ -392,7 +404,7 @@ typedef union HMM_Mat4 {
   float Elements[4][4];
   HMM_Vec4 Columns[4];
   float e[4][4];
-
+  float em[16];
 } HMM_Mat4;
 
 
@@ -1709,14 +1721,6 @@ static inline HMM_Mat4 HMM_Translate(HMM_Vec3 Translation) {
   return Result;
 }
 
-static inline HMM_Mat4 *HMM_Translate_p(HMM_Mat4 *m, HMM_Vec3 t)
-{
-  m->Elements[3][0] += t.X;
-  m->Elements[3][1] += t.Y;
-  m->Elements[3][2] += t.Z;
-  return m;
-}
-
 static inline HMM_Mat4 HMM_InvTranslate(HMM_Mat4 TranslationMatrix) {
 
   HMM_Mat4 Result = TranslationMatrix;
@@ -1769,14 +1773,6 @@ static inline HMM_Mat4 HMM_Scale(HMM_Vec3 Scale) {
   Result.Elements[2][2] = Scale.Z;
 
   return Result;
-}
-
-static inline HMM_Mat4 *HMM_Scale_p(HMM_Mat4 *m, HMM_Vec3 s)
-{
-  m->Elements[0][0] *= s.X;
-  m->Elements[1][1] *= s.Y;
-  m->Elements[2][2] *= s.Z;
-  return m;
 }
 
 static inline HMM_Mat4 HMM_InvScale(HMM_Mat4 ScaleMatrix) {
@@ -2147,6 +2143,38 @@ static inline HMM_Mat4 HMM_QToM4(HMM_Quat Left) {
 
   return Result;
 }
+
+static inline HMM_Mat4 HMM_M4TRS(HMM_Vec3 t, HMM_Quat q, HMM_Vec3 s)
+{
+  HMM_Mat4 T = HMM_Translate(t);
+  HMM_Mat4 R = HMM_QToM4(q);
+  HMM_Mat4 S = HMM_Scale(s);
+  HMM_Mat4 l;
+  float *lm = (float*)&l;
+  
+  lm[0] = (1 - 2 * q.y*q.y - 2 * q.z*q.z) * s.x;
+  lm[1] = (2 * q.x*q.y + 2 * q.z*q.w) * s.x;
+  lm[2] = (2 * q.x*q.z - 2 * q.y*q.w) * s.x;
+  lm[3] = 0.f;
+  
+  lm[4] = (2 * q.x*q.y - 2 * q.z*q.w) * s.y;
+  lm[5] = (1 - 2 * q.x*q.x - 2 * q.z*q.z) * s.y;
+  lm[6] = (2 * q.y*q.z + 2 * q.x*q.w) * s.y;
+  lm[7] = 0.f;
+  
+  lm[8] = (2 * q.x*q.z + 2 * q.y*q.w) * s.z;
+  lm[9] = (2 * q.y*q.z - 2 * q.x*q.w) * s.z;
+  lm[10] = (1 - 2 * q.x*q.x - 2 * q.y*q.y) * s.z;
+  lm[11] = 0.f;
+  
+  lm[12] = t.x;
+  lm[13] = t.y;
+  lm[14] = t.z;
+  lm[15] = 1.f;
+  
+  return l;
+}
+
 
 // This method taken from Mike Day at Insomniac Games.
 // https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2015/01/matrix-to-quat.pdf

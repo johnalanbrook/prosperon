@@ -58,7 +58,11 @@ transform2d mat2transform2d(HMM_Mat3 m)
   return t;
 }
   
-HMM_Mat4 transform3d2mat(transform3d t) { return HMM_MulM4(HMM_Translate(t.pos), HMM_MulM4(HMM_QToM4(t.rotation), HMM_Scale(t.scale))); }
+HMM_Mat4 transform3d2mat(transform3d t) {
+  return HMM_MulM4(HMM_Translate(t.pos),
+          HMM_MulM4(HMM_QToM4(t.rotation),
+          HMM_Scale(t.scale)));
+}
 
 transform3d mat2transform3d(HMM_Mat4 m)
 {

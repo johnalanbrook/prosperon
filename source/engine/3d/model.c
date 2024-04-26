@@ -3,7 +3,6 @@
 #include "log.h"
 #include "resources.h"
 #include "stb_ds.h"
-#include "font.h"
 #include "gameobject.h"
 
 //#include "diffuse.sglsl.h"
@@ -16,11 +15,12 @@
 #include "math.h"
 #include "time.h"
 
-#define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include "yugine.h"
 
 #include "texture.h"
 
@@ -32,7 +32,6 @@ static void processtexture();
 
 static sg_shader model_shader;
 static sg_pipeline model_pipe;
-
 struct bone_weights {
   char b1;
   char b2;
@@ -40,11 +39,11 @@ struct bone_weights {
   char b4;
 };
 
-struct mesh_v {
-  HMM_Vec3 pos;
-  struct uv_n uv;
-  uint32_t norm;
-  struct bone_weights bones;
+struct joints {
+  char j1;
+  char j2;
+  char j3;
+  char j4;
 };
 
 void model_init() {
@@ -57,8 +56,16 @@ void model_init() {
         [0].format = SG_VERTEXFORMAT_FLOAT3,
 	      [1].format = SG_VERTEXFORMAT_USHORT2N,
 	      [1].buffer_index = 1,
-        [2].format = SG_VERTEXFORMAT_FLOAT3,
-        [2].buffer_index = 2
+        [2].format = SG_VERTEXFORMAT_UINT10_N2,
+        [2].buffer_index = 2,
+        [3] = {
+          .format = SG_VERTEXFORMAT_UBYTE4N,
+          .buffer_index = 3
+        },
+        [4] = {
+          .format = SG_VERTEXFORMAT_UBYTE4,
+          .buffer_index = 4
+        }
       },
     },
     .index_type = SG_INDEXTYPE_UINT16,
@@ -90,59 +97,29 @@ unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
 
 uint32_t pack_int10_n2(float *norm)
 {
-  /*float x = norm[0];
-  float y = norm[1];
-  float z = norm[2];
-  const uint32_t xs = x < 0;
-  const uint32_t ys = y < 0;
-  const uint32_t zs = z < 0;
-  uint32_t vi =
-      zs << 29 | ((uint32_t)(z * 511 + (zs << 9)) & 511) << 20 |
-      ys << 19 | ((uint32_t)(y * 511 + (ys << 9)) & 511) << 10 |
-      xs << 9  | ((uint32_t)(x * 511 + (xs << 9)) & 511);
-  return vi;
-  int16_t ni[3];
-  printf("accessing norm %g,%g,%g\n", norm[0], norm[1], norm[2]);
-
-  for (int i = 0; i < 3; i++) 
-    ni[i] = (int16_t)(norm[i]*512.0f);
-
-  uint32_t combined = (((uint32_t)ni[2]) << 20) | (((uint32_t)ni[1]) << 10) | ((uint32_t)ni[0]);
-  return combined;
-uint32_t ni[3];
-    for (int i = 0; i < 3; i++) {
-    ni[i] = fabs(norm[i]) * 511.0 + 0.5;
-    ni[i] = (ni[i] > 511) ? 511 : ni[i];
-    ni[i] = ( norm[i] < 0.0 ) ? -ni[i] : ni[i];
+  uint32_t ret = 0;
+  for (int i = 0; i < 3; i++) {
+    int n = (norm[i]+1.0)*511;
+    ret |= (n & 0x3ff) << (10*i);
   }
-
-  return (ni[0] | ( (ni[1]) << 10) | ( (ni[2] << 20) | ( (0 & 0x3) << 30)));*/
-
-      // Pack the floats into a 32-bit unsigned integer
-    uint32_t packedValue = 0;
-    packedValue |= (uint32_t)((int32_t)(norm[0] * 0x1ff) & 0x3ff) << 20;
-    packedValue |= (uint32_t)((int32_t)(norm[1] * 0x1ff) & 0x3ff) << 10;
-    packedValue |= (uint32_t)((int32_t)(norm[2] * 0x1ff) & 0x3ff);
-    //packedValue |= (uint32_t)((int32_t)(0 * 0x1ff) & 0x3ff) >> 8;
-
-    return packedValue;
+  return ret;
 }
 
-void mesh_add_material(mesh *mesh, cgltf_material *mat)
+void mesh_add_material(primitive *prim, cgltf_material *mat)
 {
   if (!mat) return;
   
-  if (mat && mat->has_pbr_metallic_roughness) {
+  if (mat->has_pbr_metallic_roughness) {
     cgltf_image *img = mat->pbr_metallic_roughness.base_color_texture.texture->image;
      if (img->buffer_view) {
        cgltf_buffer_view *buf = img->buffer_view;
-       mesh->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
+       prim->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
      } else
-       mesh->bind.fs.images[0] = texture_from_file(img->uri)->id;
+       prim->bind.fs.images[0] = texture_from_file(img->uri)->id;
    } else
-     mesh->bind.fs.images[0] = texture_from_file("icons/moon.gif")->id; 
+     prim->bind.fs.images[0] = texture_from_file("icons/moon.gif")->id; 
     
-   mesh->bind.fs.samplers[0] = std_sampler;
+   prim->bind.fs.samplers[0] = std_sampler;
 }
 
 sg_buffer texcoord_floats(float *f, int verts, int comp)
@@ -160,10 +137,6 @@ sg_buffer texcoord_floats(float *f, int verts, int comp)
 
 sg_buffer normal_floats(float *f, int verts, int comp)
 {
-  return sg_make_buffer(&(sg_buffer_desc){
-    .data.ptr = f,
-    .data.size = sizeof(*f)*verts*comp
-  });
   uint32_t packed_norms[verts];
   for (int v = 0, i = 0; v < verts; v++, i+= comp)
     packed_norms[v] = pack_int10_n2(f+i);
@@ -174,46 +147,70 @@ sg_buffer normal_floats(float *f, int verts, int comp)
   });
 }
 
+sg_buffer joint_buf(float *f, int v, int c)
+{
+  char joints[v*c];
+  for (int i = 0; i < (v*c); i++)
+    joints[i] = f[i];
+  
+  return sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(joints)});
+}
+
+sg_buffer weight_buf(float *f, int v, int c)
+{
+  unsigned char weights[v*c];
+  for (int i = 0; i < (v*c); i++)
+    weights[i] = f[i]*255;
+  
+  return sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(weights)});
+}
+
 HMM_Vec3 index_to_vert(uint32_t idx, float *f)
 {
   return (HMM_Vec3){f[idx*3], f[idx*3+1], f[idx*3+2]};
 }
 
-void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
+struct primitive mesh_add_primitive(cgltf_primitive *prim)
 {
+  primitive retp = (primitive){0};
+
   uint16_t *idxs;
   if (prim->indices) {
-    int c = prim->indices->count;
-    idxs = malloc(sizeof(*idxs)*c);
-    memcpy(idxs, cgltf_buffer_view_data(prim->indices->buffer_view), sizeof(uint16_t) * c);
+    int n = cgltf_accessor_unpack_floats(prim->indices, NULL, 0);
+    float fidx[n];
+    cgltf_accessor_unpack_floats(prim->indices, fidx, n);
+    idxs = malloc(sizeof(*idxs)*n);
+    for (int i = 0; i < n; i++)
+      idxs[i] = fidx[i];
 
-    mesh->bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-    .data.ptr = idxs,
-    .data.size = sizeof(uint16_t) * c,
-    .type = SG_BUFFERTYPE_INDEXBUFFER,
-    .label = "mesh index buffer",
-  });
+    retp.bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+      .data.ptr = idxs,
+      .data.size = sizeof(*idxs) * n,
+      .type = SG_BUFFERTYPE_INDEXBUFFER,
+      .label = "mesh index buffer",
+    });
 
-    mesh->idx_count = c;
+    retp.idx_count = n;
   } else {
     YughWarn("Model does not have indices. Generating them.");
-    int c = prim->attributes[0].data->count;
+    int c = cgltf_accessor_unpack_floats(prim->attributes[0].data, NULL, 0);
 
-    mesh->idx_count = c;
+    retp.idx_count = c;
     idxs = malloc(sizeof(*idxs)*c);
     
     for (int z = 0; z < c; z++)
       idxs[z] = z;
 
-    mesh->bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
-	.data.ptr = idxs,
-	.data.size = sizeof(uint16_t) * c,
-	.type = SG_BUFFERTYPE_INDEXBUFFER});
+    retp.bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+	    .data.ptr = idxs,
+	    .data.size = sizeof(uint16_t) * c,
+	    .type = SG_BUFFERTYPE_INDEXBUFFER});
   }
+  
   free(idxs);
 
   printf("adding material\n");
-  mesh_add_material(mesh, prim->material);
+  mesh_add_material(&retp, prim->material);
   int has_norm = 0;  
 
   for (int k = 0; k < prim->attributes_count; k++) {
@@ -227,7 +224,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
 
     switch (attribute.type) {
       case cgltf_attribute_type_position:
-      mesh->bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+      retp.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .data.ptr = vs,
         .data.size = sizeof(float) * n,
         .label = "mesh vert buffer"
@@ -236,8 +233,7 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
 
     case cgltf_attribute_type_normal:
       has_norm = 1;
-      YughInfo("Found normals.");
-      mesh->bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
+      retp.bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_tangent:
@@ -247,16 +243,15 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_weights:
+      retp.bind.vertex_buffers[3] = weight_buf(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_joints:
+      retp.bind.vertex_buffers[4] = joint_buf(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_texcoord:
-      mesh->bind.vertex_buffers[1] = texcoord_floats(vs, verts, comp); /*sg_make_buffer(&(sg_buffer_desc){
-        .data.ptr = vs,
-        .data.size=sizeof(*vs)*verts*comp
-      });*/
+      retp.bind.vertex_buffers[1] = texcoord_floats(vs, verts, comp);
       break;
     case cgltf_attribute_type_invalid:
       YughWarn("Invalid type.");
@@ -288,48 +283,135 @@ void mesh_add_primitive(mesh *mesh, cgltf_primitive *prim)
       face_norms[i] = face_norms[i+1] = face_norms[i+2] = packed_norm;
      }
      
-     mesh->bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
+     retp.bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
        .data.ptr = face_norms,
        .data.size = sizeof(uint32_t) * verts});
   }
+  
+  return retp;
 }
 
-void model_add_cgltf_mesh(model *model, cgltf_mesh *gltf_mesh)
+static cgltf_data *cdata;
+
+void model_add_cgltf_mesh(mesh *m, cgltf_mesh *gltf_mesh)
 {
-  mesh mesh = {0};
-
+  printf("mesh has %d primitives\n", gltf_mesh->primitives_count);
   for (int i = 0; i < gltf_mesh->primitives_count; i++)
-    mesh_add_primitive(&mesh, &gltf_mesh->primitives[i]);
+    arrput(m->primitives, mesh_add_primitive(gltf_mesh->primitives+i));
+}
 
-  arrput(model->meshes,mesh);
+void packFloats(float *src, float *dest, int srcLength) {
+    int i, j;
+    for (i = 0, j = 0; i < srcLength; i += 3, j += 4) {
+        dest[j] = src[i];
+        dest[j + 1] = src[i + 1];
+        dest[j + 2] = src[i + 2];
+        dest[j + 3] = 0.0f;
+    }
 }
 
 void model_add_cgltf_anim(model *model, cgltf_animation *anim)
 {
+  YughInfo("FOUND ANIM, using %d channels and %d samplers", anim->channels_count, anim->samplers_count);
+  
+  struct animation an = (struct animation){0};
+  arrsetlen(an.samplers, anim->samplers_count);
+  
+  for (int i = 0; i < anim->samplers_count; i++) {
+    cgltf_animation_sampler s = anim->samplers[i];
+    sampler samp = (sampler){0};
+    int n = cgltf_accessor_unpack_floats(s.input, NULL, 0);
+    arrsetlen(samp.times, n);
+    cgltf_accessor_unpack_floats(s.input, samp.times, n);
 
+    n = cgltf_accessor_unpack_floats(s.output, NULL, 0);
+    int comp = cgltf_num_components(s.output->type);
+    arrsetlen(samp.data, n/comp);
+    if (comp == 4)
+      cgltf_accessor_unpack_floats(s.output, samp.data, n);
+    else {
+      float *out = malloc(sizeof(*out)*n);
+      cgltf_accessor_unpack_floats(s.output, out, n);
+      packFloats(out, samp.data, n);
+      free(out);
+    }
+    
+    samp.type = s.interpolation;
+    
+    if (samp.type == LINEAR && comp == 4)
+      samp.type = SLERP;
+    
+    an.samplers[i] = samp;
+  }
+    
+  for (int i = 0; i < anim->channels_count; i++) {
+    cgltf_animation_channel ch = anim->channels[i];
+    struct anim_channel ach = (struct anim_channel){0};
+    md5joint *md = model->nodes+(ch.target_node-cdata->nodes);
+    switch(ch.target_path) {
+      case cgltf_animation_path_type_translation:
+        ach.target = &md->pos;
+        break;
+      case cgltf_animation_path_type_rotation:
+        ach.target = &md->rot;
+        break;
+      case cgltf_animation_path_type_scale:
+        ach.target = &md->scale;
+        break;
+    }
+    ach.sampler = an.samplers+(ch.sampler-anim->samplers);
+    
+    arrput(an.channels, ach);
+  }
+  
+  model->anim = an;
+  model->anim.time = apptime();
 }
 
 void model_add_cgltf_skin(model *model, cgltf_skin *skin)
 {
+  int n = cgltf_accessor_unpack_floats(skin->inverse_bind_matrices, NULL, 0);
+  struct skin sk = (struct skin){0};
+  arrsetlen(sk.invbind, n/16);
+  cgltf_accessor_unpack_floats(skin->inverse_bind_matrices, sk.invbind, n);
+  YughInfo("FOUND SKIN, of %d bones, and %d vert comps", skin->joints_count, n);
   
+  cgltf_node *root = skin->skeleton;
+  
+  arrsetlen(sk.joints, skin->joints_count);
+  sk.root = model->nodes+(skin->skeleton-cdata->nodes);
+  
+  for (int i = 0; i < 50; i++)
+    sk.binds[i] = HMM_M4D(1);
+  
+  for (int i = 0; i < skin->joints_count; i++) {
+    int offset = skin->joints[i]-cdata->nodes;
+    sk.joints[i] = model->nodes+offset;
+    md5joint *j = sk.joints[i];
+    cgltf_node *n = skin->joints[i];
+    for (int i = 0; i < 3; i++) {
+      j->pos.e[i] = n->translation[i];
+      j->scale.e[i] = n->scale[i];
+    }
+    for (int i = 0; i < 4; i++)
+      j->rot.e[i] = n->rotation[i];
+  }
+  
+  model->skin = sk;
 }
 
 void model_process_node(model *model, cgltf_node *node)
 {
-  if (node->has_matrix)
-    memcpy(model->matrix.Elements, node->matrix, sizeof(float)*16);
-
-  if (node->mesh)
-    model_add_cgltf_mesh(model, node->mesh);
-
-  if (node->skin)
-    model_add_cgltf_skin(model, node->skin);
-}
-
-void model_process_scene(model *model, cgltf_scene *scene)
-{
-  for (int i = 0; i < scene->nodes_count; i++)
-    model_process_node(model, scene->nodes[i]);
+  int n = node-cdata->nodes;
+  cgltf_node_transform_world(node, model->nodes[n].t.e);
+  model->nodes[n].parent = model->nodes+(node->parent-cdata->nodes);
+  
+  if (node->mesh) {
+    int meshn = node->mesh-cdata->meshes;
+    arrsetlen(model->meshes, meshn+1);
+    model->meshes[meshn].m = &model->nodes[n].t;
+    model_add_cgltf_mesh(model->meshes+meshn, node->mesh);
+  }
 }
 
 struct model *model_make(const char *path)
@@ -338,30 +420,36 @@ struct model *model_make(const char *path)
   cgltf_options options = {0};
   cgltf_data *data = NULL;
   cgltf_result result = cgltf_parse_file(&options, path, &data);
+  struct model *model = NULL;
 
   if (result) {
     YughError("CGLTF could not parse file %s, err %d.", path, result);
-    return NULL;
+    goto CLEAN;
   }
 
   result = cgltf_load_buffers(&options, data, path);
 
   if (result) {
     YughError("CGLTF could not load buffers for file %s, err %d.", path, result);
-    return NULL;
+    goto CLEAN;
   }
+  
+  cdata = data;
 
-  struct model *model = calloc(1, sizeof(*model));
-
-  if (data->scenes_count == 0 || data->scenes_count > 1) return NULL;
-  model_process_scene(model, data->scene);
-
-  for (int i = 0; i < data->meshes_count; i++)
-    model_add_cgltf_mesh(model, &data->meshes[i]);
+  model = calloc(1, sizeof(*model));
+  
+  arrsetlen(model->nodes, data->nodes_count);
+  for (int i = 0; i < data->nodes_count; i++)
+    model_process_node(model, data->nodes+i);
 
   for (int i = 0; i < data->animations_count; i++)
-    model_add_cgltf_anim(model, &data->animations[i]);
-
+    model_add_cgltf_anim(model, data->animations+i);
+    
+  for (int i = 0; i < data->skins_count; i++)
+    model_add_cgltf_skin(model, data->skins+i);
+    
+  CLEAN:
+  cgltf_free(data);
   return model;
 }
 
@@ -372,20 +460,45 @@ void model_free(model *m)
 
 void model_draw_go(model *model, gameobject *go, gameobject *cam)
 {
+  animation_run(&model->anim, apptime());
+
+  skin *sk = &model->skin;
+  for (int i = 0; i < arrlen(sk->joints); i++) {
+    md5joint *md = sk->joints[i];
+    HMM_Mat4 local = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
+    if (md->parent)
+      local = HMM_MulM4(md->parent->t, local);
+    md->t = local;
+    sk->binds[i] = HMM_MulM4(md->t, sk->invbind[i]);
+    
+    //printf("TRANSLATION OF %d IS " HMMFMT_VEC3 "\n", i, HMMPRINT_VEC3(md->pos));
+  }
+
   HMM_Mat4 view = t3d_go2world(cam);
   HMM_Mat4 proj = HMM_Perspective_RH_NO(20, 1, 0.01, 10000);
   HMM_Mat4 vp = HMM_MulM4(proj, view);
-  
-  vs_p_t vs_p;
-  memcpy(vs_p.vp, vp.Elements, sizeof(float)*16);
-  memcpy(vs_p.model, t3d_go2world(go).Elements, sizeof(float)*16);
-  
+  HMM_Mat4 gom = transform3d2mat(go2t3(go));
+
   sg_apply_pipeline(model_pipe);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vs_p));
-  
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vp.e));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_skinv, &(sg_range){
+    .ptr = sk->binds,
+    .size = sizeof(*sk->binds)*50
+  });
+  float ambient[4] = {1.0,1.0,1.0,1.0};
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_lightf, SG_RANGE_REF(ambient));
   for (int i = 0; i < arrlen(model->meshes); i++) {
-    sg_apply_bindings(&model->meshes[i].bind);
-    sg_draw(0, model->meshes[i].idx_count, 1);    
+    HMM_Mat4 mod = *model->meshes[i].m;
+    mod = HMM_MulM4(mod, gom);
+    mesh msh = model->meshes[i];
+    for (int j = 0; j < arrlen(msh.primitives); j++) {
+      sg_apply_bindings(&(msh.primitives[j].bind));    
+      sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vmodel, &(sg_range){
+        .ptr = mod.em,
+        .size = sizeof(mod)
+      });
+      sg_draw(0, model->meshes[i].primitives[j].idx_count, 1);    
+    }
   }
 }
 

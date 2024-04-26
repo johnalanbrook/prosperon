@@ -41,3 +41,6 @@
 #define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvg.h"
 #include "nanosvgrast.h"
+
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"

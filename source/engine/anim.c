@@ -2,40 +2,39 @@
 #include "log.h"
 #include "stb_ds.h"
 
-void sampler_add(sampler *s, float time, HMM_Vec4 val)
+void animation_run(struct animation *anim, float now)
 {
-  arrput(s->times,time);
-  arrput(s->data,val);
+  float elapsed = now - anim->time;
+  elapsed = fmod(elapsed,2);
+  if (!anim->channels) return;  
+  
+  for (int i = 0; i < arrlen(anim->channels); i++) {
+    struct anim_channel *ch = anim->channels+i;
+    HMM_Vec4 s = sample_sampler(ch->sampler, elapsed);
+    *(ch->target) = s;
+  }
 }
 
 HMM_Vec4 sample_cubicspline(sampler *sampler, float t, int prev, int next)
 {
-  float t2 = t*t;
-  float t3 = t2*t;
-  float td = sampler->times[next]-sampler->times[prev];
-
-  HMM_Vec4 v = HMM_MulV4F(sampler->data[prev*3+1], (2*t3-3*t2+1));
-  v = HMM_AddV4(v, HMM_MulV4F(sampler->data[prev*3+2], td*(t3-2*t2+t)));
-  v = HMM_AddV4(v, HMM_MulV4F(sampler->data[next*3+1], 3*t2-2*t3));
-  v = HMM_AddV4(v, HMM_MulV4F(sampler->data[next*3], td*(t3-t2)));
-  return v;
+  return (HMM_Vec4)HMM_SLerp(HMM_QV4(sampler->data[prev]), t, HMM_QV4(sampler->data[next]));
 }
 
 HMM_Vec4 sample_sampler(sampler *sampler, float time)
 {
-  if (arrlen(sampler->data) == 0) return (HMM_Vec4){0,0,0,0};
+  if (arrlen(sampler->data) == 0) return v4zero;
   if (arrlen(sampler->data) == 1) return sampler->data[0];
   int previous_time=0;
   int next_time=0;
 
   for (int i = 1; i < arrlen(sampler->times); i++) {
     if (time < sampler->times[i]) {
-      previous_time = sampler->times[i-1];
-      next_time = sampler->times[i];
+      previous_time = i-1;
+      next_time = i;
       break;
     }
   }
-
+  
   float td = sampler->times[next_time]-sampler->times[previous_time];
   float t = (time - sampler->times[previous_time])/td;
 

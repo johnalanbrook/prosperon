@@ -92,7 +92,7 @@ emitter *make_emitter() {
     
   e->life = 10;
   e->tte = lerp(e->explosiveness, e->life/e->max, 0);
-  sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
+  //sampler_add(&e->color, 0, (HMM_Vec4){1,1,1,1});
   e->scale = 1;
   e->speed = 20;
   e->texture = NULL;

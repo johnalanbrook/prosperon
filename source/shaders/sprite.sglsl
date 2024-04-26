@@ -47,8 +47,6 @@ void main()
   color = texture(sampler2D(image,smp), texcoords);
   color *= fcolor;
   color.xyz = mix(color.xyz, femissive.xyz, femissive.a);
-  color.a = 1.0;
-  
 }
 @end
 

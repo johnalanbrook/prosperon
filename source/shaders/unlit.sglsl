@@ -2,19 +2,26 @@
 in vec3 a_pos;
 in vec2 a_tex_coords;
 in vec4 a_norm;
+in vec4 a_weight;
+in vec4 a_joint;
 
 out vec2 tex_coords;
 out vec3 normal;
 
-uniform vs_p {
-uniform mat4 vp;
-uniform mat4 model;
-};
+uniform vs_p { uniform mat4 vp; };
+uniform vmodel { uniform mat4 model; };
+
+uniform skinv { uniform mat4 bones[50]; };
 
 void main() {
-  gl_Position = vp * model * vec4(a_pos,1.0);
+  mat4 skin = bones[int(a_joint.x)] * a_weight.x;
+  skin += bones[int(a_joint.y)] * a_weight.y;
+  skin += bones[int(a_joint.z)] * a_weight.z;
+  skin += bones[int(a_joint.w)] * a_weight.w;
+  mat4 skinm = model * skin;
+  gl_Position = vp * skinm * vec4(a_pos,1.0);
   tex_coords = a_tex_coords;
-  normal = a_norm.xyz;
+  normal = (skinm * vec4(a_norm.xyz*2-1,0)).xyz;
 }
 @end
 
@@ -26,10 +33,14 @@ out vec4 color;
 uniform texture2D diffuse;
 uniform sampler smp;
 
+uniform lightf {
+  vec4 ambient;
+};
+
 void main() {
   vec3 lightDir = normalize(vec3(0.5f, 0.5f, 1.0f));
   float diff = max(dot(normal, lightDir), 0.0f);
-  color = texture(sampler2D(diffuse,smp),tex_coords)*diff;
+  color = texture(sampler2D(diffuse,smp),tex_coords) * ambient;
 }
 @end
 
