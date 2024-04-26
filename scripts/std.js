@@ -455,8 +455,8 @@ function cmd_args(cmdargs)
   if (cmds.length === 0)
     cmds[0] = "play";
   else if (!Cmdline.orders[cmds[0]]) {
-    console.warn(`Command ${cmds[0]} not found.`);
-    return;
+    cmds[0] = "play";
+    console.warn(`Command ${cmds[0]} not found. Playing instead.`);
   }
 
   Cmdline.orders[cmds[0]](cmds.slice(1));
