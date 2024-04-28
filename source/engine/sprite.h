@@ -36,7 +36,6 @@ void sprite_initialize();
 void sprite_draw(struct sprite *sprite, gameobject *go);
 void sprite_pipe();
 void sprite_draw_all();
-void sprite_flush();
 
 void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
 

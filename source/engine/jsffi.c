@@ -624,7 +624,6 @@ JSC_CCALL(render_clear_color,
 )
 
 JSC_CCALL(render_set_sprite_tex, sprite_tex(js2texture(argv[0])))
-JSC_CCALL(render_sprite_flush, sprite_flush())
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, grid, 3),
@@ -641,7 +640,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, hud_res, 1),
   MIST_FUNC_DEF(render, clear_color, 1),
   MIST_FUNC_DEF(render, set_sprite_tex, 1),
-  MIST_FUNC_DEF(render, sprite_flush, 0),
 };
 
 JSC_CCALL(gui_flush, text_flush(&useproj));

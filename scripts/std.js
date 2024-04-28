@@ -476,9 +476,54 @@ Cmdline.register_cmd("l", function(n) {
   console.level = n;
 }, "Set log level.");
 
+function convertYAMLtoJSON(yamlString) {
+  const lines = yamlString.split('\n');
+  const jsonObj = {};
+
+  let currentKey = '';
+  let currentValue = '';
+  let currentDepth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
+
+    const depth = (line.match(/^\s+/g) || [''])[0].length;
+    const keyValue = line.split(':');
+    const key = keyValue[0].trim();
+    const value = keyValue[1].trim();
+
+    if (depth > currentDepth) {
+      jsonObj[currentKey] = convertYAMLtoJSON(currentValue);
+      currentKey = key;
+      currentValue = value;
+    } else if (depth === currentDepth) {
+      jsonObj[currentKey] = convertYAMLtoJSON(currentValue);
+      currentKey = key;
+      currentValue = value;
+    } else {
+      jsonObj[currentKey] = convertYAMLtoJSON(currentValue);
+      currentKey = '';
+      currentValue = '';
+      i--; // To reprocess the current line with updated values
+    }
+
+    currentDepth = depth;
+  }
+
+  if (currentKey) {
+    jsonObj[currentKey] = convertYAMLtoJSON(currentValue);
+  }
+
+  return jsonObj;
+}
+
 return {
   Resources,
   Cmdline,
-  cmd_args
+  cmd_args,
+  convertYAMLtoJSON
 };
 

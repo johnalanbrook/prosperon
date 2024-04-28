@@ -122,11 +122,9 @@ struct texture *texture_from_file(const char *path) {
   unsigned int nw = next_pow2(tex->width);
   unsigned int nh = next_pow2(tex->height);
 
-  int filter = SG_FILTER_NEAREST;
-  
   sg_image_data sg_img_data;
   sg_img_data.subimage[0][0] = (sg_range){.ptr = data, .size=tex->width*tex->height*4};
-  /*
+  
   int mips = mip_levels(tex->width, tex->height)+1;
 
   YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
@@ -151,18 +149,18 @@ struct texture *texture_from_file(const char *path) {
     mipw = w;
     miph = h;
   }
-*/
+
   tex->id = sg_make_image(&(sg_image_desc){
     .type = SG_IMAGETYPE_2D,
     .width = tex->width,
     .height = tex->height,
     .usage = SG_USAGE_IMMUTABLE,
-    //.num_mipmaps = mips,
+    .num_mipmaps = mips,
     .data = sg_img_data
   });
 
-  /*for (int i = 1; i < mips; i++)
-    free(mipdata[i]);*/
+  for (int i = 1; i < mips; i++)
+    free(mipdata[i]);
     
   return tex;
 }
@@ -191,8 +189,6 @@ struct texture *texture_fromdata(void *raw, long size)
   
   tex->data = data;
 
-  int filter = SG_FILTER_NEAREST;
-  
   sg_image_data sg_img_data;
   
   int mips = mip_levels(tex->width, tex->height)+1;

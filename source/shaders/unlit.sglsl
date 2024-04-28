@@ -1,27 +1,42 @@
-@vs vs
+@block vptr
 in vec3 a_pos;
 in vec2 a_tex_coords;
 in vec4 a_norm;
-in vec4 a_weight;
-in vec4 a_joint;
-
 out vec2 tex_coords;
 out vec3 normal;
-
 uniform vs_p { uniform mat4 vp; };
 uniform vmodel { uniform mat4 model; };
+@end
+
+@vs vs
+@include_block vptr
+
+in vec4 a_weight;
+in vec4 a_joint;
 
 uniform skinv { uniform mat4 bones[50]; };
 
 void main() {
+  mat4 tt = vp;
+  mat4 mm = model;
   mat4 skin = bones[int(a_joint.x)] * a_weight.x;
   skin += bones[int(a_joint.y)] * a_weight.y;
   skin += bones[int(a_joint.z)] * a_weight.z;
   skin += bones[int(a_joint.w)] * a_weight.w;
-  mat4 skinm = model * skin;
-  gl_Position = vp * skinm * vec4(a_pos,1.0);
+  mat4 skinm = mm * skin;
+  gl_Position = tt * skinm * vec4(a_pos,1.0);
   tex_coords = a_tex_coords;
   normal = (skinm * vec4(a_norm.xyz*2-1,0)).xyz;
+}
+@end
+
+@vs vs_st
+@include_block vptr
+
+void main() {
+  gl_Position = vp * model * vec4(a_pos,1.0);
+  tex_coords = a_tex_coords;
+  normal = (model * vec4(a_norm.xyz*2-1,0)).xyz;
 }
 @end
 
@@ -45,3 +60,4 @@ void main() {
 @end
 
 @program unlit vs fs
+@program unlit_st vs_st fs

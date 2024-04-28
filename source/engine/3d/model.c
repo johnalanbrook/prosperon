@@ -26,12 +26,18 @@
 
 #include "sokol/sokol_gfx.h"
 
+#define POS 0
+#define UV 1
+#define NORM 2
+#define WEIGHT 3
+#define JOINT 4
+
 static void processnode();
 static void processmesh();
 static void processtexture();
 
-static sg_shader model_shader;
 static sg_pipeline model_pipe;
+static sg_pipeline model_st_pipe;
 struct bone_weights {
   char b1;
   char b2;
@@ -46,23 +52,27 @@ struct joints {
   char j4;
 };
 
-void model_init() {
-  model_shader = sg_make_shader(unlit_shader_desc(sg_query_backend()));
+static cgltf_data *cdata;
+static char *cpath;
 
+struct joints joint_nul = { 0, 0, 0, 0 };
+struct bone_weights weight_nul = {0, 0, 0, 0};
+
+void model_init() {
   model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = model_shader,
+    .shader = sg_make_shader(unlit_shader_desc(sg_query_backend())),
     .layout = {
       .attrs = {
-        [0].format = SG_VERTEXFORMAT_FLOAT3,
-	      [1].format = SG_VERTEXFORMAT_USHORT2N,
-	      [1].buffer_index = 1,
-        [2].format = SG_VERTEXFORMAT_UINT10_N2,
-        [2].buffer_index = 2,
-        [3] = {
+        [POS].format = SG_VERTEXFORMAT_FLOAT3,
+	      [UV].format = SG_VERTEXFORMAT_USHORT2N,
+	      [UV].buffer_index = 1,
+        [NORM].format = SG_VERTEXFORMAT_UINT10_N2,
+        [NORM].buffer_index = 2,
+        [WEIGHT] = {
           .format = SG_VERTEXFORMAT_UBYTE4N,
           .buffer_index = 3
         },
-        [4] = {
+        [JOINT] = {
           .format = SG_VERTEXFORMAT_UBYTE4,
           .buffer_index = 4
         }
@@ -73,6 +83,28 @@ void model_init() {
     .depth.write_enabled = true,
     .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
   });
+  
+  model_st_pipe = sg_make_pipeline(&(sg_pipeline_desc){
+    .shader = sg_make_shader(unlit_st_shader_desc(sg_query_backend())),
+    .layout = {
+      .attrs = {
+        [ATTR_vs_st_a_pos].format = SG_VERTEXFORMAT_FLOAT3,
+        [ATTR_vs_st_a_tex_coords] = {
+          .format = SG_VERTEXFORMAT_USHORT2N,
+          .buffer_index = 1
+        },
+        [ATTR_vs_st_a_norm] = {
+          .format = SG_VERTEXFORMAT_UINT10_N2,
+          .buffer_index = 2
+        }
+      },
+    },
+    .index_type = SG_INDEXTYPE_UINT16,
+    .cull_mode = SG_CULLMODE_FRONT,
+    .depth.write_enabled = true,
+    .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
+  });
+        
 }
 
 cgltf_attribute *get_attr_type(cgltf_primitive *p, cgltf_attribute_type t)
@@ -109,17 +141,21 @@ void mesh_add_material(primitive *prim, cgltf_material *mat)
 {
   if (!mat) return;
   
-  if (mat->has_pbr_metallic_roughness) {
+  if (mat->has_pbr_metallic_roughness && mat->pbr_metallic_roughness.base_color_texture.texture) {
     cgltf_image *img = mat->pbr_metallic_roughness.base_color_texture.texture->image;
-     if (img->buffer_view) {
-       cgltf_buffer_view *buf = img->buffer_view;
-       prim->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
-     } else
-       prim->bind.fs.images[0] = texture_from_file(img->uri)->id;
+    if (img->buffer_view) {
+      cgltf_buffer_view *buf = img->buffer_view;
+      prim->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
+    } else {
+      char *path = makepath(dirname(cpath), img->uri);
+      prim->bind.fs.images[0] = texture_from_file(path)->id;
+      free(path);
+     }
    } else
      prim->bind.fs.images[0] = texture_from_file("icons/moon.gif")->id; 
     
-   prim->bind.fs.samplers[0] = std_sampler;
+  // TODO: Cache and reuse samplers
+  prim->bind.fs.samplers[0] = tex_sampler;
 }
 
 sg_buffer texcoord_floats(float *f, int verts, int comp)
@@ -211,7 +247,6 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
 
   printf("adding material\n");
   mesh_add_material(&retp, prim->material);
-  int has_norm = 0;  
 
   for (int k = 0; k < prim->attributes_count; k++) {
     cgltf_attribute attribute = prim->attributes[k];
@@ -232,7 +267,6 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_normal:
-      has_norm = 1;
       retp.bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
       break;
 
@@ -263,8 +297,25 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       break;
     }
   }
+  /*
+  if (!retp.bind.vertex_buffers[JOINT].id) {
+    struct joints jnts[retp.idx_count];
+    for (int i = 0; i < retp.idx_count; i++)
+      jnts[i] = joint_nul;
+      
+    retp.bind.vertex_buffers[JOINT] = sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(jnts)});
+  }
+  
+  if (!retp.bind.vertex_buffers[WEIGHT].id) {
+    struct bone_weights v[retp.idx_count];
+    for (int i = 0; i < retp.idx_count; i++)
+      v[i] = weight_nul;
+      
+    retp.bind.vertex_buffers[WEIGHT] = sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(v)});
+  }
+  */
 
-  if (!has_norm) {
+  if (retp.bind.vertex_buffers[NORM].id) {
     YughInfo("Making normals.");
     cgltf_attribute *pa = get_attr_type(prim, cgltf_attribute_type_position);
     int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
@@ -291,7 +342,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
   return retp;
 }
 
-static cgltf_data *cdata;
+
 
 void model_add_cgltf_mesh(mesh *m, cgltf_mesh *gltf_mesh)
 {
@@ -382,7 +433,7 @@ void model_add_cgltf_skin(model *model, cgltf_skin *skin)
   sk.root = model->nodes+(skin->skeleton-cdata->nodes);
   
   for (int i = 0; i < 50; i++)
-    sk.binds[i] = HMM_M4D(1);
+    sk.binds[i] = MAT1;
   
   for (int i = 0; i < skin->joints_count; i++) {
     int offset = skin->joints[i]-cdata->nodes;
@@ -417,6 +468,7 @@ void model_process_node(model *model, cgltf_node *node)
 struct model *model_make(const char *path)
 {
   YughInfo("Making the model from %s.", path);
+  cpath = path;
   cgltf_options options = {0};
   cgltf_data *data = NULL;
   cgltf_result result = cgltf_parse_file(&options, path, &data);
@@ -460,31 +512,34 @@ void model_free(model *m)
 
 void model_draw_go(model *model, gameobject *go, gameobject *cam)
 {
-  animation_run(&model->anim, apptime());
-
-  skin *sk = &model->skin;
-  for (int i = 0; i < arrlen(sk->joints); i++) {
-    md5joint *md = sk->joints[i];
-    HMM_Mat4 local = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
-    if (md->parent)
-      local = HMM_MulM4(md->parent->t, local);
-    md->t = local;
-    sk->binds[i] = HMM_MulM4(md->t, sk->invbind[i]);
-    
-    //printf("TRANSLATION OF %d IS " HMMFMT_VEC3 "\n", i, HMMPRINT_VEC3(md->pos));
-  }
-
   HMM_Mat4 view = t3d_go2world(cam);
   HMM_Mat4 proj = HMM_Perspective_RH_NO(20, 1, 0.01, 10000);
   HMM_Mat4 vp = HMM_MulM4(proj, view);
   HMM_Mat4 gom = transform3d2mat(go2t3(go));
+  
+  animation_run(&model->anim, apptime());
 
-  sg_apply_pipeline(model_pipe);
+  skin *sk = &model->skin;
+  if (arrlen(sk->joints) == 0) {
+    sg_apply_pipeline(model_st_pipe);
+  } else {
+    sg_apply_pipeline(model_pipe);
+    
+    for (int i = 0; i < arrlen(sk->joints); i++) {
+      md5joint *md = sk->joints[i];
+      HMM_Mat4 local = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
+      if (md->parent)
+        local = HMM_MulM4(md->parent->t, local);
+      md->t = local;
+      sk->binds[i] = HMM_MulM4(md->t, sk->invbind[i]);
+    }
+    sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_skinv, &(sg_range){
+      .ptr = sk->binds,
+      .size = sizeof(*sk->binds)*50
+    });
+  }
+
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vp.e));
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_skinv, &(sg_range){
-    .ptr = sk->binds,
-    .size = sizeof(*sk->binds)*50
-  });
   float ambient[4] = {1.0,1.0,1.0,1.0};
   sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_lightf, SG_RANGE_REF(ambient));
   for (int i = 0; i < arrlen(model->meshes); i++) {

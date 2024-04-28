@@ -34,6 +34,7 @@ extern sg_pass_action pass_action;
 
 extern sg_buffer sprite_quad;
 extern sg_sampler std_sampler;
+extern sg_sampler tex_sampler;
 
 struct draw_p {
   float x;

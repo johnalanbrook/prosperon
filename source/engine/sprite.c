@@ -44,31 +44,6 @@ void sprite_free(sprite *sprite) { free(sprite); }
 static texture *loadedtex;
 static int sprite_count = 0;
 
-void sprite_flush() {
-return;
-  if (!loadedtex) return;
-/*  
-  int flushed = arrlen(spverts)/4;
-  sg_apply_bindings(&bind_sprite);
-  sg_range data = (sg_range){
-    .ptr = spverts,
-    .size = sizeof(sprite_vert)*arrlen(spverts)
-  };
-  if (sg_query_buffer_will_overflow(bind_sprite.vertex_buffers[0], data.size))
-    bind_sprite.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = data.size,
-      .type = SG_BUFFERTYPE_VERTEXBUFFER,
-      .usage = SG_USAGE_STREAM,
-      .label = "sprite vertex buffer"
-    });
-
-  sg_update_buffer(bind_sprite.vertex_buffers[0], &data);
-    
-  sg_draw(sprite_count * 4, 4, flushed);
-  sprite_count += flushed;
-  */
-}
-
 void sprite_initialize() {
   shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
 
@@ -112,41 +87,6 @@ void sprite_pipe()
   sg_apply_bindings(&bind_sprite);
 }
 
-void tex_draw(HMM_Mat3 m, struct rect r, struct rgba color, int wrap, HMM_Vec2 wrapoffset, HMM_Vec2 wrapscale, struct rgba emissive) {
-  /*
-  struct sprite_vert verts[4];
-  float w = loadedtex->width*r.w;
-  float h = loadedtex->height*r.h;
-  
-  HMM_Vec2 sposes[4] = {
-    {0,0},
-    {w,0},
-    {0,h},
-    {w,h}
-  };
-
-  for (int i = 0; i < 4; i++)
-    verts[i].pos = mat_t_pos(m, sposes[i]);
-
-  if (wrap) {
-    r.w *= wrapscale.x;
-    r.h *= wrapscale.y;
-  }
-
-  verts[0].uv.X = r.x;
-  verts[0].uv.Y = r.y+r.h;
-  verts[1].uv.X = r.x+r.w;
-  verts[1].uv.Y = r.y+r.h;
-  verts[2].uv.X = r.x;
-  verts[2].uv.Y = r.y;
-  verts[3].uv.X = r.x+r.w;
-  verts[3].uv.Y = r.y;
-
-  for (int i = 0; i < 4; i++)
-    arrput(spverts, verts[i]);
-    */
-}
-
 transform2d sprite2t(sprite *s)
 {
   return (transform2d){
@@ -179,7 +119,7 @@ void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, fl
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vp, SG_RANGE_REF(useproj));
   sprite_tex(tex);
-  tex_draw(transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0});
+  //tex_draw(transform2d2mat(t), ST_UNIT, color, wrap, wrapoffset, (HMM_Vec2){wrapscale,wrapscale}, (struct rgba){0,0,0,0});
 }
 
 void slice9_draw(texture *tex, transform2d *t, HMM_Vec4 border, struct rgba color)

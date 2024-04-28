@@ -421,6 +421,8 @@ static const HMM_Vec3 vBKWD = {0,0,-1};
 static const HMM_Vec3 vLEFT = {-1,0,0};
 static const HMM_Vec3 vRIGHT = {1,0,0};
 
+static const HMM_Mat4 MAT1 = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+
 /*
  * Angle unit conversion functions
  */

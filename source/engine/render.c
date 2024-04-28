@@ -33,6 +33,7 @@ float camzoom = 1;
 
 sg_buffer sprite_quad;
 sg_sampler std_sampler;
+sg_sampler tex_sampler;
 
 static struct {
   sg_swapchain swap;
@@ -242,6 +243,13 @@ void render_init() {
   });
   
   std_sampler = sg_make_sampler(&(sg_sampler_desc){});
+  tex_sampler = sg_make_sampler(&(sg_sampler_desc){
+    .min_filter = SG_FILTER_LINEAR,
+    .mag_filter = SG_FILTER_LINEAR,
+    .mipmap_filter = SG_FILTER_LINEAR,
+    .wrap_u = SG_WRAP_REPEAT,
+    .wrap_v = SG_WRAP_REPEAT
+  });
 
 #ifndef NDEBUG
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
