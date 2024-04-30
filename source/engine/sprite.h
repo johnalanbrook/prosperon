@@ -28,14 +28,17 @@ struct spriteuni {
 typedef struct sprite sprite;
 
 extern sg_bindings bind_sprite;
+extern sg_pipeline pip_sprite;
 
 sprite *sprite_make();
 void sprite_free(sprite *sprite);
 void sprite_tex(texture *t);
 void sprite_initialize();
+void tex_draw(texture *tex, gameobject *go);
 void sprite_draw(struct sprite *sprite, gameobject *go);
 void sprite_pipe();
 void sprite_draw_all();
+void sprite_setpipe(sg_pipeline p);
 
 void gui_draw_img(texture *tex, transform2d t, int wrap, HMM_Vec2 wrapoffset, float wrapscale, struct rgba color);
 

@@ -18,7 +18,8 @@ extern struct rect ST_UNIT;
 
 /* Represents an actual texture on the GPU */
 struct texture {
-  sg_image id; /* ID reference for the GPU memory location of the texture */
+  sg_image id; /* ID reference for the GPU memory location of the 
+  texture */
   int width;
   int height;
   unsigned char *data;

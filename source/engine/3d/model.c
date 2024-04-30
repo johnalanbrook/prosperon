@@ -26,12 +26,6 @@
 
 #include "sokol/sokol_gfx.h"
 
-#define POS 0
-#define UV 1
-#define NORM 2
-#define WEIGHT 3
-#define JOINT 4
-
 static void processnode();
 static void processmesh();
 static void processtexture();
@@ -52,6 +46,13 @@ struct joints {
   char j4;
 };
 
+#define MAT_POS 0
+#define MAT_UV 1
+#define MAT_NORM 2
+#define MAT_BONE 3
+#define MAT_WEIGHT 4
+#define MAT_COLOR 5
+
 static cgltf_data *cdata;
 static char *cpath;
 
@@ -63,18 +64,18 @@ void model_init() {
     .shader = sg_make_shader(unlit_shader_desc(sg_query_backend())),
     .layout = {
       .attrs = {
-        [POS].format = SG_VERTEXFORMAT_FLOAT3,
-	      [UV].format = SG_VERTEXFORMAT_USHORT2N,
-	      [UV].buffer_index = 1,
-        [NORM].format = SG_VERTEXFORMAT_UINT10_N2,
-        [NORM].buffer_index = 2,
-        [WEIGHT] = {
+        [MAT_POS].format = SG_VERTEXFORMAT_FLOAT3,
+	      [MAT_UV].format = SG_VERTEXFORMAT_USHORT2N,
+	      [MAT_UV].buffer_index = MAT_UV,
+        [MAT_NORM].format = SG_VERTEXFORMAT_UINT10_N2,
+        [MAT_NORM].buffer_index = MAT_NORM,
+        [MAT_WEIGHT] = {
           .format = SG_VERTEXFORMAT_UBYTE4N,
-          .buffer_index = 3
+          .buffer_index = MAT_WEIGHT
         },
-        [JOINT] = {
+        [MAT_BONE] = {
           .format = SG_VERTEXFORMAT_UBYTE4,
-          .buffer_index = 4
+          .buffer_index = MAT_BONE
         }
       },
     },
@@ -89,13 +90,13 @@ void model_init() {
     .layout = {
       .attrs = {
         [ATTR_vs_st_a_pos].format = SG_VERTEXFORMAT_FLOAT3,
-        [ATTR_vs_st_a_tex_coords] = {
+        [ATTR_vs_st_a_uv] = {
           .format = SG_VERTEXFORMAT_USHORT2N,
-          .buffer_index = 1
+          .buffer_index = MAT_UV
         },
         [ATTR_vs_st_a_norm] = {
           .format = SG_VERTEXFORMAT_UINT10_N2,
-          .buffer_index = 2
+          .buffer_index = MAT_NORM
         }
       },
     },
@@ -141,21 +142,21 @@ void mesh_add_material(primitive *prim, cgltf_material *mat)
 {
   if (!mat) return;
   
+  prim->mat = calloc(sizeof(*prim->mat), 1);
+  material *pmat = prim->mat;
+  
   if (mat->has_pbr_metallic_roughness && mat->pbr_metallic_roughness.base_color_texture.texture) {
     cgltf_image *img = mat->pbr_metallic_roughness.base_color_texture.texture->image;
     if (img->buffer_view) {
       cgltf_buffer_view *buf = img->buffer_view;
-      prim->bind.fs.images[0] = texture_fromdata(buf->buffer->data, buf->size)->id;
+      pmat->diffuse = texture_fromdata(buf->buffer->data, buf->size);
     } else {
       char *path = makepath(dirname(cpath), img->uri);
-      prim->bind.fs.images[0] = texture_from_file(path)->id;
+      pmat->diffuse = texture_from_file(path);
       free(path);
      }
    } else
-     prim->bind.fs.images[0] = texture_from_file("icons/moon.gif")->id; 
-    
-  // TODO: Cache and reuse samplers
-  prim->bind.fs.samplers[0] = tex_sampler;
+     pmat->diffuse = texture_from_file("icons/moon.gif"); 
 }
 
 sg_buffer texcoord_floats(float *f, int verts, int comp)
@@ -219,7 +220,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
     for (int i = 0; i < n; i++)
       idxs[i] = fidx[i];
 
-    retp.bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+    retp.idx = sg_make_buffer(&(sg_buffer_desc){
       .data.ptr = idxs,
       .data.size = sizeof(*idxs) * n,
       .type = SG_BUFFERTYPE_INDEXBUFFER,
@@ -237,7 +238,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
     for (int z = 0; z < c; z++)
       idxs[z] = z;
 
-    retp.bind.index_buffer = sg_make_buffer(&(sg_buffer_desc){
+    retp.idx = sg_make_buffer(&(sg_buffer_desc){
 	    .data.ptr = idxs,
 	    .data.size = sizeof(uint16_t) * c,
 	    .type = SG_BUFFERTYPE_INDEXBUFFER});
@@ -259,7 +260,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
 
     switch (attribute.type) {
       case cgltf_attribute_type_position:
-      retp.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+      retp.pos = sg_make_buffer(&(sg_buffer_desc){
         .data.ptr = vs,
         .data.size = sizeof(float) * n,
         .label = "mesh vert buffer"
@@ -267,7 +268,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_normal:
-      retp.bind.vertex_buffers[2] = normal_floats(vs, verts, comp);
+      retp.norm = normal_floats(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_tangent:
@@ -277,15 +278,15 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_weights:
-      retp.bind.vertex_buffers[3] = weight_buf(vs, verts, comp);
+      retp.weight = weight_buf(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_joints:
-      retp.bind.vertex_buffers[4] = joint_buf(vs, verts, comp);
+      retp.bone = joint_buf(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_texcoord:
-      retp.bind.vertex_buffers[1] = texcoord_floats(vs, verts, comp);
+      retp.uv = texcoord_floats(vs, verts, comp);
       break;
     case cgltf_attribute_type_invalid:
       YughWarn("Invalid type.");
@@ -315,7 +316,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
   }
   */
 
-  if (retp.bind.vertex_buffers[NORM].id) {
+  if (retp.norm.id) {
     YughInfo("Making normals.");
     cgltf_attribute *pa = get_attr_type(prim, cgltf_attribute_type_position);
     int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
@@ -334,7 +335,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       face_norms[i] = face_norms[i+1] = face_norms[i+2] = packed_norm;
      }
      
-     retp.bind.vertex_buffers[2] = sg_make_buffer(&(sg_buffer_desc){
+     retp.norm = sg_make_buffer(&(sg_buffer_desc){
        .data.ptr = face_norms,
        .data.size = sizeof(uint32_t) * verts});
   }
@@ -510,6 +511,20 @@ void model_free(model *m)
 
 }
 
+sg_bindings primitive_bind(primitive *p)
+{
+  sg_bindings b = {0};
+  b.vertex_buffers[unlit_attr_slot("a_pos")] = p->pos;
+  b.vertex_buffers[5] = p->uv;
+  b.vertex_buffers[3] = p->norm;
+  //b.vertex_buffers[unlit_attr_slot("a_bone")] = p->bone;
+  //b.vertex_buffers[unlit_attr_slot("a_weight")] = p->weight;
+  b.index_buffer = p->idx;
+  b.fs.images[unlit_image_slot(SG_SHADERSTAGE_FS, "diffuse")] = p->mat->diffuse->id;
+  b.fs.samplers[unlit_sampler_slot(SG_SHADERSTAGE_FS, "smp")] = tex_sampler;
+  return b;
+}
+
 void model_draw_go(model *model, gameobject *go, gameobject *cam)
 {
   HMM_Mat4 view = t3d_go2world(cam);
@@ -538,6 +553,8 @@ void model_draw_go(model *model, gameobject *go, gameobject *cam)
       .size = sizeof(*sk->binds)*50
     });
   }
+  
+  sg_apply_pipeline(model_st_pipe);
 
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vp.e));
   float ambient[4] = {1.0,1.0,1.0,1.0};
@@ -547,12 +564,13 @@ void model_draw_go(model *model, gameobject *go, gameobject *cam)
     mod = HMM_MulM4(mod, gom);
     mesh msh = model->meshes[i];
     for (int j = 0; j < arrlen(msh.primitives); j++) {
-      sg_apply_bindings(&(msh.primitives[j].bind));    
+      sg_bindings b = primitive_bind(msh.primitives+j);
+      sg_apply_bindings(&b);    
       sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vmodel, &(sg_range){
         .ptr = mod.em,
         .size = sizeof(mod)
       });
-      sg_draw(0, model->meshes[i].primitives[j].idx_count, 1);    
+      sg_draw(0, msh.primitives[j].idx_count, 1);    
     }
   }
 }

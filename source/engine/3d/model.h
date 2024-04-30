@@ -26,9 +26,19 @@ typedef struct material {
 struct model;
 
 typedef struct primitive {
-  sg_bindings bind;
+  sg_buffer pos;
+  sg_buffer norm;
+  sg_buffer uv;
+  sg_buffer bone;
+  sg_buffer weight;
+  sg_buffer idx;
+  material *mat;
   uint32_t idx_count;
 } primitive;
+
+typedef struct shader {
+  sg_pipeline pipeline;
+} shader;
 
 /* A single mesh */
 typedef struct mesh {
@@ -60,6 +70,7 @@ typedef struct skin {
 typedef struct model {
   struct mesh *meshes;
   md5joint *nodes;
+  material *mats;
   skin skin;
   struct animation anim;
 } model;

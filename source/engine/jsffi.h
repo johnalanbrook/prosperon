@@ -135,4 +135,9 @@ JSValue str2js(const char *c, ...);
 
 void nota_int(char *blob);
 
+JSValue js_getpropidx(JSValue v, uint32_t i);
+JSValue js_getpropstr(JSValue v, const char *str);
+const char *js2str(JSValue v);
+void jsfreestr(const char *str);
+
 #endif

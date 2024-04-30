@@ -10,8 +10,7 @@
 #include "sprite.sglsl.h"
 #include "9slice.sglsl.h"
 
-static sg_shader shader_sprite;
-static sg_pipeline pip_sprite;
+sg_pipeline pip_sprite;
 sg_bindings bind_sprite;
 
 static sg_shader slice9_shader;
@@ -45,10 +44,8 @@ static texture *loadedtex;
 static int sprite_count = 0;
 
 void sprite_initialize() {
-  shader_sprite = sg_make_shader(sprite_shader_desc(sg_query_backend()));
-
   pip_sprite = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = shader_sprite,
+    .shader = sg_make_shader(sprite_shader_desc(sg_query_backend())),
     .layout = {
       .attrs = {
         [0].format = SG_VERTEXFORMAT_FLOAT2
@@ -84,7 +81,6 @@ void sprite_pipe()
 {
   sg_apply_pipeline(pip_sprite);
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vp, SG_RANGE_REF(useproj));
-  sg_apply_bindings(&bind_sprite);
 }
 
 transform2d sprite2t(sprite *s)
@@ -102,6 +98,25 @@ void sprite_tex(texture *t)
   bind_sprite.fs.images[0] = t->id;
 }
 
+void sprite_setpipe(sg_pipeline p)
+{
+  pip_sprite = p;
+}
+
+void tex_draw(texture *tex, gameobject *go)
+{
+  HMM_Mat4 m = transform2d2mat4(go2t(go));
+  
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 1, SG_RANGE_REF(m.e));
+  
+  sg_bindings bind = {0};
+  bind.vertex_buffers[0] = sprite_quad;
+  bind.fs.images[0] = tex->id;
+  bind.fs.samplers[0] = std_sampler;
+  sg_apply_bindings(&bind);
+  sg_draw(0,4,1);
+}
+
 void sprite_draw(struct sprite *sprite, gameobject *go) {
   HMM_Mat4 m = transform2d2mat4(go2t(go));
   HMM_Mat4 sm = transform2d2mat4(sprite2t(sprite));
@@ -111,7 +126,11 @@ void sprite_draw(struct sprite *sprite, gameobject *go) {
   spv.size = sprite->spritesize;
   spv.offset = sprite->spriteoffset;
   spv.model = HMM_MulM4(m,sm);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_sprite, SG_RANGE_REF(spv));  
+  
+  sg_bindings bind = {0};
+  bind.vertex_buffers[0] = sprite_quad;
+  bind.fs.images[0] = loadedtex->id;
+  bind.fs.samplers[0] = std_sampler;
   sg_draw(0,4,1);
 }
 

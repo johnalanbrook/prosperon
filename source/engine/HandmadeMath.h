@@ -279,6 +279,7 @@ typedef union HMM_Vec3 {
   };
 
   float Elements[3];
+  float e[3];
 
 } HMM_Vec3;
 

@@ -158,7 +158,7 @@ struct texture *texture_from_file(const char *path) {
     .num_mipmaps = mips,
     .data = sg_img_data
   });
-
+  
   for (int i = 1; i < mips; i++)
     free(mipdata[i]);
     

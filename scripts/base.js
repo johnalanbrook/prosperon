@@ -820,6 +820,12 @@ Object.defineProperty(String.prototype, 'splice', {
   }
 });
 
+Object.defineProperty(String.prototype, 'sub', {
+  value: function(index, str) {
+    return this.slice(0,index) + str + this.slice(index+str.length);
+  }
+});
+
 Object.defineProperty(String.prototype, 'rm', {
   value: function(index, endidx = index+1) { return this.slice(0,index) + this.slice(endidx); }
 });
@@ -1551,10 +1557,63 @@ Math.sortpointsccw = function(points)
   return ccw.map(function(x) { return x.add(cm); });
 }
 
+var yaml = {};
+yaml.tojson = function(yaml)
+{
+  yaml = yaml.replace(/(\w+):/g, '"$1":');
+  yaml = yaml.replace(/: ([\w\.]+)/g, ': "$1"');
+  
+  yaml = yaml.split("\n");
+  var cont = {};
+  var cur = 0;
+  for (var i = 0; i < yaml.length; i++) {
+    var line = yaml[i];
+    var indent = line.search(/\S/);
+    
+    if (indent > cur) {
+      if (line[indent] == "-") {
+        cont[indent] = "array";
+        yaml[i] = line.sub(indent, '[');
+      } else {
+        cont[indent] = "obj";
+        yaml[i] = line.sub(indent-1, '{');
+      }
+    }
+    
+    if (indent < cur) {
+      while (cur > indent) {
+      if (cont[cur] === "obj")
+        yaml[i-1] = yaml[i-1] + "}";
+      else if (cont[cur] === "array")
+        yaml[i-1] = yaml[i-1] + "]";
+      
+      delete cont[cur];
+      cur--;
+      }
+    }
+
+    if (indent === cur) {
+      if (yaml[i][indent] === '-')
+        yaml[i] = yaml[i].sub(indent,',');
+      else
+        yaml[i-1] = yaml[i-1] + ',';
+    }
+    
+    cur = indent;
+  }
+  yaml = "{" + yaml.join("\n") + "}";
+  yaml = yaml.replace(/\s/g, '');
+  yaml = yaml.replace(/,}/g, '}');
+  yaml = yaml.replace(/,]/g, ']');
+  return yaml; 
+}
+
+
 return {
   convert,
   time,
   json,
   Vector,
-  bbox
+  bbox,
+  yaml
 };

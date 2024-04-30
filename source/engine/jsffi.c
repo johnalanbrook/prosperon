@@ -61,6 +61,7 @@ const char *js2str(JSValue v) {
   return JS_ToCString(js, v);
 }
 
+void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
 QJSCLASS(emitter)
 QJSCLASS(dsp_node)
@@ -625,6 +626,110 @@ JSC_CCALL(render_clear_color,
 
 JSC_CCALL(render_set_sprite_tex, sprite_tex(js2texture(argv[0])))
 
+JSC_CCALL(render_pipeline,
+  sg_shader_desc desc = {0};
+  JSValue prog = argv[0];
+  JSValue vs = js_getpropstr(prog, "vs");
+  JSValue fs = js_getpropstr(prog, "fs");
+  char *vsf = js2str(js_getpropstr(vs, "code"));
+  char *fsf = js2str(js_getpropstr(fs, "code"));
+  desc.vs.source = vsf;
+  desc.fs.source = fsf;
+  char *vsmain = js2str(js_getpropstr(vs, "entry_point"));
+  char *fsmain = js2str(js_getpropstr(fs, "entry_point"));
+  desc.vs.entry = vsmain;
+  desc.fs.entry = fsmain;
+  JSValue vsu = js_getpropstr(vs, "uniform_blocks");
+  int unin = js_arrlen(vsu);
+  for (int i = 0; i < unin; i++) {
+    JSValue u = js_getpropidx(vsu, i);
+    int slot = js2number(js_getpropstr(u, "slot"));
+    desc.vs.uniform_blocks[slot].size = js2number(js_getpropstr(u, "size"));
+    desc.vs.uniform_blocks[slot].layout = SG_UNIFORMLAYOUT_STD140;
+  }
+  
+  JSValue fsu = js_getpropstr(fs, "uniform_blocks");
+  unin = js_arrlen(fsu);
+  for (int i = 0; i < unin; i++) {
+    JSValue u = js_getpropidx(fsu, i);
+    int slot = js2number(js_getpropstr(u, "slot"));
+    desc.fs.uniform_blocks[slot].size = js2number(js_getpropstr(u, "size"));
+    desc.fs.uniform_blocks[slot].layout = SG_UNIFORMLAYOUT_STD140;
+  }
+  
+  JSValue imgs = js_getpropstr(fs, "images");
+  unin = js_arrlen(imgs);
+  for (int i = 0; i < unin; i++) {
+    JSValue u = js_getpropidx(imgs, i);
+    int slot = js2number(js_getpropstr(u, "slot"));
+    desc.fs.images[i].used = true;
+    desc.fs.images[i].multisampled = js2boolean(js_getpropstr(u, "multisampled"));
+    desc.fs.images[i].image_type = SG_IMAGETYPE_2D;
+    desc.fs.images[i].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+  }
+  
+  JSValue samps = js_getpropstr(fs, "samplers");
+  unin = js_arrlen(samps);
+  for (int i = 0; i < unin; i++) {
+    desc.fs.samplers[0].used = true;
+    desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
+  }
+  
+  JSValue pairs = js_getpropstr(fs, "image_sampler_pairs");
+  unin = js_arrlen(pairs);
+  for (int i = 0; i < unin; i++) {
+    desc.fs.image_sampler_pairs[0].used = true;
+    desc.fs.image_sampler_pairs[0].image_slot = 0;
+    desc.fs.image_sampler_pairs[0].sampler_slot = 0;
+  }
+  
+  sg_shader sgshader = sg_make_shader(&desc);
+  
+  sg_pipeline_desc pdesc = {0};
+  pdesc.shader = sgshader;
+  pdesc.cull_mode = SG_CULLMODE_FRONT;
+  pdesc.depth.write_enabled = true;
+  pdesc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
+  
+  pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+  
+  pdesc.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
+  //pdesc.colors[0].blend = blend_trans;
+  
+  sg_pipeline pipe = sg_make_pipeline(&pdesc);
+  jsfreestr(vsf);
+  jsfreestr(fsf);
+  jsfreestr(vsmain);
+  jsfreestr(fsmain);
+  return number2js(pipe.id);
+)
+
+JSC_CCALL(render_spritepipe, pip_sprite.id = js2number(argv[0]))
+
+JSC_CCALL(render_texture,
+  tex_draw(js2texture(argv[0]), js2gameobject(argv[1]));
+)
+
+JSC_CCALL(render_setuniv,
+  float f = js2number(argv[0]);
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, js2number(argv[1]), SG_RANGE_REF(f));
+)
+
+JSC_CCALL(render_setuniv3,
+  HMM_Vec3 v = js2vec3(argv[0]);
+  sg_apply_uniforms(SG_SHADERSTAGE_FS, js2number(argv[1]), SG_RANGE_REF(v.e));
+)
+
+JSC_CCALL(render_spdraw,
+  gameobject *go = js2gameobject(argv[0]);
+  HMM_Mat4 m = transform2d2mat4(go2t(go));
+  sg_apply_uniforms(SG_SHADERSTAGE_VS, 1, SG_RANGE_REF(m.e));
+  sg_bindings bind = {0};
+  bind.vertex_buffers[0] = sprite_quad;
+  sg_apply_bindings(&bind);
+  sg_draw(0,4,1);
+)
+
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, grid, 3),
   MIST_FUNC_DEF(render, point, 3),
@@ -640,6 +745,12 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, hud_res, 1),
   MIST_FUNC_DEF(render, clear_color, 1),
   MIST_FUNC_DEF(render, set_sprite_tex, 1),
+  MIST_FUNC_DEF(render, pipeline, 1),
+  MIST_FUNC_DEF(render, spritepipe, 1),
+  MIST_FUNC_DEF(render, texture, 2),
+  MIST_FUNC_DEF(render, setuniv3, 2),
+  MIST_FUNC_DEF(render, setuniv, 2),
+  MIST_FUNC_DEF(render, spdraw, 1)
 };
 
 JSC_CCALL(gui_flush, text_flush(&useproj));
@@ -891,6 +1002,7 @@ JSC_SCALL(io_save_qoa, save_qoa(str))
 JSC_SCALL(io_pack_start, pack_start(str))
 JSC_SCALL(io_pack_add, pack_add(str))
 JSC_CCALL(io_pack_end, pack_end())
+JSC_SCALL(io_mod, ret = number2js(file_mod_secs(str));)
 
 static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, exists,1),
@@ -907,7 +1019,8 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, save_qoa,1),
   MIST_FUNC_DEF(io, pack_start, 1),
   MIST_FUNC_DEF(io, pack_add, 1),
-  MIST_FUNC_DEF(io, pack_end, 0)
+  MIST_FUNC_DEF(io, pack_end, 0),
+  MIST_FUNC_DEF(io, mod,1)
 };
 
 JSC_CCALL(debug_draw_gameobject, gameobject_draw_debug(js2gameobject(argv[0]));)
@@ -1030,6 +1143,8 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, make_damp, 0),
   MIST_FUNC_DEF(physics, make_gravity, 0),
 };
+
+
 
 JSC_CCALL(model_draw_go,
   model_draw_go(js2model(this), js2gameobject(argv[0]), js2gameobject(argv[1]))
@@ -1536,7 +1651,7 @@ JSC_CCALL(os_make_font, return font2js(MakeFont(js2str(argv[0]), js2number(argv[
 
 JSC_SCALL(os_system, system(str); )
 
-JSC_SCALL(os_make_model, return model2js(model_make(str)))
+JSC_SCALL(os_make_model, ret = model2js(model_make(str)))
 
 JSC_CCALL(os_sprite_pipe, sprite_pipe())
 
