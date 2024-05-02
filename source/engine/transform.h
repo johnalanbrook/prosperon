@@ -9,11 +9,17 @@ typedef struct transform3d {
     HMM_Quat rotation;
 } transform3d;
 
+transform3d *make_transform3d();
+void transform3d_free(transform3d *t);
+
 typedef struct {
   HMM_Vec2 pos;
   HMM_Vec2 scale;
   float angle;
 } transform2d;
+
+transform2d *make_transform2d();
+void transform2d_free(transform2d *t);
 
 extern const transform2d t2d_unit;
 
@@ -27,7 +33,7 @@ HMM_Vec3 trans_down(const transform3d *trans);
 HMM_Vec3 trans_right(const transform3d *trans);
 HMM_Vec3 trans_left(const transform3d *trans);
 
-HMM_Mat4 transform2d2mat4(transform2d trn);
+HMM_Mat4 transform2d2mat4(transform2d *t);
 
 /* Transform a position via the matrix */
 HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos);

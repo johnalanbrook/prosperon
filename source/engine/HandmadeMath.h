@@ -221,6 +221,7 @@ typedef union HMM_Vec2 {
   };
 
   float Elements[2];
+  float e[2];
 
   cpVect cp;
 
@@ -404,6 +405,7 @@ typedef union HMM_Mat3 {
 typedef union HMM_Mat4 {
   float Elements[4][4];
   HMM_Vec4 Columns[4];
+  HMM_Vec4 col[4];
   float e[4][4];
   float em[16];
 } HMM_Mat4;

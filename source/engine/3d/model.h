@@ -8,7 +8,13 @@
 #include "anim.h"
 #include "texture.h"
 
-extern HMM_Vec3 eye;
+#define MAT_POS 0
+#define MAT_UV 1
+#define MAT_NORM 2
+#define MAT_BONE 3
+#define MAT_WEIGHT 4
+#define MAT_COLOR 5
+#define MAT_TAN 6
 
 typedef struct material {
   texture *diffuse;
@@ -31,14 +37,11 @@ typedef struct primitive {
   sg_buffer uv;
   sg_buffer bone;
   sg_buffer weight;
+  sg_buffer color;
   sg_buffer idx;
   material *mat;
   uint32_t idx_count;
 } primitive;
-
-typedef struct shader {
-  sg_pipeline pipeline;
-} shader;
 
 /* A single mesh */
 typedef struct mesh {

@@ -124,9 +124,9 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
 };
 
 render.image = function(tex, pos, rotation = 0, color = Color.white, dimensions = [tex.width, tex.height]) {
-  var scale = [dimensions.x/tex.width, dimensions.y/tex.height];
-  gui.img(tex,pos, scale, 0.0, false, [0.0,0.0], color); 
-  return bbox.fromcwh([0,0], [tex.width,tex.height]);
+  //var scale = [dimensions.x/tex.width, dimensions.y/tex.height];
+  //gui.img(tex,pos, scale, 0.0, false, [0.0,0.0], color); 
+  //return bbox.fromcwh([0,0], [tex.width,tex.height]);
 }
 
 render.fontcache = {};

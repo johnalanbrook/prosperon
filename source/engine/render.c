@@ -257,7 +257,6 @@ void render_init() {
 
   font_init();
   debugdraw_init();
-  sprite_initialize();
 
   model_init();
   

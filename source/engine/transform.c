@@ -1,11 +1,29 @@
 #include "transform.h"
 #include <string.h>
+#include <stdio.h>
 
 const transform2d t2d_unit = {
   .pos = {0,0},
   .scale = {1,1},
   .angle = 0
 };
+
+transform3d *make_transform3d()
+{
+  transform3d *t = calloc(sizeof(transform3d),1);
+  return t;
+}
+
+void transform3d_free(transform3d *t) { free(t); }
+
+transform2d *make_transform2d()
+{
+  transform2d *t = calloc(sizeof(transform2d),1);
+  t->scale = (HMM_Vec2){1,1};
+  return t;
+}
+
+void transform2d_free(transform2d *t) { free(t); }
 
 HMM_Vec3 trans_forward(const transform3d *const trans) { return HMM_QVRot(vFWD, trans->rotation); }
 HMM_Vec3 trans_back(const transform3d *trans) { return HMM_QVRot(vBKWD, trans->rotation); }
@@ -40,13 +58,19 @@ HMM_Mat3 transform2d2mat(transform2d trn) {
   return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale)));
 }
 
-HMM_Mat4 transform2d2mat4(transform2d trn)
+HMM_Mat4 transform2d2mat4(transform2d *t)
 {
-  transform3d t3d;
-  t3d.pos.xy = trn.pos;
-  t3d.scale.xy = trn.scale;
-  t3d.rotation = HMM_QFromAxisAngle_RH((HMM_Vec3){0,0,-1}, trn.angle);
-  return transform3d2mat(t3d);
+  HMM_Mat4 T = {0};
+  float c = cosf(t->angle);
+  float s = sinf(t->angle);
+  T.col[0].x = c*t->scale.x;
+  T.col[0].y = s*t->scale.y;
+  T.col[1].x = -s*t->scale.x;
+  T.col[1].y = c*t->scale.y;
+  T.col[3].xy = t->pos;
+  T.col[2].z = 1;
+  T.col[3].w = 1;
+  return T;
 }
 
 transform2d mat2transform2d(HMM_Mat3 m)

@@ -13,6 +13,10 @@ this.view2world = function(pos) {
     pos = pos.scale(this.zoom);    
     pos = pos.add(this.pos);
   }
+  if (window.mode === window.modetypes.expand) {
+    pos = pos.sub(window.size.scale(0.5)); 
+    pos = pos.scale([window.rendersize.x/window.size.x, window.rendersize.y/window.size.y]);
+  }
   return pos;
 };
 this.world2view = function(pos) {
@@ -25,6 +29,9 @@ this.world2view = function(pos) {
     pos = pos.sub(this.pos);
     pos = pos.scale(1/this.zoom);
     pos = pos.add(window.size.scale(0.5));
+  }
+  if (window.mode === window.modetypes.expand) {
+    
   }
   return pos;
 };

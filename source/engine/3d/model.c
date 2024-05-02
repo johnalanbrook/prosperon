@@ -30,83 +30,8 @@ static void processnode();
 static void processmesh();
 static void processtexture();
 
-static sg_pipeline model_pipe;
-static sg_pipeline model_st_pipe;
-struct bone_weights {
-  char b1;
-  char b2;
-  char b3;
-  char b4;
-};
-
-struct joints {
-  char j1;
-  char j2;
-  char j3;
-  char j4;
-};
-
-#define MAT_POS 0
-#define MAT_UV 1
-#define MAT_NORM 2
-#define MAT_BONE 3
-#define MAT_WEIGHT 4
-#define MAT_COLOR 5
-
 static cgltf_data *cdata;
 static char *cpath;
-
-struct joints joint_nul = { 0, 0, 0, 0 };
-struct bone_weights weight_nul = {0, 0, 0, 0};
-
-void model_init() {
-  model_pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = sg_make_shader(unlit_shader_desc(sg_query_backend())),
-    .layout = {
-      .attrs = {
-        [MAT_POS].format = SG_VERTEXFORMAT_FLOAT3,
-	      [MAT_UV].format = SG_VERTEXFORMAT_USHORT2N,
-	      [MAT_UV].buffer_index = MAT_UV,
-        [MAT_NORM].format = SG_VERTEXFORMAT_UINT10_N2,
-        [MAT_NORM].buffer_index = MAT_NORM,
-        [MAT_WEIGHT] = {
-          .format = SG_VERTEXFORMAT_UBYTE4N,
-          .buffer_index = MAT_WEIGHT
-        },
-        [MAT_BONE] = {
-          .format = SG_VERTEXFORMAT_UBYTE4,
-          .buffer_index = MAT_BONE
-        }
-      },
-    },
-    .index_type = SG_INDEXTYPE_UINT16,
-    .cull_mode = SG_CULLMODE_FRONT,
-    .depth.write_enabled = true,
-    .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
-  });
-  
-  model_st_pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = sg_make_shader(unlit_st_shader_desc(sg_query_backend())),
-    .layout = {
-      .attrs = {
-        [ATTR_vs_st_a_pos].format = SG_VERTEXFORMAT_FLOAT3,
-        [ATTR_vs_st_a_uv] = {
-          .format = SG_VERTEXFORMAT_USHORT2N,
-          .buffer_index = MAT_UV
-        },
-        [ATTR_vs_st_a_norm] = {
-          .format = SG_VERTEXFORMAT_UINT10_N2,
-          .buffer_index = MAT_NORM
-        }
-      },
-    },
-    .index_type = SG_INDEXTYPE_UINT16,
-    .cull_mode = SG_CULLMODE_FRONT,
-    .depth.write_enabled = true,
-    .depth.compare = SG_COMPAREFUNC_LESS_EQUAL
-  });
-        
-}
 
 cgltf_attribute *get_attr_type(cgltf_primitive *p, cgltf_attribute_type t)
 {
@@ -182,6 +107,24 @@ sg_buffer normal_floats(float *f, int verts, int comp)
     .data = SG_RANGE(packed_norms),
     .label = "normal vert buffer",
   });
+}
+
+sg_buffer ubyten_buffer(float *f, int v, int c)
+{
+  unsigned char b[v*c];
+  for (int i = 0; i < (v*c); i++)
+    b[i] = f[i]*255;
+    
+  return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});
+}
+
+sg_buffer ubyte_buffer(float *f, int v, int c)
+{
+  unsigned char b[v*c];
+  for (int i = 0; i < (v*c); i++)
+    b[i] = f[i];
+    
+  return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});
 }
 
 sg_buffer joint_buf(float *f, int v, int c)
@@ -275,14 +218,15 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_color:
+      retp.color = ubyten_buffer(vs,verts,comp);
       break;
 
     case cgltf_attribute_type_weights:
-      retp.weight = weight_buf(vs, verts, comp);
+      retp.weight = ubyten_buffer(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_joints:
-      retp.bone = joint_buf(vs, verts, comp);
+      retp.bone = ubyte_buffer(vs, verts, comp);
       break;
 
     case cgltf_attribute_type_texcoord:
@@ -294,29 +238,31 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       
     case cgltf_attribute_type_custom:
       break;
+      
     case cgltf_attribute_type_max_enum:
       break;
     }
   }
-  /*
-  if (!retp.bind.vertex_buffers[JOINT].id) {
-    struct joints jnts[retp.idx_count];
-    for (int i = 0; i < retp.idx_count; i++)
-      jnts[i] = joint_nul;
-      
-    retp.bind.vertex_buffers[JOINT] = sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(jnts)});
+
+  if (!retp.bone.id) {
+    char joints[retp.idx_count*4];
+    memset(joints, 0, retp.idx_count*4);
+    retp.bone = sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(joints)});
   }
   
-  if (!retp.bind.vertex_buffers[WEIGHT].id) {
-    struct bone_weights v[retp.idx_count];
-    for (int i = 0; i < retp.idx_count; i++)
-      v[i] = weight_nul;
-      
-    retp.bind.vertex_buffers[WEIGHT] = sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(v)});
+  if (!retp.weight.id) {
+    char weights[retp.idx_count*4];
+    memset(weights,0,retp.idx_count*4);
+    retp.weight = sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(weights)});
   }
-  */
+  
+  if (!retp.color.id) {
+    char colors[retp.idx_count*4];
+    memset(colors,0,retp.idx_count*4);
+    retp.color = sg_make_buffer(&(sg_buffer_desc) { .data = SG_RANGE(colors) });
+  }
 
-  if (retp.norm.id) {
+  if (!retp.norm.id) {
     YughInfo("Making normals.");
     cgltf_attribute *pa = get_attr_type(prim, cgltf_attribute_type_position);
     int n = cgltf_accessor_unpack_floats(pa->data, NULL,0);
@@ -535,26 +481,19 @@ void model_draw_go(model *model, gameobject *go, gameobject *cam)
   animation_run(&model->anim, apptime());
 
   skin *sk = &model->skin;
-  if (arrlen(sk->joints) == 0) {
-    sg_apply_pipeline(model_st_pipe);
-  } else {
-    sg_apply_pipeline(model_pipe);
-    
-    for (int i = 0; i < arrlen(sk->joints); i++) {
-      md5joint *md = sk->joints[i];
-      HMM_Mat4 local = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
-      if (md->parent)
-        local = HMM_MulM4(md->parent->t, local);
-      md->t = local;
-      sk->binds[i] = HMM_MulM4(md->t, sk->invbind[i]);
-    }
-    sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_skinv, &(sg_range){
-      .ptr = sk->binds,
-      .size = sizeof(*sk->binds)*50
-    });
+  for (int i = 0; i < arrlen(sk->joints); i++) {
+    md5joint *md = sk->joints[i];
+    HMM_Mat4 local = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
+    if (md->parent)
+      local = HMM_MulM4(md->parent->t, local);
+    md->t = local;
+    sk->binds[i] = HMM_MulM4(md->t, sk->invbind[i]);
   }
-  
-  sg_apply_pipeline(model_st_pipe);
+  /*sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_skinv, &(sg_range){
+    .ptr = sk->binds,
+    .size = sizeof(*sk->binds)*50
+  });
+  */
 
   sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vp.e));
   float ambient[4] = {1.0,1.0,1.0,1.0};
