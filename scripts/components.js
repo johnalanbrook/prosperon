@@ -177,7 +177,7 @@ Object.mixin(os.sprite(true), {
   height() { return this.dimensions().y; },
 });
 globalThis.allsprites = {};
-os.sprite(true).make = function(go)
+os.sprite().make = function(go)
 {
   var sp = os.sprite();
   sp.go = go;

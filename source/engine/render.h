@@ -14,6 +14,7 @@
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
 #include "gameobject.h"
+#include "transform.h"
 
 #define RGBA_MAX 255
 
@@ -61,7 +62,7 @@ void render_init();
 extern HMM_Vec2 campos;
 extern float camzoom;
 
-void openglRender(struct window *window, gameobject *cam, float zoom);
+void openglRender(struct window *window, transform2d *cam, float zoom);
 void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);

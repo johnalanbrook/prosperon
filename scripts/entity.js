@@ -12,16 +12,398 @@ function obj_unique_name(name, obj) {
   return n;
 }
 
-var gameobject = {
+function unique_name(list, name = "new_object") {
+  var str = name.replaceAll('.', '_');
+  var n = 1;
+  var t = str;
+  while (list.indexOf(t) !== -1) {
+    t = str + n;
+    n++;
+  }
+  return t;
+};
+
+var entity = {
   get_comp_by_name(name) {
     var comps = [];
     for (var c of Object.values(this.components))
       if (c.comp === name) comps.push(c);
-
+  
     if (comps.length) return comps;
     return undefined;
   },
   
+  path_from(o) {
+    var p = this.toString();
+    var c = this.master;
+    while (c && c !== o && c !== world) {
+      p = c.toString() + "." + p;
+      c = c.master;
+    }
+    if (c === world) p = "world." + p;
+    return p;
+  },
+  
+  full_path() { return this.path_from(world); },
+  
+  clear() {
+    for (var k in this.objects) {
+      this.objects[k].kill();
+    };
+    this.objects = {};
+  },
+
+  sync() {
+    this.components.forEach(function(x) { x.sync?.(); });
+    this.objects.forEach(function(x) { x.sync(); });
+  },
+
+  delay(fn, seconds) {
+    var timers = this.timers;
+    var stop = function() { 
+      timers.remove(stop);
+      execute = undefined;
+      stop = undefined;
+      rm?.();
+      rm = undefined;
+      update = undefined;
+    }
+    
+    function execute() {
+      fn();
+      stop?.();
+    }
+    
+    stop.remain = seconds;
+    stop.seconds = seconds;
+    stop.pct = function() { return 1 - (stop.remain/stop.seconds); };
+    
+    function update(dt) {
+      stop.remain -= dt;
+      if (stop.remain <= 0) execute();
+    }
+    
+    var rm = Register.update.register(update);
+    timers.push(stop);
+    return stop;
+  },
+  
+  cry(file) { return audio.cry(file); },
+  
+  get pos() {  return this.transform.pos; },
+  set pos(x) { this.transform.pos = x; },
+  get angle() { return this.transform.angle; },
+  set angle(x) { this.transform.angle = x; },
+  get scale() { return this.transform.scale; },
+  set scale(x) { this.transform.scale = x; },
+  
+  move(vec) { this.pos = this.pos.add(vec); },
+  rotate(x) { this.angle += x; },
+  grow(vec) {
+    if (typeof vec === 'number') vec = [vec,vec];
+    this.scale = this.scale.map((x,i) => x*vec[i]);
+  },
+  
+  /* Reparent 'this' to be 'parent's child */
+  reparent(parent) {
+    assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
+    console.spam(`parenting ${this.toString()} to ${parent.toString()}`);
+    if (this.master === parent) {
+      console.warn("not reparenting ...");
+      console.warn(`${this.master} is the same as ${parent}`);
+      return;
+    }
+    
+    var name = unique_name(Object.keys(parent), this.name);
+    this.name = name;
+  
+    this.master?.remove_obj(this);
+    this.master = parent;
+    parent.objects[this.guid] = this;
+    parent[name] = this;
+    Object.hide(parent, name);
+  },
+  
+  remove_obj(obj) {
+    delete this.objects[obj.guid];
+    delete this[obj.name];
+    Object.unhide(this, obj.name);
+  },
+  
+  spawn(text, config, callback) {
+    var st = profile.now();
+    var ent = Object.create(entity);
+    ent.transform = os.make_transform2d();
+    
+    ent.guid = prosperon.guid();
+    
+    ent.components = {};
+    ent.objects = {};
+    ent.timers = [];
+    
+    if (!text)
+      ent.ur = emptyur;
+    else if (typeof text === 'object' && text) {// assume it's an ur
+      ent.ur = text;
+      text = ent.ur.text;
+      config = [ent.ur.data, config].filter(x => x).flat();
+    }
+    else {
+      ent.ur = getur(text, config);
+      text = ent.ur.text;
+      config = [ent.ur.data, config];
+    }
+    
+    if (typeof text === 'string')
+      use(text, ent);
+    else if (Array.isArray(text))
+      text.forEach(path => use(path,ent));
+  
+    if (typeof config === 'string')
+      Object.merge(ent, json.decode(Resources.replstrs(config)));
+    else if (Array.isArray(config))
+      config.forEach(function(path) {
+        if (typeof path === 'string') {
+          console.info(`ingesting ${path} ...`);
+          Object.merge(ent, json.decode(Resources.replstrs(path)));
+        }
+        else if (typeof path === 'object')
+          Object.merge(ent,path);
+      });
+      
+    ent.reparent(this);
+    
+    for (var [prop, p] of Object.entries(ent)) {
+      if (!p) continue;
+      if (typeof p !== 'object') continue;
+      if (component.isComponent(p)) continue;
+      if (!p.comp) continue;
+      ent[prop] = component[p.comp].make(ent);
+      Object.merge(ent[prop], p);
+      ent.components[prop] = ent[prop];
+    };
+  
+    check_registers(ent);
+  
+    if (typeof ent.load === 'function') ent.load();
+    if (sim.playing())
+      if (typeof ent.start === 'function') ent.start();
+  
+    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');
+    
+    ent._ed = {
+      selectable: true,
+      dirty: false,
+      inst: false,
+      urdiff: {}
+    };
+  
+    Object.hide(ent, '_ed');
+    
+    ent.sync();
+    
+    if (!Object.empty(ent.objects)) {
+      var o = ent.objects;
+      delete ent.objects;
+      ent.objects = {};
+      for (var i in o) {
+        console.info(`creating ${i} on ${ent.toString()}`);
+        var newur = o[i].ur;
+        delete o[i].ur;
+        var n = ent.spawn(ur[newur], o[i]);
+        ent.rename_obj(n.toString(), i);
+      }
+    }
+    
+    if (ent.tag) game.tag_add(ent.tag, ent);
+    
+    if (callback) callback(ent);
+  
+  
+    ent.ur.fresh ??= json.decode(json.encode(ent));
+    ent.ur.fresh.objects = {};
+    for (var i in ent.objects)
+      ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
+      
+    profile.addreport(entityreport, ent.ur.name, st);
+    return ent;
+  },
+  
+  disable() { this.components.forEach(function(x) { x.disable(); }); },
+  enable() { this.components.forEach(function(x) { x.enable(); }); },
+  
+  this2screen(pos) { return game.camera.world2view(this.this2world(pos)); },
+  screen2this(pos) { return this.world2this(game.camera.view2world(pos)); },
+  
+  /* Make a unique object the same as its prototype */
+  revert() { Object.merge(this, this.ur.fresh); },
+  
+  name: "new_object",
+  toString() { return this.name; },
+  width() {
+    var bb = this.boundingbox();
+    return bb.r - bb.l;
+  },
+  
+  height() {
+    var bb = this.boundingbox();
+    return bb.t - bb.b;
+  },
+  
+  flipx() { return this.scale.x < 0; },
+  flipy() { return this.scale.y < 0; },
+  
+  mirror(plane) { this.scale = Vector.reflect(this.scale, plane); },
+
+  /* Bounding box of the object in world dimensions */
+  boundingbox() {
+    var boxes = [];
+    boxes.push({
+      t: 0,
+      r: 0,
+      b: 0,
+      l: 0
+    });
+  
+    for (var key in this.components) {
+      if ('boundingbox' in this.components[key])
+        boxes.push(this.components[key].boundingbox());
+    }
+    for (var key in this.objects)
+      boxes.push(this.objects[key].boundingbox());
+  
+    var bb = boxes.shift();
+  
+    boxes.forEach(function(x) { bb = bbox.expand(bb, x); });
+  
+    bb = bbox.move(bb, this.pos);
+  
+    return bb ? bb : bbox.fromcwh([0, 0], [0, 0]);
+  },
+  
+  /* The unique components of this object. Its diff. */
+  json_obj(depth=0) {
+    var fresh = this.ur.fresh;
+    var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
+    var d = ediff(thiso, fresh);
+  
+    d ??= {};
+  
+    fresh.objects ??= {};
+    var curobjs = {};
+    for (var o in this.objects)
+      curobjs[o] = this.objects[o].instance_obj();
+  
+    var odiff = ediff(curobjs, fresh.objects);
+    if (odiff)
+      d.objects = curobjs;
+  
+    delete d.pos;
+    delete d.angle;
+    delete d.scale;
+    delete d.velocity;
+    delete d.angularvelocity;
+    return d;
+  },
+  
+  /* The object needed to store an object as an instance of a master */
+  instance_obj() {
+    var t = this.transform();
+    t.ur = this.ur.name;
+    return t;
+  },
+  
+  transform() {
+    var t = {};
+    t.pos = this.get_pos(this.master).map(x => Math.places(x, 0));
+    t.angle = Math.places(this.get_angle(this.master), 4);
+    t.scale = this.get_scale(this.master).map(x => Math.places(x, 2));;
+    return t;
+  },
+
+dup(diff) {
+    var n = this.master.spawn(this.ur);
+    Object.totalmerge(n, this.transform());
+    return n;
+  },
+  
+  kill() {
+    if (this.__kill) return;
+    this.__kill = true;
+    console.spam(`Killing entity of type ${this.ur}`);
+  
+    this.timers.forEach(t => t());
+    this.timers = [];
+    Event.rm_obj(this);
+    input.do_uncontrol(this);
+  
+    if (this.master) {
+      this.master.remove_obj(this);
+      this.master = undefined;
+    }
+  
+    for (var key in this.components) {
+      this.components[key].kill?.();
+      this.components[key].gameobject = undefined;
+      this[key].enabled = false;
+      delete this.components[key];
+      delete this[key];
+    }
+    delete this.components;
+  
+    this.clear();
+    if (typeof this.stop === 'function') this.stop();
+    
+    game.tag_clear_guid(this.guid);
+    
+    for (var i in this) {
+      if (typeof this[i] === 'object') delete this[i];
+      if (typeof this[i] === 'function') delete this[i];
+    }
+  },
+  
+  
+  make_objs(objs) {
+    for (var prop in objs) {
+      say(`spawning ${json.encode(objs[prop])}`);
+      var newobj = this.spawn(objs[prop]);
+    }
+  },
+  
+  rename_obj(name, newname) {
+    if (!this.objects[name]) {
+      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
+      return;
+    }
+    if (name === newname) {
+      Object.hide(this, name);
+      return;
+    }
+    if (this.objects[newname])
+      return;
+  
+    this.objects[newname] = this.objects[name];
+    this[newname] = this[name];
+    this[newname].toString = function() { return newname; };
+    Object.hide(this, newname);
+    delete this.objects[name];
+    delete this[name];
+    return this.objects[newname];
+  },
+  
+  add_component(comp, data, name = comp.toString()) {
+    if (typeof comp.make !== 'function') return;
+    name = obj_unique_name(name, this);
+    this[name] = comp.make(this);
+    this[name].comp = comp.toString();
+    this.components[name] = this[name];
+    if (data)
+      Object.assign(this[name], data);
+    return this[name];
+  },
+};
+
+var gameobject = {
   check_dirty() {
     this._ed.urdiff = this.json_obj();
     this._ed.dirty = !Object.empty(this._ed.urdiff);
@@ -50,9 +432,6 @@ var gameobject = {
     return str;
   },
 
-  full_path() {
-    return this.path_from(world);
-  },
   /* pin this object to the to object */
   pin(to) {
     var p = joint.pin(this,to);
@@ -94,63 +473,6 @@ var gameobject = {
   motor(to, rate) {
     var p = joint.motor(this, to, rate);
   },
-
-  path_from(o) {
-    var p = this.toString();
-    var c = this.master;
-    while (c && c !== o && c !== world) {
-      p = c.toString() + "." + p;
-      c = c.master;
-    }
-    if (c === world) p = "world." + p;
-    return p;
-  },
-
-  clear() {
-    for (var k in this.objects) {
-      this.objects[k].kill();
-    };
-    this.objects = {};
-  },
-
-  delay(fn, seconds) {
-    var timers = this.timers;
-    var stop = function() { 
-      timers.remove(stop);
-      execute = undefined;
-      stop = undefined;
-      rm?.();
-      rm = undefined;
-      update = undefined;
-    }
-    
-    function execute() {
-      fn();
-      stop?.();
-    }
-    
-    stop.remain = seconds;
-    stop.seconds = seconds;
-    stop.pct = function() { return 1 - (stop.remain/stop.seconds); };
-    
-    function update(dt) {
-      stop.remain -= dt;
-      if (stop.remain <= 0) execute();
-    }
-    
-    var rm = Register.update.register(update);
-    timers.push(stop);
-    return stop;
-  },
-
-  cry(file) { return audio.cry(file); },
-  
-  set pos(x) { this.set_pos(x); },
-  get pos() { return this.rpos; },
-  set angle(x) { this.set_angle(x); },
-  get angle() { return this.rangle; },
-  set scale(x) { this.set_scale(x); },
-  get scale() { return this.rscale; },
 
   set_pos(x, relative = world) {
     var newpos = relative.this2world(x);
@@ -197,285 +519,8 @@ var gameobject = {
     return this.scale.map((x,i) => x/masterscale[i]);
   },
   
-  /* Moving, rotating, scaling functions, world relative */
-  move(vec) { this.set_pos(this.pos.add(vec)); },
-  rotate(x) { this.set_angle(this.angle + x); },
-  grow(vec) { 
-    if (typeof vec === 'number') vec = [vec,vec,vec];
-    this.set_scale(this.scale.map((x, i) => x * vec[i]));
-  },
-  
-  screenpos() { return game.camera.world2view(this.pos); },
-
-  get_ur() { return this.ur; },
-
-  /* spawn an entity
-      text can be:
-      the file path of a script
-      an ur object
-      nothing
-  */
-  spawn(text, config, callback) {
-    var st = profile.now();
-    var ent = os.make_gameobject();
-    ent.guid = prosperon.guid();
-    ent.components = {};
-    ent.objects = {};
-    ent.timers = [];
-        
-    Object.mixin(ent, {
-      set category(n) {
-        if (n === 0) {
-          this.categories = n;
-          return;
-        }
-        var cat = (1 << (n-1));
-        this.categories = cat;
-      },
-      get category() {
-        if (this.categories === 0) return 0;
-        var pos = 0;
-        var num = this.categories;
-        while (num > 0) {
-            if (num & 1) {
-                break;
-            }
-            pos++;
-            num >>>= 1;
-        }
-        
-        return pos+1;
-      }
-    });
-    
-    if (typeof text === 'object' && text) {// assume it's an ur
-      ent.ur = text;
-      text = ent.ur.text;
-      config = [ent.ur.data, config].filter(x => x).flat();
-    }
-    else {
-      ent.ur = getur(text, config);
-      text = ent.ur.text;
-      config = [ent.ur.data, config];
-    }
-
-    if (typeof text === 'string')
-      use(text, ent);
-    else if (Array.isArray(text))
-      text.forEach(path => use(path,ent));
-
-    if (typeof config === 'string')
-      Object.merge(ent, json.decode(Resources.replstrs(config)));
-    else if (Array.isArray(config))
-      config.forEach(function(path) {
-        if (typeof path === 'string') {
-          console.info(`ingesting ${path} ...`);
-          Object.merge(ent, json.decode(Resources.replstrs(path)));
-        }
-        else if (typeof path === 'object')
-          Object.merge(ent,path);
-      });
-
-    ent.reparent(this);
-
-    for (var [prop, p] of Object.entries(ent)) {
-      if (!p) continue;
-      if (typeof p !== 'object') continue;
-      if (component.isComponent(p)) continue;
-      if (!p.comp) continue;
-      ent[prop] = component[p.comp].make(ent);
-      Object.merge(ent[prop], p);
-      ent.components[prop] = ent[prop];
-    };
-
-    check_registers(ent);
-
-    if (typeof ent.load === 'function') ent.load();
-    if (sim.playing())
-      if (typeof ent.start === 'function') ent.start();
-
-    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master', 'categories');
-    
-    ent._ed = {
-      selectable: true,
-      dirty: false,
-      inst: false,
-      urdiff: {}
-    };
-
-    Object.hide(ent, '_ed');
-
-    ent.sync();
-    
-    if (!Object.empty(ent.objects)) {
-      var o = ent.objects;
-      delete ent.objects;
-      ent.objects = {};
-      for (var i in o) {
-        console.info(`creating ${i} on ${ent.toString()}`);
-        var newur = o[i].ur;
-        delete o[i].ur;
-        var n = ent.spawn(ur[newur], o[i]);
-        ent.rename_obj(n.toString(), i);
-      }
-    }
-    
-    if (ent.tag) game.tag_add(ent.tag, ent);
-    
-    if (callback) callback(ent);
-
-    ent.ur.fresh ??= json.decode(json.encode(ent));
-    ent.ur.fresh.objects = {};
-    for (var i in ent.objects)
-      ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
-
-    profile.addreport(entityreport, ent.ur.name, st);
-    return ent;
-  },
-
-  /* Reparent 'this' to be 'parent's child */
-  reparent(parent) {
-    assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
-    console.spam(`parenting ${this.toString()} to ${parent.toString()}`);
-    if (this.master === parent) {
-      console.warn("not reparenting ...");
-      console.warn(`${this.master} is the same as ${parent}`);
-      return;
-    }
-
-    this.master?.remove_obj(this);
-
-    this.master = parent;
-
-    function unique_name(list, name = "new_object") {
-      var str = name.replaceAll('.', '_');
-      var n = 1;
-      var t = str;
-      while (list.indexOf(t) !== -1) {
-        t = str + n;
-        n++;
-      }
-      return t;
-    };
-
-    var name = unique_name(Object.keys(parent.objects), this.ur.name);
-
-    parent.objects[name] = this;
-    parent[name] = this;
-    Object.hide(parent, name);
-    this.toString = function() { return name; };
-  },
-
-  remove_obj(obj) {
-    delete this.objects[obj.toString()];
-    delete this[obj.toString()];
-    Object.unhide(this, obj.toString());
-  },
-
-  components: {},
-  objects: {},
-  master: undefined,
-
-  this2screen(pos) { return game.camera.world2view(this.this2world(pos)); },
-  screen2this(pos) { return this.world2this(game.camera.view2world(pos)); },
-  
   in_air() { return this.in_air(); },
-
-  hide() { this.components.forEach(x => x.hide?.());
-    this.objects.forEach(x => x.hide?.()); },
-    
-  show() { this.components.forEach(function(x) { x.show?.(); });
-    this.objects.forEach(function(x) { x.show?.(); }); },
-
-  width() {
-    var bb = this.boundingbox();
-    return bb.r - bb.l;
-  },
-
-  height() {
-    var bb = this.boundingbox();
-    return bb.t - bb.b;
-  },
-
-  /* Make a unique object the same as its prototype */
-  revert() { Object.merge(this, this.ur.fresh); },
-
-  toString() { return "new_object"; },
-
-  flipx() { return this.scale.x < 0; },
-  flipy() { return this.scale.y < 0; },
-
-  mirror(plane) { this.scale = Vector.reflect(this.scale, plane); },
-
-  disable() { this.components.forEach(function(x) { x.disable(); }); },
-  enable() { this.components.forEach(function(x) { x.enable(); }); },
   
-  /* Bounding box of the object in world dimensions */
-  boundingbox() {
-    var boxes = [];
-    boxes.push({
-      t: 0,
-      r: 0,
-      b: 0,
-      l: 0
-    });
-
-    for (var key in this.components) {
-      if ('boundingbox' in this.components[key])
-        boxes.push(this.components[key].boundingbox());
-    }
-    for (var key in this.objects)
-      boxes.push(this.objects[key].boundingbox());
-
-    var bb = boxes.shift();
-
-    boxes.forEach(function(x) { bb = bbox.expand(bb, x); });
-
-    bb = bbox.move(bb, this.pos);
-
-    return bb ? bb : bbox.fromcwh([0, 0], [0, 0]);
-  },
-
-  /* The unique components of this object. Its diff. */
-  json_obj(depth=0) {
-    var fresh = this.ur.fresh;
-    var thiso = json.decode(json.encode(this)); // TODO: SLOW. Used to ignore properties in toJSON of components.
-    var d = ediff(thiso, fresh);
-
-    d ??= {};
-
-    fresh.objects ??= {};
-    var curobjs = {};
-    for (var o in this.objects)
-      curobjs[o] = this.objects[o].instance_obj();
-
-    var odiff = ediff(curobjs, fresh.objects);
-    if (odiff)
-      d.objects = curobjs;
-
-    delete d.pos;
-    delete d.angle;
-    delete d.scale;
-    delete d.velocity;
-    delete d.angularvelocity;
-    return d;
-  },
-
-  /* The object needed to store an object as an instance of a master */
-  instance_obj() {
-    var t = this.transform();
-    t.ur = this.ur.name;
-    return t;
-  },
-
-  transform() {
-    var t = {};
-    t.pos = this.get_pos(this.master).map(x => Math.places(x, 0));
-    t.angle = Math.places(this.get_angle(this.master), 4);
-    t.scale = this.get_scale(this.master).map(x => Math.places(x, 2));;
-    return t;
-  },
-
   /* Velocity and angular velocity of the object */
   phys_obj() {
     var phys = {};
@@ -483,111 +528,32 @@ var gameobject = {
     phys.angularvelocity = this.angularvelocity;
     return phys;
   },
-
-  phys_mat() { 
-   return {
-      friction: this.friction,
-      elasticity: this.elasticity
+  
+  set category(n) {
+    if (n === 0) {
+      this.categories = n;
+      return;
     }
+    var cat = (1 << (n-1));
+    this.categories = cat;
   },
-
-  dup(diff) {
-    var n = this.master.spawn(this.ur);
-    Object.totalmerge(n, this.transform());
-    return n;
-  },
-
-  kill() {
-    if (this.__kill) return;
-    this.__kill = true;
-    console.spam(`Killing entity of type ${this.ur}`);
-
-    this.timers.forEach(t => t());
-    this.timers = [];
-    Event.rm_obj(this);
-    input.do_uncontrol(this);
-
-    if (this.master) {
-      this.master.remove_obj(this);
-      this.master = undefined;
+  get category() {
+    if (this.categories === 0) return 0;
+    var pos = 0;
+    var num = this.categories;
+    while (num > 0) {
+        if (num & 1) {
+            break;
+        }
+        pos++;
+        num >>>= 1;
     }
-
-    for (var key in this.components) {
-      this.components[key].kill?.();
-      this.components[key].gameobject = undefined;
-      this[key].enabled = false;
-      delete this.components[key];
-      delete this[key];
-    }
-    delete this.components;
-
-    this.clear();
-    if (typeof this.stop === 'function') this.stop();
     
-    game.tag_clear_guid(this.guid);
-    
-    for (var i in this) {
-      if (typeof this[i] === 'object') delete this[i];
-      if (typeof this[i] === 'function') delete this[i];
-    }
-  },
-
-  up() { return [0, 1].rotate(this.angle); },
-  down() { return [0, -1].rotate(this.angle); },
-  right() { return [1, 0].rotate(this.angle); },
-  left() { return [-1, 0].rotate(this.angle); },
-
-  make_objs(objs) {
-    for (var prop in objs) {
-      say(`spawning ${json.encode(objs[prop])}`);
-      var newobj = this.spawn(objs[prop]);
-    }
-  },
-
-  rename_obj(name, newname) {
-    if (!this.objects[name]) {
-      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
-      return;
-    }
-    if (name === newname) {
-      Object.hide(this, name);
-      return;
-    }
-    if (this.objects[newname])
-      return;
-
-    this.objects[newname] = this.objects[name];
-    this[newname] = this[name];
-    this[newname].toString = function() { return newname; };
-    Object.hide(this, newname);
-    delete this.objects[name];
-    delete this[name];
-    return this.objects[newname];
-  },
-
-  add_component(comp, data, name = comp.toString()) {
-    if (typeof comp.make !== 'function') return;
-    name = obj_unique_name(name, this);
-    this[name] = comp.make(this);
-    this[name].comp = comp.toString();
-    this.components[name] = this[name];
-    if (data)
-      Object.assign(this[name], data);
-    return this[name];
-  },
-}
-
-function go_init() {
-  var gop = os.make_gameobject().__proto__;
-  Object.mixin(gop, gameobject);
-  gop.sync = function() {
-    this.selfsync();
-    this.components.forEach(function(x) { x.sync?.(); });
-    this.objects.forEach(function(x) { x.sync?.(); });
+    return pos+1;
   }
 }
 
-gameobject.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
+entity.spawn.doc = `Spawn an entity of type 'ur' on this entity. Returns the spawned entity.`;
 
 gameobject.doc = {
   doc: "All objects in the game created through spawning have these attributes.",
@@ -695,8 +661,18 @@ function apply_ur(u, ent) {
   }
 }
 
+var emptyur = {
+  name: "empty"
+}
+
 var getur = function(text, data)
 {
+  if (!text && !data) {
+    console.info('empty ur');
+    return {
+      name: "empty"
+    };
+  }
   var urstr = text + "+" + data;
   if (!ur[urstr]) {
     ur[urstr] = {
@@ -784,4 +760,4 @@ game.ur.save = function(str)
   }
 }
 
-return { go_init }
+return { entity }

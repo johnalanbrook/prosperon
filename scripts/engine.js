@@ -289,7 +289,6 @@ game.engine_start = function(s) {
   gggstart(function() {
     global.mixin("scripts/sound.js");
     world_start();
-    go_init();
     window.set_icon(os.make_texture("icons/moon.gif"))
     Object.readonly(window.__proto__, 'vsync');
     Object.readonly(window.__proto__, 'enable_dragndrop');
@@ -330,9 +329,9 @@ function process()
   }
   var st = profile.now();
   if (!game.camera)  
-    prosperon.window_render(world, 1);
+    prosperon.window_render(world.transform, 1);
   else
-    prosperon.window_render(game.camera, game.camera.zoom);
+    prosperon.window_render(game.camera.transform, game.camera.zoom);
     
   render.set_camera();
   
@@ -627,7 +626,8 @@ global.mixin("scripts/actor");
 global.mixin("scripts/entity");
 
 function world_start() {
-  globalThis.world = os.make_gameobject();
+  globalThis.world = Object.create(entity);
+  world.transform = os.make_transform2d();
   world.objects = {};
   world.toString = function() { return "world"; };
   world.ur = "world";

@@ -204,9 +204,3 @@ HMM_Vec3 go_pos3d(gameobject *go)
   HMM_Vec2 pos2d = go_pos(go);
   return (HMM_Vec3){pos2d.x, pos2d.y, go->drawlayer};
 }
-
-void gameobject_draw_debug(gameobject *go) {
-  if (!go || !go->body) return;
-
-  cpBodyEachShape(go->body, body_draw_shapes_dbg, NULL);
-}

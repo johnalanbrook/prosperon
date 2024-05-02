@@ -258,8 +258,6 @@ void render_init() {
   font_init();
   debugdraw_init();
 
-  model_init();
-  
   sg_color c = (sg_color){0,0,0,1};
   pass_action = (sg_pass_action){
     .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
@@ -337,7 +335,7 @@ HMM_Mat4 useproj = {0};
 #define MODE_EXPAND 4
 #define MODE_FULL 5
 
-void openglRender(struct window *window, gameobject *cam, float zoom) {
+void openglRender(struct window *window, transform2d *cam, float zoom) {
   sg_swapchain sch = sglue_swapchain();
   sg_begin_pass(&(sg_pass){
     .action = pass_action,
@@ -372,7 +370,7 @@ void openglRender(struct window *window, gameobject *cam, float zoom) {
   }
 
   // 2D projection
-  campos = go_pos(cam);
+  campos = cam->pos;
   camzoom = zoom;
 
   projection = HMM_Orthographic_RH_NO(

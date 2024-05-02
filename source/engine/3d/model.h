@@ -84,8 +84,6 @@ void model_free(model *m);
 
 void model_draw_go(model *m, gameobject *go, gameobject *cam);
 
-void model_init();
-
 material *material_make();
 void material_free(material *mat);
 

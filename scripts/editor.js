@@ -344,7 +344,7 @@ var editor = {
       root = root ? root + "." : root;
       Object.entries(obj.objects).forEach(function(x) {
         var p = root + x[0];
-        render.text(p, x[1].screenpos(), 1, editor.color_depths[depth]);
+        render.text(p, x[1].this2screen(), 1, editor.color_depths[depth]);
 	editor.draw_objects_names(x[1], p, depth+1);
       });
   },
@@ -402,7 +402,7 @@ var editor = {
     if (this.comp_info && this.sel_comp)
       render.text(input.print_pawn_kbm(this.sel_comp,false), [100,700],1);
 
-    render.cross(editor.edit_level.screenpos(),3,Color.blue);
+    render.cross(editor.edit_level.this2screen(),3,Color.blue);
 
     var thiso = editor.get_this();
     var clvl = thiso;
@@ -447,16 +447,16 @@ var editor = {
     render.text("$$$$$$", [0,ypos],1,editor.color_depths[depth]);
     
     this.selectlist.forEach(function(x) {
-      render.text(x.urstr(), x.screenpos().add([0, render.font.linegap*2]), 1, Color.editor.ur);
-      render.text(x.pos.map(function(x) { return Math.round(x); }), x.screenpos());
-      render.cross(x.screenpos(), 10, Color.blue);
+      render.text(x.urstr(), x.this2screen().add([0, render.font.linegap*2]), 1, Color.editor.ur);
+      render.text(x.pos.map(function(x) { return Math.round(x); }), x.this2screen());
+      render.cross(x.this2screen(), 10, Color.blue);
     });
 
     Object.entries(thiso.objects).forEach(function(x) {
       var p = x[1].namestr();
-      render.text(p, x[1].screenpos().add([0,render.font.linegap]),1,editor.color_depths[depth]);
-      render.point(x[1].screenpos(),5,Color.blue.alpha(0.3));
-      render.point(x[1].screenpos(), 1, Color.red);
+      render.text(p, x[1].this2screen().add([0,render.font.linegap]),1,editor.color_depths[depth]);
+      render.point(x[1].this2screen(),5,Color.blue.alpha(0.3));
+      render.point(x[1].this2screen(), 1, Color.red);
     });
 
     var mg = physics.pos_query(input.mouse.worldpos());
@@ -474,7 +474,7 @@ var editor = {
       for (var key in this.selectlist[0].components) {
         var selected = this.sel_comp === this.selectlist[0].components[key];
         var str = (selected ? ">" : " ") + key + " [" + this.selectlist[0].components[key].toString() + "]";
-        render.text(str, this.selectlist[0].screenpos().add([0,-render.font.linegap*(i++)]));
+        render.text(str, this.selectlist[0].this2screen().add([0,-render.font.linegap*(i++)]));
       }
 
       if (this.sel_comp) {
@@ -879,7 +879,7 @@ editor.inputs['C-s'] = function() {
   }
 
   var savejs = saveobj.json_obj();
-  var tur = saveobj.get_ur();
+  var tur = saveobj.ur;
   if (!tur) {
     console.warn(`Can't save object because it has no ur.`);
     return;

@@ -779,7 +779,21 @@ JSC_CCALL(render_setuniproj,
 )
 
 JSC_CCALL(render_setunim4,
-  HMM_Mat4 m = transform2d2mat4(js2transform2d(argv[2]));
+  HMM_Mat4 m = MAT1;
+  if (JS_IsArray(js, argv[2])) {
+    JSValue arr = argv[2];
+    int n = js_arrlen(arr);
+    if (n == 1)
+      m = transform2d2mat4(js2transform2d(js_getpropidx(arr,0)));
+    else {
+      for (int i = 0; i < n; i++) {
+        HMM_Mat4 p = transform2d2mat4(js2transform2d(js_getpropidx(arr, i)));
+        m = HMM_MulM4(p,m);
+      }
+    }
+  } else
+    m = transform2d2mat4(js2transform2d(argv[2]));
+    
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(m.e));
 );  
 
@@ -920,7 +934,7 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 
 JSC_CCALL(prosperon_emitters_step, emitters_step(js2number(argv[0])))
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
-JSC_CCALL(prosperon_window_render, openglRender(&mainwin, js2gameobject(argv[0]), js2number(argv[1])))
+JSC_CCALL(prosperon_window_render, openglRender(&mainwin, js2transform2d(argv[0]), js2number(argv[1])))
 JSC_CCALL(prosperon_guid,
   uint8_t bytes[16];
   for (int i = 0; i < 16; i++) bytes[i] = rand()%256;
@@ -1089,8 +1103,6 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, mod,1)
 };
 
-JSC_CCALL(debug_draw_gameobject, gameobject_draw_debug(js2gameobject(argv[0]));)
-
 JSC_GETSET_GLOBAL(disabled_color, color)
 JSC_GETSET_GLOBAL(sleep_color, color)
 JSC_GETSET_GLOBAL(dynamic_color, color)
@@ -1098,7 +1110,6 @@ JSC_GETSET_GLOBAL(kinematic_color, color)
 JSC_GETSET_GLOBAL(static_color, color)
 
 static const JSCFunctionListEntry js_debug_funcs[] = {
-  MIST_FUNC_DEF(debug, draw_gameobject, 1),
   CGETSET_ADD(global, disabled_color),
   CGETSET_ADD(global, sleep_color),
   CGETSET_ADD(global, dynamic_color),
@@ -1716,7 +1727,16 @@ JSC_SCALL(os_make_texture,
 JSC_CCALL(os_make_font, return font2js(MakeFont(js2str(argv[0]), js2number(argv[1]))))
 
 JSC_CCALL(os_make_transform2d,
-  return transform2d2js(make_transform2d());
+  if (JS_IsUndefined(argv[0]))
+    return transform2d2js(make_transform2d());
+  
+  int n = js2number(argv[0]);
+  transform2d *t = calloc(sizeof(transform2d), n);
+  JSValue arr = JS_NewArray(js);
+  for (int i = 0; i < n; i++)
+    js_setprop_num(arr, i, transform2d2js(t+i));
+  
+  return arr;
 )
 
 JSC_SCALL(os_system, return number2js(system(str)); )
@@ -1742,7 +1762,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_model, 1),
-  MIST_FUNC_DEF(os, make_transform2d, 0),
+  MIST_FUNC_DEF(os, make_transform2d, 1),
 };
 
 #include "steam.h"
