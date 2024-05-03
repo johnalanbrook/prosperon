@@ -11,7 +11,6 @@
 #include <window.h>
 #include "resources.h"
 #include "debugdraw.h"
-#include "text.sglsl.h"
 #include "render.h"
 
 #include "stb_image_write.h"
@@ -22,9 +21,7 @@
 
 struct sFont *use_font;
 
-static sg_shader fontshader;
 static sg_bindings bind_text;
-static sg_pipeline pipe_text;
 struct text_vert {
   struct draw_p pos;
   struct draw_p wh;
@@ -36,26 +33,6 @@ struct text_vert {
 static struct text_vert *text_buffer;
 
 void font_init() {
-  fontshader = sg_make_shader(text_shader_desc(sg_query_backend()));
-  pipe_text = sg_make_pipeline(&(sg_pipeline_desc){
-      .shader = fontshader,
-      .layout = {
-          .attrs = {
-            [ATTR_vs_vert].format = SG_VERTEXFORMAT_FLOAT2,
-            [ATTR_vs_vert].buffer_index = 1,
-            [ATTR_vs_pos].format = SG_VERTEXFORMAT_FLOAT2,
-            [ATTR_vs_wh].format = SG_VERTEXFORMAT_FLOAT2,
-            [ATTR_vs_uv].format = SG_VERTEXFORMAT_USHORT2N,
-            [ATTR_vs_st].format = SG_VERTEXFORMAT_USHORT2N,
-            [ATTR_vs_vColor].format = SG_VERTEXFORMAT_UBYTE4N,
-          },
-	      .buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE
-      },
-      .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-      .colors[0].blend = blend_trans,
-      .label = "text",
-    });
-    
   bind_text.vertex_buffers[1] = sprite_quad;
   
   bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
@@ -201,7 +178,7 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
   draw_box(b, wh, color);
 }
 
-void text_flush(HMM_Mat4 *proj) {
+void text_flush() {
   if (arrlen(text_buffer) ==  0) return;
 
   sg_range verts;
@@ -217,9 +194,7 @@ void text_flush(HMM_Mat4 *proj) {
     
   sg_append_buffer(bind_text.vertex_buffers[0], &verts);
   
-  sg_apply_pipeline(pipe_text);
   sg_apply_bindings(&bind_text);
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE_REF(*proj));
   sg_draw(0, 4, arrlen(text_buffer));
   arrsetlen(text_buffer, 0);
 }
@@ -377,7 +352,7 @@ int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, f
         if (*wordstart == '\e')
           wordstart = esc_color(wordstart, &usecolor, color);
 
-	      sdrawCharacter(use_font->Characters[*wordstart], HMM_AddV2(cursor, HMM_MulV2F((HMM_Vec2){1,-1},scale)), scale, (rgba){0,0,0,255});
+	      //sdrawCharacter(use_font->Characters[*wordstart], HMM_AddV2(cursor, HMM_MulV2F((HMM_Vec2){1,-1},scale)), scale, (rgba){0,0,0,255});
         sdrawCharacter(use_font->Characters[*wordstart], cursor, scale, usecolor);
 
         cursor.X += use_font->Characters[*wordstart].Advance * tracking * scale;

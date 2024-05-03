@@ -5,9 +5,6 @@
 #include "stb_ds.h"
 #include "gameobject.h"
 
-//#include "diffuse.sglsl.h"
-#include "unlit.sglsl.h"
-
 #include "render.h"
 
 #include "HandmadeMath.h"
@@ -460,14 +457,15 @@ void model_free(model *m)
 sg_bindings primitive_bind(primitive *p)
 {
   sg_bindings b = {0};
-  b.vertex_buffers[unlit_attr_slot("a_pos")] = p->pos;
-  b.vertex_buffers[5] = p->uv;
-  b.vertex_buffers[3] = p->norm;
-  //b.vertex_buffers[unlit_attr_slot("a_bone")] = p->bone;
-  //b.vertex_buffers[unlit_attr_slot("a_weight")] = p->weight;
+  b.vertex_buffers[MAT_POS] = p->pos;
+  b.vertex_buffers[MAT_UV] = p->uv;
+  b.vertex_buffers[MAT_NORM] = p->norm;
+  b.vertex_buffers[MAT_BONE] = p->bone;
+  b.vertex_buffers[MAT_WEIGHT] = p->weight;
+  b.vertex_buffers[MAT_COLOR] = p->color;
   b.index_buffer = p->idx;
-  b.fs.images[unlit_image_slot(SG_SHADERSTAGE_FS, "diffuse")] = p->mat->diffuse->id;
-  b.fs.samplers[unlit_sampler_slot(SG_SHADERSTAGE_FS, "smp")] = tex_sampler;
+  b.fs.images[0] = p->mat->diffuse->id;
+  b.fs.samplers[0] = tex_sampler;
   return b;
 }
 
@@ -495,9 +493,6 @@ void model_draw_go(model *model, gameobject *go, gameobject *cam)
   });
   */
 
-  sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vs_p, SG_RANGE_REF(vp.e));
-  float ambient[4] = {1.0,1.0,1.0,1.0};
-  sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_lightf, SG_RANGE_REF(ambient));
   for (int i = 0; i < arrlen(model->meshes); i++) {
     HMM_Mat4 mod = *model->meshes[i].m;
     mod = HMM_MulM4(mod, gom);
@@ -505,10 +500,6 @@ void model_draw_go(model *model, gameobject *go, gameobject *cam)
     for (int j = 0; j < arrlen(msh.primitives); j++) {
       sg_bindings b = primitive_bind(msh.primitives+j);
       sg_apply_bindings(&b);    
-      sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_vmodel, &(sg_range){
-        .ptr = mod.em,
-        .size = sizeof(mod)
-      });
       sg_draw(0, msh.primitives[j].idx_count, 1);    
     }
   }

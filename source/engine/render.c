@@ -294,7 +294,10 @@ void render_init() {
     1, -1, 1, 0,
     1, 1, 1, 1
   };
-
+  
+  sg_limits ll = sg_query_limits();
+  printf("attribute limits %d\n", ll.max_vertex_attrs);
+  
   sg_gif.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(gif_quad),
     .data = gif_quad,

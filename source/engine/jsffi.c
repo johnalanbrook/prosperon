@@ -625,7 +625,10 @@ JSC_CCALL(render_line3d,
 );
 
 JSC_CCALL(render_emitters, emitters_draw(&useproj))
-JSC_CCALL(render_flush, debug_flush(&useproj); text_flush(&useproj); )
+JSC_CCALL(render_flush, debug_flush(&useproj); )
+
+JSC_CCALL(render_flushtext, text_flush())
+
 JSC_CCALL(render_end_pass,
   sg_end_pass();
   sg_commit();
@@ -737,6 +740,27 @@ JSC_CCALL(render_pipeline3d,
   return number2js(pipe.id);
 )
 
+JSC_CCALL(render_pipelinetext,
+  sg_shader fontshader = js2shader(argv[0]);
+  sg_pipeline_desc p = {0};
+  p.shader = fontshader;
+  sg_vertex_layout_state st = {0};
+  st.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+  st.attrs[0].buffer_index = 1;
+  st.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+  st.attrs[2].format = SG_VERTEXFORMAT_FLOAT2;
+  st.attrs[3].format = SG_VERTEXFORMAT_USHORT2N;
+  st.attrs[4].format = SG_VERTEXFORMAT_USHORT2N;
+  st.attrs[5].format = SG_VERTEXFORMAT_UBYTE4N;
+  st.buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE;
+  p.layout = st;
+  p.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
+  p.colors[0].blend = blend_trans;
+  
+  sg_pipeline pipe = sg_make_pipeline(&p);
+  return number2js(pipe.id);
+)
+
 JSC_CCALL(render_pipeline,
   sg_shader sgshader = js2shader(argv[0]);
   
@@ -801,8 +825,8 @@ JSC_CCALL(render_spdraw,
   sg_bindings bind = {0};
   bind.vertex_buffers[0] = sprite_quad;
   
-  for (int i = 0; i < js_arrlen(argv[1]); i++) {
-    bind.fs.images[i] = js2texture(js_getpropidx(argv[1], i))->id;
+  for (int i = 0; i < js_arrlen(argv[0]); i++) {
+    bind.fs.images[i] = js2texture(js_getpropidx(argv[0], i))->id;
     bind.fs.samplers[i] = std_sampler;
   }
   
@@ -824,6 +848,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, line, 3),
   MIST_FUNC_DEF(render, line3d, 2),
   MIST_FUNC_DEF(render, emitters, 0),
+  MIST_FUNC_DEF(render, flushtext, 0),
   MIST_FUNC_DEF(render, flush, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
@@ -832,6 +857,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, clear_color, 1),
   MIST_FUNC_DEF(render, pipeline, 1),
   MIST_FUNC_DEF(render, pipeline3d, 1),
+  MIST_FUNC_DEF(render, pipelinetext, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
   MIST_FUNC_DEF(render, spdraw, 2),
