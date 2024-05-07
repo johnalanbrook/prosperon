@@ -19,6 +19,8 @@
 #include <string.h>
 #include "yugine.h"
 
+#include "jsffi.h"
+
 #include "texture.h"
 
 #include "sokol/sokol_gfx.h"
@@ -38,14 +40,6 @@ cgltf_attribute *get_attr_type(cgltf_primitive *p, cgltf_attribute_type t)
   }
 
   return NULL;
-}
-
-unsigned short pack_short_texcoord(float x, float y)
-{
-  unsigned short s;
-  char xc = x*255;
-  char yc = y*255;
-  return (((unsigned short)yc) << 8) | xc;
 }
 
 unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
@@ -81,12 +75,16 @@ void mesh_add_material(primitive *prim, cgltf_material *mat)
      pmat->diffuse = texture_from_file("icons/moon.gif"); 
 }
 
-sg_buffer texcoord_floats(float *f, int verts, int comp)
+sg_buffer texcoord_floats(float *f, int n)
 {
-  int n = verts*comp;
   unsigned short packed[n];
-  for (int i = 0; i < n; i++)
-    packed[i] = pack_short_tex(f[i]);
+  for (int i = 0; i < n; i++) {
+    float v = f[i];
+    if (v < 0) v = 0;
+    if (v > 1) v = 1;
+    packed[i] = pack_short_tex(v);
+    printf("val: %g, packed: %u\n", v, packed[i]);
+  }
 
   return sg_make_buffer(&(sg_buffer_desc){
     .data = SG_RANGE(packed),
@@ -94,10 +92,43 @@ sg_buffer texcoord_floats(float *f, int verts, int comp)
   });
 }
 
-sg_buffer normal_floats(float *f, int verts, int comp)
+sg_buffer par_idx_buffer(uint32_t *p, int v)
 {
-  uint32_t packed_norms[verts];
-  for (int v = 0, i = 0; v < verts; v++, i+= comp)
+  uint16_t idx[v];
+  for (int i = 0; i < v; i++) idx[i] = p[i];
+  
+  return sg_make_buffer(&(sg_buffer_desc){
+    .data = SG_RANGE(idx),
+    .type = SG_BUFFERTYPE_INDEXBUFFER
+  });
+}
+
+sg_buffer float_buffer(float *f, int v)
+{
+  return sg_make_buffer(&(sg_buffer_desc){
+    .data = (sg_range){
+      .ptr = f,
+      .size = sizeof(*f)*v
+    }
+  });
+}
+
+sg_buffer index_buffer(float *f, int verts)
+{
+  uint16_t idxs[verts];
+  for (int i = 0; i < verts; i++)
+    idxs[i] = f[i];
+  
+  return sg_make_buffer(&(sg_buffer_desc){
+    .data = SG_RANGE(idxs),
+    .type = SG_BUFFERTYPE_INDEXBUFFER,
+  });
+}
+
+sg_buffer normal_floats(float *f, int n)
+{
+  uint32_t packed_norms[n/3];
+  for (int v = 0, i = 0; v < n/3; v++, i+= 3)
     packed_norms[v] = pack_int10_n2(f+i);
 
   return sg_make_buffer(&(sg_buffer_desc){
@@ -106,37 +137,37 @@ sg_buffer normal_floats(float *f, int verts, int comp)
   });
 }
 
-sg_buffer ubyten_buffer(float *f, int v, int c)
+sg_buffer ubyten_buffer(float *f, int v)
 {
-  unsigned char b[v*c];
-  for (int i = 0; i < (v*c); i++)
+  unsigned char b[v];
+  for (int i = 0; i < (v); i++)
     b[i] = f[i]*255;
     
   return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});
 }
 
-sg_buffer ubyte_buffer(float *f, int v, int c)
+sg_buffer ubyte_buffer(float *f, int v)
 {
-  unsigned char b[v*c];
-  for (int i = 0; i < (v*c); i++)
+  unsigned char b[v];
+  for (int i = 0; i < (v); i++)
     b[i] = f[i];
     
   return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});
 }
 
-sg_buffer joint_buf(float *f, int v, int c)
+sg_buffer joint_buf(float *f, int v)
 {
-  char joints[v*c];
-  for (int i = 0; i < (v*c); i++)
+  char joints[v];
+  for (int i = 0; i < (v); i++)
     joints[i] = f[i];
   
   return sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(joints)});
 }
 
-sg_buffer weight_buf(float *f, int v, int c)
+sg_buffer weight_buf(float *f, int v)
 {
-  unsigned char weights[v*c];
-  for (int i = 0; i < (v*c); i++)
+  unsigned char weights[v];
+  for (int i = 0; i < (v); i++)
     weights[i] = f[i]*255;
   
   return sg_make_buffer(&(sg_buffer_desc){ .data = SG_RANGE(weights)});
@@ -145,6 +176,22 @@ sg_buffer weight_buf(float *f, int v, int c)
 HMM_Vec3 index_to_vert(uint32_t idx, float *f)
 {
   return (HMM_Vec3){f[idx*3], f[idx*3+1], f[idx*3+2]};
+}
+
+void primitive_gen_indices(primitive *prim)
+{
+  if (prim->idx_count == 0) return;
+  uint16_t *idxs = malloc(sizeof(*idxs)*prim->idx_count);
+  
+  for (int z = 0; z < prim->idx_count; z++)
+    idxs[z] = z;
+  
+  prim->idx = sg_make_buffer(&(sg_buffer_desc){
+    .data.ptr = idxs,
+    .data.size = sizeof(uint16_t) * prim->idx_count,
+    .type = SG_BUFFERTYPE_INDEXBUFFER});
+    
+  free(idxs);
 }
 
 struct primitive mesh_add_primitive(cgltf_primitive *prim)
@@ -168,24 +215,12 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
     });
 
     retp.idx_count = n;
+    free(idxs);
   } else {
-    YughWarn("Model does not have indices. Generating them.");
-    int c = cgltf_accessor_unpack_floats(prim->attributes[0].data, NULL, 0);
-
-    retp.idx_count = c;
-    idxs = malloc(sizeof(*idxs)*c);
-    
-    for (int z = 0; z < c; z++)
-      idxs[z] = z;
-
-    retp.idx = sg_make_buffer(&(sg_buffer_desc){
-	    .data.ptr = idxs,
-	    .data.size = sizeof(uint16_t) * c,
-	    .type = SG_BUFFERTYPE_INDEXBUFFER});
+    retp.idx_count = cgltf_accessor_unpack_floats(prim->attributes[0].data, NULL, 0);
+    primitive_gen_indices(&retp);
   }
   
-  free(idxs);
-
   printf("adding material\n");
   mesh_add_material(&retp, prim->material);
 
@@ -208,26 +243,26 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
       break;
 
     case cgltf_attribute_type_normal:
-      retp.norm = normal_floats(vs, verts, comp);
+      retp.norm = normal_floats(vs, n);
       break;
 
     case cgltf_attribute_type_tangent:
       break;
 
     case cgltf_attribute_type_color:
-      retp.color = ubyten_buffer(vs,verts,comp);
+      retp.color = ubyten_buffer(vs,n);
       break;
 
     case cgltf_attribute_type_weights:
-      retp.weight = ubyten_buffer(vs, verts, comp);
+      retp.weight = ubyten_buffer(vs, n);
       break;
 
     case cgltf_attribute_type_joints:
-      retp.bone = ubyte_buffer(vs, verts, comp);
+      retp.bone = ubyte_buffer(vs, n);
       break;
 
     case cgltf_attribute_type_texcoord:
-      retp.uv = texcoord_floats(vs, verts, comp);
+      retp.uv = texcoord_floats(vs, n);
       break;
     case cgltf_attribute_type_invalid:
       YughWarn("Invalid type.");
@@ -503,6 +538,68 @@ void model_draw_go(model *model, gameobject *go, gameobject *cam)
       sg_draw(0, msh.primitives[j].idx_count, 1);    
     }
   }
+}
+
+int mat2type(int mat)
+{
+  switch(mat) {
+    case MAT_POS:
+    case MAT_WH:
+    case MAT_ST:
+      return SG_VERTEXFORMAT_FLOAT2;
+    case MAT_UV:
+    case MAT_TAN:
+      return SG_VERTEXFORMAT_USHORT2N;
+    case MAT_NORM:
+      return SG_VERTEXFORMAT_UINT10_N2;
+    case MAT_BONE:
+      return SG_VERTEXFORMAT_UBYTE4;
+    case MAT_WEIGHT:
+    case MAT_COLOR:
+      return SG_VERTEXFORMAT_UBYTE4N;
+    case MAT_ANGLE:
+      return SG_VERTEXFORMAT_FLOAT;
+  };
+  return 0;
+}
+
+sg_buffer mat2buffer(int mat, primitive *p)
+{
+  switch(mat) {
+    case MAT_POS: return p->pos;
+    case MAT_NORM: return p->norm;
+    case MAT_UV: return p->uv;
+    case MAT_BONE: return p->bone;
+    case MAT_WEIGHT: return p->weight;
+    case MAT_COLOR: return p->color;
+  };
+  
+  return p->pos;
+}
+
+sg_bindings primitive_bindings(primitive *p, JSValue v)
+{
+  sg_bindings b = {0};
+  JSValue inputs = js_getpropstr(js_getpropstr(v, "vs"), "inputs");
+  for (int i = 0; i < js_arrlen(inputs); i++) {
+    JSValue attr = js_getpropidx(inputs, i);
+    int mat = js2number(js_getpropstr(attr, "mat"));  
+    int slot = js2number(js_getpropstr(attr, "slot"));
+    sg_buffer buf = mat2buffer(mat,p);
+    if (!buf.id) {
+      // ERROR
+    }
+    b.vertex_buffers[slot] = buf;
+  }
+  
+  b.index_buffer = p->idx;
+  
+  return b;
+}
+
+void primitive_free(primitive *prim)
+{
+
 }
 
 void material_free(material *mat)

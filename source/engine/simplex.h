@@ -21,18 +21,18 @@ typedef union NoiseUnion {
     noiseNDptr pn;
 } genericNoise;
 
-extern double Noise2D(double x, double y);
-extern double Noise3D(double x, double y, double z);
-extern double Noise4D(double x, double y, double z, double w);
+double Noise2D(double x, double y);
+double Noise3D(double x, double y, double z);
+double Noise4D(double x, double y, double z, double w);
 
-extern double GBlur1D(double stdDev, double x);
-extern double GBlur2D(double stdDev, double x, double y);
+double GBlur1D(double stdDev, double x);
+double GBlur2D(double stdDev, double x, double y);
 
-extern double Noise(genericNoise func, int len, double args[]);
+double Noise(genericNoise func, int len, double args[]);
 
-extern double TurbulentNoise(genericNoise func, int direction, int iterations, int len, double args[]);
-extern double FractalSumNoise(genericNoise func, int iterations, int len, double args[]);
-extern double FractalSumAbsNoise(genericNoise func, int iterations, int len, double args[]);
+double TurbulentNoise(genericNoise func, int direction, int iterations, int len, double args[]);
+double FractalSumNoise(genericNoise func, int iterations, int len, double args[]);
+double FractalSumAbsNoise(genericNoise func, int iterations, int len, double args[]);
 
 double octave_3d(double x, double y, double z, int octaves, double persistence);
 

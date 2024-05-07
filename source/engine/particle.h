@@ -7,6 +7,7 @@
 #include "texture.h"
 #include "anim.h"
 #include "gameobject.h"
+#include "render.h"
 
 typedef struct particle {
   HMM_Vec4 pos;
@@ -23,9 +24,16 @@ typedef struct particle {
 #define CLOUD 1
 #define MESH 2
 
+typedef struct par_vert {
+  HMM_Vec2 pos;
+  float angle;
+  float scale;
+  struct rgba color;
+} par_vert;
+
 typedef struct emitter {
   struct particle *particles;
-  transform3d t;
+  par_vert *verts;
   HMM_Vec3 *mesh; /* list of points to optionally spawn from */
   HMM_Vec3 *norm; /* norm at each point */
   int type; /* spray, cloud, or mesh */
@@ -44,8 +52,6 @@ typedef struct emitter {
   float scale_var;
   float grow_for; /* seconds to grow from small until scale */
   float shrink_for; /* seconds to shrink to small prior to its death */
-  /* PARTICLE TYPE */
-  texture *texture;
   /* ROTATION AND COLLISION */
   int collision_mask; /* mask for collision */
   float bounce; /* bounce back after collision */
@@ -55,22 +61,15 @@ typedef struct emitter {
   float persist_var;
   /* TRAILS */
   warpmask warp_mask;
-  int on;
-  double tte; /* time to emit */  
+  double tte; /* time to emit */ 
+  sg_buffer buffer; 
 } emitter;
-
-void particle_init();
 
 emitter *make_emitter();
 void emitter_free(emitter *e);
 
-void start_emitter(emitter *e);
-void stop_emitter(emitter *e);
-
-void emitter_emit(emitter *e, int count);
-void emitters_step(double dt);
-void emitter_draw(emitter *e, gameobject *go);
-void emitters_draw(HMM_Mat4 *proj);
-void emitter_step(emitter *e, double dt);
+void emitter_emit(emitter *e, int count, transform2d *t);
+void emitter_step(emitter *e, double dt, transform2d *t);
+void emitter_draw(emitter *e, sg_bindings bind);
 
 #endif

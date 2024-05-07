@@ -101,7 +101,7 @@ else ifeq ($(OS), IOS)
 	LDFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
 	LDFLAGS += -framework Foundation -framework UIKit -framework AudioToolbox -framework Metal -framework MetalKit -framework AVFoundation
 	CXXFLAGS += -std=c++11
-	CFLAGS += -x objective-c
+	CFLAGS += -x objective-c -DIOS
 	INFO :=$(INFO)_ios
 else ifeq ($(OS), wasm) # Then WEB
   OS := Web

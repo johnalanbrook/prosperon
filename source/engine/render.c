@@ -18,9 +18,6 @@
 #include "sokol/sokol_glue.h"
 #include "stb_image_write.h"
 
-#include "box.sglsl.h"
-#include "shadow.sglsl.h"
-
 #include "sokol/sokol_gfx.h"
 #include "sokol_gfx_ext.h"
 
@@ -31,7 +28,6 @@
 HMM_Vec2 campos = {0,0};
 float camzoom = 1;
 
-sg_buffer sprite_quad;
 sg_sampler std_sampler;
 sg_sampler tex_sampler;
 
@@ -127,14 +123,6 @@ void capture_screen(int x, int y, int w, int h, const char *path)
 
 sg_pass_action pass_action = {0};
 
-static struct {
-  sg_pass_action pass_action;
-
-  sg_pass pass;
-  sg_pipeline pipe;
-  sg_shader shader;
-} sg_shadow;
-
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
 //  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);
@@ -227,20 +215,6 @@ void render_init() {
     .logger = { .func = sg_logging },
     .buffer_pool_size = 1024
   });
-    
-  float quad[] = {
-  0,0,
-  1,0,
-  0,1,
-  1,1
-  };
-  
-  sprite_quad = sg_make_buffer(&(sg_buffer_desc){
-    .data = quad,
-    .size = sizeof(quad),
-    .usage = SG_USAGE_IMMUTABLE,
-    .label = "sprite quad"
-  });
   
   std_sampler = sg_make_sampler(&(sg_sampler_desc){});
   tex_sampler = sg_make_sampler(&(sg_sampler_desc){
@@ -262,69 +236,6 @@ void render_init() {
   pass_action = (sg_pass_action){
     .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
   };
-  
-  sg_gif.shader = sg_make_shader(box_shader_desc(sg_query_backend()));
-
-  sg_gif.pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = sg_gif.shader,
-    .layout = {
-      .attrs = {
-        [0].format = SG_VERTEXFORMAT_FLOAT2,
-      	[1].format = SG_VERTEXFORMAT_FLOAT2
-      }
-    },
-    .colors[0].pixel_format = SG_PIXELFORMAT_RGBA8,
-    .label = "gif pipe",
-  });
-
-  float crt_quad[] = {
-    -1, 1, 0, 1,
-    -1, -1, 0, 0,
-    1, -1, 1, 0,
-    -1, 1, 0, 1,
-    1, -1, 1, 0,
-    1, 1, 1, 1
-  };
-
-  float gif_quad[] = {
-    -1, 1, 0, 1,
-    -1, -1, 0, 0,
-    1, -1, 1, 0,
-    -1, 1, 0, 1,
-    1, -1, 1, 0,
-    1, 1, 1, 1
-  };
-  
-  sg_limits ll = sg_query_limits();
-  printf("attribute limits %d\n", ll.max_vertex_attrs);
-  
-  sg_gif.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(gif_quad),
-    .data = gif_quad,
-    .label = "gif vert buffer",
-  });
-  sg_gif.bind.fs.samplers[0] = std_sampler;
-  
-  sg_crt.shader = sg_make_shader(crt_shader_desc(sg_query_backend()));
-  sg_crt.pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = sg_crt.shader,
-    .layout = {
-      .attrs = {
-        [0].format = SG_VERTEXFORMAT_FLOAT2,
-        [1].format = SG_VERTEXFORMAT_FLOAT2
-      }
-    },
-    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-  });
-  
-  sg_crt.bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(crt_quad),
-    .type = SG_BUFFERTYPE_VERTEXBUFFER,
-    .usage = SG_USAGE_IMMUTABLE,
-    .data = SG_RANGE(crt_quad),
-    
-    .label = "crt vert buffer",
-  });
 }
 
 HMM_Mat4 projection = {0.f};

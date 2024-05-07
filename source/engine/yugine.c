@@ -63,7 +63,6 @@ void c_init() {
   window_resize(sapp_width(), sapp_height());
   phys2d_init();  
   render_init();
-  particle_init();
   if (!JS_IsUndefined(c_start)) {
     script_call_sym(c_start,0,NULL);
     JS_FreeValue(js, c_start);

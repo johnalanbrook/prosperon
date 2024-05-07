@@ -32,6 +32,7 @@
 #include "render.h"
 #include "model.h"
 #include "HandmadeMath.h"
+#include "par/par_streamlines.h"
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -61,6 +62,11 @@ const char *js2str(JSValue v) {
   return JS_ToCString(js, v);
 }
 
+void sg_buffer_free(sg_buffer *b)
+{
+  sg_dealloc_buffer(*b);
+}
+
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
 QJSCLASS(transform3d)
@@ -76,6 +82,8 @@ QJSCLASS(material)
 QJSCLASS(model)
 QJSCLASS(window)
 QJSCLASS(constraint)
+QJSCLASS(primitive)
+QJSCLASS(sg_buffer)
 
 static JSValue sound_proto;
 sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
@@ -109,6 +117,11 @@ JSValue js_getpropstr(JSValue v, const char *str)
   JSValue p = JS_GetPropertyStr(js,v,str);
   JS_FreeValue(js,p);
   return p;
+}
+
+void js_setpropstr(JSValue v, const char *str, JSValue p)
+{
+  JS_SetPropertyStr(js, v, str, p);
 }
 
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
@@ -578,6 +591,21 @@ static const JSCFunctionListEntry js_warp_damp_funcs [] = {
   CGETSET_ADD(warp_damp, damp)
 };
 
+sg_bindings js2bind(JSValue mat, JSValue prim)
+{
+  sg_bindings bind = {0};
+  for (int i = 0; i < js_arrlen(mat); i++) {
+    bind.fs.images[i] = js2texture(js_getpropidx(mat, i))->id;
+    bind.fs.samplers[i] = std_sampler; 
+  }
+  
+  bind.vertex_buffers[0] = *js2sg_buffer(js_getpropstr(prim, "pos"));
+  bind.index_buffer = *js2sg_buffer(js_getpropstr(prim, "index"));
+  bind.vertex_buffers[1] = *js2sg_buffer(js_getpropstr(prim, "uv"));
+  
+  return bind;
+}
+
 JSC_GETSET(emitter, life, number)
 JSC_GETSET(emitter, life_var, number)
 JSC_GETSET(emitter, speed, number)
@@ -595,11 +623,9 @@ JSC_GETSET(emitter, die_after_collision, boolean)
 JSC_GETSET(emitter, persist, number)
 JSC_GETSET(emitter, persist_var, number)
 JSC_GETSET(emitter, warp_mask, bitmask)
-JSC_GETSET(emitter, texture, texture)
-
-JSC_CCALL(emitter_start, start_emitter(js2emitter(this)))
-JSC_CCALL(emitter_stop, stop_emitter(js2emitter(this)))
-JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0])))
+JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
+JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
+JSC_CCALL(emitter_draw, emitter_draw(js2emitter(this), js2bind(argv[0], argv[1])))
 
 JSC_CCALL(render_grid, draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2]));)
 JSC_CCALL(render_point, draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])))
@@ -624,7 +650,6 @@ JSC_CCALL(render_line3d,
   arrfree(v1);
 );
 
-JSC_CCALL(render_emitters, emitters_draw(&useproj))
 JSC_CCALL(render_flush, debug_flush(&useproj); )
 
 JSC_CCALL(render_flushtext, text_flush())
@@ -740,20 +765,40 @@ JSC_CCALL(render_pipeline3d,
   return number2js(pipe.id);
 )
 
-JSC_CCALL(render_pipelinetext,
-  sg_shader fontshader = js2shader(argv[0]);
-  sg_pipeline_desc p = {0};
-  p.shader = fontshader;
+sg_vertex_layout_state js2layout(JSValue v)
+{
   sg_vertex_layout_state st = {0};
-  st.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-  st.attrs[0].buffer_index = 1;
-  st.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-  st.attrs[2].format = SG_VERTEXFORMAT_FLOAT2;
-  st.attrs[3].format = SG_VERTEXFORMAT_USHORT2N;
-  st.attrs[4].format = SG_VERTEXFORMAT_USHORT2N;
-  st.attrs[5].format = SG_VERTEXFORMAT_UBYTE4N;
-  st.buffers[0].step_func = SG_VERTEXSTEP_PER_INSTANCE;
-  p.layout = st;
+  JSValue inputs = js_getpropstr(js_getpropstr(v, "vs"), "inputs");
+  for (int i = 0; i < js_arrlen(inputs); i++) {
+    JSValue attr = js_getpropidx(inputs, i);
+    int slot = js2number(js_getpropstr(attr, "slot"));
+    int mat = js2number(js_getpropstr(attr, "mat"));
+    st.attrs[slot].format = mat2type(mat);
+    st.attrs[slot].buffer_index = slot;
+  }
+  
+  return st;
+}
+
+JSC_CCALL(render_pipelineparticle,
+  sg_pipeline_desc p = {0};
+  p.shader = js2shader(argv[0]);
+  p.layout = js2layout(argv[0]);
+  p.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
+  p.index_type = SG_INDEXTYPE_UINT16;
+  //p.cull_mode = SG_CULLMODE_BACK;
+  //p.colors[0].blend = blend_trans;
+  //p.depth.write_enabled = true;
+  //p.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
+  
+  sg_pipeline pipe = sg_make_pipeline(&p);
+  return number2js(pipe.id);
+)
+  
+JSC_CCALL(render_pipelinetext,
+  sg_pipeline_desc p = {0};
+  p.shader = js2shader(argv[0]);
+  p.layout = js2layout(argv[0]);
   p.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
   p.colors[0].blend = blend_trans;
   
@@ -762,18 +807,15 @@ JSC_CCALL(render_pipelinetext,
 )
 
 JSC_CCALL(render_pipeline,
-  sg_shader sgshader = js2shader(argv[0]);
-  
-  sg_pipeline_desc pdesc = {0};
-  pdesc.shader = sgshader;
-  pdesc.cull_mode = SG_CULLMODE_FRONT;
-  
-  pdesc.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-  pdesc.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
+  sg_pipeline_desc p = {0};
+  p.shader = js2shader(argv[0]);
+  p.layout = js2layout(argv[0]);
+  //p.cull_mode = SG_CULLMODE_FRONT;
+  p.index_type = SG_INDEXTYPE_UINT16;
   if (js2boolean(js_getpropstr(argv[0], "blend")))
-    pdesc.colors[0].blend = blend_trans;
+    p.colors[0].blend = blend_trans;
   
-  sg_pipeline pipe = sg_make_pipeline(&pdesc);
+  sg_pipeline pipe = sg_make_pipeline(&p);
 
   return number2js(pipe.id);
 )
@@ -822,16 +864,10 @@ JSC_CCALL(render_setunim4,
 );  
 
 JSC_CCALL(render_spdraw,
-  sg_bindings bind = {0};
-  bind.vertex_buffers[0] = sprite_quad;
-  
-  for (int i = 0; i < js_arrlen(argv[0]); i++) {
-    bind.fs.images[i] = js2texture(js_getpropidx(argv[0], i))->id;
-    bind.fs.samplers[i] = std_sampler;
-  }
-  
+  sg_bindings bind = js2bind(argv[0], argv[1]);
   sg_apply_bindings(&bind);
-  sg_draw(0,4,1);
+  int p = js2number(js_getpropstr(argv[1], "count"));
+  sg_draw(0,p,1);
 )
 
 JSC_CCALL(render_setpipeline,
@@ -847,7 +883,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, poly, 2),
   MIST_FUNC_DEF(render, line, 3),
   MIST_FUNC_DEF(render, line3d, 2),
-  MIST_FUNC_DEF(render, emitters, 0),
   MIST_FUNC_DEF(render, flushtext, 0),
   MIST_FUNC_DEF(render, flush, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
@@ -858,9 +893,10 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, pipeline, 1),
   MIST_FUNC_DEF(render, pipeline3d, 1),
   MIST_FUNC_DEF(render, pipelinetext, 1),
+  MIST_FUNC_DEF(render, pipelineparticle, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
-  MIST_FUNC_DEF(render, spdraw, 2),
+  MIST_FUNC_DEF(render, spdraw, 1),
   MIST_FUNC_DEF(render, setuniproj, 2),
   MIST_FUNC_DEF(render, setunim4, 3),
   MIST_FUNC_DEF(render, setuniv2, 2),
@@ -958,7 +994,6 @@ static const JSCFunctionListEntry js_input_funcs[] = {
   MIST_FUNC_DEF(input, cursor_img, 1)
 };
 
-JSC_CCALL(prosperon_emitters_step, emitters_step(js2number(argv[0])))
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
 JSC_CCALL(prosperon_window_render, openglRender(&mainwin, js2transform2d(argv[0]), js2number(argv[1])))
 JSC_CCALL(prosperon_guid,
@@ -972,7 +1007,6 @@ JSC_CCALL(prosperon_guid,
 )
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
-  MIST_FUNC_DEF(prosperon, emitters_step, 1),
   MIST_FUNC_DEF(prosperon, phys2d_step, 1),
   MIST_FUNC_DEF(prosperon, window_render, 0),
   MIST_FUNC_DEF(prosperon, guid, 0),
@@ -1247,8 +1281,6 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, make_gravity, 0),
 };
 
-
-
 JSC_CCALL(model_draw_go,
   model_draw_go(js2model(this), js2gameobject(argv[0]), js2gameobject(argv[1]))
 );
@@ -1275,10 +1307,9 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, persist),
   CGETSET_ADD(emitter, persist_var),
   CGETSET_ADD(emitter, warp_mask),  
-  MIST_FUNC_DEF(emitter, start, 0),
-  MIST_FUNC_DEF(emitter, stop, 0),
   MIST_FUNC_DEF(emitter, emit, 1),
-  CGETSET_ADD(emitter, texture),
+  MIST_FUNC_DEF(emitter, step, 1),
+  MIST_FUNC_DEF(emitter, draw, 1)
 };
 
 JSC_GETSET(transform2d, pos, vec2)
@@ -1685,8 +1716,12 @@ JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
   return str2js("linux");
   #elif defined(_WIN32) || defined(_WIN64)
   return str2js("windows");
+  #elif defined(IOS)
+  return str2js("ios");
   #elif defined(__APPLE__)
   return str2js("macos");
+  #elif define(__EMSCRIPTEN__)
+  return str2js("web");
   #endif
   return JS_UNDEFINED;
 }
@@ -1699,7 +1734,6 @@ JSC_SSCALL(os_eval, ret = script_eval(str, str2))
 JSC_SCALL(os_capture, capture_screen(js2number(argv[1]), js2number(argv[2]), js2number(argv[4]), js2number(argv[5]), str))
 
 JSC_CCALL(os_sprite,
-  if (js2boolean(argv[0])) return JS_GetClassProto(js,js_sprite_id);
   return sprite2js(sprite_make());
 )
 
@@ -1768,9 +1802,89 @@ JSC_CCALL(os_make_transform2d,
 JSC_SCALL(os_system, return number2js(system(str)); )
 
 JSC_SCALL(os_make_model, ret = model2js(model_make(str)))
+JSC_CCALL(os_make_emitter, ret = emitter2js(make_emitter()))
+
+JSC_CCALL(os_make_buffer,
+  int type = js2number(argv[1]);
+  float *b = malloc(sizeof(float)*js_arrlen(argv[0]));
+  for (int i = 0; i < js_arrlen(argv[0]); i++)
+    b[i] = js2number(js_getpropidx(argv[0],i));
+    
+  sg_buffer *p = malloc(sizeof(sg_buffer));
+  
+  switch(type) {
+    case 0:
+      *p = sg_make_buffer(&(sg_buffer_desc){
+        .size = sizeof(float)*js_arrlen(argv[0]),
+        .data = b
+      });
+      break;
+    case 1:
+      *p = index_buffer(b, js_arrlen(argv[0]));
+      break;
+    case 2:
+      *p = texcoord_floats(b, js_arrlen(argv[0]));
+      break;
+  }
+
+  free(b);
+  return sg_buffer2js(p);
+)
+
+JSC_CCALL(os_make_line_prim,
+  JSValue prim = JS_NewObject(js);
+  HMM_Vec2 *v = js2cpvec2arr(argv[0]);
+  parsl_position par_v[arrlen(v)];
+  for (int i = 0; i < arrlen(v); i++) {
+    par_v[i].x = v[i].x;
+    par_v[i].y = v[i].y;
+  }
+  
+  parsl_context *par_ctx = parsl_create_context((parsl_config){
+    .thickness = js2number(argv[1]),
+    .flags= PARSL_FLAG_ANNOTATIONS,
+    .u_mode = PAR_U_MODE_NORMALIZED_DISTANCE
+  });
+  
+  uint16_t spine_lens[] = {arrlen(v)};
+  
+  parsl_mesh *m = parsl_mesh_from_lines(par_ctx, (parsl_spine_list){
+    .num_vertices = arrlen(v),
+    .num_spines = 1,
+    .vertices = par_v,
+    .spine_lengths = spine_lens
+  });
+  
+  sg_buffer *pos = malloc(sizeof(*pos));
+  *pos = sg_make_buffer(&(sg_buffer_desc){
+    .data = (sg_range){
+      .ptr = m->positions,
+      .size = sizeof(parsl_position)*m->num_vertices
+    }
+  });
+  js_setpropstr(prim, "pos", sg_buffer2js(pos));
+  js_setpropstr(prim, "count", number2js(m->num_triangles*3));
+  sg_buffer *idx = malloc(sizeof(*idx));
+  *idx = par_idx_buffer(m->triangle_indices, m->num_triangles*3);
+  js_setpropstr(prim, "index", sg_buffer2js(idx));
+  
+  printf("there are %d verts\n", m->num_vertices);
+  float uv[m->num_vertices*2];
+  for (int i = 0; i < m->num_vertices; i++) {
+    uv[i*2] = m->annotations[i].u_along_curve;
+    uv[i*2+1] = m->annotations[i].v_across_curve;
+    printf("uv is %g,%g\n", uv[i*2], uv[i*2+1]);
+  }
+  sg_buffer *buv = malloc(sizeof(*buv));
+  *buv = texcoord_floats(uv, m->num_vertices*2);
+  //*buv = float_buffer(uv, m->num_vertices*2);
+  js_setpropstr(prim, "uv", sg_buffer2js(buv));
+  
+  return prim;
+)  
 
 static const JSCFunctionListEntry js_os_funcs[] = {
-  MIST_FUNC_DEF(os,sprite,1),
+  MIST_FUNC_DEF(os,sprite,0),
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
   MIST_FUNC_DEF(os, sys, 0),
@@ -1789,6 +1903,9 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_model, 1),
   MIST_FUNC_DEF(os, make_transform2d, 1),
+  MIST_FUNC_DEF(os, make_emitter, 0),
+  MIST_FUNC_DEF(os, make_buffer, 1),
+  MIST_FUNC_DEF(os, make_line_prim, 2),
 };
 
 #include "steam.h"

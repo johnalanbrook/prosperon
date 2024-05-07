@@ -15,17 +15,20 @@
 #define MAT_WEIGHT 4
 #define MAT_COLOR 5
 #define MAT_TAN 6
+#define MAT_ANGLE 7
+#define MAT_WH 8
+#define MAT_ST 9
 
 typedef struct material {
-  texture *diffuse;
-  texture *metalrough;
+  struct texture *diffuse;
+  struct texture *metalrough;
   float metal;
   float rough;
-  texture *normal;
+  struct texture *normal;
   float nrm;
-  texture *occlusion;
+  struct texture *occlusion;
   float occl;
-  texture *emissive;
+  struct texture *emissive;
   HMM_Vec3 emis;
 } material;
 
@@ -83,6 +86,20 @@ struct model *model_make(const char *path);
 void model_free(model *m);
 
 void model_draw_go(model *m, gameobject *go, gameobject *cam);
+sg_bindings primitive_bindings(primitive *p, JSValue pipe);
+void primitive_gen_indices(primitive *prim);
+int mat2type(int mat);
+
+sg_buffer float_buffer(float *f, int v);
+sg_buffer index_buffer(float *f, int verts);
+sg_buffer texcoord_floats(float *f, int n);
+sg_buffer par_idx_buffer(uint32_t *i, int v);
+sg_buffer normal_floats(float *f, int n);
+sg_buffer ubyten_buffer(float *f, int v);
+sg_buffer ubyte_buffer(float *f, int v);
+sg_buffer joint_buf(float *f, int v);
+sg_buffer weight_buf(float *f, int v);
+void primitive_free(primitive *prim);
 
 material *material_make();
 void material_free(material *mat);

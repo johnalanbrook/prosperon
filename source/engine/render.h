@@ -15,6 +15,7 @@
 #include "HandmadeMath.h"
 #include "gameobject.h"
 #include "transform.h"
+#include "model.h"
 
 #define RGBA_MAX 255
 
@@ -33,7 +34,6 @@ extern HMM_Mat4 hudproj;
 extern HMM_Mat4 useproj;
 extern sg_pass_action pass_action;
 
-extern sg_buffer sprite_quad;
 extern sg_sampler std_sampler;
 extern sg_sampler tex_sampler;
 

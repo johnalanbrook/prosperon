@@ -111,9 +111,6 @@ struct circle_vertex {
   float fill;
 };
 
-static sg_pipeline g3_pipe;
-static sg_shader g3_shader;
-
 void debug_nextpass()
 {
   point_sc = point_c;
@@ -196,14 +193,6 @@ static sg_shader_uniform_block_desc time_ubo = {
 
 void debugdraw_init()
 {
-/*
-  g3_shader = sg_make_shader(grid3d_shader_desc(sg_query_backend()));
-  g3_pipe = sg_make_pipeline(&(sg_pipeline_desc){
-    .shader = g3_shader,
-    .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-    .index_type = SG_INDEXTYPE_UINT32
-  });
-*/
   point_shader = sg_make_shader(point_shader_desc(sg_query_backend()));
   
   point_pipe = sg_make_pipeline(&(sg_pipeline_desc){

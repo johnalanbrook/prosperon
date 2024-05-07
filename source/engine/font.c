@@ -33,8 +33,6 @@ struct text_vert {
 static struct text_vert *text_buffer;
 
 void font_init() {
-  bind_text.vertex_buffers[1] = sprite_quad;
-  
   bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
       .size = sizeof(struct text_vert),
       .type = SG_BUFFERTYPE_VERTEXBUFFER,

@@ -309,7 +309,6 @@ function process()
   frame_t = profile.secs(profile.now());
   
   prosperon.appupdate(dt);
-  prosperon.emitters_step(dt);
   input.procdown();
   
   if (sim.mode === "play" || sim.mode === "step") {
@@ -342,7 +341,6 @@ function process()
     render.sprite_flush();                
   });
   render.sprite_flush();*/
-  render.emitters(); // blits emitters
   prosperon.draw(); // draw calls
   debug.draw(); // calls needed debugs
   render.flush();
