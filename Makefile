@@ -145,7 +145,7 @@ OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/shaders source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
+includeflag += $(engineincs) source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
 includeflag += $(STEAM)/public
 includeflag += source
 includeflag := $(addprefix -I, $(includeflag))
@@ -172,10 +172,7 @@ DEPENDS = $(OBJS:.o=.d)
 all: $(NAME)
 	cp -f $(NAME) $(APP)$(EXT)
 
-SHADERS = $(shell ls source/shaders/*.sglsl)
-SHADERS := $(patsubst %.sglsl, %.sglsl.h, $(SHADERS))
-
-prereqs: $(SHADERS) source/engine/core.cdb.h
+prereqs: source/engine/core.cdb.h
 
 DESTDIR ?= ~/.bin
 install: $(NAME)
@@ -198,13 +195,6 @@ $(NAME): $(OBJS) $(DEPS)
 %$(INFO).o: %.m
 	@echo Making Objective-C object $@
 	$(CROSS)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-shaders: $(SHADERS)
-	@echo Making shaders
-
-%.sglsl.h:%.sglsl
-	@echo Creating shader $^
-	./sokol-shdc -r --ifdef -i $^ --slang=glsl330:hlsl5:metal_macos:metal_ios:metal_sim:glsl300es -o $@
 
 SCRIPTS := $(shell ls scripts/*.js*)
 CORE != (ls icons/* fonts/*)
@@ -266,7 +256,7 @@ crossweb:
 	
 clean:
 	@echo Cleaning project
-	rm -f source/shaders/*.h core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(APP)* *.icns *.ico
+	rm -f core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(APP)* *.icns *.ico
 	find . -type f -name "*.[oad]" -delete
 	rm -rf Prosperon.app 
 

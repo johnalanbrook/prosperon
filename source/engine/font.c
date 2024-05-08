@@ -10,7 +10,6 @@
 #include <string.h>
 #include <window.h>
 #include "resources.h"
-#include "debugdraw.h"
 #include "render.h"
 
 #include "stb_image_write.h"
@@ -172,8 +171,6 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
   HMM_Vec2 b;
   b.x = cursor.X + wh.x/2;
   b.y = cursor.Y + wh.y/2;
-
-  draw_box(b, wh, color);
 }
 
 void text_flush() {

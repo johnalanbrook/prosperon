@@ -1,7 +1,6 @@
 #include "jsffi.h"
 
 #include "script.h"
-#include "debugdraw.h"
 #include "font.h"
 #include "gameobject.h"
 #include "input.h"
@@ -11,7 +10,6 @@
 #include "2dphysics.h"
 #include "datastream.h"
 #include "sound.h"
-#include "sprite.h"
 #include "stb_ds.h"
 #include "string.h"
 #include "window.h"
@@ -33,6 +31,8 @@
 #include "model.h"
 #include "HandmadeMath.h"
 #include "par/par_streamlines.h"
+#include "par/par_shapes.h"
+#include "sokol_glue.h"
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -75,7 +75,6 @@ QJSCLASS(emitter)
 QJSCLASS(dsp_node)
 QJSCLASS(texture)
 QJSCLASS(font)
-QJSCLASS(sprite)
 QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
 QJSCLASS(material)
@@ -627,49 +626,56 @@ JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2tr
 JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
 JSC_CCALL(emitter_draw, emitter_draw(js2emitter(this), js2bind(argv[0], argv[1])))
 
-JSC_CCALL(render_grid, draw_grid(js2number(argv[0]), js2number(argv[1]), js2color(argv[2]));)
-JSC_CCALL(render_point, draw_cppoint(js2vec2(argv[0]), js2number(argv[1]), js2color(argv[2])))
-JSC_CCALL(render_circle, draw_circle(js2vec2(argv[0]), js2number(argv[1]), js2number(argv[2]), js2color(argv[3]), -1);)
-JSC_CCALL(render_poly, 
-  int n = js_arrlen(argv[0]);
-  HMM_Vec2 points[n];
-  for (int i = 0; i < n; i++)
-    points[i] = js2vec2(js_getpropidx(argv[0], i));
-  draw_poly(points, n, js2color(argv[1]));
-)
-
-JSC_CCALL(render_line, 
-  void *v1 = js2cpvec2arr(argv[0]);
-  draw_edge(v1, js_arrlen(argv[0]), js2color(argv[1]), js2number(argv[2]), 0, js2color(argv[1]), 10);
-  arrfree(v1);
-)
-
-JSC_CCALL(render_line3d,
-  void *v1 = js2cpvec3arr(argv[0]);
-  draw_line3d(v1, js_arrlen(argv[0]), js2color(argv[1]), 0, 0);
-  arrfree(v1);
-);
-
-JSC_CCALL(render_flush, debug_flush(&useproj); )
-
 JSC_CCALL(render_flushtext, text_flush())
 
 JSC_CCALL(render_end_pass,
   sg_end_pass();
+  
+  sg_begin_pass(&(sg_pass){
+    .swapchain = sglue_swapchain(),
+    .action = (sg_pass_action){
+      .colors[0] = {
+        .load_action = SG_LOADACTION_CLEAR,
+        .clear_value = (sg_color){0,0,0,1}
+      }
+    }
+    });
+  sg_pipeline p = {0};
+  
+  switch(mainwin.mode) {
+    case MODE_STRETCH:
+      sg_apply_viewportf(0,0,mainwin.size.x,mainwin.size.y,1);
+      break;
+    case MODE_WIDTH:
+      sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,1); // keep width
+      break;
+    case MODE_HEIGHT:
+      sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,1); // keep height
+      break;
+    case MODE_KEEP:
+      sg_apply_viewportf(0,0,mainwin.rendersize.x, mainwin.rendersize.y, 1); // no scaling
+      break;
+    case MODE_EXPAND:
+      if (mainwin.aspect < mainwin.raspect)
+        sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,1); // keep width
+      else
+        sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,1); // keep height
+      break;
+  }
+  p.id = js2number(argv[0]);
+  sg_apply_pipeline(p);
+  sg_bindings bind = js2bind(argv[1], argv[2]);
+  bind.fs.images[0] = screencolor;
+  bind.fs.samplers[0] = std_sampler;
+  sg_apply_bindings(&bind);
+  int c = js2number(js_getpropstr(argv[2], "count"));
+  sg_draw(0,c,1);
+  
+  sg_end_pass();
   sg_commit();
-  debug_newframe();
 )
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 JSC_CCALL(render_set_camera, useproj = projection)
-JSC_CCALL(render_hud_res,
-  HMM_Vec2 xy = js2vec2(argv[0]);
-  useproj = HMM_Orthographic_RH_ZO(0, xy.x, 0, xy.y, -1, 1);
-)
-JSC_CCALL(render_clear_color,
-  sg_color c;
-  rgba2floats(&c, js2color(argv[0]));
-  pass_action.colors[0].clear_value = c;
-)
 
 sg_shader js2shader(JSValue v)
 {
@@ -739,32 +745,6 @@ sg_shader js2shader(JSValue v)
   return sh;
 }
 
-JSC_CCALL(render_pipeline3d,
-  sg_shader sgshader = js2shader(argv[0]);
-  sg_pipeline_desc p = {0};
-  p.shader = sgshader;
-  sg_vertex_layout_state st = {0};
-  st.attrs[MAT_POS].format = SG_VERTEXFORMAT_FLOAT3;
-  st.attrs[MAT_UV].format = SG_VERTEXFORMAT_USHORT2N;
-  st.attrs[MAT_UV].buffer_index = MAT_UV;
-  st.attrs[MAT_NORM].format = SG_VERTEXFORMAT_UINT10_N2;
-  st.attrs[MAT_NORM].buffer_index = MAT_NORM;
-  st.attrs[MAT_WEIGHT].format = SG_VERTEXFORMAT_UBYTE4N;
-  st.attrs[MAT_WEIGHT].buffer_index = MAT_WEIGHT;
-  st.attrs[MAT_BONE].format = SG_VERTEXFORMAT_UBYTE4;
-  st.attrs[MAT_BONE].buffer_index = MAT_BONE;
-  st.attrs[MAT_COLOR].format = SG_VERTEXFORMAT_UBYTE4N;
-  st.attrs[MAT_COLOR].buffer_index = MAT_COLOR;
-  p.layout = st;
-  p.index_type = SG_INDEXTYPE_UINT16;
-  p.depth.write_enabled = true;
-  p.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
-  p.cull_mode = SG_CULLMODE_FRONT;
-  
-  sg_pipeline pipe = sg_make_pipeline(&p);
-  return number2js(pipe.id);
-)
-
 sg_vertex_layout_state js2layout(JSValue v)
 {
   sg_vertex_layout_state st = {0};
@@ -780,40 +760,18 @@ sg_vertex_layout_state js2layout(JSValue v)
   return st;
 }
 
-JSC_CCALL(render_pipelineparticle,
-  sg_pipeline_desc p = {0};
-  p.shader = js2shader(argv[0]);
-  p.layout = js2layout(argv[0]);
-  p.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
-  p.index_type = SG_INDEXTYPE_UINT16;
-  //p.cull_mode = SG_CULLMODE_BACK;
-  //p.colors[0].blend = blend_trans;
-  //p.depth.write_enabled = true;
-  //p.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
-  
-  sg_pipeline pipe = sg_make_pipeline(&p);
-  return number2js(pipe.id);
-)
-  
-JSC_CCALL(render_pipelinetext,
-  sg_pipeline_desc p = {0};
-  p.shader = js2shader(argv[0]);
-  p.layout = js2layout(argv[0]);
-  p.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP;
-  p.colors[0].blend = blend_trans;
-  
-  sg_pipeline pipe = sg_make_pipeline(&p);
-  return number2js(pipe.id);
-)
-
 JSC_CCALL(render_pipeline,
   sg_pipeline_desc p = {0};
   p.shader = js2shader(argv[0]);
   p.layout = js2layout(argv[0]);
-  //p.cull_mode = SG_CULLMODE_FRONT;
+  p.cull_mode = js2number(js_getpropstr(argv[0], "cull"));
+  p.primitive_type = js2number(js_getpropstr(argv[0], "primitive"));
   p.index_type = SG_INDEXTYPE_UINT16;
   if (js2boolean(js_getpropstr(argv[0], "blend")))
     p.colors[0].blend = blend_trans;
+    
+  //p.depth.write_enabled = true;
+  //p.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
   
   sg_pipeline pipe = sg_make_pipeline(&p);
 
@@ -841,7 +799,7 @@ JSC_CCALL(render_setuniv4,
 )
 
 JSC_CCALL(render_setuniproj,
-  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(useproj));
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(projection));
 )
 
 JSC_CCALL(render_setunim4,
@@ -877,23 +835,11 @@ JSC_CCALL(render_setpipeline,
 )
 
 static const JSCFunctionListEntry js_render_funcs[] = {
-  MIST_FUNC_DEF(render, grid, 3),
-  MIST_FUNC_DEF(render, point, 3),
-  MIST_FUNC_DEF(render, circle, 3),
-  MIST_FUNC_DEF(render, poly, 2),
-  MIST_FUNC_DEF(render, line, 3),
-  MIST_FUNC_DEF(render, line3d, 2),
   MIST_FUNC_DEF(render, flushtext, 0),
-  MIST_FUNC_DEF(render, flush, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
   MIST_FUNC_DEF(render, set_camera, 0),
-  MIST_FUNC_DEF(render, hud_res, 1),
-  MIST_FUNC_DEF(render, clear_color, 1),
   MIST_FUNC_DEF(render, pipeline, 1),
-  MIST_FUNC_DEF(render, pipeline3d, 1),
-  MIST_FUNC_DEF(render, pipelinetext, 1),
-  MIST_FUNC_DEF(render, pipelineparticle, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
   MIST_FUNC_DEF(render, spdraw, 1),
@@ -958,6 +904,49 @@ static const JSCFunctionListEntry js_spline_funcs[] = {
 JSValue js_vector_dot(JSContext *js, JSValue this, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
 
 JSC_CCALL(vector_project, return vec22js(HMM_ProjV2(js2vec2(argv[0]), js2vec2(argv[1]))))
+
+/* Given a series of points p, computes a new series with them expanded on either side by d */
+HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
+{
+  if (d == 0) {
+    HMM_Vec2 *ret = NULL;
+    arraddn(ret,n);
+       for (int i = 0; i < n; i++)
+         ret[i] = p[i];
+
+       return ret;
+     }
+
+  parsl_position par_v[n];
+  uint16_t spine_lens[] = {n};
+  for (int i = 0; i < n; i++) {
+    par_v[i].x = p[i].x;
+    par_v[i].y = p[i].y;
+  };
+
+  parsl_context *par_ctx = parsl_create_context((parsl_config){
+    .thickness = d,
+    .flags= PARSL_FLAG_ANNOTATIONS,
+    .u_mode = PAR_U_MODE_DISTANCE
+  });
+  
+  parsl_mesh *mesh = parsl_mesh_from_lines(par_ctx, (parsl_spine_list){
+    .num_vertices = n,
+    .num_spines = 1,
+    .vertices = par_v,
+    .spine_lengths = spine_lens,
+    .closed = 0,
+  });
+
+  HMM_Vec2 *ret = NULL;
+  arraddn(ret,mesh->num_vertices);
+  for (int i = 0; i < mesh->num_vertices; i++) {
+    ret[i].x = mesh->positions[i].x;
+    ret[i].y = mesh->positions[i].y;
+  };
+  
+  return ret;
+}
 
 JSC_CCALL(vector_inflate,
   HMM_Vec2 *p = js2cpvec2arr(argv[0]);
@@ -1572,16 +1561,6 @@ static const JSCFunctionListEntry js_pshape_funcs[] = {
   MIST_FUNC_DEF(pshape, get_enabled, 1)
 };
 
-JSC_GETSET(sprite, color, color)
-JSC_GETSET(sprite, emissive, color)
-JSC_GETSET(sprite, spriteoffset, vec2)
-
-static const JSCFunctionListEntry js_sprite_funcs[] = {
-  CGETSET_ADD(sprite,color),
-  CGETSET_ADD(sprite,emissive),
-  CGETSET_ADD(sprite, spriteoffset),
-};
-
 JSC_GET(texture, width, number)
 JSC_GET(texture, height, number)
 JSC_GET(texture, frames, number)
@@ -1731,11 +1710,6 @@ JSC_CCALL(os_exit, exit(js2number(argv[0]));)
 JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
 JSC_CCALL(os_gc, script_gc());
 JSC_SSCALL(os_eval, ret = script_eval(str, str2))
-JSC_SCALL(os_capture, capture_screen(js2number(argv[1]), js2number(argv[2]), js2number(argv[4]), js2number(argv[5]), str))
-
-JSC_CCALL(os_sprite,
-  return sprite2js(sprite_make());
-)
 
 JSC_CCALL(os_make_gameobject,
   ret = gameobject2js(MakeGameobject());
@@ -1800,7 +1774,6 @@ JSC_CCALL(os_make_transform2d,
 )
 
 JSC_SCALL(os_system, return number2js(system(str)); )
-
 JSC_SCALL(os_make_model, ret = model2js(model_make(str)))
 JSC_CCALL(os_make_emitter, ret = emitter2js(make_emitter()))
 
@@ -1843,7 +1816,7 @@ JSC_CCALL(os_make_line_prim,
   parsl_context *par_ctx = parsl_create_context((parsl_config){
     .thickness = js2number(argv[1]),
     .flags= PARSL_FLAG_ANNOTATIONS,
-    .u_mode = PAR_U_MODE_NORMALIZED_DISTANCE
+    .u_mode = js2number(argv[2])
   });
   
   uint16_t spine_lens[] = {arrlen(v)};
@@ -1852,15 +1825,20 @@ JSC_CCALL(os_make_line_prim,
     .num_vertices = arrlen(v),
     .num_spines = 1,
     .vertices = par_v,
-    .spine_lengths = spine_lens
+    .spine_lengths = spine_lens,
+    .closed = js2boolean(argv[3])
   });
+  HMM_Vec3 a_pos[m->num_vertices];
+  
+  for (int i = 0; i < m->num_vertices; i++) {
+    a_pos[i].x = m->positions[i].x;
+    a_pos[i].y = m->positions[i].y;
+    a_pos[i].z = 0;
+  }
   
   sg_buffer *pos = malloc(sizeof(*pos));
   *pos = sg_make_buffer(&(sg_buffer_desc){
-    .data = (sg_range){
-      .ptr = m->positions,
-      .size = sizeof(parsl_position)*m->num_vertices
-    }
+    .data = SG_RANGE(a_pos),
   });
   js_setpropstr(prim, "pos", sg_buffer2js(pos));
   js_setpropstr(prim, "count", number2js(m->num_triangles*3));
@@ -1873,18 +1851,86 @@ JSC_CCALL(os_make_line_prim,
   for (int i = 0; i < m->num_vertices; i++) {
     uv[i*2] = m->annotations[i].u_along_curve;
     uv[i*2+1] = m->annotations[i].v_across_curve;
-    printf("uv is %g,%g\n", uv[i*2], uv[i*2+1]);
   }
   sg_buffer *buv = malloc(sizeof(*buv));
   *buv = texcoord_floats(uv, m->num_vertices*2);
-  //*buv = float_buffer(uv, m->num_vertices*2);
   js_setpropstr(prim, "uv", sg_buffer2js(buv));
   
   return prim;
-)  
+)
+
+JSValue parmesh2js(par_shapes_mesh *m)
+{
+  JSValue obj = JS_NewObject(js);
+  sg_buffer *pos = malloc(sizeof(*pos));
+  *pos = float_buffer(m->points, 3*m->npoints);
+  js_setpropstr(obj, "pos", sg_buffer2js(pos));
+  
+  if (m->tcoords) {
+    sg_buffer *uv = malloc(sizeof(*uv));
+    *uv = texcoord_floats(m->tcoords, 2*m->npoints);
+    js_setpropstr(obj, "uv", sg_buffer2js(uv));
+  }
+  
+  if (m->normals) {
+    sg_buffer *norm = malloc(sizeof(*norm));
+    *norm = normal_floats(m->normals, 3*m->npoints);
+    js_setpropstr(obj, "norm", sg_buffer2js(norm));
+  }
+  
+  sg_buffer *index = malloc(sizeof(*index));
+  *index = sg_make_buffer(&(sg_buffer_desc){
+    .data = {
+      .ptr = m->triangles,
+      .size = sizeof(*m->triangles)*3*m->ntriangles
+    },
+    .type = SG_BUFFERTYPE_INDEXBUFFER
+  });
+  js_setpropstr(obj, "index", sg_buffer2js(index));
+  
+  js_setpropstr(obj, "count", number2js(3*m->ntriangles));
+  
+  par_shapes_free_mesh(m);
+  return obj;
+}
+
+JSC_CCALL(os_make_cylinder,
+  return parmesh2js(par_shapes_create_cylinder(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(os_make_cone,
+  return parmesh2js(par_shapes_create_cone(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(os_make_disk,
+  return parmesh2js(par_shapes_create_parametric_disk(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(os_make_torus,
+  return parmesh2js(par_shapes_create_torus(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])));
+)
+
+JSC_CCALL(os_make_sphere,
+  return parmesh2js(par_shapes_create_parametric_sphere(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(os_make_klein_bottle,
+  return parmesh2js(par_shapes_create_klein_bottle(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(os_make_trefoil_knot,
+  return parmesh2js(par_shapes_create_trefoil_knot(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])));
+)
+
+JSC_CCALL(os_make_hemisphere,
+  return parmesh2js(par_shapes_create_hemisphere(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(os_make_plane,
+  return parmesh2js(par_shapes_create_plane(js2number(argv[0]), js2number(argv[1])));
+)
 
 static const JSCFunctionListEntry js_os_funcs[] = {
-  MIST_FUNC_DEF(os,sprite,0),
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
   MIST_FUNC_DEF(os, sys, 0),
@@ -1893,7 +1939,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, exit, 1),
   MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),
-  MIST_FUNC_DEF(os, capture, 5),
   MIST_FUNC_DEF(os, eval, 2),
   MIST_FUNC_DEF(os, make_gameobject, 0),
   MIST_FUNC_DEF(os, make_circle2d, 2),
@@ -1906,6 +1951,15 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_emitter, 0),
   MIST_FUNC_DEF(os, make_buffer, 1),
   MIST_FUNC_DEF(os, make_line_prim, 2),
+  MIST_FUNC_DEF(os, make_cylinder, 2),
+  MIST_FUNC_DEF(os, make_cone, 2),
+  MIST_FUNC_DEF(os, make_disk, 2),
+  MIST_FUNC_DEF(os, make_torus, 3),
+  MIST_FUNC_DEF(os, make_sphere, 2),
+  MIST_FUNC_DEF(os, make_klein_bottle, 2),
+  MIST_FUNC_DEF(os, make_trefoil_knot, 3),
+  MIST_FUNC_DEF(os, make_hemisphere, 2),
+  MIST_FUNC_DEF(os, make_plane, 2)
 };
 
 #include "steam.h"
@@ -1916,7 +1970,6 @@ void ffi_load() {
   QJSCLASSPREP(ptr);
   QJSCLASSPREP(transform3d);
   
-    
   QJSGLOBALCLASS(os);
   
   QJSCLASSPREP_FUNCS(gameobject);
@@ -1925,7 +1978,6 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(emitter);
   QJSCLASSPREP_FUNCS(warp_gravity);
   QJSCLASSPREP_FUNCS(warp_damp);
-  QJSCLASSPREP_FUNCS(sprite);
   QJSCLASSPREP_FUNCS(texture);
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(constraint);

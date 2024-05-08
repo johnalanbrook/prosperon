@@ -343,18 +343,14 @@ function process()
   render.sprite_flush();*/
   prosperon.draw(); // draw calls
   debug.draw(); // calls needed debugs
-  render.flush();
   
   prosperon.hook3d?.();
   
-  render.hud_res(window.rendersize);
   prosperon.gui();
-  render.flush();
-  render.hud_res(window.size);
   prosperon.screengui();
-  render.flush();
   
-  render.end_pass();
+  prosperon.hookend?.();
+  //render.end_pass();
   profile.addreport(profcache, "render frame", st);
   frames.push(profile.secs(profile.now()-startframe));
   if (frames.length > 20) frames.shift();

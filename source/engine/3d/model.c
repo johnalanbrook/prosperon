@@ -83,7 +83,6 @@ sg_buffer texcoord_floats(float *f, int n)
     if (v < 0) v = 0;
     if (v > 1) v = 1;
     packed[i] = pack_short_tex(v);
-    printf("val: %g, packed: %u\n", v, packed[i]);
   }
 
   return sg_make_buffer(&(sg_buffer_desc){
@@ -544,6 +543,7 @@ int mat2type(int mat)
 {
   switch(mat) {
     case MAT_POS:
+      return SG_VERTEXFORMAT_FLOAT3;
     case MAT_WH:
     case MAT_ST:
       return SG_VERTEXFORMAT_FLOAT2;

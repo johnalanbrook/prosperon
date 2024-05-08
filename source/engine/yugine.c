@@ -103,7 +103,6 @@ void seghandle()
 void c_clean() {
   JS_FreeValue(js, c_process_fn);
   cleanup();
-  gif_rec_end("out.gif");
   saudio_shutdown();
   sg_shutdown();
 };

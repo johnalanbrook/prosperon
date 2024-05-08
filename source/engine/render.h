@@ -1,21 +1,20 @@
 #ifndef OPENGL_RENDER_H
 #define OPENGL_RENDER_H
 
-#if defined __linux__
-  #define SOKOL_GLCORE33
-#elif __EMSCRIPTEN__
-  #define SOKOL_GLES3
-#elif __WIN32
-  #define SOKOL_D3D11
-#elif __APPLE__
-  #define SOKOL_METAL
-#endif
+#include "config.h"
 
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
 #include "gameobject.h"
 #include "transform.h"
 #include "model.h"
+
+#define MODE_STRETCH 0
+#define MODE_KEEP 1
+#define MODE_WIDTH 2
+#define MODE_HEIGHT 3
+#define MODE_EXPAND 4
+#define MODE_FULL 5
 
 #define RGBA_MAX 255
 
@@ -36,6 +35,8 @@ extern sg_pass_action pass_action;
 
 extern sg_sampler std_sampler;
 extern sg_sampler tex_sampler;
+extern sg_image screencolor;
+extern sg_image screendepth;
 
 struct draw_p {
   float x;

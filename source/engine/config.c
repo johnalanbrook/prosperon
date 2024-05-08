@@ -1,4 +1,4 @@
-#include "render.h"
+#include "config.h"
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
@@ -7,7 +7,6 @@
 #include "sokol/sokol_args.h"
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
-#include "sokol_gfx_ext.h"
 
 #define MSF_GIF_IMPL
 #include "msf_gif.h"
@@ -25,10 +24,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_FAILURE_USERMSG
 #define STBI_NO_STDIO
-#ifdef __TINYC__
-#define STBI_NO_SIMD
-#endif
 #include "stb_image.h"
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb_image_resize2.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STBIR_DEFAULT_FILTER_DOWNSAMPLE STBIR_FILTER_BOX
@@ -44,3 +43,12 @@
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
+
+#define PAR_SHAPES_IMPLEMENTATION
+#include "par/par_shapes.h"
+
+#define PAR_STREAMLINES_IMPLEMENTATION
+#include "par/par_streamlines.h"
+
+#define QOI_IMPLEMENTATION
+#include "qoi.h"

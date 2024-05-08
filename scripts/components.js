@@ -76,7 +76,7 @@ function json_from_whitelist(whitelist)
   } 
 }
 
-Object.mixin(os.sprite(true), {
+var sprite = {
   loop: true,
   toJSON:json_from_whitelist([
     "path",
@@ -175,21 +175,16 @@ Object.mixin(os.sprite(true), {
   },
   width() { return this.dimensions().x; },
   height() { return this.dimensions().y; },
-});
+};
 globalThis.allsprites = {};
-os.sprite().make = function(go)
+sprite.make = function(go)
 {
-  var sp = os.sprite();
   sp.go = go;
   sp.gameobject = go;
   sp.guid = prosperon.guid();
   allsprites[sp.guid] = sp;
   return sp;
 }
-
-component.sprite = os.sprite(true);
-
-var sprite = component.sprite;
 
 sprite.doc = {
   path: "Path to the texture.",
@@ -224,6 +219,8 @@ sprite.inputs.kp4 = function() { this.setanchor("mr"); }
 sprite.inputs.kp3 = function() { this.setanchor("ur"); }
 sprite.inputs.kp2 = function() { this.setanchor("um"); }
 sprite.inputs.kp1 = function() { this.setanchor("ul"); }
+
+component.sprite = sprite;
 
 Object.seal(sprite);
 

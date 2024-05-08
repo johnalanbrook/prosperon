@@ -21,7 +21,6 @@ struct datastream {
 
 struct texture;
 
-void MakeDatastream();
 struct datastream *ds_openvideo(const char *path);
 struct texture *ds_maketexture(struct datastream *);
 void ds_advance(struct datastream *ds, double);

@@ -2,7 +2,6 @@
 
 #include "2dphysics.h"
 #include <string.h>
-#include "debugdraw.h"
 #include "log.h"
 #include "math.h"
 

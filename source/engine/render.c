@@ -2,11 +2,9 @@
 
 #include "config.h"
 #include "datastream.h"
-#include "debugdraw.h"
 #include "font.h"
 #include "gameobject.h"
 #include "log.h"
-#include "sprite.h"
 #include "particle.h"
 #include "window.h"
 #include "model.h"
@@ -19,109 +17,26 @@
 #include "stb_image_write.h"
 
 #include "sokol/sokol_gfx.h"
-#include "sokol_gfx_ext.h"
 
-#include "crt.sglsl.h"
-
-#include "msf_gif.h"
+static HMM_Vec2 lastuse = {0};
 
 HMM_Vec2 campos = {0,0};
 float camzoom = 1;
 
 sg_sampler std_sampler;
+sg_sampler nofilter_sampler;
 sg_sampler tex_sampler;
 
-static struct {
-  sg_swapchain swap;
-  sg_pipeline pipe;
-  sg_bindings bind;
-  sg_shader shader;
-  sg_image img;
-  sg_image depth;
-} sg_gif;
-
-static struct {
-  sg_pipeline pipe;
-  sg_bindings bind;
-  sg_shader shader;
-} sg_crt;
-
-static struct {
-  int w;
-  int h;
-  int cpf;
-  int depth;
-  double timer;
-  double spf;
-  int rec;
-  uint8_t *buffer;
-} gif;
-
-MsfGifState gif_state = {};
-void gif_rec_start(int w, int h, int cpf, int bitdepth)
-{
-  gif.w = w;
-  gif.h = h;
-  gif.depth = bitdepth;
-  msf_gif_begin(&gif_state, gif.w, gif.h);
-  gif.cpf = cpf;
-  gif.spf = cpf/100.0;
-  gif.rec = 1;
-  gif.timer = apptime();
-  if (gif.buffer) free(gif.buffer);
-  gif.buffer = malloc(gif.w*gif.h*4);
-
-  sg_destroy_image(sg_gif.img);
-  sg_destroy_image(sg_gif.depth);
-
-  sg_gif.img = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = gif.w,
-    .height = gif.h,
-    .pixel_format = SG_PIXELFORMAT_RGBA8,
-    .label = "gif rt",
-  });
-
-  sg_gif.depth = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = gif.w,
-    .height = gif.h,
-    .label = "gif depth",
-  });
-
-  sg_gif.swap = sglue_swapchain();
-}
-
-void gif_rec_end(const char *path)
-{
-  if (!gif.rec) return;
-  
-  MsfGifResult gif_res = msf_gif_end(&gif_state);
-  if (gif_res.data) {
-    FILE *f = fopen(path, "wb");
-    fwrite(gif_res.data, gif_res.dataSize, 1, f);
-    fclose(f);
-  }
-  msf_gif_free(gif_res);
-  gif.rec = 0;
-}
-
-void capture_screen(int x, int y, int w, int h, const char *path)
-{
-  int n = 4;
-  void *data = malloc(w*h*n);
-  sg_query_pixels(0,0,w,h,1,data,w*h*sizeof(char)*n);
-//  sg_query_image_pixels(crt_post.img, crt_post.bind.fs.samplers[0], data, w*h*4);  
-  stbi_write_png("cap.png", w, h, n, data, n*w);
-//  stbi_write_bmp("cap.bmp", w, h, n, data);
-  free(data);
-}
+sg_pass offscreen;
 
 #include "sokol/sokol_app.h"
 
 #include "HandmadeMath.h"
 
 sg_pass_action pass_action = {0};
+sg_pass_action off_action = {0};
+sg_image screencolor = {0};
+sg_image screendepth = {0};
 
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
@@ -230,58 +145,81 @@ void render_init() {
 #endif
 
   font_init();
-  debugdraw_init();
 
   sg_color c = (sg_color){0,0,0,1};
   pass_action = (sg_pass_action){
     .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
   };
+  
+  sg_color oc = (sg_color){35.0/255,60.0/255,92.0/255,1};
+  off_action = (sg_pass_action){
+    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = oc}
+  };
+  
+  screencolor = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width = 500,
+    .height = 500,
+    .pixel_format = sapp_color_format(),
+    .sample_count = 1,
+  });
+  screendepth = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width =500,
+    .height=500,
+    .pixel_format = sapp_depth_format(),
+    .sample_count = 1
+  });
+  
+  offscreen = (sg_pass){
+    .attachments = sg_make_attachments(&(sg_attachments_desc){
+      .colors[0].image = screencolor,
+      .depth_stencil.image = screendepth
+    }),
+    .action = off_action,
+  };
+    
 }
 
 HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};
 HMM_Mat4 useproj = {0};
 
-#define MODE_STRETCH 0
-#define MODE_KEEP 1
-#define MODE_WIDTH 2
-#define MODE_HEIGHT 3
-#define MODE_EXPAND 4
-#define MODE_FULL 5
 
 void openglRender(struct window *window, transform2d *cam, float zoom) {
-  sg_swapchain sch = sglue_swapchain();
-  sg_begin_pass(&(sg_pass){
-    .action = pass_action,
-    .swapchain = sglue_swapchain(),
-    .label =  "window pass"
+ HMM_Vec2 usesize = mainwin.rendersize;
+ if (mainwin.mode == MODE_FULL)
+  usesize = mainwin.size;
+ //sg_apply_viewportf(0,0,usesize.x,usesize.y,1);
+ if (usesize.x != lastuse.x || usesize.y != lastuse.y) {
+  printf("Redoing to %g,%g\n", usesize.x, usesize.y);
+  sg_destroy_image(screencolor);
+  sg_destroy_image(screendepth);
+  sg_destroy_attachments(offscreen.attachments);
+  screencolor = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width = usesize.x,
+    .height = usesize.y,
+    .pixel_format = sapp_color_format(),
+    .sample_count = 1,
   });
-
-  HMM_Vec2 usesize = window->rendersize;
-
-  switch(window->mode) {
-    case MODE_STRETCH:
-      sg_apply_viewportf(0,0,window->size.x,window->size.y,1);
-      break;
-    case MODE_WIDTH:
-      sg_apply_viewportf(0, window->top, window->size.x, window->psize.y,1); // keep width
-      break;
-    case MODE_HEIGHT:
-      sg_apply_viewportf(window->left,0,window->psize.x, window->size.y,1); // keep height
-      break;
-    case MODE_KEEP:
-      sg_apply_viewportf(0,0,window->rendersize.x, window->rendersize.y, 1); // no scaling
-      break;
-    case MODE_EXPAND:
-      if (window->aspect < window->raspect)
-        sg_apply_viewportf(0, window->top, window->size.x, window->psize.y,1); // keep width
-      else
-        sg_apply_viewportf(window->left,0,window->psize.x, window->size.y,1); // keep height
-      break;
-    case MODE_FULL:
-      usesize = window->size;
-      break;
-  }
+  screendepth = sg_make_image(&(sg_image_desc){
+    .render_target = true,
+    .width =usesize.x,
+    .height=usesize.y,
+    .pixel_format = sapp_depth_format(),
+    .sample_count = 1
+  });
+  offscreen = (sg_pass){
+    .attachments = sg_make_attachments(&(sg_attachments_desc){
+      .colors[0].image = screencolor,
+      .depth_stencil.image = screendepth
+    }),
+    .action = off_action,
+  };
+ }
+ lastuse = usesize;
+ sg_begin_pass(&offscreen);
 
   // 2D projection
   campos = cam->pos;
@@ -292,22 +230,6 @@ void openglRender(struct window *window, transform2d *cam, float zoom) {
              campos.x + camzoom * usesize.x / 2,
              campos.y - camzoom * usesize.y / 2,
              campos.y + camzoom * usesize.y / 2, -10000.f, 10000.f);
-
-/*  if (gif.rec && (apptime() - gif.timer) > gif.spf) {
-    sg_begin_pass(&(sg_pass){
-      .action = pass_action,
-      .swapchain = sg_gif.swap
-    });
-    sg_apply_pipeline(sg_gif.pipe);
-    sg_apply_bindings(&sg_gif.bind);
-    sg_draw(0,6,1);
-    sg_end_pass();
-
-    gif.timer = apptime();
-    sg_query_image_pixels(sg_gif.img, crt_post.bind.fs.samplers[0], gif.buffer, gif.w*gif.h*4);
-    msf_gif_frame(&gif_state, gif.buffer, gif.cpf, gif.depth, gif.w * -4);
-  }
-*/
 }
 
 struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {

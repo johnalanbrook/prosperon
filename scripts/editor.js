@@ -8,7 +8,6 @@ game.loadurs();
 console.info(`window size: ${window.size}, render size: ${window.rendersize}`);
 
 player[0].control(debug);
-render.clear_color([35,60,92,255].map(x => x/255));
 
 var show_frame = true;
 

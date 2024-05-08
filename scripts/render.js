@@ -139,12 +139,9 @@ render.set_font = function(path, size) {
 }
 
 render.doc = "Draw shapes in screen space.";
-render.circle.doc = "Draw a circle at pos, with a given radius and color.";
+//render.circle.doc = "Draw a circle at pos, with a given radius and color.";
 render.cross.doc = "Draw a cross centered at pos, with arm length size.";
 render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
-render.poly.doc = "Draw a concave polygon from a set of points.";
 render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
-render.box.doc = "Draw a box centered at pos, with width and height in the tuple wh.";
-render.line.doc = "Draw a line from a set of points, and a given thickness.";
 
 return {render};

@@ -13,8 +13,6 @@
 #include "font.h"
 #include "render.h"
 
-#include "mpeg2.sglsl.h"
-
 #include "cbuf.h"
 
 #include "sokol/sokol_gfx.h"
@@ -89,10 +87,6 @@ struct datastream *ds_openvideo(const char *path)
   ds->playing = true;
 
   return ds;
-}
-
-void MakeDatastream() {
-  vid_shader = sg_make_shader(mpeg2_shader_desc(sg_query_backend()));
 }
 
 void ds_advance(struct datastream *ds, double s) {

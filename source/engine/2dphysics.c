@@ -3,7 +3,6 @@
 #include "gameobject.h"
 #include <string.h>
 
-#include "debugdraw.h"
 #include "stb_ds.h"
 #include <assert.h>
 #include <chipmunk/chipmunk_unsafe.h>
@@ -225,9 +224,9 @@ void phys2d_dbgdrawcpcirc(cpShape *c) {
   float radius = cpCircleShapeGetRadius(c);
   struct rgba color = shape_color(c);
   float seglen = cpShapeGetSensor(c) ? 5 : -1;
-  draw_circle(pos, radius, 1, color, seglen);
+  //draw_circle(pos, radius, 1, color, seglen);
   color.a = col_alpha;
-  draw_circle(pos,radius,radius,color,-1);
+  //draw_circle(pos,radius,radius,color,-1);
 }
 
 void phys2d_shape_apply(struct phys2d_shape *s)
@@ -347,9 +346,9 @@ void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
 
     points[n] = points[0];
 
-    draw_poly(points, n, color);
+    //draw_poly(points, n, color);
     float seglen = cpShapeGetSensor(poly->shape.shape) ? sensor_seg : 0;
-    draw_line(points, n, line_color, seglen, 0);
+    //draw_line(points, n, line_color, seglen, 0);
   }
 }
 /****************** EDGE 2D**************/
@@ -492,8 +491,8 @@ void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
   struct rgba color = shape_color(edge->shapes[0]);
   struct rgba line_color = color;
   color.a = col_alpha;
-  draw_edge(drawpoints, arrlen(edge->points), color, edge->thickness * 2, 0, line_color, seglen);
-  draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
+//  draw_edge(drawpoints, arrlen(edge->points), color, edge->thickness * 2, 0, line_color, seglen);
+  //draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 
 /************ COLLIDER ****************/

@@ -8,12 +8,10 @@
 
 #include "resources.h"
 
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize2.h"
 
 #include <stdio.h>
 
-#define QOI_IMPLEMENTATION
 #include "qoi.h"
 
 #ifndef NSVG
