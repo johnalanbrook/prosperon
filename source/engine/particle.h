@@ -28,7 +28,7 @@ typedef struct par_vert {
   HMM_Vec2 pos;
   float angle;
   float scale;
-  struct rgba color;
+  HMM_Vec4 color;
 } par_vert;
 
 typedef struct emitter {
@@ -70,6 +70,6 @@ void emitter_free(emitter *e);
 
 void emitter_emit(emitter *e, int count, transform2d *t);
 void emitter_step(emitter *e, double dt, transform2d *t);
-void emitter_draw(emitter *e, sg_bindings bind);
+void emitter_draw(emitter *e);
 
 #endif

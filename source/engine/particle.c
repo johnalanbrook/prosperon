@@ -19,7 +19,7 @@ emitter *make_emitter() {
   e->speed = 20;
   e->buffer = sg_make_buffer(&(sg_buffer_desc){
     .size = sizeof(struct par_vert),
-    .type = SG_BUFFERTYPE_VERTEXBUFFER,
+    .type = SG_BUFFERTYPE_STORAGEBUFFER,
     .usage = SG_USAGE_STREAM
   });
   return e;
@@ -41,13 +41,14 @@ float variate(float val, float variance)
 
 int emitter_spawn(emitter *e, transform2d *t)
 {
-  particle p;
+  if (arrlen(e->particles) == e->max) return 0;
+  particle p = {0};
   p.life = e->life;
   p.pos = (HMM_Vec4){t->pos.x,t->pos.y,0,0};
-  float newan = t->angle * HMM_TurnToRad*(frand(e->divergence)-(e->divergence/2));
+  float newan = t->angle + (frand(e->divergence)-(e->divergence/2))*HMM_TurnToRad;
   HMM_Vec2 norm = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
   p.v = HMM_MulV4F((HMM_Vec4){norm.x,norm.y,0,0}, variate(e->speed, e->variation));
-  p.angle = newan;
+  p.angle = 0.25;
   p.scale = variate(e->scale*t->scale.x, e->scale_var);
   arrput(e->particles,p);
   return 1;
@@ -59,7 +60,7 @@ void emitter_emit(emitter *e, int count, transform2d *t)
     emitter_spawn(e, t);
 }
 
-void emitter_draw(emitter *e, sg_bindings bind)
+void emitter_draw(emitter *e)
 {
   if (arrlen(e->particles) == 0) return;
   arrsetlen(e->verts, arrlen(e->particles));
@@ -73,27 +74,26 @@ void emitter_draw(emitter *e, sg_bindings bind)
       e->verts[i].scale = lerp(p->time/e->grow_for, 0, p->scale);
     else if (p->time > (p->life - e->shrink_for))
       e->verts[i].scale = lerp((p->time-(p->life-e->shrink_for))/e->shrink_for, p->scale, 0);*/
-    e->verts[i].color = vec2rgba(p->color);
+    e->verts[i].color = p->color;
   }
 
   sg_range verts;
   verts.ptr = e->verts;
   verts.size = sizeof(*e->verts)*arrlen(e->verts);
-  if (sg_query_buffer_will_overflow(e->buffer, verts.size))
+  if (sg_query_buffer_will_overflow(e->buffer, verts.size)) {
+    sg_destroy_buffer(e->buffer);
     e->buffer = sg_make_buffer(&(sg_buffer_desc){
       .size = verts.size,
-      .type = SG_BUFFERTYPE_VERTEXBUFFER,
+      .type = SG_BUFFERTYPE_STORAGEBUFFER,
       .usage = SG_USAGE_STREAM
     });
+  }
     
   sg_append_buffer(e->buffer, &verts);
-  
-  bind.vertex_buffers[0] = e->buffer;
-  sg_apply_bindings(&bind);
-  sg_draw(0,4,arrlen(e->verts));
 }
 
 void emitter_step(emitter *e, double dt, transform2d *t) {
+  
   HMM_Vec4 g_accel = HMM_MulV4F((HMM_Vec4){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0, 0}, dt);
   
   for (int i = 0; i < arrlen(e->particles); i++) {
@@ -110,13 +110,14 @@ void emitter_step(emitter *e, double dt, transform2d *t) {
   
    if (e->particles[i].time >= e->particles[i].life)
      arrdelswap(e->particles, i);
-   else if (query_point(e->particles[i].pos.xy))
-     arrdelswap(e->particles,i);
+//   else if (query_point(e->particles[i].pos.xy))
+//     arrdelswap(e->particles,i);
   }
 
   e->tte-=dt;
-  if (e->tte <= 0) {
-    emitter_spawn(e, t);
-    e->tte = lerp(e->explosiveness, e->life/e->max,0);
+  float step = lerp(e->explosiveness, e->life/e->max,0);
+  while (e->tte <= 0) {
+    e->tte += step;
+    if (!emitter_spawn(e, t)) break;
   }
 }

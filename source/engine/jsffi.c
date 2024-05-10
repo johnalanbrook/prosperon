@@ -608,6 +608,11 @@ sg_bindings js2bind(JSValue v)
     bind.fs.samplers[i] = std_sampler; 
   }
   
+  JSValue ssbo = js_getpropstr(v, "ssbo");
+  for (int i = 0; i < js_arrlen(ssbo); i++) {
+    bind.vs.storage_buffers[i] = *js2sg_buffer(js_getpropidx(ssbo,i));
+  }
+  
   return bind;
 }
 
@@ -630,7 +635,10 @@ JSC_GETSET(emitter, persist_var, number)
 JSC_GETSET(emitter, warp_mask, bitmask)
 JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
 JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
-JSC_CCALL(emitter_draw, emitter_draw(js2emitter(this), js2bind(argv[0])))
+JSC_CCALL(emitter_draw,
+  emitter_draw(js2emitter(this));
+  return number2js(arrlen(js2emitter(this)->verts));
+)
 
 JSC_CCALL(render_flushtext, text_flush())
 
@@ -742,6 +750,13 @@ sg_shader js2shader(JSValue v)
     desc.fs.image_sampler_pairs[0].sampler_slot = 0;
   }
   
+  JSValue ssbos = js_getpropstr(vs, "storage_buffers");
+  unin = js_arrlen(ssbos);
+  for (int i = 0; i < unin; i++) {
+    desc.vs.storage_buffers[i].used = true;
+    desc.vs.storage_buffers[i].readonly = true;
+  }
+  
   sg_shader sh = sg_make_shader(&desc);
   
   jsfreestr(vsf);
@@ -841,7 +856,8 @@ JSC_CCALL(render_spdraw,
   sg_bindings bind = js2bind(argv[0]);
   sg_apply_bindings(&bind);
   int p = js2number(js_getpropstr(argv[0], "count"));
-  sg_draw(0,p,1);
+  int n = js2number(js_getpropstr(argv[0], "inst"));
+  sg_draw(0,p,n);
 )
 
 JSC_CCALL(render_setpipeline,
@@ -1311,7 +1327,7 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, die_after_collision),
   CGETSET_ADD(emitter, persist),
   CGETSET_ADD(emitter, persist_var),
-  CGETSET_ADD(emitter, warp_mask),  
+  CGETSET_ADD(emitter, warp_mask),
   MIST_FUNC_DEF(emitter, emit, 1),
   MIST_FUNC_DEF(emitter, step, 1),
   MIST_FUNC_DEF(emitter, draw, 1)
@@ -1812,7 +1828,11 @@ JSC_CCALL(os_make_transform2d,
 
 JSC_SCALL(os_system, return number2js(system(str)); )
 JSC_SCALL(os_make_model, ret = model2js(model_make(str)))
-JSC_CCALL(os_make_emitter, ret = emitter2js(make_emitter()))
+JSC_CCALL(os_make_emitter,
+  emitter *e = make_emitter();
+  ret = emitter2js(e);
+  js_setpropstr(ret, "buffer", sg_buffer2js(&e->buffer));
+)
 
 JSC_CCALL(os_make_buffer,
   int type = js2number(argv[1]);
