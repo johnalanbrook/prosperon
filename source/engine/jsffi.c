@@ -83,6 +83,7 @@ QJSCLASS(window)
 QJSCLASS(constraint)
 QJSCLASS(primitive)
 QJSCLASS(sg_buffer)
+QJSCLASS(datastream)
 
 static JSValue sound_proto;
 sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
@@ -590,17 +591,22 @@ static const JSCFunctionListEntry js_warp_damp_funcs [] = {
   CGETSET_ADD(warp_damp, damp)
 };
 
-sg_bindings js2bind(JSValue mat, JSValue prim)
+sg_bindings js2bind(JSValue v)
 {
   sg_bindings bind = {0};
-  for (int i = 0; i < js_arrlen(mat); i++) {
-    bind.fs.images[i] = js2texture(js_getpropidx(mat, i))->id;
+  JSValue attrib = js_getpropstr(v, "attrib");
+  for (int i = 0; i < js_arrlen(attrib); i++)
+    bind.vertex_buffers[i] = *js2sg_buffer(js_getpropidx(attrib,i));
+    
+  JSValue index = js_getpropstr(v, "index");
+  if (!JS_IsUndefined(index))
+    bind.index_buffer = *js2sg_buffer(index);
+  
+  JSValue imgs = js_getpropstr(v, "images");
+  for (int i = 0; i < js_arrlen(imgs); i++) {
+    bind.fs.images[i] = js2texture(js_getpropidx(imgs, i))->id;
     bind.fs.samplers[i] = std_sampler; 
   }
-  
-  bind.vertex_buffers[0] = *js2sg_buffer(js_getpropstr(prim, "pos"));
-  bind.index_buffer = *js2sg_buffer(js_getpropstr(prim, "index"));
-  bind.vertex_buffers[1] = *js2sg_buffer(js_getpropstr(prim, "uv"));
   
   return bind;
 }
@@ -624,7 +630,7 @@ JSC_GETSET(emitter, persist_var, number)
 JSC_GETSET(emitter, warp_mask, bitmask)
 JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
 JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
-JSC_CCALL(emitter_draw, emitter_draw(js2emitter(this), js2bind(argv[0], argv[1])))
+JSC_CCALL(emitter_draw, emitter_draw(js2emitter(this), js2bind(argv[0])))
 
 JSC_CCALL(render_flushtext, text_flush())
 
@@ -664,11 +670,11 @@ JSC_CCALL(render_end_pass,
   }
   p.id = js2number(argv[0]);
   sg_apply_pipeline(p);
-  sg_bindings bind = js2bind(argv[1], argv[2]);
+  sg_bindings bind = js2bind(argv[1]);
   bind.fs.images[0] = screencolor;
   bind.fs.samplers[0] = std_sampler;
   sg_apply_bindings(&bind);
-  int c = js2number(js_getpropstr(argv[2], "count"));
+  int c = js2number(js_getpropstr(argv[1], "count"));
   sg_draw(0,c,1);
   
   sg_end_pass();
@@ -730,8 +736,9 @@ sg_shader js2shader(JSValue v)
   JSValue pairs = js_getpropstr(fs, "image_sampler_pairs");
   unin = js_arrlen(pairs);
   for (int i = 0; i < unin; i++) {
+    JSValue pair = js_getpropidx(pairs, i);
     desc.fs.image_sampler_pairs[0].used = true;
-    desc.fs.image_sampler_pairs[0].image_slot = 0;
+    desc.fs.image_sampler_pairs[0].image_slot = js2number(js_getpropstr(pair, "slot"));
     desc.fs.image_sampler_pairs[0].sampler_slot = 0;
   }
   
@@ -822,9 +829,9 @@ JSC_CCALL(render_setunim4,
 );  
 
 JSC_CCALL(render_spdraw,
-  sg_bindings bind = js2bind(argv[0], argv[1]);
+  sg_bindings bind = js2bind(argv[0]);
   sg_apply_bindings(&bind);
-  int p = js2number(js_getpropstr(argv[1], "count"));
+  int p = js2number(js_getpropstr(argv[0], "count"));
   sg_draw(0,p,1);
 )
 
@@ -1549,6 +1556,27 @@ static const JSCFunctionListEntry js_dspsound_funcs[] = {
   MIST_FUNC_DEF(dspsound, mod, 1)
 };
 
+JSC_CCALL(datastream_time, return number2js(plm_get_time(js2datastream(this)->plm)); )
+
+JSC_CCALL(datastream_advance_frames,  ds_advanceframes(js2datastream(this), js2number(argv[0])))
+
+JSC_CCALL(datastream_seek, ds_seek(js2datastream(this), js2number(argv[0])))
+
+JSC_CCALL(datastream_advance, ds_advance(js2datastream(this), js2number(argv[0])))
+
+JSC_CCALL(datastream_duration, return number2js(ds_length(js2datastream(this))))
+
+JSC_CCALL(datastream_framerate, return number2js(plm_get_framerate(js2datastream(this)->plm)))
+
+static const JSCFunctionListEntry js_datastream_funcs[] = {
+  MIST_FUNC_DEF(datastream, time, 0),
+  MIST_FUNC_DEF(datastream, advance_frames, 1),
+  MIST_FUNC_DEF(datastream, seek, 1),
+  MIST_FUNC_DEF(datastream, advance, 1),
+  MIST_FUNC_DEF(datastream, duration, 0),
+  MIST_FUNC_DEF(datastream, framerate, 0),
+};
+
 JSC_CCALL(pshape_set_sensor, shape_set_sensor(js2ptr(argv[0]), js2boolean(argv[1])))
 JSC_CCALL(pshape_get_sensor, return boolean2js(shape_get_sensor(js2ptr(argv[0]))))
 JSC_CCALL(pshape_set_enabled, shape_enabled(js2ptr(argv[0]), js2boolean(argv[1])))
@@ -1846,7 +1874,6 @@ JSC_CCALL(os_make_line_prim,
   *idx = par_idx_buffer(m->triangle_indices, m->num_triangles*3);
   js_setpropstr(prim, "index", sg_buffer2js(idx));
   
-  printf("there are %d verts\n", m->num_vertices);
   float uv[m->num_vertices*2];
   for (int i = 0; i < m->num_vertices; i++) {
     uv[i*2] = m->annotations[i].u_along_curve;
@@ -1930,6 +1957,14 @@ JSC_CCALL(os_make_plane,
   return parmesh2js(par_shapes_create_plane(js2number(argv[0]), js2number(argv[1])));
 )
 
+JSC_SCALL(os_make_video,
+  datastream *ds = ds_openvideo(str);
+  ret = datastream2js(ds);
+  texture *t = malloc(sizeof(texture));
+  t->id = ds->img;
+  js_setpropstr(ret, "texture", texture2js(t));
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
@@ -1959,7 +1994,8 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_klein_bottle, 2),
   MIST_FUNC_DEF(os, make_trefoil_knot, 3),
   MIST_FUNC_DEF(os, make_hemisphere, 2),
-  MIST_FUNC_DEF(os, make_plane, 2)
+  MIST_FUNC_DEF(os, make_plane, 2),
+  MIST_FUNC_DEF(os, make_video, 1),
 };
 
 #include "steam.h"
@@ -1983,6 +2019,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(constraint);
   QJSCLASSPREP_FUNCS(window);
   QJSCLASSPREP_FUNCS(model);
+  QJSCLASSPREP_FUNCS(datastream);
 
   QJSGLOBALCLASS(nota);
   QJSGLOBALCLASS(input);

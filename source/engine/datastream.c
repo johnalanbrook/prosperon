@@ -17,9 +17,12 @@
 
 #include "sokol/sokol_gfx.h"
 
-sg_shader vid_shader;
-sg_pipeline vid_pipeline;
-sg_bindings vid_bind;
+void datastream_free(datastream *ds)
+{
+  sg_destroy_image(ds->img);
+  plm_destroy(ds->plm);
+  free(ds);
+}
 
 void soundstream_fillbuf(struct datastream *ds, soundbyte *buf, int frames) {
   for (int i = 0; i < frames*CHANNELS; i++)
@@ -27,17 +30,14 @@ void soundstream_fillbuf(struct datastream *ds, soundbyte *buf, int frames) {
 }
 
 static void render_frame(plm_t *mpeg, plm_frame_t *frame, struct datastream *ds) {
-  return;
+  if (ds->dirty) return;
   uint8_t rgb[frame->height*frame->width*4];
+  memset(rgb,255,frame->height*frame->width*4);
   plm_frame_to_rgba(frame, rgb, frame->width*4);
-  sg_image_data imgd;
-  sg_range ir = {
-    .ptr = rgb,
-    .size = frame->height*frame->width*4*sizeof(uint8_t)
-  };
-
-  imgd.subimage[0][0] = ir;  
+  sg_image_data imgd = {0};
+  imgd.subimage[0][0] = SG_RANGE(rgb);
   sg_update_image(ds->img, &imgd);
+  ds->dirty = true;
 }
 
 static void render_audio(plm_t *mpeg, plm_samples_t *samples, struct datastream *ds) {
@@ -62,19 +62,24 @@ struct datastream *ds_openvideo(const char *path)
           path,
           plm_get_framerate(ds->plm),
           plm_get_samplerate(ds->plm),
-	  plm_get_num_audio_streams(ds->plm),
+	        plm_get_num_audio_streams(ds->plm),
           plm_get_duration(ds->plm));
-
 
   ds->img = sg_make_image(&(sg_image_desc){
     .width = plm_get_width(ds->plm),
-    .height = plm_get_height(ds->plm)
+    .height = plm_get_height(ds->plm),
+    .usage = SG_USAGE_STREAM,
+    .type = SG_IMAGETYPE_2D,
+    .pixel_format = SG_PIXELFORMAT_RGBA8,
   });  
+  
+  plm_set_video_decode_callback(ds->plm, render_frame, ds);
+  
+  return ds;
 
   ds->ring = ringnew(ds->ring, 8192);
   plugin_node(make_node(ds, soundstream_fillbuf, NULL), masterbus);
 
-  plm_set_video_decode_callback(ds->plm, render_frame, ds);
   plm_set_audio_decode_callback(ds->plm, render_audio, ds);
   plm_set_loop(ds->plm, false);
 
@@ -84,13 +89,12 @@ struct datastream *ds_openvideo(const char *path)
   // Adjust the audio lead time according to the audio_spec buffer size
   plm_set_audio_lead_time(ds->plm, BUF_FRAMES / SAMPLERATE);
 
-  ds->playing = true;
-
   return ds;
 }
 
 void ds_advance(struct datastream *ds, double s) {
-  if (ds->playing) plm_decode(ds->plm, s);
+  ds->dirty = false;
+  plm_decode(ds->plm, s);
 }
 
 void ds_seek(struct datastream *ds, double time) {
@@ -102,31 +106,6 @@ void ds_advanceframes(struct datastream *ds, int frames) {
     plm_frame_t *frame = plm_decode_video(ds->plm);
     render_frame(ds->plm, frame, ds);
   }
-}
-
-void ds_pause(struct datastream *ds) {
-  ds->playing = false;
-}
-
-void ds_stop(struct datastream *ds) {
-  if (ds->plm != NULL) {
-    plm_destroy(ds->plm);
-    ds->plm = NULL;
-  }
-
-  ds->playing = false;
-}
-
-// TODO: Must be a better way
-int ds_videodone(struct datastream *ds) {
-  return (ds->plm == NULL) || plm_get_time(ds->plm) >= plm_get_duration(ds->plm);
-}
-
-double ds_remainingtime(struct datastream *ds) {
-  if (ds->plm != NULL)
-    return plm_get_duration(ds->plm) - plm_get_time(ds->plm);
-  else
-    return 0.f;
 }
 
 double ds_length(struct datastream *ds) {

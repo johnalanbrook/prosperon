@@ -11,15 +11,21 @@ struct soundstream;
 
 struct datastream {
   plm_t *plm;
-  double last_time;
-  int playing;
   sg_image img;
+  sg_image y;
+  sg_image cr;
+  sg_image cb;
   int width;
   int height;
+  int dirty;
   soundbyte *ring;
 };
 
+typedef struct datastream datastream;
+
 struct texture;
+
+void datastream_free(datastream *ds);
 
 struct datastream *ds_openvideo(const char *path);
 struct texture *ds_maketexture(struct datastream *);

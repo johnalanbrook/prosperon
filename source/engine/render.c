@@ -185,7 +185,6 @@ HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};
 HMM_Mat4 useproj = {0};
 
-
 void openglRender(struct window *window, transform2d *cam, float zoom) {
  HMM_Vec2 usesize = mainwin.rendersize;
  if (mainwin.mode == MODE_FULL)

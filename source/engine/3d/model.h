@@ -18,6 +18,8 @@
 #define MAT_ANGLE 7
 #define MAT_WH 8
 #define MAT_ST 9
+#define MAT_PPOS 10
+#define MAT_SCALE 11
 
 typedef struct material {
   struct texture *diffuse;

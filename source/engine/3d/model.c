@@ -544,6 +544,7 @@ int mat2type(int mat)
   switch(mat) {
     case MAT_POS:
       return SG_VERTEXFORMAT_FLOAT3;
+    case MAT_PPOS:
     case MAT_WH:
     case MAT_ST:
       return SG_VERTEXFORMAT_FLOAT2;
@@ -558,9 +559,24 @@ int mat2type(int mat)
     case MAT_COLOR:
       return SG_VERTEXFORMAT_UBYTE4N;
     case MAT_ANGLE:
+    case MAT_SCALE:
       return SG_VERTEXFORMAT_FLOAT;
   };
   return 0;
+}
+
+int mat2step(int mat)
+{
+  switch(mat) {
+    case MAT_POS:
+    case MAT_UV:
+    case MAT_TAN:
+    case MAT_NORM:
+    case MAT_BONE:
+    case MAT_WEIGHT:
+      return SG_VERTEXSTEP_PER_VERTEX;
+  };
+  return SG_VERTEXSTEP_PER_INSTANCE;
 }
 
 sg_buffer mat2buffer(int mat, primitive *p)
