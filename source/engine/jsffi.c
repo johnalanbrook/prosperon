@@ -786,22 +786,31 @@ JSC_CCALL(render_pipeline,
 )
 
 JSC_CCALL(render_setuniv,
-  float f = js2number(argv[2]);
+  HMM_Vec4 f = {0};
+  f.x = js2number(argv[2]);
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(f));
 )
 
 JSC_CCALL(render_setuniv2,
-  HMM_Vec2 v = js2vec2(argv[2]);
+  HMM_Vec4 v;
+  v.xy = js2vec2(argv[2]);
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(v.e));
 )
 
 JSC_CCALL(render_setuniv3,
-  HMM_Vec3 v = js2vec3(argv[2]);
-  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(v.e));
+  HMM_Vec4 f = {0};
+  f.xyz = js2vec3(argv[2]);
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(f.e));
 )
 
 JSC_CCALL(render_setuniv4,
-  HMM_Vec4 v = js2vec4(argv[2]);
+  HMM_Vec4 v = {0};
+  if (JS_IsArray(js, argv[2])) {
+    for (int i = 0; i < js_arrlen(argv[2]); i++)
+     v.e[i] = js2number(js_getpropidx(argv[2], i));
+  } else
+    v.x = js2number(argv[2]);
+
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(v.e));
 )
 
