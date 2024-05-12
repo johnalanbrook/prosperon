@@ -503,12 +503,9 @@ sg_bindings primitive_bind(primitive *p)
   return b;
 }
 
-void model_draw_go(model *model, gameobject *go, gameobject *cam)
+void model_draw_go(model *model, transform *go)
 {
-  HMM_Mat4 view = t3d_go2world(cam);
-  HMM_Mat4 proj = HMM_Perspective_RH_NO(20, 1, 0.01, 10000);
-  HMM_Mat4 vp = HMM_MulM4(proj, view);
-  HMM_Mat4 gom = transform3d2mat(go2t3(go));
+  HMM_Mat4 gom = transform2mat(*go);
   
   animation_run(&model->anim, apptime());
 

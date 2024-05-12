@@ -17,6 +17,7 @@ const HMM_Vec3 vLEFT = {-1,0,0};
 const HMM_Vec3 vRIGHT = {1,0,0};
 
 const HMM_Mat4 MAT1 = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+const HMM_Quat QUAT1 = {1,0,0,0};
 
 /*
  * Angle unit conversion functions
@@ -1746,6 +1747,7 @@ HMM_Mat4 HMM_M4TRS(HMM_Vec3 t, HMM_Quat q, HMM_Vec3 s)
   HMM_Mat4 T = HMM_Translate(t);
   HMM_Mat4 R = HMM_QToM4(q);
   HMM_Mat4 S = HMM_Scale(s);
+  return HMM_MulM4(T,S);
   HMM_Mat4 l;
   float *lm = (float*)&l;
   

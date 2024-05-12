@@ -87,7 +87,7 @@ typedef struct model {
 struct model *model_make(const char *path);
 void model_free(model *m);
 
-void model_draw_go(model *m, gameobject *go, gameobject *cam);
+void model_draw_go(model *m, transform *go);
 sg_bindings primitive_bindings(primitive *p, JSValue pipe);
 void primitive_gen_indices(primitive *prim);
 int mat2type(int mat);

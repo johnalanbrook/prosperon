@@ -29,9 +29,6 @@
 struct gameobject {
   cpBodyType phys;
   cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
-  HMM_Vec3 scale; /* local */  
-  HMM_Quat quat;
-  int next;
   float mass;
   float friction;
   float elasticity;
@@ -43,9 +40,8 @@ struct gameobject {
   cpBitmask categories;
   cpBitmask mask;
   unsigned int warp_mask;
+  HMM_Vec3 scale;
   JSValue ref;
-  HMM_Mat4 world;
-  float drawlayer; 
 };
 
 /*
@@ -68,21 +64,9 @@ typedef struct gameobject gameobject;
 gameobject *MakeGameobject();
 void gameobject_apply(gameobject *go);
 void gameobject_free(gameobject *go);
+transform go2t(gameobject *go);
 
-transform2d go2t(gameobject *go);
-transform3d go2t3(gameobject *go);
-
-HMM_Vec2 go2world(gameobject *go, HMM_Vec2 pos);
-HMM_Vec2 world2go(gameobject *go, HMM_Vec2 pos);
-
-HMM_Mat3 t_go2world(gameobject *go);
-HMM_Mat3 t_world2go(gameobject *go);
-HMM_Mat4 t3d_go2world(gameobject *go);
-HMM_Mat4 t3d_world2go(gameobject *go);
-
-HMM_Vec3 go_pos3d(gameobject *go);
-
-HMM_Vec2 go_pos(gameobject *go);
+HMM_Vec3 go_pos(gameobject *go);
 void gameobject_setpos(gameobject *go, cpVect vec);
 float go_angle(gameobject *go);
 void gameobject_setangle(gameobject *go, float angle);

@@ -2,35 +2,21 @@
 #include <string.h>
 #include <stdio.h>
 
-const transform2d t2d_unit = {
-  .pos = {0,0},
-  .scale = {1,1},
-  .angle = 0
-};
-
-transform3d *make_transform3d()
+transform *make_transform()
 {
-  transform3d *t = calloc(sizeof(transform3d),1);
+  transform *t = calloc(sizeof(transform),1);
+  t->scale = (HMM_Vec3){1,1,1};
   return t;
 }
 
-void transform3d_free(transform3d *t) { free(t); }
+void transform_free(transform *t) { free(t); }
 
-transform2d *make_transform2d()
-{
-  transform2d *t = calloc(sizeof(transform2d),1);
-  t->scale = (HMM_Vec2){1,1};
-  return t;
-}
-
-void transform2d_free(transform2d *t) { free(t); }
-
-HMM_Vec3 trans_forward(const transform3d *const trans) { return HMM_QVRot(vFWD, trans->rotation); }
-HMM_Vec3 trans_back(const transform3d *trans) { return HMM_QVRot(vBKWD, trans->rotation); }
-HMM_Vec3 trans_up(const transform3d *trans) { return HMM_QVRot(vUP, trans->rotation); }
-HMM_Vec3 trans_down(const transform3d *trans) { return HMM_QVRot(vDOWN, trans->rotation); }
-HMM_Vec3 trans_right(const transform3d *trans) { return HMM_QVRot(vRIGHT, trans->rotation); }
-HMM_Vec3 trans_left(const transform3d *trans) { return HMM_QVRot(vLEFT, trans->rotation); }
+HMM_Vec3 trans_forward(const transform *const trans) { return HMM_QVRot(vFWD, trans->rotation); }
+HMM_Vec3 trans_back(const transform *trans) { return HMM_QVRot(vBKWD, trans->rotation); }
+HMM_Vec3 trans_up(const transform *trans) { return HMM_QVRot(vUP, trans->rotation); }
+HMM_Vec3 trans_down(const transform *trans) { return HMM_QVRot(vDOWN, trans->rotation); }
+HMM_Vec3 trans_right(const transform *trans) { return HMM_QVRot(vRIGHT, trans->rotation); }
+HMM_Vec3 trans_left(const transform *trans) { return HMM_QVRot(vLEFT, trans->rotation); }
 
 HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos) { return HMM_MulM3V3(m, (HMM_Vec3){pos.x, pos.y, 1}).xy; }
 
@@ -54,43 +40,23 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
   return mat3_t_pos(m, dir);
 }
 
-HMM_Mat3 transform2d2mat(transform2d trn) {
-  return HMM_MulM3(HMM_Translate2D(trn.pos), HMM_MulM3(HMM_RotateM3(trn.angle), HMM_ScaleM3(trn.scale)));
+HMM_Mat4 transform2mat(transform t) {
+  return HMM_M4TRS(t.pos, t.rotation, t.scale);
 }
 
-HMM_Mat4 transform2d2mat4(transform2d *t)
+HMM_Quat angle2rotation(float angle)
 {
-  HMM_Mat4 T = {0};
-  float c = cosf(t->angle);
-  float s = sinf(t->angle);
-  T.col[0].x = c*t->scale.x;
-  T.col[0].y = s*t->scale.y;
-  T.col[1].x = -s*t->scale.x;
-  T.col[1].y = c*t->scale.y;
-  T.col[3].xy = t->pos;
-  T.col[2].z = 1;
-  T.col[3].w = 1;
-  return T;
+  return HMM_QFromAxisAngle_RH(vUP, angle);
 }
 
-transform2d mat2transform2d(HMM_Mat3 m)
+float transform2angle(HMM_Vec3 axis)
 {
-  transform2d t;
-  t.pos = m.Columns[2].xy;
-  t.scale = (HMM_Vec2){HMM_LenV2(m.Columns[0].xy), HMM_LenV2(m.Columns[1].xy)};
-  t.angle = acos(m.Columns[0].x/t.scale.x);
-  return t;
-}
-  
-HMM_Mat4 transform3d2mat(transform3d t) {
-  return HMM_MulM4(HMM_Translate(t.pos),
-          HMM_MulM4(HMM_QToM4(t.rotation),
-          HMM_Scale(t.scale)));
+
 }
 
-transform3d mat2transform3d(HMM_Mat4 m)
+transform mat2transform(HMM_Mat4 m)
 {
-  transform3d t;
+  transform t;
   t.pos = m.Columns[3].xyz;
   for (int i = 0; i < 2; i++)
     t.scale.Elements[i] = HMM_LenV3(m.Columns[i].xyz);

@@ -68,8 +68,8 @@ typedef struct emitter {
 emitter *make_emitter();
 void emitter_free(emitter *e);
 
-void emitter_emit(emitter *e, int count, transform2d *t);
-void emitter_step(emitter *e, double dt, transform2d *t);
+void emitter_emit(emitter *e, int count, transform *t);
+void emitter_step(emitter *e, double dt, transform *t);
 void emitter_draw(emitter *e);
 
 #endif

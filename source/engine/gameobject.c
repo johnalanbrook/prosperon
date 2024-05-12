@@ -14,39 +14,19 @@ gameobject *shape2go(cpShape *shape) {
   return pshape->go;
 }
 
-HMM_Vec2 go_pos(gameobject *go)
+HMM_Vec3 go_pos(gameobject *go)
 {
   cpVect p = cpBodyGetPosition(go->body);
-  return (HMM_Vec2){p.x, p.y};
+  return (HMM_Vec3){p.x, p.y, 0};
 }
 float go_angle(gameobject *go) { return cpBodyGetAngle(go->body); }
 
-transform3d go2t3(gameobject *go)
+transform go2t(gameobject *go)
 {
-  transform3d t;
-  HMM_Vec2 p = go_pos(go);
-  t.pos.X = p.X;  
-  t.pos.Y = p.Y;
-  t.pos.Z = go->drawlayer;
-  t.scale = go->scale;
-  t.scale.Z = go->scale.X;
-  t.rotation = go->quat;
-  return t;
-}
-
-HMM_Vec2 go2world(gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_go2world(go), pos); }
-HMM_Vec2 world2go(gameobject *go, HMM_Vec2 pos) { return mat_t_pos(t_world2go(go), pos); }
-HMM_Mat3 t_go2world(gameobject *go) { return transform2d2mat(go2t(go)); }
-HMM_Mat3 t_world2go(gameobject *go) { return HMM_InvGeneralM3(t_go2world(go)); }
-HMM_Mat4 t3d_go2world(gameobject *go) { return transform3d2mat(go2t3(go)); }
-HMM_Mat4 t3d_world2go(gameobject *go) { return HMM_InvGeneralM4(t3d_go2world(go)); }
-
-transform2d go2t(gameobject *go)
-{
-  transform2d t;
+  transform t = {0};
   t.pos.cp = cpBodyGetPosition(go->body);
-  t.angle = cpBodyGetAngle(go->body);
-  t.scale = go->scale.XY;
+  t.rotation = angle2rotation(cpBodyGetAngle(go->body));
+  t.scale = go->scale;
   if (!isfinite(t.scale.X)) t.scale.X = 1;
   if (!isfinite(t.scale.Y)) t.scale.Y = 1;
   return t;
@@ -130,15 +110,12 @@ gameobject *MakeGameobject() {
       .maxvelocity = INFINITY,
       .maxangularvelocity = INFINITY,
       .mass = 1.f,
-      .next = -1,
-      .drawlayer = 0,
       .damping = INFINITY,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
       .mask = ~0,
       .categories = 1,
       .warp_mask = ~0,
-      .quat = HMM_QFromAxisAngle_RH((HMM_Vec3){0,1,0}, 0)
   };
 
   go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
@@ -191,15 +168,4 @@ void gameobject_setpos(gameobject *go, cpVect vec) {
   if (!go || !go->body) return;
   cpBodySetPosition(go->body, vec);
   phys2d_reindex_body(go->body);
-}
-
-void body_draw_shapes_dbg(cpBody *body, cpShape *shape, void *data) {
-  struct phys2d_shape *s = cpShapeGetUserData(shape);
-  s->debugdraw(s->data);
-}
-
-HMM_Vec3 go_pos3d(gameobject *go)
-{
-  HMM_Vec2 pos2d = go_pos(go);
-  return (HMM_Vec3){pos2d.x, pos2d.y, go->drawlayer};
 }

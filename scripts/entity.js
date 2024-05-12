@@ -133,7 +133,7 @@ var entity = {
   spawn(text, config, callback) {
     var st = profile.now();
     var ent = Object.create(entity);
-    ent.transform = os.make_transform2d();
+    ent.transform = os.make_transform();
     
     ent.guid = prosperon.guid();
     

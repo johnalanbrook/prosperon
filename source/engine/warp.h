@@ -9,7 +9,7 @@ typedef uint32_t warpmask;
 #define gravmask 1U
 
 typedef struct {
-  transform3d t;
+  transform t;
   float strength;
   float decay;
   int spherical;
@@ -18,7 +18,7 @@ typedef struct {
 } warp_gravity;
 
 typedef struct {
-  transform3d t;
+  transform t;
   int unlimited_range;
   HMM_Vec3 range;
   HMM_Vec3 falloff;
@@ -27,7 +27,7 @@ typedef struct {
 } warp_damp;
   
 typedef struct {
-  transform3d t;
+  transform t;
   float strength;
   float decay;
   float pulse; /* strength of random variance in the wind effect */

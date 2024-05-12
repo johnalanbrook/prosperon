@@ -34,15 +34,15 @@ static int cb_idx = 0;
 static const unsigned char col_alpha = 40;
 static const float sensor_seg = 10;
 
-cpTransform m3_to_cpt(HMM_Mat3 m)
+cpTransform m3_to_cpt(HMM_Mat4 m)
 {
   cpTransform t;
   t.a = m.Columns[0].x;
   t.b = m.Columns[0].y;
-  t.tx = m.Columns[2].x;
+  t.tx = m.Columns[3].x;
   t.c = m.Columns[1].x;
   t.d = m.Columns[1].y;
-  t.ty = m.Columns[2].y;
+  t.ty = m.Columns[3].y;
   return t;
 }
 
@@ -181,7 +181,7 @@ void phys2d_update(float deltaT) {
 void init_phys2dshape(struct phys2d_shape *shape, gameobject *go, void *data) {
   shape->go = go;
   shape->data = data;
-  shape->t.scale = (HMM_Vec2){1.0,1.0};
+  shape->t.scale = (HMM_Vec3){1.0,1.0,1.0};
   go_shape_apply(go->body, shape->shape, go);
   cpShapeSetCollisionType(shape->shape, (cpCollisionType)go);
   cpShapeSetUserData(shape->shape, shape);
@@ -201,7 +201,6 @@ struct phys2d_circle *Make2DCircle(gameobject *go) {
   new->offset = v2zero;
 
   new->shape.shape = cpSpaceAddShape(space, cpCircleShapeNew(go->body, new->radius, cpvzero));
-  new->shape.debugdraw = phys2d_dbgdrawcircle;
   new->shape.moi = phys2d_circle_moi;
   new->shape.apply = phys2d_applycircle;
   new->shape.free = NULL;
@@ -219,16 +218,6 @@ float phys2d_circle_moi(struct phys2d_circle *c) {
 void phys2d_circledel(struct phys2d_circle *c) { phys2d_shape_del(&c->shape); }
 void circle2d_free(circle2d *c) { phys2d_circledel(c); }
 
-void phys2d_dbgdrawcpcirc(cpShape *c) {
-  HMM_Vec2 pos = mat_t_pos(t_go2world(shape2go(c)), (HMM_Vec2)cpCircleShapeGetOffset(c));
-  float radius = cpCircleShapeGetRadius(c);
-  struct rgba color = shape_color(c);
-  float seglen = cpShapeGetSensor(c) ? 5 : -1;
-  //draw_circle(pos, radius, 1, color, seglen);
-  color.a = col_alpha;
-  //draw_circle(pos,radius,radius,color,-1);
-}
-
 void phys2d_shape_apply(struct phys2d_shape *s)
 {
   float moment = cpBodyGetMoment(s->go->body);
@@ -240,10 +229,6 @@ void phys2d_shape_apply(struct phys2d_shape *s)
   moment += newmoi;
   if (moment < 0) moment = 0;
   cpBodySetMoment(s->go->body, moment);
-}
-
-void phys2d_dbgdrawcircle(struct phys2d_circle *circle) {
-  phys2d_dbgdrawcpcirc(circle->shape.shape);
 }
 
 void phys2d_applycircle(struct phys2d_circle *circle) {
@@ -263,7 +248,6 @@ struct phys2d_poly *Make2DPoly(gameobject *go) {
   new->radius = 0.f;
 
   new->shape.shape = cpSpaceAddShape(space, cpPolyShapeNewRaw(go->body, 0, (cpVect*)new->points, new->radius));
-  new->shape.debugdraw = phys2d_dbgdrawpoly;
   new->shape.moi = phys2d_poly_moi;
   new->shape.free = phys2d_poly_free;
   new->shape.apply = phys2d_applypoly;
@@ -321,36 +305,15 @@ void phys2d_applypoly(struct phys2d_poly *poly) {
   if (arrlen(poly->points) <= 0) return;
   assert(sizeof(poly->points[0]) == sizeof(cpVect));
   struct gameobject *go = poly->shape.go;
-  transform2d t = go2t(shape2go(poly->shape.shape));
-  t.pos.cp = cpvzero;
-  t.angle = 0;
-  cpTransform T = m3_to_cpt(transform2d2mat(t));
+  transform t = go2t(shape2go(poly->shape.shape));
+  t.pos.xy = v2zero;
+  t.rotation = QUAT1;
+  cpTransform T = m3_to_cpt(transform2mat(t));
   cpPolyShapeSetVerts(poly->shape.shape, arrlen(poly->points), (cpVect*)poly->points, T);
   cpPolyShapeSetRadius(poly->shape.shape, poly->radius);
   cpSpaceReindexShapesForBody(space, cpShapeGetBody(poly->shape.shape));
 }
 
-void phys2d_dbgdrawpoly(struct phys2d_poly *poly) {
-  struct rgba color = shape_color(poly->shape.shape);
-  struct rgba line_color = color;
-  color.a = col_alpha;
-
-  if (arrlen(poly->points) >= 3) {
-    int n = cpPolyShapeGetCount(poly->shape.shape);
-    HMM_Vec2 points[n+1];
-    transform2d t = go2t(shape2go(poly->shape.shape));
-    t.scale = (HMM_Vec2){1,1};
-    HMM_Mat3 rt = transform2d2mat(t);
-    for (int i = 0; i < n; i++)
-      points[i] = mat_t_pos(rt, (HMM_Vec2)cpPolyShapeGetVert(poly->shape.shape, i));
-
-    points[n] = points[0];
-
-    //draw_poly(points, n, color);
-    float seglen = cpShapeGetSensor(poly->shape.shape) ? sensor_seg : 0;
-    //draw_line(points, n, line_color, seglen, 0);
-  }
-}
 /****************** EDGE 2D**************/
 
 struct phys2d_edge *Make2DEdge(gameobject *go) {
@@ -362,7 +325,6 @@ struct phys2d_edge *Make2DEdge(gameobject *go) {
   arrsetlen(new->shapes, 0);
   new->shape.go = go;
   new->shape.data = new;
-  new->shape.debugdraw = phys2d_dbgdrawedge;
   new->shape.moi = phys2d_edge_moi;  
   new->shape.shape = NULL;
   new->shape.apply = NULL; 
@@ -467,32 +429,6 @@ void phys2d_applyedge(struct phys2d_edge *edge) {
   }
 
   cpSpaceReindexShapesForBody(space, edge->shape.go->body);
-}
-
-void phys2d_dbgdrawedge(struct phys2d_edge *edge) {
-  edge->draws++;
-  if (edge->draws > 1) {
-    if (edge->draws >= arrlen(edge->shapes))
-      edge->draws = 0;
-
-    return;
-  }
-
-  if (arrlen(edge->shapes) < 1) return;
-
-  HMM_Vec2 drawpoints[arrlen(edge->points)];
-  struct gameobject *go = edge->shape.go;
-
-  HMM_Mat3 g2w = t_go2world(go);
-  for (int i = 0; i < arrlen(edge->points); i++) 
-    drawpoints[i] = mat_t_pos(g2w, edge->points[i]);
-
-  float seglen = cpShapeGetSensor(edge->shapes[0]) ? sensor_seg : 0;
-  struct rgba color = shape_color(edge->shapes[0]);
-  struct rgba line_color = color;
-  color.a = col_alpha;
-//  draw_edge(drawpoints, arrlen(edge->points), color, edge->thickness * 2, 0, line_color, seglen);
-  //draw_points(drawpoints, arrlen(edge->points), 2, kinematic_color);
 }
 
 /************ COLLIDER ****************/

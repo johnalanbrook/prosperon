@@ -23,6 +23,8 @@ static HMM_Vec2 lastuse = {0};
 HMM_Vec2 campos = {0,0};
 float camzoom = 1;
 
+viewstate globalview = {0};
+
 sg_sampler std_sampler;
 sg_sampler nofilter_sampler;
 sg_sampler tex_sampler;
@@ -185,11 +187,10 @@ HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};
 HMM_Mat4 useproj = {0};
 
-void openglRender(struct window *window, transform2d *cam, float zoom) {
+void openglRender(struct window *window) {
  HMM_Vec2 usesize = mainwin.rendersize;
  if (mainwin.mode == MODE_FULL)
   usesize = mainwin.size;
- //sg_apply_viewportf(0,0,usesize.x,usesize.y,1);
  if (usesize.x != lastuse.x || usesize.y != lastuse.y) {
   printf("Redoing to %g,%g\n", usesize.x, usesize.y);
   sg_destroy_image(screencolor);
@@ -219,16 +220,6 @@ void openglRender(struct window *window, transform2d *cam, float zoom) {
  }
  lastuse = usesize;
  sg_begin_pass(&offscreen);
-
-  // 2D projection
-  campos = cam->pos;
-  camzoom = zoom;
-
-  projection = HMM_Orthographic_RH_NO(
-             campos.x - camzoom * usesize.x / 2,
-             campos.x + camzoom * usesize.x / 2,
-             campos.y - camzoom * usesize.y / 2,
-             campos.y + camzoom * usesize.y / 2, -10000.f, 10000.f);
 }
 
 struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {

@@ -39,22 +39,24 @@ float variate(float val, float variance)
   return val + val*(frand(variance)-(variance/2));
 }
 
-int emitter_spawn(emitter *e, transform2d *t)
+int emitter_spawn(emitter *e, transform *t)
 {
   if (arrlen(e->particles) == e->max) return 0;
   particle p = {0};
   p.life = e->life;
-  p.pos = (HMM_Vec4){t->pos.x,t->pos.y,0,0};
-  float newan = t->angle + (frand(e->divergence)-(e->divergence/2))*HMM_TurnToRad;
-  HMM_Vec2 norm = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
-  p.v = HMM_MulV4F((HMM_Vec4){norm.x,norm.y,0,0}, variate(e->speed, e->variation));
+  p.pos = (HMM_Vec4){t->pos.x,t->pos.y,t->pos.z,0};
+  HMM_Vec3 up = trans_forward(t);
+  float newan = (frand(e->divergence)-(e->divergence/2))*HMM_TurnToRad;
+  HMM_Vec2 v2n = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
+  HMM_Vec3 norm = (HMM_Vec3){v2n.x, v2n.y,0};
+  p.v = HMM_MulV4F((HMM_Vec4){norm.x,norm.y,norm.z,0}, variate(e->speed, e->variation));
   p.angle = 0.25;
   p.scale = variate(e->scale*t->scale.x, e->scale_var);
   arrput(e->particles,p);
   return 1;
 }
 
-void emitter_emit(emitter *e, int count, transform2d *t)
+void emitter_emit(emitter *e, int count, transform *t)
 {
   for (int i = 0; i < count; i++)
     emitter_spawn(e, t);
@@ -92,7 +94,7 @@ void emitter_draw(emitter *e)
   sg_append_buffer(e->buffer, &verts);
 }
 
-void emitter_step(emitter *e, double dt, transform2d *t) {
+void emitter_step(emitter *e, double dt, transform *t) {
   
   HMM_Vec4 g_accel = HMM_MulV4F((HMM_Vec4){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0, 0}, dt);
   

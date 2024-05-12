@@ -332,7 +332,7 @@ function process()
   else
     prosperon.window_render(game.camera.transform, game.camera.zoom);
     
-  render.set_camera();
+  //render.set_camera();
   
   /*os.sprite_pipe();
   allsprites.forEach(function(x) {
@@ -621,7 +621,7 @@ global.mixin("scripts/entity");
 
 function world_start() {
   globalThis.world = Object.create(entity);
-  world.transform = os.make_transform2d();
+  world.transform = os.make_transform();
   world.objects = {};
   world.toString = function() { return "world"; };
   world.ur = "world";

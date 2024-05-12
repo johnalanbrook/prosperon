@@ -8,6 +8,8 @@
 struct shader;
 struct window;
 
+extern sg_buffer text_ssbo;
+
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
   float Size[2];     // Size of glyph
@@ -26,6 +28,7 @@ struct sFont {
   float emscale;
   struct Character Characters[256];
   sg_image texID;
+  texture *texture;
 };
 
 typedef struct sFont font;
@@ -40,6 +43,6 @@ void text_settype(struct sFont *font);
 struct boundingbox text_bb(const char *text, float scale, float lw, float tracking);
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
 
-void text_flush();
+int text_flush();
 
 #endif

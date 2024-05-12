@@ -38,6 +38,14 @@ extern sg_sampler tex_sampler;
 extern sg_image screencolor;
 extern sg_image screendepth;
 
+typedef struct viewstate {
+  HMM_Mat4 v;
+  HMM_Mat4 p;
+  HMM_Mat4 vp;
+} viewstate;
+
+extern viewstate globalview;
+
 struct draw_p {
   float x;
   float y;
@@ -63,7 +71,7 @@ void render_init();
 extern HMM_Vec2 campos;
 extern float camzoom;
 
-void openglRender(struct window *window, transform2d *cam, float zoom);
+void openglRender(struct window *window);
 void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);

@@ -64,13 +64,13 @@ const char *js2str(JSValue v) {
 
 void sg_buffer_free(sg_buffer *b)
 {
-  sg_dealloc_buffer(*b);
+  sg_destroy_buffer(*b);
+  free(b);
 }
 
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
-QJSCLASS(transform3d)
-QJSCLASS(transform2d)
+QJSCLASS(transform)
 QJSCLASS(emitter)
 QJSCLASS(dsp_node)
 QJSCLASS(texture)
@@ -135,15 +135,11 @@ JSValue strarr2js(char **c)
   return arr;
 }
 
-JSValue js2strarr(JSValue v)
-{
-  
-}
-
 JSValue number2js(double g) { return JS_NewFloat64(js,g); }
 double js2number(JSValue v) {
   double g;
   JS_ToFloat64(js, &g, v);
+  if (isnan(g)) g = 0;
   return g;
 }
 
@@ -348,12 +344,27 @@ JSValue vec32js(HMM_Vec3 v)
   return array;
 }
 
+JSValue quat2js(HMM_Quat q)
+{
+  JSValue arr = JS_NewArray(js);
+  js_setprop_num(arr, 0, number2js(q.x));
+  js_setprop_num(arr,1,number2js(q.y));
+  js_setprop_num(arr,2,number2js(q.z));
+  js_setprop_num(arr,3,number2js(q.w));
+  return arr;
+}
+
 HMM_Vec4 js2vec4(JSValue v)
 {
   HMM_Vec4 v4;
   for (int i = 0; i < 4; i++)
     v4.e[i] = js2number(js_getpropidx(v,i));
   return v4;
+}
+
+HMM_Quat js2quat(JSValue v)
+{
+  return js2vec4(v).quat;
 }
 
 JSValue vec42js(HMM_Vec4 v)
@@ -633,14 +644,16 @@ JSC_GETSET(emitter, die_after_collision, boolean)
 JSC_GETSET(emitter, persist, number)
 JSC_GETSET(emitter, persist_var, number)
 JSC_GETSET(emitter, warp_mask, bitmask)
-JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
-JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform2d(argv[1])))
+JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2transform(argv[1])))
+JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform(argv[1])))
 JSC_CCALL(emitter_draw,
   emitter_draw(js2emitter(this));
   return number2js(arrlen(js2emitter(this)->verts));
 )
 
-JSC_CCALL(render_flushtext, text_flush())
+JSC_CCALL(render_flushtext,
+  return number2js(text_flush());
+)
 
 JSC_CCALL(render_end_pass,
   sg_end_pass();
@@ -688,8 +701,37 @@ JSC_CCALL(render_end_pass,
   sg_end_pass();
   sg_commit();
 )
+
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
-JSC_CCALL(render_set_camera, useproj = projection)
+
+JSC_CCALL(render_set_camera,
+  JSValue cam = argv[0];
+  int ortho = js2boolean(js_getpropstr(cam, "ortho"));
+  int near = js2number(js_getpropstr(cam, "near"));
+  int far = js2number(js_getpropstr(cam, "far"));
+  float fov = js2number(js_getpropstr(cam, "fov"));
+  HMM_Vec4 viewport = js2vec4(js_getpropstr(cam, "viewport"));
+  
+  transform *t = js2transform(js_getpropstr(cam, "transform"));
+  globalview.v = transform2mat(*t);
+  HMM_Vec2 size = mainwin.mode == MODE_FULL ? mainwin.size : mainwin.rendersize;
+  sg_apply_viewportf(viewport.x*size.x, viewport.y*size.y, viewport.z*size.x, viewport.w*size.y,1);
+  
+  if (ortho)
+    globalview.p = HMM_Orthographic_RH_NO(
+      -size.x/2,
+      size.x/2,
+      -size.y/2,
+      size.y/2,
+      near,
+      far
+    );
+  else
+    globalview.p = HMM_Perspective_RH_NO(fov, size.y/size.x, near, far);
+    
+  globalview.vp = HMM_MulM4(globalview.p, globalview.v);
+  projection = globalview.vp;
+)
 
 sg_shader js2shader(JSValue v)
 {
@@ -839,18 +881,18 @@ JSC_CCALL(render_setunim4,
     JSValue arr = argv[2];
     int n = js_arrlen(arr);
     if (n == 1)
-      m = transform2d2mat4(js2transform2d(js_getpropidx(arr,0)));
+      m = transform2mat(*js2transform(js_getpropidx(arr,0)));
     else {
       for (int i = 0; i < n; i++) {
-        HMM_Mat4 p = transform2d2mat4(js2transform2d(js_getpropidx(arr, i)));
+        HMM_Mat4 p = transform2mat(*js2transform(js_getpropidx(arr, i)));
         m = HMM_MulM4(p,m);
       }
     }
   } else
-    m = transform2d2mat4(js2transform2d(argv[2]));
+    m = transform2mat(*js2transform(argv[2]));
     
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(m.e));
-);  
+);
 
 JSC_CCALL(render_spdraw,
   sg_bindings bind = js2bind(argv[0]);
@@ -866,11 +908,16 @@ JSC_CCALL(render_setpipeline,
   sg_apply_pipeline(p);
 )
 
+JSC_CCALL(render_text_ssbo,
+  return sg_buffer2js(&text_ssbo);
+)
+
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flushtext, 0),
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
-  MIST_FUNC_DEF(render, set_camera, 0),
+  MIST_FUNC_DEF(render, text_ssbo, 0),
+  MIST_FUNC_DEF(render, set_camera, 1),
   MIST_FUNC_DEF(render, pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
@@ -882,7 +929,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setpipeline, 1)
 };
 
-JSC_CCALL(gui_flush, text_flush(&useproj));
+JSC_CCALL(gui_flush, text_flush());
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
 JSC_CCALL(gui_text,
   const char *s = JS_ToCString(js, argv[0]);
@@ -1016,7 +1063,7 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 };
 
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
-JSC_CCALL(prosperon_window_render, openglRender(&mainwin, js2transform2d(argv[0]), js2number(argv[1])))
+JSC_CCALL(prosperon_window_render, openglRender(&mainwin))
 JSC_CCALL(prosperon_guid,
   uint8_t bytes[16];
   for (int i = 0; i < 16; i++) bytes[i] = rand()%256;
@@ -1303,7 +1350,7 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
 };
 
 JSC_CCALL(model_draw_go,
-  model_draw_go(js2model(this), js2gameobject(argv[0]), js2gameobject(argv[1]))
+  model_draw_go(js2model(this), js2gameobject(argv[0]))
 );
 
 static const JSCFunctionListEntry js_model_funcs[] = {
@@ -1333,14 +1380,29 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
   MIST_FUNC_DEF(emitter, draw, 1)
 };
 
-JSC_GETSET(transform2d, pos, vec2)
-JSC_GETSET(transform2d, scale, vec2)
-JSC_GETSET(transform2d, angle, number)
+JSC_GETSET(transform, pos, vec3)
+JSC_GETSET(transform, scale, vec3)
+JSC_GETSET(transform, rotation, quat)
+JSC_CCALL(transform_lookat,
+  HMM_Vec3 point = js2vec3(argv[0]);
+  transform *go = js2transform(this);
+  HMM_Mat4 m = HMM_LookAt_RH(go->pos, point, vUP);
+  go->rotation = HMM_M4ToQ_RH(m);
+)
 
-static const JSCFunctionListEntry js_transform2d_funcs[] = {
-  CGETSET_ADD(transform2d, pos),
-  CGETSET_ADD(transform2d, scale),
-  CGETSET_ADD(transform2d, angle)
+JSC_CCALL(transform_rotate,
+  HMM_Vec3 axis = js2vec3(argv[0]);
+  transform *t = js2transform(this);
+  HMM_Quat rot = HMM_QFromAxisAngle_RH(axis, js2number(argv[1]));
+  t->rotation = HMM_MulQ(t->rotation, rot);
+)
+
+static const JSCFunctionListEntry js_transform_funcs[] = {
+  CGETSET_ADD(transform, pos),
+  CGETSET_ADD(transform, scale),
+  CGETSET_ADD(transform, rotation),
+  MIST_FUNC_DEF(transform, rotate, 2),
+  MIST_FUNC_DEF(transform, lookat, 1)
 };
 
 JSC_GETSET(dsp_node, pass, boolean)
@@ -1454,32 +1516,9 @@ JSC_GETSET(gameobject, timescale, number)
 JSC_GETSET(gameobject, maxvelocity, number)
 JSC_GETSET(gameobject, maxangularvelocity, number)
 JSC_GETSET(gameobject, warp_mask, bitmask)
-JSC_GETSET(gameobject, drawlayer, number)
 JSC_GETSET(gameobject, categories, bitmask)
 JSC_GETSET(gameobject, mask, bitmask)
 JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
-JSC_CCALL(gameobject_world2this, return vec22js(world2go(js2gameobject(this), js2vec2(argv[0]))))
-JSC_CCALL(gameobject_this2world, return vec22js(go2world(js2gameobject(this), js2vec2(argv[0]))))
-JSC_CCALL(gameobject_dir_world2this, return vec22js(mat_t_dir(t_world2go(js2gameobject(this)), js2vec2(argv[0]))))
-JSC_CCALL(gameobject_dir_this2world, return vec22js(mat_t_dir(t_go2world(js2gameobject(this)), js2vec2(argv[0]))))
-
-JSC_CCALL(gameobject_rotate3d,
-  HMM_Vec3 rot = js2vec3(argv[0]);
-  HMM_Quat qrot = HMM_QFromAxisAngle_RH((HMM_Vec3){1,0,0}, rot.x);
-  qrot = HMM_MulQ(qrot, HMM_QFromAxisAngle_RH((HMM_Vec3){0,1,0}, rot.y));
-  qrot = HMM_MulQ(qrot, HMM_QFromAxisAngle_RH((HMM_Vec3){0,0,1}, rot.z));
-  gameobject *go = js2gameobject(this);
-  go->quat = HMM_MulQ(go->quat, qrot);
-  return JS_UNDEFINED;
-)
-
-JSC_CCALL(gameobject_lookat,
-  HMM_Vec3 point = js2vec3(argv[0]);
-  gameobject *go = js2gameobject(this);
-  HMM_Vec3 pos = go_pos3d(go);
-  HMM_Mat4 m = HMM_LookAt_RH(pos, point, (HMM_Vec3){0,1,0});
-  go->quat = HMM_M4ToQ_RH(m);
-)
 
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject, friction),
@@ -1491,12 +1530,8 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject,maxangularvelocity),
   CGETSET_ADD(gameobject,layer),
   CGETSET_ADD(gameobject,warp_mask),
-  CGETSET_ADD(gameobject,drawlayer),
   CGETSET_ADD(gameobject, categories),
   CGETSET_ADD(gameobject, mask),
-  CGETSET_ADD_HID(gameobject, rpos),
-  CGETSET_ADD_HID(gameobject, rangle),
-  CGETSET_ADD_HID(gameobject, rscale),  
   CGETSET_ADD(gameobject, velocity),
   CGETSET_ADD(gameobject, angularvelocity),
 //  CGETSET_ADD(gameobject, moi),
@@ -1505,13 +1540,7 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, impulse, 1),
   MIST_FUNC_DEF(gameobject, force, 1),
   MIST_FUNC_DEF(gameobject, force_local, 2),
-  MIST_FUNC_DEF(gameobject, world2this, 1),
-  MIST_FUNC_DEF(gameobject, this2world, 1),
-  MIST_FUNC_DEF(gameobject, dir_world2this, 1),
-  MIST_FUNC_DEF(gameobject, dir_this2world, 1),
   MIST_FUNC_DEF(gameobject, selfsync, 0),
-  MIST_FUNC_DEF(gameobject, rotate3d, 1),
-  MIST_FUNC_DEF(gameobject, lookat, 1)
 };
 
 JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
@@ -1811,20 +1840,13 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
-JSC_CCALL(os_make_font, return font2js(MakeFont(js2str(argv[0]), js2number(argv[1]))))
-
-JSC_CCALL(os_make_transform2d,
-  if (JS_IsUndefined(argv[0]))
-    return transform2d2js(make_transform2d());
-  
-  int n = js2number(argv[0]);
-  transform2d *t = calloc(sizeof(transform2d), n);
-  JSValue arr = JS_NewArray(js);
-  for (int i = 0; i < n; i++)
-    js_setprop_num(arr, i, transform2d2js(t+i));
-  
-  return arr;
+JSC_CCALL(os_make_font,
+  font *f = MakeFont(js2str(argv[0]), js2number(argv[1]));
+  ret = font2js(f);
+  js_setpropstr(ret, "texture", texture2js(f->texture));
 )
+
+JSC_CCALL(os_make_transform, return transform2js(make_transform()))
 
 JSC_SCALL(os_system, return number2js(system(str)); )
 JSC_SCALL(os_make_model, ret = model2js(model_make(str)))
@@ -2011,7 +2033,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_model, 1),
-  MIST_FUNC_DEF(os, make_transform2d, 1),
+  MIST_FUNC_DEF(os, make_transform, 0),
   MIST_FUNC_DEF(os, make_emitter, 0),
   MIST_FUNC_DEF(os, make_buffer, 1),
   MIST_FUNC_DEF(os, make_line_prim, 2),
@@ -2033,12 +2055,11 @@ void ffi_load() {
   globalThis = JS_GetGlobalObject(js);
   
   QJSCLASSPREP(ptr);
-  QJSCLASSPREP(transform3d);
   
   QJSGLOBALCLASS(os);
   
   QJSCLASSPREP_FUNCS(gameobject);
-  QJSCLASSPREP_FUNCS(transform2d);
+  QJSCLASSPREP_FUNCS(transform);
   QJSCLASSPREP_FUNCS(dsp_node);
   QJSCLASSPREP_FUNCS(emitter);
   QJSCLASSPREP_FUNCS(warp_gravity);

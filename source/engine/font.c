@@ -20,26 +20,25 @@
 
 struct sFont *use_font;
 
-static sg_bindings bind_text;
+sg_buffer text_ssbo;
+
 struct text_vert {
-  struct draw_p pos;
-  struct draw_p wh;
-  struct uv_n uv;
-  struct uv_n st;
-  struct rgba color;
+  HMM_Vec2 pos;
+  HMM_Vec2 wh;
+  HMM_Vec2 uv;
+  HMM_Vec2 st;
+  HMM_Vec4 color;
 };
 
 static struct text_vert *text_buffer;
 
 void font_init() {
-  bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-      .size = sizeof(struct text_vert),
-      .type = SG_BUFFERTYPE_VERTEXBUFFER,
-      .usage = SG_USAGE_STREAM,
-      .label = "text buffer"
-    });
-
-  bind_text.fs.samplers[0] = std_sampler;
+  text_ssbo = sg_make_buffer(&(sg_buffer_desc){
+    .size = sizeof(struct text_vert),
+    .type = SG_BUFFERTYPE_STORAGEBUFFER,
+    .usage = SG_USAGE_STREAM,
+    .label = "text buffer"
+  });
 }
 
 void font_free(font *f)
@@ -51,7 +50,6 @@ void font_free(font *f)
 void font_set(font *f)
 {
   use_font = f;
-  bind_text.fs.images[0] = f->texID;  
 }
 
 struct sFont *MakeSDFFont(const char *fontfile, int height)
@@ -114,7 +112,8 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   newfont->emscale = stbtt_ScaleForPixelHeight(&fontinfo, height);
   newfont->linegap = (newfont->ascent - newfont->descent) * newfont->emscale*1.5;
 
-  newfont->texID = sg_make_image(&(sg_image_desc){
+  newfont->texture = malloc(sizeof(texture));
+  newfont->texture->id = sg_make_image(&(sg_image_desc){
     .type = SG_IMAGETYPE_2D,
     .width = packsize,
     .height = packsize,
@@ -125,6 +124,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
       .size = packsize * packsize
     }
   });
+  
+  newfont->texture->width = packsize;
+  newfont->texture->height = packsize;
 
   for (unsigned char c = 32; c < 127; c++) {
     stbtt_packedchar glyph = glyphs[c - 32];
@@ -173,25 +175,26 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
   b.y = cursor.Y + wh.y/2;
 }
 
-void text_flush() {
-  if (arrlen(text_buffer) ==  0) return;
+int text_flush() {
+  if (arrlen(text_buffer) ==  0) return 0;
 
   sg_range verts;
   verts.ptr = text_buffer;
   verts.size = sizeof(struct text_vert) * arrlen(text_buffer);
-  if (sg_query_buffer_will_overflow(bind_text.vertex_buffers[0], verts.size))
-    bind_text.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+  if (sg_query_buffer_will_overflow(text_ssbo, verts.size)) {
+    sg_destroy_buffer(text_ssbo);
+    text_ssbo = sg_make_buffer(&(sg_buffer_desc){
       .size = verts.size,
-      .type = SG_BUFFERTYPE_VERTEXBUFFER,
+      .type = SG_BUFFERTYPE_STORAGEBUFFER,
       .usage = SG_USAGE_STREAM,
       .label = "text buffer"
     });
+  }
     
-  sg_append_buffer(bind_text.vertex_buffers[0], &verts);
-  
-  sg_apply_bindings(&bind_text);
-  sg_draw(0, 4, arrlen(text_buffer));
+  sg_append_buffer(text_ssbo, &verts);
+  int n = arrlen(text_buffer);
   arrsetlen(text_buffer, 0);
+  return n;
 }
 
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
@@ -208,11 +211,11 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;
 
-  vert.uv.u = c.rect.x*USHRT_MAX;
-  vert.uv.v = c.rect.y*USHRT_MAX;
-  vert.st.u = c.rect.w*USHRT_MAX;
-  vert.st.v = c.rect.h*USHRT_MAX;
-  vert.color = color;
+  vert.uv.x = c.rect.x;
+  vert.uv.y = c.rect.y;
+  vert.st.x = c.rect.w;
+  vert.st.y = c.rect.h;
+  rgba2floats(vert.color.e, color);
 
   arrput(text_buffer, vert);
 }

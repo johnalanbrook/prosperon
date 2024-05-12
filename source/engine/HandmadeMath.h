@@ -257,6 +257,10 @@ typedef union HMM_Vec3 {
     float _Ignored4;
   };
 
+  struct {
+    cpVect cp;
+    float _Ignored5;
+  };
 
   struct
   {
@@ -370,6 +374,12 @@ typedef union HMM_Vec4 {
     float _Ignored5;
     HMM_Vec2 ZW;
   };
+  
+  struct
+  {
+    HMM_Vec2 cp;
+    HMM_Vec2 wh;
+  };
 
   HMM_Quat quat;
   struct {float x, y, z, w; };
@@ -422,6 +432,8 @@ extern const HMM_Vec3 vLEFT;
 extern const HMM_Vec3 vRIGHT;
 
 extern const HMM_Mat4 MAT1;
+
+extern const HMM_Quat QUAT1;
 
 /*
  * Angle unit conversion functions
