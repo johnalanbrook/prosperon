@@ -44,15 +44,6 @@ cgltf_attribute *get_attr_type(cgltf_primitive *p, cgltf_attribute_type t)
 
 unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
 
-uint32_t pack_int10_n2(float *norm)
-{
-  uint32_t ret = 0;
-  for (int i = 0; i < 3; i++) {
-    int n = (norm[i]+1.0)*511;
-    ret |= (n & 0x3ff) << (10*i);
-  }
-  return ret;
-}
 
 void mesh_add_material(primitive *prim, cgltf_material *mat)
 {
@@ -122,6 +113,16 @@ sg_buffer index_buffer(float *f, int verts)
     .data = SG_RANGE(idxs),
     .type = SG_BUFFERTYPE_INDEXBUFFER,
   });
+}
+
+uint32_t pack_int10_n2(float *norm)
+{
+  uint32_t ret = 0;
+  for (int i = 0; i < 3; i++) {
+    int n = (norm[i]+1.0)*511;
+    ret |= (n & 0x3ff) << (10*i);
+  }
+  return ret;
 }
 
 sg_buffer normal_floats(float *f, int n)
@@ -540,6 +541,7 @@ int mat2type(int mat)
 {
   switch(mat) {
     case MAT_POS:
+    case MAT_NORM:
       return SG_VERTEXFORMAT_FLOAT3;
     case MAT_PPOS:
     case MAT_WH:
@@ -548,7 +550,6 @@ int mat2type(int mat)
     case MAT_UV:
     case MAT_TAN:
       return SG_VERTEXFORMAT_USHORT2N;
-    case MAT_NORM:
       return SG_VERTEXFORMAT_UINT10_N2;
     case MAT_BONE:
       return SG_VERTEXFORMAT_UBYTE4;

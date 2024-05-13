@@ -227,6 +227,10 @@ sapp_desc sokol_main(int argc, char **argv) {
   signal(SIGFPE, seghandle);
 #endif
 
+  HMM_Quat norot = HMM_QFromAxisAngle_RH((HMM_Vec3){0,1,0}, 0.1);
+  norot = HMM_M4ToQ_RH(HMM_LookAt_RH((HMM_Vec3){0,0,-100}, v3zero, vUP));
+  printf("rot is %g,%g,%g,%g\n", norot.x, norot.y, norot.z, norot.w);
+
   resources_init();
   stm_setup(); /* time */
   script_startup();

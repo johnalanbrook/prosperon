@@ -671,22 +671,22 @@ JSC_CCALL(render_end_pass,
   
   switch(mainwin.mode) {
     case MODE_STRETCH:
-      sg_apply_viewportf(0,0,mainwin.size.x,mainwin.size.y,1);
+      sg_apply_viewportf(0,0,mainwin.size.x,mainwin.size.y,0);
       break;
     case MODE_WIDTH:
-      sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,1); // keep width
+      sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,0); // keep width
       break;
     case MODE_HEIGHT:
-      sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,1); // keep height
+      sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,0); // keep height
       break;
     case MODE_KEEP:
-      sg_apply_viewportf(0,0,mainwin.rendersize.x, mainwin.rendersize.y, 1); // no scaling
+      sg_apply_viewportf(0,0,mainwin.rendersize.x, mainwin.rendersize.y, 0); // no scaling
       break;
     case MODE_EXPAND:
       if (mainwin.aspect < mainwin.raspect)
-        sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,1); // keep width
+        sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,0); // keep width
       else
-        sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,1); // keep height
+        sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,0); // keep height
       break;
   }
   p.id = js2number(argv[0]);
@@ -702,6 +702,8 @@ JSC_CCALL(render_end_pass,
   sg_commit();
 )
 
+JSC_CCALL(render_commit, sg_commit())
+
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 
 JSC_CCALL(render_set_camera,
@@ -715,10 +717,10 @@ JSC_CCALL(render_set_camera,
   transform *t = js2transform(js_getpropstr(cam, "transform"));
   globalview.v = transform2mat(*t);
   HMM_Vec2 size = mainwin.mode == MODE_FULL ? mainwin.size : mainwin.rendersize;
-  sg_apply_viewportf(viewport.x*size.x, viewport.y*size.y, viewport.z*size.x, viewport.w*size.y,1);
+  //sg_apply_viewportf(viewport.x*size.x, viewport.y*size.y, viewport.z*size.x, viewport.w*size.y,0);
   
   if (ortho)
-    globalview.p = HMM_Orthographic_RH_NO(
+    globalview.p = HMM_Orthographic_RH_ZO(
       -size.x/2,
       size.x/2,
       -size.y/2,
@@ -727,10 +729,9 @@ JSC_CCALL(render_set_camera,
       far
     );
   else
-    globalview.p = HMM_Perspective_RH_NO(fov, size.y/size.x, near, far);
+    globalview.p = HMM_Perspective_RH_NO(fov, size.x/size.x, near, far);
     
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
-  projection = globalview.vp;
 )
 
 sg_shader js2shader(JSValue v)
@@ -830,6 +831,7 @@ JSC_CCALL(render_pipeline,
   p.layout = js2layout(argv[0]);
   p.cull_mode = js2number(js_getpropstr(argv[0], "cull"));
   p.primitive_type = js2number(js_getpropstr(argv[0], "primitive"));
+  p.face_winding = SG_FACEWINDING_CCW;
   p.index_type = SG_INDEXTYPE_UINT16;
   if (js2boolean(js_getpropstr(argv[0], "blend")))
     p.colors[0].blend = blend_trans;
@@ -872,7 +874,15 @@ JSC_CCALL(render_setuniv4,
 )
 
 JSC_CCALL(render_setuniproj,
-  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(projection));
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.p));
+)
+
+JSC_CCALL(render_setuniview,
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.v));
+)
+
+JSC_CCALL(render_setunivp,
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.vp));
 )
 
 JSC_CCALL(render_setunim4,
@@ -923,10 +933,13 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setuniv, 2),
   MIST_FUNC_DEF(render, spdraw, 1),
   MIST_FUNC_DEF(render, setuniproj, 2),
+  MIST_FUNC_DEF(render, setuniview, 2),
+  MIST_FUNC_DEF(render, setunivp, 2),
   MIST_FUNC_DEF(render, setunim4, 3),
   MIST_FUNC_DEF(render, setuniv2, 2),
   MIST_FUNC_DEF(render, setuniv4, 2),
-  MIST_FUNC_DEF(render, setpipeline, 1)
+  MIST_FUNC_DEF(render, setpipeline, 1),
+  MIST_FUNC_DEF(render, commit, 0),
 };
 
 JSC_CCALL(gui_flush, text_flush());
@@ -1952,7 +1965,7 @@ JSValue parmesh2js(par_shapes_mesh *m)
   
   if (m->normals) {
     sg_buffer *norm = malloc(sizeof(*norm));
-    *norm = normal_floats(m->normals, 3*m->npoints);
+    *norm = float_buffer(m->normals, 3*m->npoints);
     js_setpropstr(obj, "norm", sg_buffer2js(norm));
   }
   

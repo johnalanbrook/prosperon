@@ -6,6 +6,7 @@ transform *make_transform()
 {
   transform *t = calloc(sizeof(transform),1);
   t->scale = (HMM_Vec3){1,1,1};
+  t->rotation = (HMM_Quat){0,0,0,1};
   return t;
 }
 
