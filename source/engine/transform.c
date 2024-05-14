@@ -47,7 +47,7 @@ HMM_Mat4 transform2mat(transform t) {
 
 HMM_Quat angle2rotation(float angle)
 {
-  return HMM_QFromAxisAngle_RH(vUP, angle);
+  return HMM_QFromAxisAngle_LH(vUP, angle);
 }
 
 float transform2angle(HMM_Vec3 axis)
@@ -63,6 +63,6 @@ transform mat2transform(HMM_Mat4 m)
     t.scale.Elements[i] = HMM_LenV3(m.Columns[i].xyz);
 //  for (int i = 0; i < 2; i++)
 //    m.Columns[i].xyz = HMM_MulV3(m.Columns[i].xyz, t.scale.Elements[i]);
-  t.rotation = HMM_M4ToQ_RH(m);
+  t.rotation = HMM_M4ToQ_LH(m);
   return t;
 }

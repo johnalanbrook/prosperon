@@ -147,6 +147,9 @@ void render_init() {
 #endif
 
   font_init();
+  
+  sg_features feat = sg_query_features();
+  printf("top left? %d\n", feat.origin_top_left);
 
   sg_color c = (sg_color){0,0,0,1};
   pass_action = (sg_pass_action){
@@ -155,7 +158,12 @@ void render_init() {
   
   sg_color oc = (sg_color){35.0/255,60.0/255,92.0/255,1};
   off_action = (sg_pass_action){
-    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = oc}
+    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = oc},
+    .depth = {
+      .load_action = SG_LOADACTION_CLEAR,
+      .clear_value = 1
+      //.store_action = SG_STOREACTION_STORE
+    }
   };
   
   screencolor = sg_make_image(&(sg_image_desc){
@@ -176,11 +184,10 @@ void render_init() {
   offscreen = (sg_pass){
     .attachments = sg_make_attachments(&(sg_attachments_desc){
       .colors[0].image = screencolor,
-      .depth_stencil.image = screendepth
+      .depth_stencil.image = screendepth,
     }),
     .action = off_action,
   };
-    
 }
 
 HMM_Mat4 projection = {0.f};
@@ -219,6 +226,7 @@ void openglRender(struct window *window) {
   };
  }
  lastuse = usesize;
+ 
  sg_begin_pass(&offscreen);
 }
 

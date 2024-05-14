@@ -4,9 +4,11 @@
 #include "HandmadeMath.h"
 
 typedef struct transform {
-    HMM_Vec3 pos;
-    HMM_Vec3 scale;
-    HMM_Quat rotation;
+  HMM_Vec3 pos;
+  HMM_Vec3 scale;
+  HMM_Quat rotation;
+  HMM_Mat4 cache;
+  int dirty;
 } transform;
 
 transform *make_transform();

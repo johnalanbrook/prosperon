@@ -615,6 +615,8 @@ HMM_Mat4 HMM_Perspective_RH_NO(float FOV, float AspectRatio, float Near, float F
 HMM_Mat4 HMM_Perspective_RH_ZO(float FOV, float AspectRatio, float Near, float Far);
 HMM_Mat4 HMM_Perspective_LH_NO(float FOV, float AspectRatio, float Near, float Far);
 HMM_Mat4 HMM_Perspective_LH_ZO(float FOV, float AspectRatio, float Near, float Far);
+
+HMM_Mat4 HMM_Perspective_Metal(float FOV, float AspectRation, float Near, float Far);
 HMM_Mat4 HMM_InvPerspective_RH(HMM_Mat4 PerspectiveMatrix);
 HMM_Mat4 HMM_InvPerspective_LH(HMM_Mat4 PerspectiveMatrix);
 HMM_Mat4 HMM_Translate(HMM_Vec3 Translation);

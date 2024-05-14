@@ -43,7 +43,7 @@ typedef struct primitive {
   sg_buffer bone;
   sg_buffer weight;
   sg_buffer color;
-  sg_buffer idx;
+  sg_buffer index;
   material *mat;
   uint32_t idx_count;
 } primitive;

@@ -44,6 +44,8 @@ static JSValue globalThis;
 static JSClassID js_ptr_id;
 static JSClassDef js_ptr_class = { "POINTER" };
 
+static JSValue JSUNDEF;
+
 JSValue str2js(const char *c, ...) {
   if (!c) return JS_UNDEFINED;
   char *result = NULL;
@@ -81,7 +83,6 @@ QJSCLASS(material)
 QJSCLASS(model)
 QJSCLASS(window)
 QJSCLASS(constraint)
-QJSCLASS(primitive)
 QJSCLASS(sg_buffer)
 QJSCLASS(datastream)
 
@@ -666,7 +667,7 @@ JSC_CCALL(render_end_pass,
         .clear_value = (sg_color){0,0,0,1}
       }
     }
-    });
+  });
   sg_pipeline p = {0};
   
   switch(mainwin.mode) {
@@ -709,18 +710,16 @@ JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2numb
 JSC_CCALL(render_set_camera,
   JSValue cam = argv[0];
   int ortho = js2boolean(js_getpropstr(cam, "ortho"));
-  int near = js2number(js_getpropstr(cam, "near"));
-  int far = js2number(js_getpropstr(cam, "far"));
-  float fov = js2number(js_getpropstr(cam, "fov"));
-  HMM_Vec4 viewport = js2vec4(js_getpropstr(cam, "viewport"));
+  float near = js2number(js_getpropstr(cam, "near"));
+  float far = js2number(js_getpropstr(cam, "far"));
+  float fov = js2number(js_getpropstr(cam, "fov"))*HMM_DegToRad;
   
   transform *t = js2transform(js_getpropstr(cam, "transform"));
   globalview.v = transform2mat(*t);
   HMM_Vec2 size = mainwin.mode == MODE_FULL ? mainwin.size : mainwin.rendersize;
-  //sg_apply_viewportf(viewport.x*size.x, viewport.y*size.y, viewport.z*size.x, viewport.w*size.y,0);
   
   if (ortho)
-    globalview.p = HMM_Orthographic_RH_ZO(
+    globalview.p = HMM_Orthographic_LH_ZO(
       -size.x/2,
       size.x/2,
       -size.y/2,
@@ -729,7 +728,7 @@ JSC_CCALL(render_set_camera,
       far
     );
   else
-    globalview.p = HMM_Perspective_RH_NO(fov, size.x/size.x, near, far);
+    globalview.p = HMM_Perspective_Metal(fov, size.x/size.y, near, far);
     
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
@@ -831,13 +830,17 @@ JSC_CCALL(render_pipeline,
   p.layout = js2layout(argv[0]);
   p.cull_mode = js2number(js_getpropstr(argv[0], "cull"));
   p.primitive_type = js2number(js_getpropstr(argv[0], "primitive"));
-  p.face_winding = SG_FACEWINDING_CCW;
+  //p.face_winding = js2number(js_getpropstr(argv[0], "face"));
+  p.face_winding = 1;
   p.index_type = SG_INDEXTYPE_UINT16;
   if (js2boolean(js_getpropstr(argv[0], "blend")))
     p.colors[0].blend = blend_trans;
     
-  //p.depth.write_enabled = true;
-  //p.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
+  int depth = js2boolean(js_getpropstr(argv[0], "depth"));
+  if (depth) {
+    p.depth.write_enabled = true;
+    p.depth.compare = SG_COMPAREFUNC_LESS;
+  }
   
   sg_pipeline pipe = sg_make_pipeline(&p);
 
@@ -924,7 +927,7 @@ JSC_CCALL(render_text_ssbo,
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flushtext, 0),
-  MIST_FUNC_DEF(render, end_pass, 0),
+  MIST_FUNC_DEF(render, end_pass, 2),
   MIST_FUNC_DEF(render, text_size, 3),
   MIST_FUNC_DEF(render, text_ssbo, 0),
   MIST_FUNC_DEF(render, set_camera, 1),
@@ -1399,15 +1402,15 @@ JSC_GETSET(transform, rotation, quat)
 JSC_CCALL(transform_lookat,
   HMM_Vec3 point = js2vec3(argv[0]);
   transform *go = js2transform(this);
-  HMM_Mat4 m = HMM_LookAt_RH(go->pos, point, vUP);
-  go->rotation = HMM_M4ToQ_RH(m);
+  HMM_Mat4 m = HMM_LookAt_LH(go->pos, point, vUP);
+  go->rotation = HMM_M4ToQ_LH(m);
 )
 
 JSC_CCALL(transform_rotate,
   HMM_Vec3 axis = js2vec3(argv[0]);
   transform *t = js2transform(this);
-  HMM_Quat rot = HMM_QFromAxisAngle_RH(axis, js2number(argv[1]));
-  t->rotation = HMM_MulQ(t->rotation, rot);
+  HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2number(argv[1]));
+  t->rotation = HMM_MulQ(rot, t->rotation);
 )
 
 static const JSCFunctionListEntry js_transform_funcs[] = {
@@ -1862,7 +1865,34 @@ JSC_CCALL(os_make_font,
 JSC_CCALL(os_make_transform, return transform2js(make_transform()))
 
 JSC_SCALL(os_system, return number2js(system(str)); )
-JSC_SCALL(os_make_model, ret = model2js(model_make(str)))
+
+#define PRIMCHECK(VAR, JS, VAL) \
+if (VAR->VAL.id) js_setpropstr(JS, #VAL, sg_buffer2js(&VAR->VAL)); \
+
+JSValue primitive2js(primitive *p)
+{
+  JSValue v = JS_NewObject(js);
+  PRIMCHECK(p, v, pos)
+  PRIMCHECK(p,v,norm)
+  PRIMCHECK(p,v,uv)
+  PRIMCHECK(p,v,bone)
+  PRIMCHECK(p,v,weight)
+  PRIMCHECK(p,v,color)
+  PRIMCHECK(p,v,index)
+  js_setpropstr(v, "count", number2js(p->idx_count));
+  
+  printf("new primitive with count %d\n", p->idx_count);
+  
+  return v;
+}
+
+JSC_SCALL(os_make_model,
+  model *m = model_make(str);
+  if (arrlen(m->meshes) != 1) return JSUNDEF;
+  mesh *me = m->meshes+0;
+  
+  return primitive2js(me->primitives+0);
+)
 JSC_CCALL(os_make_emitter,
   emitter *e = make_emitter();
   ret = emitter2js(e);
@@ -1965,7 +1995,7 @@ JSValue parmesh2js(par_shapes_mesh *m)
   
   if (m->normals) {
     sg_buffer *norm = malloc(sizeof(*norm));
-    *norm = float_buffer(m->normals, 3*m->npoints);
+    *norm = normal_floats(m->normals, 3*m->npoints);
     js_setpropstr(obj, "norm", sg_buffer2js(norm));
   }
   
@@ -2065,6 +2095,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
 #include "steam.h"
 
 void ffi_load() {
+  JSUNDEF = JS_UNDEFINED;
   globalThis = JS_GetGlobalObject(js);
   
   QJSCLASSPREP(ptr);

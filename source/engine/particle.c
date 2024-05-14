@@ -95,7 +95,6 @@ void emitter_draw(emitter *e)
 }
 
 void emitter_step(emitter *e, double dt, transform *t) {
-  
   HMM_Vec4 g_accel = HMM_MulV4F((HMM_Vec4){cpSpaceGetGravity(space).x, cpSpaceGetGravity(space).y, 0, 0}, dt);
   
   for (int i = 0; i < arrlen(e->particles); i++) {

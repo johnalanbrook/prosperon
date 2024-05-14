@@ -1229,6 +1229,18 @@ HMM_Mat4 HMM_InvOrthographic(HMM_Mat4 OrthoMatrix) {
   return Result;
 }
 
+HMM_Mat4 HMM_Perspective_Metal(float FOV, float AspectRatio, float Near, float Far)
+{
+  HMM_Mat4 adjust = {0};
+  adjust.e[0][0] = 1;
+  adjust.e[1][1] = 1;
+  adjust.e[2][2] = 0.5;
+  adjust.e[3][2] = 0.5;
+  adjust.e[3][3] = 1;
+  HMM_Mat4 opengl = HMM_Perspective_LH_NO(FOV, AspectRatio, Near, Far);
+  return HMM_MulM4(opengl,adjust);
+}
+
 HMM_Mat4 HMM_Perspective_RH_NO(float FOV, float AspectRatio, float Near, float Far) {
 
   HMM_Mat4 Result = {0};

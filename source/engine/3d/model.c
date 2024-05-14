@@ -127,6 +127,7 @@ uint32_t pack_int10_n2(float *norm)
 
 sg_buffer normal_floats(float *f, int n)
 {
+  return float_buffer(f, n);
   uint32_t packed_norms[n/3];
   for (int v = 0, i = 0; v < n/3; v++, i+= 3)
     packed_norms[v] = pack_int10_n2(f+i);
@@ -180,13 +181,14 @@ HMM_Vec3 index_to_vert(uint32_t idx, float *f)
 
 void primitive_gen_indices(primitive *prim)
 {
-  if (prim->idx_count == 0) return;
+  if (prim->idx_count != 0) return;
+  
   uint16_t *idxs = malloc(sizeof(*idxs)*prim->idx_count);
   
   for (int z = 0; z < prim->idx_count; z++)
     idxs[z] = z;
   
-  prim->idx = sg_make_buffer(&(sg_buffer_desc){
+  prim->index = sg_make_buffer(&(sg_buffer_desc){
     .data.ptr = idxs,
     .data.size = sizeof(uint16_t) * prim->idx_count,
     .type = SG_BUFFERTYPE_INDEXBUFFER});
@@ -207,7 +209,7 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
     for (int i = 0; i < n; i++)
       idxs[i] = fidx[i];
 
-    retp.idx = sg_make_buffer(&(sg_buffer_desc){
+    retp.index = sg_make_buffer(&(sg_buffer_desc){
       .data.ptr = idxs,
       .data.size = sizeof(*idxs) * n,
       .type = SG_BUFFERTYPE_INDEXBUFFER,
@@ -498,7 +500,7 @@ sg_bindings primitive_bind(primitive *p)
   b.vertex_buffers[MAT_BONE] = p->bone;
   b.vertex_buffers[MAT_WEIGHT] = p->weight;
   b.vertex_buffers[MAT_COLOR] = p->color;
-  b.index_buffer = p->idx;
+  b.index_buffer = p->index;
   b.fs.images[0] = p->mat->diffuse->id;
   b.fs.samplers[0] = tex_sampler;
   return b;
@@ -606,7 +608,7 @@ sg_bindings primitive_bindings(primitive *p, JSValue v)
     b.vertex_buffers[slot] = buf;
   }
   
-  b.index_buffer = p->idx;
+  b.index_buffer = p->index;
   
   return b;
 }
