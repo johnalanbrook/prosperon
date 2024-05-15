@@ -15,6 +15,10 @@
 
 #include "script.h"
 
+#ifdef __WIN32
+#include "debugapi.h"
+#endif
+
 #define ESC "\033["
 #define BLACK 30
 #define RED 31

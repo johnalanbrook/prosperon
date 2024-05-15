@@ -152,6 +152,8 @@ var shaderlang = {
  ios: "metal_ios",
 }
 
+say(`shaderlang is ${shaderlang[os.sys()]}`);
+
 var attr_map = {
   a_pos: 0,
   a_uv: 1,  
@@ -296,7 +298,7 @@ render.make_shader = function(shader)
 
   io.slurpwrite(out, shader);
   var backend = shaderlang[os.sys()];
-  var ret = os.system(`sokol-shdc -b -f bare_yaml --slang=${backend} -i ${out} -o ${out}`);
+  var ret = os.system(`sokol-shdc -f bare_yaml --slang=${backend} -i ${out} -o ${out}`);
   if (ret) {
     console.info(`error compiling shader`);
     return;

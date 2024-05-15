@@ -64,6 +64,13 @@ const char *js2str(JSValue v) {
   return JS_ToCString(js, v);
 }
 
+char *js2strdup(JSValue v) {
+  char *str = JS_ToCString(js, v);
+  char *ret = strdup(str);
+  JS_FreeCString(js, str);
+  return ret;
+}
+
 void sg_buffer_free(sg_buffer *b)
 {
   sg_destroy_buffer(*b);
@@ -747,6 +754,15 @@ sg_shader js2shader(JSValue v)
   char *fsmain = js2str(js_getpropstr(fs, "entry_point"));
   desc.vs.entry = vsmain;
   desc.fs.entry = fsmain;
+  desc.vs.d3d11_target = "vs_4_0";
+  desc.fs.d3d11_target = "ps_4_0";
+  JSValue attrs = js_getpropstr(vs, "inputs");
+  int atin = js_arrlen(attrs);
+  for (int i = 0; i < atin; i++) {
+    JSValue u = js_getpropidx(attrs, i);
+    desc.attrs[i].sem_name = js2strdup(js_getpropstr(u,"sem_name"));
+    desc.attrs[i].sem_index = js2number(js_getpropstr(u, "sem_index"));
+  }
   JSValue vsu = js_getpropstr(vs, "uniform_blocks");
   int unin = js_arrlen(vsu);
   for (int i = 0; i < unin; i++) {

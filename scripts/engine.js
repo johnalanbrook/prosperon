@@ -129,7 +129,7 @@ qq = 'ms';
 
 profile.report = function(start, msg = "[undefined report]")
 {
-  console.info(`${msg} in ${profile.best_t(profile.now()-start)}`);
+  say(`${msg} in ${profile.best_t(profile.now()-start)}`);
 }
 
 profile.addreport = function(cache, line, start)

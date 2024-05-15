@@ -1,4 +1,3 @@
-
 var inputpanel = {
   title: "untitled",
   toString() { return this.title; },  
