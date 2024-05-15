@@ -110,6 +110,7 @@ var sprite = {
       if (!self.gameobject) return;
       //self.path = playing.path;
       self.frame = playing.frames[f].rect;
+      self.rect = [self.frame.x, self.frame.y, self.frame.w, self.frame.h];
       f = (f+1)%playing.frames.length;
       if (f === 0) {
         self.anim_done?.();
@@ -133,6 +134,8 @@ var sprite = {
     this._p = p;    
     this.del_anim?.();
     this.texture = game.texture(p);
+    this.diffuse = this.texture;    
+    this.rect = [0,0,1,1];
     
     var anim = SpriteAnim.make(p);
     if (!anim) return;
@@ -140,6 +143,7 @@ var sprite = {
     this.play();
     
     this.pos = this.dimensions().scale(this.anchor);
+
   },
   get path() {
     return this._p;
@@ -179,6 +183,7 @@ var sprite = {
 globalThis.allsprites = {};
 sprite.make = function(go)
 {
+  var sp = Object.create(sprite);
   sp.go = go;
   sp.gameobject = go;
   sp.guid = prosperon.guid();

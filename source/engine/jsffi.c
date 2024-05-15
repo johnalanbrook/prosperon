@@ -79,8 +79,6 @@ QJSCLASS(texture)
 QJSCLASS(font)
 QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
-QJSCLASS(material)
-QJSCLASS(model)
 QJSCLASS(window)
 QJSCLASS(constraint)
 QJSCLASS(sg_buffer)
@@ -1367,14 +1365,6 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, make_gravity, 0),
 };
 
-JSC_CCALL(model_draw_go,
-  model_draw_go(js2model(this), js2gameobject(argv[0]))
-);
-
-static const JSCFunctionListEntry js_model_funcs[] = {
-  MIST_FUNC_DEF(model, draw_go, 1)
-};
-
 static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, life),
   CGETSET_ADD(emitter, life_var),
@@ -1891,8 +1881,15 @@ JSValue primitive2js(primitive *p)
   PRIMCHECK(p,v,index)
   js_setpropstr(v, "count", number2js(p->idx_count));
   
-  printf("new primitive with count %d\n", p->idx_count);
-  
+  return v;
+}
+
+JSValue material2js(material *m)
+{
+  JSValue v = JS_NewObject(js);
+  if (m->diffuse)
+    js_setpropstr(v, "diffuse", texture2js(m->diffuse));
+    
   return v;
 }
 
@@ -1901,7 +1898,10 @@ JSC_SCALL(os_make_model,
   if (arrlen(m->meshes) != 1) return JSUNDEF;
   mesh *me = m->meshes+0;
   
-  return primitive2js(me->primitives+0);
+  JSValue v = JS_NewObject(js);
+  js_setpropstr(v, "mesh", primitive2js(me->primitives+0));
+  js_setpropstr(v, "material", material2js(me->primitives[0].mat));
+  return v;
 )
 JSC_CCALL(os_make_emitter,
   emitter *e = make_emitter();
@@ -2122,7 +2122,6 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(constraint);
   QJSCLASSPREP_FUNCS(window);
-  QJSCLASSPREP_FUNCS(model);
   QJSCLASSPREP_FUNCS(datastream);
 
   QJSGLOBALCLASS(nota);

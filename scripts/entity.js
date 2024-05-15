@@ -44,6 +44,8 @@ var entity = {
     return p;
   },
   
+  drawlayer: 0,
+  
   full_path() { return this.path_from(world); },
   
   clear() {

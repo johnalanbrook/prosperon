@@ -296,6 +296,31 @@ game.engine_start = function(s) {
     Object.readonly(window.__proto__, 'high_dpi');
     Object.readonly(window.__proto__, 'sample_count');
     s();
+    
+    shape.quad = {
+      pos:os.make_buffer([
+        0,0,0,
+        1,0,0,
+        0,1,0,
+        1,1,0
+      ],0),
+      verts: 4,
+      uv: os.make_buffer([0,1,1,1,0,0,1,0],2),
+      index: os.make_buffer([0,1,2,2,1,3], 1),
+      count: 6
+    };
+    
+    shape.triangle = {
+      pos: os.make_buffer([
+        0,0,0,
+        0.5,1,0,
+        1,0,0]
+      ,0),
+      uv: os.make_buffer([0,0,0.5,1,1,0],2),
+      verts: 3,
+      count: 3,
+      index: os.make_buffer([0,2,1],1),
+    };
   }, process);  
 }
 
@@ -327,30 +352,11 @@ function process()
     }
   }
   var st = profile.now();
-  if (!game.camera)  
-    prosperon.window_render(world.transform, 1);
-  else
-    prosperon.window_render(game.camera.transform, game.camera.zoom);
-    
-  //render.set_camera();
-  
-  /*os.sprite_pipe();
-  allsprites.forEach(function(x) {
-    render.set_sprite_tex(x.texture);    
-    x.draw(x.go);
-    render.sprite_flush();                
-  });
-  render.sprite_flush();*/
-  prosperon.draw(); // draw calls
-  debug.draw(); // calls needed debugs
-  
-  prosperon.hook3d?.();
-  
+  prosperon.window_render();
+  prosperon.draw();
   prosperon.gui();
   prosperon.screengui();
-  
   prosperon.hookend?.();
-  //render.end_pass();
   profile.addreport(profcache, "render frame", st);
   frames.push(profile.secs(profile.now()-startframe));
   if (frames.length > 20) frames.shift();
