@@ -715,11 +715,13 @@ JSC_CCALL(render_set_camera,
   float fov = js2number(js_getpropstr(cam, "fov"))*HMM_DegToRad;
   
   transform *t = js2transform(js_getpropstr(cam, "transform"));
-  globalview.v = transform2mat(*t);
+  //globalview.v = transform2mat(*t);
+  HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
+  globalview.v = HMM_LookAt_LH(t->pos, look, vUP);
   HMM_Vec2 size = mainwin.mode == MODE_FULL ? mainwin.size : mainwin.rendersize;
   
   if (ortho)
-    globalview.p = HMM_Orthographic_LH_ZO(
+    globalview.p = HMM_Orthographic_Metal(
       -size.x/2,
       size.x/2,
       -size.y/2,
@@ -1399,6 +1401,7 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
 JSC_GETSET(transform, pos, vec3)
 JSC_GETSET(transform, scale, vec3)
 JSC_GETSET(transform, rotation, quat)
+JSC_CCALL(transform_move, transform_move(js2transform(this), js2vec3(argv[0])); )
 JSC_CCALL(transform_lookat,
   HMM_Vec3 point = js2vec3(argv[0]);
   transform *go = js2transform(this);
@@ -1410,15 +1413,22 @@ JSC_CCALL(transform_rotate,
   HMM_Vec3 axis = js2vec3(argv[0]);
   transform *t = js2transform(this);
   HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2number(argv[1]));
-  t->rotation = HMM_MulQ(rot, t->rotation);
+  t->rotation = HMM_MulQ(t->rotation,rot);
+)
+
+JSC_CCALL(transform_direction,
+  transform *t = js2transform(this);
+  return vec32js(HMM_QVRot(js2vec3(argv[0]), t->rotation));
 )
 
 static const JSCFunctionListEntry js_transform_funcs[] = {
   CGETSET_ADD(transform, pos),
   CGETSET_ADD(transform, scale),
   CGETSET_ADD(transform, rotation),
+  MIST_FUNC_DEF(transform, move, 1),
   MIST_FUNC_DEF(transform, rotate, 2),
-  MIST_FUNC_DEF(transform, lookat, 1)
+  MIST_FUNC_DEF(transform, lookat, 1),
+  MIST_FUNC_DEF(transform, direction, 1)
 };
 
 JSC_GETSET(dsp_node, pass, boolean)

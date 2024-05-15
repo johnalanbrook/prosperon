@@ -17,12 +17,8 @@ void transform_free(transform *t);
 #define VEC2_FMT "[%g,%g]"
 #define VEC2_MEMS(s) (s).x, (s).y
 
-HMM_Vec3 trans_forward(const transform *const trans);
-HMM_Vec3 trans_back(const transform *trans);
-HMM_Vec3 trans_up(const transform *trans);
-HMM_Vec3 trans_down(const transform *trans);
-HMM_Vec3 trans_right(const transform *trans);
-HMM_Vec3 trans_left(const transform *trans);
+void transform_move(transform *t, HMM_Vec3 v);
+HMM_Vec3 transform_direction(transform *t, HMM_Vec3 dir);
 
 /* Transform a position via the matrix */
 HMM_Vec2 mat_t_pos(HMM_Mat3 m, HMM_Vec2 pos);

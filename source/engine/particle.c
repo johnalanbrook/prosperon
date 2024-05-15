@@ -45,7 +45,7 @@ int emitter_spawn(emitter *e, transform *t)
   particle p = {0};
   p.life = e->life;
   p.pos = (HMM_Vec4){t->pos.x,t->pos.y,t->pos.z,0};
-  HMM_Vec3 up = trans_forward(t);
+  HMM_Vec3 up = transform_direction(t, vFWD);
   float newan = (frand(e->divergence)-(e->divergence/2))*HMM_TurnToRad;
   HMM_Vec2 v2n = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
   HMM_Vec3 norm = (HMM_Vec3){v2n.x, v2n.y,0};

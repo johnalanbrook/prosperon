@@ -12,6 +12,16 @@ transform *make_transform()
 
 void transform_free(transform *t) { free(t); }
 
+void transform_move(transform *t, HMM_Vec3 v)
+{
+  t->pos = HMM_AddV3(t->pos, v);
+}
+
+HMM_Vec3 transform_direction(transform *t, HMM_Vec3 dir)
+{
+  return HMM_QVRot(dir, t->rotation);
+}
+
 HMM_Vec3 trans_forward(const transform *const trans) { return HMM_QVRot(vFWD, trans->rotation); }
 HMM_Vec3 trans_back(const transform *trans) { return HMM_QVRot(vBKWD, trans->rotation); }
 HMM_Vec3 trans_up(const transform *trans) { return HMM_QVRot(vUP, trans->rotation); }
