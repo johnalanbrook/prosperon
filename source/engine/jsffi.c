@@ -73,6 +73,7 @@ char *js2strdup(JSValue v) {
 
 void sg_buffer_free(sg_buffer *b)
 {
+  printf("DESTROYED BUFFER AT %p\n", b);
   sg_destroy_buffer(*b);
   free(b);
 }
@@ -715,6 +716,7 @@ JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2numb
 JSC_CCALL(render_set_camera,
   JSValue cam = argv[0];
   int ortho = js2boolean(js_getpropstr(cam, "ortho"));
+  int app = js2boolean(js_getpropstr(cam, "app"));
   float near = js2number(js_getpropstr(cam, "near"));
   float far = js2number(js_getpropstr(cam, "far"));
   float fov = js2number(js_getpropstr(cam, "fov"))*HMM_DegToRad;
@@ -724,6 +726,9 @@ JSC_CCALL(render_set_camera,
   HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
   globalview.v = HMM_LookAt_LH(t->pos, look, vUP);
   HMM_Vec2 size = mainwin.mode == MODE_FULL ? mainwin.size : mainwin.rendersize;
+  
+  if (ortho && app)
+    size = mainwin.size;
   
   if (ortho)
     globalview.p = HMM_Orthographic_Metal(
@@ -760,6 +765,7 @@ sg_shader js2shader(JSValue v)
   int atin = js_arrlen(attrs);
   for (int i = 0; i < atin; i++) {
     JSValue u = js_getpropidx(attrs, i);
+    desc.attrs[i].name = js2strdup(js_getpropstr(u, "name"));
     desc.attrs[i].sem_name = js2strdup(js_getpropstr(u,"sem_name"));
     desc.attrs[i].sem_index = js2number(js_getpropstr(u, "sem_index"));
   }
@@ -848,7 +854,8 @@ JSC_CCALL(render_pipeline,
   p.primitive_type = js2number(js_getpropstr(argv[0], "primitive"));
   //p.face_winding = js2number(js_getpropstr(argv[0], "face"));
   p.face_winding = 1;
-  p.index_type = SG_INDEXTYPE_UINT16;
+  if (js2boolean(js_getpropstr(argv[0], "indexed")))
+    p.index_type = SG_INDEXTYPE_UINT16;
   if (js2boolean(js_getpropstr(argv[0], "blend")))
     p.colors[0].blend = blend_trans;
     
@@ -961,7 +968,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, commit, 0),
 };
 
-JSC_CCALL(gui_flush, text_flush());
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
 JSC_CCALL(gui_text,
   const char *s = JS_ToCString(js, argv[0]);
@@ -979,7 +985,6 @@ JSC_CCALL(gui_text,
 JSC_CCALL(gui_font_set, font_set(js2font(argv[0])))
 
 static const JSCFunctionListEntry js_gui_funcs[] = {
-  MIST_FUNC_DEF(gui, flush, 0),
   MIST_FUNC_DEF(gui, scissor, 4),
   MIST_FUNC_DEF(gui, text, 6),
   MIST_FUNC_DEF(gui, font_set,1)

@@ -1605,7 +1605,7 @@ yaml.tojson = function(yaml)
   yaml = yaml.replace(/\s/g, '');
   yaml = yaml.replace(/,}/g, '}');
   yaml = yaml.replace(/,]/g, ']');
-  yaml = yaml.replace(/,"[^"]+"\:,/, ',');
+  yaml = yaml.replace(/,"[^"]+"\:,/g, ',');
   return yaml; 
 }
 

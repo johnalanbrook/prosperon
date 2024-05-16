@@ -4,145 +4,6 @@ render.doc = {
   wireframe: "Show only wireframes of models."
 };
 
-render.device = {
-  pc: [1920,1080],
-  macbook_m2: [2560,1664, 13.6],
-  ds_top: [400,240, 3.53],
-  ds_bottom: [320,240, 3.02],
-  playdate: [400,240,2.7],
-  switch: [1280,720, 6.2],
-  switch_lite: [1280,720,5.5],
-  switch_oled: [1280,720,7],
-  dsi: [256,192,3.268],
-  ds: [256,192, 3],
-  dsixl: [256,192,4.2],
-  ipad_air_m2: [2360,1640, 11.97],
-  iphone_se: [1334, 750, 4.7],
-  iphone_12_pro: [2532,1170,6.06],
-  iphone_15: [2556,1179,6.1],
-  gba: [240,160,2.9],
-  gameboy: [160,144,2.48],
-  gbc: [160,144,2.28],
-  steamdeck: [1280,800,7],
-  vita: [960,544,5],
-  psp: [480,272,4.3],
-  imac_m3: [4480,2520,23.5],
-  macbook_pro_m3: [3024,1964, 14.2],
-  ps1: [320,240,5],
-  ps2: [640,480],
-  snes: [256,224],
-  gamecube: [640,480],
-  n64: [320,240],
-  c64: [320,200],
-  macintosh: [512,342,9],
-  gamegear: [160,144,3.2],
-};
-
-render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
-
-/* All draw in screen space */
-render.point =  function(pos,size,color = Color.blue) {
-    render.circle(pos,size,size,color);
-};
-  
-var tmpline = render.line;
-render.line = function(points, color = Color.white, thickness = 1) {
-  tmpline(points,color,thickness);
-};
-
-render.cross = function(pos, size, color = Color.red) {
-    var a = [
-      pos.add([0,size]),
-      pos.add([0,-size])
-    ];
-    var b = [
-      pos.add([size,0]),
-      pos.add([-size,0])
-    ];
-    
-    render.line(a,color);
-    render.line(b,color);
-  };
-  
-render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
-  var dir = end.sub(start).normalized();
-  var wing1 = [
-    Vector.rotate(dir, wingangle).scale(wingspan).add(end),
-    end
-  ];
-  var wing2 = [
-    Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
-    end
-  ];
-  render.line([start,end],color);
-  render.line(wing1,color);
-  render.line(wing2,color);
-};
-
-render.coordinate = function(pos, size, color) {
-  render.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
-  render.point(pos, 2, color);
-}
-
-render.boundingbox = function(bb, color = Color.white) {
-  render.poly(bbox.topoints(bb), color);
-}
-
-render.rectangle = function(lowerleft, upperright, color) {
-  var points = [lowerleft, lowerleft.add([upperright.x-lowerleft.x,0]), upperright, lowerleft.add([0,upperright.y-lowerleft.y])];
-  render.poly(points, color);
-};
-  
-render.box = function(pos, wh, color = Color.white) {
-  var lower = pos.sub(wh.scale(0.5));
-  var upper = pos.add(wh.scale(0.5));
-  render.rectangle(lower,upper,color);
-};
-
-render.window = function(pos, wh, color) {
-  var p = pos.slice();
-  p = p.add(wh.scale(0.5));
-  render.box(p,wh,color);
-};
-
-render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
-  var bb = render.text_size(str, size, wrap);
-  var w = bb.r*2;
-  var h = bb.t*2;
-  
-  //render.text draws with an anchor on top left corner
-  var p = pos.slice();
-  p.x -= w * anchor.x;
-  bb.r += (w*anchor.x);
-  bb.l += (w*anchor.x);
-  p.y += h * (1 - anchor.y);
-  bb.t += h*(1-anchor.y);
-  bb.b += h*(1-anchor.y);
-  gui.text(str, p, size, color, wrap, cursor);
-  
-  return bb;
-};
-
-render.image = function(tex, pos, rotation = 0, color = Color.white, dimensions = [tex.width, tex.height]) {
-  //var scale = [dimensions.x/tex.width, dimensions.y/tex.height];
-  //gui.img(tex,pos, scale, 0.0, false, [0.0,0.0], color); 
-  //return bbox.fromcwh([0,0], [tex.width,tex.height]);
-}
-
-render.fontcache = {};
-render.set_font = function(path, size) {
-  var fontstr = `${path}-${size}`;
-  if (!render.fontcache[fontstr]) render.fontcache[fontstr] = os.make_font(path, size);
-
-  gui.font_set(render.fontcache[fontstr]);
-  render.font = render.fontcache[fontstr];
-}
-
-render.doc = "Draw shapes in screen space.";
-//render.circle.doc = "Draw a circle at pos, with a given radius and color.";
-render.cross.doc = "Draw a cross centered at pos, with arm length size.";
-render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
-render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
 
 var shaderlang = {
  macos: "metal_macos",
@@ -151,8 +12,6 @@ var shaderlang = {
  web: "wgsl",
  ios: "metal_ios",
 }
-
-say(`shaderlang is ${shaderlang[os.sys()]}`);
 
 var attr_map = {
   a_pos: 0,
@@ -224,12 +83,13 @@ function shader_directive(shader, name, map)
 {
   var reg = new RegExp(`#${name}.*`, 'g');
   var mat = shader.match(reg);
-  if (!mat) return 0;
+  if (!mat) return undefined;
   
   reg = new RegExp(`#${name}\s*`, 'g');
   var ff = mat.map(d=>d.replace(reg,''))[0].trim();
   
-  return map[ff];
+  if (map) return map[ff];
+  return ff;
 }
 
 function global_uni(uni, stage)
@@ -291,6 +151,10 @@ render.make_shader = function(shader)
   var cull = shader_directive(shader, 'cull', cull_map);
   var depth = shader_directive(shader, 'depth', depth_map);
   var face = shader_directive(shader, 'face', face_map);
+  var indexed = shader_directive(shader, 'indexed');
+  
+  if (typeof indexed == 'undefined') indexed = true;
+  if (indexed === 'false') indexed = false;
   
   shader = shader.replace(/uniform\s+(\w+)\s+(\w+);/g, "uniform _$2 { $1 $2; };");
   shader = shader.replace(/(texture2D|sampler) /g, "uniform $1 ");
@@ -303,12 +167,14 @@ render.make_shader = function(shader)
     console.info(`error compiling shader`);
     return;
   }
-  io.rm(out);
+//  io.rm(out);
 
   /* Take YAML and create the shader object */
   var yamlfile = `${out}_reflection.yaml`;
   console.info(`slurping ${yamlfile}`);
-  var obj = json.decode(yaml.tojson(io.slurp(yamlfile)));  
+  var jjson = yaml.tojson(io.slurp(yamlfile));
+  say(jjson);
+  var obj = json.decode(jjson);  
   io.rm(yamlfile);
   
   obj = obj.shaders[0].programs[0];
@@ -332,6 +198,7 @@ render.make_shader = function(shader)
   obj.primitive = primitive;
   obj.depth = depth;
   obj.face = face;
+  obj.indexed = indexed;
 
   if (obj.vs.inputs)
     for (var i of obj.vs.inputs) {
@@ -428,7 +295,7 @@ render.sg_bind = function(shader, mesh = {}, material = {}, ssbo)
       bind.images.push(game.texture("icons/no_tex.gif"));
   }
   
-  if (mesh.index) {
+  if (shader.indexed) {
     bind.index = mesh.index;
     bind.count = mesh.count;
   } else
@@ -441,5 +308,155 @@ render.sg_bind = function(shader, mesh = {}, material = {}, ssbo)
   
   return bind;
 }
+
+render.device = {
+  pc: [1920,1080],
+  macbook_m2: [2560,1664, 13.6],
+  ds_top: [400,240, 3.53],
+  ds_bottom: [320,240, 3.02],
+  playdate: [400,240,2.7],
+  switch: [1280,720, 6.2],
+  switch_lite: [1280,720,5.5],
+  switch_oled: [1280,720,7],
+  dsi: [256,192,3.268],
+  ds: [256,192, 3],
+  dsixl: [256,192,4.2],
+  ipad_air_m2: [2360,1640, 11.97],
+  iphone_se: [1334, 750, 4.7],
+  iphone_12_pro: [2532,1170,6.06],
+  iphone_15: [2556,1179,6.1],
+  gba: [240,160,2.9],
+  gameboy: [160,144,2.48],
+  gbc: [160,144,2.28],
+  steamdeck: [1280,800,7],
+  vita: [960,544,5],
+  psp: [480,272,4.3],
+  imac_m3: [4480,2520,23.5],
+  macbook_pro_m3: [3024,1964, 14.2],
+  ps1: [320,240,5],
+  ps2: [640,480],
+  snes: [256,224],
+  gamecube: [640,480],
+  n64: [320,240],
+  c64: [320,200],
+  macintosh: [512,342,9],
+  gamegear: [160,144,3.2],
+};
+
+render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
+
+/* All draw in screen space */
+render.point =  function(pos,size,color = Color.blue) {
+    render.circle(pos,size,size,color);
+};
+  
+var tmpline = render.line;
+render.line = function(points, color = Color.white, thickness = 1) {
+  tmpline(points,color,thickness);
+};
+
+render.cross = function(pos, size, color = Color.red) {
+    var a = [
+      pos.add([0,size]),
+      pos.add([0,-size])
+    ];
+    var b = [
+      pos.add([size,0]),
+      pos.add([-size,0])
+    ];
+    
+    render.line(a,color);
+    render.line(b,color);
+  };
+  
+render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
+  var dir = end.sub(start).normalized();
+  var wing1 = [
+    Vector.rotate(dir, wingangle).scale(wingspan).add(end),
+    end
+  ];
+  var wing2 = [
+    Vector.rotate(dir,-wingangle).scale(wingspan).add(end),
+    end
+  ];
+  render.line([start,end],color);
+  render.line(wing1,color);
+  render.line(wing2,color);
+};
+
+render.coordinate = function(pos, size, color) {
+  render.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
+  render.point(pos, 2, color);
+}
+
+render.boundingbox = function(bb, color = Color.white) {
+  render.poly(bbox.topoints(bb), color);
+}
+
+render.poly = function(points, color)
+{
+  return;
+  render.setpipeline(render.polyshader.pipe);
+  var poly = render.poly_prim(points);
+  render.shader_apply_material(render.polyshader, {shade:color});
+  render.spdraw(render.sg_bind(render.polyshader, poly));
+}
+
+render.rectangle = function(lowerleft, upperright, color) {
+  var points = [lowerleft, lowerleft.add([upperright.x-lowerleft.x,0]), upperright, lowerleft.add([0,upperright.y-lowerleft.y])];
+  render.poly(points, color);
+};
+  
+render.box = function(pos, wh, color = Color.white) {
+  var lower = pos.sub(wh.scale(0.5));
+  var upper = pos.add(wh.scale(0.5));
+  render.rectangle(lower,upper,color);
+};
+
+render.window = function(pos, wh, color) {
+  var p = pos.slice();
+  p = p.add(wh.scale(0.5));
+  render.box(p,wh,color);
+};
+
+render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
+  var bb = render.text_size(str, size, wrap);
+  var w = bb.r*2;
+  var h = bb.t*2;
+  
+  //render.text draws with an anchor on top left corner
+  var p = pos.slice();
+  p.x -= w * anchor.x;
+  bb.r += (w*anchor.x);
+  bb.l += (w*anchor.x);
+  p.y += h * (1 - anchor.y);
+  bb.t += h*(1-anchor.y);
+  bb.b += h*(1-anchor.y);
+  gui.text(str, p, size, color, wrap, cursor);
+  
+  return bb;
+};
+
+render.image = function(tex, pos, rotation = 0, color = Color.white, dimensions = [tex.width, tex.height]) {
+  //var scale = [dimensions.x/tex.width, dimensions.y/tex.height];
+  //gui.img(tex,pos, scale, 0.0, false, [0.0,0.0], color); 
+  //return bbox.fromcwh([0,0], [tex.width,tex.height]);
+}
+
+render.fontcache = {};
+render.set_font = function(path, size) {
+  var fontstr = `${path}-${size}`;
+  if (!render.fontcache[fontstr]) render.fontcache[fontstr] = os.make_font(path, size);
+
+  gui.font_set(render.fontcache[fontstr]);
+  render.font = render.fontcache[fontstr];
+}
+
+render.doc = "Draw shapes in screen space.";
+//render.circle.doc = "Draw a circle at pos, with a given radius and color.";
+render.cross.doc = "Draw a cross centered at pos, with arm length size.";
+render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
+render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
+
 
 return {render};

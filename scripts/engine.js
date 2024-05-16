@@ -129,7 +129,7 @@ qq = 'ms';
 
 profile.report = function(start, msg = "[undefined report]")
 {
-  say(`${msg} in ${profile.best_t(profile.now()-start)}`);
+  console.info(`${msg} in ${profile.best_t(profile.now()-start)}`);
 }
 
 profile.addreport = function(cache, line, start)
@@ -296,6 +296,8 @@ game.engine_start = function(s) {
     Object.readonly(window.__proto__, 'high_dpi');
     Object.readonly(window.__proto__, 'sample_count');
     s();
+    
+    render.polyshader = render.make_shader("poly.sglsl");
     
     shape.quad = {
       pos:os.make_buffer([

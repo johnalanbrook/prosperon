@@ -164,6 +164,16 @@ Mum.button = Mum.text._int.extend({
  action() { console.warn("Button has no action."); },
 });
 
+var mumcam = {};
+mumcam.transform = os.make_transform();
+mumcam.ortho = true;
+mumcam.near = 0;
+mumcam.far = 1000;
+mumcam.transform.pos = [100,100,-100];
+mumcam.app = true;
+
+var textssbo = render.text_ssbo();
+
 Mum.window = Mum.extend({
   start() {
     this.wh = [this.width, this.height];
@@ -173,7 +183,6 @@ Mum.window = Mum.extend({
     var p = cursor.sub(this.wh.scale(this.anchor)).add(this.padding);    
     render.window(p,this.wh, this.color);
     this.bb = bbox.blwh(p, this.wh);
-    gui.flush();
     this.max_width = this.width;
     if (this.selectable) gui.controls.check_bb(this);
     var pos = [this.bb.l, this.bb.t].add(this.padding);
@@ -181,7 +190,12 @@ Mum.window = Mum.extend({
       if (item.hide) return;
       item.draw(pos.slice(),this);
     }, this);
-    gui.flush();
+    render.set_camera(mumcam);
+    render.setpipeline(render.textshader.pipe);
+    render.shader_apply_material(render.textshader);
+    var bind = render.sg_bind(render.textshader, shape.quad, {text:render.font.texture}, textssbo);
+    bind.inst = render.flushtext();
+    render.spdraw(bind);
     gui.scissor_win();
   },
 });
