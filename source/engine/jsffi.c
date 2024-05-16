@@ -78,6 +78,8 @@ void sg_buffer_free(sg_buffer *b)
   free(b);
 }
 
+void sg_image_free(sg_image *t){}
+
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
 QJSCLASS(transform)
@@ -90,6 +92,7 @@ QJSCLASS(warp_damp)
 QJSCLASS(window)
 QJSCLASS(constraint)
 QJSCLASS(sg_buffer)
+QJSCLASS(sg_image)
 QJSCLASS(datastream)
 
 static JSValue sound_proto;
@@ -662,9 +665,7 @@ JSC_CCALL(render_flushtext,
   return number2js(text_flush());
 )
 
-JSC_CCALL(render_end_pass,
-  sg_end_pass();
-  
+JSC_CCALL(render_glue_pass,
   sg_begin_pass(&(sg_pass){
     .swapchain = sglue_swapchain(),
     .action = (sg_pass_action){
@@ -674,81 +675,70 @@ JSC_CCALL(render_end_pass,
       }
     }
   });
-  sg_pipeline p = {0};
-  
-  switch(mainwin.mode) {
-    case MODE_STRETCH:
-      sg_apply_viewportf(0,0,mainwin.size.x,mainwin.size.y,0);
-      break;
-    case MODE_WIDTH:
-      sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,0); // keep width
-      break;
-    case MODE_HEIGHT:
-      sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,0); // keep height
-      break;
-    case MODE_KEEP:
-      sg_apply_viewportf(0,0,mainwin.rendersize.x, mainwin.rendersize.y, 0); // no scaling
-      break;
-    case MODE_EXPAND:
-      if (mainwin.aspect < mainwin.raspect)
-        sg_apply_viewportf(0, mainwin.top, mainwin.size.x, mainwin.psize.y,0); // keep width
-      else
-        sg_apply_viewportf(mainwin.left,0,mainwin.psize.x, mainwin.size.y,0); // keep height
-      break;
-  }
-  p.id = js2number(argv[0]);
-  sg_apply_pipeline(p);
-  sg_bindings bind = js2bind(argv[1]);
-  bind.fs.images[0] = screencolor;
-  bind.fs.samplers[0] = std_sampler;
-  sg_apply_bindings(&bind);
-  int c = js2number(js_getpropstr(argv[1], "count"));
-  sg_draw(0,c,1);
-  
-  sg_end_pass();
-  sg_commit();
 )
 
+JSC_CCALL(render_viewport, sg_apply_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
+  
 JSC_CCALL(render_commit, sg_commit())
+JSC_CCALL(render_end_pass, sg_end_pass())
 
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 
 JSC_CCALL(render_set_camera,
   JSValue cam = argv[0];
   int ortho = js2boolean(js_getpropstr(cam, "ortho"));
-  int app = js2boolean(js_getpropstr(cam, "app"));
   float near = js2number(js_getpropstr(cam, "near"));
   float far = js2number(js_getpropstr(cam, "far"));
   float fov = js2number(js_getpropstr(cam, "fov"))*HMM_DegToRad;
+  HMM_Vec2 size = js2vec2(js_getpropstr(cam,"size"));
   
   transform *t = js2transform(js_getpropstr(cam, "transform"));
-  //globalview.v = transform2mat(*t);
   HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
   globalview.v = HMM_LookAt_LH(t->pos, look, vUP);
-  HMM_Vec2 size = mainwin.mode == MODE_FULL ? mainwin.size : mainwin.rendersize;
-  
-  if (ortho && app)
-    size = mainwin.size;
-  
+
   if (ortho)
     globalview.p = HMM_Orthographic_Metal(
       -size.x/2,
       size.x/2,
+#ifdef SOKOL_GLCORE    //flipping orthographic Y if opengl
+      size.y/2,
+      -size.y/2,
+#else
       -size.y/2,
       size.y/2,
+#endif
       near,
       far
     );
   else
     globalview.p = HMM_Perspective_Metal(fov, size.x/size.y, near, far);
-    
+
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
+
+sg_shader_uniform_block_desc js2uniform_block(JSValue v)
+{
+  sg_shader_uniform_block_desc desc = {0};
+    int slot = js2number(js_getpropstr(v, "slot"));
+    desc.size = js2number(js_getpropstr(v, "size"));
+    desc.layout = SG_UNIFORMLAYOUT_STD140;
+
+    JSValue uniforms = js_getpropstr(v, "uniforms");
+    for (int j = 0; j < js_arrlen(uniforms); j++) {
+      JSValue uniform = js_getpropidx(uniforms, j);
+      desc.uniforms[j].name = js2strdup(js_getpropstr(v, "struct_name"));
+      desc.uniforms[j].array_count = js2number(js_getpropstr(uniform, "array_count"));
+      desc.uniforms[j].type = SG_UNIFORMTYPE_FLOAT4;
+    }
+
+  return desc;
+}
 
 sg_shader js2shader(JSValue v)
 {
   sg_shader_desc desc = {0};
   JSValue prog = v;
+  desc.label = js2strdup(js_getpropstr(v, "name"));
   JSValue vs = js_getpropstr(prog, "vs");
   JSValue fs = js_getpropstr(prog, "fs");
   char *vsf = js2str(js_getpropstr(vs, "code"));
@@ -769,27 +759,17 @@ sg_shader js2shader(JSValue v)
     desc.attrs[i].sem_name = js2strdup(js_getpropstr(u,"sem_name"));
     desc.attrs[i].sem_index = js2number(js_getpropstr(u, "sem_index"));
   }
+  
   JSValue vsu = js_getpropstr(vs, "uniform_blocks");
-  int unin = js_arrlen(vsu);
-  for (int i = 0; i < unin; i++) {
-    JSValue u = js_getpropidx(vsu, i);
-    int slot = js2number(js_getpropstr(u, "slot"));
-    desc.vs.uniform_blocks[slot].size = js2number(js_getpropstr(u, "size"));
-    desc.vs.uniform_blocks[slot].layout = SG_UNIFORMLAYOUT_STD140;
-  }
+  for (int i = 0; i < js_arrlen(vsu); i++)
+    desc.vs.uniform_blocks[i] = js2uniform_block(js_getpropidx(vsu, i));
   
   JSValue fsu = js_getpropstr(fs, "uniform_blocks");
-  unin = js_arrlen(fsu);
-  for (int i = 0; i < unin; i++) {
-    JSValue u = js_getpropidx(fsu, i);
-    int slot = js2number(js_getpropstr(u, "slot"));
-    desc.fs.uniform_blocks[slot].size = js2number(js_getpropstr(u, "size"));
-    desc.fs.uniform_blocks[slot].layout = SG_UNIFORMLAYOUT_STD140;
-  }
+  for (int i = 0; i < js_arrlen(fsu); i++)
+    desc.fs.uniform_blocks[i] = js2uniform_block(js_getpropidx(fsu, i));
   
   JSValue imgs = js_getpropstr(fs, "images");
-  unin = js_arrlen(imgs);
-  for (int i = 0; i < unin; i++) {
+  for (int i = 0; i < js_arrlen(imgs); i++) {
     JSValue u = js_getpropidx(imgs, i);
     int slot = js2number(js_getpropstr(u, "slot"));
     desc.fs.images[i].used = true;
@@ -799,24 +779,23 @@ sg_shader js2shader(JSValue v)
   }
   
   JSValue samps = js_getpropstr(fs, "samplers");
-  unin = js_arrlen(samps);
-  for (int i = 0; i < unin; i++) {
+  for (int i = 0; i < js_arrlen(samps); i++) {
+    JSValue sampler = js_getpropidx(samps, i);
     desc.fs.samplers[0].used = true;
     desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
   }
   
   JSValue pairs = js_getpropstr(fs, "image_sampler_pairs");
-  unin = js_arrlen(pairs);
-  for (int i = 0; i < unin; i++) {
+  for (int i = 0; i < js_arrlen(pairs); i++) {
     JSValue pair = js_getpropidx(pairs, i);
     desc.fs.image_sampler_pairs[0].used = true;
     desc.fs.image_sampler_pairs[0].image_slot = js2number(js_getpropstr(pair, "slot"));
     desc.fs.image_sampler_pairs[0].sampler_slot = 0;
+    desc.fs.image_sampler_pairs[0].glsl_name = js2strdup(js_getpropstr(pair, "name"));
   }
   
   JSValue ssbos = js_getpropstr(vs, "storage_buffers");
-  unin = js_arrlen(ssbos);
-  for (int i = 0; i < unin; i++) {
+  for (int i = 0; i < js_arrlen(ssbos); i++) {
     desc.vs.storage_buffers[i].used = true;
     desc.vs.storage_buffers[i].readonly = true;
   }
@@ -926,7 +905,7 @@ JSC_CCALL(render_setunim4,
     }
   } else
     m = transform2mat(*js2transform(argv[2]));
-    
+
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(m.e));
 );
 
@@ -944,13 +923,19 @@ JSC_CCALL(render_setpipeline,
   sg_apply_pipeline(p);
 )
 
-JSC_CCALL(render_text_ssbo,
-  return sg_buffer2js(&text_ssbo);
+JSC_CCALL(render_text_ssbo, return sg_buffer2js(&text_ssbo))
+JSC_CCALL(render_screencolor,
+  texture *t = calloc(sizeof(*t), 1);
+  t->id = screencolor;
+  return texture2js(&screencolor)
 )
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flushtext, 0),
-  MIST_FUNC_DEF(render, end_pass, 2),
+  MIST_FUNC_DEF(render, viewport, 4),
+  MIST_FUNC_DEF(render, end_pass, 0),
+  MIST_FUNC_DEF(render, commit, 0),
+  MIST_FUNC_DEF(render, glue_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
   MIST_FUNC_DEF(render, text_ssbo, 0),
   MIST_FUNC_DEF(render, set_camera, 1),
@@ -965,7 +950,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setuniv2, 2),
   MIST_FUNC_DEF(render, setuniv4, 2),
   MIST_FUNC_DEF(render, setpipeline, 1),
-  MIST_FUNC_DEF(render, commit, 0),
+  MIST_FUNC_DEF(render, screencolor, 0),
 };
 
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
@@ -1079,10 +1064,10 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, inflate, 2)
 };
 
-JSC_CCALL(game_engine_start, engine_start(argv[0],argv[1]))
+JSC_CCALL(game_engine_start, engine_start(argv[0],argv[1], js2number(argv[2]), js2number(argv[3])))
 
 static const JSCFunctionListEntry js_game_funcs[] = {
-  MIST_FUNC_DEF(game, engine_start, 2),
+  MIST_FUNC_DEF(game, engine_start, 4),
 };
 
 JSC_CCALL(input_show_keyboard, sapp_show_keyboard(js2boolean(argv[0])))
@@ -1100,7 +1085,7 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 };
 
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
-JSC_CCALL(prosperon_window_render, openglRender(&mainwin))
+JSC_CCALL(prosperon_window_render, openglRender(js2vec2(argv[0])))
 JSC_CCALL(prosperon_guid,
   uint8_t bytes[16];
   for (int i = 0; i < 16; i++) bytes[i] = rand()%256;
@@ -1113,7 +1098,7 @@ JSC_CCALL(prosperon_guid,
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, phys2d_step, 1),
-  MIST_FUNC_DEF(prosperon, window_render, 0),
+  MIST_FUNC_DEF(prosperon, window_render, 1),
   MIST_FUNC_DEF(prosperon, guid, 0),
 };
 
@@ -1471,24 +1456,6 @@ static const JSCFunctionListEntry js_sound_funcs[] = {
   MIST_FUNC_DEF(sound, frames, 0),
 };
 
-static JSValue js_window_get_size(JSContext *js, JSValue this) { return vec22js(js2window(this)->size); }
-static JSValue js_window_set_size(JSContext *js, JSValue this, JSValue v) {
-  window *w = js2window(this);
-  if (!w->start)
-    w->size = js2vec2(v);
-    
-  return JS_UNDEFINED;
-}
-static JSValue js_window_get_rendersize(JSContext *js, JSValue this) {
-  window *w = js2window(this);
-  if (w->rendersize.x == 0 || w->rendersize.y == 0) return vec22js(w->size);
-  return vec22js(w->rendersize);
-}
-static JSValue js_window_set_rendersize(JSContext *js, JSValue this, JSValue v) {
-  js2window(this)->rendersize = js2vec2(v);
-  return JS_UNDEFINED;
-}
-JSC_GETSET(window, mode, number)
 static JSValue js_window_get_fullscreen(JSContext *js, JSValue this) { return boolean2js(js2window(this)->fullscreen); }
 static JSValue js_window_set_fullscreen(JSContext *js, JSValue this, JSValue v) { window_setfullscreen(js2window(this), js2boolean(v)); return JS_UNDEFINED; }
 
@@ -1510,9 +1477,6 @@ JSC_GETSET(window, high_dpi, boolean)
 JSC_GETSET(window, sample_count, number)
 
 static const JSCFunctionListEntry js_window_funcs[] = {
-  CGETSET_ADD(window, size),
-  CGETSET_ADD(window, rendersize),
-  CGETSET_ADD(window, mode),
   CGETSET_ADD(window, fullscreen),
   CGETSET_ADD(window, title),
   CGETSET_ADD(window, vsync),

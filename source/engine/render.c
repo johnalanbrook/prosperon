@@ -29,6 +29,8 @@ sg_sampler std_sampler;
 sg_sampler nofilter_sampler;
 sg_sampler tex_sampler;
 
+int TOPLEFT = 0;
+
 sg_pass offscreen;
 
 #include "sokol/sokol_app.h"
@@ -126,7 +128,6 @@ static sg_trace_hooks hooks = {
 };
 
 void render_init() {
-  mainwin.size = (HMM_Vec2){sapp_width(), sapp_height()};
   sg_setup(&(sg_desc){
     .environment = sglue_environment(),
     .logger = { .func = sg_logging },
@@ -149,7 +150,7 @@ void render_init() {
   font_init();
   
   sg_features feat = sg_query_features();
-  printf("top left? %d\n", feat.origin_top_left);
+  TOPLEFT = feat.origin_top_left;
 
   sg_color c = (sg_color){0,0,0,1};
   pass_action = (sg_pass_action){
@@ -194,12 +195,8 @@ HMM_Mat4 projection = {0.f};
 HMM_Mat4 hudproj = {0.f};
 HMM_Mat4 useproj = {0};
 
-void openglRender(struct window *window) {
- HMM_Vec2 usesize = mainwin.rendersize;
- if (mainwin.mode == MODE_FULL)
-  usesize = mainwin.size;
+void openglRender(HMM_Vec2 usesize) {
  if (usesize.x != lastuse.x || usesize.y != lastuse.y) {
-  printf("Redoing to %g,%g\n", usesize.x, usesize.y);
   sg_destroy_image(screencolor);
   sg_destroy_image(screendepth);
   sg_destroy_attachments(offscreen.attachments);

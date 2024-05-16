@@ -20,8 +20,6 @@ struct window mainwin = {
   .vsync = 1,
   .enable_clipboard = 0,
   .enable_dragndrop = 0,
-  .size =  (HMM_Vec2){640,400},
-  .rendersize = (HMM_Vec2){640,400},
 };
 
 static struct window *windows = NULL;
@@ -30,22 +28,7 @@ struct texture *icon = NULL;
 
 void window_resize(int width, int height)
 {
-  window *w = &mainwin;
-  w->size.x = width;
-  w->size.y = height;
-  window_apply(w);
-  
   script_evalf("prosperon.resize([%d,%d]);", width,height);
-}
-
-void window_apply(window *w)
-{
-  w->aspect = w->size.x/w->size.y;
-  w->raspect = w->rendersize.x/w->rendersize.y;
-  w->psize.x = w->size.x*(w->raspect/w->aspect);
-  w->psize.y = w->size.y*(w->aspect/w->raspect);
-  w->left = (w->size.x-w->psize.x)/2;
-  w->top = (w->size.y-w->psize.y)/2;
 }
 
 void window_focused(int focus)

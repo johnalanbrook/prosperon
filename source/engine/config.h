@@ -8,11 +8,10 @@
 #define DEG2RADS 0.0174532925199432957692369076848861271344287188854172545609719144f
 #define RAD2DEGS 57.2958f
 
-#define CONFIG_H
 #if defined __linux__
-  #define SOKOL_GLCORE33
+  #define SOKOL_GLCORE
 #elif __EMSCRIPTEN__
-  #define SOKOL_GLES3
+  #define SOKOL_WGPU
 #elif __WIN32
   #define SOKOL_D3D11
 #elif __APPLE__

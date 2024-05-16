@@ -112,7 +112,7 @@ void c_event(const sapp_event *e)
   char lcfmt[5];
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
-      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, mainwin.size.y -e->mouse_y, e->mouse_dx, -e->mouse_dy);
+      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, e->mouse_y, e->mouse_dx, -e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
@@ -252,15 +252,15 @@ sapp_desc sokol_main(int argc, char **argv) {
   return start_desc;
 }
 
-void engine_start(JSValue start, JSValue procfn)
+void engine_start(JSValue start, JSValue procfn, float x, float y)
 {
   c_start = JS_DupValue(js,start);
   c_process_fn = JS_DupValue(js,procfn);
 
   sound_init();
 
-  start_desc.width = mainwin.size.x;
-  start_desc.height = mainwin.size.y;
+  start_desc.width = x;
+  start_desc.height = y;
   start_desc.window_title = mainwin.title;
   start_desc.fullscreen = mainwin.fullscreen;
   start_desc.swap_interval = mainwin.vsync;

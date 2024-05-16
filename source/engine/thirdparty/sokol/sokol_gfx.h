@@ -9341,6 +9341,7 @@ _SOKOL_PRIVATE void _sg_gl_apply_uniforms(sg_shader_stage stage_index, int ub_in
         if (u->gl_loc == -1) {
             continue;
         }
+
         _sg_stats_add(gl.num_uniform, 1);
         GLfloat* fptr = (GLfloat*) (((uint8_t*)data->ptr) + u->offset);
         GLint* iptr = (GLint*) (((uint8_t*)data->ptr) + u->offset);

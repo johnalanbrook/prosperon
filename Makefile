@@ -5,7 +5,7 @@ MAKEDIR != pwd
 # NDEBUG --- build with debugging symbols and logging
 
 ifeq ($(ARCH),)
-	ARCH != uname -m
+  ARCH != uname -m
 endif
 
 CXX:=$(CC)
@@ -17,11 +17,11 @@ STEAM = steam/sdk
 STEAMAPI = 
 
 ifeq ($(CROSS)$(CC), emcc)
-	LDFLAGS += --shell-file shell.html --closure 1
-	CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB
-	NDEBUG = 1
-	ARCH:= wasm
-	OPT=small
+  LDFLAGS += --shell-file shell.html --closure 1
+  CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB
+  NDEBUG = 1
+  ARCH:= wasm
+  OPT=small
 endif
 
 ifdef NEDITOR
@@ -114,10 +114,10 @@ else
   UNAME != uname -s
   ifeq ($(UNAME), Linux) # then LINUX
     OS := Linux
-		PLATFORM := linux64
+    PLATFORM := linux64
     LDFLAGS += -pthread -rdynamic
-    LDLIBS += GL pthread c m dl X11 Xi Xcursor EGL asound
-		INFO :=$(INFO)_linux
+    LDLIBS += pthread c m dl X11 Xi Xcursor EGL asound GL
+    INFO :=$(INFO)_linux
   endif
 
   ifeq ($(UNAME), Darwin)

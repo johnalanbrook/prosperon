@@ -323,7 +323,7 @@ game.engine_start = function(s) {
       count: 3,
       index: os.make_buffer([0,2,1],1),
     };
-  }, process);  
+  }, process, window.size.x, window.size.y);  
 }
 
 game.startengine = 0;
@@ -354,7 +354,7 @@ function process()
     }
   }
   var st = profile.now();
-  prosperon.window_render();
+  prosperon.window_render(window.rendersize);
   prosperon.draw();
   prosperon.gui();
   prosperon.screengui();
@@ -484,7 +484,10 @@ Range is given by a semantic versioning number, prefixed with nothing, a ~, or a
 
 prosperon.iconified = function(icon) {};
 prosperon.focus = function(focus) {};
-prosperon.resize = function(dimensions) {};
+prosperon.resize = function(dimensions) {
+  window.size.x = dimensions.x;
+  window.size.y = dimensions.y;
+};
 prosperon.suspended = function(sus) {};
 prosperon.mouseenter = function(){};
 prosperon.mouseleave = function(){};
@@ -603,16 +606,17 @@ var Event = {
 
 // window.rendersize is the resolution the game renders at
 // window.size is the physical size of the window on the desktop
-window.modetypes = { 
-  stretch: 0, // stretch render to fill window
-  keep: 1, // keep render exact dimensions, with no stretching
-  width: 2, // keep render at width
-  height: 3, // keep render at height
-  expand: 4, // expand width or height
-  full: 5 // expand out beyond window
-};
+// set to one of the following
+// stretch     render to fill window
+// keep      render exact dimensions, with no stretching
+// width     keep render at width
+// height     keep render at height
+// expand    width or height
+// full    expand out beyond window
 
 window.size = [640, 480];
+window.rendersize = window.size;
+window.mode = "keep";
 
 window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
 

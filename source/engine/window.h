@@ -4,12 +4,6 @@
 #include <HandmadeMath.h>
 
 struct window {
-  int id;
-  HMM_Vec2 size; // Actual width and height of the window
-  HMM_Vec2 rendersize; // The desired rendering resolution, what the assets are at
-  HMM_Vec2 psize;
-  float left;
-  float top;
   double dpi;
   int render;
   int mouseFocus;
@@ -19,9 +13,6 @@ struct window {
   int iconified;
   int focus;
   int shown;
-  int mode;
-  float aspect;
-  float raspect;
   char *title;
   int vsync;
   int enable_clipboard;

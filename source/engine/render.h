@@ -9,13 +9,6 @@
 #include "transform.h"
 #include "model.h"
 
-#define MODE_STRETCH 0
-#define MODE_KEEP 1
-#define MODE_WIDTH 2
-#define MODE_HEIGHT 3
-#define MODE_EXPAND 4
-#define MODE_FULL 5
-
 #define RGBA_MAX 255
 
 #include "window.h"
@@ -23,8 +16,7 @@
 extern struct rgba color_white;
 extern struct rgba color_black;
 extern struct rgba color_clear;
-
-extern int renderMode;
+extern int TOPLEFT;
 
 extern HMM_Vec3 dirl_pos;
 
@@ -59,19 +51,9 @@ struct draw_p3 {
 
 #include <chipmunk/chipmunk.h>
 
-enum RenderMode {
-    LIT,
-    UNLIT,
-    WIREFRAME,
-    DIRSHADOWMAP,
-    OBJECTPICKER
-};
-
 void render_init();
-extern HMM_Vec2 campos;
-extern float camzoom;
 
-void openglRender(struct window *window);
+void openglRender(HMM_Vec2 usesize);
 void opengl_rendermode(enum RenderMode r);
 
 void openglInit3d(struct window *window);

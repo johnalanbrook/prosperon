@@ -192,7 +192,7 @@ Cmdline.register_order("edit", function() {
   }
 
   window.size = [1280, 720];
-  window.mode = window.modetypes.full;
+  window.mode = "full";
   sim.pause();
 
   game.engine_start(function() {
@@ -243,7 +243,6 @@ Cmdline.register_order("play", function(argv) {
 
   var project = json.decode(io.slurp(projectfile));
   game.title = project.title;
-  window.mode = window.modetypes.expand;
   global.mixin("config.js");
   if (project.title) window.title = project.title;
 

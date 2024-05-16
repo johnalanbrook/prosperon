@@ -4,12 +4,11 @@ render.doc = {
   wireframe: "Show only wireframes of models."
 };
 
-
 var shaderlang = {
  macos: "metal_macos",
- windows: "hlsl5",
- linux: "glsl330",
- web: "wgsl",
+ windows: "hlsl4",
+ linux: "glsl430",
+// web: "wgsl",
  ios: "metal_ios",
 }
 
@@ -129,8 +128,9 @@ render.make_shader = function(shader)
   
     profile.report(st, `CACHE make shader from ${file}`);
     var shaderobj = json.decode(io.slurp(writejson));
-    shaderobj.pipe = render.pipeline(shaderobj);
-    return shaderobj;
+    var obj = shaderobj[os.sys()];
+    obj.pipe = render.pipeline(obj);
+    return obj;
   }
   
   var out = `${file.name()}.shader`;
@@ -161,19 +161,22 @@ render.make_shader = function(shader)
   shader = shader.replace(/uniform texture2D ?(.*);/g, "uniform _$1_size { vec2 $1_size; };\nuniform texture2D $1;");
 
   io.slurpwrite(out, shader);
-  var backend = shaderlang[os.sys()];
-  var ret = os.system(`sokol-shdc -f bare_yaml --slang=${backend} -i ${out} -o ${out}`);
-  if (ret) {
-    console.info(`error compiling shader`);
-    return;
-  }
-//  io.rm(out);
+
+  var compiled = {};
+
+  // shader file is created, now cross compile to all targets
+  for (var platform in shaderlang) {
+    var backend = shaderlang[platform];
+    var ret = os.system(`sokol-shdc -f bare_yaml --slang=${backend} -i ${out} -o ${out}`);
+    if (ret) {
+      console.error(`error compiling shader ${file}. No compilation found for ${platform}:${backend}, and no cross compiler available.`);
+      return;
+    }
 
   /* Take YAML and create the shader object */
   var yamlfile = `${out}_reflection.yaml`;
   console.info(`slurping ${yamlfile}`);
   var jjson = yaml.tojson(io.slurp(yamlfile));
-  say(jjson);
   var obj = json.decode(jjson);  
   io.rm(yamlfile);
   
@@ -181,6 +184,7 @@ render.make_shader = function(shader)
   function add_code(stage) {
     console.info(json.encode(stage));
     stage.code = io.slurp(stage.path);
+
     io.rm(stage.path);
     delete stage.path;
   }
@@ -212,11 +216,10 @@ render.make_shader = function(shader)
     if (!stage.uniform_blocks) return {};
     var unimap = {};
     for (var uni of stage.uniform_blocks) {
-      if (uni.struct_name[0] == "_")
-        uni.struct_name = uni.struct_name.slice(1);
+      var uniname = uni.struct_name[0] == "_" ? uni.struct_name.slice(1) : uni.struct_name;
         
-      unimap[uni.struct_name] = {
-        name: uni.struct_name,
+      unimap[uniname] = {
+        name: uniname,
         slot: Number(uni.slot),
         size: Number(uni.size)
       };
@@ -228,14 +231,18 @@ render.make_shader = function(shader)
   obj.vs.unimap = make_unimap(obj.vs);
   obj.fs.unimap = make_unimap(obj.fs);
   
-  obj.files = files;
-  
   obj.name = file;
+
+  compiled[platform] = obj;
+  }
+
+  compiled.files = files;
   
-  io.slurpwrite(writejson, json.encode(obj));
+  io.slurpwrite(writejson, json.encode(compiled));
   profile.report(st, `make shader from ${file}`);
   
   console.info(`pipeline for ${file}`);
+  var obj = compiled[os.sys()];
   obj.pipe = render.pipeline(obj);
 
   return obj;
@@ -352,7 +359,7 @@ render.point =  function(pos,size,color = Color.blue) {
   
 var tmpline = render.line;
 render.line = function(points, color = Color.white, thickness = 1) {
-  tmpline(points,color,thickness);
+//  tmpline(points,color,thickness);
 };
 
 render.cross = function(pos, size, color = Color.red) {
