@@ -57,12 +57,7 @@ HMM_Mat4 transform2mat(transform t) {
 
 HMM_Quat angle2rotation(float angle)
 {
-  return HMM_QFromAxisAngle_LH(vUP, angle);
-}
-
-float transform2angle(HMM_Vec3 axis)
-{
-
+  return HMM_QFromAxisAngle_LH(vBKWD, angle);
 }
 
 transform mat2transform(HMM_Mat4 m)

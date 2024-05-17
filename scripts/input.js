@@ -119,6 +119,7 @@ prosperon.textinput = function(c){
 };
 prosperon.mousemove = function(pos, dx){
   mousepos = pos;
+  mousepos.y = window.size.y - mousepos.y;
   player[0].mouse_input("move", pos, dx);
 };
 prosperon.mousescroll = function(dx){

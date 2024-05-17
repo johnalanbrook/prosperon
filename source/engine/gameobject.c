@@ -7,43 +7,28 @@
 
 #include "stb_ds.h"
 
-gameobject *body2go(cpBody *body) { return cpBodyGetUserData(body); }
-gameobject *shape2go(cpShape *shape) {
-  struct phys2d_shape *pshape = cpShapeGetUserData(shape);
-  if (!pshape) return NULL;
-  return pshape->go;
-}
-
 transform go2t(gameobject *go)
 {
   transform t = {0};
   t.pos.cp = cpBodyGetPosition(go->body);
   t.rotation = angle2rotation(cpBodyGetAngle(go->body));
-  t.scale = go->scale;
-  if (!isfinite(t.scale.X)) t.scale.X = 1;
-  if (!isfinite(t.scale.Y)) t.scale.Y = 1;
+  t.scale = go->t->scale;
   return t;
 }
 
-void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go) {
-  cpShapeSetFriction(shape, go->friction);
-  cpShapeSetElasticity(shape, go->elasticity);
-  cpShapeSetCollisionType(shape, (cpCollisionType)go);
+gameobject *body2go(cpBody *b)
+{
+  return cpBodyGetUserData(b);
+}
 
-  cpShapeFilter filter;
-  filter.group = (cpCollisionType)go;
-  filter.categories = go->categories;
-  filter.mask = go->mask;
-//  filter.mask = CP_ALL_CATEGORIES;
-  cpShapeSetFilter(shape, filter);
-
-  struct phys2d_shape *ape = cpShapeGetUserData(shape);
-  if (ape && ape->apply)
-    ape->apply(ape->data);
+gameobject *shape2go(cpShape *s)
+{
+  cpBody *b = cpShapeGetBody(s);
+  return cpBodyGetUserData(b);
 }
 
 void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
-  float moment = cpBodyGetMoment(body);
+/*  float moment = cpBodyGetMoment(body);
   struct phys2d_shape *s = cpShapeGetUserData(shape);
   if (!s) {
     cpBodySetMoment(body, moment + 1);
@@ -52,25 +37,10 @@ void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
 
   moment += s->moi(s->data);
   if (moment < 0) moment = 0;
-  cpBodySetMoment(body, moment);
+  cpBodySetMoment(body, moment);*/
 }
 
-void gameobject_apply(gameobject *go) {
-  YughSpam("Applying gameobject %p", go);
-  cpBodySetType(go->body, go->phys);
-  cpBodyEachShape(go->body, go_shape_apply, go);
-
-  if (go->phys == CP_BODY_TYPE_DYNAMIC) {
-    cpBodySetMass(go->body, go->mass);
-    cpBodySetMoment(go->body, 0.f);
-    cpBodyEachShape(go->body, go_shape_moi, go);
-
-    if (cpBodyGetMoment(go->body) <= 0.f)
-      cpBodySetMoment(go->body, 1.f);
-  }
-
-  *go->t = go2t(go);
-}
+void gameobject_apply(gameobject *go) { *go->t = go2t(go); }
 
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
@@ -100,20 +70,15 @@ static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt
 gameobject *MakeGameobject() {
   gameobject *ngo = malloc(sizeof(*ngo));
   gameobject go = {
-      .scale = (HMM_Vec3){1.f,1.f,1.f},
-      .phys = CP_BODY_TYPE_STATIC,
       .maxvelocity = INFINITY,
       .maxangularvelocity = INFINITY,
-      .mass = 1.f,
       .damping = INFINITY,
       .timescale = 1.0,
       .ref = JS_UNDEFINED,
-      .mask = ~0,
-      .categories = 1,
       .warp_mask = ~0,
   };
 
-  go.body = cpSpaceAddBody(space, cpBodyNew(go.mass, 1.f));
+  go.body = cpSpaceAddBody(space, cpBodyNew(1, 1));
   cpBodySetVelocityUpdateFunc(go.body, velocityFn);
 
   *ngo = go;
@@ -123,19 +88,6 @@ gameobject *MakeGameobject() {
 }
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
-  struct phys2d_shape *s = cpShapeGetUserData(shape);
-  
-  if (s) {
-    JS_FreeValue(js, s->ref);
-    s->ref = JS_UNDEFINED;
-    if (s->free)
-      s->free(s->data);
-    else
-      free(s->data);
-  }
-
-  cpShapeSetFilter(shape, CP_SHAPE_FILTER_NONE);
-  
   cpSpaceRemoveShape(space, shape);
   cpShapeFree(shape);
 }
@@ -147,8 +99,8 @@ void rm_body_constraints(cpBody *body, cpConstraint *constraint, void *data)
 
 void gameobject_free(gameobject *go) {
   go->ref = JS_UNDEFINED;  
-  cpBodyEachShape(go->body, rm_body_shapes, NULL);
-  cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
+//  cpBodyEachShape(go->body, rm_body_shapes, NULL);
+//  cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
   free(go);
@@ -157,5 +109,5 @@ void gameobject_free(gameobject *go) {
 void gameobject_setpos(gameobject *go, cpVect vec) {
   if (!go || !go->body) return;
   cpBodySetPosition(go->body, vec);
-  phys2d_reindex_body(go->body);
+//  phys2d_reindex_body(go->body);
 }

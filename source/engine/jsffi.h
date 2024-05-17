@@ -11,6 +11,8 @@
 
 #define GETFN(ID, ENTRY, TYPE) JSC_CCALL(ID##_##ENTRY, return TYPE##2js(js2##ID (this)->ENTRY))
 
+#define JS_SETSIG JSContext *js, JSValue this, JSValue val
+
 #define JSC_SCALL(NAME, FN) JSC_CCALL(NAME, \
   const char *str = js2str(argv[0]); \
   FN ; \
@@ -41,7 +43,7 @@
 } \
 
 #define GETSETPAIR(ID, ENTRY, TYPE, FN) \
-JSValue js_##ID##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+JSValue js_##ID##_set_##ENTRY (JS_SETSIG) { \
   js2##ID (this)->ENTRY = js2##TYPE (val); \
   {FN;} \
   return JS_UNDEFINED; \
@@ -56,7 +58,7 @@ JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue this) { \
 #define JSC_GETSET_HOOK(ID, ENTRY) GETSETPAIR(ID, ENTRY, JSValue, ;)
 
 #define JSC_GETSET_GLOBAL(ENTRY, TYPE) \
-JSValue js_global_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+JSValue js_global_set_##ENTRY (JS_SETSIG) { \
   ENTRY = js2##TYPE (val); \
   return JS_UNDEFINED; \
 } \
@@ -66,7 +68,7 @@ JSValue js_global_get_##ENTRY (JSContext *js, JSValue this) { \
 } \
 
 #define JSC_GETSET_BODY(ENTRY, CPENTRY, TYPE) \
-JSValue js_gameobject_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+JSValue js_gameobject_set_##ENTRY (JS_SETSIG) { \
   cpBody *b = js2gameobject(this)->body; \
   cpBodySet##CPENTRY (b, js2##TYPE (val)); \
   return JS_UNDEFINED; \

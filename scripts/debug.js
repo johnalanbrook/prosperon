@@ -1,3 +1,5 @@
+var debug = {};
+
 debug.fn_break = function(fn,obj = globalThis) {
   if (typeof fn !== 'function') return;
   

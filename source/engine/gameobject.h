@@ -27,20 +27,13 @@
 }while(0)
 
 struct gameobject {
-  cpBodyType phys;
   cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
-  float mass;
-  float friction;
-  float elasticity;
   float damping;
   float timescale;
   float maxvelocity;
   float maxangularvelocity;
   unsigned int layer;
-  cpBitmask categories;
-  cpBitmask mask;
   unsigned int warp_mask;
-  HMM_Vec3 scale;
   JSValue ref;
   transform *t; // the transform this body controls
 };
@@ -69,8 +62,8 @@ transform go2t(gameobject *go);
 
 HMM_Vec3 go_pos(gameobject *go);
 
-gameobject *body2go(cpBody *body);
-gameobject *shape2go(cpShape *shape);
+gameobject *shape2go(cpShape *s);
+gameobject *body2go(cpBody *b);
 
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 
