@@ -14,13 +14,6 @@ gameobject *shape2go(cpShape *shape) {
   return pshape->go;
 }
 
-HMM_Vec3 go_pos(gameobject *go)
-{
-  cpVect p = cpBodyGetPosition(go->body);
-  return (HMM_Vec3){p.x, p.y, 0};
-}
-float go_angle(gameobject *go) { return cpBodyGetAngle(go->body); }
-
 transform go2t(gameobject *go)
 {
   transform t = {0};
@@ -75,6 +68,8 @@ void gameobject_apply(gameobject *go) {
     if (cpBodyGetMoment(go->body) <= 0.f)
       cpBodySetMoment(go->body, 1.f);
   }
+
+  *go->t = go2t(go);
 }
 
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
@@ -157,11 +152,6 @@ void gameobject_free(gameobject *go) {
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
   free(go);
-}
-
-void gameobject_setangle(gameobject *go, float angle) {
-  cpBodySetAngle(go->body, angle);
-  phys2d_reindex_body(go->body);
 }
 
 void gameobject_setpos(gameobject *go, cpVect vec) {

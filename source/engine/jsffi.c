@@ -33,6 +33,7 @@
 #include "par/par_streamlines.h"
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
+#include <chipmunk/chipmunk_unsafe.h>
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -78,6 +79,11 @@ void sg_buffer_free(sg_buffer *b)
   free(b);
 }
 
+void cpShape_free(cpShape *s)
+{
+  cpShapeFree(s);
+}
+
 void sg_image_free(sg_image *t){}
 
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
@@ -94,6 +100,7 @@ QJSCLASS(constraint)
 QJSCLASS(sg_buffer)
 QJSCLASS(sg_image)
 QJSCLASS(datastream)
+QJSCLASS(cpShape)
 
 static JSValue sound_proto;
 sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
@@ -563,34 +570,6 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
   return best;
 }
 
-circle2d *js2circle2d(JSValue v) { return js2ptr(v); }
-
-JSC_CCALL(circle2d_set_radius, js2circle2d(argv[0])->radius = js2number(argv[1]))
-JSC_CCALL(circle2d_get_radius, return number2js(js2circle2d(argv[0])->radius))
-JSC_CCALL(circle2d_set_offset, js2circle2d(argv[0])->offset = js2vec2(argv[1]))
-JSC_CCALL(circle2d_get_offset, return vec22js(js2circle2d(argv[0])->offset))
-JSC_CCALL(circle2d_sync, phys2d_shape_apply(&js2circle2d(argv[0])->shape))
-
-static const JSCFunctionListEntry js_circle2d_funcs[] = {
-  MIST_FUNC_DEF(circle2d, set_radius, 2),
-  MIST_FUNC_DEF(circle2d, get_radius, 1),
-  MIST_FUNC_DEF(circle2d, set_offset, 2),
-  MIST_FUNC_DEF(circle2d, get_offset, 1),
-  MIST_FUNC_DEF(circle2d, sync, 1),
-};
-
-struct phys2d_poly *js2poly2d(JSValue v) { return js2ptr(v); }
-
-JSC_CCALL(poly2d_setverts, 
-  struct phys2d_poly *p = js2poly2d(argv[0]);
-  HMM_Vec2 *v = js2cpvec2arr(argv[1]);
-  phys2d_poly_setverts(p,v);
-  arrfree(v);
-)
-
-static const JSCFunctionListEntry js_poly2d_funcs[] = {
-  MIST_FUNC_DEF(poly2d, setverts, 2),
-};
 
 JSC_GETSET(warp_gravity, strength, number)
 JSC_GETSET(warp_gravity, decay, number)
@@ -1487,16 +1466,18 @@ static const JSCFunctionListEntry js_window_funcs[] = {
   MIST_FUNC_DEF(window, set_icon, 1)
 };
 
-JSValue js_gameobject_set_rpos(JSContext *js, JSValue this, JSValue val) {
+JSValue js_gameobject_set_pos(JSContext *js, JSValue this, JSValue val) {
   cpBody *b = js2gameobject(this)->body;
   cpBodySetPosition(b, js2cvec2(val));
   if (cpBodyGetType(b) == CP_BODY_TYPE_STATIC)
     cpSpaceReindexShapesForBody(space, b);
+
+  gameobject_apply(js2gameobject(this));
   return JS_UNDEFINED;
 }
-JSValue js_gameobject_get_rpos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
-JSValue js_gameobject_set_rangle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); return JS_UNDEFINED; }
-JSValue js_gameobject_get_rangle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
+JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
+JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); return JS_UNDEFINED; }
+JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
 JSValue js_gameobject_get_rscale(JSContext *js, JSValue this) { return vec32js(js2gameobject(this)->scale); }
 JSValue js_gameobject_set_rscale(JSContext *js, JSValue this, JSValue val) { js2gameobject(this)->scale = js2vec3(val); return JS_UNDEFINED; }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
@@ -1521,7 +1502,20 @@ JSC_GETSET(gameobject, categories, bitmask)
 JSC_GETSET(gameobject, mask, bitmask)
 JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
 
+void body_shape_fn(cpBody *body, cpShape *shape, JSValue *fn) {
+  JSValue v = cpShape2js(shape);
+  script_call_sym(*fn, 1, &v);
+}
+
+JSC_CCALL(gameobject_eachshape,
+  gameobject *g = js2gameobject(this);
+  JSValue fn = argv[0];
+  cpBodyEachShape(g->body, body_shape_fn, &fn);
+)
+
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
+  CGETSET_ADD(gameobject, pos),
+  CGETSET_ADD(gameobject, angle),
   CGETSET_ADD(gameobject, friction),
   CGETSET_ADD(gameobject, elasticity),
   CGETSET_ADD(gameobject,mass),
@@ -1542,6 +1536,7 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, force, 1),
   MIST_FUNC_DEF(gameobject, force_local, 2),
   MIST_FUNC_DEF(gameobject, selfsync, 0),
+  MIST_FUNC_DEF(gameobject, eachshape, 1)
 };
 
 JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
@@ -1795,30 +1790,100 @@ JSC_CCALL(os_gc, script_gc());
 JSC_SSCALL(os_eval, ret = script_eval(str, str2))
 
 JSC_CCALL(os_make_gameobject,
-  ret = gameobject2js(MakeGameobject());
-  JS_SetPropertyFunctionList(js, ret, js_gameobject_funcs, countof(js_gameobject_funcs));
-  js2gameobject(ret)->ref = ret;
+  gameobject *g = MakeGameobject();
+  g->t = js2transform(argv[0]);
+  ret = gameobject2js(g);
+//  JS_SetPropertyFunctionList(js, ret, js_gameobject_funcs, countof(js_gameobject_funcs));
+  g->ref = ret;
   return ret;
 )
+
+JSValue js_circle2d_set_radius(JSContext *js, JSValue this, JSValue val) {
+  cpCircleShapeSetRadius(js2cpShape(this), js2number(val));
+}
+JSC_CCALL(circle2d_get_radius, return number2js(cpCircleShapeGetRadius(js2cpShape(this))))
+JSValue js_circle2d_set_offset(JSContext *js, JSValue this, JSValue val) {
+  cpCircleShapeSetOffset(js2cpShape(this), js2vec2(val).cp);
+}
+JSC_CCALL(circle2d_get_offset, return vec22js((HMM_Vec2)cpCircleShapeGetOffset(js2cpShape(this))))
+
+static const JSCFunctionListEntry js_circle2d_funcs[] = {
+  CGETSET_ADD(circle2d, radius),
+  CGETSET_ADD(circle2d, offset)
+};
+
 JSC_CCALL(os_make_circle2d,
   gameobject *go = js2gameobject(argv[0]);
-  struct phys2d_circle *circle = Make2DCircle(go);
-  JSValue circleval = JS_NewObject(js);
-  js_setprop_str(circleval, "id", ptr2js(circle));
-  js_setprop_str(circleval, "shape", ptr2js(&circle->shape));
-  circle->shape.ref = JS_DupValue(js,argv[1]);
-  return circleval;
+  cpShape *shape = cpCircleShapeNew(go->body, 10, (cpVect){0,0});
+  cpSpaceAddShape(space, shape);
+  ret = cpShape2js(shape);
+  JS_SetPropertyFunctionList(js, ret, js_circle2d_funcs, countof(js_circle2d_funcs));
+  return ret;
 )
+
+JSC_CCALL(poly2d_setverts,
+  cpShape *s = js2cpShape(this);
+  HMM_Vec2 *v = js2cpvec2arr(argv[0]);
+  cpTransform t = {0};
+  t.a = 1;
+  t.b = 0;
+  t.tx = 0;
+  t.c = 0;
+  t.d = 1;
+  t.ty = 0;
+  cpPolyShapeSetVerts(s, arrlen(v), v, t);
+  arrfree(v);
+)
+
+JSValue js_poly2d_set_radius(JSContext *js, JSValue this, JSValue val) {
+  cpPolyShapeSetRadius(js2cpShape(this), js2number(val));
+}
+JSC_CCALL(poly2d_get_radius, return number2js(cpPolyShapeGetRadius(js2cpShape(this))))
+
+static const JSCFunctionListEntry js_poly2d_funcs[] = {
+  MIST_FUNC_DEF(poly2d, setverts, 2),
+  CGETSET_ADD(poly2d, radius)
+};
 
 JSC_CCALL(os_make_poly2d,
   gameobject *go = js2gameobject(argv[0]);
-  struct phys2d_poly *poly = Make2DPoly(go);
-  phys2d_poly_setverts(poly, NULL);
-  JSValue polyval = JS_NewObject(js);
-  js_setprop_str(polyval, "id", ptr2js(poly));
-  js_setprop_str(polyval, "shape", ptr2js(&poly->shape));
-  poly->shape.ref = JS_DupValue(js,argv[1]);
-  return polyval;
+  cpShape *shape = cpPolyShapeNew(go->body, 0, NULL, (cpTransform){0}, 0);
+  cpSpaceAddShape(space, shape);
+  ret = cpShape2js(shape);
+  JS_SetPropertyFunctionList(js, ret, js_poly2d_funcs, countof(js_poly2d_funcs));
+  return ret;
+)
+
+JSC_CCALL(seg2d_set_endpoints,
+  HMM_Vec2 a = js2vec2(argv[0]);
+  HMM_Vec2 b = js2vec2(argv[1]);
+  cpSegmentShapeSetEndpoints(js2cpShape(this), a.cp, b.cp);
+)
+
+JSValue js_seg2d_set_radius(JSContext *js, JSValue this, JSValue val) {
+  cpSegmentShapeSetRadius(js2cpShape(this), js2number(val));
+}
+JSC_CCALL(seg2d_get_radius, return number2js(cpSegmentShapeGetRadius(js2cpShape(this))))
+
+JSC_CCALL(seg2d_set_neighbors,
+  HMM_Vec2 prev = js2vec2(argv[0]);
+  HMM_Vec2 next = js2vec2(argv[1]);
+  cpSegmentShapeSetNeighbors(js2cpShape(this), prev.cp, next.cp);
+)
+
+static const JSCFunctionListEntry js_seg2d_funcs[] = {
+  MIST_FUNC_DEF(seg2d, set_endpoints, 2),
+  CGETSET_ADD(seg2d, radius),
+  MIST_FUNC_DEF(seg2d, set_neighbors, 2)
+};
+
+JSC_CCALL(os_make_seg2d,
+  gameobject *go = js2gameobject(argv[0]);
+  cpShape *shape = cpSegmentShapeNew(go->body, (cpVect){0,0}, (cpVect){0,0}, 0);
+  cpSpaceAddShape(space, shape);
+  ret = cpShape2js(shape);
+  JS_SetPropertyFunctionList(js, ret, js_seg2d_funcs, countof(js_seg2d_funcs));
+  return ret;
 )
 
 JSC_CCALL(os_make_edge2d,
@@ -2064,10 +2129,11 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),
   MIST_FUNC_DEF(os, eval, 2),
-  MIST_FUNC_DEF(os, make_gameobject, 0),
+  MIST_FUNC_DEF(os, make_gameobject, 1),
   MIST_FUNC_DEF(os, make_circle2d, 2),
   MIST_FUNC_DEF(os, make_poly2d, 2),
   MIST_FUNC_DEF(os, make_edge2d, 2),
+  MIST_FUNC_DEF(os, make_seg2d, 1),
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_model, 1),
@@ -2128,7 +2194,7 @@ void ffi_load() {
   QJSGLOBALCLASS(dspsound);
   QJSGLOBALCLASS(pshape);
   QJSGLOBALCLASS(performance);
-  QJSGLOBALCLASS(circle2d);
+
   QJSGLOBALCLASS(poly2d);
   QJSGLOBALCLASS(edge2d);
   

@@ -42,6 +42,7 @@ struct gameobject {
   unsigned int warp_mask;
   HMM_Vec3 scale;
   JSValue ref;
+  transform *t; // the transform this body controls
 };
 
 /*
@@ -67,16 +68,10 @@ void gameobject_free(gameobject *go);
 transform go2t(gameobject *go);
 
 HMM_Vec3 go_pos(gameobject *go);
-void gameobject_setpos(gameobject *go, cpVect vec);
-float go_angle(gameobject *go);
-void gameobject_setangle(gameobject *go, float angle);
 
 gameobject *body2go(cpBody *body);
 gameobject *shape2go(cpShape *shape);
 
 void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 
-/* Tries a few methods to select a gameobject; if none is selected returns -1 */
-
-void gameobject_draw_debug(gameobject *go);
 #endif
