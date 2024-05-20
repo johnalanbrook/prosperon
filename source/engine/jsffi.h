@@ -4,12 +4,13 @@
 #include "quickjs/quickjs.h"
 #include "HandmadeMath.h"
 #include <stdarg.h>
+#include <chipmunk/chipmunk.h>
+
+extern JSValue cpShape2js(cpShape *s);
 
 #define MIST_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
 
 #define MIST_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN)
-
-#define GETFN(ID, ENTRY, TYPE) JSC_CCALL(ID##_##ENTRY, return TYPE##2js(js2##ID (this)->ENTRY))
 
 #define JS_SETSIG JSContext *js, JSValue this, JSValue val
 
@@ -93,8 +94,8 @@ static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
   .finalizer = js_##TYPE##_finalizer,\
 };\
-static TYPE *js2##TYPE (JSValue val) { return JS_GetOpaque(val,js_##TYPE##_id); }\
-static JSValue TYPE##2js(TYPE *n) { \
+TYPE *js2##TYPE (JSValue val) { return JS_GetOpaque(val,js_##TYPE##_id); }\
+JSValue TYPE##2js(TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   YughSpam("Created " #TYPE " at %p", n); \
   JS_SetOpaque(j,n);\

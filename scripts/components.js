@@ -227,7 +227,7 @@ sprite.inputs.kp1 = function() { this.setanchor("ul"); }
 
 component.sprite = sprite;
 
-Object.seal(sprite);
+//Object.seal(sprite);
 
 /* sprite anim returns a data structure for the given file path
   frames: array of frames

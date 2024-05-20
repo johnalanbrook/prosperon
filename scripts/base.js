@@ -1169,11 +1169,6 @@ Object.defineProperty(Array.prototype, 'anyjs', {
 });
 
 /* Return true if array contains x */
-/*Object.defineProperty(Array.prototype, 'includes', {
-value: function(x) {
-  return this.some(e => e === x);
-}});
-*/
 Object.defineProperty(Array.prototype, 'empty', {
   get: function() { return this.length === 0; },
 });

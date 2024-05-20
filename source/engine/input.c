@@ -44,7 +44,7 @@ static char *touch_jstrn(char *dest, int len, sapp_touchpoint *touch, int n)
   char touchdest[512] = {0};
   strncat(dest,"[", 512);
   for (int i = 0; i < n; i++) {
-    snprintf(touchdest, 512, "{id:%p, x:%g, y:%g},", touch[i].identifier, touch[i].pos_x, touch[i].pos_y);
+    snprintf(touchdest, 512, "{id:%zd, x:%g, y:%g},", touch[i].identifier, touch[i].pos_x, touch[i].pos_y);
     strncat(dest,touchdest,512);
   }
   strncat(dest,"]", 512);

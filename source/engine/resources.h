@@ -25,7 +25,7 @@ void pack_end();
 
 void *slurp_file(const char *filename, size_t *size);
 char *slurp_text(const char *filename, size_t *size);
-int slurp_write(const char *txt, const char *filename, size_t len);
+int slurp_write(void *txt, const char *filename, size_t len);
 
 char *seprint(char *fmt, ...);
 

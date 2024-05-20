@@ -74,20 +74,23 @@ char *js2strdup(JSValue v) {
 
 void sg_buffer_free(sg_buffer *b)
 {
-  printf("DESTROYED BUFFER AT %p\n", b);
   sg_destroy_buffer(*b);
   free(b);
 }
 
 void cpShape_free(cpShape *s)
 {
-  JSValue *cb = cpShapeGetUserData(s);
-  free(cb);
-  cpSpaceRemoveShape(space, s);
+  if (cpSpaceContainsShape(space, s))
+    cpSpaceRemoveShape(space, s);
   cpShapeFree(s);
 }
 
-void sg_image_free(sg_image *t){}
+void cpConstraint_free(cpConstraint *c)
+{
+  if (cpSpaceContainsConstraint(space, c))
+    cpSpaceRemoveConstraint(space, c);
+  cpConstraintFree(c);
+}
 
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
@@ -99,15 +102,25 @@ QJSCLASS(font)
 QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
 QJSCLASS(window)
-QJSCLASS(constraint)
 QJSCLASS(sg_buffer)
-QJSCLASS(sg_image)
 QJSCLASS(datastream)
 QJSCLASS(cpShape)
+QJSCLASS(cpConstraint)
 
 static JSValue js_circle2d;
 static JSValue js_poly2d;
 static JSValue js_seg2d;
+
+static JSValue js_pin;
+static JSValue js_motor;
+static JSValue js_ratchet;
+static JSValue js_slide;
+static JSValue js_pivot;
+static JSValue js_gear;
+static JSValue js_rotary;
+static JSValue js_damped_rotary;
+static JSValue js_damped_spring;
+static JSValue js_groove;
 
 static JSValue sound_proto;
 sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
@@ -165,6 +178,14 @@ double js2number(JSValue v) {
   JS_ToFloat64(js, &g, v);
   if (isnan(g)) g = 0;
   return g;
+}
+
+JSValue angle2js(double g) {
+  return number2js(g*HMM_RadToTurn);
+}
+double js2angle(JSValue v) {
+  double n = js2number(v);
+  return n * HMM_TurnToRad;
 }
 
 void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
@@ -670,20 +691,21 @@ JSC_CCALL(render_end_pass, sg_end_pass())
 
 JSC_SCALL(render_text_size, ret = bb2js(text_bb(str, js2number(argv[1]), js2number(argv[2]), 1)))
 
-JSC_CCALL(render_set_camera,
-  JSValue cam = argv[0];
+HMM_Mat4 transform2view(transform *t)
+{
+  HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
+  return HMM_LookAt_LH(t->pos, look, vUP);
+}
+
+HMM_Mat4 camera2projection(JSValue cam) {
   int ortho = js2boolean(js_getpropstr(cam, "ortho"));
   float near = js2number(js_getpropstr(cam, "near"));
   float far = js2number(js_getpropstr(cam, "far"));
   float fov = js2number(js_getpropstr(cam, "fov"))*HMM_DegToRad;
   HMM_Vec2 size = js2vec2(js_getpropstr(cam,"size"));
-  
-  transform *t = js2transform(js_getpropstr(cam, "transform"));
-  HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
-  globalview.v = HMM_LookAt_LH(t->pos, look, vUP);
 
   if (ortho)
-    globalview.p = HMM_Orthographic_Metal(
+    return HMM_Orthographic_Metal(
       -size.x/2,
       size.x/2,
 #ifdef SOKOL_GLCORE    //flipping orthographic Y if opengl
@@ -697,8 +719,20 @@ JSC_CCALL(render_set_camera,
       far
     );
   else
-    globalview.p = HMM_Perspective_Metal(fov, size.x/size.y, near, far);
+    return HMM_Perspective_Metal(fov, size.x/size.y, near, far);
+}
 
+JSC_CCALL(render_camera_screen2world,
+  HMM_Mat4 view = transform2view(js2transform(js_getpropstr(argv[0], "transform")));
+  view = HMM_InvGeneralM4(view);
+  HMM_Vec4 p = js2vec4(argv[1]);
+  return vec42js(HMM_MulM4V4(view, p));
+)
+
+JSC_CCALL(render_set_camera,
+  JSValue cam = argv[0];
+  globalview.p = camera2projection(argv[0]);
+  globalview.v = transform2view(js2transform(js_getpropstr(cam, "transform")));
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
 
@@ -918,6 +952,7 @@ JSC_CCALL(render_screencolor,
 
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flushtext, 0),
+  MIST_FUNC_DEF(render, camera_screen2world, 2),
   MIST_FUNC_DEF(render, viewport, 4),
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, commit, 0),
@@ -1165,7 +1200,7 @@ JSValue js_io_slurpbytes(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
-  char *d = slurp_file(f,&len);
+  unsigned char *d = slurp_file(f,&len);
   JSValue ret = JS_NewArrayBufferCopy(js,d,len);
   JS_FreeCString(js,f);
   free(d);
@@ -1191,14 +1226,13 @@ JSValue js_io_slurpwrite(JSContext *js, JSValue this, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
-  const char *data;
   JSValue ret;
   if (JS_IsString(argv[1])) {
-    data = JS_ToCStringLen(js, &len, argv[1]);
+    char *data = JS_ToCStringLen(js, &len, argv[1]);
     ret = number2js(slurp_write(data, f, len));
     JS_FreeCString(js,data);
   } else {
-    data = JS_GetArrayBuffer(js, &len, argv[1]);
+    unsigned char *data = JS_GetArrayBuffer(js, &len, argv[1]);
     ret = number2js(slurp_write(data, f, len));
   }
 
@@ -1297,7 +1331,7 @@ JSC_CCALL(physics_ray_query,
 static void point_query_fn(cpShape *shape, float dist, cpVect point, JSValue *cb)
 {
   JSValue argv[3] = {
-    JS_DupValue(js,*(JSValue*)cpShapeGetUserData(shape)),
+    JS_DupValue(js,cpShape2js(shape)),
     vec22js((HMM_Vec2)point),
     number2js(dist)
   };
@@ -1325,10 +1359,40 @@ JSC_CCALL(physics_point_query_nearest,
   return pointinfo2js(info);
 )
 
+void space_shape_fn(cpShape *shape, JSValue *fn) {
+  JSValue v = *(JSValue*)cpShapeGetUserData(shape);
+  script_call_sym(*fn, 1, &v);
+}
+
+JSC_CCALL(physics_eachshape,
+  JSValue fn = argv[0];
+  cpSpaceEachShape(space, space_shape_fn, &fn);
+)
+
+void space_body_fn(cpBody *body, JSValue *fn) {
+  JSValue v = body2go(body)->ref;
+  script_call_sym(*fn, 1, &v);
+}
+
+JSC_CCALL(physics_eachbody,
+  JSValue fn = argv[0];
+  cpSpaceEachBody(space, space_body_fn, &fn);
+)
+
+void space_constraint_fn(cpConstraint *c, JSValue *fn) {
+  JSValue v = *(JSValue*)cpConstraintGetUserData(c);
+  script_call_sym(*fn, 1, &v);
+}
+
+JSC_CCALL(physics_eachconstraint,
+  JSValue fn = argv[0];
+  cpSpaceEachConstraint(space, space_constraint_fn, &fn);
+)
+
 #define SPACE_GETSET(ENTRY, CPENTRY, TYPE) \
 JSC_CCALL(physics_get_##ENTRY, return TYPE##2js(cpSpaceGet##CPENTRY (space))) \
 JSValue js_physics_set_##ENTRY (JS_SETSIG) { \
-  cpSpaceSet##CPENTRY(space, js2##TYPE(val)); \
+  cpSpaceSet##CPENTRY(space, js2##TYPE(val));   return JS_UNDEFINED; \
 } \
 
 SPACE_GETSET(iterations, Iterations, number)
@@ -1347,6 +1411,9 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, closest_point, 3),
   MIST_FUNC_DEF(physics, make_damp, 0),
   MIST_FUNC_DEF(physics, make_gravity, 0),
+  MIST_FUNC_DEF(physics, eachbody, 1),
+  MIST_FUNC_DEF(physics, eachshape, 1),
+  MIST_FUNC_DEF(physics, eachconstraint, 1),
   CGETSET_ADD(physics, iterations),
   CGETSET_ADD(physics, idle_speed),
   CGETSET_ADD(physics, sleep_time),
@@ -1392,7 +1459,7 @@ JSC_CCALL(transform_lookat,
 JSC_CCALL(transform_rotate,
   HMM_Vec3 axis = js2vec3(argv[0]);
   transform *t = js2transform(this);
-  HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2number(argv[1]));
+  HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2angle(argv[1]));
   t->rotation = HMM_MulQ(t->rotation,rot);
 )
 
@@ -1408,7 +1475,7 @@ static const JSCFunctionListEntry js_transform_funcs[] = {
   MIST_FUNC_DEF(transform, move, 1),
   MIST_FUNC_DEF(transform, rotate, 2),
   MIST_FUNC_DEF(transform, lookat, 1),
-  MIST_FUNC_DEF(transform, direction, 1)
+  MIST_FUNC_DEF(transform, direction, 1),
 };
 
 JSC_GETSET(dsp_node, pass, boolean)
@@ -1481,12 +1548,12 @@ JSValue js_gameobject_set_pos(JSContext *js, JSValue this, JSValue val) {
   return JS_UNDEFINED;
 }
 JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
-JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); return JS_UNDEFINED; }
-JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngle(js2gameobject(this)->body)); }
+JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, js2angle(val)); return JS_UNDEFINED; }
+JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return angle2js(cpBodyGetAngle(js2gameobject(this)->body)); }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
-JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, HMM_TurnToRad*js2number(val)); return JS_UNDEFINED;}
-JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return number2js(HMM_RadToTurn*cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
-//JSC_GETSET_BODY(moi, Moment, number)
+JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, js2angle(val)); return JS_UNDEFINED;}
+JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return angle2js(cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
+JSC_GETSET_BODY(moi, Moment, number)
 JSC_GETSET_BODY(torque, Torque, number)
 JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
 JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
@@ -1505,7 +1572,7 @@ JSC_CCALL(gameobject_wake, cpBodyActivate(js2gameobject(this)->body))
 JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
 
 void body_shape_fn(cpBody *body, cpShape *shape, JSValue *fn) {
-  JSValue v = cpShape2js(shape);
+  JSValue v = *(JSValue*)cpShapeGetUserData(shape);
   script_call_sym(*fn, 1, &v);
 }
 
@@ -1513,6 +1580,32 @@ JSC_CCALL(gameobject_eachshape,
   gameobject *g = js2gameobject(this);
   JSValue fn = argv[0];
   cpBodyEachShape(g->body, body_shape_fn, &fn);
+)
+
+void body_constraint_fn(cpBody *body, cpConstraint *c, JSValue *fn) {
+  JSValue v = *(JSValue*)cpConstraintGetUserData(c);
+  script_call_sym(*fn, 1, &v);
+}
+
+JSC_CCALL(gameobject_eachconstraint,
+  gameobject *g = js2gameobject(this);
+  JSValue fn = argv[0];
+  cpBodyEachConstraint(g->body, body_constraint_fn, &fn);
+)
+
+void body_arbiter_fn(cpBody *body, cpArbiter *arb, JSValue *fn) {
+  JSValue v = arb2js(arb);
+  script_call_sym(*fn, 1, &v);
+}
+
+JSC_CCALL(gameobject_eacharbiter,
+  gameobject *g = js2gameobject(this);
+  JSValue fn = argv[0];
+  cpBodyEachArbiter(g->body, body_arbiter_fn, &fn);
+)
+
+JSC_CCALL(gameobject_transform,
+  return JS_DupValue(js, transform2js(js2gameobject(this)->t));
 )
 
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
@@ -1527,7 +1620,7 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   CGETSET_ADD(gameobject,warp_mask),
   CGETSET_ADD(gameobject, velocity),
   CGETSET_ADD(gameobject, angularvelocity),
-//  CGETSET_ADD(gameobject, moi),
+  CGETSET_ADD(gameobject, moi),
   CGETSET_ADD(gameobject, phys),
   CGETSET_ADD(gameobject, torque),
   MIST_FUNC_DEF(gameobject, impulse, 1),
@@ -1535,21 +1628,221 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
   MIST_FUNC_DEF(gameobject, force_local, 2),
   MIST_FUNC_DEF(gameobject, selfsync, 0),
   MIST_FUNC_DEF(gameobject, eachshape, 1),
+  MIST_FUNC_DEF(gameobject, eachconstraint, 1),
+  MIST_FUNC_DEF(gameobject, eacharbiter, 1),
   MIST_FUNC_DEF(gameobject, sleep, 0),
   MIST_FUNC_DEF(gameobject, sleeping, 0),
-  MIST_FUNC_DEF(gameobject, wake, 0)
+  MIST_FUNC_DEF(gameobject, wake, 0),
+  MIST_FUNC_DEF(gameobject, transform, 0),
 };
 
-JSC_CCALL(joint_pin, return constraint2js(constraint_make(cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero))))
-JSC_CCALL(joint_pivot, return constraint2js(constraint_make(cpPivotJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body,js2vec2(argv[2]).cp))))
-JSC_CCALL(joint_gear, return constraint2js(constraint_make(cpGearJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3])))))
-JSC_CCALL(joint_rotary, return constraint2js(constraint_make(cpRotaryLimitJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3])))))
-JSC_CCALL(joint_damped_rotary, return constraint2js(constraint_make(cpDampedRotarySpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))))
-JSC_CCALL(joint_damped_spring, return constraint2js(constraint_make(cpDampedSpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5]), js2number(argv[6])))))
-JSC_CCALL(joint_groove, return constraint2js(constraint_make(cpGrooveJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp))))
-JSC_CCALL(joint_slide, return constraint2js(constraint_make(cpSlideJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5])))))
-JSC_CCALL(joint_ratchet, return constraint2js(constraint_make(cpRatchetJointNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2]), js2number(argv[3])))))
-JSC_CCALL(joint_motor, return constraint2js(constraint_make(cpSimpleMotorNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2])))))
+#define CC_GETSET(CPTYPE, CP, ENTRY, CPENTRY, TYPE) \
+JSC_CCALL(CP##_get_##ENTRY, return TYPE##2js(CP##Get##CPENTRY (js2##CPTYPE(this)))) \
+JSValue js_##CP##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
+  CP##Set##CPENTRY (js2##CPTYPE(this), js2##TYPE (val)); \
+  return JS_UNDEFINED; \
+} \
+
+#define CNST_GETSET(ENTRY,CPENTRY,TYPE) CC_GETSET(cpConstraint, cpConstraint, ENTRY, CPENTRY, TYPE)
+
+CNST_GETSET(max_force, MaxForce, number)
+CNST_GETSET(max_bias, MaxBias, number)
+CNST_GETSET(error_bias, ErrorBias, number)
+CNST_GETSET(collide_bodies, CollideBodies, boolean)
+
+JSC_CCALL(cpConstraint_broken, return boolean2js(cpSpaceContainsConstraint(space, js2cpConstraint(this))))
+JSC_CCALL(cpConstraint_break, 
+  if (cpSpaceContainsConstraint(space, js2cpConstraint(this)))
+    cpSpaceRemoveConstraint(space, js2cpConstraint(this));
+)
+
+JSC_CCALL(cpConstraint_bodyA,
+  cpBody *b = cpConstraintGetBodyA(js2cpConstraint(this));
+  gameobject *go = body2go(b);
+  return JS_DupValue(js,gameobject2js(go));
+)
+
+JSC_CCALL(cpConstraint_bodyB,
+  cpBody *b = cpConstraintGetBodyB(js2cpConstraint(this));
+  gameobject *go = body2go(b);
+  return JS_DupValue(js,gameobject2js(go));
+)
+
+static const JSCFunctionListEntry js_cpConstraint_funcs[] = {
+  MIST_FUNC_DEF(cpConstraint, bodyA, 0),
+  MIST_FUNC_DEF(cpConstraint, bodyB, 0),
+  CGETSET_ADD(cpConstraint, max_force),
+  CGETSET_ADD(cpConstraint, max_bias),
+  CGETSET_ADD(cpConstraint, error_bias),
+  CGETSET_ADD(cpConstraint, collide_bodies),
+  MIST_FUNC_DEF(cpConstraint, broken, 0),
+  MIST_FUNC_DEF(cpConstraint, break, 0)
+};
+
+JSValue prep_constraint(cpConstraint *c)
+{
+  JSValue ret = cpConstraint2js(c);
+  JSValue *cb = malloc(sizeof(JSValue));
+  *cb = ret;
+  cpConstraintSetUserData(c, cb);
+  return ret;
+}
+
+CC_GETSET(cpConstraint, cpPinJoint, distance, Dist, number)
+CC_GETSET(cpConstraint, cpPinJoint, anchor_a, AnchorA, cvec2)
+CC_GETSET(cpConstraint, cpPinJoint, anchor_b, AnchorB, cvec2)
+
+static const JSCFunctionListEntry js_pin_funcs[] = {
+  CGETSET_ADD(cpPinJoint, distance),
+  CGETSET_ADD(cpPinJoint, anchor_a),
+  CGETSET_ADD(cpPinJoint, anchor_b)
+};
+
+JSC_CCALL(joint_pin,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_pin);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero)));
+  JS_SetPrototype(js, ret, js_pin);
+)
+
+CC_GETSET(cpConstraint, cpPivotJoint, anchor_a, AnchorA, cvec2)
+CC_GETSET(cpConstraint, cpPivotJoint, anchor_b, AnchorB, cvec2)
+
+static const JSCFunctionListEntry js_pivot_funcs[] = {
+  CGETSET_ADD(cpPivotJoint, anchor_a),
+  CGETSET_ADD(cpPivotJoint, anchor_b)
+};
+
+JSC_CCALL(joint_pivot,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_pivot);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpPivotJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body,js2vec2(argv[2]).cp)));
+  JS_SetPrototype(js, ret, js_pivot);
+)
+
+CC_GETSET(cpConstraint, cpGearJoint, phase, Phase, angle)
+CC_GETSET(cpConstraint, cpGearJoint, ratio, Ratio, number)
+
+static const JSCFunctionListEntry js_gear_funcs[] = {
+  CGETSET_ADD(cpGearJoint, phase),
+  CGETSET_ADD(cpGearJoint, ratio)
+};
+  
+JSC_CCALL(joint_gear,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_gear);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpGearJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]))));
+  JS_SetPrototype(js, ret, js_gear);
+)
+
+CC_GETSET(cpConstraint, cpRotaryLimitJoint, min, Min, number)
+CC_GETSET(cpConstraint, cpRotaryLimitJoint, max, Max, number)
+
+static const JSCFunctionListEntry js_rotary_funcs[] = {
+  CGETSET_ADD(cpRotaryLimitJoint, min),
+  CGETSET_ADD(cpRotaryLimitJoint, max)
+};
+
+JSC_CCALL(joint_rotary,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_rotary);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpRotaryLimitJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]))));
+  JS_SetPrototype(js, ret, js_rotary);
+)
+
+CC_GETSET(cpConstraint, cpDampedRotarySpring, rest_angle, RestAngle, number)
+CC_GETSET(cpConstraint, cpDampedRotarySpring, stiffness, Stiffness, number)
+CC_GETSET(cpConstraint, cpDampedRotarySpring, damping, Damping, number)
+
+static const JSCFunctionListEntry js_damped_rotary_funcs[] = {
+  CGETSET_ADD(cpDampedRotarySpring, rest_angle),
+  CGETSET_ADD(cpDampedRotarySpring, stiffness),
+  CGETSET_ADD(cpDampedRotarySpring, damping)
+};
+
+JSC_CCALL(joint_damped_rotary,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_damped_rotary);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpDampedRotarySpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]), js2number(argv[4]))));
+  JS_SetPrototype(js, ret, js_damped_rotary);
+)
+
+CC_GETSET(cpConstraint, cpDampedSpring, anchor_a, AnchorA, cvec2)
+CC_GETSET(cpConstraint, cpDampedSpring, anchor_b, AnchorB, cvec2)
+CC_GETSET(cpConstraint, cpDampedSpring, rest_length, RestLength, number)
+CC_GETSET(cpConstraint, cpDampedSpring, stiffness, Stiffness, number)
+CC_GETSET(cpConstraint, cpDampedSpring, damping, Damping, number)
+
+static const JSCFunctionListEntry js_damped_spring_funcs[] = {
+  CGETSET_ADD(cpDampedSpring, anchor_a),
+  CGETSET_ADD(cpDampedSpring, anchor_b),
+  CGETSET_ADD(cpDampedSpring, rest_length),
+  CGETSET_ADD(cpDampedSpring, stiffness),
+  CGETSET_ADD(cpDampedSpring, damping)
+};
+
+JSC_CCALL(joint_damped_spring,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_damped_spring);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpDampedSpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5]), js2number(argv[6]))));
+  JS_SetPrototype(js, ret, js_damped_spring);
+)
+
+CC_GETSET(cpConstraint, cpGrooveJoint, groove_a, GrooveA, cvec2)
+CC_GETSET(cpConstraint, cpGrooveJoint, groove_b, GrooveB, cvec2)
+CC_GETSET(cpConstraint, cpGrooveJoint, anchor_b, AnchorB, cvec2)
+
+static const JSCFunctionListEntry js_groove_funcs[] = {
+  CGETSET_ADD(cpGrooveJoint, groove_a),
+  CGETSET_ADD(cpGrooveJoint, groove_b),
+  CGETSET_ADD(cpGrooveJoint, anchor_b)
+};
+
+JSC_CCALL(joint_groove,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_groove);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpGrooveJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp)));
+  JS_SetPrototype(js, ret, js_groove);
+)
+
+CC_GETSET(cpConstraint, cpSlideJoint, anchor_a, AnchorA, cvec2)
+CC_GETSET(cpConstraint, cpSlideJoint, anchor_b, AnchorB, cvec2)
+CC_GETSET(cpConstraint, cpSlideJoint, min, Min, number)
+CC_GETSET(cpConstraint, cpSlideJoint, max, Max, number)
+
+static const JSCFunctionListEntry js_slide_funcs[] = {
+  CGETSET_ADD(cpSlideJoint, anchor_a),
+  CGETSET_ADD(cpSlideJoint, anchor_b),
+  CGETSET_ADD(cpSlideJoint, min),
+  CGETSET_ADD(cpSlideJoint, max)
+};
+
+JSC_CCALL(joint_slide,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_slide);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpSlideJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5]))));
+  JS_SetPrototype(js, ret, js_slide);
+)
+
+CC_GETSET(cpConstraint, cpRatchetJoint, angle, Angle, angle)
+CC_GETSET(cpConstraint, cpRatchetJoint, phase, Phase, angle)
+CC_GETSET(cpConstraint, cpRatchetJoint, ratchet, Ratchet, number)
+
+static const JSCFunctionListEntry js_ratchet_funcs[] = {
+  CGETSET_ADD(cpRatchetJoint, angle),
+  CGETSET_ADD(cpRatchetJoint, phase),
+  CGETSET_ADD(cpRatchetJoint, ratchet)
+};
+
+JSC_CCALL(joint_ratchet,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_ratchet);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpRatchetJointNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2]), js2number(argv[3]))));
+  JS_SetPrototype(js, ret, js_ratchet);
+)
+
+CC_GETSET(cpConstraint, cpSimpleMotor, rate, Rate, angle)
+
+static const JSCFunctionListEntry js_motor_funcs[] = {
+  CGETSET_ADD(cpSimpleMotor, rate)
+};
+
+JSC_CCALL(joint_motor,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_motor);
+  ret = prep_constraint(cpSpaceAddConstraint(space, cpSimpleMotorNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2]))));
+  JS_SetPrototype(js, ret, js_motor);
+)
 
 static const JSCFunctionListEntry js_joint_funcs[] = {
   MIST_FUNC_DEF(joint, pin, 2),
@@ -1648,27 +1941,6 @@ static const JSCFunctionListEntry js_font_funcs[] = {
   MIST_GET(font, height),
 };
 
-JSValue js_constraint_set_max_force (JSContext *js, JSValue this, JSValue val) {
-  cpConstraintSetMaxForce(js2constraint(this)->c, js2number(val));
-  return JS_UNDEFINED;
-}
-
-JSValue js_constraint_get_max_force(JSContext *js, JSValue this) { return number2js(cpConstraintGetMaxForce(js2constraint(this)->c));
-}
-
-JSValue js_constraint_set_collide (JSContext *js, JSValue this, JSValue val) {
-  cpConstraintSetCollideBodies(js2constraint(this)->c, js2boolean(val));
-  return JS_UNDEFINED;
-}
-
-JSValue js_constraint_get_collide(JSContext *js, JSValue this) { return boolean2js(cpConstraintGetCollideBodies(js2constraint(this)->c));
-}
-
-static const JSCFunctionListEntry js_constraint_funcs[] = {
-  CGETSET_ADD(constraint, max_force),
-  CGETSET_ADD(constraint, collide),
-};
-
 const char *STRTEST = "TEST STRING";
 
 JSC_CCALL(performance_barecall,)
@@ -1706,7 +1978,7 @@ JSValue js_nota_encode(JSContext *js, JSValue this, int argc, JSValue *argv)
   char nota[1024*1024]; // 1MB
   char *e = js_do_nota_encode(obj, nota);
 
-  return JS_NewArrayBufferCopy(js, nota, e-nota);
+  return JS_NewArrayBufferCopy(js, (unsigned char*)nota, e-nota);
 }
 
 JSValue js_nota_decode(JSContext *js, JSValue this, int argc, JSValue *argv)
@@ -1714,9 +1986,9 @@ JSValue js_nota_decode(JSContext *js, JSValue this, int argc, JSValue *argv)
   if (argc < 1) return JS_UNDEFINED;
 
   size_t len;
-  char *nota = JS_GetArrayBuffer(js, &len, argv[0]);
+  unsigned char *nota = JS_GetArrayBuffer(js, &len, argv[0]);
   JSValue ret;
-  js_do_nota_decode(&ret, nota);
+  js_do_nota_decode(&ret, (char*)nota);
   return ret;
 }
 
@@ -1773,12 +2045,16 @@ JSC_CCALL(os_make_gameobject,
 #define CP_GETSET(ENTRY, CPENTRY, TYPE) \
 JSC_CCALL(cpShape_get_##ENTRY, return TYPE##2js(cpShapeGet##CPENTRY (js2cpShape(this)))) \
 JSValue js_cpShape_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
-  cpShapeSet##CPENTRY (js2cpShape(this), js2##TYPE (val)); \
+  cpShapeSet##CPENTRY (js2cpShape(this), js2##TYPE (val)); return JS_UNDEFINED; \
 } \
 
 CP_GETSET(sensor, Sensor, boolean)
 CP_GETSET(friction, Friction, number)
 CP_GETSET(elasticity, Elasticity, number)
+CP_GETSET(mass, Mass, number)
+
+JSC_CCALL(cpShape_area, return number2js(cpShapeGetArea(js2cpShape(this))))
+
 JSC_CCALL(cpShape_get_surface_velocity, return vec22js((HMM_Vec2)cpShapeGetSurfaceVelocity(js2cpShape(this))))
 JSValue js_cpShape_set_surface_velocity(JS_SETSIG) {
   HMM_Vec2 v = js2vec2(val);
@@ -1802,6 +2078,12 @@ JSValue js_cpShape_set_category (JS_SETSIG) {
   return JS_UNDEFINED;
 }
 
+JSC_CCALL(cpShape_body,
+  cpBody *b = cpShapeGetBody(js2cpShape(this));
+  gameobject *go = body2go(b);
+  return JS_DupValue(js,gameobject2js(go));
+)
+
 static const JSCFunctionListEntry js_cpShape_funcs[] = {
   CGETSET_ADD(cpShape, sensor),
   CGETSET_ADD(cpShape, friction),
@@ -1809,14 +2091,19 @@ static const JSCFunctionListEntry js_cpShape_funcs[] = {
   CGETSET_ADD(cpShape, surface_velocity),
   CGETSET_ADD(cpShape, mask),
   CGETSET_ADD(cpShape, category),
+  CGETSET_ADD(cpShape, mass),
+  MIST_FUNC_DEF(cpShape, area, 0),
+  MIST_FUNC_DEF(cpShape, body, 0),
 };
 
 JSValue js_circle2d_set_radius(JSContext *js, JSValue this, JSValue val) {
   cpCircleShapeSetRadius(js2cpShape(this), js2number(val));
+  return JS_UNDEFINED;
 }
 JSC_CCALL(circle2d_get_radius, return number2js(cpCircleShapeGetRadius(js2cpShape(this))))
 JSValue js_circle2d_set_offset(JSContext *js, JSValue this, JSValue val) {
   cpCircleShapeSetOffset(js2cpShape(this), js2vec2(val).cp);
+  return JS_UNDEFINED;
 }
 JSC_CCALL(circle2d_get_offset, return vec22js((HMM_Vec2)cpCircleShapeGetOffset(js2cpShape(this))))
 
@@ -1828,12 +2115,11 @@ static const JSCFunctionListEntry js_circle2d_funcs[] = {
 JSValue prep_cpshape(cpShape *shape, gameobject *go)
 {
   cpSpaceAddShape(space, shape);
-//  cpShapeSetFilter(shape, (cpShapeFilter) {
-//    .group = (cpGroup)go,
-//    .mask = CP_ALL_CATEGORIES,
-//    .categories = CP_ALL_CATEGORIES
-//  });
-  cpShapeSetFilter(shape, CP_SHAPE_FILTER_ALL);
+  cpShapeSetFilter(shape, (cpShapeFilter) {
+    .group = (cpGroup)go,
+    .mask = CP_ALL_CATEGORIES,
+    .categories = CP_ALL_CATEGORIES
+  });
   cpShapeSetCollisionType(shape, (cpCollisionType)go);
 
   JSValue ret = cpShape2js(shape);
@@ -1844,6 +2130,7 @@ JSValue prep_cpshape(cpShape *shape, gameobject *go)
 }
 
 JSC_CCALL(os_make_circle2d,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_circle2d);
   gameobject *go = js2gameobject(argv[0]);
   cpShape *shape = cpCircleShapeNew(go->body, 10, (cpVect){0,0});
   ret = prep_cpshape(shape,go);    
@@ -1867,6 +2154,7 @@ JSC_CCALL(poly2d_setverts,
 
 JSValue js_poly2d_set_radius(JSContext *js, JSValue this, JSValue val) {
   cpPolyShapeSetRadius(js2cpShape(this), js2number(val));
+  return JS_UNDEFINED;
 }
 JSC_CCALL(poly2d_get_radius, return number2js(cpPolyShapeGetRadius(js2cpShape(this))))
 
@@ -1876,6 +2164,7 @@ static const JSCFunctionListEntry js_poly2d_funcs[] = {
 };
 
 JSC_CCALL(os_make_poly2d,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js, js_poly2d);
   gameobject *go = js2gameobject(argv[0]);
   cpShape *shape = cpPolyShapeNew(go->body, 0, NULL, (cpTransform){0}, 0);
   ret = prep_cpshape(shape,go);  
@@ -1891,6 +2180,7 @@ JSC_CCALL(seg2d_set_endpoints,
 
 JSValue js_seg2d_set_radius(JSContext *js, JSValue this, JSValue val) {
   cpSegmentShapeSetRadius(js2cpShape(this), js2number(val));
+  return JS_UNDEFINED;
 }
 JSC_CCALL(seg2d_get_radius, return number2js(cpSegmentShapeGetRadius(js2cpShape(this))))
 
@@ -1907,6 +2197,7 @@ static const JSCFunctionListEntry js_seg2d_funcs[] = {
 };
 
 JSC_CCALL(os_make_seg2d,
+  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_seg2d);
   gameobject *go = js2gameobject(argv[0]);
   cpShape *shape = cpSegmentShapeNew(go->body, (cpVect){0,0}, (cpVect){0,0}, 0);
   ret = prep_cpshape(shape,go);
@@ -2168,12 +2459,17 @@ static const JSCFunctionListEntry js_os_funcs[] = {
 
 #include "steam.h"
 
+#define JSSTATIC(NAME, PARENT) \
+js_##NAME = JS_NewObject(js); \
+JS_SetPropertyFunctionList(js, js_##NAME, js_##NAME##_funcs, countof(js_##NAME##_funcs)); \
+JS_SetPrototype(js, js_##NAME, PARENT); \
+
 void ffi_load() {
   JSUNDEF = JS_UNDEFINED;
   globalThis = JS_GetGlobalObject(js);
   
   QJSCLASSPREP(ptr);
-  
+  QJSCLASSPREP(sg_buffer);
   QJSGLOBALCLASS(os);
   
   QJSCLASSPREP_FUNCS(gameobject);
@@ -2184,7 +2480,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(warp_damp);
   QJSCLASSPREP_FUNCS(texture);
   QJSCLASSPREP_FUNCS(font);
-  QJSCLASSPREP_FUNCS(constraint);
+  QJSCLASSPREP_FUNCS(cpConstraint);
   QJSCLASSPREP_FUNCS(window);
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(cpShape);
@@ -2220,18 +2516,21 @@ void ffi_load() {
   JS_SetPropertyStr(js,globalThis, "sound_proto", sound_proto);
   JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
   JS_SetPrototype(js, sound_proto, dsp_node_proto);
-
-  js_circle2d = JS_NewObject(js);
-  JS_SetPropertyFunctionList(js, js_circle2d, js_circle2d_funcs, countof(js_circle2d_funcs));
-  JS_SetPrototype(js, js_circle2d, cpShape_proto);
-
-  js_poly2d = JS_NewObject(js);
-  JS_SetPropertyFunctionList(js, js_poly2d, js_poly2d_funcs, countof(js_poly2d_funcs));
-  JS_SetPrototype(js, js_poly2d, cpShape_proto);
-
-  js_seg2d = JS_NewObject(js);
-  JS_SetPropertyFunctionList(js, js_seg2d, js_seg2d_funcs, countof(js_seg2d_funcs));
-  JS_SetPrototype(js, js_seg2d, cpShape_proto);
+   
+  JSSTATIC(circle2d, cpShape_proto)
+  JSSTATIC(poly2d, cpShape_proto)
+  JSSTATIC(seg2d, cpShape_proto)  
+  
+  JSSTATIC(pin, cpConstraint_proto)
+  JSSTATIC(motor, cpConstraint_proto)
+  JSSTATIC(ratchet, cpConstraint_proto)
+  JSSTATIC(slide, cpConstraint_proto)
+  JSSTATIC(pivot, cpConstraint_proto)
+  JSSTATIC(gear, cpConstraint_proto)
+  JSSTATIC(rotary, cpConstraint_proto)
+  JSSTATIC(damped_rotary, cpConstraint_proto)
+  JSSTATIC(damped_spring, cpConstraint_proto)
+  JSSTATIC(groove, cpConstraint_proto)
   
   JS_FreeValue(js,globalThis);  
 }

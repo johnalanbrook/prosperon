@@ -27,19 +27,6 @@ gameobject *shape2go(cpShape *s)
   return cpBodyGetUserData(b);
 }
 
-void go_shape_moi(cpBody *body, cpShape *shape, gameobject *go) {
-/*  float moment = cpBodyGetMoment(body);
-  struct phys2d_shape *s = cpShapeGetUserData(shape);
-  if (!s) {
-    cpBodySetMoment(body, moment + 1);
-    return;
-  }
-
-  moment += s->moi(s->data);
-  if (moment < 0) moment = 0;
-  cpBodySetMoment(body, moment);*/
-}
-
 void gameobject_apply(gameobject *go) { *go->t = go2t(go); }
 
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
@@ -89,18 +76,17 @@ gameobject *MakeGameobject() {
 
 void rm_body_shapes(cpBody *body, cpShape *shape, void *data) {
   cpSpaceRemoveShape(space, shape);
-  cpShapeFree(shape);
 }
 
-void rm_body_constraints(cpBody *body, cpConstraint *constraint, void *data)
+void rm_body_constraints(cpBody *body, cpConstraint *c, void *data)
 {
-  constraint_break(cpConstraintGetUserData(constraint));
+  cpSpaceRemoveConstraint(space, c);
 }
 
 void gameobject_free(gameobject *go) {
   go->ref = JS_UNDEFINED;  
-//  cpBodyEachShape(go->body, rm_body_shapes, NULL);
-//  cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
+  cpBodyEachShape(go->body, rm_body_shapes, NULL);
+  cpBodyEachConstraint(go->body, rm_body_constraints, NULL);
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
   free(go);

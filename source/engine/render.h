@@ -38,25 +38,10 @@ typedef struct viewstate {
 
 extern viewstate globalview;
 
-struct draw_p {
-  float x;
-  float y;
-};
-
-struct draw_p3 {
-  float x;
-  float y;
-  float z;
-};
-
-#include <chipmunk/chipmunk.h>
-
 void render_init();
 
 void openglRender(HMM_Vec2 usesize);
-void opengl_rendermode(enum RenderMode r);
 
-void openglInit3d(struct window *window);
 void capture_screen(int x, int y, int w, int h, const char *path);
 
 void gif_rec_start(int w, int h, int cpf, int bitdepth);

@@ -6,54 +6,18 @@
 
 cpSpace *space = NULL;
 
-static JSValue fns[100];
-static JSValue hits[100];
-static int cb_idx = 0;
+static JSValue *fns = NULL;
+static JSValue *hits = NULL;
 
 void phys2d_init()
 {
   space = cpSpaceNew();
 }
 
-constraint *constraint_make(cpConstraint *c)
-{
-  constraint *cp = malloc(sizeof(*cp));
-  cp->c = c;
-  cp->break_cb = JS_UNDEFINED;
-  cp->remove_cb = JS_UNDEFINED;
-  cpSpaceAddConstraint(space,c);
-  cpConstraintSetUserData(c, cp);
-  return cp;
-}
-
-void constraint_break(constraint *constraint)
-{
-  if (!constraint->c) return;
-  cpSpaceRemoveConstraint(space, constraint->c);
-  cpConstraintFree(constraint->c);
-  constraint->c = NULL;
-  script_call_sym(constraint->break_cb,0,NULL);
-}
-
-void constraint_free(constraint *constraint)
-{
-  constraint_break(constraint);
-  free(constraint);
-}
-
-void constraint_test(cpConstraint *constraint, float *dt)
-{
-  float max = cpConstraintGetMaxForce(constraint);
-  if (!isfinite(max)) return;
-  float force = cpConstraintGetImpulse(constraint)/ *dt;
-  if (force > max)
-    constraint_break(cpConstraintGetUserData(constraint));
-}
-
 void phys2d_update(float deltaT) {
   cpSpaceStep(space, deltaT);
-  cpSpaceEachConstraint(space, constraint_test, &deltaT);
-  cb_idx = 0;
+  arrsetlen(fns,0);
+  arrsetlen(hits,0);
 }
 
 JSValue arb2js(cpArbiter *arb)
@@ -66,7 +30,7 @@ JSValue arb2js(cpArbiter *arb)
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
 
-  JSValue *j = cpShapeGetUserData(shape2);
+  JSValue j = cpShape2js(shape2);
 
   JSValue jg = body2go(body2)->ref;
 
@@ -76,9 +40,11 @@ JSValue arb2js(cpArbiter *arb)
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "normal", vec22js((HMM_Vec2)cpArbiterGetNormal(arb)));
   JS_SetPropertyStr(js, obj, "obj", JS_DupValue(js,jg));
-  JS_SetPropertyStr(js, obj, "shape", JS_DupValue(js, *j));
+  JS_SetPropertyStr(js, obj, "shape", JS_DupValue(js, j));
   JS_SetPropertyStr(js, obj, "point", vec22js((HMM_Vec2)cpArbiterGetPointA(arb, 0)));
   JS_SetPropertyStr(js, obj, "velocity", vec22js(srfv));
+  JS_SetPropertyStr(js, obj, "impulse", vec22js((HMM_Vec2)cpArbiterTotalImpulse(arb)));
+  JS_SetPropertyStr(js, obj, "ke", number2js(cpArbiterTotalKE(arb)));
 
   return obj;
 }
@@ -96,23 +62,21 @@ void register_hit(cpArbiter *arb, gameobject *go, const char *name)
   JSValue cb = JS_GetPropertyStr(js, go->ref, name);
   if (!JS_IsUndefined(cb)) {
     JSValue jarb = arb2js(arb);
-    fns[cb_idx] = JS_DupValue(js, cb);
-    hits[cb_idx] = jarb;
-    cpSpaceAddPostStepCallback(space, phys_run_post, &fns[cb_idx], &hits[cb_idx]);
-    cb_idx++;
+    arrput(fns, JS_DupValue(js,cb));
+    arrput(hits, jarb);
+    cpSpaceAddPostStepCallback(space, phys_run_post, fns+arrlen(fns)-1, hits+arrlen(hits)-1);
   }
   
   cpShape *s1, *s2;
   cpArbiterGetShapes(arb, &s1, &s2);
-  JSValue *j1 = cpShapeGetUserData(s1);
-  JSValue *j2 = cpShapeGetUserData(s2);
-  cb = JS_GetPropertyStr(js, *j1, name);
+  JSValue j1 = cpShape2js(s1);
+  JSValue j2 = cpShape2js(s2);
+  cb = JS_GetPropertyStr(js, j1, name);
   if (!JS_IsUndefined(cb)) {
     JSValue jarb = arb2js(arb);
-    fns[cb_idx] = JS_DupValue(js,cb);
-    hits[cb_idx] = jarb;
-    cpSpaceAddPostStepCallback(space, phys_run_post, &fns[cb_idx], &hits[cb_idx]);
-    cb_idx++;
+    arrput(fns, JS_DupValue(js,cb));
+    arrput(hits, jarb);
+    cpSpaceAddPostStepCallback(space, phys_run_post, fns+arrlen(fns)-1, hits+arrlen(hits)-1);
   }
 }
 

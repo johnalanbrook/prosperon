@@ -327,7 +327,6 @@ struct primitive mesh_add_primitive(cgltf_primitive *prim)
 
 void model_add_cgltf_mesh(mesh *m, cgltf_mesh *gltf_mesh)
 {
-  printf("mesh has %d primitives\n", gltf_mesh->primitives_count);
   for (int i = 0; i < gltf_mesh->primitives_count; i++)
     arrput(m->primitives, mesh_add_primitive(gltf_mesh->primitives+i));
 }
@@ -390,6 +389,7 @@ void model_add_cgltf_anim(model *model, cgltf_animation *anim)
       case cgltf_animation_path_type_scale:
         ach.target = &md->scale;
         break;
+      default: break;
     }
     ach.sampler = an.samplers+(ch.sampler-anim->samplers);
     

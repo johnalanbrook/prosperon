@@ -261,9 +261,9 @@ void *slurp_file(const char *filename, size_t *size)
   void *ret;
   if (!access(filename, R_OK))
     return os_slurp(filename, size);
-  else if (ret = mz_zip_reader_extract_file_to_heap(&game_cdb, filename, size, 0))
+  else if ((ret = mz_zip_reader_extract_file_to_heap(&game_cdb, filename, size, 0)))
     return ret;
-  else if (ret = mz_zip_reader_extract_file_to_heap(&corecdb, filename, size, 0))
+  else if ((ret = mz_zip_reader_extract_file_to_heap(&corecdb, filename, size, 0)))
     return ret;
 
   return NULL;
@@ -334,7 +334,7 @@ int mkpath(char *path, mode_t mode)
     return 0;
 }
 
-int slurp_write(const char *txt, const char *filename, size_t len) {
+int slurp_write(void *txt, const char *filename, size_t len) {
   FILE *f = fopen(filename, "w");
   if (!f) return 1;
 
