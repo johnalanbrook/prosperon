@@ -5,12 +5,12 @@
 #include "tml.h"
 #include "dsp.h"
 
-struct dsp_midi_song {
+typedef struct dsp_midi_song {
   float bpm;
   double time;
   tml_message *midi;
   tsf *sf;
-};
+} midi;
 
 dsp_node *dsp_midi(const char *midi, tsf *sf);
 tsf *make_soundfont(const char *sf);

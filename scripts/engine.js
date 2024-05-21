@@ -141,9 +141,8 @@ profile.addreport = function(cache, line, start)
 profile.printreport = function(cache, name)
 {
   var report = name + "\n";
-  for (var i in cache) {
-    report += `${i}    ${profile.best_t(profcache[i].reduce((a,b) => a+b)/profcache[i].length)}\n`;
-  }
+  for (var i in cache)
+    report += `${i}    ${profile.best_t(cache[i].reduce((a,b) => a+b)/cache[i].length)}\n`;
   
   return report;
 }

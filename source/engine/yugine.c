@@ -53,8 +53,8 @@ static int sim_play = SIM_PLAY;
 static int argc;
 static char **args;
 
-static JSValue c_start = JS_UNDEFINED;
-static JSValue c_process_fn = JS_UNDEFINED;
+static JSValue c_start;
+static JSValue c_process_fn;
 
 static int PLAYSTART = 0;
 

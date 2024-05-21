@@ -122,8 +122,19 @@ static JSValue js_damped_rotary;
 static JSValue js_damped_spring;
 static JSValue js_groove;
 
-static JSValue sound_proto;
-sound *js2sound(JSValue v) { return js2dsp_node(v)->data; }
+#define DSP_PROTO(TYPE) \
+static JSValue TYPE##_proto; \
+static TYPE *js2##TYPE (JSValue v) { \
+  dsp_node *node = js2dsp_node(v); \
+  return node->data; \
+} \
+
+DSP_PROTO(bitcrush)
+DSP_PROTO(delay)
+DSP_PROTO(sound)
+DSP_PROTO(compressor)
+DSP_PROTO(phasor)
+DSP_PROTO(adsr)
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
@@ -177,6 +188,13 @@ double js2number(JSValue v) {
   double g;
   JS_ToFloat64(js, &g, v);
   if (isnan(g)) g = 0;
+  return g;
+}
+
+uint64_t js2uint64(JSValue v)
+{
+  uint64_t g;
+  JS_ToIndex(js, &g, v);
   return g;
 }
 
@@ -661,11 +679,11 @@ JSC_GETSET(emitter, die_after_collision, boolean)
 JSC_GETSET(emitter, persist, number)
 JSC_GETSET(emitter, persist_var, number)
 JSC_GETSET(emitter, warp_mask, bitmask)
-JSC_CCALL(emitter_emit, emitter_emit(js2emitter(this), js2number(argv[0]), js2transform(argv[1])))
-JSC_CCALL(emitter_step, emitter_step(js2emitter(this), js2number(argv[0]), js2transform(argv[1])))
+JSC_CCALL(emitter_emit, emitter_emit(js2emitter(self), js2number(argv[0]), js2transform(argv[1])))
+JSC_CCALL(emitter_step, emitter_step(js2emitter(self), js2number(argv[0]), js2transform(argv[1])))
 JSC_CCALL(emitter_draw,
-  emitter_draw(js2emitter(this));
-  return number2js(arrlen(js2emitter(this)->verts));
+  emitter_draw(js2emitter(self));
+  return number2js(arrlen(js2emitter(self)->verts));
 )
 
 JSC_CCALL(render_flushtext,
@@ -1023,7 +1041,7 @@ static const JSCFunctionListEntry js_spline_funcs[] = {
   MIST_FUNC_DEF(spline, bezier, 2)
 };
 
-JSValue js_vector_dot(JSContext *js, JSValue this, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
+JSValue js_vector_dot(JSContext *js, JSValue self, int argc, JSValue *argv) { return number2js(HMM_DotV2(js2vec2(argv[0]), js2vec2(argv[1]))) ; };
 
 JSC_CCALL(vector_project, return vec22js(HMM_ProjV2(js2vec2(argv[0]), js2vec2(argv[1]))))
 
@@ -1092,7 +1110,7 @@ static const JSCFunctionListEntry js_game_funcs[] = {
 };
 
 JSC_CCALL(input_show_keyboard, sapp_show_keyboard(js2boolean(argv[0])))
-JSValue js_input_keyboard_shown(JSContext *js, JSValue this) { return boolean2js(sapp_keyboard_shown()); }
+JSValue js_input_keyboard_shown(JSContext *js, JSValue self) { return boolean2js(sapp_keyboard_shown()); }
 JSC_CCALL(input_mouse_mode, set_mouse_mode(js2number(argv[0])))
 JSC_CCALL(input_mouse_cursor, sapp_set_mouse_cursor(js2number(argv[0])))
 JSC_SCALL(input_cursor_img, cursor_img(str))
@@ -1129,12 +1147,12 @@ JSC_CCALL(time_now,
   return number2js((double)ct.tv_sec+(double)(ct.tv_usec/1000000.0));
 )
 
-JSValue js_time_computer_dst(JSContext *js, JSValue this) {
+JSValue js_time_computer_dst(JSContext *js, JSValue self) {
   time_t t = time(NULL);
   return boolean2js(localtime(&t)->tm_isdst);
 }
 
-JSValue js_time_computer_zone(JSContext *js, JSValue this) {
+JSValue js_time_computer_zone(JSContext *js, JSValue self) {
   time_t t = time(NULL);
   time_t local_t = mktime(localtime(&t));
   double diff = difftime(t, local_t);
@@ -1149,7 +1167,7 @@ static const JSCFunctionListEntry js_time_funcs[] = {
 
 JSC_SCALL(console_print, log_print(str))
 
-JSValue js_console_rec(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_console_rec(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   int level = js2number(argv[0]);
   const char *msg = JS_ToCString(js, argv[1]);
@@ -1196,7 +1214,7 @@ JSC_SCALL(io_chdir, ret = number2js(chdir(str)))
 JSC_SCALL(io_rm, ret = number2js(remove(str)))
 JSC_SCALL(io_mkdir, ret = number2js(mkdir(str,0777)))
 
-JSValue js_io_slurpbytes(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_io_slurpbytes(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
@@ -1207,7 +1225,7 @@ JSValue js_io_slurpbytes(JSContext *js, JSValue this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_slurp(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
@@ -1222,7 +1240,7 @@ JSValue js_io_slurp(JSContext *js, JSValue this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_slurpwrite(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_io_slurpwrite(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   size_t len;
@@ -1239,7 +1257,7 @@ JSValue js_io_slurpwrite(JSContext *js, JSValue this, int argc, JSValue *argv)
   return ret;
 }
 
-JSValue js_io_chmod(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_io_chmod(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char *f = js2str(argv[0]);
   int mod = js2number(argv[1]);
@@ -1252,7 +1270,11 @@ JSC_SCALL(io_save_qoa, save_qoa(str))
 JSC_SCALL(io_pack_start, pack_start(str))
 JSC_SCALL(io_pack_add, pack_add(str))
 JSC_CCALL(io_pack_end, pack_end())
-JSC_SCALL(io_mod, ret = number2js(file_mod_secs(str));)
+JSC_SCALL(io_mod,
+  #ifndef __EMSCRIPTEN__
+  ret = number2js(file_mod_secs(str));
+  #endif
+)
 
 static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, exists,1),
@@ -1448,23 +1470,23 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
 JSC_GETSET(transform, pos, vec3)
 JSC_GETSET(transform, scale, vec3)
 JSC_GETSET(transform, rotation, quat)
-JSC_CCALL(transform_move, transform_move(js2transform(this), js2vec3(argv[0])); )
+JSC_CCALL(transform_move, transform_move(js2transform(self), js2vec3(argv[0])); )
 JSC_CCALL(transform_lookat,
   HMM_Vec3 point = js2vec3(argv[0]);
-  transform *go = js2transform(this);
+  transform *go = js2transform(self);
   HMM_Mat4 m = HMM_LookAt_LH(go->pos, point, vUP);
   go->rotation = HMM_M4ToQ_LH(m);
 )
 
 JSC_CCALL(transform_rotate,
   HMM_Vec3 axis = js2vec3(argv[0]);
-  transform *t = js2transform(this);
+  transform *t = js2transform(self);
   HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2angle(argv[1]));
   t->rotation = HMM_MulQ(t->rotation,rot);
 )
 
 JSC_CCALL(transform_direction,
-  transform *t = js2transform(this);
+  transform *t = js2transform(self);
   return vec32js(HMM_QVRot(js2vec3(argv[0]), t->rotation));
 )
 
@@ -1483,8 +1505,8 @@ JSC_GETSET(dsp_node, off, boolean)
 JSC_GETSET(dsp_node, gain, number)
 JSC_GETSET(dsp_node, pan, number)
 
-JSC_CCALL(dsp_node_plugin, plugin_node(js2dsp_node(this), js2dsp_node(argv[0])))
-JSC_CCALL(dsp_node_unplug, unplug_node(js2dsp_node(this)))
+JSC_CCALL(dsp_node_plugin, plugin_node(js2dsp_node(self), js2dsp_node(argv[0])))
+JSC_CCALL(dsp_node_unplug, unplug_node(js2dsp_node(self)))
 
 static const JSCFunctionListEntry js_dsp_node_funcs[] = {
   CGETSET_ADD(dsp_node, pass),
@@ -1498,7 +1520,7 @@ static const JSCFunctionListEntry js_dsp_node_funcs[] = {
 JSC_GETSET(sound, loop, boolean)
 JSC_GETSET(sound, timescale, number)
 JSC_GETSET(sound, frame, number)
-JSC_CCALL(sound_frames, return number2js(js2sound(this)->data->frames))
+JSC_CCALL(sound_frames, return number2js(js2sound(self)->data->frames))
 
 static const JSCFunctionListEntry js_sound_funcs[] = {
   CGETSET_ADD(sound, loop),
@@ -1507,19 +1529,19 @@ static const JSCFunctionListEntry js_sound_funcs[] = {
   MIST_FUNC_DEF(sound, frames, 0),
 };
 
-static JSValue js_window_get_fullscreen(JSContext *js, JSValue this) { return boolean2js(js2window(this)->fullscreen); }
-static JSValue js_window_set_fullscreen(JSContext *js, JSValue this, JSValue v) { window_setfullscreen(js2window(this), js2boolean(v)); return JS_UNDEFINED; }
+static JSValue js_window_get_fullscreen(JSContext *js, JSValue self) { return boolean2js(js2window(self)->fullscreen); }
+static JSValue js_window_set_fullscreen(JSContext *js, JSValue self, JSValue v) { window_setfullscreen(js2window(self), js2boolean(v)); return JS_UNDEFINED; }
 
-static JSValue js_window_set_title(JSContext *js, JSValue this, JSValue v)
+static JSValue js_window_set_title(JSContext *js, JSValue self, JSValue v)
 {
-  window *w = js2window(this);
+  window *w = js2window(self);
   if (w->title) JS_FreeCString(js, w->title);
   w->title = js2str(v);
   if (w->start)
     sapp_set_window_title(w->title);
   return JS_UNDEFINED;
 }
-JSC_CCALL(window_get_title, return str2js(js2window(this)->title))
+JSC_CCALL(window_get_title, return str2js(js2window(self)->title))
 JSC_CCALL(window_set_icon, window_seticon(&mainwin, js2texture(argv[0])))
 JSC_GETSET(window, vsync, boolean)
 JSC_GETSET(window, enable_clipboard, boolean)
@@ -1538,26 +1560,26 @@ static const JSCFunctionListEntry js_window_funcs[] = {
   MIST_FUNC_DEF(window, set_icon, 1)
 };
 
-JSValue js_gameobject_set_pos(JSContext *js, JSValue this, JSValue val) {
-  cpBody *b = js2gameobject(this)->body;
+JSValue js_gameobject_set_pos(JSContext *js, JSValue self, JSValue val) {
+  cpBody *b = js2gameobject(self)->body;
   cpBodySetPosition(b, js2cvec2(val));
   if (cpBodyGetType(b) == CP_BODY_TYPE_STATIC)
     cpSpaceReindexShapesForBody(space, b);
 
-  gameobject_apply(js2gameobject(this));
+  gameobject_apply(js2gameobject(self));
   return JS_UNDEFINED;
 }
-JSValue js_gameobject_get_pos(JSContext *js, JSValue this) { return cvec22js(cpBodyGetPosition(js2gameobject(this)->body)); }
-JSValue js_gameobject_set_angle (JSContext *js, JSValue this, JSValue val) { cpBodySetAngle(js2gameobject(this)->body, js2angle(val)); return JS_UNDEFINED; }
-JSValue js_gameobject_get_angle (JSContext *js, JSValue this) { return angle2js(cpBodyGetAngle(js2gameobject(this)->body)); }
+JSValue js_gameobject_get_pos(JSContext *js, JSValue self) { return cvec22js(cpBodyGetPosition(js2gameobject(self)->body)); }
+JSValue js_gameobject_set_angle (JSContext *js, JSValue self, JSValue val) { cpBodySetAngle(js2gameobject(self)->body, js2angle(val)); return JS_UNDEFINED; }
+JSValue js_gameobject_get_angle (JSContext *js, JSValue self) { return angle2js(cpBodyGetAngle(js2gameobject(self)->body)); }
 JSC_GETSET_BODY(velocity, Velocity, cvec2)
-JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue this, JSValue val) { cpBodySetAngularVelocity(js2gameobject(this)->body, js2angle(val)); return JS_UNDEFINED;}
-JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue this) { return angle2js(cpBodyGetAngularVelocity(js2gameobject(this)->body)); }
+JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue self, JSValue val) { cpBodySetAngularVelocity(js2gameobject(self)->body, js2angle(val)); return JS_UNDEFINED;}
+JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue self) { return angle2js(cpBodyGetAngularVelocity(js2gameobject(self)->body)); }
 JSC_GETSET_BODY(moi, Moment, number)
 JSC_GETSET_BODY(torque, Torque, number)
-JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
-JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(this)->body)))
-JSC_CCALL(gameobject_force_local, cpBodyApplyForceAtLocalPoint(js2gameobject(this)->body, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp))
+JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(self)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(self)->body)))
+JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(self)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(self)->body)))
+JSC_CCALL(gameobject_force_local, cpBodyApplyForceAtLocalPoint(js2gameobject(self)->body, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp))
 JSC_GETSET_BODY(mass, Mass, number)
 JSC_GETSET_BODY(phys, Type, number)
 JSC_GETSET_APPLY(gameobject, layer, number)
@@ -1566,10 +1588,10 @@ JSC_GETSET(gameobject, timescale, number)
 JSC_GETSET(gameobject, maxvelocity, number)
 JSC_GETSET(gameobject, maxangularvelocity, number)
 JSC_GETSET(gameobject, warp_mask, bitmask)
-JSC_CCALL(gameobject_sleeping, return boolean2js(cpBodyIsSleeping(js2gameobject(this)->body)))
-JSC_CCALL(gameobject_sleep, cpBodySleep(js2gameobject(this)->body))
-JSC_CCALL(gameobject_wake, cpBodyActivate(js2gameobject(this)->body))
-JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(this)))
+JSC_CCALL(gameobject_sleeping, return boolean2js(cpBodyIsSleeping(js2gameobject(self)->body)))
+JSC_CCALL(gameobject_sleep, cpBodySleep(js2gameobject(self)->body))
+JSC_CCALL(gameobject_wake, cpBodyActivate(js2gameobject(self)->body))
+JSC_CCALL(gameobject_selfsync, gameobject_apply(js2gameobject(self)))
 
 void body_shape_fn(cpBody *body, cpShape *shape, JSValue *fn) {
   JSValue v = *(JSValue*)cpShapeGetUserData(shape);
@@ -1577,7 +1599,7 @@ void body_shape_fn(cpBody *body, cpShape *shape, JSValue *fn) {
 }
 
 JSC_CCALL(gameobject_eachshape,
-  gameobject *g = js2gameobject(this);
+  gameobject *g = js2gameobject(self);
   JSValue fn = argv[0];
   cpBodyEachShape(g->body, body_shape_fn, &fn);
 )
@@ -1588,7 +1610,7 @@ void body_constraint_fn(cpBody *body, cpConstraint *c, JSValue *fn) {
 }
 
 JSC_CCALL(gameobject_eachconstraint,
-  gameobject *g = js2gameobject(this);
+  gameobject *g = js2gameobject(self);
   JSValue fn = argv[0];
   cpBodyEachConstraint(g->body, body_constraint_fn, &fn);
 )
@@ -1599,13 +1621,13 @@ void body_arbiter_fn(cpBody *body, cpArbiter *arb, JSValue *fn) {
 }
 
 JSC_CCALL(gameobject_eacharbiter,
-  gameobject *g = js2gameobject(this);
+  gameobject *g = js2gameobject(self);
   JSValue fn = argv[0];
   cpBodyEachArbiter(g->body, body_arbiter_fn, &fn);
 )
 
 JSC_CCALL(gameobject_transform,
-  return JS_DupValue(js, transform2js(js2gameobject(this)->t));
+  return JS_DupValue(js, transform2js(js2gameobject(self)->t));
 )
 
 static const JSCFunctionListEntry js_gameobject_funcs[] = {
@@ -1637,9 +1659,9 @@ static const JSCFunctionListEntry js_gameobject_funcs[] = {
 };
 
 #define CC_GETSET(CPTYPE, CP, ENTRY, CPENTRY, TYPE) \
-JSC_CCALL(CP##_get_##ENTRY, return TYPE##2js(CP##Get##CPENTRY (js2##CPTYPE(this)))) \
-JSValue js_##CP##_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
-  CP##Set##CPENTRY (js2##CPTYPE(this), js2##TYPE (val)); \
+JSC_CCALL(CP##_get_##ENTRY, return TYPE##2js(CP##Get##CPENTRY (js2##CPTYPE(self)))) \
+JSValue js_##CP##_set_##ENTRY (JSContext *js, JSValue self, JSValue val) { \
+  CP##Set##CPENTRY (js2##CPTYPE(self), js2##TYPE (val)); \
   return JS_UNDEFINED; \
 } \
 
@@ -1650,20 +1672,20 @@ CNST_GETSET(max_bias, MaxBias, number)
 CNST_GETSET(error_bias, ErrorBias, number)
 CNST_GETSET(collide_bodies, CollideBodies, boolean)
 
-JSC_CCALL(cpConstraint_broken, return boolean2js(cpSpaceContainsConstraint(space, js2cpConstraint(this))))
+JSC_CCALL(cpConstraint_broken, return boolean2js(cpSpaceContainsConstraint(space, js2cpConstraint(self))))
 JSC_CCALL(cpConstraint_break, 
-  if (cpSpaceContainsConstraint(space, js2cpConstraint(this)))
-    cpSpaceRemoveConstraint(space, js2cpConstraint(this));
+  if (cpSpaceContainsConstraint(space, js2cpConstraint(self)))
+    cpSpaceRemoveConstraint(space, js2cpConstraint(self));
 )
 
 JSC_CCALL(cpConstraint_bodyA,
-  cpBody *b = cpConstraintGetBodyA(js2cpConstraint(this));
+  cpBody *b = cpConstraintGetBodyA(js2cpConstraint(self));
   gameobject *go = body2go(b);
   return JS_DupValue(js,gameobject2js(go));
 )
 
 JSC_CCALL(cpConstraint_bodyB,
-  cpBody *b = cpConstraintGetBodyB(js2cpConstraint(this));
+  cpBody *b = cpConstraintGetBodyB(js2cpConstraint(self));
   gameobject *go = body2go(b);
   return JS_DupValue(js,gameobject2js(go));
 )
@@ -1862,12 +1884,52 @@ JSC_CCALL(dspsound_pink, return dsp_node2js(dsp_pinknoise()))
 JSC_CCALL(dspsound_red, return dsp_node2js(dsp_rednoise()))
 JSC_CCALL(dspsound_pitchshift, return dsp_node2js(dsp_pitchshift(js2number(argv[0]))))
 JSC_CCALL(dspsound_noise_gate, return dsp_node2js(dsp_noise_gate(js2number(argv[0]))))
-JSC_CCALL(dspsound_limiter, return dsp_node2js(dsp_limiter(js2number(argv[0]))))
+
+static JSValue dspnum;
+
+JSC_CCALL(dspsound_limiter,
+  ret = dsp_node2js(dsp_limiter(js2number(argv[0])));
+  JS_SetPrototype(js, ret, dspnum);  
+)
+
+static const JSCFunctionListEntry js_compressor_funcs[] = {
+
+};
 JSC_CCALL(dspsound_compressor, return dsp_node2js(dsp_compressor()))
-JSC_CCALL(dspsound_crush, return dsp_node2js(dsp_bitcrush(js2number(argv[0]), js2number(argv[1]))))
+
+JSC_GETSET(bitcrush, sr, number)
+JSC_GETSET(bitcrush, depth, number)
+static const JSCFunctionListEntry js_bitcrush_funcs[] = {
+  CGETSET_ADD(bitcrush, sr),
+  CGETSET_ADD(bitcrush, depth)
+};
+JSC_CCALL(dspsound_crush,
+  ret = dsp_node2js(dsp_bitcrush(js2number(argv[0]), js2number(argv[1])));
+  JS_SetPrototype(js, ret, bitcrush_proto);
+)
+
+static const JSCFunctionListEntry js_adsr_funcs[] = {
+
+};
+
+static const JSCFunctionListEntry js_phasor_funcs[] = {
+
+};
+
 JSC_CCALL(dspsound_lpf, return dsp_node2js(dsp_lpf(js2number(argv[0]))))
 JSC_CCALL(dspsound_hpf, return dsp_node2js(dsp_hpf(js2number(argv[0]))))
-JSC_CCALL(dspsound_delay, return dsp_node2js(dsp_delay(js2number(argv[0]), js2number(argv[1]))))
+
+JSC_GETSET(delay, ms_delay, number)
+JSC_GETSET(delay, decay, number)
+static const JSCFunctionListEntry js_delay_funcs[] = {
+  CGETSET_ADD(delay, ms_delay),
+  CGETSET_ADD(delay, decay),
+};
+JSC_CCALL(dspsound_delay,
+  ret = dsp_node2js(dsp_delay(js2number(argv[0]), js2number(argv[1])));
+  JS_SetPrototype(js, ret, delay_proto);
+)
+
 JSC_CCALL(dspsound_fwd_delay, return dsp_node2js(dsp_fwd_delay(js2number(argv[0]), js2number(argv[1]))))
 JSC_SCALL(dspsound_source,
   ret = dsp_node2js(dsp_source(str));
@@ -1900,17 +1962,17 @@ static const JSCFunctionListEntry js_dspsound_funcs[] = {
   MIST_FUNC_DEF(dspsound, mod, 1)
 };
 
-JSC_CCALL(datastream_time, return number2js(plm_get_time(js2datastream(this)->plm)); )
+JSC_CCALL(datastream_time, return number2js(plm_get_time(js2datastream(self)->plm)); )
 
-JSC_CCALL(datastream_advance_frames,  ds_advanceframes(js2datastream(this), js2number(argv[0])))
+JSC_CCALL(datastream_advance_frames,  ds_advanceframes(js2datastream(self), js2number(argv[0])))
 
-JSC_CCALL(datastream_seek, ds_seek(js2datastream(this), js2number(argv[0])))
+JSC_CCALL(datastream_seek, ds_seek(js2datastream(self), js2number(argv[0])))
 
-JSC_CCALL(datastream_advance, ds_advance(js2datastream(this), js2number(argv[0])))
+JSC_CCALL(datastream_advance, ds_advance(js2datastream(self), js2number(argv[0])))
 
-JSC_CCALL(datastream_duration, return number2js(ds_length(js2datastream(this))))
+JSC_CCALL(datastream_duration, return number2js(ds_length(js2datastream(self))))
 
-JSC_CCALL(datastream_framerate, return number2js(plm_get_framerate(js2datastream(this)->plm)))
+JSC_CCALL(datastream_framerate, return number2js(plm_get_framerate(js2datastream(self)->plm)))
 
 static const JSCFunctionListEntry js_datastream_funcs[] = {
   MIST_FUNC_DEF(datastream, time, 0),
@@ -1970,7 +2032,7 @@ static const JSCFunctionListEntry js_performance_funcs[] = {
   MIST_FUNC_DEF(performance, call_fn_n, 3)
 };
 
-JSValue js_nota_encode(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_nota_encode(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
   
@@ -1981,7 +2043,7 @@ JSValue js_nota_encode(JSContext *js, JSValue this, int argc, JSValue *argv)
   return JS_NewArrayBufferCopy(js, (unsigned char*)nota, e-nota);
 }
 
-JSValue js_nota_decode(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_nota_decode(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
 
@@ -1998,7 +2060,7 @@ static const JSCFunctionListEntry js_nota_funcs[] = {
 };
 
 
-JSValue js_os_cwd(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_os_cwd(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char cwd[PATH_MAX];
   #ifndef __EMSCRIPTEN__
@@ -2012,7 +2074,7 @@ JSValue js_os_cwd(JSContext *js, JSValue this, int argc, JSValue *argv)
 
 JSC_SCALL(os_env, ret = str2js(getenv(str)))
 
-JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
+JSValue js_os_sys(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   #ifdef __linux__
   return str2js("linux");
@@ -2022,7 +2084,7 @@ JSValue js_os_sys(JSContext *js, JSValue this, int argc, JSValue *argv)
   return str2js("ios");
   #elif defined(__APPLE__)
   return str2js("macos");
-  #elif define(__EMSCRIPTEN__)
+  #elif defined(__EMSCRIPTEN__)
   return str2js("web");
   #endif
   return JS_UNDEFINED;
@@ -2043,9 +2105,9 @@ JSC_CCALL(os_make_gameobject,
 )
 
 #define CP_GETSET(ENTRY, CPENTRY, TYPE) \
-JSC_CCALL(cpShape_get_##ENTRY, return TYPE##2js(cpShapeGet##CPENTRY (js2cpShape(this)))) \
-JSValue js_cpShape_set_##ENTRY (JSContext *js, JSValue this, JSValue val) { \
-  cpShapeSet##CPENTRY (js2cpShape(this), js2##TYPE (val)); return JS_UNDEFINED; \
+JSC_CCALL(cpShape_get_##ENTRY, return TYPE##2js(cpShapeGet##CPENTRY (js2cpShape(self)))) \
+JSValue js_cpShape_set_##ENTRY (JSContext *js, JSValue self, JSValue val) { \
+  cpShapeSet##CPENTRY (js2cpShape(self), js2##TYPE (val)); return JS_UNDEFINED; \
 } \
 
 CP_GETSET(sensor, Sensor, boolean)
@@ -2053,33 +2115,33 @@ CP_GETSET(friction, Friction, number)
 CP_GETSET(elasticity, Elasticity, number)
 CP_GETSET(mass, Mass, number)
 
-JSC_CCALL(cpShape_area, return number2js(cpShapeGetArea(js2cpShape(this))))
+JSC_CCALL(cpShape_area, return number2js(cpShapeGetArea(js2cpShape(self))))
 
-JSC_CCALL(cpShape_get_surface_velocity, return vec22js((HMM_Vec2)cpShapeGetSurfaceVelocity(js2cpShape(this))))
+JSC_CCALL(cpShape_get_surface_velocity, return vec22js((HMM_Vec2)cpShapeGetSurfaceVelocity(js2cpShape(self))))
 JSValue js_cpShape_set_surface_velocity(JS_SETSIG) {
   HMM_Vec2 v = js2vec2(val);
-  cpShapeSetSurfaceVelocity(js2cpShape(this), v.cp);
+  cpShapeSetSurfaceVelocity(js2cpShape(self), v.cp);
   return JS_UNDEFINED;
 }
 
-JSC_CCALL(cpShape_get_mask, return bitmask2js(cpShapeGetFilter(js2cpShape(this)).mask));
+JSC_CCALL(cpShape_get_mask, return bitmask2js(cpShapeGetFilter(js2cpShape(self)).mask));
 JSValue js_cpShape_set_mask (JS_SETSIG) {
-  cpShapeFilter f = cpShapeGetFilter(js2cpShape(this));
+  cpShapeFilter f = cpShapeGetFilter(js2cpShape(self));
   f.mask = js2bitmask(val);
-  cpShapeSetFilter(js2cpShape(this), f);
+  cpShapeSetFilter(js2cpShape(self), f);
   return JS_UNDEFINED;
 }
 
-JSC_CCALL(cpShape_get_category, return bitmask2js(cpShapeGetFilter(js2cpShape(this)).categories))
+JSC_CCALL(cpShape_get_category, return bitmask2js(cpShapeGetFilter(js2cpShape(self)).categories))
 JSValue js_cpShape_set_category (JS_SETSIG) {
-  cpShapeFilter f = cpShapeGetFilter(js2cpShape(this));
+  cpShapeFilter f = cpShapeGetFilter(js2cpShape(self));
   f.categories = js2bitmask(val);
-  cpShapeSetFilter(js2cpShape(this), f);
+  cpShapeSetFilter(js2cpShape(self), f);
   return JS_UNDEFINED;
 }
 
 JSC_CCALL(cpShape_body,
-  cpBody *b = cpShapeGetBody(js2cpShape(this));
+  cpBody *b = cpShapeGetBody(js2cpShape(self));
   gameobject *go = body2go(b);
   return JS_DupValue(js,gameobject2js(go));
 )
@@ -2096,16 +2158,16 @@ static const JSCFunctionListEntry js_cpShape_funcs[] = {
   MIST_FUNC_DEF(cpShape, body, 0),
 };
 
-JSValue js_circle2d_set_radius(JSContext *js, JSValue this, JSValue val) {
-  cpCircleShapeSetRadius(js2cpShape(this), js2number(val));
+JSValue js_circle2d_set_radius(JSContext *js, JSValue self, JSValue val) {
+  cpCircleShapeSetRadius(js2cpShape(self), js2number(val));
   return JS_UNDEFINED;
 }
-JSC_CCALL(circle2d_get_radius, return number2js(cpCircleShapeGetRadius(js2cpShape(this))))
-JSValue js_circle2d_set_offset(JSContext *js, JSValue this, JSValue val) {
-  cpCircleShapeSetOffset(js2cpShape(this), js2vec2(val).cp);
+JSC_CCALL(circle2d_get_radius, return number2js(cpCircleShapeGetRadius(js2cpShape(self))))
+JSValue js_circle2d_set_offset(JSContext *js, JSValue self, JSValue val) {
+  cpCircleShapeSetOffset(js2cpShape(self), js2vec2(val).cp);
   return JS_UNDEFINED;
 }
-JSC_CCALL(circle2d_get_offset, return vec22js((HMM_Vec2)cpCircleShapeGetOffset(js2cpShape(this))))
+JSC_CCALL(circle2d_get_offset, return vec22js((HMM_Vec2)cpCircleShapeGetOffset(js2cpShape(self))))
 
 static const JSCFunctionListEntry js_circle2d_funcs[] = {
   CGETSET_ADD(circle2d, radius),
@@ -2139,7 +2201,7 @@ JSC_CCALL(os_make_circle2d,
 )
 
 JSC_CCALL(poly2d_setverts,
-  cpShape *s = js2cpShape(this);
+  cpShape *s = js2cpShape(self);
   HMM_Vec2 *v = js2cpvec2arr(argv[0]);
   cpTransform t = {0};
   t.a = 1;
@@ -2152,11 +2214,11 @@ JSC_CCALL(poly2d_setverts,
   arrfree(v);
 )
 
-JSValue js_poly2d_set_radius(JSContext *js, JSValue this, JSValue val) {
-  cpPolyShapeSetRadius(js2cpShape(this), js2number(val));
+JSValue js_poly2d_set_radius(JSContext *js, JSValue self, JSValue val) {
+  cpPolyShapeSetRadius(js2cpShape(self), js2number(val));
   return JS_UNDEFINED;
 }
-JSC_CCALL(poly2d_get_radius, return number2js(cpPolyShapeGetRadius(js2cpShape(this))))
+JSC_CCALL(poly2d_get_radius, return number2js(cpPolyShapeGetRadius(js2cpShape(self))))
 
 static const JSCFunctionListEntry js_poly2d_funcs[] = {
   MIST_FUNC_DEF(poly2d, setverts, 2),
@@ -2175,19 +2237,19 @@ JSC_CCALL(os_make_poly2d,
 JSC_CCALL(seg2d_set_endpoints,
   HMM_Vec2 a = js2vec2(argv[0]);
   HMM_Vec2 b = js2vec2(argv[1]);
-  cpSegmentShapeSetEndpoints(js2cpShape(this), a.cp, b.cp);
+  cpSegmentShapeSetEndpoints(js2cpShape(self), a.cp, b.cp);
 )
 
-JSValue js_seg2d_set_radius(JSContext *js, JSValue this, JSValue val) {
-  cpSegmentShapeSetRadius(js2cpShape(this), js2number(val));
+JSValue js_seg2d_set_radius(JSContext *js, JSValue self, JSValue val) {
+  cpSegmentShapeSetRadius(js2cpShape(self), js2number(val));
   return JS_UNDEFINED;
 }
-JSC_CCALL(seg2d_get_radius, return number2js(cpSegmentShapeGetRadius(js2cpShape(this))))
+JSC_CCALL(seg2d_get_radius, return number2js(cpSegmentShapeGetRadius(js2cpShape(self))))
 
 JSC_CCALL(seg2d_set_neighbors,
   HMM_Vec2 prev = js2vec2(argv[0]);
   HMM_Vec2 next = js2vec2(argv[1]);
-  cpSegmentShapeSetNeighbors(js2cpShape(this), prev.cp, next.cp);
+  cpSegmentShapeSetNeighbors(js2cpShape(self), prev.cp, next.cp);
 )
 
 static const JSCFunctionListEntry js_seg2d_funcs[] = {
@@ -2509,13 +2571,17 @@ void ffi_load() {
   JS_SetPropertyStr(js, prosperon, "revision", str2js(COM));
   JS_SetPropertyStr(js, globalThis, "window", window2js(&mainwin));
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
+
+  #ifndef NSTEAM
+  JS_SetPropertyStr(js, globalThis, "steam", js_init_steam(js));
+  #endif
   
-  //JS_SetPropertyStr(js, globalThis, "steam", js_init_steam(js));
-  
-  sound_proto = JS_NewObject(js);
-  JS_SetPropertyStr(js,globalThis, "sound_proto", sound_proto);
-  JS_SetPropertyFunctionList(js, sound_proto, js_sound_funcs, countof(js_sound_funcs));
-  JS_SetPrototype(js, sound_proto, dsp_node_proto);
+  PREP_PARENT(bitcrush, dsp_node);
+  PREP_PARENT(delay, dsp_node);
+  PREP_PARENT(sound, dsp_node);
+  PREP_PARENT(compressor, dsp_node);
+  PREP_PARENT(phasor, dsp_node);
+  PREP_PARENT(adsr, dsp_node);
    
   JSSTATIC(circle2d, cpShape_proto)
   JSSTATIC(poly2d, cpShape_proto)

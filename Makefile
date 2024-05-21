@@ -21,7 +21,6 @@ ifeq ($(CROSS)$(CC), emcc)
   CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB
   NDEBUG = 1
   ARCH:= wasm
-  OPT=small
 endif
 
 ifdef NEDITOR
@@ -51,6 +50,10 @@ else
   INFO :=$(INFO)_dbg
 endif
 
+ifdef NSTEAM
+  CPPFLAGS += -DNSTEAM
+endif
+
 ifdef LEAK
   CPPFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -DLEAK
 	INFO := $(INFO)_leak
@@ -66,7 +69,7 @@ else ifeq ($(OPT), 1)
   CPPFLAGS += -O3 -flto
   INFO :=$(INFO)_opt
 else
-	CPPFLAGS += -O2
+  CPPFLAGS += -O2
 endif
 
 CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
@@ -84,7 +87,7 @@ INFO := $(INFO)_$(ARCH)
 ifeq ($(OS), Windows_NT) # then WINDOWS
 	PLATFORM := win64
   DEPS += resource.o
-	STEAMAPI := steam_api64
+  STEAMAPI := steam_api64
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
@@ -105,10 +108,10 @@ else ifeq ($(OS), IOS)
 	INFO :=$(INFO)_ios
 else ifeq ($(OS), wasm) # Then WEB
   OS := Web
-  LDFLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
+  LDFLAGS += -sUSE_WEBGPU
   CPPFLAGS += -DNSTEAM
   LDLIBS += GL openal c m dl
-	STEAMAPI := 
+  STEAMAPI := 
   EXT = .html
 else 
   UNAME != uname -s
@@ -118,17 +121,22 @@ else
     LDFLAGS += -pthread -rdynamic
     LDLIBS += pthread c m dl X11 Xi Xcursor EGL asound GL
     INFO :=$(INFO)_linux
+    STEAMAPI := steam_api
   endif
 
   ifeq ($(UNAME), Darwin)
     OS := macos
-		PLATFORM := osx
+    PLATFORM := osx
     CPPFLAGS += -arch $(ARCH)
     CFLAGS += -x objective-c
     CXXFLAGS += -std=c++11
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
 		INFO :=$(INFO)_macos
   endif
+endif
+
+ifdef NSTEAM
+  STEAMAPI =
 endif
 
 # All other sources
@@ -246,14 +254,14 @@ crossmac: Prosperon.icns
 	mv $(NAME) Prosperon.app/Contents/MacOS/Prosperon
 	cp Info.plist Prosperon.app/Contents
 	cp Prosperon.icns Prosperon.app/Contents/Resources
-	
+
 crosswin:
 	make CROSS=x86_64-w64-mingw32- OS=Windows_NT CC=gcc
 
 crossweb:
-	make CROSS=em OS=wasm
+	make CC=emcc OS=wasm
 	mv $(APP).html index.html
-	
+
 clean:
 	@echo Cleaning project
 	rm -f core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(APP)* *.icns *.ico

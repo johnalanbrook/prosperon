@@ -221,13 +221,13 @@ var entity = {
     
     if (callback) callback(ent);
   
-  
     ent.ur.fresh ??= json.decode(json.encode(ent));
     ent.ur.fresh.objects = {};
     for (var i in ent.objects)
       ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
-      
+
     profile.addreport(entityreport, ent.ur.name, st);
+    
     return ent;
   },
   

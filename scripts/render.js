@@ -8,7 +8,7 @@ var shaderlang = {
  macos: "metal_macos",
  windows: "hlsl4",
  linux: "glsl430",
-// web: "wgsl",
+ web: "wgsl",
  ios: "metal_ios",
 }
 
@@ -158,7 +158,7 @@ render.make_shader = function(shader)
   
   shader = shader.replace(/uniform\s+(\w+)\s+(\w+);/g, "uniform _$2 { $1 $2; };");
   shader = shader.replace(/(texture2D|sampler) /g, "uniform $1 ");
-  shader = shader.replace(/uniform texture2D ?(.*);/g, "uniform _$1_size { vec2 $1_size; };\nuniform texture2D $1;");
+//  shader = shader.replace(/uniform texture2D ?(.*);/g, "uniform _$1_size { vec2 $1_size; };\nuniform texture2D $1;");
 
   io.slurpwrite(out, shader);
 

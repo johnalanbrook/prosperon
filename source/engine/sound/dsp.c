@@ -195,13 +195,6 @@ void unplug_node(dsp_node *node)
     }
 }
 
-typedef struct {
-  float amp;
-  float freq;
-  float phase; /* from 0 to 1, marking where we are */
-  float (*filter)(float phase);
-} phasor;
-
 float sin_phasor(float p)
 {
     return sin(2*PI*p);
@@ -394,7 +387,6 @@ void filter_iir(struct dsp_iir *iir, soundbyte *buffer, int frames)
     for (int j = 0; j < CHANNELS; j++) buffer[i*CHANNELS+j] = v;
   }
 }
-
 
 dsp_node *dsp_lpf(float freq)
 {
@@ -623,11 +615,6 @@ void dsp_mono(void *p, soundbyte *restrict out, int n)
             out[i*CHANNELS+j] = val;
     }
 }
-
-struct bitcrush {
-  float sr;
-  float depth;
-};
 
 #define ROUND(f) ((float)((f>0.0)?floor(f+0.5):ceil(f-0.5)))
 void filter_bitcrush(struct bitcrush *restrict b, soundbyte *restrict out, int frames)

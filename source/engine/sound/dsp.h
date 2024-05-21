@@ -51,7 +51,7 @@ dsp_node *dsp_hpf(float freq);
 dsp_node *dsp_lpf(float freq);
 
 /* atk, dec, sus, rls specify the time, in miliseconds, the phase begins */
-struct dsp_adsr {
+typedef struct dsp_adsr {
     unsigned int atk;
     double atk_t;
     unsigned int dec;
@@ -63,7 +63,7 @@ struct dsp_adsr {
 
     double time; /* Current time of the filter */
     float out;
-};
+} adsr;
 
 dsp_node *dsp_adsr(unsigned int atk, unsigned int dec, unsigned int sus, unsigned int rls);
 
@@ -77,7 +77,7 @@ dsp_node *dsp_delay(double sec, double decay);
 dsp_node *dsp_fwd_delay(double sec, double decay);
 dsp_node *dsp_pitchshift(float octaves);
 
-struct dsp_compressor {
+typedef struct dsp_compressor {
     double ratio;
     double threshold;
     float target;
@@ -85,7 +85,7 @@ struct dsp_compressor {
     double atk_tau;
     unsigned int rls; /* MIlliseconds */
     double rls_tau;
-};
+} compressor;
 
 dsp_node *dsp_compressor();
 
@@ -106,6 +106,19 @@ float tri_phasor(float p);
 dsp_node *dsp_reverb();
 dsp_node *dsp_sinewave(float amp, float freq);
 dsp_node *dsp_square(float amp, float freq, int sr, int ch);
+
+typedef struct {
+  float amp;
+  float freq;
+  float phase; /* from 0 to 1, marking where we are */
+  float (*filter)(float phase);
+} phasor;
+
+typedef struct bitcrush {
+  float sr;
+  float depth;
+} bitcrush;
+
 dsp_node *dsp_bitcrush(float sr, float res);
 void dsp_mono(void *p, soundbyte *out, int n);
 void pan_frames(soundbyte *out, float deg, int frames);
