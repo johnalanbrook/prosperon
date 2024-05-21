@@ -357,24 +357,18 @@ render.point =  function(pos,size,color = Color.blue) {
     render.circle(pos,size,size,color);
 };
   
-var tmpline = render.line;
-render.line = function(points, color = Color.white, thickness = 1) {
-//  tmpline(points,color,thickness);
-};
-
 render.cross = function(pos, size, color = Color.red) {
-    var a = [
-      pos.add([0,size]),
-      pos.add([0,-size])
-    ];
-    var b = [
-      pos.add([size,0]),
-      pos.add([-size,0])
-    ];
-    
-    render.line(a,color);
-    render.line(b,color);
-  };
+  var a = [
+    pos.add([0,size]),
+    pos.add([0,-size])
+  ];
+  var b = [
+    pos.add([size,0]),
+    pos.add([-size,0])
+  ];
+  render.line(a,color);
+  render.line(b,color);
+};
   
 render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
   var dir = end.sub(start).normalized();
@@ -398,15 +392,6 @@ render.coordinate = function(pos, size, color) {
 
 render.boundingbox = function(bb, color = Color.white) {
   render.poly(bbox.topoints(bb), color);
-}
-
-render.poly = function(points, color)
-{
-  return;
-  render.setpipeline(render.polyshader.pipe);
-  var poly = render.poly_prim(points);
-  render.shader_apply_material(render.polyshader, {shade:color});
-  render.spdraw(render.sg_bind(render.polyshader, poly));
 }
 
 render.rectangle = function(lowerleft, upperright, color) {

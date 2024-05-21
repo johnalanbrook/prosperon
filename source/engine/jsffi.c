@@ -923,7 +923,7 @@ JSC_CCALL(render_setunim4,
         m = HMM_MulM4(p,m);
       }
     }
-  } else
+  } else if (!JS_IsUndefined(argv[2]))
     m = transform2mat(*js2transform(argv[2]));
 
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(m.e));
