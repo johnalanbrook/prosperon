@@ -33,6 +33,11 @@ var entity = {
     return undefined;
   },
   
+  rigidify() {
+    this.body = os.make_body(this.transform);
+  },
+
+  
   path_from(o) {
     var p = this.toString();
     var c = this.master;
@@ -178,9 +183,8 @@ var entity = {
     for (var [prop, p] of Object.entries(ent)) {
       if (!p) continue;
       if (typeof p !== 'object') continue;
-      if (component.isComponent(p)) continue;
       if (!p.comp) continue;
-      ent[prop] = component[p.comp].make(ent);
+      ent[prop] = component[p.comp](ent);
       Object.merge(ent[prop], p);
       ent.components[prop] = ent[prop];
     };
@@ -347,9 +351,8 @@ dup(diff) {
     for (var key in this.components) {
       this.components[key].kill?.();
       this.components[key].gameobject = undefined;
-      this[key].enabled = false;
+      this.components[key].enabled = false;
       delete this.components[key];
-      delete this[key];
     }
     delete this.components;
   
@@ -393,15 +396,14 @@ dup(diff) {
     return this.objects[newname];
   },
   
-  add_component(comp, data, name = comp.toString()) {
-    if (typeof comp.make !== 'function') return;
-    name = obj_unique_name(name, this);
-    this[name] = comp.make(this);
-    this[name].comp = comp.toString();
-    this.components[name] = this[name];
-    if (data)
-      Object.assign(this[name], data);
-    return this[name];
+  add_component(comp, data) {
+    var name = prosperon.guid();
+    this.components[name] = comp(this);
+    if (data) {
+      Object.assign(this.components[name], data);
+      this.components[name].sync?.();
+    }
+    return this.components[name];
   },
 };
 

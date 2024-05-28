@@ -358,13 +358,6 @@ Object.readonly = function(o, name, msg)
   Object.defineProperty(o, name, prop);
 }
 
-Object.extend = function(from)
-{
-  var n = {};
-  Object.mixin(n, from);
-  return n;
-}
-
 Object.mixin = function(target, source)
 {
   if (typeof source !== 'object') return target;
@@ -808,6 +801,13 @@ Object.defineProperty(String.prototype, 'name', {
     if (idx === -1)
       return this.tolast('.');
     return this.fromlast('/').tolast('.'); }
+});
+
+Object.defineProperty(String.prototype, 'set_name', {
+  value: function(name) {
+    var dir = this.dir();
+    return this.dir() + name + "." + this.ext();
+  }
 });
 
 Object.defineProperty(String.prototype, 'base', {
@@ -1337,16 +1337,19 @@ Math.snap = function(val, grid) {
 }
 
 Math.angledist = function (a1, a2) {
-    a1 = Math.turn2deg(a1);
-    a2 = Math.turn2deg(a2);
-    var dist = a2 - a1;
-    var wrap = dist >= 0 ? dist+360 : dist-360;
-    wrap %= 360;
+  a1 = a1%1;
+  a2 = a2%1;
+  var dist = a2 - a1;
+  if (dist == 0) return dist;
+  
+  if (dist > 0) {
+    if (dist > 0.5) return dist-1;
+    return dist;
+  }
+  
+  if (dist < -0.5) return dist+1;
 
-    if (Math.abs(dist) < Math.abs(wrap))
-      return Math.deg2turn(dist);
-
-    return Math.deg2turn(wrap);
+  return dist;
 };
 Math.angledist.doc = "Find the shortest angle between two angles.";
 Math.TAU = Math.PI*2;
@@ -1544,8 +1547,8 @@ Math.sortpointsccw = function(points)
   var cm = points2cm(points);
   var cmpoints = points.map(function(x) { return x.sub(cm); });
   var ccw = cmpoints.sort(function(a,b) {
-    aatan = Math.atan2(a.y, a.x);
-    batan = Math.atan2(b.y, b.x);
+    var aatan = Math.atan2(a.y, a.x);
+    var batan = Math.atan2(b.y, b.x);
     return aatan - batan;
   });
   
@@ -1603,6 +1606,8 @@ yaml.tojson = function(yaml)
   yaml = yaml.replace(/,"[^"]+"\:,/g, ',');
   return yaml; 
 }
+
+Math.sign = function(n) { return n >= 0 ? 1 : -1; }
 
 return {
   convert,

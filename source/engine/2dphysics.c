@@ -30,7 +30,7 @@ JSValue arb2js(cpArbiter *arb)
   cpShape *shape2;
   cpArbiterGetShapes(arb, &shape1, &shape2);
 
-  JSValue j = cpShape2js(shape2);
+  JSValue j = *(JSValue*)cpShapeGetUserData(shape2);
 
   JSValue jg = body2go(body2)->ref;
 
@@ -69,8 +69,8 @@ void register_hit(cpArbiter *arb, gameobject *go, const char *name)
   
   cpShape *s1, *s2;
   cpArbiterGetShapes(arb, &s1, &s2);
-  JSValue j1 = cpShape2js(s1);
-  JSValue j2 = cpShape2js(s2);
+  JSValue j1 = *(JSValue*)cpShapeGetUserData(s1);
+  JSValue j2 = *(JSValue*)cpShapeGetUserData(s2);
   cb = JS_GetPropertyStr(js, j1, name);
   if (!JS_IsUndefined(cb)) {
     JSValue jarb = arb2js(arb);

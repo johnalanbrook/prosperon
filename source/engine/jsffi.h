@@ -98,7 +98,10 @@ static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
   .finalizer = js_##TYPE##_finalizer,\
 };\
-TYPE *js2##TYPE (JSValue val) { return JS_GetOpaque(val,js_##TYPE##_id); }\
+TYPE *js2##TYPE (JSValue val) { \
+  assert(JS_GetClassID(val) == js_##TYPE##_id); \
+  return JS_GetOpaque(val,js_##TYPE##_id); \
+}\
 JSValue TYPE##2js(TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   YughSpam("Created " #TYPE " at %p", n); \

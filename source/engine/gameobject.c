@@ -32,6 +32,7 @@ void gameobject_apply(gameobject *go) { *go->t = go2t(go); }
 static void velocityFn(cpBody *body, cpVect gravity, cpFloat damping, cpFloat dt)
 {
   gameobject *go = body2go(body);
+  gameobject_apply(go);  
   cpVect pos = cpBodyGetPosition(body);  
   HMM_Vec2 g = warp_force((HMM_Vec3){pos.x, pos.y, 0}, go->warp_mask).xy;
   if (!go) {
@@ -90,10 +91,4 @@ void gameobject_free(gameobject *go) {
   cpSpaceRemoveBody(space, go->body);
   cpBodyFree(go->body);
   free(go);
-}
-
-void gameobject_setpos(gameobject *go, cpVect vec) {
-  if (!go || !go->body) return;
-  cpBodySetPosition(go->body, vec);
-//  phys2d_reindex_body(go->body);
 }

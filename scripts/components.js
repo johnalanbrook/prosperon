@@ -1,44 +1,4 @@
-var component = {
-  components: [],
-  toString() {
-    if ('gameobject' in this)
-      return this.name + " on " + this.gameobject;
-    else
-      return this.name;
-  },
-  name: "component",
-  component: true,
-  enabled: true,
-  enable() { this.enabled = true; },
-  disable() { this.enabled = false; },
-
-  isComponent(c) {
-    if (typeof c !== 'object') return false;
-    if (typeof c.toString !== 'function') return false;
-    if (typeof c.make !== 'function') return false;
-    return (typeof component[c.toString()] === 'object');
-  },
-
-  make(go) {
-    var nc = Object.create(this);
-    nc.gameobject = go;
-    Object.mixin(nc, this._enghook(go, nc));
-    assign_impl(nc,this.impl);
-    Object.hide(nc, 'gameobject', 'id');
-    nc.post();
-    nc.make = undefined;
-    return nc;
-  },
-  
-  kill() { console.info("Kill not created for this component yet"); },
-  sync(){},
-  post(){},
-  gui(){},
-  gizmo(){},
-  
-  finish_center() {},
-  extend(spec) { return Object.copy(this, spec); },
-};
+var component = {};
 
 var make_point_obj = function(o, p)
 {
@@ -53,41 +13,8 @@ var make_point_obj = function(o, p)
   }
 }
 
-var assign_impl = function(obj, impl)
-{
-  var tmp = {};
-  for (var key of Object.keys(impl))
-    if (typeof obj[key] !== 'undefined' && typeof obj[key] !== 'function')
-      tmp[key] = obj[key];
-
-  Object.mixin(obj, impl);
-
-  for (var key in tmp)
-    obj[key] = tmp[key];
-}
-
-function json_from_whitelist(whitelist)
-{
-  return function() {
-    var o = {};
-    for (var p of whitelist)
-      o[p] = this[p];
-    return o;
-  } 
-}
-
 var sprite = {
   loop: true,
-  toJSON:json_from_whitelist([
-    "path",
-    "pos",
-    "scale",
-    "angle",
-    "color",
-    "emissive",
-    "parallax",
-    "frame"
-  ]),
   anim:{},
   playing: 0,
   play(str = 0) {
@@ -155,7 +82,6 @@ var sprite = {
     this.anim_done = undefined;
     delete allsprites[this.guid];
   },
-  toString() { return "sprite"; },
   move(d) { this.pos = this.pos.add(d); },
   grow(x) {
     this.scale = this.scale.scale(x);
@@ -181,15 +107,6 @@ var sprite = {
   height() { return this.dimensions().y; },
 };
 globalThis.allsprites = {};
-sprite.make = function(go)
-{
-  var sp = Object.create(sprite);
-  sp.go = go;
-  sp.gameobject = go;
-  sp.guid = prosperon.guid();
-  allsprites[sp.guid] = sp;
-  return sp;
-}
 
 sprite.doc = {
   path: "Path to the texture.",
@@ -225,9 +142,18 @@ sprite.inputs.kp3 = function() { this.setanchor("ur"); }
 sprite.inputs.kp2 = function() { this.setanchor("um"); }
 sprite.inputs.kp1 = function() { this.setanchor("ul"); }
 
-component.sprite = sprite;
+component.sprite = function(obj) {
+  var sp = Object.create(sprite);
+  sp.gameobject = obj;
+  sp.guid = prosperon.guid();
+  allsprites[sp.guid] = sp;
+  return sp;
+}
+sprite.shade = [1,1,1,1];
 
-//Object.seal(sprite);
+Object.mixin(os.make_seg2d(), {
+  sync() { this.set_endpoints(this.points[0], this.points[1]); }
+});
 
 /* sprite anim returns a data structure for the given file path
   frames: array of frames
@@ -364,18 +290,7 @@ SpriteAnim.strip.doc = 'Given a path and number of frames, converts a horizontal
 SpriteAnim.aseprite.doc = 'Given an aseprite json metadata, returns an object of animations defined in the aseprite file.';
 SpriteAnim.find.doc = 'Given a path, find the relevant animation for the file.';
 
-/* For all colliders, "shape" is a pointer to a phys2d_shape, "id" is a pointer to the shape data */
-var collider2d = Object.copy(component, {
-  impl: {
-    set sensor(x) { pshape.set_sensor(this.shape,x); },
-    get sensor() { return pshape.get_sensor(this.shape); },
-    set enabled(x) { pshape.set_enabled(this.shape,x); },
-    get enabled() { return pshape.get_enabled(this.shape); }
-  },
-});
-
-Object.hide(collider2d.impl, 'enabled');
-
+var collider2d = {};
 collider2d.inputs = {};
 collider2d.inputs['M-s'] = function() { this.sensor = !this.sensor; }
 collider2d.inputs['M-s'].doc = "Toggle if this collider is a sensor.";
@@ -383,27 +298,11 @@ collider2d.inputs['M-s'].doc = "Toggle if this collider is a sensor.";
 collider2d.inputs['M-t'] = function() { this.enabled = !this.enabled; }
 collider2d.inputs['M-t'].doc = "Toggle if this collider is enabled.";
 
-component.polygon2d = Object.copy(collider2d, {
-  toJSON:json_from_whitelist([
-    'points',
-    'sensor'
-  ]),
-  toString() { return "polygon2d"; },
-  flipx: false,
-  flipy: false,
-  
+Object.mix(os.make_poly2d(), {
   boundingbox() {
     return bbox.frompoints(this.spoints());
   },
   
-  hides: ['id', 'shape', 'gameobject'],
-  _enghook: os.make_poly2d,
-  points:[],
-  setpoints(points) {
-    this.points = points;
-    this.sync();
-  },
-
   /* EDITOR */  
   spoints() {
     var spoints = this.points.slice();
@@ -411,7 +310,7 @@ component.polygon2d = Object.copy(collider2d, {
     if (this.flipx) {
       spoints.forEach(function(x) {
         var newpoint = x.slice();
-	newpoint.x = -newpoint.x;
+	      newpoint.x = -newpoint.x;
         spoints.push(newpoint);
       });
     }
@@ -419,8 +318,8 @@ component.polygon2d = Object.copy(collider2d, {
     if (this.flipy) {
       spoints.forEach(function(x) {
         var newpoint = x.slice();
-	newpoint.y = -newpoint.y;
-	spoints.push(newpoint);
+	      newpoint.y = -newpoint.y;
+	      spoints.push(newpoint);
       });
     }
     return spoints;
@@ -449,63 +348,71 @@ function pointscaler(x) {
   this.points = this.points.map(p => p.mult(x));
 }
 
-component.polygon2d.impl = Object.mix(collider2d.impl, {
-  sync() { poly2d.setverts(this.id,this.spoints()); },
-  query() { return physics.shape_query(this.shape); },
+Object.mixin(os.make_poly2d(), {
+  sync() { 
+    this.setverts(this.points);
+  },
   grow: pointscaler,
 });
 
-var polygon2d = component.polygon2d;
+var polyinputs = Object.create(collider2d.inputs);
+os.make_poly2d().inputs = polyinputs;
 
-polygon2d.inputs = {};
-//polygon2d.inputs.post = function() { this.sync(); };
-polygon2d.inputs.f10 = function() {
+polyinputs = {};
+polyinputs.f10 = function() {
   this.points = Math.sortpointsccw(this.points);
 };
-polygon2d.inputs.f10.doc = "Sort all points to be CCW order.";
+polyinputs.f10.doc = "Sort all points to be CCW order.";
 
-polygon2d.inputs['C-lm'] = function() {
+polyinputs['C-lm'] = function() {
   this.points.push(this.gameobject.world2this(input.mouse.worldpos()));
 };
-polygon2d.inputs['C-lm'].doc = "Add a point to location of mouse.";
-polygon2d.inputs.lm = function(){};
-polygon2d.inputs.lm.released = function(){};
+polyinputs['C-lm'].doc = "Add a point to location of mouse.";
+polyinputs.lm = function(){};
+polyinputs.lm.released = function(){};
 
-polygon2d.inputs['C-M-lm'] = function() {
+polyinputs['C-M-lm'] = function() {
   var idx = Math.grab_from_points(input.mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
   if (idx === -1) return;
   this.points.splice(idx, 1);
 };
-polygon2d.inputs['C-M-lm'].doc = "Remove point under mouse.";
+polyinputs['C-M-lm'].doc = "Remove point under mouse.";
 
-polygon2d.inputs['C-b'] = function() {
+polyinputs['C-b'] = function() {
   this.points = this.spoints;
   this.flipx = false;
   this.flipy = false;
 };
-polygon2d.inputs['C-b'].doc = "Freeze mirroring in place.";
+polyinputs['C-b'].doc = "Freeze mirroring in place.";
 
-component.edge2d = Object.copy(collider2d, {
-  toJSON:json_from_whitelist([
-    'sensor',
-    'thickness',
-    'points',
-    'hollow',
-    'hollowt',
-    'angle',
-  ]),
+var edge2d = {
   dimensions:2,
-  thickness:0,
+  thickness:1,
   /* if type === -1, point to point */
   type: Spline.type.catmull,
   C: 1, /* when in bezier, continuity required. 0, 1 or 2. */
   looped: false,
   angle: 0.5, /* smaller for smoother bezier */
+  elasticity: 0,
+  friction: 0,
+  sync() {
+    var ppp = this.sample();
+    this.segs ??= [];
+    var count = ppp.length-1;
+    this.segs.length = count;
+    for (var i = 0; i < count; i++) {
+      this.segs[i] ??= os.make_seg2d(this.body);
+      this.segs[i].set_endpoints(ppp[i],ppp[i+1]);
+      this.segs[i].set_neighbors(ppp[i],ppp[i+1]);
+      this.segs[i].radius = this.thickness;
+      this.segs[i].elasticity = this.elasticity;
+      this.segs[i].friction = this.friction;
+      this.segs[i].collide = this.collide;
+    }
+  },
   
   flipx: false,
   flipy: false,
-  points:[],
-  toString() { return "edge2d"; },
   
   hollow: false,
   hollowt: 0,
@@ -544,12 +451,10 @@ component.edge2d = Object.copy(collider2d, {
       return arr1.concat(arr2.reverse());
     }
     
+    if (this.looped)
+      spoints = spoints.wrapped(1);
+    
     return spoints;
-  },
-
-  setpoints(points) {
-    this.points = points;
-//    this.sync();
   },
 
   post() {
@@ -581,9 +486,6 @@ component.edge2d = Object.copy(collider2d, {
   },
 
   boundingbox() { return bbox.frompoints(this.points.map(x => x.scale(this.gameobject.scale))); },
-
-  hides: ['gameobject', 'id', 'shape'],
-  _enghook: os.make_edge2d,
 
   /* EDITOR */
   gizmo() {
@@ -660,12 +562,12 @@ component.edge2d = Object.copy(collider2d, {
     var idx = 0;
     if (Spline.is_catmull(this.type) || this.type === -1) {
       if (this.points.length >= 2)
-	idx = physics.closest_point(pos, this.points, 400);
+	     idx = physics.closest_point(pos, this.points, 400);
 
       if (idx === this.points.length)
-	this.points.push(pos);
+	     this.points.push(pos);
       else
-	this.points.splice(idx, 0, pos);
+	     this.points.splice(idx, 0, pos);
     }
 
     if (Spline.is_bezier(this.type)) {
@@ -675,11 +577,11 @@ component.edge2d = Object.copy(collider2d, {
       
       if (idx === 0) {
         this.points.unshift(pos.slice(), pos.add([-100,0]), Vector.reflect_point(this.points[1], this.points[0]));
-	return;
+	      return;
       }
       if (idx === Spline.bezier_node_count(this.points)) {
         this.points.push(Vector.reflect_point(this.points.at(-2), this.points.at(-1)), pos.add([-100,0]), pos.slice());
-	return;
+	      return;
       }
       idx = 2 + (idx-1)*3;
       var adds = [pos.add([100,0]), pos.slice(), pos.add([-100,0])];
@@ -692,71 +594,64 @@ component.edge2d = Object.copy(collider2d, {
     this.points.forEach(x =>picks.push(make_point_obj(this,x)));
     return picks;
   },
-});
+};
 
-component.edge2d.impl = Object.mix(collider2d.impl, {
-  set thickness(x) { edge2d.set_thickness(this.id,x); },
-  get thickness() { return edge2d.get_thickness(this.id); },
-  grow: pointscaler,
-  sync() {
-    var sensor = this.sensor;
-    var points = this.sample();
-    if (!points) return;
-    edge2d.setverts(this.id,points);
-    this.sensor = sensor;
-  },
-});
+component.edge2d = function(obj) {
+  if (!obj.body) obj.rigidify();
+  var edge = Object.create(edge2d);
+  edge.body = obj.body;
+  return edge;
+}
 
-var bucket = component.edge2d;
-bucket.spoints.doc = "Returns the controls points after modifiers are applied, such as it being hollow or mirrored on its axises.";
-bucket.inputs = {};
-bucket.inputs.h = function() { this.hollow = !this.hollow; };
-bucket.inputs.h.doc = "Toggle hollow.";
+edge2d.spoints.doc = "Returns the controls points after modifiers are applied, such as it being hollow or mirrored on its axises.";
+edge2d.inputs = {};
+edge2d.inputs.h = function() { this.hollow = !this.hollow; };
+edge2d.inputs.h.doc = "Toggle hollow.";
 
-bucket.inputs['C-g'] = function() { if (this.hollowt > 0) this.hollowt--; };
-bucket.inputs['C-g'].doc = "Thin the hollow thickness.";
-bucket.inputs['C-g'].rep = true;
+edge2d.inputs['C-g'] = function() { if (this.hollowt > 0) this.hollowt--; };
+edge2d.inputs['C-g'].doc = "Thin the hollow thickness.";
+edge2d.inputs['C-g'].rep = true;
 
-bucket.inputs['C-f'] = function() { this.hollowt++; };
-bucket.inputs['C-f'].doc = "Increase the hollow thickness.";
-bucket.inputs['C-f'].rep = true;
+edge2d.inputs['C-f'] = function() { this.hollowt++; };
+edge2d.inputs['C-f'].doc = "Increase the hollow thickness.";
+edge2d.inputs['C-f'].rep = true;
 
-bucket.inputs['M-v'] = function() { if (this.thickness > 0) this.thickness--; };
-bucket.inputs['M-v'].doc = "Decrease spline thickness.";
-bucket.inputs['M-v'].rep = true;
+edge2d.inputs['M-v'] = function() { if (this.thickness > 0) this.thickness--; };
+edge2d.inputs['M-v'].doc = "Decrease spline thickness.";
+edge2d.inputs['M-v'].rep = true;
 
-bucket.inputs['C-y'] = function() {
+edge2d.inputs['C-y'] = function() {
   this.points = this.spoints();
   this.flipx = false;
   this.flipy = false;
   this.hollow = false;
 };
-bucket.inputs['C-y'].doc = "Freeze mirroring,";
-bucket.inputs['M-b'] = function() { this.thickness++; };
-bucket.inputs['M-b'].doc = "Increase spline thickness.";
-bucket.inputs['M-b'].rep = true;
+edge2d.inputs['C-y'].doc = "Freeze mirroring,";
+edge2d.inputs['M-b'] = function() { this.thickness++; };
+edge2d.inputs['M-b'].doc = "Increase spline thickness.";
+edge2d.inputs['M-b'].rep = true;
 
-bucket.inputs.plus = function() {
+edge2d.inputs.plus = function() {
   if (this.angle <= 1) {
     this.angle = 1;
     return;
   }
   this.angle *= 0.9;
 };
-bucket.inputs.plus.doc = "Increase the number of samples of this spline.";
-bucket.inputs.plus.rep = true;
+edge2d.inputs.plus.doc = "Increase the number of samples of this spline.";
+edge2d.inputs.plus.rep = true;
 
-bucket.inputs.minus = function() { this.angle *= 1.1; };
-bucket.inputs.minus.doc = "Decrease the number of samples on this spline.";
-bucket.inputs.minus.rep = true;
+edge2d.inputs.minus = function() { this.angle *= 1.1; };
+edge2d.inputs.minus.doc = "Decrease the number of samples on this spline.";
+edge2d.inputs.minus.rep = true;
 
-bucket.inputs['C-r'] = function() { this.points = this.points.reverse(); };
-bucket.inputs['C-r'].doc = "Reverse the order of the spline's points.";
+edge2d.inputs['C-r'] = function() { this.points = this.points.reverse(); };
+edge2d.inputs['C-r'].doc = "Reverse the order of the spline's points.";
 
-bucket.inputs['C-l'] = function() { this.looped = !this.looped};
-bucket.inputs['C-l'].doc = "Toggle spline being looped.";
+edge2d.inputs['C-l'] = function() { this.looped = !this.looped};
+edge2d.inputs['C-l'].doc = "Toggle spline being looped.";
 
-bucket.inputs['C-c'] = function() {
+edge2d.inputs['C-c'] = function() {
   switch(this.type) {
     case Spline.type.bezier:
       this.points = Spline.bezier2catmull(this.points);
@@ -765,9 +660,9 @@ bucket.inputs['C-c'] = function() {
   this.type = Spline.type.catmull;
 };
 
-bucket.inputs['C-c'].doc = "Set type of spline to catmull-rom.";
+edge2d.inputs['C-c'].doc = "Set type of spline to catmull-rom.";
 
-bucket.inputs['C-b'] = function() {
+edge2d.inputs['C-b'] = function() {
   switch(this.type) {
     case Spline.type.catmull:
       this.points = Spline.catmull2bezier(Spline.catmull_caps(this.points));
@@ -776,10 +671,10 @@ bucket.inputs['C-b'] = function() {
   this.type = Spline.type.bezier;
 };
 
-bucket.inputs['C-o'] = function() { this.type = -1; };
-bucket.inputs['C-o'].doc = "Set spline to linear.";
+edge2d.inputs['C-o'] = function() { this.type = -1; };
+edge2d.inputs['C-o'].doc = "Set spline to linear.";
 
-bucket.inputs['C-M-lm'] = function() {
+edge2d.inputs['C-M-lm'] = function() {
   if (Spline.is_catmull(this.type)) {
     var idx = Math.grab_from_points(input.mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
     if (idx === -1) return;
@@ -789,12 +684,12 @@ bucket.inputs['C-M-lm'] = function() {
 
   this.points = this.points.newfirst(idx);
 };
-bucket.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
+edge2d.inputs['C-M-lm'].doc = "Select the given point as the '0' of this spline.";
 
-bucket.inputs['C-lm'] = function() { this.add_node(input.mouse.worldpos()); }
-bucket.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
+edge2d.inputs['C-lm'] = function() { this.add_node(input.mouse.worldpos()); }
+edge2d.inputs['C-lm'].doc = "Add a point to the spline at the mouse position.";
 
-bucket.inputs['C-M-lm'] = function() {
+edge2d.inputs['C-M-lm'] = function() {
   var idx = -1;
   if (Spline.is_catmull(this.type))
     idx = Math.grab_from_points(input.mouse.worldpos(), this.points.map(p => this.gameobject.this2world(p)), 25);
@@ -806,12 +701,12 @@ bucket.inputs['C-M-lm'] = function() {
 
   this.rm_node(idx);
 };
-bucket.inputs['C-M-lm'].doc = "Remove point from the spline.";
+edge2d.inputs['C-M-lm'].doc = "Remove point from the spline.";
 
-bucket.inputs.lm = function(){};
-bucket.inputs.lm.released = function(){};
+edge2d.inputs.lm = function(){};
+edge2d.inputs.lm.released = function(){};
 
-bucket.inputs.lb = function() {
+edge2d.inputs.lb = function() {
   var np = [];
 
   this.points.forEach(function(c) {
@@ -820,10 +715,10 @@ bucket.inputs.lb = function() {
 
   this.points = np;
 };
-bucket.inputs.lb.doc = "Rotate the points CCW.";
-bucket.inputs.lb.rep = true;
+edge2d.inputs.lb.doc = "Rotate the points CCW.";
+edge2d.inputs.lb.rep = true;
 
-bucket.inputs.rb = function() {
+edge2d.inputs.rb = function() {
   var np = [];
 
   this.points.forEach(function(c) {
@@ -832,36 +727,26 @@ bucket.inputs.rb = function() {
 
   this.points = np;
 };
-bucket.inputs.rb.doc = "Rotate the points CW.";
-bucket.inputs.rb.rep = true;
+edge2d.inputs.rb.doc = "Rotate the points CW.";
+edge2d.inputs.rb.rep = true;
 
-component.circle2d = Object.copy(collider2d, {
-  radius:10,
-  offset:[0,0],
-  toString() { return "circle2d"; },
-  
-  boundingbox() {
-    return bbox.fromcwh([0,0], [this.radius,this.radius]);
-  },
+/* CIRCLE */
 
-  hides: ['gameobject', 'id', 'shape', 'scale'],
-  _enghook: os.make_circle2d,
-});
+function shape_maker(maker) {
+ return function(obj) { 
+   if (!obj.body) obj.rigidify();
+   return maker(obj.body);
+  }
+}
+component.circle2d = shape_maker(os.make_circle2d);
+component.poly2d = shape_maker(os.make_poly2d);
+component.seg2d = shape_maker(os.make_seg2d);
 
-component.circle2d.impl = Object.mix({
-  toJSON:json_from_whitelist([
-    "pos",
-    "radius",
-  ]),
-
-  set radius(x) { circle2d.set_radius(this.id,x); circle2d.sync(this.id); },
-  get radius() { return circle2d.get_radius(this.id); },
-
+Object.mix(os.make_circle2d(), {
+  boundingbox() { return bbox.fromcwh(this.offset, [this.radius,this.radius]); },
+    
   set scale(x) { this.radius = x; },
   get scale() { return this.radius; },
-
-  set offset(x) { circle2d.set_offset(this.id,x); circle2d.sync(this.id); },
-  get offset() { circle2d.get_offset(this.id); },
 
   get pos() { return this.offset; },
   set pos(x) { this.offset = x; },
@@ -870,7 +755,6 @@ component.circle2d.impl = Object.mix({
     if (typeof x === 'number') this.scale *= x;
     else if (typeof x === 'object') this.scale *= x[0];
   },
-  
-}, collider2d.impl);
+});
 
 return {component, SpriteAnim};

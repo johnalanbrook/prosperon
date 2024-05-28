@@ -132,6 +132,7 @@ else
     CXXFLAGS += -std=c++11
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
 		INFO :=$(INFO)_macos
+		STEAMAPI := steam_api
   endif
 endif
 
