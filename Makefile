@@ -1,4 +1,5 @@
-MAKEFLAGS = --jobs=8
+PROCS != nproc --all
+MAKEFLAGS = -j $(PROCS)
 UNAME != uname
 MAKEDIR != pwd
 # Options
@@ -72,7 +73,7 @@ else
   CPPFLAGS += -O2
 endif
 
-CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) -MD $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
+CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DINFO=\"$(INFO)\" #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
 CPPFLAGS += -DCONFIG_VERSION=\"2024-02-14\" -DCONFIG_BIGNUM #for quickjs
 
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
@@ -170,20 +171,37 @@ LDPATHS := $(STEAM)/redistributable_bin/$(PLATFORM)
 LDPATHS := $(addprefix -L, $(LDPATHS))
 
 DEPENDS = $(OBJS:.o=.d)
--include $(DEPENDS)
+
+ifndef VERBOSE
+.SILENT:
+endif
+
+%$(INFO).d: %.c
+	@echo Making deps $@
+	$(CROSS)$(CC) $(CPPFLAGS) -MT $@ -MM -MG $^ -o $@
+
+%$(INFO).d: %.cpp
+	@echo Making deps $@
+	$(CROSS)$(CXX) $(CPPFLAGS) -MT $@ -MM -MG $^ -o $@
+
+%$(INFO).d: %.m
+	@echo Making deps $@
+	$(CROSS)$(CC) $(CPPFLAGS) -MT $@ -MM -MG $^ -o $@
+
+ifneq ($(MAKECMDGOALS), clean)
+  include $(DEPENDS)
+endif
 
 .DEFAULT_GOAL := all
 all: $(NAME)
 	cp -f $(NAME) $(APP)$(EXT)
-
-prereqs: source/engine/core.cdb.h
 
 $(NAME): $(OBJS) $(DEPS)
 	@echo Linking $(NAME)
 	$(CROSS)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-%$(INFO).o: %.c prereqs
+%$(INFO).o: %.c
 	@echo Making C object $@
 	$(CROSS)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -207,7 +225,7 @@ core.cdb: packer $(CORE)
 	@echo Packing core.cdb
 	./packer $@ $(CORE)
 
-source/engine/core.cdb.h: core.cdb
+core.cdb.h: core.cdb
 	@echo Making $@
 	xxd -i $< > $@
 
