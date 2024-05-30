@@ -110,12 +110,17 @@ function global_uni(uni, stage)
   
   return false;
 }
-
+ 
 render.make_shader = function(shader)
 {
   var file = shader;
   shader = io.slurp(shader);
-  var writejson = `${file.name()}_c.json`;
+  console.info(shader);
+  if (!shader) {
+    console.info(`not found! slurping shaders/${file}`);
+    shader = io.slurp(`shaders/${file}`);
+  }
+  var writejson = `.prosperon/${file.name()}.shader.json`;
   var st = profile.now();
   
   breakme: if (io.exists(writejson)) {
@@ -133,15 +138,18 @@ render.make_shader = function(shader)
     return obj;
   }
   
-  var out = `${file.name()}.shader`;
+  var out = `.prosperon/${file.name()}.shader`;
   
   var files = [file];
-  
+
   var incs = shader.match(/#include <.*>/g);
   if (incs)
   for (var inc of incs) {
     var filez = inc.match(/#include <(.*)>/)[1];
     var macro = io.slurp(filez);
+    if (!macro)
+      macro = io.slurp(`shaders/${filez}`);
+    
     shader = shader.replace(inc, macro);
     files.push(filez);
   }
@@ -177,7 +185,7 @@ render.make_shader = function(shader)
   var yamlfile = `${out}_reflection.yaml`;
   console.info(`slurping ${yamlfile}`);
   var jjson = yaml.tojson(io.slurp(yamlfile));
-  var obj = json.decode(jjson);  
+  var obj = json.decode(jjson);
   io.rm(yamlfile);
   
   obj = obj.shaders[0].programs[0];

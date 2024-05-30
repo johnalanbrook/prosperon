@@ -1556,8 +1556,9 @@ Math.sortpointsccw = function(points)
 var yaml = {};
 yaml.tojson = function(yaml)
 {
+  // Replace key value pairs that are strings with quotation marks around them
   yaml = yaml.replace(/(\w+):/g, '"$1":');
-  yaml = yaml.replace(/: ([\w\.]+)/g, ': "$1"');
+  yaml = yaml.replace(/: ([\w\.\/]+)/g, ': "$1"'); // TODO: make this more general
   
   yaml = yaml.split("\n");
   var cont = {};

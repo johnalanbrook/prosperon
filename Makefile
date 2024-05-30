@@ -176,17 +176,19 @@ ifndef VERBOSE
 .SILENT:
 endif
 
+DEPFLAGS = -MT $(@:.d=.o) -MM -MG $< -o $@
+
 %$(INFO).d: %.c
 	@echo Making deps $@
-	$(CROSS)$(CC) $(CPPFLAGS) -MT $@ -MM -MG $^ -o $@
+	$(CROSS)$(CC) $(CPPFLAGS) $(DEPFLAGS)
 
 %$(INFO).d: %.cpp
 	@echo Making deps $@
-	$(CROSS)$(CXX) $(CPPFLAGS) -MT $@ -MM -MG $^ -o $@
+	$(CROSS)$(CXX) $(CPPFLAGS) $(DEPFLAGS)
 
 %$(INFO).d: %.m
 	@echo Making deps $@
-	$(CROSS)$(CC) $(CPPFLAGS) -MT $@ -MM -MG $^ -o $@
+	$(CROSS)$(CC) $(CPPFLAGS) $(DEPFLAGS)
 
 ifneq ($(MAKECMDGOALS), clean)
   include $(DEPENDS)
@@ -213,9 +215,7 @@ $(NAME): $(OBJS) $(DEPS)
 	@echo Making Objective-C object $@
 	$(CROSS)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-SCRIPTS := $(shell ls scripts/*.js*)
-CORE != (ls icons/* fonts/*)
-CORE := $(CORE) $(SCRIPTS)
+CORE != (ls icons/* fonts/* shaders/*.cg scripts/*.js*)
 
 packer: tools/packer.c source/engine/miniz.c
 	@echo Making packer

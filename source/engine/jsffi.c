@@ -1219,6 +1219,10 @@ JSValue js_io_slurpbytes(JSContext *js, JSValue self, int argc, JSValue *argv)
   char *f = js2str(argv[0]);
   size_t len;
   unsigned char *d = slurp_file(f,&len);
+  if (!d) {
+    JS_FreeCString(js,f);
+    return JS_UNDEFINED;
+  }
   JSValue ret = JS_NewArrayBufferCopy(js,d,len);
   JS_FreeCString(js,f);
   free(d);
