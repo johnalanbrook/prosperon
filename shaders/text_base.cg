@@ -1,0 +1,10 @@
+#include <stdvert.cg>
+
+@block frag
+void frag()
+{ 
+  color = color0;
+}
+@end
+
+#include <basetext.cg>

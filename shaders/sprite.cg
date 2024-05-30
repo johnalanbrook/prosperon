@@ -1,0 +1,24 @@
+@block vert
+uniform vec4 mixcolor;
+uniform vec4 emissive;
+uniform vec4 rect;
+uniform vec2 offset;
+uniform vec2 diffuse_size;
+void vert()
+{
+  pos *= vec3(diffuse_size * rect.zw,1);
+  uv = (uv*rect.zw)+rect.xy;
+}
+@end
+
+@block frag
+uniform vec4 shade;
+void frag()
+{
+  color = texture(sampler2D(diffuse,smp), uv);
+  if (color.a < 0.1) discard;
+  color *= shade;
+}
+@end
+
+#include <base.cg>

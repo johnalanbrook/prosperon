@@ -1,0 +1,51 @@
+#blend mix
+#primitive triangle
+#cull none
+#depth off
+ 
+@vs vs
+in vec3 a_pos;
+in vec2 a_uv;
+ 
+out vec2 uv;
+ 
+#define PI 3.141592
+
+vec3 pos;
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 vp;
+uniform mat4 model;
+
+@include_block vert
+ 
+void main()
+{
+  pos = a_pos;
+  uv = a_uv;
+  vert();
+  gl_Position =  vp * model * vec4(pos, 1.0);
+}
+@end
+
+@fs fs
+
+in vec2 uv;
+
+out vec4 color;
+
+#define PI 3.141592
+
+texture2D diffuse;
+sampler smp;
+
+@include_block frag
+
+void main()
+{
+  frag();
+}
+@end
+
+@program sprite vs fs

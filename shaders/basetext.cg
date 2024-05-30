@@ -1,0 +1,61 @@
+#depth off
+
+@vs vs
+in vec2 a_pos;
+in vec2 a_uv;
+
+struct letter {
+  vec2 pos;
+  vec2 wh;
+  vec2 uv;
+  vec2 st;
+  vec4 color;
+};
+
+readonly buffer ssbo {
+  letter ls[];
+};
+
+out vec2 uv;
+out vec2 fuv;
+out vec4 color0;
+
+vec2 pos;
+
+uniform mat4 vp;
+
+@include_block vert
+
+void main()
+{
+  letter l = ls[gl_InstanceIndex];
+  fuv = l.uv + vec2(a_pos.x*l.st.x, l.st.y - a_pos.y*l.st.y);
+  uv = a_uv;
+  color0 = l.color;
+  pos = l.pos+(a_pos*l.wh);
+  vert();
+  gl_Position = vp * vec4(pos, 0.0, 1.0);
+}
+@end
+
+@fs fs
+in vec2 uv;
+in vec2 fuv;
+in vec4 color0;
+
+out vec4 color;
+
+texture2D text;
+sampler smp;
+
+@include_block frag
+
+void main()
+{
+  float lettera = texture(sampler2D(text,smp),fuv).r;
+  if (lettera < 0.1f) discard;
+  frag();
+}
+@end
+
+@program text vs fs

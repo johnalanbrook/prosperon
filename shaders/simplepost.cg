@@ -1,0 +1,8 @@
+@block frag
+void frag()
+{
+  color = texture(sampler2D(diffuse,smp),uv); 
+}
+@end
+
+#include <postbase.cg>
