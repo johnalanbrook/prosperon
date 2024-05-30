@@ -354,7 +354,7 @@ render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 
 /* All draw in screen space */
 render.point =  function(pos,size,color = Color.blue) {
-    render.circle(pos,size,size,color);
+  render.circle(pos,size,size,color);
 };
   
 render.cross = function(pos, size, color = Color.red) {

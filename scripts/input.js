@@ -300,15 +300,20 @@ var Player = {
 
   raw_input(cmd, state, ...args) {
     for (var pawn of this.pawns.reversed()) {
-      if (typeof pawn.inputs?.any === 'function') {
+      if (!pawn.inputs) {
+        console.error(`pawn no longer has inputs object.`);
+	continue;
+      }
+      
+      if (typeof pawn.inputs.any === 'function') {
         pawn.inputs.any(cmd);
         
-	      if (!pawn.inputs.fallthru)	
+	if (!pawn.inputs.fallthru)	
           return;
       }
 
-      if (!pawn.inputs?.[cmd]) {
-        if (pawn.inputs?.block) return;
+      if (!pawn.inputs[cmd]) {
+        if (pawn.inputs.block) return;
       	continue;
       }
 
@@ -316,21 +321,22 @@ var Player = {
 
       switch (state) {
         case 'pressed':
-	        fn = pawn.inputs[cmd];
-	        break;
+	  fn = pawn.inputs[cmd];
+	  break;
       	case 'rep':
-    	    fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
-	        break;
+    	  fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
+	  break;
       	case 'released':
       	  fn = pawn.inputs[cmd].released;
-    	    break;
+    	  break;
       	case 'down':
-    	   fn = pawn.inputs[cmd].down;
+    	  fn = pawn.inputs[cmd].down;
       }
 
       if (typeof fn === 'function') {
         fn.call(pawn, ... args);
-      	pawn.inputs.post?.call(pawn);
+	if (!pawn.inputs) continue; // TODO: OK? Checking if the call uncontrolled the pawn
+	pawn.inputs.post?.call(pawn);
       }
 
       switch (state) {
@@ -370,6 +376,10 @@ var Player = {
   pawns: [],
 
   control(pawn) {
+    if (!pawn.inputs) {
+      console.warn(`attempted to control a pawn without any input object.`);
+      return;
+    }
     this.pawns.push_unique(pawn);
   },
 

@@ -92,7 +92,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     printf("\n");
   }
 
-  if (priority >= LOG_ERROR) {
+  if (priority >= LOG_PANIC) {
     js_stacktrace();
     #ifdef __WIN32
     DebugBreak();

@@ -535,10 +535,8 @@ Object.unhide = function(obj, ...props)
 {
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
-    if (!p) {
-      console.warn(`No property of name ${prop}.`);
-      return;
-    }
+    if (!p)
+      continue;
     p.enumerable = true;
     Object.defineProperty(obj, prop, p);
   }

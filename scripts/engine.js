@@ -149,7 +149,7 @@ profile.printreport = function(cache, name)
 
 console.transcript = "";
 console.say = function(msg) {
-  msg += "\n";
+  msg += "\n"; 
   console.print(msg);
   console.transcript += msg;
 };
@@ -354,6 +354,7 @@ function process()
   var st = profile.now();
   prosperon.window_render(window.rendersize);
   prosperon.draw();
+  prosperon.debug();
   prosperon.gui();
   prosperon.screengui();
   prosperon.hookend?.();
