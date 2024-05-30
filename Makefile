@@ -78,34 +78,27 @@ CPPFLAGS += -DCONFIG_VERSION=\"2024-02-14\" -DCONFIG_BIGNUM #for quickjs
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
 # default, fast and medium available in game at runtime; best available in editor
 
-PKGCMD = tar --directory --exclude="./*.a" --exclude="./obj" -czf $(DISTDIR)/$(DIST) .
-ZIP = .tar.gz
-UNZIP = cp $(DISTDIR)/$(DIST) $(DESTDIR) && tar xzf $(DESTDIR)/$(DIST) -C $(DESTDIR) && rm $(DESTDIR)/$(DIST)
-
 INFO := $(INFO)_$(ARCH)
 
 ifeq ($(OS), Windows_NT) # then WINDOWS
-	PLATFORM := win64
+  PLATFORM := win64
   DEPS += resource.o
   STEAMAPI := steam_api64
   LDFLAGS += -mwin32 -static
   CPPFLAGS += -mwin32
   LDLIBS += mingw32 kernel32 d3d11 user32 shell32 dxgi gdi32 ws2_32 ole32 winmm setupapi m pthread
-  PKGCMD = zip -q -r $(MAKEDIR)/$(DISTDIR)/$(DIST) . -x \*.a ./obj/\*
-  ZIP = .zip
-  UNZIP = unzip -o -q $(DISTDIR)/$(DIST) -d $(DESTDIR)
-	INFO :=$(INFO)_win
-	EXT = .exe
+  INFO :=$(INFO)_win
+  EXT = .exe
 else ifeq ($(OS), IOS)
   CC = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
-	SDK = iphoneos
-	SDK_PATH = /Applications/Xcode.app/Contents/Developer/Platforms/$(SDK).platform/Developer/SDKs/$(SDK).sdk
-	CFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
-	LDFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
-	LDFLAGS += -framework Foundation -framework UIKit -framework AudioToolbox -framework Metal -framework MetalKit -framework AVFoundation
-	CXXFLAGS += -std=c++11
-	CFLAGS += -x objective-c -DIOS
-	INFO :=$(INFO)_ios
+  SDK = iphoneos
+  SDK_PATH = /Applications/Xcode.app/Contents/Developer/Platforms/$(SDK).platform/Developer/SDKs/$(SDK).sdk
+  CFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
+  LDFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
+  LDFLAGS += -framework Foundation -framework UIKit -framework AudioToolbox -framework Metal -framework MetalKit -framework AVFoundation
+  CXXFLAGS += -std=c++11
+  CFLAGS += -x objective-c -DIOS
+  INFO :=$(INFO)_ios
 else ifeq ($(OS), wasm) # Then WEB
   OS := Web
   LDFLAGS += -sUSE_WEBGPU
@@ -131,8 +124,8 @@ else
     CFLAGS += -x objective-c
     CXXFLAGS += -std=c++11
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
-		INFO :=$(INFO)_macos
-		STEAMAPI := steam_api
+    INFO :=$(INFO)_macos
+    STEAMAPI := steam_api
   endif
 endif
 
@@ -161,9 +154,11 @@ includeflag := $(addprefix -I, $(includeflag))
 
 WARNING_FLAGS = -Wno-incompatible-function-pointer-types -Wno-incompatible-pointer-types
 
+# For vanilla compilation, remove _
 ifeq ($(INFO),_)
-	INFO := 
+  INFO := 
 endif
+
 APP = prosperon
 NAME = $(APP)$(INFO)$(EXT)
 SEM != git describe --tags --abbrev=0
@@ -183,17 +178,12 @@ all: $(NAME)
 
 prereqs: source/engine/core.cdb.h
 
-DESTDIR ?= ~/.bin
-install: $(NAME)
-	@echo Copying to destination
-	cp -f $(NAME) $(DESTDIR)/$(APP)
-
 $(NAME): $(OBJS) $(DEPS)
 	@echo Linking $(NAME)
 	$(CROSS)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
 	@echo Finished build
 
-%$(INFO).o: %.c 
+%$(INFO).o: %.c prereqs
 	@echo Making C object $@
 	$(CROSS)$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -257,7 +247,7 @@ crossmac: Prosperon.icns
 	cp Prosperon.icns Prosperon.app/Contents/Resources
 
 crosswin:
-	make CROSS=x86_64-w64-mingw32- OS=Windows_NT CC=gcc
+	make CROSS=x86_64-w64-mingw32ucrt- OS=Windows_NT CC=gcc
 
 crossweb:
 	make CC=emcc OS=wasm

@@ -53,6 +53,8 @@ physics.gravity.strength = 500;
 physics.damp = physics.make_damp();
 physics.damp.mask = ~1;
 
+physics.delta = 1/240;
+
 return {
   physics
 }

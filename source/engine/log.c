@@ -29,7 +29,7 @@
 #define CYAN 36
 #define WHITE 37
 
-#define COLOR(TXT, _C) ESC #_C "m" #TXT ESC "0m"
+#define COLOR(TXT, _C) ESC "22;" #_C "m" #TXT ESC "0m"
 
 char *logstr[] = { "spam", "debug", "info", "warn", "error", "panic"};
 char *logcolor[] = { COLOR(spam,37), COLOR(debug,32), COLOR(info,36), COLOR(warn,33), COLOR(error,31), COLOR(panic,45) };
@@ -47,7 +47,6 @@ void log_init()
   if (!fexists(".prosperon")) {
     logout = tmpfile();
     dump = tmpfile();
-    writeout = stdout;
   }
   else {
     logout = fopen(".prosperon/log.txt", "w");
@@ -93,7 +92,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
     printf("\n");
   }
 
-  if (priority >= LOG_PANIC) {
+  if (priority >= LOG_ERROR) {
     js_stacktrace();
     #ifdef __WIN32
     DebugBreak();

@@ -793,9 +793,9 @@ sg_shader js2shader(JSValue v)
   int atin = js_arrlen(attrs);
   for (int i = 0; i < atin; i++) {
     JSValue u = js_getpropidx(attrs, i);
-    desc.attrs[i].name = js2strdup(js_getpropstr(u, "name"));
-    desc.attrs[i].sem_name = js2strdup(js_getpropstr(u,"sem_name"));
-    desc.attrs[i].sem_index = js2number(js_getpropstr(u, "sem_index"));
+    int slot = js2number(js_getpropstr(u, "slot"));    
+    desc.attrs[slot].sem_name = js2strdup(js_getpropstr(u,"sem_name"));
+    desc.attrs[slot].sem_index = js2number(js_getpropstr(u, "sem_index"));
   }
   
   JSValue vsu = js_getpropstr(vs, "uniform_blocks");

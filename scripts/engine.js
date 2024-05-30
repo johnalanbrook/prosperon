@@ -269,7 +269,6 @@ global.mixin("scripts/render");
 global.mixin("scripts/debug");
 
 var frame_t = profile.secs(profile.now());
-var phys_step = 1/240;
 
 var sim = {};
 sim.mode = "play";
@@ -344,11 +343,11 @@ function process()
 
     physlag += dt;
 
-    while (physlag > phys_step) {
-      physlag -= phys_step;
+    while (physlag > physics.delta) {
+      physlag -= physics.delta;
       var st = profile.now();
-      prosperon.phys2d_step(phys_step*game.timescale);
-      prosperon.physupdate(phys_step*game.timescale);
+      prosperon.phys2d_step(physics.delta*game.timescale);
+      prosperon.physupdate(physics.delta*game.timescale);
       profile.addreport(profcache, "physics step", st);
     }
   }

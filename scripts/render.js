@@ -6,7 +6,7 @@ render.doc = {
 
 var shaderlang = {
  macos: "metal_macos",
- windows: "hlsl4",
+ windows: "hlsl5",
  linux: "glsl430",
  web: "wgsl",
  ios: "metal_ios",
