@@ -115,7 +115,6 @@ render.make_shader = function(shader)
 {
   var file = shader;
   shader = io.slurp(shader);
-  console.info(shader);
   if (!shader) {
     console.info(`not found! slurping shaders/${file}`);
     shader = io.slurp(`shaders/${file}`);
@@ -183,20 +182,18 @@ render.make_shader = function(shader)
 
   /* Take YAML and create the shader object */
   var yamlfile = `${out}_reflection.yaml`;
-  console.info(`slurping ${yamlfile}`);
   var jjson = yaml.tojson(io.slurp(yamlfile));
   var obj = json.decode(jjson);
   io.rm(yamlfile);
   
   obj = obj.shaders[0].programs[0];
   function add_code(stage) {
-    console.info(json.encode(stage));
     stage.code = io.slurp(stage.path);
 
     io.rm(stage.path);
     delete stage.path;
   }
-  console.info(json.encode(obj));
+
   add_code(obj.vs);
   if (!obj.fs)
    if (obj.vs.fs) {
@@ -249,7 +246,6 @@ render.make_shader = function(shader)
   io.slurpwrite(writejson, json.encode(compiled));
   profile.report(st, `make shader from ${file}`);
   
-  console.info(`pipeline for ${file}`);
   var obj = compiled[os.sys()];
   obj.pipe = render.pipeline(obj);
 
