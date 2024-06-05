@@ -41,6 +41,8 @@
 #include "stb_image_write.h"
 #include <pl_mpeg.h>
 
+#include "gui.h"
+
 uint64_t start_t;
 uint64_t frame_t;
 
@@ -109,6 +111,7 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
+  gui_input(e);
   char lcfmt[5];
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:

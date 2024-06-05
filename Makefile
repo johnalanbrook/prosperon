@@ -15,7 +15,9 @@ OPT ?= 0
 LD = $(CC)
 
 STEAM = steam/sdk
-STEAMAPI = 
+STEAMAPI =
+
+LDFLAGS += -lstdc++
 
 ifeq ($(CROSS)$(CC), emcc)
   LDFLAGS += --shell-file shell.html --closure 1
@@ -148,7 +150,7 @@ OBJS := $(patsubst %.m, %$(INFO).o, $(OBJS))
 
 engineincs != find source/engine -maxdepth 1 -type d
 includeflag != find source -type d -name include
-includeflag += $(engineincs) source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs
+includeflag += $(engineincs) source/engine/thirdparty/sokol source/engine/thirdparty/stb source/engine/thirdparty/cgltf source/engine/thirdparty/TinySoundFont source/engine/thirdparty/dr_libs source/engine/thirdparty/imgui
 includeflag += $(STEAM)/public
 includeflag += source
 includeflag := $(addprefix -I, $(includeflag))

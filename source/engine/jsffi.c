@@ -34,6 +34,7 @@
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
 #include <chipmunk/chipmunk_unsafe.h>
+#include "gui.h"
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -968,6 +969,12 @@ JSC_CCALL(render_screencolor,
   return texture2js(&screencolor)
 )
 
+JSC_CCALL(render_imgui_new, gui_newframe(js2number(argv[0]),js2number(argv[1]),js2number(argv[2])); )
+JSC_CCALL(render_gfx_gui, gfx_gui())
+JSC_CCALL(render_imgui_end, gui_endframe())
+
+JSC_CCALL(render_imgui_init, return gui_init(js))
+
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flushtext, 0),
   MIST_FUNC_DEF(render, camera_screen2world, 2),
@@ -990,6 +997,10 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setuniv4, 2),
   MIST_FUNC_DEF(render, setpipeline, 1),
   MIST_FUNC_DEF(render, screencolor, 0),
+  MIST_FUNC_DEF(render, imgui_new, 3),
+  MIST_FUNC_DEF(render, gfx_gui, 0),
+  MIST_FUNC_DEF(render, imgui_end, 0),
+  MIST_FUNC_DEF(render, imgui_init, 0),
 };
 
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))

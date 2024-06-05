@@ -1,6 +1,10 @@
 #ifndef SCRIPT_H
 #define SCRIPT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "quickjs/quickjs.h"
 #include <time.h>
 
@@ -25,5 +29,9 @@ JSValue script_eval(const char *file, const char *script);
 void script_call_sym(JSValue sym, int argc, JSValue *argv);
 
 void script_gc();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -18,6 +18,8 @@
 
 #include "sokol/sokol_gfx.h"
 
+#include "gui.h"
+
 static HMM_Vec2 lastuse = {0};
 
 HMM_Vec2 campos = {0,0};
@@ -148,7 +150,7 @@ void render_init() {
 #endif
 
   font_init();
-  
+
   sg_features feat = sg_query_features();
   TOPLEFT = feat.origin_top_left;
 
