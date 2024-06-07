@@ -1,4 +1,5 @@
 #include "gui.h"
+
 #include "render.h"
 #include "sokol/sokol_app.h"
 #include "imgui.h"
@@ -72,11 +73,12 @@ void gui_input(sapp_event *e)
 
 void gui_newframe(int x, int y, float dt)
 {
-  simgui_new_frame(&(simgui_frame_desc_t){
+  simgui_frame_desc_t frame = {
     .width = x,
     .height = y,
     .delta_time = dt
-  });
+  };
+  simgui_new_frame(&frame);
 }
 
 void gfx_gui()

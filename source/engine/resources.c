@@ -163,11 +163,18 @@ static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
     arrpush(ls_paths, strdup(&path[2]));
 
   return 0;
-}
+} 
 
 time_t file_mod_secs(const char *file) {
   struct stat attr;
-  stat(file, &attr);
+  
+  if (mz_zip_reader_locate_file(&game_cdb, file, NULL, 0) != -1)
+    stat("game.zip", &attr);
+  else if (mz_zip_reader_locate_file(&corecdb, file, NULL, 0) != -1)
+    return UNIX_TIME;
+  else
+    stat(file, &attr);
+    
   return attr.st_mtime;
 }
 

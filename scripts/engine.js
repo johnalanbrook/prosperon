@@ -295,8 +295,6 @@ game.engine_start = function(s) {
     Object.readonly(window.__proto__, 'sample_count');
     s();
     
-    render.polyshader = render.make_shader("poly.sglsl");
-    
     shape.quad = {
       pos:os.make_buffer([
         0,0,0,
@@ -321,6 +319,8 @@ game.engine_start = function(s) {
       count: 3,
       index: os.make_buffer([0,2,1],1),
     };
+    
+    render.init();
   }, process, window.size.x, window.size.y);  
 }
 

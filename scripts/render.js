@@ -146,9 +146,10 @@ render.make_shader = function(shader)
   for (var inc of incs) {
     var filez = inc.match(/#include <(.*)>/)[1];
     var macro = io.slurp(filez);
-    if (!macro)
-      macro = io.slurp(`shaders/${filez}`);
-    
+    if (!macro) {
+      filez = `shaders/${filez}`;
+      macro = io.slurp(filez);
+    }
     shader = shader.replace(inc, macro);
     files.push(filez);
   }
@@ -355,6 +356,57 @@ render.device = {
 };
 
 render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
+
+var textshader;
+var circleshader;
+var polyshader;
+
+render.init = function() {
+  textshader = render.make_shader("shaders/text_base.cg");
+  render.spriteshader = render.make_shader("shaders/sprite.cg");
+  render.postshader = render.make_shader("shaders/simplepost.cg");
+  circleshader = render.make_shader("shaders/circle.cg");
+  polyshader = render.make_shader("shaders/poly.cg");
+  
+  render.textshader = textshader;
+}
+
+render.circle = function(pos, radius, color) {
+  var mat = {
+    radius: radius,
+    coord: pos,
+    shade: color
+  };
+  render.setpipeline(circleshader.pipe);
+  render.shader_apply_material(circleshader, mat);
+  var bind = render.sg_bind(circleshader, shape.quad, mat);
+  bind.inst = 1;
+  render.spdraw(bind);
+}
+
+render.poly = function(points, color, transform) {
+  var buffer = render.poly_prim(points);
+  var mat = { shade: color};
+  render.setpipeline(polyshader.pipe);
+  render.setunim4(0,polyshader.vs.unimap.model.slot, transform);
+  render.shader_apply_material(polyshader, mat);
+  var bind = render.sg_bind(polyshader, buffer, mat);
+  bind.inst = 1;
+  render.spdraw(bind);
+}
+
+render.line = function(points, color = Color.white, thickness = 1, transform) {
+  var buffer = os.make_line_prim(points, thickness, 0, false);
+  render.setpipeline(polyshader.pipe);
+  var mat = {
+    shade: color
+  };
+  render.shader_apply_material(polyshader, mat);
+  render.setunim4(0,polyshader.vs.unimap.model.slot, transform);
+  var bind = render.sg_bind(polyshader, buffer, mat);
+  bind.inst = 1;
+  render.spdraw(bind);
+}
 
 /* All draw in screen space */
 render.point =  function(pos,size,color = Color.blue) {
