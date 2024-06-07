@@ -369,6 +369,35 @@ render.init = function() {
   polyshader = render.make_shader("shaders/poly.cg");
   
   render.textshader = textshader;
+  
+  os.make_circle2d().draw = function() {
+    render.circle(this.body().transform().pos, this.radius, [1,1,0,1]);
+  }
+  
+  var disabled = [148/255,148/255, 148/255, 1];
+  var sleep = [1, 140/255, 228/255, 1];
+  var dynamic = [1, 70/255, 46/255, 1];
+  var kinematic = [1, 194/255, 64/255, 1];
+  var static_color = [73/255, 209/255, 80/255, 1];
+  
+  os.make_poly2d().draw = function() {
+    var body = this.body();
+    var color = body.sleeping() ? [0,0.3,0,0.4] : [0,1,0,0.4];
+    var t = body.transform();
+    render.poly(this.points, color, body.transform());
+    color.a = 1;
+    render.line(this.points.wrapped(1), color, 1, body.transform());
+  }
+  
+  os.make_seg2d().draw = function() {
+    render.line([this.a(), this.b()], [1,0,1,1], Math.max(this.radius/2, 1), this.body().transform());
+  }
+  
+  joint.pin().draw = function() {
+    var a = this.bodyA();
+    var b = this.bodyB();
+    render.line([a.transform().pos.xy, b.transform().pos.xy], [0,1,1,1], 1);
+  }
 }
 
 render.circle = function(pos, radius, color) {
