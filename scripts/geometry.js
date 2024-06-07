@@ -1,4 +1,9 @@
 var shape = {};
+shape.box = {};
+shape.box.points = function(ll, ur)
+{
+  return [ll, ll.add([ur.x-ll.x,0]), ur, ll.add([0,ur.y-ll.y])];
+}
 shape.sphere = {};
 shape.circle = {};
 shape.sphere.volume = function(r) { return Math.pi*r*r*r*4/3; };
