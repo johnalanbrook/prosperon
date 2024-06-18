@@ -1474,6 +1474,7 @@ JSC_GETSET(transform, pos, vec3)
 JSC_GETSET(transform, scale, vec3)
 JSC_GETSET(transform, rotation, quat)
 JSC_CCALL(transform_move, transform_move(js2transform(self), js2vec3(argv[0])); )
+
 JSC_CCALL(transform_lookat,
   HMM_Vec3 point = js2vec3(argv[0]);
   transform *go = js2transform(self);
@@ -1488,6 +1489,15 @@ JSC_CCALL(transform_rotate,
   t->rotation = HMM_MulQ(t->rotation,rot);
 )
 
+JSC_CCALL(transform_angle,
+  HMM_Vec3 axis = js2vec3(argv[0]);
+  transform *t = js2transform(self);
+  if (axis.x) return angle2js(HMM_Q_Roll(t->rotation));
+  if (axis.y) return angle2js(HMM_Q_Pitch(t->rotation));
+  if (axis.z) return angle2js(HMM_Q_Yaw(t->rotation));
+  return angle2js(0);
+)
+
 JSC_CCALL(transform_direction,
   transform *t = js2transform(self);
   return vec32js(HMM_QVRot(js2vec3(argv[0]), t->rotation));
@@ -1499,6 +1509,7 @@ static const JSCFunctionListEntry js_transform_funcs[] = {
   CGETSET_ADD(transform, rotation),
   MIST_FUNC_DEF(transform, move, 1),
   MIST_FUNC_DEF(transform, rotate, 2),
+  MIST_FUNC_DEF(transform, angle, 1),
   MIST_FUNC_DEF(transform, lookat, 1),
   MIST_FUNC_DEF(transform, direction, 1),
 };
@@ -1988,11 +1999,18 @@ JSC_GET(texture, height, number)
 JSC_GET(texture, frames, number)
 JSC_GET(texture, delays, ints)
 
+JSC_SCALL(texture_save, texture_save(js2texture(self), str));
+
+JSC_CCALL(texture_blit,
+  texture_blit(js2texture(self), js2texture(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))
+
 static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, width),
   MIST_GET(texture, height),
   MIST_GET(texture, frames),
   MIST_GET(texture, delays),
+  MIST_FUNC_DEF(texture, save, 2),
+  MIST_FUNC_DEF(texture, blit, 3)
 };
 
 JSC_GETSET(font, linegap, number)
@@ -2289,6 +2307,8 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
+JSC_CCALL(os_make_tex_data, ret = texture2js(texture_empty(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]))))
+
 JSC_CCALL(os_make_font,
   font *f = MakeFont(js2str(argv[0]), js2number(argv[1]));
   ret = font2js(f);
@@ -2517,6 +2537,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_poly2d, 2),
   MIST_FUNC_DEF(os, make_seg2d, 1),
   MIST_FUNC_DEF(os, make_texture, 1),
+  MIST_FUNC_DEF(os, make_tex_data, 3),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_model, 1),
   MIST_FUNC_DEF(os, make_transform, 0),

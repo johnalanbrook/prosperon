@@ -1909,6 +1909,21 @@ HMM_Quat HMM_M4ToQ_LH(HMM_Mat4 M) {
   return Q;
 }
 
+float HMM_Q_Roll(HMM_Quat q)
+{
+  return atan2(2.0*(q.x*q.y + q.w*q.z), q.w*q.w + q.x*q.x - q.y*q.y - q.z*q.z);
+}
+
+float HMM_Q_Pitch(HMM_Quat q)
+{
+  return asin(-2.0*(q.x*q.z - q.w*q.y));
+}
+
+float HMM_Q_Yaw(HMM_Quat q)
+{
+  return atan2(2.0*(q.y*q.z + q.w*q.x), q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z);
+}
+
 HMM_Quat HMM_QFromAxisAngle_RH(HMM_Vec3 Axis, float AngleOfRotation) {
 
   HMM_Quat Result;

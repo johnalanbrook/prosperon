@@ -5,6 +5,7 @@
 #include "sokol/sokol_gfx.h"
 #include <math.h>
 #include <stb_image.h>
+#include <stb_image_write.h>
 
 #include "resources.h"
 
@@ -173,6 +174,26 @@ void texture_free(texture *tex)
   free(tex);
 }
 
+struct texture *texture_empty(int w, int h, int n)
+{
+  texture *tex = calloc(1,sizeof(*tex));
+  tex->data = calloc(w*h*n, sizeof(unsigned char));
+  tex->width = w;
+  tex->height = h;
+  sg_image_data sgdata;
+  sgdata.subimage[0][0] = (sg_range){.ptr = tex->data, .size = w*h*4};
+  tex->id = sg_make_image(&(sg_image_desc){
+    .type = SG_IMAGETYPE_2D,
+    .width = tex->width,
+    .height = tex->height,
+    .usage = SG_USAGE_IMMUTABLE,
+    .num_mipmaps = 1,
+    .data = sgdata,
+  });
+  
+  return tex;
+}
+
 struct texture *texture_fromdata(void *raw, long size)
 {
   struct texture *tex = calloc(1, sizeof(*tex));
@@ -258,6 +279,64 @@ double grad (int hash, double x, double y, double z)
         case 0xF: return -y - z;
         default: return 0; // never happens
     }*/
+}
+
+void texture_save(texture *tex, const char *file)
+{
+  char *ext = strrchr(file, '.');
+  printf("SAVING TO %s with ext %s\n", file, ext);  
+  if (!strcmp(ext, ".png"))
+    stbi_write_png(file, tex->width, tex->height, 4, tex->data, 4*tex->width);
+  else if (!strcmp(ext, ".bmp"))
+    stbi_write_bmp(file, tex->width, tex->height, 4, tex->data);
+  else if (!strcmp(ext, ".tga"))
+    stbi_write_tga(file, tex->width, tex->height, 4, tex->data);
+  else if (!strcmp(ext, ".jpg") || !strcmp(ext, ".jpeg"))
+    stbi_write_jpg(file, tex->width, tex->height, 4, tex->data, 5);
+}
+
+void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int dest_width, int dest_height, int sx, int sy, int sw, int sh) {
+  int src_stride = src_width * 4;
+  int dest_stride = dest_width * 4;
+
+  for (int y = 0; y < sw; y++) {
+    for (int x = 0; x < sh; x++) {
+      int src_index = (y * src_stride) + (x * 4);
+      int dest_index = ((y + sy) * dest_stride) + ((x + sx) * 4);
+
+      // Calculate the alpha value for the source pixel
+      uint8_t src_alpha = src[src_index + 3];
+
+      // Calculate the alpha value for the destination pixel
+      uint8_t dest_alpha = dest[dest_index + 3];
+
+      // Calculate the resulting alpha value
+      uint8_t result_alpha = src_alpha + (255 - src_alpha) * dest_alpha / 255;
+
+      // Calculate the resulting RGB values
+      uint8_t result_red = (src[src_index + 0] * src_alpha + dest[dest_index + 0] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
+      uint8_t result_green = (src[src_index + 1] * src_alpha + dest[dest_index + 1] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
+      uint8_t result_blue = (src[src_index + 2] * src_alpha + dest[dest_index + 2] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
+
+      // Set the resulting pixel values
+      dest[dest_index + 0] = result_red;
+      dest[dest_index + 1] = result_green;
+      dest[dest_index + 2] = result_blue;
+      dest[dest_index + 3] = result_alpha;
+    }
+  }
+}
+
+
+
+// Function to draw source image pixels on top of a destination image
+void texture_blit(texture *dest, texture *src, int x, int y, int w, int h) {
+  blit_image(src->data, dest->data, src->width, src->height, dest->height, dest->width, x, y, w, h);
+}
+
+void texture_flip(texture *tex, int y)
+{
+  
 }
 
 static int p[512] = {151,160,137,91,90,15,

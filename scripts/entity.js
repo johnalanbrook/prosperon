@@ -105,7 +105,7 @@ var entity = {
   set scale(x) { this.transform.scale = x; },
   
   move(vec) { this.pos = this.pos.add(vec); },
-  rotate(x) { this.angle += x; },
+  rotate(x) { this.transform.rotate(x, [0,0,-1]); },
   grow(vec) {
     if (typeof vec === 'number') vec = [vec,vec];
     this.scale = this.scale.map((x,i) => x*vec[i]);

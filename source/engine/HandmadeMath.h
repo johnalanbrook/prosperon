@@ -658,4 +658,8 @@ HMM_Quat HMM_M4ToQ_LH(HMM_Mat4 M);
 HMM_Quat HMM_QFromAxisAngle_RH(HMM_Vec3 Axis, float AngleOfRotation);
 HMM_Quat HMM_QFromAxisAngle_LH(HMM_Vec3 Axis, float AngleOfRotation);
 
+float HMM_Q_Roll(HMM_Quat q);
+float HMM_Q_Yaw(HMM_Quat q);
+float HMM_Q_Pitch(HMM_Quat q);
+
 #endif /* HANDMADE_MATH_H */

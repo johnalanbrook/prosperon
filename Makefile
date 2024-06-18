@@ -267,7 +267,7 @@ crossmac: Prosperon.icns
 	cp Prosperon.icns Prosperon.app/Contents/Resources
 
 crosswin:
-	make CROSS=x86_64-w64-mingw32ucrt- OS=Windows_NT CC=gcc
+	make CROSS=x86_64-w64-mingw32- OS=Windows_NT CC=gcc
 
 crossweb:
 	make CC=emcc OS=wasm
