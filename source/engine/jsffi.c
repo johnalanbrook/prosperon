@@ -2002,6 +2002,7 @@ JSC_GET(texture, delays, ints)
 JSC_SCALL(texture_save, texture_save(js2texture(self), str));
 
 JSC_CCALL(texture_blit,
+  texture *tex = js2texture(self);
   texture_blit(js2texture(self), js2texture(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))
 
 static const JSCFunctionListEntry js_texture_funcs[] = {
@@ -2009,8 +2010,8 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, height),
   MIST_GET(texture, frames),
   MIST_GET(texture, delays),
-  MIST_FUNC_DEF(texture, save, 2),
-  MIST_FUNC_DEF(texture, blit, 3)
+  MIST_FUNC_DEF(texture, save, 1),
+  MIST_FUNC_DEF(texture, blit, 5)
 };
 
 JSC_GETSET(font, linegap, number)
@@ -2307,7 +2308,9 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
-JSC_CCALL(os_make_tex_data, ret = texture2js(texture_empty(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]))))
+JSC_CCALL(os_make_tex_data,
+  ret = texture2js(texture_empty(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
+)
 
 JSC_CCALL(os_make_font,
   font *f = MakeFont(js2str(argv[0]), js2number(argv[1]));

@@ -296,6 +296,8 @@ void texture_save(texture *tex, const char *file)
 }
 
 void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int dest_width, int dest_height, int sx, int sy, int sw, int sh) {
+  if (sx + sw > dest_width) return;
+  if (sy + sh > dest_height) return;
   int src_stride = src_width * 4;
   int dest_stride = dest_width * 4;
 

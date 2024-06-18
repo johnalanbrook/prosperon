@@ -61,7 +61,6 @@ var sprite = {
     this._p = p;    
     this.del_anim?.();
     this.texture = game.texture(p);
-    say(p);
     this.diffuse = this.texture;    
     this.rect = [0,0,1,1];
     
