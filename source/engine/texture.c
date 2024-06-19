@@ -284,7 +284,6 @@ double grad (int hash, double x, double y, double z)
 void texture_save(texture *tex, const char *file)
 {
   char *ext = strrchr(file, '.');
-  printf("SAVING TO %s with ext %s\n", file, ext);  
   if (!strcmp(ext, ".png"))
     stbi_write_png(file, tex->width, tex->height, 4, tex->data, 4*tex->width);
   else if (!strcmp(ext, ".bmp"))
