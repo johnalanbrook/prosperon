@@ -275,12 +275,13 @@ render.shader_apply_material = function(shader, material = {})
     var s = shader.fs.unimap[p];
     shader_unisize[s.size](1, s.slot, material[p]);
   }
+  if (!material.diffuse) return;
   
   if ("diffuse_size" in shader.fs.unimap)
     render.setuniv2(1, shader.fs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
-    
+
   if ("diffuse_size" in shader.vs.unimap)
-  render.setuniv2(0, shader.vs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
+    render.setuniv2(0, shader.vs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
 }
 
 render.sg_bind = function(shader, mesh = {}, material = {}, ssbo)

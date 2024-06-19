@@ -260,7 +260,7 @@ SpriteAnim.aseprite = function(path) {
   var anims = {};
   var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
   var f = 0;
-  if (data.meta.frameTags.length === 0) {
+  if (!data.meta.frameTags || data.meta.frameTags.length === 0) {
     anims[0] = aseframeset2anim(frames, data.meta);
     return anims;
   }
