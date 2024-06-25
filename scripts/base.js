@@ -1493,7 +1493,17 @@ Vector.random = function() {
   var vec = [Math.random()-0.5, Math.random()-0.5];
   return Vector.norm(vec);
 }
-  
+
+Vector.angle_between = function(a,b)
+{
+  var dot = Vector.dot(a,b);
+  var am = Vector.length(a);
+  var bm = Vector.length(b);
+  var cos_a = dot / (am*bm);
+  var angle = Math.acos(cos_a);
+  return Math.rad2turn(angle);
+}
+
 Vector.angle = function(v) { return Math.rad2turn(Math.atan2(v.y, v.x)); }
 Vector.rotate = function(v,angle) {  
   var r = Vector.length(v);
