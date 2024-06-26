@@ -95,10 +95,12 @@ Color.normalize = function(c) {
       continue;
     }
     
+    c[p][3] = 255;
+    
     for (var color of c[p]) {
       if (color > 1) {
         fmt = "8b";
-	break;
+	      break;
       }
     }
 
