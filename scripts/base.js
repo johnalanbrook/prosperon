@@ -1184,6 +1184,9 @@ Object.defineProperty(Array.prototype, 'unique', {
   }
 });
 
+Object.defineProperty(Array.prototype, 'unduped', {
+  value: function() { return [... new Set(this)]; }
+});
 
 Object.defineProperty(Array.prototype, 'findIndex', {
  value: function(fn) {
@@ -1215,6 +1218,15 @@ Object.defineProperty(Array.prototype, 'find', {
 
   return ret;
 }});
+
+Object.defineProperty(Array.prototype, 'search', {
+  value: function(val) {
+    for (var i = 0; i < this.length; i++)
+      if (this[i] === val) return i;
+
+    return undefined;
+  }
+});
 
 Object.defineProperty(Array.prototype, 'last', {
   value: function() { return this[this.length-1]; },
