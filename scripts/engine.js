@@ -362,7 +362,7 @@ function process() {
     }
   }
   var st = profile.now();
-  prosperon.window_render(window.rendersize);
+  prosperon.window_render(window.size);
   prosperon.draw();
   prosperon.debug();
   prosperon.gui();
@@ -606,7 +606,6 @@ var Event = {
   },
 };
 
-// window.rendersize is the resolution the game renders at
 // window.size is the physical size of the window on the desktop
 // set to one of the following
 // stretch     render to fill window
@@ -617,7 +616,6 @@ var Event = {
 // full    expand out beyond window
 
 window.size = [640, 480];
-window.rendersize = window.size;
 window.mode = "keep";
 
 window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
@@ -661,8 +659,3 @@ globalThis.mum = app.spawn("scripts/mum");
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500, 500];
-window.boundingbox = function () {
-  var pos = game.camera.pos;
-  var wh = window.rendersize.scale(game.camera.zoom);
-  return bbox.fromcwh(pos, wh);
-};

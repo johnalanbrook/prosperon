@@ -703,6 +703,7 @@ JSC_CCALL(render_glue_pass,
   });
 )
 
+// Set the portion of the window to be rendered to
 JSC_CCALL(render_viewport, sg_apply_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
   
 JSC_CCALL(render_commit, sg_commit())

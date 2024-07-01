@@ -246,9 +246,6 @@ Cmdline.register_order("play", function(argv) {
   global.mixin("config.js");
   if (project.title) window.title = project.title;
 
-  if (window.rendersize.equal([0,0])) window.rendersize = window.size;
-  console.info(`Starting game with window size ${window.size} and render ${window.rendersize}.`);
-  
   game.engine_start(function() {
     render.set_font("fonts/c64.ttf", 8);
     global.app = actor.spawn("game.js");

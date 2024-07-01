@@ -5,8 +5,6 @@
 
 game.loadurs();
 
-console.info(`window size: ${window.size}, render size: ${window.rendersize}`);
-
 player[0].control(debug);
 
 var show_frame = true;
@@ -390,8 +388,8 @@ var editor = {
 
   gui() { 
     /* Clean out killed objects */
-    if (show_frame)
-      render.line(shape.box(window.rendersize.x, window.rendersize.y).wrapped(1).map(p => game.camera.world2view(p)), Color.yellow);
+//    if (show_frame)
+///      render.line(shape.box(window.rendersize.x, window.rendersize.y).wrapped(1).map(p => game.camera.world2view(p)), Color.yellow);
 
     render.text([0,0], game.camera.world2view([0,0]));
 
