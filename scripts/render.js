@@ -518,7 +518,7 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
 render.image = function(tex, pos, scale = 1, rotation = 0, color = Color.white, dimensions = [tex.width, tex.height]) {
   var t = os.make_transform();
   t.pos = pos;
-  t.scale = [scale,scale];
+  t.scale = [scale,scale,scale];
   render.setpipeline(render.spriteshader.pipe);
   render.setunim4(0, render.spriteshader.vs.unimap.model.slot, t);
   render.shader_apply_material(render.spriteshader, {

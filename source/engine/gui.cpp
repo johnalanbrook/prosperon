@@ -40,13 +40,21 @@ JSC_CCALL(imgui_menuitem,
 JSC_CCALL(imgui_beginmenubar, ImGui::BeginMenuBar())
 JSC_CCALL(imgui_endmenubar, ImGui::EndMenuBar())
 
+JSC_SSCALL(imgui_textinput,
+  char buffer[512];
+  strncpy(buffer, str2, 512);
+  ImGui::InputText(str, buffer, sizeof(buffer));
+  ret = str2js(buffer);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, begin, 1),
   MIST_FUNC_DEF(imgui, end,0),
   MIST_FUNC_DEF(imgui, beginmenu, 1),
   MIST_FUNC_DEF(imgui, menuitem, 3),
   MIST_FUNC_DEF(imgui, beginmenubar, 0),
-  MIST_FUNC_DEF(imgui, endmenubar, 0)
+  MIST_FUNC_DEF(imgui, endmenubar, 0),
+  MIST_FUNC_DEF(imgui, textinput, 2),
 };
 
 static int started = 0;

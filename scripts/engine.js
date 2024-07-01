@@ -422,8 +422,8 @@ game.doc.pause = "Pause game simulation.";
 game.doc.play = "Resume or start game simulation.";
 game.doc.camera = "Current camera.";
 
-game.texture = function (path) {
-  if (game.texture.cache[path]) return game.texture.cache[path];
+game.texture = function (path, force = false) {
+  if (force && game.texture.cache[path]) return game.texture.cache[path];
 
   if (!io.exists(path)) {
     console.warn(`Missing texture: ${path}`);
