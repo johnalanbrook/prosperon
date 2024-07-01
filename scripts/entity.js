@@ -727,6 +727,7 @@ game.loadurs = function() {
     }
   }
 
+  return;
   for (var file of io.glob("**.json").filter(f => !ur[f.name()])) {
     if (file[0] === '.' || file[0] === '_') continue;
     var newur = ur_from_file(file);

@@ -182,13 +182,11 @@ SpriteAnim.make = function(path) {
   return animcache[path];
 };
 SpriteAnim.gif = function(path) {
-  console.info(`making an anim from ${path}`);
   var anim = {};
   anim.frames = [];
   anim.path = path;
   var tex = game.texture(path);
   var frames = tex.frames;
-  console.info(`frames are ${frames}`);    
   if (frames === 1) return undefined;
   var yslice = 1/frames;
   for (var f = 0; f < frames; f++) {
@@ -207,7 +205,6 @@ SpriteAnim.gif = function(path) {
     anim.frames[i].time = times[i]/1000;
   anim.loop = true;
   var dim = [tex.width,tex.height];
-  console.info(`dimensions are ${dim}`);
   dim.y /= frames;
   anim.dim = dim;
   return {0:anim};

@@ -2304,7 +2304,6 @@ JSC_CCALL(os_make_seg2d,
 
 JSC_SCALL(os_make_texture,
   ret = texture2js(texture_from_file(str));
-  YughInfo("Made texture with %s", str);
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 

@@ -125,8 +125,6 @@ struct texture *texture_from_file(const char *path) {
   sg_img_data.subimage[0][0] = (sg_range){.ptr = data, .size=tex->width*tex->height*4};
   
   int mips = mip_levels(tex->width, tex->height)+1;
-
-  YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
   
   int mipw, miph;
   mipw = tex->width;
