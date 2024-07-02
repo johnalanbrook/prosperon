@@ -1,57 +1,13 @@
-#+title: Prosperon Documentation
-#+author: John Alanbrook
-#+options: html-postamble:nil
-#+DESCRIPTION: Prosperon documentation
-#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="style.css" />
-#+HTML_HEAD: <script defer data-domain="prosperon.dev" data-api="https://net.pockle.world/net/event" src="https://net.pockle.world/bat/script.js"></script>
-#+HTML_HEAD: <link rel="icon" href="orb.gif" type="image/gif">
-#+INFOJS_OPT: view:showall ltoc:above path:org-info.js toc:nil
-
-@@html:
-<script src="https://kit.fontawesome.com/a87f68ad0a.js" crossorigin="anonymous"></script>
-<nav class="floathead">
-  <a href="https://prosperon.dev">
-    <img height=50px src="prosperon_orb_horizontal.gif">
-  </a>
-  <a href=#top><i class="fa-solid fa-bars"></i></a>  
-  <a href="https://github.com/johnalanbrook/prosperon"><i class="fa-brands fa-github"></i></a>
-  <a href="https://x.com/pockleworld"><i class="fa-brands fa-x-twitter"></i></a>
-</nav>
-@@
-
-* Getting Started
-
-#+begin_scholium
-Press 'i' to see the table of contents.
-Press '?' for shortcuts on navigating this document!
-#+end_scholium
-
-** Installation
-*** Linux & MacOS
-Install the most [[https://prosperon.dev/download][recent binaries]] into your ~$PATH~.
-
-*** Windows
-Copy the executable into any folder and run it. If no game is deteced, it scaffolds for you.
-
-*** Building
-You will need ~sokol-shdc~ in the top of your directory. Then, ~make shaders~ and ~make~. The command ~make install~ copies it to your home's ~.bin~ path.
-
-** Playing your first game
-Download any of the completed example projects. Run ~prosperon play~ in the folder.
-
-Poke around the example projects. You will find it refreshingly straight forward.
-
-* Engine Tour
+# Engine Tour
 Prosperon is built in a code-first fashion.
 
-** Scripting
-The scripting language used in Prosperon is Javascript, with QuickJS. It is [[https://tc39.es/ecma262/2023/][ES2023]] compliant. It is fast, and has a number of features that make it well suited for a video game engine, like ref counting. Read more about it [[https://bellard.org/quickjs/][here]].
+## Scripting
+The scripting language used in Prosperon is Javascript, with QuickJS. It is ES2023 compliant. It is fast.
 
-#+begin_scholium
-Javascript is used here mostly to set up objects and tear them down. Although computationally expensive tasks can be done using QuickJS, Prosperon makes it easy to extend with raw C.
-#+end_scholium
+!!! scholium
+    Javascript is used here mostly to set up objects and tear them down. Although computationally expensive tasks can be done using QuickJS, Prosperon makes it easy to extend with raw C.
 
-*** How Prosperon games are structured
+### How Prosperon games are structured
 Prosperon schews the CommonJS and ES module systems for a custom one suitable for a computer game actor model. It is more restricted than either system, while retaining their full power.
 
 Prosperon games are structured into two types of source files:
@@ -60,32 +16,34 @@ Prosperon games are structured into two types of source files:
 
 Scripts end with a return statement. A script can return a function, an object of functions, or any other sort of value.
 
-#+begin_scholium
-It is a common requirement to add some amount of functionality to an object. It can be easily done with a script file.
-#+begin_src
-*script.js*
-function hello() { say("hello"); };
-return hello;
-#+end_src
-#+begin_src
-var o = {};
-o.use("hello.js");
-o.hello();
-#+end_src
-The ~use~ function on any object loads a module, and ~assign~s its return to the object.
-#+end_scholium
+!!! scholium
+    It is a common requirement to add some amount of functionality to an object. It can be easily done with a script file.
+    
+    ```
+    *script.js*
+    function hello() { say("hello"); };
+    return hello;
+    ```
 
-Scripts are loaded into memory only once. Further ~use~ statements only generate references to the statements. Because *scripts* are executed in a lambda environment, any ~var~ declared inside the script files are effectively private variables, persistent variables.
+    ```
+    var o = {};
+    o.use("hello.js");
+    o.hello();
+    ```
 
-In a *script*, ~this~ refers to ~undefined~. It is nothng.
+    The `use` function on any object loads a module, and `assign`s its return to the object.
 
-In an *actor* source file, ~this~ refers to the actor. Actors do not end in a ~return~ statement. *actor* source is intended to set up a new agent in your game. Set up the new entity by loading modules and assigning functions to ~this~.
+Scripts are loaded into memory only once. Further `use` statements only generate references to the statements. Because *scripts* are executed in a lambda environment, any `var` declared inside the script files are effectively private variables, persistent variables.
 
-*** Script entry points
+In a *script*, `this` refers to `undefined`. It is nothng.
+
+In an *actor* source file, `this` refers to the actor. Actors do not end in a `return` statement. *actor* source is intended to set up a new agent in your game. Set up the new entity by loading modules and assigning functions to `this`.
+
+### Script entry points
 The first way you can customize Prosperon is by adding scripts to the folder you're running it from. Any file ending with *.js* is a *script* which can be ran by Prosperon.
 
 | script          | When called                                 |
-|-----------------+---------------------------------------------|
+|-----------------|---------------------------------------------|
 | config.js       | First script on Prosperon load              |
 | game.js         | Entry point for running the game            |
 | editorconfig.js | Entry point for running the editor          |
@@ -93,98 +51,96 @@ The first way you can customize Prosperon is by adding scripts to the folder you
 | debug.js        | Debug set up                                |
 | dbgret.js       | After stopping debug mode, used for cleanup |
 
-#+begin_scholium
-Try it out. Add a script called ~config.js~ to your folder, with this.
+!!! scholium
+    Try it out. Add a script called `config.js` to your folder, with this.
 
-#+begin_src
-console.log("Hello world!");
-Game.quit();
-#+end_src
-Run ~prosperon~. You will see "Hello world!" in the console, and it shuts down.
-#+end_scholium
+    ```
+    console.log("Hello world!");
+    Game.quit();
+    ```
+    Run `prosperon`. You will see "Hello world!" in the console, and it shuts down.
 
-Using ~config.js~ and ~game.js~, you can write an entire game, without reaching any further. When you want to populate a world with independent actors, entities are what you will reach for.
 
-** Actors
+Using `config.js` and `game.js`, you can write an entire game, without reaching any further. When you want to populate a world with independent actors, entities are what you will reach for.
+
+## Actors
 The fundamental tool for building in Prosperon is the actor system. Actors run independently from each other. Actors are defined by a combination of code and data. All actors have a *master* which controls certain properties of the actor.
 
 The most masterful actor is the *Empyrean*. The first actor you create will have the Empyrean as its master. Subsequent actors can use any other actor as its master.
 
 | fn                  | description                                              |
-|---------------------+----------------------------------------------------------|
+|---------------------|----------------------------------------------------------|
 | spawn(text, config) | Creates an actor as the padawan of this one, using text  |
 | kill()              | Kills an actor                                           |
 | delay(fn, seconds)  | Calls 'fn' after 'seconds' with the context of the actor |
 
-*** Actor Lifetime
+### Actor Lifetime
 When an actor dies, all of the actors that have it as their master will die as well.
 
-*** Turns
+### Turns
 Actors get fragments of time called a *turn*. Actors which belong to different systems can have different lengths of turns.
 
-*** Actor files
+### Actor files
 Actor files end with the extension *.jso*[fn::"Javascript object".]. They list a series of functions to call on a newly formed actor. Actors have a number of useful functions which are called as defined.
 
 | function | call time                                                |
-|----------+----------------------------------------------------------|
+|----------|----------------------------------------------------------|
 | start    | The first function called when the actor is in the world |
 | update   | Called once per turn                                     |
 | gui      | Called on GUI draw                                       |
 | stop     | Called when the actor is killed                          |
 | gizmo    | Called by the editor when the entity is selected         |
 
-#+begin_scholium
-Create a new actor, then kill it.
-#+begin_src
-var act_die_call = function() {
-  console.log(`Actor ${this.id} has died.`);
-}
-var act1 = Empyrean.spawn();
-var act2 = actor1.spawn();
-act1.stop = act_die_call;
-act2.stop = act_die_call;
-Empyrean.kill(); /* Error: The Empyrean cannot be killed */
-act1.kill();
-act2.kill(); /* Error: act2 has been killed because act1 was */
-#+end_src
-#+end_scholium
+!!! scholium
+    Create a new actor, then kill it.
+    ```
+    var act_die_call = function() {
+      console.log(`Actor ${this.id} has died.`);
+    }
+    var act1 = Empyrean.spawn();
+    var act2 = actor1.spawn();
+    act1.stop = act_die_call;
+    act2.stop = act_die_call;
+    Empyrean.kill(); /* Error: The Empyrean cannot be killed */
+    act1.kill();
+    act2.kill(); /* Error: act2 has been killed because act1 was */
+    ```
 
-#+begin_scholium
-Now simplify by putting the code into a file named *hello.jso*.
-#+begin_src
-this.stop = function() {
-  console.log(`Actor ${this.id} has died.`);
-}
-#+end_src
-Now spawn two actors using it.
-#+begin_src
-var act1 = Empyrean.spawn("hello.jso");
-var act2 = act1.spawn("hello.jso");
-#+end_src
-#+end_scholium
+!!! scholium
+    Now simplify by putting the code into a file named *hello.jso*.
+    ```
+    this.stop = function() {
+      console.log(`Actor ${this.id} has died.`);
+    }
+    ```
+    Now spawn two actors using it.
+    ```
+    var act1 = Empyrean.spawn("hello.jso");
+    var act2 = act1.spawn("hello.jso");
+    ```
 
-*** Actor configuration
+
+### Actor configuration
 Actors can be created using an optional configuration file. A configuration file is one of any accepted data types. Currently, JSON or [[https://www.crockford.com/nota.html][Nota]]. Configuration files are loaded after an actor's script file, overwriting any defined values on it.
 
-#+begin_scholium
-Add a name for the actor to take on using a configuration file named *hello.json*.
-#+begin_src
-{
- "name": "Actor 1"
-}
-#+end_src
-Now create *hello.jso* to use it.
-#+begin_src
-this.start = function() { console.log(`I, ${this.name}, have been created.`); }
-#+end_src
-#+end_scholium
+!!! scholium
+    Add a name for the actor to take on using a configuration file named *hello.json*.
+    ```
+    {
+     "name": "Actor 1"
+    }
+    ```
+    Now create *hello.jso* to use it.
+    ```
+    this.start = function() { console.log(`I, ${this.name}, have been created.`); }
+    ```
 
-** Entities
+
+## Entities
 Game worlds are made of entities. Entities are a type of actor with a number of useful properties. Entities can only be created on the actor named *Primum*[fn::See the Primum Mobile]. The Primum is the outermost actor with a physical space. While Actors are more abstract, Entities exist in a definite space, with a position, rotation, and so on. Entities can respond to physics and play sounds. Anything which can be thought of as having a position in space should be an entitiy.
 
-#+begin_scholium
-The first and most masterful entity is the Primum. The Primum has no components, and its rotation and position are zero. It defines the center of the game.
-#+end_scholium
+!!! scholium
+    The first and most masterful entity is the Primum. The Primum has no components, and its rotation and position are zero. It defines the center of the game.
 
 In editor mode, when an entity moves, all of its *padawans* also move.
 
@@ -192,26 +148,26 @@ When the game is actively simulating, this only holds if there are physical cons
 
 Prosperon automatically generates physical pin constraints between objects with the appropriate physical properties.
 
-*** Adding Components
+### Adding Components
 Entities can have *components*. Components are essentially javascript wrappers over C code into the engine. Scripting is done to set the components up on entities, after which most of the work is done by the C plugin.
 
-#+begin_scholium
-For example, to render an image, set up a *sprite* component on an entity and point its path to an image on your harddrive.
-#+begin_src
-var ent = Empyrean.spawn();
-var spr = ent.add_component(component.sprite);
-spr.path = "image.png";
-#+end_src
-Put that into your config file and run ~prosperon~. You should see the contents of "image.png" on the screen.
+!!! scholium
+    For example, to render an image, set up a *sprite* component on an entity and point its path to an image on your harddrive.
+    ```
+    var ent = Empyrean.spawn();
+    var spr = ent.add_component(component.sprite);
+    spr.path = "image.png";
+    ```
+    Put that into your config file and run `prosperon`. You should see the contents of "image.png" on the screen.
+    
+    Try using an animated gif. Prosperon has native support for gif animations!
 
-Try using an animated gif. Prosperon has native support for gif animations!
-#+end_scholium
 
 Components only work in the context of an entity. They have no meaning outside of a physical object in the world. They have no inherent scripting capabilities.
 
 While components can be added via scripting, it is easier to add them via the editor, as we will later see.
 
-*** Ur system
+### Ur system
 The ur[fn::A German prefix meaning primitive, original, or earliest.] system is a prototypical inheritence system used by the actor files. When actor files are loaded, they are stored as an ur. An *ur* holds a list of (text, config) required to create an entity.
 
 When prosperon starts, it searches for urs by name. Any file ending in ".jso" or ".json" will be interpereted as an ur, with same named jso and json being applied as (text, config) for an ur. A jso or json alone also constitute an ur.
@@ -225,14 +181,13 @@ An ur can also be defined by a json file. If an ur is found, it takes predecent 
 
 Any ur file with this sort of json creates an ur which can be created in the game. A file named "box.ur" will be ingested and be available as "ur.box". When saving differences, it creates a json file with the same name as an ur (in this case, "box.json").
 
-#+begin_scholium
-Create an ur from the *hello* files above, and then spawn it.
-#+begin_src
-ur.create("hello", "hello.jso", "hello.json");
-Primum.spawn(ur.hello);
-#+end_src
-When creating an actor from source files, all of its setup must take place. In this example, the setup happens during *ur.create*, and spawning is simply a matter of prototyping it.
-#+end_scholium
+!!! scholium
+    Create an ur from the *hello* files above, and then spawn it.
+    ```
+    ur.create("hello", "hello.jso", "hello.json");
+    Primum.spawn(ur.hello);
+    ```
+    When creating an actor from source files, all of its setup must take place. In this example, the setup happens during *ur.create*, and spawning is simply a matter of prototyping it.
 
 This method allows high composability of game objects.
 
@@ -240,68 +195,67 @@ If an entity is created without an ur, is ur is defined as its given text and da
 
 Objects can be composed on the fly by stringing together urs. For example, a "2x.json" might define scale as 2x. Then, you can create a goblin with `ur.goblin`, or a large goblin with `ur.goblin.2x`. This creates a goblin object, and then applies the 2x scripts and jsons onto the object.
 
-*** Urs in game
+### Urs in game
 
 Each ur has the following fields.
 
 | field     | description                                                 |
-|-----------+-------------------------------------------------------------|
+|-----------|-------------------------------------------------------------|
 | instances | An array of instances of this ur                            |
 | name      | Name of the ur                                              |
 | text      | Path to the script file                                     |
 | data      | Object to write to a newly generated actor                  |
 | proto     | An object that looks like a freshly made entity from the ur |
 
-An *ur* has a full path given like ~ur.goblin.big~. ~goblin~ and ~big~ can both possibly have a *.jso* script as well as a *data* file.
+An *ur* has a full path given like `ur.goblin.big`. `goblin` and `big` can both possibly have a *.jso* script as well as a *data* file.
 
-When ~goblin.big~ is created, the new object has the ~goblin~ script run on it, followed by the ~big~ script. The ~data~ fields consist of objects prototyped from each other, so that the ~__proto__~ of ~big.data~ is ~goblin.data~. All fields of this objects are assigned to the ~big goblin~.
+When `goblin.big` is created, the new object has the `goblin` script run on it, followed by the `big` script. The `data` fields consist of objects prototyped from each other, so that the `__proto__` of `big.data` is `goblin.data`. All fields of this objects are assigned to the `big goblin`.
 
-The unaltered form of every ur-based-entity is saved in the ur's ~proto~ field. As you edit objects, the differences between how your object is now, compared to its ~ur.proto~ is a list of differences. These differences can be rolled into the ~ur~, or saved as a subtype.
+The unaltered form of every ur-based-entity is saved in the ur's `proto` field. As you edit objects, the differences between how your object is now, compared to its `ur.proto` is a list of differences. These differences can be rolled into the `ur`, or saved as a subtype.
 
-*** Prototyping Entities
+### Prototyping Entities
 Ur types are the prototype of created entities. This makes it trivial to change huge swathes of the game, or make tiny adjustments to single objects, in a natural and intuitive way. When a value is changed on an entity, it is private. When a value is changed on an ur, it propogates to all entities. Values cannot be added or removed in subtypes.
 
 Entities all have the following functions to assist with this:
 
 | function      | use                                         |
-|---------------+---------------------------------------------|
+|---------------|---------------------------------------------|
 | clone(parent) | Create an entity prototyped from the parent |
 | dup(parent)   | Create an exact duplicate of the parent     |
 | revert()      | Removes all local changes on the entity     |
 
 Speaking of practical experience, is best for ur prototype chains to be shallow.
 
-*** Spawning
+### Spawning
 Actor data and ur types can remember which entities were contained in it when saving. They are stored in the *objects* field. When an entity with an *objects* field is spawned, it spawns all of the objects listed in turn.
 
 When an entity is spawned, it is addressable directly through its master entity. Its name is generated from its file or ur type name.
 
-#+begin_scholium
-Let's take a simple RPG game.
-#+begin_src
-Primum
- level1
-   orc
-   goblin
-   human
-    sword
- ui
-#+end_src
-The orc, for example, is addressable by ~Primum.level1.orc~. The ~human~ has a ~sword~ spawned underneath it. When he is killed, his sword also disappears.
-#+end_scholium
+!!! scholium
+    Let's take a simple RPG game.
+    ```
+    Primum
+     level1
+       orc
+       goblin
+       human
+        sword
+     ui
+    ```
+    The orc, for example, is addressable by `Primum.level1.orc`. The `human` has a `sword` spawned underneath it. When he is killed, his sword also disappears.
 
-*** Resources
-Assets can generally be used simply with their filename. Assets can be modified with a sidecar file named *filename.asset*, so, a file ~ball.png~ can have additional parameters through its ~ball.png.asset~ file.
+### Resources
+Assets can generally be used simply with their filename. Assets can be modified with a sidecar file named *filename.asset*, so, a file `ball.png` can have additional parameters through its `ball.png.asset` file.
 
 | sigil  | meaning                |
-|--------+------------------------|
+|--------|------------------------|
 | \slash | root of project        |
 | @      | root of save directory |
 | #      | root of link           |
 
 Resources can be referenced in a relative manner by actor scripts. When it comes to actors using assets, relative filepaths are useful and encouraged.
 
-#+begin_src
+```
 /
   score.wav
   /bumper
@@ -310,22 +264,21 @@ Resources can be referenced in a relative manner by actor scripts. When it comes
   /ball
     hit.wav
     ball.jso
-#+end_src
+```
 
 Path resolution occurs during actor creation. In effect, a reference to *hit.wav* in *bumper.jso* will resolve to the absolute path */bumper/hit.wav*.
 
 If the asset is not found, it is searched for until the project root is reached. The bumper can reference *score.wav* and have the path resolution take place. Later, if the it is decided for the bumper to have a unique score sound, a new /score.wav/ can be placed in its folder and it will work without changing any code.
 
-#+begin_scholium
-Caution! Because the path is resolved during object load, you will need to fresh the bumper's ur or spawn a new bumper for it to use the newly placed /score.wav/.
-#+end_scholium
+!!! caution
+    Because the path is resolved during object load, you will need to fresh the bumper's ur or spawn a new bumper for it to use the newly placed /score.wav/.
 
-**** Links
-Links can be specified using the "#" sign. These are shortcuts you can specify for large projects. Specify them in the array ~Resources.links~.
+###* Links
+Links can be specified using the "#" sign. These are shortcuts you can specify for large projects. Specify them in the array `Resources.links`.
 
-An example is of the form ~trees:/world/assets/nature/trees~. Links are called with ~#~, so you can now make a "fern" with ~Primum.spawn("#trees/fern.jso")~.
+An example is of the form `trees:/world/assets/nature/trees`. Links are called with `#`, so you can now make a "fern" with `Primum.spawn("#trees/fern.jso")`.
 
-*** Ur auto creation
+### Ur auto creation
 Instead of coding all the ur type creation by hand, Prosperon can automatically search your project's folder and create the ur types for you. Any /[name].jso/ file is converted into an ur with the name. Any /[name].json/ file is then applied over it, should it exist. If there is a /.json/ file without a corresponding /.jso/, it can still be turned into an ur, if it is a valid ur format.
 
 Folders and files beginning with a '.' (hidden) or a '_' will be ignored for ur creation.
@@ -334,7 +287,7 @@ The folder hierarchy of your file system determines the ur prototype chain. /.js
 
 Only one ur of any name can be created.
 
-#+begin_src
+```
 @/
   flipper.js
   flipper/
@@ -345,50 +298,50 @@ Only one ur of any name can be created.
     flipper.js
     left/
       left.js
-#+end_src
+```
 
-~prototypes.generate_ur(path)~ will generate all ur-types for a given path. You can preload specific levels this way, or the entire game using ~prototypes.generate_ur('.')~. If your game is small enough, this can have a massive runtime improvement.
+`prototypes.generate_ur(path)` will generate all ur-types for a given path. You can preload specific levels this way, or the entire game using `prototypes.generate_ur('.')`. If your game is small enough, this can have a massive runtime improvement.
 
-** Input
+## Input
 Input is done in a highly generic and customizable manner. *players* can take control of any object (actor or otherwise) in Prosperon, after which it is referred to as a *pawn* of a player. If the object has a defined *input* object, it is a valid pawn. One player can have many pawns, but each pawn may have only one player.
 
 Pawns are added as a stack, with the newest ones getting priority, and handled first. It is possible for pawns to block input to lower pawns on the stack.
 
-#+begin_src
+```
 /newest/
 car <== When a key is pressed, this is the first pawn to handle input
 player
 ui <== /block/ is set to true here, so editor recieves no input!
 editor
 /oldest/
-#+end_src
+```
 
-The default player can be obtained with ~Player.players[0]~. Players are all local, and the highest number is determined by platform.
+The default player can be obtained with `Player.players[0]`. Players are all local, and the highest number is determined by platform.
 
 The *input* object defines a number of keys or actions, with their values being functions.
 
-*** Editor input
+### Editor input
 The editor input style defines keystrokes. It is good for custom editors, or any sort of game that requires many hotkeys. Keystrokes are case sensitive and can be augmented with auxiliary keys.
 
 | symbol | key   |
-|--------+-------|
+|--------|-------|
 | C      | ctrl  |
 | M      | alt   |
 | S      | super |
 
-#+begin_src
+```
 var orc = Primum.spawn(ur.orc);
 orc.inputs = {};
 orc.inputs.a = function() { ... };
 orc.inputs.A = function() { ... }; /* This is only called with a capital A! */
 orc.inputs['C-a'] = function() { ... }; /* Control-a */
 Player.players[0].control(orc); /* player 0 is now in control of the orc */
-#+end_src
+```
 
 The input object can be modified to customize how it handles input.
 
 | property       | type     | effect                               |
-|----------------+----------+--------------------------------------|
+|----------------|----------|--------------------------------------|
 | post           | function | called after any input is processed  |
 | =release_post= | function | called after any input is released   |
 | fallthru       | bool     | false if input should stop with this |
@@ -397,27 +350,27 @@ The input object can be modified to customize how it handles input.
 The input can be modified by setting properties on the associated function.
 
 | property | type     | effect                                                 |
-|----------+----------+--------------------------------------------------------|
+|----------|----------|--------------------------------------------------------|
 | released | function | Called when the input is released                      |
 | rep      | bool     | true if holding the input should repeatedly trigger it |
 | down     | function | called while the input is down                         |
 
-** GUI
+## GUI
 Game GUIs are written by registering an entity's *gui* property to a function.
 
 The GUI system which ships with Prosperon is called *MUM*. MUM is a declarative, immediate mode interface system. Immediate to eliminate the issue of data synchronization in the game.
 
 All GUI objects derive from MUM. MUM has a list of properties, used for rendering. Mum also has functions which cause drawing to appear on the screen.
 
-** Physics
+## Physics
 Prospeorn comes with the [[https://chipmunk-physics.net][Chipmunk]] physics engine built in. It is a fast, stable physics solution. All entities are assumed to be physics based objects, and components can be added to them to enable more physics features.
 
 * Editor Tour
 Prosperon's visual editor is an assistant for the creation and editing of your game entities and actors. In the editor, all ur types are loaded, and assets are constantly monitored for changes for hot reloading.
 
-To initiate it, execute ~prosperon~.
+To initiate it, execute `prosperon`.
 
-** Editing entities
+## Editing entities
 The desktop is the topmost entity that exists in the editor. Instead of editing specific files, you simply load them into your desktop, and go from there. This makes it easier to see two different entities simultaneously so you can ensure changes to one are congruous with the vision for the others.
 
 The main editor view is made up of entities. Each entity can have a number of components attached to it. When an entity is selected, its name, position, and list of components are listed.
@@ -426,47 +379,46 @@ Basic use of the editor involves spawning new entities, or ones from already mad
 
 Assign the entity's *gizmo* property to a function to have that function called each gui rendering frame.
 
-** The REPL[fn::Read-eval-print loop]
+## The REPL[fn::Read-eval-print loop]
 The REPL lets you poke around in the game. It makes iteration and experimentation fast, fun, and easy.
 
-The symbol ~$~ references the current REPL entity. If no entity is selected, the REPL entity is the currently edited one. Otherwise, it is the selected entity, or group of entities, as an array.
+The symbol `$` references the current REPL entity. If no entity is selected, the REPL entity is the currently edited one. Otherwise, it is the selected entity, or group of entities, as an array.
 
-#+begin_scholium
-Easily run commands on multiple entities using Javascript functions like for each.
-#+begin_src
-$.forEach(e => console.log(e.pos));
-#+end_src
-#+end_scholium
+!!! scholium
+    Easily run commands on multiple entities using Javascript functions like for each.
+    ```
+    $.forEach(e => console.log(e.pos));
+    ```
 
 The REPL is a powerful tool for editing your game. Arbitrary code can be ran in it, meaning any esoteric activity you need done for your game can be done easily. Commonly used functions should be copied into your /editorconfig.js/ to be called and used at will.
 
-** Playing the game
+## Playing the game
 Playing the game involves running the game from a special /debug.js/ file, or from the beginning, as if the game were packaged and shipped.
 
 | key   | action                                              |
-|-------+-----------------------------------------------------|
+|-------|-----------------------------------------------------|
 | f5    | Play the game, starting with entry point /debug.js/ |
 | f6    | Play the game from the beginning                    |
 
 While playing the game, a limited editor is available that allows for simple debugging tasks.
 
 | key | action                      |
-|-----+-----------------------------|
+|-----|-----------------------------|
 | C-p | Pause                       |
 | M-p | One time step               |
 | C-q | Quit play, return to editor |
 
-** Script Editor
+## Script Editor
 Prosperon comes with an in-engine script editor. It implements a subset of emacs, and adds a few engine specific features.
 
-*** Syntax coloring? ... nope!
+### Syntax coloring? ... nope!
 The editor that ships with Prosperon has *context coloring*, which is a good deal more useful than syntax coloring.
 
-** Debugging
+## Debugging
 Debugging functions are mapped to the F buttons, and are available in any debug build of the game. Pressing the specified key toggles the feature; pressing it with /alt/ shows a legend for that feature.
 
 | key | description                |
-|-----+----------------------------|
+|-----|----------------------------|
 | F1  | Draw physics info          |
 | F3  | Draw bounding boxes        |
 | F12 | Draw gui info              |
@@ -478,7 +430,7 @@ Prosperon is a multiplatform engine. Bundling your game for these platforms esse
 - Conversion of assets
 - Packing into a CDB[fn::Constant database]
 
-To distribute your game for a given platform, run ~prosperon build {platform}~.
+To distribute your game for a given platform, run `prosperon build {platform}`.
 
 | platform |
 |----------|
@@ -488,7 +440,7 @@ To distribute your game for a given platform, run ~prosperon build {platform}~.
 
 You will find your game ready to go. Rename the executable to the name of your game and run it to play. Congratulations!
 
-** Building static content
+## Building static content
 Static content creation involves any number of optimizations.
 
 - Bitmap font creation
@@ -496,13 +448,13 @@ Static content creation involves any number of optimizations.
 
 Creation of these assets is invisible. Prosperon updates its understanding of how to pull assets based on the existance of these packed ones.
 
-** Converting assets
+## Converting assets
 Images, videos, and sounds, are converted to assets most suitable for the target platform. This may be for speed or simple compatability. *You do not need to do anything*. Use your preferred asset types during production.
 
-** Packing into a CDB
+## Packing into a CDB
 A *cdb* is known as a "constant database". It is a write once type of database, with extremely fast retrieval times. Packing your game into a cdb means to create a database with key:value pairs of the filenames of your game. The Prosperon executable is already packed with a core cdb. Your game assets are packed alongside it as the game cdb.
 
-You can create your game's cdb by running ~prosperon -b~. You will find a *game.cdb* in the root directory.
+You can create your game's cdb by running `prosperon -b`. You will find a *game.cdb* in the root directory.
 
 * Modding & Patching
 When an asset is requested in Prosperon, it is searched for in the following manner.
@@ -513,13 +465,13 @@ When an asset is requested in Prosperon, it is searched for in the following man
    
 Game modification is trivial using this described system. By putting an asset in the same path as the asset's location in the game cdb, when that asset is requested it will be pulled from the file system instead of the game cdb.
 
-Given a Prosperon-built game, you can unpack its content into a directory by running ~prosperon unpack {game}~.
+Given a Prosperon-built game, you can unpack its content into a directory by running `prosperon unpack {game}`.
 
-** Shipping
-Once a game's assets are modified, it may be desirable to ship them. Run ~prosperon patch create {game}~ to create a /patch.cdb/ filled only with the files that are different compared to those found in the /game.cdb/ in the /game/.
+## Shipping
+Once a game's assets are modified, it may be desirable to ship them. Run `prosperon patch create {game}` to create a /patch.cdb/ filled only with the files that are different compared to those found in the /game.cdb/ in the /game/.
 
-To update /game/ to use the new patch, run ~prosperon patch apply {patch}~, replacing /patch/ with the name of the cdb file generated above.
+To update /game/ to use the new patch, run `prosperon patch apply {patch}`, replacing /patch/ with the name of the cdb file generated above.
 
-Many patches can be bundled by running ~prosperon patch bundle {list of patches}~. This creates a patch that will update the game as if the user had updated each patch in order.
+Many patches can be bundled by running `prosperon patch bundle {list of patches}`. This creates a patch that will update the game as if the user had updated each patch in order.
 
 Mods can be distributed with the same idea.
