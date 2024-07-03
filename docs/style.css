@@ -1,3 +1,8 @@
+[data-md-color-scheme="youtube"] {
+  --md-primary-fg-color: #3876AD;
+  --md-accent-fg-color:  #94DBE8
+}
+
 a:link a:visited a:hover a:active {
   color: green;
 }
@@ -8,6 +13,10 @@ a:link a:visited a:hover a:active {
 
 html {
   scroll-padding-top:50px;
+}
+
+h1 {
+  color: red
 }
 
 #text-table-of-contents {
@@ -79,15 +88,21 @@ code {
 }
 
 .example {
-  background-color: #FFFFEC;
-  border-width: 2px;  
-  border-color: #61bcd7;
   margin: 10px 20px;
   padding: 20px;
   font-family: code;
   font-size: 16px;
   line-height: 1em;
   display: inline-block;
+}
+
+.code {
+    padding: 2px 5px;
+    background-color: rgba(var(--bs-body-bg-rgb), 0.75);
+    border: solid 1px var(--bs-border-color);
+    color: var(--bs-body-color);
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .title {

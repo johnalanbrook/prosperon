@@ -1,0 +1,36 @@
+site_name: Prosperon Documentation
+repo_url: https://forge.pockle.world/john/prosperon
+repo_name: john/prosperon
+edit_uri: edit/master/doc/docs
+
+plugins:
+  - search
+  - git-revision-date-localized:
+    
+extra_css:
+  - style.css
+
+theme:
+  name: material
+  navigation_depth: 3
+  logo: prosperon.gif
+  favicon: orb.gif
+  features:
+    - content.action.view
+    - navigation.prune
+  icon:
+    view: material/eye
+  palette:
+    scheme: youtube
+    
+  
+extra:
+  social:
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/@pockleworld
+    - icon: fontawesome/brands/github
+      link: https://github.com/johnalanbrook
+
+markdown_extensions:
+  - admonition
+  - tables

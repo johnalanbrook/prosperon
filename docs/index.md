@@ -81,7 +81,7 @@ When an actor dies, all of the actors that have it as their master will die as w
 Actors get fragments of time called a *turn*. Actors which belong to different systems can have different lengths of turns.
 
 ### Actor files
-Actor files end with the extension *.jso*[fn::"Javascript object".]. They list a series of functions to call on a newly formed actor. Actors have a number of useful functions which are called as defined.
+Actor files end with the extension *.jso*. They list a series of functions to call on a newly formed actor. Actors have a number of useful functions which are called as defined.
 
 | function | call time                                                |
 |----------|----------------------------------------------------------|
@@ -137,7 +137,7 @@ Actors can be created using an optional configuration file. A configuration file
 
 
 ## Entities
-Game worlds are made of entities. Entities are a type of actor with a number of useful properties. Entities can only be created on the actor named *Primum*[fn::See the Primum Mobile]. The Primum is the outermost actor with a physical space. While Actors are more abstract, Entities exist in a definite space, with a position, rotation, and so on. Entities can respond to physics and play sounds. Anything which can be thought of as having a position in space should be an entitiy.
+Game worlds are made of entities. Entities are a type of actor with a number of useful properties. Entities can only be created on the actor named *Primum*. The Primum is the outermost actor with a physical space. While Actors are more abstract, Entities exist in a definite space, with a position, rotation, and so on. Entities can respond to physics and play sounds. Anything which can be thought of as having a position in space should be an entitiy.
 
 !!! scholium
     The first and most masterful entity is the Primum. The Primum has no components, and its rotation and position are zero. It defines the center of the game.
@@ -168,8 +168,6 @@ Components only work in the context of an entity. They have no meaning outside o
 While components can be added via scripting, it is easier to add them via the editor, as we will later see.
 
 ### Ur system
-The ur[fn::A German prefix meaning primitive, original, or earliest.] system is a prototypical inheritence system used by the actor files. When actor files are loaded, they are stored as an ur. An *ur* holds a list of (text, config) required to create an entity.
-
 When prosperon starts, it searches for urs by name. Any file ending in ".jso" or ".json" will be interpereted as an ur, with same named jso and json being applied as (text, config) for an ur. A jso or json alone also constitute an ur.
 
 An ur can also be defined by a json file. If an ur is found, it takes predecent over auto generated urs. The json of an ur looks like this:
@@ -273,7 +271,7 @@ If the asset is not found, it is searched for until the project root is reached.
 !!! caution
     Because the path is resolved during object load, you will need to fresh the bumper's ur or spawn a new bumper for it to use the newly placed /score.wav/.
 
-###* Links
+#### Links
 Links can be specified using the "#" sign. These are shortcuts you can specify for large projects. Specify them in the array `Resources.links`.
 
 An example is of the form `trees:/world/assets/nature/trees`. Links are called with `#`, so you can now make a "fern" with `Primum.spawn("#trees/fern.jso")`.
@@ -379,7 +377,7 @@ Basic use of the editor involves spawning new entities, or ones from already mad
 
 Assign the entity's *gizmo* property to a function to have that function called each gui rendering frame.
 
-## The REPL[fn::Read-eval-print loop]
+## The REPL
 The REPL lets you poke around in the game. It makes iteration and experimentation fast, fun, and easy.
 
 The symbol `$` references the current REPL entity. If no entity is selected, the REPL entity is the currently edited one. Otherwise, it is the selected entity, or group of entities, as an array.
@@ -428,7 +426,7 @@ Prosperon is a multiplatform engine. Bundling your game for these platforms esse
 
 - Baking static content
 - Conversion of assets
-- Packing into a CDB[fn::Constant database]
+- Packing into a CDB
 
 To distribute your game for a given platform, run `prosperon build {platform}`.
 
@@ -459,7 +457,7 @@ You can create your game's cdb by running `prosperon -b`. You will find a *game.
 * Modding & Patching
 When an asset is requested in Prosperon, it is searched for in the following manner.
 
-1. The cwd[fn::current working directory]
+1. The cwd
 2. The game cdb (not necessarily present)
 3. The core cdb
    
