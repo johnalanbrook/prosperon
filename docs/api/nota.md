@@ -1,0 +1,10 @@
+# nota
+#### encode()
+
+
+
+#### decode()
+
+
+
+

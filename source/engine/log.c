@@ -46,6 +46,7 @@ void log_init()
 #ifndef NDEBUG
   if (!fexists(".prosperon")) {
     logout = tmpfile();
+    writeout = tmpfile();
     dump = tmpfile();
   }
   else {

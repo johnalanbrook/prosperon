@@ -18,11 +18,11 @@ theme:
   features:
     - content.action.view
     - navigation.prune
+    - navigation.indexes
   icon:
     view: material/eye
   palette:
     scheme: youtube
-    
   
 extra:
   social:

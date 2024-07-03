@@ -503,6 +503,17 @@ prosperon.quit = function () {
     say(debug.log.time[i].map((x) => profile.ms(x)));
 };
 
+window.size = [640, 480];
+window.mode = "keep";
+window.toggle_fullscreen = function() { window.fullscreen = !window.fullscreen; }
+
+window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
+
+window.doc = {};
+window.doc.dimensions = "Window width and height packaged in an array [width,height]";
+window.doc.title = "Name in the title bar of the window.";
+window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
+
 global.mixin("scripts/input");
 global.mixin("scripts/std");
 global.mixin("scripts/diff");
@@ -606,30 +617,8 @@ var Event = {
   },
 };
 
-// window.size is the physical size of the window on the desktop
-// set to one of the following
-// stretch     render to fill window
-// keep      render exact dimensions, with no stretching
-// width     keep render at width
-// height     keep render at height
-// expand    width or height
-// full    expand out beyond window
-
-window.size = [640, 480];
-window.mode = "keep";
-
-window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
-
 global.mixin("scripts/spline");
 global.mixin("scripts/components");
-
-window.doc = {};
-window.doc.dimensions =
-  "Window width and height packaged in an array [width,height]";
-window.doc.title = "Name in the title bar of the window.";
-window.doc.boundingbox =
-  "Boundingbox of the window, with top and right being its height and width.";
-
 global.mixin("scripts/actor");
 global.mixin("scripts/entity");
 

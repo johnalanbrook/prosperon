@@ -180,7 +180,7 @@ debug.api.doc_entry = function(obj, key)
   else if (obj.doc && obj.doc[key]) doc = obj.doc[key];
   else if (Array.isArray(o)) doc = json.encode(o);
 
-  return `## ${title}
+  return `#### ${title}
 ${t}
 ${doc}
 `;
@@ -214,8 +214,9 @@ debug.api.print_doc =  function(name)
   var mdoc = "# " + name + "\n";
   if (obj.doc?.doc) mdoc += obj.doc.doc + "\n";
   else if (typeof obj.doc === 'string') mdoc += obj.doc + "\n";
-  
-  for (var key in obj) {
+
+  var keys = Object.keys(obj);
+  for (var key of keys) {
     if (key === 'doc') continue;
     if (key === 'toString') continue;
 

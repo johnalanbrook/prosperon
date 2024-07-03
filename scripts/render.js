@@ -443,7 +443,7 @@ render.point =  function(pos,size,color = Color.blue) {
   render.circle(pos,size,size,color);
 };
   
-render.cross = function(pos, size, color = Color.red) {
+render.cross = function(pos, size, color = Color.red, thickness = 1) {
   var a = [
     pos.add([0,size]),
     pos.add([0,-size])
@@ -452,8 +452,8 @@ render.cross = function(pos, size, color = Color.red) {
     pos.add([size,0]),
     pos.add([-size,0])
   ];
-  render.line(a,color);
-  render.line(b,color);
+  render.line(a,color,thickness);
+  render.line(b,color,thickness);
 };
   
 render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle = 10) {

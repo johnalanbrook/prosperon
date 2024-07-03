@@ -14,6 +14,9 @@ if (os.sys() === 'macos') {
   appy.inputs['S-g'] = os.gc;
 }
 
+appy.inputs.f11 = window.toggle_fullscreen;
+appy.inputs['M-f4'] = prosperon.quit;
+
 player[0].control(appy);
   
 //steam.appid = 480;
@@ -402,7 +405,7 @@ Cmdline.register_order("run", function(script) {
     return;
   }
   
-  say(use(script));
+  say(eval(script));
 }, "Run a given script. SCRIPT can be the script itself, or a file containing the script", "SCRIPT");
 
 Cmdline.orders.script = Cmdline.orders.run;
