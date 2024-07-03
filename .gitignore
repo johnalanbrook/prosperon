@@ -24,9 +24,6 @@ jsc
 .DS_Store
 *.html
 .vscode
-primum*
-Prosperon*
-prosperon*
 *.icns
 game.zip
 icon.ico
