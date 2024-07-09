@@ -23,6 +23,7 @@ mum.base = {
   angle: 0,
   anchor: [0,1],
   background_image: null,
+  slice: null,
   hovered: {},
   text_shadow: {
     pos: [0,0],
@@ -76,13 +77,13 @@ var listpost = function()
 mum.list = function(fn, data = {})
 {
   if (pre(data)) return;
-  
   cursor = context.pos;
   cursor = cursor.add(context.offset);
   posts.push(post);
   post = listpost;
   
   fn();
+  
   post = posts.pop();
   end();
 }
@@ -92,13 +93,12 @@ mum.image = function(path, data = {})
   if (pre(data)) return;
   
   var tex = game.texture(path);
-  context.bb = render.image(tex, cursor, context.size);
+  if (context.slice)
+    render.slice9(tex, cursor, context.slice, context.size);
+  else
+    context.bb = render.image(tex, cursor, context.size);
   
   end();
-}
-
-mum.slice9 = function(path, data = {})
-{
 }
 
 var btnbb;

@@ -527,10 +527,10 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
   return bb;
 };
 
-render.image = function(tex, pos, scale = 1, rotation = 0, color = Color.white, dimensions = [tex.width, tex.height]) {
+render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0, color = Color.white) {
   var t = os.make_transform();
   t.pos = pos;
-  t.scale = [scale,scale,scale];
+  t.scale = [scale.x/tex.width,scale.y/tex.height,1];
   render.setpipeline(render.spriteshader.pipe);
   render.setunim4(0, render.spriteshader.vs.unimap.model.slot, t);
   render.shader_apply_material(render.spriteshader, {
@@ -549,19 +549,25 @@ render.image = function(tex, pos, scale = 1, rotation = 0, color = Color.white, 
   return bb;
 }
 
-render.slice9 = function(tex, pos, bb, scale = 1, color = Color.white)
+render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = Color.white)
 {
   var t = os.make_transform();
   t.pos = pos;
-  t.scale = [scale,scale,scale];
+  t.scale = [scale.x/tex.width,scale.y/tex.height,1];
+  var border;
+  if (typeof bb === 'number')
+    border = [bb/tex.width,bb/tex.height,bb/tex.width,bb/tex.height];
+  else
+    border = [bb.l/tex.width, bb.b/tex.height, bb.r/tex.width, bb.t/tex.height];
+    
   render.setpipeline(slice9shader.pipe);
   render.setunim4(0, slice9shader.vs.unimap.model.slot, t);
   render.shader_apply_material(slice9shader, {
     shade: color,
     diffuse:tex,
     rect:[0,0,1,1],
-    border: [bb.l/tex.width, bb.b/tex.height, bb.r/tex.width, bb.t/tex.height],
-    scale: [scale,scale]
+    border: border,
+    scale: [scale.x/tex.width,scale.y/tex.height]
   });
   var bind = render.sg_bind(slice9shader, shape.quad, {diffuse:tex});
   bind.inst = 1;
