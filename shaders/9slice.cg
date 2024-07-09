@@ -10,8 +10,10 @@ void vert()
 
 @block frag
 uniform vec4 border;
-// borders in pixels, x = left, y = bottom, z = right, w = top
-#define B vec4(10., 20., 30., 20.)
+uniform vec2 scale;
+uniform vec4 shade;
+
+// border given as [left,down,right,top], in scaled coordinates
 
 vec2 uv9slice(vec2 uv, vec2 s, vec4 b)
 {
@@ -21,20 +23,9 @@ vec2 uv9slice(vec2 uv, vec2 s, vec4 b)
 
 void frag()
 {
-  vec2 uv = fragCoord/iResolution.xy;
-  vec2 ts = vec2(textureSize(iChannel0, 0));
-  // scaling factor
-  // probably available as uniform irl
-  vec2 s = iResolution.xy / ts;
-
-  // border by texture size, shouldn't be > .5
-  // probably available as uniform irl
-  vec4 b = min(B / ts.xyxy, vec4(.499));
-  uv = uv9slice(uv, s, b);
-  
-  vec3 col = vec3(texture(iChannel0, uv).x);
-
-  fragColor = vec4(col,1.0);
+  vec2 ruv = uv9slice(uv, scale, border);
+  color = texture(sampler2D(diffuse,smp), ruv);
+  if (color.a < 0.1) discard;
 }
 @end
 

@@ -490,7 +490,7 @@ render.rectangle = function(lowerleft, upperright, color) {
 render.box = function(pos, wh, color = Color.white) {
   var lower = pos.sub(wh.scale(0.5));
   var upper = pos.add(wh.scale(0.5));
-  render.rectangle(lower,upper,color);
+  render.recteangle(lower,upper,color);
 };
 
 render.window = function(pos, wh, color) {
@@ -499,19 +499,22 @@ render.window = function(pos, wh, color) {
   render.box(p,wh,color);
 };
 
-render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
-  
-  var bb = render.text_size(str, size, wrap);
+render.text_bb = function(str, size = 1, wrap = -1, pos = [0,0])
+{
+  var bb = render.text_size(str,size,wrap);
   var w = (bb.r - bb.l);
   var h = (bb.t - bb.b);
-  
-  //render.text draws with an anchor on top left corner
-  var p = pos.slice();
+
   bb.r += pos.x;
   bb.l += pos.x;
   bb.t += pos.y;
   bb.b += pos.y;
-  gui.text(str, p, size, color, wrap, cursor);
+  return bb;
+}
+
+render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
+  var bb = render.text_size(str, size, wrap, pos);
+  gui.text(str, pos, size, color, wrap, cursor);
   return bb;
   
   p.x -= w * anchor.x;
@@ -551,12 +554,16 @@ render.slice9 = function(tex, pos, bb, scale = 1, color = Color.white)
   var t = os.make_transform();
   t.pos = pos;
   t.scale = [scale,scale,scale];
-  render.setpipeline(render.slice9.pipe);
-  render.setunim4(0, render.slice9.vs.unimap.model.slot, t);
-  render.shader_apply_material(render.slice9, {
-    shade: color
+  render.setpipeline(slice9shader.pipe);
+  render.setunim4(0, slice9shader.vs.unimap.model.slot, t);
+  render.shader_apply_material(slice9shader, {
+    shade: color,
+    diffuse:tex,
+    rect:[0,0,1,1],
+    border: [bb.l/tex.width, bb.b/tex.height, bb.r/tex.width, bb.t/tex.height],
+    scale: [scale,scale]
   });
-  var bind = render.sg_bind(render.slice9, shape.quad, {diffuse:tex});
+  var bind = render.sg_bind(slice9shader, shape.quad, {diffuse:tex});
   bind.inst = 1;
   render.spdraw(bind);
 }

@@ -1,6 +1,15 @@
 globalThis.mum = {};
 var panel;
 
+var selected = undefined;
+
+mum.inputs = {};
+mum.inputs.lm = function()
+{
+  if (!selected) return;
+  selected.action();
+}
+
 mum.base = {
   padding:[0,0], /* Each element inset with this padding on all sides */
   offset:[0,0],
@@ -30,6 +39,7 @@ mum.base = {
   image_repeat_offset: [0,0],
   debug: false, /* set to true to draw debug boxes */
   hide: false,
+  tooltip: null,
 }
 
 var post = function() {};
@@ -47,21 +57,20 @@ var end = function()
   if (!context) context = mum.base;
 }
 
-var listpost = function()
-{
-  var height = 0;
-  if (context.height) height += context.height;
-  else height += (context.bb.t - context.bb.b);
-  cursor.y -= height;
-  cursor.y -= context.padding.y; 
-}
-
 var pre = function(data)
 {
   if (data.hide || context.hide) return true;
   data.__proto__ = context;
   contexts.push(context);
   context = data;
+}
+
+var listpost = function()
+{
+  var height = 0;
+  height += (context.bb.t - context.bb.b);
+  cursor.y -= height;
+  cursor.y -= context.padding.y; 
 }
 
 mum.list = function(fn, data = {})
@@ -88,20 +97,83 @@ mum.image = function(path, data = {})
   end();
 }
 
-mum.button = function(str, data = {padding:[4,4]})
+mum.slice9 = function(path, data = {})
+{
+}
+
+var btnbb;
+var btnpost = function()
+{
+  btnbb = context.bb;
+}
+
+mum.button = function(str, data = {padding:[4,4], color:Color.black, hover:{color:Color.red}})
 {
   if (pre(data)) return;
-  var bb = render.text(str, cursor.add(context.padding), context.size, context.color);
-  render.rectangle([bb.l-context.padding.x, bb.b-context.padding.y], [bb.r+context.padding.y, bb.t+context.padding.y], Color.black);
-  context.bb = bb;
+  posts.push(post);
+  post = btnpost;
+  if (typeof str === 'string')
+    render.text(str, cursor.add(context.padding), context.size, context.color);
+  else
+    str();
+
+  if (data.hover && bbox.pointin(btnbb, input.mouse.screenpos())) {
+    data.hover.__proto__ = data;
+    context = data.hover;
+  }
+  render.rectangle([btnbb.l-context.padding.x, btnbb.b-context.padding.y], [btnbb.r+context.padding.y, btnbb.t+context.padding.y], context.color);
+  context.bb = btnbb;
+
+  post = posts.pop();
+  end();
+}
+
+mum.window = function(fn, data = {})
+{
+  data = Object.assign({
+    width:400,
+    height:400,
+    color: Color.black
+  }, data);
+
+  if (pre(data)) return;
+
+  cursor = context.pos;
+  render.rectangle(cursor, cursor.add([context.width,context.height]), context.color);
+  cursor.y += context.height;
+  cursor = cursor.add(context.padding);
+  context.pos = cursor.slice();
+  fn();
   end();
 }
 
 mum.label = function(str, data = {})
 {
   if (pre(data)) return;
-  render.set_font(data.font, data.font_size);
+  if (false) {
+    context.hover.__proto__ = context;
+    context = context.hover;
+  }
+
+  context.bb = render.text_bb(str, context.size, -1, cursor);
+
+  if (bbox.pointin(context.bb, input.mouse.screenpos())) {
+    if (context.hover) {
+      context.hover.__proto__ = context;
+      context = context.hover;
+      selected = context;
+    }
+  }
+
+  render.set_font(context.font, context.font_size);
   context.bb = render.text(str, cursor, context.size, context.color);
   
+  end();
+}
+
+mum.div = function(fn, data = {})
+{
+  if (pre(data)) return;
+  fn();
   end();
 }
