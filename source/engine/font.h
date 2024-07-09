@@ -22,10 +22,9 @@ struct Character {
 struct sFont {
   uint32_t fontTexture;
   uint32_t height; /* in pixels */
-  int ascent;
-  int descent;
-  int linegap;
-  float emscale;
+  float ascent;
+  float descent;
+  float linegap;
   struct Character Characters[256];
   sg_image texID;
   texture *texture;

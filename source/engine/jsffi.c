@@ -617,7 +617,6 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
   return best;
 }
 
-
 JSC_GETSET(warp_gravity, strength, number)
 JSC_GETSET(warp_gravity, decay, number)
 JSC_GETSET(warp_gravity, spherical, boolean)

@@ -241,24 +241,9 @@ function use(file, env = {}, script) {
 use.cache = {};
 
 global.check_registers = function (obj) {
-  if (typeof obj.update === "function")
-    obj.timers.push(Register.update.register(obj.update.bind(obj)));
-
-  if (typeof obj.physupdate === "function")
-    obj.timers.push(Register.physupdate.register(obj.physupdate.bind(obj)));
-
-  if (typeof obj.draw === "function")
-    obj.timers.push(Register.draw.register(obj.draw.bind(obj), obj));
-
-  if (typeof obj.debug === "function")
-    obj.timers.push(Register.debug.register(obj.debug.bind(obj)));
-
-  if (typeof obj.gui === "function")
-    obj.timers.push(Register.gui.register(obj.gui.bind(obj)));
-
-  if (typeof obj.screengui === "function")
-    obj.timers.push(Register.screengui.register(obj.screengui.bind(obj)));
-
+  for (var reg in Register.registries)
+    if (typeof obj[reg] === 'function')
+      obj.timers.push(Register.registries[reg].register(obj[reg].bind(obj)));
   for (var k in obj) {
     if (!k.startswith("on_")) continue;
     var signal = k.fromfirst("on_");
@@ -363,11 +348,7 @@ function process() {
   }
   var st = profile.now();
   prosperon.window_render(window.size);
-  prosperon.draw();
-  prosperon.debug();
-  prosperon.gui();
-  prosperon.screengui();
-  prosperon.hookend?.();
+  prosperon.render();
   profile.addreport(profcache, "render frame", st);
   frames.push(profile.secs(profile.now() - startframe));
   if (frames.length > 20) frames.shift();
@@ -558,7 +539,7 @@ which returns a function that, when invoked, cancels the registry.
 var Register = {
   registries: [],
 
-  add_cb(name) {
+  add_cb(name, e_event = false) {
     var n = {};
     var fns = [];
 
@@ -579,19 +560,19 @@ var Register = {
     };
 
     Register[name] = n;
-    Register.registries.push(n);
+    Register.registries[name] = n;
 
     return n;
   },
 };
 
-Register.add_cb("appupdate");
-Register.add_cb("update").doc = "Called once per frame.";
-Register.add_cb("physupdate");
-Register.add_cb("gui");
-Register.add_cb("debug");
-Register.add_cb("draw");
-Register.add_cb("screengui");
+Register.add_cb("appupdate", true);
+Register.add_cb("update", true).doc = "Called once per frame.";
+Register.add_cb("physupdate", true);
+Register.add_cb("gui", true);
+Register.add_cb("hud", true);
+Register.add_cb("debug", true);
+Register.add_cb("draw", true);
 
 var Event = {
   events: {},
@@ -643,8 +624,7 @@ function world_start() {
 
 global.mixin("scripts/physics");
 global.mixin("scripts/widget");
-
-globalThis.mum = app.spawn("scripts/mum");
+global.mixin("scripts/mum");
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500, 500];

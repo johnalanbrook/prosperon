@@ -1,4 +1,5 @@
 #depth off
+#blend mix
 
 @vs vs
 in vec2 a_pos;
@@ -53,8 +54,8 @@ sampler smp;
 void main()
 {
   float lettera = texture(sampler2D(text,smp),fuv).r;
-  if (lettera < 0.1f) discard;
   frag();
+  color.a = lettera;
 }
 @end
 

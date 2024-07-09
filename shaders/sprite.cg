@@ -1,5 +1,4 @@
 @block vert
-uniform vec4 emissive;
 uniform vec4 rect;
 uniform vec2 diffuse_size;
 void vert()

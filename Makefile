@@ -200,6 +200,9 @@ endif
 all: $(NAME)
 	cp -f $(NAME) $(APP)$(EXT)
 
+$(APP): $(NAME)
+	cp -f $(NAME) $(APP)
+
 $(NAME): $(OBJS) $(DEPS)
 	@echo Linking $(NAME)
 	$(CROSS)$(LD) $^ $(CPPFLAGS) $(LDFLAGS) -L. $(LDPATHS) $(LDLIBS) -o $@
@@ -282,6 +285,9 @@ clean:
 docs: doc/prosperon.org
 	make -C doc
 	mv doc/html .
+  
+api: $(APP)
+	./prosperon run 'for (var i in globalThis) say(i)' | xargs -I {} ./prosperon api {} > docs/api/{}.md
 
 TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)

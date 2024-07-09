@@ -361,11 +361,13 @@ render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
 var textshader;
 var circleshader;
 var polyshader;
+var slice9shader;
 
 render.init = function() {
   textshader = render.make_shader("shaders/text_base.cg");
   render.spriteshader = render.make_shader("shaders/sprite.cg");
   render.postshader = render.make_shader("shaders/simplepost.cg");
+  slice9shader = render.make_shader("shaders/9slice.cg");
   circleshader = render.make_shader("shaders/circle.cg");
   polyshader = render.make_shader("shaders/poly.cg");
   
@@ -498,20 +500,27 @@ render.window = function(pos, wh, color) {
 };
 
 render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
+  
   var bb = render.text_size(str, size, wrap);
-  var w = bb.r*2;
-  var h = bb.t*2;
+  var w = (bb.r - bb.l);
+  var h = (bb.t - bb.b);
   
   //render.text draws with an anchor on top left corner
   var p = pos.slice();
+  bb.r += pos.x;
+  bb.l += pos.x;
+  bb.t += pos.y;
+  bb.b += pos.y;
+  gui.text(str, p, size, color, wrap, cursor);
+  return bb;
+  
   p.x -= w * anchor.x;
   bb.r += (w*anchor.x);
   bb.l += (w*anchor.x);
   p.y += h * (1 - anchor.y);
   bb.t += h*(1-anchor.y);
   bb.b += h*(1-anchor.y);
-  gui.text(str, p, size, color, wrap, cursor);
-  
+
   return bb;
 };
 
@@ -528,12 +537,49 @@ render.image = function(tex, pos, scale = 1, rotation = 0, color = Color.white, 
   var bind = render.sg_bind(render.spriteshader, shape.quad, {diffuse:tex});
   bind.inst = 1;
   render.spdraw(bind);
+  
+  var bb = {};
+  bb.b = pos.y;
+  bb.l = pos.x;
+  bb.t = pos.y + tex.height*scale;
+  bb.r = pos.x + tex.width*scale;
+  return bb;
+}
+
+render.slice9 = function(tex, pos, bb, scale = 1, color = Color.white)
+{
+  var t = os.make_transform();
+  t.pos = pos;
+  t.scale = [scale,scale,scale];
+  render.setpipeline(render.slice9.pipe);
+  render.setunim4(0, render.slice9.vs.unimap.model.slot, t);
+  render.shader_apply_material(render.slice9, {
+    shade: color
+  });
+  var bind = render.sg_bind(render.slice9, shape.quad, {diffuse:tex});
+  bind.inst = 1;
+  render.spdraw(bind);
+}
+
+var textssbo = render.text_ssbo();
+
+render.flush_text = function()
+{
+  if (!render.textshader) return;
+  render.setpipeline(render.textshader.pipe);
+  render.shader_apply_material(render.textshader);
+  var textbind = render.sg_bind(render.textshader, shape.quad, {text:render.font.texture}, textssbo);
+  textbind.inst = render.flushtext();
+  render.spdraw(textbind);
 }
 
 render.fontcache = {};
 render.set_font = function(path, size) {
   var fontstr = `${path}-${size}`;
+  if (render.font && render.fontcache[fontstr] === render.font) return;
   if (!render.fontcache[fontstr]) render.fontcache[fontstr] = os.make_font(path, size);
+  
+  render.flush_text();
 
   gui.font_set(render.fontcache[fontstr]);
   render.font = render.fontcache[fontstr];

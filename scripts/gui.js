@@ -164,16 +164,6 @@ Mum.button = Mum.text._int.extend({
  action() { console.warn("Button has no action."); },
 });
 
-var mumcam = {};
-mumcam.transform = os.make_transform();
-mumcam.ortho = true;
-mumcam.near = 0;
-mumcam.far = 1000;
-mumcam.transform.pos = [100,100,-100];
-mumcam.app = true;
-
-var textssbo = render.text_ssbo();
-
 Mum.window = Mum.extend({
   start() {
     this.wh = [this.width, this.height];
@@ -190,10 +180,7 @@ Mum.window = Mum.extend({
       if (item.hide) return;
       item.draw(pos.slice(),this);
     }, this);
-    render.set_camera(mumcam);
-    render.setpipeline(render.textshader.pipe);
-    render.shader_apply_material(render.textshader);
-    var bind = render.sg_bind(render.textshader, shape.quad, {text:render.font.texture}, textssbo);
+    
     bind.inst = render.flushtext();
     render.spdraw(bind);
     gui.scissor_win();
@@ -243,12 +230,13 @@ Mum.column = Mum.extend({
   },
 });
 
+/*
 Mum.debug_colors = {
   bounds: Color.red.slice(),
   margin: Color.blue.slice(),
   padding: Color.green.slice()
-};
+};*/
 
-Object.values(Mum.debug_colors).forEach(function(v) { v.a = 100; });
+//Object.values(Mum.debug_colors).forEach(function(v) { v.a = 100; });
 
-return { Mum };
+//return { Mum };

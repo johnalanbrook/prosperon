@@ -80,7 +80,7 @@ struct sFont *MakeSDFFont(const char *fontfile, int height)
 }
 
 struct sFont *MakeFont(const char *fontfile, int height) {
-  int packsize = 1024;
+  int packsize = 2048;
 
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
@@ -106,11 +106,16 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
     YughError("Failed to make font %s", fontfile);
   }
+  
+  int ascent, descent, linegap;
 
-  stbtt_GetFontVMetrics(&fontinfo, &newfont->ascent, &newfont->descent, &newfont->linegap);
-  //newfont->emscale = stbtt_ScaleForMappingEmToPixels(&fontinfo, 16);
-  newfont->emscale = stbtt_ScaleForPixelHeight(&fontinfo, height);
-  newfont->linegap = (newfont->ascent - newfont->descent) * newfont->emscale*1.5;
+  stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
+  float emscale = stbtt_ScaleForPixelHeight(&fontinfo, height);
+  newfont->ascent = ascent*emscale;
+  newfont->descent = descent*emscale;
+  newfont->linegap = linegap*emscale;
+  newfont->linegap = ((newfont->ascent - newfont->descent) - newfont->linegap);
+  printf("newfont : %g, %g, %g\n", newfont->ascent, newfont->descent, newfont->linegap);
 
   newfont->texture = malloc(sizeof(texture));
   newfont->texture->id = sg_make_image(&(sg_image_desc){
@@ -137,12 +142,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     r.y = (glyph.y0) / (float)packsize;
     r.h = (glyph.y1-glyph.y0) / (float)packsize;
 
-    stbtt_GetCodepointHMetrics(&fontinfo, c, &newfont->Characters[c].Advance, &newfont->Characters[c].leftbearing);
-    newfont->Characters[c].leftbearing *= newfont->emscale;
-
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
-    newfont->Characters[c].Size[0] = glyph.x1 - glyph.x0; 
-    newfont->Characters[c].Size[1] = glyph.y1 - glyph.y0;
+    newfont->Characters[c].Size[0] = (glyph.x1 - glyph.x0);
+    newfont->Characters[c].Size[1] = (glyph.y1 - glyph.y0);
     newfont->Characters[c].Bearing[0] = glyph.xoff;
     newfont->Characters[c].Bearing[1] = glyph.yoff2;
     newfont->Characters[c].rect = r;
@@ -201,8 +203,6 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
   struct rgba colorbox = {0,0,0,255};
   
   struct text_vert vert;
-
-  float lsize = 1.0 / 1024.0;
 
   vert.pos.x = cursor.X + c.Bearing[0] * scale;
   vert.pos.y = cursor.Y - c.Bearing[1] * scale;
@@ -290,7 +290,12 @@ struct boundingbox text_bb(const char *text, float scale, float lw, float tracki
     }
   }
 
-  return cwh2bb((HMM_Vec2){0,0}, (HMM_Vec2){cursor.X,use_font->linegap-cursor.Y});
+  return (struct boundingbox){
+    .b = cursor.Y + use_font->descent,
+    .t = cursor.Y + use_font->ascent,
+    .l = 0,
+    .r = cursor.X
+  };
 }
 
 void check_caret(int caret, int l, HMM_Vec2 pos, float scale, struct rgba color)
