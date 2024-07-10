@@ -479,7 +479,7 @@ render.coordinate = function(pos, size, color) {
 }
 
 render.boundingbox = function(bb, color = Color.white) {
-  render.poly(bbox.topoints(bb), color);
+  render.line(bbox.topoints(bb).wrapped(1), color);
 }
 
 render.rectangle = function(lowerleft, upperright, color) {
@@ -513,7 +513,7 @@ render.text_bb = function(str, size = 1, wrap = -1, pos = [0,0])
 }
 
 render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
-  var bb = render.text_size(str, size, wrap, pos);
+  var bb = render.text_bb(str, size, wrap, pos);
   gui.text(str, pos, size, color, wrap, cursor);
   return bb;
   

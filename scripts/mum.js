@@ -1,4 +1,5 @@
 globalThis.mum = {};
+
 var panel;
 
 var selected = undefined;
@@ -32,8 +33,7 @@ mum.base = {
   text_outline: 1, /* outline in pixels */
   color: Color.white,
   margin: [0,0], /* Distance between elements for things like columns */
-  width: null,
-  height: null,
+  size: null,
   max_width: Infinity,
   max_height: Infinity,
   image_repeat: false,
@@ -43,6 +43,8 @@ mum.base = {
   tooltip: null,
 }
 
+mum.debug = false;
+
 var post = function() {};
 var posts = [];
 
@@ -51,27 +53,21 @@ var contexts = [];
 
 var cursor = [0,0];
 
-var end = function()
-{
-  post();
-  context = contexts.pop();
-  if (!context) context = mum.base;
-}
-
 var pre = function(data)
 {
-  if (data.hide || context.hide) return true;
-  data.__proto__ = context;
-  contexts.push(context);
+  if (data.hide) return true;
+  data.__proto__ = mum.base;
+  if (context)
+    contexts.push(context);
+    
   context = data;
 }
 
-var listpost = function()
+var end = function()
 {
-  var height = 0;
-  height += (context.bb.t - context.bb.b);
-  cursor.y -= height;
-  cursor.y -= context.padding.y; 
+  var old = context;
+  context = contexts.pop();
+  post(old);
 }
 
 mum.list = function(fn, data = {})
@@ -80,11 +76,58 @@ mum.list = function(fn, data = {})
   cursor = context.pos;
   cursor = cursor.add(context.offset);
   posts.push(post);
-  post = listpost;
+  post = mum.list.post;
   
   fn();
+
+  context.bb.l -= context.padding.x;
+  context.bb.r += context.padding.x;
+  context.bb.t += context.padding.y;
+  context.bb.b -= context.padding.y;
+
+  if (mum.debug)
+    render.boundingbox(context.bb);
+
+  if (context.background_image) {
+    mum.image(context.background_image, {
+  }
   
   post = posts.pop();
+  end();
+}
+
+mum.list.post = function(e)
+{
+  cursor.y -= (e.bb.t - e.bb.b);
+  cursor.y -= e.padding.y;
+  
+  if (context.bb)
+    context.bb = bbox.expand(context.bb,e.bb)
+  else
+    context.bb = e.bb;
+}
+
+mum.label = function(str, data = {})
+{
+  if (pre(data)) return;
+
+  render.set_font(context.font, context.font_size);
+
+  context.bb = render.text_bb(str, context.scale, -1, cursor);
+  
+  if (mum.debug)
+    render.boundingbox(context.bb);
+
+  if (bbox.pointin(context.bb, input.mouse.screenpos())) {
+    if (context.hover) {
+      context.hover.__proto__ = context;
+      context = context.hover;
+      selected = context;
+    }
+  }
+
+  context.bb = render.text(str, cursor, context.scale, context.color);
+  
   end();
 }
 
@@ -94,9 +137,9 @@ mum.image = function(path, data = {})
   
   var tex = game.texture(path);
   if (context.slice)
-    render.slice9(tex, cursor, context.slice, context.size);
+    render.slice9(tex, cursor, context.slice, context.scale);
   else
-    context.bb = render.image(tex, cursor, context.size);
+    context.bb = render.image(tex, cursor, context.scale);
   
   end();
 }
@@ -113,7 +156,7 @@ mum.button = function(str, data = {padding:[4,4], color:Color.black, hover:{colo
   posts.push(post);
   post = btnpost;
   if (typeof str === 'string')
-    render.text(str, cursor.add(context.padding), context.size, context.color);
+    render.text(str, cursor.add(context.padding), context.scale, context.color);
   else
     str();
 
@@ -131,43 +174,18 @@ mum.button = function(str, data = {padding:[4,4], color:Color.black, hover:{colo
 mum.window = function(fn, data = {})
 {
   data = Object.assign({
-    width:400,
-    height:400,
+    size:[400,400],
     color: Color.black
   }, data);
 
   if (pre(data)) return;
 
   cursor = context.pos;
-  render.rectangle(cursor, cursor.add([context.width,context.height]), context.color);
+  render.rectangle(cursor, cursor.add(context.size), context.color);
   cursor.y += context.height;
   cursor = cursor.add(context.padding);
   context.pos = cursor.slice();
   fn();
-  end();
-}
-
-mum.label = function(str, data = {})
-{
-  if (pre(data)) return;
-  if (false) {
-    context.hover.__proto__ = context;
-    context = context.hover;
-  }
-
-  context.bb = render.text_bb(str, context.size, -1, cursor);
-
-  if (bbox.pointin(context.bb, input.mouse.screenpos())) {
-    if (context.hover) {
-      context.hover.__proto__ = context;
-      context = context.hover;
-      selected = context;
-    }
-  }
-
-  render.set_font(context.font, context.font_size);
-  context.bb = render.text(str, cursor, context.size, context.color);
-  
   end();
 }
 
