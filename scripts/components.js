@@ -17,6 +17,7 @@ var fullrect = [0,0,1,1];
 
 var sprite = {
   loop: true,
+  rect: fullrect,
   anim:{},
   playing: 0,
   play(str = 0) {

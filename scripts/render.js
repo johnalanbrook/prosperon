@@ -541,7 +541,7 @@ render.rectangle = function(lowerleft, upperright, color) {
 render.box = function(pos, wh, color = Color.white) {
   var lower = pos.sub(wh.scale(0.5));
   var upper = pos.add(wh.scale(0.5));
-  render.recteangle(lower,upper,color);
+  render.rectangle(lower,upper,color);
 };
 
 render.window = function(pos, wh, color) {

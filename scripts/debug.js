@@ -238,6 +238,13 @@ debug.log.time = function(fn, name, avg=0)
   debug.log.time[name].push(profile.now()-start);
 }
 
+debug.kill = function()
+{
+  assert = function() {};
+  debug.build = function() {};
+  debug.fn_break = function() {};
+}
+
 return {
   debug,
   Gizmos,

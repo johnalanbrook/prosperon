@@ -14,6 +14,7 @@ if (os.sys() === 'macos') {
   appy.inputs['S-g'] = os.gc;
 }
 
+appy.inputs.f12 = function() { mum.debug = !mum.debug; }
 appy.inputs.f11 = window.toggle_fullscreen;
 appy.inputs['M-f4'] = prosperon.quit;
 

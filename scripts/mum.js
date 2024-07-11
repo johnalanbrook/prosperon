@@ -15,17 +15,19 @@ mum.inputs.lm = function()
 mum.base = {
   padding:[0,0], /* Each element inset with this padding on all sides */
   offset:[0,0],
-  pos: [0,0],
+  pos: null,
   font: "fonts/c64.ttf",
   selectable: false,
   selected: false,
   font_size: 16,
   scale: 1,
   angle: 0,
-  anchor: [0,1],
+  anchor: [0,1], // where to draw the item from.
   background_image: null,
   slice: null,
-  hovered: {},
+  hover: {
+    color: Color.red,
+  },
   text_shadow: {
     pos: [0,0],
     color: Color.white,
@@ -45,12 +47,16 @@ mum.base = {
   tooltip: null,
 }
 
+function show_debug() { return prosperon.debug && mum.debug; }
+
 mum.debug = false;
 
 var post = function() {};
 var posts = [];
 
-var context = mum.base;
+mum.style = mum.base;
+
+var context = mum.style;
 var contexts = [];
 
 var cursor = [0,0];
@@ -58,11 +64,12 @@ var cursor = [0,0];
 var pre = function(data)
 {
   if (data.hide) return true;
-  data.__proto__ = mum.base;
+  data.__proto__ = mum.style;
   if (context)
     contexts.push(context);
     
   context = data;
+  if (context.pos) cursor = context.pos.slice();
 }
 
 var end = function()
@@ -87,7 +94,7 @@ mum.list = function(fn, data = {})
   context.bb.t += context.padding.y;
   context.bb.b -= context.padding.y;
 
-  if (mum.debug)
+  if (show_debug())
     render.boundingbox(context.bb);
 
   post = posts.pop();
@@ -113,10 +120,10 @@ mum.label = function(str, data = {})
 
   context.bb = render.text_bb(str, context.scale, -1, cursor);
   
-  if (mum.debug)
+  if (show_debug())
     render.boundingbox(context.bb);
 
-  if (bbox.pointin(context.bb, input.mouse.screenpos())) {
+  if (context.action && bbox.pointin(context.bb, input.mouse.screenpos())) {
     if (context.hover) {
       context.hover.__proto__ = context;
       context = context.hover;
@@ -132,12 +139,16 @@ mum.label = function(str, data = {})
 mum.image = function(path, data = {})
 {
   if (pre(data)) return;
+  var tex = path;
+  if (typeof path === 'string')
+    tex = game.texture(path);
   
-  var tex = game.texture(path);
   if (context.slice)
     render.slice9(tex, cursor, context.slice, context.scale);
-  else
-    context.bb = render.image(tex, cursor, context.scale);
+  else {
+    cursor.y -= tex.height*context.scale;
+    context.bb = render.image(tex, cursor, [context.scale*tex.width, context.scale*tex.height]);
+  }
   
   end();
 }
@@ -148,7 +159,7 @@ var btnpost = function()
   btnbb = context.bb;
 }
 
-mum.button = function(str, data = {padding:[4,4], color:Color.black, hover:{color:Color.red}})
+mum.button = function(str, data = {padding:[4,4], color:Color.black})
 {
   if (pre(data)) return;
   posts.push(post);
@@ -158,7 +169,7 @@ mum.button = function(str, data = {padding:[4,4], color:Color.black, hover:{colo
   else
     str();
 
-  if (data.hover && bbox.pointin(btnbb, input.mouse.screenpos())) {
+  if (data.action && data.hover && bbox.pointin(btnbb, input.mouse.screenpos())) {
     data.hover.__proto__ = data;
     context = data.hover;
   }
@@ -178,18 +189,10 @@ mum.window = function(fn, data = {})
 
   if (pre(data)) return;
 
-  cursor = context.pos;
   render.rectangle(cursor, cursor.add(context.size), context.color);
   cursor.y += context.height;
   cursor = cursor.add(context.padding);
   context.pos = cursor.slice();
-  fn();
-  end();
-}
-
-mum.div = function(fn, data = {})
-{
-  if (pre(data)) return;
   fn();
   end();
 }

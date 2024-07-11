@@ -326,6 +326,14 @@ game.engine_start = function (s) {
 game.startengine = 0;
 var frames = [];
 
+prosperon.release_mode = function()
+{
+  prosperon.debug = false;
+  mum.debug = false;
+  debug.kill();
+}
+prosperon.debug = true;
+
 function process() {
   var startframe = profile.now();
   var dt = profile.secs(profile.now()) - frame_t;
@@ -573,7 +581,9 @@ Register.add_cb("update", true).doc = "Called once per frame.";
 Register.add_cb("physupdate", true);
 Register.add_cb("gui", true);
 Register.add_cb("hud", true);
-Register.add_cb("debug", true);
+Register.add_cb("draw_dbg", true);
+Register.add_cb("gui_dbg", true);
+Register.add_cb("hud_dbg", true);
 Register.add_cb("draw", true);
 
 var Event = {

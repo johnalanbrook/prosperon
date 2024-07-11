@@ -40,6 +40,7 @@ function keycode(name) { return charCodeAt(name); }
 
 function keyname_extd(key)
 {
+  if (typeof key === 'string') return key;
   if (key > 289 && key < 302) {
     var num = key-289;
     return `f${num}`;
@@ -56,7 +57,7 @@ function keyname_extd(key)
   return undefined;
 }
 
-prosperon.keys = [];
+var downkeys = {};
 
 function modstr()
 {
@@ -69,7 +70,7 @@ function modstr()
 
 prosperon.keydown = function(key, repeat)
 {
-  prosperon.keys[key] = true;
+  downkeys[key] = true;
   
   if (key == 341 || key == 345)
     mod.ctrl = 1;
@@ -91,7 +92,8 @@ prosperon.keydown = function(key, repeat)
 
 prosperon.keyup = function(key)
 {
-  prosperon.keys[key] = false;
+  delete downkeys[key];
+  
   if (key == 341 || key == 345)
     mod.ctrl = 0;
 
@@ -127,9 +129,11 @@ prosperon.mousescroll = function(dx){
 };
 prosperon.mousedown = function(b){
   player[0].raw_input(modstr() + input.mouse.button[b], "pressed");
+  downkeys[input.mouse.button[b]] = true;
 };
 prosperon.mouseup = function(b){
   player[0].raw_input(input.mouse.button[b], "released");
+  delete downkeys[input.mouse.button[b]];
 };
 
 input.mouse = {};
@@ -181,8 +185,8 @@ input.mouse.normal.doc = "Set the mouse to show again after hiding.";
 
 input.keyboard = {};
 input.keyboard.down = function(code) {
-  if (typeof code === 'number') return prosperon.keys[code];
-  if (typeof code === 'string') return (prosperon.keys[code.uc().charCodeAt()] || prosperon.keys[code.lc().charCodeAt()]);
+  if (typeof code === 'number') return downkeys[code];
+  if (typeof code === 'string') return (downkeys[code.uc().charCodeAt()] || downkeys[code.lc().charCodeAt()]);
   return undefined;
 }
 
@@ -210,10 +214,8 @@ input.print_pawn_kbm = function(pawn) {
 
 input.procdown = function()
 {
-    for (var k of prosperon.keys) {
-      if (!k) continue;
-      player[0].raw_input(keyname_extd(k), "down");
-    }
+  for (var k in downkeys)
+    player[0].raw_input(keyname_extd(k), "down");
 }
 
 input.print_md_kbm = function(pawn) {
@@ -330,7 +332,10 @@ var Player = {
       	  fn = pawn.inputs[cmd].released;
     	  break;
       	case 'down':
-    	  fn = pawn.inputs[cmd].down;
+	  if (typeof pawn.inputs[cmd].down === 'function')
+	    fn = pawn.inputs[cmd].down;
+	  else if (pawn.inputs[cmd].down)
+	    fn = pawn.inputs[cmd];
       }
 
       if (typeof fn === 'function') {
