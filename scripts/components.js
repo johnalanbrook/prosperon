@@ -13,6 +13,8 @@ var make_point_obj = function(o, p)
   }
 }
 
+var fullrect = [0,0,1,1];
+
 var sprite = {
   loop: true,
   anim:{},
@@ -63,7 +65,7 @@ var sprite = {
     this.texture = game.texture(p);
     
     this.diffuse = this.texture;
-    this.rect = [0,0,1,1];
+    this.rect = fullrect;
     
     var anim = SpriteAnim.make(p);
     if (!anim) return;

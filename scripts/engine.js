@@ -128,8 +128,10 @@ profile.report = function (start, msg = "[undefined report]") {
 };
 
 profile.addreport = function (cache, line, start) {
+  cache ??= profcache;
   cache[line] ??= [];
   cache[line].push(profile.now() - start);
+  return profile.now();
 };
 
 profile.printreport = function (cache, name) {

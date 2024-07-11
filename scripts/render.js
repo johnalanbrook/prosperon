@@ -4,6 +4,44 @@ render.doc = {
   wireframe: "Show only wireframes of models."
 };
 
+var cur = {};
+
+render.use_shader = function(shader)
+{
+  if (cur.shader === shader) return;
+  cur.shader = shader;
+  cur.globals = {};
+  cur.bind = undefined;
+  cur.mesh = undefined;
+  render.setpipeline(shader.pipe);
+}
+
+render.use_mat = function(mat)
+{
+  if (!cur.shader) return;
+  if (cur.mat === mat) return;
+
+  render.shader_apply_material(cur.shader, mat, cur.mat);
+  
+  cur.mat = mat;
+
+  cur.images = [];
+  if (!cur.shader.fs.images) return;
+  for (var img of cur.shader.fs.images)
+    if (mat[img.name])
+      cur.images.push(mat[img.name]);
+    else
+      cur.images.push(game.texture("icons/no_tex.gif"));
+}
+
+var models_array = [];
+
+render.set_model = function(t)
+{
+  if (cur.shader.vs.unimap.model)
+    render.setunim4(0, cur.shader.vs.unimap.model.slot, t);
+}
+
 var shaderlang = {
  macos: "metal_macos",
  windows: "hlsl5",
@@ -93,18 +131,25 @@ function shader_directive(shader, name, map)
 
 function global_uni(uni, stage)
 {
+  cur.globals[stage] ??= {};
+  if (cur.globals[stage][uni.name]) return true;
   switch(uni.name) {
     case "time":
+      cur.globals[stage][uni.name]
       render.setuniv(stage, uni.slot, profile.secs(profile.now()));
+      cur.globals[stage][uni.name] = true;
       return true;
     case "projection":
       render.setuniproj(stage, uni.slot);
+      cur.globals[stage][uni.name] = true;
       return true;
     case "view":
       render.setuniview(stage, uni.slot);
+      cur.globals[stage][uni.name] = true;
       return true;
     case "vp":
       render.setunivp(stage, uni.slot);
+      cur.globals[stage][uni.name] = true;
       return true;
   }
   
@@ -260,22 +305,26 @@ var shader_unisize = {
   16: render.setuniv4
 };
   
-render.shader_apply_material = function(shader, material = {})
+render.shader_apply_material = function(shader, material = {}, old = {})
 {
   for (var p in shader.vs.unimap) {
     if (global_uni(shader.vs.unimap[p], 0)) continue;
-    if (!(p in material)) continue;    
+    if (material[p] === old[p]) continue;
+    assert(p in material, `shader ${shader.name} has no uniform for ${p}`);
     var s = shader.vs.unimap[p];
     shader_unisize[s.size](0, s.slot, material[p]);
   }
   
   for (var p in shader.fs.unimap) {
     if (global_uni(shader.fs.unimap[p], 1)) continue;
-    if (!(p in material)) continue;    
+    if (material[p] === old[p]) continue;
+    assert(p in material, `shader ${shader.name} has no uniform for ${p}`);    
     var s = shader.fs.unimap[p];
     shader_unisize[s.size](1, s.slot, material[p]);
   }
+  
   if (!material.diffuse) return;
+  if (material.diffuse === old.diffuse) return;
   
   if ("diffuse_size" in shader.fs.unimap)
     render.setuniv2(1, shader.fs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
@@ -284,40 +333,48 @@ render.shader_apply_material = function(shader, material = {})
     render.setuniv2(0, shader.vs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
 }
 
-render.sg_bind = function(shader, mesh = {}, material = {}, ssbo)
+render.sg_bind = function(mesh, ssbo)
 {
+  if (cur.mesh === mesh && cur.bind) {
+    cur.bind.inst = 1;
+    cur.bind.images = cur.images;
+    render.setbind(cur.bind);
+    return cur.bind;
+  }
+  
+  cur.mesh = mesh;
+  
   var bind = {};
   bind.attrib = [];
-  if (shader.vs.inputs)
-  for (var a of shader.vs.inputs) {
+  if (cur.shader.vs.inputs)
+  for (var a of cur.shader.vs.inputs) {
     if (!(a.name in mesh)) {
       if (!(a.name.slice(2) in mesh)) {
-        console.error(`cannot draw shader ${shader.name}; there is no attrib ${a.name} in the given mesh.`);
+        console.error(`cannot draw shader ${cur.shader.name}; there is no attrib ${a.name} in the given mesh.`);
         return undefined;
       } else
       bind.attrib.push(mesh[a.name.slice(2)]);
     } else
     bind.attrib.push(mesh[a.name]);
   }
-  bind.images = [];
-  if (shader.fs.images)
-  for (var img of shader.fs.images) {
-    if (material[img.name])
-      bind.images.push(material[img.name]);
-    else
-      bind.images.push(game.texture("icons/no_tex.gif"));
-  }
   
-  if (shader.indexed) {
+  if (cur.shader.indexed) {
     bind.index = mesh.index;
     bind.count = mesh.count;
   } else
     bind.count = mesh.verts;
     
   bind.ssbo = [];
-  if (shader.vs.storage_buffers)
-  for (var b of shader.vs.storage_buffers)
+  if (cur.shader.vs.storage_buffers)
+  for (var b of cur.shader.vs.storage_buffers)
     bind.ssbo.push(ssbo);
+
+  bind.inst = 1;
+  bind.images = cur.images;
+
+  cur.bind = bind;
+
+  render.setbind(cur.bind);
   
   return bind;
 }
@@ -409,35 +466,29 @@ render.circle = function(pos, radius, color) {
     coord: pos,
     shade: color
   };
-  render.setpipeline(circleshader.pipe);
-  render.shader_apply_material(circleshader, mat);
-  var bind = render.sg_bind(circleshader, shape.quad, mat);
-  bind.inst = 1;
-  render.spdraw(bind);
+  render.use_shader(circleshader);
+  render.use_mat(mat);
+  render.draw(shape.quad);
 }
 
 render.poly = function(points, color, transform) {
   var buffer = render.poly_prim(points);
   var mat = { shade: color};
-  render.setpipeline(polyshader.pipe);
-  render.setunim4(0,polyshader.vs.unimap.model.slot, transform);
-  render.shader_apply_material(polyshader, mat);
-  var bind = render.sg_bind(polyshader, buffer, mat);
-  bind.inst = 1;
-  render.spdraw(bind);
+  render.use_shader(polyshader);
+  render.set_model(transform);
+  render.use_mat(mat);
+  render.draw(buffer);
 }
 
 render.line = function(points, color = Color.white, thickness = 1, transform) {
   var buffer = os.make_line_prim(points, thickness, 0, false);
-  render.setpipeline(polyshader.pipe);
+  render.use_shader(polyshader);
   var mat = {
     shade: color
   };
-  render.shader_apply_material(polyshader, mat);
-  render.setunim4(0,polyshader.vs.unimap.model.slot, transform);
-  var bind = render.sg_bind(polyshader, buffer, mat);
-  bind.inst = 1;
-  render.spdraw(bind);
+  render.use_mat(mat);
+  render.set_model(transform);
+  render.draw(buffer);
 }
 
 /* All draw in screen space */
@@ -531,15 +582,14 @@ render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0,
   var t = os.make_transform();
   t.pos = pos;
   t.scale = [scale.x/tex.width,scale.y/tex.height,1];
-  render.setpipeline(render.spriteshader.pipe);
-  render.setunim4(0, render.spriteshader.vs.unimap.model.slot, t);
-  render.shader_apply_material(render.spriteshader, {
+  render.use_shader(render.spriteshader);
+  render.set_model(t);
+  render.use_mat({
     shade: color,
     diffuse: tex
   });
-  var bind = render.sg_bind(render.spriteshader, shape.quad, {diffuse:tex});
-  bind.inst = 1;
-  render.spdraw(bind);
+  
+  render.draw(shape.quad);
   
   var bb = {};
   bb.b = pos.y;
@@ -559,19 +609,18 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
     border = [bb/tex.width,bb/tex.height,bb/tex.width,bb/tex.height];
   else
     border = [bb.l/tex.width, bb.b/tex.height, bb.r/tex.width, bb.t/tex.height];
-    
-  render.setpipeline(slice9shader.pipe);
-  render.setunim4(0, slice9shader.vs.unimap.model.slot, t);
-  render.shader_apply_material(slice9shader, {
+
+  render.use_shader(slice9shader);
+  render.set_model(t);
+  render.use_mat({
     shade: color,
     diffuse:tex,
     rect:[0,0,1,1],
     border: border,
     scale: [scale.x/tex.width,scale.y/tex.height]
   });
-  var bind = render.sg_bind(slice9shader, shape.quad, {diffuse:tex});
-  bind.inst = 1;
-  render.spdraw(bind);
+
+  render.draw(shape.quad);
 }
 
 var textssbo = render.text_ssbo();
@@ -579,11 +628,10 @@ var textssbo = render.text_ssbo();
 render.flush_text = function()
 {
   if (!render.textshader) return;
-  render.setpipeline(render.textshader.pipe);
-  render.shader_apply_material(render.textshader);
-  var textbind = render.sg_bind(render.textshader, shape.quad, {text:render.font.texture}, textssbo);
-  textbind.inst = render.flushtext();
-  render.spdraw(textbind);
+  render.use_shader(render.textshader);
+  render.use_mat({text:render.font.texture});
+
+  render.draw(shape.quad, textssbo, render.flushtext());
 }
 
 render.fontcache = {};
@@ -604,5 +652,10 @@ render.cross.doc = "Draw a cross centered at pos, with arm length size.";
 render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
 render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
 
+render.draw = function(mesh, ssbo, inst = 1)
+{
+  render.sg_bind(mesh, ssbo);
+  render.spdraw(cur.bind.count, inst);
+}
 
 return {render};

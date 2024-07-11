@@ -655,9 +655,8 @@ sg_bindings js2bind(JSValue v)
   }
   
   JSValue ssbo = js_getpropstr(v, "ssbo");
-  for (int i = 0; i < js_arrlen(ssbo); i++) {
+  for (int i = 0; i < js_arrlen(ssbo); i++)
     bind.vs.storage_buffers[i] = *js2sg_buffer(js_getpropidx(ssbo,i));
-  }
   
   return bind;
 }
@@ -948,12 +947,33 @@ JSC_CCALL(render_setunim4,
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(m.e));
 );
 
-JSC_CCALL(render_spdraw,
+JSC_CCALL(render_setbind,
   sg_bindings bind = js2bind(argv[0]);
   sg_apply_bindings(&bind);
-  int p = js2number(js_getpropstr(argv[0], "count"));
-  int n = js2number(js_getpropstr(argv[0], "inst"));
-  sg_draw(0,p,n);
+)
+
+JSC_CCALL(render_make_t_ssbo,
+  JSValue array = argv[0];
+  HMM_Mat4 ms[js_arrlen(array)];
+  for (int i = 0; i < js_arrlen(array); i++)
+    ms[i] = transform2mat(*js2transform(js_getpropidx(array, i)));
+
+  sg_buffer *rr = malloc(sizeof(sg_buffer));
+  *rr = sg_make_buffer(&(sg_buffer_desc){
+    .data = {
+      .ptr = ms,
+      .size = sizeof(HMM_Mat4)*js_arrlen(array),
+    },
+    .type = SG_BUFFERTYPE_STORAGEBUFFER,
+    .usage = SG_USAGE_IMMUTABLE,
+    .label = "transform buffer"
+  });
+
+  return sg_buffer2js(rr);
+)
+
+JSC_CCALL(render_spdraw,
+  sg_draw(0,js2number(argv[0]),js2number(argv[1]));
 )
 
 JSC_CCALL(render_setpipeline,
@@ -988,7 +1008,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
-  MIST_FUNC_DEF(render, spdraw, 1),
+  MIST_FUNC_DEF(render, spdraw, 2),
+  MIST_FUNC_DEF(render, setbind, 1),
   MIST_FUNC_DEF(render, setuniproj, 2),
   MIST_FUNC_DEF(render, setuniview, 2),
   MIST_FUNC_DEF(render, setunivp, 2),
@@ -1001,6 +1022,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, gfx_gui, 0),
   MIST_FUNC_DEF(render, imgui_end, 0),
   MIST_FUNC_DEF(render, imgui_init, 0),
+  MIST_FUNC_DEF(render, make_t_ssbo, 1)
 };
 
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))

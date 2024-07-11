@@ -8,6 +8,7 @@ mum.inputs = {};
 mum.inputs.lm = function()
 {
   if (!selected) return;
+  if (!selected.action) return;
   selected.action();
 }
 
@@ -19,7 +20,6 @@ mum.base = {
   selectable: false,
   selected: false,
   font_size: 16,
-  text_align: "left", /* left, center, right */
   scale: 1,
   angle: 0,
   anchor: [0,1],
@@ -31,6 +31,8 @@ mum.base = {
     color: Color.white,
   },
   text_outline: 1, /* outline in pixels */
+  text_align: "left", /* left, center, right */
+  text_shader: null,
   color: Color.white,
   margin: [0,0], /* Distance between elements for things like columns */
   size: null,
@@ -88,10 +90,6 @@ mum.list = function(fn, data = {})
   if (mum.debug)
     render.boundingbox(context.bb);
 
-  if (context.background_image) {
-    mum.image(context.background_image, {
-  }
-  
   post = posts.pop();
   end();
 }
