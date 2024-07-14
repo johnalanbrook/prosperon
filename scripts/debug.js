@@ -52,10 +52,8 @@ debug.draw = function() {
 
 function assert(op, str = `assertion failed [value '${op}']`)
 {
-  if (!op) {
-    console.error(str);
-    os.quit();
-  }
+  if (!op)
+    console.panic(str);
 }
 
 var Gizmos = {

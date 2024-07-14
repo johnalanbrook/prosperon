@@ -22,7 +22,7 @@ mum.base = {
   font_size: 16,
   scale: 1,
   angle: 0,
-  anchor: [0,1], // where to draw the item from.
+  anchor: [0,1], // where to draw the item from, relative to the cursor.
   background_image: null,
   slice: null,
   hover: {
@@ -35,9 +35,12 @@ mum.base = {
   text_outline: 1, /* outline in pixels */
   text_align: "left", /* left, center, right */
   text_shader: null,
+  overflow: "wrap", // clip, wrap, break
   color: Color.white,
   margin: [0,0], /* Distance between elements for things like columns */
   size: null,
+  width:0,
+  height:0,
   max_width: Infinity,
   max_height: Infinity,
   image_repeat: false,
@@ -57,6 +60,7 @@ var posts = [];
 mum.style = mum.base;
 
 var context = mum.style;
+var container = undefined;
 var contexts = [];
 
 var cursor = [0,0];
@@ -82,13 +86,37 @@ var end = function()
 mum.list = function(fn, data = {})
 {
   if (pre(data)) return;
-  cursor = context.pos;
-  cursor = cursor.add(context.offset);
+  var aa = [0,1].sub(context.anchor);
+  if (context.pos) cursor = context.pos.slice();
+  cursor = cursor.add([context.width,context.height].scale(aa)).add(context.offset).add(context.padding);
+
   posts.push(post);
   post = mum.list.post;
   
+  if (show_debug())
+    render.boundingbox({
+      t:cursor.y,
+      b:cursor.y-context.height,
+      l:cursor.x,
+      r:cursor.x+context.width
+    });
+    
+  cursor.x += context.width/2;
+    
+  //if (context.background_image) mum.image(null, Object.create(context)) 
+  if (context.background_image) {
+    var imgpos = context.pos.slice();
+    imgpos.y -= context.height/2;
+    imgpos.x -= context.width/2;
+    var imgscale = [context.width,context.height];
+    if (context.slice)
+      render.slice9(game.texture(context.background_image), imgpos, context.slice, imgscale);
+    else
+      render.image(game.texture(context.background_image), imgpos, [context.width,context.height]);
+  }
+    
   fn();
-
+  
   context.bb.l -= context.padding.x;
   context.bb.r += context.padding.x;
   context.bb.t += context.padding.y;
@@ -117,11 +145,17 @@ mum.label = function(str, data = {})
   if (pre(data)) return;
 
   render.set_font(context.font, context.font_size);
-
+ 
   context.bb = render.text_bb(str, context.scale, -1, cursor);
+  context.wh = bbox.towh(context.bb);
   
-  if (show_debug())
-    render.boundingbox(context.bb);
+  var aa = [0,1].sub(context.anchor);  
+  
+  var pos = cursor.slice();  
+  pos.y -= (context.bb.t-cursor.y);
+  pos = pos.add(context.wh.scale(aa)).add(context.offset);
+
+  context.bb = render.text_bb(str, context.scale, -1, pos);
 
   if (context.action && bbox.pointin(context.bb, input.mouse.screenpos())) {
     if (context.hover) {
@@ -131,7 +165,10 @@ mum.label = function(str, data = {})
     }
   }
 
-  context.bb = render.text(str, cursor, context.scale, context.color);
+  context.bb = render.text(str, pos, context.scale, context.color);
+    
+  if (show_debug())
+    render.boundingbox(context.bb);
   
   end();
 }
@@ -139,6 +176,7 @@ mum.label = function(str, data = {})
 mum.image = function(path, data = {})
 {
   if (pre(data)) return;
+  path ??= context.background_image;
   var tex = path;
   if (typeof path === 'string')
     tex = game.texture(path);
@@ -195,4 +233,12 @@ mum.window = function(fn, data = {})
   context.pos = cursor.slice();
   fn();
   end();
+}
+
+mum.ex_hud = function()
+{
+  mum.label("TOP LEFT", {pos:[0,game.size.y], anchor:[0,1]});
+  mum.label("BOTTOM LEFT", {pos:[0,0], anchor:[0,0]});
+  mum.label("TOP RIGHT", {pos:game.size, anchor:[1,1]});
+  mum.label("BOTTOM RIGHT", {pos:[game.size.x, 0], anchor:[1,0]});
 }

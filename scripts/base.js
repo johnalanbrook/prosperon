@@ -1447,6 +1447,15 @@ bbox.pointin = function(bb, p)
   return true;
 }
 
+bbox.zero = function(bb) {
+  var newbb = Object.assign({},bb);
+  newbb.r -= newbb.l;
+  newbb.t -= newbb.b;
+  newbb.b = 0;
+  newbb.l = 0;
+  return newbb;
+}
+
 bbox.move = function(bb, pos) {
   var newbb = Object.assign({}, bb);
   newbb.t += pos.y;
@@ -1455,6 +1464,11 @@ bbox.move = function(bb, pos) {
   newbb.r += pos.x;
   return newbb;
 };
+
+bbox.moveto = function(bb, pos) {
+  bb = bbox.zero(bb);
+  return bbox.move(bb, pos);
+}
 
 bbox.expand = function(oldbb, x) {
   if (!oldbb || !x) return;

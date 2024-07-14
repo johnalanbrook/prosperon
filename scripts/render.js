@@ -155,6 +155,13 @@ function global_uni(uni, stage)
   
   return false;
 }
+
+var setcam = render.set_camera;
+render.set_camera = function(cam)
+{
+  delete cur.shader;
+  setcam(cam);
+}
  
 render.make_shader = function(shader)
 {
@@ -586,7 +593,8 @@ render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0,
   render.set_model(t);
   render.use_mat({
     shade: color,
-    diffuse: tex
+    diffuse: tex,
+    rect:[0,0,1,1]
   });
   
   render.draw(shape.quad);
