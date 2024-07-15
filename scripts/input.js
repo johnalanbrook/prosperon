@@ -41,6 +41,7 @@ function keycode(name) { return charCodeAt(name); }
 function keyname_extd(key)
 {
   if (typeof key === 'string') return key;
+  
   if (key > 289 && key < 302) {
     var num = key-289;
     return `f${num}`;

@@ -607,6 +607,8 @@ render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0,
   return bb;
 }
 
+
+// pos is the lower left corner, scale is the width and height
 render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = Color.white)
 {
   var t = os.make_transform();

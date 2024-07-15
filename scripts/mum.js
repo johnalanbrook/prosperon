@@ -13,16 +13,17 @@ mum.inputs.lm = function()
 }
 
 mum.base = {
-  padding:[0,0], /* Each element inset with this padding on all sides */
-  offset:[0,0],
-  pos: null,
+  pos: null, // If set, puts the cursor to this position before drawing the element
+  offset:[0,0], // Move x,y to the right and down before drawing
+  padding:[0,0], // Pad inwards after drawing, to prepare for the next element  
   font: "fonts/c64.ttf",
   selectable: false,
   selected: false,
   font_size: 16,
   scale: 1,
   angle: 0,
-  anchor: [0,1], // where to draw the item from, relative to the cursor.
+  inset: null,
+  anchor: [0,1], // where to draw the item from, relative to the cursor. [0,1] is from the top left corner. [1,0] is from the bottom right
   background_image: null,
   slice: null,
   hover: {
@@ -32,13 +33,13 @@ mum.base = {
     pos: [0,0],
     color: Color.white,
   },
-  text_outline: 1, /* outline in pixels */
+  border: 0, // Draw a border around the element. For text, an outline.
+  overflow: "wrap", // how to deal with overflow from parent element
+  wrap: -1,
   text_align: "left", /* left, center, right */
-  text_shader: null,
-  overflow: "wrap", // clip, wrap, break
+  shader: null, // Use this shader, instead of the engine provided one
   color: Color.white,
-  margin: [0,0], /* Distance between elements for things like columns */
-  size: null,
+  opacity:1,
   width:0,
   height:0,
   max_width: Infinity,
@@ -57,37 +58,50 @@ mum.debug = false;
 var post = function() {};
 var posts = [];
 
-mum.style = mum.base;
-
-var context = mum.style;
+var context = mum.base;
 var container = undefined;
 var contexts = [];
 
 var cursor = [0,0];
 
+mum._frame = function()
+{
+  cursor = [0,0];
+}
+
 var pre = function(data)
 {
   if (data.hide) return true;
-  data.__proto__ = mum.style;
+  data.__proto__ = mum.base;
   if (context)
     contexts.push(context);
     
   context = data;
   if (context.pos) cursor = context.pos.slice();
+  context.drawpos = cursor.slice().add(context.offset);
 }
 
 var end = function()
 {
   var old = context;
   context = contexts.pop();
+  cursor = cursor.add(old.padding);
   post(old);
+}
+
+mum.style = function(fn, data)
+{
+  var oldbase = mum.base;
+  data.__proto__ = mum.base;
+  mum.base = data;
+  fn();
+  mum.base = oldbase;
 }
 
 mum.list = function(fn, data = {})
 {
   if (pre(data)) return;
   var aa = [0,1].sub(context.anchor);
-  if (context.pos) cursor = context.pos.slice();
   cursor = cursor.add([context.width,context.height].scale(aa)).add(context.offset).add(context.padding);
 
   posts.push(post);
@@ -100,8 +114,6 @@ mum.list = function(fn, data = {})
       l:cursor.x,
       r:cursor.x+context.width
     });
-    
-  cursor.x += context.width/2;
     
   //if (context.background_image) mum.image(null, Object.create(context)) 
   if (context.background_image) {
@@ -151,11 +163,10 @@ mum.label = function(str, data = {})
   
   var aa = [0,1].sub(context.anchor);  
   
-  var pos = cursor.slice();  
-  pos.y -= (context.bb.t-cursor.y);
-  pos = pos.add(context.wh.scale(aa)).add(context.offset);
+  data.drawpos.y -= (context.bb.t-cursor.y);
+  data.drawpos = data.drawpos.add(context.wh.scale(aa)).add(context.offset);
 
-  context.bb = render.text_bb(str, context.scale, -1, pos);
+  context.bb = render.text_bb(str, context.scale, data.wrap, data.drawpos);
 
   if (context.action && bbox.pointin(context.bb, input.mouse.screenpos())) {
     if (context.hover) {
@@ -165,7 +176,7 @@ mum.label = function(str, data = {})
     }
   }
 
-  context.bb = render.text(str, pos, context.scale, context.color);
+  context.bb = render.text(str, data.drawpos, context.scale, context.color, data.wrap);
     
   if (show_debug())
     render.boundingbox(context.bb);
@@ -180,12 +191,18 @@ mum.image = function(path, data = {})
   var tex = path;
   if (typeof path === 'string')
     tex = game.texture(path);
+
+  data.width ??= tex.width;
+  data.height ??= tex.height;
+
+  var aa = [0,0].sub(data.anchor);
+  data.drawpos = data.drawpos.add(aa.scale([data.width,data.height]));
   
   if (context.slice)
-    render.slice9(tex, cursor, context.slice, context.scale);
+    render.slice9(tex, data.drawpos, context.slice, [data.width,data.height]);
   else {
     cursor.y -= tex.height*context.scale;
-    context.bb = render.image(tex, cursor, [context.scale*tex.width, context.scale*tex.height]);
+    context.bb = render.image(tex, data.drawpos, [context.scale*tex.width, context.scale*tex.height]);
   }
   
   end();
@@ -220,17 +237,11 @@ mum.button = function(str, data = {padding:[4,4], color:Color.black})
 
 mum.window = function(fn, data = {})
 {
-  data = Object.assign({
-    size:[400,400],
-    color: Color.black
-  }, data);
-
   if (pre(data)) return;
 
   render.rectangle(cursor, cursor.add(context.size), context.color);
   cursor.y += context.height;
   cursor = cursor.add(context.padding);
-  context.pos = cursor.slice();
   fn();
   end();
 }

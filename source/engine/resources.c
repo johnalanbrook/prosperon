@@ -126,17 +126,6 @@ char *dirname(const char *path)
   return dir;
 }
 
-char *makepath(char *dir, char *file)
-{
-  int d = strlen(dir) + strlen(file) + 2;
-  char *path = malloc(d);
-  path[0] = 0;
-  strncat(path, dir, d);
-  strncat(path, "/", d);
-  strncat(path, file, d);
-  return path;
-}
-
 char *seprint(char *fmt, ...)
 {
   va_list args;

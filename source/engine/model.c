@@ -58,9 +58,9 @@ void mesh_add_material(primitive *prim, cgltf_material *mat)
       cgltf_buffer_view *buf = img->buffer_view;
       pmat->diffuse = texture_fromdata(buf->buffer->data, buf->size);
     } else {
-      char *path = makepath(dirname(cpath), img->uri);
-      pmat->diffuse = texture_from_file(path);
-      free(path);
+//      char *path = makepath(dirname(cpath), img->uri);
+//      pmat->diffuse = texture_from_file(path);
+//      free(path);
      }
    } else
      pmat->diffuse = texture_from_file("icons/moon.gif"); 
