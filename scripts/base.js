@@ -1331,6 +1331,11 @@ Object.defineProperty(Number.prototype, 'lerp', {
     return (to - this) * t + this;
   }
 });
+Object.defineProperty(Number.prototype, 'clamp', {
+  value: function(from,to) {
+    return Math.clamp(this,from,to);
+  }
+});
 
 Math.clamp = function (x, l, h) { return x > h ? h : x < l ? l : x; }
 

@@ -51,6 +51,12 @@ mum.base = {
   tooltip: null,
 }
 
+// data is passed into each function, and various stats are generated
+// drawpos: the point to start the drawing from
+// wh: an array of [width,height]
+// bound: a boundingbox around the drawn UI element
+// extent: a boundingbox around the total extents of the element (ie before padding)
+
 function show_debug() { return prosperon.debug && mum.debug; }
 
 mum.debug = false;
@@ -58,87 +64,79 @@ mum.debug = false;
 var post = function() {};
 var posts = [];
 
-var context = mum.base;
-var container = undefined;
-var contexts = [];
+mum.style = mum.base;
 
 var cursor = [0,0];
-
-mum._frame = function()
-{
-  cursor = [0,0];
-}
 
 var pre = function(data)
 {
   if (data.hide) return true;
-  data.__proto__ = mum.base;
-  if (context)
-    contexts.push(context);
-    
-  context = data;
-  if (context.pos) cursor = context.pos.slice();
-  context.drawpos = cursor.slice().add(context.offset);
+  data.__proto__ = mum.style;
+  
+  if (data.pos) cursor = data.pos.slice();
+  data.drawpos = cursor.slice().add(data.offset);
+
+  if (data.opacity !== 1) {
+    data.color = data.color.slice();
+    data.color[3] = data.opacity;
+  }
+
+  data.wh = [data.width,data.height];
 }
 
-var end = function()
+var anchor_calc = function(data)
 {
-  var old = context;
-  context = contexts.pop();
-  cursor = cursor.add(old.padding);
-  post(old);
+  var aa = [0,1].sub(data.anchor);
+  data.drawpos = data.drawpos.add([data.width,data.height]).scale(aa);
 }
 
-mum.style = function(fn, data)
+var end = function(data)
 {
-  var oldbase = mum.base;
-  data.__proto__ = mum.base;
-  mum.base = data;
-  fn();
-  mum.base = oldbase;
+  cursor = cursor.add(data.padding);
+  post(data);
 }
 
 mum.list = function(fn, data = {})
 {
   if (pre(data)) return;
-  var aa = [0,1].sub(context.anchor);
-  cursor = cursor.add([context.width,context.height].scale(aa)).add(context.offset).add(context.padding);
+  var aa = [0,1].sub(data.anchor);
+  cursor = cursor.add([data.width,data.height].scale(aa)).add(data.offset).add(data.padding);
 
   posts.push(post);
-  post = mum.list.post;
+  post = mum.list.post.bind(data);
   
   if (show_debug())
     render.boundingbox({
       t:cursor.y,
-      b:cursor.y-context.height,
+      b:cursor.y-data.height,
       l:cursor.x,
-      r:cursor.x+context.width
+      r:cursor.x+data.width
     });
     
-  //if (context.background_image) mum.image(null, Object.create(context)) 
-  if (context.background_image) {
-    var imgpos = context.pos.slice();
-    imgpos.y -= context.height/2;
-    imgpos.x -= context.width/2;
-    var imgscale = [context.width,context.height];
-    if (context.slice)
-      render.slice9(game.texture(context.background_image), imgpos, context.slice, imgscale);
+  //if (data.background_image) mum.image(null, Object.create(data)) 
+  if (data.background_image) {
+    var imgpos = data.pos.slice();
+    imgpos.y -= data.height/2;
+    imgpos.x -= data.width/2;
+    var imgscale = [data.width,data.height];
+    if (data.slice)
+      render.slice9(game.texture(data.background_image), imgpos, data.slice, imgscale);
     else
-      render.image(game.texture(context.background_image), imgpos, [context.width,context.height]);
+      render.image(game.texture(data.background_image), imgpos, [data.width,data.height]);
   }
     
   fn();
   
-  context.bb.l -= context.padding.x;
-  context.bb.r += context.padding.x;
-  context.bb.t += context.padding.y;
-  context.bb.b -= context.padding.y;
+  data.bb.l -= data.padding.x;
+  data.bb.r += data.padding.x;
+  data.bb.t += data.padding.y;
+  data.bb.b -= data.padding.y;
 
   if (show_debug())
-    render.boundingbox(context.bb);
+    render.boundingbox(data.bb);
 
   post = posts.pop();
-  end();
+  end(data);
 }
 
 mum.list.post = function(e)
@@ -146,48 +144,48 @@ mum.list.post = function(e)
   cursor.y -= (e.bb.t - e.bb.b);
   cursor.y -= e.padding.y;
   
-  if (context.bb)
-    context.bb = bbox.expand(context.bb,e.bb)
+  if (this.bb)
+    this.bb = bbox.expand(this.bb,e.bb)
   else
-    context.bb = e.bb;
+    this.bb = e.bb;
 }
 
 mum.label = function(str, data = {})
 {
   if (pre(data)) return;
 
-  render.set_font(context.font, context.font_size);
+  render.set_font(data.font, data.font_size);
  
-  context.bb = render.text_bb(str, context.scale, -1, cursor);
-  context.wh = bbox.towh(context.bb);
+  data.bb = render.text_bb(str, data.scale, -1, cursor);
+  data.wh = bbox.towh(data.bb);
   
-  var aa = [0,1].sub(context.anchor);  
+  var aa = [0,1].sub(data.anchor);  
   
-  data.drawpos.y -= (context.bb.t-cursor.y);
-  data.drawpos = data.drawpos.add(context.wh.scale(aa)).add(context.offset);
+  data.drawpos.y -= (data.bb.t-cursor.y);
+  data.drawpos = data.drawpos.add(data.wh.scale(aa)).add(data.offset);
 
-  context.bb = render.text_bb(str, context.scale, data.wrap, data.drawpos);
+  data.bb = render.text_bb(str, data.scale, data.wrap, data.drawpos);
 
-  if (context.action && bbox.pointin(context.bb, input.mouse.screenpos())) {
-    if (context.hover) {
-      context.hover.__proto__ = context;
-      context = context.hover;
-      selected = context;
+  if (data.action && bbox.pointin(data.bb, input.mouse.screenpos())) {
+    if (data.hover) {
+      data.hover.__proto__ = data;
+      data = data.hover;
+      selected = data;
     }
   }
 
-  context.bb = render.text(str, data.drawpos, context.scale, context.color, data.wrap);
+  data.bb = render.text(str, data.drawpos, data.scale, data.color, data.wrap);
     
   if (show_debug())
-    render.boundingbox(context.bb);
+    render.boundingbox(data.bb);
   
-  end();
+  end(data);
 }
 
 mum.image = function(path, data = {})
 {
   if (pre(data)) return;
-  path ??= context.background_image;
+  path ??= data.background_image;
   var tex = path;
   if (typeof path === 'string')
     tex = game.texture(path);
@@ -198,20 +196,31 @@ mum.image = function(path, data = {})
   var aa = [0,0].sub(data.anchor);
   data.drawpos = data.drawpos.add(aa.scale([data.width,data.height]));
   
-  if (context.slice)
-    render.slice9(tex, data.drawpos, context.slice, [data.width,data.height]);
+  if (data.slice)
+    render.slice9(tex, data.drawpos, data.slice, [data.width,data.height]);
   else {
-    cursor.y -= tex.height*context.scale;
-    context.bb = render.image(tex, data.drawpos, [context.scale*tex.width, context.scale*tex.height]);
+    cursor.y -= tex.height*data.scale;
+    data.bb = render.image(tex, data.drawpos, [data.scale*tex.width, data.scale*tex.height]);
   }
   
-  end();
+  end(data);
+}
+
+mum.rectangle = function(data = {})
+{
+  if (pre(data)) return;
+  var aa = [0,0].sub(data.anchor);
+  data.drawpos = data.drawpos.add(aa.scale([data.width,data.height]));
+ 
+  render.rectangle(data.drawpos, data.drawpos.add([data.width,data.height]), data.color);
+
+  end(data);
 }
 
 var btnbb;
 var btnpost = function()
 {
-  btnbb = context.bb;
+  btnbb = data.bb;
 }
 
 mum.button = function(str, data = {padding:[4,4], color:Color.black})
@@ -220,30 +229,30 @@ mum.button = function(str, data = {padding:[4,4], color:Color.black})
   posts.push(post);
   post = btnpost;
   if (typeof str === 'string')
-    render.text(str, cursor.add(context.padding), context.scale, context.color);
+    render.text(str, cursor.add(data.padding), data.scale, data.color);
   else
     str();
 
   if (data.action && data.hover && bbox.pointin(btnbb, input.mouse.screenpos())) {
     data.hover.__proto__ = data;
-    context = data.hover;
+    data = data.hover;
   }
-  render.rectangle([btnbb.l-context.padding.x, btnbb.b-context.padding.y], [btnbb.r+context.padding.y, btnbb.t+context.padding.y], context.color);
-  context.bb = btnbb;
+  render.rectangle([btnbb.l-data.padding.x, btnbb.b-data.padding.y], [btnbb.r+data.padding.y, btnbb.t+data.padding.y], data.color);
+  data.bb = btnbb;
 
   post = posts.pop();
-  end();
+  end(data);
 }
 
 mum.window = function(fn, data = {})
 {
   if (pre(data)) return;
 
-  render.rectangle(cursor, cursor.add(context.size), context.color);
-  cursor.y += context.height;
-  cursor = cursor.add(context.padding);
+  render.rectangle(cursor, cursor.add(data.size), data.color);
+  cursor.y += data.height;
+  cursor = cursor.add(data.padding);
   fn();
-  end();
+  end(data);
 }
 
 mum.ex_hud = function()
