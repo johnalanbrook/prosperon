@@ -190,18 +190,30 @@ mum.image = function(path, data = {})
   if (typeof path === 'string')
     tex = game.texture(path);
 
-  data.width ??= tex.width;
-  data.height ??= tex.height;
+  if (!data.height)
+    if (data.width)
+      data.height = tex.height * (data.width/tex.width);
+    else
+      data.height = tex.height;
 
-  var aa = [0,0].sub(data.anchor);
+  if (!data.width)
+    if (data.height)
+      data.width = tex.width * (data.height/tex.height);
+    else
+      data.height = tex.height;
+
+
+    
+  if (!data.width) data.width = tex.width;
+  if (!data.height) data.height = tex.height;
+
+  var aa = [0,1].sub(data.anchor);
   data.drawpos = data.drawpos.add(aa.scale([data.width,data.height]));
   
   if (data.slice)
     render.slice9(tex, data.drawpos, data.slice, [data.width,data.height]);
-  else {
-    cursor.y -= tex.height*data.scale;
-    data.bb = render.image(tex, data.drawpos, [data.scale*tex.width, data.scale*tex.height]);
-  }
+  else
+    data.bb = render.image(tex, data.drawpos, [data.width, data.height]);
   
   end(data);
 }
