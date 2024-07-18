@@ -681,12 +681,25 @@ JSC_GETSET(emitter, warp_mask, bitmask)
 JSC_CCALL(emitter_emit, emitter_emit(js2emitter(self), js2number(argv[0]), js2transform(argv[1])))
 JSC_CCALL(emitter_step, emitter_step(js2emitter(self), js2number(argv[0]), js2transform(argv[1])))
 JSC_CCALL(emitter_draw,
-  emitter_draw(js2emitter(self));
+  sg_buffer *b = js2sg_buffer(js_getpropstr(self, "buffer"));
+  emitter_draw(js2emitter(self), b);
   return number2js(arrlen(js2emitter(self)->verts));
 )
 
 JSC_CCALL(render_flushtext,
-  return number2js(text_flush());
+  sg_buffer *buf = js2sg_buffer(argv[0]);
+  int amt = text_flush(buf);
+  return number2js(amt);
+)
+
+JSC_CCALL(render_make_textssbo,
+  sg_buffer *b = malloc(sizeof(*b));
+  *b = sg_make_buffer(&(sg_buffer_desc){
+    .type = SG_BUFFERTYPE_STORAGEBUFFER,
+    .size = 4,
+    .usage = SG_USAGE_STREAM
+  });
+  return sg_buffer2js(b);
 )
 
 JSC_CCALL(render_glue_pass,
@@ -982,7 +995,6 @@ JSC_CCALL(render_setpipeline,
   sg_apply_pipeline(p);
 )
 
-JSC_CCALL(render_text_ssbo, return sg_buffer2js(&text_ssbo))
 JSC_CCALL(render_screencolor,
   texture *t = calloc(sizeof(*t), 1);
   t->id = screencolor;
@@ -996,14 +1008,14 @@ JSC_CCALL(render_imgui_end, gui_endframe())
 JSC_CCALL(render_imgui_init, return gui_init(js))
 
 static const JSCFunctionListEntry js_render_funcs[] = {
-  MIST_FUNC_DEF(render, flushtext, 0),
+  MIST_FUNC_DEF(render, flushtext, 1),
   MIST_FUNC_DEF(render, camera_screen2world, 2),
+  MIST_FUNC_DEF(render, make_textssbo, 0),
   MIST_FUNC_DEF(render, viewport, 4),
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, commit, 0),
   MIST_FUNC_DEF(render, glue_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
-  MIST_FUNC_DEF(render, text_ssbo, 0),
   MIST_FUNC_DEF(render, set_camera, 1),
   MIST_FUNC_DEF(render, pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
@@ -2380,10 +2392,17 @@ JSC_SCALL(os_make_model,
   js_setpropstr(v, "material", material2js(me->primitives[0].mat));
   return v;
 )
+
 JSC_CCALL(os_make_emitter,
   emitter *e = make_emitter();
   ret = emitter2js(e);
-  js_setpropstr(ret, "buffer", sg_buffer2js(&e->buffer));
+  sg_buffer *b = malloc(sizeof(*b));
+  *b = sg_make_buffer(&(sg_buffer_desc) {
+    .type = SG_BUFFERTYPE_STORAGEBUFFER,
+    .size = 4,
+    .usage = SG_USAGE_STREAM
+  });
+  js_setpropstr(ret, "buffer", sg_buffer2js(b));
 )
 
 JSC_CCALL(os_make_buffer,

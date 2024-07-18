@@ -17,11 +17,7 @@ emitter *make_emitter() {
   e->tte = lerp(e->explosiveness, e->life/e->max, 0);
   e->scale = 1;
   e->speed = 20;
-  e->buffer = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(struct par_vert),
-    .type = SG_BUFFERTYPE_STORAGEBUFFER,
-    .usage = SG_USAGE_STREAM
-  });
+  
   return e;
 }
 
@@ -62,10 +58,9 @@ void emitter_emit(emitter *e, int count, transform *t)
     emitter_spawn(e, t);
 }
 
-void emitter_draw(emitter *e)
+int emitter_draw(emitter *e, sg_buffer *b)
 {
-  printf("drawing %d particles\n", arrlen(e->particles));
-  if (arrlen(e->particles) == 0) return;
+  if (arrlen(e->particles) == 0) return 0;
   arrsetlen(e->verts, arrlen(e->particles));
   for (int i = 0; i < arrlen(e->particles); i++) {
     if (e->particles[i].time >= e->particles[i].life) continue;
@@ -83,16 +78,16 @@ void emitter_draw(emitter *e)
   sg_range verts;
   verts.ptr = e->verts;
   verts.size = sizeof(*e->verts)*arrlen(e->verts);
-  if (sg_query_buffer_will_overflow(e->buffer, verts.size)) {
-    sg_destroy_buffer(e->buffer);
-    e->buffer = sg_make_buffer(&(sg_buffer_desc){
+  if (sg_query_buffer_will_overflow(*b, verts.size)) {
+    sg_destroy_buffer(*b);
+    *b = sg_make_buffer(&(sg_buffer_desc){
       .size = verts.size,
       .type = SG_BUFFERTYPE_STORAGEBUFFER,
       .usage = SG_USAGE_STREAM
     });
   }
     
-  sg_append_buffer(e->buffer, &verts);
+  sg_append_buffer(*b, &verts);
 }
 
 void emitter_step(emitter *e, double dt, transform *t) {

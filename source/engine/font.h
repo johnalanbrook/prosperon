@@ -34,7 +34,6 @@ typedef struct sFont font;
 
 void font_free(font *f);
 
-void font_init();
 struct sFont *MakeFont(const char *fontfile, int height);
 void font_set(font *f);
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
@@ -42,6 +41,6 @@ void text_settype(struct sFont *font);
 struct boundingbox text_bb(const char *text, float scale, float lw, float tracking);
 int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
 
-int text_flush();
+int text_flush(sg_buffer *buf);
 
 #endif

@@ -46,6 +46,8 @@ sampler smp;
 void main()
 {
   color = color0;
+  color.r = 1;
+  color.a = 1;
 }
 @end
 

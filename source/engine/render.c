@@ -149,8 +149,6 @@ void render_init() {
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
 #endif
 
-  font_init();
-
   sg_features feat = sg_query_features();
   TOPLEFT = feat.origin_top_left;
 

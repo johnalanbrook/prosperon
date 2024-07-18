@@ -62,7 +62,6 @@ typedef struct emitter {
   /* TRAILS */
   warpmask warp_mask;
   double tte; /* time to emit */ 
-  sg_buffer buffer; 
 } emitter;
 
 emitter *make_emitter();
@@ -70,6 +69,6 @@ void emitter_free(emitter *e);
 
 void emitter_emit(emitter *e, int count, transform *t);
 void emitter_step(emitter *e, double dt, transform *t);
-void emitter_draw(emitter *e);
+int emitter_draw(emitter *e, sg_buffer *b);
 
 #endif

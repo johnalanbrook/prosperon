@@ -99,6 +99,7 @@ static JSClassDef js_##TYPE##_class = {\
   .finalizer = js_##TYPE##_finalizer,\
 };\
 TYPE *js2##TYPE (JSValue val) { \
+  if (JS_IsUndefined(val)) return NULL; \
   assert(JS_GetClassID(val) == js_##TYPE##_id); \
   return JS_GetOpaque(val,js_##TYPE##_id); \
 }\

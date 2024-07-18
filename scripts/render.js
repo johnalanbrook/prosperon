@@ -438,6 +438,7 @@ render.init = function() {
   circleshader = render.make_shader("shaders/circle.cg");
   polyshader = render.make_shader("shaders/poly.cg");
   parshader = render.make_shader("shaders/baseparticle.cg");
+  textssbo = render.make_textssbo();
   
   render.textshader = textshader;
   
@@ -637,22 +638,28 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
   render.draw(shape.quad);
 }
 
-var textssbo = render.text_ssbo();
-
-render.emitter(emit)
+render.emitter = function(emit)
 {
-  var ssbo = emit.draw();
-  render.use_shader(particleshader);
-  render.draw(shape.quad, ssbo, 
+  var amt = emit.draw();
+  if (amt === 0) return;
+  render.use_shader(parshader);
+  render.use_mat({});
+  render.draw(shape.quad, emit.buffer, amt);
 }
+
+var textssbo;
 
 render.flush_text = function()
 {
   if (!render.textshader) return;
+  var amt = render.flushtext(textssbo);
+  
   render.use_shader(render.textshader);
   render.use_mat({text:render.font.texture});
 
-  render.draw(shape.quad, textssbo, render.flushtext());
+  if (amt === 0) return;
+  
+  render.draw(shape.quad, textssbo, amt);
 }
 
 render.fontcache = {};

@@ -20,8 +20,6 @@
 
 struct sFont *use_font;
 
-sg_buffer text_ssbo;
-
 struct text_vert {
   HMM_Vec2 pos;
   HMM_Vec2 wh;
@@ -31,15 +29,6 @@ struct text_vert {
 };
 
 static struct text_vert *text_buffer;
-
-void font_init() {
-  text_ssbo = sg_make_buffer(&(sg_buffer_desc){
-    .size = sizeof(struct text_vert),
-    .type = SG_BUFFERTYPE_STORAGEBUFFER,
-    .usage = SG_USAGE_STREAM,
-    .label = "text buffer"
-  });
-}
 
 void font_free(font *f)
 {
@@ -177,15 +166,15 @@ void draw_char_box(struct Character c, HMM_Vec2 cursor, float scale, struct rgba
   b.y = cursor.Y + wh.y/2;
 }
 
-int text_flush() {
+int text_flush(sg_buffer *buf) {
   if (arrlen(text_buffer) ==  0) return 0;
 
   sg_range verts;
   verts.ptr = text_buffer;
   verts.size = sizeof(struct text_vert) * arrlen(text_buffer);
-  if (sg_query_buffer_will_overflow(text_ssbo, verts.size)) {
-    sg_destroy_buffer(text_ssbo);
-    text_ssbo = sg_make_buffer(&(sg_buffer_desc){
+  if (sg_query_buffer_will_overflow(*buf, verts.size)) {
+    sg_destroy_buffer(*buf);
+    *buf = sg_make_buffer(&(sg_buffer_desc){
       .size = verts.size,
       .type = SG_BUFFERTYPE_STORAGEBUFFER,
       .usage = SG_USAGE_STREAM,
@@ -193,7 +182,7 @@ int text_flush() {
     });
   }
     
-  sg_append_buffer(text_ssbo, &verts);
+  sg_append_buffer(*buf, &verts);
   int n = arrlen(text_buffer);
   arrsetlen(text_buffer, 0);
   return n;
