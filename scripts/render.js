@@ -178,9 +178,11 @@ render.make_shader = function(shader)
     var data = json.decode(io.slurp(writejson));
     var filemod = io.mod(writejson);
     if (!data.files) break breakme;
-    for (var i of data.files)
-      if (io.mod(i) > filemod)
+    for (var i of data.files) {
+      if (io.mod(i) > filemod) {
         break breakme;
+      }
+    }
   
     profile.report(st, `CACHE make shader from ${file}`);
     var shaderobj = json.decode(io.slurp(writejson));
@@ -426,6 +428,7 @@ var textshader;
 var circleshader;
 var polyshader;
 var slice9shader;
+var parshader;
 
 render.init = function() {
   textshader = render.make_shader("shaders/text_base.cg");
@@ -434,6 +437,7 @@ render.init = function() {
   slice9shader = render.make_shader("shaders/9slice.cg");
   circleshader = render.make_shader("shaders/circle.cg");
   polyshader = render.make_shader("shaders/poly.cg");
+  parshader = render.make_shader("shaders/baseparticle.cg");
   
   render.textshader = textshader;
   
@@ -634,6 +638,13 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
 }
 
 var textssbo = render.text_ssbo();
+
+render.emitter(emit)
+{
+  var ssbo = emit.draw();
+  render.use_shader(particleshader);
+  render.draw(shape.quad, ssbo, 
+}
 
 render.flush_text = function()
 {

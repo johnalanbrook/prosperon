@@ -1,7 +1,7 @@
 #blend mix
+#depth off
 #primitive triangle
 #cull none
-#depth off
  
 @vs vs
 in vec3 a_pos;

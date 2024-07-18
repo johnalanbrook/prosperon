@@ -1,0 +1,52 @@
+#depth off
+#blend mix
+
+@vs vs
+in vec2 a_pos;
+in vec2 a_uv;
+
+struct particle {
+  vec2 pos;
+  float angle;
+  float scale;
+  vec4 color;
+};
+
+readonly buffer ssbo {
+  particle par[];
+};
+
+out vec2 uv;
+out vec2 fuv;
+out vec4 color0;
+
+vec2 pos;
+
+uniform mat4 vp;
+
+void main()
+{
+  particle p = par[gl_InstanceIndex];
+  pos = p.pos+(a_pos);
+  color0 = p.color;
+  gl_Position = vp * vec4(pos, 0.0, 1.0);
+}
+@end
+
+@fs fs
+in vec2 uv;
+in vec2 fuv;
+in vec4 color0;
+
+out vec4 color;
+
+texture2D text;
+sampler smp;
+
+void main()
+{
+  color = color0;
+}
+@end
+
+@program text vs fs

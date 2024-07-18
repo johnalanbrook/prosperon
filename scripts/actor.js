@@ -17,6 +17,12 @@ actor.spawn = function(script, config, callback){
   return padawan;
 };
 
+actor.tween = function(from,to,time,fn) {
+  var stop = tween(from,to,time,fn);
+  this.timers.push(stop);
+  return stop;
+}
+
 actor.spawn.doc = `Create a new actor, using this actor as the master, initializing it with 'script' and with data (as a JSON or Nota file) from 'config'.`;
 
 actor.rm_pawn = function(pawn)
@@ -36,25 +42,10 @@ actor.kill = function(){
   this.__dead__ = true;
   if (typeof this.die === 'function') this.die();
   if (typeof this.stop === 'function') this.stop();
+  if (typeof this.garbage === 'function') this.garbage();
 };
 
 actor.kill.doc = `Remove this actor and all its padawans from existence.`;
-
-actor.interval = function(fn, seconds) {
-  var cur;
-  var stop = function() {
-    cur();
-  }
-  
-  var f = function() {
-    fn.call(this);
-    cur = this.delay(f,seconds);
-  }
-  
-  cur = this.delay(f,seconds);
-  
-  return stop;
-}
 
 actor.delay = function(fn, seconds) {
   var timers = this.timers;
@@ -64,7 +55,8 @@ actor.delay = function(fn, seconds) {
   }
 
   function execute() {
-    fn();
+    if (fn) fn();
+    if (stop.then) stop.then();
     stop();
   }
   

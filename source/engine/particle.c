@@ -64,6 +64,7 @@ void emitter_emit(emitter *e, int count, transform *t)
 
 void emitter_draw(emitter *e)
 {
+  printf("drawing %d particles\n", arrlen(e->particles));
   if (arrlen(e->particles) == 0) return;
   arrsetlen(e->verts, arrlen(e->particles));
   for (int i = 0; i < arrlen(e->particles); i++) {

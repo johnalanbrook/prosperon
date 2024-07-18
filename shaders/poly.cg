@@ -1,5 +1,5 @@
-#blend mix
 #depth off
+#blend mix
 #primitive triangle
 #cull none
 
