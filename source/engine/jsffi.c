@@ -670,11 +670,14 @@ JSC_GETSET(emitter, scale, number)
 JSC_GETSET(emitter, scale_var, number)
 JSC_GETSET(emitter, grow_for, number)
 JSC_GETSET(emitter, shrink_for, number)
+JSC_GETSET(emitter, color, vec4)
 JSC_GETSET(emitter, max, number)
 JSC_GETSET(emitter, explosiveness, number)
 JSC_GETSET(emitter, bounce, number)
 JSC_GETSET(emitter, collision_mask, bitmask)
 JSC_GETSET(emitter, die_after_collision, boolean)
+JSC_GETSET(emitter, tumble, number)
+JSC_GETSET(emitter, tumble_rate, number)
 JSC_GETSET(emitter, persist, number)
 JSC_GETSET(emitter, persist_var, number)
 JSC_GETSET(emitter, warp_mask, bitmask)
@@ -1492,6 +1495,9 @@ static const JSCFunctionListEntry js_emitter_funcs[] = {
   CGETSET_ADD(emitter, grow_for),
   CGETSET_ADD(emitter, shrink_for),
   CGETSET_ADD(emitter, max),
+  CGETSET_ADD(emitter, color),
+  CGETSET_ADD(emitter, tumble),
+  CGETSET_ADD(emitter, tumble_rate),
   CGETSET_ADD(emitter, explosiveness),
   CGETSET_ADD(emitter, bounce),
   CGETSET_ADD(emitter, collision_mask),

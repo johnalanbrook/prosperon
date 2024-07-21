@@ -17,6 +17,7 @@ emitter *make_emitter() {
   e->tte = lerp(e->explosiveness, e->life/e->max, 0);
   e->scale = 1;
   e->speed = 20;
+  e->color = (HMM_Vec4){1,1,1,1};
   
   return e;
 }
@@ -46,7 +47,8 @@ int emitter_spawn(emitter *e, transform *t)
   HMM_Vec2 v2n = HMM_V2Rotate((HMM_Vec2){0,1}, newan);
   HMM_Vec3 norm = (HMM_Vec3){v2n.x, v2n.y,0};
   p.v = HMM_MulV4F((HMM_Vec4){norm.x,norm.y,norm.z,0}, variate(e->speed, e->variation));
-  p.angle = 0.25;
+  p.angle = e->tumble;
+  p.av = e->tumble_rate;
   p.scale = variate(e->scale*t->scale.x, e->scale_var);
   arrput(e->particles,p);
   return 1;
@@ -58,9 +60,9 @@ void emitter_emit(emitter *e, int count, transform *t)
     emitter_spawn(e, t);
 }
 
-int emitter_draw(emitter *e, sg_buffer *b)
+void emitter_draw(emitter *e, sg_buffer *b)
 {
-  if (arrlen(e->particles) == 0) return 0;
+  if (arrlen(e->particles) == 0) return;
   arrsetlen(e->verts, arrlen(e->particles));
   for (int i = 0; i < arrlen(e->particles); i++) {
     if (e->particles[i].time >= e->particles[i].life) continue;
@@ -68,10 +70,10 @@ int emitter_draw(emitter *e, sg_buffer *b)
     e->verts[i].pos = p->pos.xy;
     e->verts[i].angle = p->angle;
     e->verts[i].scale = p->scale;
-/*    if (p->time < e->grow_for)
+    if (p->time < e->grow_for)
       e->verts[i].scale = lerp(p->time/e->grow_for, 0, p->scale);
     else if (p->time > (p->life - e->shrink_for))
-      e->verts[i].scale = lerp((p->time-(p->life-e->shrink_for))/e->shrink_for, p->scale, 0);*/
+      e->verts[i].scale = lerp((p->time-(p->life-e->shrink_for))/e->shrink_for, p->scale, 0);
     e->verts[i].color = p->color;
   }
 
@@ -96,13 +98,14 @@ void emitter_step(emitter *e, double dt, transform *t) {
   for (int i = 0; i < arrlen(e->particles); i++) {
     if (e->particles[i].time >= e->particles[i].life) continue;
   
-    //if (e->warp_mask & gravmask)
-//      e->particles[i].v = HMM_AddV4(e->particles[i].v, g_accel);
+    if (e->warp_mask & gravmask)
+      e->particles[i].v = HMM_AddV4(e->particles[i].v, g_accel);
       
     e->particles[i].pos = HMM_AddV4(e->particles[i].pos, HMM_MulV4F(e->particles[i].v, dt));
     e->particles[i].angle += e->particles[i].av*dt;
     e->particles[i].time += dt;
-    e->particles[i].color = sample_sampler(&e->color, e->particles[i].time/e->particles[i].life);
+    e->particles[i].color = e->color;
+    //e->particles[i].color = sample_sampler(&e->color, e->particles[i].time/e->particles[i].life);
     e->particles[i].scale = e->scale;
   
    if (e->particles[i].time >= e->particles[i].life)

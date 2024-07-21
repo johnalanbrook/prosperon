@@ -21,13 +21,17 @@ out vec2 fuv;
 out vec4 color0;
 
 vec2 pos;
-
 uniform mat4 vp;
 
 void main()
 {
   particle p = par[gl_InstanceIndex];
-  pos = p.pos+(a_pos);
+  pos = a_pos - 0.5;
+  vec2 rot = pos;
+  rot.x = pos.x*cos(p.angle) - pos.y*sin(p.angle);
+  rot.y = pos.x*sin(p.angle) + pos.y*cos(p.angle);
+  pos = rot*p.scale;
+  pos += p.pos;
   color0 = p.color;
   gl_Position = vp * vec4(pos, 0.0, 1.0);
 }
@@ -46,8 +50,6 @@ sampler smp;
 void main()
 {
   color = color0;
-  color.r = 1;
-  color.a = 1;
 }
 @end
 

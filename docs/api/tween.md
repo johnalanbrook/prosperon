@@ -1,1 +1,15 @@
-scripts/debug.js:205: [2024-07-03 12:13:12] [22;33mwarn[0m, script: Cannot print the API of something that isn't an object.
+# Tween
+#### default
+**object**
+
+
+
+#### start(obj, target, tvals, options)
+
+
+
+#### make(obj, target, tvals, options)
+
+
+
+

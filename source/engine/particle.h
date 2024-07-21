@@ -47,7 +47,7 @@ typedef struct emitter {
   float divergence; /* angular degree of variation from emitter normal, up to 1 */
   float tumble; /* amount of random rotation of particles */
   float tumble_rate; /* tumble rotation */
-  sampler color; /* color over particle lifetime */
+  HMM_Vec4 color; /* color over particle lifetime */
   float scale;
   float scale_var;
   float grow_for; /* seconds to grow from small until scale */
@@ -69,6 +69,6 @@ void emitter_free(emitter *e);
 
 void emitter_emit(emitter *e, int count, transform *t);
 void emitter_step(emitter *e, double dt, transform *t);
-int emitter_draw(emitter *e, sg_buffer *b);
+void emitter_draw(emitter *e, sg_buffer *b);
 
 #endif
