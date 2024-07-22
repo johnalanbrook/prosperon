@@ -5,7 +5,6 @@
 #include "font.h"
 #include "gameobject.h"
 #include "log.h"
-#include "particle.h"
 #include "window.h"
 #include "model.h"
 #include "stb_ds.h"

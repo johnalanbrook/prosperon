@@ -7,7 +7,6 @@
 #include "resources.h"
 #include "spline.h"
 #include <stdio.h>
-#include "particle.h"
 #include "simplex.h"
 #include <wctype.h>
 

@@ -15,7 +15,6 @@
 #include "window.h"
 #include "spline.h"
 #include "yugine.h"
-#include "particle.h"
 #include <assert.h>
 #include "resources.h"
 #include <sokol/sokol_time.h>
@@ -96,7 +95,6 @@ void cpConstraint_free(cpConstraint *c)
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
 QJSCLASS(transform)
-QJSCLASS(emitter)
 QJSCLASS(dsp_node)
 QJSCLASS(texture)
 QJSCLASS(font)
@@ -661,34 +659,6 @@ sg_bindings js2bind(JSValue v)
   return bind;
 }
 
-JSC_GETSET(emitter, life, number)
-JSC_GETSET(emitter, life_var, number)
-JSC_GETSET(emitter, speed, number)
-JSC_GETSET(emitter, variation, number)
-JSC_GETSET(emitter, divergence, number)
-JSC_GETSET(emitter, scale, number)
-JSC_GETSET(emitter, scale_var, number)
-JSC_GETSET(emitter, grow_for, number)
-JSC_GETSET(emitter, shrink_for, number)
-JSC_GETSET(emitter, color, vec4)
-JSC_GETSET(emitter, max, number)
-JSC_GETSET(emitter, explosiveness, number)
-JSC_GETSET(emitter, bounce, number)
-JSC_GETSET(emitter, collision_mask, bitmask)
-JSC_GETSET(emitter, die_after_collision, boolean)
-JSC_GETSET(emitter, tumble, number)
-JSC_GETSET(emitter, tumble_rate, number)
-JSC_GETSET(emitter, persist, number)
-JSC_GETSET(emitter, persist_var, number)
-JSC_GETSET(emitter, warp_mask, bitmask)
-JSC_CCALL(emitter_emit, emitter_emit(js2emitter(self), js2number(argv[0]), js2transform(argv[1])))
-JSC_CCALL(emitter_step, emitter_step(js2emitter(self), js2number(argv[0]), js2transform(argv[1])))
-JSC_CCALL(emitter_draw,
-  sg_buffer *b = js2sg_buffer(js_getpropstr(self, "buffer"));
-  emitter_draw(js2emitter(self), b);
-  return number2js(arrlen(js2emitter(self)->verts));
-)
-
 JSC_CCALL(render_flushtext,
   sg_buffer *buf = js2sg_buffer(argv[0]);
   int amt = text_flush(buf);
@@ -968,24 +938,67 @@ JSC_CCALL(render_setbind,
   sg_apply_bindings(&bind);
 )
 
+typedef struct particle_ss {
+  HMM_Mat4 model;
+  HMM_Vec4 color;
+} particle_ss;
+
+JSC_CCALL(render_make_particle_ssbo,
+  JSValue array = argv[0];
+  size_t size = js_arrlen(array)*(sizeof(particle_ss));
+  sg_buffer *b = js2sg_buffer(argv[1]);
+  if (!b) return JS_UNDEFINED;
+  
+  particle_ss ms[js_arrlen(array)];
+
+  if (sg_query_buffer_will_overflow(*b, size)) {
+    sg_destroy_buffer(*b);
+    *b = sg_make_buffer(&(sg_buffer_desc){
+      .type = SG_BUFFERTYPE_STORAGEBUFFER,
+      .size = size,
+      .usage = SG_USAGE_STREAM,
+      .label = "transform buffer"
+    });
+  }
+
+  for (int i = 0; i < js_arrlen(array); i++) {
+    JSValue sub = js_getpropidx(array,i);
+    ms[i].model = transform2mat(*js2transform(js_getpropidx(sub, 0)));
+    ms[i].color = js2vec4(js_getpropidx(sub,1));
+  }
+
+  sg_append_buffer(*b, (&(sg_range){
+    .ptr = ms,
+    .size = size
+  }));
+
+)
+
 JSC_CCALL(render_make_t_ssbo,
   JSValue array = argv[0];
+  size_t size = js_arrlen(array)*sizeof(HMM_Mat4);
+  sg_buffer *b = js2sg_buffer(argv[1]);
+  if (!b) return JS_UNDEFINED;
+  
   HMM_Mat4 ms[js_arrlen(array)];
+
+  if (sg_query_buffer_will_overflow(*b, size)) {
+    sg_destroy_buffer(*b);
+    *b = sg_make_buffer(&(sg_buffer_desc){
+      .type = SG_BUFFERTYPE_STORAGEBUFFER,
+      .size = size,
+      .usage = SG_USAGE_STREAM,
+      .label = "transform buffer"
+    });
+  }
+
   for (int i = 0; i < js_arrlen(array); i++)
     ms[i] = transform2mat(*js2transform(js_getpropidx(array, i)));
 
-  sg_buffer *rr = malloc(sizeof(sg_buffer));
-  *rr = sg_make_buffer(&(sg_buffer_desc){
-    .data = {
-      .ptr = ms,
-      .size = sizeof(HMM_Mat4)*js_arrlen(array),
-    },
-    .type = SG_BUFFERTYPE_STORAGEBUFFER,
-    .usage = SG_USAGE_IMMUTABLE,
-    .label = "transform buffer"
-  });
-
-  return sg_buffer2js(rr);
+  sg_append_buffer(*b, (&(sg_range){
+    .ptr = ms,
+    .size = size
+  }));
 )
 
 JSC_CCALL(render_spdraw,
@@ -1037,7 +1050,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, gfx_gui, 0),
   MIST_FUNC_DEF(render, imgui_end, 0),
   MIST_FUNC_DEF(render, imgui_init, 0),
-  MIST_FUNC_DEF(render, make_t_ssbo, 1)
+  MIST_FUNC_DEF(render, make_t_ssbo, 2),
+  MIST_FUNC_DEF(render, make_particle_ssbo, 2)
 };
 
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
@@ -1484,32 +1498,6 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   CGETSET_ADD(physics, collision_persistence),
 };
 
-static const JSCFunctionListEntry js_emitter_funcs[] = {
-  CGETSET_ADD(emitter, life),
-  CGETSET_ADD(emitter, life_var),
-  CGETSET_ADD(emitter, speed),
-  CGETSET_ADD(emitter, variation),
-  CGETSET_ADD(emitter, divergence),
-  CGETSET_ADD(emitter, scale),
-  CGETSET_ADD(emitter, scale_var),
-  CGETSET_ADD(emitter, grow_for),
-  CGETSET_ADD(emitter, shrink_for),
-  CGETSET_ADD(emitter, max),
-  CGETSET_ADD(emitter, color),
-  CGETSET_ADD(emitter, tumble),
-  CGETSET_ADD(emitter, tumble_rate),
-  CGETSET_ADD(emitter, explosiveness),
-  CGETSET_ADD(emitter, bounce),
-  CGETSET_ADD(emitter, collision_mask),
-  CGETSET_ADD(emitter, die_after_collision),
-  CGETSET_ADD(emitter, persist),
-  CGETSET_ADD(emitter, persist_var),
-  CGETSET_ADD(emitter, warp_mask),
-  MIST_FUNC_DEF(emitter, emit, 1),
-  MIST_FUNC_DEF(emitter, step, 1),
-  MIST_FUNC_DEF(emitter, draw, 1)
-};
-
 JSC_GETSET(transform, pos, vec3)
 JSC_GETSET(transform, scale, vec3)
 JSC_GETSET(transform, rotation, quat)
@@ -1543,10 +1531,21 @@ JSC_CCALL(transform_direction,
   return vec32js(HMM_QVRot(js2vec3(argv[0]), t->rotation));
 )
 
+JSC_CCALL(transform_phys2d,
+  transform *t = js2transform(self);
+  HMM_Vec2 v = js2vec2(argv[0]);
+  float av = js2number(argv[1]);
+  float dt = js2number(argv[2]);
+  transform_move(t, (HMM_Vec3){v.x*dt,v.y*dt,0});
+  HMM_Quat rot = HMM_QFromAxisAngle_LH((HMM_Vec3){0,0,1}, av*dt);
+  t->rotation = HMM_MulQ(t->rotation, rot);
+)
+
 static const JSCFunctionListEntry js_transform_funcs[] = {
   CGETSET_ADD(transform, pos),
   CGETSET_ADD(transform, scale),
   CGETSET_ADD(transform, rotation),
+  MIST_FUNC_DEF(transform, phys2d, 3),
   MIST_FUNC_DEF(transform, move, 1),
   MIST_FUNC_DEF(transform, rotate, 2),
   MIST_FUNC_DEF(transform, angle, 1),
@@ -2399,18 +2398,6 @@ JSC_SCALL(os_make_model,
   return v;
 )
 
-JSC_CCALL(os_make_emitter,
-  emitter *e = make_emitter();
-  ret = emitter2js(e);
-  sg_buffer *b = malloc(sizeof(*b));
-  *b = sg_make_buffer(&(sg_buffer_desc) {
-    .type = SG_BUFFERTYPE_STORAGEBUFFER,
-    .size = 4,
-    .usage = SG_USAGE_STREAM
-  });
-  js_setpropstr(ret, "buffer", sg_buffer2js(b));
-)
-
 JSC_CCALL(os_make_buffer,
   int type = js2number(argv[1]);
   float *b = malloc(sizeof(float)*js_arrlen(argv[0]));
@@ -2590,7 +2577,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_model, 1),
   MIST_FUNC_DEF(os, make_transform, 0),
-  MIST_FUNC_DEF(os, make_emitter, 0),
   MIST_FUNC_DEF(os, make_buffer, 1),
   MIST_FUNC_DEF(os, make_line_prim, 4),
   MIST_FUNC_DEF(os, make_cylinder, 2),
@@ -2623,7 +2609,6 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(gameobject);
   QJSCLASSPREP_FUNCS(transform);
   QJSCLASSPREP_FUNCS(dsp_node);
-  QJSCLASSPREP_FUNCS(emitter);
   QJSCLASSPREP_FUNCS(warp_gravity);
   QJSCLASSPREP_FUNCS(warp_damp);
   QJSCLASSPREP_FUNCS(texture);

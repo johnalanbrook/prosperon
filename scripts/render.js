@@ -162,9 +162,13 @@ render.set_camera = function(cam)
   delete cur.shader;
   setcam(cam);
 }
+
+var shader_cache = {};
  
 render.make_shader = function(shader)
 {
+  if (shader_cache[shader]) return shader_cache[shader];
+  
   var file = shader;
   shader = io.slurp(shader);
   if (!shader) {
@@ -188,6 +192,7 @@ render.make_shader = function(shader)
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
     obj.pipe = render.pipeline(obj);
+    shader_cache[shader] = obj;
     return obj;
   }
   
@@ -304,6 +309,7 @@ render.make_shader = function(shader)
   var obj = compiled[os.sys()];
   obj.pipe = render.pipeline(obj);
 
+  shader_cache[shader] = obj;
   return obj;
 }
 
@@ -640,11 +646,14 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
 
 render.emitter = function(emit)
 {
-  var amt = emit.draw();
+  var amt = Object.values(emit.particles).length;
   if (amt === 0) return;
   render.use_shader(parshader);
   render.use_mat(emit);
-  render.draw(shape.quad, emit.buffer, amt);
+  var ts = [];
+  for (var p of Object.values(emit.particles)) ts.push([p.transform,p.color]);
+  render.make_particle_ssbo(ts, emit.ssbo);
+  render.draw(shape.quad, emit.ssbo, amt);
 }
 
 var textssbo;

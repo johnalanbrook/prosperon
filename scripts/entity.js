@@ -36,7 +36,6 @@ var entity = {
   rigidify() {
     this.body = os.make_body(this.transform);
   },
-
   
   path_from(o) {
     var p = this.toString();

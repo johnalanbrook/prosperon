@@ -8,9 +8,7 @@ in vec2 a_uv;
 uniform vec2 diffuse_size;
 
 struct particle {
-  vec2 pos;
-  float angle;
-  float scale;
+  mat4 model;
   vec4 color;
 };
 
@@ -28,21 +26,16 @@ void main()
 {
   particle p = par[gl_InstanceIndex];
   pos = a_pos - 0.5;
-  vec2 rot = pos;
-  rot.x = pos.x*cos(p.angle) - pos.y*sin(p.angle);
-  rot.y = pos.x*sin(p.angle) + pos.y*cos(p.angle);
-  pos = rot*p.scale;
-  pos += p.pos;
-  color0 = p.color;
-  gl_Position = vp * vec4(pos, 0.0, 1.0);
+  gl_Position = vp * p.model * vec4(pos, 0.0, 1.0);
   uv = a_pos;
+  color0 = p.color;
 }
 @end
 
 @fs fs
 in vec2 uv;
-in vec4 color0;
 
+in vec4 color0;
 out vec4 color;
 
 texture2D diffuse;
@@ -50,7 +43,7 @@ sampler smp;
 
 void main()
 {
-  color = texture(sampler2D(diffuse,smp), uv);
+  color = texture(sampler2D(diffuse,smp),uv);
   color *= color0;
 }
 @end

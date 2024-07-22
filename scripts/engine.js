@@ -512,6 +512,7 @@ global.mixin("scripts/color");
 global.mixin("scripts/gui");
 global.mixin("scripts/tween");
 global.mixin("scripts/ai");
+global.mixin("scripts/particle");
 
 var timer = {
   update(dt) {

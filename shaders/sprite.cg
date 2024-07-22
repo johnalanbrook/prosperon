@@ -13,7 +13,6 @@ uniform vec4 shade;
 void frag()
 {
   color = texture(sampler2D(diffuse,smp), uv);
-  if (color.a < 0.1) discard;
   color *= shade;
 }
 @end
