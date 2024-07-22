@@ -643,7 +643,7 @@ render.emitter = function(emit)
   var amt = emit.draw();
   if (amt === 0) return;
   render.use_shader(parshader);
-  render.use_mat({});
+  render.use_mat(emit);
   render.draw(shape.quad, emit.buffer, amt);
 }
 

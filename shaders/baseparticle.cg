@@ -5,6 +5,8 @@
 in vec2 a_pos;
 in vec2 a_uv;
 
+uniform vec2 diffuse_size;
+
 struct particle {
   vec2 pos;
   float angle;
@@ -17,7 +19,6 @@ readonly buffer ssbo {
 };
 
 out vec2 uv;
-out vec2 fuv;
 out vec4 color0;
 
 vec2 pos;
@@ -34,22 +35,23 @@ void main()
   pos += p.pos;
   color0 = p.color;
   gl_Position = vp * vec4(pos, 0.0, 1.0);
+  uv = a_pos;
 }
 @end
 
 @fs fs
 in vec2 uv;
-in vec2 fuv;
 in vec4 color0;
 
 out vec4 color;
 
-texture2D text;
+texture2D diffuse;
 sampler smp;
 
 void main()
 {
-  color = color0;
+  color = texture(sampler2D(diffuse,smp), uv);
+  color *= color0;
 }
 @end
 
