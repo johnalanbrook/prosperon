@@ -46,7 +46,18 @@ emitter.die_hook = std_die;
 emitter.spawn = function(t)
 {
   t ??= this.transform;
-  var par = {
+  
+  var par = this.dead.shift();
+  if (par) {
+    par.body.pos = t.pos;
+    par.transform.scale = [this.scale,this.scale,this.scale];
+    this.particles[par.id] = par;
+    par.time = 0;
+    this.spawn_hook(par);
+    return;
+  }
+
+  par = {
     transform: os.make_transform(),
     life: this.life,
     time: 0,
@@ -83,6 +94,7 @@ emitter.step = function(dt)
     
     if (p.time >= p.life) {
       this.die_hook(p);
+      this.dead.push(this.particles[p.id]);
       delete this.particles[p.id];
     }
   }
@@ -97,7 +109,8 @@ var make_emitter = function()
   var e = Object.create(emitter);
   e.ssbo = render.make_textssbo();
   e.shape = shape.quad;
-  e.shader = render.make_shader("shaders/baseparticle.cg");  
+  e.shader = render.make_shader("shaders/baseparticle.cg");
+  e.dead = [];
   return e;
 }
 
