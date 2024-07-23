@@ -508,7 +508,7 @@ sg_bindings primitive_bind(primitive *p)
 
 void model_draw_go(model *model, transform *go)
 {
-  HMM_Mat4 gom = transform2mat(*go);
+  HMM_Mat4 gom = transform2mat(go);
   
   animation_run(&model->anim, apptime());
 

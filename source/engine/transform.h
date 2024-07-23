@@ -12,6 +12,7 @@ typedef struct transform {
 } transform;
 
 transform *make_transform();
+void transform_apply(transform *t);
 void transform_free(transform *t);
 
 #define VEC2_FMT "[%g,%g]"
@@ -33,7 +34,7 @@ float vec_dirangle(HMM_Vec2 a, HMM_Vec2 b);
 HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos);
 HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir);
 
-HMM_Mat4 transform2mat(transform t);
+HMM_Mat4 transform2mat(transform *t);
 transform mat2transform(HMM_Mat4 m);
 
 HMM_Quat angle2rotation(float angle);

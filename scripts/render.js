@@ -541,11 +541,9 @@ render.flush_poly = function()
 
 render.line = function(points, color = Color.white, thickness = 1) {
   var transform = os.make_transform();
-  var vv = points[1].sub(points[0]);
-  var dist = Vector.length(vv);
-  var center = vv.scale(0.5).add(points[0]);
-  transform.move([center.x,center.y,0]);
-  transform.rotate([0,0,-1], Vector.angle(vv));
+  var dist = Vector.distance(points[0],points[1]);
+  transform.move(Vector.midpoint(points[0],points[1]));
+  transform.rotate([0,0,-1], Vector.angle([points[1].x-points[0].x, points[1].y-points[0].y]));
   transform.scale = [dist, thickness, 1];
   poly_cache.push({
     transform:transform,
@@ -598,17 +596,26 @@ render.boundingbox = function(bb, color = Color.white) {
 }
 
 render.rectangle = function(lowerleft, upperright, color) {
-  var thickness = upperright.x-lowerleft.x;
-  var mid = thickness/2;
-  var from = [mid+lowerleft.x, lowerleft.y];
-  var to = [mid+lowerleft.x, upperright.y];
-  render.line([from,to], color, thickness);
+  var transform = os.make_transform();
+  var wh = [upperright.x-lowerleft.x, upperright.y-lowerleft.y];
+  transform.move(Vector.midpoint(lowerleft,upperright));
+  transform.scale = [wh.x,wh.y,1];
+  poly_cache.push({
+    transform:transform,
+    color:color
+  });
+  check_flush(render.flush_poly);
 };
   
 render.box = function(pos, wh, color = Color.white) {
-  var lower = pos.sub(wh.scale(0.5));
-  var upper = pos.add(wh.scale(0.5));
-  render.rectangle(lower,upper,color);
+  var transform = os.make_transform();
+  transform.move(pos);
+  transform.scale = [wh.x,wh.y,1];
+  poly_cache.push({
+    transform:transform,
+    color:color
+  });
+  check_flush(render.flush_poly);  
 };
 
 render.window = function(pos, wh, color) {

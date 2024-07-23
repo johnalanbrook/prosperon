@@ -1525,6 +1525,9 @@ Vector.random = function() {
   return Vector.norm(vec);
 }
 
+Vector.midpoint = function(a,b) { return [(a.x+b.x)/2, (a.y+b.y)/2]; }
+Vector.distance = function(a,b) { return Math.hypot(b.x-a.x, b.y-a.y); }
+
 Vector.angle_between = function(a,b)
 {
   var dot = Vector.dot(a,b);

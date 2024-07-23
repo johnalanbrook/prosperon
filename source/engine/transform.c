@@ -5,16 +5,21 @@
 transform *make_transform()
 {
   transform *t = calloc(sizeof(transform),1);
+    
   t->scale = (HMM_Vec3){1,1,1};
   t->rotation = (HMM_Quat){0,0,0,1};
+  t->dirty = 1;
   return t;
 }
 
 void transform_free(transform *t) { free(t); }
 
+void transform_apply(transform *t) { t->dirty = 1; }
+
 void transform_move(transform *t, HMM_Vec3 v)
 {
   t->pos = HMM_AddV3(t->pos, v);
+  t->dirty = 1;
 }
 
 HMM_Vec3 transform_direction(transform *t, HMM_Vec3 dir)
@@ -42,7 +47,6 @@ HMM_Vec2 mat_right(HMM_Mat3 m) { return HMM_NormV2(m.Columns[0].XY); }
 float vec_angle(HMM_Vec2 a, HMM_Vec2 b) { return acos(HMM_DotV2(a,b)/(HMM_LenV2(a)*HMM_LenV2(b))); }
 float vec_dirangle(HMM_Vec2 a, HMM_Vec2 b) { return atan2(b.x, b.y) - atan2(a.x, a.y); }
 
-
 HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos) { return HMM_MulM4V4(m, (HMM_Vec4){pos.X, pos.Y, pos.Z, 1}).XYZ; }
 
 HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
@@ -51,8 +55,13 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
   return mat3_t_pos(m, dir);
 }
 
-HMM_Mat4 transform2mat(transform t) {
-  return HMM_M4TRS(t.pos, t.rotation, t.scale);
+HMM_Mat4 transform2mat(transform *t) {
+  if (t->dirty) {
+    t->cache = HMM_M4TRS(t->pos, t->rotation, t->scale);
+    t->dirty = 0;
+  }
+  
+  return t->cache;
 }
 
 HMM_Quat angle2rotation(float angle)

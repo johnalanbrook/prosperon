@@ -920,15 +920,15 @@ JSC_CCALL(render_setunim4,
     JSValue arr = argv[2];
     int n = js_arrlen(arr);
     if (n == 1)
-      m = transform2mat(*js2transform(js_getpropidx(arr,0)));
+      m = transform2mat(js2transform(js_getpropidx(arr,0)));
     else {
       for (int i = 0; i < n; i++) {
-        HMM_Mat4 p = transform2mat(*js2transform(js_getpropidx(arr, i)));
+        HMM_Mat4 p = transform2mat(js2transform(js_getpropidx(arr, i)));
         m = HMM_MulM4(p,m);
       }
     }
   } else if (!JS_IsUndefined(argv[2]))
-    m = transform2mat(*js2transform(argv[2]));
+    m = transform2mat(js2transform(argv[2]));
 
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(m.e));
 );
@@ -963,7 +963,7 @@ JSC_CCALL(render_make_particle_ssbo,
 
   for (int i = 0; i < js_arrlen(array); i++) {
     JSValue sub = js_getpropidx(array,i);
-    ms[i].model = transform2mat(*js2transform(js_getpropstr(sub, "transform")));
+    ms[i].model = transform2mat(js2transform(js_getpropstr(sub, "transform")));
     ms[i].color = js2vec4(js_getpropstr(sub,"color"));
   }
 
@@ -998,7 +998,7 @@ JSC_CCALL(render_make_sprite_ssbo,
 
   for (int i = 0; i < js_arrlen(array); i++) {
     JSValue sub = js_getpropidx(array,i);
-    ms[i].model = transform2mat(*js2transform(js_getpropstr(sub, "transform")));
+    ms[i].model = transform2mat(js2transform(js_getpropstr(sub, "transform")));
     ms[i].rect = js2vec4(js_getpropstr(sub,"rect"));
   }
 
@@ -1027,7 +1027,7 @@ JSC_CCALL(render_make_t_ssbo,
   }
 
   for (int i = 0; i < js_arrlen(array); i++)
-    ms[i] = transform2mat(*js2transform(js_getpropidx(array, i)));
+    ms[i] = transform2mat(js2transform(js_getpropidx(array, i)));
 
   sg_append_buffer(*b, (&(sg_range){
     .ptr = ms,
@@ -1533,9 +1533,9 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   CGETSET_ADD(physics, collision_persistence),
 };
 
-JSC_GETSET(transform, pos, vec3)
-JSC_GETSET(transform, scale, vec3)
-JSC_GETSET(transform, rotation, quat)
+JSC_GETSET_APPLY(transform, pos, vec3)
+JSC_GETSET_APPLY(transform, scale, vec3)
+JSC_GETSET_APPLY(transform, rotation, quat)
 JSC_CCALL(transform_move, transform_move(js2transform(self), js2vec3(argv[0])); )
 
 JSC_CCALL(transform_lookat,
@@ -1543,6 +1543,7 @@ JSC_CCALL(transform_lookat,
   transform *go = js2transform(self);
   HMM_Mat4 m = HMM_LookAt_LH(go->pos, point, vUP);
   go->rotation = HMM_M4ToQ_LH(m);
+  go->dirty = true;
 )
 
 JSC_CCALL(transform_rotate,
@@ -1550,6 +1551,7 @@ JSC_CCALL(transform_rotate,
   transform *t = js2transform(self);
   HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2angle(argv[1]));
   t->rotation = HMM_MulQ(t->rotation,rot);
+  t->dirty = true;
 )
 
 JSC_CCALL(transform_angle,
