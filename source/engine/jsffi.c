@@ -1533,9 +1533,9 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
   CGETSET_ADD(physics, collision_persistence),
 };
 
-JSC_GETSET_APPLY(transform, pos, vec3)
-JSC_GETSET_APPLY(transform, scale, vec3)
-JSC_GETSET_APPLY(transform, rotation, quat)
+JSC_GETSET(transform, pos, vec3)
+JSC_GETSET(transform, scale, vec3)
+JSC_GETSET(transform, rotation, quat)
 JSC_CCALL(transform_move, transform_move(js2transform(self), js2vec3(argv[0])); )
 
 JSC_CCALL(transform_lookat,

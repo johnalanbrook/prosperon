@@ -274,3 +274,41 @@ mum.ex_hud = function()
   mum.label("TOP RIGHT", {pos:game.size, anchor:[1,1]});
   mum.label("BOTTOM RIGHT", {pos:[game.size.x, 0], anchor:[1,0]});
 }
+
+mum.drawinput = undefined;
+var ptext = "";
+var panpan = {
+  draw() {
+    mum.rectangle({pos:[0,0], anchor:[0,0], height:20, width: window.size.x, padding:[10,16], color:Color.black});
+    mum.label("input level: ");
+    mum.label(ptext, {offset:[50,0], color:Color.red});
+  },
+  inputs: {
+    block: true,
+    char(c) {
+      ptext += c
+    },
+    enter() {
+      delete mum.drawinput;
+      player[0].uncontrol(panpan);
+    },
+    escape() {
+      delete mum.drawinput;
+      player[0].uncontrol(panpan);
+    },
+    backspace() {
+      ptext = ptext.slice(0,ptext.length-1);
+    }
+  },
+}
+
+mum.textinput = function (fn, str = "") {
+  mum.drawinput = panpan.draw;
+  ptext = str;
+  player[0].control(panpan);
+  panpan.inputs.enter = function() {
+    fn(ptext);
+    delete mum.drawinput;
+    player[0].uncontrol(panpan);
+  }
+}

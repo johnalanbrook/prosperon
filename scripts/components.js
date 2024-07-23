@@ -15,6 +15,24 @@ var make_point_obj = function(o, p)
 
 var fullrect = [0,0,1,1];
 
+var sprite_addbucket = function(sprite)
+{
+  return;
+  var pp = sprite.gameobject.drawlayer.toString();
+  sprite_buckets[pp] ??= {};
+  sprite_buckets[pp][sprite.path] ??= {};
+  sprite_buckets[pp][sprite.path][sprite.guid] = sprite;
+}
+
+var sprite_rmbucket = function(sprite)
+{
+  return;
+  var pp = sprite.gameobject.drawlayer.toString();
+  if (!sprite_buckets[pp]) return;
+  if (!sprite_buckets[pp][sprite.path]) return;
+  delete sprite_buckets[pp][sprite.path][sprite.guid];
+}
+
 var sprite = {
   loop: true,
   rect: fullrect,
@@ -61,7 +79,10 @@ var sprite = {
       return;
     }
     if (p === this.path) return;
-    this._p = p;    
+    sprite_rmbucket(this);
+    this._p = p;
+    sprite_addbucket(this);
+  
     this.del_anim?.();
     this.texture = game.texture(p);
     
@@ -74,12 +95,12 @@ var sprite = {
     this.play();
     
     this.pos = this.dimensions().scale(this.anchor);
-
   },
   get path() {
     return this._p;
   },
   kill() {
+    sprite_rmbucket(this);  
     this.del_anim?.();
     this.anim = undefined;
     this.gameobject = undefined;
@@ -111,6 +132,7 @@ var sprite = {
   height() { return this.dimensions().y; },
 };
 globalThis.allsprites = {};
+globalThis.sprite_buckets = [];
 
 sprite.doc = {
   path: "Path to the texture.",
@@ -152,8 +174,11 @@ component.sprite = function(obj) {
   sp.transform = obj.transform;
   sp.guid = prosperon.guid();
   allsprites[sp.guid] = sp;
+  sprite_addbucket(sp);
+  if (component.sprite.make_hook) component.sprite.make_hook(sp);
   return sp;
 }
+
 sprite.shade = [1,1,1,1];
 
 Object.mixin(os.make_seg2d(), {

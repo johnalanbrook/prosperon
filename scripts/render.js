@@ -444,6 +444,8 @@ var parshader;
 var spritessboshader;
 var polyssboshader;
 
+var sprite_ssbo;
+
 render.init = function() {
   textshader = render.make_shader("shaders/text_base.cg");
   render.spriteshader = render.make_shader("shaders/sprite.cg");
@@ -456,6 +458,7 @@ render.init = function() {
   polyssboshader = render.make_shader("shaders/poly_ssbo.cg");
   textssbo = render.make_textssbo();
   poly_ssbo = render.make_textssbo();
+  sprite_ssbo = render.make_textssbo();
   
   render.textshader = textshader;
   
@@ -486,6 +489,30 @@ render.init = function() {
     var a = this.bodyA();
     var b = this.bodyB();
     render.line([a.transform().pos.xy, b.transform().pos.xy], [0,1,1,1], 1);
+  }
+}
+
+render.sprites = function(gridsize = 1)
+{
+  var sps = Object.values(allsprites);
+  var sprite_buckets = {};
+  for (var sprite of sps) {
+    var pp = sprite.gameobject.drawlayer.toString();
+    sprite_buckets[pp] ??= {};
+    sprite_buckets[pp][sprite.path] ??= {};
+    sprite_buckets[pp][sprite.path][sprite.guid] = sprite;
+  }
+  
+  render.use_shader(spritessboshader);
+  for (var bucket of Object.values(sprite_buckets)){
+    for (var img of Object.values(bucket)) {
+       var sparray = Object.values(img);
+       if (sparray.length === 0) continue;
+       var ss = sparray[0];
+       render.use_mat(ss);
+       render.make_sprite_ssbo(Object.values(sparray), sprite_ssbo);
+       render.draw(shape.quad, sprite_ssbo, sparray.length);
+    }
   }
 }
 

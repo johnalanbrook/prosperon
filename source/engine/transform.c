@@ -56,6 +56,8 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
 }
 
 HMM_Mat4 transform2mat(transform *t) {
+  return HMM_M4TRS(t->pos, t->rotation, t->scale);
+  
   if (t->dirty) {
     t->cache = HMM_M4TRS(t->pos, t->rotation, t->scale);
     t->dirty = 0;

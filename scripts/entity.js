@@ -354,6 +354,7 @@ dup(diff) {
       this.components[key].enabled = false;
       delete this.components[key];
     }
+    
     delete this.components;
   
     this.clear();
@@ -366,7 +367,6 @@ dup(diff) {
       if (typeof this[i] === 'function') delete this[i];
     }
   },
-  
   
   make_objs(objs) {
     for (var prop in objs) {

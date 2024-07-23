@@ -19,15 +19,13 @@ readonly buffer ssbo {
 out vec2 uv;
 out vec4 color0;
 
-vec2 pos;
 uniform mat4 vp;
 
 void main()
 {
   particle p = par[gl_InstanceIndex];
-  pos = a_pos - 0.5;
-  gl_Position = vp * p.model * vec4(pos, 0.0, 1.0);
-  uv = a_pos;
+  gl_Position = vp * p.model * vec4(a_pos, 0.0, 1.0);
+  uv = a_uv;
   color0 = p.color;
 }
 @end
