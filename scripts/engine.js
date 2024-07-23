@@ -314,6 +314,14 @@ game.engine_start = function (s) {
         count: 3,
         index: os.make_buffer([0, 2, 1], 1),
       };
+      
+      shape.centered_quad = {
+        pos: os.make_buffer([-0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5], 0),
+        verts: 4,
+        uv: os.make_buffer([0,1,1,1,0,0,1,0],2),
+        index: os.make_buffer([0,1,2,2,1,3],1),
+        count: 6
+      };
 
       render.init();
     },

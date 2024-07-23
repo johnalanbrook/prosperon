@@ -161,6 +161,10 @@ function global_uni(uni, stage)
 var setcam = render.set_camera;
 render.set_camera = function(cam)
 {
+  if (nextflush) {
+    nextflush();
+    nextflush = undefined;
+  }
   delete cur.shader;
   setcam(cam);
 }
@@ -438,6 +442,7 @@ var polyshader;
 var slice9shader;
 var parshader;
 var spritessboshader;
+var polyssboshader;
 
 render.init = function() {
   textshader = render.make_shader("shaders/text_base.cg");
@@ -448,7 +453,9 @@ render.init = function() {
   circleshader = render.make_shader("shaders/circle.cg");
   polyshader = render.make_shader("shaders/poly.cg");
   parshader = render.make_shader("shaders/baseparticle.cg");
+  polyssboshader = render.make_shader("shaders/poly_ssbo.cg");
   textssbo = render.make_textssbo();
+  poly_ssbo = render.make_textssbo();
   
   render.textshader = textshader;
   
@@ -483,6 +490,7 @@ render.init = function() {
 }
 
 render.circle = function(pos, radius, color) {
+  check_flush();
   var mat = {
     radius: radius,
     coord: pos,
@@ -502,15 +510,49 @@ render.poly = function(points, color, transform) {
   render.draw(buffer);
 }
 
-render.line = function(points, color = Color.white, thickness = 1, transform) {
-  var buffer = os.make_line_prim(points, thickness, 0, false);
-  render.use_shader(polyshader);
-  var mat = {
-    shade: color
-  };
-  render.use_mat(mat);
-  render.set_model(transform);
-  render.draw(buffer);
+var nextflush = undefined;
+var check_flush = function(flush_fn)
+{
+  if (!flush_fn) {
+    if (!nextflush) return;
+    nextflush();
+    nextflush = undefined;
+  }
+  if (!nextflush)
+    nextflush = flush_fn;
+  else if (nextflush !== flush_fn) {
+      nextflush();
+      nextflush = flush_fn;
+    }
+}
+
+var poly_cache = [];
+var poly_ssbo;
+
+render.flush_poly = function()
+{
+  if (poly_cache.length === 0) return;
+  render.use_shader(polyssboshader);
+  render.use_mat({});
+  render.make_particle_ssbo(poly_cache, poly_ssbo);
+  render.draw(shape.centered_quad, poly_ssbo, poly_cache.length);
+  poly_cache = [];
+}
+
+render.line = function(points, color = Color.white, thickness = 1) {
+  var transform = os.make_transform();
+  var vv = points[1].sub(points[0]);
+  var dist = Vector.length(vv);
+  var center = vv.scale(0.5).add(points[0]);
+  transform.move([center.x,center.y,0]);
+  transform.rotate([0,0,-1], Vector.angle(vv));
+  transform.scale = [dist, thickness, 1];
+  poly_cache.push({
+    transform:transform,
+    color:color
+  });
+  
+  check_flush(render.flush_poly);
 }
 
 /* All draw in screen space */
@@ -556,8 +598,11 @@ render.boundingbox = function(bb, color = Color.white) {
 }
 
 render.rectangle = function(lowerleft, upperright, color) {
-  var points = [lowerleft, lowerleft.add([upperright.x-lowerleft.x,0]), upperright, lowerleft.add([0,upperright.y-lowerleft.y])];
-  render.poly(points, color);
+  var thickness = upperright.x-lowerleft.x;
+  var mid = thickness/2;
+  var from = [mid+lowerleft.x, lowerleft.y];
+  var to = [mid+lowerleft.x, upperright.y];
+  render.line([from,to], color, thickness);
 };
   
 render.box = function(pos, wh, color = Color.white) {
@@ -588,6 +633,7 @@ render.text_bb = function(str, size = 1, wrap = -1, pos = [0,0])
 render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
   var bb = render.text_bb(str, size, wrap, pos);
   gui.text(str, pos, size, color, wrap, cursor);
+  check_flush(render.flush_text);
   return bb;
   
   p.x -= w * anchor.x;
@@ -601,6 +647,7 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
 };
 
 render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0, color = Color.white) {
+  check_flush();
   var t = os.make_transform();
   t.pos = pos;
   t.scale = [scale.x/tex.width,scale.y/tex.height,1];
