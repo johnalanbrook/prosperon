@@ -358,6 +358,7 @@ function process() {
   }
   var st = profile.now();
   prosperon.window_render(window.size);
+  profile.addreport(null, "window render", st);
   prosperon.render();
   profile.addreport(profcache, "render frame", st);
   frames.push(profile.secs(profile.now() - startframe));

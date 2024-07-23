@@ -13,14 +13,13 @@ emitter.draw = function()
   if (amt === 0) return;
   render.use_shader(this.shader);
   render.use_mat(this);
-  var ts = [];
-  for (var p of Object.values(this.particles)) ts.push([p.transform,p.color]);
-  render.make_particle_ssbo(ts, this.ssbo);
+  render.make_particle_ssbo(Object.values(this.particles), this.ssbo);
   render.draw(this.shape, this.ssbo, amt);
 }
 
 var std_spawn = function(par)
 {
+
 }
 
 var std_step = function(p)

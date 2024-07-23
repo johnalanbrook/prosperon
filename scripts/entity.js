@@ -24,6 +24,7 @@ function unique_name(list, name = "new_object") {
 };
 
 var entity = {
+  drawlayer: -1,
   get_comp_by_name(name) {
     var comps = [];
     for (var c of Object.values(this.components))

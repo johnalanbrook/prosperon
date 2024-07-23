@@ -8,6 +8,8 @@ var cur = {};
 
 render.use_shader = function(shader)
 {
+  if (typeof shader === 'string')
+    shader = render.make_shader(shader);
   if (cur.shader === shader) return;
   cur.shader = shader;
   cur.globals = {};
@@ -435,10 +437,12 @@ var circleshader;
 var polyshader;
 var slice9shader;
 var parshader;
+var spritessboshader;
 
 render.init = function() {
   textshader = render.make_shader("shaders/text_base.cg");
   render.spriteshader = render.make_shader("shaders/sprite.cg");
+  spritessboshader = render.make_shader("shaders/sprite_ssbo.cg");
   render.postshader = render.make_shader("shaders/simplepost.cg");
   slice9shader = render.make_shader("shaders/9slice.cg");
   circleshader = render.make_shader("shaders/circle.cg");

@@ -149,6 +149,7 @@ sprite.inputs.kp1 = function() { this.setanchor("ul"); }
 component.sprite = function(obj) {
   var sp = Object.create(sprite);
   sp.gameobject = obj;
+  sp.transform = obj.transform;
   sp.guid = prosperon.guid();
   allsprites[sp.guid] = sp;
   return sp;

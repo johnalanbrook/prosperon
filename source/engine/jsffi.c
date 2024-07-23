@@ -963,15 +963,49 @@ JSC_CCALL(render_make_particle_ssbo,
 
   for (int i = 0; i < js_arrlen(array); i++) {
     JSValue sub = js_getpropidx(array,i);
-    ms[i].model = transform2mat(*js2transform(js_getpropidx(sub, 0)));
-    ms[i].color = js2vec4(js_getpropidx(sub,1));
+    ms[i].model = transform2mat(*js2transform(js_getpropstr(sub, "transform")));
+    ms[i].color = js2vec4(js_getpropstr(sub,"color"));
   }
 
   sg_append_buffer(*b, (&(sg_range){
     .ptr = ms,
     .size = size
   }));
+)
 
+typedef struct sprite_ss {
+  HMM_Mat4 model;
+  HMM_Vec4 rect;
+} sprite_ss;
+
+JSC_CCALL(render_make_sprite_ssbo,
+  JSValue array = argv[0];
+  size_t size = js_arrlen(array)*(sizeof(sprite_ss));
+  sg_buffer *b = js2sg_buffer(argv[1]);
+  if (!b) return JS_UNDEFINED;
+  
+  sprite_ss ms[js_arrlen(array)];
+
+  if (sg_query_buffer_will_overflow(*b, size)) {
+    sg_destroy_buffer(*b);
+    *b = sg_make_buffer(&(sg_buffer_desc){
+      .type = SG_BUFFERTYPE_STORAGEBUFFER,
+      .size = size,
+      .usage = SG_USAGE_STREAM,
+      .label = "transform buffer"
+    });
+  }
+
+  for (int i = 0; i < js_arrlen(array); i++) {
+    JSValue sub = js_getpropidx(array,i);
+    ms[i].model = transform2mat(*js2transform(js_getpropstr(sub, "transform")));
+    ms[i].rect = js2vec4(js_getpropstr(sub,"rect"));
+  }
+
+  sg_append_buffer(*b, (&(sg_range){
+    .ptr = ms,
+    .size = size
+  }));
 )
 
 JSC_CCALL(render_make_t_ssbo,
@@ -1051,7 +1085,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, imgui_end, 0),
   MIST_FUNC_DEF(render, imgui_init, 0),
   MIST_FUNC_DEF(render, make_t_ssbo, 2),
-  MIST_FUNC_DEF(render, make_particle_ssbo, 2)
+  MIST_FUNC_DEF(render, make_particle_ssbo, 2),
+  MIST_FUNC_DEF(render, make_sprite_ssbo, 2)
 };
 
 JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))

@@ -1,0 +1,60 @@
+#blend mix
+#depth off
+#primitive triangle
+#cull none
+ 
+@vs vs
+in vec3 a_pos;
+in vec2 a_uv;
+out vec2 uv;
+ 
+vec3 pos;
+
+struct sprite {
+  mat4 model;
+  vec4 rect;
+};
+
+readonly buffer ssbo {
+  sprite sprites[];
+};
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 vp;
+uniform vec2 diffuse_size;
+
+void main()
+{
+  sprite s = sprites[gl_InstanceIndex];
+  pos = a_pos;
+  uv = a_uv;
+  pos *= vec3(diffuse_size * s.rect.zw,1);
+  uv = (uv*s.rect.zw)+s.rect.xy;
+  gl_Position =  vp * s.model * vec4(pos, 1.0);
+}
+@end
+
+@fs fs
+
+in vec2 uv;
+
+out vec4 color;
+
+texture2D diffuse;
+sampler smp;
+
+uniform vec4 shade;
+void frag()
+{
+  color = texture(sampler2D(diffuse,smp), uv);
+  color *= shade;
+}
+
+void main()
+{
+  frag();
+}
+@end
+
+@program sprite vs fs
