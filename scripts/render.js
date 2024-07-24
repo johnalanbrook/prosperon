@@ -492,7 +492,8 @@ render.init = function() {
   }
 }
 
-render.sprites = function(gridsize = 1)
+render.mixin({
+  sprites(gridsize = 1)
 {
   var sps = Object.values(allsprites);
   var sprite_buckets = {};
@@ -514,7 +515,7 @@ render.sprites = function(gridsize = 1)
        render.draw(shape.quad, sprite_ssbo, sparray.length);
     }
   }
-}
+}});
 
 render.circle = function(pos, radius, color) {
   check_flush();

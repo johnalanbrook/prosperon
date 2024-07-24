@@ -1194,10 +1194,21 @@ JSC_CCALL(vector_inflate,
   arrfree(p);
 )
 
+JSC_CCALL(vector_rotate,
+  HMM_Vec2 vec = js2vec2(argv[0]);
+  float r = HMM_LenV2(vec);
+  double angle = js2angle(argv[1]);
+  angle += atan2(vec.y,vec.x);
+  vec.x = r*cos(angle);
+  vec.y = r*sin(angle);
+  return vec22js(vec);
+)
+
 static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector,dot,2),
   MIST_FUNC_DEF(vector,project,2),
-  MIST_FUNC_DEF(vector, inflate, 2)
+  MIST_FUNC_DEF(vector, inflate, 2),
+  MIST_FUNC_DEF(vector, rotate, 2)
 };
 
 JSC_CCALL(game_engine_start, engine_start(argv[0],argv[1], js2number(argv[2]), js2number(argv[3])))
@@ -1299,8 +1310,27 @@ static const JSCFunctionListEntry js_audio_funcs[] = {
 
 JSC_CCALL(profile_now, return number2js(stm_now()))
 
+static JSValue instr_v = JS_UNDEFINED;
+int iiihandle(JSRuntime *rt, void *data)
+{
+  script_call_sym(instr_v, 0, NULL);
+  return 0;
+}
+
+JSC_CCALL(profile_gather,
+  int count = js2number(argv[0]);
+  instr_v = JS_DupValue(js, argv[1]);
+  JS_SetInterruptHandler(rt, iiihandle, NULL, count);
+)
+
+JSC_CCALL(profile_gather_rate,
+  JS_SetInterruptRate(js2number(argv[0]));
+)
+
 static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
+  MIST_FUNC_DEF(profile,gather,2),
+  MIST_FUNC_DEF(profile,gather_rate,1)
 };
 
 JSC_SCALL(io_exists, ret = boolean2js(fexists(str)))

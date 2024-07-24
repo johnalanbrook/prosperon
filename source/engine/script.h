@@ -9,6 +9,7 @@ extern "C" {
 #include <time.h>
 
 extern JSContext *js;
+extern JSRuntime *rt;
 
 struct phys_cbs {
   JSValue begin;

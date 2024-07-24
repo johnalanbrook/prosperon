@@ -429,7 +429,7 @@ typedef enum {
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */
-#define JS_INTERRUPT_COUNTER_INIT 10000
+static int JS_INTERRUPT_COUNTER_INIT = 1000;
 
 struct JSContext {
     JSGCObjectHeader header; /* must come first */
@@ -1813,10 +1813,16 @@ void JS_SetGCThreshold(JSRuntime *rt, size_t gc_threshold)
 #define free(p) free_is_forbidden(p)
 #define realloc(p,s) realloc_is_forbidden(p,s)
 
-void JS_SetInterruptHandler(JSRuntime *rt, JSInterruptHandler *cb, void *opaque)
+void JS_SetInterruptRate(int count)
+{
+  JS_INTERRUPT_COUNTER_INIT = count;
+}
+
+void JS_SetInterruptHandler(JSRuntime *rt, JSInterruptHandler *cb, void *opaque, int count)
 {
     rt->interrupt_handler = cb;
     rt->interrupt_opaque = opaque;
+    JS_INTERRUPT_COUNTER_INIT = count;
 }
 
 void JS_SetCanBlock(JSRuntime *rt, BOOL can_block)

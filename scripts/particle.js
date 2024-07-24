@@ -89,8 +89,7 @@ emitter.step = function(dt)
   // update all particles
   for (var p of Object.values(this.particles)) {
     p.time += dt;
-
-    this.step_hook(p);
+    this.step_hook?.(p);
     
     if (p.time >= p.life) {
       this.die_hook(p);

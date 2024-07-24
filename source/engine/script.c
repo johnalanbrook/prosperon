@@ -3,6 +3,7 @@
 #include "jsffi.h"
 #include "stb_ds.h"
 #include "resources.h"
+#include <sokol/sokol_time.h>
 
 #include <stdarg.h>
 

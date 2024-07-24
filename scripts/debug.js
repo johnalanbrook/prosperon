@@ -79,6 +79,65 @@ profile.cpu = function(fn, times = 1, q = "unnamed") {
 profile.ms = function(t) { return t/1000000; }
 profile.secs = function(t) { return t/1000000000; }
 
+
+var callgraph = {};
+var st = profile.now();
+
+function add_callgraph(line, time) {
+  callgraph[line] ??= 0;
+  callgraph[line] += time;
+}
+
+profile.gather(500, function() {
+  var time = profile.now()-st;
+  
+  var err = new Error();
+  var stack = err.stack.split("\n");
+  stack = stack.slice(1);
+  stack = stack.map(x => x.slice(7).split(' '));
+  var lines = stack.map(x => x[1]).filter(x => x);
+  lines = lines.map(x => x.slice(1,x.length-1));
+  
+  lines.forEach(x => add_callgraph(x,time));
+  st = profile.now();
+  
+  profile.gather_rate(400+Math.random()*200);
+});
+
+var filecache = {};
+function get_line(file, line) {
+  var text = filecache[file];
+  if (!text) {
+    var f = io.slurp(file);
+    if (!f) {
+      filecache[file] = "undefined";
+      return filecache[file];
+    }
+    filecache[file] = io.slurp(file).split('\n');
+    text = filecache[file];
+  }
+  
+  if (typeof text === 'string') return text;
+  text = text[Number(line)-1];
+  if (!text) return "NULL";
+  return text.trim();
+}
+
+prosperon.quit_hook = function()
+{
+  var e = Object.entries(callgraph);
+  e = e.sort((a,b) => {
+    if (a[1] > b[1]) return -1;
+    return 1;
+  });
+
+  e.forEach(x => {
+    var ffs = x[0].split(':');
+    var time = profile.best_t(x[1]);
+    say(x[0] + '::' + time + ':: ' + get_line(ffs[0], ffs[1]));
+  });
+}
+
 /* These controls are available during editing, and during play of debug builds */
 debug.inputs = {};
 debug.inputs.f1 = function () { debug.draw_phys =  !debug.draw_phys; };

@@ -651,6 +651,7 @@ prosperon.clipboardpaste = function (str) {};
 prosperon.quit = function () {
   say(profile.printreport(profcache, "USE REPORT"));
   say(profile.printreport(entityreport, "ENTITY REPORT"));
+  if (prosperon.quit_hook) prosperon.quit_hook();
 
   console.info("QUITTING");
   for (var i in debug.log.time)

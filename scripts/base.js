@@ -1509,10 +1509,8 @@ bbox.fromobjs = function(objs)
 
 /* VECTORS */
 var Vector = {};
-Vector.length = function(v) {
-  var sum = v.reduce(function(acc, val) { return acc + val**2; }, 0);
-  return Math.sqrt(sum);
-}
+Vector.length = function(v) { return Math.hypot(...v); }
+
 Vector.norm = function(v) {
   var len = Vector.length(v);
   if (!len) return [0,0];
