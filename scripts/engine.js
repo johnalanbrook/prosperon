@@ -110,37 +110,7 @@ Resources.find_script = function (file) {
   return find_ext(file, Resources.scripts);
 };
 
-profile.best_t = function (t) {
-  var qq = "ns";
-  if (t > 1000) {
-    t /= 1000;
-    qq = "us";
-    if (t > 1000) {
-      t /= 1000;
-      qq = "ms";
-    }
-  }
-  return `${t.toPrecision(4)} ${qq}`;
-};
-
-profile.report = function (start, msg = "[undefined report]") {
-  console.info(`${msg} in ${profile.best_t(profile.now() - start)}`);
-};
-
-profile.addreport = function (cache, line, start) {
-  cache ??= profcache;
-  cache[line] ??= [];
-  cache[line].push(profile.now() - start);
-  return profile.now();
-};
-
-profile.printreport = function (cache, name) {
-  var report = name + "\n";
-  for (var i in cache)
-    report += `${i}    ${profile.best_t(cache[i].reduce((a, b) => a + b) / cache[i].length)}\n`;
-
-  return report;
-};
+var t_units = ["ns", "us", "ms", "s", "m", "h"];
 
 console.transcript = "";
 console.say = function (msg) {
@@ -218,17 +188,17 @@ console.doc = {
 
 globalThis.global = globalThis;
 
-var profcache = {};
+var use_prof = "USE";
+
+profile.addreport = function(){};
 
 function use(file, env = {}, script) {
   file = Resources.find_script(file);
   var st = profile.now();
 
-  profcache[file] ??= [];
-
   if (use.cache[file]) {
     var ret = use.cache[file].call(env);
-    profile.addreport(profcache, file, st);
+    profile.addreport(use_prof, file, st);
     return;
   }
   script ??= Resources.replstrs(file);
@@ -236,16 +206,21 @@ function use(file, env = {}, script) {
   var fn = os.eval(file, script);
   use.cache[file] = fn;
   var ret = fn.call(env);
-  profile.addreport(profcache, file, st);
+  profile.addreport(use_prof, file, st);
   return ret;
 }
 
 use.cache = {};
 
 global.check_registers = function (obj) {
-  for (var reg in Register.registries)
-    if (typeof obj[reg] === 'function')
-      obj.timers.push(Register.registries[reg].register(obj[reg].bind(obj)));
+  for (var reg in Register.registries) {
+    if (typeof obj[reg] === 'function') {
+      var fn = obj[reg].bind(obj);
+      var name = obj.ur ? obj.ur.name : obj.toString();
+      obj.timers.push(Register.registries[reg].register(fn, name));
+    }
+  }
+      
   for (var k in obj) {
     if (!k.startswith("on_")) continue;
     var signal = k.fromfirst("on_");
@@ -255,6 +230,7 @@ global.check_registers = function (obj) {
 
 Object.assign(global, use("scripts/base"));
 global.obscure("global");
+global.mixin("scripts/profile");
 global.mixin("scripts/render");
 global.mixin("scripts/debug");
 
@@ -452,6 +428,7 @@ var screencolor;
 
 prosperon.render = function()
 {
+  profile.frame("world");
   render.set_camera(camera);
   render.sprites();
   prosperon.draw();
@@ -459,17 +436,27 @@ prosperon.render = function()
   hudcam.transform.pos = [hudcam.size.x/2, hudcam.size.y/2, -100];
   render.set_camera(hudcam);
 
+  profile.endframe();
+  profile.frame("hud");
+
   prosperon.hud();
   render.flush_text();
 
   render.end_pass();
 
+  profile.endframe();
+
+  profile.frame("post process");
   /* draw the image of the game world first */
   render.glue_pass();
   render.viewport(...camera.view());
   render.use_shader(render.postshader);
   render.use_mat({diffuse:screencolor});
   render.draw(shape.quad);
+
+  profile.endframe();
+
+  profile.frame("app");
 
   // Flush & render
   appcam.transform.pos = [window.size.x/2, window.size.y/2, -100];
@@ -488,49 +475,65 @@ prosperon.render = function()
   render.flush_text();
   mum.style = mum.base;
 
+  profile.endframe();
+
+  profile.frame("imgui");
+
   render.imgui_new(window.size.x, window.size.y, 0.01);
-//  if (gfx_gui) render.gfx_gui();
+  prosperon.imgui();
   render.imgui_end();
+
+  profile.endframe();
 
   render.end_pass();
   render.commit();
 }
 
 function process() {
-  var startframe = profile.now();
+  profile.frame("frame");
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
+  profile.frame("app update");
   prosperon.appupdate(dt);
+  profile.endframe();
+
+  profile.frame("input");
   input.procdown();
+  profile.endframe();
 
   if (sim.mode === "play" || sim.mode === "step") {
+    profile.frame("update");  
     prosperon.update(dt * game.timescale);
+    profile.endframe();
     if (sim.mode === "step") sim.pause();
 
+    profile.frame("physics");
     physlag += dt;
 
     while (physlag > physics.delta) {
       physlag -= physics.delta;
-      var st = profile.now();
       prosperon.phys2d_step(physics.delta * game.timescale);
       prosperon.physupdate(physics.delta * game.timescale);
-      profile.addreport(profcache, "physics step", st);
     }
+    profile.endframe();
   }
-  var st = profile.now();
+
+  profile.frame("window render");
   prosperon.window_render(window.size);
-  profile.addreport(null, "window render", st);
+  profile.endframe();
+  profile.frame("render");
   prosperon.render();
-  profile.addreport(profcache, "render frame", st);
-  frames.push(profile.secs(profile.now() - startframe));
-  if (frames.length > 20) frames.shift();
+  profile.endframe();
+
+  profile.endframe();
 }
 
 globalThis.fps = function () {
-  var sum = 0;
-  for (var i = 0; i < frames.length; i++) sum += frames[i];
-  return frames.length / sum;
+  return 0;
+//  var sum = 0;
+//  for (var i = 0; i < frames.length; i++) sum += frames[i];
+//  return frames.length / sum;
 };
 
 game.timescale = 1;
@@ -649,9 +652,16 @@ prosperon.touchrelease = function (touches) {};
 prosperon.touchmove = function (touches) {};
 prosperon.clipboardpaste = function (str) {};
 prosperon.quit = function () {
-  say(profile.printreport(profcache, "USE REPORT"));
-  say(profile.printreport(entityreport, "ENTITY REPORT"));
-  if (prosperon.quit_hook) prosperon.quit_hook();
+  say("===START CACHE REPORTS===\n");
+  for (var i in profile.report_cache) {
+    say(profile.printreport(profile.report_cache[i],i));
+  }
+
+  say("===FRAME AVERAGES===\n");
+  say(profile.print_frame_avg());
+  say("\n");
+
+  profile.print_cpu_instr();
 
   console.info("QUITTING");
   for (var i in debug.log.time)
@@ -718,17 +728,25 @@ var Register = {
     var n = {};
     var fns = [];
 
-    n.register = function (fn, obj) {
+    n.register = function (fn, oname) {
       if (typeof fn !== "function") return;
-      if (typeof obj === "object") fn = fn.bind(obj);
-      fns.push(fn);
+
+      var dofn = function(...args) {
+        var st = profile.now();
+        fn(...args);
+	profile.addreport(name, oname, st);
+      }
+      
+      fns.push(dofn);
       return function () {
-        fns.remove(fn);
+        fns.remove(dofn);
       };
     };
+    
     prosperon[name] = function (...args) {
-      fns.forEach((x) => x(...args));
+      fns.forEach(x => x(...args));
     };
+    
     prosperon[name].fns = fns;
     n.clear = function () {
       fns = [];
@@ -750,6 +768,7 @@ Register.add_cb("draw_dbg", true);
 Register.add_cb("gui_dbg", true);
 Register.add_cb("hud_dbg", true);
 Register.add_cb("draw", true);
+Register.add_cb("imgui", true);
 
 var Event = {
   events: {},

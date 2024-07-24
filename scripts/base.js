@@ -1033,6 +1033,19 @@ value: function(b) {
   return c;
 }});
 
+/*Object.defineProperty(Array.prototype, 'concat', {
+  value: function(b) {
+    var result = [];
+    for (var i = 0; i < this.length; i++)
+      result.push(this[i]);
+      
+    for (var i = 0; i < b.length; i++)
+      result.push(b[i]);
+      
+    return result;
+  }
+});*/
+
 Object.defineProperty(Array.prototype, 'normalized', {
   value: function() {
     var c = this.slice();
@@ -1377,6 +1390,7 @@ Math.rad2turn = function(x) { return x/Math.TAU; };
 Math.turn2deg = function(x) { return x*360; };
 Math.deg2turn = function(x) { return x/360; };
 Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };
+Math.variate = function(n, pct) { return n + (Math.random_range(-pct,pct)*n); }
 
 /* BOUNDINGBOXES */
 var bbox = {};

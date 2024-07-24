@@ -3,6 +3,7 @@
 #include "render.h"
 #include "sokol/sokol_app.h"
 #include "imgui.h"
+#include "implot.h"
 #define SOKOL_IMPL
 #include "sokol/util/sokol_imgui.h"
 #include "sokol/util/sokol_gfx_imgui.h"
@@ -12,11 +13,11 @@ static sgimgui_t sgimgui;
 #include "jsffi.h"
 
 JSC_CCALL(imgui_begin,
-char *title = js2strdup(argv[0]);
-bool active = true;
-ImGui::Begin(title, &active, ImGuiWindowFlags_MenuBar);
-free(title);
-return boolean2js(active);
+  char *title = js2strdup(argv[0]);
+  bool active = true;
+  ImGui::Begin(title, &active, ImGuiWindowFlags_MenuBar);
+  free(title);
+  return boolean2js(active);
 )
 
 JSC_CCALL(imgui_end, ImGui::End())
@@ -37,6 +38,22 @@ JSC_CCALL(imgui_menuitem,
   free(hotkey);
 )
 
+JSC_SCALL(imgui_startplot,
+  ImPlot::SetNextAxisToFit(ImAxis_X1);
+  ImPlot::SetNextAxisToFit(ImAxis_Y1);  
+  ImPlot::BeginPlot(str);
+)
+
+JSC_CCALL(imgui_endplot, ImPlot::EndPlot() )
+
+JSC_SCALL(imgui_lineplot,
+  double data[js_arrlen(argv[1])];
+  for (int i = 0; i < js_arrlen(argv[1]); i++)
+    data[i] = js2number(js_getpropidx(argv[1], i));
+
+  ImPlot::PlotLine(str, data, js_arrlen(argv[1]));
+)
+
 JSC_CCALL(imgui_beginmenubar, ImGui::BeginMenuBar())
 JSC_CCALL(imgui_endmenubar, ImGui::EndMenuBar())
 
@@ -55,6 +72,9 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, beginmenubar, 0),
   MIST_FUNC_DEF(imgui, endmenubar, 0),
   MIST_FUNC_DEF(imgui, textinput, 2),
+  MIST_FUNC_DEF(imgui, startplot,1),
+  MIST_FUNC_DEF(imgui,endplot,0),
+  MIST_FUNC_DEF(imgui,lineplot,2)
 };
 
 static int started = 0;
@@ -66,6 +86,8 @@ JSValue gui_init(JSContext *js)
   
   sgimgui_desc_t desc = {0};
   sgimgui_init(&sgimgui, &desc);
+
+  ImPlot::CreateContext();
 
   JSValue imgui = JS_NewObject(js);
   JS_SetPropertyFunctionList(js, imgui, js_imgui_funcs, countof(js_imgui_funcs));

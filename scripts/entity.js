@@ -230,7 +230,7 @@ var entity = {
     for (var i in ent.objects)
       ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
 
-    profile.addreport(entityreport, ent.ur.name, st);
+    profile.addreport("ENTITY TIME", ent.ur.name, st);
     
     return ent;
   },
@@ -677,7 +677,10 @@ var getur = function(text, data)
       name: "empty"
     };
   }
-  var urstr = text + "+" + data;
+  var urstr = text;
+  if (data)
+    urstr += "+" + data;
+
   if (!ur[urstr]) {
     ur[urstr] = {
       name: urstr,

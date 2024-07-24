@@ -12,6 +12,7 @@ actor.spawn = function(script, config, callback){
   padawan.timers = [];
   padawan.master = this;
   Object.hide(padawan, "master", "timers", "padawans");
+  padawan.toString = function() { return script; }  
   check_registers(padawan);
   this.padawans.push(padawan);
   return padawan;
