@@ -90,6 +90,7 @@ var sprite = {
     this.rect = fullrect;
     
     var anim = SpriteAnim.make(p);
+
     if (!anim) return;
     this.anim = anim;
     this.play();

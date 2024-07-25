@@ -492,21 +492,34 @@ render.init = function() {
   }
 }
 
-render.mixin({
-  sprites(gridsize = 1)
+render.sprites = function(gridsize = 1)
 {
+  profile.frame("bucketing");
   var sps = Object.values(allsprites);
   var sprite_buckets = {};
   for (var sprite of sps) {
-    var pp = sprite.gameobject.drawlayer.toString();
+    var pp = sprite.gameobject.drawlayer;
     sprite_buckets[pp] ??= {};
     sprite_buckets[pp][sprite.path] ??= {};
     sprite_buckets[pp][sprite.path][sprite.guid] = sprite;
+    render.sprite_hook?.(sprite);
   }
   
+  profile.endframe();
+  profile.frame("sorting");
+  var buckets = Object.entries(sprite_buckets).sort((a,b) => {
+    var na = Number(a[0]);
+    var ba = Number(b[0]);
+    if (na < ba) return -1;
+    if (na === ba) return 0;
+    return 1;
+  });
+  profile.endframe();
+
+  profile.frame("drawing");
   render.use_shader(spritessboshader);
-  for (var bucket of Object.values(sprite_buckets)){
-    for (var img of Object.values(bucket)) {
+  for (var bucket of buckets) {
+    for (var img of Object.values(bucket[1])) {
        var sparray = Object.values(img);
        if (sparray.length === 0) continue;
        var ss = sparray[0];
@@ -515,7 +528,8 @@ render.mixin({
        render.draw(shape.quad, sprite_ssbo, sparray.length);
     }
   }
-}});
+  profile.endframe();
+}
 
 render.circle = function(pos, radius, color) {
   check_flush();

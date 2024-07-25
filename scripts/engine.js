@@ -388,7 +388,6 @@ function camscreen2world(pos)
 
 camscreen2world.doc = "Convert a view position for a camera to world."
 
-
 function screen2cam(pos)
 {
   var viewport = this.view();
@@ -430,8 +429,12 @@ prosperon.render = function()
 {
   profile.frame("world");
   render.set_camera(camera);
+  profile.frame("sprites");
   render.sprites();
+  profile.endframe();
+  profile.frame("draws");
   prosperon.draw();
+  profile.endframe();
   hudcam.size = camera.size;
   hudcam.transform.pos = [hudcam.size.x/2, hudcam.size.y/2, -100];
   render.set_camera(hudcam);
@@ -519,10 +522,8 @@ function process() {
     profile.endframe();
   }
 
-  profile.frame("window render");
-  prosperon.window_render(window.size);
-  profile.endframe();
   profile.frame("render");
+  prosperon.window_render(window.size);
   prosperon.render();
   profile.endframe();
 
