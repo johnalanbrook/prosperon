@@ -824,10 +824,6 @@ Object.defineProperty(String.prototype, 'sub', {
   }
 });
 
-Object.defineProperty(String.prototype, 'rm', {
-  value: function(index, endidx = index+1) { return this.slice(0,index) + this.slice(endidx); }
-});
-
 Object.defineProperty(String.prototype, 'updir', {
   value: function() {
     if (this.lastIndexOf('/') === this.length-1)
@@ -1647,7 +1643,6 @@ Math.sign = function(n) { return n >= 0 ? 1 : -1; }
 return {
   convert,
   time,
-  json,
   Vector,
   bbox,
   yaml

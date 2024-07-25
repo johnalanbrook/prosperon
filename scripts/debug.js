@@ -50,7 +50,7 @@ debug.draw = function() {
 		                   "EDIT", [0, 0], 1);
 }
 
-function assert(op, str = `assertion failed [value '${op}']`)
+var assert = function(op, str = `assertion failed [value '${op}']`)
 {
   if (!op)
     console.panic(str);

@@ -182,7 +182,8 @@ render.make_shader = function(shader)
     shader = io.slurp(`shaders/${file}`);
   }
   var writejson = `.prosperon/${file.name()}.shader.json`;
-  var st = profile.now();
+
+  profile.cache("shader", file);
   
   breakme: if (io.exists(writejson)) {
     var data = json.decode(io.slurp(writejson));
@@ -193,8 +194,8 @@ render.make_shader = function(shader)
         break breakme;
       }
     }
-  
-    profile.addreport("shader [cached]", file, st);
+
+    profile.endcache(" [cached]");
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
     obj.pipe = render.pipeline(obj);
@@ -310,7 +311,7 @@ render.make_shader = function(shader)
   compiled.files = files;
   
   io.slurpwrite(writejson, json.encode(compiled));
-  profile.addreport('shader', file, st);
+  profile.endcache();
   
   var obj = compiled[os.sys()];
   obj.pipe = render.pipeline(obj);
@@ -790,5 +791,200 @@ render.draw = function(mesh, ssbo, inst = 1)
   render.sg_bind(mesh, ssbo);
   render.spdraw(cur.bind.count, inst);
 }
+
+
+
+
+// Returns an array in the form of [left, bottom, right, top] in pixels of the camera to render to
+// Camera viewport is [left,bottom,right,top] in relative values
+function camviewport()
+{
+  var aspect = (this.viewport[2]-this.viewport[0])/(this.viewport[3]-this.viewport[1])*window.size.x/window.size.y;
+  var raspect = this.size.x/this.size.y;
+
+  var left = this.viewport[0]*window.size.x;
+  var bottom = this.viewport[1]*window.size.y;
+
+  var usemode = this.mode;
+
+  if (this.break && this.size.x > window.size.x && this.size.y > window.size.y)
+    usemode = this.break;
+
+  if (usemode === "fit")
+    if (raspect < aspect) usemode = "height";
+    else usemode = "width";
+
+  switch(usemode) {
+    case "stretch":
+    case "expand":
+      return [0, 0, window.size.x, window.size.y];
+    case "keep":
+      return [left, bottom, left+this.size.x, bottom+this.size.y];
+    case "height":
+      var ret = [left, 0, this.size.x*(window.size.y/this.size.y), window.size.y];
+      ret[0] = (window.size.x-(ret[2]-ret[0]))/2;
+      return ret;
+    case "width":
+      var ret = [0, bottom, window.size.x, this.size.y*(window.size.x/this.size.x)];
+      ret[1] = (window.size.y-(ret[3]-ret[1]))/2;
+      return ret;
+  }
+
+  return [0, 0, window.size.x, window.size.y];
+}
+
+// pos is pixels on the screen, lower left[0,0]
+function camscreen2world(pos)
+{
+  var view = this.screen2cam(pos);
+  view.x *= this.size.x;
+  view.y *= this.size.y;
+  view = view.sub([this.size.x/2, this.size.y/2]);
+  view = view.add(this.pos.xy);
+  return view;
+}
+
+camscreen2world.doc = "Convert a view position for a camera to world."
+
+function screen2cam(pos)
+{
+  var viewport = this.view();
+  var width = viewport[2]-viewport[0];
+  var height = viewport[3]-viewport[1];
+  var left = pos.x-viewport[0];
+  var bottom = pos.y-viewport[1];
+  var p = [left/width, bottom/height];
+  return p;
+}
+
+screen2cam.doc = "Convert a screen space position in pixels to a normalized viewport position in a camera."
+
+prosperon.make_camera = function()
+{
+  var cam = world.spawn();
+  cam.near = 0.1;
+  cam.far = 1000;
+  cam.ortho = true;
+  cam.viewport = [0,0,1,1];
+  cam.size = window.size.slice(); // The render size of this camera in pixels
+  // In ortho mode, this determines how many pixels it will see
+  cam.mode = "stretch";
+  cam.screen2world = camscreen2world;
+  cam.screen2cam = screen2cam;
+
+  cam.mousepos = function() { return this.screen2world(input.mouse.screenpos()); }
+  cam.view = camviewport;
+  cam.offscreen = false;
+  return cam;
+}
+
+var screencolor;
+
+prosperon.render = function()
+{
+  profile.frame("world");
+  render.set_camera(prosperon.camera);
+  profile.frame("sprites");
+  render.sprites();
+  profile.endframe();
+  profile.frame("draws");
+  prosperon.draw();
+  profile.endframe();
+  prosperon.hudcam.size = prosperon.camera.size;
+  prosperon.hudcam.transform.pos = [prosperon.hudcam.size.x/2, prosperon.hudcam.size.y/2, -100];
+  render.set_camera(prosperon.hudcam);
+
+  profile.endframe();
+  profile.frame("hud");
+
+  prosperon.hud();
+  render.flush_text();
+
+  render.end_pass();
+
+  profile.endframe();
+
+  profile.frame("post process");
+  /* draw the image of the game world first */
+  render.glue_pass();
+  render.viewport(...prosperon.camera.view());
+  render.use_shader(render.postshader);
+  render.use_mat({diffuse:prosperon.screencolor});
+  render.draw(shape.quad);
+
+  profile.endframe();
+
+  profile.frame("app");
+
+  // Flush & render
+  prosperon.appcam.transform.pos = [window.size.x/2, window.size.y/2, -100];
+  prosperon.appcam.size = window.size.slice();
+  if (os.sys() !== 'macos')
+    prosperon.appcam.size.y *= -1;
+
+  render.set_camera(prosperon.appcam);
+  render.viewport(...prosperon.appcam.view());
+
+  // Call gui functions
+  mum.style = mum.dbg_style;
+  prosperon.gui();
+  if (mum.drawinput) mum.drawinput();
+  prosperon.gui_dbg();
+  render.flush_text();
+  mum.style = mum.base;
+
+  profile.endframe();
+
+  profile.frame("imgui");
+
+  render.imgui_new(window.size.x, window.size.y, 0.01);
+  prosperon.imgui();
+  render.imgui_end();
+
+  profile.endframe();
+
+  render.end_pass();
+  render.commit();
+}
+
+prosperon.process = function() {
+  profile.frame("frame");
+  var dt = profile.secs(profile.now()) - frame_t;
+  frame_t = profile.secs(profile.now());
+
+  profile.frame("app update");
+  prosperon.appupdate(dt);
+  profile.endframe();
+
+  profile.frame("input");
+  input.procdown();
+  profile.endframe();
+
+  if (sim.mode === "play" || sim.mode === "step") {
+    profile.frame("update");  
+    prosperon.update(dt * game.timescale);
+    profile.endframe();
+    if (sim.mode === "step") sim.pause();
+
+    profile.frame("physics");
+    physlag += dt;
+
+    while (physlag > physics.delta) {
+      physlag -= physics.delta;
+      prosperon.phys2d_step(physics.delta * game.timescale);
+      prosperon.physupdate(physics.delta * game.timescale);
+    }
+    profile.endframe();
+  }
+
+  profile.frame("render");
+  prosperon.window_render(window.size);
+  prosperon.render();
+  profile.endframe();
+
+  profile.endframe();
+}
+
+
 
 return {render};

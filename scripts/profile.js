@@ -1,3 +1,5 @@
+var t_units = ["ns", "us", "ms", "s", "m", "h"];
+
 profile.cpu = function(fn, times = 1, q = "unnamed") {
   var start = profile.now();
   for (var i = 0; i < times; i++)
@@ -33,6 +35,7 @@ function add_callgraph(fn, line, time) {
 var hittar = 500;
 var hitpct = 0.2;
 var start_gather = profile.now();
+if (profile.enabled)
 profile.gather(hittar, function() {
   var time = profile.now()-st;
   
@@ -141,19 +144,43 @@ profile.print_frame_avg = function()
     print_frame(profile_frames[i], "", 'frame');
 }
 
-profile.report_cache = {};
+var report_cache = {};
 
-profile.addreport = function (group, line, start) {
+var cachest = 0;
+var cachegroup;
+var cachetitle;
+profile.cache = function(group, title)
+{
+  cachest = profile.now();
+  cachegroup = group;
+  cachetitle = title;
+}
+
+profile.endcache = function(tag = "")
+{
+  addreport(cachegroup, cachetitle + tag, cachest);
+}
+
+profile.print_cache_report = function()
+{
+  var str = "===START CACHE REPORTS===\n";
+  for (var i in report_cache)
+    str += printreport(report_cache[i], i) + "\n";
+
+  return str;
+}
+
+function addreport(group, line, start) {
   if (typeof group !== 'string') group = 'UNGROUPED';
-  profile.report_cache[group] ??= {};
-  var cache = profile.report_cache[group];
+  report_cache[group] ??= {};
+  var cache = report_cache[group];
   cache[line] ??= [];
   var t = profile.now();
   cache[line].push(t - start);
   return t;
 };
 
-profile.printreport = function (cache, name) {
+function printreport(cache, name) {
   var report = `==${name}==` + "\n";
 
   var reports = [];
@@ -176,12 +203,3 @@ profile.printreport = function (cache, name) {
 
   return report;
 };
-
-var null_fn = function(){};
-profile.disable = function()
-{
-  profile.gather_stop();
-  profile.frame = null_fn;
-  profile.endframe = null_fn;
-  profile.disabled = true;
-}

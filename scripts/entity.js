@@ -138,7 +138,7 @@ var entity = {
   },
   
   spawn(text, config, callback) {
-    var st = profile.now();
+
     var ent = Object.create(entity);
     ent.transform = os.make_transform();
     
@@ -165,7 +165,8 @@ var entity = {
       use(text, ent);
     else if (Array.isArray(text))
       for (var path of text) use(path,ent);
-  
+    profile.cache("ENTITY TIME", ent.ur.name);
+    var st = profile.now();  
     if (typeof config === 'string')
       Object.merge(ent, json.decode(Resources.replstrs(config)));
     else if (Array.isArray(config))
@@ -230,7 +231,7 @@ var entity = {
     for (var i in ent.objects)
       ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
 
-    profile.addreport("ENTITY TIME", ent.ur.name, st);
+    profile.endcache();
     
     return ent;
   },
