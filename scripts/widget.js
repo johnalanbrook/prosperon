@@ -171,7 +171,7 @@ var listpanel = Object.copy(inputpanel,  {
 
   keycb() {
     if(this.value)
-      this.assets = this.allassets.filter(x => x.startswith(this.value));
+      this.assets = this.allassets.filter(x => x.startsWith(this.value));
     else
       this.assets = this.allassets.slice();
     for (var m in this.mumlist)

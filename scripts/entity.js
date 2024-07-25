@@ -61,8 +61,8 @@ var entity = {
   },
 
   sync() {
-    this.components.forEach(function(x) { x.sync?.(); });
-    this.objects.forEach(function(x) { x.sync(); });
+    for (var c of Object.values(this.components)) c.sync?.();
+    for (var o of Object.values(this.objects)) o.sync();
   },
 
   delay(fn, seconds) {
@@ -150,7 +150,7 @@ var entity = {
     
     if (!text)
       ent.ur = emptyur;
-    else if (typeof text === 'object' && text) {// assume it's an ur
+    else if (text instanceof Object) {// assume it's an ur
       ent.ur = text;
       text = ent.ur.text;
       config = [ent.ur.data, config].filter(x => x).flat();
@@ -164,22 +164,22 @@ var entity = {
     if (typeof text === 'string')
       use(text, ent);
     else if (Array.isArray(text))
-      text.forEach(path => use(path,ent));
+      for (var path of text) use(path,ent);
   
     if (typeof config === 'string')
       Object.merge(ent, json.decode(Resources.replstrs(config)));
     else if (Array.isArray(config))
-      config.forEach(function(path) {
+      for (var path of config) {
         if (typeof path === 'string') {
           console.info(`ingesting ${path} ...`);
           Object.merge(ent, json.decode(Resources.replstrs(path)));
         }
-        else if (typeof path === 'object')
+        else if (path instanceof Object)
           Object.merge(ent,path);
-      });
+      };
       
     ent.reparent(this);
-    
+
     for (var [prop, p] of Object.entries(ent)) {
       if (!p) continue;
       if (typeof p !== 'object') continue;
@@ -188,12 +188,12 @@ var entity = {
       Object.merge(ent[prop], p);
       ent.components[prop] = ent[prop];
     };
-  
+
     check_registers(ent);
-  
-    if (typeof ent.load === 'function') ent.load();
+
+    if (ent.load instanceof Function) ent.load();
     if (sim.playing())
-      if (typeof ent.start === 'function') ent.start();
+      if (ent.start instanceof Function) ent.start();
   
     Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');
     
@@ -235,8 +235,8 @@ var entity = {
     return ent;
   },
   
-  disable() { this.components.forEach(function(x) { x.disable(); }); },
-  enable() { this.components.forEach(function(x) { x.enable(); }); },
+  disable() { for (var x of this.components) x.disable(); },
+  enable() { for (var x of this.components) x.enable(); },
   
   this2screen(pos) { return game.camera.world2view(this.this2world(pos)); },
   screen2this(pos) { return this.world2this(game.camera.view2world(pos)); },
@@ -280,7 +280,7 @@ var entity = {
   
     var bb = boxes.shift();
   
-    boxes.forEach(function(x) { bb = bbox.expand(bb, x); });
+    for (var x of boxes) bb = bbox.expand(bb, x);
   
     bb = bbox.move(bb, this.pos);
   
@@ -338,7 +338,7 @@ dup(diff) {
     this.__kill = true;
     console.spam(`Killing entity of type ${this.ur}`);
   
-    this.timers.forEach(t => t());
+    for (var t of this.timers) t();
     this.timers = [];
     Event.rm_obj(this);
     input.do_uncontrol(this);
@@ -358,13 +358,12 @@ dup(diff) {
     delete this.components;
   
     this.clear();
-    if (typeof this.stop === 'function') this.stop();
+    if (this.stop instanceof Function) this.stop();
     
     game.tag_clear_guid(this.guid);
     
     for (var i in this) {
-      if (typeof this[i] === 'object') delete this[i];
-      if (typeof this[i] === 'function') delete this[i];
+      if (this[i] instanceof Object || this[i] instanceof Function) delete this[i];
     }
   },
   
@@ -482,17 +481,17 @@ var gameobject = {
     var newpos = relative.this2world(x);
     var move = newpos.sub(this.pos);
     this.rpos = newpos;
-    this.objects.forEach(x => x.move(move));
+    for (var o of this.objects) o.move(move);
   },
   
   set_angle(x, relative = world) {
     var newangle = relative.angle + x;
     var diff = newangle - this.angle;
     this.rangle = newangle;
-    this.objects.forEach(obj => {
+    for (var obj of this.objects) {
       obj.rotate(diff);
       obj.set_pos(Vector.rotate(obj.get_pos(obj.master), diff), obj.master);
-    });
+    }
   },
   
   set_scale(x, relative = world) {
@@ -500,10 +499,10 @@ var gameobject = {
     var newscale = relative.scale.map((s,i) => x[i]*s);
     var pct = this.scale.map((s,i) => newscale[i]/s);
     this.rscale = newscale;
-    this.objects.forEach(obj => {
+    for (var obj of this.objects) {
       obj.grow(pct);
       obj.set_pos(obj.get_pos(obj.master).map((x,i) => x*pct[i]), obj.master);
-    });
+    };
   },
   
   get_pos(relative = world) {
@@ -650,17 +649,17 @@ function apply_ur(u, ent) {
     if (typeof text === 'string')
       use(text, ent);
     else if (Array.isArray(text))
-      text.forEach(path => use(path,ent));
+      for (var path of text) use(path,ent);
     
     if (typeof data === 'string')
       Object.merge(ent, json.decode(Resources.replstrs(data)));
     else if (Array.isArray(data)) {
-      data.forEach(function(path) {
+      for (var path of data) {
         if (typeof path === 'string')
           Object.merge(ent, json.decode(Resources.replstrs(data)));
-        else if (typeof path === 'object')
+        else if (path instanceof Object)
           Object.merge(ent,path);
-      });
+      };
     }
   }
 }

@@ -409,7 +409,7 @@ Object.dainty_assign = function(target, source)
 
 Object.isObject = function(o)
 {
-  return (typeof o === 'object' && !Array.isArray(o));
+  return (o instanceof Object && !(o instanceof Array));
 }
 
 Object.setter_assign = function(target, source)
@@ -860,25 +860,6 @@ Object.defineProperty(String.prototype, 'trimchr', {
   }
 });
 
-Object.defineProperty(String.prototype, 'startswith', {
-  value: function(val) {
-    if (!val) return false;
-    return this.startsWith(val);
-  }
-});
-
-Object.defineProperty(String.prototype, 'endswith', {
-  value: function(val) {
-    if (!val) return false;
-    return this.endsWith(val);
-  }
-});
-
-Object.defineProperty(String.prototype, 'pct', {
-  value: function(val) {
-  }
-});
-
 Object.defineProperty(String.prototype, 'uc', { value: function() { return this.toUpperCase(); } });
 Object.defineProperty(String.prototype, 'lc', {value:function() { return this.toLowerCase(); }});
 
@@ -897,6 +878,18 @@ Object.defineProperty(Array.prototype, 'copy', {
     });
     
     return c;
+  }
+});
+
+Object.defineProperty(Array.prototype, 'forFrom', {
+  value: function(n, fn) {
+    for (var i = n; i < this.length; i++) fn(this[i]);
+  }
+});
+
+Object.defineProperty(Array.prototype, 'forTo', {
+  value: function(n, fn) {
+    for (var i = 0; i < n; i++) fn(this[i]);
   }
 });
 
@@ -1032,19 +1025,6 @@ value: function(b) {
   for (var i = 0; i < this.length; i++) { c[i] = this[i] + b[i]; }
   return c;
 }});
-
-/*Object.defineProperty(Array.prototype, 'concat', {
-  value: function(b) {
-    var result = [];
-    for (var i = 0; i < this.length; i++)
-      result.push(this[i]);
-      
-    for (var i = 0; i < b.length; i++)
-      result.push(b[i]);
-      
-    return result;
-  }
-});*/
 
 Object.defineProperty(Array.prototype, 'normalized', {
   value: function() {

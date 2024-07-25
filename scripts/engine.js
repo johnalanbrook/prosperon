@@ -25,6 +25,14 @@ Object.defineProperty(String.prototype, "folder", {
 
 globalThis.Resources = {};
 
+Resources.rm_fn = function(fnstr, text)
+{
+  while (text.match(fnstr)) {
+  }  
+}
+
+Resources.rm_fn.doc = "Remove calls to a given function from a given text script.";
+
 Resources.replpath = function (str, path) {
   if (!str) return str;
   if (str[0] === "/") return str.rm(0);
@@ -48,6 +56,10 @@ Resources.replstrs = function (path) {
   var script = io.slurp(path);
   var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
   var stem = path.dir();
+  
+  // remove console statements
+  //script = script.replace(/console\.(.*?)\(.*?\)/g, '');
+  //script = script.replace(/assert\(.*?\)/g, '');
 
   script = script.replace(regexp, function (str) {
     var newstr = Resources.replpath(str.trimchr('"'), path);
@@ -222,7 +234,7 @@ global.check_registers = function (obj) {
   }
       
   for (var k in obj) {
-    if (!k.startswith("on_")) continue;
+    if (!k.startsWith("on_")) continue;
     var signal = k.fromfirst("on_");
     Event.observe(signal, obj, obj[k]);
   }
@@ -728,12 +740,12 @@ var Register = {
     var fns = [];
 
     n.register = function (fn, oname) {
-      if (typeof fn !== "function") return;
+      if (!(fn instanceof Function)) return;
 
       var dofn = function(...args) {
         var st = profile.now();
         fn(...args);
-	profile.addreport(name, oname, st);
+	      profile.addreport(name, oname, st);
       }
       
       fns.push(dofn);

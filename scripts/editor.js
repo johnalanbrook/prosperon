@@ -569,7 +569,7 @@ var editor = {
       obj.ur = sub;
       
       return;
-    } else if (!sub.startswith(obj.ur)) {
+    } else if (!sub.startsWith(obj.ur)) {
       console.warn(`Cannot make an ur of type ${sub} from an object with the ur ${obj.ur}`);
       return;
     }
@@ -1433,7 +1433,7 @@ replpanel.inputs.tab = function() {
   var stub = this.value.fromlast('.');  
   var replobj = (editor.selectlist.length === 1) ? "editor.selectlist[0]" : "editor.edit_level";
   
-  if (this.value.startswith("this."))
+  if (this.value.startsWith("this."))
     keyobj = keyobj.replace("this", replobj);
 
   if (!this.value.includes('.')) keys.push("this");
@@ -1461,7 +1461,7 @@ replpanel.inputs.tab = function() {
   
   if (stub)
     this.value = o + '.' + comp;
-  else if (this.value.endswith('.'))
+  else if (this.value.endsWith('.'))
     this.value = o + '.' + comp;
   else
     this.value = comp;
@@ -1677,7 +1677,7 @@ var openlevelpanel = Object.copy(inputpanel,  {
 
   keycb() {
     if(this.value)
-      this.assets = this.allassets.filter(x => x.startswith(this.value));
+      this.assets = this.allassets.filter(x => x.startsWith(this.value));
     else
       this.assets = this.allassets.slice();
     for (var m in this.mumlist)

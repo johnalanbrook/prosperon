@@ -660,11 +660,7 @@ render.box = function(pos, wh, color = Color.white) {
   check_flush(render.flush_poly);  
 };
 
-render.window = function(pos, wh, color) {
-  var p = pos.slice();
-  p = p.add(wh.scale(0.5));
-  render.box(p,wh,color);
-};
+render.window = function(pos, wh, color) { render.box(pos.add(wh.scale(0.5)),wh,color); };
 
 render.text_bb = function(str, size = 1, wrap = -1, pos = [0,0])
 {

@@ -79,9 +79,7 @@ var sprite = {
       return;
     }
     if (p === this.path) return;
-    sprite_rmbucket(this);
     this._p = p;
-    sprite_addbucket(this);
   
     this.del_anim?.();
     this.texture = game.texture(p);
@@ -101,7 +99,6 @@ var sprite = {
     return this._p;
   },
   kill() {
-    sprite_rmbucket(this);  
     this.del_anim?.();
     this.anim = undefined;
     this.gameobject = undefined;
@@ -175,7 +172,6 @@ component.sprite = function(obj) {
   sp.transform = obj.transform;
   sp.guid = prosperon.guid();
   allsprites[sp.guid] = sp;
-  sprite_addbucket(sp);
   if (component.sprite.make_hook) component.sprite.make_hook(sp);
   return sp;
 }

@@ -126,7 +126,7 @@ profile.endframe = function()
 var print_frame = function(frame, indent, title)
 {
   var avg = frame._times.reduce((sum, e) => sum += e)/frame._times.length;
-  say(indent + `${title} ::::: ${profile.best_t(avg)}`);
+  say(indent + `${title} ::::: ${profile.best_t(avg)} (${frame._times.length} hits)`);
   
   for (var i in frame) {
     if (i === '_times') continue;
