@@ -211,16 +211,6 @@ debug.api.print_doc =  function(name)
   return mdoc;
 }
 
-debug.log = {};
-
-debug.log.time = function(fn, name, avg=0)
-{
-  debug.log.time[name] ??= [];
-  var start = profile.now();
-  fn();
-  debug.log.time[name].push(profile.now()-start);
-}
-
 debug.kill = function()
 {
   assert = function() {};

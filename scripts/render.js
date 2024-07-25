@@ -194,7 +194,7 @@ render.make_shader = function(shader)
       }
     }
   
-    profile.report(st, `CACHE make shader from ${file}`);
+    profile.addreport("shader [cached]", file, st);
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
     obj.pipe = render.pipeline(obj);
@@ -310,7 +310,7 @@ render.make_shader = function(shader)
   compiled.files = files;
   
   io.slurpwrite(writejson, json.encode(compiled));
-  profile.report(st, `make shader from ${file}`);
+  profile.addreport('shader', file, st);
   
   var obj = compiled[os.sys()];
   obj.pipe = render.pipeline(obj);

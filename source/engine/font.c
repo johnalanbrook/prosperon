@@ -104,7 +104,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   newfont->descent = descent*emscale;
   newfont->linegap = linegap*emscale;
   newfont->linegap = ((newfont->ascent - newfont->descent) - newfont->linegap);
-  printf("newfont : %g, %g, %g\n", newfont->ascent, newfont->descent, newfont->linegap);
 
   newfont->texture = malloc(sizeof(texture));
   newfont->texture->id = sg_make_image(&(sg_image_desc){

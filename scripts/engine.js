@@ -652,6 +652,8 @@ prosperon.touchrelease = function (touches) {};
 prosperon.touchmove = function (touches) {};
 prosperon.clipboardpaste = function (str) {};
 prosperon.quit = function () {
+  if (profile.disabled) return;
+  
   say("===START CACHE REPORTS===\n");
   for (var i in profile.report_cache) {
     say(profile.printreport(profile.report_cache[i],i));
@@ -662,10 +664,6 @@ prosperon.quit = function () {
   say("\n");
 
   profile.print_cpu_instr();
-
-  console.info("QUITTING");
-  for (var i in debug.log.time)
-    say(debug.log.time[i].map((x) => profile.ms(x)));
 };
 
 window.size = [640, 480];

@@ -176,3 +176,12 @@ profile.printreport = function (cache, name) {
 
   return report;
 };
+
+var null_fn = function(){};
+profile.disable = function()
+{
+  profile.gather_stop();
+  profile.frame = null_fn;
+  profile.endframe = null_fn;
+  profile.disabled = true;
+}
