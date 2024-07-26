@@ -1,4 +1,4 @@
-var t_units = ["ns", "us", "ms", "s", "m", "h"];
+var t_units = ["ns", "us", "ms", "s", "ks", "Ms"];
 
 profile.cpu = function(fn, times = 1, q = "unnamed") {
   var start = profile.now();
@@ -100,6 +100,7 @@ profile.best_t = function (t) {
     t /= 1000;
     qq++;
   }
+
   return `${t.toPrecision(4)} ${t_units[qq]}`;
 };
 

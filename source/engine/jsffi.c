@@ -1320,7 +1320,7 @@ int iiihandle(JSRuntime *rt, void *data)
 JSC_CCALL(profile_gather,
   int count = js2number(argv[0]);
   instr_v = JS_DupValue(js, argv[1]);
-  JS_SetInterruptHandler(rt, iiihandle, NULL, count);
+  JS_SetInterruptHandler(rt, iiihandle, NULL);
 )
 
 JSC_CCALL(profile_gather_rate,
@@ -1328,7 +1328,7 @@ JSC_CCALL(profile_gather_rate,
 )
 
 JSC_CCALL(profile_gather_stop,
-  JS_SetInterruptHandler(rt,NULL,NULL,10000);
+  JS_SetInterruptHandler(rt,NULL,NULL);
 )
 
 static const JSCFunctionListEntry js_profile_funcs[] = {

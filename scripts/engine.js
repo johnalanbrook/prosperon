@@ -73,12 +73,17 @@ Resources.replstrs = function (path) {
   var stem = path.dir();
   
   // remove console statements
-  script = Resources.rm_fn(/console\.(spam|info|warn|error)/, script);
-  script = Resources.rm_fn(/profile\.(cache|frame|endcache|endframe)/, script);
-  script = Resources.rm_fn(/assert/, script);
-  //script = script.replace(/console\.(.*?)\(.*?\)/g, '');
-  //script = script.replace(/assert\(.*?\)/g, '');
-
+  if (!console.enabled)
+    script = Resources.rm_fn(/console\.(spam|info|warn|error)/, script);
+  
+  if (!profile.enabled)
+    script = Resources.rm_fn(/profile\.(cache|frame|endcache|endframe)/, script);
+  
+  if (!debug.enabled) {
+    script = Resources.rm_fn(/assert/, script);
+    script = Resources.rm_fn(/debug\.(build|fn_break)/, script);
+  }
+    
   script = script.replace(regexp, function (str) {
     var newstr = Resources.replpath(str.trimchr('"'), path);
     return `"${newstr}"`;
@@ -255,14 +260,21 @@ function stripped_use (file, env = {}, script) {
 function bare_use(file)
 {
   var script = io.slurp(file);
+  if (!script) return;
   script = `(function() { var self = this; ${script}; })`;
   Object.assign(globalThis, os.eval(file, script).call(globalThis));
 }
 
-profile.enabled = false;
+globalThis.debug = {};
+
+profile.enabled = true;
+console.enabled = true;
+debug.enabled = true;
 
 bare_use("scripts/base.js");
 bare_use("scripts/profile.js");
+
+bare_use("preconfig.js");
 
 if (!profile.enabled)
   use = stripped_use;

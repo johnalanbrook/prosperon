@@ -1,5 +1,3 @@
-var debug = {};
-
 debug.build = function(fn) { fn(); }
 
 debug.fn_break = function(fn,obj = globalThis) {
@@ -209,13 +207,6 @@ debug.api.print_doc =  function(name)
   }
 
   return mdoc;
-}
-
-debug.kill = function()
-{
-  assert = function() {};
-  debug.build = function() {};
-  debug.fn_break = function() {};
 }
 
 return {
