@@ -1142,6 +1142,25 @@ JSValue js_vector_dot(JSContext *js, JSValue self, int argc, JSValue *argv) { re
 
 JSC_CCALL(vector_project, return vec22js(HMM_ProjV2(js2vec2(argv[0]), js2vec2(argv[1]))))
 
+JSC_CCALL(vector_midpoint,
+  HMM_Vec2 a = js2vec2(argv[0]);
+  HMM_Vec2 b = js2vec2(argv[1]);
+//  HMM_Vec2 c = HMM_AddV2(a,b);
+//  c = HMM_DivV2F(c, 2);
+  return vec22js((HMM_Vec2){(a.x+b.x)/2, (a.y+b.y)/2});
+)
+
+JSC_CCALL(vector_distance,
+  HMM_Vec2 a = js2vec2(argv[0]);
+  HMM_Vec2 b = js2vec2(argv[1]);
+  return number2js(HMM_DistV2(a,b));
+)
+
+JSC_CCALL(vector_angle,
+  HMM_Vec2 a = js2vec2(argv[0]);
+  return angle2js(atan2(a.y,a.x));
+)
+
 /* Given a series of points p, computes a new series with them expanded on either side by d */
 HMM_Vec2 *inflatepoints(HMM_Vec2 *p, float d, int n)
 {
@@ -1204,11 +1223,251 @@ JSC_CCALL(vector_rotate,
   return vec22js(vec);
 )
 
+JSC_CCALL(vector_add,
+  HMM_Vec4 a = js2vec4(argv[0]);
+  HMM_Vec4 b = js2vec4(argv[1]);
+  HMM_Vec4 c = HMM_AddV4(a,b);
+  return vec42js(c);
+)
+
+JSC_CCALL(vector_norm,
+  int len = js_arrlen(argv[0]);
+
+  switch(len) {
+    case 2: return vec22js(HMM_NormV2(js2vec2(argv[0])));
+    case 3: return vec32js(HMM_NormV3(js2vec3(argv[0])));
+    case 4: return vec42js(HMM_NormV4(js2vec4(argv[0])));
+  }
+  return argv[0];
+)
+
+JSC_CCALL(vector_angle_between,
+  int len = js_arrlen(argv[0]);
+  switch(len) {
+    case 2: return angle2js(HMM_AngleV2(js2vec2(argv[0]), js2vec2(argv[1])));
+    case 3: return angle2js(HMM_AngleV3(js2vec3(argv[0]), js2vec3(argv[1])));
+    case 4: return angle2js(HMM_AngleV4(js2vec4(argv[0]), js2vec4(argv[1])));
+  }
+  return angle2js(0);
+)
+
+JSC_CCALL(vector_lerp,
+  double s = js2number(argv[0]);
+  double f = js2number(argv[1]);
+  double t = js2number(argv[2]);
+  
+  return number2js((f-s)*t+s);
+)
+
+int gcd(int a, int b) {
+    if (b == 0)
+        return a;
+    return gcd(b, a % b);
+}
+
+JSC_CCALL(vector_gcd,
+  return number2js(gcd(js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(vector_lcm,
+  double a = js2number(argv[0]);
+  double b = js2number(argv[1]);
+  return number2js((a*b)/gcd(a,b));
+)
+
+JSC_CCALL(vector_clamp,
+  double x = js2number(argv[0]);
+  double l = js2number(argv[1]);
+  double h = js2number(argv[2]);
+  return number2js(x > h ? h : x < l ? l : x);
+)
+
+JSC_SSCALL(vector_trimchr,
+  int len = js2number(js_getpropstr(argv[0], "length"));
+  char *start = str;
+  
+  while (*start == *str2)
+    start++;
+    
+  char *end = str + len-1;
+  while(*end == *str2)
+    end--;
+  
+  ret = JS_NewStringLen(js, start, end-start+1);
+)
+
+JSC_CCALL(vector_angledist,
+  double a1 = js2number(argv[0]);
+  double a2 = js2number(argv[1]);
+  a1 = fmod(a1,1);
+  a2 = fmod(a2,1);
+  double dist = a2-a1;
+  if (dist == 0) return number2js(dist);
+  if (dist > 0) {
+    if (dist > 0.5) return number2js(dist-1);
+    return number2js(dist);
+  }
+  
+  if (dist < -0.5) return number2js(dist+1);
+  
+  return number2js(dist);
+)
+
+double r2()
+{
+    return (double)rand() / (double)RAND_MAX ;
+}
+
+double rand_range(double min, double max) {
+  return r2() * (max-min) + min;
+}
+
+JSC_CCALL(vector_variate,
+  double n = js2number(argv[0]);
+  double pct = js2number(argv[1]);
+  
+  return number2js(n + (rand_range(-pct,pct)*n));
+)
+
+JSC_CCALL(vector_random_range, return number2js(rand_range(js2number(argv[0]), js2number(argv[1]))))
+
+JSC_CCALL(vector_mean,
+  double len =  js_arrlen(argv[0]);
+  double sum;
+  for (int i = 0; i < len; i++)
+    sum += js2number(js_getpropidx(argv[0], i));
+    
+  return number2js(sum/len);
+)
+
+JSC_CCALL(vector_sum,
+  double sum;
+  int len = js_arrlen(argv[0]);
+  for (int i = 0; i < len; i++)
+    sum += js2number(js_getpropidx(argv[0], i));
+  
+  return number2js(sum);
+)
+
+JSC_CCALL(vector_sigma,
+  int len = js_arrlen(argv[0]);
+  double sum;
+  for (int i = 0; i < len; i++)
+    sum += js2number(js_getpropidx(argv[0], i));
+  
+  double mean = sum/(double)len;
+  
+  double sq_diff = 0;
+
+  for (int i = 0; i < len; i++) {
+    double x = js2number(js_getpropidx(argv[0],i));
+    sq_diff += pow(x-mean, 2);
+  }
+  
+  double variance = sq_diff/((double)len);
+  
+  return number2js(sqrt(variance));
+)
+
+JSC_CCALL(vector_median,
+  int len = js_arrlen(argv[0]);
+  double arr[len];
+  double temp;
+  
+  for (int i = 0; i < len; i++)
+    arr[i] = js2number(js_getpropidx(argv[0], i));
+    
+  for (int i = 0; i < len-1; i++) {
+    for (int j = i+1; j < len; j++) {
+      if (arr[i] > arr[j]) {
+        temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+      }
+    }
+  }
+  
+  if (len % 2 == 0) return number2js((arr[len/2-1] + arr[len/2])/2.0);
+  return number2js(arr[len/2]);
+)
+
 static const JSCFunctionListEntry js_vector_funcs[] = {
-  MIST_FUNC_DEF(vector,dot,2),
-  MIST_FUNC_DEF(vector,project,2),
+  MIST_FUNC_DEF(vector, dot,2),
+  MIST_FUNC_DEF(vector, project,2),
   MIST_FUNC_DEF(vector, inflate, 2),
-  MIST_FUNC_DEF(vector, rotate, 2)
+  MIST_FUNC_DEF(vector, rotate, 2),
+  MIST_FUNC_DEF(vector, add, 2),
+  MIST_FUNC_DEF(vector, midpoint, 2),
+  MIST_FUNC_DEF(vector, distance, 2),
+  MIST_FUNC_DEF(vector, angle, 1),
+  MIST_FUNC_DEF(vector, norm, 1),
+  MIST_FUNC_DEF(vector, angle_between, 2),
+  MIST_FUNC_DEF(vector, lerp, 3),
+  MIST_FUNC_DEF(vector, gcd, 2),
+  MIST_FUNC_DEF(vector, lcm, 2),
+  MIST_FUNC_DEF(vector, clamp, 3),
+  MIST_FUNC_DEF(vector, trimchr, 2),
+  MIST_FUNC_DEF(vector, angledist, 2),
+  MIST_FUNC_DEF(vector, variate, 2),
+  MIST_FUNC_DEF(vector, random_range, 2),
+  MIST_FUNC_DEF(vector, mean, 1),
+  MIST_FUNC_DEF(vector, sum, 1),
+  MIST_FUNC_DEF(vector, sigma, 1),
+  MIST_FUNC_DEF(vector, median, 1)
+};
+
+#define JS_HMM_FN(OP, HMM, SIGN) \
+JSC_CCALL(array_##OP, \
+  int len = js_arrlen(self); \
+  if (!JS_IsArray(js, argv[0])) { \
+    double n = js2number(argv[0]); \
+    JSValue arr = JS_NewArray(js); \
+    for (int i = 0; i < len; i++) \
+      js_setprop_num(arr, i, number2js(js2number(js_getpropidx(self,i)) SIGN n)); \
+    return arr; \
+  } \
+  switch(len) { \
+    case 2: \
+      return vec22js(HMM_##HMM##V2(js2vec2(self), js2vec2(argv[0]))); \
+    case 3: \
+      return vec32js(HMM_##HMM##V3(js2vec3(self), js2vec3(argv[0]))); \
+    case 4: \
+      return vec42js(HMM_##HMM##V4(js2vec4(self), js2vec4(argv[0]))); \
+  } \
+  \
+  JSValue arr = JS_NewArray(js); \
+  for (int i = 0; i < len; i++) { \
+    double a = js2number(js_getpropidx(self,i)); \
+    double b = js2number(js_getpropidx(argv[0],i)); \
+    js_setprop_num(arr, i, number2js(a SIGN b)); \
+  } \
+  return arr; \
+) \
+
+JS_HMM_FN(add, Add, +)
+JS_HMM_FN(sub, Sub, -)
+JS_HMM_FN(div, Div, /)
+JS_HMM_FN(scale, Mul, *)
+
+JSC_CCALL(array_lerp,
+  int len = js_arrlen(self);
+  JSValue arr =  JS_NewArray(js);
+  double t = js2number(argv[1]);
+  
+  for (int i = 0; i < len; i++) {
+    double from = js2number(js_getpropidx(self, i));
+    double to = js2number(js_getpropidx(argv[0], i));
+    js_setprop_num(arr, i, number2js((to - from) * t + from));
+  }
+  return arr;
+)
+
+static const JSCFunctionListEntry js_array_funcs[] = {
+  MIST_FUNC_DEF(array, add, 1),
+  MIST_FUNC_DEF(array, sub, 1),
+  MIST_FUNC_DEF(array, div,1),
+  MIST_FUNC_DEF(array, scale, 1),
+  MIST_FUNC_DEF(array, lerp, 2)
 };
 
 JSC_CCALL(game_engine_start, engine_start(argv[0],argv[1], js2number(argv[2]), js2number(argv[3])))
@@ -1234,13 +1493,18 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
 JSC_CCALL(prosperon_window_render, openglRender(js2vec2(argv[0])))
 JSC_CCALL(prosperon_guid,
-  uint8_t bytes[16];
-  for (int i = 0; i < 16; i++) bytes[i] = rand()%256;
-  char uuid[37];
-  snprintf(uuid, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-  bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-  bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]);
-  return str2js(uuid);
+  int bits = 32;
+  char guid[33];
+  for (int i = 0; i < 4; i++) {
+    int r = rand();
+    for (int j = 0; j < 8; j++) {
+      guid[i*8+j] = "0123456789abcdef"[r%16];
+      r /= 16;
+    }
+  }
+
+  guid[32] = 0;
+  return str2js(guid);
 )
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
@@ -1613,6 +1877,13 @@ JSC_CCALL(transform_phys2d,
   t->rotation = HMM_MulQ(t->rotation, rot);
 )
 
+JSC_CCALL(transform_unit,
+  transform *t = js2transform(self);
+  t->pos = v3zero;
+  t->rotation = QUAT1;
+  t->scale = v3one;
+)
+
 static const JSCFunctionListEntry js_transform_funcs[] = {
   CGETSET_ADD(transform, pos),
   CGETSET_ADD(transform, scale),
@@ -1623,6 +1894,7 @@ static const JSCFunctionListEntry js_transform_funcs[] = {
   MIST_FUNC_DEF(transform, angle, 1),
   MIST_FUNC_DEF(transform, lookat, 1),
   MIST_FUNC_DEF(transform, direction, 1),
+  MIST_FUNC_DEF(transform, unit, 0),
 };
 
 JSC_GETSET(dsp_node, pass, boolean)
@@ -2740,6 +3012,10 @@ void ffi_load() {
   JSSTATIC(damped_rotary, cpConstraint_proto)
   JSSTATIC(damped_spring, cpConstraint_proto)
   JSSTATIC(groove, cpConstraint_proto)
+  
+  JSValue array_proto = js_getpropstr(globalThis, "Array");
+  array_proto = js_getpropstr(array_proto, "prototype");
+  JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, 4);
   
   JS_FreeValue(js,globalThis);  
 }

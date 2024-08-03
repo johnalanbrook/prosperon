@@ -108,7 +108,7 @@ var make_emitter = function()
   var e = Object.create(emitter);
   e.ssbo = render.make_textssbo();
   e.shape = shape.centered_quad;
-  e.shader = render.make_shader("shaders/baseparticle.cg");
+  e.shader = "shaders/baseparticle.cg";
   e.dead = [];
   return e;
 }

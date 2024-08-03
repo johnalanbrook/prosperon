@@ -512,7 +512,7 @@ Object.copy = function(proto, ...objs)
   return c;
 }
 
-/* OBJECT DEFININTioNS */
+/* OBJECT DEFININTIONS */
 Object.defHidden = function(obj, prop)
 {
   Object.defineProperty(obj, prop, {enumerable:false, writable:true});
@@ -657,19 +657,6 @@ Object.defineProperty(Object.prototype, 'push', {
   }
 });
 
-Object.defineProperty(Object.prototype, 'findIndex', {
-  value: function(x) {
-    var i = 0;
-    for (var key in this) {
-      if (this[key] === x) return i;
-      i++;
-    }
-
-    return -1;
-  }
-});
-
-
 /* STRING DEFS */
 
 Object.defineProperty(String.prototype, 'next', {
@@ -763,12 +750,6 @@ Object.defineProperty(String.prototype, 'up_path', {
   }
 });
 
-Object.defineProperty(String.prototype, 'resolve', {
-  value: function(path) {
-    
-  },
-});
-
 Object.defineProperty(String.prototype, 'fromlast', {
   value: function(val) {
     var idx = this.lastIndexOf(val);
@@ -836,23 +817,7 @@ Object.defineProperty(String.prototype, 'updir', {
 
 Object.defineProperty(String.prototype, 'trimchr', {
   value: function(chars) {
-    var start = this.length;
-    var end = 0;
-    for (var i = 0; i < this.length; i++) {
-      if (!chars.includes(this[i])) {
-        start = i;
-	break;
-      }
-    }
-
-    for (var i = this.length-1; i >= 0; i--) {
-      if (!chars.includes(this[i])) {
-        end = i+1;
-	break;
-      }
-    }
-
-    return this.substring(start,end);
+    return vector.trimchr(this, chars);
   }
 });
 
@@ -860,11 +825,6 @@ Object.defineProperty(String.prototype, 'uc', { value: function() { return this.
 Object.defineProperty(String.prototype, 'lc', {value:function() { return this.toLowerCase(); }});
 
 /* ARRAY DEFS */
-Object.defineProperty(Array.prototype, 'aspect', {
-  value: function() { 
-    return this.x/this.y;
-  }
-});
 Object.defineProperty(Array.prototype, 'copy', {
   value: function() {
     var c = [];
@@ -1015,13 +975,6 @@ swizz.forEach(function(x) {
 };
 make_swizz();
 
-Object.defineProperty(Array.prototype, 'add', {
-value: function(b) {
-  var c = [];
-  for (var i = 0; i < this.length; i++) { c[i] = this[i] + b[i]; }
-  return c;
-}});
-
 Object.defineProperty(Array.prototype, 'normalized', {
   value: function() {
     var c = this.slice();
@@ -1056,13 +1009,6 @@ Object.defineProperty(Array.prototype, 'doubleup', {
   }
 });
 
-Object.defineProperty(Array.prototype, 'sub', {
-value: function(b) {
-  var c = [];
-  for (var i = 0; i < this.length; i++) { c[i] = this[i] - b[i]; }
-  return c;
-}});
-
 Object.defineProperty(Array.prototype, 'mult', {
   value: function(arr) {
     var c = [];
@@ -1075,16 +1021,6 @@ Object.defineProperty(Array.prototype, 'apply', {
     this.forEach(function(x) { x[fn].apply(x); });
   }
 });
-
-Object.defineProperty(Array.prototype, 'scale', {
-  value: function(s) {
-    if (Array.isArray(s)) {
-      var c = this.slice();
-      c.forEach(function(x,i) { c[i] = x * s[i]; });
-      return c;
-    }
-    return this.map(function(x) { return x*s; });
-}});
 
 Object.defineProperty(Array.prototype, 'sorted', {
   value: function() {
@@ -1119,7 +1055,6 @@ Object.defineProperty(Array.prototype, 'mapvec', {
     return this.map((x,i) => fn(x,b[i]));
   }
 });
-    
 
 Object.defineProperty(Array.prototype, 'remove', {
  value: function(b) {
@@ -1257,19 +1192,23 @@ Object.defineProperty(Array.prototype, 'mirrored', {
   }
 });
 
-Object.defineProperty(Array.prototype, 'lerp', {
-  value: function(to, t) {
-    var c = [];
-    this.forEach(function(x,i) {
-      c[i] = (to[i] - x) * t + x;
-    });
-    return c;
-  }
-});
+Math.lerp = vector.lerp;
+Math.gcd = vector.gcd;
+Math.lcm = vector.lcm;
+Math.sum = vector.sum;
+Math.mean = vector.mean;
+Math.sigma = vector.sigma;
+Math.median = vector.median;
 
-Math.lerp = function(s,f,t) { return (f-s)*t + s; };
-Math.gcd = function(a,b) { return b === 0 ? a : gcd(b,a%b); }
-Math.lcm = function(a,b) { return (a*b)/gcd(a,b); }
+Math.variance = function(series) {
+  var mean = Math.mean(series);
+  var vnce = 0;
+  for (var i = 0; i < series.length; i++)
+    vnce += Math.pow(series[i]-mean, 2);
+  return vnce/(series.length);
+}
+
+Math.ci = function(series) { return 3*Math.sigma(series)/Math.sqrt(series.length); }
 
 Math.grab_from_points = function(pos, points, slop) {
   var shortest = slop;
@@ -1313,22 +1252,18 @@ Object.defineProperty(Object.prototype, 'lerp',{
     return obj;
 }});
 
-/* MATH EXTENSioNS */
+/* MATH EXTENSIONS */
 Object.defineProperty(Number.prototype, 'lerp', {
-  value: function(to, t) {
-    var s = this;
-    return (to - this) * t + this;
-  }
+  value: function(to, t) { return Math.lerp(this, to, t); }
 });
+
 Object.defineProperty(Number.prototype, 'clamp', {
-  value: function(from,to) {
-    return Math.clamp(this,from,to);
-  }
+  value: function(from,to) { return Math.clamp(this,from,to); }
 });
 
-Math.clamp = function (x, l, h) { return x > h ? h : x < l ? l : x; }
+Math.clamp = vector.clamp;
 
-Math.random_range = function(min,max) { return Math.random() * (max-min) + min; };
+Math.random_range = vector.random_range;
 Math.rand_int = function(max) { return Math.floor(Math.random()*max); };
 
 Math.snap = function(val, grid) {
@@ -1340,33 +1275,17 @@ Math.snap = function(val, grid) {
   return d+i;
 }
 
-Math.angledist = function (a1, a2) {
-  a1 = a1%1;
-  a2 = a2%1;
-  var dist = a2 - a1;
-  if (dist == 0) return dist;
-  
-  if (dist > 0) {
-    if (dist > 0.5) return dist-1;
-    return dist;
-  }
-  
-  if (dist < -0.5) return dist+1;
-
-  return dist;
-};
+Math.angledist = vector.angledist;
 Math.angledist.doc = "Find the shortest angle between two angles.";
 Math.TAU = Math.PI*2;
 Math.deg2rad = function(deg) { return deg * 0.0174533; };
 Math.rad2deg = function(rad) { return rad / 0.0174533; };
-Math.deg2rad = function(x) { return x; };
-Math.rad2deg = function(x) { return x; };
 Math.turn2rad = function(x) { return x*Math.TAU; };
 Math.rad2turn = function(x) { return x/Math.TAU; };
 Math.turn2deg = function(x) { return x*360; };
 Math.deg2turn = function(x) { return x/360; };
 Math.randomint = function(max) { return Math.clamp(Math.floor(Math.random() * max), 0, max-1); };
-Math.variate = function(n, pct) { return n + (Math.random_range(-pct,pct)*n); }
+Math.variate = vector.variate;
 
 /* BOUNDINGBOXES */
 var bbox = {};
@@ -1501,38 +1420,16 @@ bbox.fromobjs = function(objs)
 var Vector = {};
 Vector.length = function(v) { return Math.hypot(...v); }
 
-Vector.norm = function(v) {
-  var len = Vector.length(v);
-  if (!len) return [0,0];
-  return [v.x/len, v.y/len];
-}
-Vector.project = function(a, b) { return vector.project(a,b); }
-Vector.dot = function(a, b) { return vector.dot(a,b); },
+Vector.norm = vector.norm;
+Vector.project = vector.project;
+Vector.dot = vector.dot;
 Vector.random = function() {  
   var vec = [Math.random()-0.5, Math.random()-0.5];
   return Vector.norm(vec);
 }
 
-Vector.midpoint = function(a,b) { return [(a.x+b.x)/2, (a.y+b.y)/2]; }
-Vector.distance = function(a,b) { return Math.hypot(b.x-a.x, b.y-a.y); }
-
-Vector.angle_between = function(a,b)
-{
-  var dot = Vector.dot(a,b);
-  var am = Vector.length(a);
-  var bm = Vector.length(b);
-  var cos_a = dot / (am*bm);
-  var angle = Math.acos(cos_a);
-  return Math.rad2turn(angle);
-}
-
-Vector.angle = function(v) { return Math.rad2turn(Math.atan2(v.y, v.x)); }
-Vector.rotate = function(v,angle) {  
-  var r = Vector.length(v);
-  angle += Vector.angle(v);
-  angle = Math.turn2rad(angle);
-  return [r*Math.cos(angle), r*Math.sin(angle)];
-}
+Vector.angle_between = vector.angle_between;
+Vector.rotate = vector.rotate;
   
 Vector.equal = function(v1, v2, tol) {
   if (!tol)

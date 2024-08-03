@@ -416,6 +416,7 @@ typedef union HMM_Mat4 {
 extern const HMM_Vec2 v2zero;
 extern const HMM_Vec2 v2one;
 extern const HMM_Vec3 v3zero;
+extern const HMM_Vec3 v3one;
 extern const HMM_Vec4 v4zero;
 
 typedef signed int HMM_Bool;
@@ -477,7 +478,6 @@ HMM_Vec4 HMM_AddV4(HMM_Vec4 Left, HMM_Vec4 Right);
 HMM_Vec2 HMM_SubV2(HMM_Vec2 Left, HMM_Vec2 Right);
 HMM_Vec3 HMM_SubV3(HMM_Vec3 Left, HMM_Vec3 Right);
 HMM_Vec4 HMM_SubV4(HMM_Vec4 Left, HMM_Vec4 Right);
-HMM_Vec3 HMM_ScaleV3(HMM_Vec3 v, double s);
 HMM_Vec2 HMM_MulV2(HMM_Vec2 Left, HMM_Vec2 Right);
 HMM_Vec2 HMM_MulV2F(HMM_Vec2 Left, float Right);
 HMM_Vec3 HMM_MulV3(HMM_Vec3 Left, HMM_Vec3 Right);

@@ -3,6 +3,7 @@
 const HMM_Vec2 v2zero = {0,0};
 const HMM_Vec2 v2one = {1,1};
 const HMM_Vec3 v3zero = {0,0,0};
+const HMM_Vec3 v3one = {1,1,1};
 const HMM_Vec4 v4zero = {0,0,0,0};
 
 const HMM_Vec3 vX = {1.0,0.0,0.0};
@@ -17,7 +18,7 @@ const HMM_Vec3 vLEFT = {-1,0,0};
 const HMM_Vec3 vRIGHT = {1,0,0};
 
 const HMM_Mat4 MAT1 = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-const HMM_Quat QUAT1 = {1,0,0,0};
+const HMM_Quat QUAT1 = {0,0,0,1};
 
 /*
  * Angle unit conversion functions
@@ -262,14 +263,9 @@ HMM_Vec4 HMM_SubV4(HMM_Vec4 Left, HMM_Vec4 Right) {
   return Result;
 }
 
-  HMM_Vec2 HMM_ScaleV2(HMM_Vec2 v, double s)
-  {
-    return HMM_V2(v.X*s, v.Y*s);    
-  }
-
-HMM_Vec3 HMM_ScaleV3(HMM_Vec3 v, double s)
+HMM_Vec2 HMM_ScaleV2(HMM_Vec2 v, double s)
 {
-  return HMM_V3(v.x*s,v.y*s,v.z*s);
+  return HMM_V2(v.X*s, v.Y*s);    
 }
 
 HMM_Vec2 HMM_MulV2(HMM_Vec2 Left, HMM_Vec2 Right) {
@@ -529,7 +525,6 @@ float HMM_AngleV4(HMM_Vec4 a, HMM_Vec4 b)
 }
 
 HMM_Vec2 HMM_NormV2(HMM_Vec2 A) {
-  // HMM_MulV2F(A, 1.0/HMM_LenV2(A)+FLOAT_MIN);
   return HMM_MulV2F(A, HMM_InvSqrtF(HMM_DotV2(A, A)));
 }
 

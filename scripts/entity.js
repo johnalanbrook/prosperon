@@ -1,5 +1,11 @@
 globalThis.entityreport = {};
 
+var timer_update = function(dt)
+{
+  this.fn();
+   
+}
+
 function obj_unique_name(name, obj) {
   name = name.replaceAll('.', '_');
   if (!(name in obj)) return name;
@@ -68,7 +74,7 @@ var entity = {
   delay(fn, seconds) {
     var timers = this.timers;
     var stop = function() { 
-      timers.remove(stop);
+      delete timers[guid];
       execute = undefined;
       stop = undefined;
       rm?.();
@@ -91,7 +97,8 @@ var entity = {
     }
     
     var rm = Register.update.register(update);
-    timers.push(stop);
+    var guid = prosperon.guid();
+    timers[guid] = (stop);
     return stop;
   },
   
@@ -146,7 +153,7 @@ var entity = {
     
     ent.components = {};
     ent.objects = {};
-    ent.timers = [];
+    ent.timers = {};
     
     if (!text)
       ent.ur = emptyur;
@@ -339,8 +346,8 @@ dup(diff) {
     this.__kill = true;
     console.spam(`Killing entity of type ${this.ur}`);
   
-    for (var t of this.timers) t();
-    this.timers = [];
+    this.timers.forEach(x => x());
+    delete this.timers;
     Event.rm_obj(this);
     input.do_uncontrol(this);
   

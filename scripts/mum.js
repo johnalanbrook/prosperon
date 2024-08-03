@@ -202,8 +202,6 @@ mum.image = function(path, data = {})
     else
       data.height = tex.height;
 
-
-    
   if (!data.width) data.width = tex.width;
   if (!data.height) data.height = tex.height;
 

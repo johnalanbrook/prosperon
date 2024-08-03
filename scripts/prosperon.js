@@ -316,21 +316,23 @@ var Register = {
 
   add_cb(name, e_event = false) {
     var n = {};
-    var fns = [];
+    var fns = {};
 
     n.register = function (fn, oname) {
       if (!(fn instanceof Function)) return;
+      
+      var guid = prosperon.guid();
 
       var dofn = function(...args) {
         profile.cache(name,oname);
         var st = profile.now();
         fn(...args);
-	profile.endcache();
+      	profile.endcache();
       }
       
-      fns.push(dofn);
+      fns[guid] = dofn;
       return function () {
-        fns.remove(dofn);
+        delete fns[guid];
       };
     };
     

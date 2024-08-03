@@ -17,20 +17,17 @@ var fullrect = [0,0,1,1];
 
 var sprite_addbucket = function(sprite)
 {
-  return;
-  var pp = sprite.gameobject.drawlayer.toString();
-  sprite_buckets[pp] ??= {};
-  sprite_buckets[pp][sprite.path] ??= {};
-  sprite_buckets[pp][sprite.path][sprite.guid] = sprite;
+  var layer = sprite.gameobject.drawlayer;
+  sprite_buckets[layer] ??= {};
+  sprite_buckets[layer][sprite.path] ??= {};
+  sprite_buckets[layer][sprite.path][sprite.guid] = sprite;
 }
 
 var sprite_rmbucket = function(sprite)
 {
-  return;
-  var pp = sprite.gameobject.drawlayer.toString();
-  if (!sprite_buckets[pp]) return;
-  if (!sprite_buckets[pp][sprite.path]) return;
-  delete sprite_buckets[pp][sprite.path][sprite.guid];
+  for (var layer of Object.values(sprite_buckets))
+    for (var path of Object.values(layer))
+      delete path[sprite.guid];
 }
 
 var sprite = {
@@ -59,6 +56,7 @@ var sprite = {
       //self.path = playing.path;
       self.frame = playing.frames[f].rect;
       self.rect = [self.frame.x, self.frame.y, self.frame.w, self.frame.h];
+      self.update_dimensions();
       f = (f+1)%playing.frames.length;
       if (f === 0) {
         self.anim_done?.();
@@ -88,6 +86,8 @@ var sprite = {
     this.rect = fullrect;
     
     var anim = SpriteAnim.make(p);
+    this.update_dimensions();
+    this.sync();
 
     if (!anim) return;
     this.anim = anim;
@@ -99,6 +99,7 @@ var sprite = {
     return this._p;
   },
   kill() {
+    sprite_rmbucket(this);
     this.del_anim?.();
     this.anim = undefined;
     this.gameobject = undefined;
@@ -111,7 +112,10 @@ var sprite = {
     this.pos = this.pos.scale(x);
   },
   anchor:[0,0],
-  sync() { },
+  sync() {
+    sprite_rmbucket(this);
+    sprite_addbucket(this);
+  },
   pick() { return this; },
   boundingbox() {
     var dim = this.dimensions();
@@ -120,17 +124,21 @@ var sprite = {
     return bbox.fromcwh(realpos,dim);
   },
   
+  update_dimensions() {
+    this._dimensions = [this.texture.width*this.rect[2], this.texture.height*this.rect[3]];
+    component.sprite_dim_hook?.(this);
+  },
+  
   dimensions() {
-    var dim = [this.texture.width, this.texture.height];
-    dim.x *= this.frame.w;
-    dim.y *= this.frame.h;
-    return dim;
+    return this._dimensions;
   },
   width() { return this.dimensions().x; },
   height() { return this.dimensions().y; },
 };
 globalThis.allsprites = {};
-globalThis.sprite_buckets = [];
+var sprite_buckets = {};
+
+component.sprite_buckets = function() { return sprite_buckets; }
 
 sprite.doc = {
   path: "Path to the texture.",
@@ -173,6 +181,7 @@ component.sprite = function(obj) {
   sp.guid = prosperon.guid();
   allsprites[sp.guid] = sp;
   if (component.sprite.make_hook) component.sprite.make_hook(sp);
+  sprite_addbucket(sp);
   return sp;
 }
 

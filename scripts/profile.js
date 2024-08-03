@@ -1,15 +1,32 @@
 var t_units = ["ns", "us", "ms", "s", "ks", "Ms"];
 
-profile.cpu = function(fn, times = 1, q = "unnamed") {
-  var start = profile.now();
-  for (var i = 0; i < times; i++)
-    fn();
-    
-  var elapsed = profile.now() - start;
-  var avgt = profile.best_t(elapsed/times);
-  var totalt = profile.best_t(elapsed);
+function calc_cpu(fn, times, diff=0)
+{
+  var series = []; 
+  
+  for (var i = 0; i < times; i++) {
+    var st = profile.now();
+    fn(i);
+    series.push(profile.now()-st-diff);
+  }
+  
+  return series;
+}
 
-  say(`profile [${q}]: ${profile.best_t(avgt)} average [${profile.best_t(totalt)} for ${times} loops]`);
+function empty_fn() {}
+
+profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
+  profile.gather_stop();
+  var empty = calc_cpu(empty_fn, 100000);
+  var mean = Math.mean(empty);
+  var series = calc_cpu(fn,times, mean);
+    
+  var elapsed = Math.sum(series);
+  var avgt = profile.best_t(elapsed/series.length);
+  var totalt = profile.best_t(elapsed);
+  
+  say(`profile [${q}]: ${avgt} ± ${profile.best_t(Math.ci(series))} [${totalt} for ${times} loops]`);
+  start_prof_gather();
 }
 
 profile.ms = function(t) { return t/1000000; }
@@ -35,27 +52,33 @@ function add_callgraph(fn, line, time) {
 var hittar = 500;
 var hitpct = 0.2;
 var start_gather = profile.now();
+
+function start_prof_gather()
+{
+  profile.gather(hittar, function() {
+    var time = profile.now()-st;
+    
+    var err = new Error();
+    var stack = err.stack.split("\n");
+  
+    stack = stack.slice(1);
+    stack = stack.map(x => x.slice(7).split(' '));
+  
+    var fns = stack.map(x => x[0]).filter(x=>x);
+    var lines = stack.map(x => x[1]).filter(x => x);
+    lines = lines.map(x => x.slice(1,x.length-1));
+  
+    for (var i = 0; i < fns.length; i++)
+      add_callgraph(fns[i], lines[i], time);
+  
+    st = profile.now();
+    
+    profile.gather_rate(Math.variate(hittar,hitpct));
+  });
+}
+
 if (profile.enabled)
-profile.gather(hittar, function() {
-  var time = profile.now()-st;
-  
-  var err = new Error();
-  var stack = err.stack.split("\n");
-
-  stack = stack.slice(1);
-  stack = stack.map(x => x.slice(7).split(' '));
-
-  var fns = stack.map(x => x[0]).filter(x=>x);
-  var lines = stack.map(x => x[1]).filter(x => x);
-  lines = lines.map(x => x.slice(1,x.length-1));
-
-  for (var i = 0; i < fns.length; i++)
-    add_callgraph(fns[i], lines[i], time);
-
-  st = profile.now();
-  
-  profile.gather_rate(Math.variate(hittar,hitpct));
-});
+  start_prof_gather();
 
 var filecache = {};
 function get_line(file, line) {
@@ -96,6 +119,7 @@ profile.print_cpu_instr = function()
 
 profile.best_t = function (t) {
   var qq = 0;
+
   while (t > 1000 && qq < t_units.length-1) {
     t /= 1000;
     qq++;
@@ -109,28 +133,29 @@ profile.report = function (start, msg = "[undefined report]") { console.info(`${
 var profile_frames = {};
 var profile_frame_ts = [];
 var profile_cframe = profile_frames;
-var profile_frame = 0;
-profile.frame = function(title)
+var pframe = 0;
+
+profile.frame = function profile_frame(title)
 {
   profile_frame_ts.push(profile_cframe);
   profile_cframe[title] ??= {};
   profile_cframe = profile_cframe[title];
   profile_cframe._times ??= [];
-  profile_cframe._times[profile_frame] = profile.now();
+  profile_cframe._times[pframe] ??= 0;
+  profile_cframe._times[pframe] = profile.now() - profile_cframe._times[pframe];
 }
 
-profile.endframe = function()
+profile.endframe = function profile_endframe()
 {
   if (profile_cframe === profile_frames) return;
-  profile_cframe._times[profile_frame] = profile.now() - profile_cframe._times[profile_frame];
+  profile_cframe._times[pframe] = profile.now() - profile_cframe._times[pframe];
   profile_cframe = profile_frame_ts.pop();
-  if (profile_cframe === profile_frames) profile_frame++;
+  if (profile_cframe === profile_frames) pframe++;
 }
 
 var print_frame = function(frame, indent, title)
 {
-  var avg = frame._times.reduce((sum, e) => sum += e)/frame._times.length;
-  say(indent + `${title} ::::: ${profile.best_t(avg)} (${frame._times.length} hits)`);
+  say(indent + `${title} ::::: ${profile.best_t(Math.mean(frame._times))} ± ${profile.best_t(Math.ci(frame._times))} (${frame._times.length} hits)`);
   
   for (var i in frame) {
     if (i === '_times') continue;
@@ -150,14 +175,14 @@ var report_cache = {};
 var cachest = 0;
 var cachegroup;
 var cachetitle;
-profile.cache = function(group, title)
+profile.cache = function profile_cache(group, title)
 {
   cachest = profile.now();
   cachegroup = group;
   cachetitle = title;
 }
 
-profile.endcache = function(tag = "")
+profile.endcache = function profile_endcache(tag = "")
 {
   addreport(cachegroup, cachetitle + tag, cachest);
 }

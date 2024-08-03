@@ -29,7 +29,7 @@ Object.defineProperty(String.prototype, "folder", {
 
 globalThis.Resources = {};
 
-Resources.rm_fn = function(fn, text)
+Resources.rm_fn = function rm_fn(fn, text)
 {
   var reg = new RegExp(fn.source + "\\s*\\(");
   var match;
@@ -48,7 +48,7 @@ Resources.rm_fn = function(fn, text)
 }
 Resources.rm_fn.doc = "Remove calls to a given function from a given text script.";
 
-Resources.replpath = function (str, path) {
+Resources.replpath = function replpath(str, path) {
   if (!str) return str;
   if (str[0] === "/") return str.rm(0);
 
@@ -66,7 +66,7 @@ Resources.replpath = function (str, path) {
   return str;
 };
 
-Resources.replstrs = function (path) {
+Resources.replstrs = function replstrs(path) {
   if (!path) return;
   var script = io.slurp(path);
   var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
@@ -223,7 +223,7 @@ globalThis.global = globalThis;
 
 var use_cache = {};
 
-globalThis.use = function(file, env = {}, script) {
+globalThis.use = function use(file, env = {}, script) {
   file = Resources.find_script(file);
   profile.cache("USE", file);
 
@@ -238,6 +238,7 @@ globalThis.use = function(file, env = {}, script) {
   use_cache[file] = fn;
   var ret = fn.call(env);
   profile.endcache();
+  
   return ret;
 }
 
@@ -254,6 +255,7 @@ function stripped_use (file, env = {}, script) {
   var fn = os.eval(file, script);
   var ret = fn.call(env);
   profile.endcache();
+  
   return ret;
 }
 
@@ -273,6 +275,13 @@ debug.enabled = true;
 
 bare_use("scripts/base.js");
 bare_use("scripts/profile.js");
+
+prosperon.release = function()
+{
+  profile.enabled = false;
+  console.enabled = false;
+  debug.enabled = false;
+}
 
 bare_use("preconfig.js");
 

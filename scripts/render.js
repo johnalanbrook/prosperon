@@ -6,24 +6,24 @@ render.doc = {
 
 var cur = {};
 
-render.use_shader = function(shader)
+render.use_shader = function use_shader(shader)
 {
   if (typeof shader === 'string')
-    shader = render.make_shader(shader);
+    shader = make_shader(shader);
   if (cur.shader === shader) return;
   cur.shader = shader;
-  cur.globals = {};
   cur.bind = undefined;
   cur.mesh = undefined;
   render.setpipeline(shader.pipe);
+  shader_globals(cur.shader);
 }
 
-render.use_mat = function(mat)
+render.use_mat = function use_mat(mat)
 {
   if (!cur.shader) return;
   if (cur.mat === mat) return;
 
-  render.shader_apply_material(cur.shader, mat, cur.mat);
+  shader_apply_material(cur.shader, mat, cur.mat);
   
   cur.mat = mat;
 
@@ -38,7 +38,7 @@ render.use_mat = function(mat)
 
 var models_array = [];
 
-render.set_model = function(t)
+function set_model(t)
 {
   if (cur.shader.vs.unimap.model)
     render.setunim4(0, cur.shader.vs.unimap.model.slot, t);
@@ -96,7 +96,7 @@ var face_map = {
   ccw: 1
 }
 
-render.poly_prim = function(verts)
+render.poly_prim = function poly_prim(verts)
 {
   var index = [];
   if (verts.length < 1) return undefined;
@@ -131,31 +131,15 @@ function shader_directive(shader, name, map)
   return ff;
 }
 
-function global_uni(uni, stage)
-{
-  cur.globals[stage] ??= {};
-  if (cur.globals[stage][uni.name]) return true;
-  switch(uni.name) {
-    case "time":
-      cur.globals[stage][uni.name]
-      render.setuniv(stage, uni.slot, profile.secs(profile.now()));
-      cur.globals[stage][uni.name] = true;
-      return true;
-    case "projection":
-      render.setuniproj(stage, uni.slot);
-      cur.globals[stage][uni.name] = true;
-      return true;
-    case "view":
-      render.setuniview(stage, uni.slot);
-      cur.globals[stage][uni.name] = true;
-      return true;
-    case "vp":
-      render.setunivp(stage, uni.slot);
-      cur.globals[stage][uni.name] = true;
-      return true;
-  }
-  
-  return false;
+var uni_globals = {
+  time(stage, slot) { render.setuniv(stage, slot, profile.secs(profile.now())); },
+  projection(stage,slot) { render.setuniproj(stage, slot); },
+  view(stage,slot) { render.setuniview(stage, slot); },
+  vp(stage,slot) { render.setunivp(stage,slot); },
+}
+
+function set_global_uni(uni, stage) {
+  uni_globals[uni.name]?.(stage, uni.slot); 
 }
 
 var setcam = render.set_camera;
@@ -170,8 +154,14 @@ render.set_camera = function(cam)
 }
 
 var shader_cache = {};
+
+function strip_shader_inputs(shader)
+{
+  for (var a of shader.vs.inputs)
+    a.name = a.name.slice(2);
+}
  
-render.make_shader = function(shader)
+function make_shader(shader)
 {
   if (shader_cache[shader]) return shader_cache[shader];
   
@@ -198,6 +188,7 @@ render.make_shader = function(shader)
     profile.endcache(" [cached]");
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
+    strip_shader_inputs(obj);
     obj.pipe = render.pipeline(obj);
     shader_cache[shader] = obj;
     return obj;
@@ -314,6 +305,7 @@ render.make_shader = function(shader)
   profile.endcache();
   
   var obj = compiled[os.sys()];
+  strip_shader_inputs(obj);
   obj.pipe = render.pipeline(obj);
 
   shader_cache[shader] = obj;
@@ -326,11 +318,20 @@ var shader_unisize = {
   12: render.setuniv3,
   16: render.setuniv4
 };
+
+function shader_globals(shader)
+{
+  for (var p in shader.vs.unimap)
+    set_global_uni(shader.vs.unimap[p], 0);
+    
+  for (var p in shader.fs.unimap)
+    set_global_uni(shader.fs.unimap[p], 1);
+}
   
-render.shader_apply_material = function(shader, material = {}, old = {})
+function shader_apply_material(shader, material = {}, old = {})
 {
   for (var p in shader.vs.unimap) {
-    if (global_uni(shader.vs.unimap[p], 0)) continue;
+    if (!(p in material)) continue;
     if (material[p] === old[p]) continue;
     assert(p in material, `shader ${shader.name} has no uniform for ${p}`);
     var s = shader.vs.unimap[p];
@@ -338,7 +339,7 @@ render.shader_apply_material = function(shader, material = {}, old = {})
   }
   
   for (var p in shader.fs.unimap) {
-    if (global_uni(shader.fs.unimap[p], 1)) continue;
+    if (!(p in material)) continue;
     if (material[p] === old[p]) continue;
     assert(p in material, `shader ${shader.name} has no uniform for ${p}`);    
     var s = shader.fs.unimap[p];
@@ -355,7 +356,7 @@ render.shader_apply_material = function(shader, material = {}, old = {})
     render.setuniv2(0, shader.vs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
 }
 
-render.sg_bind = function(mesh, ssbo)
+function sg_bind(mesh, ssbo)
 {
   if (cur.mesh === mesh && cur.bind) {
     cur.bind.inst = 1;
@@ -371,13 +372,10 @@ render.sg_bind = function(mesh, ssbo)
   if (cur.shader.vs.inputs)
   for (var a of cur.shader.vs.inputs) {
     if (!(a.name in mesh)) {
-      if (!(a.name.slice(2) in mesh)) {
-        console.error(`cannot draw shader ${cur.shader.name}; there is no attrib ${a.name} in the given mesh.`);
-        return undefined;
-      } else
-      bind.attrib.push(mesh[a.name.slice(2)]);
+      console.error(`cannot draw shader ${cur.shader.name}; there is no attrib ${a.name} in the given mesh.`);
+      return undefined;
     } else
-    bind.attrib.push(mesh[a.name]);
+      bind.attrib.push(mesh[a.name]);
   }
   
   if (cur.shader.indexed) {
@@ -448,15 +446,15 @@ var polyssboshader;
 var sprite_ssbo;
 
 render.init = function() {
-  textshader = render.make_shader("shaders/text_base.cg");
-  render.spriteshader = render.make_shader("shaders/sprite.cg");
-  spritessboshader = render.make_shader("shaders/sprite_ssbo.cg");
-  render.postshader = render.make_shader("shaders/simplepost.cg");
-  slice9shader = render.make_shader("shaders/9slice.cg");
-  circleshader = render.make_shader("shaders/circle.cg");
-  polyshader = render.make_shader("shaders/poly.cg");
-  parshader = render.make_shader("shaders/baseparticle.cg");
-  polyssboshader = render.make_shader("shaders/poly_ssbo.cg");
+  textshader = make_shader("shaders/text_base.cg");
+  render.spriteshader = make_shader("shaders/sprite.cg");
+  spritessboshader = make_shader("shaders/sprite_ssbo.cg");
+  render.postshader = make_shader("shaders/simplepost.cg");
+  slice9shader = make_shader("shaders/9slice.cg");
+  circleshader = make_shader("shaders/circle.cg");
+  polyshader = make_shader("shaders/poly.cg");
+  parshader = make_shader("shaders/baseparticle.cg");
+  polyssboshader = make_shader("shaders/poly_ssbo.cg");
   textssbo = render.make_textssbo();
   poly_ssbo = render.make_textssbo();
   sprite_ssbo = render.make_textssbo();
@@ -493,47 +491,55 @@ render.init = function() {
   }
 }
 
-render.sprites = function(gridsize = 1)
+render.sprites = function render_sprites(gridsize = 1)
 {
+/*
   profile.frame("bucketing");
   var sps = Object.values(allsprites);
-  var sprite_buckets = {};
+
+  var buckets = [];
+  for (var i = 0; i <= 20; i++)
+    buckets[i] = {};
+    
   for (var sprite of sps) {
-    var pp = sprite.gameobject.drawlayer;
-    sprite_buckets[pp] ??= {};
-    sprite_buckets[pp][sprite.path] ??= {};
-    sprite_buckets[pp][sprite.path][sprite.guid] = sprite;
-    render.sprite_hook?.(sprite);
+    var layer = sprite.gameobject.drawlayer+10;
+    if (buckets[layer][sprite.path])
+      buckets[layer][sprite.path].push(sprite);
+    else
+      buckets[layer][sprite.path] = [sprite];
   }
   
   profile.endframe();
+  */
+
   profile.frame("sorting");
+  var sprite_buckets = component.sprite_buckets();
+  
   var buckets = Object.entries(sprite_buckets).sort((a,b) => {
     var na = Number(a[0]);
-    var ba = Number(b[0]);
-    if (na < ba) return -1;
-    if (na === ba) return 0;
+    var nb = Number(b[0]);
+    if (na < nb) return -1;
     return 1;
   });
   profile.endframe();
-
+  
   profile.frame("drawing");
   render.use_shader(spritessboshader);
-  for (var bucket of buckets) {
-    for (var img of Object.values(bucket[1])) {
+  for (var layer of buckets) {
+    for (var img of Object.values(layer[1])) {
        var sparray = Object.values(img);
        if (sparray.length === 0) continue;
        var ss = sparray[0];
        render.use_mat(ss);
-       render.make_sprite_ssbo(Object.values(sparray), sprite_ssbo);
+       render.make_sprite_ssbo(sparray, sprite_ssbo);
        render.draw(shape.quad, sprite_ssbo, sparray.length);
     }
   }
   profile.endframe();
 }
 
-render.circle = function(pos, radius, color) {
-  check_flush();
+render.circle = function render_circle(pos, radius, color) {
+  flush();
   var mat = {
     radius: radius,
     coord: pos,
@@ -544,56 +550,71 @@ render.circle = function(pos, radius, color) {
   render.draw(shape.quad);
 }
 
-render.poly = function(points, color, transform) {
+render.poly = function render_poly(points, color, transform) {
   var buffer = render.poly_prim(points);
   var mat = { shade: color};
   render.use_shader(polyshader);
-  render.set_model(transform);
+  set_model(transform);
   render.use_mat(mat);
   render.draw(buffer);
 }
 
 var nextflush = undefined;
-var check_flush = function(flush_fn)
+function flush()
 {
-  if (!flush_fn) {
-    if (!nextflush) return;
-    nextflush();
-    nextflush = undefined;
-  }
+  nextflush?.();
+  nextflush = undefined;
+}
+
+function check_flush(flush_fn)
+{
   if (!nextflush)
     nextflush = flush_fn;
   else if (nextflush !== flush_fn) {
-      nextflush();
-      nextflush = flush_fn;
-    }
+    nextflush();
+    nextflush = flush_fn;
+  }
 }
 
 var poly_cache = [];
+var poly_idx = 0;
 var poly_ssbo;
 
-render.flush_poly = function()
+function poly_e()
 {
-  if (poly_cache.length === 0) return;
-  render.use_shader(polyssboshader);
-  render.use_mat({});
-  render.make_particle_ssbo(poly_cache, poly_ssbo);
-  render.draw(shape.centered_quad, poly_ssbo, poly_cache.length);
-  poly_cache = [];
+  var e;
+  poly_idx++;
+  if (poly_idx > poly_cache.length) {
+    e = {
+      transform:os.make_transform(),
+      color: Color.white
+    };
+    poly_cache.push(e);
+    return e;
+  }
+  var e = poly_cache[poly_idx-1];
+  e.transform.unit();
+  return e;
 }
 
-render.line = function(points, color = Color.white, thickness = 1) {
-  var transform = os.make_transform();
-  var dist = Vector.distance(points[0],points[1]);
-  transform.move(Vector.midpoint(points[0],points[1]));
-  transform.rotate([0,0,-1], Vector.angle([points[1].x-points[0].x, points[1].y-points[0].y]));
-  transform.scale = [dist, thickness, 1];
-  poly_cache.push({
-    transform:transform,
-    color:color
-  });
-  
-  check_flush(render.flush_poly);
+function flush_poly()
+{
+  if (poly_idx === 0) return;
+  render.use_shader(polyssboshader);
+  render.use_mat({});
+  render.make_particle_ssbo(poly_cache.slice(0,poly_idx), poly_ssbo);
+  render.draw(shape.centered_quad, poly_ssbo, poly_cache.length);
+  poly_idx = 0;
+}
+
+render.line = function render_line(points, color = Color.white, thickness = 1) {
+  var poly = poly_e();
+  var dist = vector.distance(points[0],points[1]);
+  poly.transform.move(vector.midpoint(points[0],points[1]));
+  poly.transform.rotate([0,0,-1], vector.angle([points[1].x-points[0].x, points[1].y-points[0].y]));
+  poly.transform.scale = [dist, thickness, 1];
+  poly.color = color;
+  check_flush(flush_poly);
 }
 
 /* All draw in screen space */
@@ -601,7 +622,7 @@ render.point =  function(pos,size,color = Color.blue) {
   render.circle(pos,size,size,color);
 };
   
-render.cross = function(pos, size, color = Color.red, thickness = 1) {
+render.cross = function render_cross(pos, size, color = Color.red, thickness = 1) {
   var a = [
     pos.add([0,size]),
     pos.add([0,-size])
@@ -614,7 +635,7 @@ render.cross = function(pos, size, color = Color.red, thickness = 1) {
   render.line(b,color,thickness);
 };
   
-render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
+render.arrow = function render_arrow(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
   var dir = end.sub(start).normalized();
   var wing1 = [
     Vector.rotate(dir, wingangle).scale(wingspan).add(end),
@@ -629,39 +650,34 @@ render.arrow = function(start, end, color = Color.red, wingspan = 4, wingangle =
   render.line(wing2,color);
 };
 
-render.coordinate = function(pos, size, color) {
+render.coordinate = function render_coordinate(pos, size, color) {
   render.text(JSON.stringify(pos.map(p=>Math.round(p))), pos, size, color);
   render.point(pos, 2, color);
 }
 
-render.boundingbox = function(bb, color = Color.white) {
+render.boundingbox = function render_boundingbox(bb, color = Color.white) {
   render.line(bbox.topoints(bb).wrapped(1), color);
 }
 
-render.rectangle = function(lowerleft, upperright, color) {
+render.rectangle = function render_rectangle(lowerleft, upperright, color) {
   var transform = os.make_transform();
   var wh = [upperright.x-lowerleft.x, upperright.y-lowerleft.y];
-  transform.move(Vector.midpoint(lowerleft,upperright));
-  transform.scale = [wh.x,wh.y,1];
-  poly_cache.push({
-    transform:transform,
-    color:color
-  });
-  check_flush(render.flush_poly);
+  var poly = poly_e();
+  poly.transform.move(vector.midpoint(lowerleft,upperright));
+  poly.transform.scale = [wh.x,wh.y,1];
+  poly.color = color;
+  check_flush(flush_poly);
 };
   
-render.box = function(pos, wh, color = Color.white) {
-  var transform = os.make_transform();
-  transform.move(pos);
-  transform.scale = [wh.x,wh.y,1];
-  poly_cache.push({
-    transform:transform,
-    color:color
-  });
-  check_flush(render.flush_poly);  
+render.box = function render_box(pos, wh, color = Color.white) {
+  var poly = poly_e();
+  poly.transform.move(pos);
+  poly.transform.scale = [wh.x,wh.y,1];
+  poly.color = color;
+  check_flush(flush_poly);  
 };
 
-render.window = function(pos, wh, color) { render.box(pos.add(wh.scale(0.5)),wh,color); };
+render.window = function render_window(pos, wh, color) { render.box(pos.add(wh.scale(0.5)),wh,color); };
 
 render.text_bb = function(str, size = 1, wrap = -1, pos = [0,0])
 {
@@ -693,12 +709,12 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
 };
 
 render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0, color = Color.white) {
-  check_flush();
+  flush();
   var t = os.make_transform();
   t.pos = pos;
   t.scale = [scale.x/tex.width,scale.y/tex.height,1];
   render.use_shader(render.spriteshader);
-  render.set_model(t);
+  set_model(t);
   render.use_mat({
     shade: color,
     diffuse: tex,
@@ -729,7 +745,7 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
     border = [bb.l/tex.width, bb.b/tex.height, bb.r/tex.width, bb.t/tex.height];
 
   render.use_shader(slice9shader);
-  render.set_model(t);
+  set_model(t);
   render.use_mat({
     shade: color,
     diffuse:tex,
@@ -768,16 +784,16 @@ render.flush_text = function()
   render.draw(shape.quad, textssbo, amt);
 }
 
-render.fontcache = {};
+var fontcache = {};
 render.set_font = function(path, size) {
   var fontstr = `${path}-${size}`;
-  if (render.font && render.fontcache[fontstr] === render.font) return;
-  if (!render.fontcache[fontstr]) render.fontcache[fontstr] = os.make_font(path, size);
+  if (render.font && fontcache[fontstr] === render.font) return;
+  if (!fontcache[fontstr]) fontcache[fontstr] = os.make_font(path, size);
   
   render.flush_text();
 
-  gui.font_set(render.fontcache[fontstr]);
-  render.font = render.fontcache[fontstr];
+  gui.font_set(fontcache[fontstr]);
+  render.font = fontcache[fontstr];
 }
 
 render.doc = "Draw shapes in screen space.";
@@ -786,14 +802,13 @@ render.cross.doc = "Draw a cross centered at pos, with arm length size.";
 render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
 render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
 
-render.draw = function(mesh, ssbo, inst = 1)
+render.draw = function render_draw(mesh, ssbo, inst = 1)
 {
-  render.sg_bind(mesh, ssbo);
+  sg_bind(mesh, ssbo);
+  profile.frame("gpu");
   render.spdraw(cur.bind.count, inst);
+  profile.endframe();
 }
-
-
-
 
 // Returns an array in the form of [left, bottom, right, top] in pixels of the camera to render to
 // Camera viewport is [left,bottom,right,top] in relative values
@@ -947,7 +962,7 @@ prosperon.render = function()
   render.commit();
 }
 
-prosperon.process = function() {
+prosperon.process = function process() {
   profile.frame("frame");
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
