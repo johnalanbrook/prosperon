@@ -3,7 +3,6 @@ globalThis.entityreport = {};
 var timer_update = function(dt)
 {
   this.fn();
-   
 }
 
 function obj_unique_name(name, obj) {
@@ -92,8 +91,10 @@ var entity = {
     stop.pct = function() { return 1 - (stop.remain/stop.seconds); };
     
     function update(dt) {
+      profile.frame("timer");
       stop.remain -= dt;
       if (stop.remain <= 0) execute();
+      profile.endframe();
     }
     
     var rm = Register.update.register(update);

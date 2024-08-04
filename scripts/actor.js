@@ -66,9 +66,10 @@ actor.delay = function(fn, seconds) {
   stop.pct = function() { return 1-(stop.remain / stop.seconds); };
   
   function update(dt) {
+    profile.frame("timer");
     stop.remain -= dt;
-    if (stop.remain <= 0)
-     execute();
+    if (stop.remain <= 0) execute();
+    profile.endframe();
   }
   
   var rm = Register.appupdate.register(update);

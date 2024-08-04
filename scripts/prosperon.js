@@ -1,3 +1,5 @@
+globalThis.gamestate = {};
+
 global.check_registers = function (obj) {
   for (var reg in Register.registries) {
     if (typeof obj[reg] === 'function') {
@@ -247,15 +249,9 @@ prosperon.touchrelease = function (touches) {};
 prosperon.touchmove = function (touches) {};
 prosperon.clipboardpaste = function (str) {};
 prosperon.quit = function () {
-  if (!profile.enabled) return;
-
-  say(profile.print_cache_report());
-
-  say("===FRAME AVERAGES===\n");
-  say(profile.print_frame_avg());
-  say("\n");
-
-  profile.print_cpu_instr();
+  profile.print_cache_report();
+  profile.stop_frame_avg()
+  profile.stop_cpu_instr();
 };
 
 window.size = [640, 480];
@@ -277,33 +273,6 @@ global.mixin("scripts/gui");
 global.mixin("scripts/tween");
 global.mixin("scripts/ai");
 global.mixin("scripts/particle");
-
-var timer = {
-  update(dt) {
-    this.remain -= dt;
-    if (this.remain <= 0) {
-      this.fn();
-      this.kill();
-    }
-  },
-
-  kill() {
-    this.end();
-    delete this.fn;
-  },
-
-  delay(fn, secs) {
-    var t = Object.create(this);
-    t.time = secs;
-    t.remain = secs;
-    t.fn = fn;
-    t.end = Register.update.register(timer.update.bind(t));
-    var returnfn = timer.kill.bind(t);
-    returnfn.remain = secs;
-    return returnfn;
-  },
-};
-
 global.mixin("scripts/physics");
 global.mixin("scripts/geometry");
 

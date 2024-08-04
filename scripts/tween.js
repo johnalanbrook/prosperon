@@ -107,6 +107,7 @@ var tween = function(from, to, time, fn)
 {
   var start = profile.secs(profile.now());
   var update = function(dt) {
+    profile.frame("tween");
     var elapsed = profile.secs(profile.now()) - start;
     fn(from.lerp(to,elapsed/time));
     if (elapsed >= time) {
@@ -114,6 +115,7 @@ var tween = function(from, to, time, fn)
       if (stop.then) stop.then();
       stop();
     }
+    profile.endframe();
   };
   var stop = Register.update.register(update);
   return stop;

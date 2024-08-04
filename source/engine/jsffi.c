@@ -34,6 +34,7 @@
 #include "sokol_glue.h"
 #include <chipmunk/chipmunk_unsafe.h>
 #include "gui.h"
+#include "timer.h"
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -105,6 +106,7 @@ QJSCLASS(sg_buffer)
 QJSCLASS(datastream)
 QJSCLASS(cpShape)
 QJSCLASS(cpConstraint)
+QJSCLASS(timer)
 
 static JSValue js_circle2d;
 static JSValue js_poly2d;
@@ -2397,6 +2399,9 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_FUNC_DEF(texture, blit, 5)
 };
 
+static const JSCFunctionListEntry js_timer_funcs[] = {
+};
+
 JSC_GETSET(font, linegap, number)
 JSC_GET(font, height, number)
 
@@ -2961,6 +2966,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(window);
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(cpShape);
+  QJSCLASSPREP_FUNCS(timer);
 
   QJSGLOBALCLASS(nota);
   QJSGLOBALCLASS(input);

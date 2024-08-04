@@ -53,8 +53,12 @@ var hittar = 500;
 var hitpct = 0.2;
 var start_gather = profile.now();
 
-function start_prof_gather()
+var gathering_cpu = false;
+
+profile.start_cpu_gather = function()
 {
+  if (gathering_cpu) return;
+  gathering_cpu = true;
   profile.gather(hittar, function() {
     var time = profile.now()-st;
     
@@ -77,8 +81,15 @@ function start_prof_gather()
   });
 }
 
-if (profile.enabled)
-  start_prof_gather();
+profile.cpu_frame = function()
+{
+  if (gathering_cpu) return;
+  
+  profile.gather(Math.random_range(300,600), function() {
+    console.stack(2);
+    profile.gather_stop();
+  });
+}
 
 var filecache = {};
 function get_line(file, line) {
@@ -99,8 +110,10 @@ function get_line(file, line) {
   return text.trim();
 }
 
-profile.print_cpu_instr = function()
+profile.stop_cpu_instr = function()
 {
+  if (!gathering_cpu) return;
+  
   say("===CPU INSTRUMENTATION===\n");
   var gather_time = profile.now()-start_gather;
   var e = Object.values(callgraph);
@@ -130,6 +143,33 @@ profile.best_t = function (t) {
 
 profile.report = function (start, msg = "[undefined report]") { console.info(`${msg} in ${profile.best_t(profile.now() - start)}`); };
 
+var frame_avg = false;
+
+profile.start_frame_avg = function()
+{
+  if (frame_avg) return;
+  say("===STARTING FRAME AVERAGE MEASUREMENTS===");
+  profile_frames = {};
+  profile_frame_ts = [];
+  profile_cframe = profile_frames;
+  pframe = 0;
+  frame_avg = true;
+}
+
+profile.stop_frame_avg = function()
+{
+  if (!frame_avg) return;
+  
+  frame_avg = false;
+  profile.print_frame_avg();
+}
+
+profile.toggle_frame_avg = function()
+{
+  if (frame_avg) profile.stop_frame_avg();
+  else profile.start_frame_avg();
+}
+
 var profile_frames = {};
 var profile_frame_ts = [];
 var profile_cframe = profile_frames;
@@ -137,6 +177,8 @@ var pframe = 0;
 
 profile.frame = function profile_frame(title)
 {
+  if (!frame_avg) return;
+  
   profile_frame_ts.push(profile_cframe);
   profile_cframe[title] ??= {};
   profile_cframe = profile_cframe[title];
@@ -147,6 +189,8 @@ profile.frame = function profile_frame(title)
 
 profile.endframe = function profile_endframe()
 {
+  if (!frame_avg) return;
+  
   if (profile_cframe === profile_frames) return;
   profile_cframe._times[pframe] = profile.now() - profile_cframe._times[pframe];
   profile_cframe = profile_frame_ts.pop();
@@ -165,9 +209,13 @@ var print_frame = function(frame, indent, title)
 
 profile.print_frame_avg = function()
 {
+  say("===FRAME AVERAGES===\n");
+  
   var indent = "";
   for (var i in profile_frames)
     print_frame(profile_frames[i], "", 'frame');
+    
+  say("\n");
 }
 
 var report_cache = {};
@@ -193,7 +241,7 @@ profile.print_cache_report = function()
   for (var i in report_cache)
     str += printreport(report_cache[i], i) + "\n";
 
-  return str;
+  say(str);
 }
 
 function addreport(group, line, start) {

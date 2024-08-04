@@ -459,6 +459,8 @@ render.init = function() {
   poly_ssbo = render.make_textssbo();
   sprite_ssbo = render.make_textssbo();
   
+  globalThis.imgui = render.imgui_init();
+  
   render.textshader = textshader;
   
   os.make_circle2d().draw = function() {

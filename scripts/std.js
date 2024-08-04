@@ -14,8 +14,10 @@ if (os.sys() === 'macos') {
   appy.inputs['S-g'] = os.gc;
 }
 
-appy.inputs.f12 = function() { mum.debug = !mum.debug; }
+//appy.inputs.f12 = function() { mum.debug = !mum.debug; }
+appy.inputs.f12 = function() { profile.cpu_frame(); }
 appy.inputs.f11 = window.toggle_fullscreen;
+appy.inputs.f10 = function() { profile.toggle_frame_avg(); }
 appy.inputs['M-f4'] = prosperon.quit;
 
 player[0].control(appy);
