@@ -551,7 +551,7 @@ Object.defineProperty(Object.prototype, 'obscure', {
 Object.defineProperty(Object.prototype, 'mixin', {
   value: function(obj) {
     if (typeof obj === 'string')
-      obj = use(obj, this);
+      obj = use(obj);
       
     if (obj)
       Object.mixin(this, obj);
@@ -1418,8 +1418,7 @@ bbox.fromobjs = function(objs)
 
 /* VECTORS */
 var Vector = {};
-Vector.length = function(v) { return Math.hypot(...v); }
-
+Vector.length = vector.length;
 Vector.norm = vector.norm;
 Vector.project = vector.project;
 Vector.dot = vector.dot;

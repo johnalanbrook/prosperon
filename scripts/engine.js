@@ -1,5 +1,8 @@
 "use math";
 
+prosperon.gc_start = function(){}
+prosperon.gc_end = function(){}
+
 Object.defineProperty(String.prototype, 'rm', {
   value: function(index, endidx = index+1) { return this.slice(0,index) + this.slice(endidx); }
 });
@@ -223,37 +226,38 @@ globalThis.global = globalThis;
 
 var use_cache = {};
 
-globalThis.use = function use(file, env = {}, script) {
+globalThis.use = function use(file) {
   file = Resources.find_script(file);
   profile.cache("USE", file);
 
   if (use_cache[file]) {
-    var ret = use_cache[file].call(env);
-    return;
+    var ret = use_cache[file]();
+    profile.endcache(" [cached]");
+    return ret;
   }
-  script ??= Resources.replstrs(file);
-
+  
+  var script = Resources.replstrs(file);
   script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
   use_cache[file] = fn;
-  var ret = fn.call(env);
+  var ret = fn();
   profile.endcache();
-  
+
   return ret;
 }
 
-function stripped_use (file, env = {}, script) {
+function stripped_use (file, script) {
   file = Resources.find_script(file);
 
   if (use_cache[file]) {
-    var ret = use_cache[file].call(env);
-    return;
+    var ret = use_cache[file]();
+    return ret;
   }
   script ??= Resources.replstrs(file);
 
   script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
-  var ret = fn.call(env);
+  var ret = fn();
   profile.endcache();
   
   return ret;
@@ -264,7 +268,7 @@ function bare_use(file)
   var script = io.slurp(file);
   if (!script) return;
   script = `(function() { var self = this; ${script}; })`;
-  Object.assign(globalThis, os.eval(file, script).call(globalThis));
+  Object.assign(globalThis, os.eval(file, script)());
 }
 
 globalThis.debug = {};

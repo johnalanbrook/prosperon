@@ -32,6 +32,7 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
+#include <script.h>
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__) || defined(__GLIBC__)
@@ -111,6 +112,22 @@ void quickjs_set_dumpout(FILE *f)
 //#define DUMP_MODULE_RESOLVE
 //#define DUMP_PROMISE
 //#define DUMP_READ_OBJECT
+
+#ifdef DUMP
+//#define DUMP_FREE
+//#define DUMP_MEM
+//#define DUMP_CLOSURE
+#define DUMP_GC
+//#define DUMP_GC_FREE
+#define DUMP_LEAKS 1
+//#define DUMP_OBJECTS
+#define DUMP_CLOSURE
+//#define DUMP_OBJECTS
+//#define DUMP_ATOMS
+//#define DUMP_SHAPES
+//#define DUMP_MODULE_RESOLVE
+//#define DUMP_PROMISE
+#endif
 
 /* test the GC by forcing it before each object allocation */
 //#define FORCE_GC_AT_MALLOC

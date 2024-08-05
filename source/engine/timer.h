@@ -5,7 +5,6 @@ typedef struct timer {
   double remain;
 } timer;
 
-
 timer *timer_make();
 void timer_free(timer *t);
 void timer_update(double dt);

@@ -920,10 +920,13 @@ prosperon.render = function()
   render.end_pass();
 
   profile.endframe();
-
-  profile.frame("post process");
+  profile.endframe();
+  profile.endframe();
   /* draw the image of the game world first */
   render.glue_pass();
+  profile.frame("frame");
+  profile.frame("render");
+  profile.frame("post process");  
   render.viewport(...prosperon.camera.view());
   render.use_shader(render.postshader);
   render.use_mat({diffuse:prosperon.screencolor});
@@ -1001,7 +1004,5 @@ prosperon.process = function process() {
 
   profile.endframe();
 }
-
-
 
 return {render};

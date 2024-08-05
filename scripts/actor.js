@@ -1,13 +1,40 @@
 var actor = {};
 
-actor.spawn = function(script, config, callback){
-  if (typeof script !== 'string') return undefined;
-  var padawan = Object.create(actor);
-  use(script, padawan);
+var actor_urs = {};
+
+globalThis.class_use = function(script, config, base, callback)
+{
+  if (!actor_urs[script]) {
+    var newur = Object.create(base);
+    actor_urs[script] = newur;
+  }
+
+  var padawan = Object.create(actor_urs[script]);
+
+  if (callback) callback(padawan);
 
   if (typeof config === 'object')
     Object.merge(padawan,config);
 
+  var file = Resources.find_script(script);
+  var script = Resources.replstrs(file);
+  script = `(function() {
+    var self = this;
+    var $ = this.__proto__;
+    ${script};
+  })`;
+  
+  var fn = os.eval(file,script);
+  fn.call(padawan);
+
+  return padawan;
+}
+
+actor.spawn = function(script, config){
+  if (typeof script !== 'string') return undefined;
+
+  var padawan = class_use(script, config, actor);
+  
   padawan.padawans = [];
   padawan.timers = [];
   padawan.master = this;

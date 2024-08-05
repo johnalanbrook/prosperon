@@ -33,6 +33,7 @@
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
 #include <chipmunk/chipmunk_unsafe.h>
+#include <chipmunk/chipmunk_structs.h>
 #include "gui.h"
 #include "timer.h"
 
@@ -1315,6 +1316,21 @@ JSC_CCALL(vector_angledist,
   return number2js(dist);
 )
 
+JSC_CCALL(vector_length,
+  int len = js_arrlen(argv[0]);
+  switch(len) {
+    case 2: return number2js(HMM_LenV2(js2vec2(argv[0])));
+    case 3: return number2js(HMM_LenV3(js2vec3(argv[0])));
+    case 4: return number2js(HMM_LenV4(js2vec4(argv[0])));
+  }
+
+  double sum = 0;
+  for (int i = 0; i < len; i++)
+    sum += pow(js2number(js_getpropidx(argv[0], i)), 2);
+
+  return number2js(sqrt(sum));
+)
+
 double r2()
 {
     return (double)rand() / (double)RAND_MAX ;
@@ -1415,7 +1431,8 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, mean, 1),
   MIST_FUNC_DEF(vector, sum, 1),
   MIST_FUNC_DEF(vector, sigma, 1),
-  MIST_FUNC_DEF(vector, median, 1)
+  MIST_FUNC_DEF(vector, median, 1),
+  MIST_FUNC_DEF(vector, length, 1)
 };
 
 #define JS_HMM_FN(OP, HMM, SIGN) \
@@ -2501,6 +2518,46 @@ JSC_CCALL(os_quit, quit();)
 JSC_CCALL(os_exit, exit(js2number(argv[0]));)
 JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
 JSC_CCALL(os_gc, script_gc());
+JSC_CCALL(os_mem_limit, script_mem_limit(js2number(argv[0])))
+JSC_CCALL(os_gc_threshold, script_gc_threshold(js2number(argv[0])))
+JSC_CCALL(os_max_stacksize, script_max_stacksize(js2number(argv[0])))
+
+#define JSOBJ_ADD_FIELD(OBJ, STRUCT, FIELD, TYPE) \
+js_setpropstr(OBJ, #FIELD, TYPE##2js(STRUCT.FIELD));\
+
+#define JSJMEMRET(FIELD) JSOBJ_ADD_FIELD(ret, jsmem, FIELD, number)
+
+JSC_CCALL(os_mem,
+  JSMemoryUsage jsmem;
+  JS_ComputeMemoryUsage(rt, &jsmem);
+  ret = JS_NewObject(js);
+  JSJMEMRET(malloc_size)
+  JSJMEMRET(malloc_limit)
+  JSJMEMRET(memory_used_size)
+  JSJMEMRET(memory_used_count)
+  JSJMEMRET(atom_count)
+  JSJMEMRET(atom_size)
+  JSJMEMRET(str_count)
+  JSJMEMRET(str_size)
+  JSJMEMRET(obj_count)
+  JSJMEMRET(obj_size)
+  JSJMEMRET(prop_count)
+  JSJMEMRET(prop_size)
+  JSJMEMRET(shape_count)
+  JSJMEMRET(shape_size)
+  JSJMEMRET(js_func_count)
+  JSJMEMRET(js_func_size)
+  JSJMEMRET(js_func_code_size)
+  JSJMEMRET(js_func_pc2line_count)
+  JSJMEMRET(js_func_pc2line_size)
+  JSJMEMRET(c_func_count)
+  JSJMEMRET(array_count)
+  JSJMEMRET(fast_array_count)
+  JSJMEMRET(fast_array_elements)
+  JSJMEMRET(binary_object_count)
+  JSJMEMRET(binary_object_size)
+)
+
 JSC_SSCALL(os_eval, ret = script_eval(str, str2))
 
 JSC_CCALL(os_make_body,
@@ -2616,6 +2673,13 @@ JSC_CCALL(os_make_circle2d,
   ret = prep_cpshape(shape,go);    
   JS_SetPrototype(js, ret, js_circle2d);
   return ret;
+)
+
+JSC_CCALL(os_make_timer, return timer2js(timer_make()))
+JSC_CCALL(os_update_timers, timer_update(js2number(argv[0])))
+
+JSC_CCALL(os_obj_size,
+  
 )
 
 JSC_CCALL(poly2d_setverts,
@@ -2938,6 +3002,12 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_hemisphere, 2),
   MIST_FUNC_DEF(os, make_plane, 2),
   MIST_FUNC_DEF(os, make_video, 1),
+  MIST_FUNC_DEF(os, make_timer, 0),
+  MIST_FUNC_DEF(os, update_timers, 1),
+  MIST_FUNC_DEF(os, mem, 1),
+  MIST_FUNC_DEF(os, mem_limit, 1),
+  MIST_FUNC_DEF(os, gc_threshold, 1),
+  MIST_FUNC_DEF(os, max_stacksize, 1)
 };
 
 #include "steam.h"

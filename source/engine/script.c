@@ -16,6 +16,9 @@ JSRuntime *rt = NULL;
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
 #endif
 
+static JSValue start_gc;
+static JSValue end_gc;
+
 void script_startup() {
   rt = JS_NewRuntime();
   js = JS_NewContext(rt);
@@ -44,6 +47,9 @@ return;
 }
 
 void script_gc() { JS_RunGC(rt); }
+void script_mem_limit(size_t limit) { JS_SetMemoryLimit(rt, limit); }
+void script_gc_threshold(size_t threshold) { JS_SetGCThreshold(rt, threshold); }
+void script_max_stacksize(size_t size) { JS_SetMaxStackSize(rt, size);  }
 
 void js_stacktrace() {
   if (!js) return;
@@ -51,6 +57,7 @@ void js_stacktrace() {
   script_evalf("console.stack();");
 #endif
 }
+
 
 void script_evalf(const char *format, ...)
 {

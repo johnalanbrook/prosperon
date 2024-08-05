@@ -15,9 +15,11 @@ if (os.sys() === 'macos') {
 }
 
 //appy.inputs.f12 = function() { mum.debug = !mum.debug; }
-appy.inputs.f12 = function() { profile.cpu_frame(); }
-appy.inputs.f11 = window.toggle_fullscreen;
+
+appy.inputs.f9 = function() { profile.print_mem(); }
 appy.inputs.f10 = function() { profile.toggle_frame_avg(); }
+appy.inputs.f11 = window.toggle_fullscreen;
+appy.inputs.f12 = function() { profile.cpu_frame(); }
 appy.inputs['M-f4'] = prosperon.quit;
 
 player[0].control(appy);
@@ -240,7 +242,7 @@ Cmdline.register_order("play", function(argv) {
   if (argv[0])
     io.chdir(argv[0]);
     
-  game.loadurs();
+//  game.loadurs();
 
   if (!io.exists(projectfile)) {
     say("No game to play. Try making one with 'prosperon init'.");
@@ -320,7 +322,7 @@ Cmdline.register_order("about", function(argv) {
 }, "Get information about this game.");
 
 Cmdline.register_order("ur", function(argv) {
-  game.loadurs();
+//  game.loadurs();
   for (var i of ur._list.sort()) say(i);
 }, "Get information about the ur types in your game.");
 

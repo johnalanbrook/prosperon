@@ -76,7 +76,7 @@ var pre = function(data)
   if (data.pos) cursor = data.pos.slice();
   data.drawpos = cursor.slice().add(data.offset);
 
-  if (data.opacity !== 1) {
+  if (data.opacity && data.opacity !== 1) {
     data.color = data.color.slice();
     data.color[3] = data.opacity;
   }

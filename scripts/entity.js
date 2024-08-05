@@ -146,16 +146,15 @@ var entity = {
   },
   
   spawn(text, config, callback) {
-
-    var ent = Object.create(entity);
-    ent.transform = os.make_transform();
-    
-    ent.guid = prosperon.guid();
-    
-    ent.components = {};
-    ent.objects = {};
-    ent.timers = {};
-    
+    var ent = class_use(text, config, entity, function(ent) {
+      ent.transform = os.make_transform();
+      ent.guid = prosperon.guid();
+      ent.components = {};
+      ent.objects = {};
+      ent.timers = {};
+      ent.ur = {};
+    });
+/*    
     if (!text)
       ent.ur = emptyur;
     else if (text instanceof Object) {// assume it's an ur
@@ -168,13 +167,7 @@ var entity = {
       text = ent.ur.text;
       config = [ent.ur.data, config];
     }
-    
-    if (typeof text === 'string')
-      use(text, ent);
-    else if (Array.isArray(text))
-      for (var path of text) use(path,ent);
-    profile.cache("ENTITY TIME", ent.ur.name);
-    var st = profile.now();  
+
     if (typeof config === 'string')
       Object.merge(ent, json.decode(Resources.replstrs(config)));
     else if (Array.isArray(config))
@@ -186,7 +179,16 @@ var entity = {
         else if (path instanceof Object)
           Object.merge(ent,path);
       };
-      
+    
+    if (typeof text === 'string') {
+      class_use(
+      use(text, ent);
+    }
+    else if (Array.isArray(text))
+      for (var path of text) use(path,ent);
+    profile.cache("ENTITY TIME", ent.ur.name);
+*/
+
     ent.reparent(this);
 
     for (var [prop, p] of Object.entries(ent)) {

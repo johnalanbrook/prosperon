@@ -110,6 +110,7 @@ JSValue TYPE##2js(TYPE *n) { \
   return j; }\
 \
 static JSValue js_##TYPE##_memid (JSContext *js, JSValue self) { return str2js("%p", js2##TYPE(self)); } \
+static JSValue js_##TYPE##_memsize (JSContext *js, JSValue self) { return number2js(sizeof(TYPE)); } \
 
 #define QJSGLOBALCLASS(NAME) \
 JSValue NAME = JS_NewObject(js); \
@@ -126,6 +127,7 @@ QJSCLASSPREP(TYPE); \
 JSValue TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
 JS_SetPropertyStr(js, TYPE##_proto, "memid", JS_NewCFunction(js, &js_##TYPE##_memid, "memid", 0)); \
+JS_SetPropertyStr(js, TYPE##_proto, "memsize", JS_NewCFunction(js, &js_##TYPE##_memsize, "memsize", 0)); \
 JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 
 #define countof(x) (sizeof(x)/sizeof((x)[0]))

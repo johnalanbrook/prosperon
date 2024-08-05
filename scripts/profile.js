@@ -16,6 +16,7 @@ function calc_cpu(fn, times, diff=0)
 function empty_fn() {}
 
 profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
+  var retgather = gathering_cpu;
   profile.gather_stop();
   var empty = calc_cpu(empty_fn, 100000);
   var mean = Math.mean(empty);
@@ -26,7 +27,10 @@ profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
   var totalt = profile.best_t(elapsed);
   
   say(`profile [${q}]: ${avgt} ± ${profile.best_t(Math.ci(series))} [${totalt} for ${times} loops]`);
-  start_prof_gather();
+  say(`result of function is ${fn()}`);
+  
+  if (retgather)
+    profile.start_prof_gather();
 }
 
 profile.ms = function(t) { return t/1000000; }
@@ -277,3 +281,25 @@ function printreport(cache, name) {
 
   return report;
 };
+
+profile.best_mem = function(bytes)
+{
+  var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes == 0) return '0 Bytes';
+  var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+  return (bytes / Math.pow(1024, i)).toPrecision(3) + ' ' + sizes[i];
+}
+
+profile.print_mem = function()
+{
+  var mem = os.mem();
+  say('total memory used: ' + profile.best_mem(mem.memory_used_size));
+  delete mem.memory_used_size;
+  delete mem.malloc_size;
+  for (var i in mem) {
+    if (i.includes("size"))
+      say("  " + i + " :: " + profile.best_mem(mem[i]));
+  }
+}
+
+return {profile};
