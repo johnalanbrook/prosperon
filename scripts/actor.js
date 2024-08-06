@@ -1,22 +1,36 @@
 var actor = {};
 
 var actor_urs = {};
+var script_times = {};
+
+var actor_spawns = {};
 
 globalThis.class_use = function(script, config, base, callback)
 {
-  if (!actor_urs[script]) {
-    var newur = Object.create(base);
-    actor_urs[script] = newur;
+  var file = Resources.find_script(script);
+
+  if (!file) {
+    var ret = Object.create(base);
+    if (callback) callback(ret);
+    return ret;
   }
 
-  var padawan = Object.create(actor_urs[script]);
+  if (!actor_urs[file]) {
+    var newur = Object.create(base);
+    actor_urs[file] = newur;
+    script_times[file] = io.mod(file);
+    actor_spawns[file] = [];
+  }
+
+  var padawan = Object.create(actor_urs[file]);
+  actor_spawns[file].push(padawan);
+  padawan._file = file;
 
   if (callback) callback(padawan);
 
   if (typeof config === 'object')
     Object.merge(padawan,config);
 
-  var file = Resources.find_script(script);
   var script = Resources.replstrs(file);
   script = `(function() {
     var self = this;
@@ -30,6 +44,36 @@ globalThis.class_use = function(script, config, base, callback)
   return padawan;
 }
 
+actor.hotreload = function()
+{
+  profile.cache("hotreload", "check");
+  for (var i in script_times) {
+    if (io.mod(i) > script_times[i]) {
+      say(`HOT RELAODING ${i}`);
+      script_times[i] = io.mod(i);
+      var script = Resources.replstrs(i);
+      script = `(function() {
+  	var self = this;
+	var $ = this.__proto__;
+        ${script};
+      })`;
+      var fn = os.eval(i,script);
+      
+      for (var obj of actor_spawns[i]) {
+        var a = obj;
+	for (var t of a.timers)
+	  t();
+	a.timers = [];
+	var save = json.decode(json.encode(a));
+        fn.call(a);
+	Object.merge(a,save);
+	check_registers(a);
+      }
+    }
+  }
+  profile.endcache();
+}
+
 actor.spawn = function(script, config){
   if (typeof script !== 'string') return undefined;
 
@@ -38,10 +82,11 @@ actor.spawn = function(script, config){
   padawan.padawans = [];
   padawan.timers = [];
   padawan.master = this;
-  Object.hide(padawan, "master", "timers", "padawans");
+  Object.hide(padawan, "master","padawans");
   padawan.toString = function() { return script; }  
   check_registers(padawan);
   this.padawans.push(padawan);
+  if (padawan.awake) padawan.awake();
   return padawan;
 };
 
@@ -68,6 +113,7 @@ actor.kill = function(){
   this.padawans.forEach(p => p.kill());
   this.padawans = [];
   this.__dead__ = true;
+  actor_spawns[this._file].remove(this);
   if (typeof this.die === 'function') this.die();
   if (typeof this.stop === 'function') this.stop();
   if (typeof this.garbage === 'function') this.garbage();
@@ -85,7 +131,7 @@ actor.delay = function(fn, seconds) {
 
   function execute() {
     if (fn) fn();
-    if (stop.then) stop.then();
+    if (stop && stop.then) stop.then();
     stop();
   }
   
