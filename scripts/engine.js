@@ -1,7 +1,8 @@
 "use math";
 
-prosperon.gc_start = function(){}
-prosperon.gc_end = function(){}
+os.mem_limit.doc = "Set the memory limit of the runtime in bytes.";
+os.gc_threshold.doc = "Set the threshold before a GC pass is triggered in bytes. This is set to malloc_size + malloc_size>>1 after a GC pass.";
+os.max_stacksize.doc = "Set the max stack size in bytes.";
 
 Object.defineProperty(String.prototype, 'rm', {
   value: function(index, endidx = index+1) { return this.slice(0,index) + this.slice(endidx); }

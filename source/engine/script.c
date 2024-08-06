@@ -16,8 +16,7 @@ JSRuntime *rt = NULL;
 #define JS_EVAL_FLAGS JS_EVAL_FLAG_STRICT | JS_EVAL_FLAG_STRIP 
 #endif
 
-static JSValue start_gc;
-static JSValue end_gc;
+static JSValue report_gc;
 
 void script_startup() {
   rt = JS_NewRuntime();

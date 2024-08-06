@@ -79,6 +79,7 @@ actor.delay = function(fn, seconds) {
   var timers = this.timers;
   var stop = function() {
     timers.remove(stop);
+    stop = undefined;
     rm();
   }
 
@@ -104,8 +105,20 @@ actor.delay = function(fn, seconds) {
   timers.push(stop);
   return stop;
 };
-
 actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;
+
+actor.interval = function(fn, seconds)
+{
+  var self = this;
+  var stop;
+  var usefn = function() {
+    fn();
+    stop = self.delay(usefn, seconds);
+  }
+  stop = self.delay(usefn, seconds);
+
+  return stop;
+}
 
 actor.padawans = [];
 

@@ -294,12 +294,30 @@ profile.print_mem = function()
 {
   var mem = os.mem();
   say('total memory used: ' + profile.best_mem(mem.memory_used_size));
+  say('total malloced: ' + profile.best_mem(mem.malloc_size));
   delete mem.memory_used_size;
   delete mem.malloc_size;
   for (var i in mem) {
     if (i.includes("size"))
       say("  " + i + " :: " + profile.best_mem(mem[i]));
   }
+}
+
+profile.atom_count = function()
+{
+//  return os.dump_atoms().split(
+}
+
+profile.print_gc = function()
+{
+  var gc = os.check_gc();
+  if (!gc) return;
+  var mem = os.mem();
+  say("GC Hit");
+  say (`time: ${profile.best_t(gc.time)}`);
+  say(`new threshold: ${profile.best_mem(mem.gc_threshold)}`);
+  say(`memory checked: ${profile.best_mem(gc.mem)}`);
+  say(`memory freed: ${profile.best_mem(gc.startmem - gc.mem)}`);
 }
 
 return {profile};

@@ -10,6 +10,8 @@ extern "C" {
 #include <stdarg.h>
 #include <chipmunk/chipmunk.h>
 
+void script_report_gc_time(double t, double startmem, double mem);
+
 extern JSValue cpShape2js(cpShape *s);
 
 #define MIST_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }

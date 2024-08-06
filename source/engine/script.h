@@ -34,6 +34,11 @@ void script_mem_limit(size_t limit);
 void script_gc_threshold(size_t threshold);
 void script_max_stacksize(size_t size);
 
+void _script_gcstart();
+void _script_gcend();
+
+
+
 #ifdef __cplusplus
 }
 #endif

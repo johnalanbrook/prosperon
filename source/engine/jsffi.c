@@ -34,6 +34,7 @@
 #include "sokol_glue.h"
 #include <chipmunk/chipmunk_unsafe.h>
 #include <chipmunk/chipmunk_structs.h>
+#include <stdint.h>
 #include "gui.h"
 #include "timer.h"
 
@@ -2483,7 +2484,6 @@ static const JSCFunctionListEntry js_nota_funcs[] = {
   MIST_FUNC_DEF(nota, decode, 1)
 };
 
-
 JSValue js_os_cwd(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char cwd[PATH_MAX];
@@ -2522,10 +2522,61 @@ JSC_CCALL(os_mem_limit, script_mem_limit(js2number(argv[0])))
 JSC_CCALL(os_gc_threshold, script_gc_threshold(js2number(argv[0])))
 JSC_CCALL(os_max_stacksize, script_max_stacksize(js2number(argv[0])))
 
+static JSValue tmp2js(FILE *tmp)
+{
+  size_t size = ftell(tmp);
+  rewind(tmp);
+  char *buffer = calloc(size+1, sizeof(char));
+  fread(buffer, sizeof(char),size, tmp);
+  JSValue ret = str2js(buffer);
+  free(buffer);
+  return ret;
+}
+
+JSC_CCALL(os_dump_value,
+  
+  FILE *tmp = tmpfile();
+  quickjs_set_dumpout(tmp);
+  JS_DumpMyValue(rt, argv[0]);
+  ret = tmp2js(tmp);
+)
+
+JSC_CCALL(os_dump_atoms,
+  FILE *tmp = tmpfile();
+  quickjs_set_dumpout(tmp);
+  JS_PrintAtoms(rt);
+  ret = tmp2js(tmp);
+)
+
+JSC_CCALL(os_dump_shapes,
+  FILE *tmp = tmpfile();
+  quickjs_set_dumpout(tmp);
+  JS_PrintShapes(rt);
+  size_t size = ftell(tmp);
+  rewind(tmp);
+  char buffer[size];
+  fgets(buffer, sizeof(char)*size, tmp);
+  fclose(tmp);
+  ret = str2js(buffer);
+)
+
+JSC_CCALL(os_calc_mem,
+  return number2js(JS_MyValueSize(rt, argv[0]));
+)
+
 #define JSOBJ_ADD_FIELD(OBJ, STRUCT, FIELD, TYPE) \
 js_setpropstr(OBJ, #FIELD, TYPE##2js(STRUCT.FIELD));\
 
 #define JSJMEMRET(FIELD) JSOBJ_ADD_FIELD(ret, jsmem, FIELD, number)
+
+JSC_CCALL(os_memstate,
+  JSMemoryUsage jsmem;
+  JS_FillMemoryState(rt, &jsmem);
+  ret = JS_NewObject(js);
+  JSJMEMRET(malloc_size)
+  JSJMEMRET(malloc_limit)
+  JSJMEMRET(gc_threshold)
+)
 
 JSC_CCALL(os_mem,
   JSMemoryUsage jsmem;
@@ -2533,6 +2584,7 @@ JSC_CCALL(os_mem,
   ret = JS_NewObject(js);
   JSJMEMRET(malloc_size)
   JSJMEMRET(malloc_limit)
+  JSJMEMRET(gc_threshold)
   JSJMEMRET(memory_used_size)
   JSJMEMRET(memory_used_count)
   JSJMEMRET(atom_count)
@@ -2556,6 +2608,45 @@ JSC_CCALL(os_mem,
   JSJMEMRET(fast_array_elements)
   JSJMEMRET(binary_object_count)
   JSJMEMRET(binary_object_size)
+)
+
+JSC_CCALL(os_dump_mem,
+  FILE *tmp = tmpfile();
+  JSMemoryUsage mem = {0};
+  JS_DumpMemoryUsage(tmp, &mem, rt);
+  ret = tmp2js(tmp);
+)
+
+static double gc_t = 0;
+static double gc_mem = 0;
+static double gc_startmem = 0;
+void script_report_gc_time(double t, double startmem, double mem)
+{
+  gc_t = t;
+  gc_mem = mem;
+  gc_startmem = startmem;
+}
+
+static FILE *cycles;
+
+JSC_CCALL(os_check_cycles,
+  if (ftell(cycles) == 0) return JS_UNDEFINED;
+  ret = tmp2js(cycles);
+  cycles = tmpfile();
+  quickjs_set_cycleout(cycles);
+)
+
+JSC_CCALL(os_check_gc,
+  if (gc_t == 0) return JS_UNDEFINED;
+
+  JSValue gc = JS_NewObject(js);
+  js_setpropstr(gc, "time", number2js(gc_t));
+  js_setpropstr(gc, "mem", number2js(gc_mem));
+  js_setpropstr(gc, "startmem", number2js(gc_startmem));
+  gc_t = 0;
+  gc_mem = 0;
+  gc_startmem = 0;
+  return gc;
 )
 
 JSC_SSCALL(os_eval, ret = script_eval(str, str2))
@@ -3007,7 +3098,15 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, mem, 1),
   MIST_FUNC_DEF(os, mem_limit, 1),
   MIST_FUNC_DEF(os, gc_threshold, 1),
-  MIST_FUNC_DEF(os, max_stacksize, 1)
+  MIST_FUNC_DEF(os, max_stacksize, 1),
+  MIST_FUNC_DEF(os, dump_value, 1),
+  MIST_FUNC_DEF(os, dump_mem, 0),
+  MIST_FUNC_DEF(os, dump_shapes, 0),
+  MIST_FUNC_DEF(os, dump_atoms,0),
+  MIST_FUNC_DEF(os, calc_mem, 1),
+  MIST_FUNC_DEF(os, check_gc, 0),
+  MIST_FUNC_DEF(os, check_cycles, 0),
+  MIST_FUNC_DEF(os, memstate, 0)
 };
 
 #include "steam.h"
@@ -3018,6 +3117,9 @@ JS_SetPropertyFunctionList(js, js_##NAME, js_##NAME##_funcs, countof(js_##NAME##
 JS_SetPrototype(js, js_##NAME, PARENT); \
 
 void ffi_load() {
+  cycles = tmpfile();
+  quickjs_set_cycleout(cycles);
+  
   JSUNDEF = JS_UNDEFINED;
   globalThis = JS_GetGlobalObject(js);
   

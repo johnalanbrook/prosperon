@@ -33,6 +33,9 @@
 #include <fenv.h>
 #include <math.h>
 #include <script.h>
+#include <jsffi.h>
+#include <sokol/sokol_time.h>
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__) || defined(__GLIBC__)
@@ -79,15 +82,17 @@
 #endif
 
 static FILE *dumpout = NULL;
+static FILE *cycleout = NULL;
 
 void quickjs_set_dumpout(FILE *f)
 {
   dumpout = f;
 }
 
+void quickjs_set_cycleout(FILE *f) { cycleout = f; }
+
 /* dump object free */
 //#define DUMP_FREE
-//#define DUMP_CLOSURE
 /* dump the bytecode of the compiled functions: combination of bits
    1: dump pass 3 final byte code
    2: dump pass 2 code
@@ -116,12 +121,8 @@ void quickjs_set_dumpout(FILE *f)
 #ifdef DUMP
 //#define DUMP_FREE
 //#define DUMP_MEM
-//#define DUMP_CLOSURE
 #define DUMP_GC
-//#define DUMP_GC_FREE
 #define DUMP_LEAKS 1
-//#define DUMP_OBJECTS
-#define DUMP_CLOSURE
 //#define DUMP_OBJECTS
 //#define DUMP_ATOMS
 //#define DUMP_SHAPES
@@ -328,6 +329,25 @@ struct JSRuntime {
 #endif
     void *user_opaque;
 };
+
+#define SETRT(FIELD) JS_SetPropertyStr(js, v, #FIELD, JS_NewFloat64(js, rt->FIELD));
+
+JSValue JS_GetRTInfo(JSRuntime *rt, JSContext *js)
+{
+  JSValue v = JS_NewObject(js);
+  SETRT(atom_hash_size);
+  SETRT(atom_count);
+  SETRT(atom_size);
+  SETRT(class_count);
+  SETRT(stack_size);
+  SETRT(stack_top);
+  SETRT(stack_limit);
+  SETRT(malloc_gc_threshold);
+  SETRT(malloc_state.malloc_count);
+  SETRT(malloc_state.malloc_size);
+  SETRT(malloc_state.malloc_limit);
+  return v;
+}
 
 struct JSClass {
     uint32_t class_id; /* 0 means free entry */
@@ -1068,12 +1088,12 @@ static JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
 JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
 static __maybe_unused void JS_DumpAtoms(JSRuntime *rt);
 static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
-static __maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
-static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p);
-static __maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
-static __maybe_unused void JS_DumpValueShort(JSRuntime *rt, JSValueConst val);
-static __maybe_unused void JS_DumpValue(JSContext *ctx, JSValueConst val);
-static __maybe_unused void JS_PrintValue(JSContext *ctx,
+static __maybe_unused void JS_DumpObjectHeader(FILE *fp, JSRuntime *rt);
+static __maybe_unused void JS_DumpObject(FILE *fp, JSRuntime *rt, JSObject *p);
+static __maybe_unused void JS_DumpGCObject(FILE *fp, JSRuntime *rt, JSGCObjectHeader *p);
+static __maybe_unused void JS_DumpValueShort(FILE *fp, JSRuntime *rt, JSValueConst val);
+static __maybe_unused void JS_DumpValue(FILE *fp, JSContext *ctx, JSValueConst val);
+static __maybe_unused void JS_PrintValue(FILE *fp,JSContext *ctx,
                                                   const char *str,
                                                   JSValueConst val);
 static __maybe_unused void JS_DumpShapes(JSRuntime *rt);
@@ -1309,6 +1329,27 @@ static const JSClassExoticMethods js_proxy_exotic_methods;
 static const JSClassExoticMethods js_module_ns_exotic_methods;
 static JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;
 
+
+////// CUSTOM DUMP FUNCTIONS
+void JS_DumpMyValue(JSRuntime *rt, JSValue v)
+{
+  uint32_t tag = JS_VALUE_GET_TAG(v);
+  if (tag == JS_TAG_OBJECT)
+    JS_DumpObject(dumpout, rt, JS_VALUE_GET_OBJ(v));
+  else
+    JS_DumpValueShort(dumpout, rt, v);
+}
+
+void JS_PrintShapes(JSRuntime *rt)
+{
+  JS_DumpShapes(rt);
+}
+
+void JS_PrintAtoms(JSRuntime *rt)
+{
+  JS_DumpAtoms(rt);
+}
+
 static void js_trigger_gc(JSRuntime *rt, size_t size)
 {
     BOOL force_gc;
@@ -1320,7 +1361,7 @@ static void js_trigger_gc(JSRuntime *rt, size_t size)
 #endif
     if (force_gc) {
 #ifdef DUMP_GC
-        fprintf(dumpout, dumpout, "GC: size=%" PRIu64 "\n",
+        fprintf(dumpout, "GC: size=%" PRIu64 "\n",
           (uint64_t)rt->malloc_state.malloc_size);
 #endif
         JS_RunGC(rt);
@@ -2004,11 +2045,11 @@ void JS_FreeRuntime(JSRuntime *rt)
             p = list_entry(el, JSGCObjectHeader, link);
             if (p->ref_count != 0) {
                 if (!header_done) {
-                    fprintf(dumpout, dumpout, "Object leaks:\n");
-                    JS_DumpObjectHeader(rt);
+                    fprintf(cycleout, "Object leaks:\n");
+                    JS_DumpObjectHeader(cycleout, rt);
                     header_done = TRUE;
                 }
-                JS_DumpGCObject(rt, p);
+                JS_DumpGCObject(cycleout, rt, p);
             }
         }
 
@@ -2020,7 +2061,7 @@ void JS_FreeRuntime(JSRuntime *rt)
             }
         }
         if (count != 0)
-            fprintf(dumpout, "Secondary object leaks: %d\n", count);
+            fprintf(cycleout, "Secondary object leaks: %d\n", count);
     }
 #endif
     assert(list_empty(&rt->gc_obj_list));
@@ -5837,7 +5878,7 @@ static void gc_free_cycles(JSRuntime *rt)
 {
     struct list_head *el, *el1;
     JSGCObjectHeader *p;
-#ifdef DUMP_GC_FREE
+#ifdef DUMP
     BOOL header_done = FALSE;
 #endif
 
@@ -5855,13 +5896,13 @@ static void gc_free_cycles(JSRuntime *rt)
         case JS_GC_OBJ_TYPE_JS_OBJECT:
         case JS_GC_OBJ_TYPE_FUNCTION_BYTECODE:
         case JS_GC_OBJ_TYPE_ASYNC_FUNCTION:
-#ifdef DUMP_GC_FREE
+#ifdef DUMP
             if (!header_done) {
-                fprintf(dumpout, "Freeing cycles:\n");
-                JS_DumpObjectHeader(rt);
+                fprintf(cycleout, "Freeing cycles:\n");
+                JS_DumpObjectHeader(cycleout, rt);
                 header_done = TRUE;
             }
-            JS_DumpGCObject(rt, p);
+            JS_DumpGCObject(cycleout, rt, p);
 #endif
             free_gc_object(rt, p);
             break;
@@ -5886,6 +5927,9 @@ static void gc_free_cycles(JSRuntime *rt)
 
 void JS_RunGC(JSRuntime *rt)
 {
+  double n = stm_now();
+  double size = rt->malloc_state.malloc_size;
+  
     /* decrement the reference of the children of each object. mark =
        1 after this pass. */
     gc_decref(rt);
@@ -5895,6 +5939,8 @@ void JS_RunGC(JSRuntime *rt)
 
     /* free the GC objects in a cycle */
     gc_free_cycles(rt);
+
+  script_report_gc_time(stm_now()-n, size, rt->malloc_state.malloc_size);
 }
 
 /* Return false if not an object or if the object has already been
@@ -5989,6 +6035,25 @@ static void compute_value_size(JSValueConst val, JSMemoryUsage_helper *hp)
     }
 }
 
+double JS_MyValueSize(JSRuntime *rt, JSValue v)
+{
+  JSMemoryUsage_helper mem = {0};
+  compute_value_size(v, &mem);
+  return mem.memory_used_count;
+}
+
+void JS_FillMemoryState(JSRuntime *rt, JSMemoryUsage *s)
+{
+  s->malloc_count = rt->malloc_state.malloc_count;
+  s->malloc_size = rt->malloc_state.malloc_size;
+  s->malloc_limit = rt->malloc_state.malloc_limit;
+
+  s->gc_threshold = rt->malloc_gc_threshold;
+
+  s->memory_used_count = 2; /* rt + rt->class_array */
+  s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
+}
+
 void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 {
     struct list_head *el, *el1;
@@ -5999,6 +6064,8 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
     s->malloc_count = rt->malloc_state.malloc_count;
     s->malloc_size = rt->malloc_state.malloc_size;
     s->malloc_limit = rt->malloc_state.malloc_limit;
+
+    s->gc_threshold = rt->malloc_gc_threshold;
 
     s->memory_used_count = 2; /* rt + rt->class_array */
     s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
@@ -6279,7 +6346,7 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 
 void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
 {
-    fprintf(dumpout, fp, "QuickJS memory usage -- "
+    fprintf(fp, "QuickJS memory usage -- "
 #ifdef CONFIG_BIGNUM
             "BigNum "
 #endif
@@ -6305,14 +6372,14 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
                 unsigned int size1 = js_malloc_usable_size_rt(rt, p);
                 if (size1 >= size) {
                     usage_size_ok = 1;
-                    fprintf(dumpout, fp, "  %3u + %-2u  %s\n",
+                    fprintf(fp, "  %3u + %-2u  %s\n",
                             size, size1 - size, object_types[i].name);
                 }
                 js_free_rt(rt, p);
             }
         }
         if (!usage_size_ok) {
-            fprintf(dumpout, fp, "  malloc_usable_size unavailable\n");
+            fprintf(fp, "  malloc_usable_size unavailable\n");
         }
         {
             int obj_classes[JS_CLASS_INIT_COUNT + 1] = { 0 };
@@ -6326,82 +6393,82 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
                     obj_classes[min_uint32(p->class_id, JS_CLASS_INIT_COUNT)]++;
                 }
             }
-            fprintf(dumpout, fp, "\n" "JSObject classes\n");
+            fprintf(fp, "\n" "JSObject classes\n");
             if (obj_classes[0])
-                fprintf(dumpout, fp, "  %5d  %2.0d %s\n", obj_classes[0], 0, "none");
+                fprintf(fp, "  %5d  %2.0d %s\n", obj_classes[0], 0, "none");
             for (class_id = 1; class_id < JS_CLASS_INIT_COUNT; class_id++) {
                 if (obj_classes[class_id] && class_id < rt->class_count) {
                     char buf[ATOM_GET_STR_BUF_SIZE];
-                    fprintf(dumpout, fp, "  %5d  %2.0d %s\n", obj_classes[class_id], class_id,
+                    fprintf(fp, "  %5d  %2.0d %s\n", obj_classes[class_id], class_id,
                             JS_AtomGetStrRT(rt, buf, sizeof(buf), rt->class_array[class_id].class_name));
                 }
             }
             if (obj_classes[JS_CLASS_INIT_COUNT])
-                fprintf(dumpout, fp, "  %5d  %2.0d %s\n", obj_classes[JS_CLASS_INIT_COUNT], 0, "other");
+                fprintf(fp, "  %5d  %2.0d %s\n", obj_classes[JS_CLASS_INIT_COUNT], 0, "other");
         }
-        fprintf(dumpout, fp, "\n");
+        fprintf(fp, "\n");
     }
 #endif
-    fprintf(dumpout, fp, "%-20s %8s %8s\n", "NAME", "COUNT", "SIZE");
+    fprintf(fp, "%-20s %8s %8s\n", "NAME", "COUNT", "SIZE");
 
     if (s->malloc_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per block)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per block)\n",
                 "memory allocated", s->malloc_count, s->malloc_size,
                 (double)s->malloc_size / s->malloc_count);
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%d overhead, %0.1f average slack)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%d overhead, %0.1f average slack)\n",
                 "memory used", s->memory_used_count, s->memory_used_size,
                 MALLOC_OVERHEAD, ((double)(s->malloc_size - s->memory_used_size) /
                                   s->memory_used_count));
     }
     if (s->atom_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per atom)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per atom)\n",
                 "atoms", s->atom_count, s->atom_size,
                 (double)s->atom_size / s->atom_count);
     }
     if (s->str_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per string)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per string)\n",
                 "strings", s->str_count, s->str_size,
                 (double)s->str_size / s->str_count);
     }
     if (s->obj_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per object)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per object)\n",
                 "objects", s->obj_count, s->obj_size,
                 (double)s->obj_size / s->obj_count);
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per object)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per object)\n",
                 "  properties", s->prop_count, s->prop_size,
                 (double)s->prop_count / s->obj_count);
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per shape)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per shape)\n",
                 "  shapes", s->shape_count, s->shape_size,
                 (double)s->shape_size / s->shape_count);
     }
     if (s->js_func_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"\n",
                 "bytecode functions", s->js_func_count, s->js_func_size);
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per function)\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per function)\n",
                 "  bytecode", s->js_func_count, s->js_func_code_size,
                 (double)s->js_func_code_size / s->js_func_count);
         if (s->js_func_pc2line_count) {
-            fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per function)\n",
+            fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per function)\n",
                     "  pc2line", s->js_func_pc2line_count,
                     s->js_func_pc2line_size,
                     (double)s->js_func_pc2line_size / s->js_func_pc2line_count);
         }
     }
     if (s->c_func_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64"\n", "C functions", s->c_func_count);
+        fprintf(fp, "%-20s %8"PRId64"\n", "C functions", s->c_func_count);
     }
     if (s->array_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64"\n", "arrays", s->array_count);
+        fprintf(fp, "%-20s %8"PRId64"\n", "arrays", s->array_count);
         if (s->fast_array_count) {
-            fprintf(dumpout, fp, "%-20s %8"PRId64"\n", "  fast arrays", s->fast_array_count);
-            fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per fast array)\n",
+            fprintf(fp, "%-20s %8"PRId64"\n", "  fast arrays", s->fast_array_count);
+            fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per fast array)\n",
                     "  elements", s->fast_array_elements,
                     s->fast_array_elements * (int)sizeof(JSValue),
                     (double)s->fast_array_elements / s->fast_array_count);
         }
     }
     if (s->binary_object_count) {
-        fprintf(dumpout, fp, "%-20s %8"PRId64" %8"PRId64"\n",
+        fprintf(fp, "%-20s %8"PRId64" %8"PRId64"\n",
                 "binary objects", s->binary_object_count, s->binary_object_size);
     }
 }
@@ -11874,14 +11941,14 @@ static JSValue JS_ToQuotedString(JSContext *ctx, JSValueConst val1)
     return JS_EXCEPTION;
 }
 
-static __maybe_unused void JS_DumpObjectHeader(JSRuntime *rt)
+static __maybe_unused void JS_DumpObjectHeader(FILE *fp, JSRuntime *rt)
 {
-    fprintf(dumpout, "%14s %4s %4s %14s %10s %s\n",
+    fprintf(fp, "%14s %4s %4s %14s %10s %s\n",
            "ADDRESS", "REFS", "SHRF", "PROTO", "CLASS", "PROPS");
 }
 
 /* for debug only: dump an object without side effect */
-static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p)
+static __maybe_unused void JS_DumpObject(FILE *fp, JSRuntime *rt, JSObject *p)
 {
     uint32_t i;
     char atom_buf[ATOM_GET_STR_BUF_SIZE];
@@ -11892,28 +11959,28 @@ static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p)
 
     /* XXX: should encode atoms with special characters */
     sh = p->shape; /* the shape can be NULL while freeing an object */
-    fprintf(dumpout, "%14p %4d ",
+    fprintf(fp, "%14p %4d ",
            (void *)p,
            p->header.ref_count);
     if (sh) {
-        fprintf(dumpout, "%3d%c %14p ",
+        fprintf(fp, "%3d%c %14p ",
                sh->header.ref_count,
                " *"[sh->is_hashed],
                (void *)sh->proto);
     } else {
-        fprintf(dumpout, "%3s  %14s ", "-", "-");
+        fprintf(fp, "%3s  %14s ", "-", "-");
     }
-    fprintf(dumpout, "%10s ",
+    fprintf(fp, "%10s ",
            JS_AtomGetStrRT(rt, atom_buf, sizeof(atom_buf), rt->class_array[p->class_id].class_name));
     if (p->is_exotic && p->fast_array) {
-        fprintf(dumpout, "[ ");
+        fprintf(fp, "[ ");
         for(i = 0; i < p->u.array.count; i++) {
             if (i != 0)
-                fprintf(dumpout, ", ");
+                fprintf(fp, ", ");
             switch (p->class_id) {
             case JS_CLASS_ARRAY:
             case JS_CLASS_ARGUMENTS:
-                JS_DumpValueShort(rt, p->u.array.u.values[i]);
+                JS_DumpValueShort(fp, rt, p->u.array.u.values[i]);
                 break;
             case JS_CLASS_UINT8C_ARRAY:
             case JS_CLASS_INT8_ARRAY:
@@ -11930,40 +11997,40 @@ static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p)
                     int size = 1 << typed_array_size_log2(p->class_id);
                     const uint8_t *b = p->u.array.u.uint8_ptr + i * size;
                     while (size-- > 0)
-                        fprintf(dumpout, "%02X", *b++);
+                        fprintf(fp, "%02X", *b++);
                 }
                 break;
             }
         }
-        fprintf(dumpout, " ] ");
+        fprintf(fp, " ] ");
     }
 
     if (sh) {
-        fprintf(dumpout, "{ ");
+        fprintf(fp, "{ ");
         for(i = 0, prs = get_shape_prop(sh); i < sh->prop_count; i++, prs++) {
             if (prs->atom != JS_ATOM_NULL) {
                 pr = &p->prop[i];
                 if (!is_first)
-                    fprintf(dumpout, ", ");
-                fprintf(dumpout, "%s: ",
+                    fprintf(fp, ", ");
+                fprintf(fp, "%s: ",
                        JS_AtomGetStrRT(rt, atom_buf, sizeof(atom_buf), prs->atom));
                 if ((prs->flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
-                    fprintf(dumpout, "[getset %p %p]", (void *)pr->u.getset.getter,
+                    fprintf(fp, "[getset %p %p]", (void *)pr->u.getset.getter,
                            (void *)pr->u.getset.setter);
                 } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) {
-                    fprintf(dumpout, "[varref %p]", (void *)pr->u.var_ref);
+                    fprintf(fp, "[varref %p]", (void *)pr->u.var_ref);
                 } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT) {
-                    fprintf(dumpout, "[autoinit %p %d %p]",
+                    fprintf(fp, "[autoinit %p %d %p]",
                            (void *)js_autoinit_get_realm(pr),
                            js_autoinit_get_id(pr),
                            (void *)pr->u.init.opaque);
                 } else {
-                    JS_DumpValueShort(rt, pr->u.value);
+                    JS_DumpValueShort(fp, rt, pr->u.value);
                 }
                 is_first = FALSE;
             }
         }
-        fprintf(dumpout, " }");
+        fprintf(fp, " }");
     }
 
     if (js_class_has_bytecode(p->class_id)) {
@@ -11971,53 +12038,53 @@ static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p)
         JSVarRef **var_refs;
         if (b->closure_var_count) {
             var_refs = p->u.func.var_refs;
-            fprintf(dumpout, " Closure:");
+            fprintf(fp, " Closure:");
             for(i = 0; i < b->closure_var_count; i++) {
-                fprintf(dumpout, " ");
-                JS_DumpValueShort(rt, var_refs[i]->value);
+                fprintf(fp, " ");
+                JS_DumpValueShort(fp, rt, var_refs[i]->value);
             }
             if (p->u.func.home_object) {
-                fprintf(dumpout, " HomeObject: ");
-                JS_DumpValueShort(rt, JS_MKPTR(JS_TAG_OBJECT, p->u.func.home_object));
+                fprintf(fp, " HomeObject: ");
+                JS_DumpValueShort(fp, rt, JS_MKPTR(JS_TAG_OBJECT, p->u.func.home_object));
             }
         }
     }
-    fprintf(dumpout, "\n");
+    fprintf(fp, "\n");
 }
 
-static __maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p)
+static __maybe_unused void JS_DumpGCObject(FILE *fp, JSRuntime *rt, JSGCObjectHeader *p)
 {
     if (p->gc_obj_type == JS_GC_OBJ_TYPE_JS_OBJECT) {
-        JS_DumpObject(rt, (JSObject *)p);
+        JS_DumpObject(fp, rt, (JSObject *)p);
     } else {
-        fprintf(dumpout, "%14p %4d ",
+        fprintf(fp, "%14p %4d ",
                (void *)p,
                p->ref_count);
         switch(p->gc_obj_type) {
         case JS_GC_OBJ_TYPE_FUNCTION_BYTECODE:
-            fprintf(dumpout, "[function bytecode]");
+            fprintf(fp, "[function bytecode]");
             break;
         case JS_GC_OBJ_TYPE_SHAPE:
-            fprintf(dumpout, "[shape]");
+            fprintf(fp, "[shape]");
             break;
         case JS_GC_OBJ_TYPE_VAR_REF:
-            fprintf(dumpout, "[var_ref]");
+            fprintf(fp, "[var_ref]");
             break;
         case JS_GC_OBJ_TYPE_ASYNC_FUNCTION:
-            fprintf(dumpout, "[async_function]");
+            fprintf(fp, "[async_function]");
             break;
         case JS_GC_OBJ_TYPE_JS_CONTEXT:
-            fprintf(dumpout, "[js_context]");
+            fprintf(fp, "[js_context]");
             break;
         default:
-            fprintf(dumpout, "[unknown %d]", p->gc_obj_type);
+            fprintf(fp, "[unknown %d]", p->gc_obj_type);
             break;
         }
-        fprintf(dumpout, "\n");
+        fprintf(fp, "\n");
     }
 }
 
-static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
+static __maybe_unused void JS_DumpValueShort(FILE *fp, JSRuntime *rt,
                                                       JSValueConst val)
 {
     uint32_t tag = JS_VALUE_GET_NORM_TAG(val);
@@ -12025,7 +12092,7 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
 
     switch(tag) {
     case JS_TAG_INT:
-        fprintf(dumpout, "%d", JS_VALUE_GET_INT(val));
+        fprintf(fp, "%d", JS_VALUE_GET_INT(val));
         break;
     case JS_TAG_BOOL:
         if (JS_VALUE_GET_BOOL(val))
@@ -12045,10 +12112,10 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
     case JS_TAG_UNDEFINED:
         str = "undefined";
     print_str:
-        fprintf(dumpout, "%s", str);
+        fprintf(fp, "%s", str);
         break;
     case JS_TAG_FLOAT64:
-        fprintf(dumpout, "%.14g", JS_VALUE_GET_FLOAT64(val));
+        fprintf(fp, "%.14g", JS_VALUE_GET_FLOAT64(val));
         break;
     case JS_TAG_BIG_INT:
         {
@@ -12056,7 +12123,7 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
             char *str;
             str = bf_ftoa(NULL, &p->num, 10, 0,
                           BF_RNDZ | BF_FTOA_FORMAT_FRAC);
-            fprintf(dumpout, "%sn", str);
+            fprintf(fp, "%sn", str);
             bf_realloc(&rt->bf_ctx, str, 0);
         }
         break;
@@ -12067,7 +12134,7 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
             char *str;
             str = bf_ftoa(NULL, &p->num, 16, BF_PREC_INF,
                           BF_RNDZ | BF_FTOA_FORMAT_FREE | BF_FTOA_ADD_PREFIX);
-            fprintf(dumpout, "%sl", str);
+            fprintf(fp, "%sl", str);
             bf_free(&rt->bf_ctx, str);
         }
         break;
@@ -12077,7 +12144,7 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
             char *str;
             str = bfdec_ftoa(NULL, &p->num, BF_PREC_INF,
                              BF_RNDZ | BF_FTOA_FORMAT_FREE);
-            fprintf(dumpout, "%sm", str);
+            fprintf(fp, "%sm", str);
             bf_free(&rt->bf_ctx, str);
         }
         break;
@@ -12093,7 +12160,7 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
         {
             JSFunctionBytecode *b = JS_VALUE_GET_PTR(val);
             char buf[ATOM_GET_STR_BUF_SIZE];
-            fprintf(dumpout, "[bytecode %s]", JS_AtomGetStrRT(rt, buf, sizeof(buf), b->func_name));
+            fprintf(fp, "[bytecode %s]", JS_AtomGetStrRT(rt, buf, sizeof(buf), b->func_name));
         }
         break;
     case JS_TAG_OBJECT:
@@ -12101,7 +12168,7 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
             JSObject *p = JS_VALUE_GET_OBJ(val);
             JSAtom atom = rt->class_array[p->class_id].class_name;
             char atom_buf[ATOM_GET_STR_BUF_SIZE];
-            fprintf(dumpout, "[%s %p]",
+            fprintf(fp, "[%s %p]",
                    JS_AtomGetStrRT(rt, atom_buf, sizeof(atom_buf), atom), (void *)p);
         }
         break;
@@ -12109,32 +12176,32 @@ static __maybe_unused void JS_DumpValueShort(JSRuntime *rt,
         {
             JSAtomStruct *p = JS_VALUE_GET_PTR(val);
             char atom_buf[ATOM_GET_STR_BUF_SIZE];
-            fprintf(dumpout, "Symbol(%s)",
+            fprintf(fp, "Symbol(%s)",
                    JS_AtomGetStrRT(rt, atom_buf, sizeof(atom_buf), js_get_atom_index(rt, p)));
         }
         break;
     case JS_TAG_MODULE:
-        fprintf(dumpout, "[module]");
+        fprintf(fp, "[module]");
         break;
     default:
-        fprintf(dumpout, "[unknown tag %d]", tag);
+        fprintf(fp, "[unknown tag %d]", tag);
         break;
     }
 }
 
-static __maybe_unused void JS_DumpValue(JSContext *ctx,
+static __maybe_unused void JS_DumpValue(FILE *fp, JSContext *ctx,
                                                  JSValueConst val)
 {
-    JS_DumpValueShort(ctx->rt, val);
+    JS_DumpValueShort(fp, ctx->rt, val);
 }
 
-static __maybe_unused void JS_PrintValue(JSContext *ctx,
+static __maybe_unused void JS_PrintValue(FILE *fp, JSContext *ctx,
                                                   const char *str,
                                                   JSValueConst val)
 {
-    fprintf(dumpout, "%s=", str);
-    JS_DumpValueShort(ctx->rt, val);
-    fprintf(dumpout, "\n");
+    fprintf(fp, "%s=", str);
+    JS_DumpValueShort(fp, ctx->rt, val);
+    fprintf(fp, "\n");
 }
 
 /* return -1 if exception (proxy case) or TRUE/FALSE */

@@ -92,7 +92,11 @@ typedef struct JSRefCountHeader {
 } JSRefCountHeader;
 
 void quickjs_set_dumpout(FILE *f);
+void quickjs_set_cycleout(FILE *f);
 void JS_SetInterruptRate(int count);
+void JS_PrintShapes(JSRuntime *rt);
+void JS_PrintAtoms(JSRuntime *rt);
+
 
 #define JS_FLOAT64_NAN NAN
 
@@ -339,6 +343,7 @@ JSRuntime *JS_NewRuntime(void);
 void JS_SetRuntimeInfo(JSRuntime *rt, const char *info);
 void JS_SetMemoryLimit(JSRuntime *rt, size_t limit);
 void JS_SetGCThreshold(JSRuntime *rt, size_t gc_threshold);
+JSValue JS_GetRTInfo(JSRuntime *rt, JSContext *js);
 /* use 0 to disable maximum stack size check */
 void JS_SetMaxStackSize(JSRuntime *rt, size_t stack_size);
 /* should be called when changing thread to update the stack top value
@@ -404,6 +409,7 @@ char *js_strndup(JSContext *ctx, const char *s, size_t n);
 
 typedef struct JSMemoryUsage {
     int64_t malloc_size, malloc_limit, memory_used_size;
+    int64_t gc_threshold;
     int64_t malloc_count;
     int64_t memory_used_count;
     int64_t atom_count, atom_size;
@@ -419,7 +425,10 @@ typedef struct JSMemoryUsage {
 } JSMemoryUsage;
 
 void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s);
+void JS_FillMemoryState(JSRuntime *rt, JSMemoryUsage *s);
 void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt);
+void JS_DumpMyValue(JSRuntime *rt, JSValue v);
+double JS_MyValueSize(JSRuntime *rt, JSValue v);
 
 /* atom support */
 #define JS_ATOM_NULL 0

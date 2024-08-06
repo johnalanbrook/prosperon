@@ -972,6 +972,13 @@ prosperon.process = function process() {
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
+  /* debugging: check for gc */
+  profile.print_gc();
+
+  var cycles = os.check_cycles();
+  if (cycles) say(cycles);
+
+
   profile.frame("app update");
   prosperon.appupdate(dt);
   profile.endframe();
