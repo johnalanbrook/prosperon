@@ -976,11 +976,7 @@ swizz.forEach(function(x) {
 make_swizz();
 
 Object.defineProperty(Array.prototype, 'normalized', {
-  value: function() {
-    var c = this.slice();
-    var len = Vector.length(c);
-    return c.map(v => v/len);
-  }
+  value: function() { return vector.norm(this); }
 });
 
 Object.defineProperty(Array.prototype, 'newfirst', {

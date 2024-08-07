@@ -251,12 +251,18 @@ Cmdline.register_order("play", function(argv) {
 
   var project = json.decode(io.slurp(projectfile));
   game.title = project.title;
+  game.size = [1280,720];
+  window.size = game.size;
   global.mixin("config.js");
   if (project.title) window.title = project.title;
 
   game.engine_start(function() {
     render.set_font("fonts/c64.ttf", 8);
-    global.app = actor.spawn("game.js");
+    if (io.exists("game.js"))
+      global.app = actor.spawn("game.js");
+    else
+      global.app = actor.spawn("scripts/nogame.js");
+      
     if (project.icon) window.set_icon(game.texture(project.icon));
     game.camera = world.spawn("scripts/camera2d");
   });  

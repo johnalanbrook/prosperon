@@ -27,17 +27,19 @@ void main() {
 in vec2 coords;
 in float rad;
 uniform vec4 shade;
+uniform float inner_r;
 out vec4 color;
 void main() {
   float px = 1/rad;
+  float blur = 1.0+px;
   float R = 1;
-  float R2 = 0.90;
-  float dist = sqrt(dot(coords,coords));
-  float sm = 1 - smoothstep(R-px,R,dist);
-  float sm2 = smoothstep(R2-px,R2,dist);
+  float R2 = 1-inner_r;
+  float dist = distance(vec2(0,0),coords);
+  float sm = 1 - smoothstep(R-px,R*blur,dist);
+  float sm2 = smoothstep(R2-px,R2*blur,dist);
   
   float alpha = sm*sm2;
-  color = vec4(shade.xyz, alpha*alpha);
+  color = vec4(shade.xyz, alpha*shade.a);
 }
 @end
 

@@ -154,49 +154,35 @@ render.set_camera = function(cam)
 }
 
 var shader_cache = {};
+var shader_times = {};
 
 function strip_shader_inputs(shader)
 {
   for (var a of shader.vs.inputs)
     a.name = a.name.slice(2);
 }
- 
-function make_shader(shader)
+
+render.hotreload = function()
 {
-  if (shader_cache[shader]) return shader_cache[shader];
-  
-  var file = shader;
-  shader = io.slurp(shader);
-  if (!shader) {
-    console.info(`not found! slurping shaders/${file}`);
-    shader = io.slurp(`shaders/${file}`);
-  }
-  var writejson = `.prosperon/${file.name()}.shader.json`;
-
-  profile.cache("shader", file);
-  
-  breakme: if (io.exists(writejson)) {
-    var data = json.decode(io.slurp(writejson));
-    var filemod = io.mod(writejson);
-    if (!data.files) break breakme;
-    for (var i of data.files) {
-      if (io.mod(i) > filemod) {
-        break breakme;
-      }
-    }
-
-    profile.endcache(" [cached]");
-    var shaderobj = json.decode(io.slurp(writejson));
-    var obj = shaderobj[os.sys()];
-    strip_shader_inputs(obj);
+  for (var i in shader_times) {
+    if (io.mod(i) <= shader_times[i]) continue;
+    say(`HOT RELOADING SHADER ${i}`);
+    shader_times[i] = io.mod(i);
+    var obj = create_shader_obj(i);
+    obj = obj[os.sys()];
     obj.pipe = render.pipeline(obj);
-    shader_cache[shader] = obj;
-    return obj;
+    var old = shader_cache[i];
+    Object.assign(shader_cache[i], obj);
+    cur.bind = undefined;
+    cur.mesh = undefined;
   }
-  
-  var out = `.prosperon/${file.name()}.shader`;
-  
+}
+
+function create_shader_obj(file)
+{
   var files = [file];
+  var out = ".prosperon/tmp.shader";
+  var shader = io.slurp(file);
 
   var incs = shader.match(/#include <.*>/g);
   if (incs)
@@ -223,7 +209,6 @@ function make_shader(shader)
   
   shader = shader.replace(/uniform\s+(\w+)\s+(\w+);/g, "uniform _$2 { $1 $2; };");
   shader = shader.replace(/(texture2D|sampler) /g, "uniform $1 ");
-//  shader = shader.replace(/uniform texture2D ?(.*);/g, "uniform _$1_size { vec2 $1_size; };\nuniform texture2D $1;");
 
   io.slurpwrite(out, shader);
 
@@ -253,11 +238,11 @@ function make_shader(shader)
   }
 
   add_code(obj.vs);
-  if (!obj.fs)
-   if (obj.vs.fs) {
+  if (!obj.fs && obj.vs.fs) {
      obj.fs = obj.vs.fs;
      delete obj.vs.fs;
-    }
+  }
+  
   add_code(obj.fs);
   
   obj.blend = blend;
@@ -296,19 +281,58 @@ function make_shader(shader)
   
   obj.name = file;
 
+  strip_shader_inputs(obj);
+
   compiled[platform] = obj;
   }
 
   compiled.files = files;
+  compiled.source = shader;
   
+  return compiled;
+}
+
+function make_shader(shader)
+{
+  if (shader_cache[shader]) return shader_cache[shader];
+  
+  var file = shader;
+  shader = io.slurp(file);
+  if (!shader) {
+    console.info(`not found! slurping shaders/${file}`);
+    shader = io.slurp(`shaders/${file}`);
+  }
+  var writejson = `.prosperon/${file.name()}.shader.json`;
+
+  profile.cache("shader", file);
+  
+  breakme: if (io.exists(writejson)) {
+    var data = json.decode(io.slurp(writejson));
+    var filemod = io.mod(writejson);
+    if (!data.files) break breakme;
+    for (var i of data.files) {
+      if (io.mod(i) > filemod) {
+        break breakme;
+      }
+    }
+
+    profile.endcache(" [cached]");
+    var shaderobj = json.decode(io.slurp(writejson));
+    var obj = shaderobj[os.sys()];
+    obj.pipe = render.pipeline(obj);
+    shader_cache[file] = obj;
+    shader_times[file] = io.mod(file);
+    return obj;
+  }
+  
+  var compiled = create_shader_obj(file);
   io.slurpwrite(writejson, json.encode(compiled));
-  profile.endcache();
-  
   var obj = compiled[os.sys()];
-  strip_shader_inputs(obj);
   obj.pipe = render.pipeline(obj);
 
-  shader_cache[shader] = obj;
+  shader_cache[file] = obj;
+  shader_times[file] = io.mod(file);
+  
   return obj;
 }
 
@@ -372,7 +396,7 @@ function sg_bind(mesh, ssbo)
   if (cur.shader.vs.inputs)
   for (var a of cur.shader.vs.inputs) {
     if (!(a.name in mesh)) {
-      console.error(`cannot draw shader ${cur.shader.name}; there is no attrib ${a.name} in the given mesh.`);
+      console.error(`cannot draw shader ${cur.shader.name}; there is no attrib ${a.name} in the given mesh. ${json.encode(mesh)}`);
       return undefined;
     } else
       bind.attrib.push(mesh[a.name]);
@@ -540,17 +564,25 @@ render.sprites = function render_sprites(gridsize = 1)
   profile.endframe();
 }
 
-render.circle = function render_circle(pos, radius, color) {
+render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
   flush();
+
+  if (inner_radius >= 1)
+    inner_radius = inner_radius/radius;
+  else if (inner_radius < 0)
+    inner_radius = 1.0;
+    
   var mat = {
     radius: radius,
+    inner_r: inner_radius,
     coord: pos,
-    shade: color
+    shade: color,
   };
   render.use_shader(circleshader);
   render.use_mat(mat);
   render.draw(shape.quad);
 }
+render.circle.doc = "Draw a circle at pos, with a given radius and color. If inner_radius is between 0 and 1, it acts as a percentage of radius. If it is above 1, is acts as a unit (usually a pixel).";
 
 render.poly = function render_poly(points, color, transform) {
   var buffer = render.poly_prim(points);
@@ -799,7 +831,6 @@ render.set_font = function(path, size) {
 }
 
 render.doc = "Draw shapes in screen space.";
-//render.circle.doc = "Draw a circle at pos, with a given radius and color.";
 render.cross.doc = "Draw a cross centered at pos, with arm length size.";
 render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
 render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
@@ -972,12 +1003,16 @@ prosperon.process = function process() {
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
+  profile.frame("hotreload");
+  actor.hotreload();
+  render.hotreload();
+  profile.endframe();
+
   /* debugging: check for gc */
   profile.print_gc();
 
   var cycles = os.check_cycles();
   if (cycles) say(cycles);
-
 
   profile.frame("app update");
   prosperon.appupdate(dt);

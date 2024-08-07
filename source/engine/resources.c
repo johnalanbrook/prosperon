@@ -158,8 +158,10 @@ time_t file_mod_secs(const char *file) {
   struct stat attr;
   mz_uint index;
   mz_zip_archive_file_stat pstat;
-  
-  if ((index = mz_zip_reader_locate_file(&game_cdb, file, NULL, 0)) != -1) {
+
+  if (!stat(file,&attr))
+    return attr.st_mtime;
+  else if ((index = mz_zip_reader_locate_file(&game_cdb, file, NULL, 0)) != -1) {
     mz_zip_reader_file_stat(&game_cdb, index,&pstat);
     return pstat.m_time;
   }
@@ -170,7 +172,7 @@ time_t file_mod_secs(const char *file) {
   else
     stat(file, &attr);
     
-  return attr.st_mtime;
+  return -1;
 }
 
 // TODO: Not reentrant

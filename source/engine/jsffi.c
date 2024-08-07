@@ -157,6 +157,7 @@ void js_setprop_num(JSValue obj, uint32_t i, JSValue v) { JS_SetPropertyUint32(j
 
 JSValue js_getpropidx(JSValue v, uint32_t i)
 {
+  if (!JS_IsArray(js, v)) return JS_UNDEFINED;
   JSValue p = JS_GetPropertyUint32(js, v, i);
   JS_FreeValue(js,p);
   return p;
@@ -401,6 +402,13 @@ HMM_Vec3 js2vec3(JSValue v)
   return v3;
 }
 
+HMM_Vec3 js2vec3f(JSValue v)
+{
+  HMM_Vec3 vec;
+  vec.x = vec.y = vec.z = js2number(v);
+  return vec;
+}
+
 JSValue vec32js(HMM_Vec3 v)
 {
   JSValue array = JS_NewArray(js);
@@ -409,6 +417,8 @@ JSValue vec32js(HMM_Vec3 v)
   js_setprop_num(array,2,number2js(v.z));
   return array;
 }
+
+JSValue vec3f2js(HMM_Vec3 v) { return vec32js(v); }
 
 JSValue quat2js(HMM_Quat q)
 {
@@ -426,6 +436,22 @@ HMM_Vec4 js2vec4(JSValue v)
   for (int i = 0; i < 4; i++)
     v4.e[i] = js2number(js_getpropidx(v,i));
   return v4;
+}
+
+double arr_vec_length(JSValue v)
+{
+  int len = js_arrlen(v);
+  switch(len) {
+    case 2: return HMM_LenV2(js2vec2(v));
+    case 3: return HMM_LenV3(js2vec3(v));
+    case 4: return HMM_LenV4(js2vec4(v));
+  }
+
+  double sum = 0;
+  for (int i = 0; i < len; i++)
+    sum += pow(js2number(js_getpropidx(v, i)), 2);
+
+  return sqrt(sum);
 }
 
 HMM_Quat js2quat(JSValue v)
@@ -1242,7 +1268,14 @@ JSC_CCALL(vector_norm,
     case 3: return vec32js(HMM_NormV3(js2vec3(argv[0])));
     case 4: return vec42js(HMM_NormV4(js2vec4(argv[0])));
   }
-  return argv[0];
+
+  double length = arr_vec_length(argv[0]);
+  JSValue newarr = JS_NewArray(js);
+
+  for (int i = 0; i < len; i++)
+    js_setprop_num(newarr, i, number2js(js2number(js_getpropidx(argv[0],i))/length));
+
+  return newarr;
 )
 
 JSC_CCALL(vector_angle_between,
@@ -1318,18 +1351,7 @@ JSC_CCALL(vector_angledist,
 )
 
 JSC_CCALL(vector_length,
-  int len = js_arrlen(argv[0]);
-  switch(len) {
-    case 2: return number2js(HMM_LenV2(js2vec2(argv[0])));
-    case 3: return number2js(HMM_LenV3(js2vec3(argv[0])));
-    case 4: return number2js(HMM_LenV4(js2vec4(argv[0])));
-  }
-
-  double sum = 0;
-  for (int i = 0; i < len; i++)
-    sum += pow(js2number(js_getpropidx(argv[0], i)), 2);
-
-  return number2js(sqrt(sum));
+  return number2js(arr_vec_length(argv[0]));
 )
 
 double r2()
@@ -1853,7 +1875,7 @@ static const JSCFunctionListEntry js_physics_funcs[] = {
 };
 
 JSC_GETSET(transform, pos, vec3)
-JSC_GETSET(transform, scale, vec3)
+JSC_GETSET(transform, scale, vec3f)
 JSC_GETSET(transform, rotation, quat)
 JSC_CCALL(transform_move, transform_move(js2transform(self), js2vec3(argv[0])); )
 
@@ -2617,6 +2639,10 @@ JSC_CCALL(os_dump_mem,
   ret = tmp2js(tmp);
 )
 
+JSC_CCALL(os_value_id,
+  return number2js((intptr_t)JS_VALUE_GET_PTR(argv[0]));
+)
+
 static double gc_t = 0;
 static double gc_mem = 0;
 static double gc_startmem = 0;
@@ -3106,7 +3132,8 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, calc_mem, 1),
   MIST_FUNC_DEF(os, check_gc, 0),
   MIST_FUNC_DEF(os, check_cycles, 0),
-  MIST_FUNC_DEF(os, memstate, 0)
+  MIST_FUNC_DEF(os, memstate, 0),
+  MIST_FUNC_DEF(os, value_id, 1)
 };
 
 #include "steam.h"

@@ -213,10 +213,26 @@ input.print_pawn_kbm = function(pawn) {
   return str;
 };
 
+var joysticks = {};
+
+joysticks["wasd"] = {
+  uy: "w",
+  dy: "s",
+  ux: "d",
+  dx: "a"
+};
+
 input.procdown = function()
 {
   for (var k in downkeys)
     player[0].raw_input(keyname_extd(k), "down");
+
+  for (var i in joysticks) {
+    var joy = joysticks[i];
+    var x = joy.ux - joy.dx;
+    var y = joy.uy - joy.dy;
+    player[0].joy_input(i, joysticks[i]);
+  }
 }
 
 input.print_md_kbm = function(pawn) {
@@ -299,6 +315,23 @@ var Player = {
 	      return;
       }
     };
+  },
+
+  joy_input(name, joystick) {
+    for (var pawn of this.pawns.reversed()) {
+      if (!pawn.inputs) return;
+      if (!pawn.inputs.joystick) return;
+      if (!pawn.inputs.joystick[name]) return;
+
+      var x = 0;
+      if (input.keyboard.down(joystick.ux)) x++;
+      if (input.keyboard.down(joystick.dx)) x--;
+      var y  = 0;
+      if (input.keyboard.down(joystick.uy)) y++;
+      if (input.keyboard.down(joystick.dy)) y--;
+
+      pawn.inputs.joystick[name](x,y);
+    }
   },
 
   raw_input(cmd, state, ...args) {

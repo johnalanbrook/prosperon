@@ -72,8 +72,8 @@ var entity = {
 
   delay(fn, seconds) {
     var timers = this.timers;
-    var stop = function() { 
-      delete timers[guid];
+    var stop = function() {
+      timers.remove(stop);
       execute = undefined;
       stop = undefined;
       rm?.();
@@ -98,8 +98,7 @@ var entity = {
     }
     
     var rm = Register.update.register(update);
-    var guid = prosperon.guid();
-    timers[guid] = (stop);
+    timers.push(stop);
     return stop;
   },
   
@@ -151,7 +150,7 @@ var entity = {
       ent.guid = prosperon.guid();
       ent.components = {};
       ent.objects = {};
-      ent.timers = {};
+      ent.timers = [];
       ent.ur = {};
     });
 /*    
