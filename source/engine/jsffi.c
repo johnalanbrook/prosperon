@@ -1505,11 +1505,11 @@ JSC_CCALL(array_lerp,
 )
 
 static const JSCFunctionListEntry js_array_funcs[] = {
-  MIST_FUNC_DEF(array, add, 1),
-  MIST_FUNC_DEF(array, sub, 1),
-  MIST_FUNC_DEF(array, div,1),
-  MIST_FUNC_DEF(array, scale, 1),
-  MIST_FUNC_DEF(array, lerp, 2)
+  PROTO_FUNC_DEF(array, add, 1),
+  PROTO_FUNC_DEF(array, sub, 1),
+  PROTO_FUNC_DEF(array, div,1),
+  PROTO_FUNC_DEF(array, scale, 1),
+  PROTO_FUNC_DEF(array, lerp, 2)
 };
 
 JSC_CCALL(game_engine_start, engine_start(argv[0],argv[1], js2number(argv[2]), js2number(argv[3])))
@@ -3220,7 +3220,7 @@ void ffi_load() {
   
   JSValue array_proto = js_getpropstr(globalThis, "Array");
   array_proto = js_getpropstr(array_proto, "prototype");
-  JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, 4);
+  JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, countof(js_array_funcs));
   
   JS_FreeValue(js,globalThis);  
 }

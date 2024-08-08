@@ -169,8 +169,6 @@ time_t file_mod_secs(const char *file) {
     mz_zip_reader_file_stat(&corecdb, index, &pstat);
     return pstat.m_time;
   }
-  else
-    stat(file, &attr);
     
   return -1;
 }

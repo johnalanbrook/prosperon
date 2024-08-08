@@ -296,6 +296,10 @@ var entity = {
   
     return bb ? bb : bbox.fromcwh([0, 0], [0, 0]);
   },
+
+  toJSON() {
+    return {guid:this.guid};
+  },
   
   /* The unique components of this object. Its diff. */
   json_obj(depth=0) {

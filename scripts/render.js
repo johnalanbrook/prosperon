@@ -1006,6 +1006,7 @@ prosperon.process = function process() {
   profile.frame("hotreload");
   actor.hotreload();
   render.hotreload();
+  repl.hotreload();
   profile.endframe();
 
   /* debugging: check for gc */

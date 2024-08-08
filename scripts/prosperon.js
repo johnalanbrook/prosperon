@@ -19,6 +19,7 @@ global.check_registers = function (obj) {
 global.obscure("global");
 global.mixin("scripts/render");
 global.mixin("scripts/debug");
+global.mixin("scripts/repl");
 
 var frame_t = profile.secs(profile.now());
 

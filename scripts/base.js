@@ -1425,6 +1425,11 @@ Vector.random = function() {
 
 Vector.angle_between = vector.angle_between;
 Vector.rotate = vector.rotate;
+
+vector.direction = function(from,to)
+{
+  return vector.norm(to.sub(from));
+}
   
 Vector.equal = function(v1, v2, tol) {
   if (!tol)

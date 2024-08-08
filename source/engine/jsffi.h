@@ -14,9 +14,10 @@ void script_report_gc_time(double t, double startmem, double mem);
 
 extern JSValue cpShape2js(cpShape *s);
 
-#define MIST_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
+#define MIST_CFUNC_DEF(name, length, func1, props) { name, props, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
 
-#define MIST_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN)
+#define MIST_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN, JS_PROP_C_W_E)
+#define PROTO_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN, 0)
 
 #define JS_SETSIG JSContext *js, JSValue self, JSValue val
 
