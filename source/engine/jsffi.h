@@ -23,7 +23,7 @@ extern JSValue cpShape2js(cpShape *s);
 
 #define JSC_SCALL(NAME, FN) JSC_CCALL(NAME, \
   const char *str = js2str(argv[0]); \
-  FN ; \
+  {FN;} ; \
   JS_FreeCString(js,str); \
 ) \
 

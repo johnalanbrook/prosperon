@@ -48,8 +48,6 @@ static JSValue globalThis;
 static JSClassID js_ptr_id;
 static JSClassDef js_ptr_class = { "POINTER" };
 
-static JSValue JSUNDEF;
-
 JSValue str2js(const char *c, ...) {
   if (!c) return JS_UNDEFINED;
   char *result = NULL;
@@ -95,6 +93,11 @@ void cpConstraint_free(cpConstraint *c)
   cpConstraintFree(c);
 }
 
+void skin_free(skin *sk) {
+  arrfree(sk->invbind);
+  free(sk);
+}
+
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
 QJSCLASS(transform)
@@ -109,6 +112,7 @@ QJSCLASS(datastream)
 QJSCLASS(cpShape)
 QJSCLASS(cpConstraint)
 QJSCLASS(timer)
+QJSCLASS(skin);
 
 static JSValue js_circle2d;
 static JSValue js_poly2d;
@@ -205,6 +209,7 @@ uint64_t js2uint64(JSValue v)
 JSValue angle2js(double g) {
   return number2js(g*HMM_RadToTurn);
 }
+
 double js2angle(JSValue v) {
   double n = js2number(v);
   return n * HMM_TurnToRad;
@@ -532,6 +537,7 @@ int js_print_exception(JSValue v)
     JS_FreeCString(js, msg);
     JS_FreeCString(js, stack);
     JS_FreeValue(js,ex);
+    
     return 1;
 #endif
   return 0;
@@ -862,6 +868,45 @@ sg_shader js2shader(JSValue v)
   jsfreestr(fsmain);
   
   return sh;
+}
+
+#define MAT_POS 0
+#define MAT_UV 1
+#define MAT_NORM 2
+#define MAT_BONE 3
+#define MAT_WEIGHT 4
+#define MAT_COLOR 5
+#define MAT_TAN 6
+#define MAT_ANGLE 7
+#define MAT_WH 8
+#define MAT_ST 9
+#define MAT_PPOS 10
+#define MAT_SCALE 11
+
+static int mat2type(int mat)
+{
+  switch(mat) {
+    case MAT_POS:
+    case MAT_NORM:
+      return SG_VERTEXFORMAT_FLOAT3;
+    case MAT_PPOS:
+    case MAT_WH:
+    case MAT_ST:
+      return SG_VERTEXFORMAT_FLOAT2;
+    case MAT_UV:
+    case MAT_TAN:
+      return SG_VERTEXFORMAT_USHORT2N;
+      return SG_VERTEXFORMAT_UINT10_N2;
+    case MAT_BONE:
+      return SG_VERTEXFORMAT_UBYTE4;
+    case MAT_WEIGHT:
+    case MAT_COLOR:
+      return SG_VERTEXFORMAT_UBYTE4N;
+    case MAT_ANGLE:
+    case MAT_SCALE:
+      return SG_VERTEXFORMAT_FLOAT;
+  };
+  return 0;
 }
 
 sg_vertex_layout_state js2layout(JSValue v)
@@ -1892,6 +1937,7 @@ JSC_CCALL(transform_rotate,
   transform *t = js2transform(self);
   HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2angle(argv[1]));
   t->rotation = HMM_MulQ(t->rotation,rot);
+  printf("rotation is now %g,%g,%g,%g\n", t->rotation.e[0], t->rotation.e[1], t->rotation.e[2], t->rotation.e[3]);
   t->dirty = true;
 )
 
@@ -2890,42 +2936,34 @@ JSC_CCALL(os_make_transform, return transform2js(make_transform()))
 
 JSC_SCALL(os_system, return number2js(system(str)); )
 
-#define PRIMCHECK(VAR, JS, VAL) \
-if (VAR->VAL.id) js_setpropstr(JS, #VAL, sg_buffer2js(&VAR->VAL)); \
+JSC_SCALL(os_gltf_buffer,
+  int buffer_idx = js2number(argv[1]);
+  int type = js2number(argv[2]);
+  cgltf_options options = {0};
+  cgltf_data *data = NULL;
+  cgltf_result result = cgltf_parse_file(&options, str, &data);
+  result = cgltf_load_buffers(&options, data, str);
 
-JSValue primitive2js(primitive *p)
-{
-  JSValue v = JS_NewObject(js);
-  PRIMCHECK(p, v, pos)
-  PRIMCHECK(p,v,norm)
-  PRIMCHECK(p,v,uv)
-  PRIMCHECK(p,v,bone)
-  PRIMCHECK(p,v,weight)
-  PRIMCHECK(p,v,color)
-  PRIMCHECK(p,v,index)
-  js_setpropstr(v, "count", number2js(p->idx_count));
-  
-  return v;
-}
+  sg_buffer *b = malloc(sizeof(*b));
+  *b = accessor2buffer(&data->accessors[buffer_idx], type);
+  cgltf_free(data);
 
-JSValue material2js(material *m)
-{
-  JSValue v = JS_NewObject(js);
-  if (m->diffuse)
-    js_setpropstr(v, "diffuse", texture2js(m->diffuse));
-    
-  return v;
-}
+  ret = sg_buffer2js(b);
+)
 
-JSC_SCALL(os_make_model,
-  model *m = model_make(str);
-  if (arrlen(m->meshes) != 1) return JSUNDEF;
-  mesh *me = m->meshes+0;
-  
-  JSValue v = JS_NewObject(js);
-  js_setpropstr(v, "mesh", primitive2js(me->primitives+0));
-  js_setpropstr(v, "material", material2js(me->primitives[0].mat));
-  return v;
+JSC_SCALL(os_gltf_skin,
+  cgltf_options options = {0};
+  cgltf_data *data = NULL;
+  cgltf_parse_file(&options,str,&data);
+  cgltf_load_buffers(&options,data,str);
+
+  if (data->skins_count <= 0) {
+    ret = (JS_UNDEFINED);
+    goto CLEANUP;
+  }
+
+  CLEANUP:
+  cgltf_free(data);
 )
 
 JSC_CCALL(os_make_buffer,
@@ -3088,6 +3126,11 @@ JSC_SCALL(os_make_video,
   js_setpropstr(ret, "texture", texture2js(t));
 )
 
+JSC_CCALL(os_skin_calculate,
+  skin *sk = js2skin(argv[0]);
+  skin_calculate(sk);
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, env, 1),
@@ -3105,7 +3148,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_tex_data, 3),
   MIST_FUNC_DEF(os, make_font, 2),
-  MIST_FUNC_DEF(os, make_model, 1),
   MIST_FUNC_DEF(os, make_transform, 0),
   MIST_FUNC_DEF(os, make_buffer, 1),
   MIST_FUNC_DEF(os, make_line_prim, 4),
@@ -3133,7 +3175,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, check_gc, 0),
   MIST_FUNC_DEF(os, check_cycles, 0),
   MIST_FUNC_DEF(os, memstate, 0),
-  MIST_FUNC_DEF(os, value_id, 1)
+  MIST_FUNC_DEF(os, value_id, 1),
+  MIST_FUNC_DEF(os, gltf_buffer, 3),
+  MIST_FUNC_DEF(os, gltf_skin, 1),
+  MIST_FUNC_DEF(os, skin_calculate, 1),
 };
 
 #include "steam.h"
@@ -3147,7 +3192,6 @@ void ffi_load() {
   cycles = tmpfile();
   quickjs_set_cycleout(cycles);
   
-  JSUNDEF = JS_UNDEFINED;
   globalThis = JS_GetGlobalObject(js);
   
   QJSCLASSPREP(ptr);

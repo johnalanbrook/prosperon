@@ -25,12 +25,11 @@ struct anim_channel {
   sampler *sampler;
 };
 
-struct animation {
-  char *name;
+typedef struct animation {
   double time;
   struct anim_channel *channels;
   sampler *samplers;
-};
+} animation;
 
 void animation_run(struct animation *anim, float now);
 HMM_Vec4 sample_sampler(sampler *sampler, float time);

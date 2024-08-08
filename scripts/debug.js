@@ -209,6 +209,8 @@ debug.api.print_doc =  function(name)
   return mdoc;
 }
 
+debug.frozen = false;
+
 return {
   debug,
   Gizmos,

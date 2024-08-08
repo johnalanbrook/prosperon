@@ -44,6 +44,8 @@ function set_model(t)
     render.setunim4(0, cur.shader.vs.unimap.model.slot, t);
 }
 
+render.set_model = set_model;
+
 var shaderlang = {
  macos: "metal_macos",
  windows: "hlsl5",
