@@ -58,7 +58,7 @@ var attr_map = {
   a_pos: 0,
   a_uv: 1,  
   a_norm: 2,
-  a_bone: 3,
+  a_joint: 3,
   a_weight: 4,
   a_color: 5,
   a_tan: 6,
@@ -361,6 +361,12 @@ function shader_apply_material(shader, material = {}, old = {})
     if (material[p] === old[p]) continue;
     assert(p in material, `shader ${shader.name} has no uniform for ${p}`);
     var s = shader.vs.unimap[p];
+    
+    if (p === 'bones') {
+      render.setunibones(0, s.slot, material[p]);
+      continue;
+    }
+
     shader_unisize[s.size](0, s.slot, material[p]);
   }
   

@@ -88,6 +88,7 @@ uint32_t pack_int10_n2(float *norm)
   return ret;
 }
 
+// Pack an array of normals into 
 sg_buffer normal_floats(float *f, int n)
 {
   return float_buffer(f, n);
@@ -126,27 +127,24 @@ sg_buffer accessor2buffer(cgltf_accessor *a, int type)
   cgltf_accessor_unpack_floats(a, vs, n);
 
   switch(type) {
-    case cgltf_attribute_type_position:
+    case MAT_POS:
       return sg_make_buffer(&(sg_buffer_desc){
         .data.ptr = vs,
 	.data.size = sizeof(float)*n
       });
-    case cgltf_attribute_type_normal:
+    case MAT_NORM:
       return normal_floats(vs,n);
-    case cgltf_attribute_type_tangent:
+    case MAT_TAN:
       return normal_floats(vs,n); // TODO: MAKE A TANGENT READER
-      break;
-    case cgltf_attribute_type_color:
+    case MAT_COLOR:
       return ubyten_buffer(vs,n);
-    case cgltf_attribute_type_weights:
+    case MAT_WEIGHT:
       return ubyten_buffer(vs,n);
-    case cgltf_attribute_type_joints:
+    case MAT_BONE:
       return ubyte_buffer(vs,n);
-    case cgltf_attribute_type_texcoord:
+    case MAT_UV:
       return texcoord_floats(vs,n);
-    case cgltf_attribute_type_invalid:
-      break;
-    case 100:
+    case MAT_INDEX:
       return index_buffer(vs,n);
   }
 

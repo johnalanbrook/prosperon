@@ -9,6 +9,20 @@
 #include "texture.h"
 #include "cgltf.h"
 
+#define MAT_POS 0
+#define MAT_UV 1
+#define MAT_NORM 2
+#define MAT_BONE 3
+#define MAT_WEIGHT 4
+#define MAT_COLOR 5
+#define MAT_TAN 6
+#define MAT_ANGLE 7
+#define MAT_WH 8
+#define MAT_ST 9
+#define MAT_PPOS 10
+#define MAT_SCALE 11
+#define MAT_INDEX 100
+
 typedef struct md5joint {
   struct md5joint *parent;
   HMM_Vec4 pos;

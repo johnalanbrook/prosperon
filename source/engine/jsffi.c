@@ -675,8 +675,10 @@ sg_bindings js2bind(JSValue v)
 {
   sg_bindings bind = {0};
   JSValue attrib = js_getpropstr(v, "attrib");
-  for (int i = 0; i < js_arrlen(attrib); i++)
+
+  for (int i = 0; i < js_arrlen(attrib); i++) {
     bind.vertex_buffers[i] = *js2sg_buffer(js_getpropidx(attrib,i));
+  }
     
   JSValue index = js_getpropstr(v, "index");
   if (!JS_IsUndefined(index))
@@ -870,19 +872,6 @@ sg_shader js2shader(JSValue v)
   return sh;
 }
 
-#define MAT_POS 0
-#define MAT_UV 1
-#define MAT_NORM 2
-#define MAT_BONE 3
-#define MAT_WEIGHT 4
-#define MAT_COLOR 5
-#define MAT_TAN 6
-#define MAT_ANGLE 7
-#define MAT_WH 8
-#define MAT_ST 9
-#define MAT_PPOS 10
-#define MAT_SCALE 11
-
 static int mat2type(int mat)
 {
   switch(mat) {
@@ -894,8 +883,8 @@ static int mat2type(int mat)
     case MAT_ST:
       return SG_VERTEXFORMAT_FLOAT2;
     case MAT_UV:
-    case MAT_TAN:
       return SG_VERTEXFORMAT_USHORT2N;
+    case MAT_TAN:
       return SG_VERTEXFORMAT_UINT10_N2;
     case MAT_BONE:
       return SG_VERTEXFORMAT_UBYTE4;
@@ -906,7 +895,8 @@ static int mat2type(int mat)
     case MAT_SCALE:
       return SG_VERTEXFORMAT_FLOAT;
   };
-  return 0;
+  
+  return -1;
 }
 
 sg_vertex_layout_state js2layout(JSValue v)
@@ -987,6 +977,11 @@ JSC_CCALL(render_setuniview,
 
 JSC_CCALL(render_setunivp,
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.vp));
+)
+
+JSC_CCALL(render_setunibones,
+  skin *sk = js2skin(argv[2]);
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(sk->binds));
 )
 
 JSC_CCALL(render_setunim4,
@@ -1146,6 +1141,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
   MIST_FUNC_DEF(render, spdraw, 2),
+  MIST_FUNC_DEF(render, setunibones, 3),
   MIST_FUNC_DEF(render, setbind, 1),
   MIST_FUNC_DEF(render, setuniproj, 2),
   MIST_FUNC_DEF(render, setuniview, 2),
@@ -2957,10 +2953,14 @@ JSC_SCALL(os_gltf_skin,
   cgltf_parse_file(&options,str,&data);
   cgltf_load_buffers(&options,data,str);
 
+  printf("file %s has %d skins\n", str, data->skins_count);
+
   if (data->skins_count <= 0) {
     ret = (JS_UNDEFINED);
     goto CLEANUP;
   }
+
+  ret = skin2js(make_gltf_skin(data->skins+0));
 
   CLEANUP:
   cgltf_free(data);
