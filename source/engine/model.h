@@ -35,10 +35,11 @@ typedef struct skin {
   md5joint *joints;
   HMM_Mat4 *invbind;
   HMM_Mat4 binds[50]; /* binds = joint * invbind */
+  animation *anim;
 } skin;
 
 sg_buffer accessor2buffer(cgltf_accessor *a, int type);
-skin *make_gltf_skin(cgltf_skin *skin);
+skin *make_gltf_skin(cgltf_skin *skin, cgltf_data *data);
 void skin_calculate(skin *sk);
 
 sg_buffer float_buffer(float *f, int v);

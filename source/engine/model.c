@@ -164,7 +164,14 @@ void packFloats(float *src, float *dest, int srcLength) {
   }
 }
 
-animation *gltf_anim(cgltf_animation *anim)
+static md5joint *node2joint(skin *sk, cgltf_node *n, cgltf_skin *skin)
+{
+  int k = 0;
+  while (skin->joints[k] != n && k < skin->joints_count) k++;
+  return sk->joints+k;
+}
+
+animation *gltf_anim(cgltf_animation *anim, skin *sk, cgltf_skin *skin)
 {
   animation *ret = calloc(sizeof(*ret), 1);
   animation an = *ret;
@@ -200,7 +207,7 @@ animation *gltf_anim(cgltf_animation *anim)
   for (int i = 0; i < anim->channels_count; i++) {
     cgltf_animation_channel ch = anim->channels[i];
     struct anim_channel ach = (struct anim_channel){0};
-    md5joint *md = NULL;
+    md5joint *md = node2joint(sk, ch.target_node, skin);
     switch(ch.target_path) {
       case cgltf_animation_path_type_translation:
         ach.target = &md->pos;
@@ -218,10 +225,13 @@ animation *gltf_anim(cgltf_animation *anim)
     arrput(an.channels, ach);
   }
 
+  an.time = 0;
+
   *ret = an;
+  return ret;
 }
 
-skin *make_gltf_skin(cgltf_skin *skin)
+skin *make_gltf_skin(cgltf_skin *skin, cgltf_data *data)
 {
   int n = cgltf_accessor_unpack_floats(skin->inverse_bind_matrices, NULL, 0);
   struct skin *sk = NULL;
@@ -236,10 +246,13 @@ skin *make_gltf_skin(cgltf_skin *skin)
   
   for (int i = 0; i < skin->joints_count; i++) {
     cgltf_node *n = skin->joints[i];
-    int idx = n-skin->skeleton;
-    int parent_idx = n->parent-skin->skeleton;
-    md5joint *j = sk->joints+idx;
-    j->parent = sk->joints+parent_idx;
+    md5joint *j = sk->joints+i;
+
+    if (n == skin->skeleton)
+      j->parent = NULL;
+    else
+      j->parent = node2joint(sk, n->parent, skin);
+
     for (int i = 0; i < 3; i++) {
       j->pos.e[i] = n->translation[i];
       j->scale.e[i] = n->scale[i];
@@ -248,17 +261,20 @@ skin *make_gltf_skin(cgltf_skin *skin)
       j->rot.e[i] = n->rotation[i];
   }
 
+  sk->anim = gltf_anim(data->animations+0, sk, skin);
+
   return sk;
 }
 
 void skin_calculate(skin *sk)
 {
+  animation_run(sk->anim, apptime());
   for (int i = 0; i < arrlen(sk->joints); i++) {
     md5joint *md = sk->joints+i;
-    HMM_Mat4 local = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
+    md->t = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);
     if (md->parent)
-      local = HMM_MulM4(md->parent->t, local);
-    md->t = local;
+      md->t = HMM_MulM4(md->parent->t, md->t);
+
     sk->binds[i] = HMM_MulM4(md->t, sk->invbind[i]);
   }
 }

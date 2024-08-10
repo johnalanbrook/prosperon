@@ -1933,7 +1933,6 @@ JSC_CCALL(transform_rotate,
   transform *t = js2transform(self);
   HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2angle(argv[1]));
   t->rotation = HMM_MulQ(t->rotation,rot);
-  printf("rotation is now %g,%g,%g,%g\n", t->rotation.e[0], t->rotation.e[1], t->rotation.e[2], t->rotation.e[3]);
   t->dirty = true;
 )
 
@@ -2960,7 +2959,7 @@ JSC_SCALL(os_gltf_skin,
     goto CLEANUP;
   }
 
-  ret = skin2js(make_gltf_skin(data->skins+0));
+  ret = skin2js(make_gltf_skin(data->skins+0, data));
 
   CLEANUP:
   cgltf_free(data);
