@@ -687,6 +687,7 @@ sg_bindings js2bind(JSValue v)
   JSValue imgs = js_getpropstr(v, "images");
   for (int i = 0; i < js_arrlen(imgs); i++) {
     bind.fs.images[i] = js2texture(js_getpropidx(imgs, i))->id;
+//    printf("printing image with id %d\n", js2texture(js_getpropidx(imgs, i))->id);
     bind.fs.samplers[i] = std_sampler; 
   }
   
@@ -2471,13 +2472,19 @@ JSC_CCALL(texture_blit,
   texture *tex = js2texture(self);
   texture_blit(js2texture(self), js2texture(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))
 
+JSC_CCALL(texture_getid,
+  texture *tex = js2texture(self);
+  return number2js(tex->id.id);
+)
+
 static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, width),
   MIST_GET(texture, height),
   MIST_GET(texture, frames),
   MIST_GET(texture, delays),
   MIST_FUNC_DEF(texture, save, 1),
-  MIST_FUNC_DEF(texture, blit, 5)
+  MIST_FUNC_DEF(texture, blit, 5),
+  MIST_FUNC_DEF(texture, getid, 0),
 };
 
 static const JSCFunctionListEntry js_timer_funcs[] = {
@@ -2917,6 +2924,13 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
+JSC_SCALL(os_texture_swap,
+  texture *old = js2texture(argv[1]);
+  texture *tex = texture_from_file(str);
+  JS_SetOpaque(argv[1], tex);
+  texture_free(old);
+)
+
 JSC_CCALL(os_make_tex_data,
   ret = texture2js(texture_empty(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
 )
@@ -3145,6 +3159,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_poly2d, 2),
   MIST_FUNC_DEF(os, make_seg2d, 1),
   MIST_FUNC_DEF(os, make_texture, 1),
+  MIST_FUNC_DEF(os, texture_swap, 2),
   MIST_FUNC_DEF(os, make_tex_data, 3),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_transform, 0),

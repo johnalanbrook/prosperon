@@ -567,6 +567,7 @@ render.sprites = function render_sprites(gridsize = 1)
        render.use_mat(ss);
        render.make_sprite_ssbo(sparray, sprite_ssbo);
        render.draw(shape.quad, sprite_ssbo, sparray.length);
+       render.text(ss.diffuse.getid(), ss.transform.pos);
     }
   }
   profile.endframe();
@@ -997,6 +998,7 @@ prosperon.render = function()
   profile.frame("imgui");
 
   render.imgui_new(window.size.x, window.size.y, 0.01);
+//  render.gfx_gui();
   prosperon.imgui();
   render.imgui_end();
 
@@ -1014,6 +1016,7 @@ prosperon.process = function process() {
   profile.frame("hotreload");
   actor.hotreload();
   render.hotreload();
+  game.tex_hotreload();
   repl.hotreload();
   profile.endframe();
 

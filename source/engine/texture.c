@@ -166,7 +166,7 @@ void texture_free(texture *tex)
 {
   if (!tex) return;
   if (tex->data)
-  free(tex->data);
+    free(tex->data);
   if (tex->delays) arrfree(tex->delays);
   sg_destroy_image(tex->id);
   free(tex);

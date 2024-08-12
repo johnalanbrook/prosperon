@@ -44,7 +44,7 @@ struct texture *texture_fromdata(void *raw, long size);
 texture *texture_empty(int width, int height, int n);
 void texture_blit(texture *dest, texture *src, int x, int y, int w, int h);
 void texture_flip(texture *tex, int y);
-void texture_save(texture *tex, const char *file);
+void texture_save(texture *tex, const char *file); // save the texture data to the given file
 
 double perlin(double x, double y, double z);
 

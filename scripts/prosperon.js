@@ -177,17 +177,31 @@ game.doc.pause = "Pause game simulation.";
 game.doc.play = "Resume or start game simulation.";
 game.doc.camera = "Current camera.";
 
-game.texture = function (path, force = false) {
-  if (force && game.texture.cache[path]) return game.texture.cache[path];
+game.tex_hotreload = function()
+{
+  for (var path in game.texture.cache) {
+    if (io.mod(path) > game.texture.time_cache[path]) {
+      var tex = game.texture.cache[path];
+      game.texture.time_cache[path] = io.mod(path);
+      os.texture_swap(path, game.texture.cache[path]);
+    }
+  }
+}
 
+game.texture = function (path) {
   if (!io.exists(path)) {
     console.warn(`Missing texture: ${path}`);
     game.texture.cache[path] = game.texture("icons/no_tex.gif");
-  } else game.texture.cache[path] ??= os.make_texture(path);
-
+    game.texture.time_cache[path] = io.mod(path);
+    return game.texture.cache[path];
+  }
+  if (game.texture.cache[path]) return game.texture.cache[path];
+  game.texture.cache[path] = os.make_texture(path);
+  game.texture.time_cache[path] = io.mod(path);
   return game.texture.cache[path];
 };
 game.texture.cache = {};
+game.texture.time_cache = {};
 
 prosperon.semver = {};
 prosperon.semver.valid = function (v, range) {
