@@ -222,13 +222,28 @@ profile.print_frame_avg = function()
   say("\n");
 }
 
+var cache_reporting = false;
+
 var report_cache = {};
 
 var cachest = 0;
 var cachegroup;
 var cachetitle;
+
+profile.imgui = function()
+{
+  
+}
+
+profile.cache_reporting = function() { return cache_reporting; }
+profile.cache_toggle = function() { cache_reporting = !cache_reporting; }
+profile.cache_dump = function() {
+  report_cache = {};
+}
+
 profile.cache = function profile_cache(group, title)
 {
+  if (!cache_reporting) return;
   cachest = profile.now();
   cachegroup = group;
   cachetitle = title;
@@ -301,11 +316,6 @@ profile.print_mem = function()
     if (i.includes("size"))
       say("  " + i + " :: " + profile.best_mem(mem[i]));
   }
-}
-
-profile.atom_count = function()
-{
-//  return os.dump_atoms().split(
 }
 
 profile.print_gc = function()

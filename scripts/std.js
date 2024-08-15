@@ -10,17 +10,28 @@ var appy = {};
 appy.inputs = {};
 if (os.sys() === 'macos') {
   appy.inputs['S-q'] = os.quit;
-  appy.inputs['S-h'] = function() { };
-  appy.inputs['S-g'] = os.gc;
 }
 
-//appy.inputs.f12 = function() { mum.debug = !mum.debug; }
+game.op_search = function()
+{
+  if (!game.ooop) return;
+  game.ooop = imgui.window("operator search", _ => {
+    imgui.text("test");
+  });
+}
 
+game.ooop = false;
+
+//appy.inputs.f12 = function() { mum.debug = !mum.debug; }
+appy.inputs['C-space'] = function() {
+  game.ooop = !game.ooop;
+}
 appy.inputs.f9 = function() { profile.print_mem(); }
 appy.inputs.f10 = function() { profile.toggle_frame_avg(); }
 appy.inputs.f11 = window.toggle_fullscreen;
-appy.inputs.f12 = function() { profile.cpu_frame(); }
-appy.inputs['M-f4'] = prosperon.quit;
+appy.inputs.f11.doc = "Toggle window fullscreen.";
+appy.inputs.f11.title = "Toggle Fullscreen";
+appy.inputs['M-f4'] = os.quit;
 
 player[0].control(appy);
   

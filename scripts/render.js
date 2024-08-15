@@ -567,7 +567,7 @@ render.sprites = function render_sprites(gridsize = 1)
        render.use_mat(ss);
        render.make_sprite_ssbo(sparray, sprite_ssbo);
        render.draw(shape.quad, sprite_ssbo, sparray.length);
-       render.text(ss.diffuse.getid(), ss.transform.pos);
+       if (debug.sprite_nums) render.text(ss.diffuse.getid(), ss.transform.pos);
     }
   }
   profile.endframe();
@@ -998,7 +998,6 @@ prosperon.render = function()
   profile.frame("imgui");
 
   render.imgui_new(window.size.x, window.size.y, 0.01);
-//  render.gfx_gui();
   prosperon.imgui();
   render.imgui_end();
 

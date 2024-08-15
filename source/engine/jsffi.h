@@ -12,6 +12,8 @@ extern "C" {
 
 void script_report_gc_time(double t, double startmem, double mem);
 
+int JS_Is(JSValue v);
+
 extern JSValue cpShape2js(cpShape *s);
 
 #define MIST_CFUNC_DEF(name, length, func1, props) { name, props, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }

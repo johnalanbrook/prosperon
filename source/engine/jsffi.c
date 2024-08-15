@@ -62,6 +62,8 @@ JSValue str2js(const char *c, ...) {
   return JS_NewString(js, buf);
 }
 
+int JS_Is(JSValue v) { return JS_ToBool(js, v); }
+
 const char *js2str(JSValue v) {
   return JS_ToCString(js, v);
 }
@@ -1123,7 +1125,6 @@ JSC_CCALL(render_screencolor,
 )
 
 JSC_CCALL(render_imgui_new, gui_newframe(js2number(argv[0]),js2number(argv[1]),js2number(argv[2])); )
-JSC_CCALL(render_gfx_gui, gfx_gui())
 JSC_CCALL(render_imgui_end, gui_endframe())
 
 JSC_CCALL(render_imgui_init, return gui_init(js))
@@ -1153,7 +1154,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setpipeline, 1),
   MIST_FUNC_DEF(render, screencolor, 0),
   MIST_FUNC_DEF(render, imgui_new, 3),
-  MIST_FUNC_DEF(render, gfx_gui, 0),
   MIST_FUNC_DEF(render, imgui_end, 0),
   MIST_FUNC_DEF(render, imgui_init, 0),
   MIST_FUNC_DEF(render, make_t_ssbo, 2),

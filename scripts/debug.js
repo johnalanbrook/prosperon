@@ -14,6 +14,7 @@ debug.draw_phys = false;
 debug.draw_bb = false;
 debug.draw_gizmos = false;
 debug.draw_names = false;
+debug.sprite_nums = false;
 debug.draw = function() {
   if (this.draw_phys) game.all_objects(function(x) { debug.draw_gameobject(x); });
   
