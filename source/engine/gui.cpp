@@ -40,16 +40,14 @@ JSC_CCALL(imgui_mainmenubar,
   }
 )
 
-const char* imempty = "##empty";
-
 JSC_CCALL(imgui_menuitem,
-  char *name = !JS_Is(argv[0]) ? imempty : js2strdup(argv[0]);
+  char *name = js2strdup(argv[0]);
   char *keyfn = JS_IsUndefined(argv[1]) ? NULL : js2strdup(argv[1]);
   bool on = JS_IsUndefined(argv[3]) ? false : js2boolean(argv[3]);
-  if (ImGui::MenuItem(name,keyfn, &on))
+  if (ImGui::MenuItem(JS_Is(argv[0]) ? name : "##empty" ,keyfn, &on))
     script_call_sym(argv[2], 0, NULL);
 
-  if (name != imempty) free(name);
+  if (JS_Is(argv[0])) free(name);
   if (keyfn) free(keyfn);
 
   return boolean2js(on);

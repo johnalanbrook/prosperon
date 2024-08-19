@@ -412,7 +412,10 @@ HMM_Vec3 js2vec3(JSValue v)
 HMM_Vec3 js2vec3f(JSValue v)
 {
   HMM_Vec3 vec;
-  vec.x = vec.y = vec.z = js2number(v);
+  if (JS_IsArray(js, v))
+    return js2vec3(v);
+  else
+    vec.x = vec.y = vec.z = js2number(v);
   return vec;
 }
 
