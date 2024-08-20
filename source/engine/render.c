@@ -132,7 +132,8 @@ void render_init() {
   sg_setup(&(sg_desc){
     .environment = sglue_environment(),
     .logger = { .func = sg_logging },
-    .buffer_pool_size = 1024
+    .buffer_pool_size = 1024,
+    .image_pool_size = 1024,
   });
   
   std_sampler = sg_make_sampler(&(sg_sampler_desc){});

@@ -1,11 +1,23 @@
 /* Tests for prosperon */
 
+var test = {};
+
 var tests = [];
 var pass = 0;
 var fail = 0;
 var failed = [];
 
-var test = function(name, fn)
+test.run_suite = function(file)
+{
+  test = [];
+  pass = 0;
+  fail = 0;
+  failed = [];
+
+  
+}
+
+test.run = function(name, fn)
 {
   var func = function() {
     print(`${pass+fail+1}/${tests.length}: ${name} ... `);
@@ -36,3 +48,5 @@ for (var f of failed)
   say(f);
   
 os.quit();
+
+return {test};

@@ -785,7 +785,7 @@ Object.defineProperty(String.prototype, 'name', {
 Object.defineProperty(String.prototype, 'set_name', {
   value: function(name) {
     var dir = this.dir();
-    return this.dir() + name + "." + this.ext();
+    return this.dir() + "/" + name + "." + this.ext();
   }
 });
 
