@@ -67,6 +67,19 @@ var sprite = {
 
     advance();
   },
+  tex_sync() {
+    if (this.anim) this.stop();
+    this.rect = fullrect;    
+    var anim = SpriteAnim.make(this.path);
+    this.update_dimensions();
+    this.sync();
+
+    if (!anim) return;
+    this.anim = anim;
+    this.play();
+    
+    this.pos = this.dimensions().scale(this.anchor);
+  },
   stop() {
     this.del_anim?.();
   },
@@ -77,23 +90,15 @@ var sprite = {
       return;
     }
     if (p === this.path) return;
+
     this._p = p;
   
     this.del_anim?.();
     this.texture = game.texture(p);
     
     this.diffuse = this.texture;
-    this.rect = fullrect;
-    
-    var anim = SpriteAnim.make(p);
-    this.update_dimensions();
-    this.sync();
 
-    if (!anim) return;
-    this.anim = anim;
-    this.play();
-    
-    this.pos = this.dimensions().scale(this.anchor);
+    this.tex_sync();
   },
   get path() {
     return this._p;
@@ -200,7 +205,6 @@ Object.mixin(os.make_seg2d(), {
 var animcache = {};
 var SpriteAnim = {};
 SpriteAnim.make = function(path) {
-  if (path in animcache) return animcache[path];
   var anim;
   if (io.exists(path.set_ext(".ase")))
     anim = SpriteAnim.aseprite(path.set_ext(".ase"));
