@@ -60,6 +60,29 @@ game.engine_start = function (s) {
       Object.readonly(window.__proto__, "enable_clipboard");
       Object.readonly(window.__proto__, "high_dpi");
       Object.readonly(window.__proto__, "sample_count");
+
+      prosperon.camera = prosperon.make_camera();
+      var camera = prosperon.camera;
+      camera.transform.pos = [0,0,-100];
+      camera.mode = "keep";
+      camera.break = "fit";
+      camera.size = game.size;
+      gamestate.camera = camera;
+
+      prosperon.hudcam = prosperon.make_camera();
+      var hudcam = prosperon.hudcam;
+      hudcam.near = 0;
+      hudcam.size = camera.size;
+      hudcam.mode = "keep";
+      hudcam.break = "fit";
+
+      prosperon.appcam = prosperon.make_camera();
+      var appcam = prosperon.appcam;
+      appcam.near = 0;
+      appcam.size = window.size;
+      appcam.transform.pos = [window.size.x,window.size.y,-100];
+      prosperon.screencolor = render.screencolor();
+      
       s();
 
       shape.quad = {
@@ -87,28 +110,6 @@ game.engine_start = function (s) {
       };
 
       render.init();
-
-      prosperon.camera = prosperon.make_camera();
-      var camera = prosperon.camera;
-      camera.transform.pos = [0,0,-100];
-      camera.mode = "keep";
-      camera.break = "fit";
-      camera.size = game.size;
-      gamestate.camera = camera;
-
-      prosperon.hudcam = prosperon.make_camera();
-      var hudcam = prosperon.hudcam;
-      hudcam.near = 0;
-      hudcam.size = camera.size;
-      hudcam.mode = "keep";
-      hudcam.break = "fit";
-
-      prosperon.appcam = prosperon.make_camera();
-      var appcam = prosperon.appcam;
-      appcam.near = 0;
-      appcam.size = window.size;
-      appcam.transform.pos = [window.size.x,window.size.y,-100];
-      prosperon.screencolor = render.screencolor();
     },
     prosperon.process,
     window.size.x,

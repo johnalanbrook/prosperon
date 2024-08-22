@@ -152,6 +152,7 @@ var entity = {
       ent.objects = {};
       ent.timers = [];
       ent.ur = {};
+      ent.urname = text;
     });
 /*    
     if (!text)

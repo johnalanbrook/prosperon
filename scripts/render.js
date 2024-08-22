@@ -853,7 +853,7 @@ render.draw = function render_draw(mesh, ssbo, inst = 1)
 }
 
 // Returns an array in the form of [left, bottom, right, top] in pixels of the camera to render to
-// Camera viewport is [left,bottom,right,top] in relative values
+// Camera viewport is [left,bottom,width,height] in relative values
 function camviewport()
 {
   var aspect = (this.viewport[2]-this.viewport[0])/(this.viewport[3]-this.viewport[1])*window.size.x/window.size.y;
@@ -901,17 +901,32 @@ function camscreen2world(pos)
   return view;
 }
 
+// three coordinatse
+// world coordinates, the "actual" view relative to the game's universe
+// camera coordinates, normalized from 0 to 1 inside of a camera's viewport, bottom left is 0,0, top right is 1,1
+// screen coordinates, pixels, 0,0 at the bottom left of the window and [w,h] at the top right of the screen
+
 camscreen2world.doc = "Convert a view position for a camera to world."
 
+// return camera coordinates given a screen position
 function screen2cam(pos)
 {
   var viewport = this.view();
-  var width = viewport[2]-viewport[0];
-  var height = viewport[3]-viewport[1];
-  var left = pos.x-viewport[0];
-  var bottom = pos.y-viewport[1];
-  var p = [left/width, bottom/height];
-  return p;
+  var width = viewport[2];
+  var height = viewport[3];
+  var viewpos = pos.sub([viewport[0],viewport[1]]);
+  return viewpos.div([width,height]);
+}
+
+function camextents()
+{
+  var half = this.size;//.scale(0.5);
+  return {
+    l: this.pos.x-half.x,
+    r: this.pos.x+half.x,
+    t:this.pos.y+half.y,
+    b:this.pos.y-half.y
+  };
 }
 
 screen2cam.doc = "Convert a screen space position in pixels to a normalized viewport position in a camera."
@@ -928,7 +943,7 @@ prosperon.make_camera = function()
   cam.mode = "stretch";
   cam.screen2world = camscreen2world;
   cam.screen2cam = screen2cam;
-
+  cam.extents = camextents;
   cam.mousepos = function() { return this.screen2world(input.mouse.screenpos()); }
   cam.view = camviewport;
   cam.offscreen = false;
