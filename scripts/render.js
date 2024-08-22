@@ -528,9 +528,11 @@ render.init = function() {
 render.sprites = function render_sprites(gridsize = 1)
 {
   // When y sorting, draw layer is firstly important followed by the gameobject position
+  var buckets;
+  if (render.y_sort) {
   profile.frame("y bucketing");
   var sps = Object.values(allsprites);
-  var buckets = {};
+  buckets = {};
   
   for (var sprite of sps) {
     var layer = (sprite.gameobject.drawlayer*10000)-sprite.gameobject.pos.y;
@@ -551,6 +553,18 @@ render.sprites = function render_sprites(gridsize = 1)
     return 1;
   });
   profile.endframe();
+  } else {
+  profile.frame("sorting");
+  var sprite_buckets = component.sprite_buckets();
+  
+  var buckets = Object.entries(sprite_buckets).sort((a,b) => {
+    var na = Number(a[0]);
+    var nb = Number(b[0]);
+    if (na < nb) return -1;
+    return 1;
+  });
+  profile.endframe();
+  }
 /*
   profile.frame("bucketing");
   var sps = Object.values(allsprites);
@@ -567,18 +581,6 @@ render.sprites = function render_sprites(gridsize = 1)
       buckets[layer][sprite.path] = [sprite];
   }
   
-  profile.endframe();
-
-
-  profile.frame("sorting");
-  var sprite_buckets = component.sprite_buckets();
-  
-  var buckets = Object.entries(sprite_buckets).sort((a,b) => {
-    var na = Number(a[0]);
-    var nb = Number(b[0]);
-    if (na < nb) return -1;
-    return 1;
-  });
   profile.endframe();
 */
 
