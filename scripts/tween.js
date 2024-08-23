@@ -103,7 +103,7 @@ Ease.elastic = {
 Ease.elastic.c4 = 2*Math.PI/3;
 Ease.elastic.c5 = 2*Math.PI / 4.5;
 
-var tween = function(from, to, time, fn)
+var tween = function(from, to, time, fn, endfn)
 {
   var start = profile.secs(profile.now());
   var update = function(dt) {
@@ -114,6 +114,7 @@ var tween = function(from, to, time, fn)
       fn(to);
       if (stop.then) stop.then();
       stop();
+      endfn?.();
     }
     profile.endframe();
   };

@@ -53,7 +53,6 @@ var sprite = {
     function advance() {
       if (!self) return;
       if (!self.gameobject) return;
-      //self.path = playing.path;
       self.frame = playing.frames[f].rect;
       self.rect = [self.frame.x, self.frame.y, self.frame.w, self.frame.h];
       self.update_dimensions();
