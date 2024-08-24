@@ -24,7 +24,7 @@ audio.dsp = dspsound;
 
 audio.cry = function(file)
 {
-  if (!io.exists(file)) file = Resources.find_sound(file);
+  file = Resources.find_sound(file);
   var player = audio.play(file);
   if (!player) return;
   
@@ -46,20 +46,29 @@ var killer = Register.appupdate.register(function() {
 
 var song;
 
-audio.music = function(file, fade = 0) {
+// Play 'file' for new song, cross fade for seconds
+audio.music = function(file, fade = 0.5) {
+  file = Resources.find_sound(file);
   if (!fade) {
     song = audio.play(file);
     song.loop = true;
+    return;
+  }
+
+  if (!song) {
+    song = audio.play(file);
+    song.volume = 1;
+//    tween(song,'volume', 1, fade);
     return;
   }
   
   var temp = audio.play(file);
   if (!temp) return;
   
-  temp.volume = 0;
+  temp.volume = 1;
   var temp2 = song;
-  tween(temp, 'volume', 1, fade);
-  tween(temp2, 'volume', 0, fade);
+//  tween(temp, 'volume', 1, fade);
+//  tween(temp2, 'volume', 0, fade);
   song = temp;
   song.loop = true;
 }

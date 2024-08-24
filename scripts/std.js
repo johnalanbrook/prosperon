@@ -66,24 +66,6 @@ os.openurl = function(url) {
 var projectfile = "project.prosperon";
 io.dumpfolder = '.prosperon';
 
-Resources.is_sound = function(path) {
-  var ext = path.ext();
-  return Resources.sounds.any(x => x === ext);
-}
-
-Resources.is_animation = function(path)
-{
-  if (path.ext() === 'gif' && Resources.gif.frames(path) > 1) return true;
-  if (path.ext() === 'ase') return true;
-  
-  return false;
-}
-
-Resources.is_path = function(str)
-{
-  return !/[\\\/:*?"<>|]/.test(str);
-}
-
 Resources.texture = {};
 Resources.texture.dimensions = function(path) { texture.dimensions(path); }
 

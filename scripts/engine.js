@@ -96,6 +96,30 @@ Resources.replstrs = function replstrs(path) {
   return script;
 };
 
+Resources.is_sound = function(path) {
+  var ext = path.ext();
+  return Resources.sounds.any(x => x === ext);
+}
+
+Resources.is_image = function(path) {
+  var ext = path.ext();
+  return Resources.images.any(x => x === ext);
+}
+
+Resources.is_animation = function(path)
+{
+  if (path.ext() === 'gif' && Resources.gif.frames(path) > 1) return true;
+  if (path.ext() === 'ase') return true;
+  
+  return false;
+}
+
+Resources.is_path = function(str)
+{
+  return !/[\\\/:*?"<>|]/.test(str);
+}
+
+
 globalThis.json = {};
 json.encode = function (value, replacer, space = 1) {
   return JSON.stringify(value, replacer, space);
@@ -127,11 +151,13 @@ Resources.images = ["png", "gif", "jpg", "jpeg"];
 Resources.sounds = ["wav", "flac", "mp3", "qoa"];
 Resources.is_image = function (path) {
   var ext = path.ext();
-  return Resources.images.any((x) => x === ext);
+  return Resources.images.some(x => x === ext);
 };
 
 function find_ext(file, ext) {
-  if (io.exists(file)) return file;
+  if (!file) return;
+  var file_ext = file.ext();
+  if (ext.some(x => x === file_ext)) return file;
   for (var e of ext) {
     var nf = `${file}.${e}`;
     if (io.exists(nf)) return nf;

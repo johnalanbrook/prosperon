@@ -673,7 +673,7 @@ function flush_poly()
   render.use_shader(polyssboshader);
   render.use_mat({});
   render.make_particle_ssbo(poly_cache.slice(0,poly_idx), poly_ssbo);
-  render.draw(shape.centered_quad, poly_ssbo, poly_cache.length);
+  render.draw(shape.centered_quad, poly_ssbo, poly_idx);
   poly_idx = 0;
 }
 

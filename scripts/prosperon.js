@@ -197,9 +197,8 @@ game.tex_hotreload = function()
 }
 
 game.texture = function (path) {
-  if (!io.exists(path))
-    path = Resources.find_image(path);
-    
+  path = Resources.find_image(path);
+  
   if (!io.exists(path)) {
     console.warn(`Missing texture: ${path}`);
     game.texture.cache[path] = game.texture("icons/no_tex.gif");

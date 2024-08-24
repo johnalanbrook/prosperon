@@ -101,9 +101,18 @@ JSC_CCALL(imgui_sokol_gfx,
   }
 )
 
+JSC_SCALL(imgui_slider,
+  float val = js2number(argv[1]);
+  float low = JS_IsUndefined(argv[2]) ? 0.0 : js2number(argv[2]);
+  float high = JS_IsUndefined(argv[3]) ? 1.0 : js2number(argv[3]);
+  ImGui::SliderFloat(str, &val, low, high, "%.3f");
+  ret = number2js(val);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
+  MIST_FUNC_DEF(imgui, slider, 4),
   MIST_FUNC_DEF(imgui, menubar, 1),
   MIST_FUNC_DEF(imgui, mainmenubar, 1),
   MIST_FUNC_DEF(imgui, menuitem, 3),
