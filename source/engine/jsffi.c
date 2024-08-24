@@ -1625,6 +1625,7 @@ static const JSCFunctionListEntry js_time_funcs[] = {
 };
 
 JSC_SCALL(console_print, log_print(str))
+JSC_SCALL(console_term_print, term_print(str));
 
 JSValue js_console_rec(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
@@ -1645,6 +1646,7 @@ JSC_GETSET_GLOBAL(stdout_lvl, number)
 
 static const JSCFunctionListEntry js_console_funcs[] = {
   MIST_FUNC_DEF(console,print,1),
+  MIST_FUNC_DEF(console, term_print, 1),
   MIST_FUNC_DEF(console,rec,4),
   CGETSET_ADD(global, stdout_lvl)
 };

@@ -41,5 +41,6 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data);
 
 void log_print(const char *str);
+void term_print(const char *str);
 
 #endif

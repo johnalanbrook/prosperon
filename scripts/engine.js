@@ -179,6 +179,7 @@ console.transcript = "";
 console.say = function (msg) {
   msg += "\n";
   console.print(msg);
+  if (debug.termout) console.term_print(msg);
   console.transcript += msg;
 };
 console.log = console.say;
