@@ -24,6 +24,7 @@ audio.dsp = dspsound;
 
 audio.cry = function(file)
 {
+  if (!io.exists(file)) file = Resources.find_sound(file);
   var player = audio.play(file);
   if (!player) return;
   

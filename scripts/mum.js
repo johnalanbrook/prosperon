@@ -25,7 +25,7 @@ mum.base = {
   inset: null,
   anchor: [0,1], // where to draw the item from, relative to the cursor. [0,1] is from the top left corner. [1,0] is from the bottom right
   background_image: null,
-  slice: null,
+  slice: null, // pass to slice an image as a 9 slice. see render.slice9 for its format
   hover: {
     color: Color.red,
   },

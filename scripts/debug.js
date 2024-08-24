@@ -1,4 +1,6 @@
-debug.build = function(fn) { fn(); }
+debug.build = function(fn) { if (!debug.show) return; fn(); }
+debug.show = true;
+debug.urnames = false;
 
 debug.fn_break = function(fn,obj = globalThis) {
   if (typeof fn !== 'function') return;
