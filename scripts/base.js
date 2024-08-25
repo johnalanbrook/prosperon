@@ -522,21 +522,27 @@ Object.hide = function(obj,...props)
 {
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
-    if (!p) {
-      console.error(`No property of name ${prop}.`);
-      continue;
-    }
+    if (!p) continue;
     p.enumerable = false;
     Object.defineProperty(obj, prop, p);
   }
+}
+
+Object.enumerable = function(obj, val, ...props)
+{
+  for (var prop of props) {
+    p = Object.getOwnPropertyDescriptor(obj,prop);
+    if (!p) continue;
+    p.enumerable = val;
+    Object.defineProperty(obj, prop, p);
+  } 
 }
 
 Object.unhide = function(obj, ...props)
 {
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj,prop);
-    if (!p)
-      continue;
+    if (!p) continue;
     p.enumerable = true;
     Object.defineProperty(obj, prop, p);
   }

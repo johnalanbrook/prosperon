@@ -22,10 +22,17 @@ audio.bus.master = dspsound.master();
 audio.dsp = {};
 audio.dsp = dspsound;
 
-audio.cry = function(file)
+
+audio.bus.master.__proto__.imgui = function()
+{
+  this.volume = imgui.slider("Volume", this.volume);
+  this.off = imgui.checkbox("Mute", this.off);
+}
+
+audio.cry = function(file, bus = audio.bus.master)
 {
   file = Resources.find_sound(file);
-  var player = audio.play(file);
+  var player = audio.play(file, bus);
   if (!player) return;
   
   player.guid = prosperon.guid();
@@ -50,19 +57,19 @@ var song;
 audio.music = function(file, fade = 0.5) {
   file = Resources.find_sound(file);
   if (!fade) {
-    song = audio.play(file);
+    song = audio.play(file, audio.bus.music);
     song.loop = true;
     return;
   }
 
   if (!song) {
-    song = audio.play(file);
+    song = audio.play(file, audio.bus.music);
     song.volume = 1;
 //    tween(song,'volume', 1, fade);
     return;
   }
   
-  var temp = audio.play(file);
+  var temp = audio.play(file, audio.bus.music);
   if (!temp) return;
   
   temp.volume = 1;
@@ -73,11 +80,8 @@ audio.music = function(file, fade = 0.5) {
   song.loop = true;
 }
 
-audio.dsp.mix = function(to) {
-  var n = audio.dsp.mix();
-  if (to) n.plugin(to);
-  return n;
-};
+audio.bus.music = audio.dsp.mix();
+audio.bus.music.plugin(audio.bus.master);
 
 audio.dsp.allpass = function(secs, decay) {
   var composite = {};
@@ -105,6 +109,8 @@ audio.dsp.doc = {
   pink: "Pink noise",
   red: "Red noise"
 };
+
+audio.dsp.obscure('doc');
 
 Object.mixin(audio.bus.master.__proto__, {
   get db() { return 20*Math.log10(Math.abs(this.volume)); },

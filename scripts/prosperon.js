@@ -290,6 +290,13 @@ window.doc = {};
 window.doc.dimensions = "Window width and height packaged in an array [width,height]";
 window.doc.title = "Name in the title bar of the window.";
 window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
+window.__proto__.toJSON = function()
+{
+  return {
+    size: this.size,
+    fullscreen: this.fullscreen,
+  }; 
+}
 
 global.mixin("scripts/input");
 global.mixin("scripts/std");

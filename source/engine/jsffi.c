@@ -2037,7 +2037,7 @@ JSC_GETSET(window, sample_count, number)
 
 static const JSCFunctionListEntry js_window_funcs[] = {
   CGETSET_ADD(window, fullscreen),
-  CGETSET_ADD(window, title,)
+  CGETSET_ADD(window, title),
   CGETSET_ADD(window, vsync),
   CGETSET_ADD(window, enable_clipboard),
   CGETSET_ADD(window, enable_dragndrop),
