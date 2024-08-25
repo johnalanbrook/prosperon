@@ -2,6 +2,7 @@ debug.build = function(fn) { if (!debug.show) return; fn(); }
 debug.show = true;
 debug.urnames = false;
 debug.termout = true;
+debug.console = false;
 
 debug.fn_break = function(fn,obj = globalThis) {
   if (typeof fn !== 'function') return;

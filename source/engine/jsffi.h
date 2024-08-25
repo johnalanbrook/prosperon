@@ -157,6 +157,9 @@ uint64_t js2uint64(JSValue v);
 
 JSValue str2js(const char *c, ...);
 
+struct texture;
+struct texture *js2texture(JSValue v);
+
 void nota_int(char *blob);
 
 JSValue js_getpropidx(JSValue v, uint32_t i);

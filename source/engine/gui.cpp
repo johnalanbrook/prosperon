@@ -122,6 +122,17 @@ JSC_CCALL(imgui_pushid,
 
 JSC_CCALL(imgui_popid, ImGui::PopID(); )
 
+JSC_CCALL(imgui_image,
+  texture *tex = js2texture(argv[0]);
+  simgui_image_t simgui_img = simgui_make_image(&(simgui_image_desc_t){
+    .image = tex->id,
+    .sampler = std_sampler
+  });
+  ImTextureID tex_id = simgui_imtextureid(simgui_img);
+  ImGui::Image(tex_id, ImVec2(tex->width, tex->height));
+  simgui_destroy_image(simgui_img);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -131,6 +142,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, menubar, 1),
   MIST_FUNC_DEF(imgui, mainmenubar, 1),
   MIST_FUNC_DEF(imgui, menuitem, 3),
+  MIST_FUNC_DEF(imgui, image, 1),
   MIST_FUNC_DEF(imgui, textinput, 2),
   MIST_FUNC_DEF(imgui, button, 2),
   MIST_FUNC_DEF(imgui, checkbox, 2),
