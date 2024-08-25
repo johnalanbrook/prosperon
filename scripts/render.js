@@ -390,13 +390,6 @@ function shader_apply_material(shader, material = {}, old = {})
 
 function sg_bind(mesh, ssbo)
 {
-  if (cur.mesh === mesh && cur.bind) {
-    cur.bind.inst = 1;
-    cur.bind.images = cur.images;
-    render.setbind(cur.bind);
-    return cur.bind;
-  }
-  
   cur.mesh = mesh;
   
   var bind = {};
@@ -524,6 +517,11 @@ render.init = function() {
     render.line([a.transform().pos.xy, b.transform().pos.xy], [0,1,1,1], 1);
   }
 }
+
+render.draw_sprites = true;
+render.draw_particles = true;
+render.draw_hud = true;
+render.draw_gui = true;
 
 render.sprites = function render_sprites(gridsize = 1)
 {
@@ -827,18 +825,6 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
   render.draw(shape.quad);
 }
 
-render.emitter = function(emit)
-{
-  var amt = Object.values(emit.particles).length;
-  if (amt === 0) return;
-  render.use_shader(parshader);
-  render.use_mat(emit);
-  var ts = [];
-  for (var p of Object.values(emit.particles)) ts.push([p.transform,p.color]);
-  render.make_particle_ssbo(ts, emit.ssbo);
-  render.draw(shape.quad, emit.ssbo, amt);
-}
-
 var textssbo;
 
 render.flush_text = function()
@@ -984,7 +970,8 @@ prosperon.render = function()
   profile.frame("world");
   render.set_camera(prosperon.camera);
   profile.frame("sprites");
-  render.sprites();
+  if (render.draw_sprites) render.sprites();
+  if (render.draw_particles) draw_emitters();
   profile.endframe();
   profile.frame("draws");
   prosperon.draw();
@@ -996,7 +983,7 @@ prosperon.render = function()
   profile.endframe();
   profile.frame("hud");
 
-  prosperon.hud();
+  if (render.draw_hud) prosperon.hud();
   render.flush_text();
 
   render.end_pass();
@@ -1029,7 +1016,7 @@ prosperon.render = function()
 
   // Call gui functions
   mum.style = mum.dbg_style;
-  prosperon.gui();
+  if (render.draw_gui) prosperon.gui();
   if (mum.drawinput) mum.drawinput();
   prosperon.gui_dbg();
   render.flush_text();
@@ -1078,6 +1065,7 @@ prosperon.process = function process() {
   if (sim.mode === "play" || sim.mode === "step") {
     profile.frame("update");  
     prosperon.update(dt * game.timescale);
+    update_emitters(dt * game.timescale);
     profile.endframe();
     if (sim.mode === "step") sim.pause();
 

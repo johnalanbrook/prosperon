@@ -295,6 +295,7 @@ window.__proto__.toJSON = function()
   return {
     size: this.size,
     fullscreen: this.fullscreen,
+    title: this.title
   }; 
 }
 

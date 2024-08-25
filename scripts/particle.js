@@ -9,17 +9,12 @@ emitter.color = Color.white;
 
 emitter.draw = function()
 {
-  var amt = Object.values(this.particles).length;
-  if (amt === 0) return;
+  var pars = Object.values(this.particles);
+  if (pars.length === 0) return;
   render.use_shader(this.shader);
   render.use_mat(this);
-  render.make_particle_ssbo(Object.values(this.particles), this.ssbo);
-  render.draw(this.shape, this.ssbo, amt);
-}
-
-var std_spawn = function(par)
-{
-
+  render.make_particle_ssbo(pars, this.ssbo);
+  render.draw(this.shape, this.ssbo, pars.length);
 }
 
 var std_step = function(p)
@@ -35,13 +30,7 @@ var std_step = function(p)
     p.transform.scale = [this.scale,this.scale,this.scale];
 }
 
-var std_die = function(par)
-{
-}
-
-emitter.spawn_hook = std_spawn;
 emitter.step_hook = std_step;
-emitter.die_hook = std_die;
 
 emitter.spawn = function(t)
 {
@@ -53,7 +42,7 @@ emitter.spawn = function(t)
     par.transform.scale = [this.scale,this.scale,this.scale];
     this.particles[par.id] = par;
     par.time = 0;
-    this.spawn_hook(par);
+    this.spawn_hook?.(par);
     return;
   }
 
@@ -92,7 +81,7 @@ emitter.step = function(dt)
     this.step_hook?.(p);
     
     if (p.time >= p.life) {
-      this.die_hook(p);
+      this.die_hook?.(p);
       this.dead.push(this.particles[p.id]);
       delete this.particles[p.id];
     }
@@ -103,6 +92,8 @@ emitter.burst = function(count, t) {
   for (var i = 0; i < count; i++) this.spawn(t);
 }
 
+var emitters = [];
+
 var make_emitter = function()
 {
   var e = Object.create(emitter);
@@ -110,7 +101,19 @@ var make_emitter = function()
   e.shape = shape.centered_quad;
   e.shader = "shaders/baseparticle.cg";
   e.dead = [];
+  emitters.push(e);
   return e;
 }
 
-return {make_emitter};
+function update_emitters(dt)
+{
+  for (var e of emitters)
+    e.step(dt);
+}
+
+function draw_emitters()
+{
+  for (var e of emitters) e.draw();
+}
+
+return {make_emitter, update_emitters, draw_emitters};

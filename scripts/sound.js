@@ -22,14 +22,15 @@ audio.bus.master = dspsound.master();
 audio.dsp = {};
 audio.dsp = dspsound;
 
-
-audio.bus.master.__proto__.imgui = function()
+audio.dsp.mix().__proto__.imgui = function()
 {
+  imgui.pushid(this.memid());
   this.volume = imgui.slider("Volume", this.volume);
   this.off = imgui.checkbox("Mute", this.off);
+  imgui.popid();
 }
 
-audio.cry = function(file, bus = audio.bus.master)
+audio.cry = function(file, bus = audio.bus.sfx)
 {
   file = Resources.find_sound(file);
   var player = audio.play(file, bus);
@@ -82,6 +83,9 @@ audio.music = function(file, fade = 0.5) {
 
 audio.bus.music = audio.dsp.mix();
 audio.bus.music.plugin(audio.bus.master);
+
+audio.bus.sfx = audio.dsp.mix();
+audio.bus.sfx.plugin(audio.bus.master);
 
 audio.dsp.allpass = function(secs, decay) {
   var composite = {};

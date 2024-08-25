@@ -1024,7 +1024,6 @@ JSC_CCALL(render_make_particle_ssbo,
   size_t size = js_arrlen(array)*(sizeof(particle_ss));
   sg_buffer *b = js2sg_buffer(argv[1]);
   if (!b) return JS_UNDEFINED;
-  
   particle_ss ms[js_arrlen(array)];
 
   if (sg_query_buffer_will_overflow(*b, size)) {

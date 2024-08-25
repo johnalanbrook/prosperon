@@ -7,6 +7,7 @@
 #define SOKOL_IMPL
 #include "sokol/util/sokol_imgui.h"
 #include "sokol/util/sokol_gfx_imgui.h"
+#include <stdlib.h>
 
 static sgimgui_t sgimgui;
 
@@ -82,7 +83,7 @@ JSC_SCALL(imgui_text,
 
 JSC_SCALL(imgui_button,
   if (ImGui::Button(str))
-    script_call_sym(argv[1], 0, NULL);
+    script_call_sym(argv[1], 1, argv);
 )
 
 JSC_CCALL(imgui_sokol_gfx,
@@ -115,9 +116,17 @@ JSC_SCALL(imgui_checkbox,
   ret = boolean2js(val);
 )
 
+JSC_CCALL(imgui_pushid,
+  ImGui::PushID(js2number(argv[0]));
+)
+
+JSC_CCALL(imgui_popid, ImGui::PopID(); )
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
+  MIST_FUNC_DEF(imgui, pushid, 1),
+  MIST_FUNC_DEF(imgui, popid, 0),
   MIST_FUNC_DEF(imgui, slider, 4),
   MIST_FUNC_DEF(imgui, menubar, 1),
   MIST_FUNC_DEF(imgui, mainmenubar, 1),
