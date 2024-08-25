@@ -110,7 +110,7 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
-  gui_input(e);
+  if (gui_input(e)) return;
   char lcfmt[5];
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:

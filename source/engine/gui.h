@@ -11,7 +11,7 @@ extern "C" {
 JSValue gui_init(JSContext *js);
 void gui_newframe(int x, int y, float dt);
 void gfx_gui();
-void gui_input(sapp_event *e);
+int gui_input(sapp_event *e);
 void gui_endframe();
 void gui_exit();
 

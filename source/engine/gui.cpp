@@ -170,10 +170,11 @@ JSValue gui_init(JSContext *js)
   return imgui;
 }
 
-void gui_input(sapp_event *e)
+int gui_input(sapp_event *e)
 {
   if (started)
-    simgui_handle_event(e);
+    return simgui_handle_event(e);
+  return 0;
 }
 
 void gui_newframe(int x, int y, float dt)

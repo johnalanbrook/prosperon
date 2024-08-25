@@ -1536,9 +1536,9 @@ JS_HMM_FN(div, Div, /)
 JS_HMM_FN(scale, Mul, *)
 
 JSC_CCALL(array_lerp,
+  double t = js2number(argv[1]);
   int len = js_arrlen(self);
   JSValue arr =  JS_NewArray(js);
-  double t = js2number(argv[1]);
   
   for (int i = 0; i < len; i++) {
     double from = js2number(js_getpropidx(self, i));
