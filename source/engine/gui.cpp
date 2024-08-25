@@ -109,6 +109,12 @@ JSC_SCALL(imgui_slider,
   ret = number2js(val);
 )
 
+JSC_SCALL(imgui_checkbox,
+  bool val = js2boolean(argv[1]);
+  ImGui::Checkbox(str, &val);
+  ret = boolean2js(val);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -118,6 +124,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, menuitem, 3),
   MIST_FUNC_DEF(imgui, textinput, 2),
   MIST_FUNC_DEF(imgui, button, 2),
+  MIST_FUNC_DEF(imgui, checkbox, 2),
   MIST_FUNC_DEF(imgui, text, 1),
   MIST_FUNC_DEF(imgui, plot,1),
   MIST_FUNC_DEF(imgui,lineplot,2),

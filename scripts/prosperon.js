@@ -277,6 +277,7 @@ prosperon.quit = function () {
   profile.print_cache_report();
   profile.stop_frame_avg()
   profile.stop_cpu_instr();
+  prosperon.quit_hook?.();
 };
 
 window.size = [640, 480];

@@ -113,6 +113,16 @@ Object.mixin(audio.bus.master.__proto__, {
   set volume(x) { this.gain = x; },
 });
 
+audio.bus.master.__proto__.toJSON = function()
+{
+  return {
+    volume: this.volume,
+    off: this.off,
+    pan: this.pan,
+    pass: this.pass
+  };
+}
+
 /*Object.mixin(audio.dsp.source().__proto__, {
   length() { return this.frames()/audio.samplerate(); },
   time() { return this.frame/sound.samplerate(); },

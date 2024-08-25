@@ -78,7 +78,7 @@ debug.inputs.f4 = function() {
 };
 debug.inputs.f4.doc = "Toggle drawing gizmos and names of objects.";
 
-debug.gif = {
+var gif = {
   w: 640, /* Max width */
   h: 480, /* Max height */
   stretch: false, /* True if you want to stretch */
@@ -212,8 +212,6 @@ debug.api.print_doc =  function(name)
 
   return mdoc;
 }
-
-debug.frozen = false;
 
 return {
   debug,
