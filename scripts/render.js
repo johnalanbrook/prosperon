@@ -522,6 +522,7 @@ render.draw_sprites = true;
 render.draw_particles = true;
 render.draw_hud = true;
 render.draw_gui = true;
+render.draw_gizmos = true;
 
 render.sprites = function render_sprites(gridsize = 1)
 {
@@ -982,8 +983,8 @@ prosperon.render = function()
 
   profile.endframe();
   profile.frame("hud");
-
   if (render.draw_hud) prosperon.hud();
+  if (render.draw_gizmos && prosperon.gizmos) prosperon.gizmos();
   render.flush_text();
 
   render.end_pass();
