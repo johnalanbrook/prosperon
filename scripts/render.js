@@ -945,6 +945,13 @@ function camextents()
 
 screen2cam.doc = "Convert a screen space position in pixels to a normalized viewport position in a camera."
 
+prosperon.gizmos = function()
+{
+  game.all_objects(o => {
+    if (o.gizmo) render.image(game.texture(o.gizmo), o.pos);
+  });
+}
+
 prosperon.make_camera = function()
 {
   var cam = world.spawn();
@@ -984,6 +991,9 @@ prosperon.render = function()
   profile.endframe();
   profile.frame("hud");
   if (render.draw_hud) prosperon.hud();
+  render.flush_text();
+
+  render.set_camera(prosperon.camera);
   if (render.draw_gizmos && prosperon.gizmos) prosperon.gizmos();
   render.flush_text();
 
