@@ -200,7 +200,7 @@ game.texture = function (path) {
   path = Resources.find_image(path);
   
   if (!io.exists(path)) {
-    console.warn(`Missing texture: ${path}`);
+    console.error(`Missing texture: ${path}`);
     game.texture.cache[path] = game.texture("icons/no_tex.gif");
     game.texture.time_cache[path] = io.mod(path);
     return game.texture.cache[path];

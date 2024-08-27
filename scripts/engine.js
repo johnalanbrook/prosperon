@@ -101,11 +101,6 @@ Resources.is_sound = function(path) {
   return Resources.sounds.any(x => x === ext);
 }
 
-Resources.is_image = function(path) {
-  var ext = path.ext();
-  return Resources.images.any(x => x === ext);
-}
-
 Resources.is_animation = function(path)
 {
   if (path.ext() === 'gif' && Resources.gif.frames(path) > 1) return true;
@@ -154,26 +149,58 @@ Resources.is_image = function (path) {
   return Resources.images.some(x => x === ext);
 };
 
-function find_ext(file, ext) {
+function find_ext(file, ext, root = "") {
   if (!file) return;
+
   var file_ext = file.ext();
   if (ext.some(x => x === file_ext)) return file;
   for (var e of ext) {
     var nf = `${file}.${e}`;
-    if (io.exists(nf)) return nf;
+    if (io.exists(nf))
+      return nf;
   }
-  return;
+
+  var all_files = io.glob(`**${file}.*`);
+  var find = undefined;
+  for (var e of ext) {
+    var finds = all_files.filter(x => x.ext() === e);
+    if (finds.length === 1) {
+      find = finds[0];
+      break;
+    }
+  }
+
+  return find;
 }
 
-Resources.find_image = function (file) {
-  return find_ext(file, Resources.images);
-};
-Resources.find_sound = function (file) {
-  return find_ext(file, Resources.sounds);
-};
-Resources.find_script = function (file) {
-  return find_ext(file, Resources.scripts);
-};
+var hashhit = 0;
+var hashmiss = 0;
+
+Object.defineProperty(Function.prototype, 'hashify', {
+  value: function() {
+    var hash = new Map();
+    var fn = this;
+    function ret() {
+      if (!hash.has(arguments[0]))
+        hash.set(arguments[0], fn(...arguments));
+
+      return hash.get(arguments[0]);
+    }
+    return ret;
+  }
+});
+
+Resources.find_image = function (file, root = "") {
+  return find_ext(file, Resources.images, root);
+}.hashify();
+
+Resources.find_sound = function (file, root = "") {
+  return find_ext(file, Resources.sounds, root);
+}.hashify();
+
+Resources.find_script = function (file, root = "") {
+  return find_ext(file, Resources.scripts, root);
+}.hashify();
 
 console.transcript = "";
 console.say = function (msg) {

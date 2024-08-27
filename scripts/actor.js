@@ -25,6 +25,7 @@ globalThis.class_use = function(script, config, base, callback)
   var padawan = Object.create(actor_urs[file]);
   actor_spawns[file].push(padawan);
   padawan._file = file;
+  padawan._root = file.dir();
 
   if (callback) callback(padawan);
 

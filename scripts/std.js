@@ -134,6 +134,23 @@ io.rm = function(f)
   tmprm(Resources.replpath(f));
 }
 
+io.globToRegex = function(glob) {
+    // Escape special regex characters
+    // Replace glob characters with regex equivalents
+    let regexStr = glob
+        .replace(/[\.\\]/g, '\\$&') // Escape literal backslashes and dots
+	.replace(/([^\*])\*/g, '$1[^/]*') // * matches any number of characters except /
+	.replace(/\*\*/g, '.*') // ** matches any number of characters, including none
+        .replace(/\[(.*?)\]/g, '[$1]') // Character sets
+        .replace(/\?/g, '.'); // ? matches any single character
+
+    // Ensure the regex matches the whole string
+    regexStr = '^' + regexStr + '$';
+
+    // Create and return the regex object
+    return new RegExp(regexStr);
+}
+
 io.mixin({
   extensions(ext) {
     var paths = io.ls();
@@ -143,12 +160,7 @@ io.mixin({
 
   glob(pat) {
     var paths = io.ls('.');
-    pat = pat.replaceAll(/([\[\]\(\)\^\$\.\|\+])/g, "\\$1");
-    pat = pat.replaceAll('**', '.*');
-    pat = pat.replaceAll(/[^\.]\*/g, '[^\\/]*');
-    pat = pat.replaceAll('?', '.');
-    
-    var regex = new RegExp("^"+pat+"$", "");
+    var regex = io.globToRegex(pat);
     paths = paths.filter(str => str.match(regex)).sort();
     return paths;
   },

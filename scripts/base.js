@@ -1083,15 +1083,6 @@ Object.defineProperty(Array.prototype, 'flat', {
   }
 });
 
-Object.defineProperty(Array.prototype, 'anyjs', {
-  value: function(fn) {
-    var ev = this.every(function(x) {
-      return !fn(x);
-    });
-    return !ev;
-  }
-});
-
 /* Return true if array contains x */
 Object.defineProperty(Array.prototype, 'empty', {
   get: function() { return this.length === 0; },

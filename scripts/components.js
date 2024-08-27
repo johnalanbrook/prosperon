@@ -83,7 +83,7 @@ var sprite = {
     this.del_anim?.();
   },
   set path(p) {
-    p = Resources.find_image(p);
+    p = Resources.find_image(p, this.gameobject._root);
     if (!p) {
       console.warn(`Could not find image ${p}.`);
       return;
