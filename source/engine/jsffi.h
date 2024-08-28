@@ -97,7 +97,6 @@ JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue self) { \
 static JSClassID js_##TYPE##_id;\
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
 TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
-YughSpam("Freeing " #TYPE " at %p", n); \
 TYPE##_free(n);}\
 static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
@@ -110,7 +109,6 @@ TYPE *js2##TYPE (JSValue val) { \
 }\
 JSValue TYPE##2js(TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
-  YughSpam("Created " #TYPE " at %p", n); \
   JS_SetOpaque(j,n);\
   return j; }\
 \

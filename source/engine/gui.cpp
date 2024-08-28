@@ -133,9 +133,14 @@ JSC_CCALL(imgui_image,
   simgui_destroy_image(simgui_img);
 )
 
+JSC_CCALL(imgui_sameline,
+  ImGui::SameLine();
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
+  MIST_FUNC_DEF(imgui, sameline, 0),
   MIST_FUNC_DEF(imgui, pushid, 1),
   MIST_FUNC_DEF(imgui, popid, 0),
   MIST_FUNC_DEF(imgui, slider, 4),

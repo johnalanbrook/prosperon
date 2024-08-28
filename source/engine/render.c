@@ -57,35 +57,29 @@ void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
 void trace_alloc_##NAME (sg_##NAME id, void *data) \
 { \
   sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-  YughSpam("Alloc " #NAME " %d [%s]", id, desc.label); \
 } \
 \
 void trace_dealloc_##NAME(sg_##NAME id, void *data) \
 { \
   sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-  YughSpam("Dealloc " #NAME " %d [%s]", id, desc.label); \
 } \
 \
 void trace_make_##NAME(sg_##NAME##_desc *desc, void *data) \
 { \
-  YughSpam("Make " #NAME " [%s]", desc->label); \
 } \
 \
 void trace_destroy_##NAME(sg_##NAME id, void *data) \
 { \
   sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-  YughSpam("Destroy " #NAME " %d [%s]", id, desc.label); \
 } \
 \
 void trace_init_##NAME(sg_##NAME id, sg_##NAME##_desc *desc, void *data) \
 { \
-  YughSpam("Init " #NAME " %d [%s]", id, desc->label); \
 } \
 \
 void trace_uninit_##NAME(sg_##NAME id, void *data) \
 { \
   sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-  YughSpam("Init " #NAME " %d [%s]", id, desc.label); \
 } \
 \
 void trace_fail_##NAME(sg_##NAME id, void *data) \

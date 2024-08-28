@@ -121,10 +121,8 @@ var entity = {
   /* Reparent 'this' to be 'parent's child */
   reparent(parent) {
     assert(parent, `Tried to reparent ${this.toString()} to nothing.`);
-    console.spam(`parenting ${this.toString()} to ${parent.toString()}`);
     if (this.master === parent) {
-      console.warn("not reparenting ...");
-      console.warn(`${this.master} is the same as ${parent}`);
+      console.warn(`not reparenting ... ${this.master} is the same as ${parent}`);
       return;
     }
     
@@ -351,7 +349,6 @@ dup(diff) {
   kill() {
     if (this.__kill) return;
     this.__kill = true;
-    console.spam(`Killing entity of type ${this.ur}`);
   
     this.timers.forEach(x => x());
     delete this.timers;
