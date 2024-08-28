@@ -137,6 +137,14 @@ JSC_CCALL(imgui_sameline,
   ImGui::SameLine();
 )
 
+JSC_SCALL(imgui_columns,
+  ImGui::Columns(js2number(argv[1]), str);
+)
+
+JSC_CCALL(imgui_nextcolumn,
+  ImGui::NextColumn();
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -155,6 +163,8 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, plot,1),
   MIST_FUNC_DEF(imgui,lineplot,2),
   MIST_FUNC_DEF(imgui, sokol_gfx, 0),
+  MIST_FUNC_DEF(imgui, columns, 2),
+  MIST_FUNC_DEF(imgui, nextcolumn, 0),
 };
 
 static int started = 0;

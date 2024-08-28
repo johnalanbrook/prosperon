@@ -677,12 +677,16 @@ function flush_poly()
 }
 
 render.line = function render_line(points, color = Color.white, thickness = 1) {
-  var poly = poly_e();
-  var dist = vector.distance(points[0],points[1]);
-  poly.transform.move(vector.midpoint(points[0],points[1]));
-  poly.transform.rotate([0,0,-1], vector.angle([points[1].x-points[0].x, points[1].y-points[0].y]));
-  poly.transform.scale = [dist, thickness, 1];
-  poly.color = color;
+  for (var i = 0; i < points.length-1; i++) {
+    var a = points[i];
+    var b = points[i+1];
+    var poly = poly_e();
+    var dist = vector.distance(a,b);
+    poly.transform.move(vector.midpoint(a,b));
+    poly.transform.rotate([0,0,-1], vector.angle([b.x-a.x, b.y-a.y]));
+    poly.transform.scale = [dist, thickness, 1];
+    poly.color = color;
+  }
   check_flush(flush_poly);
 }
 

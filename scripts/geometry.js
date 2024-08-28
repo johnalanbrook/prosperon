@@ -68,4 +68,14 @@ shape.circle.points = function(radius, n) {
   return shape.arc(radius, 360, n);
 };
 
+shape.corners2points = function(ll, ur)
+{
+  return [
+    ll,
+    ll.add([ur.x,0]),
+    ur,
+    ll.add([0,ur.y]),
+  ];
+}
+
 return {shape};
