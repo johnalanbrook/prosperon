@@ -4,7 +4,6 @@ debug.urnames = false;
 debug.termout = true;
 debug.console = false;
 debug.cheat = false;
-
 debug.fn_break = function(fn,obj = globalThis) {
   if (typeof fn !== 'function') return;
   

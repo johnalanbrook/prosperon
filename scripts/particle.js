@@ -17,6 +17,11 @@ emitter.draw = function()
   render.draw(this.shape, this.ssbo, pars.length);
 }
 
+emitter.kill = function()
+{
+  emitters.remove(this);
+}
+
 var std_step = function(p)
 {
   if (p.time < this.grow_for) {
