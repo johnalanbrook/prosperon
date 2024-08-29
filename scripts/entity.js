@@ -201,10 +201,12 @@ var entity = {
     check_registers(ent);
 
     if (ent.load instanceof Function) ent.load();
-    if (sim.playing())
+    if (sim.playing()) {
+      ent._started = true;
       if (ent.start instanceof Function) ent.start();
+    }
   
-    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master');
+    Object.hide(ent, 'ur', 'components', 'objects', 'timers', 'guid', 'master', 'guid');
     
     ent._ed = {
       selectable: true,

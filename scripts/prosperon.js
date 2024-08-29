@@ -28,6 +28,12 @@ sim.mode = "play";
 sim.play = function () {
   this.mode = "play";
   os.reindex_static();
+  game.all_objects(o => {
+    if (!o._started) {
+      o._started = true;
+      o.start?.();
+    }
+  });
 };
 sim.playing = function () {
   return this.mode === "play";
