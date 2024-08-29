@@ -1289,12 +1289,14 @@ JSC_CCALL(vector_inflate,
 
 JSC_CCALL(vector_rotate,
   HMM_Vec2 vec = js2vec2(argv[0]);
-  float r = HMM_LenV2(vec);
   double angle = js2angle(argv[1]);
+  HMM_Vec2 pivot = JS_IsUndefined(argv[2]) ? v2zero : js2vec2(argv[2]);
+  vec = HMM_SubV2(vec,pivot);
+  float r = HMM_LenV2(vec);  
   angle += atan2(vec.y,vec.x);
   vec.x = r*cos(angle);
   vec.y = r*sin(angle);
-  return vec22js(vec);
+  return vec22js(HMM_AddV2(vec,pivot));
 )
 
 JSC_CCALL(vector_add,
