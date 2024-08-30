@@ -1717,6 +1717,7 @@ JSValue js_io_slurpbytes(JSContext *js, JSValue self, int argc, JSValue *argv)
 
 JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
+
   char *f = js2str(argv[0]);
   size_t len;
 

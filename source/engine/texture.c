@@ -292,11 +292,21 @@ void texture_save(texture *tex, const char *file)
     stbi_write_jpg(file, tex->width, tex->height, 4, tex->data, 5);
 }
 
+// all coordinates start at bottom left
+// src and dest, width, height are pixel buffers and their widths and heights
+// sx the x coordinate of the destination to copy to
+// sy the y coordinate of the destination to copy to
+// sw the width of the destination to take in pixels
+// sh the height of the destination to take in pixels
 void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int dest_width, int dest_height, int sx, int sy, int sw, int sh) {
   if (sx + sw > dest_width) return;
   if (sy + sh > dest_height) return;
+  if (sx < 0) return;
+  if (sy < 0) return;
   int src_stride = src_width * 4;
   int dest_stride = dest_width * 4;
+  int dest_pixels = dest_width*dest_height*4;
+  int src_pixels = src_width*src_height*4;
 
   for (int y = 0; y < sw; y++) {
     for (int x = 0; x < sh; x++) {
@@ -317,6 +327,7 @@ void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int 
       uint8_t result_green = (src[src_index + 1] * src_alpha + dest[dest_index + 1] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
       uint8_t result_blue = (src[src_index + 2] * src_alpha + dest[dest_index + 2] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
 
+      if (dest_index+3 > dest_pixels-3) return;
       // Set the resulting pixel values
       dest[dest_index + 0] = result_red;
       dest[dest_index + 1] = result_green;
@@ -326,10 +337,10 @@ void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int 
   }
 }
 
-
-
 // Function to draw source image pixels on top of a destination image
 void texture_blit(texture *dest, texture *src, int x, int y, int w, int h) {
+  if (x + w >= dest->width) return;
+  if (y + h >= dest->height) return;
   blit_image(src->data, dest->data, src->width, src->height, dest->height, dest->width, x, y, w, h);
 }
 

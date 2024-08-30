@@ -60,7 +60,7 @@ game.engine_start = function (s) {
     function () {
       global.mixin("scripts/sound.js");
       world_start();
-      window.set_icon(os.make_texture("icons/moon.gif"));
+      window.set_icon(game.texture("moon"));
       Object.readonly(window.__proto__, "vsync");
       Object.readonly(window.__proto__, "enable_dragndrop");
       Object.readonly(window.__proto__, "enable_clipboard");
@@ -314,7 +314,7 @@ global.mixin("scripts/tween");
 global.mixin("scripts/ai");
 global.mixin("scripts/particle");
 global.mixin("scripts/physics");
-global.mixin("scripts/geometry");
+global.mixin("scripts/geometry")
 
 /*
 Factory for creating registries. Register one with 'X.register',
@@ -398,7 +398,9 @@ var Event = {
 
 global.mixin("scripts/spline");
 global.mixin("scripts/components");
+
 global.mixin("scripts/actor");
+
 global.mixin("scripts/entity");
 
 function world_start() {

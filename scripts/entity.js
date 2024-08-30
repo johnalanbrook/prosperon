@@ -1,3 +1,4 @@
+
 globalThis.entityreport = {};
 
 var timer_update = function(dt)

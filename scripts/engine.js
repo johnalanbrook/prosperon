@@ -66,7 +66,6 @@ Resources.replpath = function replpath(str, path) {
     if (io.exists(tr)) return tr;
     stem = stem.updir();
   }
-
   return str;
 };
 
@@ -74,9 +73,9 @@ Resources.replstrs = function replstrs(path) {
   if (!path) return;
   var script = io.slurp(path);
   var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
+
   var stem = path.dir();
-  
-  // remove console statements
+
   if (!console.enabled)
     script = Resources.rm_fn(/console\.(spam|info|warn|error)/, script);
   
@@ -87,6 +86,7 @@ Resources.replstrs = function replstrs(path) {
     script = Resources.rm_fn(/assert/, script);
     script = Resources.rm_fn(/debug\.(build|fn_break)/, script);
   }
+
     
   script = script.replace(regexp, function (str) {
     var newstr = Resources.replpath(str.trimchr('"'), path);
@@ -160,11 +160,13 @@ function find_ext(file, ext, root = "") {
       return nf;
   }
 
-  var all_files = io.glob(`**${file}.*`);
+  var all_files = io.glob(`**/${file}.*`);
   var find = undefined;
   for (var e of ext) {
     var finds = all_files.filter(x => x.ext() === e);
-    if (finds.length === 1) {
+    if (finds.length > 1)
+      console.warn(`Found conflicting files when searching for '${file}': ${json.encode(finds)}. Returning the first one.`);
+    if (finds.length > 0) {
       find = finds[0];
       break;
     }
@@ -290,7 +292,6 @@ globalThis.use = function use(file) {
     profile.endcache(" [cached]");
     return ret;
   }
-  
   var script = Resources.replstrs(file);
   script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
