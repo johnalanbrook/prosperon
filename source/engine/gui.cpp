@@ -124,26 +124,19 @@ JSC_CCALL(imgui_popid, ImGui::PopID(); )
 
 JSC_CCALL(imgui_image,
   texture *tex = js2texture(argv[0]);
-  simgui_image_t simgui_img = simgui_make_image(&(simgui_image_desc_t){
-    .image = tex->id,
-    .sampler = std_sampler
-  });
+  simgui_image_desc_t simgd;
+  simgd.image = tex->id;
+  simgd.sampler = std_sampler;
+  simgui_image_t simgui_img = simgui_make_image(&simgd);
   ImTextureID tex_id = simgui_imtextureid(simgui_img);
-  ImGui::Image(tex_id, ImVec2(tex->width, tex->height));
+  ImGui::Image(tex_id, ImVec2(tex->width, tex->height), ImVec2(0,0), ImVec2(1,1));
   simgui_destroy_image(simgui_img);
 )
 
-JSC_CCALL(imgui_sameline,
-  ImGui::SameLine();
-)
-
-JSC_SCALL(imgui_columns,
-  ImGui::Columns(js2number(argv[1]), str);
-)
-
-JSC_CCALL(imgui_nextcolumn,
-  ImGui::NextColumn();
-)
+JSC_CCALL(imgui_sameline, ImGui::SameLine() )
+JSC_SCALL(imgui_columns, ImGui::Columns(js2number(argv[1]), str) )
+JSC_CCALL(imgui_nextcolumn, ImGui::NextColumn() )
+JSC_SCALL(imgui_collapsingheader, ret = boolean2js(ImGui::CollapsingHeader(str)) )
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
@@ -166,6 +159,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, sokol_gfx, 0),
   MIST_FUNC_DEF(imgui, columns, 2),
   MIST_FUNC_DEF(imgui, nextcolumn, 0),
+  MIST_FUNC_DEF(imgui, collapsingheader, 1),
 };
 
 static int started = 0;
