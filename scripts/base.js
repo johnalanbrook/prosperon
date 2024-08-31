@@ -1258,7 +1258,7 @@ Object.defineProperty(Number.prototype, 'clamp', {
 Math.clamp = vector.clamp;
 
 Math.random_range = vector.random_range;
-Math.rand_int = function(max) { return Math.floor(Math.random()*max); };
+Math.rand_int = function(max = 9007199254740991) { return Math.floor(Math.random()*max); };
 
 Math.snap = function(val, grid) {
   if (!grid || grid === 1) return Math.round(val);

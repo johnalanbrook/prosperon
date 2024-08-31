@@ -77,9 +77,14 @@ JSC_SSCALL(imgui_textinput,
   ret = str2js(buffer);
 )
 
-JSC_SCALL(imgui_text,
-  ImGui::Text(str);
+JSC_SSCALL(imgui_textbox,
+  char buffer[512];
+  strncpy(buffer, str2, 512);
+  ImGui::InputTextMultiline(str, buffer, sizeof(buffer));
+  ret = str2js(buffer);
 )
+
+JSC_SCALL(imgui_text, ImGui::Text(str) )
 
 JSC_SCALL(imgui_button,
   if (ImGui::Button(str))
@@ -137,6 +142,7 @@ JSC_CCALL(imgui_sameline, ImGui::SameLine() )
 JSC_SCALL(imgui_columns, ImGui::Columns(js2number(argv[1]), str) )
 JSC_CCALL(imgui_nextcolumn, ImGui::NextColumn() )
 JSC_SCALL(imgui_collapsingheader, ret = boolean2js(ImGui::CollapsingHeader(str)) )
+JSC_SCALL(imgui_radio, ret = boolean2js(ImGui::RadioButton(str, js2boolean(argv[1]))))
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
@@ -148,9 +154,10 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, menubar, 1),
   MIST_FUNC_DEF(imgui, mainmenubar, 1),
   MIST_FUNC_DEF(imgui, menuitem, 3),
-//  MIST_FUNC_DEF(imgui, radio, 
+  MIST_FUNC_DEF(imgui, radio, 2),
   MIST_FUNC_DEF(imgui, image, 1),
   MIST_FUNC_DEF(imgui, textinput, 2),
+  MIST_FUNC_DEF(imgui, textbox, 2),
   MIST_FUNC_DEF(imgui, button, 2),
   MIST_FUNC_DEF(imgui, checkbox, 2),
   MIST_FUNC_DEF(imgui, text, 1),

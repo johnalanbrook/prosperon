@@ -299,19 +299,14 @@ void texture_save(texture *tex, const char *file)
 // sw the width of the destination to take in pixels
 // sh the height of the destination to take in pixels
 void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int dest_width, int dest_height, int sx, int sy, int sw, int sh) {
-  if (sx + sw > dest_width) return;
-  if (sy + sh > dest_height) return;
-  if (sx < 0) return;
-  if (sy < 0) return;
-  int src_stride = src_width * 4;
-  int dest_stride = dest_width * 4;
-  int dest_pixels = dest_width*dest_height*4;
-  int src_pixels = src_width*src_height*4;
+//  if (sx + sw > dest_width) return;
+//  if (sy + sh > dest_height) return;
 
-  for (int y = 0; y < sw; y++) {
-    for (int x = 0; x < sh; x++) {
-      int src_index = (y * src_stride) + (x * 4);
-      int dest_index = ((y + sy) * dest_stride) + ((x + sx) * 4);
+  for (int x = 0; x < sw; x++) {
+    for (int y = 0; y < sh; y++) {
+      int src_index = ((y * src_width) + x ) * 4;
+      int dest_index = ((y + sy) * dest_width) + (x + sx);
+      dest_index *= 4;
 
       // Calculate the alpha value for the source pixel
       uint8_t src_alpha = src[src_index + 3];
@@ -327,7 +322,6 @@ void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int 
       uint8_t result_green = (src[src_index + 1] * src_alpha + dest[dest_index + 1] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
       uint8_t result_blue = (src[src_index + 2] * src_alpha + dest[dest_index + 2] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
 
-      if (dest_index+3 > dest_pixels-3) return;
       // Set the resulting pixel values
       dest[dest_index + 0] = result_red;
       dest[dest_index + 1] = result_green;
@@ -338,10 +332,9 @@ void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int 
 }
 
 // Function to draw source image pixels on top of a destination image
+// x,y are the pixel coordinates in the destination image, w,h are the amount of pixels to take from the src image.
 void texture_blit(texture *dest, texture *src, int x, int y, int w, int h) {
-  if (x + w >= dest->width) return;
-  if (y + h >= dest->height) return;
-  blit_image(src->data, dest->data, src->width, src->height, dest->height, dest->width, x, y, w, h);
+  blit_image(src->data, dest->data, src->width, src->height, dest->width, dest->height, x, y, w, h);
 }
 
 void texture_flip(texture *tex, int y)
