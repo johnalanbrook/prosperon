@@ -84,11 +84,7 @@
 static FILE *dumpout = NULL;
 static FILE *cycleout = NULL;
 
-void quickjs_set_dumpout(FILE *f)
-{
-  dumpout = f;
-}
-
+void quickjs_set_dumpout(FILE *f) { dumpout = f; }
 void quickjs_set_cycleout(FILE *f) { cycleout = f; }
 
 /* dump object free */
