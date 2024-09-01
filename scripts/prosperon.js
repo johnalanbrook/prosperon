@@ -89,6 +89,8 @@ game.engine_start = function (s) {
       appcam.transform.pos = [window.size.x,window.size.y,-100];
       prosperon.screencolor = render.screencolor();
       
+      globalThis.imgui = render.imgui_init();
+      
       s();
 
       shape.quad = {

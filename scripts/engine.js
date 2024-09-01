@@ -86,7 +86,6 @@ Resources.replstrs = function replstrs(path) {
     script = Resources.rm_fn(/assert/, script);
     script = Resources.rm_fn(/debug\.(build|fn_break)/, script);
   }
-
     
   script = script.replace(regexp, function (str) {
     var newstr = Resources.replpath(str.trimchr('"'), path);

@@ -138,7 +138,10 @@ var entity = {
   },
   
   remove_obj(obj) {
-    delete this.objects[obj.guid];
+    if (this.objects)
+      delete this.objects[obj.guid];
+    else
+      console.warn(`Object ${this.guid} has no objects file.`);
     delete this[obj.name];
     Object.unhide(this, obj.name);
   },
@@ -330,7 +333,8 @@ var entity = {
   
   /* The object needed to store an object as an instance of a master */
   instance_obj() {
-    var t = this.transform();
+    var t = os.make_transform();
+    t = this.transform;
     t.ur = this.ur.name;
     return t;
   },
