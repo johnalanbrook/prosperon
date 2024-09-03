@@ -2472,6 +2472,8 @@ JSC_GET(texture, width, number)
 JSC_GET(texture, height, number)
 JSC_GET(texture, frames, number)
 JSC_GET(texture, delays, ints)
+JSC_GET(texture, size, number)
+JSC_GET(texture, gpusize, number)
 
 JSC_SCALL(texture_save, texture_save(js2texture(self), str));
 
@@ -2489,6 +2491,8 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, height),
   MIST_GET(texture, frames),
   MIST_GET(texture, delays),
+  MIST_GET(texture, gpusize),
+  MIST_GET(texture, size),
   MIST_FUNC_DEF(texture, save, 1),
   MIST_FUNC_DEF(texture, blit, 5),
   MIST_FUNC_DEF(texture, getid, 0),
@@ -2972,8 +2976,6 @@ JSC_SCALL(os_gltf_skin,
   cgltf_data *data = NULL;
   cgltf_parse_file(&options,str,&data);
   cgltf_load_buffers(&options,data,str);
-
-  printf("file %s has %d skins\n", str, data->skins_count);
 
   if (data->skins_count <= 0) {
     ret = (JS_UNDEFINED);

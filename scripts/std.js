@@ -12,16 +12,6 @@ if (os.sys() === 'macos') {
   appy.inputs['S-q'] = os.quit;
 }
 
-game.op_search = function()
-{
-  if (!game.ooop) return;
-  game.ooop = imgui.window("operator search", _ => {
-    imgui.text("test");
-  });
-}
-
-game.ooop = false;
-
 //appy.inputs.f12 = function() { mum.debug = !mum.debug; }
 appy.inputs['C-space'] = function() {
   game.ooop = !game.ooop;
@@ -258,7 +248,11 @@ Cmdline.register_order("play", function(argv) {
   game.title = project.title;
   game.size = [1280,720];
   window.size = game.size;
-  global.mixin("config.js");
+  if (io.exists("config.js"))
+    global.mixin("config.js");
+  else
+    console.warn('No config.js file found. Starting with default parameters.');
+    
   if (project.title) window.title = project.title;
 
   game.engine_start(function() {

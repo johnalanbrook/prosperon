@@ -110,34 +110,41 @@ void c_clean() {
 
 void c_event(const sapp_event *e)
 {
-  if (gui_input(e) && e->type != SAPP_EVENTTYPE_KEY_UP) return;
+  gui_input(e);
   char lcfmt[5];
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
+      if (gui_wantmouse()) return;
       script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, e->mouse_y, e->mouse_dx, -e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
+      if (gui_wantmouse()) return;    
       script_evalf("prosperon.mousescroll([%g, %g]);", e->scroll_x, e->scroll_y);
       break;
 
     case SAPP_EVENTTYPE_KEY_DOWN:
+      if (gui_wantkeys()) return;
       script_evalf("prosperon.keydown(%d, %d);", e->key_code, e->key_repeat);
       break;
 
     case SAPP_EVENTTYPE_KEY_UP:
+      if (gui_wantkeys()) return;    
       script_evalf("prosperon.keyup(%d);", e->key_code);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_UP:
+      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mouseup(%d);", e->mouse_button);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_DOWN:
+      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mousedown(%d);", e->mouse_button);
       break;
 
     case SAPP_EVENTTYPE_CHAR:
+      if (gui_wantkeys()) return;    
       if (iswcntrl(e->char_code)) break;
       snprintf(lcfmt, 5, "%lc", e->char_code);
       script_evalf("prosperon.textinput(`%s`);", lcfmt);
@@ -176,9 +183,11 @@ void c_event(const sapp_event *e)
       break;
       
     case SAPP_EVENTTYPE_MOUSE_ENTER:
+      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mouseenter();");
       break;
     case SAPP_EVENTTYPE_MOUSE_LEAVE:
+      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mouseleave();");
       break;
     case SAPP_EVENTTYPE_TOUCHES_BEGAN:

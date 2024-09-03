@@ -117,6 +117,8 @@ struct texture *texture_from_file(const char *path) {
     return NULL;
   
   tex->data = data;
+  tex->size = tex->width*tex->height*4;
+  tex->gpusize = tex->size;
   
   unsigned int nw = next_pow2(tex->width);
   unsigned int nh = next_pow2(tex->height);
@@ -142,6 +144,7 @@ struct texture *texture_from_file(const char *path) {
     mipdata[i] = malloc(w * h * 4);
     stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
     sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
+    tex->gpusize += w*h*4;
     
     mipw = w;
     miph = h;
@@ -158,6 +161,8 @@ struct texture *texture_from_file(const char *path) {
   
   for (int i = 1; i < mips; i++)
     free(mipdata[i]);
+
+
     
   return tex;
 }

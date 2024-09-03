@@ -205,6 +205,7 @@ game.tex_hotreload = function()
 }
 
 game.texture = function (path) {
+  if (!path) return game.texture("icons/no_text.gif");
   path = Resources.find_image(path);
   
   if (!io.exists(path)) {

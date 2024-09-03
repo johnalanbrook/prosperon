@@ -556,9 +556,8 @@ Object.defineProperty(Object.prototype, 'obscure', {
 
 Object.defineProperty(Object.prototype, 'mixin', {
   value: function(obj) {
-    if (typeof obj === 'string') {
+    if (typeof obj === 'string')
       obj = use(obj);
-    }
       
     if (obj)
       Object.mixin(this, obj);

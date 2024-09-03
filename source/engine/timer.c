@@ -13,7 +13,6 @@ timer *timer_make()
 
 void timer_free(timer *t)
 {
-  printf("before free arrlen if timers is now %d\n", arrlen(timers));
   for (int i = 0; i < arrlen(timers); i++) {
     if (timers[i] == t) {
       arrdelswap(timers,i);
@@ -22,7 +21,6 @@ void timer_free(timer *t)
   }
       
   free(t);
-  printf("arrlen if timers is now %d\n", arrlen(timers));
 }
 
 void timer_update(double dt)

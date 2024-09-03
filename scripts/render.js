@@ -975,6 +975,76 @@ prosperon.make_camera = function()
 
 var screencolor;
 
+globalThis.imtoggle = function(name, obj, field) { obj[field] = imgui.checkbox(name, obj[field]); }
+var replstr = "";
+
+var imdebug = function()
+{
+  imtoggle("Physics", debug, 'draw_phys');
+  imtoggle("Bouning boxes", debug, 'draw_bb');
+  imtoggle("Gizmos", debug, 'draw_gizmos');
+  imtoggle("Names", debug, 'draw_names');
+  imtoggle("Sprite nums", debug, 'sprite_nums');
+  imtoggle("Debug overlay", debug, 'show');
+  imtoggle("Show ur names", debug, 'urnames');
+}
+
+var imgui_fn = function()
+{
+  render.imgui_new(window.size.x, window.size.y, 0.01);
+  if (debug.console)                                                                                                     debug.console = imgui.window("console", _ => {                                                                         imgui.text(console.transcript);                                                                                      replstr = imgui.textinput(undefined, replstr);                                                                       imgui.button("submit", _ => {                                                                                          eval(replstr);                                                                                                       replstr = "";                                                                                                      });                                                                                                                });
+
+  imgui.mainmenubar(_=>{
+    imgui.menu("File", _ => {
+      imgui.menu("Game settings", _ => {
+        window.title = imgui.textinput("Title", window.title);
+        window.icon = imgui.textinput("Icon", window.icon);
+        imgui.button("Refresh window", _ => {
+          window.set_icon(game.texture(window.icon));
+        });
+      });
+      imgui.button("quit", os.quit);
+    });
+    imgui.menu("Debug", imdebug);
+    imgui.menu("View", _ => {
+      imtoggle("Profiler", gamestate, 'showprofiler');
+      imtoggle("Terminal out", debug, 'termout');
+      imtoggle("Meta [f7]", debug, 'meta');
+      imtoggle("Cheats [f8]", debug, 'cheat');      
+      imtoggle("Console [f9]", debug, 'console');
+    });
+
+    imgui.sokol_gfx();
+
+    imgui.menu("Graphics", _ => {
+      imtoggle("Draw sprites", render, 'draw_sprites');
+      imtoggle("Draw particles", render, 'draw_particles');
+      imtoggle("Draw HUD", render, 'draw_hud');
+      imtoggle("Draw GUI", render, 'draw_gui');
+      imtoggle("Draw gizmos", render, 'draw_gizmos');
+
+      imgui.menu("Window", _ => {
+        window.fullscreen = imgui.checkbox("fullscreen", window.fullscreen);
+//      window.vsync = imgui.checkbox("vsync", window.vsync);
+        imgui.menu("MSAA", _ => {
+          for (var msaa of gamestate.msaa)
+            imgui.button(msaa + "x", _ => window.sample_count = msaa);
+        });
+        imgui.menu("Resolution", _ => {
+          for (var res of gamestate.resolutions)
+            imgui.button(res, _ => window.resolution = res);
+        });
+
+      });
+    });
+
+    prosperon.menu_hook?.();
+  });
+  
+  prosperon.imgui();
+  render.imgui_end();
+}
+
 prosperon.render = function()
 {
   profile.frame("world");
@@ -1039,9 +1109,8 @@ prosperon.render = function()
 
   profile.frame("imgui");
 
-  render.imgui_new(window.size.x, window.size.y, 0.01);
-  prosperon.imgui();
-  render.imgui_end();
+  if (debug.show)
+    imgui_fn();
 
   profile.endframe();
 

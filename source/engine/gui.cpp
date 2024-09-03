@@ -13,6 +13,9 @@ static sgimgui_t sgimgui;
 
 #include "jsffi.h"
 
+static int wantkeys = 0;
+static int wantmouse = 0;
+
 JSC_SCALL(imgui_window,
   bool active = true;
   ImGui::Begin(str, &active);
@@ -187,11 +190,12 @@ JSValue gui_init(JSContext *js)
   return imgui;
 }
 
-int gui_input(sapp_event *e)
+void gui_input(sapp_event *e)
 {
-  if (started)
-    return simgui_handle_event(e);
-  return 0;
+  simgui_handle_event(e);
+  ImGuiIO io = ImGui::GetIO();
+  wantkeys = io.WantCaptureKeyboard;
+  wantmouse = io.WantCaptureMouse;
 }
 
 void gui_newframe(int x, int y, float dt)
@@ -213,3 +217,6 @@ void gui_exit()
 {
   sgimgui_discard(&sgimgui);
 }
+
+int gui_wantmouse() { return wantmouse; }
+int gui_wantkeys() { return wantkeys; }
