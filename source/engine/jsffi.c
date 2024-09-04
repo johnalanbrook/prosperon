@@ -384,6 +384,20 @@ struct boundingbox js2bb(JSValue v)
 cpVect js2cvec2(JSValue v) { return js2vec2(v).cp; }
 JSValue cvec22js(cpVect v) { return vec22js((HMM_Vec2)v); }
 
+void js2floatarr(JSValue v, int n, float *a) {
+  if (!JS_IsArray(js,v)) return; 
+  for (int i = 0; i < n; i++)
+    a[i] = js2number(js_getpropidx(v,i));
+}
+
+JSValue floatarr2js(int n, float *a) {
+  JSValue arr = JS_NewArray(js);
+  for (int i = 0; i < n; i++)
+    js_setprop_num(arr, i, number2js(a[i]));
+
+  return arr;
+}
+
 HMM_Vec2 js2vec2(JSValue v)
 {
   HMM_Vec2 v2;
@@ -692,7 +706,6 @@ sg_bindings js2bind(JSValue v)
   JSValue imgs = js_getpropstr(v, "images");
   for (int i = 0; i < js_arrlen(imgs); i++) {
     bind.fs.images[i] = js2texture(js_getpropidx(imgs, i))->id;
-//    printf("printing image with id %d\n", js2texture(js_getpropidx(imgs, i))->id);
     bind.fs.samplers[i] = std_sampler; 
   }
   
@@ -2716,9 +2729,9 @@ static FILE *cycles;
 
 JSC_CCALL(os_check_cycles,
   if (ftell(cycles) == 0) return JS_UNDEFINED;
-  ret = tmp2js(cycles);
   cycles = tmpfile();
   quickjs_set_cycleout(cycles);
+  ret = tmp2js(cycles);  
 )
 
 JSC_CCALL(os_check_gc,
@@ -3256,6 +3269,7 @@ void ffi_load() {
   
   JS_SetPropertyStr(js, prosperon, "version", str2js(VER));
   JS_SetPropertyStr(js, prosperon, "revision", str2js(COM));
+  JS_SetPropertyStr(js, prosperon, "date", str2js(DATE));
   JS_SetPropertyStr(js, globalThis, "window", window2js(&mainwin));
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
 

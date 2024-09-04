@@ -213,11 +213,6 @@ Cmdline.register_order("init", function() {
     return;
   }
 
-  if (!(io.ls().filter(x => x[0] !== '.').length === 0)) {
-    say("Directory is not empty. Make an empty one and init there.");
-    return;
-  }
-
   io.mkdir(io.dumpfolder);
   var project = {};
   project.version = prosperon.version;

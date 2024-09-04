@@ -260,8 +260,6 @@ prosperon.semver.cmp = function (v1, v2) {
   return 0;
 };
 
-prosperon.semver.doc =
-  "Functions for semantic versioning numbers. Semantic versioning is given as a triple digit number, as MAJOR.MINOR.PATCH.";
 prosperon.semver.cmp.doc =
   "Compare two semantic version numbers, given like X.X.X.";
 prosperon.semver.valid.doc = `Test if semantic version v is valid, given a range.
@@ -312,7 +310,6 @@ global.mixin("scripts/input");
 global.mixin("scripts/std");
 global.mixin("scripts/diff");
 global.mixin("scripts/color");
-global.mixin("scripts/gui");
 global.mixin("scripts/tween");
 global.mixin("scripts/ai");
 global.mixin("scripts/particle");

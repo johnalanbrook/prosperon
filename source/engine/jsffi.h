@@ -165,6 +165,8 @@ JSValue js_getpropstr(JSValue v, const char *str);
 void jsfreestr(const char *str);
 int js_arrlen(JSValue v);
 void js_setpropstr(JSValue v, const char *str, JSValue p);
+void js2floatarr(JSValue v, int n, float *a);
+JSValue floatarr2js(int n, float *a);
 
 int js2boolean(JSValue v);
 JSValue boolean2js(int b);

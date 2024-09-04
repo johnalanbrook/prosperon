@@ -111,11 +111,32 @@ JSC_CCALL(imgui_sokol_gfx,
 )
 
 JSC_SCALL(imgui_slider,
-  float val = js2number(argv[1]);
   float low = JS_IsUndefined(argv[2]) ? 0.0 : js2number(argv[2]);
   float high = JS_IsUndefined(argv[3]) ? 1.0 : js2number(argv[3]);
-  ImGui::SliderFloat(str, &val, low, high, "%.3f");
-  ret = number2js(val);
+  
+  if (JS_IsArray(js, argv[1])) {
+    int n = js_arrlen(argv[1]);
+    float a[n];
+    js2floatarr(argv[1], n, a);
+    
+    switch(n) {
+      case 2: 
+        ImGui::SliderFloat2(str, a, low, high);
+        break;
+      case 3:
+        ImGui::SliderFloat3(str, a, low, high);
+        break;
+      case 4:
+        ImGui::SliderFloat3(str, a, low, high);
+        break;
+    }
+    
+    ret = floatarr2js(n, a);
+  } else {
+    float val = js2number(argv[1]);
+    ImGui::SliderFloat(str, &val, low, high, "%.3f");
+    ret = number2js(val);
+  }
 )
 
 JSC_SCALL(imgui_checkbox,

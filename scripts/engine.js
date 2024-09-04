@@ -113,7 +113,6 @@ Resources.is_path = function(str)
   return !/[\\\/:*?"<>|]/.test(str);
 }
 
-
 globalThis.json = {};
 json.encode = function (value, replacer, space = 1) {
   return JSON.stringify(value, replacer, space);

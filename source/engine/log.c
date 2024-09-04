@@ -70,12 +70,13 @@ void log_shutdown()
 const char *logfmt = "%s:%d: [%s] %s, %s: ";
 void mYughLog(int category, int priority, int line, const char *file, const char *message, ...)
 {
+  return;
 #ifndef NDEBUG
   time_t now = time(NULL);
   struct tm *tinfo = localtime(&now);
   char timebuf[80];
   strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", tinfo);
-
+/*
   fprintf(logout, logfmt, file, line, timebuf, logstr[priority], catstr[category]);
 
   va_list args;
@@ -83,7 +84,7 @@ void mYughLog(int category, int priority, int line, const char *file, const char
   vfprintf(logout, message, args);
   va_end(args);
   fprintf(logout, "\n");
-  
+*/  
   if (priority == LOG_DEBUG || priority >= stdout_lvl) {
     printf(logfmt, file, line, timebuf, logcolor[priority], catstr[category]);
     va_list args;
@@ -108,17 +109,17 @@ void mYughLog(int category, int priority, int line, const char *file, const char
 void log_print(const char *str)
 {
 #ifndef NDEBUG
-  fprintf(writeout, "%s", str);
+  //fprintf(writeout, "%s", str);
 #else
-  printf(str);
-  fflush(stdout);
+  //printf(str);
+  //fflush(stdout);
 #endif
 }
 
 void term_print(const char *str)
 {
-  fprintf(stdout, "%s", str);
-  fflush(stdout);
+  //fprintf(stdout, "%s", str);
+  //fflush(stdout);
 }
 
 void sg_logging(const char *tag, uint32_t lvl, uint32_t id, const char *msg, uint32_t line, const char *file, void *data) {

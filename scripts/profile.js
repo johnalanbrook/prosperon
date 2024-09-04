@@ -313,7 +313,7 @@ profile.print_mem = function()
   delete mem.memory_used_size;
   delete mem.malloc_size;
   for (var i in mem) {
-    if (i.includes("size"))
+    if (i. includes("size"))
       say("  " + i + " :: " + profile.best_mem(mem[i]));
   }
 }
