@@ -157,6 +157,7 @@ profile.best_t = function (t) {
 profile.report = function (start, msg = "[undefined report]") { console.info(`${msg} in ${profile.best_t(profile.now() - start)}`); };
 
 var frame_avg = false;
+profile.frame_avg_t = 72000;
 
 profile.start_frame_avg = function()
 {
@@ -183,31 +184,38 @@ profile.toggle_frame_avg = function()
   else profile.start_frame_avg();
 }
 
-var profile_frames = {};
-var profile_frame_ts = [];
-var profile_cframe = profile_frames;
+var profile_framer = {
+  series: [],
+  avg: {},
+  frame: 72000,
+};
+var profile_cframe = undefined;
 var pframe = 0;
+var profile_stack = [];
 
 profile.frame = function profile_frame(title)
 {
   if (!frame_avg) return;
   
-  profile_frame_ts.push(profile_cframe);
+  if (!profile_cframe) {
+    profile_cframe = {};
+    profile_framer.series.push({
+      time:profile.now(),
+      data:profile_cframe
+    });
+  } else
+    profile_stack.push(profile_cframe);
+  
   profile_cframe[title] ??= {};
   profile_cframe = profile_cframe[title];
-  profile_cframe._times ??= [];
-  profile_cframe._times[pframe] ??= 0;
-  profile_cframe._times[pframe] = profile.now() - profile_cframe._times[pframe];
+  profile_cframe.time = profile.now();
 }
 
 profile.endframe = function profile_endframe()
 {
   if (!frame_avg) return;
-  
-  if (profile_cframe === profile_frames) return;
-  profile_cframe._times[pframe] = profile.now() - profile_cframe._times[pframe];
+  profile_cframe.time = profile.now() - profile_cframe.time;
   profile_cframe = profile_frame_ts.pop();
-  if (profile_cframe === profile_frames) pframe++;
 }
 
 var print_frame = function(frame, indent, title)

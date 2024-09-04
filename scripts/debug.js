@@ -5,6 +5,7 @@ debug.termout = true;
 debug.console = false;
 debug.cheat = false;
 debug.meta = false;
+debug.showprofiler = false;
 
 debug.fn_break = function(fn,obj = globalThis) {
   if (typeof fn !== 'function') return;

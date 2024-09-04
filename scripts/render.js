@@ -1007,7 +1007,7 @@ var imgui_fn = function()
     });
     imgui.menu("Debug", imdebug);
     imgui.menu("View", _ => {
-      imtoggle("Profiler", gamestate, 'showprofiler');
+      imtoggle("Profiler", debug, 'showprofiler');
       imtoggle("Terminal out", debug, 'termout');
       imtoggle("Meta [f7]", debug, 'meta');
       imtoggle("Cheats [f8]", debug, 'cheat');      

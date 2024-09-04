@@ -12,12 +12,10 @@ if (os.sys() === 'macos') {
   appy.inputs['S-q'] = os.quit;
 }
 
-//appy.inputs.f12 = function() { mum.debug = !mum.debug; }
-appy.inputs['C-space'] = function() {
-  game.ooop = !game.ooop;
-}
-appy.inputs.f9 = function() { profile.print_mem(); }
-appy.inputs.f10 = function() { profile.toggle_frame_avg(); }
+appy.inputs.f7 = function() { debug.meta = !debug.meta; }
+appy.inputs.f8 = function() { debug.cheat = !debug.cheat; }
+appy.inputs.f9 = function() { debug.console = !debug.console; }
+appy.inputs.f10 = function() { debug.show = !debug.show; }
 appy.inputs.f11 = window.toggle_fullscreen;
 appy.inputs.f11.doc = "Toggle window fullscreen.";
 appy.inputs.f11.title = "Toggle Fullscreen";

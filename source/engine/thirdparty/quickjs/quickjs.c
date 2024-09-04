@@ -2376,7 +2376,7 @@ void JS_FreeContext(JSContext *ctx)
     {
         JSMemoryUsage stats;
         JS_ComputeMemoryUsage(rt, &stats);
-        JS_DumpMemoryUsage(stdout, &stats, rt);
+      //  JS_DumpMemoryUsage(stdout, &stats, rt);
     }
 #endif
 
@@ -2575,6 +2575,7 @@ static __maybe_unused void JS_DumpChar(JSRuntime *rt, int c, int sep)
 
 static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
 {
+  return; // TODO: Reimplment this
     int i, sep;
 
     if (p == NULL) {
