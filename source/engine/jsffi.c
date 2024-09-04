@@ -184,6 +184,17 @@ void js_setpropstr(JSValue v, const char *str, JSValue p)
 
 static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
+char **js2strarr(JSValue v)
+{
+  int n = js_arrlen(v);
+  char **arr = malloc(sizeof(*arr));
+  arr = NULL;
+  for (int i = 0; i < n; i++)
+    arrput(arr, js2strdup(js_getpropidx(v, i)));
+
+  return arr;
+}
+
 JSValue strarr2js(char **c)
 {
   JSValue arr = JS_NewArray(js);

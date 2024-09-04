@@ -171,6 +171,8 @@ JSValue floatarr2js(int n, float *a);
 int js2boolean(JSValue v);
 JSValue boolean2js(int b);
 
+char **js2strarr(JSValue v);
+
 #define PREP_PARENT(TYPE, PARENT) \
 TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \

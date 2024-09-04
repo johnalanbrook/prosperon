@@ -258,7 +258,9 @@ console.stackstr = function (skip = 0) {
 };
 
 console.stack = function (skip = 0) {
-  console.log(console.stackstr(skip + 1));
+  var stack = console.stackstr(skip+1);
+  console.log(stack);
+  return stack;
 };
 
 console.stdout_lvl = 1;

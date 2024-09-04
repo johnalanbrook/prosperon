@@ -168,6 +168,25 @@ JSC_CCALL(imgui_nextcolumn, ImGui::NextColumn() )
 JSC_SCALL(imgui_collapsingheader, ret = boolean2js(ImGui::CollapsingHeader(str)) )
 JSC_SCALL(imgui_radio, ret = boolean2js(ImGui::RadioButton(str, js2boolean(argv[1]))))
 
+JSC_SCALL(imgui_tree,
+  if (ImGui::TreeNode(str)) {
+    script_call_sym(argv[1],0,NULL);
+    ImGui::TreePop();
+  }
+)
+
+JSC_SCALL(imgui_listbox,
+  char **arr = js2strarr(argv[1]);
+  int n = js_arrlen(argv[1]);
+  int idx = js2number(argv[2]);
+  ImGui::ListBox(str, &idx, arr, n, 4);
+  for (int i = 0; i < n; i++)
+    free(arr[i]);
+
+//  arrfree(arr); // TODO: Doesn't this need freed?
+  ret = number2js(idx);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -191,6 +210,8 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, columns, 2),
   MIST_FUNC_DEF(imgui, nextcolumn, 0),
   MIST_FUNC_DEF(imgui, collapsingheader, 1),
+  MIST_FUNC_DEF(imgui, tree, 2),
+  MIST_FUNC_DEF(imgui, listbox, 3),
 };
 
 static int started = 0;
@@ -213,6 +234,7 @@ JSValue gui_init(JSContext *js)
 
 void gui_input(sapp_event *e)
 {
+  if (!started) return;
   simgui_handle_event(e);
   ImGuiIO io = ImGui::GetIO();
   wantkeys = io.WantCaptureKeyboard;

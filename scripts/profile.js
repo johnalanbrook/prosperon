@@ -85,12 +85,21 @@ profile.start_cpu_gather = function()
   });
 }
 
+function push_time(arr, ob, max)
+{
+  arr.push({
+    time:profile.now(),
+    ob
+  });
+}
+
+profile.cpu_frames = [];
 profile.cpu_frame = function()
 {
   if (gathering_cpu) return;
   
   profile.gather(Math.random_range(300,600), function() {
-    console.stack(2);
+    push_time(profile.cpu_frames, console.stack(2));
     profile.gather_stop();
   });
 }
@@ -318,16 +327,20 @@ profile.print_mem = function()
   }
 }
 
+profile.last_mem = undefined;
+profile.mems = [];
+profile.gcs = [];
 profile.print_gc = function()
 {
   var gc = os.check_gc();
   if (!gc) return;
-  var mem = os.mem();
+  profile.gcs.push(gc);
+  profile.mems.push(os.mem());
   say("GC Hit");
   say (`time: ${profile.best_t(gc.time)}`);
-  say(`new threshold: ${profile.best_mem(mem.gc_threshold)}`);
-  say(`memory checked: ${profile.best_mem(gc.mem)}`);
-  say(`memory freed: ${profile.best_mem(gc.startmem - gc.mem)}`);
+  say(`new threshold: ${profile.best_mem(profile.mems.last().gc_threshold)}`);
+  say(`memory checked: ${profile.best_mem(profile.gcs.last().mem)}`);
+  say(`memory freed: ${profile.best_mem(profile.gcs.last().startmem - profile.gcs.last().mem)}`);
 }
 
 return {profile};
