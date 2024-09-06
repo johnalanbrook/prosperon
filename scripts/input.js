@@ -32,7 +32,6 @@ var mod = {
 released
 rep
 pressed
-pressrep
 down
 */
 
@@ -83,7 +82,6 @@ prosperon.keydown = function(key, repeat)
     mod.shift = 1;
   else {
     var emacs = modstr() + keyname_extd(key);
-    player[0].raw_input(emacs, "pressrep");
     if (repeat)
       player[0].raw_input(emacs, "rep");
     else
@@ -289,6 +287,11 @@ input.tabcomplete = function(val, list) {
 }
 
 /* May be a human player; may be an AI player */
+
+/*
+  'block' on a pawn's input blocks any input from reaching below for the 
+*/
+
 var Player = {
   players: [],
   input(fn, ...args) {
@@ -335,19 +338,15 @@ var Player = {
   },
 
   raw_input(cmd, state, ...args) {
+    console.info(cmd + state);
     for (var pawn of this.pawns.reversed()) {
       if (!pawn.inputs) {
         console.error(`pawn no longer has inputs object.`);
 	continue;
       }
-      
-      if (typeof pawn.inputs.any === 'function') {
-        pawn.inputs.any(cmd);
-        
-	if (!pawn.inputs.fallthru)	
-          return;
-      }
 
+      var block = pawn.inputs.block;
+      
       if (!pawn.inputs[cmd]) {
         if (pawn.inputs.block) return;
       	continue;
@@ -372,17 +371,15 @@ var Player = {
 	    fn = pawn.inputs[cmd];
       }
 
-      if (typeof fn === 'function') {
+      if (typeof fn === 'function')
         fn.call(pawn, ... args);
-	if (!pawn.inputs) continue; // TODO: OK? Checking if the call uncontrolled the pawn
-	pawn.inputs.post?.call(pawn);
-      }
 
-      switch (state) {
-        case 'released':
-          pawn.inputs.release_post?.call(pawn);
-          break;
-      }
+      if (!pawn.inputs)
+        if (block) return;
+	else continue;
+
+      if (state === 'released')
+        pawn.inputs.release_post?.call(pawn);
 
       if (!pawn.inputs.fallthru) return;
       if (pawn.inputs.block) return;      

@@ -29,9 +29,6 @@ globalThis.class_use = function(script, config, base, callback)
 
   if (callback) callback(padawan);
 
-  if (typeof config === 'object')
-    Object.merge(padawan,config);
-
   var script = Resources.replstrs(file);
   script = `(function() {
     var self = this;
@@ -41,6 +38,9 @@ globalThis.class_use = function(script, config, base, callback)
   
   var fn = os.eval(file,script);
   fn.call(padawan);
+
+  if (typeof config === 'object')
+    Object.merge(padawan,config);
 
   return padawan;
 }
