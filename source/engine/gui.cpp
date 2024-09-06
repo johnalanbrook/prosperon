@@ -187,10 +187,17 @@ JSC_SCALL(imgui_listbox,
   ret = number2js(idx);
 )
 
+JSC_SCALL(imgui_int,
+  int n = js2number(argv[1]);
+  ImGui::InputInt(str, &n);
+  ret = number2js(n);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
   MIST_FUNC_DEF(imgui, sameline, 0),
+  MIST_FUNC_DEF(imgui, int, 2),
   MIST_FUNC_DEF(imgui, pushid, 1),
   MIST_FUNC_DEF(imgui, popid, 0),
   MIST_FUNC_DEF(imgui, slider, 4),
