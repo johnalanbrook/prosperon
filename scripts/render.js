@@ -480,7 +480,6 @@ render.init = function() {
   polyshader = make_shader("shaders/poly.cg");
   parshader = make_shader("shaders/baseparticle.cg");
   polyssboshader = make_shader("shaders/poly_ssbo.cg");
-  textssbo = render.make_textssbo();
   poly_ssbo = render.make_textssbo();
   sprite_ssbo = render.make_textssbo();
   
@@ -765,7 +764,7 @@ render.text_bb = function(str, size = 1, wrap = -1, pos = [0,0])
 
 render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0,1], cursor = -1) {
   var bb = render.text_bb(str, size, wrap, pos);
-  gui.text(str, pos, size, color, wrap, cursor);
+  gui.text(str, pos, size, color, wrap, cursor); // this puts text into buffer
   check_flush(render.flush_text);
   return bb;
   
@@ -828,17 +827,31 @@ render.slice9 = function(tex, pos, bb, scale = [tex.width,tex.height], color = C
   render.draw(shape.quad);
 }
 
-var textssbo;
+function endframe()
+{
+  tdraw = 0;
+}
+
+var textssbos = [];
+var tdraw = 0;
 
 render.flush_text = function()
 {
   if (!render.textshader) return;
-  var amt = render.flushtext(textssbo);
+  tdraw++;
+  if (textssbos.length < tdraw)
+    textssbos.push(render.make_textssbo());
+    
+  var textssbo = textssbos.last();
+  var amt = render.flushtext(textssbo); // load from buffer into ssbo
+  
+  if (amt === 0) {
+    tdraw--;
+    return; 
+  } 
   
   render.use_shader(render.textshader);
   render.use_mat({text:render.font.texture});
-
-  if (amt === 0) return;
   
   render.draw(shape.quad, textssbo, amt);
 }
@@ -1116,6 +1129,8 @@ prosperon.render = function()
 
   render.end_pass();
   render.commit();
+  
+  endframe();
 }
 
 prosperon.process = function process() {

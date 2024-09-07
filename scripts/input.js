@@ -338,7 +338,6 @@ var Player = {
   },
 
   raw_input(cmd, state, ...args) {
-    console.info(cmd + state);
     for (var pawn of this.pawns.reversed()) {
       if (!pawn.inputs) {
         console.error(`pawn no longer has inputs object.`);
