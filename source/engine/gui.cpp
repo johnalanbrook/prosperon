@@ -162,8 +162,8 @@ JSC_CCALL(imgui_image,
   simgui_destroy_image(simgui_img);
 )
 
-JSC_CCALL(imgui_sameline, ImGui::SameLine() )
-JSC_SCALL(imgui_columns, ImGui::Columns(js2number(argv[1]), str) )
+JSC_CCALL(imgui_sameline, ImGui::SameLine(js2number(argv[0])) )
+JSC_CCALL(imgui_columns, ImGui::Columns(js2number(argv[0])) )
 JSC_CCALL(imgui_nextcolumn, ImGui::NextColumn() )
 JSC_SCALL(imgui_collapsingheader, ret = boolean2js(ImGui::CollapsingHeader(str)) )
 JSC_SCALL(imgui_radio, ret = boolean2js(ImGui::RadioButton(str, js2boolean(argv[1]))))
@@ -172,6 +172,20 @@ JSC_SCALL(imgui_tree,
   if (ImGui::TreeNode(str)) {
     script_call_sym(argv[1],0,NULL);
     ImGui::TreePop();
+  }
+)
+
+JSC_SCALL(imgui_tabbar,
+  if (ImGui::BeginTabBar(str)) {
+    script_call_sym(argv[1],0,NULL);
+    ImGui::EndTabBar();
+  }
+)
+
+JSC_SCALL(imgui_tab,
+  if (ImGui::BeginTabItem(str)) {
+    script_call_sym(argv[1],0,NULL);
+    ImGui::EndTabItem();
   }
 )
 
@@ -196,7 +210,7 @@ JSC_SCALL(imgui_int,
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
-  MIST_FUNC_DEF(imgui, sameline, 0),
+  MIST_FUNC_DEF(imgui, sameline, 1),
   MIST_FUNC_DEF(imgui, int, 2),
   MIST_FUNC_DEF(imgui, pushid, 1),
   MIST_FUNC_DEF(imgui, popid, 0),
@@ -214,11 +228,13 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, plot,1),
   MIST_FUNC_DEF(imgui, lineplot,2),
   MIST_FUNC_DEF(imgui, sokol_gfx, 0),
-  MIST_FUNC_DEF(imgui, columns, 2),
+  MIST_FUNC_DEF(imgui, columns, 1),
   MIST_FUNC_DEF(imgui, nextcolumn, 0),
   MIST_FUNC_DEF(imgui, collapsingheader, 1),
   MIST_FUNC_DEF(imgui, tree, 2),
   MIST_FUNC_DEF(imgui, listbox, 3),
+  MIST_FUNC_DEF(imgui, tabbar, 2),
+  MIST_FUNC_DEF(imgui, tab, 2),
 };
 
 static int started = 0;
