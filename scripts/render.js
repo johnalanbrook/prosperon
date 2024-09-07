@@ -842,7 +842,7 @@ render.flush_text = function()
   if (textssbos.length < tdraw)
     textssbos.push(render.make_textssbo());
     
-  var textssbo = textssbos.last();
+  var textssbo = textssbos[tdraw-1];
   var amt = render.flushtext(textssbo); // load from buffer into ssbo
   
   if (amt === 0) {
@@ -873,11 +873,11 @@ render.cross.doc = "Draw a cross centered at pos, with arm length size.";
 render.arrow.doc = "Draw an arrow from start to end, with wings of length wingspan at angle wingangle.";
 render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and upperright.";
 
-render.draw = function render_draw(mesh, ssbo, inst = 1)
+render.draw = function render_draw(mesh, ssbo, inst = 1, e_start = 0)
 {
   sg_bind(mesh, ssbo);
   profile.frame("gpu");
-  render.spdraw(cur.bind.count, inst);
+  render.spdraw(e_start, cur.bind.count, inst);
   profile.endframe();
 }
 

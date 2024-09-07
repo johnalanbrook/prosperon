@@ -1135,7 +1135,7 @@ JSC_CCALL(render_make_t_ssbo,
 )
 
 JSC_CCALL(render_spdraw,
-  sg_draw(0,js2number(argv[0]),js2number(argv[1]));
+  sg_draw(js2number(argv[0]),js2number(argv[1]),js2number(argv[2]));
 )
 
 JSC_CCALL(render_setpipeline,
@@ -1168,7 +1168,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
-  MIST_FUNC_DEF(render, spdraw, 2),
+  MIST_FUNC_DEF(render, spdraw, 3),
   MIST_FUNC_DEF(render, setunibones, 3),
   MIST_FUNC_DEF(render, setbind, 1),
   MIST_FUNC_DEF(render, setuniproj, 2),
