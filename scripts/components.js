@@ -35,7 +35,7 @@ var sprite = {
   rect: fullrect,
   anim:{},
   playing: 0,
-  play(str = 0) {
+  play(str = 0, fn, loop = true, reverse = false) {
     this.del_anim?.();
     var self = this;
     var stop;
@@ -48,6 +48,9 @@ var sprite = {
     var playing = self.anim[str];
     if (!playing) return;
     var f = 0;
+    if (reverse)
+      f = playing.frames.length-1;
+      
     self.path = playing.path;
     
     function advance() {
@@ -56,10 +59,21 @@ var sprite = {
       self.frame = playing.frames[f].rect;
       self.rect = [self.frame.x, self.frame.y, self.frame.w, self.frame.h];
       self.update_dimensions();
-      f = (f+1)%playing.frames.length;
-      if (f === 0) {
-        self.anim_done?.();
-        if (!self.loop) { self.stop(); return; }
+      var done = false;
+      if (reverse) {
+        f = (((f-1)%playing.frames.length)+playing.frames.length)%playing.frames.length;
+	if (f === playing.frames.length-1) done = true;
+      }
+      else {
+        f = (f+1)%playing.frames.length;
+	if (f === 0) done = true;
+      }
+	
+      if (done) {
+        fn?.();
+	if (!loop) { self?.stop(); return; }
+//        self?.anim_done?.();
+//        if (!self.loop) { self.stop(); return; }
       }
       stop = self.gameobject.delay(advance, playing.frames[f].time);
     }

@@ -207,6 +207,45 @@ JSC_SCALL(imgui_int,
   ret = number2js(n);
 )
 
+JSC_SCALL(imgui_open_popup,
+  ImGui::OpenPopup(str);
+)
+
+JSC_SCALL(imgui_popup,
+  if (ImGui::BeginPopup(str)) {
+    script_call_sym(argv[1],0,NULL);
+    ImGui::EndPopup();
+  }
+)
+
+JSC_CCALL(imgui_close_popup,
+  ImGui::CloseCurrentPopup();
+)
+
+JSC_SCALL(imgui_modal,
+  if (ImGui::BeginPopupModal(str)) {
+    script_call_sym(argv[1],0,NULL);
+    ImGui::EndPopup();
+  }
+)
+
+JSC_SCALL(imgui_context,
+  if (ImGui::BeginPopupContextItem(str)) {
+    script_call_sym(argv[1],0,NULL);
+    ImGui::EndPopup();
+  }
+)
+
+JSC_SCALL(imgui_table,
+  if (ImGui::BeginTable(str, js2number(argv[1]))) {
+    script_call_sym(argv[2],0,NULL);
+    ImGui::EndTable();
+  }
+)
+
+JSC_CCALL(imgui_tablenextrow, ImGui::TableNextRow())
+JSC_CCALL(imgui_tablenextcolumn, ImGui::TableNextColumn())
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -235,6 +274,14 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, listbox, 3),
   MIST_FUNC_DEF(imgui, tabbar, 2),
   MIST_FUNC_DEF(imgui, tab, 2),
+  MIST_FUNC_DEF(imgui, open_popup, 1),
+  MIST_FUNC_DEF(imgui, modal, 2),
+  MIST_FUNC_DEF(imgui, popup, 2),
+  MIST_FUNC_DEF(imgui, close_popup,0),
+  MIST_FUNC_DEF(imgui, context,2),
+  MIST_FUNC_DEF(imgui, table, 3),
+  MIST_FUNC_DEF(imgui, tablenextcolumn,0),
+  MIST_FUNC_DEF(imgui, tablenextrow,0),
 };
 
 static int started = 0;

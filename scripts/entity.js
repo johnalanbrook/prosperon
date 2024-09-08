@@ -93,8 +93,10 @@ var entity = {
     
     function update(dt) {
       profile.frame("timer");
+      if (stop) { // TODO: This seems broken
       stop.remain -= dt;
       if (stop.remain <= 0) execute();
+      }
       profile.endframe();
     }
     
