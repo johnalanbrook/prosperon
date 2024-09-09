@@ -363,6 +363,7 @@ Register.add_cb("gui_dbg", true);
 Register.add_cb("hud_dbg", true);
 Register.add_cb("draw", true);
 Register.add_cb("imgui", true);
+Register.add_cb("post", true);
 
 var Event = {
   events: {},

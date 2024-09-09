@@ -57,8 +57,9 @@ var song;
 // Play 'file' for new song, cross fade for seconds
 audio.music = function(file, fade = 0.5) {
   if (!file) {
-    if (song)
+    if (song) 
       song.volume = 0;
+    return;
   }
   file = Resources.find_sound(file);
   if (!fade) {

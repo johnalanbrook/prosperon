@@ -75,6 +75,7 @@ var sprite = {
 //        self?.anim_done?.();
 //        if (!self.loop) { self.stop(); return; }
       }
+      if (self)
       stop = self.gameobject.delay(advance, playing.frames[f].time);
     }
 

@@ -1118,6 +1118,9 @@ prosperon.render = function()
   render.flush_text();
   mum.style = mum.base;
 
+  prosperon.post();
+  check_flush();
+
   profile.endframe();
 
   profile.frame("imgui");

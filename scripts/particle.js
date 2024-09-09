@@ -48,6 +48,7 @@ emitter.spawn = function(t)
     this.particles[par.id] = par;
     par.time = 0;
     this.spawn_hook?.(par);
+    par.life = this.life;
     return;
   }
 
@@ -84,8 +85,8 @@ emitter.step = function(dt)
   for (var p of Object.values(this.particles)) {
     p.time += dt;
     this.step_hook?.(p);
-    
-    if (p.time >= p.life) {
+
+    if (this.kill_hook?.(p) || p.time >= p.life) {
       this.die_hook?.(p);
       this.dead.push(this.particles[p.id]);
       delete this.particles[p.id];
