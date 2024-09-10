@@ -35,6 +35,7 @@ var sprite = {
   rect: fullrect,
   anim:{},
   playing: 0,
+  anim_speed: 1,
   play(str = 0, fn, loop = true, reverse = false) {
     this.del_anim?.();
     var self = this;
@@ -76,7 +77,7 @@ var sprite = {
 //        if (!self.loop) { self.stop(); return; }
       }
       if (self)
-      stop = self.gameobject.delay(advance, playing.frames[f].time);
+      stop = self.gameobject.delay(advance, playing.frames[f].time/self.anim_speed);
     }
 
     advance();
