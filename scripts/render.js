@@ -779,6 +779,9 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
 };
 
 render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0, color = Color.white) {
+  if (typeof tex === 'string')
+    tex = game.texture(tex);
+  if (!tex) return;
   flush();
   var t = os.make_transform();
   t.pos = pos;
