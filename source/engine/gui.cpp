@@ -246,6 +246,25 @@ JSC_SCALL(imgui_table,
 JSC_CCALL(imgui_tablenextrow, ImGui::TableNextRow())
 JSC_CCALL(imgui_tablenextcolumn, ImGui::TableNextColumn())
 
+JSC_SCALL(imgui_dnd, 
+  if (ImGui::BeginDragDropSource(NULL)) {
+    double n = js2number(argv[1]);
+    ImGui::SetDragDropPayload(str, &n, sizeof(n));
+    script_call_sym(argv[2],0,NULL);
+    ImGui::EndDragDropSource();
+  }
+)
+
+JSC_SCALL(imgui_dndtarget,
+  if (ImGui::BeginDragDropTarget()) {
+    if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload(str)) {
+      JSValue n = number2js(*(double*)payload->Data);
+      script_call_sym(argv[1], 1, &n);
+    }
+    ImGui::EndDragDropTarget();
+  }
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -282,6 +301,8 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, table, 3),
   MIST_FUNC_DEF(imgui, tablenextcolumn,0),
   MIST_FUNC_DEF(imgui, tablenextrow,0),
+  MIST_FUNC_DEF(imgui, dnd, 3),
+  MIST_FUNC_DEF(imgui, dndtarget, 2)
 };
 
 static int started = 0;
