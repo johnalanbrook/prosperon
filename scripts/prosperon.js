@@ -377,9 +377,6 @@ Register.add_cb("update", true).doc = "Called once per frame.";
 Register.add_cb("physupdate", true);
 Register.add_cb("gui", true);
 Register.add_cb("hud", true, render.flush);
-Register.add_cb("draw_dbg", true);
-Register.add_cb("gui_dbg", true);
-Register.add_cb("hud_dbg", true);
 Register.add_cb("draw", true);
 Register.add_cb("imgui", true);
 

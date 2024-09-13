@@ -381,6 +381,7 @@ dup(diff) {
     this.clear();
     if (this.stop instanceof Function) this.stop();
     if (typeof this.garbage === 'function') this.garbage();
+    if (typeof this.then === 'function') this.then();
     
     game.tag_clear_guid(this.guid);
     

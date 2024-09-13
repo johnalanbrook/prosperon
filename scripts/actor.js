@@ -118,6 +118,7 @@ actor.kill = function(){
   if (typeof this.die === 'function') this.die();
   if (typeof this.stop === 'function') this.stop();
   if (typeof this.garbage === 'function') this.garbage();
+  if (typeof this.then === 'function') this.then();
 };
 
 actor.kill.doc = `Remove this actor and all its padawans from existence.`;

@@ -781,8 +781,11 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
 };
 
 render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0, color = Color.white) {
-  if (typeof tex === 'string')
+  if (typeof tex === 'string') {
     tex = game.texture(tex);
+    scale.x ??= tex.width;
+    scale.y ??= tex.height;
+  }
   if (!tex) return;
   flush();
   var t = os.make_transform();
@@ -1119,7 +1122,6 @@ prosperon.render = function()
   mum.style = mum.dbg_style;
   if (render.draw_gui) prosperon.gui();
   if (mum.drawinput) mum.drawinput();
-  prosperon.gui_dbg();
   render.flush_text();
   mum.style = mum.base;
 
