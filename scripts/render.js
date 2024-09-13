@@ -642,6 +642,8 @@ function check_flush(flush_fn)
   }
 }
 
+render.flush = check_flush;
+
 var poly_cache = [];
 var poly_idx = 0;
 var poly_ssbo;
@@ -1121,7 +1123,6 @@ prosperon.render = function()
   render.flush_text();
   mum.style = mum.base;
 
-  prosperon.post();
   check_flush();
 
   profile.endframe();

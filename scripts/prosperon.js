@@ -4,6 +4,7 @@ global.check_registers = function (obj) {
   for (var reg in Register.registries) {
     if (typeof obj[reg] === 'function') {
       var fn = obj[reg].bind(obj);
+      fn.layer = obj[reg].layer;
       var name = obj.ur ? obj.ur.name : obj.toString();
       obj.timers.push(Register.registries[reg].register(fn, name));
     }
@@ -315,9 +316,9 @@ which returns a function that, when invoked, cancels the registry.
 var Register = {
   registries: [],
 
-  add_cb(name, e_event = false) {
+  add_cb(name, e_event = false, flush = undefined) {
     var n = {};
-    var fns = {};
+    var fns = [];
 
     n.register = function (fn, oname) {
       if (!(fn instanceof Function)) return;
@@ -330,16 +331,34 @@ var Register = {
         fn(...args);
       	profile.endcache();
       }
+
+      fns.push(dofn);
+      dofn.layer = fn.layer;
+      dofn.layer ??= 0;
+
+      fns.sort((a,b) => a.layer > b.layer);
       
-      fns[guid] = dofn;
       return function () {
-        delete fns[guid];
+        fns.remove(dofn);
       };
     };
-    
-    prosperon[name] = function (...args) {
-      fns.forEach(x => x(...args));
-    };
+
+    if (!flush) {
+      prosperon[name] = function(...args) {
+        fns.forEach(fn => fn(...args));
+      }
+    }
+    else
+      prosperon[name] = function(...args) {
+        var layer = undefined;
+        for (var fn of fns) {
+	  if (layer !== fn.layer) {
+	    flush();
+	    layer = fn.layer;
+	  }
+          fn();	  
+        }
+      }
     
     prosperon[name].fns = fns;
     n.clear = function () {
@@ -357,13 +376,12 @@ Register.add_cb("appupdate", true);
 Register.add_cb("update", true).doc = "Called once per frame.";
 Register.add_cb("physupdate", true);
 Register.add_cb("gui", true);
-Register.add_cb("hud", true);
+Register.add_cb("hud", true, render.flush);
 Register.add_cb("draw_dbg", true);
 Register.add_cb("gui_dbg", true);
 Register.add_cb("hud_dbg", true);
 Register.add_cb("draw", true);
 Register.add_cb("imgui", true);
-Register.add_cb("post", true);
 
 var Event = {
   events: {},
