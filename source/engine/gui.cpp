@@ -4,6 +4,9 @@
 #include "sokol/sokol_app.h"
 #include "imgui.h"
 #include "implot.h"
+#include "imnodes.h"
+#Include "imgui_neo_sequencer.h"
+
 #define SOKOL_IMPL
 #include "sokol/util/sokol_imgui.h"
 #include "sokol/util/sokol_gfx_imgui.h"
@@ -247,7 +250,7 @@ JSC_CCALL(imgui_tablenextrow, ImGui::TableNextRow())
 JSC_CCALL(imgui_tablenextcolumn, ImGui::TableNextColumn())
 
 JSC_SCALL(imgui_dnd, 
-  if (ImGui::BeginDragDropSource(NULL)) {
+  if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
     double n = js2number(argv[1]);
     ImGui::SetDragDropPayload(str, &n, sizeof(n));
     script_call_sym(argv[2],0,NULL);
@@ -263,6 +266,80 @@ JSC_SCALL(imgui_dndtarget,
     }
     ImGui::EndDragDropTarget();
   }
+)
+
+JSC_SCALL(imgui_color,
+  int n = js_arrlen(argv[1]);
+  float color[n];
+  js2floatarr(argv[1],n,color);
+
+  if (n == 3)
+    ImGui::ColorEdit3(str, color);
+  else if (n == 4)
+    ImGui::ColorEdit4(str, color);
+
+  ret = floatarr2js(n, color);
+)
+
+JSC_CCALL(imgui_startnode,
+  ImNodes::BeginNodeEditor();
+  script_call_sym(argv[0],0,NULL);
+  ImNodes::EndNodeEditor();
+  int start_attr;
+  int end_attr;
+  if (ImNodes::IsLinkCreated(&start_attr, &end_attr))
+  {
+    JSValue ab[2];
+    ab[0] = number2js(start_attr);
+    ab[1] = number2js(end_attr);
+    script_call_sym(argv[1], 2, ab);
+    
+    for (int i = 0; i < 2; i++) JS_FreeValue(js, ab[i]);
+  }
+
+  int node_id;
+  if (ImNodes::IsNodeHovered(&node_id))
+  {
+    JSValue a = number2js(node_id);
+    script_call_sym(argv[2],1,&a);
+    JS_FreeValue(js,a);
+  }
+
+  int link_id;
+  if (ImNodes::IsLinkHovered(&link_id))
+  {
+    JSValue a = number2js(link_id);
+    script_call_sym(argv[3],1,&a);
+    JS_FreeValue(js,a);
+  }
+)
+
+JSC_CCALL(imgui_node,
+  ImNodes::BeginNode(js2number(argv[0]));
+  script_call_sym(argv[1],0,NULL);
+  ImNodes::EndNode();
+)
+
+JSC_CCALL(imgui_nodein,
+  ImNodes::BeginInputAttribute(js2number(argv[0]));
+  script_call_sym(argv[1],0,NULL);
+  ImNodes::EndInputAttribute();
+)
+
+JSC_CCALL(imgui_nodeout,
+  ImNodes::BeginOutputAttribute(js2number(argv[0]));
+  script_call_sym(argv[1],0,NULL);
+  ImNodes::EndOutputAttribute();
+)
+
+JSC_CCALL(imgui_nodelink,
+  ImNodes::Link(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]));
+)
+
+JSC_CCALL(imgui_nodemini, ImNodes::MiniMap(js2number(argv[0])))
+
+JSC_SCALL(imgui_sequencer,
+  ImGui::BeginNeoSequencer(str, 
 )
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
@@ -302,7 +379,15 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, tablenextcolumn,0),
   MIST_FUNC_DEF(imgui, tablenextrow,0),
   MIST_FUNC_DEF(imgui, dnd, 3),
-  MIST_FUNC_DEF(imgui, dndtarget, 2)
+  MIST_FUNC_DEF(imgui, dndtarget, 2),
+  MIST_FUNC_DEF(imgui, color, 2),
+  MIST_FUNC_DEF(imgui, startnode, 1),
+  MIST_FUNC_DEF(imgui, node, 2),
+  MIST_FUNC_DEF(imgui, nodein, 2),
+  MIST_FUNC_DEF(imgui, nodeout, 2),
+  MIST_FUNC_DEF(imgui, nodelink, 3),
+  MIST_FUNC_DEF(imgui, nodemini, 1),
+  MIST_FUNC_DEF(imgui, sequencer, 4),
 };
 
 static int started = 0;
@@ -316,6 +401,7 @@ JSValue gui_init(JSContext *js)
   sgimgui_init(&sgimgui, &desc);
 
   ImPlot::CreateContext();
+  ImNodes::CreateContext();
 
   JSValue imgui = JS_NewObject(js);
   JS_SetPropertyFunctionList(js, imgui, js_imgui_funcs, countof(js_imgui_funcs));

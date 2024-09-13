@@ -192,9 +192,8 @@ var entity = {
       for (var path of text) use(path,ent);
     profile.cache("ENTITY TIME", ent.ur.name);
 */
-
     ent.reparent(this);
-
+    
     for (var [prop, p] of Object.entries(ent)) {
       if (!p) continue;
       if (typeof p !== 'object') continue;
@@ -206,7 +205,7 @@ var entity = {
 
     check_registers(ent);
 
-    if (ent.load instanceof Function) ent.load();
+    if (ent.awake instanceof Function) ent.awake();
     if (sim.playing()) {
       ent._started = true;
       if (ent.start instanceof Function) ent.start();

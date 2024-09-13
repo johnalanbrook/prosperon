@@ -30,11 +30,7 @@ globalThis.class_use = function(script, config, base, callback)
   if (callback) callback(padawan);
 
   var script = Resources.replstrs(file);
-  script = `(function() {
-    var self = this;
-    var $ = this.__proto__;
-    ${script};
-  })`;
+  script = `(function() { var self = this; var $ = this.__proto__; ${script}; })`;
   
   var fn = os.eval(file,script);
   fn.call(padawan);
