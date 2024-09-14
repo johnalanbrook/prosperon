@@ -409,6 +409,15 @@ JSValue floatarr2js(int n, float *a) {
   return arr;
 }
 
+float *js2newfloatarr(JSValue v)
+{
+  float *arr = NULL;
+  for (int i = 0; i < js_arrlen(v); i++)
+    arrpush(arr, js2number(js_getpropidx(v,i)));
+    
+  return arr;
+}
+
 HMM_Vec2 js2vec2(JSValue v)
 {
   HMM_Vec2 v2;

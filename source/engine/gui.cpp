@@ -5,7 +5,10 @@
 #include "imgui.h"
 #include "implot.h"
 #include "imnodes.h"
-#Include "imgui_neo_sequencer.h"
+#include "imgui_neo_sequencer.h"
+#include "ImSequencer.h"
+
+#include "stb_ds.h"
 
 #define SOKOL_IMPL
 #include "sokol/util/sokol_imgui.h"
@@ -338,8 +341,73 @@ JSC_CCALL(imgui_nodelink,
 
 JSC_CCALL(imgui_nodemini, ImNodes::MiniMap(js2number(argv[0])))
 
+struct MySequence : public ImSequencer::SequenceInterface {
+  int GetFrameMin() const { return 0; }
+  int GetFrameMax() const { return 100; }
+  int GetItemCount() const { return 0; }
+  virtual void Get(int index, int **start, int **end, int *type, unsigned int *color) {
+  }
+};
+
+JSC_SCALL(imgui_seq,
+  struct MySequence mseq = {};
+  
+  int selected = -1;
+  int first = 0;
+  int current = 100;
+  bool expanded = true;
+  Sequencer(&mseq, &current, &expanded, &selected, &first, ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_COPYPASTE | ImSequencer::SEQUENCER_CHANGE_FRAME);
+
+)
+
 JSC_SCALL(imgui_sequencer,
-  ImGui::BeginNeoSequencer(str, 
+  int32_t current = js2number(js_getpropstr(argv[1], "current"));
+  int32_t start = js2number(js_getpropstr(argv[1], "start"));
+  int32_t end = js2number(js_getpropstr(argv[1], "end"));
+  if(ImGui::BeginNeoSequencer(str, &current, &start, &end, {700,200},
+  ImGuiNeoSequencerFlags_AllowLengthChanging |
+  ImGuiNeoSequencerFlags_EnableSelection | 
+  ImGuiNeoSequencerFlags_Selection_EnableDragging |
+  ImGuiNeoSequencerFlags_Selection_EnableDeletion)) {
+    script_call_sym(argv[2], 0, NULL);
+    ImGui::EndNeoSequencer();
+   }
+   
+  js_setpropstr(argv[1], "current", number2js(current));
+  js_setpropstr(argv[1], "start", number2js(start));
+  js_setpropstr(argv[1], "end", number2js(end));    
+)
+
+JSC_SCALL(imgui_timeline,
+  float *k = js2newfloatarr(argv[1]);
+  int n = arrlen(k);
+  int32_t *keys = (int32_t*)malloc(n*sizeof(*keys));
+  
+  for (int i = 0; i < n; i++) {
+    keys[i] = k[i];
+  }
+    
+  arrfree(k);
+  
+  if (ImGui::BeginNeoTimelineEx(str)) {
+    for (int i = 0; i < n; i++)
+      ImGui::NeoKeyframe(keys+i);
+    ImGui::EndNeoTimeLine();
+  }
+  
+  JSValue arr = JS_NewArray(js);
+  for (int i = 0; i < n; i++)
+    js_setprop_num(arr, i, number2js(keys[i]));
+    
+  free(keys);
+  ret = arr;
+)
+
+JSC_SCALL(imgui_tlgroup,
+  if (ImGui::BeginNeoGroup(str)) {
+    script_call_sym(argv[1], 0, NULL);
+    ImGui::EndNeoGroup();
+  }
 )
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
@@ -387,7 +455,10 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, nodeout, 2),
   MIST_FUNC_DEF(imgui, nodelink, 3),
   MIST_FUNC_DEF(imgui, nodemini, 1),
-  MIST_FUNC_DEF(imgui, sequencer, 4),
+  MIST_FUNC_DEF(imgui, sequencer, 3),
+  MIST_FUNC_DEF(imgui, timeline, 3),
+  MIST_FUNC_DEF(imgui, tlgroup, 2),
+  MIST_FUNC_DEF(imgui, seq, 3),
 };
 
 static int started = 0;

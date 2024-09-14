@@ -597,7 +597,7 @@ render.sprites = function render_sprites(gridsize = 1)
 }
 
 render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
-  flush();
+  check_flush(undefined);
 
   if (inner_radius >= 1)
     inner_radius = inner_radius/radius;

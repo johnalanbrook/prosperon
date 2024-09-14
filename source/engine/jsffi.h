@@ -160,6 +160,7 @@ struct texture *js2texture(JSValue v);
 
 void nota_int(char *blob);
 
+void js_setprop_num(JSValue a, uint32_t n, JSValue v);
 JSValue js_getpropidx(JSValue v, uint32_t i);
 JSValue js_getpropstr(JSValue v, const char *str);
 void jsfreestr(const char *str);
@@ -167,6 +168,8 @@ int js_arrlen(JSValue v);
 void js_setpropstr(JSValue v, const char *str, JSValue p);
 void js2floatarr(JSValue v, int n, float *a);
 JSValue floatarr2js(int n, float *a);
+
+float *js2newfloatarr(JSValue v);
 
 int js2boolean(JSValue v);
 JSValue boolean2js(int b);

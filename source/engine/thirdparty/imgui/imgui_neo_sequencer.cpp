@@ -160,7 +160,7 @@ namespace ImGui
                 timelineXmin + context.Size.x - context.ValuesWidth
         };
 
-        const auto hovered = ItemHoverable(pointerRect, GetCurrentWindow()->GetID("##_top_selector_neo"));
+        const auto hovered = ItemHoverable(pointerRect, GetCurrentWindow()->GetID("##_top_selector_neo"), 0);
 
         context.CurrentFrameColor = GetStyleNeoSequencerColorVec4(ImGuiNeoSequencerCol_FramePointer);
 
@@ -369,7 +369,7 @@ namespace ImGui
 
         const ImGuiID id = getKeyframeID(frame);
 
-        bool hovered = ItemHoverable(bb, id);
+        bool hovered = ItemHoverable(bb, id, 0);
 
         if (context.SelectionEnabled && context.Selection.contains(id) &&
             (context.StateOfSelection != SelectionState::Selecting))
@@ -575,7 +575,7 @@ namespace ImGui
 
         const auto viewWidth = (uint32_t) ((float) totalFrames / context.Zoom);
 
-        const bool hovered = ItemHoverable(bb, GetCurrentWindow()->GetID("##zoom_slider"));
+        const bool hovered = ItemHoverable(bb, GetCurrentWindow()->GetID("##zoom_slider"), 0);
 
         if (hovered)
         {
