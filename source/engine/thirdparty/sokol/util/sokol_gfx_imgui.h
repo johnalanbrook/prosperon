@@ -1287,7 +1287,6 @@ _SOKOL_PRIVATE const char* _sgimgui_pixelformat_string(sg_pixel_format fmt) {
 
 _SOKOL_PRIVATE const char* _sgimgui_filter_string(sg_filter f) {
     switch (f) {
-        case SG_FILTER_NONE:    return "SG_FILTER_NONE";
         case SG_FILTER_NEAREST: return "SG_FILTER_NEAREST";
         case SG_FILTER_LINEAR:  return "SG_FILTER_LINEAR";
         default:                return "???";
@@ -4287,7 +4286,7 @@ _SOKOL_PRIVATE void _sgimgui_draw_frame_stats_panel(sgimgui_t* ctx) {
         ImGuiTableFlags_SizingFixedFit |
         ImGuiTableFlags_Borders;
     if (igBeginTable("##frame_stats_table", 2, flags, IMVEC2(0, 0), 0)) {
-        igTableSetupScrollFreeze(0, 2);
+        igTableSetupScrollFreeze(0, 1);
         igTableSetupColumn("key", ImGuiTableColumnFlags_None, 0, 0);
         igTableSetupColumn("value", ImGuiTableColumnFlags_None, 0, 0);
         igTableHeadersRow();
@@ -4335,6 +4334,7 @@ _SOKOL_PRIVATE void _sgimgui_draw_frame_stats_panel(sgimgui_t* ctx) {
                 _sgimgui_frame_stats(wgpu.bindings.num_bindgroup_cache_hits);
                 _sgimgui_frame_stats(wgpu.bindings.num_bindgroup_cache_misses);
                 _sgimgui_frame_stats(wgpu.bindings.num_bindgroup_cache_collisions);
+                _sgimgui_frame_stats(wgpu.bindings.num_bindgroup_cache_invalidates);
                 _sgimgui_frame_stats(wgpu.bindings.num_bindgroup_cache_hash_vs_key_mismatch);
                 break;
             case SG_BACKEND_METAL_MACOS:

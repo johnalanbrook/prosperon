@@ -1844,13 +1844,13 @@ static const char* _simgui_fs_source_dummy = "";
 #endif
 
 #if !defined(SOKOL_IMGUI_NO_SOKOL_APP)
-static void _simgui_set_clipboard(void* user_data, const char* text) {
-    (void)user_data;
+static void _simgui_set_clipboard(ImGuiContext* ctx, const char* text) {
+    (void)ctx;
     sapp_set_clipboard_string(text);
 }
 
-static const char* _simgui_get_clipboard(void* user_data) {
-    (void)user_data;
+static const char* _simgui_get_clipboard(ImGuiContext* ctx) {
+    (void)ctx;
     return sapp_get_clipboard_string();
 }
 #endif
@@ -2200,6 +2200,7 @@ SOKOL_API_IMPL void simgui_setup(const simgui_desc_t* desc) {
         ImGui::CreateContext();
         ImGui::StyleColorsDark();
         ImGuiIO* io = &ImGui::GetIO();
+        ImGuiPlatformIO* pio = &ImGui::GetPlatformIO();
         if (!_simgui.desc.no_default_font) {
             io->Fonts->AddFontDefault();
         }
@@ -2207,6 +2208,7 @@ SOKOL_API_IMPL void simgui_setup(const simgui_desc_t* desc) {
         igCreateContext(NULL);
         igStyleColorsDark(igGetStyle());
         ImGuiIO* io = igGetIO();
+        ImGuiPlatformIO* pio = igGetPlatformIO();
         if (!_simgui.desc.no_default_font) {
             ImFontAtlas_AddFontDefault(io->Fonts, NULL);
         }
@@ -2218,8 +2220,8 @@ SOKOL_API_IMPL void simgui_setup(const simgui_desc_t* desc) {
         if (!_simgui.desc.disable_set_mouse_cursor) {
             io->BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
         }
-        io->SetClipboardTextFn = _simgui_set_clipboard;
-        io->GetClipboardTextFn = _simgui_get_clipboard;
+        pio->Platform_SetClipboardTextFn = _simgui_set_clipboard;
+        pio->Platform_GetClipboardTextFn = _simgui_get_clipboard;
     #endif
     io->ConfigWindowsResizeFromEdges = !_simgui.desc.disable_windows_resize_from_edges;
 
@@ -2400,7 +2402,6 @@ SOKOL_API_IMPL void simgui_create_fonts_texture(const simgui_font_tex_desc_t* de
     font_smp_desc.wrap_v = SG_WRAP_CLAMP_TO_EDGE;
     font_smp_desc.min_filter = desc->min_filter;
     font_smp_desc.mag_filter = desc->mag_filter;
-    font_smp_desc.mipmap_filter = SG_FILTER_NONE;
     font_smp_desc.label = "sokol-imgui-font-sampler";
     _simgui.font_smp = sg_make_sampler(&font_smp_desc);
 
