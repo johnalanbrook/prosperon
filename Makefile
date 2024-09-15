@@ -75,6 +75,8 @@ else
   CPPFLAGS += -O2
 endif
 
+CXXFLAGS += -std=c++14
+
 CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DDATE=\"$(DATE)\" -DINFO=\"$(INFO)\" -Wno-narrowing #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
 CPPFLAGS += -DCONFIG_VERSION=\"2024-02-14\" -DCONFIG_BIGNUM #for quickjs
 
@@ -99,7 +101,6 @@ else ifeq ($(OS), IOS)
   CFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
   LDFLAGS += -isysroot $(SDK_PATH) -miphoneos-version-min=13.0
   LDFLAGS += -framework Foundation -framework UIKit -framework AudioToolbox -framework Metal -framework MetalKit -framework AVFoundation
-  CXXFLAGS += -std=c++11
   CFLAGS += -x objective-c -DIOS
   INFO :=$(INFO)_ios
 else ifeq ($(OS), wasm) # Then WEB
@@ -125,7 +126,6 @@ else
     PLATFORM := osx
     CPPFLAGS += -arch $(ARCH)
     CFLAGS += -x objective-c
-    CXXFLAGS += -std=c++11
     LDFLAGS += -framework Cocoa -framework QuartzCore -framework AudioToolbox -framework Metal -framework MetalKit
     INFO :=$(INFO)_macos
     STEAMAPI := steam_api
