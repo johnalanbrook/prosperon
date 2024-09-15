@@ -525,6 +525,10 @@ JSC_SCALL(imgui_invisiblebutton,
   ImGui::InvisibleButton(str, js2imvec2(argv[1]));
 )
 
+JSC_CCALL(imgui_width,
+  ImGui::PushItemWidth(js2number(argv[0]));
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -592,6 +596,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, contentregionavail, 0),
   MIST_FUNC_DEF(imgui, dummy, 1),
   MIST_FUNC_DEF(imgui, invisiblebutton, 2),
+  MIST_FUNC_DEF(imgui, width, 1),
 };
 
 static int started = 0;

@@ -161,7 +161,7 @@ void node_free(dsp_node *node)
     return; /* Simple check to not delete the masterbus */
   }
   pthread_mutex_lock(&soundrun);
-  unplug_node(node);
+//  unplug_node(node);
   if (node->data) {
     if (node->data_free)
       node->data_free(node->data);

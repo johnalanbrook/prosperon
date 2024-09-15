@@ -31,7 +31,7 @@ soundbyte *dsp_node_out(dsp_node *node);
 void dsp_node_run(dsp_node *node);
 dsp_node *make_node(void *data, void (*proc)(void *data, soundbyte *out, int samples), void (*fr)(void *data));
 void plugin_node(dsp_node *from, dsp_node *to);
-void unplug_node(dsp_node *node);
+void unplug_node(dsp_node *from);
 void node_free(dsp_node *node);
 void dsp_node_free(dsp_node *node);
 void filter_iir(struct dsp_iir *iir, soundbyte *buffer, int frames);

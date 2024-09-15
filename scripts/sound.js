@@ -1,12 +1,13 @@
 /* This file runs after the audio system is initiated */
 
-var cries = {};
-
 Object.readonly(audio, 'samplerate');
 Object.readonly(audio, 'channels');
 Object.readonly(audio, 'buffer_frames');
 
+var sources = [];
+
 audio.play = function(file,bus = audio.bus.master) {
+  var filename = file;
   file = Resources.find_sound(file);
   if (!file) {
     console.error(`Cannot play sound ${file}: does not exist.`);
@@ -15,12 +16,41 @@ audio.play = function(file,bus = audio.bus.master) {
   var src = audio.dsp.source(file);
   src.plugin(bus);
   src.guid = prosperon.guid();
+  src.name = file;
+  src.type = "source";
+  sources.push(src);
   return src;
 }
 audio.bus = {};
 audio.bus.master = dspsound.master();
 audio.dsp = {};
 audio.dsp = dspsound;
+
+audio.bus.master.__proto__.type = "bus";
+audio.bus.master.name = "master";
+
+var plugin_node = audio.bus.master.plugin;
+audio.bus.master.__proto__.plugin = function(to)
+{
+  this.tos ??= [];
+  this.tos.push(to);
+  to.ins ??= [];
+  to.ins.push(this);
+  plugin_node.call(this, to);
+}
+
+var unplug_node = audio.bus.master.unplug;
+audio.bus.master.__proto__.unplug = function()
+{
+  if (this.tos) {
+    for (var node of this.tos)
+      node.ins.remove(this);
+      
+    this.tos = [];
+  }
+  
+  unplug_node.call(this);
+}
 
 audio.dsp.mix().__proto__.imgui = function()
 {
@@ -35,20 +65,18 @@ audio.cry = function(file, bus = audio.bus.sfx)
   file = Resources.find_sound(file);
   var player = audio.play(file, bus);
   if (!player) return;
-  
-  player.guid = prosperon.guid();
-  cries[player.guid] = player;
-  player.ended = function() { delete cries[player.guid]; player = undefined; }
+  player.ended = function() { player.unplug(); player = undefined;  }
   return player.ended;
 }
 
+// This function is called when every audio source is finished
 var killer = Register.appupdate.register(function() {
-  for (var i in cries) {
-    var cry = cries[i];
-    if (!cry.ended) continue;
-    if (cry.frame < cry.lastframe || cry.frame === cry.frames())
-      cry.ended();
-    cry.lastframe = cry.frame;
+  for (var src of sources) {
+    if (!src.loop && (src.frame < src.lastframe || src.frame === src.frames())) {
+      src.unplug();
+      src.ended?.();
+    }
+    src.lastframe = src.frame;
   }
 });
 
@@ -88,9 +116,11 @@ audio.music = function(file, fade = 0.5) {
 
 audio.bus.music = audio.dsp.mix();
 audio.bus.music.plugin(audio.bus.master);
+audio.bus.music.name = "music";
 
 audio.bus.sfx = audio.dsp.mix();
 audio.bus.sfx.plugin(audio.bus.master);
+audio.bus.sfx.name = "sfx";
 
 audio.dsp.allpass = function(secs, decay) {
   var composite = {};
