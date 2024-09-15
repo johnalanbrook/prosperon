@@ -3,7 +3,10 @@
 
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
-#include "render.h"  
+#include "render.h"
+
+#include "sokol_app.h"
+#include "sokol/util/sokol_imgui.h"
 
 #define TEX_SPEC 0
 #define TEX_NORM 1
@@ -18,8 +21,8 @@ extern struct rect ST_UNIT;
 
 /* Represents an actual texture on the GPU */
 struct texture {
-  sg_image id; /* ID reference for the GPU memory location of the 
-  texture */
+  sg_image id; /* ID reference for the GPU memory location of the texture */
+  simgui_image_t simgui;
   int width;
   int height;
   unsigned char *data;

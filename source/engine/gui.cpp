@@ -159,13 +159,27 @@ JSC_CCALL(imgui_popid, ImGui::PopID(); )
 
 JSC_CCALL(imgui_image,
   texture *tex = js2texture(argv[0]);
-  simgui_image_desc_t simgd;
-  simgd.image = tex->id;
-  simgd.sampler = std_sampler;
-  simgui_image_t simgui_img = simgui_make_image(&simgd);
-  ImTextureID tex_id = simgui_imtextureid(simgui_img);
-  ImGui::Image(tex_id, ImVec2(tex->width, tex->height), ImVec2(0,0), ImVec2(1,1));
-  simgui_destroy_image(simgui_img);
+  if (!tex->simgui.id) {
+    simgui_image_desc_t simgd;
+    simgd.image = tex->id;
+    simgd.sampler = std_sampler;
+    tex->simgui = simgui_make_image(&simgd);
+  }
+  
+  ImGui::Image(simgui_imtextureid(tex->simgui), ImVec2(tex->width, tex->height), ImVec2(0,0), ImVec2(1,1));
+)
+
+JSC_SCALL(imgui_imagebutton,
+  texture *tex = js2texture(argv[1]);
+  if (!tex->simgui.id) {
+    simgui_image_desc_t simgd;
+    simgd.image = tex->id;
+    simgd.sampler = std_sampler;
+    tex->simgui = simgui_make_image(&simgd);
+  }
+  
+  if (ImGui::ImageButton(str, simgui_imtextureid(tex->simgui), ImVec2(tex->width, tex->height)))
+    script_call_sym(argv[2], 1, argv);
 )
 
 JSC_CCALL(imgui_sameline, ImGui::SameLine(js2number(argv[0])) )
@@ -482,8 +496,33 @@ JSC_CCALL(imgui_mousehoveringrect,
   return boolean2js(ImGui::IsMouseHoveringRect(js2imvec2(argv[0]), js2imvec2(argv[1])));
 )
 
+JSC_CCALL(imgui_mouseclicked,
+  return boolean2js(ImGui::IsMouseClicked(js2number(argv[0])));
+)
+
+JSC_CCALL(imgui_mousedown,
+  return boolean2js(ImGui::IsMouseDown(js2number(argv[0])));
+)
+
+JSC_CCALL(imgui_mousereleased,
+  return boolean2js(ImGui::IsMouseReleased(js2number(argv[0])));
+)
+
+JSC_CCALL(imgui_mousedragging,
+  return boolean2js(ImGui::IsMouseDragging(js2number(argv[0])));
+)
+
+JSC_CCALL(imgui_mousedelta,
+  ImVec2 dm = ImGui::GetIO().MouseDelta;
+  return vec22js((HMM_Vec2){dm.x,dm.y});
+)
+
 JSC_CCALL(imgui_dummy,
   ImGui::Dummy(js2imvec2(argv[0]));
+)
+
+JSC_SCALL(imgui_invisiblebutton,
+  ImGui::InvisibleButton(str, js2imvec2(argv[1]));
 )
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
@@ -499,6 +538,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, menuitem, 3),
   MIST_FUNC_DEF(imgui, radio, 2),
   MIST_FUNC_DEF(imgui, image, 1),
+  MIST_FUNC_DEF(imgui, imagebutton, 2),
   MIST_FUNC_DEF(imgui, textinput, 2),
   MIST_FUNC_DEF(imgui, textbox, 2),
   MIST_FUNC_DEF(imgui, button, 2),
@@ -536,6 +576,11 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, tlgroup, 2),
   MIST_FUNC_DEF(imgui, seq, 3),
   MIST_FUNC_DEF(imgui, mousehoveringrect, 2),
+  MIST_FUNC_DEF(imgui, mouseclicked, 1),
+  MIST_FUNC_DEF(imgui, mousedown, 1),
+  MIST_FUNC_DEF(imgui, mousereleased, 1),
+  MIST_FUNC_DEF(imgui, mousedragging, 1),
+  MIST_FUNC_DEF(imgui, mousedelta, 0),
   MIST_FUNC_DEF(imgui, rect, 3),
   MIST_FUNC_DEF(imgui, rectfilled, 3),
   MIST_FUNC_DEF(imgui, line, 3),
@@ -546,6 +591,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, setcursorscreenpos, 1),
   MIST_FUNC_DEF(imgui, contentregionavail, 0),
   MIST_FUNC_DEF(imgui, dummy, 1),
+  MIST_FUNC_DEF(imgui, invisiblebutton, 2),
 };
 
 static int started = 0;

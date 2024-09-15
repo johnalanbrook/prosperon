@@ -161,8 +161,6 @@ struct texture *texture_from_file(const char *path) {
   
   for (int i = 1; i < mips; i++)
     free(mipdata[i]);
-
-
     
   return tex;
 }
@@ -174,6 +172,8 @@ void texture_free(texture *tex)
     free(tex->data);
   if (tex->delays) arrfree(tex->delays);
   sg_destroy_image(tex->id);
+  if (tex->simgui.id)
+    simgui_destroy_image(tex->simgui);  
   free(tex);
 }
 
