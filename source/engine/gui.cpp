@@ -361,9 +361,16 @@ JSC_SCALL(imgui_seq,
 )
 
 JSC_SCALL(imgui_sequencer,
-  int32_t current = js2number(js_getpropstr(argv[1], "current"));
-  int32_t start = js2number(js_getpropstr(argv[1], "start"));
-  int32_t end = js2number(js_getpropstr(argv[1], "end"));
+  /*float start_time = js2number(js_getpropstr(argv[1], "start"));
+  float end_time = js2number(js_getpropstr(argv[1], "end"));
+  float current = js2number(js_getpropstr(argv[1], "current"));
+  
+  ImVec2 timeline_size = ImGui::GetContentRegionAvail();
+  ImDrawList* draw_list = ImGui::GetWindowDrawList();
+  ImVec2 timeline_start = ImGui::GetCursorScreenPos();
+  float total_time = end_time - start_time;
+  float pixels_per_second = zoom * (timeline_size.x / total_time);
+
   if(ImGui::BeginNeoSequencer(str, &current, &start, &end, {700,200},
   ImGuiNeoSequencerFlags_AllowLengthChanging |
   ImGuiNeoSequencerFlags_EnableSelection | 
@@ -375,7 +382,7 @@ JSC_SCALL(imgui_sequencer,
    
   js_setpropstr(argv[1], "current", number2js(current));
   js_setpropstr(argv[1], "start", number2js(start));
-  js_setpropstr(argv[1], "end", number2js(end));    
+  js_setpropstr(argv[1], "end", number2js(end));    */
 )
 
 JSC_SCALL(imgui_timeline,
@@ -408,6 +415,75 @@ JSC_SCALL(imgui_tlgroup,
     script_call_sym(argv[1], 0, NULL);
     ImGui::EndNeoGroup();
   }
+)
+
+ImVec2 js2imvec2(JSValue v)
+{
+  HMM_Vec2 va = js2vec2(v);
+  return ImVec2(va.x,va.y);
+}
+
+ImVec4 js2imvec4(JSValue v)
+{
+  HMM_Vec4 va = js2vec4(v);
+  return ImVec4(va.x, va.y, va.z, va.w);
+}
+
+ImU32 js2imu32(JSValue v)
+{
+  return ImGui::ColorConvertFloat4ToU32(js2imvec4(v));
+}
+
+JSC_CCALL(imgui_rectfilled,
+  ImGui::GetWindowDrawList()->AddRectFilled(js2imvec2(argv[0]), js2imvec2(argv[1]), js2imu32(argv[2]));
+)
+
+JSC_CCALL(imgui_line,
+  ImGui::GetWindowDrawList()->AddLine(js2imvec2(argv[0]), js2imvec2(argv[1]),js2imu32(argv[2]));
+)
+
+JSC_CCALL(imgui_cursorscreenpos,
+  ImVec2 v = ImGui::GetCursorScreenPos();
+  HMM_Vec2 va;
+  va.x = v.x;
+  va.y = v.y;
+  return vec22js(va);
+)
+
+JSC_CCALL(imgui_setcursorscreenpos,
+  ImGui::SetCursorScreenPos(js2imvec2(argv[0]));
+)
+
+JSC_CCALL(imgui_contentregionavail,
+  ImVec2 v = ImGui::GetContentRegionAvail();
+  HMM_Vec2 va;
+  va.x = v.x;
+  va.y = v.y;
+  return vec22js(va);
+)
+
+JSC_CCALL(imgui_beziercubic,
+  ImGui::GetWindowDrawList()->AddBezierCubic(js2imvec2(argv[0]), js2imvec2(argv[1]), js2imvec2(argv[2]), js2imvec2(argv[3]), js2imu32(argv[4]), js2number(argv[5]));
+)
+
+JSC_CCALL(imgui_bezierquad,
+  ImGui::GetWindowDrawList()->AddBezierQuadratic(js2imvec2(argv[0]), js2imvec2(argv[1]), js2imvec2(argv[2]), js2imu32(argv[3]), js2number(argv[4]));
+)
+
+JSC_SCALL(imgui_drawtext,
+  ImGui::GetWindowDrawList()->AddText(js2imvec2(argv[1]), js2imu32(argv[2]), str);
+)
+
+JSC_CCALL(imgui_rect,
+  ImGui::GetWindowDrawList()->AddRect(js2imvec2(argv[0]), js2imvec2(argv[1]), js2imu32(argv[2]));
+)
+
+JSC_CCALL(imgui_mousehoveringrect,
+  return boolean2js(ImGui::IsMouseHoveringRect(js2imvec2(argv[0]), js2imvec2(argv[1])));
+)
+
+JSC_CCALL(imgui_dummy,
+  ImGui::Dummy(js2imvec2(argv[0]));
 )
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
@@ -459,6 +535,17 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, timeline, 3),
   MIST_FUNC_DEF(imgui, tlgroup, 2),
   MIST_FUNC_DEF(imgui, seq, 3),
+  MIST_FUNC_DEF(imgui, mousehoveringrect, 2),
+  MIST_FUNC_DEF(imgui, rect, 3),
+  MIST_FUNC_DEF(imgui, rectfilled, 3),
+  MIST_FUNC_DEF(imgui, line, 3),
+  MIST_FUNC_DEF(imgui, bezierquad, 5),
+  MIST_FUNC_DEF(imgui, beziercubic, 6),
+  MIST_FUNC_DEF(imgui, drawtext, 3),
+  MIST_FUNC_DEF(imgui, cursorscreenpos, 0),
+  MIST_FUNC_DEF(imgui, setcursorscreenpos, 1),
+  MIST_FUNC_DEF(imgui, contentregionavail, 0),
+  MIST_FUNC_DEF(imgui, dummy, 1),
 };
 
 static int started = 0;

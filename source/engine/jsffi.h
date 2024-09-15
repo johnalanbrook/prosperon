@@ -139,6 +139,7 @@ void ffi_load();
 
 JSValue vec22js(HMM_Vec2 v);
 HMM_Vec2 js2vec2(JSValue v);
+HMM_Vec4 js2vec4(JSValue v);
 
 const char *js2str(JSValue v);
 char *js2strdup(JSValue v);
@@ -148,6 +149,7 @@ cpBitmask js2bitmask(JSValue v);
 int js_print_exception(JSValue v);
 
 struct rgba js2color(JSValue v);
+
 double js2number(JSValue v);
 JSValue number2js(double g);
 
