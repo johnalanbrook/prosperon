@@ -620,16 +620,6 @@ Object.defineProperty(Object.prototype, 'forEach', {
   }
 });
 
-Object.defineProperty(Object.prototype, 'map', {
-  value: function(fn) {
-    var a = [];
-    Object.values(this).forEach(function(x) {
-      a.push(fn(x));
-    });
-    return a;
-  }
-});
-
 Object.empty = function(obj) {
   return Object.keys(obj).length === 0;
 }
