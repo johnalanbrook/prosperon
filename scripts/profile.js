@@ -33,10 +33,10 @@ profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
     profile.start_prof_gather();
 }
 
-profile.ms = function(t) { return t/1000000; }
-profile.secs = function(t) { return t/1000000000; }
+profile.ms = function(t) { return profile.secs(t)*1000; }
 
 var callgraph = {};
+profile.cpu_cg = callgraph;
 var st = profile.now();
 
 function add_callgraph(fn, line, time) {
@@ -53,16 +53,17 @@ function add_callgraph(fn, line, time) {
   cc.hits++;
 }
 
-var hittar = 500;
-var hitpct = 0.2;
+var hittar = 500; // number of call instructions before getting a new frame
+var hitpct = 0.2; // amount to randomize it
 var start_gather = profile.now();
 
-var gathering_cpu = false;
+var cpu_start;
 
-profile.start_cpu_gather = function()
+profile.start_cpu_gather = function(gathertime = 5) // gather cpu frames for 'time' seconds
 {
-  if (gathering_cpu) return;
-  gathering_cpu = true;
+  if (cpu_start) return;
+  cpu_start = profile.now();
+  
   profile.gather(hittar, function() {
     var time = profile.now()-st;
     
@@ -80,8 +81,26 @@ profile.start_cpu_gather = function()
       add_callgraph(fns[i], lines[i], time);
   
     st = profile.now();
-    
-    profile.gather_rate(Math.variate(hittar,hitpct));
+    if (profile.secs(st-cpu_start) < gathertime)
+      profile.gather_rate(Math.variate(hittar,hitpct));
+    else {
+      profile.gather_stop();
+      cpu_start = undefined;
+      var e = Object.values(callgraph);
+      e = e.sort((a,b) => {
+        if (a.time > b.time) return -1;
+	return 1;
+     });
+
+     for (var x of e) {
+       var ffs = x.line.split(':');
+       var time = profile.best_t(x.time);
+       var pct = profile.secs(x.time)/gathertime*100;
+       x.log =`${x.line}::${x.fn}:: ${time} (${pct.toPrecision(3)}%) (${x.hits} hits) --> ${get_line(ffs[0], ffs[1])}`;
+     }
+
+     profile.cpu_instr = e;
+    }
   });
 }
 
@@ -125,8 +144,6 @@ function get_line(file, line) {
 
 profile.stop_cpu_instr = function()
 {
-  if (!gathering_cpu) return;
-  
   say("===CPU INSTRUMENTATION===\n");
   var gather_time = profile.now()-start_gather;
   var e = Object.values(callgraph);
@@ -156,13 +173,17 @@ profile.best_t = function (t) {
 
 profile.report = function (start, msg = "[undefined report]") { console.info(`${msg} in ${profile.best_t(profile.now() - start)}`); };
 
+
+/*
+  Frame averages are an instrumented profiling technique. Place frame() calls in your code to get a call graph for things you are interested in.
+*/
+
 var frame_avg = false;
 profile.frame_avg_t = 72000;
 
 profile.start_frame_avg = function()
 {
   if (frame_avg) return;
-  say("===STARTING FRAME AVERAGE MEASUREMENTS===");
   profile_frames = {};
   profile_frame_ts = [];
   profile_cframe = profile_frames;
@@ -239,6 +260,12 @@ profile.print_frame_avg = function()
   say("\n");
 }
 
+
+/*
+  Cache reporting is to measure how long specific events take, that are NOT every frame
+  Useful to measure things like how long it takes to make a specific creature
+*/
+
 var cache_reporting = false;
 
 var report_cache = {};
@@ -246,11 +273,6 @@ var report_cache = {};
 var cachest = 0;
 var cachegroup;
 var cachetitle;
-
-profile.imgui = function()
-{
-  
-}
 
 profile.cache_reporting = function() { return cache_reporting; }
 profile.cache_toggle = function() { cache_reporting = !cache_reporting; }

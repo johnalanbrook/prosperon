@@ -1720,11 +1720,14 @@ JSC_CCALL(profile_gather_stop,
   JS_SetInterruptHandler(rt,NULL,NULL);
 )
 
+JSC_CCALL(profile_secs, return number2js(stm_sec(js2number(argv[0]))); )
+
 static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
   MIST_FUNC_DEF(profile,gather,2),
   MIST_FUNC_DEF(profile,gather_rate,1),
   MIST_FUNC_DEF(profile,gather_stop,0),
+  MIST_FUNC_DEF(profile,secs,1),
 };
 
 JSC_SCALL(io_exists, ret = boolean2js(fexists(str)))

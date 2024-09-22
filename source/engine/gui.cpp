@@ -111,7 +111,7 @@ JSC_SCALL(imgui_text, ImGui::Text(str) )
 
 JSC_SCALL(imgui_button,
   if (ImGui::Button(str))
-    script_call_sym(argv[1], 1, argv);
+    script_call_sym(argv[1], 0, NULL);
 )
 
 JSC_CCALL(imgui_sokol_gfx,
@@ -228,7 +228,7 @@ JSC_SCALL(imgui_imagebutton,
   }
   
   if (ImGui::ImageButton(str, simgui_imtextureid(tex->simgui), ImVec2(tex->width, tex->height)))
-    script_call_sym(argv[2], 1, argv);
+    script_call_sym(argv[2], 0, NULL);
 )
 
 JSC_CCALL(imgui_sameline, ImGui::SameLine(js2number(argv[0])) )
