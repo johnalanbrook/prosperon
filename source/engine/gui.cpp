@@ -81,16 +81,30 @@ JSC_SCALL(imgui_lineplot,
 
 JSC_SSCALL(imgui_textinput,
   char buffer[512];
-  strncpy(buffer, str2, 512);
+  if (JS_IsUndefined(argv[1]))
+    buffer[0] = 0;
+  else
+    strncpy(buffer, str2, 512);
+    
   ImGui::InputText(str, buffer, sizeof(buffer));
-  ret = str2js(buffer);
+  if (strcmp(buffer, str2))
+    ret = str2js(buffer);
+  else
+    ret = JS_DupValue(js,argv[1]);
 )
 
 JSC_SSCALL(imgui_textbox,
   char buffer[512];
-  strncpy(buffer, str2, 512);
+  if (JS_IsUndefined(argv[1]))
+    buffer[0] = 0;
+  else
+    strncpy(buffer, str2, 512);
+    
   ImGui::InputTextMultiline(str, buffer, sizeof(buffer));
-  ret = str2js(buffer);
+  if (strcmp(buffer, str2))
+    ret = str2js(buffer);
+  else
+    ret = JS_DupValue(js,argv[1]);
 )
 
 JSC_SCALL(imgui_text, ImGui::Text(str) )
@@ -141,6 +155,41 @@ JSC_SCALL(imgui_slider,
   } else {
     float val = js2number(argv[1]);
     ImGui::SliderFloat(str, &val, low, high, "%.3f");
+    ret = number2js(val);
+  }
+)
+
+JSC_SCALL(imgui_intslider,
+  int low = JS_IsUndefined(argv[2]) ? 0.0 : js2number(argv[2]);
+  int high = JS_IsUndefined(argv[3]) ? 1.0 : js2number(argv[3]);
+  
+  if (JS_IsArray(js, argv[1])) {
+    int n = js_arrlen(argv[1]);
+    float a[n];
+    js2floatarr(argv[1], n, a);
+    int b[n];
+    for (int i = 0; i < n; i++)
+      b[i] = a[i];
+    
+    switch(n) {
+      case 2: 
+        ImGui::SliderInt2(str, b, low, high);
+        break;
+      case 3:
+        ImGui::SliderInt3(str, b, low, high);
+        break;
+      case 4:
+        ImGui::SliderInt3(str, b, low, high);
+        break;
+    }
+    
+    for (int i = 0; i < n; i++)
+      a[i] = b[i];
+    
+    ret = floatarr2js(n, a);
+  } else {
+    int val = js2number(argv[1]);
+    ImGui::SliderInt(str, &val, low, high);
     ret = number2js(val);
   }
 )
@@ -537,6 +586,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, pushid, 1),
   MIST_FUNC_DEF(imgui, popid, 0),
   MIST_FUNC_DEF(imgui, slider, 4),
+  MIST_FUNC_DEF(imgui, intslider, 4),
   MIST_FUNC_DEF(imgui, menubar, 1),
   MIST_FUNC_DEF(imgui, mainmenubar, 1),
   MIST_FUNC_DEF(imgui, menuitem, 3),

@@ -2,6 +2,12 @@
 
 The easily moddable, programming minded, 2D-first game engine. The aim is to make the fastest way to make games.
 
-See the [documentation](doc/prosperon.org) for more information, including how to compile.
+Using ...
+* Sokol for rendering
+* Chipmunk2D for physics
+* imgui for easy editor UI
+* Clay for game UI
+
+Includes an implementation for Nota, and Kim.
 
 *Prosperon is useful, but is a work in progress. Breaking changes are frequent.*

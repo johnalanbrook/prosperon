@@ -1080,7 +1080,9 @@ Object.defineProperty(Array.prototype, 'empty', {
 
 Object.defineProperty(Array.prototype, 'push_unique', {
   value: function(x) {
-  if (!this.includes(x)) this.push(x);
+  var inc = !this.includes(x);
+  if (inc) this.push(x);
+  return inc;
 }});
 
 Object.defineProperty(Array.prototype, 'unique', {
