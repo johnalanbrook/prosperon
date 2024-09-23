@@ -183,15 +183,13 @@ game.tex_hotreload = function()
 {
   for (var path in game.texture.cache) {
     if (io.mod(path) > game.texture.time_cache[path]) {
-      say(`HOT SWAPPING IMAGE ${path}`);
       var tex = game.texture.cache[path];
       game.texture.time_cache[path] = io.mod(path);
       os.texture_swap(path, game.texture.cache[path]);
       for (var sprite of Object.values(allsprites)) {
         if (sprite.texture == tex) {
-	  say('syncing a sprite ...');
-	  sprite.tex_sync();
-	}
+	        sprite.tex_sync();
+	      }
       }
     }
   }

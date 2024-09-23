@@ -1147,13 +1147,6 @@ prosperon.process = function process() {
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
-  profile.frame("hotreload");
-  actor.hotreload();
-  render.hotreload();
-  game.tex_hotreload();
-  repl.hotreload();
-  profile.endframe();
-
   /* debugging: check for gc */
   profile.print_gc();
 

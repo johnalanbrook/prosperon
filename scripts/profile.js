@@ -1,3 +1,8 @@
+/*
+  TYPES OF PROFILING
+  
+*/
+
 var t_units = ["ns", "us", "ms", "s", "ks", "Ms"];
 
 function calc_cpu(fn, times, diff=0)
@@ -37,7 +42,6 @@ profile.ms = function(t) { return profile.secs(t)*1000; }
 
 var callgraph = {};
 profile.cpu_cg = callgraph;
-var st = profile.now();
 
 function add_callgraph(fn, line, time) {
   var cc = callgraph[line];
@@ -63,6 +67,7 @@ profile.start_cpu_gather = function(gathertime = 5) // gather cpu frames for 'ti
 {
   if (cpu_start) return;
   cpu_start = profile.now();
+  var st = cpu_start;
   
   profile.gather(hittar, function() {
     var time = profile.now()-st;

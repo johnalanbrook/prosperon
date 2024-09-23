@@ -349,3 +349,14 @@ if (!profile.enabled)
   use = stripped_use;
 
 Object.assign(globalThis, use("scripts/prosperon.js"));
+
+
+app.interval(_ => {
+  profile.frame("hotreload");
+  actor.hotreload();
+  render.hotreload();
+  game.tex_hotreload();
+  repl.hotreload();
+  profile.endframe();
+}, 1);
+
