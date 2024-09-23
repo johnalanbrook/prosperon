@@ -1,6 +1,13 @@
 /*
   TYPES OF PROFILING
   
+  cpu gathering - gets stack frames randomly for a few seconds
+
+  frames - user defined to see how long engine takes
+
+  cache - can see specific events that happened
+
+  memory - can see how much memory is allocated and from where
 */
 
 var t_units = ["ns", "us", "ms", "s", "ks", "Ms"];
@@ -41,6 +48,7 @@ profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
 profile.ms = function(t) { return profile.secs(t)*1000; }
 
 var callgraph = {};
+profile.rawstacks = {};
 profile.cpu_cg = callgraph;
 
 function add_callgraph(fn, line, time) {
@@ -61,21 +69,32 @@ var hittar = 500; // number of call instructions before getting a new frame
 var hitpct = 0.2; // amount to randomize it
 var start_gather = profile.now();
 
-var cpu_start;
+profile.cpu_start = undefined;
+
+profile.clear_cpu = function()
+{
+  callgraph = {};
+}
 
 profile.start_cpu_gather = function(gathertime = 5) // gather cpu frames for 'time' seconds
 {
-  if (cpu_start) return;
-  cpu_start = profile.now();
-  var st = cpu_start;
+  if (profile.cpu_start) return;
+  profile.cpu_start = profile.now();
+  var st = profile.cpu_start;
   
   profile.gather(hittar, function() {
     var time = profile.now()-st;
     
     var err = new Error();
-    var stack = err.stack.split("\n");
-  
-    stack = stack.slice(1);
+    var stack = err.stack.split("\n").slice(1);    
+    var rawstack = stack.join('\n');
+    profile.rawstacks[rawstack] ??= {
+      time: 0,
+      hits: 0
+    };
+    profile.rawstacks[rawstack].hits++;
+    profile.rawstacks[rawstack].time += time;
+    
     stack = stack.map(x => x.slice(7).split(' '));
   
     var fns = stack.map(x => x[0]).filter(x=>x);
@@ -86,11 +105,11 @@ profile.start_cpu_gather = function(gathertime = 5) // gather cpu frames for 'ti
       add_callgraph(fns[i], lines[i], time);
   
     st = profile.now();
-    if (profile.secs(st-cpu_start) < gathertime)
+    if (profile.secs(st-profile.cpu_start) < gathertime)
       profile.gather_rate(Math.variate(hittar,hitpct));
     else {
       profile.gather_stop();
-      cpu_start = undefined;
+      profile.cpu_start = undefined;
       var e = Object.values(callgraph);
       e = e.sort((a,b) => {
         if (a.time > b.time) return -1;
@@ -99,9 +118,12 @@ profile.start_cpu_gather = function(gathertime = 5) // gather cpu frames for 'ti
 
      for (var x of e) {
        var ffs = x.line.split(':');
-       var time = profile.best_t(x.time);
+       x.timestr = profile.best_t(x.time);
        var pct = profile.secs(x.time)/gathertime*100;
-       x.log =`${x.line}::${x.fn}:: ${time} (${pct.toPrecision(3)}%) (${x.hits} hits) --> ${get_line(ffs[0], ffs[1])}`;
+       x.timeper = x.time / x.hits;
+       x.timeperstr = profile.best_t(x.timeper);
+       x.fncall = get_line(ffs[0], ffs[1]);
+       x.log =`${x.line}::${x.fn}:: ${x.timestr} (${pct.toPrecision(3)}%) (${x.hits} hits) --> ${get_line(ffs[0], ffs[1])}`;
      }
 
      profile.cpu_instr = e;
@@ -118,12 +140,12 @@ function push_time(arr, ob, max)
 }
 
 profile.cpu_frames = [];
+profile.last_cpu_frame = undefined;
 profile.cpu_frame = function()
 {
-  if (gathering_cpu) return;
-  
   profile.gather(Math.random_range(300,600), function() {
-    push_time(profile.cpu_frames, console.stack(2));
+    var err = new Error();
+    profile.last_cpu_frame = err.stack;//.split('\n').slicconsole.stack(2);
     profile.gather_stop();
   });
 }
@@ -221,6 +243,7 @@ var profile_stack = [];
 
 profile.frame = function profile_frame(title)
 {
+  if (profile.cpu_start) return;
   if (!frame_avg) return;
   
   if (!profile_cframe) {
@@ -264,7 +287,6 @@ profile.print_frame_avg = function()
     
   say("\n");
 }
-
 
 /*
   Cache reporting is to measure how long specific events take, that are NOT every frame

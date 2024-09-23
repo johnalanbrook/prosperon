@@ -64,19 +64,53 @@ JSC_CCALL(imgui_menuitem,
 )
 
 JSC_SCALL(imgui_plot,
-  ImPlot::SetNextAxisToFit(ImAxis_X1);
-  ImPlot::SetNextAxisToFit(ImAxis_Y1);  
   ImPlot::BeginPlot(str);
   script_call_sym(argv[1], 0, NULL);
   ImPlot::EndPlot();
 )
 
 JSC_SCALL(imgui_lineplot,
-  double data[js_arrlen(argv[1])];
+  HMM_Vec2 data[js_arrlen(argv[1])];
   for (int i = 0; i < js_arrlen(argv[1]); i++)
-    data[i] = js2number(js_getpropidx(argv[1], i));
+    data[i] = js2vec2(js_getpropidx(argv[1], i));
 
-  ImPlot::PlotLine(str, data, js_arrlen(argv[1]));
+  ImPlot::PlotLine(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), 0, 0, sizeof(HMM_Vec2));
+)
+
+JSC_SCALL(imgui_scatterplot,
+  HMM_Vec2 data[js_arrlen(argv[1])];
+  for (int i = 0; i < js_arrlen(argv[1]); i++)
+    data[i] = js2vec2(js_getpropidx(argv[1], i));
+
+  ImPlot::PlotScatter(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), 0, 0, sizeof(HMM_Vec2));
+)
+
+JSC_SCALL(imgui_stairplot,
+  HMM_Vec2 data[js_arrlen(argv[1])];
+  for (int i = 0; i < js_arrlen(argv[1]); i++)
+    data[i] = js2vec2(js_getpropidx(argv[1], i));
+
+  ImPlot::PlotStairs(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), 0, 0, sizeof(HMM_Vec2));
+)
+
+JSC_SCALL(imgui_barplot,
+  HMM_Vec2 data[js_arrlen(argv[1])];
+  for (int i = 0; i < js_arrlen(argv[1]); i++)
+    data[i] = js2vec2(js_getpropidx(argv[1], i));
+
+  ImPlot::PlotBars(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), js2number(argv[2]), 0, 0, sizeof(HMM_Vec2));
+)
+
+JSC_SSCALL(imgui_plotaxes,
+  ImPlot::SetupAxes(str,str2);
+)
+
+JSC_CCALL(imgui_axeslimits,
+  ImPlot::SetupAxesLimits(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]));
+)
+
+JSC_CCALL(imgui_fitaxis,
+  ImPlot::SetNextAxisToFit((js2number(argv[0]) == 0) ? ImAxis_X1 : ImAxis_Y1);
 )
 
 JSC_SSCALL(imgui_textinput,
@@ -598,8 +632,14 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, button, 2),
   MIST_FUNC_DEF(imgui, checkbox, 2),
   MIST_FUNC_DEF(imgui, text, 1),
-  MIST_FUNC_DEF(imgui, plot,1),
-  MIST_FUNC_DEF(imgui, lineplot,2),
+  MIST_FUNC_DEF(imgui, plot, 1),
+  MIST_FUNC_DEF(imgui, lineplot, 2),
+  MIST_FUNC_DEF(imgui, scatterplot, 2),
+  MIST_FUNC_DEF(imgui, stairplot, 2),
+  MIST_FUNC_DEF(imgui, barplot, 3),
+  MIST_FUNC_DEF(imgui, plotaxes, 2),
+  MIST_FUNC_DEF(imgui, axeslimits, 4),
+  MIST_FUNC_DEF(imgui, fitaxis, 1),
   MIST_FUNC_DEF(imgui, sokol_gfx, 0),
   MIST_FUNC_DEF(imgui, columns, 1),
   MIST_FUNC_DEF(imgui, nextcolumn, 0),

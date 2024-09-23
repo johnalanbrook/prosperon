@@ -297,6 +297,7 @@ globalThis.use = function use(file) {
   var fn = os.eval(file, script);
   use_cache[file] = fn;
   var ret = fn();
+
   profile.endcache();
 
   return ret;
@@ -349,7 +350,6 @@ if (!profile.enabled)
   use = stripped_use;
 
 Object.assign(globalThis, use("scripts/prosperon.js"));
-
 
 app.interval(_ => {
   profile.frame("hotreload");

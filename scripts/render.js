@@ -632,6 +632,7 @@ function flush()
   nextflush = undefined;
 }
 
+// If flush_fn was already on deck, it does not flush. Otherwise, flushes and then sets the flush fn
 function check_flush(flush_fn)
 {
   if (!nextflush)
@@ -673,6 +674,11 @@ function flush_poly()
   render.make_particle_ssbo(poly_cache.slice(0,poly_idx), poly_ssbo);
   render.draw(shape.centered_quad, poly_ssbo, poly_idx);
   poly_idx = 0;
+}
+
+function flush_image()
+{
+  
 }
 
 render.line = function render_line(points, color = Color.white, thickness = 1) {
@@ -780,27 +786,63 @@ render.text = function(str, pos, size = 1, color = Color.white, wrap = -1, ancho
   return bb;
 };
 
-render.image = function(tex, pos, scale = [tex.width, tex.height], rotation = 0, color = Color.white) {
+var lasttex = undefined;
+var img_cache = [];
+var img_idx = 0;
+
+function flush_img()
+{
+  if (img_idx === 0) return;
+  render.use_shader(spritessboshader);
+  render.use_mat({diffuse:lasttex});
+  render.make_sprite_ssbo(img_cache.slice(0,img_idx), poly_ssbo);
+  render.draw(shape.quad, poly_ssbo, img_idx);
+  lasttex = undefined;
+  img_idx = 0;
+}
+
+function img_e()
+{
+  img_idx++;
+  if (img_idx > img_cache.length) {
+    e = {
+      transform: os.make_transform(),
+      shade: Color.white,
+      rect: [0,0,1,1]
+    };
+    img_cache.push(e);
+    return e;
+  }
+  var e = img_cache[img_idx-1];
+  e.transform.unit();
+  return e;
+}
+
+render.image = function(tex, pos, scale, rotation = 0, color = Color.white) {
   if (typeof tex === 'string') {
     tex = game.texture(tex);
     scale.x ??= tex.width;
     scale.y ??= tex.height;
   }
   if (!tex) return;
-  flush();
-  var t = os.make_transform();
-  t.pos = pos;
-  t.scale = [scale.x/tex.width,scale.y/tex.height,1];
-  render.use_shader(render.spriteshader);
-  set_model(t);
-  render.use_mat({
-    shade: color,
-    diffuse: tex,
-    rect:[0,0,1,1]
-  });
+
+  if (!lasttex) {
+    check_flush(flush_img);    
+    lasttex = tex;
+  }
+    
+  if (lasttex !== tex) {
+    flush_img();
+    lasttex = tex;
+  }
   
-  render.draw(shape.quad);
-  
+  var e = img_e();
+  e.transform.move(pos);
+  if (scale)
+    e.transform.scale = scale.div([tex.width, tex.height]);
+  e.shade = color;
+
+  return;
   var bb = {};
   bb.b = pos.y;
   bb.l = pos.x;
