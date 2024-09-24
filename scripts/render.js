@@ -1189,11 +1189,15 @@ prosperon.process = function process() {
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
+  var sst = profile.now();
+  
   /* debugging: check for gc */
   profile.print_gc();
 
   var cycles = os.check_cycles();
   if (cycles) say(cycles);
+
+
 
   profile.frame("app update");
   prosperon.appupdate(dt);
@@ -1209,7 +1213,12 @@ prosperon.process = function process() {
     update_emitters(dt * game.timescale);
     profile.endframe();
     if (sim.mode === "step") sim.pause();
+  }
 
+  profile.pushdata(profile.data.cpu.scripts, profile.now()-sst);
+  sst = profile.now();
+
+  if (sim.mode === "play" || sim.mode === "step") {
     profile.frame("physics");
     physlag += dt;
 
@@ -1219,11 +1228,14 @@ prosperon.process = function process() {
       prosperon.physupdate(physics.delta * game.timescale);
     }
     profile.endframe();
+    profile.pushdata(profile.data.cpu.physics, profile.now()-sst);
+    sst = profile.now();
   }
 
   profile.frame("render");
   prosperon.window_render(window.size);
   prosperon.render();
+  profile.pushdata(profile.data.cpu.render, profile.now()-sst);
   profile.endframe();
   profile.endframe();
 

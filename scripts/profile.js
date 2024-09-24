@@ -339,16 +339,28 @@ function printreport(cache, name) {
 };
 
 profile.data = {};
-profile.data.cpu = {};
+profile.data.cpu = {
+  scripts: [],
+  render: [],
+  physics: [],
+};
+
 profile.data.gpu = {};
 profile.data.physics = {};
 profile.data.script = {};
+profile.data.memory = {};
 var frame = 0;
+
+profile.pushdata = function(arr, val)
+{
+  if (arr.last() !== val)
+    arr[frame] = val;
+}
 
 profile.capture_data = function()
 {
   var mem = os.mem();
-  var memo = profile.data.script;
+  var memo = profile.data.memory;
   for (var i in mem) {
     memo[i] ??= [];
     if (memo[i].last() !== mem[i])
@@ -365,19 +377,6 @@ profile.best_mem = function(bytes)
   return (bytes / Math.pow(1024, i)).toPrecision(3) + ' ' + sizes[i];
 }
 
-profile.print_mem = function()
-{
-  var mem = os.mem();
-  say('total memory used: ' + profile.best_mem(mem.memory_used_size));
-  say('total malloced: ' + profile.best_mem(mem.malloc_size));
-  delete mem.memory_used_size;
-  delete mem.malloc_size;
-  for (var i in mem) {
-    if (i. includes("size"))
-      say("  " + i + " :: " + profile.best_mem(mem[i]));
-  }
-}
-
 profile.last_mem = undefined;
 profile.mems = [];
 profile.gcs = [];
@@ -385,13 +384,8 @@ profile.print_gc = function()
 {
   var gc = os.check_gc();
   if (!gc) return;
-  profile.gcs.push(gc);
-  profile.mems.push(os.mem());
-  say("GC Hit");
-  say (`time: ${profile.best_t(gc.time)}`);
-  say(`new threshold: ${profile.best_mem(profile.mems.last().gc_threshold)}`);
-  say(`memory checked: ${profile.best_mem(profile.gcs.last().mem)}`);
-  say(`memory freed: ${profile.best_mem(profile.gcs.last().startmem - profile.gcs.last().mem)}`);
+  profile.data.gc ??= [];
+  profile.data.gc[frame] = gc;
 }
 
 return {profile};

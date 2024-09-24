@@ -64,16 +64,19 @@ JSC_CCALL(imgui_menuitem,
 )
 
 JSC_SCALL(imgui_plot,
-  ImPlot::BeginPlot(str);
-  script_call_sym(argv[1], 0, NULL);
-  ImPlot::EndPlot();
+  if (ImPlot::BeginPlot(str)) {
+    script_call_sym(argv[1], 0, NULL);
+    ImPlot::EndPlot();
+  }
 )
 
-#define PLOT_FN(NAME, FN, ADD) JSC_SCALL(imgui_##NAME, \
+#define PLOT_FN(NAME, FN, ADD, SHADED) JSC_SCALL(imgui_##NAME, \
   fill_plotdata(argv[1]); \
-  ImPlot::FN(str, &plotdata[0].x, &plotdata[0].y, arrlen(plotdata), ADD 0, 0, sizeof(HMM_Vec2)); \
+  bool shaded = js2boolean(argv[2]);\
+  int flag = 0; \
+  if (shaded) flag = SHADED; \
+  ImPlot::FN(str, &plotdata[0].x, &plotdata[0].y, arrlen(plotdata), ADD flag, 0, sizeof(HMM_Vec2)); \
 ) \
-
 
 static HMM_Vec2 *plotdata = NULL;
 
@@ -95,10 +98,24 @@ void fill_plotdata(JSValue v)
   }
 }
 
-PLOT_FN(lineplot, PlotLine,)
-PLOT_FN(scatterplot, PlotScatter,)
-PLOT_FN(stairplot, PlotStairs,)
-PLOT_FN(digitalplot, PlotDigital,)
+PLOT_FN(lineplot, PlotLine,,ImPlotLineFlags_Shaded)
+PLOT_FN(scatterplot, PlotScatter,,0)
+PLOT_FN(stairplot, PlotStairs,,ImPlotStairsFlags_Shaded)
+PLOT_FN(digitalplot, PlotDigital,,0)
+static HMM_Vec3 *shadedata = NULL;
+
+JSC_SCALL(imgui_shadedplot,
+  arrsetlen(plotdata,js_arrlen(argv[1]));
+  for (int i = 0; i < js_arrlen(argv[1]); i++) {
+    HMM_Vec3 c;
+    c.x = i;
+    c.y = js2number(js_getpropidx(argv[1],i));
+    c.z = js2number(js_getpropidx(argv[2],i));
+    arrput(shadedata, c);
+  }
+  ImPlot::PlotShaded(str, &shadedata[0].x, &shadedata[0].y, &shadedata[0].z, arrlen(shadedata), 0, 0, sizeof(HMM_Vec3));
+)
+
 JSC_SCALL(imgui_barplot,
   fill_plotdata(argv[1]);
   ImPlot::PlotBars(str, &plotdata[0].x, &plotdata[0].y, js_arrlen(argv[1]), js2number(argv[2]), 0, 0, sizeof(HMM_Vec2));
@@ -141,6 +158,15 @@ JSC_CCALL(imgui_pieplot,
 JSC_SCALL(imgui_textplot,
   HMM_Vec2 v = js2vec2(argv[1]);
   ImPlot::PlotText(str, v.x, v.y);
+)
+
+JSC_CCALL(imgui_inplot,
+  HMM_Vec2 v = js2vec2(argv[0]);
+  ImPlotRect lm = ImPlot::GetPlotLimits();
+  if (v.x > lm.X.Min && v.x < lm.X.Max && v.y > lm.Y.Min && v.y < lm.Y.Max)
+    return boolean2js(true);
+
+  return boolean2js(false);
 )
 
 JSC_CCALL(imgui_plothovered,
@@ -735,6 +761,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, plot2pixels, 1),
   MIST_FUNC_DEF(imgui, plotpos, 0),
   MIST_FUNC_DEF(imgui, plotlimits, 0),
+  MIST_FUNC_DEF(imgui, inplot, 1),
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
   MIST_FUNC_DEF(imgui, sameline, 1),
@@ -755,9 +782,11 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, checkbox, 2),
   MIST_FUNC_DEF(imgui, text, 1),
   MIST_FUNC_DEF(imgui, plot, 1),
-  MIST_FUNC_DEF(imgui, lineplot, 2),
-  MIST_FUNC_DEF(imgui, scatterplot, 2),
-  MIST_FUNC_DEF(imgui, stairplot, 2),
+  MIST_FUNC_DEF(imgui, lineplot, 3),
+  MIST_FUNC_DEF(imgui, scatterplot, 3),
+  MIST_FUNC_DEF(imgui, stairplot, 3),
+  MIST_FUNC_DEF(imgui, digitalplot, 3),
+  MIST_FUNC_DEF(imgui, shadedplot, 3),  
   MIST_FUNC_DEF(imgui, barplot, 3),
   MIST_FUNC_DEF(imgui, pieplot, 5),
   MIST_FUNC_DEF(imgui, textplot, 2),
@@ -822,7 +851,7 @@ static int started = 0;
 
 JSValue gui_init(JSContext *js)
 {
-  simgui_desc_t sdesc = {0};
+  simgui_desc_t sdesc = {};
   simgui_setup(&sdesc);
   
   sgimgui_desc_t desc = {0};
