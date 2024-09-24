@@ -272,9 +272,6 @@ prosperon.touchrelease = function (touches) {};
 prosperon.touchmove = function (touches) {};
 prosperon.clipboardpaste = function (str) {};
 prosperon.quit = function () {
-  profile.print_cache_report();
-  profile.stop_frame_avg()
-  profile.stop_cpu_instr();
   prosperon.quit_hook?.();
 };
 

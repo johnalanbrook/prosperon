@@ -171,20 +171,7 @@ function get_line(file, line) {
 
 profile.stop_cpu_instr = function()
 {
-  say("===CPU INSTRUMENTATION===\n");
-  var gather_time = profile.now()-start_gather;
-  var e = Object.values(callgraph);
-  e = e.sort((a,b) => {
-    if (a.time > b.time) return -1;
-    return 1;
-  });
-
-  e.forEach(x => {
-    var ffs = x.line.split(':');
-    var time = profile.best_t(x.time);
-    var pct = x.time/gather_time*100;
-    say(`${x.line}::${x.fn}:: ${time} (${pct.toPrecision(3)}%) (${x.hits} hits) --> ${get_line(ffs[0], ffs[1])}`);
-  });
+  return;
 }
 
 profile.best_t = function (t) {
@@ -220,10 +207,7 @@ profile.start_frame_avg = function()
 
 profile.stop_frame_avg = function()
 {
-  if (!frame_avg) return;
-  
   frame_avg = false;
-  profile.print_frame_avg();
 }
 
 profile.toggle_frame_avg = function()
@@ -320,15 +304,6 @@ profile.endcache = function profile_endcache(tag = "")
   addreport(cachegroup, cachetitle + tag, cachest);
 }
 
-profile.print_cache_report = function()
-{
-  var str = "===START CACHE REPORTS===\n";
-  for (var i in report_cache)
-    str += printreport(report_cache[i], i) + "\n";
-
-  say(str);
-}
-
 function addreport(group, line, start) {
   if (typeof group !== 'string') group = 'UNGROUPED';
   report_cache[group] ??= {};
@@ -362,6 +337,25 @@ function printreport(cache, name) {
 
   return report;
 };
+
+profile.data = {};
+profile.data.cpu = {};
+profile.data.gpu = {};
+profile.data.physics = {};
+profile.data.script = {};
+var frame = 0;
+
+profile.capture_data = function()
+{
+  var mem = os.mem();
+  var memo = profile.data.script;
+  for (var i in mem) {
+    memo[i] ??= [];
+    if (memo[i].last() !== mem[i])
+      memo[i][frame] = mem[i];
+  }
+  frame++;
+}
 
 profile.best_mem = function(bytes)
 {

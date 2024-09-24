@@ -28,7 +28,7 @@ void script_evalf(const char *format, ...);
 JSValue script_eval(const char *file, const char *script);
 
 void script_call_sym(JSValue sym, int argc, JSValue *argv);
-
+JSValue script_call_sym_ret(JSValue sym, int argc, JSValue *argv);
 void script_gc();
 void script_mem_limit(size_t limit);
 void script_gc_threshold(size_t threshold);
@@ -36,8 +36,6 @@ void script_max_stacksize(size_t size);
 
 void _script_gcstart();
 void _script_gcend();
-
-
 
 #ifdef __cplusplus
 }

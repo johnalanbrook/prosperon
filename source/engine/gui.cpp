@@ -69,40 +69,91 @@ JSC_SCALL(imgui_plot,
   ImPlot::EndPlot();
 )
 
-JSC_SCALL(imgui_lineplot,
-  HMM_Vec2 data[js_arrlen(argv[1])];
-  for (int i = 0; i < js_arrlen(argv[1]); i++)
-    data[i] = js2vec2(js_getpropidx(argv[1], i));
+#define PLOT_FN(NAME, FN, ADD) JSC_SCALL(imgui_##NAME, \
+  fill_plotdata(argv[1]); \
+  ImPlot::FN(str, &plotdata[0].x, &plotdata[0].y, arrlen(plotdata), ADD 0, 0, sizeof(HMM_Vec2)); \
+) \
 
-  ImPlot::PlotLine(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), 0, 0, sizeof(HMM_Vec2));
-)
 
-JSC_SCALL(imgui_scatterplot,
-  HMM_Vec2 data[js_arrlen(argv[1])];
-  for (int i = 0; i < js_arrlen(argv[1]); i++)
-    data[i] = js2vec2(js_getpropidx(argv[1], i));
+static HMM_Vec2 *plotdata = NULL;
 
-  ImPlot::PlotScatter(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), 0, 0, sizeof(HMM_Vec2));
-)
+void fill_plotdata(JSValue v)
+{
+  arrsetlen(plotdata, 0);
 
-JSC_SCALL(imgui_stairplot,
-  HMM_Vec2 data[js_arrlen(argv[1])];
-  for (int i = 0; i < js_arrlen(argv[1]); i++)
-    data[i] = js2vec2(js_getpropidx(argv[1], i));
+  if (JS_IsArray(js,js_getpropidx(v, 0))) {
+    for (int i = 0; i < js_arrlen(v); i++)
+      arrput(plotdata, js2vec2(js_getpropidx(v, i)));
+  }
+  else {
+    // Fill it with the x axis being the array index
+    for (int i = 0; i < js_arrlen(v); i++) {
+      if (JS_IsUndefined(js_getpropidx(v,i))) continue;
+      HMM_Vec2 c = (HMM_Vec2){i, js2number(js_getpropidx(v,i))};
+      arrput(plotdata, c);
+    }
+  }
+}
 
-  ImPlot::PlotStairs(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), 0, 0, sizeof(HMM_Vec2));
-)
-
+PLOT_FN(lineplot, PlotLine,)
+PLOT_FN(scatterplot, PlotScatter,)
+PLOT_FN(stairplot, PlotStairs,)
+PLOT_FN(digitalplot, PlotDigital,)
 JSC_SCALL(imgui_barplot,
-  HMM_Vec2 data[js_arrlen(argv[1])];
-  for (int i = 0; i < js_arrlen(argv[1]); i++)
-    data[i] = js2vec2(js_getpropidx(argv[1], i));
+  fill_plotdata(argv[1]);
+  ImPlot::PlotBars(str, &plotdata[0].x, &plotdata[0].y, js_arrlen(argv[1]), js2number(argv[2]), 0, 0, sizeof(HMM_Vec2));
+)
 
-  ImPlot::PlotBars(str, &data[0].x, &data[0].y, js_arrlen(argv[1]), js2number(argv[2]), 0, 0, sizeof(HMM_Vec2));
+static double *histodata = NULL;
+void fill_histodata(JSValue v)
+{
+  arrsetlen(histodata, js_arrlen(v));
+  for (int i = 0; i < js_arrlen(v); i++)
+    histodata[i] = js2number(js_getpropidx(v, i));
+}
+JSC_SCALL(imgui_histogramplot,
+  fill_histodata(argv[1]);    
+  ImPlot::PlotHistogram(str, histodata, js_arrlen(argv[1]));
+)
+
+JSC_SCALL(imgui_heatplot,
+  fill_histodata(argv[1]);
+  int rows = js2number(argv[2]);
+  int cols = js2number(argv[3]);
+  if (rows*cols == (int)js_arrlen(argv[1]))
+    ImPlot::PlotHeatmap(str, histodata, rows, cols);
+)
+
+JSC_CCALL(imgui_pieplot,
+  if (js_arrlen(argv[0]) != js_arrlen(argv[1])) return;
+  
+  char *labels[js_arrlen(argv[0])];
+  for (int i = 0; i < js_arrlen(argv[0]); i++)
+    labels[i] = js2str(js_getpropidx(argv[0], i));
+
+  fill_histodata(argv[1]);
+  ImPlot::PlotPieChart(labels, histodata, js_arrlen(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]));
+
+  for (int i = 0; i < js_arrlen(argv[0]); i++)
+    JS_FreeCString(js,labels[i]);
+)
+
+JSC_SCALL(imgui_textplot,
+  HMM_Vec2 v = js2vec2(argv[1]);
+  ImPlot::PlotText(str, v.x, v.y);
+)
+
+JSC_CCALL(imgui_plothovered,
+  return boolean2js(ImPlot::IsPlotHovered());
 )
 
 JSC_SSCALL(imgui_plotaxes,
   ImPlot::SetupAxes(str,str2);
+)
+
+JSC_CCALL(imgui_plotmousepos,
+  ImPlotPoint p = ImPlot::GetPlotMousePos();
+  return vec22js(HMM_Vec2{p.x,p.y});
 )
 
 JSC_CCALL(imgui_axeslimits,
@@ -520,6 +571,22 @@ ImVec2 js2imvec2(JSValue v)
   return ImVec2(va.x,va.y);
 }
 
+JSValue imvec22js(ImVec2 v)
+{
+  return vec22js(HMM_Vec2({v.x,v.y}));
+}
+
+ImPlotPoint js2plotvec2(JSValue v)
+{
+  HMM_Vec2 va = js2vec2(v);
+  return ImPlotPoint(va.x,va.y);
+}
+
+JSValue plotvec22js(ImPlotPoint v)
+{
+  return vec22js(HMM_Vec2{v.x,v.y});
+}
+
 ImVec4 js2imvec4(JSValue v)
 {
   HMM_Vec4 va = js2vec4(v);
@@ -537,6 +604,10 @@ JSC_CCALL(imgui_rectfilled,
 
 JSC_CCALL(imgui_line,
   ImGui::GetWindowDrawList()->AddLine(js2imvec2(argv[0]), js2imvec2(argv[1]),js2imu32(argv[2]));
+)
+
+JSC_CCALL(imgui_point,
+  ImGui::GetWindowDrawList()->AddCircleFilled(js2imvec2(argv[0]), js2number(argv[1]), js2imu32(argv[2]));
 )
 
 JSC_CCALL(imgui_cursorscreenpos,
@@ -612,7 +683,58 @@ JSC_CCALL(imgui_width,
   ImGui::PushItemWidth(js2number(argv[0]));
 )
 
+JSC_CCALL(imgui_windowpos,
+  return imvec22js(ImGui::GetWindowPos());
+)
+
+JSC_CCALL(imgui_plotpos,
+  return plotvec22js(ImPlot::GetPlotPos());
+)
+
+JSC_CCALL(imgui_plot2pixels,
+  return imvec22js(ImPlot::PlotToPixels(js2plotvec2(argv[0])));
+)
+
+JSC_CCALL(imgui_plotlimits,
+  ImPlotRect lim = ImPlot::GetPlotLimits();
+  JSValue xlim = JS_NewObject(js);
+  js_setpropstr(xlim, "min", number2js(lim.X.Min));
+  js_setpropstr(xlim, "max", number2js(lim.X.Max));
+  JSValue ylim = JS_NewObject(js);
+  js_setpropstr(ylim, "min", number2js(lim.Y.Min));
+  js_setpropstr(ylim, "max", number2js(lim.Y.Max));
+  
+  JSValue limits = JS_NewObject(js);
+  js_setpropstr(limits, "x", xlim);
+  js_setpropstr(limits, "y", ylim);
+  
+  return limits;
+)
+
+static JSValue axis_formatter = JS_UNDEFINED;
+
+void jsformatter(double value, char *buff, int size, void *usr_data)
+{
+  JSValue v = number2js(value);
+  char *str = js2str(script_call_sym_ret(axis_formatter, 1, &v));
+  strncpy(buff,str, size);
+  JS_FreeCString(js, str);
+}
+
+JSC_CCALL(imgui_axisfmt,
+  if (!JS_IsUndefined(axis_formatter)) {
+    JS_FreeValue(js, axis_formatter);
+    axis_formatter = JS_UNDEFINED;
+  }
+  axis_formatter = JS_DupValue(js,argv[1]);
+  ImPlot::SetupAxisFormat(js2boolean(argv[0]) ? ImAxis_Y1 : ImAxis_X1, jsformatter);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
+  MIST_FUNC_DEF(imgui, windowpos, 0),
+  MIST_FUNC_DEF(imgui, plot2pixels, 1),
+  MIST_FUNC_DEF(imgui, plotpos, 0),
+  MIST_FUNC_DEF(imgui, plotlimits, 0),
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
   MIST_FUNC_DEF(imgui, sameline, 1),
@@ -637,7 +759,12 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, scatterplot, 2),
   MIST_FUNC_DEF(imgui, stairplot, 2),
   MIST_FUNC_DEF(imgui, barplot, 3),
+  MIST_FUNC_DEF(imgui, pieplot, 5),
+  MIST_FUNC_DEF(imgui, textplot, 2),
+  MIST_FUNC_DEF(imgui, histogramplot, 2),
   MIST_FUNC_DEF(imgui, plotaxes, 2),
+  MIST_FUNC_DEF(imgui, plotmousepos, 0),
+  MIST_FUNC_DEF(imgui, plothovered, 0),
   MIST_FUNC_DEF(imgui, axeslimits, 4),
   MIST_FUNC_DEF(imgui, fitaxis, 1),
   MIST_FUNC_DEF(imgui, sokol_gfx, 0),
@@ -646,6 +773,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, collapsingheader, 1),
   MIST_FUNC_DEF(imgui, tree, 2),
   MIST_FUNC_DEF(imgui, listbox, 3),
+  MIST_FUNC_DEF(imgui, axisfmt, 2),
   MIST_FUNC_DEF(imgui, tabbar, 2),
   MIST_FUNC_DEF(imgui, tab, 2),
   MIST_FUNC_DEF(imgui, open_popup, 1),
@@ -680,6 +808,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, line, 3),
   MIST_FUNC_DEF(imgui, bezierquad, 5),
   MIST_FUNC_DEF(imgui, beziercubic, 6),
+  MIST_FUNC_DEF(imgui, point, 3),
   MIST_FUNC_DEF(imgui, drawtext, 3),
   MIST_FUNC_DEF(imgui, cursorscreenpos, 0),
   MIST_FUNC_DEF(imgui, setcursorscreenpos, 1),

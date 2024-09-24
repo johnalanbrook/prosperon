@@ -1225,8 +1225,9 @@ prosperon.process = function process() {
   prosperon.window_render(window.size);
   prosperon.render();
   profile.endframe();
-
   profile.endframe();
+
+  profile.capture_data();
 }
 
 return {render};

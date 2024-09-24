@@ -91,6 +91,12 @@ void script_call_sym(JSValue sym, int argc, JSValue *argv) {
   JS_FreeValue(js, ret);
 }
 
+JSValue script_call_sym_ret(JSValue sym, int argc, JSValue *argv) {
+  if (!JS_IsFunction(js, sym)) return JS_UNDEFINED;
+  JSValue ret = JS_Call(js, sym, JS_UNDEFINED, argc, argv);
+  return ret;
+}
+
 void out_memusage(const char *file)
 {
   FILE *f = fopen(file, "w");
