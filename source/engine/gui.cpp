@@ -175,9 +175,9 @@ JSC_SCALL(imgui_heatplot,
 )
 
 JSC_CCALL(imgui_pieplot,
-  if (js_arrlen(argv[0]) != js_arrlen(argv[1])) return;
+  if (js_arrlen(argv[0]) != js_arrlen(argv[1])) return JS_UNDEFINED;
   
-  char *labels[js_arrlen(argv[0])];
+  const char *labels[js_arrlen(argv[0])];
   for (int i = 0; i < js_arrlen(argv[0]); i++)
     labels[i] = js2str(js_getpropidx(argv[0], i));
 
@@ -777,7 +777,7 @@ static JSValue axis_fmts[10];
 void jsformatter(double value, char *buff, int size, JSValue *fmt)
 {
   JSValue v = number2js(value);
-  char *str = js2str(script_call_sym_ret(*fmt, 1, &v));
+  const char *str = js2str(script_call_sym_ret(*fmt, 1, &v));
   strncpy(buff,str, size);
   JS_FreeCString(js, str);
 }
@@ -792,7 +792,7 @@ JSC_CCALL(imgui_axisfmt,
   
   axis_fmts[y] = JS_DupValue(js,argv[1]);
   
-  ImPlot::SetupAxisFormat(y, jsformatter, axis_fmts+y);
+  ImPlot::SetupAxisFormat(y, (ImPlotFormatter)jsformatter, (void*)(axis_fmts+y));
 )
 
 #define FSTAT(KEY) js_setpropstr(v, #KEY, number2js(stats.KEY));

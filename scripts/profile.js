@@ -339,18 +339,6 @@ function printreport(cache, name) {
 };
 
 profile.data = {};
-profile.data.cpu = {
-  scripts: [],
-  render: [],
-  physics: [],
-};
-
-profile.data.gpu = {};
-profile.data.physics = {};
-profile.data.script = {};
-profile.data.memory = {};
-profile.data.gfx = {};
-profile.data.actors = {};
 profile.curframe = 0;
 
 function prof_add_stats(obj, stat)
@@ -383,6 +371,23 @@ profile.best_mem = function(bytes)
   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
   return (bytes / Math.pow(1024, i)).toPrecision(3) + ' ' + sizes[i];
 }
+
+profile.cleardata = function()
+{
+  profile.data.gpu = {};
+  profile.data.physics = {};
+  profile.data.script = {};
+  profile.data.memory = {};
+  profile.data.gfx = {};
+  profile.data.actors = {};
+  profile.data.cpu = {
+    scripts: [],
+    render: [],
+    physics: [],
+  };
+}
+
+profile.cleardata();
 
 profile.last_mem = undefined;
 profile.mems = [];
