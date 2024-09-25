@@ -43,6 +43,28 @@ sg_pass_action off_action = {0};
 sg_image screencolor = {0};
 sg_image screendepth = {0};
 
+struct rfd {
+  int num_passes;
+  int num_apply_viewport;
+  int num_apply_scissor_rect;
+  int num_apply_pipeline;
+  int num_apply_uniforms;
+  int size_uniforms;
+};
+
+static struct rfd rfd = {0};
+
+void trace_apply_uniforms(sg_shader_stage stage, int ub_index, const sg_range *data, void *user_data)
+{
+  rfd.num_apply_uniforms++;
+  rfd.size_uniforms += data->size;
+}
+
+void trace_draw(int base_e, int num_e, int num_inst, void *data)
+{
+  
+}
+
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
 //  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);

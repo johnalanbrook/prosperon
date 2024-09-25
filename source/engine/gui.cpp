@@ -22,6 +22,33 @@ static sgimgui_t sgimgui;
 static int wantkeys = 0;
 static int wantmouse = 0;
 
+int num_to_yaxis(int y)
+{
+  switch(y) {
+    case 0:
+      return ImAxis_Y1;
+    case 1:
+      return ImAxis_Y2;
+    case 2:
+      return ImAxis_Y3;
+  }
+  return ImAxis_Y1;
+}
+
+int num_to_xaxis(int x)
+{
+  switch(x) {
+    case 0:
+      return ImAxis_X1;
+    case 1:
+      return ImAxis_X2;
+    case 2:
+      return ImAxis_X3;
+  }
+
+  return ImAxis_X1;
+}
+
 JSC_SCALL(imgui_window,
   bool active = true;
   ImGui::Begin(str, &active);
@@ -71,7 +98,7 @@ JSC_SCALL(imgui_plot,
 )
 
 #define PLOT_FN(NAME, FN, ADD, SHADED) JSC_SCALL(imgui_##NAME, \
-  fill_plotdata(argv[1]); \
+  fill_plotdata(argv[1], argv[3]); \
   bool shaded = js2boolean(argv[2]);\
   int flag = 0; \
   if (shaded) flag = SHADED; \
@@ -80,7 +107,7 @@ JSC_SCALL(imgui_plot,
 
 static HMM_Vec2 *plotdata = NULL;
 
-void fill_plotdata(JSValue v)
+void fill_plotdata(JSValue v, JSValue last)
 {
   arrsetlen(plotdata, 0);
 
@@ -95,6 +122,12 @@ void fill_plotdata(JSValue v)
       HMM_Vec2 c = (HMM_Vec2){i, js2number(js_getpropidx(v,i))};
       arrput(plotdata, c);
     }
+  }
+
+  if (!JS_IsUndefined(last)) {
+    int frame = js2number(last);
+    HMM_Vec2 c = (HMM_Vec2){frame, arrlast(plotdata).y};
+    arrput(plotdata, c);
   }
 }
 
@@ -117,7 +150,7 @@ JSC_SCALL(imgui_shadedplot,
 )
 
 JSC_SCALL(imgui_barplot,
-  fill_plotdata(argv[1]);
+  fill_plotdata(argv[1], JS_UNDEFINED);
   ImPlot::PlotBars(str, &plotdata[0].x, &plotdata[0].y, js_arrlen(argv[1]), js2number(argv[2]), 0, 0, sizeof(HMM_Vec2));
 )
 
@@ -739,21 +772,58 @@ JSC_CCALL(imgui_plotlimits,
 
 static JSValue axis_formatter = JS_UNDEFINED;
 
-void jsformatter(double value, char *buff, int size, void *usr_data)
+static JSValue axis_fmts[10];
+
+void jsformatter(double value, char *buff, int size, JSValue *fmt)
 {
   JSValue v = number2js(value);
-  char *str = js2str(script_call_sym_ret(axis_formatter, 1, &v));
+  char *str = js2str(script_call_sym_ret(*fmt, 1, &v));
   strncpy(buff,str, size);
   JS_FreeCString(js, str);
 }
 
 JSC_CCALL(imgui_axisfmt,
-  if (!JS_IsUndefined(axis_formatter)) {
-    JS_FreeValue(js, axis_formatter);
-    axis_formatter = JS_UNDEFINED;
+  int y = num_to_yaxis(js2number(argv[0]));
+  
+  if (!JS_IsUndefined(axis_fmts[y])) {
+    JS_FreeValue(js, axis_fmts[y]);
+    axis_fmts[y] = JS_UNDEFINED;
   }
-  axis_formatter = JS_DupValue(js,argv[1]);
-  ImPlot::SetupAxisFormat(js2boolean(argv[0]) ? ImAxis_Y1 : ImAxis_X1, jsformatter);
+  
+  axis_fmts[y] = JS_DupValue(js,argv[1]);
+  
+  ImPlot::SetupAxisFormat(y, jsformatter, axis_fmts+y);
+)
+
+#define FSTAT(KEY) js_setpropstr(v, #KEY, number2js(stats.KEY));
+JSC_CCALL(imgui_framestats,
+  JSValue v = JS_NewObject(js);
+  sg_frame_stats stats = sg_query_frame_stats();
+  FSTAT(num_passes)
+  FSTAT(num_apply_viewport)
+  FSTAT(num_apply_scissor_rect)
+  FSTAT(num_apply_pipeline)
+  FSTAT(num_apply_bindings)
+  FSTAT(num_apply_uniforms)
+  FSTAT(num_draw)
+  FSTAT(num_update_buffer)
+  FSTAT(num_append_buffer)
+  FSTAT(num_update_image)
+  FSTAT(size_apply_uniforms)
+  FSTAT(size_update_buffer)
+  FSTAT(size_append_buffer)
+  FSTAT(size_update_image)
+  return v;
+)
+
+JSC_CCALL(imgui_setaxes,
+  int x = num_to_xaxis(js2number(argv[0]));
+  int y = num_to_yaxis(js2number(argv[1]));
+  ImPlot::SetAxes(x,y);
+)
+
+JSC_CCALL(imgui_setupaxis,
+  ImPlot::SetupAxis(num_to_yaxis(js2number(argv[0])));
 )
 
 static const JSCFunctionListEntry js_imgui_funcs[] = {
@@ -761,6 +831,9 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, plot2pixels, 1),
   MIST_FUNC_DEF(imgui, plotpos, 0),
   MIST_FUNC_DEF(imgui, plotlimits, 0),
+  MIST_FUNC_DEF(imgui, setaxes, 2),
+  MIST_FUNC_DEF(imgui, setupaxis, 1),
+  MIST_FUNC_DEF(imgui, framestats, 0),
   MIST_FUNC_DEF(imgui, inplot, 1),
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -782,11 +855,11 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, checkbox, 2),
   MIST_FUNC_DEF(imgui, text, 1),
   MIST_FUNC_DEF(imgui, plot, 1),
-  MIST_FUNC_DEF(imgui, lineplot, 3),
-  MIST_FUNC_DEF(imgui, scatterplot, 3),
-  MIST_FUNC_DEF(imgui, stairplot, 3),
-  MIST_FUNC_DEF(imgui, digitalplot, 3),
-  MIST_FUNC_DEF(imgui, shadedplot, 3),  
+  MIST_FUNC_DEF(imgui, lineplot, 4),
+  MIST_FUNC_DEF(imgui, scatterplot, 4),
+  MIST_FUNC_DEF(imgui, stairplot, 4),
+  MIST_FUNC_DEF(imgui, digitalplot, 4),
+  MIST_FUNC_DEF(imgui, shadedplot, 4),  
   MIST_FUNC_DEF(imgui, barplot, 3),
   MIST_FUNC_DEF(imgui, pieplot, 5),
   MIST_FUNC_DEF(imgui, textplot, 2),
@@ -857,12 +930,17 @@ JSValue gui_init(JSContext *js)
   sgimgui_desc_t desc = {0};
   sgimgui_init(&sgimgui, &desc);
 
+  sgimgui.frame_stats_window.disable_sokol_imgui_stats = true;
+
   ImPlot::CreateContext();
   ImNodes::CreateContext();
 
   JSValue imgui = JS_NewObject(js);
   JS_SetPropertyFunctionList(js, imgui, js_imgui_funcs, countof(js_imgui_funcs));
   started = 1;
+
+  sg_enable_frame_stats();
+
   return imgui;
 }
 

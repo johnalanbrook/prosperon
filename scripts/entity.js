@@ -1,4 +1,3 @@
-
 globalThis.entityreport = {};
 
 var timer_update = function(dt)
@@ -383,6 +382,8 @@ dup(diff) {
     if (typeof this.then === 'function') this.then();
     
     game.tag_clear_guid(this.guid);
+
+    rmactor(this);
     
     for (var i in this) {
       if (this[i] instanceof Object || this[i] instanceof Function) delete this[i];

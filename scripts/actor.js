@@ -41,6 +41,24 @@ globalThis.class_use = function(script, config, base, callback)
   return padawan;
 }
 
+globalThis.rmactor = function(e)
+{
+  if (!actor_spawns[e._file]) return;
+  actor_spawns[e._file].remove(e);
+}
+
+actor.__stats = function()
+{
+  var total = 0;
+  var stats = {};
+  for (var i in actor_spawns) {
+    stats[i] = actor_spawns[i].length;
+    total += stats[i];
+  }
+  stats.total = total;
+  return stats;
+}
+
 actor.hotreload = function()
 {
   profile.cache("hotreload", "check");

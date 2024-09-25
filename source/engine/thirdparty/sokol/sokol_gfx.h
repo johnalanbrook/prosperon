@@ -3508,6 +3508,9 @@ typedef struct sg_frame_stats {
     uint32_t size_append_buffer;
     uint32_t size_update_image;
 
+    uint32_t num_tris;
+    uint32_t num_verts;
+
     sg_frame_stats_gl gl;
     sg_frame_stats_d3d11 d3d11;
     sg_frame_stats_metal metal;
@@ -18615,6 +18618,7 @@ SOKOL_API_IMPL void sg_draw(int base_element, int num_elements, int num_instance
     SOKOL_ASSERT(num_elements >= 0);
     SOKOL_ASSERT(num_instances >= 0);
     _sg_stats_add(num_draw, 1);
+    _sg_stats_add(num_verts, num_elements*num_instances);
     if (!_sg.cur_pass.valid) {
         return;
     }

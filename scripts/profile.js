@@ -349,24 +349,31 @@ profile.data.gpu = {};
 profile.data.physics = {};
 profile.data.script = {};
 profile.data.memory = {};
-var frame = 0;
+profile.data.gfx = {};
+profile.data.actors = {};
+profile.curframe = 0;
+
+function prof_add_stats(obj, stat)
+{
+  for (var i in stat) {
+    obj[i] ??= [];
+    if (obj[i].last() !== stat[i])
+      obj[i][profile.curframe] = stat[i];
+  }
+}
 
 profile.pushdata = function(arr, val)
 {
   if (arr.last() !== val)
-    arr[frame] = val;
+    arr[profile.curframe] = val;
 }
 
 profile.capture_data = function()
 {
-  var mem = os.mem();
-  var memo = profile.data.memory;
-  for (var i in mem) {
-    memo[i] ??= [];
-    if (memo[i].last() !== mem[i])
-      memo[i][frame] = mem[i];
-  }
-  frame++;
+  prof_add_stats(profile.data.memory, os.mem());
+  prof_add_stats(profile.data.gfx, imgui.framestats());
+  prof_add_stats(profile.data.actors, actor.__stats());
+  profile.curframe++;
 }
 
 profile.best_mem = function(bytes)
@@ -385,7 +392,7 @@ profile.print_gc = function()
   var gc = os.check_gc();
   if (!gc) return;
   profile.data.gc ??= [];
-  profile.data.gc[frame] = gc;
+  profile.data.gc[profile.curframe] = gc;
 }
 
 return {profile};
