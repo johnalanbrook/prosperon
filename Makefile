@@ -294,3 +294,7 @@ TAGINC != find . -name "*.[chj]"
 tags: $(TAGINC)
 	@echo Making tags.
 	@etags $(TAGINC)
+
+MYFILES != (ls scripts/*.js* source/engine/*.[ch] source/engine/sound/*.[ch])
+pretty:
+  clang-format -i $(MYFILES)

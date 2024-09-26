@@ -401,9 +401,7 @@ var Event = {
 
 global.mixin("scripts/spline");
 global.mixin("scripts/components");
-
 global.mixin("scripts/actor");
-
 global.mixin("scripts/entity");
 
 function world_start() {

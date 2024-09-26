@@ -728,6 +728,7 @@ var ur_from_file = function(file) {
 }
 
 game.loadurs = function() {
+  return;
   ur = {};
   ur._list = [];
   /* FIND ALL URS IN A PROJECT */

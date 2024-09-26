@@ -1,6 +1,6 @@
 /*
   TYPES OF PROFILING
-  
+
   cpu gathering - gets stack frames randomly for a few seconds
 
   frames - user defined to see how long engine takes
@@ -10,22 +10,21 @@
   memory - can see how much memory is allocated and from where
 */
 
-var t_units = ["ns", "us", "ms", "s", "ks", "Ms"];
+var t_units = [ "ns", "us", "ms", "s", "ks", "Ms" ];
 
-function calc_cpu(fn, times, diff=0)
-{
-  var series = []; 
-  
+function calc_cpu (fn, times, diff = 0) {
+  var series = [];
+
   for (var i = 0; i < times; i++) {
     var st = profile.now();
-    fn(i);
-    series.push(profile.now()-st-diff);
+    fn (i);
+    series.push(profile.now() - st - diff);
   }
-  
+
   return series;
 }
 
-function empty_fn() {}
+function empty_fn () {}
 
 profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
   var retgather = gathering_cpu;
@@ -51,7 +50,7 @@ var callgraph = {};
 profile.rawstacks = {};
 profile.cpu_cg = callgraph;
 
-function add_callgraph(fn, line, time) {
+function add_callgraph (fn, line, time) {
   var cc = callgraph[line];
   if (!cc) {
     var cc = {};
@@ -151,7 +150,7 @@ profile.cpu_frame = function()
 }
 
 var filecache = {};
-function get_line(file, line) {
+function get_line (file, line) {
   var text = filecache[file];
   if (!text) {
     var f = io.slurp(file);
@@ -162,22 +161,19 @@ function get_line(file, line) {
     filecache[file] = io.slurp(file).split('\n');
     text = filecache[file];
   }
-  
+
   if (typeof text === 'string') return text;
-  text = text[Number(line)-1];
+  text = text[Number (line) - 1];
   if (!text) return "NULL";
   return text.trim();
 }
 
-profile.stop_cpu_instr = function()
-{
-  return;
-}
+profile.stop_cpu_instr = function () { return; }
 
 profile.best_t = function (t) {
   var qq = 0;
 
-  while (t > 1000 && qq < t_units.length-1) {
+  while (t > 1000 && qq < t_units.length - 1) {
     t /= 1000;
     qq++;
   }
@@ -185,11 +181,13 @@ profile.best_t = function (t) {
   return `${t.toPrecision(4)} ${t_units[qq]}`;
 };
 
-profile.report = function (start, msg = "[undefined report]") { console.info(`${msg} in ${profile.best_t(profile.now() - start)}`); };
-
+profile.report = function (start, msg = "[undefined report]") {
+  console.info(`${msg} in ${profile.best_t(profile.now() - start)}`);
+};
 
 /*
-  Frame averages are an instrumented profiling technique. Place frame() calls in your code to get a call graph for things you are interested in.
+  Frame averages are an instrumented profiling technique. Place frame() calls
+  in your code to get a call graph for things you are interested in.
 */
 
 var frame_avg = false;
@@ -314,26 +312,28 @@ function addreport(group, line, start) {
   return t;
 };
 
-function printreport(cache, name) {
-  var report = `==${name}==` + "\n";
+function printreport (cache, name) {
+  var report = `==${name}==` +
+               "\n";
 
   var reports = [];
   for (var i in cache) {
-    var time = cache[i].reduce((a,b)=>a+b);
+    var time = cache[i].reduce((a, b) => a + b);
     reports.push({
-      time:time,
-      name:i,
-      hits:cache[i].length,
-      avg:time/cache[i].length
+      time : time,
+      name : i,
+      hits : cache[i].length,
+      avg : time / cache[i].length
     });
   }
-  reports = reports.sort((a,b) => {
-    if (a.avg<b.avg) return 1;
+  reports = reports.sort((a, b) => {
+    if (a.avg < b.avg) return 1;
     return -1;
   });
-  
+
   for (var rep of reports)
-    report += `${rep.name}    ${profile.best_t(rep.avg)} (${rep.hits} hits) (total ${profile.best_t(rep.time)})\n`;
+    report += `${rep.name}    ${profile.best_t(rep.avg)} (${
+      rep.hits} hits) (total ${profile.best_t(rep.time)})\n`;
 
   return report;
 };
@@ -341,12 +341,10 @@ function printreport(cache, name) {
 profile.data = {};
 profile.curframe = 0;
 
-function prof_add_stats(obj, stat)
-{
+function prof_add_stats (obj, stat) {
   for (var i in stat) {
     obj[i] ??= [];
-    if (obj[i].last() !== stat[i])
-      obj[i][profile.curframe] = stat[i];
+    if (obj[i].last() !== stat[i]) obj[i][profile.curframe] = stat[i];
   }
 }
 
