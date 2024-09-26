@@ -5,17 +5,16 @@ var panel;
 var selected = undefined;
 
 mum.inputs = {};
-mum.inputs.lm = function()
-{
+mum.inputs.lm = function () {
   if (!selected) return;
   if (!selected.action) return;
   selected.action();
-}
+};
 
 mum.base = {
   pos: null, // If set, puts the cursor to this position before drawing the element
-  offset:[0,0], // Move x,y to the right and down before drawing
-  padding:[0,0], // Pad inwards after drawing, to prepare for the next element  
+  offset: [0, 0], // Move x,y to the right and down before drawing
+  padding: [0, 0], // Pad inwards after drawing, to prepare for the next element
   font: "fonts/c64.ttf",
   selectable: false,
   selected: false,
@@ -23,33 +22,33 @@ mum.base = {
   scale: 1,
   angle: 0,
   inset: null,
-  anchor: [0,1], // where to draw the item from, relative to the cursor. [0,1] is from the top left corner. [1,0] is from the bottom right
+  anchor: [0, 1], // where to draw the item from, relative to the cursor. [0,1] is from the top left corner. [1,0] is from the bottom right
   background_image: null,
   slice: null, // pass to slice an image as a 9 slice. see render.slice9 for its format
   hover: {
     color: Color.red,
   },
   text_shadow: {
-    pos: [0,0],
+    pos: [0, 0],
     color: Color.white,
   },
   border: 0, // Draw a border around the element. For text, an outline.
   overflow: "wrap", // how to deal with overflow from parent element
   wrap: -1,
-  text_align: "left", /* left, center, right */
+  text_align: "left" /* left, center, right */,
   shader: null, // Use this shader, instead of the engine provided one
   color: Color.white,
-  opacity:1,
-  width:0,
-  height:0,
+  opacity: 1,
+  width: 0,
+  height: 0,
   max_width: Infinity,
   max_height: Infinity,
   image_repeat: false,
-  image_repeat_offset: [0,0],
-  debug: false, /* set to true to draw debug boxes */
+  image_repeat_offset: [0, 0],
+  debug: false /* set to true to draw debug boxes */,
   hide: false,
   tooltip: null,
-}
+};
 
 // data is passed into each function, and various stats are generated
 // drawpos: the point to start the drawing from
@@ -57,22 +56,23 @@ mum.base = {
 // bound: a boundingbox around the drawn UI element
 // extent: a boundingbox around the total extents of the element (ie before padding)
 
-function show_debug() { return prosperon.debug && mum.debug; }
+function show_debug() {
+  return prosperon.debug && mum.debug;
+}
 
 mum.debug = false;
 
-var post = function() {};
+var post = function () {};
 var posts = [];
 
 mum.style = mum.base;
 
-var cursor = [0,0];
+var cursor = [0, 0];
 
-var pre = function(data)
-{
+var pre = function (data) {
   if (data.hide) return true;
   data.__proto__ = mum.style;
-  
+
   if (data.pos) cursor = data.pos.slice();
   data.drawpos = cursor.slice().add(data.offset);
 
@@ -81,87 +81,77 @@ var pre = function(data)
     data.color[3] = data.opacity;
   }
 
-  data.wh = [data.width,data.height];
-}
+  data.wh = [data.width, data.height];
+};
 
-var anchor_calc = function(data)
-{
-  var aa = [0,1].sub(data.anchor);
-  data.drawpos = data.drawpos.add([data.width,data.height]).scale(aa);
-}
+var anchor_calc = function (data) {
+  var aa = [0, 1].sub(data.anchor);
+  data.drawpos = data.drawpos.add([data.width, data.height]).scale(aa);
+};
 
-var end = function(data)
-{
+var end = function (data) {
   cursor = cursor.add(data.padding);
   post(data);
-}
+};
 
-mum.list = function(fn, data = {})
-{
+mum.list = function (fn, data = {}) {
   if (pre(data)) return;
-  var aa = [0,1].sub(data.anchor);
-  cursor = cursor.add([data.width,data.height].scale(aa)).add(data.offset).add(data.padding);
+  var aa = [0, 1].sub(data.anchor);
+  cursor = cursor.add([data.width, data.height].scale(aa)).add(data.offset).add(data.padding);
 
   posts.push(post);
   post = mum.list.post.bind(data);
-  
+
   if (show_debug())
     render.boundingbox({
-      t:cursor.y,
-      b:cursor.y-data.height,
-      l:cursor.x,
-      r:cursor.x+data.width
+      t: cursor.y,
+      b: cursor.y - data.height,
+      l: cursor.x,
+      r: cursor.x + data.width,
     });
-    
-  //if (data.background_image) mum.image(null, Object.create(data)) 
+
+  //if (data.background_image) mum.image(null, Object.create(data))
   if (data.background_image) {
     var imgpos = data.pos.slice();
-    imgpos.y -= data.height/2;
-    imgpos.x -= data.width/2;
-    var imgscale = [data.width,data.height];
-    if (data.slice)
-      render.slice9(game.texture(data.background_image), imgpos, data.slice, imgscale);
-    else
-      render.image(game.texture(data.background_image), imgpos, [data.width,data.height]);
+    imgpos.y -= data.height / 2;
+    imgpos.x -= data.width / 2;
+    var imgscale = [data.width, data.height];
+    if (data.slice) render.slice9(game.texture(data.background_image), imgpos, data.slice, imgscale);
+    else render.image(game.texture(data.background_image), imgpos, [data.width, data.height]);
   }
-    
+
   fn();
-  
+
   data.bb.l -= data.padding.x;
   data.bb.r += data.padding.x;
   data.bb.t += data.padding.y;
   data.bb.b -= data.padding.y;
 
-  if (show_debug())
-    render.boundingbox(data.bb);
+  if (show_debug()) render.boundingbox(data.bb);
 
   post = posts.pop();
   end(data);
-}
+};
 
-mum.list.post = function(e)
-{
-  cursor.y -= (e.bb.t - e.bb.b);
+mum.list.post = function (e) {
+  cursor.y -= e.bb.t - e.bb.b;
   cursor.y -= e.padding.y;
-  
-  if (this.bb)
-    this.bb = bbox.expand(this.bb,e.bb)
-  else
-    this.bb = e.bb;
-}
 
-mum.label = function(str, data = {})
-{
+  if (this.bb) this.bb = bbox.expand(this.bb, e.bb);
+  else this.bb = e.bb;
+};
+
+mum.label = function (str, data = {}) {
   if (pre(data)) return;
 
   render.set_font(data.font, data.font_size);
- 
+
   data.bb = render.text_bb(str, data.scale, -1, cursor);
   data.wh = bbox.towh(data.bb);
-  
-  var aa = [0,1].sub(data.anchor);  
-  
-  data.drawpos.y -= (data.bb.t-cursor.y);
+
+  var aa = [0, 1].sub(data.anchor);
+
+  data.drawpos.y -= data.bb.t - cursor.y;
   data.drawpos = data.drawpos.add(data.wh.scale(aa)).add(data.offset);
 
   data.bb = render.text_bb(str, data.scale, data.wrap, data.drawpos);
@@ -175,87 +165,72 @@ mum.label = function(str, data = {})
   }
 
   data.bb = render.text(str, data.drawpos, data.scale, data.color, data.wrap);
-    
-  if (show_debug())
-    render.boundingbox(data.bb);
-  
-  end(data);
-}
 
-mum.image = function(path, data = {})
-{
+  if (show_debug()) render.boundingbox(data.bb);
+
+  end(data);
+};
+
+mum.image = function (path, data = {}) {
   if (pre(data)) return;
   path ??= data.background_image;
   var tex = path;
-  if (typeof path === 'string')
-    tex = game.texture(path);
+  if (typeof path === "string") tex = game.texture(path);
 
   if (!data.height)
-    if (data.width)
-      data.height = tex.height * (data.width/tex.width);
-    else
-      data.height = tex.height;
+    if (data.width) data.height = tex.height * (data.width / tex.width);
+    else data.height = tex.height;
 
   if (!data.width)
-    if (data.height)
-      data.width = tex.width * (data.height/tex.height);
-    else
-      data.height = tex.height;
+    if (data.height) data.width = tex.width * (data.height / tex.height);
+    else data.height = tex.height;
 
   if (!data.width) data.width = tex.width;
   if (!data.height) data.height = tex.height;
 
-  var aa = [0,1].sub(data.anchor);
-  data.drawpos = data.drawpos.add(aa.scale([data.width,data.height]));
-  
-  if (data.slice)
-    render.slice9(tex, data.drawpos, data.slice, [data.width,data.height]);
-  else
-    data.bb = render.image(tex, data.drawpos, [data.width, data.height]);
-  
-  end(data);
-}
+  var aa = [0, 1].sub(data.anchor);
+  data.drawpos = data.drawpos.add(aa.scale([data.width, data.height]));
 
-mum.rectangle = function(data = {})
-{
+  if (data.slice) render.slice9(tex, data.drawpos, data.slice, [data.width, data.height]);
+  else data.bb = render.image(tex, data.drawpos, [data.width, data.height]);
+
+  end(data);
+};
+
+mum.rectangle = function (data = {}) {
   if (pre(data)) return;
-  var aa = [0,0].sub(data.anchor);
-  data.drawpos = data.drawpos.add(aa.scale([data.width,data.height]));
- 
-  render.rectangle(data.drawpos, data.drawpos.add([data.width,data.height]), data.color);
+  var aa = [0, 0].sub(data.anchor);
+  data.drawpos = data.drawpos.add(aa.scale([data.width, data.height]));
+
+  render.rectangle(data.drawpos, data.drawpos.add([data.width, data.height]), data.color);
 
   end(data);
-}
+};
 
 var btnbb;
-var btnpost = function()
-{
+var btnpost = function () {
   btnbb = data.bb;
-}
+};
 
-mum.button = function(str, data = {padding:[4,4], color:Color.black})
-{
+mum.button = function (str, data = { padding: [4, 4], color: Color.black }) {
   if (pre(data)) return;
   posts.push(post);
   post = btnpost;
-  if (typeof str === 'string')
-    render.text(str, cursor.add(data.padding), data.scale, data.color);
-  else
-    str();
+  if (typeof str === "string") render.text(str, cursor.add(data.padding), data.scale, data.color);
+  else str();
 
   if (data.action && data.hover && bbox.pointin(btnbb, input.mouse.screenpos())) {
     data.hover.__proto__ = data;
     data = data.hover;
   }
-  render.rectangle([btnbb.l-data.padding.x, btnbb.b-data.padding.y], [btnbb.r+data.padding.y, btnbb.t+data.padding.y], data.color);
+  render.rectangle([btnbb.l - data.padding.x, btnbb.b - data.padding.y], [btnbb.r + data.padding.y, btnbb.t + data.padding.y], data.color);
   data.bb = btnbb;
 
   post = posts.pop();
   end(data);
-}
+};
 
-mum.window = function(fn, data = {})
-{
+mum.window = function (fn, data = {}) {
   if (pre(data)) return;
 
   render.rectangle(cursor, cursor.add(data.size), data.color);
@@ -263,28 +238,34 @@ mum.window = function(fn, data = {})
   cursor = cursor.add(data.padding);
   fn();
   end(data);
-}
+};
 
-mum.ex_hud = function()
-{
-  mum.label("TOP LEFT", {pos:[0,game.size.y], anchor:[0,1]});
-  mum.label("BOTTOM LEFT", {pos:[0,0], anchor:[0,0]});
-  mum.label("TOP RIGHT", {pos:game.size, anchor:[1,1]});
-  mum.label("BOTTOM RIGHT", {pos:[game.size.x, 0], anchor:[1,0]});
-}
+mum.ex_hud = function () {
+  mum.label("TOP LEFT", { pos: [0, game.size.y], anchor: [0, 1] });
+  mum.label("BOTTOM LEFT", { pos: [0, 0], anchor: [0, 0] });
+  mum.label("TOP RIGHT", { pos: game.size, anchor: [1, 1] });
+  mum.label("BOTTOM RIGHT", { pos: [game.size.x, 0], anchor: [1, 0] });
+};
 
 mum.drawinput = undefined;
 var ptext = "";
 var panpan = {
   draw() {
-    mum.rectangle({pos:[0,0], anchor:[0,0], height:20, width: window.size.x, padding:[10,16], color:Color.black});
+    mum.rectangle({
+      pos: [0, 0],
+      anchor: [0, 0],
+      height: 20,
+      width: window.size.x,
+      padding: [10, 16],
+      color: Color.black,
+    });
     mum.label("input level: ");
-    mum.label(ptext, {offset:[50,0], color:Color.red});
+    mum.label(ptext, { offset: [50, 0], color: Color.red });
   },
   inputs: {
     block: true,
     char(c) {
-      ptext += c
+      ptext += c;
     },
     enter() {
       delete mum.drawinput;
@@ -295,18 +276,18 @@ var panpan = {
       player[0].uncontrol(panpan);
     },
     backspace() {
-      ptext = ptext.slice(0,ptext.length-1);
-    }
+      ptext = ptext.slice(0, ptext.length - 1);
+    },
   },
-}
+};
 
 mum.textinput = function (fn, str = "") {
   mum.drawinput = panpan.draw;
   ptext = str;
   player[0].control(panpan);
-  panpan.inputs.enter = function() {
+  panpan.inputs.enter = function () {
     fn(ptext);
     delete mum.drawinput;
     player[0].uncontrol(panpan);
-  }
-}
+  };
+};

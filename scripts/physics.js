@@ -9,27 +9,25 @@ var HIT = {
 };
 */
 
-physics.pos_query = function(pos, start = world, give = 10) {
+physics.pos_query = function (pos, start = world, give = 10) {
   var ret;
   ret = physics.point_query_nearest(pos, 0);
 
-  if (ret)
-    return ret.entity;
+  if (ret) return ret.entity;
 
-  return game.all_objects(function(o) {
+  return game.all_objects(function (o) {
     var dist = Vector.length(o.pos.sub(pos));
     if (dist <= give) return o;
   });
-}
+};
 
-physics.box_point_query = function(box,points) {
+physics.box_point_query = function (box, points) {
   if (!box || !points) return [];
-  var bbox = bbox.fromcwh(box.pos,box.wh);
+  var bbox = bbox.fromcwh(box.pos, box.wh);
   var inside = [];
-  for (var i in points)
-    if (bbox.pointin(bbox,points[i])) inside.push[i];
+  for (var i in points) if (bbox.pointin(bbox, points[i])) inside.push[i];
   return inside;
-}
+};
 
 Object.assign(physics, {
   dynamic: 0,
@@ -37,8 +35,8 @@ Object.assign(physics, {
   static: 2,
 
   com(pos) {
-    if (!Array.isArray(pos)) return [0,0];
-    return pos.reduce((a,i) => a.add(i)).map(g => g/pos.length);
+    if (!Array.isArray(pos)) return [0, 0];
+    return pos.reduce((a, i) => a.add(i)).map(g => g / pos.length);
   },
 });
 
@@ -53,8 +51,8 @@ physics.gravity.strength = 500;
 physics.damp = physics.make_damp();
 physics.damp.mask = ~1;
 
-physics.delta = 1/240;
+physics.delta = 1 / 240;
 
 return {
-  physics
-}
+  physics,
+};

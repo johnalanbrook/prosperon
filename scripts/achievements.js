@@ -16,5 +16,5 @@ achievement.doc = {
   hidden: "True if the player shouldn't see this achievement.",
   icon: "Path to an unlocked icon.",
   licon: "Path to icon for not achieved.",
-  max: "Value needed to reach to unlock the achievement."
+  max: "Value needed to reach to unlock the achievement.",
 };

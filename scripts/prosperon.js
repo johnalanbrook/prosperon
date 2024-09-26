@@ -2,14 +2,14 @@ globalThis.gamestate = {};
 
 global.check_registers = function (obj) {
   for (var reg in Register.registries) {
-    if (typeof obj[reg] === 'function') {
+    if (typeof obj[reg] === "function") {
       var fn = obj[reg].bind(obj);
       fn.layer = obj[reg].layer;
       var name = obj.ur ? obj.ur.name : obj.toString();
       obj.timers.push(Register.registries[reg].register(fn, name));
     }
   }
-      
+
   for (var k in obj) {
     if (!k.startsWith("on_")) continue;
     var signal = k.fromfirst("on_");
@@ -70,7 +70,7 @@ game.engine_start = function (s) {
 
       prosperon.camera = prosperon.make_camera();
       var camera = prosperon.camera;
-      camera.transform.pos = [0,0,-100];
+      camera.transform.pos = [0, 0, -100];
       camera.mode = "keep";
       camera.break = "fit";
       camera.size = game.size;
@@ -87,11 +87,11 @@ game.engine_start = function (s) {
       var appcam = prosperon.appcam;
       appcam.near = 0;
       appcam.size = window.size;
-      appcam.transform.pos = [window.size.x,window.size.y,-100];
+      appcam.transform.pos = [window.size.x, window.size.y, -100];
       prosperon.screencolor = render.screencolor();
-      
+
       globalThis.imgui = render.imgui_init();
-      
+
       s();
 
       shape.quad = {
@@ -109,13 +109,13 @@ game.engine_start = function (s) {
         count: 3,
         index: os.make_buffer([0, 2, 1], 1),
       };
-      
+
       shape.centered_quad = {
         pos: os.make_buffer([-0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5], 0),
         verts: 4,
-        uv: os.make_buffer([0,1,1,1,0,0,1,0],2),
-        index: os.make_buffer([0,1,2,2,1,3],1),
-        count: 6
+        uv: os.make_buffer([0, 1, 1, 1, 0, 0, 1, 0], 2),
+        index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
+        count: 6,
       };
 
       render.init();
@@ -128,12 +128,11 @@ game.engine_start = function (s) {
 
 game.startengine = 0;
 
-prosperon.release_mode = function()
-{
+prosperon.release_mode = function () {
   prosperon.debug = false;
   mum.debug = false;
   debug.kill();
-}
+};
 prosperon.debug = true;
 
 game.timescale = 1;
@@ -142,8 +141,7 @@ var eachobj = function (obj, fn) {
   var val = fn(obj);
   if (val) return val;
   for (var o in obj.objects) {
-    if (obj.objects[o] === obj)
-      console.error(`Object ${obj.toString()} is referenced by itself.`);
+    if (obj.objects[o] === obj) console.error(`Object ${obj.toString()} is referenced by itself.`);
     val = eachobj(obj.objects[o], fn);
     if (val) return val;
   }
@@ -179,8 +177,7 @@ game.doc.pause = "Pause game simulation.";
 game.doc.play = "Resume or start game simulation.";
 game.doc.camera = "Current camera.";
 
-game.tex_hotreload = function()
-{
+game.tex_hotreload = function () {
   for (var path in game.texture.cache) {
     if (io.mod(path) > game.texture.time_cache[path]) {
       var tex = game.texture.cache[path];
@@ -188,17 +185,17 @@ game.tex_hotreload = function()
       os.texture_swap(path, game.texture.cache[path]);
       for (var sprite of Object.values(allsprites)) {
         if (sprite.texture == tex) {
-	        sprite.tex_sync();
-	      }
+          sprite.tex_sync();
+        }
       }
     }
   }
-}
+};
 
 game.texture = function (path) {
   if (!path) return game.texture("icons/no_text.gif");
   path = Resources.find_image(path);
-  
+
   if (!io.exists(path)) {
     console.error(`Missing texture: ${path}`);
     game.texture.cache[path] = game.texture("icons/no_tex.gif");
@@ -229,8 +226,7 @@ prosperon.semver.valid = function (v, range) {
 
   if (range[0] === "~") {
     range[0] = range[0].slice(1);
-    for (var i = 0; i < 2; i++)
-      if (parseInt(v[i]) < parseInt(range[i])) return false;
+    for (var i = 0; i < 2; i++) if (parseInt(v[i]) < parseInt(range[i])) return false;
     return true;
   }
 
@@ -251,8 +247,7 @@ prosperon.semver.cmp = function (v1, v2) {
   return 0;
 };
 
-prosperon.semver.cmp.doc =
-  "Compare two semantic version numbers, given like X.X.X.";
+prosperon.semver.cmp.doc = "Compare two semantic version numbers, given like X.X.X.";
 prosperon.semver.valid.doc = `Test if semantic version v is valid, given a range.
 Range is given by a semantic versioning number, prefixed with nothing, a ~, or a ^.
 ~ means that MAJOR and MINOR must match exactly, but any PATCH greater or equal is valid.
@@ -277,7 +272,9 @@ prosperon.quit = function () {
 
 window.size = [640, 480];
 window.mode = "keep";
-window.toggle_fullscreen = function() { window.fullscreen = !window.fullscreen; }
+window.toggle_fullscreen = function () {
+  window.fullscreen = !window.fullscreen;
+};
 
 window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
 
@@ -285,14 +282,13 @@ window.doc = {};
 window.doc.dimensions = "Window width and height packaged in an array [width,height]";
 window.doc.title = "Name in the title bar of the window.";
 window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
-window.__proto__.toJSON = function()
-{
+window.__proto__.toJSON = function () {
   return {
     size: this.size,
     fullscreen: this.fullscreen,
-    title: this.title
-  }; 
-}
+    title: this.title,
+  };
+};
 
 global.mixin("scripts/input");
 global.mixin("scripts/std");
@@ -302,7 +298,7 @@ global.mixin("scripts/tween");
 global.mixin("scripts/ai");
 global.mixin("scripts/particle");
 global.mixin("scripts/physics");
-global.mixin("scripts/geometry")
+global.mixin("scripts/geometry");
 
 /*
 Factory for creating registries. Register one with 'X.register',
@@ -317,44 +313,43 @@ var Register = {
 
     n.register = function (fn, oname) {
       if (!(fn instanceof Function)) return;
-      
+
       var guid = prosperon.guid();
 
-      var dofn = function(...args) {
-        profile.cache(name,oname);
+      var dofn = function (...args) {
+        profile.cache(name, oname);
         var st = profile.now();
         fn(...args);
-      	profile.endcache();
-      }
+        profile.endcache();
+      };
 
       fns.push(dofn);
       dofn.layer = fn.layer;
       dofn.layer ??= 0;
 
-      fns.sort((a,b) => a.layer > b.layer);
-      
+      fns.sort((a, b) => a.layer > b.layer);
+
       return function () {
         fns.remove(dofn);
       };
     };
 
     if (!flush) {
-      prosperon[name] = function(...args) {
+      prosperon[name] = function (...args) {
         fns.forEach(fn => fn(...args));
-      }
-    }
-    else
-      prosperon[name] = function(...args) {
+      };
+    } else
+      prosperon[name] = function (...args) {
         var layer = undefined;
         for (var fn of fns) {
-	  if (layer !== fn.layer) {
-	    flush();
-	    layer = fn.layer;
-	  }
-          fn();	  
+          if (layer !== fn.layer) {
+            flush();
+            layer = fn.layer;
+          }
+          fn();
         }
-      }
-    
+      };
+
     prosperon[name].fns = fns;
     n.clear = function () {
       fns = [];
@@ -384,11 +379,11 @@ var Event = {
   },
 
   unobserve(name, obj) {
-    this.events[name] = this.events[name].filter((x) => x[0] !== obj);
+    this.events[name] = this.events[name].filter(x => x[0] !== obj);
   },
 
   rm_obj(obj) {
-    Object.keys(this.events).forEach((name) => Event.unobserve(name, obj));
+    Object.keys(this.events).forEach(name => Event.unobserve(name, obj));
   },
 
   notify(name, ...args) {
@@ -435,5 +430,5 @@ return {
   sim,
   frame_t,
   physlag,
-  Event
-}
+  Event,
+};

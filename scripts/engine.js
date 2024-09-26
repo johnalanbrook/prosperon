@@ -4,8 +4,10 @@ os.mem_limit.doc = "Set the memory limit of the runtime in bytes.";
 os.gc_threshold.doc = "Set the threshold before a GC pass is triggered in bytes. This is set to malloc_size + malloc_size>>1 after a GC pass.";
 os.max_stacksize.doc = "Set the max stack size in bytes.";
 
-Object.defineProperty(String.prototype, 'rm', {
-  value: function(index, endidx = index+1) { return this.slice(0,index) + this.slice(endidx); }
+Object.defineProperty(String.prototype, "rm", {
+  value: function (index, endidx = index + 1) {
+    return this.slice(0, index) + this.slice(endidx);
+  },
 });
 
 Object.defineProperty(String.prototype, "tolast", {
@@ -33,23 +35,22 @@ Object.defineProperty(String.prototype, "folder", {
 
 globalThis.Resources = {};
 
-Resources.rm_fn = function rm_fn(fn, text)
-{
+Resources.rm_fn = function rm_fn(fn, text) {
   var reg = new RegExp(fn.source + "\\s*\\(");
   var match;
-  while (match = text.match(reg)) {
-    var last = match.index+match[0].length;
+  while ((match = text.match(reg))) {
+    var last = match.index + match[0].length;
     var par = 1;
     while (par !== 0) {
-      if (text[last] === '(') par++;
-      if (text[last] === ')') par--;
+      if (text[last] === "(") par++;
+      if (text[last] === ")") par--;
       last++;
     }
     text = text.rm(match.index, last);
   }
 
   return text;
-}
+};
 Resources.rm_fn.doc = "Remove calls to a given function from a given text script.";
 
 Resources.replpath = function replpath(str, path) {
@@ -76,17 +77,15 @@ Resources.replstrs = function replstrs(path) {
 
   var stem = path.dir();
 
-  if (!console.enabled)
-    script = Resources.rm_fn(/console\.(spam|info|warn|error)/, script);
-  
-  if (!profile.enabled)
-    script = Resources.rm_fn(/profile\.(cache|frame|endcache|endframe)/, script);
-  
+  if (!console.enabled) script = Resources.rm_fn(/console\.(spam|info|warn|error)/, script);
+
+  if (!profile.enabled) script = Resources.rm_fn(/profile\.(cache|frame|endcache|endframe)/, script);
+
   if (!debug.enabled) {
     script = Resources.rm_fn(/assert/, script);
     script = Resources.rm_fn(/debug\.(build|fn_break)/, script);
   }
-    
+
   script = script.replace(regexp, function (str) {
     var newstr = Resources.replpath(str.trimchr('"'), path);
     return `"${newstr}"`;
@@ -95,23 +94,21 @@ Resources.replstrs = function replstrs(path) {
   return script;
 };
 
-Resources.is_sound = function(path) {
+Resources.is_sound = function (path) {
   var ext = path.ext();
   return Resources.sounds.any(x => x === ext);
-}
+};
 
-Resources.is_animation = function(path)
-{
-  if (path.ext() === 'gif' && Resources.gif.frames(path) > 1) return true;
-  if (path.ext() === 'ase') return true;
-  
+Resources.is_animation = function (path) {
+  if (path.ext() === "gif" && Resources.gif.frames(path) > 1) return true;
+  if (path.ext() === "ase") return true;
+
   return false;
-}
+};
 
-Resources.is_path = function(str)
-{
+Resources.is_path = function (str) {
   return !/[\\\/:*?"<>|]/.test(str);
-}
+};
 
 globalThis.json = {};
 json.encode = function (value, replacer, space = 1) {
@@ -154,16 +151,14 @@ function find_ext(file, ext, root = "") {
   if (ext.some(x => x === file_ext)) return file;
   for (var e of ext) {
     var nf = `${file}.${e}`;
-    if (io.exists(nf))
-      return nf;
+    if (io.exists(nf)) return nf;
   }
 
   var all_files = io.glob(`**/${file}.*`);
   var find = undefined;
   for (var e of ext) {
     var finds = all_files.filter(x => x.ext() === e);
-    if (finds.length > 1)
-      console.warn(`Found conflicting files when searching for '${file}': ${json.encode(finds)}. Returning the first one.`);
+    if (finds.length > 1) console.warn(`Found conflicting files when searching for '${file}': ${json.encode(finds)}. Returning the first one.`);
     if (finds.length > 0) {
       find = finds[0];
       break;
@@ -176,18 +171,17 @@ function find_ext(file, ext, root = "") {
 var hashhit = 0;
 var hashmiss = 0;
 
-Object.defineProperty(Function.prototype, 'hashify', {
-  value: function() {
+Object.defineProperty(Function.prototype, "hashify", {
+  value: function () {
     var hash = new Map();
     var fn = this;
     function ret() {
-      if (!hash.has(arguments[0]))
-        hash.set(arguments[0], fn(...arguments));
+      if (!hash.has(arguments[0])) hash.set(arguments[0], fn(...arguments));
 
       return hash.get(arguments[0]);
     }
     return ret;
-  }
+  },
 });
 
 Resources.find_image = function (file, root = "") {
@@ -258,7 +252,7 @@ console.stackstr = function (skip = 0) {
 };
 
 console.stack = function (skip = 0) {
-  var stack = console.stackstr(skip+1);
+  var stack = console.stackstr(skip + 1);
   console.log(stack);
   return stack;
 };
@@ -301,9 +295,9 @@ globalThis.use = function use(file) {
   profile.endcache();
 
   return ret;
-}
+};
 
-function stripped_use (file, script) {
+function stripped_use(file, script) {
   file = Resources.find_script(file);
 
   if (use_cache[file]) {
@@ -316,12 +310,11 @@ function stripped_use (file, script) {
   var fn = os.eval(file, script);
   var ret = fn();
   profile.endcache();
-  
+
   return ret;
 }
 
-function bare_use(file)
-{
+function bare_use(file) {
   var script = io.slurp(file);
   if (!script) return;
   script = `(function() { var self = this; ${script}; })`;
@@ -337,17 +330,15 @@ debug.enabled = true;
 bare_use("scripts/base.js");
 bare_use("scripts/profile.js");
 
-prosperon.release = function()
-{
+prosperon.release = function () {
   profile.enabled = false;
   console.enabled = false;
   debug.enabled = false;
-}
+};
 
 bare_use("preconfig.js");
 
-if (!profile.enabled)
-  use = stripped_use;
+if (!profile.enabled) use = stripped_use;
 
 Object.assign(globalThis, use("scripts/prosperon.js"));
 
@@ -359,4 +350,3 @@ app.interval(_ => {
   repl.hotreload();
   profile.endframe();
 }, 1);
-

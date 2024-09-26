@@ -27,19 +27,19 @@ ifeq ($(CROSS)$(CC), emcc)
 endif
 
 ifdef NEDITOR
-  CPPFLAGS += -DNO_EDITOR
+	CPPFLAGS += -DNO_EDITOR
 endif
 
 ifdef NFLAC
-  CPPFLAGS += -DNFLAC
+	CPPFLAGS += -DNFLAC
 endif
 
 ifdef NMP3
-  CPPFLAGS += -DNMP3
+	CPPFLAGS += -DNMP3
 endif
 
 ifdef NSVG
-  CPPFLAGS += -DNSVG
+	CPPFLAGS += -DNSVG
 endif
 
 ifdef NQOA
@@ -297,4 +297,4 @@ tags: $(TAGINC)
 
 MYFILES != (ls scripts/*.js* source/engine/*.[ch] source/engine/sound/*.[ch])
 pretty:
-  clang-format -i $(MYFILES)
+	clang-format -i $(MYFILES)
