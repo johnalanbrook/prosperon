@@ -61,8 +61,8 @@ function add_callgraph(fn, line, time, alone) {
     cc.line = line;
     cc.alone = {
       time: 0,
-      hits: 0
-    }
+      hits: 0,
+    };
   }
   cc.time += time;
   cc.hits++;
@@ -119,7 +119,7 @@ profile.start_cpu_gather = function (gathertime = 5) {
       profile.gather_stop();
       profile.cpu_start = undefined;
       var e = Object.values(callgraph);
-      e = e.filter( x=> x.line);
+      e = e.filter(x => x.line);
 
       for (var x of e) {
         var ffs = x.line.split(":");
@@ -129,11 +129,11 @@ profile.start_cpu_gather = function (gathertime = 5) {
         x.timeperstr = profile.best_t(x.timeper);
         x.pct = (profile.secs(x.time) / gathertime) * 100;
         x.alone.timestr = profile.best_t(x.alone.time);
-        x.alone.timeper = x.alone.time/x.alone.hits;
+        x.alone.timeper = x.alone.time / x.alone.hits;
         x.alone.timeperstr = profile.best_t(x.alone.timeper);
-        x.alone.pct = (profile.secs(x.alone.time)/gathertime*100);
+        x.alone.pct = (profile.secs(x.alone.time) / gathertime) * 100;
         x.fncall = get_line(ffs[0], ffs[1]);
-        x.log = x.line + " " + x.fn + " " + x.fncall;        
+        x.log = x.line + " " + x.fn + " " + x.fncall;
         x.incl = {
           time: x.time,
           timestr: x.timestr,
@@ -289,10 +289,12 @@ profile.cache = function profile_cache(group, title) {
 };
 
 profile.endcache = function profile_endcache(tag = "") {
+  return;
   addreport(cachegroup, cachetitle + tag, cachest);
 };
 
 function addreport(group, line, start) {
+  return;
   if (typeof group !== "string") group = "UNGROUPED";
   report_cache[group] ??= {};
   var cache = report_cache[group];
@@ -331,14 +333,13 @@ profile.curframe = 0;
 profile.snapshot = {};
 var fps = [];
 
-profile.report_frame = function(t)
-{
+profile.report_frame = function (t) {
   fps.push(t);
   if (fps.length > 15) {
     profile.snapshot.fps = Math.mean(fps);
     fps = [];
   }
-}
+};
 
 function prof_add_stats(obj, stat) {
   for (var i in stat) {
@@ -348,7 +349,6 @@ function prof_add_stats(obj, stat) {
 }
 
 profile.pushdata = function (arr, val) {
-  
   if (arr.last() !== val) arr[profile.curframe] = val;
 };
 

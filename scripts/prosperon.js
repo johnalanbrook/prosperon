@@ -323,11 +323,21 @@ var Register = {
         profile.endcache();
       };
 
-      fns.push(dofn);
+      var left = 0;
+      var right = fns.length - 1;
       dofn.layer = fn.layer;
       dofn.layer ??= 0;
 
-      fns.sort((a, b) => a.layer > b.layer);
+      while (left <= right) {
+        var mid = Math.floor((left + right) / 2);
+        if (fns[mid] === dofn.layer) {
+          left = mid;
+          break;
+        } else if (fns[mid].layer < dofn.layer) left = mid + 1;
+        else right = mid - 1;
+      }
+
+      fns.splice(left, 0, dofn);
 
       return function () {
         fns.remove(dofn);

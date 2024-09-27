@@ -69,6 +69,7 @@ audio.cry = function (file, bus = audio.bus.sfx) {
 
 // This function is called when every audio source is finished
 var killer = Register.appupdate.register(function () {
+  return;
   for (var src of sources) {
     if (!src.loop && (src.frame < src.lastframe || src.frame === src.frames())) {
       src.unplug();

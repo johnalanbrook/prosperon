@@ -15,14 +15,17 @@ var make_point_obj = function (o, p) {
 var fullrect = [0, 0, 1, 1];
 
 var sprite_addbucket = function (sprite) {
-  var layer = sprite.gameobject.drawlayer;
+  var layer = 1000000 + sprite.gameobject.drawlayer * 1000 - sprite.gameobject.pos.y;
   sprite_buckets[layer] ??= {};
-  sprite_buckets[layer][sprite.path] ??= {};
-  sprite_buckets[layer][sprite.path][sprite.guid] = sprite;
+  sprite_buckets[layer][sprite.path] ??= [];
+  sprite_buckets[layer][sprite.path].push(sprite);
+  sprite._oldlayer = layer;
+  sprite._oldpath = sprite.path;
 };
 
 var sprite_rmbucket = function (sprite) {
-  for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) delete path[sprite.guid];
+  if (sprite._oldlayer && sprite._oldpath) sprite_buckets[sprite._oldlayer][sprite._oldpath].remove(sprite);
+  else for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) path.remove(sprite);
 };
 
 var sprite = {
@@ -72,7 +75,7 @@ var sprite = {
         //        self?.anim_done?.();
         //        if (!self.loop) { self.stop(); return; }
       }
-      if (self) stop = self.gameobject.delay(advance, playing.frames[f].time / self.anim_speed);
+      //      if (self) stop = self.gameobject.delay(advance, playing.frames[f].time / self.anim_speed);
     }
 
     advance();
@@ -119,7 +122,7 @@ var sprite = {
     this.anim = undefined;
     this.gameobject = undefined;
     this.anim_done = undefined;
-    delete allsprites[this.guid];
+    allsprites.remove(this);
   },
   move(d) {
     this.pos = this.pos.add(d);
@@ -130,6 +133,9 @@ var sprite = {
   },
   anchor: [0, 0],
   sync() {
+    var layer = 1000000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;
+    if (layer === this._oldlayer && this.path === this._oldpath) return;
+
     sprite_rmbucket(this);
     sprite_addbucket(this);
   },
@@ -158,12 +164,14 @@ var sprite = {
     return this.dimensions().y;
   },
 };
-globalThis.allsprites = {};
-var sprite_buckets = {};
+globalThis.allsprites = [];
+var sprite_buckets = [];
 
 component.sprite_buckets = function () {
   return sprite_buckets;
 };
+
+component.dynamic_sprites = [];
 
 sprite.doc = {
   path: "Path to the texture.",
@@ -239,7 +247,7 @@ component.sprite = function (obj) {
   sp.gameobject = obj;
   sp.transform = obj.transform;
   sp.guid = prosperon.guid();
-  allsprites[sp.guid] = sp;
+  allsprites.push(sp);
   if (component.sprite.make_hook) component.sprite.make_hook(sp);
   sprite_addbucket(sp);
   return sp;

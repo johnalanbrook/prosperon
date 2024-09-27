@@ -500,67 +500,19 @@ render.draw_hud = true;
 render.draw_gui = true;
 render.draw_gizmos = true;
 
+render.buckets = [];
 render.sprites = function render_sprites(gridsize = 1) {
   // When y sorting, draw layer is firstly important followed by the gameobject position
-  var buckets;
-  if (render.y_sort) {
-    profile.frame("y bucketing");
-    var sps = Object.values(allsprites);
-    buckets = {};
-
-    for (var sprite of sps) {
-      var layer = sprite.gameobject.drawlayer * 10000 - sprite.gameobject.pos.y;
-      buckets[layer] ??= {};
-      if (buckets[layer][sprite.path]) buckets[layer][sprite.path].push(sprite);
-      else buckets[layer][sprite.path] = [sprite];
-    }
-
-    profile.endframe();
-
-    profile.frame("y sorting");
-    buckets = Object.entries(buckets).sort((a, b) => {
-      var na = Number(a[0]);
-      var nb = Number(b[0]);
-      if (na < nb) return -1;
-      return 1;
-    });
-    profile.endframe();
-  } else {
-    profile.frame("sorting");
-    var sprite_buckets = component.sprite_buckets();
-
-    var buckets = Object.entries(sprite_buckets).sort((a, b) => {
-      var na = Number(a[0]);
-      var nb = Number(b[0]);
-      if (na < nb) return -1;
-      return 1;
-    });
-    profile.endframe();
-  }
-  /*
-  profile.frame("bucketing");
-  var sps = Object.values(allsprites);
-
-  var buckets = [];
-  for (var i = 0; i <= 20; i++)
-    buckets[i] = {};
-    
-  for (var sprite of sps) {
-    var layer = sprite.gameobject.drawlayer+10;
-    if (buckets[layer][sprite.path])
-      buckets[layer][sprite.path].push(sprite);
-    else
-      buckets[layer][sprite.path] = [sprite];
-  }
-  
-  profile.endframe();
-*/
+  //for (var sprite of allsprites)
+  //    sprite.sync();
 
   profile.frame("drawing");
   render.use_shader(spritessboshader);
-  for (var layer of buckets) {
-    for (var img of Object.values(layer[1])) {
-      var sparray = Object.values(img);
+  var buckets = component.sprite_buckets();
+  for (var l in buckets) {
+    var layer = buckets[l];
+    for (var img in layer) {
+      var sparray = layer[img];
       if (sparray.length === 0) continue;
       var ss = sparray[0];
       render.use_mat(ss);
@@ -1073,7 +1025,7 @@ prosperon.render = function () {
   render.flush_text();
 
   render.set_camera(prosperon.camera);
-  if (render.draw_gizmos && prosperon.gizmos) prosperon.gizmos();
+  //if (render.draw_gizmos && prosperon.gizmos) prosperon.gizmos();
   render.flush_text();
 
   render.end_pass();
@@ -1122,7 +1074,7 @@ prosperon.render = function () {
 
   render.end_pass();
 
-  profile.report_frame(profile.secs(profile.now())-frame_t);
+  profile.report_frame(profile.secs(profile.now()) - frame_t);
 
   render.commit();
 
@@ -1183,7 +1135,6 @@ prosperon.process = function process() {
   profile.endframe();
 
   profile.capture_data();
-
 };
 
 return { render };

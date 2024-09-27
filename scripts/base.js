@@ -1555,16 +1555,13 @@ Math.sign = function (n) {
 };
 
 var lodash = {};
-lodash.get = function(obj, path, defValue) {
-  if (!path) return undefined
+lodash.get = function (obj, path, defValue) {
+  if (!path) return undefined;
   // Check if path is string or array. Regex : ensure that we do not have '.' and brackets.
-  var pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g)
-  var result = pathArray.reduce(
-    (prevObj, key) => prevObj && prevObj[key],
-    obj
-  )
-  return result === undefined ? defValue : result
-}
+  var pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g);
+  var result = pathArray.reduce((prevObj, key) => prevObj && prevObj[key], obj);
+  return result === undefined ? defValue : result;
+};
 
 return {
   convert,
@@ -1572,5 +1569,5 @@ return {
   Vector,
   bbox,
   yaml,
-  lodash
+  lodash,
 };
