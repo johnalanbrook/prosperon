@@ -2013,10 +2013,18 @@ JSC_CCALL(transform_unit,
   t->scale = v3one;
 )
 
+JSC_CCALL(transform_trs,
+  transform *t = js2transform(self);
+  t->pos = JS_IsUndefined(argv[0]) ? v3zero : js2vec3(argv[0]);
+  t->rotation = JS_IsUndefined(argv[1]) ? QUAT1 : js2quat(argv[1]);
+  t->scale = JS_IsUndefined(argv[2]) ? v3one : js2vec3(argv[1]);
+)
+
 static const JSCFunctionListEntry js_transform_funcs[] = {
   CGETSET_ADD(transform, pos),
   CGETSET_ADD(transform, scale),
   CGETSET_ADD(transform, rotation),
+  MIST_FUNC_DEF(transform, trs, 3),
   MIST_FUNC_DEF(transform, phys2d, 3),
   MIST_FUNC_DEF(transform, move, 1),
   MIST_FUNC_DEF(transform, rotate, 2),

@@ -1554,10 +1554,23 @@ Math.sign = function (n) {
   return n >= 0 ? 1 : -1;
 };
 
+var lodash = {};
+lodash.get = function(obj, path, defValue) {
+  if (!path) return undefined
+  // Check if path is string or array. Regex : ensure that we do not have '.' and brackets.
+  var pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g)
+  var result = pathArray.reduce(
+    (prevObj, key) => prevObj && prevObj[key],
+    obj
+  )
+  return result === undefined ? defValue : result
+}
+
 return {
   convert,
   time,
   Vector,
   bbox,
   yaml,
+  lodash
 };

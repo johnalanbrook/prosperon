@@ -758,7 +758,7 @@ function flush_img() {
 function img_e() {
   img_idx++;
   if (img_idx > img_cache.length) {
-    e = {
+    var e = {
       transform: os.make_transform(),
       shade: Color.white,
       rect: [0, 0, 1, 1],
@@ -766,12 +766,10 @@ function img_e() {
     img_cache.push(e);
     return e;
   }
-  var e = img_cache[img_idx - 1];
-  e.transform.unit();
-  return e;
+  return img_cache[img_idx - 1];
 }
 
-render.image = function (tex, pos, scale, rotation = 0, color = Color.white) {
+render.image = function image(tex, pos, scale, rotation = 0, color = Color.white) {
   if (typeof tex === "string") {
     tex = game.texture(tex);
     scale.x ??= tex.width;
@@ -790,8 +788,7 @@ render.image = function (tex, pos, scale, rotation = 0, color = Color.white) {
   }
 
   var e = img_e();
-  e.transform.move(pos);
-  if (scale) e.transform.scale = scale.div([tex.width, tex.height]);
+  e.transform.trs(pos, undefined, scale ? scale.div([tex.width, tex.height]) : undefined);
   e.shade = color;
 
   return;
@@ -978,7 +975,11 @@ prosperon.make_camera = function () {
 var screencolor;
 
 globalThis.imtoggle = function (name, obj, field) {
+  var changed = false;
+  var old = obj[field];
   obj[field] = imgui.checkbox(name, obj[field]);
+  if (old !== obj[field]) return true;
+  return false;
 };
 var replstr = "";
 
@@ -1120,6 +1121,9 @@ prosperon.render = function () {
   profile.endframe();
 
   render.end_pass();
+
+  profile.report_frame(profile.secs(profile.now())-frame_t);
+
   render.commit();
 
   endframe();
@@ -1179,6 +1183,7 @@ prosperon.process = function process() {
   profile.endframe();
 
   profile.capture_data();
+
 };
 
 return { render };

@@ -49,9 +49,8 @@ profile.ms = function (t) {
 
 var callgraph = {};
 profile.rawstacks = {};
-profile.cpu_cg = callgraph;
 
-function add_callgraph(fn, line, time) {
+function add_callgraph(fn, line, time, alone) {
   var cc = callgraph[line];
   if (!cc) {
     var cc = {};
@@ -60,9 +59,18 @@ function add_callgraph(fn, line, time) {
     cc.hits = 0;
     cc.fn = fn;
     cc.line = line;
+    cc.alone = {
+      time: 0,
+      hits: 0
+    }
   }
   cc.time += time;
   cc.hits++;
+
+  if (alone) {
+    cc.alone.time += time;
+    cc.alone.hits++;
+  }
 }
 
 var hittar = 500; // number of call instructions before getting a new frame
@@ -73,9 +81,11 @@ profile.cpu_start = undefined;
 
 profile.clear_cpu = function () {
   callgraph = {};
+  profile.cpu_instr = undefined;
 };
 
 profile.start_cpu_gather = function (gathertime = 5) {
+  profile.clear_cpu();
   // gather cpu frames for 'time' seconds
   if (profile.cpu_start) return;
   profile.cpu_start = profile.now();
@@ -100,7 +110,8 @@ profile.start_cpu_gather = function (gathertime = 5) {
     var lines = stack.map(x => x[1]).filter(x => x);
     lines = lines.map(x => x.slice(1, x.length - 1));
 
-    for (var i = 0; i < fns.length; i++) add_callgraph(fns[i], lines[i], time);
+    add_callgraph(fns[0], lines[0], time, true);
+    for (var i = 1; i < fns.length; i++) add_callgraph(fns[i], lines[i], time, false);
 
     st = profile.now();
     if (profile.secs(st - profile.cpu_start) < gathertime) profile.gather_rate(Math.variate(hittar, hitpct));
@@ -108,21 +119,30 @@ profile.start_cpu_gather = function (gathertime = 5) {
       profile.gather_stop();
       profile.cpu_start = undefined;
       var e = Object.values(callgraph);
-      e = e.sort((a, b) => {
-        if (a.time > b.time) return -1;
-        return 1;
-      });
+      e = e.filter( x=> x.line);
 
       for (var x of e) {
         var ffs = x.line.split(":");
+
         x.timestr = profile.best_t(x.time);
-        var pct = (profile.secs(x.time) / gathertime) * 100;
         x.timeper = x.time / x.hits;
         x.timeperstr = profile.best_t(x.timeper);
+        x.pct = (profile.secs(x.time) / gathertime) * 100;
+        x.alone.timestr = profile.best_t(x.alone.time);
+        x.alone.timeper = x.alone.time/x.alone.hits;
+        x.alone.timeperstr = profile.best_t(x.alone.timeper);
+        x.alone.pct = (profile.secs(x.alone.time)/gathertime*100);
         x.fncall = get_line(ffs[0], ffs[1]);
-        x.log = `${x.line}::${x.fn}:: ${x.timestr} (${pct.toPrecision(3)}%) (${x.hits} hits) --> ${get_line(ffs[0], ffs[1])}`;
+        x.log = x.line + " " + x.fn + " " + x.fncall;        
+        x.incl = {
+          time: x.time,
+          timestr: x.timestr,
+          timeper: x.timeper,
+          timeperstr: x.timeperstr,
+          hits: x.hits,
+          pct: x.pct,
+        };
       }
-
       profile.cpu_instr = e;
     }
   });
@@ -179,17 +199,12 @@ profile.best_t = function (t) {
   return `${t.toPrecision(4)} ${t_units[qq]}`;
 };
 
-profile.report = function (start, msg = "[undefined report]") {
-  console.info(`${msg} in ${profile.best_t(profile.now() - start)}`);
-};
-
 /*
   Frame averages are an instrumented profiling technique. Place frame() calls
   in your code to get a call graph for things you are interested in.
 */
 
 var frame_avg = false;
-profile.frame_avg_t = 72000;
 
 profile.start_frame_avg = function () {
   if (frame_avg) return;
@@ -219,6 +234,7 @@ var pframe = 0;
 var profile_stack = [];
 
 profile.frame = function profile_frame(title) {
+  return;
   if (profile.cpu_start) return;
   if (!frame_avg) return;
 
@@ -236,27 +252,10 @@ profile.frame = function profile_frame(title) {
 };
 
 profile.endframe = function profile_endframe() {
+  return;
   if (!frame_avg) return;
   profile_cframe.time = profile.now() - profile_cframe.time;
   profile_cframe = profile_frame_ts.pop();
-};
-
-var print_frame = function (frame, indent, title) {
-  say(indent + `${title} ::::: ${profile.best_t(Math.mean(frame._times))} ± ${profile.best_t(Math.ci(frame._times))} (${frame._times.length} hits)`);
-
-  for (var i in frame) {
-    if (i === "_times") continue;
-    print_frame(frame[i], indent + "  ", i);
-  }
-};
-
-profile.print_frame_avg = function () {
-  say("===FRAME AVERAGES===\n");
-
-  var indent = "";
-  for (var i in profile_frames) print_frame(profile_frames[i], "", "frame");
-
-  say("\n");
 };
 
 /*
@@ -329,6 +328,18 @@ function printreport(cache, name) {
 profile.data = {};
 profile.curframe = 0;
 
+profile.snapshot = {};
+var fps = [];
+
+profile.report_frame = function(t)
+{
+  fps.push(t);
+  if (fps.length > 15) {
+    profile.snapshot.fps = Math.mean(fps);
+    fps = [];
+  }
+}
+
 function prof_add_stats(obj, stat) {
   for (var i in stat) {
     obj[i] ??= [];
@@ -337,10 +348,13 @@ function prof_add_stats(obj, stat) {
 }
 
 profile.pushdata = function (arr, val) {
+  
   if (arr.last() !== val) arr[profile.curframe] = val;
 };
 
+profile.capturing = false;
 profile.capture_data = function () {
+  if (!profile.capturing && profile.data.memory.malloc_size) return;
   prof_add_stats(profile.data.memory, os.mem());
   prof_add_stats(profile.data.gfx, imgui.framestats());
   prof_add_stats(profile.data.actors, actor.__stats());

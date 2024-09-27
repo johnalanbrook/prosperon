@@ -450,14 +450,39 @@ JSC_SCALL(imgui_context,
 )
 
 JSC_SCALL(imgui_table,
-  if (ImGui::BeginTable(str, js2number(argv[1]))) {
+  int flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_SizingStretchProp;
+  bool sort = false;  
+  if (!JS_IsUndefined(argv[3])) sort = true;  
+
+  if (sort) flags |= ImGuiTableFlags_Sortable;
+  if (ImGui::BeginTable(str, js2number(argv[1]), flags)) {
     script_call_sym(argv[2],0,NULL);
+
+    if (sort) {
+      ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs();
+      if (sort_specs && sort_specs->SpecsDirty) {
+        for (int i = 0; i < sort_specs->SpecsCount; i++)
+        {
+          const ImGuiTableColumnSortSpecs* spec = &sort_specs->Specs[i];
+          JSValue send[2];
+          send[0] = number2js(spec->ColumnIndex);
+          send[1] = boolean2js(spec->SortDirection == ImGuiSortDirection_Ascending);
+          script_call_sym(argv[3], 2, send);
+          JS_FreeValue(js, send[0]);
+          JS_FreeValue(js, send[1]);
+        }
+        sort_specs->SpecsDirty = false;
+      }
+    }
+
     ImGui::EndTable();
   }
 )
 
 JSC_CCALL(imgui_tablenextrow, ImGui::TableNextRow())
 JSC_CCALL(imgui_tablenextcolumn, ImGui::TableNextColumn())
+JSC_SCALL(imgui_tablesetupcolumn, ImGui::TableSetupColumn(str))
+JSC_CCALL(imgui_tableheadersrow, ImGui::TableHeadersRow())
 
 JSC_SCALL(imgui_dnd, 
   if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
@@ -883,9 +908,11 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, popup, 2),
   MIST_FUNC_DEF(imgui, close_popup,0),
   MIST_FUNC_DEF(imgui, context,2),
-  MIST_FUNC_DEF(imgui, table, 3),
+  MIST_FUNC_DEF(imgui, table, 4),
   MIST_FUNC_DEF(imgui, tablenextcolumn,0),
   MIST_FUNC_DEF(imgui, tablenextrow,0),
+  MIST_FUNC_DEF(imgui, tableheadersrow, 0),
+  MIST_FUNC_DEF(imgui, tablesetupcolumn, 1),
   MIST_FUNC_DEF(imgui, dnd, 3),
   MIST_FUNC_DEF(imgui, dndtarget, 2),
   MIST_FUNC_DEF(imgui, color, 2),
