@@ -29,3 +29,8 @@ void timer_update(double dt)
     timers[i]->remain -= dt;
   }
 }
+
+void timer_stop(timer *t)
+{
+
+}

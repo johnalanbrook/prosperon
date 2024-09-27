@@ -719,8 +719,9 @@ var img_idx = 0;
 function flush_img() {
   if (img_idx === 0) return;
   render.use_shader(spritessboshader);
-  render.use_mat({ diffuse: lasttex });
+  //render.use_mat({ diffuse: lasttex });
   render.make_sprite_ssbo(img_cache.slice(0, img_idx), poly_ssbo);
+  cur.images = [lasttex];
   render.draw(shape.quad, poly_ssbo, img_idx);
   lasttex = undefined;
   img_idx = 0;
@@ -761,6 +762,7 @@ render.image = function image(tex, pos, scale, rotation = 0, color = Color.white
   var e = img_e();
   e.transform.trs(pos, undefined, scale);
   e.shade = color;
+  e.texture = tex;
 
   return;
   var bb = {};

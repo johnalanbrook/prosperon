@@ -8,5 +8,6 @@ typedef struct timer {
 timer *timer_make();
 void timer_free(timer *t);
 void timer_update(double dt);
+void timer_stop(timer *t);
 
 #endif

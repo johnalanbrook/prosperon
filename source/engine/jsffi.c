@@ -1107,17 +1107,29 @@ JSC_CCALL(render_make_sprite_ssbo,
   for (int i = 0; i < js_arrlen(array); i++) {
     JSValue sub = js_getpropidx(array,i);
     
-    ms[i].model = transform2mat(js2transform(js_getpropstr(sub, "transform")));
+    transform *tr = js2transform(js_getpropstr(sub, "transform"));
     texture *t = js2texture(js_getpropstr(sub, "texture"));
+    HMM_Vec3 tscale;
+    
     if (t) {
-      HMM_Vec3 tscale;
       tscale.x = t->width;
       tscale.y = t->height;
       tscale.z = 1;
-      ms[i].model = HMM_MulM4(ms[i].model, HMM_Scale(tscale));
+      tr->scale = HMM_MulV3(tr->scale, tscale);
     }
+    
+    tr->scale.x = 100;
+    tr->scale.y = 100;
+    tr->scale.z = 1;
+    tr->pos.x = 100;
+    tr->pos.y = 100;
+    tr->pos.z = 0;
+    ms[i].model = transform2mat(t); 
     ms[i].rect = js2vec4(js_getpropstr(sub,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
+    
+    if (t)
+      tr->scale = HMM_DivV3(tr->scale, tscale);
   }
 
   sg_append_buffer(*b, (&(sg_range){
