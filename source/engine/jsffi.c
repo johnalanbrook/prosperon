@@ -715,9 +715,8 @@ sg_bindings js2bind(JSValue v)
   sg_bindings bind = {0};
   JSValue attrib = js_getpropstr(v, "attrib");
 
-  for (int i = 0; i < js_arrlen(attrib); i++) {
+  for (int i = 0; i < js_arrlen(attrib); i++)
     bind.vertex_buffers[i] = *js2sg_buffer(js_getpropidx(attrib,i));
-  }
     
   JSValue index = js_getpropstr(v, "index");
   if (!JS_IsUndefined(index))
@@ -1107,7 +1106,16 @@ JSC_CCALL(render_make_sprite_ssbo,
 
   for (int i = 0; i < js_arrlen(array); i++) {
     JSValue sub = js_getpropidx(array,i);
+    
     ms[i].model = transform2mat(js2transform(js_getpropstr(sub, "transform")));
+    texture *t = js2texture(js_getpropstr(sub, "texture"));
+    if (t) {
+      HMM_Vec3 tscale;
+      tscale.x = t->width;
+      tscale.y = t->height;
+      tscale.z = 1;
+      ms[i].model = HMM_MulM4(ms[i].model, HMM_Scale(tscale));
+    }
     ms[i].rect = js2vec4(js_getpropstr(sub,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
   }

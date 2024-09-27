@@ -247,7 +247,6 @@ var entity = {
       delete ent.objects;
       ent.objects = {};
       for (var i in o) {
-        console.info(`creating ${i} on ${ent.toString()}`);
         var newur = o[i].ur;
         delete o[i].ur;
         var n = ent.spawn(ur[newur], o[i]);
@@ -431,7 +430,7 @@ var entity = {
 
   rename_obj(name, newname) {
     if (!this.objects[name]) {
-      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
+//      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
       return;
     }
     if (name === newname) {

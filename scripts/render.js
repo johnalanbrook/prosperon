@@ -5,13 +5,16 @@ render.doc = {
 };
 
 var cur = {};
+cur.images = [];
 
+// When changing a shader, everything must wipe
 render.use_shader = function use_shader(shader) {
   if (typeof shader === "string") shader = make_shader(shader);
   if (cur.shader === shader) return;
   cur.shader = shader;
   cur.bind = undefined;
   cur.mesh = undefined;
+  cur.ssbo = undefined;
   render.setpipeline(shader.pipe);
   shader_globals(cur.shader);
 };
@@ -24,7 +27,7 @@ render.use_mat = function use_mat(mat) {
 
   cur.mat = mat;
 
-  cur.images = [];
+  cur.images.length = 0;
   if (!cur.shader.fs.images) return;
   for (var img of cur.shader.fs.images)
     if (mat[img.name]) cur.images.push(mat[img.name]);
@@ -372,10 +375,32 @@ function shader_apply_material(shader, material = {}, old = {}) {
   if ("diffuse_size" in shader.vs.unimap) render.setuniv2(0, shader.vs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
 }
 
+// Creates a binding object for a given mesh and shader
+var bindcache = {};
+var bcache = new WeakMap();
 function sg_bind(mesh, ssbo) {
-  cur.mesh = mesh;
-
+  if (cur.mesh === mesh && cur.ssbo === ssbo) {
+    cur.bind.ssbo = [ssbo];
+    cur.bind.images = cur.images;
+    render.setbind(cur.bind);
+    return;
+  }
+//  var sid = os.value_id(cur.shader);
+//  var mid = os.value_id(mesh);
+  if (bcache.has(cur.shader) && bcache.get(cur.shader).has(mesh)) {
+    cur.bind = bcache.get(cur.shader).get(mesh);
+    cur.bind.images = cur.images;
+    if (ssbo)
+    cur.bind.ssbo = [ssbo];
+    render.setbind(cur.bind);
+    return;
+  }
   var bind = {};
+  if (!bcache.has(cur.shader)) bcache.set(cur.shader, new WeakMap());
+  if (!bcache.get(cur.shader).has(mesh)) bcache.get(cur.shader).set(mesh, bind);
+  cur.mesh = mesh;
+  cur.ssbo = ssbo;
+  cur.bind = bind;
   bind.attrib = [];
   if (cur.shader.vs.inputs)
     for (var a of cur.shader.vs.inputs) {
@@ -393,10 +418,7 @@ function sg_bind(mesh, ssbo) {
   bind.ssbo = [];
   if (cur.shader.vs.storage_buffers) for (var b of cur.shader.vs.storage_buffers) bind.ssbo.push(ssbo);
 
-  bind.inst = 1;
   bind.images = cur.images;
-
-  cur.bind = bind;
 
   render.setbind(cur.bind);
 
@@ -501,11 +523,7 @@ render.draw_gui = true;
 render.draw_gizmos = true;
 
 render.buckets = [];
-render.sprites = function render_sprites(gridsize = 1) {
-  // When y sorting, draw layer is firstly important followed by the gameobject position
-  //for (var sprite of allsprites)
-  //    sprite.sync();
-
+render.sprites = function render_sprites() {
   profile.frame("drawing");
   render.use_shader(spritessboshader);
   var buckets = component.sprite_buckets();
@@ -515,7 +533,8 @@ render.sprites = function render_sprites(gridsize = 1) {
       var sparray = layer[img];
       if (sparray.length === 0) continue;
       var ss = sparray[0];
-      render.use_mat(ss);
+//      render.use_mat(ss);
+      cur.images = [ss.diffuse];
       render.make_sprite_ssbo(sparray, sprite_ssbo);
       render.draw(shape.quad, sprite_ssbo, sparray.length);
       if (debug.sprite_nums) render.text(ss.diffuse.getid(), ss.transform.pos);
@@ -722,11 +741,11 @@ function img_e() {
 }
 
 render.image = function image(tex, pos, scale, rotation = 0, color = Color.white) {
-  if (typeof tex === "string") {
+  if (typeof tex === "string")
     tex = game.texture(tex);
-    scale.x ??= tex.width;
-    scale.y ??= tex.height;
-  }
+
+  scale ??= [tex.width,tex.height];
+  
   if (!tex) return;
 
   if (!lasttex) {
@@ -740,7 +759,7 @@ render.image = function image(tex, pos, scale, rotation = 0, color = Color.white
   }
 
   var e = img_e();
-  e.transform.trs(pos, undefined, scale ? scale.div([tex.width, tex.height]) : undefined);
+  e.transform.trs(pos, undefined, scale);
   e.shade = color;
 
   return;

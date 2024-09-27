@@ -21,17 +21,14 @@ readonly buffer ssbo {
   sprite sprites[];
 };
 
-uniform mat4 projection;
-uniform mat4 view;
 uniform mat4 vp;
-uniform vec2 diffuse_size;
 
 void main()
 {
   sprite s = sprites[gl_InstanceIndex];
   pos = a_pos;
   uv = a_uv;
-  pos *= vec3(diffuse_size * s.rect.zw,1);
+  pos *= vec3(s.rect.zw,1);
   uv = (uv*s.rect.zw)+s.rect.xy;
   gl_Position =  vp * s.model * vec4(pos, 1.0);
   shade = s.shade;
