@@ -66,6 +66,7 @@ void window_setfullscreen(window *w, int f)
 
 void window_seticon(struct window *w, struct texture *tex)
 {
+  if (!tex->data) return;
   struct isize {
     int size;
     unsigned char *data;

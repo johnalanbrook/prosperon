@@ -332,12 +332,41 @@ profile.curframe = 0;
 
 profile.snapshot = {};
 var fps = [];
+var frame_lead = 240;
+
+var classes = ["gameobject", "transform", "dsp_node", "texture", "font", "warp_gravity", "warp_damp", "sg_buffer", "datastream", "cpShape", "cpConstraint", "timer", "skin"];
+var get_snapshot = function()
+{
+ var snap = profile.snapshot;
+ snap.actors ??= {};
+ Object.assign(snap.actors, actor.__stats());
+ snap.memory ??= {};
+ Object.assign(snap.memory, os.mem());
+ snap.memory.textures = game.texture.total_size();
+ snap.memory.texture_vram = game.texture.total_vram();
+
+ snap.rusage ??= {};
+ var rusage = os.rusage();
+ rusage.ru_maxrss *= 1024; // delivered in KB; convert here to B
+ Object.assign(snap.rusage, rusage);
+
+ snap.mallinfo ??= {};
+ Object.assign(snap.mallinfo, os.mallinfo());
+
+ snap.obj ??= {};
+ for (var i of classes) {
+   var proto = globalThis[`${i}_proto`];
+   if (!proto) continue;
+   snap.obj[i] = proto._count();
+ }
+}
 
 profile.report_frame = function (t) {
   fps.push(t);
-  if (fps.length > 15) {
+  if (fps.length > frame_lead) {
     profile.snapshot.fps = Math.mean(fps);
-    fps = [];
+    fps.length = 0;
+    get_snapshot();
   }
 };
 

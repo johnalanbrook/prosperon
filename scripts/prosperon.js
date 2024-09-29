@@ -193,7 +193,7 @@ game.tex_hotreload = function () {
 };
 
 game.texture = function (path) {
-  if (!path) return game.texture("icons/no_text.gif");
+  if (!path) return game.texture("icons/no_tex.gif");
   path = Resources.find_image(path);
 
   if (!io.exists(path)) {
@@ -209,6 +209,20 @@ game.texture = function (path) {
 };
 game.texture.cache = {};
 game.texture.time_cache = {};
+
+game.texture.total_size = function()
+{
+  var size = 0;
+  Object.values(game.texture.cache).forEach(x => size += x.inram() ? x.width*x.height*4 : 0);
+  return size;
+}
+
+game.texture.total_vram = function()
+{
+  var vram = 0;
+  Object.values(game.texture.cache).forEach(x => vram += x.vram);
+  return vram;
+}
 
 prosperon.semver = {};
 prosperon.semver.valid = function (v, range) {

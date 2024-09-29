@@ -215,6 +215,7 @@ static sapp_desc start_desc = {
     .height = 1080,
     .high_dpi = 0,
     .sample_count = 1,
+    .swap_interval = 0,
     .fullscreen = 1,
     .window_title = NULL,
     .enable_clipboard = false,

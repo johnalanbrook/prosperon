@@ -270,7 +270,7 @@ char *nota_read_text(char **text, char *nota)
   return nota;
 }
 
-char *nota_write_text(char *s, char *nota)
+char *nota_write_text(const char *s, char *nota)
 {
   nota[0] = NOTA_TEXT;
   

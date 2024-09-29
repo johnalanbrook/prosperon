@@ -16,7 +16,7 @@
 #include "stb_image_write.h"
 
 #include "sokol/sokol_gfx.h"
-
+#include "sokol/util/sokol_gl.h"
 #include "gui.h"
 
 static HMM_Vec2 lastuse = {0};
@@ -151,6 +151,10 @@ void render_init() {
     .buffer_pool_size = 1024,
     .image_pool_size = 1024,
   });
+
+//  sgl_setup(&(sgl_desc_t){
+//    .logger.func = sg_logging
+//  });
   
   std_sampler = sg_make_sampler(&(sg_sampler_desc){});
   tex_sampler = sg_make_sampler(&(sg_sampler_desc){

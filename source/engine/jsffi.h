@@ -52,6 +52,16 @@ extern JSValue cpShape2js(cpShape *s);
   return ret; \
 } \
 
+#define JSC_DCALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(); }
+
+#define JSC_1CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0])); }
+#define JSC_2CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1])); }
+#define JSC_3CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])); }
+#define JSC_4CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3])); }
+#define JSC_5CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])); }
+#define JSC_6CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5])); }
+#define JSC_7CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5]), js2number(argv[6])); }
+
 #define GETSETPAIR(ID, ENTRY, TYPE, FN) \
 JSValue js_##ID##_set_##ENTRY (JS_SETSIG) { \
   js2##ID (self)->ENTRY = js2##TYPE (val); \
@@ -95,8 +105,10 @@ JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue self) { \
 
 #define QJSCLASS(TYPE)\
 static JSClassID js_##TYPE##_id;\
+static int js_##TYPE##_count = 0; \
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
 TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
+js_##TYPE##_count--; \
 TYPE##_free(n);}\
 static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
@@ -110,27 +122,28 @@ TYPE *js2##TYPE (JSValue val) { \
 JSValue TYPE##2js(TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   JS_SetOpaque(j,n);\
+  js_##TYPE##_count++; \
   return j; }\
 \
 static JSValue js_##TYPE##_memid (JSContext *js, JSValue self) { return str2js("%p", js2##TYPE(self)); } \
 static JSValue js_##TYPE##_memsize (JSContext *js, JSValue self) { return number2js(sizeof(TYPE)); } \
+static JSValue js_##TYPE##__count (JSContext *js, JSValue self) { return number2js(js_##TYPE##_count); } \
 
 #define QJSGLOBALCLASS(NAME) \
 JSValue NAME = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, NAME, js_##NAME##_funcs, countof(js_##NAME##_funcs)); \
 JS_SetPropertyStr(js, globalThis, #NAME, NAME); \
 
-#define QJSCLASSPREP(TYPE) \
-JS_NewClassID(&js_##TYPE##_id);\
-JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
-
 /* Defines a class and uses its function list as its prototype */
 #define QJSCLASSPREP_FUNCS(TYPE) \
-QJSCLASSPREP(TYPE); \
+JS_NewClassID(&js_##TYPE##_id);\
+JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
 JSValue TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
 JS_SetPropertyStr(js, TYPE##_proto, "memid", JS_NewCFunction(js, &js_##TYPE##_memid, "memid", 0)); \
 JS_SetPropertyStr(js, TYPE##_proto, "memsize", JS_NewCFunction(js, &js_##TYPE##_memsize, "memsize", 0)); \
+JS_SetPropertyStr(js, TYPE##_proto, "_count", JS_NewCFunction(js, &js_##TYPE##__count, "_count", 0)); \
+JS_SetPropertyStr(js, globalThis, #TYPE "_proto", JS_DupValue(js,TYPE##_proto)); \
 JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 
 #define countof(x) (sizeof(x)/sizeof((x)[0]))

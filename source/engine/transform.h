@@ -18,6 +18,9 @@ void transform_free(transform *t);
 #define VEC2_FMT "[%g,%g]"
 #define VEC2_MEMS(s) (s).x, (s).y
 
+#define TR_FMT "(pos) " HMMFMT_VEC3 " scale " HMMFMT_VEC3
+#define TR_PRINT(tr) HMMPRINT_VEC3(tr->pos), HMMPRINT_VEC3(tr->scale)
+
 void transform_move(transform *t, HMM_Vec3 v);
 HMM_Vec3 transform_direction(transform *t, HMM_Vec3 dir);
 

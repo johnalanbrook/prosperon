@@ -533,11 +533,9 @@ render.sprites = function render_sprites() {
       var sparray = layer[img];
       if (sparray.length === 0) continue;
       var ss = sparray[0];
-//      render.use_mat(ss);
-      cur.images = [ss.diffuse];
-      render.make_sprite_ssbo(sparray, sprite_ssbo);
+      ss.baseinstance = render.make_sprite_ssbo(sparray, sprite_ssbo);
+      render.use_mat(ss);
       render.draw(shape.quad, sprite_ssbo, sparray.length);
-      if (debug.sprite_nums) render.text(ss.diffuse.getid(), ss.transform.pos);
     }
   }
   profile.endframe();
@@ -586,6 +584,10 @@ function check_flush(flush_fn) {
 }
 
 render.flush = check_flush;
+render.forceflush = function()
+{
+  if (nextflush) nextflush();
+}
 
 var poly_cache = [];
 var poly_idx = 0;
@@ -610,13 +612,11 @@ function poly_e() {
 function flush_poly() {
   if (poly_idx === 0) return;
   render.use_shader(polyssboshader);
-  render.use_mat({});
-  render.make_particle_ssbo(poly_cache.slice(0, poly_idx), poly_ssbo);
+  var base = render.make_particle_ssbo(poly_cache.slice(0, poly_idx), poly_ssbo);
+  render.use_mat({baseinstance:base});  
   render.draw(shape.centered_quad, poly_ssbo, poly_idx);
   poly_idx = 0;
 }
-
-function flush_image() {}
 
 render.line = function render_line(points, color = Color.white, thickness = 1) {
   for (var i = 0; i < points.length - 1; i++) {
@@ -719,10 +719,10 @@ var img_idx = 0;
 function flush_img() {
   if (img_idx === 0) return;
   render.use_shader(spritessboshader);
-  //render.use_mat({ diffuse: lasttex });
-  render.make_sprite_ssbo(img_cache.slice(0, img_idx), poly_ssbo);
+  var startidx = render.make_sprite_ssbo(img_cache.slice(0, img_idx), sprite_ssbo);
+  render.use_mat({ baseinstance:startidx});  
   cur.images = [lasttex];
-  render.draw(shape.quad, poly_ssbo, img_idx);
+  render.draw(shape.quad, sprite_ssbo, img_idx);
   lasttex = undefined;
   img_idx = 0;
 }
@@ -745,8 +745,11 @@ render.image = function image(tex, pos, scale, rotation = 0, color = Color.white
   if (typeof tex === "string")
     tex = game.texture(tex);
 
-  scale ??= [tex.width,tex.height];
-  
+  if (scale)
+    scale = scale.div([tex.width, tex.height]);
+  else
+    scale = vector.v3one;
+
   if (!tex) return;
 
   if (!lasttex) {
@@ -763,7 +766,7 @@ render.image = function image(tex, pos, scale, rotation = 0, color = Color.white
   e.transform.trs(pos, undefined, scale);
   e.shade = color;
   e.texture = tex;
-
+  
   return;
   var bb = {};
   bb.b = pos.y;
@@ -1035,6 +1038,7 @@ prosperon.render = function () {
   profile.endframe();
   profile.frame("draws");
   prosperon.draw();
+//  sgl.draw();
   profile.endframe();
   prosperon.hudcam.size = prosperon.camera.size;
   prosperon.hudcam.transform.pos = [prosperon.hudcam.size.x / 2, prosperon.hudcam.size.y / 2, -100];
@@ -1095,9 +1099,8 @@ prosperon.render = function () {
 
   render.end_pass();
 
-  profile.report_frame(profile.secs(profile.now()) - frame_t);
-
   render.commit();
+  profile.report_frame(profile.secs(profile.now()) - frame_t);  
 
   endframe();
 };

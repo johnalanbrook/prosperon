@@ -1209,6 +1209,11 @@ Math.mean = vector.mean;
 Math.sigma = vector.sigma;
 Math.median = vector.median;
 
+vector.v2one = [1,1];
+vector.v3one = [1,1,1];
+vector.v2zero = [0,0];
+vector.v3zero = [0,0,0];
+
 Math.variance = function (series) {
   var mean = Math.mean(series);
   var vnce = 0;

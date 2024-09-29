@@ -117,8 +117,7 @@ struct texture *texture_from_file(const char *path) {
     return NULL;
   
   tex->data = data;
-  tex->size = tex->width*tex->height*4;
-  tex->gpusize = tex->size;
+  tex->vram = tex->width*tex->height*4;
   
   unsigned int nw = next_pow2(tex->width);
   unsigned int nh = next_pow2(tex->height);
@@ -144,7 +143,7 @@ struct texture *texture_from_file(const char *path) {
     mipdata[i] = malloc(w * h * 4);
     stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
     sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
-    tex->gpusize += w*h*4;
+    tex->vram += w*h*4;
     
     mipw = w;
     miph = h;
@@ -161,6 +160,9 @@ struct texture *texture_from_file(const char *path) {
   
   for (int i = 1; i < mips; i++)
     free(mipdata[i]);
+
+  free(tex->data);
+  tex->data = NULL;
     
   return tex;
 }
@@ -286,6 +288,8 @@ double grad (int hash, double x, double y, double z)
 
 void texture_save(texture *tex, const char *file)
 {
+  if (!tex->data) return;
+  
   char *ext = strrchr(file, '.');
   if (!strcmp(ext, ".png"))
     stbi_write_png(file, tex->width, tex->height, 4, tex->data, 4*tex->width);
@@ -339,6 +343,7 @@ void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int 
 // Function to draw source image pixels on top of a destination image
 // x,y are the pixel coordinates in the destination image, w,h are the amount of pixels to take from the src image.
 void texture_blit(texture *dest, texture *src, int x, int y, int w, int h) {
+  if (!dest->data || !src->data) return;
   blit_image(src->data, dest->data, src->width, src->height, dest->width, dest->height, x, y, w, h);
 }
 

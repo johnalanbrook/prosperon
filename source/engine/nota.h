@@ -33,7 +33,7 @@ char *nota_read_sym(int *sym, char *nota);
 void print_nota_hex(char *nota);
 
 char *nota_write_blob(unsigned long long n, char *nota);
-char *nota_write_text(char *s, char *nota);
+char *nota_write_text(const char *s, char *nota);
 char *nota_write_array(unsigned long long n, char *nota);
 char *nota_write_record(unsigned long long n, char *nota);
 char *nota_write_float(double n, char *nota);

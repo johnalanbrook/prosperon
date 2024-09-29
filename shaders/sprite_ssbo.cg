@@ -22,10 +22,11 @@ readonly buffer ssbo {
 };
 
 uniform mat4 vp;
+uniform float baseinstance;
 
 void main()
 {
-  sprite s = sprites[gl_InstanceIndex];
+  sprite s = sprites[int(baseinstance)+gl_InstanceIndex];
   pos = a_pos;
   uv = a_uv;
   pos *= vec3(s.rect.zw,1);

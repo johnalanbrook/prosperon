@@ -17,8 +17,10 @@ readonly buffer ssbo {
   poly polys[];
 };
 
+uniform float baseinstance;
+
 void main() {
-  poly p = polys[gl_InstanceIndex];
+  poly p = polys[int(baseinstance)+gl_InstanceIndex];
   gl_Position = vp * p.model * vec4(a_pos, 1);
   shade = p.color;
 }

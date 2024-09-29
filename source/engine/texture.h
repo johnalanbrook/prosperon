@@ -26,10 +26,9 @@ struct texture {
   int width;
   int height;
   unsigned char *data;
-  int size;
-  int gpusize;
   int frames;
   int *delays;
+  int vram;
 };
 
 typedef struct texture texture;

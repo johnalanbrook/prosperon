@@ -32,11 +32,15 @@
 #include "par/par_streamlines.h"
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
+#define SOKOL_GL_IMPL
+#include "sokol/util/sokol_gl.h"
 #include <chipmunk/chipmunk_unsafe.h>
 #include <chipmunk/chipmunk_structs.h>
 #include <stdint.h>
 #include "gui.h"
 #include "timer.h"
+#include <sys/resource.h>
+#include <malloc.h>
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -44,9 +48,6 @@
 #endif
 
 static JSValue globalThis;
-
-static JSClassID js_ptr_id;
-static JSClassDef js_ptr_class = { "POINTER" };
 
 JSValue str2js(const char *c, ...) {
   if (!c) return JS_UNDEFINED;
@@ -69,7 +70,7 @@ const char *js2str(JSValue v) {
 }
 
 char *js2strdup(JSValue v) {
-  char *str = JS_ToCString(js, v);
+  const char *str = JS_ToCString(js, v);
   char *ret = strdup(str);
   JS_FreeCString(js, str);
   return ret;
@@ -228,14 +229,6 @@ double js2angle(JSValue v) {
   return n * HMM_TurnToRad;
 }
 
-void *js2ptr(JSValue v) { return JS_GetOpaque(v,js_ptr_id); }
-
-JSValue ptr2js(void *ptr) {
-  JSValue obj = JS_NewObjectClass(js, js_ptr_id);
-  JS_SetOpaque(obj, ptr);
-  return obj;
-}
-
 int js_arrlen(JSValue v) {
   if (JS_IsUndefined(v)) return 0;
   int len;
@@ -302,7 +295,7 @@ char *js_do_nota_decode(JSValue *tmp, char *nota)
 char *js_do_nota_encode(JSValue v, char *nota)
 {
   int tag = JS_VALUE_GET_TAG(v);
-  char *str = NULL;
+  const char *str = NULL;
   JSPropertyEnum *ptab;
   uint32_t plen;
   int n;
@@ -764,7 +757,10 @@ JSC_CCALL(render_glue_pass,
 )
 
 // Set the portion of the window to be rendered to
-JSC_CCALL(render_viewport, sg_apply_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
+JSC_CCALL(render_viewport,
+  sg_apply_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
+//  sgl_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
+)
   
 JSC_CCALL(render_commit, sg_commit())
 JSC_CCALL(render_end_pass, sg_end_pass())
@@ -841,12 +837,12 @@ sg_shader js2shader(JSValue v)
   desc.label = js2strdup(js_getpropstr(v, "name"));
   JSValue vs = js_getpropstr(prog, "vs");
   JSValue fs = js_getpropstr(prog, "fs");
-  char *vsf = js2str(js_getpropstr(vs, "code"));
-  char *fsf = js2str(js_getpropstr(fs, "code"));
+  const char *vsf = js2str(js_getpropstr(vs, "code"));
+  const char *fsf = js2str(js_getpropstr(fs, "code"));
   desc.vs.source = vsf;
   desc.fs.source = fsf;
-  char *vsmain = js2str(js_getpropstr(vs, "entry_point"));
-  char *fsmain = js2str(js_getpropstr(fs, "entry_point"));
+  const char *vsmain = js2str(js_getpropstr(vs, "entry_point"));
+  const char *fsmain = js2str(js_getpropstr(fs, "entry_point"));
   desc.vs.entry = vsmain;
   desc.fs.entry = fsmain;
   desc.vs.d3d11_target = "vs_4_0";
@@ -994,6 +990,7 @@ JSC_CCALL(render_setuniv3,
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(f.e));
 )
 
+
 JSC_CCALL(render_setuniv4,
   HMM_Vec4 v = {0};
   if (JS_IsArray(js, argv[2])) {
@@ -1059,10 +1056,12 @@ JSC_CCALL(render_make_particle_ssbo,
   particle_ss ms[js_arrlen(array)];
 
   if (sg_query_buffer_will_overflow(*b, size)) {
+    sg_buffer_desc desc = sg_query_buffer_desc(*b);
     sg_destroy_buffer(*b);
+
     *b = sg_make_buffer(&(sg_buffer_desc){
       .type = SG_BUFFERTYPE_STORAGEBUFFER,
-      .size = size,
+      .size = size+desc.size,
       .usage = SG_USAGE_STREAM,
       .label = "transform buffer"
     });
@@ -1074,10 +1073,12 @@ JSC_CCALL(render_make_particle_ssbo,
     ms[i].color = js2vec4(js_getpropstr(sub,"color"));
   }
 
-  sg_append_buffer(*b, (&(sg_range){
+  int offset = sg_append_buffer(*b, (&(sg_range){
     .ptr = ms,
     .size = size
   }));
+
+  ret = number2js(offset/sizeof(particle_ss));
 )
 
 typedef struct sprite_ss {
@@ -1095,10 +1096,11 @@ JSC_CCALL(render_make_sprite_ssbo,
   sprite_ss ms[js_arrlen(array)];
 
   if (sg_query_buffer_will_overflow(*b, size)) {
+    sg_buffer_desc desc = sg_query_buffer_desc(*b);
     sg_destroy_buffer(*b);
     *b = sg_make_buffer(&(sg_buffer_desc){
       .type = SG_BUFFERTYPE_STORAGEBUFFER,
-      .size = size,
+      .size = size+desc.size,
       .usage = SG_USAGE_STREAM,
       .label = "transform buffer"
     });
@@ -1117,14 +1119,8 @@ JSC_CCALL(render_make_sprite_ssbo,
       tscale.z = 1;
       tr->scale = HMM_MulV3(tr->scale, tscale);
     }
-    
-    tr->scale.x = 100;
-    tr->scale.y = 100;
-    tr->scale.z = 1;
-    tr->pos.x = 100;
-    tr->pos.y = 100;
-    tr->pos.z = 0;
-    ms[i].model = transform2mat(t); 
+
+    ms[i].model = transform2mat(tr);
     ms[i].rect = js2vec4(js_getpropstr(sub,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
     
@@ -1132,10 +1128,12 @@ JSC_CCALL(render_make_sprite_ssbo,
       tr->scale = HMM_DivV3(tr->scale, tscale);
   }
 
-  sg_append_buffer(*b, (&(sg_range){
+  int offset = sg_append_buffer(*b, (&(sg_range){
     .ptr = ms,
     .size = size
   }));
+
+  ret = number2js(offset/96);
 )
 
 JSC_CCALL(render_make_t_ssbo,
@@ -1218,7 +1216,107 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, make_sprite_ssbo, 2)
 };
 
-JSC_CCALL(gui_scissor, sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0))
+JSC_DCALL(sgl_enable_texture)
+JSC_DCALL(sgl_disable_texture)
+JSC_CCALL(sgl_texture, sgl_texture(js2texture(argv[0])->id, std_sampler))
+JSC_DCALL(sgl_matrix_mode_modelview)
+JSC_DCALL(sgl_matrix_mode_projection)
+JSC_DCALL(sgl_matrix_mode_texture)
+JSC_DCALL(sgl_load_identity)
+JSC_CCALL(sgl_translate,
+  HMM_Vec3 v = js2vec3(argv[0]);
+  sgl_translate(v.x,v.y,v.z);
+)
+JSC_CCALL(sgl_rotate,
+  float rad = js2angle(argv[0]);
+  HMM_Vec3 axis = js2vec3(argv[1]);
+  sgl_rotate(rad, axis.x, axis.y, axis.z);
+)
+
+JSC_CCALL(sgl_scale,
+  HMM_Vec3 v = js2vec3(argv[0]);
+  sgl_scale(v.x, v.y, v.z);
+)
+
+JSC_CCALL(sgl_load_matrix,
+  transform *t = js2transform(argv[0]);
+  sgl_load_matrix(t->cache.e);
+)
+
+JSC_6CALL(sgl_frustum)
+JSC_6CALL(sgl_ortho)
+JSC_4CALL(sgl_perspective)
+JSC_DCALL(sgl_push_matrix)
+JSC_DCALL(sgl_pop_matrix)
+JSC_1CALL(sgl_point_size)
+JSC_DCALL(sgl_begin_points)
+JSC_DCALL(sgl_begin_lines)
+JSC_DCALL(sgl_begin_line_strip)
+JSC_DCALL(sgl_begin_triangles)
+JSC_DCALL(sgl_begin_triangle_strip)
+JSC_DCALL(sgl_begin_quads)
+JSC_DCALL(sgl_end)
+JSC_DCALL(sgl_draw)
+JSC_1CALL(sgl_layer)
+JSC_1CALL(sgl_draw_layer)
+
+JSC_CCALL(sgl_image,
+  texture *t = js2texture(argv[0]);
+//  transform *tr = js2transform(argv[1]);
+  HMM_Vec4 rect = js2vec4(argv[2]);
+  HMM_Vec4 color = js2vec4(argv[3]);
+  sgl_begin_quads();
+  sgl_c4f(color.r, color.g, color.b, color.a);
+  sgl_v2f(0,0);
+  sgl_v2f(0,1);
+  sgl_v2f(1,1);
+  sgl_v2f(1,0);
+  sgl_end();
+//  sgl_defaults();
+)
+
+JSC_CCALL(sgl_image_array,
+  JSValue array = argv[0];
+  sgl_begin_quads();
+  for (int i = 0; i < js_arrlen(array); i++) {
+    sgl_v2f(0,0);
+    sgl_v2f(0,1);
+    sgl_v2f(1,1);
+    sgl_v2f(1,0);
+  }
+  sgl_end();
+)
+
+static const JSCFunctionListEntry js_sgl_funcs[] = {
+  MIST_FUNC_DEF(sgl, enable_texture, 0),
+  MIST_FUNC_DEF(sgl, disable_texture, 0),
+  MIST_FUNC_DEF(sgl, texture, 1),
+  MIST_FUNC_DEF(sgl, matrix_mode_modelview, 0),
+  MIST_FUNC_DEF(sgl, matrix_mode_projection, 0),
+  MIST_FUNC_DEF(sgl, matrix_mode_texture, 0),
+  MIST_FUNC_DEF(sgl, load_identity, 0),
+  MIST_FUNC_DEF(sgl, translate, 1),
+  MIST_FUNC_DEF(sgl, rotate, 2),
+  MIST_FUNC_DEF(sgl, scale, 1),
+  MIST_FUNC_DEF(sgl, load_matrix, 1),
+  MIST_FUNC_DEF(sgl, frustum, 6),
+  MIST_FUNC_DEF(sgl, ortho, 6),
+  MIST_FUNC_DEF(sgl, perspective, 4),
+  MIST_FUNC_DEF(sgl, push_matrix, 0),
+  MIST_FUNC_DEF(sgl, pop_matrix, 0),
+  MIST_FUNC_DEF(sgl, point_size, 1),
+  MIST_FUNC_DEF(sgl, draw, 0),
+  MIST_FUNC_DEF(sgl, layer, 1),
+  MIST_FUNC_DEF(sgl, draw_layer, 1),
+  MIST_FUNC_DEF(sgl, image, 4),
+  MIST_FUNC_DEF(sgl, image_array, 1),
+};
+
+JSC_CCALL(gui_scissor,
+  sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
+//  sgl_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
+)
+
 JSC_CCALL(gui_text,
   const char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2vec2(argv[1]);
@@ -1422,12 +1520,12 @@ JSC_CCALL(vector_clamp,
 
 JSC_SSCALL(vector_trimchr,
   int len = js2number(js_getpropstr(argv[0], "length"));
-  char *start = str;
+  const char *start = str;
   
   while (*start == *str2)
     start++;
     
-  char *end = str + len-1;
+  const char *end = str + len-1;
   while(*end == *str2)
     end--;
   
@@ -1656,6 +1754,9 @@ static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, guid, 0),
 };
 
+static const JSCFunctionListEntry js_sg_buffer_funcs[] = {
+};
+
 JSC_CCALL(time_now, 
   struct timeval ct;
   gettimeofday(&ct, NULL);
@@ -1760,7 +1861,7 @@ JSC_SCALL(io_mkdir, ret = number2js(mkdir(str,0777)))
 
 JSValue js_io_slurpbytes(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
-  char *f = js2str(argv[0]);
+  const char *f = js2str(argv[0]);
   size_t len;
   unsigned char *d = slurp_file(f,&len);
   if (!d) {
@@ -1776,7 +1877,7 @@ JSValue js_io_slurpbytes(JSContext *js, JSValue self, int argc, JSValue *argv)
 JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
 
-  char *f = js2str(argv[0]);
+  const char *f = js2str(argv[0]);
   size_t len;
 
   char *s = slurp_text(f,&len);
@@ -1791,11 +1892,11 @@ JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv)
 
 JSValue js_io_slurpwrite(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
-  char *f = js2str(argv[0]);
+  const char *f = js2str(argv[0]);
   size_t len;
   JSValue ret;
   if (JS_IsString(argv[1])) {
-    char *data = JS_ToCStringLen(js, &len, argv[1]);
+    const char *data = JS_ToCStringLen(js, &len, argv[1]);
     ret = number2js(slurp_write(data, f, len));
     JS_FreeCString(js,data);
   } else {
@@ -1808,7 +1909,7 @@ JSValue js_io_slurpwrite(JSContext *js, JSValue self, int argc, JSValue *argv)
 
 JSValue js_io_chmod(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
-  char *f = js2str(argv[0]);
+  const char *f = js2str(argv[0]);
   int mod = js2number(argv[1]);
   chmod(f, mod);
   return JS_UNDEFINED;
@@ -2037,7 +2138,7 @@ JSC_CCALL(transform_trs,
   transform *t = js2transform(self);
   t->pos = JS_IsUndefined(argv[0]) ? v3zero : js2vec3(argv[0]);
   t->rotation = JS_IsUndefined(argv[1]) ? QUAT1 : js2quat(argv[1]);
-  t->scale = JS_IsUndefined(argv[2]) ? v3one : js2vec3(argv[1]);
+  t->scale = JS_IsUndefined(argv[2]) ? v3one : js2vec3(argv[2]);
 )
 
 static const JSCFunctionListEntry js_transform_funcs[] = {
@@ -2538,8 +2639,7 @@ JSC_GET(texture, width, number)
 JSC_GET(texture, height, number)
 JSC_GET(texture, frames, number)
 JSC_GET(texture, delays, ints)
-JSC_GET(texture, size, number)
-JSC_GET(texture, gpusize, number)
+JSC_GET(texture, vram, number)
 
 JSC_SCALL(texture_save, texture_save(js2texture(self), str));
 
@@ -2552,16 +2652,18 @@ JSC_CCALL(texture_getid,
   return number2js(tex->id.id);
 )
 
+JSC_CCALL(texture_inram, return boolean2js(js2texture(self)->data));
+
 static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, width),
   MIST_GET(texture, height),
   MIST_GET(texture, frames),
   MIST_GET(texture, delays),
-  MIST_GET(texture, gpusize),
-  MIST_GET(texture, size),
+  MIST_GET(texture, vram),
   MIST_FUNC_DEF(texture, save, 1),
   MIST_FUNC_DEF(texture, blit, 5),
   MIST_FUNC_DEF(texture, getid, 0),
+  MIST_FUNC_DEF(texture, inram, 0),
 };
 
 static const JSCFunctionListEntry js_timer_funcs[] = {
@@ -2723,6 +2825,40 @@ JSC_CCALL(os_memstate,
   JSJMEMRET(malloc_size)
   JSJMEMRET(malloc_limit)
   JSJMEMRET(gc_threshold)
+)
+
+JSC_CCALL(os_mallinfo,
+  struct mallinfo jsmem = mallinfo();
+  ret = JS_NewObject(js);
+  JSJMEMRET(arena);
+  JSJMEMRET(ordblks);
+  JSJMEMRET(smblks);
+  JSJMEMRET(hblks);
+  JSJMEMRET(hblkhd);
+  JSJMEMRET(usmblks);
+  JSJMEMRET(uordblks);
+  JSJMEMRET(fordblks);
+  JSJMEMRET(keepcost);
+)
+
+JSC_CCALL(os_rusage,
+  struct rusage jsmem;
+  getrusage(RUSAGE_SELF, &jsmem);
+  ret = JS_NewObject(js);
+  JSJMEMRET(ru_maxrss);
+  JSJMEMRET(ru_ixrss);
+  JSJMEMRET(ru_idrss);
+  JSJMEMRET(ru_isrss);
+  JSJMEMRET(ru_minflt);
+  JSJMEMRET(ru_majflt);
+  JSJMEMRET(ru_nswap);
+  JSJMEMRET(ru_inblock);
+  JSJMEMRET(ru_oublock);
+  JSJMEMRET(ru_msgsnd);
+  JSJMEMRET(ru_msgrcv);
+  JSJMEMRET(ru_nsignals);
+  JSJMEMRET(ru_nvcsw);
+  JSJMEMRET(ru_nivcsw);
 )
 
 JSC_CCALL(os_mem,
@@ -3221,6 +3357,8 @@ JSC_CCALL(os_skin_calculate,
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, cwd, 0),
+  MIST_FUNC_DEF(os, rusage, 0),
+  MIST_FUNC_DEF(os, mallinfo, 0),
   MIST_FUNC_DEF(os, env, 1),
   MIST_FUNC_DEF(os, sys, 0),
   MIST_FUNC_DEF(os, system, 1),
@@ -3283,11 +3421,11 @@ void ffi_load() {
   
   globalThis = JS_GetGlobalObject(js);
   
-  QJSCLASSPREP(ptr);
-  QJSCLASSPREP(sg_buffer);
+
   QJSGLOBALCLASS(os);
   
   QJSCLASSPREP_FUNCS(gameobject);
+  QJSCLASSPREP_FUNCS(sg_buffer);  
   QJSCLASSPREP_FUNCS(transform);
   QJSCLASSPREP_FUNCS(dsp_node);
   QJSCLASSPREP_FUNCS(warp_gravity);
@@ -3311,6 +3449,7 @@ void ffi_load() {
   QJSGLOBALCLASS(game);
   QJSGLOBALCLASS(gui);
   QJSGLOBALCLASS(render);
+//  QJSGLOBALCLASS(sgl);
   QJSGLOBALCLASS(physics);
   QJSGLOBALCLASS(vector);
   QJSGLOBALCLASS(spline);

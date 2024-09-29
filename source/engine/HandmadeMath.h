@@ -195,6 +195,9 @@
 #define FMT_VEC4 "[%g,%g,%g,%g]"
 #define PRINT_VEC4(vec) vec.x, vec.y, vec.z, vec.w
 
+#define FMT_M4 "[%g,%g,%g,%g\n%g,%g,%g,%g\n%g,%g,%g,%g\n%g,%g,%g,%g]"
+#define PRINT_M4(m) m.e[0][0], m.e[0][1], m.e[0][2], m.e[0][3], m.e[1][0], m.e[1][1], m.e[1][2], m.e[1][3], m.e[2][0], m.e[2][1], m.e[2][2], m.e[2][3], m.e[3][0], m.e[3][1], m.e[3][2], m.e[3][3]
+
 typedef union HMM_Vec2 {
   struct
   {
@@ -383,6 +386,8 @@ typedef union HMM_Vec4 {
 
   HMM_Quat quat;
   struct {float x, y, z, w; };
+  struct {float r, g, b, a; };
+  struct {float u0, u1, v0, v1;};
 
   float Elements[4];
   float e[4];
