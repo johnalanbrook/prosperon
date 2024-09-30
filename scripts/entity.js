@@ -1,8 +1,21 @@
 globalThis.entityreport = {};
 
-var timer_update = function (dt) {
-  this.fn();
-};
+var timer_manager = {};
+timer_manager.timers = new Map();
+timer_manager.make_timer = function(obj, fn, seconds)
+{
+  var timer = os.make_timer(_ => {
+    fn();
+    this.timers.delete(obj);
+  });
+
+  this.timers.set(obj, timer);
+  return _ => {
+    if (this.timers.has(obj)) {
+      
+    }
+  };
+}
 
 function obj_unique_name(name, obj) {
   name = name.replaceAll(".", "_");
@@ -70,32 +83,7 @@ var entity = {
     for (var o of Object.values(this.objects)) o.sync();
   },
 
-  delay(fn, seconds) {
-    var timers = this.timers;
-    var stop = function () {
-      timers.remove(stop);
-      execute = undefined;
-      stop.timer = undefined;      
-      stop = undefined;
-    };
-  
-    function execute() {
-      fn();
-      stop?.();
-    }
-  
-    stop.remain = seconds;
-    stop.seconds = seconds;
-    stop.pct = function () {
-      return 1 - stop.remain / stop.seconds;
-    };
-    
-    stop.timer = os.make_timer(execute);
-    stop.timer.remain = seconds;
-  
-    timers.push(stop);
-    return stop;
-  },
+  delay(fn, seconds) { prosperon.add_timer(this, fn, seconds); },
 
   cry(file) {
     return audio.cry(file);

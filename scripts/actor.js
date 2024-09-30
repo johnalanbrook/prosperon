@@ -132,33 +132,7 @@ actor.kill = function () {
 
 actor.kill.doc = `Remove this actor and all its padawans from existence.`;
 
-actor.delay = function (fn, seconds) {
-  var timers = this.timers;
-
-  var stop = function () {
-    timers.remove(stop);
-    stop.timer = undefined;    
-    stop = undefined;
-  };
-
-  function execute() {
-    if (fn) fn();
-    if (stop && stop.then) stop.then();
-    stop();
-  }
-
-  stop.remain = seconds;
-  stop.seconds = seconds;
-  stop.pct = function () {
-    return 1 - stop.remain / stop.seconds;
-  };
-  
-  stop.timer = os.make_timer(execute);
-  stop.timer.remain = seconds;
-
-  timers.push(stop);
-  return stop;
-};
+actor.delay = function (fn, seconds) { prosperon.add_timer(this, fn, seconds); }
 actor.delay.doc = `Call 'fn' after 'seconds' with 'this' set to the actor.`;
 
 actor.interval = function (fn, seconds) {

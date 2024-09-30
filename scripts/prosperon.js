@@ -418,6 +418,36 @@ var Event = {
   },
 };
 
+prosperon.add_timer = function(obj, fn, seconds)
+{
+  var timers = obj.timers;
+  
+  var stop = function () {
+    timers.remove(stop);
+    timer.fn = undefined;
+    timer = undefined; 
+  };
+
+  function execute() {
+    if (fn)
+      timer.remain = fn(stop.seconds);
+
+    if (!timer.remain)
+      stop();
+    else
+      stop.seconds = timer.remain;
+  }
+
+  var timer = os.make_timer(execute);
+  timer.remain = seconds;
+
+  stop.remain = seconds;
+  stop.seconds = seconds;
+  
+  timers.push(stop);
+  return stop;
+}
+
 global.mixin("scripts/spline");
 global.mixin("scripts/components");
 global.mixin("scripts/actor");

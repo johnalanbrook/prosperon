@@ -1,5 +1,8 @@
 #include "jsffi.h"
 
+//#define STB_LEAKCHECK_IMPLEMENTATION
+//#include "stb/stb_leakcheck.h"
+
 #include "script.h"
 #include "font.h"
 #include "gameobject.h"
@@ -2665,10 +2668,12 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_FUNC_DEF(texture, inram, 0),
 };
 
+JSC_GETSET_CALLBACK(timer, fn)
 JSC_GETSET(timer, remain, number)
 
 static const JSCFunctionListEntry js_timer_funcs[] = {
   CGETSET_ADD(timer, remain),
+  CGETSET_ADD(timer, fn),
 };
 
 JSC_GETSET(font, linegap, number)

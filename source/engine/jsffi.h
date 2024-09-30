@@ -75,7 +75,14 @@ JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue self) { \
 
 #define JSC_GETSET(ID, ENTRY, TYPE) GETSETPAIR( ID , ENTRY , TYPE , ; )
 #define JSC_GETSET_APPLY(ID, ENTRY, TYPE) GETSETPAIR(ID, ENTRY, TYPE, ID##_apply(js2##ID (self));)
-#define JSC_GETSET_HOOK(ID, ENTRY) GETSETPAIR(ID, ENTRY, JSValue, ;)
+#define JSC_GETSET_CALLBACK(ID, ENTRY) \
+JSValue js_##ID##_set_##ENTRY (JS_SETSIG) { \
+  JSValue fn = js2##ID (self)->ENTRY; \
+  if (!JS_IsUndefined(fn)) JS_FreeValue(js, fn); \
+  js2##ID (self)->ENTRY = JS_DupValue(js, val); \
+  return JS_UNDEFINED; \
+}\
+JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue self) { return JS_DupValue(js, js2##ID (self)->ENTRY); } \
 
 #define JSC_GETSET_GLOBAL(ENTRY, TYPE) \
 JSValue js_global_set_##ENTRY (JS_SETSIG) { \

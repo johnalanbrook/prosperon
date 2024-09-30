@@ -51,7 +51,7 @@ var sprite = {
 
     self.path = playing.path;
 
-    function advance() {
+    function advance(time) {
       if (!self) return;
       if (!self.gameobject) return;
       self.frame = playing.frames[f].rect;
@@ -72,12 +72,11 @@ var sprite = {
           self?.stop();
           return;
         }
-        //        self?.anim_done?.();
-        //        if (!self.loop) { self.stop(); return; }
       }
-      if (self) stop = self.gameobject.delay(advance, playing.frames[f].time / self.anim_speed);
+      
+      return playing.frames[f].time/self.anim_speed;
     }
-
+    stop = self.gameobject.delay(advance, playing.frames[f].time/self.anim_speed);
     advance();
   },
   tex_sync() {
