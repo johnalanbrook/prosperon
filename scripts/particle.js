@@ -7,13 +7,16 @@ emitter.spawn_timer = 0;
 emitter.pps = 0;
 emitter.color = Color.white;
 
-emitter.draw = function () {
+var ssbo;
+
+var drawnum = 0;
+emitter.draw = function (arr) {
   var pars = Object.values(this.particles);
   if (pars.length === 0) return;
-  render.use_shader(this.shader);
-  render.use_mat(this);
-  render.make_particle_ssbo(pars, this.ssbo);
-  render.draw(this.shape, this.ssbo, pars.length);
+//  render.make_particle_ssbo(pars, ssbo);
+  for (var i of pars)
+    arr.push(i);
+//  drawnum += pars.length;
 };
 
 emitter.kill = function () {
@@ -108,7 +111,44 @@ function update_emitters(dt) {
 }
 
 function draw_emitters() {
-  for (var e of emitters) e.draw();
+  ssbo ??= render.make_textssbo();
+  render.use_shader("shaders/baseparticle.cg");
+  var buckets = new Map();
+  var base = 0;
+  for (var e of emitters) {
+    var bucket = buckets.get(e.diffuse);
+    if (!bucket)
+      buckets.set(e.diffuse, [e]);
+    else
+      bucket.push(e);
+  }
+
+  for (var bucket of buckets.values()) {
+    drawnum = 0;
+    var append = [];
+    bucket[0].baseinstance = base;
+    render.use_mat(bucket[0]);
+    for (var e of bucket)
+      e.draw(append);
+
+    render.make_particle_ssbo(append, ssbo);
+    render.draw(bucket[0].shape, ssbo, append.length);
+    base += append.length;
+  }
+
+//  for (var e of emitters) e.draw();
+
+//  render.draw(shape.centered_quad, ssbo, drawnum);
 }
 
-return { make_emitter, update_emitters, draw_emitters };
+function stat_emitters()
+{
+  var stat = {};
+  stat.emitters = emitters.length;
+  var particles = 0;
+  for (var e of emitters) particles += Object.values(e.particles).length;
+  stat.particles = particles
+  return stat;
+}
+
+return { make_emitter, update_emitters, draw_emitters, stat_emitters };

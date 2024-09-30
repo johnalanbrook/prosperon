@@ -352,6 +352,9 @@ var get_snapshot = function()
  snap.mallinfo ??= {};
  Object.assign(snap.mallinfo, os.mallinfo());
 
+ snap.particles ??= {};
+ Object.assign(snap.particles, stat_emitters());
+
  snap.obj ??= {};
  for (var i of classes) {
    var proto = globalThis[`${i}_proto`];

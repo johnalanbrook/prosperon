@@ -20,10 +20,11 @@ out vec2 uv;
 out vec4 color0;
 
 uniform mat4 vp;
+uniform float baseinstance;
 
 void main()
 {
-  particle p = par[gl_InstanceIndex];
+  particle p = par[int(baseinstance)+gl_InstanceIndex];
   gl_Position = vp * p.model * vec4(a_pos, 0.0, 1.0);
   uv = a_uv;
   color0 = p.color;
