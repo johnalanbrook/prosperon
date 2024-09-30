@@ -331,8 +331,7 @@ profile.data = {};
 profile.curframe = 0;
 
 profile.snapshot = {};
-var fps = [];
-var frame_lead = 240;
+
 
 var classes = ["gameobject", "transform", "dsp_node", "texture", "font", "warp_gravity", "warp_damp", "sg_buffer", "datastream", "cpShape", "cpConstraint", "timer", "skin"];
 var get_snapshot = function()
@@ -361,11 +360,15 @@ var get_snapshot = function()
  }
 }
 
+var fps = [];
+var frame_lead = 1;
+var fps_t = 0;
 profile.report_frame = function (t) {
   fps.push(t);
-  if (fps.length > frame_lead) {
+  if (profile.secs(profile.now() - fps_t) > frame_lead) {
     profile.snapshot.fps = Math.mean(fps);
     fps.length = 0;
+    fps_t = profile.now();
     get_snapshot();
   }
 };

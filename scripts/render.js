@@ -1130,6 +1130,7 @@ prosperon.process = function process() {
     profile.frame("update");
     prosperon.update(dt * game.timescale);
     update_emitters(dt * game.timescale);
+    os.update_timers(dt * game.timescale);
     profile.endframe();
     if (sim.mode === "step") sim.pause();
   }

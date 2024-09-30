@@ -134,10 +134,11 @@ actor.kill.doc = `Remove this actor and all its padawans from existence.`;
 
 actor.delay = function (fn, seconds) {
   var timers = this.timers;
+
   var stop = function () {
     timers.remove(stop);
+    stop.timer = undefined;    
     stop = undefined;
-    rm();
   };
 
   function execute() {
@@ -151,15 +152,9 @@ actor.delay = function (fn, seconds) {
   stop.pct = function () {
     return 1 - stop.remain / stop.seconds;
   };
-
-  function update(dt) {
-    profile.frame("timer");
-    stop.remain -= dt;
-    if (stop.remain <= 0) execute();
-    profile.endframe();
-  }
-
-  var rm = Register.appupdate.register(update);
+  
+  stop.timer = os.make_timer(execute);
+  stop.timer.remain = seconds;
 
   timers.push(stop);
   return stop;

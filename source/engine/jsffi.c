@@ -40,7 +40,6 @@
 #include "gui.h"
 #include "timer.h"
 #include <sys/resource.h>
-#include <malloc.h>
 
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
@@ -2666,7 +2665,10 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_FUNC_DEF(texture, inram, 0),
 };
 
+JSC_GETSET(timer, remain, number)
+
 static const JSCFunctionListEntry js_timer_funcs[] = {
+  CGETSET_ADD(timer, remain),
 };
 
 JSC_GETSET(font, linegap, number)
@@ -2828,7 +2830,8 @@ JSC_CCALL(os_memstate,
 )
 
 JSC_CCALL(os_mallinfo,
-  struct mallinfo jsmem = mallinfo();
+  ret = JS_UNDEFINED;
+  /*struct mallinfo jsmem = mallinfo();
   ret = JS_NewObject(js);
   JSJMEMRET(arena);
   JSJMEMRET(ordblks);
@@ -2838,7 +2841,7 @@ JSC_CCALL(os_mallinfo,
   JSJMEMRET(usmblks);
   JSJMEMRET(uordblks);
   JSJMEMRET(fordblks);
-  JSJMEMRET(keepcost);
+  JSJMEMRET(keepcost);*/
 )
 
 JSC_CCALL(os_rusage,
@@ -3053,7 +3056,7 @@ JSC_CCALL(os_make_circle2d,
   return ret;
 )
 
-JSC_CCALL(os_make_timer, return timer2js(timer_make()))
+JSC_CCALL(os_make_timer, return timer2js(timer_make(argv[0])))
 JSC_CCALL(os_update_timers, timer_update(js2number(argv[0])))
 
 JSC_CCALL(os_obj_size,
@@ -3388,7 +3391,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_hemisphere, 2),
   MIST_FUNC_DEF(os, make_plane, 2),
   MIST_FUNC_DEF(os, make_video, 1),
-  MIST_FUNC_DEF(os, make_timer, 0),
+  MIST_FUNC_DEF(os, make_timer, 1),
   MIST_FUNC_DEF(os, update_timers, 1),
   MIST_FUNC_DEF(os, mem, 1),
   MIST_FUNC_DEF(os, mem_limit, 1),

@@ -52,15 +52,15 @@ extern JSValue cpShape2js(cpShape *s);
   return ret; \
 } \
 
-#define JSC_DCALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(); }
+#define JSC_DCALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(); return JS_UNDEFINED; }
 
-#define JSC_1CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0])); }
-#define JSC_2CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1])); }
-#define JSC_3CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])); }
-#define JSC_4CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3])); }
-#define JSC_5CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])); }
-#define JSC_6CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5])); }
-#define JSC_7CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5]), js2number(argv[6])); }
+#define JSC_1CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0])); return JS_UNDEFINED; }
+#define JSC_2CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1])); return JS_UNDEFINED; }
+#define JSC_3CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])); return JS_UNDEFINED; }
+#define JSC_4CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3])); return JS_UNDEFINED; }
+#define JSC_5CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])); return JS_UNDEFINED; }
+#define JSC_6CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5])); return JS_UNDEFINED; }
+#define JSC_7CALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]), js2number(argv[5]), js2number(argv[6])); return JS_UNDEFINED; }
 
 #define GETSETPAIR(ID, ENTRY, TYPE, FN) \
 JSValue js_##ID##_set_##ENTRY (JS_SETSIG) { \

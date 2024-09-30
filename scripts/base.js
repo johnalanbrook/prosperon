@@ -1,28 +1,3 @@
-/* It is EMCA6 but without a lot of builtin objects and various functions. There are no:
-   * Promises and so on (Generators, async)
-   * WeakMaps and so on (weakset, weakref)
-   * Typed arrays
-   * Proxys
-   * Modules
-   * Symbols (use closures)
-   In addition to the removal of a bunch of stuff as seen here.
-   Access prototypes through __proto__ instead of the long-winded Object.getProtoTypeOf.
-*/
-
-/*
-Object.getPrototypeOf = undefined;
-Object.setPrototypeOf = undefined;
-Reflect = undefined
-Symbol = undefined;
-URIError = undefined;
-Proxy = undefined;
-Map = undefined;
-WeakMap = undefined;
-Promise = undefined;
-Set = undefined;
-WeakSet = undefined;
-*/
-
 Number.roman = {
   M: 1000,
   D: 500,

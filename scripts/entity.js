@@ -75,34 +75,24 @@ var entity = {
     var stop = function () {
       timers.remove(stop);
       execute = undefined;
+      stop.timer = undefined;      
       stop = undefined;
-      rm?.();
-      rm = undefined;
-      update = undefined;
     };
-
+  
     function execute() {
       fn();
       stop?.();
     }
-
+  
     stop.remain = seconds;
     stop.seconds = seconds;
     stop.pct = function () {
       return 1 - stop.remain / stop.seconds;
     };
-
-    function update(dt) {
-      profile.frame("timer");
-      if (stop) {
-        // TODO: This seems broken
-        stop.remain -= dt;
-        if (stop.remain <= 0) execute();
-      }
-      profile.endframe();
-    }
-
-    var rm = Register.update.register(update);
+    
+    stop.timer = os.make_timer(execute);
+    stop.timer.remain = seconds;
+  
     timers.push(stop);
     return stop;
   },
@@ -247,6 +237,7 @@ var entity = {
       delete ent.objects;
       ent.objects = {};
       for (var i in o) {
+        console.info(`creating ${i} on ${ent.toString()}`);
         var newur = o[i].ur;
         delete o[i].ur;
         var n = ent.spawn(ur[newur], o[i]);
@@ -430,7 +421,7 @@ var entity = {
 
   rename_obj(name, newname) {
     if (!this.objects[name]) {
-//      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
+      console.warn(`No object with name ${name}. Could not rename to ${newname}.`);
       return;
     }
     if (name === newname) {

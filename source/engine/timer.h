@@ -1,13 +1,14 @@
 #ifndef TIMER_H
 
+#include "script.h"
+
 typedef struct timer {
-  double start;
   double remain;
+  JSValue fn;
 } timer;
 
-timer *timer_make();
+timer *timer_make(JSValue fn);
 void timer_free(timer *t);
 void timer_update(double dt);
-void timer_stop(timer *t);
 
 #endif
