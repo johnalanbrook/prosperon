@@ -953,6 +953,10 @@ JSValue gui_init(JSContext *js)
 {
   simgui_desc_t sdesc = {};
   simgui_setup(&sdesc);
+
+  ImGuiIO& io = ImGui::GetIO();
+  io.IniFilename = ".prosperon/imgui.ini";
+  ImGui::LoadIniSettingsFromDisk(".prosperon/imgui.ini");
   
   sgimgui_desc_t desc = {0};
   sgimgui_init(&sgimgui, &desc);

@@ -1,5 +1,4 @@
 var emitter = {};
-emitter.particles = {};
 emitter.life = 10;
 emitter.scale = 1;
 emitter.grow_for = 0;
@@ -9,16 +8,6 @@ emitter.color = Color.white;
 
 var ssbo;
 
-var drawnum = 0;
-emitter.draw = function (arr) {
-  var pars = Object.values(this.particles);
-  if (pars.length === 0) return;
-//  render.make_particle_ssbo(pars, ssbo);
-  for (var i of pars)
-    arr.push(i);
-//  drawnum += pars.length;
-};
-
 emitter.kill = function () {
   emitters.remove(this);
 };
@@ -26,10 +15,10 @@ emitter.kill = function () {
 var std_step = function (p) {
   if (p.time < this.grow_for) {
     var s = Math.lerp(0, this.scale, p.time / this.grow_for);
-    p.transform.scale = [s, s, s];
+    p.transform.scale = s;
   } else if (p.time > p.life - this.shrink_for) {
     var s = Math.lerp(0, this.scale, (p.life - p.time) / this.shrink_for);
-    p.transform.scale = [s, s, s];
+    p.transform.scale = s;
   } else p.transform.scale = [this.scale, this.scale, this.scale];
 };
 
@@ -41,8 +30,8 @@ emitter.spawn = function (t) {
   var par = this.dead.shift();
   if (par) {
     par.body.pos = t.pos;
-    par.transform.scale = [this.scale, this.scale, this.scale];
-    this.particles[par.id] = par;
+    par.transform.scale = this.scale;
+    this.particles.push(par);
     par.time = 0;
     this.spawn_hook?.(par);
     par.life = this.life;
@@ -59,9 +48,8 @@ emitter.spawn = function (t) {
   par.body = os.make_body(par.transform);
 
   par.body.pos = t.pos;
-  par.transform.scale = [this.scale, this.scale, this.scale];
-  par.id = prosperon.guid();
-  this.particles[par.id] = par;
+  par.transform.scale = this.scale;
+  this.particles.push(par);
 
   this.spawn_hook(par);
 };
@@ -78,14 +66,14 @@ emitter.step = function (dt) {
   }
 
   // update all particles
-  for (var p of Object.values(this.particles)) {
+  for (var p of this.particles) {
     p.time += dt;
     this.step_hook?.(p);
 
     if (this.kill_hook?.(p) || p.time >= p.life) {
       this.die_hook?.(p);
-      this.dead.push(this.particles[p.id]);
-      delete this.particles[p.id];
+      this.dead.push(p);
+      this.particles.remove(p);
     }
   }
 };
@@ -101,6 +89,7 @@ var make_emitter = function () {
   e.ssbo = render.make_textssbo();
   e.shape = shape.centered_quad;
   e.shader = "shaders/baseparticle.cg";
+  e.particles = [];
   e.dead = [];
   emitters.push(e);
   return e;
@@ -110,35 +99,33 @@ function update_emitters(dt) {
   for (var e of emitters) e.step(dt);
 }
 
+var arr = [];
 function draw_emitters() {
   ssbo ??= render.make_textssbo();
   render.use_shader("shaders/baseparticle.cg");
-  var buckets = new Map();
+  var buckets = {};
   var base = 0;
   for (var e of emitters) {
-    var bucket = buckets.get(e.diffuse);
+    var bucket = buckets[e.diffuse.path];
     if (!bucket)
-      buckets.set(e.diffuse, [e]);
+      buckets[e.diffuse.path] = [e];
     else
       bucket.push(e);
   }
 
-  for (var bucket of buckets.values()) {
-    drawnum = 0;
-    var append = [];
+  for (var path in buckets) {
+    arr.length = 0;
+    var bucket = buckets[path];
     bucket[0].baseinstance = base;
     render.use_mat(bucket[0]);
-    for (var e of bucket)
-      e.draw(append);
-
-    render.make_particle_ssbo(append, ssbo);
-    render.draw(bucket[0].shape, ssbo, append.length);
-    base += append.length;
+    for (var e of bucket) {
+      if (e.particles.length === 0) continue;
+      for (var p of e.particles) arr.push(p);
+   }
+    render.make_particle_ssbo(arr, ssbo);
+    render.draw(bucket[0].shape, ssbo, arr.length);
+    base += arr.length;
   }
-
-//  for (var e of emitters) e.draw();
-
-//  render.draw(shape.centered_quad, ssbo, drawnum);
 }
 
 function stat_emitters()
@@ -146,8 +133,8 @@ function stat_emitters()
   var stat = {};
   stat.emitters = emitters.length;
   var particles = 0;
-  for (var e of emitters) particles += Object.values(e.particles).length;
-  stat.particles = particles
+  for (var e of emitters) particles += e.particles.length;
+  stat.particles = particles;
   return stat;
 }
 
