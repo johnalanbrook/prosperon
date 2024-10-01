@@ -314,6 +314,13 @@ void texture_save(texture *tex, const char *file)
     stbi_write_tga(file, tex->width, tex->height, 4, tex->data);
   else if (!strcmp(ext, ".jpg") || !strcmp(ext, ".jpeg"))
     stbi_write_jpg(file, tex->width, tex->height, 4, tex->data, 5);
+  else if (!strcmp(ext, ".qoi"))
+    qoi_write(file, tex->data, &(qoi_desc) {
+      .width = tex->width,
+      .height = tex->height,
+      .channels = 4,
+      .colorspace = QOI_SRGB
+    });
 }
 
 // copy texture src to dest
