@@ -851,6 +851,10 @@ JSC_CCALL(imgui_setupaxis,
   ImPlot::SetupAxis(num_to_yaxis(js2number(argv[0])));
 )
 
+JSC_SCALL(imgui_setclipboard,
+  ImGui::SetClipboardText(str);
+)
+
 static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, windowpos, 0),
   MIST_FUNC_DEF(imgui, plot2pixels, 1),
@@ -945,6 +949,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, dummy, 1),
   MIST_FUNC_DEF(imgui, invisiblebutton, 2),
   MIST_FUNC_DEF(imgui, width, 1),
+  MIST_FUNC_DEF(imgui, setclipboard, 1),
 };
 
 static int started = 0;

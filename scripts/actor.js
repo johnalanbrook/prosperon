@@ -47,11 +47,17 @@ globalThis.rmactor = function (e) {
 actor.__stats = function () {
   var total = 0;
   var stats = {};
-  for (var i in actor_spawns) {
+  game.all_objects(obj => {
+    if (!actor_spawns[obj._file]) return;
+    stats[obj._file] ??= 0;
+    stats[obj._file]++;
+    total++;
+  });
+/*  for (var i in actor_spawns) {
     stats[i] = actor_spawns[i].length;
     total += stats[i];
-  }
-  stats.total = total;
+  }*/
+//  stats.total = total;
   return stats;
 };
 

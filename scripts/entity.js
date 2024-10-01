@@ -72,9 +72,8 @@ var entity = {
   },
 
   clear() {
-    for (var k in this.objects) {
+    for (var k in this.objects)
       this.objects[k].kill();
-    }
     this.objects = {};
   },
 
