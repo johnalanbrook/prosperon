@@ -2651,7 +2651,6 @@ JSC_GET(texture, vram, number)
 JSC_SCALL(texture_save, texture_save(js2texture(self), str));
 
 JSC_CCALL(texture_blit,
-  texture *tex = js2texture(self);
   texture_blit(js2texture(self), js2texture(argv[0]), js2rect(argv[1]), js2rect(argv[2]), js2boolean(argv[3]));
 )
 
@@ -2662,6 +2661,39 @@ JSC_CCALL(texture_getid,
 
 JSC_CCALL(texture_inram, return boolean2js(js2texture(self)->data));
 
+JSC_CCALL(texture_fill,
+  texture_fill(js2texture(self), js2color(argv[0]));
+)
+
+JSC_CCALL(texture_fill_rect,
+  texture_fill_rect(js2texture(self), js2rect(argv[0]), js2color(argv[1]));
+)
+
+JSC_CCALL(texture_flip,
+  texture_flip(js2texture(self), js2boolean(argv[0]));
+)
+
+JSC_CCALL(texture_write_pixel,
+  HMM_Vec2 c = js2vec2(argv[0]);
+  texture_write_pixel(js2texture(self), c.x, c.y, js2color(argv[1]));
+)
+
+JSC_CCALL(texture_dup,
+  ret = texture2js(texture_dup(js2texture(self)));
+)
+
+JSC_CCALL(texture_scale,
+  ret = texture2js(texture_scale(js2texture(self), js2number(argv[0]), js2number(argv[1])));
+)
+
+JSC_CCALL(texture_load_gpu,
+  texture_load_gpu(js2texture(self));
+)
+
+JSC_CCALL(texture_offload,
+  texture_offload(js2texture(self));
+)
+
 static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, width),
   MIST_GET(texture, height),
@@ -2669,9 +2701,17 @@ static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, delays),
   MIST_GET(texture, vram),
   MIST_FUNC_DEF(texture, save, 1),
-  MIST_FUNC_DEF(texture, blit, 5),
+  MIST_FUNC_DEF(texture, write_pixel, 2),  
+  MIST_FUNC_DEF(texture, fill, 1),
+  MIST_FUNC_DEF(texture, fill_rect, 2),
+  MIST_FUNC_DEF(texture, dup, 0),
+  MIST_FUNC_DEF(texture, scale, 2),
+  MIST_FUNC_DEF(texture, flip, 1),
+  MIST_FUNC_DEF(texture, blit, 4),
   MIST_FUNC_DEF(texture, getid, 0),
   MIST_FUNC_DEF(texture, inram, 0),
+  MIST_FUNC_DEF(texture, load_gpu, 0),
+  MIST_FUNC_DEF(texture, offload, 0),
 };
 
 JSC_GETSET_CALLBACK(timer, fn)

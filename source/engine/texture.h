@@ -53,7 +53,8 @@ void texture_offload(texture *tex); // Remove the data from this texture
 void texture_load_gpu(texture *tex); // Upload this data to the GPU if it isn't already there. Replace it if it is.
 
 int texture_write_pixel(texture *tex, int x, int y, struct rgba color);
-int texture_fill_rect(texture *tex, int x, int y, int w, int h, struct rgba color);
+int texture_fill(texture *tex, struct rgba color);
+int texture_fill_rect(texture *tex, struct rect rect, struct rgba color);
 int texture_blit(texture *dst, texture *src, struct rect dstrect, struct rect srcrect, int tile); // copies src into dst, using their respective squares, scaling if necessary
 int texture_flip(texture *tex, int y);
 

@@ -249,7 +249,6 @@ struct texture *texture_empty(int w, int h)
   tex->data = calloc(w*h*n, sizeof(unsigned char));
   tex->width = w;
   tex->height = h;
-  texture_load_gpu(tex);
   return tex;
 }
 
@@ -321,17 +320,17 @@ void texture_save(texture *tex, const char *file)
 // sx and sy are the destination coordinates to copy to
 // sw the width of the destination to take in pixels
 // sh the height of the destination to take in pixels
-int texture_blit(texture *src, texture *dst, rect srcrect, rect dstrect, int tile) {
-  if (!src || !dst || !src->data || !dst->data) return 0;
+int texture_blit(texture *dst, texture *src, rect dstrect, rect srcrect, int tile) {
+//  if (!src || !dst || !src->data || !dst->data) return 0;
 
   float scaleX = srcrect.w / dstrect.w;
   float scaleY = srcrect.h / dstrect.h;
 
-  if (srcrect.x < 0 || srcrect.y < 0 || srcrect.x + srcrect.w > src->width ||
+/*  if (srcrect.x < 0 || srcrect.y < 0 || srcrect.x + srcrect.w > src->width ||
     dstrect.x < 0 || dstrect.y < 0 || dstrect.x + dstrect.w > dst->width ||
     srcrect.y + srcrect.h > src->height || dstrect.y + dstrect.h > dst->height) {
     return false;  // Rectangles exceed texture bounds
-  }
+  }*/
 
   for (int dstY = 0; dstY < dstrect.h; ++dstY) {
     for (int dstX = 0; dstX < dstrect.w; ++dstX) {
@@ -351,25 +350,28 @@ int texture_blit(texture *src, texture *dst, rect srcrect, rect dstrect, int til
       
       rgba srccolor = get_pixel(src->data, srcIndex);
       rgba dstcolor = get_pixel(dst->data, dstIndex);
-      write_pixel(dst->data, dstIndex, blend_colors(srccolor, dstcolor));
+      rgba color = blend_colors(srccolor, dstcolor);
+      write_pixel(dst->data, dstIndex, color);
     }
   }
 
   return 1;
 }
 
-int texture_fill_rect(texture *tex, int x, int y, int w, int h, struct rgba color)
+int texture_fill_rect(texture *tex, struct rect rect, struct rgba color)
 {
   if (!tex || !tex->data) return 0;
 
-  int x_end = x+w;
-  int y_end = y+h;
+  int x_end = rect.x+rect.w;
+  int y_end = rect.y+rect.h;
 
-  if (x < 0 || y < 0 || x_end > tex->width || y_end > tex->height) return 0;
+  if (rect.x < 0 || rect.y < 0 || x_end > tex->width || y_end > tex->height) return 0;
 
-  for (int j = y; j < y_end; ++j)
-    for (int i = x; i < x_end; ++i)
+  for (int j = rect.y; j < y_end; ++j)
+    for (int i = rect.x; i < x_end; ++i) {
+      int index = (j*tex->width+i)*4;
       write_pixel(tex->data, index, color);
+    }
 
   return 1;
 }
@@ -403,16 +405,16 @@ int texture_flip(texture *tex, int y)
   if (y) {
     for (int row = 0; row < height / 2; ++row) {
       for (int col = 0; col < width; ++col) {
-        unsigned char *top = &tex->data[(row*width+col)*4];
-        unsigned char *bottom = &tex->data[((height-row-1)*width+col)*4];
+        unsigned char *top = tex->data+((row*width+col)*4);
+        unsigned char *bottom = tex->data+(((height-row-1)*width+col)*4);
         swap_pixels(top,bottom);
       }
     }
   } else {
     for (int row = 0; row < height; ++row) {
       for (int col = 0; col < width / 2; ++col) {
-        unsigned char *left = &tex->data[(row*width+col)*4];
-        unsigned char *right = &tex->data[(row*width+(width-col-1))*4];
+        unsigned char *left = tex->data+((row*width+col)*4);
+        unsigned char *right = tex->data+((row*width+(width-col-1))*4);
         swap_pixels(left,right);
       }
     }
@@ -474,6 +476,21 @@ sg_image_data tex_img_data(texture *tex, int mipmaps)
     mipw = w;
     miph = h;
   }
+}
+
+int texture_fill(texture *tex, struct rgba color)
+{
+  if (!tex || !tex->data) return 0;  // Ensure valid texture and pixel data
+
+  // Loop through every pixel in the texture
+  for (int y = 0; y < tex->height; ++y) {
+	  for (int x = 0; x < tex->width; ++x) {
+      int index = (y * tex->width + x) * 4;
+      write_pixel(tex->data, index, color);
+    }
+  }
+  
+  return 1;
 }
 
 void texture_load_gpu(texture *tex)
