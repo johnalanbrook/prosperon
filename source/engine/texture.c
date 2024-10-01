@@ -21,6 +21,103 @@
 
 struct rect ST_UNIT = {0.f, 0.f, 1.f, 1.f};
 
+static inline void write_pixel(unsigned char *data, int idx, rgba color)
+{
+  data[idx] = color.r;
+  data[idx+1] = color.g;
+  data[idx+2] = color.b;
+  data[idx+3] = color.a;
+}
+
+static inline rgba get_pixel(unsigned char *data, int idx)
+{
+  rgba color;
+  color.r = data[idx];
+  color.g = data[idx+1];
+  color.b = data[idx+2];
+  color.a = data[idx+3];
+  return color;
+}
+
+static inline unsigned char c_clamp(float value) { return (unsigned char) fmaxf(0.0f, fminf(255.0f, roundf(value))); }
+
+static inline rgba blend_colors(rgba a, rgba b)
+{
+  float a_a = a.a / 255.0f;
+  float b_a = b.a / 255.0f;
+
+  float out_a = a_a + b_a * (1.0f - a_a);
+  rgba result;
+
+  if (out_a == 0.0f) {
+    result.r = result.g = result.b = result.a = 0;
+    return result;
+  }
+
+  // Use the c_clamp function to safely clamp the values within the range [0, 255]
+  result.r = c_clamp(((a.r * a_a) + (b.r * b_a * (1.0f - a_a))) / out_a);
+  result.g = c_clamp(((a.g * a_a) + (b.g * b_a * (1.0f - a_a))) / out_a);
+  result.b = c_clamp(((a.b * a_a) + (b.b * b_a * (1.0f - a_a))) / out_a);
+  result.a = c_clamp(out_a * 255.0f);
+
+  return result;
+}
+
+static inline rgba additive_blend(rgba a, rgba b) {
+  rgba result;
+
+  result.r = c_clamp(a.r + b.r);
+  result.g = c_clamp(a.g + b.g);
+  result.b = c_clamp(a.b + b.b);
+  result.a = c_clamp((a.a + b.a) * 0.5f);  // Blend alpha channels evenly
+
+  return result;
+}
+
+static inline rgba subtractive_blend(rgba a, rgba b) {
+  rgba result;
+
+  result.r = c_clamp(a.r - b.r);
+  result.g = c_clamp(a.g - b.g);
+  result.b = c_clamp(a.b - b.b);
+  result.a = c_clamp((a.a + b.a) * 0.5f);  // Blend alpha channels evenly
+
+  return result;
+}
+
+static inline rgba multiplicative_blend(rgba a, rgba b) {
+  rgba result;
+
+  result.r = c_clamp((a.r * b.r) / 255.0f);
+  result.g = c_clamp((a.g * b.g) / 255.0f);
+  result.b = c_clamp((a.b * b.b) / 255.0f);
+  result.a = c_clamp((a.a + b.a) * 0.5f);  // Blend alpha channels evenly
+
+  return result;
+}
+
+static inline rgba dodge_blend(rgba a, rgba b) {
+  rgba result;
+
+  result.r = c_clamp(a.r == 255 ? 255 : (b.r * 255) / (255 - a.r));
+  result.g = c_clamp(a.g == 255 ? 255 : (b.g * 255) / (255 - a.g));
+  result.b = c_clamp(a.b == 255 ? 255 : (b.b * 255) / (255 - a.b));
+  result.a = c_clamp((a.a + b.a) * 0.5f);  // Blend alpha channels evenly
+
+  return result;
+}
+
+static inline rgba burn_blend(rgba a, rgba b) {
+  rgba result;
+
+  result.r = c_clamp(a.r == 0 ? 0 : 255 - ((255 - b.r) * 255) / a.r);
+  result.g = c_clamp(a.g == 0 ? 0 : 255 - ((255 - b.g) * 255) / a.g);
+  result.b = c_clamp(a.b == 0 ? 0 : 255 - ((255 - b.b) * 255) / a.b);
+  result.a = c_clamp((a.a + b.a) * 0.5f);  // Blend alpha channels evenly
+
+  return result;
+}
+
 unsigned int next_pow2(unsigned int v)
 {
   v--;
@@ -58,6 +155,14 @@ int mip_wh(int w, int h, int *mw, int *mh, int lvl)
   *mh = h ? h : 1;
 
   return 0;
+}
+
+void texture_offload(texture *tex)
+{
+  if (tex->data) {
+    free(tex->data);
+    tex->data = NULL;
+  }
 }
 
 /* If an empty string or null is put for path, loads default texture */
@@ -113,56 +218,14 @@ struct texture *texture_from_file(const char *path) {
   }
   free(raw);
 
-  if (data == NULL)
+  if (data == NULL) {
+    free(tex);
     return NULL;
-  
-  tex->data = data;
-  tex->vram = tex->width*tex->height*4;
-  
-  unsigned int nw = next_pow2(tex->width);
-  unsigned int nh = next_pow2(tex->height);
-
-  sg_image_data sg_img_data;
-  sg_img_data.subimage[0][0] = (sg_range){.ptr = data, .size=tex->width*tex->height*4};
-  
-  int mips = mip_levels(tex->width, tex->height)+1;
-  
-  int mipw, miph;
-  mipw = tex->width;
-  miph = tex->height;
-  
-  sg_img_data.subimage[0][0] = (sg_range){ .ptr = data, .size = mipw*miph*4 };
-  
-  unsigned char *mipdata[mips];
-  mipdata[0] = data;
-    
-  for (int i = 1; i < mips; i++) {
-    int w, h, mipw, miph;
-    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); // mipw miph are previous iteration 
-    mip_wh(tex->width, tex->height, &w, &h, i);
-    mipdata[i] = malloc(w * h * 4);
-    stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
-    sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
-    tex->vram += w*h*4;
-    
-    mipw = w;
-    miph = h;
   }
 
-  tex->id = sg_make_image(&(sg_image_desc){
-    .type = SG_IMAGETYPE_2D,
-    .width = tex->width,
-    .height = tex->height,
-    .usage = SG_USAGE_IMMUTABLE,
-    .num_mipmaps = mips,
-    .data = sg_img_data
-  });
-  
-  for (int i = 1; i < mips; i++)
-    free(mipdata[i]);
+  tex->data = data;
 
-  free(tex->data);
-  tex->data = NULL;
+  texture_load_gpu(tex);
     
   return tex;
 }
@@ -179,23 +242,14 @@ void texture_free(texture *tex)
   free(tex);
 }
 
-struct texture *texture_empty(int w, int h, int n)
+struct texture *texture_empty(int w, int h)
 {
+  int n = 4;
   texture *tex = calloc(1,sizeof(*tex));
   tex->data = calloc(w*h*n, sizeof(unsigned char));
   tex->width = w;
   tex->height = h;
-  sg_image_data sgdata;
-  sgdata.subimage[0][0] = (sg_range){.ptr = tex->data, .size = w*h*4};
-  tex->id = sg_make_image(&(sg_image_desc){
-    .type = SG_IMAGETYPE_2D,
-    .width = tex->width,
-    .height = tex->height,
-    .usage = SG_USAGE_IMMUTABLE,
-    .num_mipmaps = 1,
-    .data = sgdata,
-  });
-  
+  texture_load_gpu(tex);
   return tex;
 }
 
@@ -206,52 +260,14 @@ struct texture *texture_fromdata(void *raw, long size)
   int n;
   void *data = stbi_load_from_memory(raw, size, &tex->width, &tex->height, &n, 4);
 
-  if (data == NULL)
-    NULL;
-
-  unsigned int nw = next_pow2(tex->width);
-  unsigned int nh = next_pow2(tex->height);
-  
-  tex->data = data;
-
-  sg_image_data sg_img_data;
-  
-  int mips = mip_levels(tex->width, tex->height)+1;
-
-  YughInfo("Has %d mip levels, from wxh %dx%d, pow2 is %ux%u.", mips, tex->width, tex->height,nw,nh);
-  
-  int mipw, miph;
-  mipw = tex->width;
-  miph = tex->height;
-  
-  sg_img_data.subimage[0][0] = (sg_range){ .ptr = data, .size = mipw*miph*4 };  
-  
-  unsigned char *mipdata[mips];
-  mipdata[0] = data;
-    
-  for (int i = 1; i < mips; i++) {
-    int w, h, mipw, miph;
-    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); /* mipw miph are previous iteration */
-    mip_wh(tex->width, tex->height, &w, &h, i);
-    mipdata[i] = malloc(w * h * 4);
-    stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
-    sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
-    
-    mipw = w;
-    miph = h;
+  if (data == NULL) {
+    free(tex);
+    return NULL;
   }
 
-  tex->id = sg_make_image(&(sg_image_desc){
-      .type = SG_IMAGETYPE_2D,
-      .width = tex->width,
-      .height = tex->height,
-      .usage = SG_USAGE_IMMUTABLE,
-      .num_mipmaps = mips,
-      .data = sg_img_data
-    });
+  tex->data = data;
 
-  for (int i = 1; i < mips; i++)
-    free(mipdata[i]);
+  texture_load_gpu(tex);
 
   return tex;
 }
@@ -301,105 +317,182 @@ void texture_save(texture *tex, const char *file)
     stbi_write_jpg(file, tex->width, tex->height, 4, tex->data, 5);
 }
 
-// all coordinates start at bottom left
-// src and dest, width, height are pixel buffers and their widths and heights
-// sx the x coordinate of the destination to copy to
-// sy the y coordinate of the destination to copy to
+// copy texture src to dest
+// sx and sy are the destination coordinates to copy to
 // sw the width of the destination to take in pixels
 // sh the height of the destination to take in pixels
-void blit_image(uint8_t* src, uint8_t* dest, int src_width, int src_height, int dest_width, int dest_height, int sx, int sy, int sw, int sh) {
-//  if (sx + sw > dest_width) return;
-//  if (sy + sh > dest_height) return;
+int texture_blit(texture *src, texture *dst, rect srcrect, rect dstrect, int tile) {
+  if (!src || !dst || !src->data || !dst->data) return 0;
 
-  for (int x = 0; x < sw; x++) {
-    for (int y = 0; y < sh; y++) {
-      int src_index = ((y * src_width) + x ) * 4;
-      int dest_index = ((y + sy) * dest_width) + (x + sx);
-      dest_index *= 4;
+  float scaleX = srcrect.w / dstrect.w;
+  float scaleY = srcrect.h / dstrect.h;
 
-      // Calculate the alpha value for the source pixel
-      uint8_t src_alpha = src[src_index + 3];
+  if (srcrect.x < 0 || srcrect.y < 0 || srcrect.x + srcrect.w > src->width ||
+    dstrect.x < 0 || dstrect.y < 0 || dstrect.x + dstrect.w > dst->width ||
+    srcrect.y + srcrect.h > src->height || dstrect.y + dstrect.h > dst->height) {
+    return false;  // Rectangles exceed texture bounds
+  }
 
-      // Calculate the alpha value for the destination pixel
-      uint8_t dest_alpha = dest[dest_index + 3];
-
-      // Calculate the resulting alpha value
-      uint8_t result_alpha = src_alpha + (255 - src_alpha) * dest_alpha / 255;
-
-      // Calculate the resulting RGB values
-      uint8_t result_red = (src[src_index + 0] * src_alpha + dest[dest_index + 0] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
-      uint8_t result_green = (src[src_index + 1] * src_alpha + dest[dest_index + 1] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
-      uint8_t result_blue = (src[src_index + 2] * src_alpha + dest[dest_index + 2] * (255 - src_alpha) * dest_alpha / 255) / result_alpha;
-
-      // Set the resulting pixel values
-      dest[dest_index + 0] = result_red;
-      dest[dest_index + 1] = result_green;
-      dest[dest_index + 2] = result_blue;
-      dest[dest_index + 3] = result_alpha;
+  for (int dstY = 0; dstY < dstrect.h; ++dstY) {
+    for (int dstX = 0; dstX < dstrect.w; ++dstX) {
+      int srcX;
+      int srcY;
+      
+      if (tile) {
+        srcX = srcrect.x + (dstX % (int)srcrect.w);
+        srcY = srcrect.y + (dstY % (int)srcrect.h);      
+      } else {
+        srcX = srcrect.x + (int)(dstX * scaleX);
+        srcY = srcrect.y + (int)(dstY * scaleY);
+      }
+      
+      int srcIndex = (srcY * src->width + srcX) * 4;
+      int dstIndex = ((dstrect.y + dstY) * dst->width + (dstrect.x + dstX)) * 4;
+      
+      rgba srccolor = get_pixel(src->data, srcIndex);
+      rgba dstcolor = get_pixel(dst->data, dstIndex);
+      write_pixel(dst->data, dstIndex, blend_colors(srccolor, dstcolor));
     }
+  }
+
+  return 1;
+}
+
+int texture_fill_rect(texture *tex, int x, int y, int w, int h, struct rgba color)
+{
+  if (!tex || !tex->data) return 0;
+
+  int x_end = x+w;
+  int y_end = y+h;
+
+  if (x < 0 || y < 0 || x_end > tex->width || y_end > tex->height) return 0;
+
+  for (int j = y; j < y_end; ++j)
+    for (int i = x; i < x_end; ++i)
+      write_pixel(tex->data, index, color);
+
+  return 1;
+}
+
+void swap_pixels(unsigned char *p1, unsigned char *p2) {
+  for (int i = 0; i < 4; ++i) {
+    unsigned char tmp = p1[i];
+    p1[i] = p2[i];
+    p2[i] = tmp;
   }
 }
 
-// Function to draw source image pixels on top of a destination image
-// x,y are the pixel coordinates in the destination image, w,h are the amount of pixels to take from the src image.
-void texture_blit(texture *dest, texture *src, int x, int y, int w, int h) {
-  if (!dest->data || !src->data) return;
-  blit_image(src->data, dest->data, src->width, src->height, dest->width, dest->height, x, y, w, h);
-}
-
-void texture_flip(texture *tex, int y)
+texture *texture_scale(texture *tex, int width, int height)
 {
+  texture *new = calloc(1, sizeof(*new));
+  new->width = width;
+  new->height = height;
+  new->data = malloc(4*width*height);
   
+  stbir_resize_uint8_linear(tex->data, tex->width, tex->height, 0, new->data, width, height, 0, 4);
+  return new;
 }
 
-static int p[512] = {151,160,137,91,90,15,
-   131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-   190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-   88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-   77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-   102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-   135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-   5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-   223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-   129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-   251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-   49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-   138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,
-151,160,137,91,90,15,
-   131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-   190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-   88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-   77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-   102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-   135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-   5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-   223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-   129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-   251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-   49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-   138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180   
-   };
-
-double perlin(double x, double y, double z)
+int texture_flip(texture *tex, int y)
 {
-  int X = (int)floor(x)&255;
-  int Y = (int)floor(y)&255;
-  int Z = (int)floor(z)&255;
-      x -= floor(x);                                
-      y -= floor(y);                                
-      z -= floor(z);
-      double u = fade(x),                                
-             v = fade(y),                                
-             w = fade(z);
-      int A = p[X  ]+Y, AA = p[A]+Z, AB = p[A+1]+Z,      
-          B = p[X+1]+Y, BA = p[B]+Z, BB = p[B+1]+Z;   
- 
-      return lerp(w, lerp(v, lerp(u, grad(p[AA  ], x  , y  , z   ), 
-                                     grad(p[BA  ], x-1, y  , z   )),
-                             lerp(u, grad(p[AB  ], x  , y-1, z   ), 
-                                     grad(p[BB  ], x-1, y-1, z   ))),
-                     lerp(v, lerp(u, grad(p[AA+1], x  , y  , z-1 ), 
-                                     grad(p[BA+1], x-1, y  , z-1 )), 
-                             lerp(u, grad(p[AB+1], x  , y-1, z-1 ),
-                                     grad(p[BB+1], x-1, y-1, z-1 ))));  
+  if (!tex || !tex->data) return -1;
+
+  int width = tex->width;
+  int height = tex->height;
+
+  if (y) {
+    for (int row = 0; row < height / 2; ++row) {
+      for (int col = 0; col < width; ++col) {
+        unsigned char *top = &tex->data[(row*width+col)*4];
+        unsigned char *bottom = &tex->data[((height-row-1)*width+col)*4];
+        swap_pixels(top,bottom);
+      }
+    }
+  } else {
+    for (int row = 0; row < height; ++row) {
+      for (int col = 0; col < width / 2; ++col) {
+        unsigned char *left = &tex->data[(row*width+col)*4];
+        unsigned char *right = &tex->data[(row*width+(width-col-1))*4];
+        swap_pixels(left,right);
+      }
+    }
+  }
+  
+  return 0;
+}
+
+
+int texture_write_pixel(texture *tex, int x, int y, rgba color)
+{
+  if (x < 0 || x >= tex->width || y < 0 || y >= tex->height) return 0;
+  int i = (y * tex->width + x) * 4;
+  write_pixel(tex->data, i, color);
+  
+  return 1;
+}
+
+texture *texture_dup(texture *tex)
+{
+  texture *new = calloc(1, sizeof(*new));
+  *new = *tex;
+  new->data = malloc(new->width*new->height*4);
+  memcpy(new->data, tex->data, new->width*new->height*4*sizeof(new->data));
+  
+  return new;
+}
+
+sg_image_data tex_img_data(texture *tex, int mipmaps)
+{
+  if (!mipmaps) {
+    sg_image_data sg_img_data = {0};
+    sg_img_data.subimage[0][0] = (sg_range) {.ptr = tex->data, .size = tex->width*tex->height*4};
+    return sg_img_data;
+  }
+
+  sg_image_data sg_img_data = {0};
+  
+  int mips = mip_levels(tex->width, tex->height)+1;
+  
+  int mipw, miph;
+  mipw = tex->width;
+  miph = tex->height;
+  
+  sg_img_data.subimage[0][0] = (sg_range){ .ptr = tex->data, .size = mipw*miph*4 };
+
+  unsigned char *mipdata[mips];
+  mipdata[0] = tex->data;
+    
+  for (int i = 1; i < mips; i++) {
+    int w, h, mipw, miph;
+    mip_wh(tex->width, tex->height, &mipw, &miph, i-1); // mipw miph are previous iteration 
+    mip_wh(tex->width, tex->height, &w, &h, i);
+    mipdata[i] = malloc(w * h * 4);
+    stbir_resize_uint8_linear(mipdata[i-1], mipw, miph, 0, mipdata[i], w, h, 0, 4);
+    sg_img_data.subimage[0][i] = (sg_range){ .ptr = mipdata[i], .size = w*h*4 };
+    tex->vram += w*h*4;
+      
+    mipw = w;
+    miph = h;
+  }
+}
+
+void texture_load_gpu(texture *tex)
+{
+  if (!tex->data) return;
+  if (tex->id.id == 0) {
+    // Doesn't exist, so make a new one
+    sg_image_data img_data = tex_img_data(tex, 0);
+    tex->id = sg_make_image(&(sg_image_desc){
+      .type = SG_IMAGETYPE_2D,
+      .width = tex->width,
+      .height = tex->height,
+      .usage = SG_USAGE_IMMUTABLE,
+      .num_mipmaps = 1,
+      .data = img_data
+    });
+  } else {
+    // Simple update
+    sg_image_data img_data = tex_img_data(tex,0);
+    sg_update_image(tex->id, &img_data);
+  }
 }

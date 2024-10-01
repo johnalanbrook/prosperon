@@ -43,13 +43,20 @@ typedef struct img_sampler{
 } img_sampler;
 
 texture *texture_from_file(const char *path);
-void texture_free(texture *tex);
-struct texture *texture_fromdata(void *raw, long size);
-texture *texture_empty(int width, int height, int n);
-void texture_blit(texture *dest, texture *src, int x, int y, int w, int h);
-void texture_flip(texture *tex, int y);
-void texture_save(texture *tex, const char *file); // save the texture data to the given file
+texture *texture_fromdata(void *raw, long size);
+texture *texture_empty(int width, int height); // Make an empty texture
+texture *texture_dup(texture *tex); // return an identical texture
+texture *texture_scale(texture *tex, int width, int height); // dup and scale the texture
 
-double perlin(double x, double y, double z);
+void texture_free(texture *tex);
+void texture_offload(texture *tex); // Remove the data from this texture
+void texture_load_gpu(texture *tex); // Upload this data to the GPU if it isn't already there. Replace it if it is.
+
+int texture_write_pixel(texture *tex, int x, int y, struct rgba color);
+int texture_fill_rect(texture *tex, int x, int y, int w, int h, struct rgba color);
+int texture_blit(texture *dst, texture *src, struct rect dstrect, struct rect srcrect, int tile); // copies src into dst, using their respective squares, scaling if necessary
+int texture_flip(texture *tex, int y);
+
+void texture_save(texture *tex, const char *file); // save the texture data to the given file
 
 #endif

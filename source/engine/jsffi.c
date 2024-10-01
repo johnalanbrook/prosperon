@@ -46,6 +46,9 @@
 #include "timer.h"
 #include <sys/resource.h>
 
+#define STB_PERLIN_IMPLEMENTATION
+#include "stb_perlin.h"
+
 #if (defined(_WIN32) || defined(__WIN32__))
 #include <direct.h>
 #define mkdir(x,y) _mkdir(x)
@@ -2649,7 +2652,8 @@ JSC_SCALL(texture_save, texture_save(js2texture(self), str));
 
 JSC_CCALL(texture_blit,
   texture *tex = js2texture(self);
-  texture_blit(js2texture(self), js2texture(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))
+  texture_blit(js2texture(self), js2texture(argv[0]), js2rect(argv[1]), js2rect(argv[2]), js2boolean(argv[3]));
+)
 
 JSC_CCALL(texture_getid,
   texture *tex = js2texture(self);
@@ -3155,7 +3159,7 @@ JSC_SCALL(os_texture_swap,
 )
 
 JSC_CCALL(os_make_tex_data,
-  ret = texture2js(texture_empty(js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
+  ret = texture2js(texture_empty(js2number(argv[0]), js2number(argv[1])))
 )
 
 JSC_CCALL(os_make_font,
@@ -3395,7 +3399,32 @@ JSC_CCALL(os_rectpack,
   }
 )
 
+JSC_CCALL(os_perlin,
+  HMM_Vec3 coord = js2vec3(argv[0]);
+  HMM_Vec3 wrap = js2vec3(argv[2]);
+  return number2js(stb_perlin_noise3_seed(coord.x, coord.y, coord.z, wrap.x, wrap.y, wrap.z, js2number(argv[1])));
+)
+
+JSC_CCALL(os_ridge,
+  HMM_Vec3 c = js2vec3(argv[0]);
+  return number2js(stb_perlin_ridge_noise3(c.x, c.y, c.z, js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])));
+)
+
+JSC_CCALL(os_fbm,
+  HMM_Vec3 c = js2vec3(argv[0]);
+  return number2js(stb_perlin_fbm_noise3(c.x, c.y, c.z, js2number(argv[1]), js2number(argv[2]), js2number(argv[3])));
+)
+
+JSC_CCALL(os_turbulence,
+  HMM_Vec3 c = js2vec3(argv[0]);
+  return number2js(stb_perlin_turbulence_noise3(c.x, c.y, c.z, js2number(argv[1]), js2number(argv[2]), js2number(argv[3])));  
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
+  MIST_FUNC_DEF(os, turbulence, 4),
+  MIST_FUNC_DEF(os, fbm, 4),
+  MIST_FUNC_DEF(os, ridge, 5),
+  MIST_FUNC_DEF(os, perlin, 3),
   MIST_FUNC_DEF(os, rectpack, 3),
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, rusage, 0),
