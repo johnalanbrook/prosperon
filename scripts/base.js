@@ -1176,6 +1176,13 @@ Object.defineProperty(Array.prototype, "mirrored", {
   },
 });
 
+Object.defineProperty(Array.prototype, "forEachRight", {
+  value: function(fn) {
+    for (var i = this.length-1; i >= 0; i--)
+      fn(this[i], i);
+  }
+});
+
 Math.lerp = vector.lerp;
 Math.gcd = vector.gcd;
 Math.lcm = vector.lcm;

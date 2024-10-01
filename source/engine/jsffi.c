@@ -14,6 +14,8 @@
 #include "datastream.h"
 #include "sound.h"
 #include "stb_ds.h"
+#define STB_RECT_PACK_IMPLEMENTATION
+#include "stb_rect_pack.h"
 #include "string.h"
 #include "window.h"
 #include "spline.h"
@@ -3363,7 +3365,38 @@ JSC_CCALL(os_skin_calculate,
   skin_calculate(sk);
 )
 
+JSC_CCALL(os_rectpack,
+  int width = js2number(argv[0]);
+  int height = js2number(argv[1]);
+  int num = js_arrlen(argv[2]);
+  stbrp_context ctx[1];
+  stbrp_rect rects[num];
+  
+  for (int i = 0; i < num; i++) {
+    HMM_Vec2 wh = js2vec2(js_getpropidx(argv[2], i));
+    rects[i].w = wh.x;
+    rects[i].h = wh.y;
+    rects[i].id = i;
+  }
+  
+  stbrp_node nodes[width];
+  stbrp_init_target(ctx, width, height, nodes, width);
+  int packed = stbrp_pack_rects(ctx, rects, num);
+  
+  if (!packed)
+    return JS_UNDEFINED;
+  
+  ret = JS_NewArray(js);
+  for (int i = 0; i < num; i++) {
+    HMM_Vec2 pos;
+    pos.x = rects[i].x;
+    pos.y = rects[i].y;
+    js_setprop_num(ret, i, vec22js(pos));
+  }
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
+  MIST_FUNC_DEF(os, rectpack, 3),
   MIST_FUNC_DEF(os, cwd, 0),
   MIST_FUNC_DEF(os, rusage, 0),
   MIST_FUNC_DEF(os, mallinfo, 0),

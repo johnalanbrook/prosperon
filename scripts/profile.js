@@ -337,29 +337,23 @@ var classes = ["gameobject", "transform", "dsp_node", "texture", "font", "warp_g
 var get_snapshot = function()
 {
  var snap = profile.snapshot;
- snap.actors ??= {};
- Object.assign(snap.actors, actor.__stats());
- snap.memory ??= {};
- Object.assign(snap.memory, os.mem());
+ snap.actors = actor.__stats();
+ snap.memory = os.mem();
  snap.memory.textures = game.texture.total_size();
  snap.memory.texture_vram = game.texture.total_vram();
 
- snap.rusage ??= {};
- var rusage = os.rusage();
- rusage.ru_maxrss *= 1024; // delivered in KB; convert here to B
- Object.assign(snap.rusage, rusage);
+ snap.rusage = os.rusage();
+ snap.rusage.ru_maxrss *= 1024; // delivered in KB; convert here to B
 
- snap.mallinfo ??= {};
- Object.assign(snap.mallinfo, os.mallinfo());
-
- snap.particles ??= {};
- Object.assign(snap.particles, stat_emitters());
+ snap.mallinfo = os.mallinfo();
+ snap.particles = stat_emitters();
 
  snap.obj ??= {};
  for (var i of classes) {
    var proto = globalThis[`${i}_proto`];
    if (!proto) continue;
    snap.obj[i] = proto._count();
+   snap.obj[i + "_mem"] = proto._count() * proto.memsize();
  }
 }
 

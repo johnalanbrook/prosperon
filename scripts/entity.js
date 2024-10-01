@@ -1,22 +1,5 @@
 globalThis.entityreport = {};
 
-var timer_manager = {};
-timer_manager.timers = new Map();
-timer_manager.make_timer = function(obj, fn, seconds)
-{
-  var timer = os.make_timer(_ => {
-    fn();
-    this.timers.delete(obj);
-  });
-
-  this.timers.set(obj, timer);
-  return _ => {
-    if (this.timers.has(obj)) {
-      
-    }
-  };
-}
-
 function obj_unique_name(name, obj) {
   name = name.replaceAll(".", "_");
   if (!(name in obj)) return name;
@@ -365,8 +348,7 @@ var entity = {
   kill() {
     if (this.__kill) return;
     this.__kill = true;
-
-    this.timers.forEach(x => x());
+    this.timers.forEachRight(x => x());
     delete this.timers;
     Event.rm_obj(this);
     input.do_uncontrol(this);
