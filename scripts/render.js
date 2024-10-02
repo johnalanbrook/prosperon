@@ -299,8 +299,6 @@ function make_shader(shader) {
   }
   var writejson = `.prosperon/${file.name()}.shader.json`;
 
-  profile.cache("shader", file);
-
   breakme: if (io.exists(writejson)) {
     var data = json.decode(io.slurp(writejson));
     var filemod = io.mod(writejson);
@@ -310,8 +308,7 @@ function make_shader(shader) {
         break breakme;
       }
     }
-
-    profile.endcache(" [cached]");
+    
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
     obj.pipe = render.pipeline(obj);
@@ -319,6 +316,8 @@ function make_shader(shader) {
     shader_times[file] = io.mod(file);
     return obj;
   }
+  
+  profile.report(`shader_${file}`);  
 
   var compiled = create_shader_obj(file);
   io.slurpwrite(writejson, json.encode(compiled));
@@ -327,6 +326,8 @@ function make_shader(shader) {
 
   shader_cache[file] = obj;
   shader_times[file] = io.mod(file);
+  
+  profile.endreport(`shader_${file}`);    
 
   return obj;
 }
@@ -524,7 +525,7 @@ render.draw_gizmos = true;
 
 render.buckets = [];
 render.sprites = function render_sprites() {
-  profile.frame("drawing");
+  profile.report("drawing");
   render.use_shader(spritessboshader);
   var buckets = component.sprite_buckets();
   for (var l in buckets) {
@@ -538,7 +539,7 @@ render.sprites = function render_sprites() {
       render.draw(shape.quad, sprite_ssbo, sparray.length);
     }
   }
-  profile.endframe();
+  profile.endreport("drawing");
 };
 
 render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
@@ -843,9 +844,9 @@ render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and uppe
 
 render.draw = function render_draw(mesh, ssbo, inst = 1, e_start = 0) {
   sg_bind(mesh, ssbo);
-  profile.frame("gpu");
+  profile.report("gpu_draw");
   render.spdraw(e_start, cur.bind.count, inst);
-  profile.endframe();
+  profile.endreport("gpu_draw");
 };
 
 // Returns an array in the form of [left, bottom, right, top] in pixels of the camera to render to
@@ -1030,22 +1031,22 @@ var imgui_fn = function () {
 };
 
 prosperon.render = function () {
-  profile.frame("world");
+  profile.report("world");
   render.set_camera(prosperon.camera);
-  profile.frame("sprites");
+  profile.report("sprites");
   if (render.draw_sprites) render.sprites();
   if (render.draw_particles) draw_emitters();
-  profile.endframe();
-  profile.frame("draws");
+  profile.endreport("sprites");
+  profile.report("draws");
   prosperon.draw();
 //  sgl.draw();
-  profile.endframe();
+  profile.endreport("draws");
+  profile.endreport("world");
   prosperon.hudcam.size = prosperon.camera.size;
   prosperon.hudcam.transform.pos = [prosperon.hudcam.size.x / 2, prosperon.hudcam.size.y / 2, -100];
   render.set_camera(prosperon.hudcam);
 
-  profile.endframe();
-  profile.frame("hud");
+  profile.report("hud");
   if (render.draw_hud) prosperon.hud();
   render.flush_text();
 
@@ -1055,22 +1056,20 @@ prosperon.render = function () {
 
   render.end_pass();
 
-  profile.endframe();
-  profile.endframe();
-  profile.endframe();
+  profile.endreport("hud");
   /* draw the image of the game world first */
   render.glue_pass();
-  profile.frame("frame");
-  profile.frame("render");
-  profile.frame("post process");
+  profile.report("frame");
+  profile.report("render");
+  profile.report("post process");
   render.viewport(...prosperon.camera.view());
   render.use_shader(render.postshader);
   render.use_mat({ diffuse: prosperon.screencolor });
   render.draw(shape.quad);
 
-  profile.endframe();
+  profile.endreport("post process");
 
-  profile.frame("app");
+  profile.report("app");
 
   // Flush & render
   prosperon.appcam.transform.pos = [window.size.x / 2, window.size.y / 2, -100];
@@ -1089,13 +1088,13 @@ prosperon.render = function () {
 
   check_flush();
 
-  profile.endframe();
+  profile.endreport("app");
 
-  profile.frame("imgui");
+  profile.report("imgui");
 
   if (debug.show) imgui_fn();
 
-  profile.endframe();
+  profile.endreport("imgui");
 
   render.end_pass();
 
@@ -1106,7 +1105,7 @@ prosperon.render = function () {
 };
 
 prosperon.process = function process() {
-  profile.frame("frame");
+  profile.report("frame");
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
@@ -1118,20 +1117,20 @@ prosperon.process = function process() {
   var cycles = os.check_cycles();
   if (cycles) say(cycles);
 
-  profile.frame("app update");
+  profile.report("app update");
   prosperon.appupdate(dt);
-  profile.endframe();
+  profile.endreport("app update");  
 
-  profile.frame("input");
+  profile.report("input");
   input.procdown();
-  profile.endframe();
+  profile.endreport("input");  
 
   if (sim.mode === "play" || sim.mode === "step") {
-    profile.frame("update");
+    profile.report("update");
     prosperon.update(dt * game.timescale);
     update_emitters(dt * game.timescale);
     os.update_timers(dt * game.timescale);
-    profile.endframe();
+    profile.endreport("update");    
     if (sim.mode === "step") sim.pause();
   }
 
@@ -1139,7 +1138,7 @@ prosperon.process = function process() {
   sst = profile.now();
 
   if (sim.mode === "play" || sim.mode === "step") {
-    profile.frame("physics");
+    profile.report("physics");
     physlag += dt;
 
     while (physlag > physics.delta) {
@@ -1147,17 +1146,18 @@ prosperon.process = function process() {
       prosperon.phys2d_step(physics.delta * game.timescale);
       prosperon.physupdate(physics.delta * game.timescale);
     }
-    profile.endframe();
+    profile.endreport("physics");    
     profile.pushdata(profile.data.cpu.physics, profile.now() - sst);
     sst = profile.now();
   }
 
-  profile.frame("render");
+  profile.report("render");
   prosperon.window_render(window.size);
+
   prosperon.render();
+  profile.endreport("render");  
   profile.pushdata(profile.data.cpu.render, profile.now() - sst);
-  profile.endframe();
-  profile.endframe();
+  profile.endreport('frame');
 
   profile.capture_data();
 };

@@ -23,19 +23,13 @@ struct rect ST_UNIT = {0.f, 0.f, 1.f, 1.f};
 
 static inline void write_pixel(unsigned char *data, int idx, rgba color)
 {
-  data[idx] = color.r;
-  data[idx+1] = color.g;
-  data[idx+2] = color.b;
-  data[idx+3] = color.a;
+  memcpy(data+idx, &color, sizeof(color));
 }
 
 static inline rgba get_pixel(unsigned char *data, int idx)
 {
   rgba color;
-  color.r = data[idx];
-  color.g = data[idx+1];
-  color.b = data[idx+2];
-  color.a = data[idx+3];
+  memcpy(&color, data+idx, sizeof(color));
   return color;
 }
 
@@ -328,16 +322,16 @@ void texture_save(texture *tex, const char *file)
 // sw the width of the destination to take in pixels
 // sh the height of the destination to take in pixels
 int texture_blit(texture *dst, texture *src, rect dstrect, rect srcrect, int tile) {
-//  if (!src || !dst || !src->data || !dst->data) return 0;
+  if (!src || !dst || !src->data || !dst->data) return 0;
 
   float scaleX = srcrect.w / dstrect.w;
   float scaleY = srcrect.h / dstrect.h;
 
-/*  if (srcrect.x < 0 || srcrect.y < 0 || srcrect.x + srcrect.w > src->width ||
+  if (srcrect.x < 0 || srcrect.y < 0 || srcrect.x + srcrect.w > src->width ||
     dstrect.x < 0 || dstrect.y < 0 || dstrect.x + dstrect.w > dst->width ||
     srcrect.y + srcrect.h > src->height || dstrect.y + dstrect.h > dst->height) {
     return false;  // Rectangles exceed texture bounds
-  }*/
+  }
 
   for (int dstY = 0; dstY < dstrect.h; ++dstY) {
     for (int dstX = 0; dstX < dstrect.w; ++dstX) {

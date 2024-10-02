@@ -62,10 +62,8 @@ actor.__stats = function () {
 };
 
 actor.hotreload = function () {
-  profile.cache("hotreload", "check");
   for (var i in script_times) {
     if (io.mod(i) > script_times[i]) {
-      say(`HOT RELAODING ${i}`);
       script_times[i] = io.mod(i);
       var script = Resources.replstrs(i);
       script = `(function() {
@@ -86,7 +84,6 @@ actor.hotreload = function () {
       }
     }
   }
-  profile.endcache();
 };
 
 actor.spawn = function (script, config) {

@@ -182,6 +182,7 @@ game.tex_hotreload = function () {
     if (io.mod(path) > game.texture.time_cache[path]) {
       var tex = game.texture.cache[path];
       game.texture.time_cache[path] = io.mod(path);
+      SpriteAnim.hotreload(path);
       os.texture_swap(path, game.texture.cache[path]);
       for (var sprite of Object.values(allsprites)) {
         if (sprite.texture == tex) {
@@ -331,10 +332,10 @@ var Register = {
       var guid = prosperon.guid();
 
       var dofn = function (...args) {
-        profile.cache(name, oname);
+        profile.report(`call_${name}_${oname}`);
         var st = profile.now();
         fn(...args);
-        profile.endcache();
+        profile.endreport(`call_${name}_${oname}`);   
       };
 
       var left = 0;

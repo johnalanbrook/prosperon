@@ -127,6 +127,7 @@ var entity = {
   },
 
   spawn(text, config, callback) {
+    profile.report(`make_${text}`);
     var ent = class_use(text, config, entity, function (ent) {
       ent.transform = os.make_transform();
       ent.guid = prosperon.guid();
@@ -168,7 +169,6 @@ var entity = {
     }
     else if (Array.isArray(text))
       for (var path of text) use(path,ent);
-    profile.cache("ENTITY TIME", ent.ur.name);
 */
     ent.reparent(this);
 
@@ -223,7 +223,7 @@ var entity = {
     ent.ur.fresh.objects = {};
     for (var i in ent.objects) ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
 
-    profile.endcache();
+    profile.endreport(`make_${text}`);    
 
     return ent;
   },

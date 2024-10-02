@@ -1,12 +1,9 @@
 /*
   TYPES OF PROFILING
 
-  cpu gathering - gets stack frames randomly for a few seconds
-
-  frames - user defined to see how long engine takes
-
-  cache - can see specific events that happened
-
+  cpu frames - gets stack frames randomly for a few seconds
+  report - can see specific events that happened. Includes inclusive vs noninclusive times.
+  snapshot - See the amount of something every amount of time
   memory - can see how much memory is allocated and from where
 */
 
@@ -50,6 +47,27 @@ profile.ms = function (t) {
 var callgraph = {};
 profile.rawstacks = {};
 
+function add_callgraph_from_stack(err, time)
+{
+  var stack = err.stack.split("\n").slice(1);
+  var rawstack = stack.join("\n");
+  profile.rawstacks[rawstack] ??= {
+    time: 0,
+    hits: 0,
+  };
+  profile.rawstacks[rawstack].hits++;
+  profile.rawstacks[rawstack].time += time;
+
+  stack = stack.map(x => x.slice(7).split(" "));
+
+  var fns = stack.map(x => x[0]).filter(x => x);
+  var lines = stack.map(x => x[1]).filter(x => x);
+  lines = lines.map(x => x.slice(1, x.length - 1));
+
+  add_callgraph(fns[0], lines[0], time, true);
+  for (var i = 1; i < fns.length; i++) add_callgraph(fns[i], lines[i], time, false);
+}
+
 function add_callgraph(fn, line, time, alone) {
   var cc = callgraph[line];
   if (!cc) {
@@ -82,12 +100,41 @@ profile.cpu_start = undefined;
 profile.clear_cpu = function () {
   callgraph = {};
   profile.cpu_instr = undefined;
+  profile.gather_stop();
+  profile.cpu_start = undefined;
 };
 
-profile.start_cpu_gather = function (gathertime = 5) {
-  profile.clear_cpu();
-  // gather cpu frames for 'time' seconds
+function cpu_record_frame()
+{
+
+}
+
+// These values are set to get the most amount of frames without causing a stack overflow
+var hittar = 450; 
+var hitpct = 0.2;
+
+profile.start_cpu_gather_fn = function()
+{
   if (profile.cpu_start) return;
+  profile.clear_cpu();
+
+  profile.cpu_start = profile.now();
+  var st = profile.cpu_start;
+
+  profile.gather(Math.variate(hittar,hitpct), function() {
+    var time = profile.now() - st;
+    var err = new Error();
+    add_callgraph_from_stack(err, time);
+    st = profile.now();
+    profile.gather_rate(Math.variate(hittar,hitpct));
+  });
+}
+
+profile.start_cpu_gather = function (gathertime = 5) {
+  if (profile.cpu_start) return;
+  profile.clear_cpu();
+  
+  // gather cpu frames for 'gathertime' seconds
   profile.cpu_start = profile.now();
   var st = profile.cpu_start;
 
@@ -95,58 +142,50 @@ profile.start_cpu_gather = function (gathertime = 5) {
     var time = profile.now() - st;
 
     var err = new Error();
-    var stack = err.stack.split("\n").slice(1);
-    var rawstack = stack.join("\n");
-    profile.rawstacks[rawstack] ??= {
-      time: 0,
-      hits: 0,
-    };
-    profile.rawstacks[rawstack].hits++;
-    profile.rawstacks[rawstack].time += time;
-
-    stack = stack.map(x => x.slice(7).split(" "));
-
-    var fns = stack.map(x => x[0]).filter(x => x);
-    var lines = stack.map(x => x[1]).filter(x => x);
-    lines = lines.map(x => x.slice(1, x.length - 1));
-
-    add_callgraph(fns[0], lines[0], time, true);
-    for (var i = 1; i < fns.length; i++) add_callgraph(fns[i], lines[i], time, false);
-
+    add_callgraph_from_stack(err, time);
     st = profile.now();
-    if (profile.secs(st - profile.cpu_start) < gathertime) profile.gather_rate(Math.variate(hittar, hitpct));
-    else {
-      profile.gather_stop();
-      profile.cpu_start = undefined;
-      var e = Object.values(callgraph);
-      e = e.filter(x => x.line);
-
-      for (var x of e) {
-        var ffs = x.line.split(":");
-
-        x.timestr = profile.best_t(x.time);
-        x.timeper = x.time / x.hits;
-        x.timeperstr = profile.best_t(x.timeper);
-        x.pct = (profile.secs(x.time) / gathertime) * 100;
-        x.alone.timestr = profile.best_t(x.alone.time);
-        x.alone.timeper = x.alone.time / x.alone.hits;
-        x.alone.timeperstr = profile.best_t(x.alone.timeper);
-        x.alone.pct = (profile.secs(x.alone.time) / gathertime) * 100;
-        x.fncall = get_line(ffs[0], ffs[1]);
-        x.log = x.line + " " + x.fn + " " + x.fncall;
-        x.incl = {
-          time: x.time,
-          timestr: x.timestr,
-          timeper: x.timeper,
-          timeperstr: x.timeperstr,
-          hits: x.hits,
-          pct: x.pct,
-        };
-      }
-      profile.cpu_instr = e;
-    }
+    
+    if (profile.secs(st - profile.cpu_start) < gathertime)
+      profile.gather_rate(Math.variate(hittar, hitpct));
+    else
+      profile.stop_cpu_measure();
   });
 };
+
+profile.stop_cpu_measure = function()
+{
+  if (!profile.cpu_start) return;
+  profile.gather_stop();
+  var gathertime = profile.now()-profile.cpu_start;
+  console.info(`gathered for ${profile.best_t(gathertime)}`);
+  profile.cpu_start = undefined;
+  var e = Object.values(callgraph);
+  e = e.filter(x => x.line);
+
+  for (var x of e) {
+    var ffs = x.line.split(":");
+
+    x.timestr = profile.best_t(x.time);
+    x.timeper = x.time / x.hits;
+    x.timeperstr = profile.best_t(x.timeper);
+    x.pct = x.time/gathertime * 100;
+    x.alone.timestr = profile.best_t(x.alone.time);
+    x.alone.timeper = x.alone.time / x.alone.hits;
+    x.alone.timeperstr = profile.best_t(x.alone.timeper);
+    x.alone.pct = x.alone.time / gathertime * 100;
+    x.fncall = get_line(ffs[0], ffs[1]);
+    x.log = x.line + " " + x.fn + " " + x.fncall;
+    x.incl = {
+      time: x.time,
+      timestr: x.timestr,
+      timeper: x.timeper,
+      timeperstr: x.timeperstr,
+      hits: x.hits,
+      pct: x.pct,
+    };
+  }
+  profile.cpu_instr = e;
+}
 
 function push_time(arr, ob, max) {
   arr.push({
@@ -258,94 +297,25 @@ profile.endframe = function profile_endframe() {
   profile_cframe = profile_frame_ts.pop();
 };
 
-/*
-  Cache reporting is to measure how long specific events take, that are NOT every frame
-  Useful to measure things like how long it takes to make a specific creature
-*/
-
-var cache_reporting = false;
-
-var report_cache = {};
-
-var cachest = 0;
-var cachegroup;
-var cachetitle;
-
-profile.cache_reporting = function () {
-  return cache_reporting;
-};
-profile.cache_toggle = function () {
-  cache_reporting = !cache_reporting;
-};
-profile.cache_dump = function () {
-  report_cache = {};
-};
-
-profile.cache = function profile_cache(group, title) {
-  if (!cache_reporting) return;
-  cachest = profile.now();
-  cachegroup = group;
-  cachetitle = title;
-};
-
-profile.endcache = function profile_endcache(tag = "") {
-  return;
-  addreport(cachegroup, cachetitle + tag, cachest);
-};
-
-function addreport(group, line, start) {
-  return;
-  if (typeof group !== "string") group = "UNGROUPED";
-  report_cache[group] ??= {};
-  var cache = report_cache[group];
-  cache[line] ??= [];
-  var t = profile.now();
-  cache[line].push(t - start);
-  return t;
-}
-
-function printreport(cache, name) {
-  var report = `==${name}==` + "\n";
-
-  var reports = [];
-  for (var i in cache) {
-    var time = cache[i].reduce((a, b) => a + b);
-    reports.push({
-      time: time,
-      name: i,
-      hits: cache[i].length,
-      avg: time / cache[i].length,
-    });
-  }
-  reports = reports.sort((a, b) => {
-    if (a.avg < b.avg) return 1;
-    return -1;
-  });
-
-  for (var rep of reports) report += `${rep.name}    ${profile.best_t(rep.avg)} (${rep.hits} hits) (total ${profile.best_t(rep.time)})\n`;
-
-  return report;
-}
-
 profile.data = {};
 profile.curframe = 0;
-
 profile.snapshot = {};
-
 
 var classes = ["gameobject", "transform", "dsp_node", "texture", "font", "warp_gravity", "warp_damp", "sg_buffer", "datastream", "cpShape", "cpConstraint", "timer", "skin"];
 var get_snapshot = function()
 {
  var snap = profile.snapshot;
+ 
+ for (var monitor of monitors) {
+   var stat = monitor.fn();
+   monitor.hook?.(stat);
+   snap[monitor.path] = stat;
+ }
+ 
  snap.actors = actor.__stats();
- snap.memory = os.mem();
  snap.memory.textures = game.texture.total_size();
  snap.memory.texture_vram = game.texture.total_vram();
 
- snap.rusage = os.rusage();
- snap.rusage.ru_maxrss *= 1024; // delivered in KB; convert here to B
-
- snap.mallinfo = os.mallinfo();
  snap.particles = stat_emitters();
 
  snap.obj ??= {};
@@ -356,6 +326,21 @@ var get_snapshot = function()
    snap.obj[i + "_mem"] = proto._count() * proto.memsize();
  }
 }
+
+var monitors = [];
+
+profile.add_custom_monitor = function(path, fn, hook)
+{
+  monitors.push({
+    path:path,
+    fn:fn,
+    hook:hook
+  });
+}
+
+profile.add_custom_monitor('rusage', os.rusage, stat => stat.ru_maxrss *= 1024);
+profile.add_custom_monitor('mallinfo', os.mallinfo);
+profile.add_custom_monitor('memory', os.mem);
 
 var fps = [];
 var frame_lead = 1;
@@ -368,7 +353,33 @@ profile.report_frame = function (t) {
     fps_t = profile.now();
     get_snapshot();
   }
-};
+}
+
+profile.reports = {};
+
+profile.report = function(path)
+{
+  profile.reports[path] ??= {
+    report: path,
+    time: 0,
+    hits: 0,
+    avg: 0
+  };
+  if (profile.reports[path].st) return;
+  profile.reports[path].st = profile.now();
+}
+
+profile.endreport = function(path)
+{
+  var rep = profile.reports[path];
+  if (!rep || !rep.st) return;
+  rep.hits++;
+  rep.time += profile.now()-rep.st;
+  delete rep.st;  
+  rep.avg = rep.time/rep.hits;
+
+  profile.report_cache = Object.values(profile.reports);
+}
 
 function prof_add_stats(obj, stat) {
   for (var i in stat) {

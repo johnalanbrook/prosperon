@@ -268,14 +268,21 @@ Object.mixin(os.make_seg2d(), {
 */
 var animcache = {};
 var SpriteAnim = {};
+SpriteAnim.hotreload = function(path) {
+  delete animcache[path];
+}
 SpriteAnim.make = function (path) {
   var anim;
+  if (animcache[path]) return animcache[path];
+
+  profile.report(`animation_${path}`);
   if (io.exists(path.set_ext(".ase"))) anim = SpriteAnim.aseprite(path.set_ext(".ase"));
   else if (io.exists(path.set_ext(".json"))) anim = SpriteAnim.aseprite(path.set_ext(".json"));
   else if (path.ext() === "ase") anim = SpriteAnim.aseprite(path);
   else if (path.ext() === "gif") anim = SpriteAnim.gif(path);
   else anim = undefined;
 
+  profile.endreport(`animation_${path}`);
   animcache[path] = anim;
   return animcache[path];
 };

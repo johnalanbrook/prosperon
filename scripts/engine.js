@@ -144,6 +144,8 @@ Resources.is_image = function (path) {
   return Resources.images.some(x => x === ext);
 };
 
+var res_cache = {};
+
 function find_ext(file, ext, root = "") {
   if (!file) return;
 
@@ -170,6 +172,12 @@ function find_ext(file, ext, root = "") {
 
 var hashhit = 0;
 var hashmiss = 0;
+
+globalThis.hashifier = {};
+hashifier.stats = function()
+{
+  
+}
 
 Object.defineProperty(Function.prototype, "hashify", {
   value: function () {
@@ -279,21 +287,24 @@ var use_cache = {};
 
 globalThis.use = function use(file) {
   file = Resources.find_script(file);
-  profile.cache("USE", file);
 
   if (use_cache[file]) {
+    profile.report(`use_${file}`);  
     var ret = use_cache[file]();
-    profile.endcache(" [cached]");
+    profile.endreport(`use_${file}`);  
     return ret;
   }
+  profile.report(`compile_${file}`);
   var script = Resources.replstrs(file);
   script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
   use_cache[file] = fn;
+  profile.endreport(`compile_${file}`);
+
+  profile.report(`use_${file}`);  
   var ret = fn();
-
-  profile.endcache();
-
+  profile.endreport(`use_${file}`);
+  
   return ret;
 };
 
@@ -309,7 +320,6 @@ function stripped_use(file, script) {
   script = `(function() { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
   var ret = fn();
-  profile.endcache();
 
   return ret;
 }
@@ -343,10 +353,10 @@ if (!profile.enabled) use = stripped_use;
 Object.assign(globalThis, use("scripts/prosperon.js"));
 
 app.interval(_ => {
-  profile.frame("hotreload");
+  profile.report("hotreload");
   actor.hotreload();
   render.hotreload();
   game.tex_hotreload();
   repl.hotreload();
-  profile.endframe();
+  profile.endreport("hotreload");  
 }, 1);
