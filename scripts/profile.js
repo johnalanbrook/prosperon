@@ -1,13 +1,9 @@
 /*
   TYPES OF PROFILING
-
-  cpu frames - gets stack frames randomly for a few seconds
-  report - can see specific events that happened. Includes inclusive vs noninclusive times.
+  report - can see specific events that happened. Includes inclusive vs noninclusive times. When used on top of each other, also generates a callstack.
   snapshot - See the amount of something every amount of time
-  memory - can see how much memory is allocated and from where
+  memory - can see how much memory is allocated and from where [not implemented yet]
 */
-
-var t_units = ["ns", "us", "ms", "s", "ks", "Ms"];
 
 function calc_cpu(fn, times, diff = 0) {
   var series = [];
@@ -23,9 +19,8 @@ function calc_cpu(fn, times, diff = 0) {
 
 function empty_fn() {}
 
-profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
-  var retgather = gathering_cpu;
-  profile.gather_stop();
+// Measure how long a fn takes to run, ignoring the overhead of a function call
+profile.cpu = function profile_cpu(fn, times = 1, q = fn) {
   var empty = calc_cpu(empty_fn, 100000);
   var mean = Math.mean(empty);
   var series = calc_cpu(fn, times, mean);
@@ -36,8 +31,6 @@ profile.cpu = function profile_cpu(fn, times = 1, q = "unnamed") {
 
   say(`profile [${q}]: ${avgt} ± ${profile.best_t(Math.ci(series))} [${totalt} for ${times} loops]`);
   say(`result of function is ${fn()}`);
-
-  if (retgather) profile.start_prof_gather();
 };
 
 profile.ms = function (t) {
@@ -165,44 +158,21 @@ profile.stop_cpu_measure = function()
   for (var x of e) {
     var ffs = x.line.split(":");
 
-    x.timestr = profile.best_t(x.time);
     x.timeper = x.time / x.hits;
-    x.timeperstr = profile.best_t(x.timeper);
     x.pct = x.time/gathertime * 100;
-    x.alone.timestr = profile.best_t(x.alone.time);
     x.alone.timeper = x.alone.time / x.alone.hits;
-    x.alone.timeperstr = profile.best_t(x.alone.timeper);
     x.alone.pct = x.alone.time / gathertime * 100;
     x.fncall = get_line(ffs[0], ffs[1]);
     x.log = x.line + " " + x.fn + " " + x.fncall;
     x.incl = {
       time: x.time,
-      timestr: x.timestr,
       timeper: x.timeper,
-      timeperstr: x.timeperstr,
       hits: x.hits,
       pct: x.pct,
     };
   }
   profile.cpu_instr = e;
 }
-
-function push_time(arr, ob, max) {
-  arr.push({
-    time: profile.now(),
-    ob,
-  });
-}
-
-profile.cpu_frames = [];
-profile.last_cpu_frame = undefined;
-profile.cpu_frame = function () {
-  profile.gather(Math.random_range(300, 600), function () {
-    var err = new Error();
-    profile.last_cpu_frame = err.stack; //.split('\n').slicconsole.stack(2);
-    profile.gather_stop();
-  });
-};
 
 var filecache = {};
 function get_line(file, line) {
@@ -225,17 +195,6 @@ function get_line(file, line) {
 
 profile.stop_cpu_instr = function () {
   return;
-};
-
-profile.best_t = function (t) {
-  var qq = 0;
-
-  while (t > 1000 && qq < t_units.length - 1) {
-    t /= 1000;
-    qq++;
-  }
-
-  return `${t.toPrecision(4)} ${t_units[qq]}`;
 };
 
 /*

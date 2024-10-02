@@ -723,9 +723,11 @@ sg_bindings js2bind(JSValue v)
     bind.index_buffer = *js2sg_buffer(index);
   
   JSValue imgs = js_getpropstr(v, "images");
+  JSValue samplers = js_getpropstr(v, "samplers");
   for (int i = 0; i < js_arrlen(imgs); i++) {
     bind.fs.images[i] = js2texture(js_getpropidx(imgs, i))->id;
-    bind.fs.samplers[i] = std_sampler; 
+    int use_std = js2boolean(js_getpropidx(samplers, i));
+    bind.fs.samplers[i] = use_std ? std_sampler : tex_sampler;
   }
   
   JSValue ssbo = js_getpropstr(v, "ssbo");
@@ -766,7 +768,6 @@ JSC_CCALL(render_glue_pass,
 // Set the portion of the window to be rendered to
 JSC_CCALL(render_viewport,
   sg_apply_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
-//  sgl_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
 )
   
 JSC_CCALL(render_commit, sg_commit())
@@ -1848,10 +1849,26 @@ JSC_CCALL(profile_gather_stop,
   JS_SetInterruptHandler(rt,NULL,NULL);
 )
 
+JSC_CCALL(profile_best_t,
+  char* result[50];
+  double seconds = stm_sec(js2number(argv[0]));
+  if (seconds < 1e-6)
+    snprintf(result, 50, "%.2f ns", seconds * 1e9);
+  else if (seconds < 1e-3)
+    snprintf(result, 50, "%.2f µs", seconds * 1e6);
+  else if (seconds < 1)
+    snprintf(result, 50, "%.2f ms", seconds * 1e3);
+  else
+    snprintf(result, 50, "%.2f s", seconds);
+
+  ret = str2js(result);
+)
+
 JSC_CCALL(profile_secs, return number2js(stm_sec(js2number(argv[0]))); )
 
 static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
+  MIST_FUNC_DEF(profile,best_t, 1),
   MIST_FUNC_DEF(profile,gather,2),
   MIST_FUNC_DEF(profile,gather_rate,1),
   MIST_FUNC_DEF(profile,gather_stop,0),

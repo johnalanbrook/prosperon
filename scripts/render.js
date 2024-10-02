@@ -6,6 +6,7 @@ render.doc = {
 
 var cur = {};
 cur.images = [];
+cur.samplers = [];
 
 // When changing a shader, everything must wipe
 render.use_shader = function use_shader(shader) {
@@ -28,10 +29,16 @@ render.use_mat = function use_mat(mat) {
   cur.mat = mat;
 
   cur.images.length = 0;
+  cur.samplers.length = 0;
   if (!cur.shader.fs.images) return;
-  for (var img of cur.shader.fs.images)
+  for (var img of cur.shader.fs.images) {
     if (mat[img.name]) cur.images.push(mat[img.name]);
     else cur.images.push(game.texture("icons/no_tex.gif"));
+  }
+  for (var smp of cur.shader.fs.samplers) {
+    var std = smp.sampler_type === "nonfiltering";
+    cur.samplers.push(std);
+  }
 };
 
 var models_array = [];
@@ -377,28 +384,27 @@ function shader_apply_material(shader, material = {}, old = {}) {
 }
 
 // Creates a binding object for a given mesh and shader
-var bindcache = {};
 var bcache = new WeakMap();
 function sg_bind(mesh, ssbo) {
   if (cur.mesh === mesh && cur.ssbo === ssbo) {
     cur.bind.ssbo = [ssbo];
     cur.bind.images = cur.images;
+    cur.bind.samplers = cur.samplers;
     render.setbind(cur.bind);
     return;
   }
-//  var sid = os.value_id(cur.shader);
-//  var mid = os.value_id(mesh);
-  if (bcache.has(cur.shader) && bcache.get(cur.shader).has(mesh)) {
+
+/*  if (bcache.has(cur.shader) && bcache.get(cur.shader).has(mesh)) {
     cur.bind = bcache.get(cur.shader).get(mesh);
     cur.bind.images = cur.images;
+    cur.bind.samplers = cur.samplers;
     if (ssbo)
     cur.bind.ssbo = [ssbo];
     render.setbind(cur.bind);
     return;
-  }
-  var bind = {};
-  if (!bcache.has(cur.shader)) bcache.set(cur.shader, new WeakMap());
-  if (!bcache.get(cur.shader).has(mesh)) bcache.get(cur.shader).set(mesh, bind);
+  }*/
+  var bind = {};/*  if (!bcache.has(cur.shader)) bcache.set(cur.shader, new WeakMap());
+  if (!bcache.get(cur.shader).has(mesh)) bcache.get(cur.shader).set(mesh, bind);*/
   cur.mesh = mesh;
   cur.ssbo = ssbo;
   cur.bind = bind;
@@ -420,6 +426,7 @@ function sg_bind(mesh, ssbo) {
   if (cur.shader.vs.storage_buffers) for (var b of cur.shader.vs.storage_buffers) bind.ssbo.push(ssbo);
 
   bind.images = cur.images;
+  bind.samplers = cur.samplers;
 
   render.setbind(cur.bind);
 
@@ -1033,6 +1040,20 @@ var imgui_fn = function () {
 prosperon.render = function () {
   profile.report("world");
   render.set_camera(prosperon.camera);
+  // figure out the highest resolution we can render at that's an integer
+  var basesize = prosperon.camera.size.slice();
+  var baseview = prosperon.camera.view();
+  var wh = [baseview[2]-baseview[0], baseview[3]-baseview[1]];
+  var mult = 1;
+  var trysize = basesize.scale(mult);
+  while (trysize.x <= wh.x && trysize.y <= wh.y) {
+    mult++;
+    trysize = basesize.scale(mult);
+  }
+  if (Math.abs(wh.x - basesize.scale(mult-1).x) < Math.abs(wh.x - trysize.x))
+    mult--;
+    
+  prosperon.window_render(basesize.scale(mult));
   profile.report("sprites");
   if (render.draw_sprites) render.sprites();
   if (render.draw_particles) draw_emitters();
@@ -1152,8 +1173,6 @@ prosperon.process = function process() {
   }
 
   profile.report("render");
-  prosperon.window_render(window.size);
-
   prosperon.render();
   profile.endreport("render");  
   profile.pushdata(profile.data.cpu.render, profile.now() - sst);

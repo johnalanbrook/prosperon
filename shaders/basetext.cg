@@ -47,6 +47,8 @@ in vec4 color0;
 out vec4 color;
 
 texture2D text;
+
+@sampler_type smp nonfiltering
 sampler smp;
 
 @include_block frag

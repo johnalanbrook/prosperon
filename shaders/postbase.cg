@@ -23,9 +23,9 @@ out vec4 color;
 
 #define PI 3.141592
 
-@image_sample_type diffuse unfilterable_float
 texture2D diffuse;
-@sampler_type smp nonfiltering
+
+@sampler_type smp filtering
 sampler smp;
 
 uniform vec2 mouse;

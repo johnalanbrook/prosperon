@@ -151,11 +151,11 @@ void render_init() {
     .buffer_pool_size = 1024,
     .image_pool_size = 1024,
   });
-
-//  sgl_setup(&(sgl_desc_t){
-//    .logger.func = sg_logging
-//  });
   
+#ifndef NDEBUG
+  sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
+#endif
+
   std_sampler = sg_make_sampler(&(sg_sampler_desc){});
   tex_sampler = sg_make_sampler(&(sg_sampler_desc){
     .min_filter = SG_FILTER_LINEAR,
@@ -164,10 +164,6 @@ void render_init() {
     .wrap_u = SG_WRAP_REPEAT,
     .wrap_v = SG_WRAP_REPEAT
   });
-
-#ifndef NDEBUG
-  sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
-#endif
 
   sg_features feat = sg_query_features();
   TOPLEFT = feat.origin_top_left;
