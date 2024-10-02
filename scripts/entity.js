@@ -94,7 +94,7 @@ var entity = {
     this.pos = this.pos.add(vec);
   },
   rotate(x) {
-    this.transform.rotate(x, [0, 0, -1]);
+    this.transform.rotate([0, 0, -1],x);
   },
   grow(vec) {
     if (typeof vec === "number") vec = [vec, vec];
