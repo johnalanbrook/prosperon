@@ -8,6 +8,188 @@ var cur = {};
 cur.images = [];
 cur.samplers = [];
 
+/* A pipeline defines the characteristics of the incoming draw.
+  {
+    shader <--- the shader determines the vertex layout, 
+    depth
+      compare always (never/less/equal/less_equal/greater/not_equal/greater_equal/always)
+      write false
+      bias 0
+      bias_slope_scale 0
+      bias_clamp 0
+    stencil
+      enabled false
+      front/back
+        compare always
+        fail_op keep (zero/replace/incr_clamp/decr_clamp/invert/incr_wrap/decr_wrap)
+        depth_fail_op keep
+        pass_op keep
+      read true
+      write false
+      ref 0 (0-255)
+    color
+      write_mask rgba
+      blend
+        enabled false
+        src_factor_rgb one
+        dst_factor_rgb zero
+        op_rgb add
+        src_factor_alpha one
+        dst_factor_alpha zero
+        op_alpha add
+    cull none
+    face_winding cw
+    alpha_to_coverage false
+    label ""
+*/
+
+var blendop = {
+  add: 1,
+  subtract: 2,
+  reverse_subtract: 3
+};
+
+var blendfactor = {
+  zero: 1,
+  one: 2,
+  src_color: 3,
+  one_minus_src_color: 4,
+  src_alpha: 5,
+  one_minus_src_alpha: 6,
+  dst_color: 7,
+  one_minus_dst_color: 8,
+  dst_alpha: 9,
+  one_minus_dst_alpha: 10,
+  src_alpha_saturated: 11,
+  blend_color: 12,
+  one_minus_blend_color: 13,
+  blend_alpha: 14,
+  one_minus_blend_alpha: 15
+};
+
+var colormask = {
+  none: 0x10,
+  r: 0x1,
+  g: 0x2,
+  rg: 0x3,
+  b: 0x4,
+  rb: 0x5,
+  gb: 0x6,
+  rgb: 0x7,
+  a: 0x8,
+  ra: 0x9,
+  ga: 0xA,
+  rga: 0xB,
+  ba: 0xC,
+  rba: 0xD,
+  gba: 0xE,
+  rgba: 0xF
+};
+
+var primitive_map = {
+  point: 1,
+  line: 2,
+  linestrip: 3,
+  triangle: 4,
+  trianglestrip: 5,
+};
+
+var cull_map = {
+  none: 1,
+  front: 2,
+  back: 3,
+};
+
+var stencilop = {
+  keep: 1,
+  zero: 2,
+  replace: 3,
+  incr_clamp: 4,
+  decr_clamp: 5,
+  invert: 6,
+  incr_wrap: 7,
+  decr_wrap: 8
+};
+
+var depth_map = {
+  off: false,
+  on: true,
+};
+
+var face_map = {
+  ccw: 1,
+  cw: 2,
+};
+
+var compare = {
+  never: 1,
+  less: 2,
+  equal: 3,
+  less_equal: 4,
+  greater: 5,
+  not_equal: 6,
+  greater_equal: 7,
+  always: 8
+};
+
+var base_pipeline = {
+  primitive: primitive_map.triangle,
+  depth: {
+    compare: compare.always,
+    write: false,
+    bias: 0,
+    bias_slope_scale: 0,
+    bias_clamp: 0
+  },
+  stencil: {
+    enabled: false,
+    front: {
+      compare: compare.always,
+      fail_op: stencilop.keep,
+      depth_fail_op: stencilop.keep,
+      pass_op: stencilop.keep
+    },
+    back: {
+      compare: compare.always,
+      fail_op: stencilop.keep,
+      depth_fail_op: stencilop.keep,
+      pass_op: stencilop.keep
+    },
+    read: true,
+    write: false,
+    ref: 0
+  },
+  write_mask: colormask.rgba,
+  blend: {
+    enabled: false,
+    src_factor_rgb: blendfactor.one,
+    dst_factor_rgb: blendfactor.zero,
+    op_rgb: blendop.add,
+    src_factor_alpha: blendfactor.one,
+    dst_factor_alpha: blendfactor.zero,
+    op_alpha: blendop.add,
+  },
+  cull: cull_map.none,
+  face: face_map.cw,
+  alpha_to_coverage: false,
+  label: "scripted pipeline"
+}
+
+render.base_pipeline = base_pipeline;
+render.colormask = colormask;
+render.primitive_map = primitive_map;
+render.cull_map = cull_map;
+render.stencilop = stencilop;
+render.depth_map = depth_map;
+render.face_map = face_map;
+render.compare = compare;
+render.blendfactor = blendfactor;
+
+render.use_pipeline = function use_pipeline(pipeline)
+{
+
+}
+
 // When changing a shader, everything must wipe
 render.use_shader = function use_shader(shader) {
   if (typeof shader === "string") shader = make_shader(shader);
@@ -72,35 +254,6 @@ var attr_map = {
   a_scale: 11,
 };
 
-var blend_map = {
-  mix: true,
-  none: false,
-};
-
-var primitive_map = {
-  point: 1,
-  line: 2,
-  linestrip: 3,
-  triangle: 4,
-  trianglestrip: 5,
-};
-
-var cull_map = {
-  none: 1,
-  front: 2,
-  back: 3,
-};
-
-var depth_map = {
-  off: false,
-  on: true,
-};
-
-var face_map = {
-  cw: 2,
-  ccw: 1,
-};
-
 render.poly_prim = function poly_prim(verts) {
   var index = [];
   if (verts.length < 1) return undefined;
@@ -120,18 +273,6 @@ render.poly_prim = function poly_prim(verts) {
     count: index.length,
   };
 };
-
-function shader_directive(shader, name, map) {
-  var reg = new RegExp(`#${name}.*`, "g");
-  var mat = shader.match(reg);
-  if (!mat) return undefined;
-
-  reg = new RegExp(`#${name}\s*`, "g");
-  var ff = mat.map(d => d.replace(reg, ""))[0].trim();
-
-  if (map) return map[ff];
-  return ff;
-}
 
 var uni_globals = {
   time(stage, slot) {
@@ -176,7 +317,7 @@ render.hotreload = function () {
     shader_times[i] = io.mod(i);
     var obj = create_shader_obj(i);
     obj = obj[os.sys()];
-    obj.pipe = render.pipeline(obj);
+    obj.pipe = render.pipeline(obj, base_pipeline);
     var old = shader_cache[i];
     Object.assign(shader_cache[i], obj);
     cur.bind = undefined;
@@ -201,17 +342,6 @@ function create_shader_obj(file) {
       shader = shader.replace(inc, macro);
       files.push(filez);
     }
-
-  var blend = shader_directive(shader, "blend", blend_map);
-  var primitive = shader_directive(shader, "primitive", primitive_map);
-  var cull = shader_directive(shader, "cull", cull_map);
-  var depth = shader_directive(shader, "depth", depth_map);
-  var face = shader_directive(shader, "face", face_map);
-  var indexed = shader_directive(shader, "indexed");
-  var stencil = shader_directive(shader, "stencil");
-
-  if (typeof indexed == "undefined") indexed = true;
-  if (indexed === "false") indexed = false;
 
   shader = shader.replace(/uniform\s+(\w+)\s+(\w+);/g, "uniform _$2 { $1 $2; };");
   shader = shader.replace(/(texture2D|sampler) /g, "uniform $1 ");
@@ -251,13 +381,7 @@ function create_shader_obj(file) {
 
     add_code(obj.fs);
 
-    obj.blend = blend;
-    obj.cull = cull;
-    obj.primitive = primitive;
-    obj.depth = depth;
-    obj.face = face;
-    obj.indexed = indexed;
-    obj.stencil = stencil === 'write';
+    obj.indexed = true;
 
     if (obj.vs.inputs)
       for (var i of obj.vs.inputs) {
@@ -320,7 +444,7 @@ function make_shader(shader) {
     
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
-    obj.pipe = render.pipeline(obj);
+    obj.pipe = render.pipeline(obj, base_pipeline);
     shader_cache[file] = obj;
     shader_times[file] = io.mod(file);
     return obj;
@@ -331,7 +455,7 @@ function make_shader(shader) {
   var compiled = create_shader_obj(file);
   io.slurpwrite(writejson, json.encode(compiled));
   var obj = compiled[os.sys()];
-  obj.pipe = render.pipeline(obj);
+  obj.pipe = render.pipeline(obj, base_pipeline);
 
   shader_cache[file] = obj;
   shader_times[file] = io.mod(file);
@@ -758,7 +882,6 @@ render.floodmask = function(val)
 {
   render.use_shader(polyshader);
   render.use_mat({});
-  render.draw(
 }
 
 render.mask = function mask(tex, pos, scale, rotation = 0)

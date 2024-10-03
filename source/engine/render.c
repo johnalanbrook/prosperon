@@ -179,9 +179,6 @@ void render_init() {
     .depth = {
       .load_action = SG_LOADACTION_CLEAR,
       .clear_value = 1
-    },
-    .stencil = {
-      .clear_value = 1
     }
   };
   
@@ -264,11 +261,3 @@ float *rgba2floats(float *r, struct rgba c)
   r[3] = (float)c.a / RGBA_MAX;
   return r;
 }
-
-sg_blend_state blend_trans = {
-  .enabled = true,
-  .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
-  .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-  .src_factor_alpha = SG_BLENDFACTOR_SRC_ALPHA,
-  .dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA
-};

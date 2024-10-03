@@ -1,5 +1,3 @@
-#stencil write
-
 @block vert
 uniform vec4 rect;
 
@@ -16,7 +14,7 @@ void frag()
 {
   color = texture(sampler2D(diffuse,smp), uv);
   if (color.a == 0.0) discard;
-  color = vec4(1.0);
+  color = vec4(0.0);
 }
 @end
 

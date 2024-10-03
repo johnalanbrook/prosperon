@@ -95,7 +95,11 @@ game.engine_start = function (s) {
       s();
 
       shape.quad = {
-        pos: os.make_buffer([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0], 0),
+        pos: os.make_buffer([
+          0, 0, 0,
+          0, 1, 0,
+          1, 0, 0,
+          1, 1, 0], 0),
         verts: 4,
         uv: os.make_buffer([0, 1, 1, 1, 0, 0, 1, 0], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
@@ -107,11 +111,15 @@ game.engine_start = function (s) {
         uv: os.make_buffer([0, 0, 0.5, 1, 1, 0], 2),
         verts: 3,
         count: 3,
-        index: os.make_buffer([0, 2, 1], 1),
+        index: os.make_buffer([0, 1, 2], 1),
       };
 
       shape.centered_quad = {
-        pos: os.make_buffer([-0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5], 0),
+        pos: os.make_buffer([
+          -0.5, -0.5, -0.5,
+          -0.5, 0.5, -0.5,
+          0.5, -0.5, -0.5,
+          0.5, 0.5, -0.5], 0),
         verts: 4,
         uv: os.make_buffer([0, 1, 1, 1, 0, 0, 1, 0], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),

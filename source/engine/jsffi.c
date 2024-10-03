@@ -86,6 +86,12 @@ void sg_buffer_free(sg_buffer *b)
   free(b);
 }
 
+void sg_pipeline_free(sg_pipeline *p)
+{
+  sg_destroy_pipeline(*p);
+  free(p);
+}
+
 void cpShape_free(cpShape *s)
 {
   if (cpSpaceContainsShape(space, s))
@@ -115,6 +121,7 @@ QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
 QJSCLASS(window)
 QJSCLASS(sg_buffer)
+QJSCLASS(sg_pipeline)
 QJSCLASS(datastream)
 QJSCLASS(cpShape)
 QJSCLASS(cpConstraint)
@@ -757,6 +764,8 @@ JSC_CCALL(render_glue_pass,
       .colors[0] = {
         .load_action = SG_LOADACTION_CLEAR,
         .clear_value = (sg_color){0,0,0,1}
+      },
+      .stencil = { .clear_value = 1
       }
     }
   });
@@ -953,41 +962,73 @@ sg_vertex_layout_state js2layout(JSValue v)
   return st;
 }
 
+sg_depth_state js2depth(JSValue v)
+{
+  sg_depth_state depth = {0};
+  depth.compare = js2number(js_getpropstr(v, "compare"));
+  depth.write_enabled = js2boolean(js_getpropstr(v, "write"));
+  depth.bias = js2number(js_getpropstr(v, "bias"));
+  depth.bias_slope_scale = js2number(js_getpropstr(v, "bias_slope_scale"));
+  depth.bias_clamp = js2number(js_getpropstr(v, "bias_clamp"));
+  return depth;
+}
+
+sg_stencil_face_state js2face_state(JSValue v)
+{
+  sg_stencil_face_state face = {0};
+  face.compare = js2number(js_getpropstr(v, "compare"));
+  face.fail_op = js2number(js_getpropstr(v, "fail"));
+  face.depth_fail_op = js2number(js_getpropstr(v, "depth_fail"));
+  face.pass_op = js2number(js_getpropstr(v, "pass_op"));
+  return face;
+}
+
+sg_stencil_state js2stencil(JSValue v)
+{
+  sg_stencil_state stencil = {0};
+  stencil.enabled = js2boolean(js_getpropstr(v, "enabled"));
+  stencil.read_mask = js2boolean(js_getpropstr(v, "read")) ? 0xFF : 0x00;
+  stencil.write_mask = js2boolean(js_getpropstr(v, "write")) ? 0xFF : 0x00;
+  stencil.front = js2face_state(js_getpropstr(v, "front"));
+  stencil.back = js2face_state(js_getpropstr(v, "back"));
+  return stencil;
+}
+
+#define GETNUMVALUE(STRUCT, NAME) STRUCT.NAME = js2number(js_getpropstr(v, #NAME));
+sg_blend_state js2blend(JSValue v)
+{
+  sg_blend_state blend = {0};
+  blend.enabled = js2boolean(js_getpropstr(v, "enabled"));
+  GETNUMVALUE(blend, src_factor_rgb);
+  GETNUMVALUE(blend, dst_factor_rgb);
+  GETNUMVALUE(blend, op_rgb);
+  GETNUMVALUE(blend, src_factor_alpha);
+  GETNUMVALUE(blend, dst_factor_alpha);
+  GETNUMVALUE(blend, op_alpha);
+  return blend;
+}
+
 JSC_CCALL(render_pipeline,
   sg_pipeline_desc p = {0};
   p.shader = js2shader(argv[0]);
   p.layout = js2layout(argv[0]);
-  p.cull_mode = js2number(js_getpropstr(argv[0], "cull"));
   p.primitive_type = js2number(js_getpropstr(argv[0], "primitive"));
-  //p.face_winding = js2number(js_getpropstr(argv[0], "face"));
-  p.face_winding = 1;
   if (js2boolean(js_getpropstr(argv[0], "indexed")))
     p.index_type = SG_INDEXTYPE_UINT16;
-  if (js2boolean(js_getpropstr(argv[0], "blend")))
-    p.colors[0].blend = blend_trans;
-    
-  int depth = js2boolean(js_getpropstr(argv[0], "depth"));
-  if (depth) {
-    p.depth.write_enabled = true;
-    p.depth.compare = SG_COMPAREFUNC_LESS;
-  }
-
-  int stencil = js2boolean(js_getpropstr(argv[0], "stencil"));
-
-  p.stencil.enabled = true;
-  p.stencil.front.compare = p.stencil.back.compare = SG_COMPAREFUNC_EQUAL;
-  p.stencil.read_mask = 0xFF;
-  p.stencil.ref = 1;
-
-  if (stencil) {
-    p.stencil.write_mask = 0xFF;
-    p.stencil.front.compare = p.stencil.back.compare = SG_COMPAREFUNC_NEVER;
-    p.stencil.front.pass_op = p.stencil.back.pass_op = p.stencil.front.fail_op = p.stencil.front.depth_fail_op = p.stencil.back.depth_fail_op = p.stencil.back.fail_op = SG_STENCILOP_REPLACE;
-  }
   
-  sg_pipeline pipe = sg_make_pipeline(&p);
+  JSValue pipe = argv[1];
+  p.primitive_type = js2number(js_getpropstr(pipe, "primitive"));
+  p.cull_mode = js2number(js_getpropstr(pipe, "cull"));
+  p.face_winding = js2number(js_getpropstr(pipe, "face"));
+  p.colors[0].blend = js2blend(js_getpropstr(pipe, "blend"));
+  p.colors[0].write_mask = js2number(js_getpropstr(pipe, "write_mask"));
+  p.alpha_to_coverage_enabled = js2boolean(js_getpropstr(pipe, "alpha_to_coverage"));
+  p.depth = js2depth(js_getpropstr(pipe, "depth"));
+  p.stencil = js2stencil(js_getpropstr(pipe, "stencil"));
 
-  return number2js(pipe.id);
+  sg_pipeline *g = malloc(sizeof(*g));
+  *g = sg_make_pipeline(&p);
+  return sg_pipeline2js(g);
 )
 
 JSC_CCALL(render_setuniv,
@@ -1185,11 +1226,7 @@ JSC_CCALL(render_spdraw,
   sg_draw(js2number(argv[0]),js2number(argv[1]),js2number(argv[2]));
 )
 
-JSC_CCALL(render_setpipeline,
-  sg_pipeline p = {0};
-  p.id = js2number(argv[0]);
-  sg_apply_pipeline(p);
-)
+JSC_CCALL(render_setpipeline, sg_apply_pipeline(*js2sg_pipeline(argv[0]));)
 
 JSC_CCALL(render_screencolor,
   texture *t = calloc(sizeof(*t), 1);
