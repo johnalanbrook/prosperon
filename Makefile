@@ -21,7 +21,7 @@ LDFLAGS += -lstdc++
 
 ifeq ($(CROSS)$(CC), emcc)
   LDFLAGS += --shell-file shell.html --closure 1
-  CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB
+  CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB -pthread -s USE_PTHREADS=1
   NDEBUG = 1
   ARCH:= wasm
 endif
@@ -105,8 +105,9 @@ else ifeq ($(OS), IOS)
   INFO :=$(INFO)_ios
 else ifeq ($(OS), wasm) # Then WEB
   OS := Web
-  LDFLAGS += -sUSE_WEBGPU
-  CPPFLAGS += -DNSTEAM
+  LDFLAGS += -sUSE_WEBGPU -pthread
+  CPPFLAGS += -DNSTEAM -pthread
+	CFLAGS += -pthread
   LDLIBS += GL openal c m dl
   STEAMAPI := 
   EXT = .html
@@ -138,7 +139,7 @@ endif
 
 # All other sources
 OBJS != find source -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
-CPPOBJS != find source -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main'
+CPPOBJS != find source -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main|ImCurveEdit|GraphEditor|neo_sequencer|imgui_neo_sequencer'
 OBJS += $(CPPOBJS)
 OBJS += source/engine/yugine.c
 OBJS += $(shell find source/engine -type f -name '*.m')

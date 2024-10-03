@@ -179,7 +179,9 @@ void render_init() {
     .depth = {
       .load_action = SG_LOADACTION_CLEAR,
       .clear_value = 1
-      //.store_action = SG_STOREACTION_STORE
+    },
+    .stencil = {
+      .clear_value = 1
     }
   };
   

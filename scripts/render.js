@@ -208,6 +208,7 @@ function create_shader_obj(file) {
   var depth = shader_directive(shader, "depth", depth_map);
   var face = shader_directive(shader, "face", face_map);
   var indexed = shader_directive(shader, "indexed");
+  var stencil = shader_directive(shader, "stencil");
 
   if (typeof indexed == "undefined") indexed = true;
   if (indexed === "false") indexed = false;
@@ -256,6 +257,7 @@ function create_shader_obj(file) {
     obj.depth = depth;
     obj.face = face;
     obj.indexed = indexed;
+    obj.stencil = stencil === 'write';
 
     if (obj.vs.inputs)
       for (var i of obj.vs.inputs) {
@@ -378,6 +380,8 @@ function shader_apply_material(shader, material = {}, old = {}) {
   if (!material.diffuse) return;
   if (material.diffuse === old.diffuse) return;
 
+  if ("diffuse_texel" in shader.fs.unimap) render.setuniv2(1, shader.fs.unimap.diffuse_texel.slot, [1,1].div([material.diffuse.width, material.diffuse.height]));
+
   if ("diffuse_size" in shader.fs.unimap) render.setuniv2(1, shader.fs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
 
   if ("diffuse_size" in shader.vs.unimap) render.setuniv2(0, shader.vs.unimap.diffuse_size.slot, [material.diffuse.width, material.diffuse.height]);
@@ -476,7 +480,7 @@ var slice9shader;
 var parshader;
 var spritessboshader;
 var polyssboshader;
-
+var maskshader;
 var sprite_ssbo;
 
 render.init = function () {
@@ -489,6 +493,7 @@ render.init = function () {
   polyshader = make_shader("shaders/poly.cg");
   parshader = make_shader("shaders/baseparticle.cg");
   polyssboshader = make_shader("shaders/poly_ssbo.cg");
+  maskshader = make_shader('shaders/mask.cg');
   poly_ssbo = render.make_textssbo();
   sprite_ssbo = render.make_textssbo();
 
@@ -747,6 +752,29 @@ function img_e() {
     return e;
   }
   return img_cache[img_idx - 1];
+}
+
+render.floodmask = function(val)
+{
+  render.use_shader(polyshader);
+  render.use_mat({});
+  render.draw(
+}
+
+render.mask = function mask(tex, pos, scale, rotation = 0)
+{
+  if (typeof tex === 'string') tex = game.texture(tex);
+
+  render.use_shader(maskshader);
+  var t = os.make_transform();
+  t.pos = pos;
+  t.scale = scale;
+  set_model(t);
+  render.use_mat({
+    diffuse:tex,
+    rect: [0,0,1,1]
+  });
+  render.draw(shape.quad);
 }
 
 render.image = function image(tex, pos, scale, rotation = 0, color = Color.white) {
@@ -1037,6 +1065,8 @@ var imgui_fn = function () {
   render.imgui_end();
 };
 
+prosperon.postvals = {};
+prosperon.postvals.offset_amt = 300;
 prosperon.render = function () {
   profile.report("world");
   render.set_camera(prosperon.camera);
@@ -1085,7 +1115,8 @@ prosperon.render = function () {
   profile.report("post process");
   render.viewport(...prosperon.camera.view());
   render.use_shader(render.postshader);
-  render.use_mat({ diffuse: prosperon.screencolor });
+  prosperon.postvals.diffuse = prosperon.screencolor;
+  render.use_mat(prosperon.postvals);
   render.draw(shape.quad);
 
   profile.endreport("post process");

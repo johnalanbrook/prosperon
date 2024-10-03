@@ -1,8 +1,5 @@
 #include "jsffi.h"
 
-//#define STB_LEAKCHECK_IMPLEMENTATION
-//#include "stb/stb_leakcheck.h"
-
 #include "script.h"
 #include "font.h"
 #include "gameobject.h"
@@ -973,6 +970,19 @@ JSC_CCALL(render_pipeline,
   if (depth) {
     p.depth.write_enabled = true;
     p.depth.compare = SG_COMPAREFUNC_LESS;
+  }
+
+  int stencil = js2boolean(js_getpropstr(argv[0], "stencil"));
+
+  p.stencil.enabled = true;
+  p.stencil.front.compare = p.stencil.back.compare = SG_COMPAREFUNC_EQUAL;
+  p.stencil.read_mask = 0xFF;
+  p.stencil.ref = 1;
+
+  if (stencil) {
+    p.stencil.write_mask = 0xFF;
+    p.stencil.front.compare = p.stencil.back.compare = SG_COMPAREFUNC_NEVER;
+    p.stencil.front.pass_op = p.stencil.back.pass_op = p.stencil.front.fail_op = p.stencil.front.depth_fail_op = p.stencil.back.depth_fail_op = p.stencil.back.fail_op = SG_STENCILOP_REPLACE;
   }
   
   sg_pipeline pipe = sg_make_pipeline(&p);
