@@ -77,7 +77,7 @@ endif
 
 CXXFLAGS += -std=c++14
 
-CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) $(WARNING_FLAGS) -I. -DVER=\"$(SEM)\" -DCOM=\"$(COM)\" -DDATE=\"$(DATE)\" -DINFO=\"$(INFO)\" -Wno-narrowing -Wno-int-conversion #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
+CPPFLAGS += -DHAVE_CEIL -DCP_USE_CGTYPES=0 -DCP_USE_DOUBLES=0 -DHAVE_FLOOR -DHAVE_FMOD -DHAVE_LRINT -DHAVE_LRINTF $(includeflag) $(WARNING_FLAGS) -I. -DPROSPERON_VER=\"$(SEM)\" -DPROSPERON_COM=\"$(COM)\" -DPROSPERON_DATE=\"$(DATE)\" -DPROSPERON_INFO=\"$(INFO)\" -Wno-narrowing -Wno-int-conversion #-DENABLE_SINC_MEDIUM_CONVERTER -DENABLE_SINC_FAST_CONVERTER -DCP_COLLISION_TYPE_TYPE=uintptr_t -DCP_BITMASK_TYPE=uintptr_t 
 CPPFLAGS += -DCONFIG_VERSION=\"2024-02-14\" -DCONFIG_BIGNUM #for quickjs
 
 # ENABLE_SINC_[BEST|FAST|MEDIUM]_CONVERTER
@@ -139,7 +139,7 @@ endif
 
 # All other sources
 OBJS != find source -type f -name '*.c' | grep -vE 'test|tool|example|fuzz|main' | grep -vE 'quickjs'
-CPPOBJS != find source -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main|ImCurveEdit|GraphEditor|neo_sequencer|imgui_neo_sequencer'
+CPPOBJS != find source -type f -name '*.cpp' | grep -vE 'test|tool|example|fuzz|main|GraphEditor|ImCurveEdit'
 OBJS += $(CPPOBJS)
 OBJS += source/engine/yugine.c
 OBJS += $(shell find source/engine -type f -name '*.m')
@@ -240,8 +240,8 @@ ICNSIZE = 16 32 128 256 512 1024
 ICNNAME := $(addsuffix .png, $(ICNSIZE))
 ICON = icons/moon.gif
 icon.ico: $(ICON)
-	for i in $(ICNSIZE); do convert $^ -thumbnail $${i}x$${i} $${i}.png; done
-	convert $(ICNNAME) icon.ico
+	for i in $(ICNSIZE); do magick $^ -thumbnail $${i}x$${i} $${i}.png; done
+	magick $(ICNNAME) icon.ico
 	rm $(ICNNAME)
 
 resource.o: resource.rc resource.manifest icon.ico

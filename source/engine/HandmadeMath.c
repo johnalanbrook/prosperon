@@ -1224,6 +1224,18 @@ HMM_Mat4 HMM_InvOrthographic(HMM_Mat4 OrthoMatrix) {
   return Result;
 }
 
+HMM_Mat4 HMM_Orthographic_DX(float l, float r, float b, float t, float near, float far)
+{
+  return HMM_Orthographic_LH_ZO(l,r,b,t,near,far);
+}
+
+HMM_Mat4 HMM_Orthographic_GL(float l, float r, float b, float t, float near, float far)
+{
+//  return HMM_MulM4(HMM_Orthographic_LH_NO(l,r,b,t,near,far), HMM_Scale((HMM_Vec3){1,-1,1}));
+  return HMM_Orthographic_LH_NO(l,r,b,t,near,far);
+}
+
+
 HMM_Mat4 HMM_Orthographic_Metal(float l, float r, float b, float t, float near, float far)
 {
   HMM_Mat4 adjust = {0};

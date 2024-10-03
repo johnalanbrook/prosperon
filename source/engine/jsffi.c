@@ -41,7 +41,10 @@
 #include <stdint.h>
 #include "gui.h"
 #include "timer.h"
+
+#ifndef _WIN32
 #include <sys/resource.h>
+#endif
 
 #define STB_PERLIN_IMPLEMENTATION
 #include "stb_perlin.h"
@@ -795,16 +798,17 @@ HMM_Mat4 camera2projection(JSValue cam) {
   HMM_Vec2 size = js2vec2(js_getpropstr(cam,"size"));
 
   if (ortho)
+#ifdef SOKOL_GLCORE
+    return HMM_Orthographic_GL(
+#elifdef SOKOL_D3D11
+    return HMM_Orthographic_DX(
+#else
     return HMM_Orthographic_Metal(
+#endif
       -size.x/2,
       size.x/2,
-#ifdef SOKOL_GLCORE    //flipping orthographic Y if opengl
-      size.y/2,
-      -size.y/2,
-#else
       -size.y/2,
       size.y/2,
-#endif
       near,
       far
     );
@@ -1369,7 +1373,6 @@ static const JSCFunctionListEntry js_sgl_funcs[] = {
 
 JSC_CCALL(gui_scissor,
   sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
-//  sgl_scissor_rectf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
 )
 
 JSC_CCALL(gui_text,
@@ -2880,6 +2883,18 @@ JSValue js_os_sys(JSContext *js, JSValue self, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
+JSC_CCALL(os_backend,
+  #ifdef SOKOL_GLCORE
+  return str2js("opengl");
+  #elifdef SOKOL_WGPU
+  return str2js("wgpu");
+  #elifdef SOKOL_D3D11
+  return str2js("directx");
+  #elifdef SOKOL_METAL
+  return str2js("metal");
+  #endif
+)
+
 JSC_CCALL(os_quit, quit();)
 JSC_CCALL(os_exit, exit(js2number(argv[0]));)
 JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
@@ -2960,9 +2975,11 @@ JSC_CCALL(os_mallinfo,
 )
 
 JSC_CCALL(os_rusage,
+  ret = JS_NewObject(js);
+
+#ifndef _WIN32
   struct rusage jsmem;
   getrusage(RUSAGE_SELF, &jsmem);
-  ret = JS_NewObject(js);
   JSJMEMRET(ru_maxrss);
   JSJMEMRET(ru_ixrss);
   JSJMEMRET(ru_idrss);
@@ -2977,6 +2994,7 @@ JSC_CCALL(os_rusage,
   JSJMEMRET(ru_nsignals);
   JSJMEMRET(ru_nvcsw);
   JSJMEMRET(ru_nivcsw);
+#endif
 )
 
 JSC_CCALL(os_mem,
@@ -3527,6 +3545,7 @@ JSC_CCALL(os_turbulence,
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, turbulence, 4),
   MIST_FUNC_DEF(os, fbm, 4),
+  MIST_FUNC_DEF(os, backend, 0),
   MIST_FUNC_DEF(os, ridge, 5),
   MIST_FUNC_DEF(os, perlin, 3),
   MIST_FUNC_DEF(os, rectpack, 3),
@@ -3633,9 +3652,9 @@ void ffi_load() {
 
   QJSGLOBALCLASS(poly2d);
   
-  JS_SetPropertyStr(js, prosperon, "version", str2js(VER));
-  JS_SetPropertyStr(js, prosperon, "revision", str2js(COM));
-  JS_SetPropertyStr(js, prosperon, "date", str2js(DATE));
+  JS_SetPropertyStr(js, prosperon, "version", str2js(PROSPERON_VER));
+  JS_SetPropertyStr(js, prosperon, "revision", str2js(PROSPERON_COM));
+  JS_SetPropertyStr(js, prosperon, "date", str2js(PROSPERON_DATE));
   JS_SetPropertyStr(js, globalThis, "window", window2js(&mainwin));
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
 

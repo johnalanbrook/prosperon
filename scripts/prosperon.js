@@ -101,7 +101,27 @@ game.engine_start = function (s) {
           1, 0, 0,
           1, 1, 0], 0),
         verts: 4,
-        uv: os.make_buffer([0, 1, 1, 1, 0, 0, 1, 0], 2),
+        uv: os.make_buffer([
+          0, 0,
+          0, 1,
+          1, 0,
+          1, 1], 2),
+        index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
+        count: 6,
+      };
+
+      shape.flipquad = {
+        pos: os.make_buffer([
+          0, 0, 0,
+          0, 1, 0,
+          1, 0, 0,
+          1, 1, 0], 0),
+        verts: 4,
+        uv: os.make_buffer([
+          0, 1,
+          0, 0,
+          1, 1,
+          1, 0], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
         count: 6,
       };
@@ -121,7 +141,11 @@ game.engine_start = function (s) {
           0.5, -0.5, -0.5,
           0.5, 0.5, -0.5], 0),
         verts: 4,
-        uv: os.make_buffer([0, 1, 1, 1, 0, 0, 1, 0], 2),
+        uv: os.make_buffer([
+          0, 0,
+          0, 1,
+          1, 0,
+          1, 1], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
         count: 6,
       };

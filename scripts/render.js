@@ -111,11 +111,6 @@ var stencilop = {
   decr_wrap: 8
 };
 
-var depth_map = {
-  off: false,
-  on: true,
-};
-
 var face_map = {
   ccw: 1,
   cw: 2,
@@ -180,7 +175,6 @@ render.colormask = colormask;
 render.primitive_map = primitive_map;
 render.cull_map = cull_map;
 render.stencilop = stencilop;
-render.depth_map = depth_map;
 render.face_map = face_map;
 render.compare = compare;
 render.blendfactor = blendfactor;
@@ -421,7 +415,7 @@ function create_shader_obj(file) {
   return compiled;
 }
 
-function make_shader(shader) {
+function make_shader(shader, pipe) {
   if (shader_cache[shader]) return shader_cache[shader];
 
   var file = shader;
@@ -444,7 +438,9 @@ function make_shader(shader) {
     
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
-    obj.pipe = render.pipeline(obj, base_pipeline);
+    
+    pipe ??= base_pipeline;
+    obj.pipe = render.pipeline(obj, pipe);
     shader_cache[file] = obj;
     shader_times[file] = io.mod(file);
     return obj;
@@ -611,7 +607,9 @@ render.init = function () {
   textshader = make_shader("shaders/text_base.cg");
   render.spriteshader = make_shader("shaders/sprite.cg");
   spritessboshader = make_shader("shaders/sprite_ssbo.cg");
-  render.postshader = make_shader("shaders/simplepost.cg");
+  var postpipe = Object.create(base_pipeline);
+  postpipe.cull = cull_map.none;
+  render.postshader = make_shader("shaders/simplepost.cg", postpipe);
   slice9shader = make_shader("shaders/9slice.cg");
   circleshader = make_shader("shaders/circle.cg");
   polyshader = make_shader("shaders/poly.cg");
@@ -1089,7 +1087,7 @@ prosperon.gizmos = function () {
 
 prosperon.make_camera = function () {
   var cam = world.spawn();
-  cam.near = 0.1;
+  cam.near = -1;
   cam.far = 1000;
   cam.ortho = true;
   cam.viewport = [0, 0, 1, 1];
@@ -1213,7 +1211,6 @@ prosperon.render = function () {
   profile.endreport("sprites");
   profile.report("draws");
   prosperon.draw();
-//  sgl.draw();
   profile.endreport("draws");
   profile.endreport("world");
   prosperon.hudcam.size = prosperon.camera.size;
@@ -1239,8 +1236,9 @@ prosperon.render = function () {
   render.viewport(...prosperon.camera.view());
   render.use_shader(render.postshader);
   prosperon.postvals.diffuse = prosperon.screencolor;
+  
   render.use_mat(prosperon.postvals);
-  render.draw(shape.quad);
+  render.draw(os.backend() === "directx" ? shape.flipquad : shape.quad);
 
   profile.endreport("post process");
 
@@ -1249,7 +1247,6 @@ prosperon.render = function () {
   // Flush & render
   prosperon.appcam.transform.pos = [window.size.x / 2, window.size.y / 2, -100];
   prosperon.appcam.size = window.size.slice();
-  if (os.sys() !== "macos") prosperon.appcam.size.y *= -1;
 
   render.set_camera(prosperon.appcam);
   render.viewport(...prosperon.appcam.view());
