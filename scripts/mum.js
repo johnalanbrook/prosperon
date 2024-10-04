@@ -60,6 +60,26 @@ function show_debug() {
   return prosperon.debug && mum.debug;
 }
 
+var context = mum.base;
+var context_stack = [];
+var cursor = [0,0];
+
+mum.container = function(data, cb) {
+  context_stack.push(context);
+  data.__proto__ = mum.base;
+  var container_context = {
+    pos:cursor.slice(),
+    size:[0,0],
+    children:[]
+  };
+  
+  context = data;
+
+  cb();
+
+  computeContainerSize(context);
+}
+
 mum.debug = false;
 
 var post = function () {};

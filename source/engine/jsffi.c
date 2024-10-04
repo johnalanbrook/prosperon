@@ -3602,6 +3602,9 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, skin_calculate, 1),
 };
 
+ 
+
+
 #include "steam.h"
 
 #define JSSTATIC(NAME, PARENT) \

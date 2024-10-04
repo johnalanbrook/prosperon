@@ -120,8 +120,6 @@ Color.normalize = function (c) {
 
 Color.normalize(Color);
 
-Object.deepfreeze(Color);
-
 var ColorMap = {};
 ColorMap.makemap = function (map) {
   var newmap = Object.create(ColorMap);
@@ -200,8 +198,6 @@ ColorMap.sample = function (t, map = this) {
 ColorMap.doc = {
   sample: "Sample a given colormap at the given percentage (0 to 1).",
 };
-
-Object.freeze(ColorMap);
 
 return {
   Color,
