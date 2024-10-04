@@ -739,6 +739,7 @@ render.flush = check_flush;
 render.forceflush = function()
 {
   if (nextflush) nextflush();
+  nextflush = undefined;
 }
 
 var poly_cache = [];
@@ -893,12 +894,6 @@ function img_e() {
   return img_cache[img_idx - 1];
 }
 
-render.floodmask = function(val)
-{
-  render.use_shader(polyshader);
-  render.use_mat({});
-}
-
 var stencil_write = {
   compare: compare.always,
   fail_op: stencilop.replace,
@@ -906,7 +901,7 @@ var stencil_write = {
   pass_op: stencilop.replace
 };
 
-function stencil_writer(ref)
+var stencil_writer = function stencil_writer(ref)
 {
   var pipe = Object.create(base_pipeline);
   Object.assign(pipe, {
@@ -920,32 +915,56 @@ function stencil_writer(ref)
     },
     write_mask: colormask.none
   });
-}
+  return pipe;
+}.hashify();
 
 // objects by default draw where the stencil buffer is 0
-
-var pipe_stencil_on = stencil_writer(1);
-var pipe_stencil_off = stencil_writer(0);
-
-render.fillmask = function(on)
+render.fillmask = function(ref)
 {
-  var pipe = on ? pipe_stencil_on : pipe_stencil_off;
+  render.forceflush();
+  var pipe = stencil_writer(ref);
   render.use_shader('shaders/screenfill.cg', pipe);
   render.draw(shape.quad);
-} 
+}
 
-render.mask = function mask(tex, pos, scale, rotation = 0)
+var stencil_invert = {
+  compare: compare.always,
+  fail_op: stencilop.invert,
+  depth_fail_op: stencilop.invert,
+  pass_op: stencilop.invert
+};
+var stencil_inverter = Object.create(base_pipeline);
+Object.assign(stencil_inverter, {
+  stencil: {
+    enabled: true,
+    front: stencil_invert,
+    back:stencil_invert,
+    write:true,
+    read:true,
+    ref: 0
+  },
+  write_mask: colormask.none
+});
+render.invertmask = function()
+{
+  render.forceflush();
+  render.use_shader('shaders/screenfill.cg', stencil_inverter);
+  render.draw(shape.quad);
+}
+
+render.mask = function mask(tex, pos, scale, rotation = 0, ref = 1)
 {
   if (typeof tex === 'string') tex = game.texture(tex);
-
-  render.use_shader(spritessboshader, pipe_stencil_on);
+  var pipe = stencil_writer(ref);
+  render.use_shader('shaders/sprite.cg', pipe);
   var t = os.make_transform();
   t.pos = pos;
-  t.scale = scale;
+  t.scale = scale.div(tex.dimensions);
   set_model(t);
   render.use_mat({
     diffuse:tex,
-    rect: [0,0,1,1]
+    rect: [0,0,1,1],
+    shade: Color.white
   });
   render.draw(shape.quad);
 }

@@ -995,6 +995,7 @@ sg_stencil_state js2stencil(JSValue v)
   stencil.write_mask = js2boolean(js_getpropstr(v, "write")) ? 0xFF : 0x00;
   stencil.front = js2face_state(js_getpropstr(v, "front"));
   stencil.back = js2face_state(js_getpropstr(v, "back"));
+  stencil.ref = js2number(js_getpropstr(v, "ref"));
   return stencil;
 }
 

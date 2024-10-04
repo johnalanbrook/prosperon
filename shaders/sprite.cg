@@ -9,11 +9,11 @@ void vert()
 @end
 
 @block frag
-uniform vec4 shade;
+
 void frag()
 {
   color = texture(sampler2D(diffuse,smp), uv);
-  color *= shade;
+  if (color.a != 0) discard;
 }
 @end
 
