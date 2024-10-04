@@ -137,15 +137,15 @@ var base_pipeline = {
     bias_clamp: 0
   },
   stencil: {
-    enabled: false,
+    enabled: true,
     front: {
-      compare: compare.always,
+      compare: compare.equal,
       fail_op: stencilop.keep,
       depth_fail_op: stencilop.keep,
       pass_op: stencilop.keep
     },
     back: {
-      compare: compare.always,
+      compare: compare.equal,
       fail_op: stencilop.keep,
       depth_fail_op: stencilop.keep,
       pass_op: stencilop.keep
@@ -184,17 +184,39 @@ render.use_pipeline = function use_pipeline(pipeline)
 
 }
 
-// When changing a shader, everything must wipe
-render.use_shader = function use_shader(shader) {
+var pipe_shaders = new WeakMap();
+
+// Uses the shader with the specified pipeline. If none specified, uses the base pipeline
+render.use_shader = function use_shader(shader, pipeline) {
+  pipeline ??= base_pipeline;
   if (typeof shader === "string") shader = make_shader(shader);
   if (cur.shader === shader) return;
+  
+  if (!pipe_shaders.has(shader)) pipe_shaders.set(shader, new WeakMap());
+  var shader_pipelines = pipe_shaders.get(shader);
+  if (!shader_pipelines.has(pipeline)) {
+    var new_pipeline = render.make_pipeline(shader,pipeline);
+    shader_pipelines.set(pipeline, new_pipeline);
+  }
+  
+  var use_pipeline = shader_pipelines.get(pipeline);
+  if (cur.shader === shader && cur.pipeline === use_pipeline) return;
+  
   cur.shader = shader;
   cur.bind = undefined;
   cur.mesh = undefined;
   cur.ssbo = undefined;
-  render.setpipeline(shader.pipe);
+  cur.images = [];
+  cur.pipeline = use_pipeline;
+  
+  // Grab or create a pipeline obj that utilizes the specific shader and pipeline
+  render.setpipeline(use_pipeline);
   shader_globals(cur.shader);
 };
+
+render.use_pipeline = function use_pipeline(pipeline) {
+
+}
 
 render.use_mat = function use_mat(mat) {
   if (!cur.shader) return;
@@ -311,7 +333,6 @@ render.hotreload = function () {
     shader_times[i] = io.mod(i);
     var obj = create_shader_obj(i);
     obj = obj[os.sys()];
-    obj.pipe = render.pipeline(obj, base_pipeline);
     var old = shader_cache[i];
     Object.assign(shader_cache[i], obj);
     cur.bind = undefined;
@@ -439,8 +460,6 @@ function make_shader(shader, pipe) {
     var shaderobj = json.decode(io.slurp(writejson));
     var obj = shaderobj[os.sys()];
     
-    pipe ??= base_pipeline;
-    obj.pipe = render.pipeline(obj, pipe);
     shader_cache[file] = obj;
     shader_times[file] = io.mod(file);
     return obj;
@@ -451,7 +470,6 @@ function make_shader(shader, pipe) {
   var compiled = create_shader_obj(file);
   io.slurpwrite(writejson, json.encode(compiled));
   var obj = compiled[os.sys()];
-  obj.pipe = render.pipeline(obj, base_pipeline);
 
   shader_cache[file] = obj;
   shader_times[file] = io.mod(file);
@@ -600,7 +618,6 @@ var slice9shader;
 var parshader;
 var spritessboshader;
 var polyssboshader;
-var maskshader;
 var sprite_ssbo;
 
 render.init = function () {
@@ -609,13 +626,13 @@ render.init = function () {
   spritessboshader = make_shader("shaders/sprite_ssbo.cg");
   var postpipe = Object.create(base_pipeline);
   postpipe.cull = cull_map.none;
+  postpipe.primitive = primitive_map.triangle;
   render.postshader = make_shader("shaders/simplepost.cg", postpipe);
   slice9shader = make_shader("shaders/9slice.cg");
   circleshader = make_shader("shaders/circle.cg");
   polyshader = make_shader("shaders/poly.cg");
   parshader = make_shader("shaders/baseparticle.cg");
   polyssboshader = make_shader("shaders/poly_ssbo.cg");
-  maskshader = make_shader('shaders/mask.cg');
   poly_ssbo = render.make_textssbo();
   sprite_ssbo = render.make_textssbo();
 
@@ -882,11 +899,46 @@ render.floodmask = function(val)
   render.use_mat({});
 }
 
+var stencil_write = {
+  compare: compare.always,
+  fail_op: stencilop.replace,
+  depth_fail_op:stencilop.replace,
+  pass_op: stencilop.replace
+};
+
+function stencil_writer(ref)
+{
+  var pipe = Object.create(base_pipeline);
+  Object.assign(pipe, {
+    stencil: {
+      enabled: true,
+      front: stencil_write,
+      back: stencil_write,
+      write:true,
+      read:true,
+      ref:ref
+    },
+    write_mask: colormask.none
+  });
+}
+
+// objects by default draw where the stencil buffer is 0
+
+var pipe_stencil_on = stencil_writer(1);
+var pipe_stencil_off = stencil_writer(0);
+
+render.fillmask = function(on)
+{
+  var pipe = on ? pipe_stencil_on : pipe_stencil_off;
+  render.use_shader('shaders/screenfill.cg', pipe);
+  render.draw(shape.quad);
+} 
+
 render.mask = function mask(tex, pos, scale, rotation = 0)
 {
   if (typeof tex === 'string') tex = game.texture(tex);
 
-  render.use_shader(maskshader);
+  render.use_shader(spritessboshader, pipe_stencil_on);
   var t = os.make_transform();
   t.pos = pos;
   t.scale = scale;
@@ -1238,7 +1290,7 @@ prosperon.render = function () {
   prosperon.postvals.diffuse = prosperon.screencolor;
   
   render.use_mat(prosperon.postvals);
-  render.draw(os.backend() === "directx" ? shape.flipquad : shape.quad);
+  render.draw((os.backend() === "directx" || os.backend() === 'metal') ? shape.flipquad : shape.quad);
 
   profile.endreport("post process");
 

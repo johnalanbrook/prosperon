@@ -47,6 +47,7 @@ void frag()
 {
   color = texture(sampler2D(diffuse,smp), uv);
   color *= shade;
+  if (color.a == 0.0) discard;
 }
 
 void main()

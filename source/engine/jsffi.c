@@ -1012,7 +1012,7 @@ sg_blend_state js2blend(JSValue v)
   return blend;
 }
 
-JSC_CCALL(render_pipeline,
+JSC_CCALL(render_make_pipeline,
   sg_pipeline_desc p = {0};
   p.shader = js2shader(argv[0]);
   p.layout = js2layout(argv[0]);
@@ -1253,7 +1253,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, glue_pass, 0),
   MIST_FUNC_DEF(render, text_size, 3),
   MIST_FUNC_DEF(render, set_camera, 1),
-  MIST_FUNC_DEF(render, pipeline, 1),
+  MIST_FUNC_DEF(render, make_pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
   MIST_FUNC_DEF(render, spdraw, 3),

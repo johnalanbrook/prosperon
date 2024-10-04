@@ -290,7 +290,7 @@ SpriteAnim.gif = function (path) {
   var anim = {};
   anim.frames = [];
   anim.path = path;
-  var tex = game.texture(path);
+  var tex = game.texture(path).texture;
   var frames = tex.frames;
   if (frames === 1) return undefined;
   var yslice = 1 / frames;

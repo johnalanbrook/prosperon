@@ -1534,6 +1534,7 @@ yaml.tojson = function (yaml) {
   yaml = yaml.replace(/,}/g, "}");
   yaml = yaml.replace(/,]/g, "]");
   yaml = yaml.replace(/,"[^"]+"\:,/g, ",");
+  yaml = yaml.replace(/,"[^"]+"\:}/g, "}");  
   return yaml;
 };
 

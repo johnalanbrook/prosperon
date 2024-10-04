@@ -25,6 +25,7 @@ struct texture {
   simgui_image_t simgui;
   int width;
   int height;
+  HMM_Vec3 dimensions;
   unsigned char *data;
   int frames;
   int *delays;
