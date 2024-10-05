@@ -1,3 +1,46 @@
+/*
+  Anatomy of rendering an image
+  render.image(path)
+  Path can be a file like "toad"
+  If this is a gif, this would display the entire range of the animation
+  It can be a frame of animation, like "frog.0"
+  If it's an aseprite, it can have multiple animations, like "frog.walk.0"
+                                                          file^ frame^ idx
+
+  render.image("frog.walk.0",
+  game.image("frog.walk.0") ==> retrieve
+
+  image = {
+    texture: "spritesheet.png",
+    rect: [x,y,w,h],
+    time: 100 
+  },
+
+    frames: {
+      toad: {
+        x: 4,
+        y: 5,
+        w: 10,
+        h: 10
+      },
+      frog: {
+      
+        walk: [
+          { texture: spritesheet.png, x: 10, y:10, w:6,h:6, time: 100 },
+          { texture: spritesheet.png, x:16,y:10,w:6,h:6,time:100}       <--- two frame walk animation
+        ],
+      },
+    },
+  }
+  texture frog {
+    texture: {"frog.png"}, <--- this is the actual thing to send to the gpu
+    x:0,
+    y:0,
+    w:10,
+    h:10
+  },
+*/
+
 render.doc = {
   doc: "Functions for rendering modes.",
   normal: "Final render with all lighting.",
@@ -886,7 +929,6 @@ function img_e() {
     var e = {
       transform: os.make_transform(),
       shade: Color.white,
-      rect: [0, 0, 1, 1],
     };
     img_cache.push(e);
     return e;
@@ -954,7 +996,9 @@ render.invertmask = function()
 
 render.mask = function mask(tex, pos, scale, rotation = 0, ref = 1)
 {
-  if (typeof tex === 'string') tex = game.texture(tex);
+  if (typeof tex === 'string')
+    tex = game.texture(tex);
+    
   var pipe = stencil_writer(ref);
   render.use_shader('shaders/sprite.cg', pipe);
   var t = os.make_transform();
@@ -962,16 +1006,18 @@ render.mask = function mask(tex, pos, scale, rotation = 0, ref = 1)
   t.scale = scale.div(tex.dimensions);
   set_model(t);
   render.use_mat({
-    diffuse:tex,
-    rect: [0,0,1,1],
+    diffuse:tex.texture,
+    rect: tex.rect,
     shade: Color.white
   });
   render.draw(shape.quad);
 }
 
-render.image = function image(tex, pos, scale, rotation = 0, color = Color.white) {
-  if (typeof tex === "string")
-    tex = game.texture(tex);
+render.image = function image(image, pos, scale, rotation = 0, color = Color.white) {
+  if (typeof image === "string")
+    image = game.texture(image);
+
+  var tex = image.texture;
 
   if (scale)
     scale = scale.div([tex.width, tex.height]);
@@ -992,8 +1038,8 @@ render.image = function image(tex, pos, scale, rotation = 0, color = Color.white
 
   var e = img_e();
   e.transform.trs(pos, undefined, scale);
-  e.shade = color;
-  e.texture = tex;
+  e.image = image;
+  e.shade = color;  
   
   return;
   var bb = {};

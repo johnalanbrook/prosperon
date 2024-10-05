@@ -1174,7 +1174,8 @@ JSC_CCALL(render_make_sprite_ssbo,
     JSValue sub = js_getpropidx(array,i);
     
     transform *tr = js2transform(js_getpropstr(sub, "transform"));
-    texture *t = js2texture(js_getpropstr(sub, "texture"));
+    JSValue image = js_getpropstr(sub, "image");
+    texture *t = js2texture(js_getpropstr(image, "texture"));
     HMM_Vec3 tscale;
     
     if (t) {
@@ -1185,7 +1186,7 @@ JSC_CCALL(render_make_sprite_ssbo,
     }
 
     ms[i].model = transform2mat(tr);
-    ms[i].rect = js2vec4(js_getpropstr(sub,"rect"));
+    ms[i].rect = js2vec4(js_getpropstr(image,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
     
     if (t)
@@ -3274,6 +3275,10 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
+JSC_SCALL(os_make_aseprite,
+  
+)
+
 JSC_SCALL(os_texture_swap,
   texture *old = js2texture(argv[1]);
   texture *tex = texture_from_file(str);
@@ -3510,8 +3515,9 @@ JSC_CCALL(os_rectpack,
   stbrp_init_target(ctx, width, height, nodes, width);
   int packed = stbrp_pack_rects(ctx, rects, num);
   
-  if (!packed)
+  if (!packed) {
     return JS_UNDEFINED;
+  }
   
   ret = JS_NewArray(js);
   for (int i = 0; i < num; i++) {

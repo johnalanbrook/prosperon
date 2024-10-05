@@ -15,6 +15,9 @@
 
 #include "qoi.h"
 
+#define CUTE_ASEPRITE_IMPLEMENTATION
+#include "cute_aseprite.h"
+
 #ifndef NSVG
 #include "nanosvgrast.h"
 #endif
@@ -177,8 +180,32 @@ struct texture *texture_from_file(const char *path) {
   int n;
 
   char *ext = strrchr(path, '.');
-  
-  if (!strcmp(ext, ".qoi")) {
+
+  if (!strcmp(ext, ".ase")) {
+    ase_t *ase = cute_aseprite_load_from_memory(raw, rawlen, NULL);
+    // frame is ase->w, ase->h
+    /* sprite anim is
+       anim = {
+         frames: [
+           rect: {  <---- gathered after rect packing
+             x: 
+             y:
+             w:
+             h:
+           },
+           time: ase->duration_milliseconds / 1000 (so it's in seconds)
+         ],
+         path: path,
+       };
+
+    */
+    for (int i = 0; i < ase->frame_count; i++) {
+      ase_frame_t *frame = ase->frames+i;
+      // add to thing with frame->pixels
+    }
+    
+    cute_aseprite_free(ase);
+  } else if (!strcmp(ext, ".qoi")) {
     qoi_desc qoi;
     data = qoi_decode(raw, rawlen, &qoi, 4);
     tex->width = qoi.width;
@@ -220,8 +247,6 @@ struct texture *texture_from_file(const char *path) {
   }
 
   tex->data = data;
-
-  texture_load_gpu(tex);
     
   return tex;
 }
@@ -232,9 +257,9 @@ void texture_free(texture *tex)
   if (tex->data)
     free(tex->data);
   if (tex->delays) arrfree(tex->delays);
-  sg_destroy_image(tex->id);
   if (tex->simgui.id)
-    simgui_destroy_image(tex->simgui);  
+    simgui_destroy_image(tex->simgui);
+
   free(tex);
 }
 
@@ -510,9 +535,9 @@ void texture_load_gpu(texture *tex)
       .num_mipmaps = 1,
       .data = img_data
     });
-  } else {
+  } //else {
     // Simple update
-    sg_image_data img_data = tex_img_data(tex,0);
-    sg_update_image(tex->id, &img_data);
-  }
+//    sg_image_data img_data = tex_img_data(tex,0);
+//    sg_update_image(tex->id, &img_data);
+//  }
 }

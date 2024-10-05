@@ -5,6 +5,8 @@
 #include "HandmadeMath.h"
 #include "render.h"
 
+#include "stb_rect_pack.h";
+
 #include "sokol_app.h"
 #include "sokol/util/sokol_imgui.h"
 

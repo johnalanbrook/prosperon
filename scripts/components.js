@@ -12,15 +12,14 @@ var make_point_obj = function (o, p) {
   };
 };
 
-var fullrect = [0, 0, 1, 1];
-
 var sprite_addbucket = function (sprite) {
+  if (!sprite.image) return;
   var layer = 1000000 + sprite.gameobject.drawlayer * 1000 - sprite.gameobject.pos.y;
   sprite_buckets[layer] ??= {};
-  sprite_buckets[layer][sprite.path] ??= [];
-  sprite_buckets[layer][sprite.path].push(sprite);
+  sprite_buckets[layer][sprite.image.texture.path] ??= [];
+  sprite_buckets[layer][sprite.image.texture.path].push(sprite);
   sprite._oldlayer = layer;
-  sprite._oldpath = sprite.path;
+  sprite._oldpath = sprite.image.texture.path;
 };
 
 var sprite_rmbucket = function (sprite) {
@@ -28,88 +27,101 @@ var sprite_rmbucket = function (sprite) {
   else for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) path.remove(sprite);
 };
 
+/* an anim is simply an array of images */
+/* an anim set is like this 
+frog = {
+  walk: [],
+  hop: [],
+  ...etc
+}
+*/
+
 var sprite = {
-  loop: true,
-  rect: fullrect,
-  anim: {},
-  playing: 0,
+  image: undefined,
+  get diffuse() { return this.image.texture; },
+  set diffuse(x) {},
   anim_speed: 1,
-  play(str = 0, fn, loop = true, reverse = false) {
+  play(str, loop = true, reverse = false) {
+    str ??= this.anim;
+    if (!str) return;
+
+    if (typeof str === 'string')
+      str = this.animset[str];
+
+    var playing = str;
+    
     this.del_anim?.();
+    
     var self = this;
     var stop;
+    
     self.del_anim = function () {
       self.del_anim = undefined;
       self = undefined;
       advance = undefined;
       stop?.();
     };
-    var playing = self.anim[str];
-    if (!playing) return;
-    var f = 0;
-    if (reverse) f = playing.frames.length - 1;
 
-    self.path = playing.path;
+    var f = 0;
+    if (reverse) f = playing.length - 1;
 
     function advance(time) {
       if (!self) return;
       if (!self.gameobject) return;
-      self.frame = playing.frames[f].rect;
-      self.rect = [self.frame.x, self.frame.y, self.frame.w, self.frame.h];
-      self.update_dimensions();
+
       var done = false;
       if (reverse) {
-        f = (((f - 1) % playing.frames.length) + playing.frames.length) % playing.frames.length;
-        if (f === playing.frames.length - 1) done = true;
+        f = (((f - 1) % playing.length) + playing.length) % playing.length;
+        if (f === playing.length - 1) done = true;
       } else {
-        f = (f + 1) % playing.frames.length;
+        f = (f + 1) % playing.length;
         if (f === 0) done = true;
       }
 
+      self.image = playing[f];
+
       if (done) {
-        fn?.();
+        self.anim_done?.();
         if (!loop) {
           self?.stop();
           return;
         }
       }
       
-      return playing.frames[f].time/self.anim_speed;
+      return playing[f].time/self.anim_speed;
     }
-    stop = self.gameobject.delay(advance, playing.frames[f].time/self.anim_speed);
+    stop = self.gameobject.delay(advance, playing[f].time/self.anim_speed);
     advance();
   },
   tex_sync() {
     if (this.anim) this.stop();
-    this.rect = fullrect;
-    var anim = SpriteAnim.make(this.path);
-    this.update_dimensions();
     this.sync();
-
-    if (!anim) return;
-    this.anim = anim;
     this.play();
-
-    this.pos = this.dimensions().scale(this.anchor);
   },
   stop() {
     this.del_anim?.();
   },
   set path(p) {
-    p = Resources.find_image(p, this.gameobject._root);
-    if (!p) {
+    var image = game.texture(p);
+    if (!image) {
       console.warn(`Could not find image ${p}.`);
       return;
     }
-    if (p === this.path) return;
 
     this._p = p;
 
     this.del_anim?.();
-    this.texture = game.texture(p);
-
-    this.diffuse = this.texture;
-
+    this.image = image;
+    if (Array.isArray(image)) {
+      this.anim = image;
+      this.image = image[0];
+    }
+    if (Object.values(image)[0][0]) {
+      // it is an anims set
+      this.animset = image;
+      this.image = Object.values(image)[0][0];
+    }
+    
     this.tex_sync();
   },
   get path() {
@@ -146,21 +158,6 @@ var sprite = {
     dim = dim.scale(this.gameobject.scale);
     var realpos = dim.scale(0.5).add(this.pos);
     return bbox.fromcwh(realpos, dim);
-  },
-
-  update_dimensions() {
-    this._dimensions = [this.texture.width * this.rect[2], this.texture.height * this.rect[3]];
-    component.sprite_dim_hook?.(this);
-  },
-
-  dimensions() {
-    return this._dimensions;
-  },
-  width() {
-    return this.dimensions().x;
-  },
-  height() {
-    return this.dimensions().y;
   },
 };
 globalThis.allsprites = [];
@@ -247,7 +244,6 @@ component.sprite = function (obj) {
   sp.transform = obj.transform;
   sp.guid = prosperon.guid();
   allsprites.push(sp);
-  if (component.sprite.make_hook) component.sprite.make_hook(sp);
   sprite_addbucket(sp);
   return sp;
 };
@@ -271,37 +267,38 @@ var SpriteAnim = {};
 SpriteAnim.hotreload = function(path) {
   delete animcache[path];
 }
-SpriteAnim.make = function (path) {
+SpriteAnim.make = function (path, tex) {
   var anim;
   if (animcache[path]) return animcache[path];
 
+  if (!tex) return;
+
   profile.report(`animation_${path}`);
-  if (io.exists(path.set_ext(".ase"))) anim = SpriteAnim.aseprite(path.set_ext(".ase"));
-  else if (io.exists(path.set_ext(".json"))) anim = SpriteAnim.aseprite(path.set_ext(".json"));
-  else if (path.ext() === "ase") anim = SpriteAnim.aseprite(path);
-  else if (path.ext() === "gif") anim = SpriteAnim.gif(path);
+  if (io.exists(path.set_ext(".ase"))) anim = SpriteAnim.aseprite(path.set_ext(".ase"), tex);
+  else if (io.exists(path.set_ext(".json"))) anim = SpriteAnim.aseprite(path.set_ext(".json"), tex);
+  else if (path.ext() === "ase") anim = SpriteAnim.aseprite(path, tex);
+  else if (path.ext() === "gif") anim = SpriteAnim.gif(path, tex);
   else anim = undefined;
 
   profile.endreport(`animation_${path}`);
   animcache[path] = anim;
   return animcache[path];
 };
-SpriteAnim.gif = function (path) {
+SpriteAnim.gif = function (path, tex) {
   var anim = {};
   anim.frames = [];
   anim.path = path;
-  var tex = game.texture(path).texture;
   var frames = tex.frames;
   if (frames === 1) return undefined;
   var yslice = 1 / frames;
   for (var f = 0; f < frames; f++) {
     var frame = {};
-    frame.rect = {
-      x: 0,
-      w: 1,
-      y: yslice * f,
-      h: yslice,
-    };
+    frame.rect = [
+      0,
+      yslice * f,      
+      1,
+      yslice,
+    ];
     frame.time = 0.05;
     anim.frames.push(frame);
   }
@@ -340,12 +337,12 @@ SpriteAnim.aseprite = function (path) {
     var ase_make_frame = function (ase_frame) {
       var f = ase_frame.frame;
       var frame = {};
-      frame.rect = {
-        x: f.x / dim.w,
-        w: f.w / dim.w,
-        y: f.y / dim.h,
-        h: f.h / dim.h,
-      };
+      frame.rect = [
+        f.x / dim.w,
+        f.y / dim.h,        
+        f.w / dim.w,
+        f.h / dim.h,
+      ];
       frame.time = ase_frame.duration / 1000;
       anim.frames.push(frame);
     };

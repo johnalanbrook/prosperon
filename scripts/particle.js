@@ -101,6 +101,7 @@ function update_emitters(dt) {
 
 var arr = [];
 function draw_emitters() {
+  return;
   ssbo ??= render.make_textssbo();
   render.use_shader("shaders/baseparticle.cg");
   var buckets = {};

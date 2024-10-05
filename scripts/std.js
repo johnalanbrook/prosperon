@@ -273,7 +273,7 @@ Cmdline.register_order(
       if (io.exists("game.js")) global.app = actor.spawn("game.js");
       else global.app = actor.spawn("scripts/nogame.js");
 
-      if (project.icon) window.set_icon(game.texture(project.icon));
+      if (project.icon) window.set_icon(game.texture(project.icon).texture);
       game.camera = world.spawn("scripts/camera2d");
     });
   },

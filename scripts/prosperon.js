@@ -61,7 +61,7 @@ game.engine_start = function (s) {
     function () {
       global.mixin("scripts/sound.js");
       world_start();
-      window.set_icon(game.texture("moon"));
+      window.set_icon(game.texture("moon").texture);
       Object.readonly(window.__proto__, "vsync");
       Object.readonly(window.__proto__, "enable_dragndrop");
       Object.readonly(window.__proto__, "enable_clipboard");
@@ -225,6 +225,65 @@ game.tex_hotreload = function () {
   }
 };
 
+var image = {};
+image.dimensions = function()
+{
+  return [this.texture.width, this.texture.height].scale([this.rect[2], this.rect[3]]);
+}
+
+texture_proto.copy = function(src, pos, rect)
+{
+  var pixel_rect = {
+    x: rect[0]*src.width,
+    y: rect[1]*src.height,
+    w: rect[2]*src.width,
+    h: rect[3]*src.height
+  };
+
+  this.blit(src, {
+    x: pos[0],
+    y: pos[1],
+    w: rect[2]*src.width,
+    h: rect[3]*src.height
+  }, pixel_rect, false);
+}
+
+var spritesheet;
+var sheet_frames = [];
+var sheetsize = 1024;
+
+function pack_into_sheet(images)
+{
+  if (!Array.isArray(images)) images = [images];
+  if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
+  sheet_frames = sheet_frames.concat(images);
+  var sizes = sheet_frames.map(x => [x.rect[2]*x.texture.width, x.rect[3]*x.texture.height]);
+  var pos = os.rectpack(sheetsize, sheetsize, sizes);
+  if (!pos) {
+    console.error(`did not make spritesheet properly from images ${images}`);
+    console.info(sizes);
+    return;
+  }
+
+  var newsheet = os.make_tex_data(sheetsize,sheetsize);
+
+  for (var i = 0; i < pos.length; i++) {
+    // Copy the texture to the new sheet
+    newsheet.copy(sheet_frames[i].texture, pos[i], sheet_frames[i].rect);
+    
+    // Update the frame's rect to the new position in normalized coordinates
+    sheet_frames[i].rect[0] = pos[i][0] / newsheet.width;
+    sheet_frames[i].rect[1] = pos[i][1] / newsheet.height;
+    sheet_frames[i].rect[2] = sizes[i][0] / newsheet.width;
+    sheet_frames[i].rect[3] = sizes[i][1] / newsheet.height;
+    sheet_frames[i].texture = newsheet;
+  }
+
+  newsheet.load_gpu();
+  spritesheet = newsheet;
+  return spritesheet;
+}
+
 game.texture = function (path) {
   if (!path) return game.texture("icons/no_tex.gif");
   path = Resources.find_image(path);
@@ -236,8 +295,40 @@ game.texture = function (path) {
     return game.texture.cache[path];
   }
   if (game.texture.cache[path]) return game.texture.cache[path];
-  game.texture.cache[path] = os.make_texture(path);
+  var tex = os.make_texture(path);
+  
+  var image;
+  
+  var anim = SpriteAnim.make(path, tex);
+  if (!anim) {
+    image = {
+      texture: tex,
+      rect:[0,0,1,1]
+    };
+    if (pack_into_sheet([image]))
+      tex = spritesheet;
+  } else if (Object.keys(anim).length === 1) {
+    image = Object.values(anim)[0].frames;
+    image.forEach(x => x.texture = tex);
+    if (pack_into_sheet(image))
+      tex = spritesheet;
+  } else {
+    image = {};
+    var packs = [];
+    for (var a in anim) {
+      image[a] = anim[a].frames.slice();
+      image[a].forEach(x => x.texture = tex);
+      packs = packs.concat(image[a]);
+    }
+    if (pack_into_sheet(packs))
+      tex = spritesheet;
+  }
+  
+  game.texture.cache[path] = image;
   game.texture.time_cache[path] = io.mod(path);
+
+  tex.load_gpu();
+
   return game.texture.cache[path];
 };
 game.texture.cache = {};
@@ -246,14 +337,14 @@ game.texture.time_cache = {};
 game.texture.total_size = function()
 {
   var size = 0;
-  Object.values(game.texture.cache).forEach(x => size += x.inram() ? x.width*x.height*4 : 0);
+//  Object.values(game.texture.cache).forEach(x => size += x.texture.inram() ? x..texture.width*x.texture.height*4 : 0);
   return size;
 }
 
 game.texture.total_vram = function()
 {
   var vram = 0;
-  Object.values(game.texture.cache).forEach(x => vram += x.vram);
+//  Object.values(game.texture.cache).forEach(x => vram += x.vram);
   return vram;
 }
 

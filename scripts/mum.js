@@ -21,7 +21,6 @@ mum.base = {
   font_size: 16,
   scale: 1,
   angle: 0,
-  inset: null,
   anchor: [0, 1], // where to draw the item from, relative to the cursor. [0,1] is from the top left corner. [1,0] is from the bottom right
   background_image: null,
   slice: null, // pass to slice an image as a 9 slice. see render.slice9 for its format
@@ -47,7 +46,10 @@ mum.base = {
   image_repeat_offset: [0, 0],
   debug: false /* set to true to draw debug boxes */,
   hide: false,
+  child_gap: 0,
+  child_layout: 'top2bottom', /* top2bottom, left2right */
   tooltip: null,
+  children: [],
 };
 
 // data is passed into each function, and various stats are generated
@@ -64,9 +66,46 @@ var context = mum.base;
 var context_stack = [];
 var cursor = [0,0];
 
+function computeContainerSize(context)
+{
+  var sizing = context.sizing.value;
+  var content_dim = [0,0];
+  var max_child_dim = [0,0];
+
+  if (context.layout === 'left2right') {
+    for (var child of context.children) {
+      content_dim.x += child.size.x + context.child_gap;
+      if (child.size.y > max_child_dim.y)
+        max_child_dim.y = child.size.y;
+    }
+
+    content_dim.width -= context.child_gap;  // remove extra gap after last child
+    content_dim.y = max_child_dim.y;
+  } else {
+    for (var child of context.children) {
+      content_dim.y += child.size.y + context.child_gap;
+      if (child.size.x > max_child_dim.x)
+        max_child_dim.x = child.size.x;
+    }
+
+    content_dim.y -= child_gap;
+    content_dim.x = max_child_dim.x;
+  }
+
+  content_dim = content_dim.add(context.padding.scale(2));
+
+  var container_size = [0,0];
+  if (context.sizing.x.type === 'fit')
+    container_size.x = content_dim.x;
+  else if (container.sizing.x.type === 'grow') {
+  }
+    
+}
+
 mum.container = function(data, cb) {
   context_stack.push(context);
   data.__proto__ = mum.base;
+  data.children = [];
   var container_context = {
     pos:cursor.slice(),
     size:[0,0],
@@ -194,8 +233,9 @@ mum.label = function (str, data = {}) {
 mum.image = function (path, data = {}) {
   if (pre(data)) return;
   path ??= data.background_image;
-  var tex = path;
-  if (typeof path === "string") tex = game.texture(path);
+  
+  var image = game.texture(path);
+  var tex = image.texture;
 
   if (!data.height)
     if (data.width) data.height = tex.height * (data.width / tex.width);
@@ -212,12 +252,12 @@ mum.image = function (path, data = {}) {
   data.drawpos = data.drawpos.add(aa.scale([data.width, data.height]));
 
   if (data.slice) render.slice9(tex, data.drawpos, data.slice, [data.width, data.height]);
-  else data.bb = render.image(tex, data.drawpos, [data.width, data.height]);
+  else data.bb = render.image(image, data.drawpos, [data.width, data.height]);
 
   end(data);
 };
 
-mum.rectangle = function (data = {}) {
+mum.rectangle = function (data = {}, cb) {
   if (pre(data)) return;
   var aa = [0, 0].sub(data.anchor);
   data.drawpos = data.drawpos.add(aa.scale([data.width, data.height]));
