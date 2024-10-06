@@ -20,24 +20,6 @@ void input_clipboard_paste(char *str)
   script_evalf("prosperon.clipboardpaste(`%s`);", sapp_get_clipboard_string());
 }
 
-/*
-  0 free
-  1 lock
-*/
-void set_mouse_mode(int mousemode) { sapp_lock_mouse(mousemode); }
-
-void cursor_hide() { sapp_show_mouse(0); }
-void cursor_show() { sapp_show_mouse(1); }
-
-void cursor_img(const char *path)
-{
-/*  NSdesting *dest = [NSdesting destingWithUTF8desting:path];
-  NSImage *img = [[NSImage alloc] initWithContentsOfFile:dest];
-  NSCursor *custom = [[NSCursor alloc] initWithImage:img hotSpot:NSMakePoint(0,0)];
-  [custom set];
-*/
-}
-
 static char *touch_jstrn(char *dest, int len, sapp_touchpoint *touch, int n)
 {
   dest[0] = 0;

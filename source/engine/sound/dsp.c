@@ -13,7 +13,7 @@
 
 #define PI 3.14159265
 
-int SAMPLERATE = 44100;
+int SAMPLERATE = 48000;
 int BUF_FRAMES = 2048;
 int CHANNELS = 2;
 

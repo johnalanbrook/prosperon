@@ -481,6 +481,7 @@ JSC_CCALL(imgui_tablenextrow, ImGui::TableNextRow())
 JSC_CCALL(imgui_tablenextcolumn, ImGui::TableNextColumn())
 JSC_SCALL(imgui_tablesetupcolumn, ImGui::TableSetupColumn(str))
 JSC_CCALL(imgui_tableheadersrow, ImGui::TableHeadersRow())
+JSC_CCALL(imgui_tableangledheadersrow, ImGui::TableAngledHeadersRow())
 
 JSC_SCALL(imgui_dnd, 
   if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
@@ -838,6 +839,7 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, tablenextcolumn,0),
   MIST_FUNC_DEF(imgui, tablenextrow,0),
   MIST_FUNC_DEF(imgui, tableheadersrow, 0),
+  MIST_FUNC_DEF(imgui, tableangledheadersrow, 0),
   MIST_FUNC_DEF(imgui, tablesetupcolumn, 1),
   MIST_FUNC_DEF(imgui, dnd, 3),
   MIST_FUNC_DEF(imgui, dndtarget, 2),

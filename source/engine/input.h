@@ -6,10 +6,6 @@
 #include "HandmadeMath.h"
 #include "sokol_app.h"
 
-void cursor_hide();
-void cursor_show();
-void cursor_img(const char *path);
-void set_mouse_mode(int mousemode);
 void touch_start(sapp_touchpoint *touch, int n);
 void touch_move(sapp_touchpoint *touch, int n);
 void touch_end(sapp_touchpoint *touch, int n);

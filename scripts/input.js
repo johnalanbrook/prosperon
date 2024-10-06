@@ -125,7 +125,7 @@ input.mouse.screenpos = function () {
   return mousepos.slice();
 };
 input.mouse.worldpos = function () {
-  return game.camera.view2world(mousepos);
+  return prosperon.camera.screen2world(mousepos);
 };
 input.mouse.disabled = function () {
   input.mouse_mode(1);
@@ -147,7 +147,8 @@ input.mouse.set_custom_cursor = function (img, mode = input.mouse.cursor.default
 };
 
 input.mouse.button = {
-  /* left, right, middle mouse */ 0: "lm",
+  /* left, right, middle mouse */
+  0: "lm",
   1: "rm",
   2: "mm",
 };

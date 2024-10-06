@@ -1174,6 +1174,7 @@ JSC_CCALL(render_make_sprite_ssbo,
     JSValue sub = js_getpropidx(array,i);
     
     transform *tr = js2transform(js_getpropstr(sub, "transform"));
+    HMM_Vec2 pos = js2vec2(js_getpropstr(sub, "pos"));
     JSValue image = js_getpropstr(sub, "image");
     texture *t = js2texture(js_getpropstr(image, "texture"));
     HMM_Vec3 tscale;
@@ -1184,6 +1185,7 @@ JSC_CCALL(render_make_sprite_ssbo,
       tscale.z = 1;
       tr->scale = HMM_MulV3(tr->scale, tscale);
     }
+    tr->pos.xy = HMM_AddV2(tr->pos.xy, pos);
 
     ms[i].model = transform2mat(tr);
     ms[i].rect = js2vec4(js_getpropstr(image,"rect"));
@@ -1191,6 +1193,8 @@ JSC_CCALL(render_make_sprite_ssbo,
     
     if (t)
       tr->scale = HMM_DivV3(tr->scale, tscale);
+
+    tr->pos.xy = HMM_SubV2(tr->pos.xy, pos);
   }
 
   int offset = sg_append_buffer(*b, (&(sg_range){
@@ -1779,16 +1783,16 @@ static const JSCFunctionListEntry js_game_funcs[] = {
 
 JSC_CCALL(input_show_keyboard, sapp_show_keyboard(js2boolean(argv[0])))
 JSValue js_input_keyboard_shown(JSContext *js, JSValue self) { return boolean2js(sapp_keyboard_shown()); }
-JSC_CCALL(input_mouse_mode, set_mouse_mode(js2number(argv[0])))
+JSC_CCALL(input_mouse_lock, sapp_lock_mouse(js2number(argv[0])))
 JSC_CCALL(input_mouse_cursor, sapp_set_mouse_cursor(js2number(argv[0])))
-JSC_SCALL(input_cursor_img, cursor_img(str))
+JSC_CCALL(input_mouse_show, sapp_show_mouse(js2boolean(argv[0])))
 
 static const JSCFunctionListEntry js_input_funcs[] = {
   MIST_FUNC_DEF(input, show_keyboard, 1),
   MIST_FUNC_DEF(input, keyboard_shown, 0),
-  MIST_FUNC_DEF(input, mouse_mode, 1),
   MIST_FUNC_DEF(input, mouse_cursor, 1),
-  MIST_FUNC_DEF(input, cursor_img, 1)
+  MIST_FUNC_DEF(input, mouse_show, 1),
+  MIST_FUNC_DEF(input, mouse_lock, 1),
 };
 
 JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
@@ -2828,6 +2832,59 @@ static const JSCFunctionListEntry js_performance_funcs[] = {
   MIST_FUNC_DEF(performance, call_fn_n, 3)
 };
 
+JSC_CCALL(geometry_rect_intersect,
+  rect a = js2rect(argv[0]);
+  rect b = js2rect(argv[1]);
+  return boolean2js(a.x < (b.x+b.w) &&
+         (a.x + a.w) > b.x &&
+         a.y < (b.y + b.h) &&
+         (a.y + a.h) > b.y );
+)
+
+JSC_CCALL(geometry_rect_inside,
+  rect inner = js2rect(argv[0]);
+  rect outer = js2rect(argv[1]);
+  return boolean2js(
+         inner.x >= outer.x &&
+         inner.x + inner.w <= outer.x + outer.w &&
+         inner.y >= outer.y &&
+         inner.y + inner.h <= outer.y + outer.h
+         );
+)
+
+JSC_CCALL(geometry_rect_random,
+  rect a = js2rect(argv[0]);
+  return vec22js((HMM_Vec2){
+    a.x + rand_range(-0.5,0.5)*a.w,
+    a.y + rand_range(-0.5,0.5)*a.h
+  });
+)
+
+JSC_CCALL(geometry_rect_point_inside,
+  rect a = js2rect(argv[0]);
+  HMM_Vec2 p = js2vec2(argv[1]);
+  return boolean2js(p.x >= a.x-a.w/2 && p.x <= a.x+a.w/2 && p.y <= a.y+a.h/2 && p.y >= a.y-a.h/2);
+)
+
+JSC_CCALL(geometry_cwh2rect,
+  HMM_Vec2 c = js2vec2(argv[0]);
+  HMM_Vec2 wh = js2vec2(argv[1]);
+  rect r;
+  r.x = c.x;
+  r.y = c.y;
+  r.w = wh.x;
+  r.h = wh.y;
+  return rect2js(r);
+)
+
+static const JSCFunctionListEntry js_geometry_funcs[] = {
+  MIST_FUNC_DEF(geometry, rect_intersect, 2),
+  MIST_FUNC_DEF(geometry, rect_inside, 2),
+  MIST_FUNC_DEF(geometry, rect_random, 1),
+  MIST_FUNC_DEF(geometry, cwh2rect, 2),
+  MIST_FUNC_DEF(geometry, rect_point_inside, 2),
+};
+
 JSValue js_nota_encode(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   if (argc < 1) return JS_UNDEFINED;
@@ -3659,6 +3716,7 @@ void ffi_load() {
   QJSGLOBALCLASS(joint);
   QJSGLOBALCLASS(dspsound);
   QJSGLOBALCLASS(performance);
+  QJSGLOBALCLASS(geometry);
 
   QJSGLOBALCLASS(poly2d);
   
@@ -3697,6 +3755,8 @@ void ffi_load() {
   JSValue array_proto = js_getpropstr(globalThis, "Array");
   array_proto = js_getpropstr(array_proto, "prototype");
   JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, countof(js_array_funcs));
+
+  srand(stm_now());
   
   JS_FreeValue(js,globalThis);  
 }

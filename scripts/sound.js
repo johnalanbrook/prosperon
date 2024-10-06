@@ -61,7 +61,7 @@ audio.cry = function (file, bus = audio.bus.sfx) {
   var player = audio.play(file, bus);
   if (!player) return;
   player.ended = function () {
-    player.unplug();
+    player?.unplug();
     player = undefined;
   };
   return player.ended;
@@ -69,7 +69,6 @@ audio.cry = function (file, bus = audio.bus.sfx) {
 
 // This function is called when every audio source is finished
 var killer = Register.appupdate.register(function () {
-  return;
   for (var src of sources) {
     if (!src.loop && (src.frame < src.lastframe || src.frame === src.frames())) {
       src.unplug();
@@ -111,6 +110,11 @@ audio.music = function (file, fade = 0.5) {
   song = temp;
   song.loop = true;
 };
+
+audio.music.playing = function()
+{
+  return song;
+}
 
 audio.bus.music = audio.dsp.mix();
 audio.bus.music.plugin(audio.bus.master);

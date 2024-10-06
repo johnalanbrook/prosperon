@@ -820,6 +820,11 @@ Object.defineProperty(Array.prototype, "rotate", {
   },
 });
 
+Array.random = function(arr) {
+  if (!Array.isArray(arr)) return;
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
 function make_swizz() {
   function setelem(n) {
     return {

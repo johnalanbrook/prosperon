@@ -233,7 +233,6 @@ var pipe_shaders = new WeakMap();
 render.use_shader = function use_shader(shader, pipeline) {
   pipeline ??= base_pipeline;
   if (typeof shader === "string") shader = make_shader(shader);
-  if (cur.shader === shader) return;
   
   if (!pipe_shaders.has(shader)) pipe_shaders.set(shader, new WeakMap());
   var shader_pipelines = pipe_shaders.get(shader);
@@ -571,13 +570,14 @@ function shader_apply_material(shader, material = {}, old = {}) {
 // Creates a binding object for a given mesh and shader
 var bcache = new WeakMap();
 function sg_bind(mesh, ssbo) {
-  if (cur.mesh === mesh && cur.ssbo === ssbo) {
+/*  if (cur.bind && cur.mesh === mesh && cur.ssbo === ssbo) {
     cur.bind.ssbo = [ssbo];
     cur.bind.images = cur.images;
     cur.bind.samplers = cur.samplers;
+    console.info(json.encode(cur.bind));
     render.setbind(cur.bind);
     return;
-  }
+  }*/
 
 /*  if (bcache.has(cur.shader) && bcache.get(cur.shader).has(mesh)) {
     cur.bind = bcache.get(cur.shader).get(mesh);
@@ -737,7 +737,7 @@ render.sprites = function render_sprites() {
 };
 
 render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
-  check_flush(undefined);
+  check_flush();
 
   if (inner_radius >= 1) inner_radius = inner_radius / radius;
   else if (inner_radius < 0) inner_radius = 1.0;
@@ -807,7 +807,7 @@ function poly_e() {
 
 function flush_poly() {
   if (poly_idx === 0) return;
-  render.use_shader(polyssboshader);
+  render.use_shader(queued_shader, queued_pipe);
   var base = render.make_particle_ssbo(poly_cache.slice(0, poly_idx), poly_ssbo);
   render.use_mat({baseinstance:base});  
   render.draw(shape.centered_quad, poly_ssbo, poly_idx);
@@ -858,15 +858,25 @@ render.boundingbox = function render_boundingbox(bb, color = Color.white) {
   render.line(bbox.topoints(bb).wrapped(1), color);
 };
 
-render.rectangle = function render_rectangle(lowerleft, upperright, color) {
+var queued_shader;
+var queued_pipe;
+render.rectangle = function render_rectangle(lowerleft, upperright, color, shader = polyssboshader, pipe = base_pipeline) {
   var transform = os.make_transform();
   var wh = [upperright.x - lowerleft.x, upperright.y - lowerleft.y];
   var poly = poly_e();
   poly.transform.move(vector.midpoint(lowerleft, upperright));
   poly.transform.scale = [wh.x, wh.y, 1];
   poly.color = color;
-  check_flush(flush_poly);
+  
+  queued_shader = shader;
+  queued_pipe = pipe;
+  flush_poly();
 };
+
+render.rect = function(rect, color, shader, pipe)
+{
+  render.rectangle([rect.x-rect.w/2, rect.y-rect.h/2], [rect.x+rect.w/2, rect.y+rect.h/2], color, shader, pipe);
+}
 
 render.box = function render_box(pos, wh, color = Color.white) {
   var poly = poly_e();
@@ -916,7 +926,7 @@ function flush_img() {
   if (img_idx === 0) return;
   render.use_shader(spritessboshader);
   var startidx = render.make_sprite_ssbo(img_cache.slice(0, img_idx), sprite_ssbo);
-  render.use_mat({ baseinstance:startidx});  
+  render.use_mat({baseinstance:startidx});  
   cur.images = [lasttex];
   render.draw(shape.quad, sprite_ssbo, img_idx);
   lasttex = undefined;
@@ -959,6 +969,8 @@ var stencil_writer = function stencil_writer(ref)
   });
   return pipe;
 }.hashify();
+
+render.stencil_writer = stencil_writer;
 
 // objects by default draw where the stencil buffer is 0
 render.fillmask = function(ref)
@@ -1039,8 +1051,11 @@ render.image = function image(image, pos, scale, rotation = 0, color = Color.whi
   var e = img_e();
   e.transform.trs(pos, undefined, scale);
   e.image = image;
-  e.shade = color;  
-  
+  e.shade = color;
+
+  flush_img();
+  lasttex = undefined;
+
   return;
   var bb = {};
   bb.b = pos.y;
@@ -1330,6 +1345,7 @@ prosperon.render = function () {
   prosperon.draw();
   profile.endreport("draws");
   profile.endreport("world");
+  render.fillmask(0);
   prosperon.hudcam.size = prosperon.camera.size;
   prosperon.hudcam.transform.pos = [prosperon.hudcam.size.x / 2, prosperon.hudcam.size.y / 2, -100];
   render.set_camera(prosperon.hudcam);
