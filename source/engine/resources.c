@@ -49,15 +49,19 @@ void *zipbuf;
 
 sfetch_handle_t game_h;
 
+#define MAXGAMESIZE 15*1024*1024
+
 static void response_cb(const sfetch_response_t *r)
 {
   if (r->fetched) {
+    YughInfo("FINISHED FETCH\n");
     zipbuf = malloc(r->data.size);
     memcpy(zipbuf, r->data.ptr, r->data.size);
     mz_zip_reader_init_mem(&game_cdb, zipbuf, r->data.size,0);
     
   }
   if (r->finished) {
+    YughInfo("FINISHED RESPONSE\n");
     LOADED_GAME = 1;
     void *buf = sfetch_unbind_buffer(r->handle);
     free(buf);
@@ -78,13 +82,14 @@ void resources_init() {
   mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);  
   
 #ifdef __EMSCRIPTEN__
-  gamebuf = malloc(8*1024*1024);
+  gamebuf = malloc(MAXGAMESIZE);
+  YughInfo("GRABBING GAME.ZIP\n");
   game_h = sfetch_send(&(sfetch_request_t){
     .path="game.zip",
     .callback = response_cb,
     .buffer = {
       .ptr = gamebuf,
-      .size = 8*1024*1024
+      .size = MAXGAMESIZE
     }
   });
 #else

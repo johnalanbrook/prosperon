@@ -20,7 +20,7 @@ STEAMAPI =
 LDFLAGS += -lstdc++
 
 ifeq ($(CROSS)$(CC), emcc)
-  LDFLAGS += --shell-file shell.html --closure 1
+  LDFLAGS += --shell-file shell.html --embed-file ld56@/ #--closure 1
   CPPFLAGS += -Wbad-function-cast -Wcast-function-type -sSTACK_SIZE=1MB -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=128MB -pthread -s USE_PTHREADS=1
   NDEBUG = 1
   ARCH:= wasm

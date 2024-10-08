@@ -233,6 +233,7 @@ var pipe_shaders = new WeakMap();
 render.use_shader = function use_shader(shader, pipeline) {
   pipeline ??= base_pipeline;
   if (typeof shader === "string") shader = make_shader(shader);
+  if (cur.shader === shader) return;
   
   if (!pipe_shaders.has(shader)) pipe_shaders.set(shader, new WeakMap());
   var shader_pipelines = pipe_shaders.get(shader);
@@ -570,14 +571,13 @@ function shader_apply_material(shader, material = {}, old = {}) {
 // Creates a binding object for a given mesh and shader
 var bcache = new WeakMap();
 function sg_bind(mesh, ssbo) {
-/*  if (cur.bind && cur.mesh === mesh && cur.ssbo === ssbo) {
+  if (cur.bind && cur.mesh === mesh && cur.ssbo === ssbo) {
     cur.bind.ssbo = [ssbo];
     cur.bind.images = cur.images;
     cur.bind.samplers = cur.samplers;
-    console.info(json.encode(cur.bind));
     render.setbind(cur.bind);
     return;
-  }*/
+  }
 
 /*  if (bcache.has(cur.shader) && bcache.get(cur.shader).has(mesh)) {
     cur.bind = bcache.get(cur.shader).get(mesh);
@@ -870,7 +870,7 @@ render.rectangle = function render_rectangle(lowerleft, upperright, color, shade
   
   queued_shader = shader;
   queued_pipe = pipe;
-  flush_poly();
+  check_flush(flush_poly);
 };
 
 render.rect = function(rect, color, shader, pipe)
@@ -1052,9 +1052,6 @@ render.image = function image(image, pos, scale, rotation = 0, color = Color.whi
   e.transform.trs(pos, undefined, scale);
   e.image = image;
   e.shade = color;
-
-  flush_img();
-  lasttex = undefined;
 
   return;
   var bb = {};

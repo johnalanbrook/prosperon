@@ -13,7 +13,7 @@ void vert()
 void frag()
 {
   color = texture(sampler2D(diffuse,smp), uv);
-  if (color.a != 0) discard;
+  if (color.a == 0) discard;
 }
 @end
 

@@ -12,8 +12,6 @@
 
 pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;
 
-#include "samplerate.h"
-
 #include "stb_ds.h"
 
 #include "dsp.h"
@@ -31,7 +29,6 @@ pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;
 #define TML_IMPLEMENTATION
 #include "tml.h"
 
-#define DR_WAV_NO_STDIO
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
 
@@ -48,17 +45,23 @@ pthread_mutex_t soundrun = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #ifndef NQOA
-#define QOA_NO_STDIO
 #define QOA_IMPLEMENTATION
 #include "qoa.h"
 #endif
 
-static struct {
-  char *key;
-  struct wav *value;
-} *wavhash = NULL;
+void short_to_float_array(const short *in, float *out, int frames, int channels)
+{
+  for (int i = 0; i < frames * channels; i++)
+    out[i] = (float)in[i] / 32768.0f;
+}
 
-void change_channels(struct wav *w, int ch) {
+void float_to_short_array(float *in, short *out, int frames, int channels)
+{
+  for (int i = 0; i < frames*channels; i++)
+    out[i] = (float)in[i]*32768;
+}
+
+void change_channels(struct pcm *w, int ch) {
   if (w->ch == ch) return;
   soundbyte *data = w->data;
   int samples = ch * w->frames;
@@ -81,26 +84,30 @@ void change_channels(struct wav *w, int ch) {
   w->data = new;
 }
 
-void resample(soundbyte *in, soundbyte *out, int in_frames, int out_frames, int channels)
+void resample_pcm(soundbyte *in, soundbyte *out, int in_frames, int out_frames, int channels)
 {
-  float ratio = (float)in_frames/out_frames;
-  SRC_DATA ssrc;
-  ssrc.data_in = in;
-  ssrc.data_out = out;
-  ssrc.input_frames = in_frames;
-  ssrc.output_frames = out_frames;
-  ssrc.src_ratio = ratio;
-  int err = src_simple(&ssrc, SRC_LINEAR, channels);
-  if (err)
-    YughError("Resampling error code %d: %s", err, src_strerror(err));
+  float ratio = (float)in_frames / out_frames;
+  for (int i = 0; i < out_frames; i++) {
+    // Find the position in the input buffer.
+    float in_pos = i * ratio;
+    int in_index = (int)in_pos;   // Get the integer part of the position.
+    float frac = in_pos - in_index;  // Get the fractional part for interpolation.
+    
+    for (int ch = 0; ch < channels; ch++) {
+      // Linear interpolation between two input samples.
+      soundbyte sample1 = in[in_index * channels + ch];
+      soundbyte sample2 = in[(in_index + 1) * channels + ch];
+      out[i * channels + ch] = (soundbyte)((1.0f - frac) * sample1 + frac * sample2);
+    }
+  }
 }
 
-void change_samplerate(struct wav *w, int rate) {
+void change_samplerate(struct pcm *w, int rate) {
   if (rate == w->samplerate) return;
   float ratio = (float)rate / w->samplerate;
   int outframes = w->frames * ratio;
   soundbyte *resampled = malloc(w->ch*outframes*sizeof(soundbyte));
-  resample(w->data, resampled, w->frames, outframes, w->ch);
+  resample_pcm(w->data, resampled, w->frames, outframes, w->ch);
   free(w->data);
   
   w->data = resampled;
@@ -143,30 +150,8 @@ void sound_init() {
   BUF_FRAMES = saudio_buffer_frames();
 }
 
-typedef struct {
-  int channels;
-  int samplerate;
-  void *f;
-} stream;
-
-void mp3_filter(stream *mp3, soundbyte *buffer, int frames)
-{
-  if (mp3->samplerate == SAMPLERATE) {
-    drmp3_read_pcm_frames_f32(mp3->f, frames, buffer);
-    return;
-  }
-  
-  int in_frames = (float)mp3->samplerate/SAMPLERATE;
-  soundbyte *decode = malloc(sizeof(*decode)*in_frames*mp3->channels);
-  drmp3_read_pcm_frames_f32(mp3->f, in_frames, decode);
-  resample(decode, buffer, in_frames, frames, CHANNELS);
-}
-
-struct wav *make_sound(const char *wav) {
-  int index = shgeti(wavhash, wav);
-  if (index != -1)
-    return wavhash[index].value;
-  
+struct pcm *make_pcm(const char *wav) {
+  if (!wav) return NULL;
   char *ext = strrchr(wav, '.')+1;
   
   if(!ext) {
@@ -174,13 +159,14 @@ struct wav *make_sound(const char *wav) {
     return NULL;
   }
 
-  struct wav *mwav = malloc(sizeof(*mwav));
   size_t rawlen;
   void *raw = slurp_file(wav, &rawlen);
   if (!raw) {
-    YughError("Could not find file %s.", wav);
+    YughWarn("Could not find file %s.", wav);
     return NULL;
   }
+  
+  struct pcm *mwav = malloc(sizeof(*mwav));  
 
   if (!strcmp(ext, "wav"))
     mwav->data = drwav_open_memory_and_read_pcm_frames_f32(raw, rawlen, &mwav->ch, &mwav->samplerate, &mwav->frames, NULL);
@@ -207,9 +193,9 @@ struct wav *make_sound(const char *wav) {
     short *qoa_data = qoa_decode(raw, rawlen, &qoa);
     mwav->ch = qoa.channels;
     mwav->samplerate = qoa.samplerate;
-    mwav->frames = qoa.samples;
+    mwav->frames = qoa.samples/mwav->ch;
     mwav->data = malloc(sizeof(soundbyte) * mwav->frames * mwav->ch);
-    src_short_to_float_array(qoa_data, mwav->data, mwav->frames*mwav->ch);
+    short_to_float_array(qoa_data, mwav->data, mwav->frames,mwav->ch);
     free(qoa_data);
   #else
     YughWarn("Could not load %s because Primum was built without QOA support.", wav);
@@ -222,38 +208,47 @@ struct wav *make_sound(const char *wav) {
   }
   free(raw);
 
-  change_samplerate(mwav, SAMPLERATE);
-  change_channels(mwav, CHANNELS);
-
-  if (shlen(wavhash) == 0) sh_new_arena(wavhash);
-  shput(wavhash, wav, mwav);
-
   return mwav;
 }
 
-void save_qoa(char *file)
+void pcm_format(pcm *pcm, int samplerate, int channels)
 {
-  wav *wav = make_sound(file);
-  qoa_desc q;
-  q.channels = wav->ch;
-  q.samples = wav->frames;
-  q.samplerate = wav->samplerate;
-  unsigned int len;
-  void *raw = qoa_encode(wav->data, &q, &len);
-
-  file = str_replace_ext(file, ".qoa");
-  slurp_write(raw, file, len);
-  free(raw);
-  free_sound(wav);
+  change_samplerate(pcm, samplerate);
+  change_channels(pcm, channels);
 }
 
-void free_sound(const char *wav) {
-  struct wav *w = shget(wavhash, wav);
-  if (w == NULL) return;
+void save_qoa(char *file, pcm *pcm)
+{
+  qoa_desc q;
+  short *out = malloc(sizeof(short)*pcm->ch*pcm->frames);
+  float_to_short_array(pcm->data, out, pcm->frames, pcm->ch);
+  q.channels = pcm->ch;
+  q.samples = pcm->frames;
+  q.samplerate = pcm->samplerate;
+  int encoded = qoa_write(file, out, &q);
+  free(out);
+}
 
-  free(w->data);
-  free(w);
-  shdel(wavhash, wav);
+void save_wav(char *file, pcm *pcm)
+{
+  drwav wav;
+  drwav_data_format fmt = {0};
+  fmt.format = DR_WAVE_FORMAT_PCM;
+  fmt.channels = pcm->ch;
+  fmt.sampleRate = pcm->samplerate;
+  fmt.bitsPerSample = 32;
+  drwav_int32 *out = malloc(sizeof(*out)*pcm->ch*pcm->frames);
+  drwav_f32_to_s32(out, pcm->data, pcm->frames*pcm->ch);
+  drwav_init_file_write_sequential_pcm_frames(&wav, file, &fmt, pcm->frames, NULL);
+  drwav_write_pcm_frames(&wav, pcm->frames, out);
+  drwav_uninit(&wav);
+  free(out);
+}
+
+void pcm_free(pcm *pcm)
+{
+  free(pcm->data);
+  free(pcm);
 }
 
 void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
@@ -265,11 +260,6 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
   else
     end = 1;
 
-  if (s->timescale != 1) {
-    src_callback_read(s->src, s->timescale, frames, buf);
-    return;
-  }
-  
   soundbyte *in = s->data->data;
   
   for (int i = 0; i < frames; i++) {
@@ -287,42 +277,22 @@ void sound_fillbuf(struct sound *s, soundbyte *buf, int n) {
 
 void free_source(struct sound *s)
 {
-  src_delete(s->src);
   free(s);
 }
 
-static long src_cb(struct sound *s, float **data)
+struct dsp_node *dsp_source(pcm *pcm)
 {
-  long needed = BUF_FRAMES/s->timescale;
-  *data = s->data->data+s->frame;
-  s->frame += needed;
-  return needed;
-}
-
-struct dsp_node *dsp_source(const char *path)
-{
+  if (!pcm) return NULL;
   struct sound *self = malloc(sizeof(*self));
   self->frame = 0;
-  self->data = make_sound(path);
+  self->data = pcm;
   self->loop = false;
-  self->src = src_callback_new(src_cb, SRC_SINC_MEDIUM_QUALITY, 2, NULL, self);
-  self->timescale = 1;
   dsp_node *n = make_node(self, sound_fillbuf, free_source);
   return n;
 }
 
 int sound_finished(const struct sound *s) {
   return s->frame == s->data->frames;
-}
-
-struct mp3 make_music(const char *mp3) {
-  //    drmp3 new;
-  //    if (!drmp3_init_file(&new, mp3, NULL)) {
-  //        YughError("Could not open mp3 file %s.", mp3);
-  //    }
-
-  struct mp3 newmp3 = {};
-  return newmp3;
 }
 
 float short2db(short val) {

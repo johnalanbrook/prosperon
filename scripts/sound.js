@@ -5,18 +5,29 @@ Object.readonly(audio, "channels");
 Object.readonly(audio, "buffer_frames");
 
 var sources = [];
+var pcms = {};
+
+audio.pcm = function(file)
+{
+  file = Resources.find_sound(file);
+  if (!file) return;
+  if (pcms[file]) return pcms[file];
+
+  var newpcm =  os.make_pcm(file);
+  if (!newpcm) return;
+  pcms[file] = newpcm;
+  newpcm.format(audio.samplerate, audio.channels);
+  return newpcm;
+}
 
 audio.play = function (file, bus = audio.bus.master) {
-  var filename = file;
-  file = Resources.find_sound(file);
-  if (!file) {
-    console.error(`Cannot play sound ${file}: does not exist.`);
-    return;
-  }
-  var src = audio.dsp.source(file);
+  var pcm = audio.pcm(file);
+  if (!pcm) return;
+  var src = audio.dsp.source(pcm);
   src.plugin(bus);
   src.guid = prosperon.guid();
   src.name = file;
+  src._pcm = pcm;
   src.type = "source";
   sources.push(src);
   return src;
@@ -57,7 +68,6 @@ audio.dsp.mix().__proto__.imgui = function () {
 };
 
 audio.cry = function (file, bus = audio.bus.sfx) {
-  file = Resources.find_sound(file);
   var player = audio.play(file, bus);
   if (!player) return;
   player.ended = function () {
@@ -86,7 +96,7 @@ audio.music = function (file, fade = 0.5) {
     if (song) song.volume = 0;
     return;
   }
-  file = Resources.find_sound(file);
+
   if (!fade) {
     song = audio.play(file, audio.bus.music);
     song.loop = true;

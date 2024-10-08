@@ -119,6 +119,7 @@ QJSCLASS(gameobject)
 QJSCLASS(transform)
 QJSCLASS(dsp_node)
 QJSCLASS(texture)
+QJSCLASS(pcm)
 QJSCLASS(font)
 QJSCLASS(warp_gravity)
 QJSCLASS(warp_damp)
@@ -1127,7 +1128,7 @@ JSC_CCALL(render_make_particle_ssbo,
       .type = SG_BUFFERTYPE_STORAGEBUFFER,
       .size = size+desc.size,
       .usage = SG_USAGE_STREAM,
-      .label = "transform buffer"
+      .label = "particle ssbo buffer"
     });
   }
 
@@ -1158,7 +1159,7 @@ JSC_CCALL(render_make_sprite_ssbo,
   if (!b) return JS_UNDEFINED;
   
   sprite_ss ms[js_arrlen(array)];
-
+  
   if (sg_query_buffer_will_overflow(*b, size)) {
     sg_buffer_desc desc = sg_query_buffer_desc(*b);
     sg_destroy_buffer(*b);
@@ -1166,7 +1167,7 @@ JSC_CCALL(render_make_sprite_ssbo,
       .type = SG_BUFFERTYPE_STORAGEBUFFER,
       .size = size+desc.size,
       .usage = SG_USAGE_STREAM,
-      .label = "transform buffer"
+      .label = "sprite ssbo buffer"
     });
   }
 
@@ -1201,7 +1202,7 @@ JSC_CCALL(render_make_sprite_ssbo,
     .ptr = ms,
     .size = size
   }));
-
+  
   ret = number2js(offset/96);
 )
 
@@ -1995,8 +1996,6 @@ JSValue js_io_chmod(JSContext *js, JSValue self, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
-JSC_SCALL(io_save_qoa, save_qoa(str))
-
 JSC_SCALL(io_pack_start, pack_start(str))
 JSC_SCALL(io_pack_add, pack_add(str))
 JSC_CCALL(io_pack_end, pack_end())
@@ -2018,7 +2017,6 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, slurp, 1),
   MIST_FUNC_DEF(io, slurpbytes, 1),
   MIST_FUNC_DEF(io, slurpwrite, 2),
-  MIST_FUNC_DEF(io, save_qoa,1),
   MIST_FUNC_DEF(io, pack_start, 1),
   MIST_FUNC_DEF(io, pack_add, 1),
   MIST_FUNC_DEF(io, pack_end, 0),
@@ -2253,15 +2251,37 @@ static const JSCFunctionListEntry js_dsp_node_funcs[] = {
 };
 
 JSC_GETSET(sound, loop, boolean)
-JSC_GETSET(sound, timescale, number)
 JSC_GETSET(sound, frame, number)
 JSC_CCALL(sound_frames, return number2js(js2sound(self)->data->frames))
 
 static const JSCFunctionListEntry js_sound_funcs[] = {
   CGETSET_ADD(sound, loop),
-  CGETSET_ADD(sound, timescale),
   CGETSET_ADD(sound, frame),
   MIST_FUNC_DEF(sound, frames, 0),
+};
+
+JSC_GET(pcm, ch, number)
+JSC_GET(pcm, samplerate, number)
+JSC_GET(pcm, frames, number)
+JSC_CCALL(pcm_format,
+  pcm_format(js2pcm(self), js2number(argv[0]), js2number(argv[1]));
+)
+
+JSC_SCALL(pcm_save_qoa,
+  save_qoa(str, js2pcm(self));
+)
+
+JSC_SCALL(pcm_save_wav,
+  save_wav(str, js2pcm(self));
+)
+
+static const JSCFunctionListEntry js_pcm_funcs[] = {
+  MIST_GET(pcm, ch),
+  MIST_GET(pcm, samplerate),
+  MIST_GET(pcm, frames),
+  MIST_FUNC_DEF(pcm, format, 2),
+  MIST_FUNC_DEF(pcm, save_qoa, 1),
+  MIST_FUNC_DEF(pcm, save_wav, 1)
 };
 
 static JSValue js_window_get_fullscreen(JSContext *js, JSValue self) { return boolean2js(js2window(self)->fullscreen); }
@@ -2663,8 +2683,8 @@ JSC_CCALL(dspsound_delay,
 )
 
 JSC_CCALL(dspsound_fwd_delay, return dsp_node2js(dsp_fwd_delay(js2number(argv[0]), js2number(argv[1]))))
-JSC_SCALL(dspsound_source,
-  ret = dsp_node2js(dsp_source(str));
+JSC_CCALL(dspsound_source,
+  ret = dsp_node2js(dsp_source(js2pcm(argv[0])));
   JS_SetPrototype(js, ret, sound_proto);
 )
 JSC_CCALL(dspsound_mix, return dsp_node2js(make_node(NULL,NULL,NULL)))
@@ -3332,6 +3352,10 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
+JSC_SCALL(os_make_pcm,
+  ret = pcm2js(make_pcm(str));
+)
+
 JSC_SCALL(os_make_aseprite,
   
 )
@@ -3629,6 +3653,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_poly2d, 2),
   MIST_FUNC_DEF(os, make_seg2d, 1),
   MIST_FUNC_DEF(os, make_texture, 1),
+  MIST_FUNC_DEF(os, make_pcm, 1),
   MIST_FUNC_DEF(os, texture_swap, 2),
   MIST_FUNC_DEF(os, make_tex_data, 3),
   MIST_FUNC_DEF(os, make_font, 2),
@@ -3691,6 +3716,7 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(warp_gravity);
   QJSCLASSPREP_FUNCS(warp_damp);
   QJSCLASSPREP_FUNCS(texture);
+  QJSCLASSPREP_FUNCS(pcm);
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(cpConstraint);
   QJSCLASSPREP_FUNCS(window);

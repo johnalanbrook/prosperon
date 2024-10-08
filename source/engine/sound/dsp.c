@@ -336,29 +336,6 @@ dsp_node *dsp_pitchshift(float octaves)
   return make_node(oct, filter_pitchshift, NULL);
 }
 
-struct timescale
-{
-  float rate;
-  SRC_STATE *src;
-};
-
-static long *src_cb(struct timescale *ts, float **data)
-{
-  return NULL;
-}
-
-void filter_timescale(struct timescale *ts, soundbyte *buffer, int frames)
-{
-}
-
-dsp_node *dsp_timescale(float scale)
-{
-  struct timescale *ts = malloc(sizeof(*ts));
-  ts->rate = scale;
-  ts->src = src_callback_new(src_cb, SRC_SINC_FASTEST, scale, NULL, ts);
-  return make_node(ts, filter_timescale, NULL);
-}
-
 soundbyte iir_filter(struct dsp_iir iir, soundbyte val)
 {
   iir.y[0] = 0.0;
