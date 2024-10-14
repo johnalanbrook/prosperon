@@ -42,6 +42,11 @@
 #include "gui.h"
 #include "timer.h"
 
+#include "mum.h"
+
+#define CLAY_IMPLEMENTATION
+#include "clay.h"
+
 #ifndef _WIN32
 #include <sys/resource.h>
 #endif
@@ -952,7 +957,7 @@ static int mat2type(int mat)
   return -1;
 }
 
-sg_vertex_layout_state js2layout(JSValue v)
+sg_vertex_layout_state js2vertex_layout(JSValue v)
 {
   sg_vertex_layout_state st = {0};
   JSValue inputs = js_getpropstr(js_getpropstr(v, "vs"), "inputs");
@@ -1017,7 +1022,7 @@ sg_blend_state js2blend(JSValue v)
 JSC_CCALL(render_make_pipeline,
   sg_pipeline_desc p = {0};
   p.shader = js2shader(argv[0]);
-  p.layout = js2layout(argv[0]);
+  p.layout = js2vertex_layout(argv[0]);
   p.primitive_type = js2number(js_getpropstr(argv[0], "primitive"));
   if (js2boolean(js_getpropstr(argv[0], "indexed")))
     p.index_type = SG_INDEXTYPE_UINT16;
@@ -3692,6 +3697,260 @@ static const JSCFunctionListEntry js_os_funcs[] = {
 
  
 
+///// CLAY STUFF
+// Primary ideas are CLAY_CONTAINER, CLAY_TEXT, CLAY_IMAGE, CLAY_SCROLL_CONTAINER, CLAY_BORDER_CONTAINER, and CLAY_FLOATING_CONTAINER
+
+/*
+  Clay_container -> layout
+  clay_text -> text
+  clay_image -> layout, image
+  scorll_container -> layout, scroll
+  floating_container -> layout, floating
+  border_container -> layout, border
+  
+  Layout config
+  {
+    sizing: {
+      width: min/max:percent, type grow:fill:percent:fixed
+      height: min/max:percent
+    }
+    padding: [x,y],
+    childGap: number,
+    layoutirection: horizontal:vertical
+    childAlignment: {
+      x: left/right/center,
+      y: top/bottom/center
+    }
+  }
+  
+  text config
+  {
+    fontSize: (height in pixels)
+    letterSpacing: pixels,
+    lineSpacing: pixels,
+    wrapMode: words:newlines:none
+  }
+  
+  image config
+  {
+    sourceDimensions
+  }
+  
+  floating config
+  {
+    offset: [x,y],
+    expand: [width, height],
+    zindex: number,
+    attachment: {
+      element: left_top:left_center:left_bottom:center_top:center_center:center_bottom:right_top:right_center:right_button,
+      parent: ""
+    },
+  }
+  
+  scroll config
+  {
+    horizontal: boolean,
+    vertical: boolean
+  }
+  
+  border config
+  {
+    left: {
+      width,
+      color
+    }
+    right: '',
+    top: '',
+    bottom:'',
+    betweenchildren: '',
+    corner_radius: {
+      topleft: number,
+      topright:'',
+      bottomleft:'',
+      bottomright:''
+    }
+  }
+  
+  and then render the commands
+  rencercmd: {
+    boundingbox: {x, y, width, height},
+    config: [config from element type],
+    text: text [this can probably be kept in the JS object as a ref]
+    commandType: none/rectangle/border/text/image/scissor_start/scissor_end
+  }
+*/
+
+static Clay_LayoutConfig js2layout(JSValue v)
+{
+  Clay_LayoutConfig config = {0};
+  config.sizing.width.type = (Clay__SizingType)js2number(js_getpropstr(v, "x_content"));
+  config.sizing.height.type = (Clay__SizingType)js2number(js_getpropstr(v, "y_content"));
+  
+  if (config.sizing.width.type == CLAY__SIZING_TYPE_PERCENT)
+    config.sizing.width.sizePercent = js2number(js_getpropstr(v, "x_percent"));
+  else {
+    HMM_Vec2 minmax = js2vec2(js_getpropstr(v, "x_minmax"));
+    config.sizing.width.sizeMinMax.min = minmax.x;
+    config.sizing.width.sizeMinMax.max = minmax.y;
+  }
+  
+  if (config.sizing.height.type == CLAY__SIZING_TYPE_PERCENT) 
+    config.sizing.height.sizePercent = js2number(js_getpropstr(v, "y_percent"));
+  else {
+    HMM_Vec2 minmax = js2vec2(js_getpropstr(v, "y_minmax"));
+    config.sizing.height.sizeMinMax.min = minmax.x;
+    config.sizing.height.sizeMinMax.max = minmax.y;
+  }
+
+  HMM_Vec2 padding = js2vec2(js_getpropstr(v, "padding"));
+  config.padding.x = padding.x;
+  config.padding.y = padding.y;
+  config.childGap = js2number(js_getpropstr(v, "child_gap"));
+  config.layoutDirection = (Clay_LayoutDirection)js2number(js_getpropstr(v, "layout_direction"));
+  config.childAlignment.x = (Clay_LayoutAlignmentX)(js2number(js_getpropstr(v, "child_align_x")));
+  config.childAlignment.y = (Clay_LayoutAlignmentY)(js2number(js_getpropstr(v, "child_align_y")));
+  
+  return config;
+}
+
+JSC_CCALL(clay_dimensions,
+  HMM_Vec2 dim = js2vec2(argv[0]);
+  Clay_SetLayoutDimensions((Clay_Dimensions) { dim.x, dim.y });
+)
+
+JSC_CCALL(clay_draw,
+  Clay_BeginLayout();
+  script_call_sym(argv[0], 0, NULL);
+  Clay_RenderCommandArray cmd = Clay_EndLayout();
+  
+  ret = JS_NewArray(js);
+  printf("there are %d commands here\n", cmd.length);
+  for (int i = 0; i < cmd.length; i++) {
+    Clay_RenderCommand cc = cmd.internalArray[i];
+    JSValue c = JS_NewObject(js);
+    JSValue bb = JS_NewObject(js);
+    js_setpropstr(bb, "x", number2js(cc.boundingBox.x));
+    js_setpropstr(bb, "y", number2js(cc.boundingBox.y));
+    js_setpropstr(bb, "width", number2js(cc.boundingBox.width));
+    js_setpropstr(bb, "height", number2js(cc.boundingBox.height));
+    js_setpropstr(c, "boundingbox", bb);
+    js_setprop_num(ret, i, c);
+    Clay_RectangleElementConfig *rect = cc.config.rectangleElementConfig;
+    js_setpropstr(c, "config", rect->js);
+  }
+)
+
+JSC_CCALL(clay_pointer,
+  HMM_Vec2 pos = js2vec2(argv[0]);
+  int down = js2boolean(argv[1]);
+  Clay_SetPointerState((Clay_Vector2) {pos.x,pos.y }, down);
+)
+
+JSC_CCALL(clay_updatescroll,
+  int drag = js2boolean(argv[0]);
+  HMM_Vec2 delta = js2vec2(argv[1]);
+  float dt = js2number(argv[2]);
+  Clay_UpdateScrollContainers(drag, (Clay_Vector2){delta.x,delta.y}, dt);
+)
+
+JSC_SCALL(clay_container,
+  Clay_LayoutConfig config = js2layout(argv[1]);
+  Clay_RectangleElementConfig rect = {0};
+  rect.js = JS_DupValue(js, argv[1]);
+Clay_String cstr;
+  cstr.length = strlen(str);
+  cstr.chars = str;
+//  Clay__OpenRectangleElement(Clay__HashString(cstr,0,0), &config, &rect);
+  Clay__OpenRectangleElement(CLAY_ID("TEST"), &config, &rect);
+  script_call_sym(argv[2], 0, NULL);
+  Clay__CloseElementWithChildren();
+)
+
+JSC_SCALL(clay_image,
+  Clay_LayoutConfig config = js2layout(argv[1]);
+  Clay_ImageElementConfig image = {0};
+  HMM_Vec2 dim = js2vec2(argv[2]);
+  image.sourceDimensions.width = dim.x;
+  image.sourceDimensions.height = dim.y;
+  Clay__OpenImageElement(CLAY_ID(str), &config, &image);
+  script_call_sym(argv[3], 0, NULL);  
+  Clay__CloseElementWithChildren();
+)
+
+JSC_SSCALL(clay_text,
+  Clay_TextElementConfig text = {0};
+  text.fontSize = js2number(js_getpropstr(argv[2], "font_size"));
+  text.letterSpacing = js2number(js_getpropstr(argv[2], "letter_spacing"));
+  text.lineHeight = js2number(js_getpropstr(argv[2], "line_spacing"));
+  text.wrapMode = (Clay_TextElementConfigWrapMode)js2number(js_getpropstr(argv[2], "wrap"));
+  text.font = js2font(js_getpropstr(argv[2], "font"));
+  Clay__OpenTextElement(CLAY_ID(str), CLAY_STRING(str2), &text);
+//  CLAY_TEXT(CLAY_ID(str), CLAY_STRING(str2), text)
+)
+
+JSC_SCALL(clay_scroll,
+  Clay_LayoutConfig config = js2layout(argv[1]);
+  Clay_ScrollElementConfig scroll = {0};
+  scroll.horizontal = js2boolean(js_getpropstr(argv[1], "scroll_horizontal"));
+  scroll.vertical = js2boolean(js_getpropstr(argv[1], "scroll_vertical"));
+  Clay__OpenScrollElement(CLAY_ID(str), &config, &scroll);
+  script_call_sym(argv[2], 0, NULL);
+  Clay__CloseElementWithChildren();  
+)
+
+static Clay_FloatingElementConfig js2floating(JSValue v)
+{
+  Clay_FloatingElementConfig clay = {0};
+  HMM_Vec2 offset = js2vec2(js_getpropstr(v, "offset"));
+  clay.offset.x = offset.x;
+  clay.offset.y = offset.y;
+  clay.zIndex = js2number(js_getpropstr(v, "zindex"));
+  HMM_Vec2 expand = js2vec2(js_getpropstr(v, "expand"));
+  clay.expand.width = expand.x;
+  clay.expand.height = expand.y;
+  clay.attachment.element = (Clay_FloatingAttachPointType)js2number(js_getpropstr(v, "element"));
+  clay.attachment.parent = (Clay_FloatingAttachPointType)js2number(js_getpropstr(v, "parent"));  
+  return clay;
+}
+
+JSC_SCALL(clay_floating,
+  Clay_LayoutConfig config = js2layout(argv[1]);
+  Clay_FloatingElementConfig floating = js2floating(argv[1]);
+  Clay__OpenFloatingElement(CLAY_ID(str), &config, &floating);
+  script_call_sym(argv[2], 0, NULL);
+  Clay__CloseElementWithChildren();  
+)
+
+static const JSCFunctionListEntry js_clay_funcs[] = {
+  MIST_FUNC_DEF(clay, dimensions, 1),
+  MIST_FUNC_DEF(clay, draw, 1),
+  MIST_FUNC_DEF(clay, pointer, 2),
+  MIST_FUNC_DEF(clay, updatescroll, 3),
+  MIST_FUNC_DEF(clay, container, 3),
+  MIST_FUNC_DEF(clay, image, 4),
+  MIST_FUNC_DEF(clay, text, 3),
+  MIST_FUNC_DEF(clay, scroll, 3),
+  MIST_FUNC_DEF(clay, floating, 3),
+};
+
+// Example measure text function
+static inline Clay_Dimensions MeasureText(Clay_String *text, Clay_TextElementConfig *config) {
+    // Clay_TextElementConfig contains members such as fontId, fontSize, letterSpacing etc
+    // Note: Clay_String->chars is not guaranteed to be null terminated
+    Clay_Dimensions size = {0};
+    float maxWidth = 0;
+    float lineWidth = 0;
+    
+    float height = config->font->height;
+    float scale = config->fontSize/height;
+    float lineHeight = config->font->ascent + config->font->descent + config->font->linegap;
+    lineHeight *= config->lineHeight * scale;
+    float letterSpacing = config->letterSpacing * scale;
+    
+    for (int i = 0; i < text->length; i++) {
+      
+    }
+}
 
 #include "steam.h"
 
@@ -3743,6 +4002,12 @@ void ffi_load() {
   QJSGLOBALCLASS(dspsound);
   QJSGLOBALCLASS(performance);
   QJSGLOBALCLASS(geometry);
+  
+  uint64_t totalMemorySize = Clay_MinMemorySize();
+  Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(totalMemorySize, malloc(totalMemorySize));
+  Clay_Initialize(arena, (Clay_Dimensions) { 1920, 1080 });
+  Clay_SetMeasureTextFunction(MeasureText);
+  QJSGLOBALCLASS(clay);
 
   QJSGLOBALCLASS(poly2d);
   

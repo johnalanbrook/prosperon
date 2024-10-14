@@ -12,7 +12,6 @@ mum.inputs.lm = function () {
 };
 
 mum.base = {
-  pos: null, // If set, puts the cursor to this position before drawing the element
   offset: [0, 0], // Move x,y to the right and down before drawing
   padding: [0, 0], // Pad inwards after drawing, to prepare for the next element
   font: "fonts/c64.ttf",
@@ -101,6 +100,8 @@ function computeContainerSize(context)
   }
     
 }
+
+
 
 mum.container = function(data, cb) {
   context_stack.push(context);
@@ -290,15 +291,20 @@ mum.button = function (str, data = { padding: [4, 4], color: Color.black }) {
   end(data);
 };
 
-mum.window = function (fn, data = {}) {
-  if (pre(data)) return;
+mum.window = function (pos = [0,0], size = game.size.slice(), config = {}, fn) {
+  if (pre(config)) return;
 
   render.rectangle(cursor, cursor.add(data.size), data.color);
-  cursor.y += data.height;
-  cursor = cursor.add(data.padding);
+  config.pos = pos;
+  config.pos = config.add(config.padding);
   fn();
   end(data);
 };
+
+mum.hstack = function(data = {}, fn)
+{
+   
+}
 
 mum.ex_hud = function () {
   mum.label("TOP LEFT", { pos: [0, game.size.y], anchor: [0, 1] });

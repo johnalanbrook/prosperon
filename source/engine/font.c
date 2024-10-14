@@ -76,7 +76,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
   if (!ttf_buffer) {
-    YughWarn("Could not find font at %s.");
+    YughWarn("Could not find font at %s.", fontfile);
     return NULL;
   }
   unsigned char *bitmap = malloc(packsize * packsize);
@@ -99,12 +99,11 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   int ascent, descent, linegap;
 
   stbtt_GetFontVMetrics(&fontinfo, &ascent, &descent, &linegap);
-  float emscale = stbtt_ScaleForPixelHeight(&fontinfo, height);
+  float emscale = tbtt_ScaleForMappingEmToPixels(&fontinfo, height);
   newfont->ascent = ascent*emscale;
   newfont->descent = descent*emscale;
   newfont->linegap = linegap*emscale;
-  newfont->linegap = ((newfont->ascent - newfont->descent) - newfont->linegap);
-
+  
   newfont->texture = malloc(sizeof(texture));
   newfont->texture->id = sg_make_image(&(sg_image_desc){
     .type = SG_IMAGETYPE_2D,
@@ -131,10 +130,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     r.h = (glyph.y1-glyph.y0) / (float)packsize;
 
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
-    newfont->Characters[c].Size[0] = (glyph.x1 - glyph.x0);
-    newfont->Characters[c].Size[1] = (glyph.y1 - glyph.y0);
-    newfont->Characters[c].Bearing[0] = glyph.xoff;
-    newfont->Characters[c].Bearing[1] = glyph.yoff2;
     newfont->Characters[c].rect = r;
   }
 
@@ -194,7 +189,7 @@ void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgb
 
   vert.pos.x = cursor.X + c.Bearing[0] * scale;
   vert.pos.y = cursor.Y - c.Bearing[1] * scale;
-  vert.wh.x = c.Size[0] * scale;
+  vert.wh.x = c.\Size[0] * scale;
   vert.wh.y = c.Size[1] * scale;
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;

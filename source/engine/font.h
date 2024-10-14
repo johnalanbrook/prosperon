@@ -12,19 +12,17 @@ extern sg_buffer text_ssbo;
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
-  float Size[2];     // Size of glyph
-  float Bearing[2];  // Offset from baseline to left/top of glyph
   int Advance; // Horizontal offset to advance to next glyph
-  int leftbearing;
-  struct rect rect;
+  float leftbearing; // X offset from cursor to render at
+  float topbearing; // Y offset from cursor to render at 
+  struct rect rect; // the rect on the font image to render from
 };
 
 struct sFont {
-  uint32_t fontTexture;
   uint32_t height; /* in pixels */
-  float ascent;
-  float descent;
-  float linegap;
+  float ascent; // pixels
+  float descent; // pixels
+  float linegap; //pixels
   struct Character Characters[256];
   sg_image texID;
   texture *texture;
