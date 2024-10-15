@@ -98,6 +98,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   newfont->ascent = ascent*emscale;
   newfont->descent = descent*emscale;
   newfont->linegap = linegap*emscale;
+
   printf("ascent %g descent %g linegap %g\n", newfont->ascent, newfont->descent, newfont->linegap);
   
   newfont->texture = malloc(sizeof(texture));
@@ -131,6 +132,9 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     };
 
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
+    newfont->Characters[c].leftbearing = glyph.xoff;
+//    printf("char %c: ascent %g, yoff %g, yoff2 %g\n", c, newfont->ascent, glyph.yoff, glyph.yoff2);
+    newfont->Characters[c].topbearing = newfont->ascent + glyph.yoff;
     newfont->Characters[c].rect = r;
   }
 
@@ -165,8 +169,8 @@ int text_flush(sg_buffer *buf) {
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
   struct text_vert vert;
 
-  vert.pos.x = cursor.X + c.leftbearing * scale;
-  vert.pos.y = cursor.Y - c.topbearing * scale;
+  vert.pos.x = cursor.X + c.leftbearing;
+  vert.pos.y = cursor.Y + c.topbearing;
   vert.wh = c.size;
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;

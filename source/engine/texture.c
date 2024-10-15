@@ -175,8 +175,6 @@ struct texture *texture_from_file(const char *path) {
 
   struct texture *tex = calloc(1, sizeof(*tex));
 
-  stbi_set_flip_vertically_on_load(1);
-  
   int n;
 
   char *ext = strrchr(path, '.');

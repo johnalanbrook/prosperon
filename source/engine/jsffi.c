@@ -598,8 +598,8 @@ struct rect js2rect(JSValue v) {
   struct rect rect;
   rect.x = js2number(js_getpropstr(v, "x"));
   rect.y = js2number(js_getpropstr(v, "y"));
-  rect.w = js2number(js_getpropstr(v, "w"));
-  rect.h = js2number(js_getpropstr(v, "h"));
+  rect.w = js2number(js_getpropstr(v, "width"));
+  rect.h = js2number(js_getpropstr(v, "height"));
   return rect;
 }
 
@@ -1396,11 +1396,12 @@ JSC_CCALL(gui_scissor,
 JSC_CCALL(gui_text,
   const char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2vec2(argv[1]);
-
   float size = js2number(argv[2]);
+  font *f = js2font(argv[5]);
+  if (!size) size = f->height;
   struct rgba c = js2color(argv[3]);
   int wrap = js2number(argv[4]);
-  renderText(s, pos, js2font(argv[5]), size, c, wrap);
+  renderText(s, pos, f, size, c, wrap);
   JS_FreeCString(js, s);
   return ret;
 )
@@ -2890,7 +2891,7 @@ JSC_CCALL(geometry_rect_random,
 JSC_CCALL(geometry_rect_point_inside,
   rect a = js2rect(argv[0]);
   HMM_Vec2 p = js2vec2(argv[1]);
-  return boolean2js(p.x >= a.x-a.w/2 && p.x <= a.x+a.w/2 && p.y <= a.y+a.h/2 && p.y >= a.y-a.h/2);
+  return boolean2js(p.x >= a.x && p.x <= a.x+a.w && p.y <= a.y+a.h && p.y >= a.y-a.h);
 )
 
 JSC_CCALL(geometry_cwh2rect,

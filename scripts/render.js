@@ -873,9 +873,16 @@ render.rectangle = function render_rectangle(lowerleft, upperright, color, shade
   check_flush(flush_poly);
 };
 
+// brect is x,y,width,height, with x,y in the upper left corner
 render.brect = function(brect, color = Color.white)
 {
   render.rectangle([brect.x,brect.y], [brect.x+brect.width, brect.y+brect.height], color);
+}
+
+// brect is x,y,width,height, with x,y in the upper left corner
+render.urect = function(brect, color = Color.white)
+{
+  render.rectangle([brect.x,brect.y], [brect.x+brect.width, brect.y], color);
 }
 
 render.rect = function(rect, color, shader, pipe)
@@ -895,7 +902,7 @@ render.window = function render_window(pos, wh, color) {
   render.box(pos.add(wh.scale(0.5)), wh, color);
 };
 
-render.text = function (str, pos, font = cur_font, size = 1, color = Color.white, wrap = -1) {
+render.text = function (str, pos, font = cur_font, size = 0, color = Color.white, wrap = -1) {
   if (!font) return;
   gui.text(str, pos, size, color, wrap, font); // this puts text into buffer
   cur_font = font;
@@ -1164,10 +1171,10 @@ function camscreen2world(pos) {
   return view;
 }
 
-// three coordinatse
 // world coordinates, the "actual" view relative to the game's universe
 // camera coordinates, normalized from 0 to 1 inside of a camera's viewport, bottom left is 0,0, top right is 1,1
-// screen coordinates, pixels, 0,0 at the bottom left of the window and [w,h] at the top right of the screen
+// screen coordinates, pixels, 0,0 at the top left of the window and [w,h] at the top right of the screen
+// hud coordinates, same as screen coordinates but the top left is 0,0
 
 camscreen2world.doc = "Convert a view position for a camera to world.";
 
@@ -1327,8 +1334,9 @@ prosperon.render = function () {
   profile.endreport("draws");
   profile.endreport("world");
   render.fillmask(0);
-  prosperon.hudcam.size = prosperon.camera.size;
+  prosperon.hudcam.size = prosperon.camera.size.slice();
   prosperon.hudcam.transform.pos = [prosperon.hudcam.size.x / 2, prosperon.hudcam.size.y / 2, -100];
+  prosperon.hudcam.size.y *= -1;
   render.set_camera(prosperon.hudcam);
 
   profile.report("hud");

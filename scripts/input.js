@@ -105,7 +105,6 @@ prosperon.textinput = function (c) {
 };
 prosperon.mousemove = function (pos, dx) {
   mousepos = pos;
-  mousepos.y = window.size.y - mousepos.y;
   player[0].mouse_input("move", pos, dx);
 };
 prosperon.mousescroll = function (dx) {
@@ -127,6 +126,12 @@ input.mouse.screenpos = function () {
 input.mouse.worldpos = function () {
   return prosperon.camera.screen2world(mousepos);
 };
+input.mouse.viewpos = function()
+{
+  var world = input.mouse.worldpos();
+  
+  return mousepos.slice();
+}
 input.mouse.disabled = function () {
   input.mouse_mode(1);
 };

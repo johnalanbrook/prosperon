@@ -27,7 +27,7 @@ uniform mat4 vp;
 void main()
 {
   letter charData = ls[gl_InstanceIndex];
-  fuv = charData.uv + vec2(a_pos.x*charData.uv_size.x, charData.uv_size.y - a_pos.y*charData.uv_size.y);  
+  fuv = charData.uv + a_pos*charData.uv_size;
   uv = a_uv;
   color0 = charData.color;
   pos = charData.pos+(a_pos*charData.wh);
@@ -54,7 +54,7 @@ void main()
 {
   float lettera = texture(sampler2D(text,smp),fuv).r;
   frag();
-  color.a = lettera;
+  color.a *= lettera;    
 }
 @end
 
