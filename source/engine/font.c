@@ -213,8 +213,6 @@ HMM_Vec2 measure_text(const char *text, font *f, float size, float letterSpacing
   HMM_Vec2 dim = {0};
   float maxWidth = 0; // max width of any line
   float lineWidth = 0; // current line width
-  size = f->height;
-
   float scale = size/f->height;
   float lineHeight = f->ascent - f->descent;
   lineHeight *= scale;

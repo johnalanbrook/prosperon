@@ -42,6 +42,10 @@
 #include "gui.h"
 #include "timer.h"
 
+#define LAY_FLOAT 1
+#define LAY_IMPLEMENTATION
+#include "layout.h"
+
 #include "mum.h"
 
 #define CLAY_IMPLEMENTATION
@@ -788,10 +792,6 @@ JSC_CCALL(render_viewport,
 JSC_CCALL(render_commit, sg_commit())
 JSC_CCALL(render_end_pass, sg_end_pass())
 
-JSC_SCALL(render_measure_text,
-  ret = vec22js(measure_text(str, js2font(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4])))
-)
-
 HMM_Mat4 transform2view(transform *t)
 {
   HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
@@ -1257,6 +1257,15 @@ JSC_CCALL(render_imgui_end, gui_endframe())
 
 JSC_CCALL(render_imgui_init, return gui_init(js))
 
+JSC_SCALL(render_text_size,
+  font *f = js2font(argv[1]);
+  float size = js2number(argv[2]);
+  if (!size) size = f->height;
+  float letterSpacing = js2number(argv[3]);
+  float wrap = js2number(argv[4]);
+  ret = vec22js(measure_text(str, f, size, letterSpacing, wrap));
+)
+
 static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, flushtext, 1),
   MIST_FUNC_DEF(render, camera_screen2world, 2),
@@ -1265,7 +1274,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, end_pass, 0),
   MIST_FUNC_DEF(render, commit, 0),
   MIST_FUNC_DEF(render, glue_pass, 0),
-  MIST_FUNC_DEF(render, measure_text, 5),
+  MIST_FUNC_DEF(render, text_size, 5),
   MIST_FUNC_DEF(render, set_camera, 1),
   MIST_FUNC_DEF(render, make_pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
@@ -1389,13 +1398,16 @@ JSC_CCALL(gui_scissor,
   sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
 )
 
-JSC_SCALL(gui_text,
+JSC_CCALL(gui_text,
+  const char *s = JS_ToCString(js, argv[0]);
   HMM_Vec2 pos = js2vec2(argv[1]);
+
   float size = js2number(argv[2]);
   struct rgba c = js2color(argv[3]);
   int wrap = js2number(argv[4]);
-  font *f = js2font(argv[5]);
-  renderText(str, pos, f, size, c, wrap);
+  renderText(s, pos, js2font(argv[5]), size, c, wrap);
+  JS_FreeCString(js, s);
+  return ret;
 )
 
 static const JSCFunctionListEntry js_gui_funcs[] = {
@@ -3813,18 +3825,15 @@ JSC_CCALL(clay_dimensions,
   Clay_SetLayoutDimensions((Clay_Dimensions) { dim.x, dim.y });
 )
 
-static int container_id = 0;
-
 JSC_CCALL(clay_draw,
-  container_id = 0;
   Clay_BeginLayout();
   script_call_sym(argv[0], 0, NULL);
   Clay_RenderCommandArray cmd = Clay_EndLayout();
   
   ret = JS_NewArray(js);
+  printf("there are %d commands here\n", cmd.length);
   for (int i = 0; i < cmd.length; i++) {
     Clay_RenderCommand cc = cmd.internalArray[i];
-    if (cc.commandType == CLAY_RENDER_COMMAND_TYPE_NONE) continue;
     JSValue c = JS_NewObject(js);
     JSValue bb = JS_NewObject(js);
     js_setpropstr(bb, "x", number2js(cc.boundingBox.x));
@@ -3833,29 +3842,9 @@ JSC_CCALL(clay_draw,
     js_setpropstr(bb, "height", number2js(cc.boundingBox.height));
     js_setpropstr(c, "boundingbox", bb);
     js_setprop_num(ret, i, c);
-
-    switch(cc.commandType) {
-      case CLAY_RENDER_COMMAND_TYPE_RECTANGLE:
-        Clay_RectangleElementConfig *rect = cc.config.rectangleElementConfig;
-        js_setpropstr(c, "config", JS_DupValue(js,rect->js));
-        break;
-      case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
-        js_setpropstr(c, "config", str2js("scissor_start"));
-        break;
-      case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END:
-        js_setpropstr(c, "config", str2js('scissor_end'));
-        break;
-    }
+    Clay_RectangleElementConfig *rect = cc.config.rectangleElementConfig;
+    js_setpropstr(c, "config", rect->js);
   }
-   for (int i = 0; i < cmd.length; i++) {
-     Clay_RenderCommand cc = cmd.internalArray[i];
-     if (cc.commandType != CLAY_RENDER_COMMAND_TYPE_RECTANGLE) continue;
-     Clay_RectangleElementConfig *rect = cc.config.rectangleElementConfig;
-     if (!JS_IsUndefined(rect->js)) {
-       JS_FreeValue(js, rect->js);
-       rect->js = JS_UNDEFINED;
-     }
-   }
 )
 
 JSC_CCALL(clay_pointer,
@@ -3871,13 +3860,39 @@ JSC_CCALL(clay_updatescroll,
   Clay_UpdateScrollContainers(drag, (Clay_Vector2){delta.x,delta.y}, dt);
 )
 
-JSC_CCALL(clay_container,
-  Clay_LayoutConfig config = js2layout(argv[0]);
+JSC_SCALL(clay_container,
+  Clay_LayoutConfig config = js2layout(argv[1]);
   Clay_RectangleElementConfig rect = {0};
-  rect.js = JS_DupValue(js, argv[0]);
-  Clay__OpenRectangleElement(CLAY_IDI_LOCAL("container", container_id++), &config, &rect);
-  script_call_sym(argv[1], 0, NULL);
+  rect.js = JS_DupValue(js, argv[1]);
+Clay_String cstr;
+  cstr.length = strlen(str);
+  cstr.chars = str;
+//  Clay__OpenRectangleElement(Clay__HashString(cstr,0,0), &config, &rect);
+  Clay__OpenRectangleElement(CLAY_ID("TEST"), &config, &rect);
+  script_call_sym(argv[2], 0, NULL);
   Clay__CloseElementWithChildren();
+)
+
+JSC_SCALL(clay_image,
+  Clay_LayoutConfig config = js2layout(argv[1]);
+  Clay_ImageElementConfig image = {0};
+  HMM_Vec2 dim = js2vec2(argv[2]);
+  image.sourceDimensions.width = dim.x;
+  image.sourceDimensions.height = dim.y;
+  Clay__OpenImageElement(CLAY_ID(str), &config, &image);
+  script_call_sym(argv[3], 0, NULL);  
+  Clay__CloseElementWithChildren();
+)
+
+JSC_SSCALL(clay_text,
+  Clay_TextElementConfig text = {0};
+  text.fontSize = js2number(js_getpropstr(argv[2], "font_size"));
+  text.letterSpacing = js2number(js_getpropstr(argv[2], "letter_spacing"));
+  text.lineHeight = js2number(js_getpropstr(argv[2], "line_spacing"));
+  text.wrapMode = (Clay_TextElementConfigWrapMode)js2number(js_getpropstr(argv[2], "wrap"));
+  text.font = js2font(js_getpropstr(argv[2], "font"));
+  Clay__OpenTextElement(CLAY_ID(str), CLAY_STRING(str2), &text);
+//  CLAY_TEXT(CLAY_ID(str), CLAY_STRING(str2), text)
 )
 
 JSC_SCALL(clay_scroll,
@@ -3918,9 +3933,103 @@ static const JSCFunctionListEntry js_clay_funcs[] = {
   MIST_FUNC_DEF(clay, draw, 1),
   MIST_FUNC_DEF(clay, pointer, 2),
   MIST_FUNC_DEF(clay, updatescroll, 3),
-  MIST_FUNC_DEF(clay, container, 2),
+  MIST_FUNC_DEF(clay, container, 3),
+  MIST_FUNC_DEF(clay, image, 4),
+  MIST_FUNC_DEF(clay, text, 3),
   MIST_FUNC_DEF(clay, scroll, 3),
   MIST_FUNC_DEF(clay, floating, 3),
+};
+
+
+// Example measure text function
+static inline Clay_Dimensions MeasureText(Clay_String *text, Clay_TextElementConfig *config) {
+    // Clay_TextElementConfig contains members such as fontId, fontSize, letterSpacing etc
+    // Note: Clay_String->chars is not guaranteed to be null terminated
+    Clay_Dimensions size = {0};
+    float maxWidth = 0;
+    float lineWidth = 0;
+    
+    float height = config->font->height;
+    float scale = config->fontSize/height;
+    float lineHeight = config->font->ascent + config->font->descent + config->font->linegap;
+    lineHeight *= config->lineHeight * scale;
+    float letterSpacing = config->letterSpacing * scale;
+    
+    for (int i = 0; i < text->length; i++) {
+      
+    }
+}
+
+
+static lay_context lay_ctx;
+
+struct lrtb {
+  float l;
+  float r;
+  float t;
+  float b;
+};
+
+typedef struct lrtb lrtb;
+
+lrtb js2lrtb(JSValue v)
+{
+  lrtb ret = {0};
+  ret.l = js2number(js_getpropstr(v,"l"));
+  ret.b = js2number(js_getpropstr(v,"b"));
+  ret.t = js2number(js_getpropstr(v,"t"));
+  ret.r = js2number(js_getpropstr(v,"r"));
+  return ret;
+}
+
+JSC_CCALL(layout_item,
+  lay_id item = lay_item(&lay_ctx);
+  HMM_Vec2 size = js2vec2(js_getpropstr(argv[0], "size"));
+  lay_set_size_xy(&lay_ctx, item, size.x, size.y);
+  lay_set_contain(&lay_ctx, item, js2number(js_getpropstr(argv[0], "contain")));
+  lay_set_behave(&lay_ctx, item, js2number(js_getpropstr(argv[0], "behave")));
+  lrtb margins = js2lrtb(js_getpropstr(argv[0], "margin"));
+  lay_set_margins_ltrb(&lay_ctx, item, margins.l, margins.t, margins.r, margins.b);
+  return number2js(item);
+)
+
+JSC_CCALL(layout_insert,
+  lay_insert(&lay_ctx, js2number(argv[0]), js2number(argv[1]));
+)
+
+JSC_CCALL(layout_append,
+  lay_append(&lay_ctx, js2number(argv[0]), js2number(argv[1]));
+)
+
+JSC_CCALL(layout_push,
+  lay_push(&lay_ctx, js2number(argv[0]), js2number(argv[1]));
+)
+
+JSC_CCALL(layout_run,
+  lay_run_context(&lay_ctx);
+)
+
+JSC_CCALL(layout_get_rect,
+  lay_vec4 rect = lay_get_rect(&lay_ctx, js2number(argv[0]));
+  ret = JS_NewObject(js);
+  js_setpropstr(ret, "x", number2js(rect[0]));
+  js_setpropstr(ret, "y", number2js(rect[1]));
+  js_setpropstr(ret, "width", number2js(rect[2]));
+  js_setpropstr(ret, "height", number2js(rect[3]));  
+)
+
+JSC_CCALL(layout_reset,
+  lay_reset_context(&lay_ctx);
+)
+
+static const JSCFunctionListEntry js_layout_funcs[] = {
+  MIST_FUNC_DEF(layout, item, 1),
+  MIST_FUNC_DEF(layout, insert, 2),
+  MIST_FUNC_DEF(layout, append, 2),
+  MIST_FUNC_DEF(layout, push, 2),
+  MIST_FUNC_DEF(layout, run, 0),
+  MIST_FUNC_DEF(layout, get_rect, 1),
+  MIST_FUNC_DEF(layout, reset, 0),
 };
 
 #include "steam.h"
@@ -3935,7 +4044,6 @@ void ffi_load() {
   quickjs_set_cycleout(cycles);
   
   globalThis = JS_GetGlobalObject(js);
-  
 
   QJSGLOBALCLASS(os);
   
@@ -3973,10 +4081,12 @@ void ffi_load() {
   QJSGLOBALCLASS(dspsound);
   QJSGLOBALCLASS(performance);
   QJSGLOBALCLASS(geometry);
+  QJSGLOBALCLASS(layout);
   
   uint64_t totalMemorySize = Clay_MinMemorySize();
   Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(totalMemorySize, malloc(totalMemorySize));
   Clay_Initialize(arena, (Clay_Dimensions) { 1920, 1080 });
+  Clay_SetMeasureTextFunction(MeasureText);
   QJSGLOBALCLASS(clay);
 
   QJSGLOBALCLASS(poly2d);
@@ -4018,6 +4128,9 @@ void ffi_load() {
   JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, countof(js_array_funcs));
 
   srand(stm_now());
+  
+  lay_init_context(&lay_ctx);
+  lay_reserve_items_capacity(&lay_ctx, 1024);
   
   JS_FreeValue(js,globalThis);  
 }
