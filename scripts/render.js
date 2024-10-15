@@ -873,6 +873,11 @@ render.rectangle = function render_rectangle(lowerleft, upperright, color, shade
   check_flush(flush_poly);
 };
 
+render.brect = function(brect, color = Color.white)
+{
+  render.rectangle([brect.x,brect.y], [brect.x+brect.width, brect.y+brect.height], color);
+}
+
 render.rect = function(rect, color, shader, pipe)
 {
   render.rectangle([rect.x-rect.w/2, rect.y-rect.h/2], [rect.x+rect.w/2, rect.y+rect.h/2], color, shader, pipe);
@@ -890,32 +895,11 @@ render.window = function render_window(pos, wh, color) {
   render.box(pos.add(wh.scale(0.5)), wh, color);
 };
 
-render.text_bb = function (str, size = 1, wrap = -1, pos = [0, 0]) {
-  var bb = render.text_size(str, size, wrap);
-  var w = bb.r - bb.l;
-  var h = bb.t - bb.b;
-
-  bb.r += pos.x;
-  bb.l += pos.x;
-  bb.t += pos.y;
-  bb.b += pos.y;
-  return bb;
-};
-
-render.text = function (str, pos, size = 1, color = Color.white, wrap = -1, anchor = [0, 1], cursor = -1) {
-  var bb = render.text_bb(str, size, wrap, pos);
-  gui.text(str, pos, size, color, wrap, cursor); // this puts text into buffer
+render.text = function (str, pos, font = cur_font, size = 1, color = Color.white, wrap = -1) {
+  if (!font) return;
+  gui.text(str, pos, size, color, wrap, font); // this puts text into buffer
+  cur_font = font;
   check_flush(render.flush_text);
-  return bb;
-
-  p.x -= w * anchor.x;
-  bb.r += w * anchor.x;
-  bb.l += w * anchor.x;
-  p.y += h * (1 - anchor.y);
-  bb.t += h * (1 - anchor.y);
-  bb.b += h * (1 - anchor.y);
-
-  return bb;
 };
 
 var lasttex = undefined;
@@ -1063,7 +1047,10 @@ render.image = function image(image, pos, scale, rotation = 0, color = Color.whi
 };
 
 // pos is the lower left corner, scale is the width and height
-render.slice9 = function (tex, pos, bb, scale = [tex.width, tex.height], color = Color.white) {
+render.slice9 = function (image, pos, bb, scale = [tex.width, tex.height], color = Color.white) {
+  if (typeof image === 'string')
+    image = game.texture(image);
+  var tex = image.texture;
   var t = os.make_transform();
   t.pos = pos;
   t.scale = [scale.x / tex.width, scale.y / tex.height, 1];
@@ -1090,6 +1077,7 @@ function endframe() {
 
 var textssbos = [];
 var tdraw = 0;
+var cur_font = undefined;
 
 render.flush_text = function () {
   if (!render.textshader) return;
@@ -1105,22 +1093,18 @@ render.flush_text = function () {
   }
 
   render.use_shader(render.textshader);
-  render.use_mat({ text: render.font.texture });
-
+  render.use_mat({ text: cur_font.texture });
   render.draw(shape.quad, textssbo, amt);
 };
 
 var fontcache = {};
-render.set_font = function (path, size) {
+
+render.get_font = function(path,size)
+{
   var fontstr = `${path}-${size}`;
-  if (render.font && fontcache[fontstr] === render.font) return;
-  if (!fontcache[fontstr]) fontcache[fontstr] = os.make_font(path, size);
-
-  render.flush_text();
-
-  gui.font_set(fontcache[fontstr]);
-  render.font = fontcache[fontstr];
-};
+  if (!fontcache[fontstr]) fontcache[fontstr] = os.make_font(path,size);
+  return fontcache[fontstr];
+}
 
 render.doc = "Draw shapes in screen space.";
 render.cross.doc = "Draw a cross centered at pos, with arm length size.";

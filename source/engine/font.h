@@ -12,10 +12,11 @@ extern sg_buffer text_ssbo;
 
 /// Holds all state information relevant to a character as loaded using FreeType
 struct Character {
-  int Advance; // Horizontal offset to advance to next glyph
+  float Advance; // Horizontal offset to advance to next glyph
   float leftbearing; // X offset from cursor to render at
   float topbearing; // Y offset from cursor to render at 
-  struct rect rect; // the rect on the font image to render from
+  struct rect rect; // the rect on the font image to render from, uv coordinates
+  HMM_Vec2 size; // The pixel size of this letter
 };
 
 struct sFont {
@@ -29,16 +30,16 @@ struct sFont {
 };
 
 typedef struct sFont font;
+typedef struct Character glyph;
 
 void font_free(font *f);
 
 struct sFont *MakeFont(const char *fontfile, int height);
-void font_set(font *f);
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
-void text_settype(struct sFont *font);
-struct boundingbox text_bb(const char *text, float scale, float lw, float tracking);
-int renderText(const char *text, HMM_Vec2 pos, float scale, struct rgba color, float lw, int caret, float tracking);
+void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap);
+HMM_Vec2 measure_text(const char *text, font *f, float scale, float letterSpacing, float wrap);
 
+// Flushes all letters from renderText calls into the provided buffer
 int text_flush(sg_buffer *buf);
 
 #endif

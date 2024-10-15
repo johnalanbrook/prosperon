@@ -261,6 +261,7 @@ typedef struct
     uint16_t lineHeight;
     Clay_TextElementConfigWrapMode wrapMode;
     struct sFont *font;
+    JSValue jsstr;
     #ifdef CLAY_EXTEND_CONFIG_ELEMENT
     CLAY_EXTEND_CONFIG_ELEMENT
     #endif

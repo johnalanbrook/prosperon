@@ -269,7 +269,6 @@ Cmdline.register_order(
     if (project.title) window.title = project.title;
 
     game.engine_start(function () {
-      render.set_font("fonts/c64.ttf", 8);
       if (io.exists("game.js")) global.app = actor.spawn("game.js");
       else global.app = actor.spawn("scripts/nogame.js");
 

@@ -6,7 +6,7 @@ struct letter {
   vec2 pos;
   vec2 wh;
   vec2 uv;
-  vec2 st;
+  vec2 uv_size;
   vec4 color;
 };
 
@@ -14,8 +14,8 @@ readonly buffer ssbo {
   letter ls[];
 };
 
-out vec2 uv;
-out vec2 fuv;
+out vec2 uv; // Normalized UV, from 0 to 1 on the letter, for special effects
+out vec2 fuv; // This is the UV given to get the correct letter from the texture
 out vec4 color0;
 
 vec2 pos;
@@ -26,11 +26,11 @@ uniform mat4 vp;
 
 void main()
 {
-  letter l = ls[gl_InstanceIndex];
-  fuv = l.uv + vec2(a_pos.x*l.st.x, l.st.y - a_pos.y*l.st.y);
+  letter charData = ls[gl_InstanceIndex];
+  fuv = charData.uv + vec2(a_pos.x*charData.uv_size.x, charData.uv_size.y - a_pos.y*charData.uv_size.y);  
   uv = a_uv;
-  color0 = l.color;
-  pos = l.pos+(a_pos*l.wh);
+  color0 = charData.color;
+  pos = charData.pos+(a_pos*charData.wh);
   vert();
   gl_Position = vp * vec4(pos, 0.0, 1.0);
 }
