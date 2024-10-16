@@ -162,7 +162,6 @@ game.startengine = 0;
 
 prosperon.release_mode = function () {
   prosperon.debug = false;
-  mum.debug = false;
   debug.kill();
 };
 prosperon.debug = true;

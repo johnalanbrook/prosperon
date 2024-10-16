@@ -99,8 +99,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   newfont->descent = descent*emscale;
   newfont->linegap = linegap*emscale;
 
-  printf("ascent %g descent %g linegap %g\n", newfont->ascent, newfont->descent, newfont->linegap);
-  
   newfont->texture = malloc(sizeof(texture));
   newfont->texture->id = sg_make_image(&(sg_image_desc){
     .type = SG_IMAGETYPE_2D,

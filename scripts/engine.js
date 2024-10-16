@@ -139,6 +139,7 @@ json.doc = {
 Resources.scripts = ["jsoc", "jsc", "jso", "js"];
 Resources.images = ["qoi", "png", "gif", "jpg", "jpeg"];
 Resources.sounds = ["wav", "flac", "mp3", "qoa"];
+Resources.fonts = ["ttf"];
 Resources.is_image = function (path) {
   var ext = path.ext();
   return Resources.images.some(x => x === ext);
@@ -202,6 +203,10 @@ Resources.find_sound = function (file, root = "") {
 
 Resources.find_script = function (file, root = "") {
   return find_ext(file, Resources.scripts, root);
+}.hashify();
+
+Resources.find_font = function(file, root = "") {
+  return find_ext(file, Resources.fonts, root);
 }.hashify();
 
 console.transcript = "";

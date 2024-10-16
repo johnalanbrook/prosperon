@@ -903,11 +903,22 @@ render.window = function render_window(pos, wh, color) {
 };
 
 render.text = function (str, pos, font = cur_font, size = 0, color = Color.white, wrap = -1) {
+  if (typeof font === 'string')
+    font = render.get_font(font);
+
   if (!font) return;
   gui.text(str, pos, size, color, wrap, font); // this puts text into buffer
   cur_font = font;
   check_flush(render.flush_text);
 };
+
+var tttsize = render.text_size;
+render.text_size = function(str, font)
+{
+  if (typeof font === 'string')
+    font = render.get_font(font);
+  return tttsize(str,font); 
+}
 
 var lasttex = undefined;
 var img_cache = [];
@@ -1108,7 +1119,13 @@ var fontcache = {};
 
 render.get_font = function(path,size)
 {
-  var fontstr = `${path}-${size}`;
+  var parts = path.split('.');
+  if (!isNaN(parts[1])) {
+    path = parts[0];
+    size = Number(parts[1]);
+  }
+  path = Resources.find_font(path);
+  var fontstr = `${path}.${size}`;
   if (!fontcache[fontstr]) fontcache[fontstr] = os.make_font(path,size);
   return fontcache[fontstr];
 }
@@ -1360,7 +1377,8 @@ prosperon.render = function () {
   prosperon.postvals.diffuse = prosperon.screencolor;
   
   render.use_mat(prosperon.postvals);
-  render.draw((os.backend() === "directx" || os.backend() === 'metal') ? shape.flipquad : shape.quad);
+  render.draw(shape.quad);
+  //render.draw((os.backend() === "directx" || os.backend() === 'metal') ? shape.flipquad : shape.quad);
 
   profile.endreport("post process");
 
@@ -1372,13 +1390,8 @@ prosperon.render = function () {
 
   render.set_camera(prosperon.appcam);
   render.viewport(...prosperon.appcam.view());
-
   // Call gui functions
-  mum.style = mum.dbg_style;
   if (render.draw_gui) prosperon.gui();
-  if (mum.drawinput) mum.drawinput();
-  render.flush_text();
-  mum.style = mum.base;
 
   check_flush();
 

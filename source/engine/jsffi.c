@@ -826,6 +826,16 @@ JSC_CCALL(render_camera_screen2world,
   return vec42js(HMM_MulM4V4(view, p));
 )
 
+JSC_CCALL(render_set_projection,
+  globalview.p = camera2projection(argv[0]);
+  globalview.vp = HMM_MulM4(globalview.p, globalview.v);
+)
+
+JSC_CCALL(render_set_view,
+  globalview.v = transform2view(js2transform(argv[0]));
+  globalview.vp = HMM_MulM4(globalview.p, globalview.v);
+)
+
 JSC_CCALL(render_set_camera,
   JSValue cam = argv[0];
   globalview.p = camera2projection(argv[0]);
@@ -1271,6 +1281,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, glue_pass, 0),
   MIST_FUNC_DEF(render, text_size, 5),
   MIST_FUNC_DEF(render, set_camera, 1),
+  MIST_FUNC_DEF(render, set_projection, 1),
+  MIST_FUNC_DEF(render, set_view, 1),
   MIST_FUNC_DEF(render, make_pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
   MIST_FUNC_DEF(render, setuniv, 2),
