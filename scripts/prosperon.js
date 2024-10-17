@@ -406,6 +406,7 @@ global.mixin("scripts/ai");
 global.mixin("scripts/particle");
 global.mixin("scripts/physics");
 global.mixin("scripts/geometry");
+global.mixin("scripts/layout");
 
 /*
 Factory for creating registries. Register one with 'X.register',
@@ -571,7 +572,7 @@ function world_start() {
 }
 
 global.mixin("scripts/physics");
-global.mixin("scripts/layout");
+
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500, 500];
