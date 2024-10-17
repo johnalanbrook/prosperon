@@ -5,6 +5,13 @@
 #include "render.h"
 #include "HandmadeMath.h"
 
+typedef enum {
+  LEFT,
+  RIGHT,
+  CENTER,
+  JUSTIFY
+} ALIGN;
+
 struct shader;
 struct window;
 

@@ -68,7 +68,7 @@ var texteditor = Object.copy(inputpanel, {
   src: "NEW FILE",
 
   guibody() {
-    return [Mum.text({ str: `EDITING ${this.src}` }), Mum.text({ str: this.value, caret: this.cursor, offset: [0, -16] })];
+    // TODO: new render here
   },
 
   insert_char(char) {

@@ -57,6 +57,11 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
 
 HMM_Mat4 transform2mat(transform *t) {
   return HMM_M4TRS(t->pos, t->rotation, t->scale);
+  HMM_Mat4 scale = HMM_Scale(t->scale);
+  HMM_Mat4 rot = HMM_QToM4(t->rotation);
+  HMM_Mat4 pos = HMM_Translate(t->pos);
+  return HMM_MulM4(pos, HMM_MulM4(rot, scale));
+
   
   if (t->dirty) {
     t->cache = HMM_M4TRS(t->pos, t->rotation, t->scale);
@@ -68,7 +73,7 @@ HMM_Mat4 transform2mat(transform *t) {
 
 HMM_Quat angle2rotation(float angle)
 {
-  return HMM_QFromAxisAngle_LH(vBKWD, angle);
+  return HMM_QFromAxisAngle_RH(vBKWD, angle);
 }
 
 transform mat2transform(HMM_Mat4 m)
@@ -79,6 +84,6 @@ transform mat2transform(HMM_Mat4 m)
     t.scale.Elements[i] = HMM_LenV3(m.Columns[i].xyz);
 //  for (int i = 0; i < 2; i++)
 //    m.Columns[i].xyz = HMM_MulV3(m.Columns[i].xyz, t.scale.Elements[i]);
-  t.rotation = HMM_M4ToQ_LH(m);
+  t.rotation = HMM_M4ToQ_RH(m);
   return t;
 }

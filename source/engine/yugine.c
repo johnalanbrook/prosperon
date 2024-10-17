@@ -115,7 +115,7 @@ void c_event(const sapp_event *e)
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
       if (gui_wantmouse()) return;
-      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, e->mouse_y, e->mouse_dx, -e->mouse_dy);
+      script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:

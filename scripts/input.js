@@ -104,6 +104,8 @@ prosperon.textinput = function (c) {
   player[0].raw_input("char", "pressed", c);
 };
 prosperon.mousemove = function (pos, dx) {
+  pos.y *= -1;
+  dx.y *= -1;
   mousepos = pos;
   player[0].mouse_input("move", pos, dx);
 };

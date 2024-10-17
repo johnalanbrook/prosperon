@@ -12,8 +12,8 @@ const HMM_Vec3 vZ = {0.0,0.0,1.0};
 
 const HMM_Vec3 vUP = {0,1,0};
 const HMM_Vec3 vDOWN = {0,-1,0};
-const HMM_Vec3 vFWD = {0,0,1};
-const HMM_Vec3 vBKWD = {0,0,-1};
+const HMM_Vec3 vFWD = {0,0,-1};
+const HMM_Vec3 vBKWD = {0,0,1};
 const HMM_Vec3 vLEFT = {-1,0,0};
 const HMM_Vec3 vRIGHT = {1,0,0};
 
@@ -1231,10 +1231,8 @@ HMM_Mat4 HMM_Orthographic_DX(float l, float r, float b, float t, float near, flo
 
 HMM_Mat4 HMM_Orthographic_GL(float l, float r, float b, float t, float near, float far)
 {
-//  return HMM_MulM4(HMM_Orthographic_LH_NO(l,r,b,t,near,far), HMM_Scale((HMM_Vec3){1,-1,1}));
   return HMM_Orthographic_LH_NO(l,r,b,t,near,far);
 }
-
 
 HMM_Mat4 HMM_Orthographic_Metal(float l, float r, float b, float t, float near, float far)
 {
@@ -1774,6 +1772,7 @@ HMM_Mat4 HMM_QToM4(HMM_Quat Left) {
   return Result;
 }
 
+// this is right handed
 HMM_Mat4 HMM_M4TRS(HMM_Vec3 t, HMM_Quat q, HMM_Vec3 s)
 {
   HMM_Mat4 l;
@@ -1801,7 +1800,6 @@ HMM_Mat4 HMM_M4TRS(HMM_Vec3 t, HMM_Quat q, HMM_Vec3 s)
   
   return l;
 }
-
 
 // This method taken from Mike Day at Insomniac Games.
 // https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2015/01/matrix-to-quat.pdf

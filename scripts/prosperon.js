@@ -76,20 +76,6 @@ game.engine_start = function (s) {
       camera.size = game.size;
       gamestate.camera = camera;
 
-      prosperon.hudcam = prosperon.make_camera();
-      var hudcam = prosperon.hudcam;
-      hudcam.near = 0;
-      hudcam.size = camera.size;
-      hudcam.mode = "keep";
-      hudcam.break = "fit";
-
-      prosperon.appcam = prosperon.make_camera();
-      var appcam = prosperon.appcam;
-      appcam.near = 0;
-      appcam.size = window.size;
-      appcam.transform.pos = [window.size.x, window.size.y, -100];
-      prosperon.screencolor = render.screencolor();
-
       globalThis.imgui = render.imgui_init();
 
       s();
@@ -106,22 +92,6 @@ game.engine_start = function (s) {
           0, 1,
           1, 0,
           1, 1], 2),
-        index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
-        count: 6,
-      };
-
-      shape.flipquad = {
-        pos: os.make_buffer([
-          0, 0, 0,
-          0, 1, 0,
-          1, 0, 0,
-          1, 1, 0], 0),
-        verts: 4,
-        uv: os.make_buffer([
-          0, 1,
-          0, 0,
-          1, 1,
-          1, 0], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
         count: 6,
       };
@@ -254,7 +224,7 @@ var sheetsize = 1024;
 function pack_into_sheet(images)
 {
   if (!Array.isArray(images)) images = [images];
-  if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
+  if (images[0].texture.width > 1 && images[0].texture.height > 1) return;
   sheet_frames = sheet_frames.concat(images);
   var sizes = sheet_frames.map(x => [x.rect[2]*x.texture.width, x.rect[3]*x.texture.height]);
   var pos = os.rectpack(sheetsize, sheetsize, sizes);
@@ -483,10 +453,13 @@ var Register = {
 
     if (!flush) {
       prosperon[name] = function (...args) {
+        profile.report(name);
         fns.forEach(fn => fn(...args));
+        profile.endreport(name);
       };
     } else
       prosperon[name] = function (...args) {
+        profile.report(name);
         var layer = undefined;
         for (var fn of fns) {
           if (layer !== fn.layer) {
@@ -495,6 +468,7 @@ var Register = {
           }
           fn();
         }
+        profile.endreport(name);
       };
 
     prosperon[name].fns = fns;
@@ -516,6 +490,7 @@ Register.add_cb("gui", true);
 Register.add_cb("hud", true, render.flush);
 Register.add_cb("draw", true, render.flush);
 Register.add_cb("imgui", true, render.flush);
+Register.add_cb("app", true, render.flush);
 
 var Event = {
   events: {},
@@ -596,8 +571,7 @@ function world_start() {
 }
 
 global.mixin("scripts/physics");
-global.mixin("scripts/widget");
-global.mixin("scripts/mum");
+global.mixin("scripts/layout");
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500, 500];

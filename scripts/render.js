@@ -1,3 +1,5 @@
+var unit_transform = os.make_transform();
+
 /*
   Anatomy of rendering an image
   render.image(path)
@@ -222,16 +224,10 @@ render.face_map = face_map;
 render.compare = compare;
 render.blendfactor = blendfactor;
 
-render.use_pipeline = function use_pipeline(pipeline)
-{
-
-}
-
 var pipe_shaders = new WeakMap();
 
 // Uses the shader with the specified pipeline. If none specified, uses the base pipeline
-render.use_shader = function use_shader(shader, pipeline) {
-  pipeline ??= base_pipeline;
+render.use_shader = function use_shader(shader, pipeline = base_pipeline) {
   if (typeof shader === "string") shader = make_shader(shader);
   if (cur.shader === shader) return;
   
@@ -351,16 +347,6 @@ var uni_globals = {
 function set_global_uni(uni, stage) {
   uni_globals[uni.name]?.(stage, uni.slot);
 }
-
-var setcam = render.set_camera;
-render.set_camera = function (cam) {
-  if (nextflush) {
-    nextflush();
-    nextflush = undefined;
-  }
-  delete cur.shader;
-  setcam(cam);
-};
 
 var shader_cache = {};
 var shader_times = {};
@@ -531,11 +517,11 @@ var shader_unisize = {
 
 function shader_globals(shader) {
   for (var p in shader.vs.unimap) set_global_uni(shader.vs.unimap[p], 0);
-
   for (var p in shader.fs.unimap) set_global_uni(shader.fs.unimap[p], 1);
 }
 
 function shader_apply_material(shader, material = {}, old = {}) {
+  render.setpipeline(cur.pipeline);
   for (var p in shader.vs.unimap) {
     if (!(p in material)) continue;
     if (material[p] === old[p]) continue;
@@ -719,6 +705,7 @@ render.draw_gizmos = true;
 
 render.buckets = [];
 render.sprites = function render_sprites() {
+  profile.report("sprites");
   profile.report("drawing");
   render.use_shader(spritessboshader);
   var buckets = component.sprite_buckets();
@@ -734,6 +721,7 @@ render.sprites = function render_sprites() {
     }
   }
   profile.endreport("drawing");
+  profile.endreport("sprites");
 };
 
 render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
@@ -783,6 +771,7 @@ render.forceflush = function()
 {
   if (nextflush) nextflush();
   nextflush = undefined;
+  cur.shader =  undefined;
 }
 
 var poly_cache = [];
@@ -821,7 +810,7 @@ render.line = function render_line(points, color = Color.white, thickness = 1) {
     var poly = poly_e();
     var dist = vector.distance(a, b);
     poly.transform.move(vector.midpoint(a, b));
-    poly.transform.rotate([0, 0, -1], vector.angle([b.x - a.x, b.y - a.y]));
+    poly.transform.rotate([0, 0, 1], vector.angle([b.x - a.x, b.y - a.y]));
     poly.transform.scale = [dist, thickness, 1];
     poly.color = color;
   }
@@ -854,17 +843,15 @@ render.coordinate = function render_coordinate(pos, size, color) {
   render.point(pos, 2, color);
 };
 
-render.boundingbox = function render_boundingbox(bb, color = Color.white) {
-  render.line(bbox.topoints(bb).wrapped(1), color);
-};
-
 var queued_shader;
 var queued_pipe;
-render.rectangle = function render_rectangle(lowerleft, upperright, color, shader = polyssboshader, pipe = base_pipeline) {
+render.rectangle = function render_rectangle(rect, color, shader = polyssboshader, pipe = base_pipeline) {
   var transform = os.make_transform();
-  var wh = [upperright.x - lowerleft.x, upperright.y - lowerleft.y];
+  var wh = [rect.width, rect.height];
   var poly = poly_e();
-  poly.transform.move(vector.midpoint(lowerleft, upperright));
+  var pos = [rect.x,rect.y].add([rect.width,rect.height].scale(0.5));
+  pos = pos.sub([rect.width,rect.height].scale([rect.anchor_x,rect.anchor_y]));
+  poly.transform.move(pos);
   poly.transform.scale = [wh.x, wh.y, 1];
   poly.color = color;
   
@@ -872,23 +859,6 @@ render.rectangle = function render_rectangle(lowerleft, upperright, color, shade
   queued_pipe = pipe;
   check_flush(flush_poly);
 };
-
-// brect is x,y,width,height, with x,y in the upper left corner
-render.brect = function(brect, color = Color.white)
-{
-  render.rectangle([brect.x,brect.y], [brect.x+brect.width, brect.y+brect.height], color);
-}
-
-// brect is x,y,width,height, with x,y in the upper left corner
-render.urect = function(brect, color = Color.white)
-{
-  render.rectangle([brect.x,brect.y], [brect.x+brect.width, brect.y], color);
-}
-
-render.rect = function(rect, color, shader, pipe)
-{
-  render.rectangle([rect.x-rect.w/2, rect.y-rect.h/2], [rect.x+rect.w/2, rect.y+rect.h/2], color, shader, pipe);
-}
 
 render.box = function render_box(pos, wh, color = Color.white) {
   var poly = poly_e();
@@ -902,11 +872,15 @@ render.window = function render_window(pos, wh, color) {
   render.box(pos.add(wh.scale(0.5)), wh, color);
 };
 
-render.text = function (str, pos, font = cur_font, size = 0, color = Color.white, wrap = -1) {
+render.text = function (str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
   if (typeof font === 'string')
     font = render.get_font(font);
 
   if (!font) return;
+  var pos = [rect.x,rect.y];
+  pos.y -= font.descent;
+  if (rect.anchor_y)
+    pos.y -= rect.anchor_y*(font.ascent-font.descent);
   gui.text(str, pos, size, color, wrap, font); // this puts text into buffer
   cur_font = font;
   check_flush(render.flush_text);
@@ -1008,37 +982,37 @@ render.invertmask = function()
   render.draw(shape.quad);
 }
 
-render.mask = function mask(tex, pos, scale, rotation = 0, ref = 1)
+render.mask = function mask(image, pos, scale, rotation = 0, ref = 1)
 {
-  if (typeof tex === 'string')
-    tex = game.texture(tex);
+  if (typeof image === 'string')
+    image = game.texture(image);
+
+  var tex = image.texture;
+
+  if (scale) scale = sacle.div([tex.width,tex.height]);
+  else scale = vector.v3one;
     
   var pipe = stencil_writer(ref);
   render.use_shader('shaders/sprite.cg', pipe);
   var t = os.make_transform();
-  t.pos = pos;
-  t.scale = scale.div(tex.dimensions);
+  t.trs(pos, undefined,scale);
   set_model(t);
   render.use_mat({
-    diffuse:tex.texture,
-    rect: tex.rect,
+    diffuse:image.texture,
+    rect: image.rect,
     shade: Color.white
   });
   render.draw(shape.quad);
 }
 
-render.image = function image(image, pos, scale, rotation = 0, color = Color.white) {
+render.image = function image(image, rect = [0,0], rotation = 0, color = Color.white) {
   if (typeof image === "string")
     image = game.texture(image);
 
   var tex = image.texture;
-
-  if (scale)
-    scale = scale.div([tex.width, tex.height]);
-  else
-    scale = vector.v3one;
-
   if (!tex) return;
+
+  var size = [rect.width ? rect.width : tex.width, rect.height ? rect.height : tex.height];
 
   if (!lasttex) {
     check_flush(flush_img);
@@ -1051,30 +1025,26 @@ render.image = function image(image, pos, scale, rotation = 0, color = Color.whi
   }
 
   var e = img_e();
-  e.transform.trs(pos, undefined, scale);
+  var pos = [rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y]));
+  e.transform.trs(pos, undefined, size.div([tex.width,tex.height]));
   e.image = image;
   e.shade = color;
 
   return;
-  var bb = {};
-  bb.b = pos.y;
-  bb.l = pos.x;
-  bb.t = pos.y + tex.height * scale;
-  bb.r = pos.x + tex.width * scale;
-  return bb;
 };
 
 // pos is the lower left corner, scale is the width and height
-render.slice9 = function (image, pos, bb, scale = [tex.width, tex.height], color = Color.white) {
+render.slice9 = function (image, rect = [0,0], slice = 0, color = Color.white) {
   if (typeof image === 'string')
     image = game.texture(image);
+    
   var tex = image.texture;
+  var size = [rect.width ? rect.width : tex.width, rect.height ? rect.height : tex.height];
   var t = os.make_transform();
   t.pos = pos;
-  t.scale = [scale.x / tex.width, scale.y / tex.height, 1];
-  var border;
-  if (typeof bb === "number") border = [bb / tex.width, bb / tex.height, bb / tex.width, bb / tex.height];
-  else border = [bb.l / tex.width, bb.b / tex.height, bb.r / tex.width, bb.t / tex.height];
+  t.scale = size.div([tex.width,tex.height]);
+  slice = clay.normalizeSpacing(slice);
+  var border = [slice.l / tex.width, slice.b / tex.height, slice.r / tex.width, slice.t / tex.height];
 
   render.use_shader(slice9shader);
   set_model(t);
@@ -1083,7 +1053,7 @@ render.slice9 = function (image, pos, bb, scale = [tex.width, tex.height], color
     diffuse: tex,
     rect: [0, 0, 1, 1],
     border: border,
-    scale: [scale.x / tex.width, scale.y / tex.height],
+    scale: [size.x / tex.width, size.y / tex.height],
   });
 
   render.draw(shape.quad);
@@ -1142,8 +1112,7 @@ render.draw = function render_draw(mesh, ssbo, inst = 1, e_start = 0) {
   profile.endreport("gpu_draw");
 };
 
-// Returns an array in the form of [left, bottom, right, top] in pixels of the camera to render to
-// Camera viewport is [left,bottom,width,height] in relative values
+// Camera viewport is a rectangle with the bottom left corner defined as x,y. Units are pixels on the window.
 function camviewport() {
   var aspect = (((this.viewport[2] - this.viewport[0]) / (this.viewport[3] - this.viewport[1])) * window.size.x) / window.size.y;
   var raspect = this.size.x / this.size.y;
@@ -1162,20 +1131,45 @@ function camviewport() {
   switch (usemode) {
     case "stretch":
     case "expand":
-      return [0, 0, window.size.x, window.size.y];
+      return {
+        x: 0,
+        y: 0,
+        width: window.size.x,
+        height: window.size.y
+      };
     case "keep":
-      return [left, bottom, left + this.size.x, bottom + this.size.y];
+      return {
+        x: left,
+        y: bottom,
+        width:left+this.size.x,
+        height:bottom+this.size.y
+      }
     case "height":
-      var ret = [left, 0, this.size.x * (window.size.y / this.size.y), window.size.y];
-      ret[0] = (window.size.x - (ret[2] - ret[0])) / 2;
+      var ret = {
+        x:left,
+        y:0,
+        width:this.size.x*(window.size.y/this.size.y),
+        height:window.size.y
+      };
+      ret.x = (window.size.x - (ret.width-ret.x))/2;
       return ret;
     case "width":
-      var ret = [0, bottom, window.size.x, this.size.y * (window.size.x / this.size.x)];
-      ret[1] = (window.size.y - (ret[3] - ret[1])) / 2;
+      var ret = {
+        x:0,
+        y:bottom,
+        width:window.size.x,
+        height:this.size.y*(window.size.x/this.size.x)
+      };
+      ret.y = (window.size.y - (ret.height-ret.y))/2;
       return ret;
   }
 
-  return [0, 0, window.size.x, window.size.y];
+  return {
+    x:0,
+    y:0,
+    width:window.size.x,
+    height:window.size.y
+  };
 }
 
 // pos is pixels on the screen, lower left[0,0]
@@ -1183,8 +1177,8 @@ function camscreen2world(pos) {
   var view = this.screen2cam(pos);
   view.x *= this.size.x;
   view.y *= this.size.y;
-  view = view.sub([this.size.x / 2, this.size.y / 2]);
   view = view.add(this.pos.xy);
+  view = view.scale(this.transform.scale);
   return view;
 }
 
@@ -1197,11 +1191,12 @@ camscreen2world.doc = "Convert a view position for a camera to world.";
 
 // return camera coordinates given a screen position
 function screen2cam(pos) {
+  var winsize = window.size.slice();
   var viewport = this.view();
-  var width = viewport[2];
-  var height = viewport[3];
-  var viewpos = pos.sub([viewport[0], viewport[1]]);
-  return viewpos.div([width, height]);
+  var viewpos = pos.sub([viewport.x,viewport.y]);
+  viewpos = viewpos.div([viewport.width,viewport.height]);
+  viewpos.y += 1;
+  return viewpos;
 }
 
 function camextents() {
@@ -1224,21 +1219,17 @@ prosperon.gizmos = function () {
 
 prosperon.make_camera = function () {
   var cam = world.spawn();
-  cam.near = -1;
-  cam.far = 1000;
+  cam.near = 1;
+  cam.far = -1000;
   cam.ortho = true;
-  cam.viewport = [0, 0, 1, 1];
+  cam.viewport = [0, 0, 1, 1]; // normalized screen coordinates of where to draw
   cam.size = window.size.slice(); // The render size of this camera in pixels
   // In ortho mode, this determines how many pixels it will see
   cam.mode = "stretch";
   cam.screen2world = camscreen2world;
   cam.screen2cam = screen2cam;
   cam.extents = camextents;
-  cam.mousepos = function () {
-    return this.screen2world(input.mouse.screenpos());
-  };
   cam.view = camviewport;
-  cam.offscreen = false;
   return cam;
 };
 
@@ -1323,13 +1314,8 @@ var imgui_fn = function () {
   render.imgui_end();
 };
 
-prosperon.postvals = {};
-prosperon.postvals.offset_amt = 300;
-prosperon.render = function () {
-  profile.report("world");
-  render.set_camera(prosperon.camera);
   // figure out the highest resolution we can render at that's an integer
-  var basesize = prosperon.camera.size.slice();
+/*  var basesize = prosperon.camera.size.slice();
   var baseview = prosperon.camera.view();
   var wh = [baseview[2]-baseview[0], baseview[3]-baseview[1]];
   var mult = 1;
@@ -1342,65 +1328,52 @@ prosperon.render = function () {
     mult--;
     
   prosperon.window_render(basesize.scale(mult));
-  profile.report("sprites");
+*/
+
+prosperon.render = function () {
+  render.glue_pass();
+  render.set_view(prosperon.camera.transform);
+  render.set_projection_ortho({
+    l:-prosperon.camera.size.x/2,
+    r:prosperon.camera.size.x/2,
+    b:-prosperon.camera.size.y/2,
+    t:prosperon.camera.size.y/2
+  }, prosperon.camera.near,prosperon.camera.far);
+  render.viewport(prosperon.camera.view(), false);
+  
   if (render.draw_sprites) render.sprites();
   if (render.draw_particles) draw_emitters();
-  profile.endreport("sprites");
-  profile.report("draws");
   prosperon.draw();
-  profile.endreport("draws");
-  profile.endreport("world");
   render.fillmask(0);
-  prosperon.hudcam.size = prosperon.camera.size.slice();
-  prosperon.hudcam.transform.pos = [prosperon.hudcam.size.x / 2, prosperon.hudcam.size.y / 2, -100];
-  prosperon.hudcam.size.y *= -1;
-  render.set_camera(prosperon.hudcam);
-
-  profile.report("hud");
-  if (render.draw_hud) prosperon.hud();
-  render.flush_text();
-
-  render.set_camera(prosperon.camera);
-  //if (render.draw_gizmos && prosperon.gizmos) prosperon.gizmos();
-  render.flush_text();
-
-  render.end_pass();
-
-  profile.endreport("hud");
-  /* draw the image of the game world first */
-  render.glue_pass();
-  profile.report("frame");
-  profile.report("render");
-  profile.report("post process");
-  render.viewport(...prosperon.camera.view());
-  render.use_shader(render.postshader);
-  prosperon.postvals.diffuse = prosperon.screencolor;
+  render.forceflush();
   
-  render.use_mat(prosperon.postvals);
-  render.draw(shape.quad);
-  //render.draw((os.backend() === "directx" || os.backend() === 'metal') ? shape.flipquad : shape.quad);
+  render.set_projection_ortho({
+    l:0,
+    r:prosperon.camera.size.x,
+    b:-prosperon.camera.size.y,
+    t:0
+  },-1,1);
+  
+  render.set_view(unit_transform);
+  if (render.draw_hud) prosperon.hud();
+  render.forceflush();
 
-  profile.endreport("post process");
-
-  profile.report("app");
-
-  // Flush & render
-  prosperon.appcam.transform.pos = [window.size.x / 2, window.size.y / 2, -100];
-  prosperon.appcam.size = window.size.slice();
-
-  render.set_camera(prosperon.appcam);
-  render.viewport(...prosperon.appcam.view());
-  // Call gui functions
-  if (render.draw_gui) prosperon.gui();
-
-  check_flush();
-
-  profile.endreport("app");
+  render.set_projection_ortho({
+    l:0,
+    r:window.size.x,
+    b:-window.size.y,
+    t:0
+  },-1,1);
+  render.viewport({
+    t:0,
+    height:window.size.y,
+    width:window.size.x,
+    l:0
+  }, false);
+  prosperon.app();
 
   profile.report("imgui");
-
   if (debug.show) imgui_fn();
-
   profile.endreport("imgui");
 
   render.end_pass();

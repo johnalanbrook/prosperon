@@ -7,6 +7,17 @@
 #include "sokol/sokol_args.h"
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
+#include "sokol/util/sokol_gl.h"
+
+#define LAY_FLOAT 1
+#define LAY_IMPLEMENTATION
+#include "layout.h"
+
+#define STB_PERLIN_IMPLEMENTATION
+#include "stb_perlin.h"
+
+#define STB_RECT_PACK_IMPLEMENTATION
+#include "stb_rect_pack.h"
 
 #define MSF_GIF_IMPL
 #include "msf_gif.h"

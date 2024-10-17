@@ -121,8 +121,8 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     struct rect r;
     r.x = (glyph.x0) / (float)packsize;
     r.w = (glyph.x1-glyph.x0) / (float)packsize;
-    r.y = (glyph.y0) / (float)packsize;
-    r.h = (glyph.y1-glyph.y0) / (float)packsize;
+    r.y = (glyph.y1) / (float)packsize;
+    r.h = (glyph.y0-glyph.y1) / (float)packsize;
 
     newfont->Characters[c].size = (HMM_Vec2){
       .x = glyph.x1-glyph.x0,
@@ -132,7 +132,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
     newfont->Characters[c].leftbearing = glyph.xoff;
 //    printf("char %c: ascent %g, yoff %g, yoff2 %g\n", c, newfont->ascent, glyph.yoff, glyph.yoff2);
-    newfont->Characters[c].topbearing = newfont->ascent + glyph.yoff;
+    newfont->Characters[c].topbearing = -glyph.yoff2;//newfont->ascent - glyph.yoff;
     newfont->Characters[c].rect = r;
   }
 
@@ -216,6 +216,7 @@ HMM_Vec2 measure_text(const char *text, font *f, float size, float letterSpacing
   float maxWidth = 0; // max width of any line
   float lineWidth = 0; // current line width
   float scale = size/f->height;
+  scale = 1;
   float lineHeight = f->ascent - f->descent;
   lineHeight *= scale;
   letterSpacing *= scale;
@@ -244,6 +245,7 @@ void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgb
 
   HMM_Vec2 cursor = pos;
   float lineHeight = f->ascent - f->descent;
+  float lineWidth = 0;
 
   for (char *c = text; *c != 0; c++) {
     if (*c == '\n') {
@@ -294,7 +296,6 @@ void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgb
         if (*wordstart == '\e')
           wordstart = esc_color(wordstart, &usecolor, color);
 
-	      //sdrawCharacter(f->Characters[*wordstart], HMM_AddV2(cursor, HMM_MulV2F((HMM_Vec2){1,-1},scale)), scale, (rgba){0,0,0,255});
         sdrawCharacter(f->Characters[*wordstart], cursor, scale, usecolor);
 
         cursor.X += f->Characters[*wordstart].Advance * scale;

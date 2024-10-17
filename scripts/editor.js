@@ -1452,20 +1452,6 @@ var replpanel = Object.copy(inputpanel, {
   guibody() {
     this.win.selectable = true;
     var log = console.transcript;
-    return [
-      Mum.text({
-        str: log,
-        anchor: [0, 0],
-        offset: [0, -300].sub(this.scrolloffset),
-        selectable: true,
-      }),
-      Mum.text({
-        str: this.value,
-        color: Color.green,
-        offset: [0, -290],
-        caret: this.caret,
-      }),
-    ];
   },
   prevmark: -1,
   prevthis: [],
@@ -1608,109 +1594,6 @@ replpanel.inputs.pgdown = function () {
 };
 replpanel.inputs.pgdown.rep = true;
 
-var objectexplorer = Object.copy(inputpanel, {
-  title: "object explorer",
-  obj: undefined,
-  previous: [],
-  start() {
-    this.previous = [];
-  },
-
-  goto_obj(obj) {
-    if (obj === this.obj) return;
-    this.previous.push(this.obj);
-    this.obj = obj;
-  },
-
-  prev_obj() {
-    this.obj = this.previous.pop();
-  },
-
-  guibody() {
-    var items = [];
-    items.push(Mum.text({ str: "Examining " + this.obj.toString() + " entity" }));
-    items.push(Mum.text({ str: JSON.stringify(this.obj, undefined, 1) }));
-    return items;
-
-    var n = 0;
-    var curobj = this.obj;
-    while (curobj) {
-      n++;
-      curobj = curobj.__proto__;
-    }
-
-    n--;
-    curobj = this.obj.__proto__;
-    while (curobj) {
-      items.push(Mum.text({ str: curobj.toString(), action: this.goto_obj(curobj) }));
-      curobj = curobj.__proto__;
-    }
-
-    if (!Object.empty(this.previous))
-      items.push(
-        Mum.text({
-          str: "prev: " + this.previous.last(),
-          action: this.prev_obj,
-        }),
-      );
-
-    Object.getOwnPropertyNames(this.obj).forEach(key => {
-      var descriptor = Object.getOwnPropertyDescriptor(this.obj, key);
-      if (!descriptor) return;
-      var hidden = !descriptor.enumerable;
-      var writable = descriptor.writable;
-      var configurable = descriptor.configurable;
-
-      if (!descriptor.configurable) return;
-      if (hidden) return;
-
-      var name = (hidden ? "[hidden] " : "") + key;
-      var val = this.obj[key];
-
-      switch (typeof val) {
-        case "object":
-          if (val) {
-            items.push(Mum.text({ str: name }));
-            items.push(
-              Mum.text({
-                str: val.toString(),
-                action: this.goto_obj.bind(val),
-              }),
-            );
-          }
-          break;
-
-        case "function":
-          items.push(Mum.text({ str: name }));
-          items.push(Mum.text({ str: "function" }));
-          break;
-
-        default:
-          items.push(Mum.text({ str: name }));
-          items.push(Mum.text({ str: val.toString() }));
-          break;
-      }
-    });
-
-    items.push(Mum.text({ str: "Properties that can be pulled in ..." }));
-    var pullprops = [];
-    for (var key in this.obj.__proto__) {
-      if (!this.obj.hasOwn(key)) {
-        if (typeof this.obj[key] === "object" || typeof this.obj[key] === "function") continue;
-        pullprops.push(key);
-      }
-    }
-
-    pullprops = pullprops.sort();
-
-    pullprops.forEach(function (key) {
-      items.push(Mum.text({ str: key }));
-    });
-
-    return items;
-  },
-});
-
 var openlevelpanel = Object.copy(inputpanel, {
   title: "open entity",
   action() {
@@ -1719,8 +1602,6 @@ var openlevelpanel = Object.copy(inputpanel, {
 
   assets: [],
   allassets: [],
-
-  mumlist: {},
 
   submit_check() {
     if (this.assets.length === 0) return false;
@@ -1739,32 +1620,15 @@ var openlevelpanel = Object.copy(inputpanel, {
       this.submit();
     };
     click_ur = click_ur.bind(this);
-
-    this.mumlist = [];
-    this.assets.forEach(function (x) {
-      this.mumlist[x] = Mum.text({
-        str: x,
-        action: click_ur,
-        color: Color.blue,
-        hovered: { color: Color.red },
-        selectable: true,
-      });
-    }, this);
   },
 
   keycb() {
     if (this.value) this.assets = this.allassets.filter(x => x.startsWith(this.value));
     else this.assets = this.allassets.slice();
-    for (var m in this.mumlist) this.mumlist[m].hide = true;
-    this.assets.forEach(function (x) {
-      this.mumlist[x].hide = false;
     }, this);
   },
 
   guibody() {
-    var a = [Mum.text({ str: this.value, color: Color.green, caret: this.caret })];
-    var b = a.concat(Object.values(this.mumlist));
-    return Mum.column({ items: b, offset: [0, -10] });
   },
 });
 
@@ -1789,17 +1653,6 @@ var groupsaveaspanel = Object.copy(inputpanel, {
   },
 });
 
-var quitpanel = Object.copy(inputpanel, {
-  title: "really quit?",
-  action() {
-    os.quit();
-  },
-
-  guibody() {
-    return Mum.text({ str: "Really quit?" });
-  },
-});
-
 var allfiles = [];
 allfiles.push(Resources.scripts, Resources.images, Resources.sounds);
 allfiles = allfiles.flat();
@@ -1812,26 +1665,6 @@ var assetexplorer = Object.copy(openlevelpanel, {
   action() {
     if (editor.sel_comp && "asset" in editor.sel_comp) editor.sel_comp.asset = this.value;
     else editor.viewasset(this.value);
-  },
-});
-
-var componentexplorer = Object.copy(inputpanel, {
-  title: "component menu",
-  assets: ["sprite", "model", "edge2d", "polygon2d", "circle2d"],
-  click(name) {
-    if (editor.selectlist.length !== 1) return;
-    editor.selectlist[0].add_component(component[name]);
-  },
-  guibody() {
-    return componentexplorer.assets.map(x =>
-      Mum.text({
-        str: x,
-        action: this.click,
-        color: Color.blue,
-        hovered: { Color: Color.red },
-        selectable: true,
-      }),
-    );
   },
 });
 

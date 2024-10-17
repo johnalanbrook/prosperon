@@ -77,6 +77,7 @@ struct boundingbox {
   float l;
 };
 
+// rectangles are always defined with [x,y] in the bottom left
 struct rect {
   float x,y,w,h;
 };

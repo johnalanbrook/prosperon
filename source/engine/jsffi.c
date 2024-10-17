@@ -11,7 +11,6 @@
 #include "datastream.h"
 #include "sound.h"
 #include "stb_ds.h"
-#define STB_RECT_PACK_IMPLEMENTATION
 #include "stb_rect_pack.h"
 #include "string.h"
 #include "window.h"
@@ -34,7 +33,6 @@
 #include "par/par_streamlines.h"
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
-#define SOKOL_GL_IMPL
 #include "sokol/util/sokol_gl.h"
 #include <chipmunk/chipmunk_unsafe.h>
 #include <chipmunk/chipmunk_structs.h>
@@ -43,14 +41,12 @@
 #include "timer.h"
 
 #define LAY_FLOAT 1
-#define LAY_IMPLEMENTATION
 #include "layout.h"
 
 #ifndef _WIN32
 #include <sys/resource.h>
 #endif
 
-#define STB_PERLIN_IMPLEMENTATION
 #include "stb_perlin.h"
 
 #if (defined(_WIN32) || defined(__WIN32__))
@@ -58,8 +54,26 @@
 #define mkdir(x,y) _mkdir(x)
 #endif
 
-static JSValue globalThis;
+struct lrtb {
+  float l;
+  float r;
+  float t;
+  float b;
+};
 
+typedef struct lrtb lrtb;
+
+lrtb js2lrtb(JSValue v)
+{
+  lrtb ret = {0};
+  ret.l = js2number(js_getpropstr(v,"l"));
+  ret.b = js2number(js_getpropstr(v,"b"));
+  ret.t = js2number(js_getpropstr(v,"t"));
+  ret.r = js2number(js_getpropstr(v,"r"));
+  return ret;
+}
+
+static JSValue globalThis;
 JSValue str2js(const char *c, ...) {
   if (!c) return JS_UNDEFINED;
   char *result = NULL;
@@ -600,6 +614,12 @@ struct rect js2rect(JSValue v) {
   rect.y = js2number(js_getpropstr(v, "y"));
   rect.w = js2number(js_getpropstr(v, "width"));
   rect.h = js2number(js_getpropstr(v, "height"));
+  float anchor_x = js2number(js_getpropstr(v, "anchor_x"));
+  float anchor_y = js2number(js_getpropstr(v, "anchor_y"));
+  
+  rect.y -= anchor_y*rect.h;
+  rect.x -= anchor_x*rect.w;
+
   return rect;
 }
 
@@ -781,7 +801,8 @@ JSC_CCALL(render_glue_pass,
 
 // Set the portion of the window to be rendered to
 JSC_CCALL(render_viewport,
-  sg_apply_viewportf(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
+  rect view = js2rect(argv[0]);
+  sg_apply_viewportf(view.x, view.y,view.w,view.h, js2boolean(argv[1]));
 )
   
 JSC_CCALL(render_commit, sg_commit())
@@ -790,33 +811,9 @@ JSC_CCALL(render_end_pass, sg_end_pass())
 HMM_Mat4 transform2view(transform *t)
 {
   HMM_Vec3 look = HMM_AddV3(t->pos, transform_direction(t, vFWD));
-  return HMM_LookAt_LH(t->pos, look, vUP);
-}
-
-HMM_Mat4 camera2projection(JSValue cam) {
-  int ortho = js2boolean(js_getpropstr(cam, "ortho"));
-  float near = js2number(js_getpropstr(cam, "near"));
-  float far = js2number(js_getpropstr(cam, "far"));
-  float fov = js2number(js_getpropstr(cam, "fov"))*HMM_DegToRad;
-  HMM_Vec2 size = js2vec2(js_getpropstr(cam,"size"));
-
-  if (ortho)
-#ifdef SOKOL_GLCORE
-    return HMM_Orthographic_GL(
-#elifdef SOKOL_D3D11
-    return HMM_Orthographic_DX(
-#else
-    return HMM_Orthographic_Metal(
-#endif
-      -size.x/2,
-      size.x/2,
-      -size.y/2,
-      size.y/2,
-      near,
-      far
-    );
-  else
-    return HMM_Perspective_Metal(fov, size.x/size.y, near, far);
+  HMM_Mat4 ret = HMM_LookAt_RH(t->pos, look, vUP);
+  ret = HMM_MulM4(ret, HMM_Scale(t->scale));
+  return ret;
 }
 
 JSC_CCALL(render_camera_screen2world,
@@ -826,20 +823,32 @@ JSC_CCALL(render_camera_screen2world,
   return vec42js(HMM_MulM4V4(view, p));
 )
 
-JSC_CCALL(render_set_projection,
-  globalview.p = camera2projection(argv[0]);
+JSC_CCALL(render_set_projection_ortho,
+  lrtb extents = js2lrtb(argv[0]);
+  float near = js2number(argv[1]);
+  float far = js2number(argv[2]);
+  globalview.p = HMM_Orthographic_RH_NO(
+    extents.l,
+    extents.r,
+    extents.b,
+    extents.t,
+    near,
+    far
+  );
+  globalview.vp = HMM_MulM4(globalview.p, globalview.v);
+)
+
+JSC_CCALL(render_set_projection_perspective,
+  float fov = js2number(argv[0]);
+  float aspect = js2number(argv[1]);
+  float near = js2number(argv[2]);
+  float far = js2number(argv[3]);
+  globalview.p = HMM_Perspective_RH_NO(fov, aspect, near, far);
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
 
 JSC_CCALL(render_set_view,
   globalview.v = transform2view(js2transform(argv[0]));
-  globalview.vp = HMM_MulM4(globalview.p, globalview.v);
-)
-
-JSC_CCALL(render_set_camera,
-  JSValue cam = argv[0];
-  globalview.p = camera2projection(argv[0]);
-  globalview.v = transform2view(js2transform(js_getpropstr(cam, "transform")));
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
 
@@ -1250,13 +1259,6 @@ JSC_CCALL(render_spdraw,
 )
 
 JSC_CCALL(render_setpipeline, sg_apply_pipeline(*js2sg_pipeline(argv[0]));)
-
-JSC_CCALL(render_screencolor,
-  texture *t = calloc(sizeof(*t), 1);
-  t->id = screencolor;
-  return texture2js(&screencolor)
-)
-
 JSC_CCALL(render_imgui_new, gui_newframe(js2number(argv[0]),js2number(argv[1]),js2number(argv[2])); )
 JSC_CCALL(render_imgui_end, gui_endframe())
 
@@ -1280,8 +1282,8 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, commit, 0),
   MIST_FUNC_DEF(render, glue_pass, 0),
   MIST_FUNC_DEF(render, text_size, 5),
-  MIST_FUNC_DEF(render, set_camera, 1),
-  MIST_FUNC_DEF(render, set_projection, 1),
+  MIST_FUNC_DEF(render, set_projection_ortho, 3),
+  MIST_FUNC_DEF(render, set_projection_perspective, 4),  
   MIST_FUNC_DEF(render, set_view, 1),
   MIST_FUNC_DEF(render, make_pipeline, 1),
   MIST_FUNC_DEF(render, setuniv3, 2),
@@ -1296,7 +1298,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setuniv2, 2),
   MIST_FUNC_DEF(render, setuniv4, 2),
   MIST_FUNC_DEF(render, setpipeline, 1),
-  MIST_FUNC_DEF(render, screencolor, 0),
   MIST_FUNC_DEF(render, imgui_new, 3),
   MIST_FUNC_DEF(render, imgui_end, 0),
   MIST_FUNC_DEF(render, imgui_init, 0),
@@ -2188,15 +2189,15 @@ JSC_CCALL(transform_move, transform_move(js2transform(self), js2vec3(argv[0])); 
 JSC_CCALL(transform_lookat,
   HMM_Vec3 point = js2vec3(argv[0]);
   transform *go = js2transform(self);
-  HMM_Mat4 m = HMM_LookAt_LH(go->pos, point, vUP);
-  go->rotation = HMM_M4ToQ_LH(m);
+  HMM_Mat4 m = HMM_LookAt_RH(go->pos, point, vUP);
+  go->rotation = HMM_M4ToQ_RH(m);
   go->dirty = true;
 )
 
 JSC_CCALL(transform_rotate,
   HMM_Vec3 axis = js2vec3(argv[0]);
   transform *t = js2transform(self);
-  HMM_Quat rot = HMM_QFromAxisAngle_LH(axis, js2angle(argv[1]));
+  HMM_Quat rot = HMM_QFromAxisAngle_RH(axis, js2angle(argv[1]));
   t->rotation = HMM_MulQ(t->rotation,rot);
   t->dirty = true;
 )
@@ -2221,7 +2222,7 @@ JSC_CCALL(transform_phys2d,
   float av = js2number(argv[1]);
   float dt = js2number(argv[2]);
   transform_move(t, (HMM_Vec3){v.x*dt,v.y*dt,0});
-  HMM_Quat rot = HMM_QFromAxisAngle_LH((HMM_Vec3){0,0,1}, av*dt);
+  HMM_Quat rot = HMM_QFromAxisAngle_RH((HMM_Vec3){0,0,1}, av*dt);
   t->rotation = HMM_MulQ(t->rotation, rot);
 )
 
@@ -2837,10 +2838,14 @@ static const JSCFunctionListEntry js_timer_funcs[] = {
 
 JSC_GETSET(font, linegap, number)
 JSC_GET(font, height, number)
+JSC_GET(font, ascent, number)
+JSC_GET(font, descent, number)
 
 static const JSCFunctionListEntry js_font_funcs[] = {
   CGETSET_ADD(font, linegap),
   MIST_GET(font, height),
+  MIST_GET(font, ascent),
+  MIST_GET(font, descent)
 };
 
 const char *STRTEST = "TEST STRING";
@@ -2903,7 +2908,7 @@ JSC_CCALL(geometry_rect_random,
 JSC_CCALL(geometry_rect_point_inside,
   rect a = js2rect(argv[0]);
   HMM_Vec2 p = js2vec2(argv[1]);
-  return boolean2js(p.x >= a.x && p.x <= a.x+a.w && p.y <= a.y+a.h && p.y >= a.y-a.h);
+  return boolean2js(p.x >= a.x && p.x <= a.x+a.w && p.y <= a.y+a.h && p.y >= a.y);
 )
 
 JSC_CCALL(geometry_cwh2rect,
@@ -3711,25 +3716,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
 };
 
 static lay_context lay_ctx;
-
-struct lrtb {
-  float l;
-  float r;
-  float t;
-  float b;
-};
-
-typedef struct lrtb lrtb;
-
-lrtb js2lrtb(JSValue v)
-{
-  lrtb ret = {0};
-  ret.l = js2number(js_getpropstr(v,"l"));
-  ret.b = js2number(js_getpropstr(v,"b"));
-  ret.t = js2number(js_getpropstr(v,"t"));
-  ret.r = js2number(js_getpropstr(v,"r"));
-  return ret;
-}
 
 JSC_CCALL(layout_item,
   lay_id item = lay_item(&lay_ctx);
