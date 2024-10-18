@@ -21,9 +21,7 @@
 #include <ftw.h>
 #endif
 
-#define SOKOL_FETCH_IMPL
 #include "sokol/sokol_fetch.h"
-
 #include "stb_ds.h"
 
 #include "core.cdb.h"

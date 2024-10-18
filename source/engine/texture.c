@@ -15,9 +15,6 @@
 
 #include "qoi.h"
 
-#define CUTE_ASEPRITE_IMPLEMENTATION
-#include "cute_aseprite.h"
-
 #ifndef NSVG
 #include "nanosvgrast.h"
 #endif
@@ -175,50 +172,16 @@ struct texture *texture_from_file(const char *path) {
 
   struct texture *tex = calloc(1, sizeof(*tex));
 
-  stbi_set_flip_vertically_on_load(1);
-
   int n;
 
   char *ext = strrchr(path, '.');
 
-  if (!strcmp(ext, ".ase")) {
-    ase_t *ase = cute_aseprite_load_from_memory(raw, rawlen, NULL);
-    // frame is ase->w, ase->h
-    /* sprite anim is
-       anim = {
-         frames: [
-           rect: {  <---- gathered after rect packing
-             x: 
-             y:
-             w:
-             h:
-           },
-           time: ase->duration_milliseconds / 1000 (so it's in seconds)
-         ],
-         path: path,
-       };
-
-    */
-    for (int i = 0; i < ase->frame_count; i++) {
-      ase_frame_t *frame = ase->frames+i;
-      // add to thing with frame->pixels
-    }
-    
-    cute_aseprite_free(ase);
-  } else if (!strcmp(ext, ".qoi")) {
+  if (!strcmp(ext, ".qoi")) {
     qoi_desc qoi;
     data = qoi_decode(raw, rawlen, &qoi, 4);
     tex->width = qoi.width;
     tex->height = qoi.height;
     n = qoi.channels;
-  } else if (!strcmp(ext, ".gif")) {
-    data = stbi_load_gif_from_memory(raw, rawlen, &tex->delays, &tex->width, &tex->height, &tex->frames, &n, 4);
-    int *dd = tex->delays;
-    tex->delays = NULL;
-    arrsetlen(tex->delays, tex->frames);
-    for (int i = 0; i < tex->frames; i++) tex->delays[i] = dd[i];
-    free(dd);
-    tex->height *= tex->frames;
   } else if (!strcmp(ext, ".svg")) {
   #ifndef NSVG
     NSVGimage *svg = nsvgParse(raw, "px", 96);
@@ -256,7 +219,6 @@ void texture_free(texture *tex)
   if (!tex) return;
   if (tex->data)
     free(tex->data);
-  if (tex->delays) arrfree(tex->delays);
   if (tex->simgui.id)
     simgui_destroy_image(tex->simgui);
 

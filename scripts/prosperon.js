@@ -88,10 +88,10 @@ game.engine_start = function (s) {
           1, 1, 0], 0),
         verts: 4,
         uv: os.make_buffer([
-          0, 0,
           0, 1,
-          1, 0,
-          1, 1], 2),
+          0, 0,
+          1, 1,
+          1, 0], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
         count: 6,
       };
@@ -112,10 +112,10 @@ game.engine_start = function (s) {
           0.5, 0.5, -0.5], 0),
         verts: 4,
         uv: os.make_buffer([
-          0, 0,
           0, 1,
-          1, 0,
-          1, 1], 2),
+          0, 0,
+          1, 1,
+          1, 0], 2),
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
         count: 6,
       };
@@ -255,7 +255,9 @@ function pack_into_sheet(images)
 
 game.texture = function (path) {
   if (!path) return game.texture("icons/no_tex.gif");
-  path = Resources.find_image(path);
+
+  var parts = path.split(':');
+  path = Resources.find_image(parts[0]);
 
   if (!io.exists(path)) {
     console.error(`Missing texture: ${path}`);
@@ -263,12 +265,38 @@ game.texture = function (path) {
     game.texture.time_cache[path] = io.mod(path);
     return game.texture.cache[path];
   }
-  if (game.texture.cache[path]) return game.texture.cache[path];
-  var tex = os.make_texture(path);
+
+  var cachestr = path;
+  if (parts[1])
+    cachestr += parts[1];
+
+  var frame;
+  var anim_str;
+  if (parts.length > 1) {
+    // it's an animation
+    path = parts[0];
+    parts = parts[1].split('_'); // For a gif, it might be 'water.gif:3', but for an ase it might be 'water.ase:run_3', meaning the third frame of the 'run' animation
+    if (parts.length === 1)
+      frame = Number(parts[0]);
+    else {
+      anim_str = parts[0];
+      frame = Number(parts[1]);
+    }
+  } else
+    parts = undefined;
+
+  if (game.texture.cache[cachestr]) return game.texture.cache[path];
+  
+  var tex = os.make_texture(path.split(':')[0]);
+  if (!tex) return;
   
   var image;
-  
-  var anim = SpriteAnim.make(path, tex);
+
+  var ext = path.ext();
+  var anim;
+  if (ext === 'ase' || ext === 'aseprite') {
+    anim = os.make_aseprite(path);
+  }
   if (!anim) {
     image = {
       texture: tex,
@@ -293,12 +321,12 @@ game.texture = function (path) {
       tex = spritesheet;
   }
   
-  game.texture.cache[path] = image;
+  game.texture.cache[cachestr] = image;
   game.texture.time_cache[path] = io.mod(path);
 
   tex.load_gpu();
 
-  return game.texture.cache[path];
+  return game.texture.cache[cachestr];
 };
 game.texture.cache = {};
 game.texture.time_cache = {};

@@ -1012,7 +1012,9 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
   var tex = image.texture;
   if (!tex) return;
 
-  var size = [rect.width ? rect.width : tex.width, rect.height ? rect.height : tex.height];
+  var image_size = [image.rect.width*tex.width, image.rect.height*tex.height];
+  
+  var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
 
   if (!lasttex) {
     check_flush(flush_img);
@@ -1026,7 +1028,7 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
 
   var e = img_e();
   var pos = [rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y]));
-  e.transform.trs(pos, undefined, size.div([tex.width,tex.height]));
+  e.transform.trs(pos, undefined, size.div(image_size));
   e.image = image;
   e.shade = color;
 

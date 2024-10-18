@@ -11,6 +11,7 @@
 #include "datastream.h"
 #include "sound.h"
 #include "stb_ds.h"
+#include "stb_image.h"
 #include "stb_rect_pack.h"
 #include "string.h"
 #include "window.h"
@@ -39,6 +40,8 @@
 #include <stdint.h>
 #include "gui.h"
 #include "timer.h"
+
+#include "cute_aseprite.h"
 
 #define LAY_FLOAT 1
 #include "layout.h"
@@ -627,8 +630,8 @@ JSValue rect2js(struct rect rect) {
   JSValue obj = JS_NewObject(js);
   js_setprop_str(obj, "x", number2js(rect.x));
   js_setprop_str(obj, "y", number2js(rect.y));
-  js_setprop_str(obj, "w", number2js(rect.w));
-  js_setprop_str(obj, "h", number2js(rect.h));
+  js_setprop_str(obj, "width", number2js(rect.w));
+  js_setprop_str(obj, "height", number2js(rect.h));
   return obj;
 }
 
@@ -2758,8 +2761,6 @@ static const JSCFunctionListEntry js_datastream_funcs[] = {
 
 JSC_GET(texture, width, number)
 JSC_GET(texture, height, number)
-JSC_GET(texture, frames, number)
-JSC_GET(texture, delays, ints)
 JSC_GET(texture, vram, number)
 
 JSC_SCALL(texture_save, texture_save(js2texture(self), str));
@@ -2811,8 +2812,6 @@ JSC_CCALL(texture_offload,
 static const JSCFunctionListEntry js_texture_funcs[] = {
   MIST_GET(texture, width),
   MIST_GET(texture, height),
-  MIST_GET(texture, frames),
-  MIST_GET(texture, delays),
   MIST_GET(texture, vram),
   MIST_FUNC_DEF(texture, save, 1),
   MIST_FUNC_DEF(texture, write_pixel, 2),  
@@ -3377,12 +3376,101 @@ JSC_SCALL(os_make_texture,
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
-JSC_SCALL(os_make_pcm,
-  ret = pcm2js(make_pcm(str));
+JSC_SCALL(os_make_gif,
+  size_t rawlen;
+  unsigned char *raw = slurp_file(str, &rawlen);
+  if (!raw) goto ENDEND;
+  int n;
+  texture *tex = calloc(1,sizeof(*tex));
+  int frames;
+  int *delays;
+  tex->data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &frames, &n, 4);
+
+  JSValue gif = JS_NewObject(js);
+  js_setpropstr(gif, "texture", texture2js(tex));
+
+  JSValue delay_arr = JS_NewArray(js);
+  float yslice = 1.0/frames;
+  for (int i = 0; i < frames; i++) {
+    JSValue frame = JS_NewObject(js);
+    js_setpropstr(frame, "time", number2js((float)delays[i]/1000.0));
+    js_setpropstr(frame, "rect", rect2js((rect){
+      .x = 0,
+      .y = yslice*i,
+      .w = 1,
+      .h = yslice
+    }));
+    js_setprop_num(delay_arr, i, frame);
+  }
+
+  js_setpropstr(gif, "delays", delay_arr);
+
+  free(delays);
+  
+  ret = gif;
+
+  END:
+  free(raw);
+
+  ENDEND:
 )
 
 JSC_SCALL(os_make_aseprite,
-  
+  size_t rawlen;
+  unsigned char *raw = slurp_file(str, &rawlen);
+  ase_t *ase = cute_aseprite_load_from_memory(raw, rawlen, NULL);
+
+  JSValue obj = JS_NewObject(js);
+
+  int w = ase->w;
+  int h = ase->h;
+
+  int pixels = w*h;
+
+  for (int t = 0; t < ase->tag_count; t++) {
+    ase_tag_t tag = ase->tags[t];
+    JSValue anim = JS_NewObject(js);
+    js_setpropstr(anim, "repeat", number2js(tag.repeat));
+    switch(tag.loop_animation_direction) {
+      case ASE_ANIMATION_DIRECTION_FORWARDS:
+        js_setpropstr(anim, "loop", str2js("forward"));
+        break;
+      case ASE_ANIMATION_DIRECTION_BACKWORDS:
+        js_setpropstr(anim, "loop", str2js("backward"));
+        break;
+      case ASE_ANIMATION_DIRECTION_PINGPONG:
+        js_setpropstr(anim, "loop", str2js("pingpong"));
+        break;
+    }
+
+    int _frame = 0;
+    JSValue frames = JS_NewArray(js);
+    for (int f = tag.from_frame; f <= tag.to_frame; f++) {
+      ase_frame_t aframe = ase->frames[f];
+      JSValue frame = JS_NewObject(js);
+
+      texture *tex = calloc(1,sizeof(*tex));
+      tex->width = w;
+      tex->height = h;
+      tex->data = malloc(w*h*4);
+      memcpy(tex->data, aframe.pixels, w*h*4);
+      js_setpropstr(frame, "texture", texture2js(tex));
+      js_setpropstr(frame, "rect", rect2js((rect){.x=0,.y=0,.w=1,.h=1}));
+      js_setpropstr(frame, "time", number2js((float)aframe.duration_milliseconds/1000.0));      
+      js_setprop_num(frames, _frame, frame);
+      _frame++;
+    }
+    js_setpropstr(anim, "frames", frames);
+    js_setpropstr(obj, tag.name, anim);
+  }
+
+  ret = obj;
+
+  cute_aseprite_free(ase);
+)
+
+JSC_SCALL(os_make_pcm,
+  ret = pcm2js(make_pcm(str));
 )
 
 JSC_SCALL(os_texture_swap,
@@ -3678,6 +3766,8 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_poly2d, 2),
   MIST_FUNC_DEF(os, make_seg2d, 1),
   MIST_FUNC_DEF(os, make_texture, 1),
+  MIST_FUNC_DEF(os, make_gif, 1),
+  MIST_FUNC_DEF(os, make_aseprite, 1),
   MIST_FUNC_DEF(os, make_pcm, 1),
   MIST_FUNC_DEF(os, texture_swap, 2),
   MIST_FUNC_DEF(os, make_tex_data, 3),

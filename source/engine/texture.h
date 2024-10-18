@@ -29,8 +29,6 @@ struct texture {
   int height;
   HMM_Vec3 dimensions;
   unsigned char *data;
-  int frames;
-  int *delays;
   int vram;
 };
 
