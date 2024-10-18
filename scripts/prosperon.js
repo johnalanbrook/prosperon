@@ -203,17 +203,17 @@ image.dimensions = function()
 texture_proto.copy = function(src, pos, rect)
 {
   var pixel_rect = {
-    x: rect[0]*src.width,
-    y: rect[1]*src.height,
-    w: rect[2]*src.width,
-    h: rect[3]*src.height
+    x: rect.x*src.width,
+    y: rect.y*src.height,
+    width: rect.width*src.width,
+    height: rect.height*src.height
   };
 
   this.blit(src, {
     x: pos[0],
     y: pos[1],
-    w: rect[2]*src.width,
-    h: rect[3]*src.height
+    width: rect.width*src.width,
+    height: rect.height*src.height
   }, pixel_rect, false);
 }
 
@@ -224,9 +224,9 @@ var sheetsize = 1024;
 function pack_into_sheet(images)
 {
   if (!Array.isArray(images)) images = [images];
-  if (images[0].texture.width > 1 && images[0].texture.height > 1) return;
+  if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
   sheet_frames = sheet_frames.concat(images);
-  var sizes = sheet_frames.map(x => [x.rect[2]*x.texture.width, x.rect[3]*x.texture.height]);
+  var sizes = sheet_frames.map(x => [x.rect.width*x.texture.width, x.rect.height*x.texture.height]);
   var pos = os.rectpack(sheetsize, sheetsize, sizes);
   if (!pos) {
     console.error(`did not make spritesheet properly from images ${images}`);
@@ -241,10 +241,10 @@ function pack_into_sheet(images)
     newsheet.copy(sheet_frames[i].texture, pos[i], sheet_frames[i].rect);
     
     // Update the frame's rect to the new position in normalized coordinates
-    sheet_frames[i].rect[0] = pos[i][0] / newsheet.width;
-    sheet_frames[i].rect[1] = pos[i][1] / newsheet.height;
-    sheet_frames[i].rect[2] = sizes[i][0] / newsheet.width;
-    sheet_frames[i].rect[3] = sizes[i][1] / newsheet.height;
+    sheet_frames[i].rect.x = pos[i][0] / newsheet.width;
+    sheet_frames[i].rect.y = pos[i][1] / newsheet.height;
+    sheet_frames[i].rect.width = sizes[i][0] / newsheet.width;
+    sheet_frames[i].rect.height = sizes[i][1] / newsheet.height;
     sheet_frames[i].texture = newsheet;
   }
 
@@ -272,7 +272,7 @@ game.texture = function (path) {
   if (!anim) {
     image = {
       texture: tex,
-      rect:[0,0,1,1]
+      rect:{x:0,y:0,width:1,height:1}
     };
     if (pack_into_sheet([image]))
       tex = spritesheet;

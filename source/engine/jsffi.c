@@ -1169,7 +1169,7 @@ JSC_CCALL(render_make_particle_ssbo,
 
 typedef struct sprite_ss {
   HMM_Mat4 model;
-  HMM_Vec4 rect;
+  rect rect;
   HMM_Vec4 shade;
 } sprite_ss;
 
@@ -1210,7 +1210,7 @@ JSC_CCALL(render_make_sprite_ssbo,
     tr->pos.xy = HMM_AddV2(tr->pos.xy, pos);
 
     ms[i].model = transform2mat(tr);
-    ms[i].rect = js2vec4(js_getpropstr(image,"rect"));
+    ms[i].rect = js2rect(js_getpropstr(image,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
     
     if (t)
