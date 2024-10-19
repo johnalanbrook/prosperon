@@ -24,7 +24,6 @@ extern struct rect ST_UNIT;
 /* Represents an actual texture on the GPU */
 struct texture {
   sg_image id; /* ID reference for the GPU memory location of the texture */
-  simgui_image_t simgui;
   int width;
   int height;
   HMM_Vec3 dimensions;

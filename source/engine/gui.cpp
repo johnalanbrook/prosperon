@@ -2,6 +2,7 @@
 
 #include "render.h"
 #include "sokol/sokol_app.h"
+#include "log.h"
 #include "imgui.h"
 #include "implot.h"
 #include "imnodes.h"
@@ -350,27 +351,28 @@ JSC_CCALL(imgui_popid, ImGui::PopID(); )
 
 JSC_CCALL(imgui_image,
   texture *tex = js2texture(argv[0]);
-  if (!tex->simgui.id) {
-    simgui_image_desc_t simgd;
-    simgd.image = tex->id;
-    simgd.sampler = std_sampler;
-    tex->simgui = simgui_make_image(&simgd);
-  }
+  simgui_image_desc_t sg = {};
+  sg.image = tex->id;
+  sg.sampler = std_sampler;
+  simgui_image_t ss = simgui_make_image(&sg);
   
-  ImGui::Image(simgui_imtextureid(tex->simgui), ImVec2(tex->width, tex->height), ImVec2(0,0), ImVec2(1,1));
+  ImGui::Image(simgui_imtextureid(ss), ImVec2(tex->width, tex->height), ImVec2(0,0), ImVec2(1,1));
+  
+  simgui_destroy_image(ss);
 )
 
 JSC_SCALL(imgui_imagebutton,
   texture *tex = js2texture(argv[1]);
-  if (!tex->simgui.id) {
-    simgui_image_desc_t simgd;
-    simgd.image = tex->id;
-    simgd.sampler = std_sampler;
-    tex->simgui = simgui_make_image(&simgd);
-  }
+  simgui_image_desc_t sg = {};
+  sg.image = tex->id;
+  sg.sampler = std_sampler;
+  simgui_image_t ss = simgui_make_image(&sg);
   
-  if (ImGui::ImageButton(str, simgui_imtextureid(tex->simgui), ImVec2(tex->width, tex->height)))
+  
+  if (ImGui::ImageButton(str, simgui_imtextureid(ss), ImVec2(tex->width, tex->height)))
     script_call_sym(argv[2], 0, NULL);
+    
+  simgui_destroy_image(ss);
 )
 
 JSC_CCALL(imgui_sameline, ImGui::SameLine(js2number(argv[0])) )
@@ -876,7 +878,9 @@ static int started = 0;
 
 JSValue gui_init(JSContext *js)
 {
-  simgui_desc_t sdesc = {};
+  simgui_desc_t sdesc = {
+    .image_pool_size = 1024
+  };
   simgui_setup(&sdesc);
 
   ImGuiIO& io = ImGui::GetIO();

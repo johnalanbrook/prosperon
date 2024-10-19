@@ -137,7 +137,7 @@ json.doc = {
 };
 
 Resources.scripts = ["jsoc", "jsc", "jso", "js"];
-Resources.images = ["qoi", "png", "gif", "jpg", "jpeg"];
+Resources.images = ["qoi", "png", "gif", "jpg", "jpeg", "ase", "aseprite"];
 Resources.sounds = ["wav", "flac", "mp3", "qoa"];
 Resources.fonts = ["ttf"];
 Resources.is_image = function (path) {

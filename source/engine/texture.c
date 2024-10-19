@@ -219,8 +219,6 @@ void texture_free(texture *tex)
   if (!tex) return;
   if (tex->data)
     free(tex->data);
-  if (tex->simgui.id)
-    simgui_destroy_image(tex->simgui);
 
   free(tex);
 }

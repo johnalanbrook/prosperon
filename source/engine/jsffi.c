@@ -3387,7 +3387,6 @@ JSC_SCALL(os_make_gif,
   tex->data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &frames, &n, 4);
 
   JSValue gif = JS_NewObject(js);
-  js_setpropstr(gif, "texture", texture2js(tex));
 
   JSValue delay_arr = JS_NewArray(js);
   float yslice = 1.0/frames;
@@ -3400,10 +3399,11 @@ JSC_SCALL(os_make_gif,
       .w = 1,
       .h = yslice
     }));
+    js_setpropstr(frame, "texture", texture2js(tex));
     js_setprop_num(delay_arr, i, frame);
   }
 
-  js_setpropstr(gif, "delays", delay_arr);
+  js_setpropstr(gif, "frames", delay_arr);
 
   free(delays);
   

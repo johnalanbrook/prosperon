@@ -223,6 +223,7 @@ var sheetsize = 1024;
 
 function pack_into_sheet(images)
 {
+  return;
   if (!Array.isArray(images)) images = [images];
   if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
   sheet_frames = sheet_frames.concat(images);
@@ -253,6 +254,9 @@ function pack_into_sheet(images)
   return spritesheet;
 }
 
+// The game texture cache is a cache of all images that have been loaded. It looks like this ...
+// Any request to it returns an image, which is a texture and rect. But they can
+
 game.texture = function (path) {
   if (!path) return game.texture("icons/no_tex.gif");
 
@@ -265,16 +269,11 @@ game.texture = function (path) {
     game.texture.time_cache[path] = io.mod(path);
     return game.texture.cache[path];
   }
-
-  var cachestr = path;
-  if (parts[1])
-    cachestr += parts[1];
-
+  
   var frame;
   var anim_str;
   if (parts.length > 1) {
     // it's an animation
-    path = parts[0];
     parts = parts[1].split('_'); // For a gif, it might be 'water.gif:3', but for an ase it might be 'water.ase:run_3', meaning the third frame of the 'run' animation
     if (parts.length === 1)
       frame = Number(parts[0]);
@@ -284,19 +283,53 @@ game.texture = function (path) {
     }
   } else
     parts = undefined;
+  var ret;
+  if (ret = game.texture.cache[path]) {
+    if (ret.texture) return ret;
+    if (!parts) return ret;
 
-  if (game.texture.cache[cachestr]) return game.texture.cache[path];
-  
-  var tex = os.make_texture(path.split(':')[0]);
+    return ret[anim_str].frames[frame];
+  }
+    
+  var ext = path.ext();    
+
+  if (ext === 'ase' || ext === 'aseprite') {
+    anim = os.make_aseprite(path);
+    if (!anim) return;
+    // load all into gpu
+    for (var a in anim) 
+      for (let frame of anim[a].frames)
+        frame.texture.load_gpu();
+
+    game.texture.cache[path] = anim;
+    ret = game.texture.cache[path];
+    if (!parts) return ret;
+    return ret[anim_str].frames[frame];
+  }
+
+  if (ext === 'gif') {
+    console.info(path);
+    anim = os.make_gif(path);
+    if (!anim) return;
+    if (anim.frames.length === 1) {
+      anim.texture = anim.frames[0].texture;
+      anim.rect = anim.frames[0].rect;
+    }
+    game.texture.cache[path] = anim;
+    console.info("LOADING INTO GPU");
+    anim.frames[0].texture.load_gpu();
+    console.info(json.encode(anim));
+    return anim;
+  }
+
+  var tex = os.make_texture(path);
   if (!tex) return;
   
   var image;
 
   var ext = path.ext();
   var anim;
-  if (ext === 'ase' || ext === 'aseprite') {
-    anim = os.make_aseprite(path);
-  }
+
   if (!anim) {
     image = {
       texture: tex,
@@ -321,12 +354,12 @@ game.texture = function (path) {
       tex = spritesheet;
   }
   
-  game.texture.cache[cachestr] = image;
+  game.texture.cache[path] = image;
   game.texture.time_cache[path] = io.mod(path);
 
   tex.load_gpu();
 
-  return game.texture.cache[cachestr];
+  return game.texture.cache[path];
 };
 game.texture.cache = {};
 game.texture.time_cache = {};
