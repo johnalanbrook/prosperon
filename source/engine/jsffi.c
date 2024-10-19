@@ -1199,27 +1199,11 @@ JSC_CCALL(render_make_sprite_ssbo,
     JSValue sub = js_getpropidx(array,i);
     
     transform *tr = js2transform(js_getpropstr(sub, "transform"));
-    HMM_Vec2 pos = js2vec2(js_getpropstr(sub, "pos"));
     JSValue image = js_getpropstr(sub, "image");
-    texture *t = js2texture(js_getpropstr(image, "texture"));
-    HMM_Vec3 tscale;
     
-    if (t) {
-      tscale.x = t->width;
-      tscale.y = t->height;
-      tscale.z = 1;
-      tr->scale = HMM_MulV3(tr->scale, tscale);
-    }
-    tr->pos.xy = HMM_AddV2(tr->pos.xy, pos);
-
     ms[i].model = transform2mat(tr);
     ms[i].rect = js2rect(js_getpropstr(image,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
-    
-    if (t)
-      tr->scale = HMM_DivV3(tr->scale, tscale);
-
-    tr->pos.xy = HMM_SubV2(tr->pos.xy, pos);
   }
 
   int offset = sg_append_buffer(*b, (&(sg_range){
@@ -1227,7 +1211,7 @@ JSC_CCALL(render_make_sprite_ssbo,
     .size = size
   }));
   
-  ret = number2js(offset/96);
+  ret = number2js(offset/96); // 96 size of a sprite struct
 )
 
 JSC_CCALL(render_make_t_ssbo,
@@ -3389,6 +3373,9 @@ JSC_SCALL(os_make_gif,
   JSValue gif = JS_NewObject(js);
 
   JSValue delay_arr = JS_NewArray(js);
+
+  JSValue jstex = texture2js(tex);
+
   float yslice = 1.0/frames;
   for (int i = 0; i < frames; i++) {
     JSValue frame = JS_NewObject(js);
@@ -3399,11 +3386,12 @@ JSC_SCALL(os_make_gif,
       .w = 1,
       .h = yslice
     }));
-    js_setpropstr(frame, "texture", texture2js(tex));
+    js_setpropstr(frame, "texture", JS_DupValue(js,jstex));
     js_setprop_num(delay_arr, i, frame);
   }
 
   js_setpropstr(gif, "frames", delay_arr);
+  JS_FreeValue(js,jstex);
 
   free(delays);
   

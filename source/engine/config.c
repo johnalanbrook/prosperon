@@ -67,3 +67,6 @@
 
 #define QOI_IMPLEMENTATION
 #include "qoi.h"
+
+#define QOP_IMPLEMENTATION
+#include "qop.h"

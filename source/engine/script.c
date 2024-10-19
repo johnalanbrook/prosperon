@@ -57,7 +57,6 @@ void js_stacktrace() {
 #endif
 }
 
-
 void script_evalf(const char *format, ...)
 {
   JSValue obj;

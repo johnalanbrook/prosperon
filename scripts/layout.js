@@ -239,7 +239,7 @@ layout.draw_commands = function(cmds, pos = [0,0])
     }
 
     if (config.background_image)
-      if (render.slice)
+      if (config.slice)
         render.slice9(config.background_image, cmd.boundingbox, config.slice, config.background_color);
       else
         render.image(config.background_image, cmd.boundingbox, 0, config.color);

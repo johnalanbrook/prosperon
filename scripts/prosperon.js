@@ -223,7 +223,6 @@ var sheetsize = 1024;
 
 function pack_into_sheet(images)
 {
-  return;
   if (!Array.isArray(images)) images = [images];
   if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
   sheet_frames = sheet_frames.concat(images);
@@ -308,7 +307,6 @@ game.texture = function (path) {
   }
 
   if (ext === 'gif') {
-    console.info(path);
     anim = os.make_gif(path);
     if (!anim) return;
     if (anim.frames.length === 1) {
@@ -316,9 +314,7 @@ game.texture = function (path) {
       anim.rect = anim.frames[0].rect;
     }
     game.texture.cache[path] = anim;
-    console.info("LOADING INTO GPU");
     anim.frames[0].texture.load_gpu();
-    console.info(json.encode(anim));
     return anim;
   }
 

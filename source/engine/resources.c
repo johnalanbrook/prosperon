@@ -15,6 +15,7 @@
 #include "font.h"
 
 #include <fcntl.h>
+
 #include "miniz.h"
 
 #ifndef __EMSCRIPTEN__
@@ -23,8 +24,6 @@
 
 #include "sokol/sokol_fetch.h"
 #include "stb_ds.h"
-
-#include "core.cdb.h"
 
 #if defined(_WIN32)
 #include <direct.h>
@@ -38,14 +37,35 @@ struct dirent *c_dirent = NULL;
 
 char pathbuf[MAXPATH + 1];
 
-static mz_zip_archive corecdb;
-static mz_zip_archive game_cdb;
+static mz_zip_archive core_res;
 
 int LOADED_GAME = 0;
 uint8_t *gamebuf;
 void *zipbuf;
 
 sfetch_handle_t game_h;
+
+void *os_slurp(const char *file, size_t *size)
+{
+  FILE *f;
+
+  jump:
+  f = fopen(file, "rb");
+
+  if (!f) return NULL;
+
+  fseek(f, 0, SEEK_END);
+  size_t fsize = ftell(f);
+  rewind(f);
+  void *slurp = malloc(fsize);
+  fread(slurp, fsize, 1, f);
+  fclose(f);
+
+  if (size) *size = fsize;
+
+  return slurp;
+}
+
 
 #define MAXGAMESIZE 15*1024*1024
 
@@ -55,7 +75,6 @@ static void response_cb(const sfetch_response_t *r)
     YughInfo("FINISHED FETCH\n");
     zipbuf = malloc(r->data.size);
     memcpy(zipbuf, r->data.ptr, r->data.size);
-    mz_zip_reader_init_mem(&game_cdb, zipbuf, r->data.size,0);
     
   }
   if (r->finished) {
@@ -68,6 +87,33 @@ static void response_cb(const sfetch_response_t *r)
   }
 }
 
+#if defined(__linux__)
+	#include <unistd.h>
+	#include <stdio.h>
+#elif defined(__APPLE__)
+	#include <mach-o/dyld.h>
+#elif defined(_WIN32)
+	#include <windows.h>
+#endif
+
+int get_executable_path(char *buffer, unsigned int buffer_size) {
+	#if defined(__linux__)
+		ssize_t len = readlink("/proc/self/exe", buffer, buffer_size - 1);
+		if (len == -1) {
+			return 0;
+		}
+		buffer[len] = '\0';
+		return len;
+	#elif defined(__APPLE__)
+		if (_NSGetExecutablePath(buffer, &buffer_size) == 0) {
+			return buffer_size;
+		}
+	#elif defined(_WIN32)
+		return GetModuleFileName(NULL, buffer, buffer_size);
+	#endif
+
+	return 0;
+}
 void *gamedata;
 
 void resources_init() {
@@ -77,11 +123,13 @@ void resources_init() {
     .num_lanes = 8,
     .logger = { .func = sg_logging },
   });
-  mz_zip_reader_init_mem(&corecdb, core_cdb, core_cdb_len, 0);  
-  
+
+  size_t coresize;
+  void *core = os_slurp("core.zip", &coresize);
+  mz_zip_reader_init_mem(&core_res, core, coresize, 0);
+
 #ifdef __EMSCRIPTEN__
   gamebuf = malloc(MAXGAMESIZE);
-  YughInfo("GRABBING GAME.ZIP\n");
   game_h = sfetch_send(&(sfetch_request_t){
     .path="game.zip",
     .callback = response_cb,
@@ -90,14 +138,6 @@ void resources_init() {
       .size = MAXGAMESIZE
     }
   });
-#else
-  size_t gamesize;
-  gamebuf = slurp_file("game.zip", &gamesize);
-  if (gamebuf) {
-    mz_zip_reader_init_mem(&game_cdb, gamebuf, gamesize, 0);
-    free(gamebuf);
-    return;
-  }
 #endif
 }
 
@@ -159,17 +199,14 @@ static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
 
 time_t file_mod_secs(const char *file) {
   struct stat attr;
+
   mz_uint index;
   mz_zip_archive_file_stat pstat;
-
+  
   if (!stat(file,&attr))
     return attr.st_mtime;
-  else if ((index = mz_zip_reader_locate_file(&game_cdb, file, NULL, 0)) != -1) {
-    mz_zip_reader_file_stat(&game_cdb, index,&pstat);
-    return pstat.m_time;
-  }
-  else if ((index = mz_zip_reader_locate_file(&corecdb, file, NULL, 0)) != -1) {
-    mz_zip_reader_file_stat(&corecdb, index, &pstat);
+  else if ((index = mz_zip_reader_locate_file(&core_res, file, NULL, 0)) != -1) {
+    mz_zip_reader_file_stat(&core_res, index, &pstat);
     return pstat.m_time;
   }
     
@@ -190,24 +227,22 @@ char **ls(const char *path)
   return ls_paths;
 }
 
-static mz_zip_archive ar;
 
 void pack_start(const char *name)
 {
-  memset(&ar, 0, sizeof(ar));
-  int status = mz_zip_writer_init_file(&ar, name, 0);
-
+//  memset(&ar, 0, sizeof(ar));
+//  int status = mz_zip_writer_init_file(&ar, name, 0);
 }
 
 void pack_add(const char *path) 
 {
-  mz_zip_writer_add_file(&ar, path, path, NULL, 0, MZ_BEST_COMPRESSION);
+//  mz_zip_writer_add_file(&ar, path, path, NULL, 0, MZ_BEST_COMPRESSION);
 }
 
 void pack_end()
 {
-  mz_zip_writer_finalize_archive(&ar);
-  mz_zip_writer_end(&ar);
+//  mz_zip_writer_finalize_archive(&ar);
+//  mz_zip_writer_end(&ar);
 }
 
 #else
@@ -233,45 +268,19 @@ char *str_replace_ext(const char *s, const char *newext) {
 int fexists(const char *path)
 {
   int len = strlen(path);
-  if (mz_zip_reader_locate_file(&game_cdb, path, NULL, 0) != -1) return 1;
-  else if (mz_zip_reader_locate_file(&corecdb, path, NULL, 0) != -1) return 1;
+  if (mz_zip_reader_locate_file(&core_res, path, NULL, 0) != -1) return 1;
   else if (!access(path, R_OK)) return 1;
 
   return 0;
 }
 
-void *os_slurp(const char *file, size_t *size)
-{
-  FILE *f;
-
-  jump:
-  f = fopen(file, "rb");
-
-  if (!f) return NULL;
-
-  fseek(f, 0, SEEK_END);
-  size_t fsize = ftell(f);
-  rewind(f);
-  void *slurp = malloc(fsize);
-  fread(slurp, fsize, 1, f);
-  fclose(f);
-
-  if (size) *size = fsize;
-
-  return slurp;
-}
 
 void *slurp_file(const char *filename, size_t *size)
 {
-  void *ret;
   if (!access(filename, R_OK))
     return os_slurp(filename, size);
-  else if ((ret = mz_zip_reader_extract_file_to_heap(&game_cdb, filename, size, 0)))
-    return ret;
-  else if ((ret = mz_zip_reader_extract_file_to_heap(&corecdb, filename, size, 0)))
-    return ret;
-
-  return NULL;
+  else
+    return mz_zip_reader_extract_file_to_heap(&core_res, filename, size, 0);
 }
 
 char *slurp_text(const char *filename, size_t *size)

@@ -199,10 +199,10 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 .DEFAULT_GOAL := all
-all: $(NAME)
+all: $(NAME) core.zip
 	cp -f $(NAME) $(APP)$(EXT)
 
-$(APP): $(NAME)
+$(APP): $(NAME) core.zip
 	cp -f $(NAME) $(APP)
 
 $(NAME): $(OBJS) $(DEPS)
@@ -228,13 +228,9 @@ packer: tools/packer.c source/engine/miniz.c
 	@echo Making packer
 	$(CC) -O2 $^ -Isource/engine -o packer
 
-core.cdb: packer $(CORE)
-	@echo Packing core.cdb
+core.zip: packer $(CORE)
+	@echo Packing core.zip
 	./packer $@ $(CORE)
-
-core.cdb.h: core.cdb
-	@echo Making $@
-	xxd -i $< > $@
 
 ICNSIZE = 16 32 128 256 512 1024
 ICNNAME := $(addsuffix .png, $(ICNSIZE))
@@ -280,7 +276,7 @@ crossweb:
 
 clean:
 	@echo Cleaning project
-	rm -f core.cdb jso cdb packer TAGS source/engine/core.cdb.h tools/libcdb.a $(APP)* *.icns *.ico
+	rm -f core.zip jso cdb packer TAGS $(APP)* *.icns *.ico
 	find . -type f -name "*.[oad]" -delete
 	rm -rf Prosperon.app 
 

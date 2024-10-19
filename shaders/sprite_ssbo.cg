@@ -24,7 +24,6 @@ void main()
   sprite s = sprites[int(baseinstance)+gl_InstanceIndex];
   pos = a_pos;
   uv = a_uv;
-  pos *= vec3(s.rect.zw,1);
   uv = (uv*s.rect.zw)+s.rect.xy;
   gl_Position =  vp * s.model * vec4(pos, 1.0);
   shade = s.shade;

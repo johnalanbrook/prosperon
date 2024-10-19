@@ -1005,6 +1005,11 @@ render.mask = function mask(image, pos, scale, rotation = 0, ref = 1)
   render.draw(shape.quad);
 }
 
+function calc_image_size(img)
+{
+  return [img.texture.width*img.rect.width, img.texture.height*img.rect.height];
+}
+
 render.image = function image(image, rect = [0,0], rotation = 0, color = Color.white) {
   if (typeof image === "string")
     image = game.texture(image);
@@ -1012,7 +1017,7 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
   var tex = image.texture;
   if (!tex) return;
 
-  var image_size = [image.rect.width*tex.width, image.rect.height*tex.height];
+  var image_size = calc_image_size(image);
   
   var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
 
@@ -1028,34 +1033,36 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
 
   var e = img_e();
   var pos = [rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y]));
-  e.transform.trs(pos, undefined, size.div(image_size));
+  e.transform.trs(pos, undefined, size);
   e.image = image;
   e.shade = color;
 
   return;
 };
 
+var slice9_t = os.make_transform();
 // pos is the lower left corner, scale is the width and height
+// slice is given in pixels
 render.slice9 = function (image, rect = [0,0], slice = 0, color = Color.white) {
   if (typeof image === 'string')
     image = game.texture(image);
-    
-  var tex = image.texture;
-  var size = [rect.width ? rect.width : tex.width, rect.height ? rect.height : tex.height];
-  var t = os.make_transform();
-  t.pos = pos;
-  t.scale = size.div([tex.width,tex.height]);
-  slice = clay.normalizeSpacing(slice);
-  var border = [slice.l / tex.width, slice.b / tex.height, slice.r / tex.width, slice.t / tex.height];
 
+  var tex = image.texture;
+  var image_size = calc_image_size(image);
+  var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
+  
+  slice9_t.trs([rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y])), undefined, size);
+  slice = clay.normalizeSpacing(slice);
+  var border = [slice.l/image_size.x, slice.b/image_size.y, slice.r/image_size.x, slice.t/image_size.y];
   render.use_shader(slice9shader);
-  set_model(t);
+  set_model(slice9_t);
   render.use_mat({
     shade: color,
     diffuse: tex,
-    rect: [0, 0, 1, 1],
+    win_tex_scale: size.div(image_size),
+    rect: [image.rect.x, image.rect.y,image.rect.width,image.rect.height],
+    frag_rect: [image.rect.x, image.rect.y,image.rect.width,image.rect.height],    
     border: border,
-    scale: [size.x / tex.width, size.y / tex.height],
   });
 
   render.draw(shape.quad);
@@ -1373,6 +1380,7 @@ prosperon.render = function () {
     l:0
   }, false);
   prosperon.app();
+  render.forceflush();
 
   profile.report("imgui");
   if (debug.show) imgui_fn();

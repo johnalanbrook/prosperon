@@ -33,6 +33,7 @@ out vec4 color;
 #define PI 3.141592
 
 texture2D diffuse;
+@sampler_type smp nonfiltering
 sampler smp;
 
 @include_block frag
