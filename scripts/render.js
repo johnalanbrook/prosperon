@@ -558,7 +558,10 @@ function shader_apply_material(shader, material = {}, old = {}) {
 var bcache = new WeakMap();
 function sg_bind(mesh, ssbo) {
   if (cur.bind && cur.mesh === mesh && cur.ssbo === ssbo) {
-    cur.bind.ssbo = [ssbo];
+    if (ssbo)
+      cur.bind.ssbo = [ssbo];
+    else
+      cur.bind.ssbo = undefined;
     cur.bind.images = cur.images;
     cur.bind.samplers = cur.samplers;
     render.setbind(cur.bind);
@@ -1226,6 +1229,14 @@ prosperon.gizmos = function () {
   });
 };
 
+function screen2hud(pos)
+{
+  var campos = this.screen2cam(pos);
+  campos = campos.scale(this.size);
+  campos.y -= this.size.y;
+  return campos;
+}
+
 prosperon.make_camera = function () {
   var cam = world.spawn();
   cam.near = 1;
@@ -1237,6 +1248,7 @@ prosperon.make_camera = function () {
   cam.mode = "stretch";
   cam.screen2world = camscreen2world;
   cam.screen2cam = screen2cam;
+  cam.screen2hud = screen2hud;
   cam.extents = camextents;
   cam.view = camviewport;
   return cam;

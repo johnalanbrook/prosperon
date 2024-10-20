@@ -37,7 +37,7 @@ var clay_base = {
   padding:0,
   margin:0,
   offset:[0,0],
-  size:[0,0]
+  size:undefined,
 };
 
 var root_item;
@@ -185,22 +185,37 @@ var add_item = function(config)
   return item;
 }
 
-clay.image = function(path, config = {})
+function rectify_configs(config_array)
 {
-  config.__proto__ = clay_base;
-  config.image = path;
+  if (config_array.length === 0)
+    config_array = [{}];
+
+  for (var i = config_array.length-1; i > 0; i--)
+    config_array[i].__proto__ = config_array[i-1];
+
+  config_array[0].__proto__ = clay_base;
+  var cleanobj = Object.create(config_array[config_array.length-1]);
+
+  return cleanobj;
+}
+
+clay.image = function(path, ...configs)
+{
+  var config = rectify_configs(configs);
   var image = game.texture(path);
+  config.image = path;  
   config.size ??= [image.texture.width, image.texture.height];
   add_item(config);
 }
 
-clay.text = function(str, config = {})
+clay.text = function(str, ...configs)
 {
-  config.__proto__ = clay_base;
+  var config = rectify_configs(configs);
   var tsize = render.text_size(str, config.font);
+  config.size ??= [0,0];
   config.size = config.size.map((x,i) => Math.max(x, tsize[i]));
-  add_item(config);
   config.text = str;
+  add_item(config);
 }
 
 /*
@@ -226,14 +241,14 @@ clay.button = function(str, action, config = {})
 
 layout.draw_commands = function(cmds, pos = [0,0])
 {
-  var mousepos = input.mouse.screenpos();
+  var mousepos = prosperon.camera.screen2hud(input.mouse.screenpos());
   for (var cmd of cmds) {
     cmd.boundingbox.x += pos.x;
     cmd.boundingbox.y += pos.y;
     cmd.content.x += pos.x;
     cmd.content.y += pos.y;
     var config = cmd.config;
-    if (config.hovered && geometry.rect_point_inside(cmd.content, mousepos)) {
+    if (config.hovered && geometry.rect_point_inside(cmd.boundingbox, mousepos)) {
       config.hovered.__proto__ = config;
       config = config.hovered;
     }
