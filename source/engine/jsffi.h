@@ -22,17 +22,22 @@ extern JSValue cpShape2js(cpShape *s);
 #define PROTO_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN, 0)
 
 #define JS_SETSIG JSContext *js, JSValue self, JSValue val
+#define JSC_CCALL(NAME, ...) JSValue js_##NAME (JSContext *js, JSValue self, int argc, JSValue *argv) { \
+  JSValue ret = JS_UNDEFINED; \
+  __VA_ARGS__  ;\
+  return ret; \
+}
 
-#define JSC_SCALL(NAME, FN) JSC_CCALL(NAME, \
+#define JSC_SCALL(NAME, ...) JSC_CCALL(NAME, \
   const char *str = js2str(argv[0]); \
-  {FN;} ; \
+  __VA_ARGS__  ;\
   JS_FreeCString(js,str); \
-) \
+)
 
-#define JSC_SSCALL(NAME, FN) JSC_CCALL(NAME, \
+#define JSC_SSCALL(NAME, ...) JSC_CCALL(NAME, \
   const char *str = js2str(argv[0]); \
   const char *str2 = js2str(argv[1]); \
-  FN ; \
+  __VA_ARGS__ ; \
   JS_FreeCString(js,str2); \
   JS_FreeCString(js,str); \
 ) \
@@ -45,12 +50,6 @@ extern JSValue cpShape2js(cpShape *s);
 #define CGETSET_ADD_NAME(ID, ENTRY, NAME) MIST_CGETSET_DEF(#NAME, js_##ID##_get_##ENTRY, js_##ID##_set_##ENTRY)
 #define CGETSET_ADD(ID, ENTRY) MIST_CGETSET_DEF(#ENTRY, js_##ID##_get_##ENTRY, js_##ID##_set_##ENTRY)
 #define CGETSET_ADD_HID(ID, ENTRY) MIST_CGETSET_BASE(#ENTRY, js_##ID##_get_##ENTRY, js_##ID##_set_##ENTRY, JS_PROP_CONFIGURABLE)
-
-#define JSC_CCALL(NAME, FN) JSValue js_##NAME (JSContext *js, JSValue self, int argc, JSValue *argv) { \
-  JSValue ret = JS_UNDEFINED; \
-  {FN;} \
-  return ret; \
-} \
 
 #define JSC_DCALL(FN) JSValue js_##FN (JSContext *js, JSValue self, int argc, JSValue *argv) { FN(); return JS_UNDEFINED; }
 

@@ -41,6 +41,8 @@
 #include "gui.h"
 #include "timer.h"
 
+#include "enet/enet.h"
+
 #include "cute_aseprite.h"
 
 #define LAY_FLOAT 1
@@ -135,6 +137,16 @@ void skin_free(skin *sk) {
   free(sk);
 }
 
+void ENetHost_free(ENetHost *server)
+{
+  enet_host_destroy(server);
+}
+
+void ENetPeer_free(ENetPeer *peer)
+{
+//  free(peer);
+}
+
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
 QJSCLASS(gameobject)
 QJSCLASS(transform)
@@ -151,7 +163,9 @@ QJSCLASS(datastream)
 QJSCLASS(cpShape)
 QJSCLASS(cpConstraint)
 QJSCLASS(timer)
-QJSCLASS(skin);
+QJSCLASS(skin)
+QJSCLASS(ENetHost)
+QJSCLASS(ENetPeer)
 
 static JSValue js_circle2d;
 static JSValue js_poly2d;
@@ -2033,7 +2047,7 @@ static const JSCFunctionListEntry js_io_funcs[] = {
 
 JSC_CCALL(physics_closest_point,
   void *v1 = js2cpvec2arr(argv[1]);
-  JSValue ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
+  ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
   arrfree(v1);
   return ret;
 )
@@ -3845,6 +3859,163 @@ static const JSCFunctionListEntry js_layout_funcs[] = {
   MIST_FUNC_DEF(layout, reset, 0),
 };
 
+ENetAddress str2enetaddress(char *str)
+{
+  char *mystr = strdup(str);
+  char *semi = strrchr(mystr, ':');
+  *semi = 0;
+  ENetAddress addr;
+  addr.port = atoi(semi+1);
+  printf("connecting from string %s, into %s ::: %s\n", str, mystr, semi+1);
+  enet_address_set_host_ip(&addr, mystr);
+  printf("connecting via %s, ip %s, to %x:%u\n", mystr, semi+1, addr.host, addr.port);
+  free(mystr);
+  return addr;
+}
+
+JSC_SCALL(enet_host_create,
+  ENetAddress addr;
+  ENetAddress *use = NULL;
+  if (!JS_IsUndefined(argv[0])) {
+    addr = str2enetaddress(str);
+    use = &addr;
+  }
+   
+  ENetHost *server = enet_host_create(use, js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]));
+  if (!server) {
+    printf("Error trying to create a host.\n");
+    return JS_UNDEFINED;
+  }
+  return ENetHost2js(server);
+);
+
+static const JSCFunctionListEntry js_enet_funcs[] = {
+  MIST_FUNC_DEF(enet, host_create, 5),
+};
+
+JSValue enetpacket2js(ENetPacket *packet)
+{
+  JSValue v = JS_NewObject(js);
+  // nota encoded
+  void *nota = packet->data;
+  JSValue dd;
+  js_do_nota_decode(&dd, nota);
+  js_setpropstr(v, "data", dd);
+  js_setpropstr(v, "size", number2js(packet->dataLength));
+  return v;
+}
+
+JSValue enetevent2js(ENetEvent e)
+{
+  JSValue v = JS_NewObject(js);
+  js_setpropstr(v, "type", number2js(e.type));
+  js_setpropstr(v, "peer", ENetPeer2js(e.peer));
+  js_setpropstr(v, "channel", number2js(e.channelID));
+  js_setpropstr(v, "data", number2js(e.data));
+  if (e.packet) {
+    JSValue packet = enetpacket2js(e.packet);
+    js_setpropstr(v, "packet", packet);
+  }
+  return v;
+}
+
+JSC_CCALL(ENetHost_service,
+  ENetEvent event;
+  while(enet_host_service(js2ENetHost(self), &event, js2number(argv[0])) > 0) {
+    JSValue jsevent = enetevent2js(event);
+    script_call_sym(argv[1], 1, &jsevent);
+  }
+)
+
+void *js2nota(JSValue v, size_t *len)
+{
+  char nota[1024*1024];
+  char *e = js_do_nota_encode(v, nota);
+  *len = e-nota;
+  char *ret = malloc(*len);
+  memcpy(ret, nota, *len);
+  return ret;
+}
+
+ENetPacket *js2enetpacket(JSValue v)
+{
+  size_t len;
+  void *nota = js2nota(v, &len);
+  ENetPacket *packet = enet_packet_create(nota, len, ENET_PACKET_FLAG_RELIABLE);
+  free(nota);
+  return packet;
+}
+
+JSC_SCALL(ENetHost_connect,
+  ENetAddress addr = str2enetaddress(str);
+  ENetPeer *peer = enet_host_connect(js2ENetHost(self), &addr, js2number(argv[1]), js2number(argv[2]));
+  if (!peer) return JS_UNDEFINED;
+  return ENetPeer2js(peer);
+)
+
+JSC_CCALL(ENetHost_flush, enet_host_flush(js2ENetHost(self)))
+JSC_CCALL(ENetHost_broadcast,
+  ENetPacket *packet = js2enetpacket(argv[1]);
+  if (packet) enet_host_broadcast(js2ENetHost(self), js2number(argv[0]),packet);
+)
+
+JSC_CCALL(ENetHost_channel_limit, enet_host_channel_limit(js2ENetHost(self), js2number(argv[0])))
+JSC_CCALL(ENetHost_bandwidth_limit, enet_host_bandwidth_limit(js2ENetHost(self), js2number(argv[0]), js2number(argv[1])))
+JSC_CCALL(ENetHost_bandwidth_throttle, enet_host_bandwidth_throttle(js2ENetHost(self)))
+JSC_CCALL(ENetHost_check_events,
+  ENetEvent e;
+  while (enet_host_check_events(js2ENetHost(self), &e) > 0) {
+    JSValue jsevent = enetevent2js(e);
+    script_call_sym(argv[1], 1, &jsevent);
+  }
+)
+
+static const JSCFunctionListEntry js_ENetHost_funcs[] = {
+  MIST_FUNC_DEF(ENetHost, service, 1),
+  MIST_FUNC_DEF(ENetHost, connect, 3),
+  MIST_FUNC_DEF(ENetHost, flush, 0),
+  MIST_FUNC_DEF(ENetHost, broadcast, 2),
+  MIST_FUNC_DEF(ENetHost, channel_limit, 1),
+  MIST_FUNC_DEF(ENetHost, bandwidth_limit, 2),
+  MIST_FUNC_DEF(ENetHost, bandwidth_throttle, 0),
+  MIST_FUNC_DEF(ENetHost, check_events, 1),
+};
+
+JSC_SCALL(ENetPeer_send,
+  ENetPacket *packet = js2enetpacket(argv[0]);
+  if (packet) enet_peer_send(js2ENetPeer(self), 0, packet);
+)
+
+JSC_CCALL(ENetPeer_disconnect, enet_peer_disconnect(js2ENetPeer(self), js2number(argv[0])))
+JSC_CCALL(ENetPeer_disconnect_now, enet_peer_disconnect_now(js2ENetPeer(self), js2number(argv[0])))
+JSC_CCALL(ENetPeer_disconnect_later, enet_peer_disconnect_later(js2ENetPeer(self), js2number(argv[0])))
+JSC_CCALL(ENetPeer_reset, enet_peer_reset(js2ENetPeer(self)))
+JSC_CCALL(ENetPeer_ping, enet_peer_ping(js2ENetPeer(self)))
+JSC_CCALL(ENetPeer_ping_interval, enet_peer_ping_interval(js2ENetPeer(self), js2number(argv[0])))
+JSC_CCALL(ENetPeer_throttle_configure, enet_peer_throttle_configure(js2ENetPeer(self), js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
+JSC_CCALL(ENetPeer_timeout, enet_peer_timeout(js2ENetPeer(self), js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
+
+JSC_CCALL(ENetPeer_receive,
+  enet_uint8 channel;
+  ENetPacket *packet = enet_peer_receive(js2ENetPeer(self), &channel);
+  if (!packet) return JS_UNDEFINED;
+  ret = enetpacket2js(packet);
+  js_setpropstr(ret, "channel", number2js(channel));
+)
+
+static const JSCFunctionListEntry js_ENetPeer_funcs[] = {
+  MIST_FUNC_DEF(ENetPeer, send, 1),
+  MIST_FUNC_DEF(ENetPeer, disconnect, 1),
+  MIST_FUNC_DEF(ENetPeer, disconnect_now, 1),
+  MIST_FUNC_DEF(ENetPeer, disconnect_later, 1),
+  MIST_FUNC_DEF(ENetPeer, reset, 0),
+  MIST_FUNC_DEF(ENetPeer, ping, 0),
+  MIST_FUNC_DEF(ENetPeer, ping_interval, 2),
+  MIST_FUNC_DEF(ENetPeer, throttle_configure, 3),
+  MIST_FUNC_DEF(ENetPeer, timeout, 3),
+  MIST_FUNC_DEF(ENetPeer, receive, 0),
+};
+
 #include "steam.h"
 
 #define JSSTATIC(NAME, PARENT) \
@@ -3853,6 +4024,7 @@ JS_SetPropertyFunctionList(js, js_##NAME, js_##NAME##_funcs, countof(js_##NAME##
 JS_SetPrototype(js, js_##NAME, PARENT); \
 
 void ffi_load() {
+  enet_initialize();
   cycles = tmpfile();
   quickjs_set_cycleout(cycles);
   
@@ -3874,8 +4046,11 @@ void ffi_load() {
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(cpShape);
   QJSCLASSPREP_FUNCS(timer);
+  QJSCLASSPREP_FUNCS(ENetHost);
+  QJSCLASSPREP_FUNCS(ENetPeer);
 
   QJSGLOBALCLASS(nota);
+  QJSGLOBALCLASS(enet);
   QJSGLOBALCLASS(input);
   QJSGLOBALCLASS(io);
   QJSGLOBALCLASS(prosperon);
