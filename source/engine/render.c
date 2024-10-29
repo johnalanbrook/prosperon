@@ -17,7 +17,6 @@
 
 #include "sokol/sokol_gfx.h"
 #include "sokol/util/sokol_gl.h"
-#include "gui.h"
 
 static HMM_Vec2 lastuse = {0};
 

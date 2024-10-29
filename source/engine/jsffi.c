@@ -2,14 +2,9 @@
 
 #include "script.h"
 #include "font.h"
-#include "gameobject.h"
 #include "input.h"
 #include "log.h"
-#include "dsp.h"
-#include "music.h"
-#include "2dphysics.h"
 #include "datastream.h"
-#include "sound.h"
 #include "stb_ds.h"
 #include "stb_image.h"
 #include "stb_rect_pack.h"
@@ -27,7 +22,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
-#include "nota.h"
 #include "render.h"
 #include "model.h"
 #include "HandmadeMath.h"
@@ -35,18 +29,10 @@
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
 #include "sokol/util/sokol_gl.h"
-#include <chipmunk/chipmunk_unsafe.h>
-#include <chipmunk/chipmunk_structs.h>
 #include <stdint.h>
-#include "gui.h"
 #include "timer.h"
 
-#include "enet/enet.h"
-
 #include "cute_aseprite.h"
-
-#define LAY_FLOAT 1
-#include "layout.h"
 
 #ifndef _WIN32
 #include <sys/resource.h>
@@ -98,7 +84,50 @@ int JS_Is(JSValue v) { return JS_ToBool(js, v); }
 const char *js2str(JSValue v) {
   return JS_ToCString(js, v);
 }
+/*
+JSValue sapp_event2js(JSContext *js, sapp_event *e)
+{
+  JSValue event = JS_NewObject(js);
+  JS_SetPropertyStr(js, event, "frame_count", JS_NewIntt64(js, e->frame_count));
+  JS_SetPropertyStr(js, event, "type", JS_NewInt64(js, e->type));
+  JS_SetPropertyStr(js, event, "mouse_dx", JS_NewFloat64(js, e->mouse_dx));
+  JS_SetPropertyStr(js, event, "mouse_dy", JS_NewFloat64(js, e->mouse_dy));
+  JS_SetPropertyStr(js, event, "window_width", JS_NewFloat64(js, e->window_width));
+  JS_SetPropertyStr(js, event, "window_height", JS_NewFloat64(js, e->window_height));
+  JS_SetPropertyStr(js, event, "framebuffer_height", JS_NewFloat64(js, e->framebuffer_height));
+  JS_SetPropertyStr(js, event, "framebuffer_height", JS_NewFloat64(js, e->framebuffer_height));    
 
+  switch(e->type) {
+    case MOUSE_SCROLL:
+      JS_SetPropertyStr(js, event, "scroll_dx", JS_NewFloat64(js, e->scroll_dx));
+      JS_SetPropertyStr(js, event, "scroll_dy", JS_NewFloat64(js, e->scroll_dy));
+      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
+      break;
+    case KEY_UP:
+    case KEY_DOWN:
+      JS_SetPropertyStr(js, event, "key_code", JS_NewInt64(js, e->key_code));
+      JS_SetPropertyStr(js, event, "char_code", JS_NewUint32(js, e->char_code));
+      JS_SetPropertyStr(js, event, "key_repeat", JS_NewBool(js, e->key_repeat));
+      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
+      break;
+    case CHAR:
+      JS_SetPropertyStr(js, event, "char_code", JS_NewUint32(js, e->char_code));
+      JS_SetPropertyStr(js, event, "key_repeat", JS_NewBool(js, e->key_repeat));
+      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));            
+      break;
+    case TOUCHES_BEGIN:
+    case TOUCHES_MOVED:
+    case TOUCHES_ENDED:
+      break;
+    case MOUSE_UP:
+    case MOUSE_DOWN:
+      JS_SetPropertyStr(js, event, "mouse_button", JS_NewUint32(js, e->mouse_button));
+      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
+      break;
+  }
+  return event;
+}
+*/
 char *js2strdup(JSValue v) {
   const char *str = JS_ToCString(js, v);
   char *ret = strdup(str);
@@ -118,83 +147,23 @@ void sg_pipeline_free(sg_pipeline *p)
   free(p);
 }
 
-void cpShape_free(cpShape *s)
-{
-  if (cpSpaceContainsShape(space, s))
-    cpSpaceRemoveShape(space, s);
-  cpShapeFree(s);
-}
-
-void cpConstraint_free(cpConstraint *c)
-{
-  if (cpSpaceContainsConstraint(space, c))
-    cpSpaceRemoveConstraint(space, c);
-  cpConstraintFree(c);
-}
-
 void skin_free(skin *sk) {
   arrfree(sk->invbind);
   free(sk);
 }
 
-void ENetHost_free(ENetHost *server)
-{
-  enet_host_destroy(server);
-}
-
-void ENetPeer_free(ENetPeer *peer)
-{
-//  free(peer);
-}
-
 void jsfreestr(const char *s) { JS_FreeCString(js, s); }
-QJSCLASS(gameobject)
 QJSCLASS(transform)
-QJSCLASS(dsp_node)
 QJSCLASS(texture)
-QJSCLASS(pcm)
 QJSCLASS(font)
-QJSCLASS(warp_gravity)
-QJSCLASS(warp_damp)
+//QJSCLASS(warp_gravity)
+//QJSCLASS(warp_damp)
 QJSCLASS(window)
 QJSCLASS(sg_buffer)
 QJSCLASS(sg_pipeline)
 QJSCLASS(datastream)
-QJSCLASS(cpShape)
-QJSCLASS(cpConstraint)
 QJSCLASS(timer)
 QJSCLASS(skin)
-QJSCLASS(ENetHost)
-QJSCLASS(ENetPeer)
-
-static JSValue js_circle2d;
-static JSValue js_poly2d;
-static JSValue js_seg2d;
-
-static JSValue js_pin;
-static JSValue js_motor;
-static JSValue js_ratchet;
-static JSValue js_slide;
-static JSValue js_pivot;
-static JSValue js_gear;
-static JSValue js_rotary;
-static JSValue js_damped_rotary;
-static JSValue js_damped_spring;
-static JSValue js_groove;
-
-#define DSP_PROTO(TYPE) \
-static JSValue TYPE##_proto; \
-static TYPE *js2##TYPE (JSValue v) { \
-  dsp_node *node = js2dsp_node(v); \
-  return node->data; \
-} \
-
-DSP_PROTO(bitcrush)
-DSP_PROTO(delay)
-DSP_PROTO(sound)
-DSP_PROTO(compressor)
-DSP_PROTO(phasor)
-DSP_PROTO(adsr)
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)     \
@@ -220,6 +189,21 @@ JSValue js_getpropidx(JSValue v, uint32_t i)
   return p;
 }
 
+// 
+static inline HMM_Mat4 js2transform_mat(JSContext *js, JSValue v)
+{
+  transform *T = js2transform(v);
+  transform *P = js2transform(js_getpropstr(v, "parent"));
+  if (P) {
+    HMM_Mat4 pm = transform2mat(P);
+    HMM_Mat4 tm = transform2mat(T);
+    
+    return HMM_MulM4(pm, tm);
+  }
+
+  return transform2mat(T);
+}
+
 void js_setprop_str(JSValue obj, const char *prop, JSValue v) { JS_SetPropertyStr(js, obj, prop, v); }
 JSValue js_getpropstr(JSValue v, const char *str)
 {
@@ -232,8 +216,6 @@ void js_setpropstr(JSValue v, const char *str, JSValue p)
 {
   JS_SetPropertyStr(js, v, str, p);
 }
-
-static inline cpBody *js2body(JSValue v) { return js2gameobject(v)->body; }
 
 char **js2strarr(JSValue v)
 {
@@ -284,117 +266,6 @@ int js_arrlen(JSValue v) {
   int len;
   JS_ToInt32(js, &len, js_getpropstr( v, "length"));
   return len;
-}
-
-char *js_do_nota_decode(JSValue *tmp, char *nota)
-{
-  int type = nota_type(nota);
-  JSValue ret2;
-  long long n;
-  double d;
-  int b;
-  char *str;
-
-  switch(type) {
-    case NOTA_BLOB:
-      break;
-    case NOTA_TEXT:
-      nota = nota_read_text(&str, nota);
-      *tmp = str2js(str);
-      /* TODO: Avoid malloc and free here */
-      free(str);
-      break;
-    case NOTA_ARR:
-      nota = nota_read_array(&n, nota);
-      *tmp = JS_NewArray(js);
-      for (int i = 0; i < n; i++) {
-        nota = js_do_nota_decode(&ret2, nota);
-        JS_SetPropertyInt64(js, *tmp, i, ret2);
-      }
-      break;
-    case NOTA_REC:
-      nota = nota_read_record(&n, nota);
-      *tmp = JS_NewObject(js);
-      for (int i = 0; i < n; i++) {
-        nota = nota_read_text(&str, nota);
-	nota = js_do_nota_decode(&ret2, nota);
-	JS_SetPropertyStr(js, *tmp, str, ret2);
-	free(str);
-      }
-      break;
-    case NOTA_INT:
-      nota = nota_read_int(&n, nota);
-      *tmp = number2js(n);
-      break;
-    case NOTA_SYM:
-      nota = nota_read_sym(&b, nota);
-      if (b == NOTA_NULL) *tmp = JS_UNDEFINED;
-      else
-        *tmp = boolean2js(b);
-      break;
-    default:
-    case NOTA_FLOAT:
-      nota = nota_read_float(&d, nota);
-      *tmp = number2js(d);
-      break;
-  }
-
-  return nota;
-}
-
-char *js_do_nota_encode(JSValue v, char *nota)
-{
-  int tag = JS_VALUE_GET_TAG(v);
-  const char *str = NULL;
-  JSPropertyEnum *ptab;
-  uint32_t plen;
-  int n;
-  JSValue val;
-  
-  switch(tag) {
-    case JS_TAG_FLOAT64:
-      return nota_write_float(JS_VALUE_GET_FLOAT64(v), nota);
-    case JS_TAG_INT:
-      return nota_write_int(JS_VALUE_GET_INT(v), nota);
-    case JS_TAG_STRING:
-      str = js2str(v);
-      nota = nota_write_text(str, nota);
-      JS_FreeCString(js, str);
-      return nota;
-    case JS_TAG_BOOL:
-      return nota_write_sym(JS_VALUE_GET_BOOL(v), nota);
-    case JS_TAG_UNDEFINED:
-      return nota_write_sym(NOTA_NULL, nota);
-    case JS_TAG_NULL:
-      return nota_write_sym(NOTA_NULL, nota);
-    case JS_TAG_OBJECT:
-      if (JS_IsArray(js, v)) {
-        int n = js_arrlen(v);
-        nota = nota_write_array(n, nota);
-        for (int i = 0; i < n; i++)
-          nota = js_do_nota_encode(js_getpropidx(v, i), nota);
-        return nota;
-      }
-      n = JS_GetOwnPropertyNames(js, &ptab, &plen, v, JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
-      nota = nota_write_record(plen, nota);
-      
-      for (int i = 0; i < plen; i++) {
-        val = JS_GetProperty(js,v,ptab[i].atom);
-        str = JS_AtomToCString(js, ptab[i].atom);
-      	JS_FreeAtom(js, ptab[i].atom);
-	
-        nota = nota_write_text(str, nota);
-	      JS_FreeCString(js, str);
-	
-        nota = js_do_nota_encode(val, nota);
-	      JS_FreeValue(js,val);
-      }
-      js_free(js, ptab);
-      return nota;
-    default:
-      return nota;
-  }
-  return nota;
 }
 
 struct rgba js2color(JSValue v) {
@@ -739,7 +610,7 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
   return best;
 }
 
-JSC_GETSET(warp_gravity, strength, number)
+/*JSC_GETSET(warp_gravity, strength, number)
 JSC_GETSET(warp_gravity, decay, number)
 JSC_GETSET(warp_gravity, spherical, boolean)
 JSC_GETSET(warp_gravity, mask, bitmask)
@@ -758,7 +629,7 @@ JSC_GETSET(warp_damp, damp, vec3)
 static const JSCFunctionListEntry js_warp_damp_funcs [] = {
   CGETSET_ADD(warp_damp, damp)
 };
-
+*/
 sg_bindings js2bind(JSValue v)
 {
   sg_bindings bind = {0};
@@ -1082,7 +953,7 @@ JSC_CCALL(render_setuniv,
 )
 
 JSC_CCALL(render_setuniv2,
-  HMM_Vec4 v;
+  HMM_Vec4 v = {0};
   v.xy = js2vec2(argv[2]);
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(v.e));
 )
@@ -1092,7 +963,6 @@ JSC_CCALL(render_setuniv3,
   f.xyz = js2vec3(argv[2]);
   sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(f.e));
 )
-
 
 JSC_CCALL(render_setuniv4,
   HMM_Vec4 v = {0};
@@ -1106,15 +976,15 @@ JSC_CCALL(render_setuniv4,
 )
 
 JSC_CCALL(render_setuniproj,
-  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.p));
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.p.e));
 )
 
 JSC_CCALL(render_setuniview,
-  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.v));
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.v.e));
 )
 
 JSC_CCALL(render_setunivp,
-  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.vp));
+  sg_apply_uniforms(js2number(argv[0]), js2number(argv[1]), SG_RANGE_REF(globalview.vp.e));
 )
 
 JSC_CCALL(render_setunibones,
@@ -1212,10 +1082,10 @@ JSC_CCALL(render_make_sprite_ssbo,
   for (int i = 0; i < js_arrlen(array); i++) {
     JSValue sub = js_getpropidx(array,i);
     
-    transform *tr = js2transform(js_getpropstr(sub, "transform"));
+//    transform *tr = js2transform(js_getpropstr(sub, "transform"));
     JSValue image = js_getpropstr(sub, "image");
     
-    ms[i].model = transform2mat(tr);
+    ms[i].model = js2transform_mat(js, js_getpropstr(sub,"transform"));// transform2mat(tr);
     ms[i].rect = js2rect(js_getpropstr(image,"rect"));
     ms[i].shade = js2vec4(js_getpropstr(sub,"shade"));
   }
@@ -1260,10 +1130,6 @@ JSC_CCALL(render_spdraw,
 )
 
 JSC_CCALL(render_setpipeline, sg_apply_pipeline(*js2sg_pipeline(argv[0]));)
-JSC_CCALL(render_imgui_new, gui_newframe(js2number(argv[0]),js2number(argv[1]),js2number(argv[2])); )
-JSC_CCALL(render_imgui_end, gui_endframe())
-
-JSC_CCALL(render_imgui_init, return gui_init(js))
 
 JSC_SCALL(render_text_size,
   font *f = js2font(argv[1]);
@@ -1299,9 +1165,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, setuniv2, 2),
   MIST_FUNC_DEF(render, setuniv4, 2),
   MIST_FUNC_DEF(render, setpipeline, 1),
-  MIST_FUNC_DEF(render, imgui_new, 3),
-  MIST_FUNC_DEF(render, imgui_end, 0),
-  MIST_FUNC_DEF(render, imgui_init, 0),
   MIST_FUNC_DEF(render, make_t_ssbo, 2),
   MIST_FUNC_DEF(render, make_particle_ssbo, 2),
   MIST_FUNC_DEF(render, make_sprite_ssbo, 2)
@@ -1818,7 +1681,6 @@ static const JSCFunctionListEntry js_input_funcs[] = {
   MIST_FUNC_DEF(input, mouse_lock, 1),
 };
 
-JSC_CCALL(prosperon_phys2d_step, phys2d_update(js2number(argv[0])))
 JSC_CCALL(prosperon_window_render, openglRender(js2vec2(argv[0])))
 JSC_CCALL(prosperon_guid,
   int bits = 32;
@@ -1836,7 +1698,6 @@ JSC_CCALL(prosperon_guid,
 )
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
-  MIST_FUNC_DEF(prosperon, phys2d_step, 1),
   MIST_FUNC_DEF(prosperon, window_render, 1),
   MIST_FUNC_DEF(prosperon, guid, 0),
 };
@@ -1893,16 +1754,6 @@ static const JSCFunctionListEntry js_console_funcs[] = {
   MIST_FUNC_DEF(console, term_print, 1),
   MIST_FUNC_DEF(console,rec,4),
   CGETSET_ADD(global, stdout_lvl)
-};
-
-JSC_GETSET_GLOBAL(CHANNELS, number)
-JSC_GETSET_GLOBAL(BUF_FRAMES, number)
-JSC_GETSET_GLOBAL(SAMPLERATE, number)
-
-static const JSCFunctionListEntry js_audio_funcs[] = {
-  CGETSET_ADD_NAME(global, CHANNELS, channels),
-  CGETSET_ADD_NAME(global, BUF_FRAMES, buffer_frames),
-  CGETSET_ADD_NAME(global, SAMPLERATE, samplerate),
 };
 
 JSC_CCALL(profile_now, return number2js(stm_now()))
@@ -2018,9 +1869,6 @@ JSValue js_io_chmod(JSContext *js, JSValue self, int argc, JSValue *argv)
   return JS_UNDEFINED;
 }
 
-JSC_SCALL(io_pack_start, pack_start(str))
-JSC_SCALL(io_pack_add, pack_add(str))
-JSC_CCALL(io_pack_end, pack_end())
 JSC_SCALL(io_mod,
   #ifndef __EMSCRIPTEN__
   ret = number2js(file_mod_secs(str));
@@ -2039,21 +1887,16 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, slurp, 1),
   MIST_FUNC_DEF(io, slurpbytes, 1),
   MIST_FUNC_DEF(io, slurpwrite, 2),
-  MIST_FUNC_DEF(io, pack_start, 1),
-  MIST_FUNC_DEF(io, pack_add, 1),
-  MIST_FUNC_DEF(io, pack_end, 0),
   MIST_FUNC_DEF(io, mod,1)
 };
 
+/*
 JSC_CCALL(physics_closest_point,
   void *v1 = js2cpvec2arr(argv[1]);
   ret = number2js(point2segindex(js2vec2(argv[0]), v1, js2number(argv[2])));
   arrfree(v1);
   return ret;
 )
-
-JSC_CCALL(physics_make_gravity, return warp_gravity2js(warp_gravity_make()))
-JSC_CCALL(physics_make_damp, return warp_damp2js(warp_damp_make()))
 
 void bb_query_fn(cpShape *shape, JSValue *cb)
 {
@@ -2125,62 +1968,14 @@ void space_shape_fn(cpShape *shape, JSValue *fn) {
   script_call_sym(*fn, 1, &v);
 }
 
-JSC_CCALL(physics_eachshape,
-  JSValue fn = argv[0];
-  cpSpaceEachShape(space, space_shape_fn, &fn);
-)
-
-void space_body_fn(cpBody *body, JSValue *fn) {
-  JSValue v = body2go(body)->ref;
-  script_call_sym(*fn, 1, &v);
-}
-
-JSC_CCALL(physics_eachbody,
-  JSValue fn = argv[0];
-  cpSpaceEachBody(space, space_body_fn, &fn);
-)
-
-void space_constraint_fn(cpConstraint *c, JSValue *fn) {
-  JSValue v = *(JSValue*)cpConstraintGetUserData(c);
-  script_call_sym(*fn, 1, &v);
-}
-
-JSC_CCALL(physics_eachconstraint,
-  JSValue fn = argv[0];
-  cpSpaceEachConstraint(space, space_constraint_fn, &fn);
-)
-
-#define SPACE_GETSET(ENTRY, CPENTRY, TYPE) \
-JSC_CCALL(physics_get_##ENTRY, return TYPE##2js(cpSpaceGet##CPENTRY (space))) \
-JSValue js_physics_set_##ENTRY (JS_SETSIG) { \
-  cpSpaceSet##CPENTRY(space, js2##TYPE(val));   return JS_UNDEFINED; \
-} \
-
-SPACE_GETSET(iterations, Iterations, number)
-SPACE_GETSET(idle_speed, IdleSpeedThreshold, number)
-SPACE_GETSET(collision_slop, CollisionSlop, number)
-SPACE_GETSET(sleep_time, SleepTimeThreshold, number)
-SPACE_GETSET(collision_bias, CollisionBias, number)
-SPACE_GETSET(collision_persistence, CollisionPersistence, number)
-
 static const JSCFunctionListEntry js_physics_funcs[] = {
   MIST_FUNC_DEF(physics, point_query, 3),
   MIST_FUNC_DEF(physics, point_query_nearest, 2),
   MIST_FUNC_DEF(physics, ray_query, 4),
   MIST_FUNC_DEF(physics, box_query, 2),
   MIST_FUNC_DEF(physics, closest_point, 3),
-  MIST_FUNC_DEF(physics, make_damp, 0),
-  MIST_FUNC_DEF(physics, make_gravity, 0),
-  MIST_FUNC_DEF(physics, eachbody, 1),
-  MIST_FUNC_DEF(physics, eachshape, 1),
-  MIST_FUNC_DEF(physics, eachconstraint, 1),
-  CGETSET_ADD(physics, iterations),
-  CGETSET_ADD(physics, idle_speed),
-  CGETSET_ADD(physics, sleep_time),
-  CGETSET_ADD(physics, collision_slop),
-  CGETSET_ADD(physics, collision_bias),
-  CGETSET_ADD(physics, collision_persistence),
 };
+*/
 
 JSC_GETSET(transform, pos, vec3)
 JSC_GETSET(transform, scale, vec3f)
@@ -2255,57 +2050,6 @@ static const JSCFunctionListEntry js_transform_funcs[] = {
   MIST_FUNC_DEF(transform, unit, 0),
 };
 
-JSC_GETSET(dsp_node, pass, boolean)
-JSC_GETSET(dsp_node, off, boolean)
-JSC_GETSET(dsp_node, gain, number)
-JSC_GETSET(dsp_node, pan, number)
-
-JSC_CCALL(dsp_node_plugin, plugin_node(js2dsp_node(self), js2dsp_node(argv[0])))
-JSC_CCALL(dsp_node_unplug, unplug_node(js2dsp_node(self)))
-
-static const JSCFunctionListEntry js_dsp_node_funcs[] = {
-  CGETSET_ADD(dsp_node, pass),
-  CGETSET_ADD(dsp_node, off),
-  CGETSET_ADD(dsp_node, gain),
-  CGETSET_ADD(dsp_node, pan),
-  MIST_FUNC_DEF(dsp_node, plugin, 1),
-  MIST_FUNC_DEF(dsp_node, unplug, 0),
-};
-
-JSC_GETSET(sound, loop, boolean)
-JSC_GETSET(sound, frame, number)
-JSC_CCALL(sound_frames, return number2js(js2sound(self)->data->frames))
-
-static const JSCFunctionListEntry js_sound_funcs[] = {
-  CGETSET_ADD(sound, loop),
-  CGETSET_ADD(sound, frame),
-  MIST_FUNC_DEF(sound, frames, 0),
-};
-
-JSC_GET(pcm, ch, number)
-JSC_GET(pcm, samplerate, number)
-JSC_GET(pcm, frames, number)
-JSC_CCALL(pcm_format,
-  pcm_format(js2pcm(self), js2number(argv[0]), js2number(argv[1]));
-)
-
-JSC_SCALL(pcm_save_qoa,
-  save_qoa(str, js2pcm(self));
-)
-
-JSC_SCALL(pcm_save_wav,
-  save_wav(str, js2pcm(self));
-)
-
-static const JSCFunctionListEntry js_pcm_funcs[] = {
-  MIST_GET(pcm, ch),
-  MIST_GET(pcm, samplerate),
-  MIST_GET(pcm, frames),
-  MIST_FUNC_DEF(pcm, format, 2),
-  MIST_FUNC_DEF(pcm, save_qoa, 1),
-  MIST_FUNC_DEF(pcm, save_wav, 1)
-};
-
 static JSValue js_window_get_fullscreen(JSContext *js, JSValue self) { return boolean2js(js2window(self)->fullscreen); }
 static JSValue js_window_set_fullscreen(JSContext *js, JSValue self, JSValue v) { window_setfullscreen(js2window(self), js2boolean(v)); return JS_UNDEFINED; }
 
@@ -2335,405 +2079,6 @@ static const JSCFunctionListEntry js_window_funcs[] = {
   CGETSET_ADD(window, high_dpi),
   CGETSET_ADD(window, sample_count),
   MIST_FUNC_DEF(window, set_icon, 1)
-};
-
-JSValue js_gameobject_set_pos(JSContext *js, JSValue self, JSValue val) {
-  cpBody *b = js2gameobject(self)->body;
-  cpBodySetPosition(b, js2cvec2(val));
-  if (cpBodyGetType(b) == CP_BODY_TYPE_STATIC)
-    cpSpaceReindexShapesForBody(space, b);
-
-  gameobject_apply(js2gameobject(self));
-  return JS_UNDEFINED;
-}
-JSValue js_gameobject_get_pos(JSContext *js, JSValue self) { return cvec22js(cpBodyGetPosition(js2gameobject(self)->body)); }
-JSValue js_gameobject_set_angle (JSContext *js, JSValue self, JSValue val) { cpBodySetAngle(js2gameobject(self)->body, js2angle(val)); return JS_UNDEFINED; }
-JSValue js_gameobject_get_angle (JSContext *js, JSValue self) { return angle2js(cpBodyGetAngle(js2gameobject(self)->body)); }
-JSC_GETSET_BODY(velocity, Velocity, cvec2)
-JSValue js_gameobject_set_angularvelocity (JSContext *js, JSValue self, JSValue val) { cpBodySetAngularVelocity(js2gameobject(self)->body, js2angle(val)); return JS_UNDEFINED;}
-JSValue js_gameobject_get_angularvelocity (JSContext *js, JSValue self) { return angle2js(cpBodyGetAngularVelocity(js2gameobject(self)->body)); }
-JSC_GETSET_BODY(moi, Moment, number)
-JSC_GETSET_BODY(torque, Torque, number)
-JSC_CCALL(gameobject_impulse, cpBodyApplyImpulseAtWorldPoint(js2gameobject(self)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(self)->body)))
-JSC_CCALL(gameobject_force, cpBodyApplyForceAtWorldPoint(js2gameobject(self)->body, js2vec2(argv[0]).cp, cpBodyGetPosition(js2gameobject(self)->body)))
-JSC_CCALL(gameobject_force_local, cpBodyApplyForceAtLocalPoint(js2gameobject(self)->body, js2vec2(argv[0]).cp, js2vec2(argv[1]).cp))
-JSC_GETSET_BODY(mass, Mass, number)
-JSC_GETSET_BODY(phys, Type, number)
-JSC_GETSET_APPLY(gameobject, layer, number)
-JSC_GETSET(gameobject, damping, number)
-JSC_GETSET(gameobject, timescale, number)
-JSC_GETSET(gameobject, maxvelocity, number)
-JSC_GETSET(gameobject, maxangularvelocity, number)
-JSC_GETSET(gameobject, warp_mask, bitmask)
-JSC_CCALL(gameobject_sleeping, return boolean2js(cpBodyIsSleeping(js2gameobject(self)->body)))
-JSC_CCALL(gameobject_sleep, cpBodySleep(js2gameobject(self)->body))
-JSC_CCALL(gameobject_wake, cpBodyActivate(js2gameobject(self)->body))
-
-void body_shape_fn(cpBody *body, cpShape *shape, JSValue *fn) {
-  JSValue v = *(JSValue*)cpShapeGetUserData(shape);
-  script_call_sym(*fn, 1, &v);
-}
-
-JSC_CCALL(gameobject_eachshape,
-  gameobject *g = js2gameobject(self);
-  cpBodyEachShape(g->body, body_shape_fn, &argv[0]);
-)
-
-void body_constraint_fn(cpBody *body, cpConstraint *c, JSValue *fn) {
-  JSValue v = *(JSValue*)cpConstraintGetUserData(c);
-  script_call_sym(*fn, 1, &v);
-}
-
-JSC_CCALL(gameobject_eachconstraint,
-  gameobject *g = js2gameobject(self);
-  JSValue fn = argv[0];
-  cpBodyEachConstraint(g->body, body_constraint_fn, &fn);
-)
-
-void body_arbiter_fn(cpBody *body, cpArbiter *arb, JSValue *fn) {
-  JSValue v = arb2js(arb);
-  script_call_sym(*fn, 1, &v);
-}
-
-JSC_CCALL(gameobject_eacharbiter,
-  gameobject *g = js2gameobject(self);
-  JSValue fn = argv[0];
-  cpBodyEachArbiter(g->body, body_arbiter_fn, &fn);
-)
-
-JSC_CCALL(gameobject_transform,
-  return JS_DupValue(js, transform2js(js2gameobject(self)->t));
-)
-
-static const JSCFunctionListEntry js_gameobject_funcs[] = {
-  CGETSET_ADD(gameobject, pos),
-  CGETSET_ADD(gameobject, angle),
-  CGETSET_ADD(gameobject,mass),
-  CGETSET_ADD(gameobject,damping),
-  CGETSET_ADD(gameobject,timescale),
-  CGETSET_ADD(gameobject,maxvelocity),
-  CGETSET_ADD(gameobject,maxangularvelocity),
-  CGETSET_ADD(gameobject,layer),
-  CGETSET_ADD(gameobject,warp_mask),
-  CGETSET_ADD(gameobject, velocity),
-  CGETSET_ADD(gameobject, angularvelocity),
-  CGETSET_ADD(gameobject, moi),
-  CGETSET_ADD(gameobject, phys),
-  CGETSET_ADD(gameobject, torque),
-  MIST_FUNC_DEF(gameobject, impulse, 1),
-  MIST_FUNC_DEF(gameobject, force, 1),
-  MIST_FUNC_DEF(gameobject, force_local, 2),
-  MIST_FUNC_DEF(gameobject, eachshape, 1),
-  MIST_FUNC_DEF(gameobject, eachconstraint, 1),
-  MIST_FUNC_DEF(gameobject, eacharbiter, 1),
-  MIST_FUNC_DEF(gameobject, sleep, 0),
-  MIST_FUNC_DEF(gameobject, sleeping, 0),
-  MIST_FUNC_DEF(gameobject, wake, 0),
-  MIST_FUNC_DEF(gameobject, transform, 0),
-};
-
-#define CC_GETSET(CPTYPE, CP, ENTRY, CPENTRY, TYPE) \
-JSC_CCALL(CP##_get_##ENTRY, return TYPE##2js(CP##Get##CPENTRY (js2##CPTYPE(self)))) \
-JSValue js_##CP##_set_##ENTRY (JSContext *js, JSValue self, JSValue val) { \
-  CP##Set##CPENTRY (js2##CPTYPE(self), js2##TYPE (val)); \
-  return JS_UNDEFINED; \
-} \
-
-#define CNST_GETSET(ENTRY,CPENTRY,TYPE) CC_GETSET(cpConstraint, cpConstraint, ENTRY, CPENTRY, TYPE)
-
-CNST_GETSET(max_force, MaxForce, number)
-CNST_GETSET(max_bias, MaxBias, number)
-CNST_GETSET(error_bias, ErrorBias, number)
-CNST_GETSET(collide_bodies, CollideBodies, boolean)
-
-JSC_CCALL(cpConstraint_broken, return boolean2js(cpSpaceContainsConstraint(space, js2cpConstraint(self))))
-JSC_CCALL(cpConstraint_break, 
-  if (cpSpaceContainsConstraint(space, js2cpConstraint(self)))
-    cpSpaceRemoveConstraint(space, js2cpConstraint(self));
-)
-
-JSC_CCALL(cpConstraint_bodyA,
-  cpBody *b = cpConstraintGetBodyA(js2cpConstraint(self));
-  gameobject *go = body2go(b);
-  return JS_DupValue(js,gameobject2js(go));
-)
-
-JSC_CCALL(cpConstraint_bodyB,
-  cpBody *b = cpConstraintGetBodyB(js2cpConstraint(self));
-  gameobject *go = body2go(b);
-  return JS_DupValue(js,gameobject2js(go));
-)
-
-static const JSCFunctionListEntry js_cpConstraint_funcs[] = {
-  MIST_FUNC_DEF(cpConstraint, bodyA, 0),
-  MIST_FUNC_DEF(cpConstraint, bodyB, 0),
-  CGETSET_ADD(cpConstraint, max_force),
-  CGETSET_ADD(cpConstraint, max_bias),
-  CGETSET_ADD(cpConstraint, error_bias),
-  CGETSET_ADD(cpConstraint, collide_bodies),
-  MIST_FUNC_DEF(cpConstraint, broken, 0),
-  MIST_FUNC_DEF(cpConstraint, break, 0)
-};
-
-JSValue prep_constraint(cpConstraint *c)
-{
-  JSValue ret = cpConstraint2js(c);
-  JSValue *cb = malloc(sizeof(JSValue));
-  *cb = ret;
-  cpConstraintSetUserData(c, cb);
-  return ret;
-}
-
-CC_GETSET(cpConstraint, cpPinJoint, distance, Dist, number)
-CC_GETSET(cpConstraint, cpPinJoint, anchor_a, AnchorA, cvec2)
-CC_GETSET(cpConstraint, cpPinJoint, anchor_b, AnchorB, cvec2)
-
-static const JSCFunctionListEntry js_pin_funcs[] = {
-  CGETSET_ADD(cpPinJoint, distance),
-  CGETSET_ADD(cpPinJoint, anchor_a),
-  CGETSET_ADD(cpPinJoint, anchor_b)
-};
-
-JSC_CCALL(joint_pin,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_pin);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpPinJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, cpvzero,cpvzero)));
-  JS_SetPrototype(js, ret, js_pin);
-)
-
-CC_GETSET(cpConstraint, cpPivotJoint, anchor_a, AnchorA, cvec2)
-CC_GETSET(cpConstraint, cpPivotJoint, anchor_b, AnchorB, cvec2)
-
-static const JSCFunctionListEntry js_pivot_funcs[] = {
-  CGETSET_ADD(cpPivotJoint, anchor_a),
-  CGETSET_ADD(cpPivotJoint, anchor_b)
-};
-
-JSC_CCALL(joint_pivot,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_pivot);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpPivotJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body,js2vec2(argv[2]).cp)));
-  JS_SetPrototype(js, ret, js_pivot);
-)
-
-CC_GETSET(cpConstraint, cpGearJoint, phase, Phase, angle)
-CC_GETSET(cpConstraint, cpGearJoint, ratio, Ratio, number)
-
-static const JSCFunctionListEntry js_gear_funcs[] = {
-  CGETSET_ADD(cpGearJoint, phase),
-  CGETSET_ADD(cpGearJoint, ratio)
-};
-  
-JSC_CCALL(joint_gear,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_gear);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpGearJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]))));
-  JS_SetPrototype(js, ret, js_gear);
-)
-
-CC_GETSET(cpConstraint, cpRotaryLimitJoint, min, Min, number)
-CC_GETSET(cpConstraint, cpRotaryLimitJoint, max, Max, number)
-
-static const JSCFunctionListEntry js_rotary_funcs[] = {
-  CGETSET_ADD(cpRotaryLimitJoint, min),
-  CGETSET_ADD(cpRotaryLimitJoint, max)
-};
-
-JSC_CCALL(joint_rotary,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_rotary);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpRotaryLimitJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]))));
-  JS_SetPrototype(js, ret, js_rotary);
-)
-
-CC_GETSET(cpConstraint, cpDampedRotarySpring, rest_angle, RestAngle, number)
-CC_GETSET(cpConstraint, cpDampedRotarySpring, stiffness, Stiffness, number)
-CC_GETSET(cpConstraint, cpDampedRotarySpring, damping, Damping, number)
-
-static const JSCFunctionListEntry js_damped_rotary_funcs[] = {
-  CGETSET_ADD(cpDampedRotarySpring, rest_angle),
-  CGETSET_ADD(cpDampedRotarySpring, stiffness),
-  CGETSET_ADD(cpDampedRotarySpring, damping)
-};
-
-JSC_CCALL(joint_damped_rotary,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_damped_rotary);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpDampedRotarySpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2number(argv[2]), js2number(argv[3]), js2number(argv[4]))));
-  JS_SetPrototype(js, ret, js_damped_rotary);
-)
-
-CC_GETSET(cpConstraint, cpDampedSpring, anchor_a, AnchorA, cvec2)
-CC_GETSET(cpConstraint, cpDampedSpring, anchor_b, AnchorB, cvec2)
-CC_GETSET(cpConstraint, cpDampedSpring, rest_length, RestLength, number)
-CC_GETSET(cpConstraint, cpDampedSpring, stiffness, Stiffness, number)
-CC_GETSET(cpConstraint, cpDampedSpring, damping, Damping, number)
-
-static const JSCFunctionListEntry js_damped_spring_funcs[] = {
-  CGETSET_ADD(cpDampedSpring, anchor_a),
-  CGETSET_ADD(cpDampedSpring, anchor_b),
-  CGETSET_ADD(cpDampedSpring, rest_length),
-  CGETSET_ADD(cpDampedSpring, stiffness),
-  CGETSET_ADD(cpDampedSpring, damping)
-};
-
-JSC_CCALL(joint_damped_spring,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_damped_spring);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpDampedSpringNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5]), js2number(argv[6]))));
-  JS_SetPrototype(js, ret, js_damped_spring);
-)
-
-CC_GETSET(cpConstraint, cpGrooveJoint, groove_a, GrooveA, cvec2)
-CC_GETSET(cpConstraint, cpGrooveJoint, groove_b, GrooveB, cvec2)
-CC_GETSET(cpConstraint, cpGrooveJoint, anchor_b, AnchorB, cvec2)
-
-static const JSCFunctionListEntry js_groove_funcs[] = {
-  CGETSET_ADD(cpGrooveJoint, groove_a),
-  CGETSET_ADD(cpGrooveJoint, groove_b),
-  CGETSET_ADD(cpGrooveJoint, anchor_b)
-};
-
-JSC_CCALL(joint_groove,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_groove);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpGrooveJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2vec2(argv[4]).cp)));
-  JS_SetPrototype(js, ret, js_groove);
-)
-
-CC_GETSET(cpConstraint, cpSlideJoint, anchor_a, AnchorA, cvec2)
-CC_GETSET(cpConstraint, cpSlideJoint, anchor_b, AnchorB, cvec2)
-CC_GETSET(cpConstraint, cpSlideJoint, min, Min, number)
-CC_GETSET(cpConstraint, cpSlideJoint, max, Max, number)
-
-static const JSCFunctionListEntry js_slide_funcs[] = {
-  CGETSET_ADD(cpSlideJoint, anchor_a),
-  CGETSET_ADD(cpSlideJoint, anchor_b),
-  CGETSET_ADD(cpSlideJoint, min),
-  CGETSET_ADD(cpSlideJoint, max)
-};
-
-JSC_CCALL(joint_slide,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_slide);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpSlideJointNew(js2gameobject(argv[0])->body, js2gameobject(argv[1])->body, js2vec2(argv[2]).cp, js2vec2(argv[3]).cp, js2number(argv[4]), js2number(argv[5]))));
-  JS_SetPrototype(js, ret, js_slide);
-)
-
-CC_GETSET(cpConstraint, cpRatchetJoint, angle, Angle, angle)
-CC_GETSET(cpConstraint, cpRatchetJoint, phase, Phase, angle)
-CC_GETSET(cpConstraint, cpRatchetJoint, ratchet, Ratchet, number)
-
-static const JSCFunctionListEntry js_ratchet_funcs[] = {
-  CGETSET_ADD(cpRatchetJoint, angle),
-  CGETSET_ADD(cpRatchetJoint, phase),
-  CGETSET_ADD(cpRatchetJoint, ratchet)
-};
-
-JSC_CCALL(joint_ratchet,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_ratchet);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpRatchetJointNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2]), js2number(argv[3]))));
-  JS_SetPrototype(js, ret, js_ratchet);
-)
-
-CC_GETSET(cpConstraint, cpSimpleMotor, rate, Rate, angle)
-
-static const JSCFunctionListEntry js_motor_funcs[] = {
-  CGETSET_ADD(cpSimpleMotor, rate)
-};
-
-JSC_CCALL(joint_motor,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_motor);
-  ret = prep_constraint(cpSpaceAddConstraint(space, cpSimpleMotorNew(js2body(argv[0]), js2body(argv[1]), js2number(argv[2]))));
-  JS_SetPrototype(js, ret, js_motor);
-)
-
-static const JSCFunctionListEntry js_joint_funcs[] = {
-  MIST_FUNC_DEF(joint, pin, 2),
-  MIST_FUNC_DEF(joint, pivot, 3),
-  MIST_FUNC_DEF(joint, gear, 4),
-  MIST_FUNC_DEF(joint, rotary, 4),
-  MIST_FUNC_DEF(joint, damped_rotary, 5),
-  MIST_FUNC_DEF(joint, damped_spring, 7),
-  MIST_FUNC_DEF(joint, groove, 5),
-  MIST_FUNC_DEF(joint, slide, 6),
-  MIST_FUNC_DEF(joint, ratchet, 4),
-  MIST_FUNC_DEF(joint, motor, 3)
-};
-
-JSC_CCALL(dspsound_noise, return dsp_node2js(dsp_whitenoise()))
-JSC_CCALL(dspsound_pink, return dsp_node2js(dsp_pinknoise()))
-JSC_CCALL(dspsound_red, return dsp_node2js(dsp_rednoise()))
-JSC_CCALL(dspsound_pitchshift, return dsp_node2js(dsp_pitchshift(js2number(argv[0]))))
-JSC_CCALL(dspsound_noise_gate, return dsp_node2js(dsp_noise_gate(js2number(argv[0]))))
-
-static JSValue dspnum;
-
-JSC_CCALL(dspsound_limiter,
-  ret = dsp_node2js(dsp_limiter(js2number(argv[0])));
-  JS_SetPrototype(js, ret, dspnum);  
-)
-
-static const JSCFunctionListEntry js_compressor_funcs[] = {
-
-};
-JSC_CCALL(dspsound_compressor, return dsp_node2js(dsp_compressor()))
-
-JSC_GETSET(bitcrush, sr, number)
-JSC_GETSET(bitcrush, depth, number)
-static const JSCFunctionListEntry js_bitcrush_funcs[] = {
-  CGETSET_ADD(bitcrush, sr),
-  CGETSET_ADD(bitcrush, depth)
-};
-JSC_CCALL(dspsound_crush,
-  ret = dsp_node2js(dsp_bitcrush(js2number(argv[0]), js2number(argv[1])));
-  JS_SetPrototype(js, ret, bitcrush_proto);
-)
-
-static const JSCFunctionListEntry js_adsr_funcs[] = {
-
-};
-
-static const JSCFunctionListEntry js_phasor_funcs[] = {
-
-};
-
-JSC_CCALL(dspsound_lpf, return dsp_node2js(dsp_lpf(js2number(argv[0]))))
-JSC_CCALL(dspsound_hpf, return dsp_node2js(dsp_hpf(js2number(argv[0]))))
-
-JSC_GETSET(delay, ms_delay, number)
-JSC_GETSET(delay, decay, number)
-static const JSCFunctionListEntry js_delay_funcs[] = {
-  CGETSET_ADD(delay, ms_delay),
-  CGETSET_ADD(delay, decay),
-};
-JSC_CCALL(dspsound_delay,
-  ret = dsp_node2js(dsp_delay(js2number(argv[0]), js2number(argv[1])));
-  JS_SetPrototype(js, ret, delay_proto);
-)
-
-JSC_CCALL(dspsound_fwd_delay, return dsp_node2js(dsp_fwd_delay(js2number(argv[0]), js2number(argv[1]))))
-JSC_CCALL(dspsound_source,
-  ret = dsp_node2js(dsp_source(js2pcm(argv[0])));
-  JS_SetPrototype(js, ret, sound_proto);
-)
-JSC_CCALL(dspsound_mix, return dsp_node2js(make_node(NULL,NULL,NULL)))
-JSC_CCALL(dspsound_master, return dsp_node2js(masterbus))
-JSC_CCALL(dspsound_plugin_node, plugin_node(js2dsp_node(argv[0]), js2dsp_node(argv[1]));)
-JSC_SCALL(dspsound_mod, ret = dsp_node2js(dsp_mod(str))) 
-JSC_SSCALL(dspsound_midi, ret = dsp_node2js(dsp_midi(str, make_soundfont(str2))))
-
-static const JSCFunctionListEntry js_dspsound_funcs[] = {
-  MIST_FUNC_DEF(dspsound, noise, 0),
-  MIST_FUNC_DEF(dspsound, pink, 0),
-  MIST_FUNC_DEF(dspsound, red, 0),
-  MIST_FUNC_DEF(dspsound, pitchshift, 1),
-  MIST_FUNC_DEF(dspsound, noise_gate, 1),
-  MIST_FUNC_DEF(dspsound, limiter, 1),
-  MIST_FUNC_DEF(dspsound, compressor, 0),
-  MIST_FUNC_DEF(dspsound, crush, 2),
-  MIST_FUNC_DEF(dspsound, lpf, 1),
-  MIST_FUNC_DEF(dspsound, hpf, 1),
-  MIST_FUNC_DEF(dspsound, delay, 2),
-  MIST_FUNC_DEF(dspsound, fwd_delay, 2),
-  MIST_FUNC_DEF(dspsound, source, 1),
-  MIST_FUNC_DEF(dspsound, mix, 0),
-  MIST_FUNC_DEF(dspsound, master, 0),
-  MIST_FUNC_DEF(dspsound, plugin_node, 2),
-  MIST_FUNC_DEF(dspsound, midi, 2),
-  MIST_FUNC_DEF(dspsound, mod, 1)
 };
 
 JSC_CCALL(datastream_time, return number2js(plm_get_time(js2datastream(self)->plm)); )
@@ -2772,7 +2117,7 @@ JSC_CCALL(texture_getid,
   return number2js(tex->id.id);
 )
 
-JSC_CCALL(texture_inram, return boolean2js(js2texture(self)->data));
+JSC_CCALL(texture_inram, return boolean2js((int)js2texture(self)->data));
 
 JSC_CCALL(texture_fill,
   texture_fill(js2texture(self), js2color(argv[0]));
@@ -2927,33 +2272,6 @@ static const JSCFunctionListEntry js_geometry_funcs[] = {
   MIST_FUNC_DEF(geometry, rect_point_inside, 2),
 };
 
-JSValue js_nota_encode(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  if (argc < 1) return JS_UNDEFINED;
-  
-  JSValue obj = argv[0];
-  char nota[1024*1024]; // 1MB
-  char *e = js_do_nota_encode(obj, nota);
-
-  return JS_NewArrayBufferCopy(js, (unsigned char*)nota, e-nota);
-}
-
-JSValue js_nota_decode(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  if (argc < 1) return JS_UNDEFINED;
-
-  size_t len;
-  unsigned char *nota = JS_GetArrayBuffer(js, &len, argv[0]);
-  JSValue ret;
-  js_do_nota_decode(&ret, (char*)nota);
-  return ret;
-}
-
-static const JSCFunctionListEntry js_nota_funcs[] = {
-  MIST_FUNC_DEF(nota, encode, 1),
-  MIST_FUNC_DEF(nota, decode, 1)
-};
-
 JSValue js_os_cwd(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   char cwd[PATH_MAX];
@@ -2998,7 +2316,6 @@ JSC_CCALL(os_backend,
 
 JSC_CCALL(os_quit, quit();)
 JSC_CCALL(os_exit, exit(js2number(argv[0]));)
-JSC_CCALL(os_reindex_static, cpSpaceReindexStatic(space));
 JSC_CCALL(os_gc, script_gc());
 JSC_CCALL(os_mem_limit, script_mem_limit(js2number(argv[0])))
 JSC_CCALL(os_gc_threshold, script_gc_threshold(js2number(argv[0])))
@@ -3174,199 +2491,11 @@ JSC_CCALL(os_check_gc,
 )
 
 JSC_SSCALL(os_eval, ret = script_eval(str, str2))
-
-JSC_CCALL(os_make_body,
-  gameobject *g = MakeGameobject();
-  g->t = js2transform(argv[0]);
-  ret = gameobject2js(g);
-  g->ref = ret;  
-  return ret;
-)
-
-#define CP_GETSET(ENTRY, CPENTRY, TYPE) \
-JSC_CCALL(cpShape_get_##ENTRY, return TYPE##2js(cpShapeGet##CPENTRY (js2cpShape(self)))) \
-JSValue js_cpShape_set_##ENTRY (JSContext *js, JSValue self, JSValue val) { \
-  cpShapeSet##CPENTRY (js2cpShape(self), js2##TYPE (val)); return JS_UNDEFINED; \
-} \
-
-CP_GETSET(sensor, Sensor, boolean)
-CP_GETSET(friction, Friction, number)
-CP_GETSET(elasticity, Elasticity, number)
-CP_GETSET(mass, Mass, number)
-
-JSC_CCALL(cpShape_area, return number2js(cpShapeGetArea(js2cpShape(self))))
-
-JSC_CCALL(cpShape_get_surface_velocity, return vec22js((HMM_Vec2)cpShapeGetSurfaceVelocity(js2cpShape(self))))
-JSValue js_cpShape_set_surface_velocity(JS_SETSIG) {
-  HMM_Vec2 v = js2vec2(val);
-  cpShapeSetSurfaceVelocity(js2cpShape(self), v.cp);
-  return JS_UNDEFINED;
-}
-
-JSC_CCALL(cpShape_get_mask, return bitmask2js(cpShapeGetFilter(js2cpShape(self)).mask));
-JSValue js_cpShape_set_mask (JS_SETSIG) {
-  cpShapeFilter f = cpShapeGetFilter(js2cpShape(self));
-  f.mask = js2bitmask(val);
-  cpShapeSetFilter(js2cpShape(self), f);
-  return JS_UNDEFINED;
-}
-
-JSC_CCALL(cpShape_get_category, return bitmask2js(cpShapeGetFilter(js2cpShape(self)).categories))
-JSValue js_cpShape_set_category (JS_SETSIG) {
-  cpShapeFilter f = cpShapeGetFilter(js2cpShape(self));
-  f.categories = js2bitmask(val);
-  cpShapeSetFilter(js2cpShape(self), f);
-  return JS_UNDEFINED;
-}
-
-JSC_CCALL(cpShape_body,
-  cpBody *b = cpShapeGetBody(js2cpShape(self));
-  gameobject *go = body2go(b);
-  return JS_DupValue(js,gameobject2js(go));
-)
-
-static void shape_query_fn(cpShape *shape, cpContactPointSet *points, JSValue *cb)
-{
-  JSValue v = *(JSValue*)cpShapeGetUserData(shape);
-  script_call_sym(*cb, 1, &v);
-}
-
-JSC_CCALL(cpShape_query,
-  cpSpaceShapeQuery(space, js2cpShape(self), shape_query_fn, &argv[0]);
-)
-
-static const JSCFunctionListEntry js_cpShape_funcs[] = {
-  CGETSET_ADD(cpShape, sensor),
-  CGETSET_ADD(cpShape, friction),
-  CGETSET_ADD(cpShape, elasticity),
-  CGETSET_ADD(cpShape, surface_velocity),
-  CGETSET_ADD(cpShape, mask),
-  CGETSET_ADD(cpShape, category),
-  CGETSET_ADD(cpShape, mass),
-  MIST_FUNC_DEF(cpShape, area, 0),
-  MIST_FUNC_DEF(cpShape, body, 0),
-  MIST_FUNC_DEF(cpShape, query, 1),
-};
-
-JSValue js_circle2d_set_radius(JSContext *js, JSValue self, JSValue val) {
-  cpCircleShapeSetRadius(js2cpShape(self), js2number(val));
-  return JS_UNDEFINED;
-}
-JSC_CCALL(circle2d_get_radius, return number2js(cpCircleShapeGetRadius(js2cpShape(self))))
-JSValue js_circle2d_set_offset(JSContext *js, JSValue self, JSValue val) {
-  cpCircleShapeSetOffset(js2cpShape(self), js2vec2(val).cp);
-  return JS_UNDEFINED;
-}
-JSC_CCALL(circle2d_get_offset, return vec22js((HMM_Vec2)cpCircleShapeGetOffset(js2cpShape(self))))
-
-static const JSCFunctionListEntry js_circle2d_funcs[] = {
-  CGETSET_ADD(circle2d, radius),
-  CGETSET_ADD(circle2d, offset)
-};
-
-JSValue prep_cpshape(cpShape *shape, gameobject *go)
-{
-  cpSpaceAddShape(space, shape);
-  cpShapeSetFilter(shape, (cpShapeFilter) {
-    .group = (cpGroup)go,
-    .mask = CP_ALL_CATEGORIES,
-    .categories = CP_ALL_CATEGORIES
-  });
-  cpShapeSetCollisionType(shape, (cpCollisionType)go);
-
-  JSValue ret = cpShape2js(shape);
-  JSValue *cb = malloc(sizeof(JSValue));
-  *cb = ret;
-  cpShapeSetUserData(shape, cb);
-  return ret;
-}
-
-JSC_CCALL(os_make_circle2d,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_circle2d);
-  gameobject *go = js2gameobject(argv[0]);
-  cpShape *shape = cpCircleShapeNew(go->body, 10, (cpVect){0,0});
-  ret = prep_cpshape(shape,go);    
-  JS_SetPrototype(js, ret, js_circle2d);
-  return ret;
-)
-
 JSC_CCALL(os_make_timer, return timer2js(timer_make(argv[0])))
 JSC_CCALL(os_update_timers, timer_update(js2number(argv[0])))
 
 JSC_CCALL(os_obj_size,
   
-)
-
-JSC_CCALL(poly2d_setverts,
-  cpShape *s = js2cpShape(self);
-  HMM_Vec2 *v = js2cpvec2arr(argv[0]);
-  gameobject *go = shape2go(s);
-  cpTransform t = {0};
-  t.a = go->t->scale.x;
-  t.b = 0;
-  t.tx = 0;
-  t.c = 0;
-  t.d = go->t->scale.y;
-  t.ty = 0;
-  cpPolyShapeSetVerts(s, arrlen(v), v, t);
-  arrfree(v);  
-)
-
-JSValue js_poly2d_set_radius(JSContext *js, JSValue self, JSValue val) {
-  cpPolyShapeSetRadius(js2cpShape(self), js2number(val));
-  return JS_UNDEFINED;
-}
-JSC_CCALL(poly2d_get_radius, return number2js(cpPolyShapeGetRadius(js2cpShape(self))))
-
-static const JSCFunctionListEntry js_poly2d_funcs[] = {
-  MIST_FUNC_DEF(poly2d, setverts, 2),
-  CGETSET_ADD(poly2d, radius)
-};
-
-JSC_CCALL(os_make_poly2d,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js, js_poly2d);
-  gameobject *go = js2gameobject(argv[0]);
-  cpShape *shape = cpPolyShapeNew(go->body, 0, NULL, (cpTransform){0}, 0);
-  ret = prep_cpshape(shape,go);  
-  JS_SetPrototype(js, ret, js_poly2d);
-  return ret;
-)
-
-JSC_CCALL(seg2d_set_endpoints,
-  cpSegmentShapeSetEndpoints(js2cpShape(self), js2vec2(argv[0]).cp, js2vec2(argv[1]).cp);
-  cpSpaceReindexShape(space, js2cpShape(self));
-)
-
-JSValue js_seg2d_set_radius(JSContext *js, JSValue self, JSValue val) {
-  cpSegmentShapeSetRadius(js2cpShape(self), js2number(val));
-  return JS_UNDEFINED;
-}
-JSC_CCALL(seg2d_get_radius, return number2js(cpSegmentShapeGetRadius(js2cpShape(self))))
-
-JSC_CCALL(seg2d_set_neighbors,
-  HMM_Vec2 prev = js2vec2(argv[0]);
-  HMM_Vec2 next = js2vec2(argv[1]);
-  cpSegmentShapeSetNeighbors(js2cpShape(self), prev.cp, next.cp);
-)
-
-JSC_CCALL(seg2d_a, return cvec22js(cpSegmentShapeGetA(js2cpShape(self))))
-JSC_CCALL(seg2d_b, return cvec22js(cpSegmentShapeGetB(js2cpShape(self))))
-
-static const JSCFunctionListEntry js_seg2d_funcs[] = {
-  MIST_FUNC_DEF(seg2d, set_endpoints, 2),
-  CGETSET_ADD(seg2d, radius),
-  MIST_FUNC_DEF(seg2d, set_neighbors, 2),
-  MIST_FUNC_DEF(seg2d, a, 0),
-  MIST_FUNC_DEF(seg2d, b, 0),
-};
-
-JSC_CCALL(os_make_seg2d,
-  if (JS_IsUndefined(argv[0])) return JS_DupValue(js,js_seg2d);
-  gameobject *go = js2gameobject(argv[0]);
-  cpShape *shape = cpSegmentShapeNew(go->body, (cpVect){0,0}, (cpVect){0,0}, 0);
-  ret = prep_cpshape(shape,go);
-  JS_SetPrototype(js, ret, js_seg2d);
-  return ret;
 )
 
 JSC_SCALL(os_make_texture,
@@ -3469,10 +2598,6 @@ JSC_SCALL(os_make_aseprite,
   ret = obj;
 
   cute_aseprite_free(ase);
-)
-
-JSC_SCALL(os_make_pcm,
-  ret = pcm2js(make_pcm(str));
 )
 
 JSC_SCALL(os_texture_swap,
@@ -3760,17 +2885,11 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, system, 1),
   MIST_FUNC_DEF(os, quit, 0),
   MIST_FUNC_DEF(os, exit, 1),
-  MIST_FUNC_DEF(os, reindex_static, 0),
   MIST_FUNC_DEF(os, gc, 0),
   MIST_FUNC_DEF(os, eval, 2),
-  MIST_FUNC_DEF(os, make_body, 1),
-  MIST_FUNC_DEF(os, make_circle2d, 2),
-  MIST_FUNC_DEF(os, make_poly2d, 2),
-  MIST_FUNC_DEF(os, make_seg2d, 1),
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_gif, 1),
   MIST_FUNC_DEF(os, make_aseprite, 1),
-  MIST_FUNC_DEF(os, make_pcm, 1),
   MIST_FUNC_DEF(os, texture_swap, 2),
   MIST_FUNC_DEF(os, make_tex_data, 3),
   MIST_FUNC_DEF(os, make_font, 2),
@@ -3807,224 +2926,21 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, skin_calculate, 1),
 };
 
-static lay_context lay_ctx;
-
-JSC_CCALL(layout_item,
-  lay_id item = lay_item(&lay_ctx);
-  HMM_Vec2 size = js2vec2(js_getpropstr(argv[0], "size"));
-  lay_set_size_xy(&lay_ctx, item, size.x, size.y);
-  lay_set_contain(&lay_ctx, item, js2number(js_getpropstr(argv[0], "contain")));
-  lay_set_behave(&lay_ctx, item, js2number(js_getpropstr(argv[0], "behave")));
-  lrtb margins = js2lrtb(js_getpropstr(argv[0], "margin"));
-  lay_set_margins_ltrb(&lay_ctx, item, margins.l, margins.t, margins.r, margins.b);
-  return number2js(item);
-)
-
-JSC_CCALL(layout_insert,
-  lay_insert(&lay_ctx, js2number(argv[0]), js2number(argv[1]));
-)
-
-JSC_CCALL(layout_append,
-  lay_append(&lay_ctx, js2number(argv[0]), js2number(argv[1]));
-)
-
-JSC_CCALL(layout_push,
-  lay_push(&lay_ctx, js2number(argv[0]), js2number(argv[1]));
-)
-
-JSC_CCALL(layout_run,
-  lay_run_context(&lay_ctx);
-)
-
-JSC_CCALL(layout_get_rect,
-  lay_vec4 rect = lay_get_rect(&lay_ctx, js2number(argv[0]));
-  ret = JS_NewObject(js);
-  js_setpropstr(ret, "x", number2js(rect[0]));
-  js_setpropstr(ret, "y", number2js(rect[1]));
-  js_setpropstr(ret, "width", number2js(rect[2]));
-  js_setpropstr(ret, "height", number2js(rect[3]));  
-)
-
-JSC_CCALL(layout_reset,
-  lay_reset_context(&lay_ctx);
-)
-
-static const JSCFunctionListEntry js_layout_funcs[] = {
-  MIST_FUNC_DEF(layout, item, 1),
-  MIST_FUNC_DEF(layout, insert, 2),
-  MIST_FUNC_DEF(layout, append, 2),
-  MIST_FUNC_DEF(layout, push, 2),
-  MIST_FUNC_DEF(layout, run, 0),
-  MIST_FUNC_DEF(layout, get_rect, 1),
-  MIST_FUNC_DEF(layout, reset, 0),
-};
-
-ENetAddress str2enetaddress(char *str)
-{
-  char *mystr = strdup(str);
-  char *semi = strrchr(mystr, ':');
-  *semi = 0;
-  ENetAddress addr;
-  addr.port = atoi(semi+1);
-  printf("connecting from string %s, into %s ::: %s\n", str, mystr, semi+1);
-  enet_address_set_host_ip(&addr, mystr);
-  printf("connecting via %s, ip %s, to %x:%u\n", mystr, semi+1, addr.host, addr.port);
-  free(mystr);
-  return addr;
-}
-
-JSC_SCALL(enet_host_create,
-  ENetAddress addr;
-  ENetAddress *use = NULL;
-  if (!JS_IsUndefined(argv[0])) {
-    addr = str2enetaddress(str);
-    use = &addr;
-  }
-   
-  ENetHost *server = enet_host_create(use, js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), js2number(argv[4]));
-  if (!server) {
-    printf("Error trying to create a host.\n");
-    return JS_UNDEFINED;
-  }
-  return ENetHost2js(server);
-);
-
-static const JSCFunctionListEntry js_enet_funcs[] = {
-  MIST_FUNC_DEF(enet, host_create, 5),
-};
-
-JSValue enetpacket2js(ENetPacket *packet)
-{
-  JSValue v = JS_NewObject(js);
-  // nota encoded
-  void *nota = packet->data;
-  JSValue dd;
-  js_do_nota_decode(&dd, nota);
-  js_setpropstr(v, "data", dd);
-  js_setpropstr(v, "size", number2js(packet->dataLength));
-  return v;
-}
-
-JSValue enetevent2js(ENetEvent e)
-{
-  JSValue v = JS_NewObject(js);
-  js_setpropstr(v, "type", number2js(e.type));
-  js_setpropstr(v, "peer", ENetPeer2js(e.peer));
-  js_setpropstr(v, "channel", number2js(e.channelID));
-  js_setpropstr(v, "data", number2js(e.data));
-  if (e.packet) {
-    JSValue packet = enetpacket2js(e.packet);
-    js_setpropstr(v, "packet", packet);
-  }
-  return v;
-}
-
-JSC_CCALL(ENetHost_service,
-  ENetEvent event;
-  while(enet_host_service(js2ENetHost(self), &event, js2number(argv[0])) > 0) {
-    JSValue jsevent = enetevent2js(event);
-    script_call_sym(argv[1], 1, &jsevent);
-  }
-)
-
-void *js2nota(JSValue v, size_t *len)
-{
-  char nota[1024*1024];
-  char *e = js_do_nota_encode(v, nota);
-  *len = e-nota;
-  char *ret = malloc(*len);
-  memcpy(ret, nota, *len);
-  return ret;
-}
-
-ENetPacket *js2enetpacket(JSValue v)
-{
-  size_t len;
-  void *nota = js2nota(v, &len);
-  ENetPacket *packet = enet_packet_create(nota, len, ENET_PACKET_FLAG_RELIABLE);
-  free(nota);
-  return packet;
-}
-
-JSC_SCALL(ENetHost_connect,
-  ENetAddress addr = str2enetaddress(str);
-  ENetPeer *peer = enet_host_connect(js2ENetHost(self), &addr, js2number(argv[1]), js2number(argv[2]));
-  if (!peer) return JS_UNDEFINED;
-  return ENetPeer2js(peer);
-)
-
-JSC_CCALL(ENetHost_flush, enet_host_flush(js2ENetHost(self)))
-JSC_CCALL(ENetHost_broadcast,
-  ENetPacket *packet = js2enetpacket(argv[1]);
-  if (packet) enet_host_broadcast(js2ENetHost(self), js2number(argv[0]),packet);
-)
-
-JSC_CCALL(ENetHost_channel_limit, enet_host_channel_limit(js2ENetHost(self), js2number(argv[0])))
-JSC_CCALL(ENetHost_bandwidth_limit, enet_host_bandwidth_limit(js2ENetHost(self), js2number(argv[0]), js2number(argv[1])))
-JSC_CCALL(ENetHost_bandwidth_throttle, enet_host_bandwidth_throttle(js2ENetHost(self)))
-JSC_CCALL(ENetHost_check_events,
-  ENetEvent e;
-  while (enet_host_check_events(js2ENetHost(self), &e) > 0) {
-    JSValue jsevent = enetevent2js(e);
-    script_call_sym(argv[1], 1, &jsevent);
-  }
-)
-
-static const JSCFunctionListEntry js_ENetHost_funcs[] = {
-  MIST_FUNC_DEF(ENetHost, service, 1),
-  MIST_FUNC_DEF(ENetHost, connect, 3),
-  MIST_FUNC_DEF(ENetHost, flush, 0),
-  MIST_FUNC_DEF(ENetHost, broadcast, 2),
-  MIST_FUNC_DEF(ENetHost, channel_limit, 1),
-  MIST_FUNC_DEF(ENetHost, bandwidth_limit, 2),
-  MIST_FUNC_DEF(ENetHost, bandwidth_throttle, 0),
-  MIST_FUNC_DEF(ENetHost, check_events, 1),
-};
-
-JSC_SCALL(ENetPeer_send,
-  ENetPacket *packet = js2enetpacket(argv[0]);
-  if (packet) enet_peer_send(js2ENetPeer(self), 0, packet);
-)
-
-JSC_CCALL(ENetPeer_disconnect, enet_peer_disconnect(js2ENetPeer(self), js2number(argv[0])))
-JSC_CCALL(ENetPeer_disconnect_now, enet_peer_disconnect_now(js2ENetPeer(self), js2number(argv[0])))
-JSC_CCALL(ENetPeer_disconnect_later, enet_peer_disconnect_later(js2ENetPeer(self), js2number(argv[0])))
-JSC_CCALL(ENetPeer_reset, enet_peer_reset(js2ENetPeer(self)))
-JSC_CCALL(ENetPeer_ping, enet_peer_ping(js2ENetPeer(self)))
-JSC_CCALL(ENetPeer_ping_interval, enet_peer_ping_interval(js2ENetPeer(self), js2number(argv[0])))
-JSC_CCALL(ENetPeer_throttle_configure, enet_peer_throttle_configure(js2ENetPeer(self), js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
-JSC_CCALL(ENetPeer_timeout, enet_peer_timeout(js2ENetPeer(self), js2number(argv[0]), js2number(argv[1]), js2number(argv[2])))
-
-JSC_CCALL(ENetPeer_receive,
-  enet_uint8 channel;
-  ENetPacket *packet = enet_peer_receive(js2ENetPeer(self), &channel);
-  if (!packet) return JS_UNDEFINED;
-  ret = enetpacket2js(packet);
-  js_setpropstr(ret, "channel", number2js(channel));
-)
-
-static const JSCFunctionListEntry js_ENetPeer_funcs[] = {
-  MIST_FUNC_DEF(ENetPeer, send, 1),
-  MIST_FUNC_DEF(ENetPeer, disconnect, 1),
-  MIST_FUNC_DEF(ENetPeer, disconnect_now, 1),
-  MIST_FUNC_DEF(ENetPeer, disconnect_later, 1),
-  MIST_FUNC_DEF(ENetPeer, reset, 0),
-  MIST_FUNC_DEF(ENetPeer, ping, 0),
-  MIST_FUNC_DEF(ENetPeer, ping_interval, 2),
-  MIST_FUNC_DEF(ENetPeer, throttle_configure, 3),
-  MIST_FUNC_DEF(ENetPeer, timeout, 3),
-  MIST_FUNC_DEF(ENetPeer, receive, 0),
-};
-
-#include "steam.h"
-
 #define JSSTATIC(NAME, PARENT) \
 js_##NAME = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, js_##NAME, js_##NAME##_funcs, countof(js_##NAME##_funcs)); \
 JS_SetPrototype(js, js_##NAME, PARENT); \
 
+JSValue js_layout(JSContext *js);
+JSValue js_miniz(JSContext *js);
+JSValue js_soloud_use(JSContext *js);
+JSValue js_chipmunk2d_use(JSContext *js);
+
+#ifndef NEDITOR
+JSValue js_imgui(JSContext *js);
+#endif
+
 void ffi_load() {
-  enet_initialize();
   cycles = tmpfile();
   quickjs_set_cycleout(cycles);
   
@@ -4032,87 +2948,51 @@ void ffi_load() {
 
   QJSGLOBALCLASS(os);
   
-  QJSCLASSPREP_FUNCS(gameobject);
   QJSCLASSPREP_FUNCS(sg_buffer);  
   QJSCLASSPREP_FUNCS(transform);
-  QJSCLASSPREP_FUNCS(dsp_node);
-  QJSCLASSPREP_FUNCS(warp_gravity);
-  QJSCLASSPREP_FUNCS(warp_damp);
+//  QJSCLASSPREP_FUNCS(warp_gravity);
+//  QJSCLASSPREP_FUNCS(warp_damp);
   QJSCLASSPREP_FUNCS(texture);
-  QJSCLASSPREP_FUNCS(pcm);
   QJSCLASSPREP_FUNCS(font);
-  QJSCLASSPREP_FUNCS(cpConstraint);
   QJSCLASSPREP_FUNCS(window);
   QJSCLASSPREP_FUNCS(datastream);
-  QJSCLASSPREP_FUNCS(cpShape);
   QJSCLASSPREP_FUNCS(timer);
-  QJSCLASSPREP_FUNCS(ENetHost);
-  QJSCLASSPREP_FUNCS(ENetPeer);
 
-  QJSGLOBALCLASS(nota);
-  QJSGLOBALCLASS(enet);
   QJSGLOBALCLASS(input);
   QJSGLOBALCLASS(io);
   QJSGLOBALCLASS(prosperon);
   QJSGLOBALCLASS(time);
   QJSGLOBALCLASS(console);
-  QJSGLOBALCLASS(audio);
   QJSGLOBALCLASS(profile);
   QJSGLOBALCLASS(game);
   QJSGLOBALCLASS(gui);
   QJSGLOBALCLASS(render);
 //  QJSGLOBALCLASS(sgl);
-  QJSGLOBALCLASS(physics);
   QJSGLOBALCLASS(vector);
   QJSGLOBALCLASS(spline);
-  QJSGLOBALCLASS(joint);
-  QJSGLOBALCLASS(dspsound);
   QJSGLOBALCLASS(performance);
   QJSGLOBALCLASS(geometry);
-  QJSGLOBALCLASS(layout);
-  
-  QJSGLOBALCLASS(poly2d);
-  
-  JS_SetPropertyStr(js, prosperon, "version", str2js(PROSPERON_VER));
-  JS_SetPropertyStr(js, prosperon, "revision", str2js(PROSPERON_COM));
-  JS_SetPropertyStr(js, prosperon, "date", str2js(PROSPERON_DATE));
+
+  JS_SetPropertyStr(js, prosperon, "version", str2js("ver"));
+  JS_SetPropertyStr(js, prosperon, "revision", str2js("com"));
+  JS_SetPropertyStr(js, prosperon, "date", str2js("date"));
   JS_SetPropertyStr(js, globalThis, "window", window2js(&mainwin));
   JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
 
-  #ifndef NSTEAM
-  JS_SetPropertyStr(js, globalThis, "steam", js_init_steam(js));
-  #endif
-  
-  PREP_PARENT(bitcrush, dsp_node);
-  PREP_PARENT(delay, dsp_node);
-  PREP_PARENT(sound, dsp_node);
-  PREP_PARENT(compressor, dsp_node);
-  PREP_PARENT(phasor, dsp_node);
-  PREP_PARENT(adsr, dsp_node);
-   
-  JSSTATIC(circle2d, cpShape_proto)
-  JSSTATIC(poly2d, cpShape_proto)
-  JSSTATIC(seg2d, cpShape_proto)  
-  
-  JSSTATIC(pin, cpConstraint_proto)
-  JSSTATIC(motor, cpConstraint_proto)
-  JSSTATIC(ratchet, cpConstraint_proto)
-  JSSTATIC(slide, cpConstraint_proto)
-  JSSTATIC(pivot, cpConstraint_proto)
-  JSSTATIC(gear, cpConstraint_proto)
-  JSSTATIC(rotary, cpConstraint_proto)
-  JSSTATIC(damped_rotary, cpConstraint_proto)
-  JSSTATIC(damped_spring, cpConstraint_proto)
-  JSSTATIC(groove, cpConstraint_proto)
-  
   JSValue array_proto = js_getpropstr(globalThis, "Array");
   array_proto = js_getpropstr(array_proto, "prototype");
   JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, countof(js_array_funcs));
 
   srand(stm_now());
-  
-  lay_init_context(&lay_ctx);
-  lay_reserve_items_capacity(&lay_ctx, 1024);
+
+  JS_SetPropertyStr(js, globalThis, "layout", js_layout(js));
+  JS_SetPropertyStr(js, globalThis, "miniz", js_miniz(js));
+  JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
+  JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));    
+
+#ifndef NEDITOR
+  JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
+#endif
   
   JS_FreeValue(js,globalThis);  
 }

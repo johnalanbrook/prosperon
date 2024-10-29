@@ -9,7 +9,7 @@ var HIT = {
 };
 */
 
-physics.pos_query = function (pos, start = world, give = 10) {
+export function pos_query(pos, start = world, give = 10) {
   var ret;
   ret = physics.point_query_nearest(pos, 0);
 
@@ -21,7 +21,7 @@ physics.pos_query = function (pos, start = world, give = 10) {
   });
 };
 
-physics.box_point_query = function (box, points) {
+export function box_point_query(box, points) {
   if (!box || !points) return [];
   var bbox = bbox.fromcwh(box.pos, box.wh);
   var inside = [];

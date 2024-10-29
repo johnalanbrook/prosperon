@@ -1,27 +1,13 @@
 #include "yugine.h"
-#include "transform.h"
 #include "input.h"
 #include "render.h"
 #include "window.h"
-#include "sound.h"
-#include "resources.h"
-#include "spline.h"
 #include <stdio.h>
-#include "simplex.h"
 #include <wctype.h>
-
-#include "datastream.h"
-
-#include "quickjs/quickjs.h"
-
-#include "jsffi.h"
-#include "script.h"
 
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "2dphysics.h"
 
 #include <signal.h>
 #include <time.h>
@@ -38,18 +24,6 @@
 #include <stb_truetype.h>
 #include "stb_image.h"
 #include "stb_image_write.h"
-#include <pl_mpeg.h>
-
-#include "gui.h"
-
-uint64_t start_t;
-uint64_t frame_t;
-
-#define SIM_PLAY 0
-#define SIM_PAUSE 1
-#define SIM_STEP 2
-
-static int sim_play = SIM_PLAY;
 
 static int argc;
 static char **args;
@@ -62,7 +36,6 @@ static int PLAYSTART = 0;
 void c_init() {
   mainwin.start = 1;
   window_resize(sapp_width(), sapp_height());
-  phys2d_init();  
   render_init();
   if (!JS_IsUndefined(c_start)) {
     script_call_sym(c_start,0,NULL);
@@ -104,47 +77,43 @@ void seghandle()
 void c_clean() {
   JS_FreeValue(js, c_process_fn);
   cleanup();
-  saudio_shutdown();
   sg_shutdown();
 };
 
+void gui_input(sapp_event *e);
+
 void c_event(const sapp_event *e)
 {
+#ifndef NIMGUI
   gui_input(e);
+#endif
   char lcfmt[5];
   switch (e->type) {
     case SAPP_EVENTTYPE_MOUSE_MOVE:
-      if (gui_wantmouse()) return;
       script_evalf("prosperon.mousemove([%g, %g], [%g, %g]);", e->mouse_x, e->mouse_y, e->mouse_dx, e->mouse_dy);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
-      if (gui_wantmouse()) return;    
       script_evalf("prosperon.mousescroll([%g, %g]);", e->scroll_x, e->scroll_y);
       break;
 
     case SAPP_EVENTTYPE_KEY_DOWN:
-      if (gui_wantkeys()) return;
       script_evalf("prosperon.keydown(%d, %d);", e->key_code, e->key_repeat);
       break;
 
     case SAPP_EVENTTYPE_KEY_UP:
-      if (gui_wantkeys()) return;    
       script_evalf("prosperon.keyup(%d);", e->key_code);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_UP:
-      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mouseup(%d);", e->mouse_button);
       break;
 
     case SAPP_EVENTTYPE_MOUSE_DOWN:
-      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mousedown(%d);", e->mouse_button);
       break;
 
     case SAPP_EVENTTYPE_CHAR:
-      if (gui_wantkeys()) return;    
       if (iswcntrl(e->char_code)) break;
       snprintf(lcfmt, 5, "%lc", e->char_code);
       script_evalf("prosperon.textinput(`%s`);", lcfmt);
@@ -183,11 +152,9 @@ void c_event(const sapp_event *e)
       break;
       
     case SAPP_EVENTTYPE_MOUSE_ENTER:
-      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mouseenter();");
       break;
     case SAPP_EVENTTYPE_MOUSE_LEAVE:
-      if (gui_wantmouse()) return;        
       script_evalf("prosperon.mouseleave();");
       break;
     case SAPP_EVENTTYPE_TOUCHES_BEGAN:
@@ -268,8 +235,6 @@ void engine_start(JSValue start, JSValue procfn, float x, float y)
 {
   c_start = JS_DupValue(js,start);
   c_process_fn = JS_DupValue(js,procfn);
-
-  sound_init();
 
   start_desc.width = x;
   start_desc.height = y;

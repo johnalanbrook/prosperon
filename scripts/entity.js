@@ -33,10 +33,6 @@ var entity = {
     return undefined;
   },
 
-  rigidify() {
-    this.body = os.make_body(this.transform);
-  },
-
   path_from(o) {
     var p = this.toString();
     var c = this.master;

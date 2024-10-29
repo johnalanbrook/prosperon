@@ -10,8 +10,6 @@ extern char *DATA_PATH;
 extern int LOADED_GAME;
 
 void resources_init();
-char *get_filename_from_path(char *path, int extension);
-char *dirname(const char *path);
 char *str_replace_ext(const char *s, const char *newext);
 FILE *res_open(char *path, const char *tag);
 char **ls(const char *path);

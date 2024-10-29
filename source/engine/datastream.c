@@ -1,12 +1,9 @@
 #include "datastream.h"
 
 #include "config.h"
-#include "dsp.h"
-#include "iir.h"
 #include "limits.h"
 #include "log.h"
 #include "resources.h"
-#include "sound.h"
 #include "texture.h"
 #include <stdbool.h>
 #include <stdlib.h>
@@ -24,10 +21,10 @@ void datastream_free(datastream *ds)
   free(ds);
 }
 
-void soundstream_fillbuf(struct datastream *ds, soundbyte *buf, int frames) {
-  for (int i = 0; i < frames*CHANNELS; i++)
-    buf[i] = ringshift(ds->ring);
-}
+//void soundstream_fillbuf(struct datastream *ds, soundbyte *buf, int frames) {
+//  for (int i = 0; i < frames*CHANNELS; i++)
+//    buf[i] = ringshift(ds->ring);
+//}
 
 static void render_frame(plm_t *mpeg, plm_frame_t *frame, struct datastream *ds) {
   if (ds->dirty) return;
@@ -41,8 +38,8 @@ static void render_frame(plm_t *mpeg, plm_frame_t *frame, struct datastream *ds)
 }
 
 static void render_audio(plm_t *mpeg, plm_samples_t *samples, struct datastream *ds) {
-  for (int i = 0; i < samples->count * CHANNELS; i++)
-    ringpush(ds->ring, samples->interleaved[i]);
+//  for (int i = 0; i < samples->count * CHANNELS; i++)
+//    ringpush(ds->ring, samples->interleaved[i]);
 }
 
 struct datastream *ds_openvideo(const char *path)
@@ -77,8 +74,8 @@ struct datastream *ds_openvideo(const char *path)
   
   return ds;
 
-  ds->ring = ringnew(ds->ring, 8192);
-  plugin_node(make_node(ds, soundstream_fillbuf, NULL), masterbus);
+//  ds->ring = ringnew(ds->ring, 8192);
+//  plugin_node(make_node(ds, soundstream_fillbuf, NULL), masterbus);
 
   plm_set_audio_decode_callback(ds->plm, render_audio, ds);
   plm_set_loop(ds->plm, false);
@@ -87,7 +84,7 @@ struct datastream *ds_openvideo(const char *path)
   plm_set_audio_stream(ds->plm, 0);
 
   // Adjust the audio lead time according to the audio_spec buffer size
-  plm_set_audio_lead_time(ds->plm, BUF_FRAMES / SAMPLERATE);
+//  plm_set_audio_lead_time(ds->plm, BUF_FRAMES / SAMPLERATE);
 
   return ds;
 }

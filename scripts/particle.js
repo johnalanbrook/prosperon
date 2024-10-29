@@ -29,7 +29,6 @@ emitter.spawn = function (t) {
 
   var par = this.dead.shift();
   if (par) {
-    par.body.pos = t.pos;
     par.transform.scale = this.scale;
     this.particles.push(par);
     par.time = 0;
@@ -45,9 +44,6 @@ emitter.spawn = function (t) {
     color: this.color,
   };
 
-  par.body = os.make_body(par.transform);
-
-  par.body.pos = t.pos;
   par.transform.scale = this.scale;
   this.particles.push(par);
 

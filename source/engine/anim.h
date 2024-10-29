@@ -22,7 +22,7 @@ typedef struct sampler {
 struct anim_channel {
   HMM_Vec4 *target;
   int comps;
-  sampler *sampler;
+  struct sampler *sampler;
 };
 
 typedef struct animation {

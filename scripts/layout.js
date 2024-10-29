@@ -1,5 +1,7 @@
 // Layout code
 // Contain is for how it will treat its children. If they should be laid out as a row, or column, or in a flex style, etc.
+
+var lay_ctx = layout.make_context();
 layout.contain = {};
 layout.contain.row = 0x002;
 layout.contain.column = 0x003;
@@ -63,9 +65,9 @@ clay.normalizeSpacing = function(spacing) {
 
 clay.draw = function(size, fn, )
 {
-  layout.reset();
+  lay_ctx.reset();
   boxes = [];
-  var root = layout.item({
+  var root = lay_ctx.item({
     size:size,
     contain: layout.contain.row,
   });
@@ -76,12 +78,12 @@ clay.draw = function(size, fn, )
     config:root_config
   });
   fn();
-  layout.run();
+  lay_ctx.run();
 
   // Adjust bounding boxes for padding
   for (var i = 0; i < boxes.length; i++) {
     var box = boxes[i];
-    box.content = layout.get_rect(box.id);
+    box.content = lay_ctx.get_rect(box.id);
     box.boundingbox = Object.assign({}, box.content);
 
     var padding = clay.normalizeSpacing(box.config.padding || 0);
@@ -106,8 +108,6 @@ clay.draw = function(size, fn, )
 
   return boxes;
 }
-
-var last_config;
 
 function create_view_fn(base_config)
 {
@@ -173,12 +173,12 @@ var add_item = function(config)
     l:margin.l+padding.l
   };
 
-  var item = layout.item(use_config);  
+  var item = lay_ctx.item(use_config);  
   boxes.push({
     id:item,
     config:use_config
   });
-  layout.insert(root_item,item);
+  lay_ctx.insert(root_item,item);
 
   // Increment the parent's child index
   root_config._childIndex++;
@@ -271,3 +271,6 @@ layout.draw_commands = function(cmds, pos = [0,0])
 //    render.rectangle(cmd.marginbox, [0,0,1,0.1]);
   }
 }
+
+return layout;
+

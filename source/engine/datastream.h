@@ -3,7 +3,6 @@
 
 #include <pl_mpeg.h>
 #include <stdint.h>
-#include "dsp.h"
 
 #include "sokol/sokol_gfx.h"
 
@@ -18,7 +17,6 @@ struct datastream {
   int width;
   int height;
   int dirty;
-  soundbyte *ring;
 };
 
 typedef struct datastream datastream;

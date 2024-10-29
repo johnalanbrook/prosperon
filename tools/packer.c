@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     // Add files to the zip archive
     for (int i = 2; i < argc; ++i)
-      mz_zip_writer_add_file(&zip_archive, argv[i], argv[i], NULL, 0, MZ_DEFAULT_COMPRESSION);
+      mz_zip_writer_add_file(&zip_archive, argv[i]+3, argv[i], NULL, 0, MZ_DEFAULT_COMPRESSION);
 
     // Close the zip file
     mz_zip_writer_finalize_archive(&zip_archive);

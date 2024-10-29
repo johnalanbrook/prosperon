@@ -1,12 +1,6 @@
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 
-#include "quickjs/quickjs.h"
-#include "HandmadeMath.h"
-#include "transform.h"
-#include "script.h"
-#include "warp.h"
-
 #define dag_rm(p,c) do{\
  for (int i = arrlen(p->children)-1; i--; i >=0) {\
   if (p->children[i] == c) { \
@@ -27,15 +21,12 @@
 }while(0)
 
 struct gameobject {
-  cpBody *body; /* NULL if this object is dead; has 2d position and rotation, relative to global 0 */  
   float damping;
   float timescale;
   float maxvelocity;
   float maxangularvelocity;
   unsigned int layer;
   unsigned int warp_mask;
-  JSValue ref;
-  transform *t; // the transform this body controls
 };
 
 /*
@@ -54,17 +45,5 @@ struct gameobject {
 */
 
 typedef struct gameobject gameobject;
-
-gameobject *MakeGameobject();
-void gameobject_apply(gameobject *go);
-void gameobject_free(gameobject *go);
-transform go2t(gameobject *go);
-
-HMM_Vec3 go_pos(gameobject *go);
-
-gameobject *shape2go(cpShape *s);
-gameobject *body2go(cpBody *b);
-
-void go_shape_apply(cpBody *body, cpShape *shape, gameobject *go);
 
 #endif

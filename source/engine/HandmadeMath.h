@@ -223,10 +223,10 @@ typedef union HMM_Vec2 {
     float Width, Height;
   };
 
+  cpVect cp;
+
   float Elements[2];
   float e[2];
-
-  cpVect cp;
 
 } HMM_Vec2;
 
@@ -260,11 +260,6 @@ typedef union HMM_Vec3 {
     float _Ignored4;
   };
 
-  struct {
-    cpVect cp;
-    float _Ignored5;
-  };
-
   struct
   {
     float _Ignored1;
@@ -281,6 +276,12 @@ typedef union HMM_Vec3 {
   {
     float _Ignored3;
     HMM_Vec2 VW;
+  };
+
+  struct
+  {
+    HMM_Vec2 cp;
+    float _Ignored5;
   };
 
   float Elements[3];

@@ -42,9 +42,10 @@ var sprite = {
   set diffuse(x) {},
   anim_speed: 1,
   play(str, loop = true, reverse = false) {
+    if (!this.animset) return;
     str ??= this.anim;
     if (!str) return;
-
+    
     if (typeof str === 'string')
       str = this.animset[str];
 
@@ -97,6 +98,7 @@ var sprite = {
     if (this.anim) this.stop();
     this.sync();
     this.play();
+//    this.transform.scale = [this.image.texture.width, this.image.texture.height];
   },
   stop() {
     this.del_anim?.();
@@ -241,7 +243,9 @@ sprite.inputs.kp1 = function () {
 component.sprite = function (obj) {
   var sp = Object.create(sprite);
   sp.gameobject = obj;
-  sp.transform = obj.transform;
+  sp.transform = os.make_transform();
+  sp.transform.scale = 18;
+  sp.transform.parent = obj.transform;
   sp.guid = prosperon.guid();
   allsprites.push(sp);
   sprite_addbucket(sp);
@@ -249,6 +253,8 @@ component.sprite = function (obj) {
 };
 
 sprite.shade = [1, 1, 1, 1];
+
+return {component};
 
 Object.mixin(os.make_seg2d(), {
   sync() {
@@ -697,7 +703,7 @@ var edge2d = {
 };
 
 component.edge2d = function (obj) {
-  if (!obj.body) obj.rigidify();
+//  if (!obj.body) obj.rigidify();
   var edge = Object.create(edge2d);
   edge.body = obj.body;
   return edge;
@@ -865,7 +871,7 @@ edge2d.inputs.rb.rep = true;
 
 function shape_maker(maker) {
   return function (obj) {
-    if (!obj.body) obj.rigidify();
+//    if (!obj.body) obj.rigidify();
     return maker(obj.body);
   };
 }

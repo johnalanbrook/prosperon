@@ -59,7 +59,7 @@ game.engine_start = function (s) {
   game.startengine = 1;
   gggstart(
     function () {
-      global.mixin("scripts/sound.js");
+//      global.mixin("scripts/sound.js");
       world_start();
       window.set_icon(game.texture("moon").texture);
       Object.readonly(window.__proto__, "vsync");
@@ -75,8 +75,6 @@ game.engine_start = function (s) {
       camera.break = "fit";
       camera.size = game.size;
       gamestate.camera = camera;
-
-      globalThis.imgui = render.imgui_init();
 
       s();
 
@@ -461,9 +459,8 @@ global.mixin("scripts/color");
 global.mixin("scripts/tween");
 global.mixin("scripts/ai");
 global.mixin("scripts/particle");
-global.mixin("scripts/physics");
+//global.mixin("scripts/physics");
 global.mixin("scripts/geometry");
-global.mixin("scripts/layout");
 
 /*
 Factory for creating registries. Register one with 'X.register',
@@ -627,9 +624,6 @@ function world_start() {
   world.ur.fresh = {};
   game.cam = world;
 }
-
-global.mixin("scripts/physics");
-
 
 window.title = `Prosperon v${prosperon.version}`;
 window.size = [500, 500];

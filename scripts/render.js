@@ -670,9 +670,10 @@ render.init = function () {
 
   render.textshader = textshader;
 
-  os.make_circle2d().draw = function () {
+/*  os.make_circle2d().draw = function () {
     render.circle(this.body().transform().pos, this.radius, [1, 1, 0, 1]);
   };
+
 
   var disabled = [148 / 255, 148 / 255, 148 / 255, 1];
   var sleep = [1, 140 / 255, 228 / 255, 1];
@@ -698,6 +699,7 @@ render.init = function () {
     var b = this.bodyB();
     render.line([a.transform().pos.xy, b.transform().pos.xy], [0, 1, 1, 1], 1);
   };
+*/  
 };
 
 render.draw_sprites = true;
@@ -706,7 +708,6 @@ render.draw_hud = true;
 render.draw_gui = true;
 render.draw_gizmos = true;
 
-render.buckets = [];
 render.sprites = function render_sprites() {
   profile.report("sprites");
   profile.report("drawing");
@@ -848,7 +849,7 @@ render.coordinate = function render_coordinate(pos, size, color) {
 
 var queued_shader;
 var queued_pipe;
-render.rectangle = function render_rectangle(rect, color, shader = polyssboshader, pipe = base_pipeline) {
+render.rectangle = function render_rectangle(rect, color = Color.white, shader = polyssboshader, pipe = base_pipeline) {
   var transform = os.make_transform();
   var wh = [rect.width, rect.height];
   var poly = poly_e();
@@ -860,14 +861,6 @@ render.rectangle = function render_rectangle(rect, color, shader = polyssboshade
   
   queued_shader = shader;
   queued_pipe = pipe;
-  check_flush(flush_poly);
-};
-
-render.box = function render_box(pos, wh, color = Color.white) {
-  var poly = poly_e();
-  poly.transform.move(pos);
-  poly.transform.scale = [wh.x, wh.y, 1];
-  poly.color = color;
   check_flush(flush_poly);
 };
 
@@ -1276,7 +1269,8 @@ var imdebug = function () {
 };
 
 var imgui_fn = function () {
-  render.imgui_new(window.size.x, window.size.y, 0.01);
+  imgui.init();
+  imgui.newframe(window.size.x, window.size.y, 0.01);
   if (debug.console)
     debug.console = imgui.window("console", _ => {
       imgui.text(console.transcript);
@@ -1332,7 +1326,7 @@ var imgui_fn = function () {
   });
 
   prosperon.imgui();
-  render.imgui_end();
+  imgui.endframe();
 };
 
   // figure out the highest resolution we can render at that's an integer
@@ -1440,7 +1434,7 @@ prosperon.process = function process() {
   sst = profile.now();
 
   if (sim.mode === "play" || sim.mode === "step") {
-    profile.report("physics");
+/*    profile.report("physics");
     physlag += dt;
 
     while (physlag > physics.delta) {
@@ -1448,9 +1442,11 @@ prosperon.process = function process() {
       prosperon.phys2d_step(physics.delta * game.timescale);
       prosperon.physupdate(physics.delta * game.timescale);
     }
+  
     profile.endreport("physics");    
     profile.pushdata(profile.data.cpu.physics, profile.now() - sst);
     sst = profile.now();
+  */  
   }
 
   profile.report("render");

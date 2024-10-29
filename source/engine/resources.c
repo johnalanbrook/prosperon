@@ -141,34 +141,6 @@ void resources_init() {
 #endif
 }
 
-char *get_filename_from_path(char *path, int extension) {
-  char *dirpos = strrchr(path, '/');
-  if (!dirpos)
-    dirpos = path;
-
-  char *end = strrchr(path, '\0');
-
-  int offset = 0;
-  if (!extension) {
-    char *ext = strrchr(path, '.');
-    offset = end - ext;
-    YughInfo("Making %s without extension ...");
-  }
-
-  char *filename = malloc(sizeof(char) * (end - dirpos - offset + 1));
-  strncpy(filename, dirpos, end - dirpos - offset);
-  return filename;
-}
-
-char *dirname(const char *path)
-{
-  const char *dirpos = strrchr(path, '/');
-  if (!dirpos) return ".";
-  char *dir = malloc(dirpos-path+1);
-  strncpy(dir,path,dirpos-path);
-  return dir;
-}
-
 char *seprint(char *fmt, ...)
 {
   va_list args;
@@ -227,28 +199,7 @@ char **ls(const char *path)
   return ls_paths;
 }
 
-
-void pack_start(const char *name)
-{
-//  memset(&ar, 0, sizeof(ar));
-//  int status = mz_zip_writer_init_file(&ar, name, 0);
-}
-
-void pack_add(const char *path) 
-{
-//  mz_zip_writer_add_file(&ar, path, path, NULL, 0, MZ_BEST_COMPRESSION);
-}
-
-void pack_end()
-{
-//  mz_zip_writer_finalize_archive(&ar);
-//  mz_zip_writer_end(&ar);
-}
-
 #else
-void pack_start(const char *name){}
-void pack_add(const char *path){}
-void pack_end() {}
 void fill_extensions(char *paths, const char *path, const char *ext)
 {};
 char **ls(const char *path) { return NULL; }

@@ -13,10 +13,6 @@
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include "cute_aseprite.h"
 
-#define LAY_FLOAT 1
-#define LAY_IMPLEMENTATION
-#include "layout.h"
-
 #define STB_PERLIN_IMPLEMENTATION
 #include "stb_perlin.h"
 

@@ -151,6 +151,7 @@ function find_ext(file, ext, root = "") {
   if (!file) return;
 
   var file_ext = file.ext();
+
   if (ext.some(x => x === file_ext)) return file;
   for (var e of ext) {
     var nf = `${file}.${e}`;
@@ -312,6 +313,11 @@ globalThis.use = function use(file) {
   
   return ret;
 };
+
+globalThis.spinup = function spinup(file)
+{
+  // spin up this file into its own entity
+}
 
 function stripped_use(file, script) {
   file = Resources.find_script(file);
