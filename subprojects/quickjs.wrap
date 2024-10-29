@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/quickjs.git
+revision = head
+depth = 1
+
+[provide]
+quickjs = quickjs_dep
+

@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/qjs-enet.git
+revision = head
+depth = 1
+
+[provide]
+qjs-enet = qjs_enet_dep

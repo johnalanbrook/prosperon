@@ -7,7 +7,7 @@ if (libtype != 'static')
 endif
 
 add_global_arguments('-DCONFIG_BIGNUM', language : 'c')
-add_global_arguments('-DCP_USE_DOUBLES=0', language : 'c')
+add_global_arguments('-DCP_USE_DOUBLES=0', language : 'c') # option for chipmunk physics
 
 add_project_arguments('-Wno-implicit-function-declaration', language: 'c')
 add_project_arguments('-Wno-incompatible-function-pointer-types', language: 'c')
@@ -38,14 +38,15 @@ if host_machine.system() == 'windows'
   endforeach
 endif
 
-quickjs = dependency('quickjs', fallback:['quickjs', 'quickjs_dep'], static:true)
-enet = dependency('qjs-enet', fallback:['qjs-enet', 'enet_dep'],static:true)
-layout = dependency('qjs-layout', fallback:['qjs-layout', 'qjs_layout_dep'],static:true)
-nota = dependency('qjs-nota', fallback:['qjs-nota', 'dep'],static:true)
-steam = dependency('qjs-steam', fallback:['qjs-steam', 'dep'],static:true)
-chipmunk2d = dependency('qjs-chipmunk2d', fallback:['qjs-chipmunk2d', 'qjs_chipmunk2d_dep'],static:true)
-miniz = dependency('qjs-miniz', fallback:['qjs-miniz', 'qjs_miniz_dep'],static:true)
-soloud = dependency('qjs-soloud', fallback:['qjs-soloud', 'qjs_soloud_dep'],static:true)
+deps = []
+deps += dependency('quickjs', static:true)
+deps += dependency('qjs-enet',static:true)
+deps += dependency('qjs-layout',static:true)
+deps += dependency('qjs-nota',static:true)
+#steam = dependency('qjs-steam',static:true)
+deps += dependency('qjs-chipmunk',static:true)
+deps += dependency('qjs-miniz',static:true)
+deps += dependency('qjs-soloud',static:true)
 
 sources = []
 src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','qjs_imgui.cpp','HandmadeMath.c','input.c', 'jsffi.c','log.c','miniz.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
@@ -91,6 +92,6 @@ core = custom_target('core_bundle',
 )
 
 prosperon = executable('prosperon', sources,
-  dependencies: deps + [quickjs, enet, layout, nota, steam, chipmunk2d, miniz, soloud],
+  dependencies: deps + [quickjs, enet, layout, nota, chipmunk2d, miniz, soloud],
   include_directories: includers
 )

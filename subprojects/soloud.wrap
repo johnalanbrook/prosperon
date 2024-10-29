@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/soloud.git
+revision = head
+depth = 1
+
+[provide]
+soloud = soloud_dep

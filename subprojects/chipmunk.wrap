@@ -1,0 +1,13 @@
+[wrap-file]
+directory = Chipmunk2D-Chipmunk-7.0.3
+source_url = https://github.com/slembcke/Chipmunk2D/archive/Chipmunk-7.0.3.tar.gz
+source_filename = Chipmunk2D-Chipmunk-7.0.3.tar.gz
+source_hash = 1e6f093812d6130e45bdf4cb80280cb3c93d1e1833d8cf989d554d7963b7899a
+patch_filename = chipmunk_7.0.3-1_patch.zip
+patch_url = https://wrapdb.mesonbuild.com/v2/chipmunk_7.0.3-1/get_patch
+patch_hash = 90e5e1be7712812cd303974910c37e7c4f2d2c8060312521b3a7995daa54f66a
+wrapdb_version = 7.0.3-1
+
+[provide]
+chipmunk = chipmunk_dep
+

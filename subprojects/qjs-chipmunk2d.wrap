@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/qjs-chipmunk2d.git
+revision = head
+depth = 1
+
+[provide]
+qjs-chipmunk = qjs_chipmunk_dep

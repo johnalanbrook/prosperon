@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/cnota.git
+revision = head
+depth = 1
+
+[provide]
+qjs-nota = qjs_nota_dep

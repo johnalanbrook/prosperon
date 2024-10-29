@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/qjs-layout.git
+revision = head
+depth = 1
+
+[provide]
+qjs-layout = qjs_layout_dep

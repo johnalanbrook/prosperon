@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/johnalanbrook/qjs-steam.git
+revision = head
+depth = 1
+
+[provide]
+qjs-steam = qjs_steam_dep
