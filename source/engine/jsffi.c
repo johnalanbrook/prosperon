@@ -2374,7 +2374,6 @@ JSC_CCALL(os_memstate,
   ret = JS_NewObject(js);
   JSJMEMRET(malloc_size)
   JSJMEMRET(malloc_limit)
-  JSJMEMRET(gc_threshold)
 )
 
 JSC_CCALL(os_mallinfo,
@@ -2421,7 +2420,6 @@ JSC_CCALL(os_mem,
   ret = JS_NewObject(js);
   JSJMEMRET(malloc_size)
   JSJMEMRET(malloc_limit)
-  JSJMEMRET(gc_threshold)
   JSJMEMRET(memory_used_size)
   JSJMEMRET(memory_used_count)
   JSJMEMRET(atom_count)
@@ -2931,7 +2929,7 @@ js_##NAME = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, js_##NAME, js_##NAME##_funcs, countof(js_##NAME##_funcs)); \
 JS_SetPrototype(js, js_##NAME, PARENT); \
 
-JSValue js_layout(JSContext *js);
+JSValue js_layout_use(JSContext *js);
 JSValue js_miniz(JSContext *js);
 JSValue js_soloud_use(JSContext *js);
 JSValue js_chipmunk2d_use(JSContext *js);
@@ -2985,7 +2983,7 @@ void ffi_load() {
 
   srand(stm_now());
 
-  JS_SetPropertyStr(js, globalThis, "layout", js_layout(js));
+  JS_SetPropertyStr(js, globalThis, "layout", js_layout_use(js));
   JS_SetPropertyStr(js, globalThis, "miniz", js_miniz(js));
   JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
   JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));    

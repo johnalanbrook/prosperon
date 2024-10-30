@@ -1,0 +1,11 @@
+[binaries]
+c = 'emcc'
+cpp = 'em++'
+ar = 'emar'
+strip = 'emstrip'
+
+[host_machine]
+system = 'emscripten'
+cpu_family = 'wasm64'
+cpu = 'wasm64'
+endian = 'little'

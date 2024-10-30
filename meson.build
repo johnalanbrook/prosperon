@@ -38,12 +38,11 @@ if host_machine.system() == 'windows'
   endforeach
 endif
 
-deps = []
 deps += dependency('quickjs', static:true)
 deps += dependency('qjs-enet',static:true)
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
-#steam = dependency('qjs-steam',static:true)
+#deps += dependency('qjs-steam',static:true)
 deps += dependency('qjs-chipmunk',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
@@ -74,24 +73,15 @@ endforeach
 
 incc = include_directories('source/engine/thirdparty/sokol')
 
-packer = custom_target('packer',
-  input: [ 'tools/packer.c', 'source/engine/miniz.c'],
-  output: 'packer',
-  command: ['cc', '-I../source/engine', '-o', '@OUTPUT@', '@INPUT@'],
-  build_by_default: true
+packer = executable('packer',
+  'tools/packer.c', 'source/engine/miniz.c',
+  include_directories: includers,
 )
 
 core_glob = run_command('globcore.sh')
 core_files = core_glob.stdout().strip().split('\n')
 
-core = custom_target('core_bundle',
-  input:core_files,
-  output:'core.zip',
-  command: [packer.full_path(), '@OUTPUT@', '@INPUT@'],
-  build_by_default:true
-)
-
 prosperon = executable('prosperon', sources,
-  dependencies: deps + [quickjs, enet, layout, nota, chipmunk2d, miniz, soloud],
+  dependencies: deps,
   include_directories: includers
 )

@@ -67,40 +67,9 @@ static uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filen
     return buf;
 }
 
-static JSModuleDef *js_module_loader(JSContext *ctx,
-                              const char *module_name, void *opaque)
-{
-    JSModuleDef *m;
-        size_t buf_len;
-        uint8_t *buf;
-        JSValue func_val;
-
-        buf = js_load_file(ctx, &buf_len, module_name);
-        if (!buf) {
-            JS_ThrowReferenceError(ctx, "could not load module filename '%s'",
-                                   module_name);
-            return NULL;
-        }
-
-        /* compile the module */
-        func_val = JS_Eval(ctx, (char *)buf, buf_len, module_name,
-                           JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-        js_free(ctx, buf);
-        if (JS_IsException(func_val))
-            return NULL;
-        /* XXX: could propagate the exception */
-        js_module_set_import_meta(ctx, func_val, 1, 0);
-        /* the module is already referenced, so we must free it */
-        m = JS_VALUE_GET_PTR(func_val);
-        JS_FreeValue(ctx, func_val);
-    return m;
-}
-
 void script_startup() {
   rt = JS_NewRuntime();
   js = JS_NewContext(rt);
-
-  JS_SetModuleLoaderFunc(rt, NULL, js_module_loader, NULL);
 
   ffi_load();
   
