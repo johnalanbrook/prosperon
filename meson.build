@@ -71,15 +71,11 @@ foreach inc : includes
   includers += include_directories(inc)
 endforeach
 
-incc = include_directories('source/engine/thirdparty/sokol')
-
-packer = executable('packer',
-  'tools/packer.c', 'source/engine/miniz.c',
-  include_directories: includers,
+core = custom_target('core.zip',
+  output:'core.zip',
+  command: ['globcore.sh'],
+  build_by_default: true,
 )
-
-core_glob = run_command('globcore.sh')
-core_files = core_glob.stdout().strip().split('\n')
 
 prosperon = executable('prosperon', sources,
   dependencies: deps,
