@@ -1,0 +1,2 @@
+option('editor', type:'boolean', value:true)
+option('storefront', type:'combo', choices:['none','steam', 'gog', 'egs'], value:'none')
