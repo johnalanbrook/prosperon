@@ -1,12 +1,12 @@
-project('prosperon', ['c', 'cpp'], default_options : [ 'cpp_std=c++14', 'default_library=static'])
+project('prosperon', ['c', 'cpp'], default_options : [ 'cpp_std=c++14'])
 
 libtype = get_option('default_library')
 
-if (libtype != 'static')
-  add_global_arguments('-DJS_SHARED_LIBRARY', language:'c')
+if not get_option('editor')
+  add_project_arguments('-DNEDITOR', language:'c')
 endif
 
-add_global_arguments('-DCONFIG_BIGNUM', language : 'c')
+add_global_arguments('-DCONFIG_BIGNUM', language : 'c') # use bignum for quickjs
 add_global_arguments('-DCP_USE_DOUBLES=0', language : 'c') # option for chipmunk physics
 
 add_project_arguments('-Wno-implicit-function-declaration', language: 'c')
@@ -42,13 +42,13 @@ deps += dependency('quickjs', static:true)
 deps += dependency('qjs-enet',static:true)
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
-#deps += dependency('qjs-steam',static:true)
+deps += dependency('qjs-steam',static:false)
 deps += dependency('qjs-chipmunk',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
 
 sources = []
-src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','qjs_imgui.cpp','HandmadeMath.c','input.c', 'jsffi.c','log.c','miniz.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
+src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','input.c', 'jsffi.c','log.c','miniz.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 
@@ -62,9 +62,12 @@ foreach file : src
     sources += files(full_path)
 endforeach
 
-foreach imgui : imsrc
-  sources += tp / 'imgui' / imgui
-endforeach
+if get_option('editor')
+  sources += 'source/engine/qjs_imgui.cpp'
+  foreach imgui : imsrc
+    sources += tp / 'imgui' / imgui
+  endforeach
+endif
 
 includers = []
 foreach inc : includes
@@ -81,3 +84,5 @@ prosperon = executable('prosperon', sources,
   dependencies: deps,
   include_directories: includers
 )
+
+test('sanity', prosperon)

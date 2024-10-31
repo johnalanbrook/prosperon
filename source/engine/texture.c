@@ -491,10 +491,10 @@ void texture_load_gpu(texture *tex)
       .type = SG_IMAGETYPE_2D,
       .width = tex->width,
       .height = tex->height,
-      .usage = SG_USAGE_IMMUTABLE,
-      .num_mipmaps = 1,
-      .data = img_data
+      .usage = SG_USAGE_DYNAMIC,
+      .num_mipmaps = 1
     });
+    sg_update_image(tex->id, &img_data);
   } //else {
     // Simple update
 //    sg_image_data img_data = tex_img_data(tex,0);

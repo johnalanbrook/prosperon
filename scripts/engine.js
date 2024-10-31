@@ -159,14 +159,17 @@ function find_ext(file, ext, root = "") {
   }
 
   var all_files = io.glob(`**/${file}.*`);
+  all_files = all_files.filter(x => !x.startsWith('.'));
   var find = undefined;
   for (var e of ext) {
     var finds = all_files.filter(x => x.ext() === e);
-    if (finds.length > 1) console.warn(`Found conflicting files when searching for '${file}': ${json.encode(finds)}. Returning the first one.`);
-    if (finds.length > 0) {
-      find = finds[0];
-      break;
+    if (finds.length > 1) {
+      console.info(finds);
+      console.warn(`Found conflicting files when searching for '${file}': ${json.encode(finds)}. Returning the topmost one.`);
+      finds.sort((a,b) => a.length-b.length);
+      return finds[0];
     }
+    if (finds.length === 1) return finds[0];
   }
 
   return find;

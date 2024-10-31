@@ -2,6 +2,7 @@
 // Contain is for how it will treat its children. If they should be laid out as a row, or column, or in a flex style, etc.
 
 var lay_ctx = layout.make_context();
+console.info(lay_ctx);
 layout.contain = {};
 layout.contain.row = 0x002;
 layout.contain.column = 0x003;

@@ -222,7 +222,7 @@ var sheetsize = 1024;
 function pack_into_sheet(images)
 {
   if (!Array.isArray(images)) images = [images];
-  if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
+  if (images[0].texture.width > 3 && images[0].texture.height > 3) return;
   sheet_frames = sheet_frames.concat(images);
   var sizes = sheet_frames.map(x => [x.rect.width*x.texture.width, x.rect.height*x.texture.height]);
   var pos = os.rectpack(sheetsize, sheetsize, sizes);
@@ -251,6 +251,47 @@ function pack_into_sheet(images)
   return spritesheet;
 }
 
+var SpriteAnim = {};
+SpriteAnim.aseprite = function (path) {
+  function aseframeset2anim(frameset, meta) {
+    var anim = {};
+    anim.frames = [];
+    var dim = meta.size;
+
+    var ase_make_frame = function (ase_frame) {
+      var f = ase_frame.frame;
+      var frame = {};
+      frame.rect = [
+        f.x / dim.w,
+        f.y / dim.h,        
+        f.w / dim.w,
+        f.h / dim.h,
+      ];
+      frame.time = ase_frame.duration / 1000;
+      anim.frames.push(frame);
+    };
+
+    frameset.forEach(ase_make_frame);
+    anim.dim = frameset[0].sourceSize;
+    anim.loop = true;
+    return anim;
+  }
+
+  var data = json.decode(io.slurp(path));
+  if (!data?.meta?.app.includes("aseprite")) return;
+  var anims = {};
+  var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
+
+  if (!data.meta.frameTags || data.meta.frameTags.length === 0) {
+    anims[0] = aseframeset2anim(frames, data.meta);
+    return anims;
+  }
+  for (var tag of data.meta.frameTags)
+    anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to + 1), data.meta);
+
+  return anims;
+};
+
 // The game texture cache is a cache of all images that have been loaded. It looks like this ...
 // Any request to it returns an image, which is a texture and rect. But they can
 
@@ -266,7 +307,8 @@ game.texture = function (path) {
     game.texture.time_cache[path] = io.mod(path);
     return game.texture.cache[path];
   }
-  
+
+  // Look for a cached version
   var frame;
   var anim_str;
   if (parts.length > 1) {
@@ -280,6 +322,7 @@ game.texture = function (path) {
     }
   } else
     parts = undefined;
+
   var ret;
   if (ret = game.texture.cache[path]) {
     if (ret.texture) return ret;
@@ -287,6 +330,8 @@ game.texture = function (path) {
 
     return ret[anim_str].frames[frame];
   }
+
+  // Cache not found; add to the spritesheet
     
   var ext = path.ext();    
 
@@ -320,32 +365,29 @@ game.texture = function (path) {
   if (!tex) return;
   
   var image;
-
-  var ext = path.ext();
   var anim;
+
+  if (io.exists(path.set_ext(".json")))
+    anim = SpriteAnim.aseprite(path.set_ext(".json"));
 
   if (!anim) {
     image = {
       texture: tex,
       rect:{x:0,y:0,width:1,height:1}
     };
-    if (pack_into_sheet([image]))
-      tex = spritesheet;
+    pack_into_sheet([image]);
   } else if (Object.keys(anim).length === 1) {
     image = Object.values(anim)[0].frames;
     image.forEach(x => x.texture = tex);
-    if (pack_into_sheet(image))
-      tex = spritesheet;
+    pack_into_sheet(image);
   } else {
-    image = {};
-    var packs = [];
-    for (var a in anim) {
-      image[a] = anim[a].frames.slice();
-      image[a].forEach(x => x.texture = tex);
-      packs = packs.concat(image[a]);
-    }
-    if (pack_into_sheet(packs))
-      tex = spritesheet;
+    var allframes = [];
+    for (var a in anim)
+      allframes = allframes.concat(anim[a].frames);
+
+    for (var frame of allframes) frame.texture = tex;
+    pack_into_sheet(allframes);
+    image = anim;
   }
   
   game.texture.cache[path] = image;

@@ -84,7 +84,7 @@ void gui_input(sapp_event *e);
 
 void c_event(const sapp_event *e)
 {
-#ifndef NIMGUI
+#ifndef NEDITOR
   gui_input(e);
 #endif
   char lcfmt[5];

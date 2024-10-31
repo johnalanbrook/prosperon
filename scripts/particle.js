@@ -42,6 +42,7 @@ emitter.spawn = function (t) {
     life: this.life,
     time: 0,
     color: this.color,
+    body:{},
   };
 
   par.transform.scale = this.scale;

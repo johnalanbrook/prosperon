@@ -1036,6 +1036,11 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
   return;
 };
 
+render.images = function(image, rects, rotations, colors)
+{
+  
+}
+
 var slice9_t = os.make_transform();
 // pos is the lower left corner, scale is the width and height
 // slice is given in pixels
