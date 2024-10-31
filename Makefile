@@ -19,7 +19,7 @@ web: FORCE
 	meson compile -C build_web
 
 crosswin: FORCE
-	meson setup -Dbuildtype=minsize -Db_lto=true -Db_lto_threads=4 -Db_ndebug=true -Db_pgo=use --cross-file mingw32.cross build_win
+	meson setup -Dbuildtype=debugoptimized --cross-file mingw32.cross build_win
 	meson compile -C build_win
 
 FORCE:

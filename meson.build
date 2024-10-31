@@ -32,10 +32,8 @@ if host_machine.system() == 'linux'
 endif
 
 if host_machine.system() == 'windows'
-  depstrs = ['d3d11']
-  foreach str : depstrs
-    deps += dependency(str)
-  endforeach
+#  deps += dependency('d3d11')
+  deps += cc.find_library('d3d11')
 endif
 
 deps += dependency('quickjs', static:true)
