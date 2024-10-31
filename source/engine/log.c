@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include "yugine.h"
 #include "resources.h"
-#include "quickjs/quickjs.h"
+#include "quickjs.h"
 
 #include "script.h"
 

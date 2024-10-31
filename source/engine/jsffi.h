@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "quickjs/quickjs.h"
+#include "quickjs.h"
 #include "HandmadeMath.h"
 #include <stdarg.h>
 #include <chipmunk/chipmunk.h>

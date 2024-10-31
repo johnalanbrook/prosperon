@@ -1,4 +1,4 @@
-project('prosperon', ['c', 'cpp'], default_options : [ 'cpp_std=c++14'])
+project('prosperon', ['c', 'cpp'], default_options : [ 'cpp_std=c++11'])
 
 libtype = get_option('default_library')
 
@@ -42,10 +42,14 @@ deps += dependency('quickjs', static:true)
 deps += dependency('qjs-enet',static:true)
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
-deps += dependency('qjs-steam',static:false)
 deps += dependency('qjs-chipmunk',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
+
+storefront = get_option('storefront')
+if storefront == 'steam'
+  deps += dependency('qjs-steam',static:false)
+endif
 
 sources = []
 src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','input.c', 'jsffi.c','log.c','miniz.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
