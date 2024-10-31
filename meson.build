@@ -32,17 +32,28 @@ if host_machine.system() == 'linux'
 endif
 
 if host_machine.system() == 'windows'
-#  deps += dependency('d3d11')
   deps += cc.find_library('d3d11')
 endif
 
+link = []
+if host_machine.system() == 'emscripten'
+  link += '-sUSE_WEBGPU'
+  add_global_arguments('-Dlinux', language:'c')  # Required because enet does not check for emscripten
+endif
+
 deps += dependency('quickjs', static:true)
-deps += dependency('qjs-enet',static:true)
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
-deps += dependency('qjs-chipmunk',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
+
+if get_option('chipmunk')
+  deps += dependency('qjs-chipmunk',static:true)
+endif
+
+if get_option('enet')
+  deps += dependency('qjs-enet',static:true)
+endif
 
 storefront = get_option('storefront')
 if storefront == 'steam'
@@ -84,7 +95,8 @@ core = custom_target('core.zip',
 
 prosperon = executable('prosperon', sources,
   dependencies: deps,
-  include_directories: includers
+  include_directories: includers,
+  link_args: link
 )
 
 test('sanity', prosperon)

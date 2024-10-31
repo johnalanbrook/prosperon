@@ -15,7 +15,7 @@ small: FORCE
 	meson compile -C build_small
 
 web: FORCE
-	meson setup -Dbuildtype=minsize -Db_lto=true -Db_ndebug=true --cross-file emscripten.cross build_web
+	meson setup -Deditor=false -Dbuildtype=minsize -Db_lto=true -Db_ndebug=true --cross-file emscripten.cross build_web
 	meson compile -C build_web
 
 crosswin: FORCE

@@ -45,20 +45,7 @@ void c_init() {
 
 void c_frame() {
   sfetch_dowork();
-#ifdef __EMSCRIPTEN__
-  if (PLAYSTART)
-    script_call_sym(c_process_fn,0,NULL); 
-  else if (LOADED_GAME) {
-    PLAYSTART = 1;
-    printf("LOADED GAME\n");
-    script_evalf("cmd_args('play');");
-    script_call_sym(c_start,0,NULL);
-    JS_FreeValue(js, c_start);
-    window_resize(sapp_width(), sapp_height());    
-  }
-#else
   script_call_sym(c_process_fn,0,NULL); 
-#endif 
 }
 
 void cleanup()

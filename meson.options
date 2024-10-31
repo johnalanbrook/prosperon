@@ -1,2 +1,4 @@
 option('editor', type:'boolean', value:true)
+option('chipmunk', type:'boolean', value:true)
+option('enet', type:'boolean', value:true)
 option('storefront', type:'combo', choices:['none','steam', 'gog', 'egs'], value:'none')
