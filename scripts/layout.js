@@ -2,32 +2,6 @@
 // Contain is for how it will treat its children. If they should be laid out as a row, or column, or in a flex style, etc.
 
 var lay_ctx = layout.make_context();
-console.info(lay_ctx);
-layout.contain = {};
-layout.contain.row = 0x002;
-layout.contain.column = 0x003;
-layout.contain.layout = 0x000;
-layout.contain.flex = 0x002;
-layout.contain.nowrap = 0x000;
-layout.contain.wrap = 0x004;
-layout.contain.start = 0x008;
-layout.contain.middle = 0x000;
-layout.contain.end = 0x010;
-layout.contain.justify = 0x018;
-
-// Behave is for how it behaves to its parent. How it should be aligned, directions it should fill, etc.
-layout.behave = {};
-layout.behave.left = 0x020;
-layout.behave.top = 0x040;
-layout.behave.right = 0x080;
-layout.behave.bottom = 0x100;
-layout.behave.hfill = 0x0a0;
-layout.behave.vfill = 0x140;
-layout.behave.hcenter = 0x000;
-layout.behave.vcenter = 0x000;
-layout.behave.center = 0x000;
-layout.behave.fill = 0x1e0;
-layout.behave.break = 0x200;
 
 var clay_base = {
   font: undefined,
@@ -64,14 +38,13 @@ clay.normalizeSpacing = function(spacing) {
   }
 }
 
-clay.draw = function(size, fn, )
+clay.draw = function(size, fn)
 {
   lay_ctx.reset();
   boxes = [];
-  var root = lay_ctx.item({
-    size:size,
-    contain: layout.contain.row,
-  });
+  var root = lay_ctx.item();
+  lay_ctx.set_size(root,size);
+  lay_ctx.set_contain(root,layout.contain.row);
   root_item = root;
   root_config = Object.assign({}, clay_base);
   boxes.push({
@@ -174,7 +147,11 @@ var add_item = function(config)
     l:margin.l+padding.l
   };
 
-  var item = lay_ctx.item(use_config);  
+  var item = lay_ctx.item();
+  lay_ctx.set_margins(item, use_config.margin);
+  lay_ctx.set_size(item,use_config.size);
+  lay_ctx.set_contain(item,use_config.contain);
+  lay_ctx.set_behave(item,use_config.behave);
   boxes.push({
     id:item,
     config:use_config
@@ -266,10 +243,15 @@ layout.draw_commands = function(cmds, pos = [0,0])
       render.text(config.text, cmd.content, config.font, config.font_size, config.color);
     if (config.image)
       render.image(config.image, cmd.content, 0, config.color);
-      
-    render.rectangle(cmd.content, [1,0,0,0]);
-//    render.rectangle(cmd.boundingbox, [0,1,0,0.1]);
-//    render.rectangle(cmd.marginbox, [0,0,1,0.1]);
+  }
+}
+
+layout.draw_debug = function(cmds, pos = [0,0])
+{
+  for (var cmd of cmds) {
+    render.rectangle(cmd.content, [1,0,0,0.1]);
+    render.rectangle(cmd.boundingbox, [0,1,0,0.1]);
+    render.rectangle(cmd.marginbox, [0,0,1,0.1]);
   }
 }
 

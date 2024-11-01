@@ -67,15 +67,15 @@ actor.hotreload = function () {
       script_times[i] = io.mod(i);
       var script = Resources.replstrs(i);
       script = `(function() {
-  	var self = this;
-	var $ = this.__proto__;
-        ${script};
-      })`;
+  	              var self = this;
+	                var $ = this.__proto__;
+                  ${script};
+               })`;
       var fn = os.eval(i, script);
 
       for (var obj of actor_spawns[i]) {
         var a = obj;
-        for (var t of a.timers) t();
+        a.timers.forEachRight(t=>t());
         a.timers = [];
         var save = json.decode(json.encode(a));
         fn.call(a);

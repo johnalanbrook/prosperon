@@ -2504,12 +2504,15 @@ JSC_SCALL(os_make_texture,
 JSC_SCALL(os_make_gif,
   size_t rawlen;
   unsigned char *raw = slurp_file(str, &rawlen);
-  if (!raw) goto ENDEND;
+  if (!raw) goto END;
   int n;
   texture *tex = calloc(1,sizeof(*tex));
   int frames;
   int *delays;
   tex->data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &frames, &n, 4);
+  tex->height *= frames;
+
+  printf("making gif with %s\n", str);
 
   JSValue gif = JS_NewObject(js);
 
@@ -2537,11 +2540,9 @@ JSC_SCALL(os_make_gif,
   free(delays);
   
   ret = gif;
-
-  END:
   free(raw);
 
-  ENDEND:
+  END:
 )
 
 JSC_SCALL(os_make_aseprite,

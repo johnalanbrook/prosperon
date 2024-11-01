@@ -42,20 +42,21 @@ var sprite = {
   set diffuse(x) {},
   anim_speed: 1,
   play(str, loop = true, reverse = false) {
-    if (!this.animset) return;
-    str ??= this.anim;
-    if (!str) return;
+    
+    if (!this.animset) {
+//      console.warn(`Sprite has no animset when trying to play ${str}`);
+      return;
+    }
     
     if (typeof str === 'string')
-      str = this.animset[str];
+      this.anim = this.animset[str];
 
-    var playing = str;
-    
-    this.del_anim?.();
+    var playing = this.anim;
     
     var self = this;
     var stop;
-    
+
+    this.del_anim?.();
     self.del_anim = function () {
       self.del_anim = undefined;
       self = undefined;
@@ -64,7 +65,7 @@ var sprite = {
     };
 
     var f = 0;
-    if (reverse) f = playing.length - 1;
+    if (reverse) f = playing.frames.length - 1;
 
     function advance(time) {
       if (!self) return;
@@ -72,14 +73,14 @@ var sprite = {
 
       var done = false;
       if (reverse) {
-        f = (((f - 1) % playing.length) + playing.length) % playing.length;
-        if (f === playing.length - 1) done = true;
+        f = (((f - 1) % playing.frames.length) + playing.frames.length) % playing.frames.length;
+        if (f === playing.frames.length - 1) done = true;
       } else {
-        f = (f + 1) % playing.length;
+        f = (f + 1) % playing.frames.length;
         if (f === 0) done = true;
       }
 
-      self.image = playing[f];
+      self.image = playing.frames[f];
 
       if (done) {
         self.anim_done?.();
@@ -89,16 +90,17 @@ var sprite = {
         }
       }
       
-      return playing[f].time/self.anim_speed;
+      return playing.frames[f].time/self.anim_speed;
     }
-    stop = self.gameobject.delay(advance, playing[f].time/self.anim_speed);
+    stop = self.gameobject.delay(advance, playing.frames[f].time/self.anim_speed);
     advance();
   },
   tex_sync() {
     if (this.anim) this.stop();
     this.sync();
     this.play();
-//    this.transform.scale = [this.image.texture.width, this.image.texture.height];
+    if (this.image)
+    this.transform.scale = [this.image.texture.width*this.image.rect.width, this.image.texture.height*this.image.rect.height];
   },
   stop() {
     this.del_anim?.();
@@ -113,15 +115,23 @@ var sprite = {
     this._p = p;
 
     this.del_anim?.();
-    this.image = image;
-    if (Array.isArray(image)) {
-      this.anim = image;
-      this.image = image[0];
-    }
-    if (Object.values(image)[0][0]) {
-      // it is an anims set
-      this.animset = image;
-      this.image = Object.values(image)[0][0];
+    if (image.texture)
+      this.image = image;
+    else if (image.frames) {
+      // It's an animation
+      this.anim = image;      
+      this.image = image.frames[0];
+      this.animset = [this.anim]
+    } else {
+      // Maybe an animset; try to grab the first one
+      for (var anim in image) {
+        if (image[anim].frames) {
+          this.anim = image[anim];
+          this.image = image[anim].frames[0];
+          this.animset = image;
+          break;
+        }
+      }
     }
     
     this.tex_sync();
@@ -136,13 +146,6 @@ var sprite = {
     this.gameobject = undefined;
     this.anim_done = undefined;
     allsprites.remove(this);
-  },
-  move(d) {
-    this.pos = this.pos.add(d);
-  },
-  grow(x) {
-    this.scale = this.scale.scale(x);
-    this.pos = this.pos.scale(x);
   },
   anchor: [0, 0],
   sync() {
@@ -163,7 +166,7 @@ var sprite = {
   },
 };
 globalThis.allsprites = [];
-var sprite_buckets = [];
+var sprite_buckets = {};
 
 component.sprite_buckets = function () {
   return sprite_buckets;
@@ -244,7 +247,6 @@ component.sprite = function (obj) {
   var sp = Object.create(sprite);
   sp.gameobject = obj;
   sp.transform = os.make_transform();
-  sp.transform.scale = 18;
   sp.transform.parent = obj.transform;
   sp.guid = prosperon.guid();
   allsprites.push(sp);

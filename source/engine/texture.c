@@ -495,9 +495,8 @@ void texture_load_gpu(texture *tex)
       .num_mipmaps = 1
     });
     sg_update_image(tex->id, &img_data);
-  } //else {
-    // Simple update
-//    sg_image_data img_data = tex_img_data(tex,0);
-//    sg_update_image(tex->id, &img_data);
-//  }
+  } else {
+    sg_image_data img_data = tex_img_data(tex,0);
+    sg_update_image(tex->id, &img_data);
+  }
 }

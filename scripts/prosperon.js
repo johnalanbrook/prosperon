@@ -177,6 +177,7 @@ game.doc.play = "Resume or start game simulation.";
 game.doc.camera = "Current camera.";
 
 game.tex_hotreload = function () {
+  return;
   for (var path in game.texture.cache) {
     if (io.mod(path) > game.texture.time_cache[path]) {
       var tex = game.texture.cache[path];
@@ -252,6 +253,7 @@ function pack_into_sheet(images)
 }
 
 var SpriteAnim = {};
+globalThis.SpriteAnim = SpriteAnim;
 SpriteAnim.aseprite = function (path) {
   function aseframeset2anim(frameset, meta) {
     var anim = {};
@@ -261,12 +263,12 @@ SpriteAnim.aseprite = function (path) {
     var ase_make_frame = function (ase_frame) {
       var f = ase_frame.frame;
       var frame = {};
-      frame.rect = [
-        f.x / dim.w,
-        f.y / dim.h,        
-        f.w / dim.w,
-        f.h / dim.h,
-      ];
+      frame.rect = {
+        x: f.x / dim.w,
+        y: f.y / dim.h,        
+        width: f.w / dim.w,
+        height: f.h / dim.h,
+      };
       frame.time = ase_frame.duration / 1000;
       anim.frames.push(frame);
     };
@@ -292,9 +294,12 @@ SpriteAnim.aseprite = function (path) {
   return anims;
 };
 
-// The game texture cache is a cache of all images that have been loaded. It looks like this ...
-// Any request to it returns an image, which is a texture and rect. But they can
+game.is_image = function(obj)
+{
+  if (obj.texture && obj.rect) return true;
+}
 
+// Any request to it returns an image, which is a texture and rect. But they can
 game.texture = function (path) {
   if (!path) return game.texture("icons/no_tex.gif");
 
@@ -353,6 +358,7 @@ game.texture = function (path) {
     anim = os.make_gif(path);
     if (!anim) return;
     if (anim.frames.length === 1) {
+      // in this case, it's just a single image
       anim.texture = anim.frames[0].texture;
       anim.rect = anim.frames[0].rect;
     }
@@ -377,9 +383,9 @@ game.texture = function (path) {
     };
     pack_into_sheet([image]);
   } else if (Object.keys(anim).length === 1) {
-    image = Object.values(anim)[0].frames;
-    image.forEach(x => x.texture = tex);
-    pack_into_sheet(image);
+    image = Object.values(anim)[0];
+    image.frames.forEach(x => x.texture = tex);
+    pack_into_sheet(image.frames);
   } else {
     var allframes = [];
     for (var a in anim)
