@@ -31,11 +31,13 @@ if host_machine.system() == 'linux'
   deps += [dependency('x11'), dependency('xi'), dependency('xcursor'), dependency('egl'), dependency('gl')]
 endif
 
+link = []
+
 if host_machine.system() == 'windows'
   deps += cc.find_library('d3d11')
+  link += '-static'
 endif
 
-link = []
 if host_machine.system() == 'emscripten'
   link += '-sUSE_WEBGPU'
   add_global_arguments('-Dlinux', language:'c')  # Required because enet does not check for emscripten
@@ -46,6 +48,8 @@ deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
+
+deps += dependency('threads')
 
 if get_option('chipmunk')
   deps += dependency('qjs-chipmunk',static:true)
