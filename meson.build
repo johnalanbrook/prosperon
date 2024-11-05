@@ -66,18 +66,18 @@ src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMat
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 
-srceng = 'source/engine'
+srceng = 'source'
 tp = srceng / 'thirdparty'
 
 includes = [srceng,tp / 'cgltf',tp / 'imgui',tp / 'par',tp / 'sokol',tp / 'stb',tp,tp / 'pl_mpeg/include']
 
 foreach file : src
-    full_path = join_paths('source/engine', file)
+    full_path = join_paths('source', file)
     sources += files(full_path)
 endforeach
 
 if get_option('editor')
-  sources += 'source/engine/qjs_imgui.cpp'
+  sources += 'source/qjs_imgui.cpp'
   foreach imgui : imsrc
     sources += tp / 'imgui' / imgui
   endforeach

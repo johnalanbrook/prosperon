@@ -1038,7 +1038,6 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
 
 render.images = function(image, rects, rotations, colors)
 {
-  
 }
 
 var slice9_t = os.make_transform();

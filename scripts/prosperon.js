@@ -301,17 +301,8 @@ game.is_image = function(obj)
 
 // Any request to it returns an image, which is a texture and rect. But they can
 game.texture = function (path) {
-  if (!path) return game.texture("icons/no_tex.gif");
-
   var parts = path.split(':');
   path = Resources.find_image(parts[0]);
-
-  if (!io.exists(path)) {
-    console.error(`Missing texture: ${path}`);
-    game.texture.cache[path] = game.texture("icons/no_tex.gif");
-    game.texture.time_cache[path] = io.mod(path);
-    return game.texture.cache[path];
-  }
 
   // Look for a cached version
   var frame;
@@ -334,6 +325,15 @@ game.texture = function (path) {
     if (!parts) return ret;
 
     return ret[anim_str].frames[frame];
+  }
+
+  if (!path) return game.texture("icons/no_tex.gif");
+
+  if (!io.exists(path)) {
+    console.error(`Missing texture: ${path}`);
+    game.texture.cache[path] = game.texture("icons/no_tex.gif");
+    game.texture.time_cache[path] = io.mod(path);
+    return game.texture.cache[path];
   }
 
   // Cache not found; add to the spritesheet
@@ -361,6 +361,10 @@ game.texture = function (path) {
       // in this case, it's just a single image
       anim.texture = anim.frames[0].texture;
       anim.rect = anim.frames[0].rect;
+      anim.frames = undefined;
+      anim.texture.load_gpu();
+      game.texture.cache[path] = anim;
+      return anim;
     }
     game.texture.cache[path] = anim;
     anim.frames[0].texture.load_gpu();
@@ -381,18 +385,18 @@ game.texture = function (path) {
       texture: tex,
       rect:{x:0,y:0,width:1,height:1}
     };
-    pack_into_sheet([image]);
+//    pack_into_sheet([image]);
   } else if (Object.keys(anim).length === 1) {
     image = Object.values(anim)[0];
     image.frames.forEach(x => x.texture = tex);
-    pack_into_sheet(image.frames);
+//    pack_into_sheet(image.frames);
   } else {
     var allframes = [];
     for (var a in anim)
       allframes = allframes.concat(anim[a].frames);
 
     for (var frame of allframes) frame.texture = tex;
-    pack_into_sheet(allframes);
+//    pack_into_sheet(allframes);
     image = anim;
   }
   
