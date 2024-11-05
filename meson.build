@@ -8,9 +8,6 @@ if not get_option('editor')
   add_project_arguments('-DNEDITOR', language:'c')
 endif
 
-add_global_arguments('-DCONFIG_BIGNUM', language : 'c') # use bignum for quickjs
-add_global_arguments('-DCP_USE_DOUBLES=0', language : 'c') # option for chipmunk physics
-
 add_project_arguments('-Wno-implicit-function-declaration', language: 'c')
 add_project_arguments('-Wno-incompatible-function-pointer-types', language: 'c')
 add_project_arguments('-Wno-incompatible-pointer-types', language: 'c')
@@ -41,7 +38,6 @@ endif
 
 if host_machine.system() == 'emscripten'
   link += '-sUSE_WEBGPU'
-  add_global_arguments('-Dlinux', language:'c')  # Required because enet does not check for emscripten
 endif
 
 deps += dependency('quickjs', static:true)
@@ -92,9 +88,15 @@ foreach inc : includes
   includers += include_directories(inc)
 endforeach
 
+zip_folders = ['scripts', 'fonts', 'icons', 'shaders']
+zip_paths = []
+foreach folder: zip_folders
+  zip_paths += meson.project_source_root() / folder
+endforeach
+
 core = custom_target('core.zip',
   output:'core.zip',
-  command: ['globcore.sh'],
+  command: ['zip', '-r', '@OUTPUT@'] + zip_paths,
   build_by_default: true,
 )
 
