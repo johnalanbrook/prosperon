@@ -18,9 +18,9 @@ global.check_registers = function (obj) {
 };
 
 global.obscure("global");
-global.mixin("scripts/render");
-global.mixin("scripts/debug");
-global.mixin("scripts/repl");
+global.mixin("render");
+global.mixin("debug");
+global.mixin("repl");
 
 var frame_t = profile.secs(profile.now());
 
@@ -59,7 +59,7 @@ game.engine_start = function (s) {
   game.startengine = 1;
   gggstart(
     function () {
-//      global.mixin("scripts/sound.js");
+//      global.mixin("sound.js");
       world_start();
       window.set_icon(game.texture("moon").texture);
       Object.readonly(window.__proto__, "vsync");
@@ -327,11 +327,11 @@ game.texture = function (path) {
     return ret[anim_str].frames[frame];
   }
 
-  if (!path) return game.texture("icons/no_tex.gif");
+  if (!path) return game.texture("no_tex.gif");
 
   if (!io.exists(path)) {
     console.error(`Missing texture: ${path}`);
-    game.texture.cache[path] = game.texture("icons/no_tex.gif");
+    game.texture.cache[path] = game.texture("no_tex.gif");
     game.texture.time_cache[path] = io.mod(path);
     return game.texture.cache[path];
   }
@@ -504,15 +504,15 @@ window.__proto__.toJSON = function () {
   };
 };
 
-global.mixin("scripts/input");
-global.mixin("scripts/std");
-global.mixin("scripts/diff");
-global.mixin("scripts/color");
-global.mixin("scripts/tween");
-global.mixin("scripts/ai");
-global.mixin("scripts/particle");
-//global.mixin("scripts/physics");
-global.mixin("scripts/geometry");
+global.mixin("input");
+global.mixin("std");
+global.mixin("diff");
+global.mixin("color");
+global.mixin("tween");
+global.mixin("ai");
+global.mixin("particle");
+//global.mixin("physics");
+global.mixin("geometry");
 
 /*
 Factory for creating registries. Register one with 'X.register',
@@ -653,10 +653,10 @@ prosperon.add_timer = function(obj, fn, seconds)
   return stop;
 }
 
-global.mixin("scripts/spline");
-global.mixin("scripts/components");
-global.mixin("scripts/actor");
-global.mixin("scripts/entity");
+global.mixin("spline");
+global.mixin("components");
+global.mixin("actor");
+global.mixin("entity");
 
 function world_start() {
   globalThis.world = Object.create(entity);

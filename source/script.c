@@ -74,8 +74,8 @@ void script_startup() {
   ffi_load();
   
   size_t len;
-  char *eng = slurp_text("scripts/engine.js", &len);
-  JSValue v = script_eval("scripts/engine.js", eng);
+  char *eng = slurp_text("engine.js", &len);
+  JSValue v = script_eval("engine.js", eng);
   JS_FreeValue(js, v);
   free(eng);
 }

@@ -96,8 +96,9 @@ endforeach
 
 core = custom_target('core.zip',
   output:'core.zip',
-  command: ['zip', '-r', '@OUTPUT@'] + zip_paths,
+  command: ['zip', '-r', '-j', '@OUTPUT@'] + zip_paths,
   build_by_default: true,
+  build_always:true
 )
 
 prosperon = executable('prosperon', sources,

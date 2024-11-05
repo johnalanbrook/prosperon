@@ -1,6 +1,5 @@
 os.cwd.doc = "Get the absolute path of the current working directory.";
 os.env.doc = "Return the value of the environment variable v.";
-os.platform = "steam";
 if (os.sys() === "windows") os.user = os.env("USERNAME");
 else os.user = os.env("USER");
 
@@ -29,9 +28,6 @@ appy.inputs["M-f4"] = os.quit;
 
 player[0].control(appy);
 
-//steam.appid = 480;
-//steam.userid = 8437843;
-
 os.home = os.env("HOME");
 
 /*steam.path = {
@@ -40,6 +36,7 @@ os.home = os.env("HOME");
   linux: `${os.home}/.local/share/Steam/userdata/${steam.userid}/${steam.appid}`
 };
 */
+
 var otherpath = {
   windows: `C:/Users/${os.user}/Saved Games`,
   macos: `${os.home}/Library/Application Support`,
@@ -79,6 +76,15 @@ var tmpchm = io.chmod;
 io.chmod = function (file, mode) {
   return tmpchm(file, parseInt(mode, 8));
 };
+
+var tmpfex = io.exists;
+var icount = 0;
+io.exists = function(path)
+{
+  icount++;
+  if (console.info) console.info(`exist count: ${icount}`);
+  return tmpfex(path)
+}
 
 var tmpslurp = io.slurp;
 io.slurp = function (path) {
@@ -203,7 +209,7 @@ Cmdline.register_order(
     sim.pause();
 
     game.engine_start(function () {
-      global.mixin("scripts/editor.js");
+      global.mixin("editor.js");
       use("editorconfig.js");
       use("config.js");
       render.set_font("fonts/c64.ttf", 8);
@@ -270,10 +276,10 @@ Cmdline.register_order(
 
     game.engine_start(function () {
       if (io.exists("game.js")) global.app = actor.spawn("game.js");
-      else global.app = actor.spawn("scripts/nogame.js");
+      else global.app = actor.spawn("nogame.js");
 
       if (project.icon) window.set_icon(game.texture(project.icon).texture);
-      game.camera = world.spawn("scripts/camera2d");
+      game.camera = world.spawn("camera2d");
     });
   },
   "Play the game present in this folder.",
@@ -444,7 +450,7 @@ Cmdline.register_order(
       return;
     }
 
-    use("scripts/editor.js");
+    use("editor.js");
     var api = debug.api.print_doc(obj[0]);
     if (!api) return;
 
@@ -457,7 +463,7 @@ Cmdline.register_order(
 Cmdline.register_order(
   "input",
   function (pawn) {
-    use("scripts/editor.js");
+    use("editor.js");
     say(`## Input for ${pawn}`);
     eval(`say(input.print_md_kbm(${pawn}));`);
   },
@@ -549,7 +555,7 @@ Cmdline.register_order(
 Cmdline.register_order(
   "test",
   function (argv) {
-    use("scripts/test.js");
+    use("test.js");
   },
   "Run tests.",
 );

@@ -244,7 +244,7 @@ var editor = {
       Object.dainty_assign(this.desktop, this.stash);
     }
     this.selectlist = [];
-    editor.camera = world.spawn("scripts/camera2d");
+    editor.camera = world.spawn("camera2d");
     editor.camera._ed.selectable = false;
     game.camera = editor.camera;
   },

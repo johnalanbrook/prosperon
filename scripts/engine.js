@@ -73,6 +73,7 @@ Resources.replpath = function replpath(str, path) {
 Resources.replstrs = function replstrs(path) {
   if (!path) return;
   var script = io.slurp(path);
+  if (!script) return;
   var regexp = /"[^"\s]*?\.[^"\s]+?"/g;
 
   var stem = path.dir();
@@ -351,8 +352,8 @@ profile.enabled = true;
 console.enabled = true;
 debug.enabled = true;
 
-bare_use("scripts/base.js");
-bare_use("scripts/profile.js");
+bare_use("base.js");
+bare_use("profile.js");
 
 prosperon.release = function () {
   profile.enabled = false;
@@ -364,7 +365,7 @@ bare_use("preconfig.js");
 
 if (!profile.enabled) use = stripped_use;
 
-Object.assign(globalThis, use("scripts/prosperon.js"));
+Object.assign(globalThis, use("prosperon.js"));
 
 app.interval(_ => {
   profile.report("hotreload");
