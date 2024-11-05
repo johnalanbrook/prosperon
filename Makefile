@@ -3,7 +3,7 @@ debug: FORCE
 	meson compile -C build_dbg
 
 release: FORCE
-	meson setup -Dbuildtype=release -Db_lto=true -Db_lto_threads=4 -Db_ndebug=true -Db_pgo=use build_release
+	meson setup -Dbuildtype=release -Db_lto=true -Db_ndebug=true -Db_pgo=use build_release
 	meson compile -C build_release
 
 sanitize: FORCE
@@ -11,7 +11,7 @@ sanitize: FORCE
 	meson compile -C build_sani
 
 small: FORCE
-	meson setup -Dbuildtype=minsize -Db_lto=true -Db_lto_threads=4 -Db_ndebug=true -Db_pgo=use build_small
+	meson setup -Dbuildtype=minsize -Db_lto=true -Db_ndebug=true -Db_pgo=use build_small
 	meson compile -C build_small
 
 web: FORCE

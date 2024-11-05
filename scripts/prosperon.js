@@ -223,7 +223,7 @@ var sheetsize = 1024;
 function pack_into_sheet(images)
 {
   if (!Array.isArray(images)) images = [images];
-  if (images[0].texture.width > 3 && images[0].texture.height > 3) return;
+  if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
   sheet_frames = sheet_frames.concat(images);
   var sizes = sheet_frames.map(x => [x.rect.width*x.texture.width, x.rect.height*x.texture.height]);
   var pos = os.rectpack(sheetsize, sheetsize, sizes);

@@ -2,6 +2,8 @@ project('prosperon', ['c', 'cpp'], default_options : [ 'cpp_std=c++11'])
 
 libtype = get_option('default_library')
 
+link = []
+
 if not get_option('editor')
   add_project_arguments('-DNEDITOR', language:'c')
 endif
@@ -29,13 +31,12 @@ cc = meson.get_compiler('c')
 if host_machine.system() == 'linux'
   deps += cc.find_library('asound', required:true)
   deps += [dependency('x11'), dependency('xi'), dependency('xcursor'), dependency('egl'), dependency('gl')]
+  link += '-fuse-ld=mold' # use mold, which is very fast, for debug builds
 endif
-
-link = []
 
 if host_machine.system() == 'windows'
   deps += cc.find_library('d3d11')
-  link += '-static'
+  link += '-static' # Required to pack in mingw dlls on cross compilation
 endif
 
 if host_machine.system() == 'emscripten'
@@ -101,6 +102,10 @@ prosperon = executable('prosperon', sources,
   dependencies: deps,
   include_directories: includers,
   link_args: link
+)
+
+prosperon_dep = declare_dependency(
+  link_with:prosperon
 )
 
 test('sanity', prosperon)
