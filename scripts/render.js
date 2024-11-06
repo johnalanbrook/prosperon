@@ -270,7 +270,7 @@ render.use_mat = function use_mat(mat) {
   if (!cur.shader.fs.images) return;
   for (var img of cur.shader.fs.images) {
     if (mat[img.name]) cur.images.push(mat[img.name]);
-    else cur.images.push(game.texture("icons/no_tex.gif"));
+    else cur.images.push(game.texture("no_tex.gif"));
   }
   for (var smp of cur.shader.fs.samplers) {
     var std = smp.sampler_type === "nonfiltering";
@@ -1187,6 +1187,7 @@ function camscreen2world(pos) {
   view.x *= this.size.x;
   view.y *= this.size.y;
   view = view.add(this.pos.xy);
+  view = view.sub(this.size.scale(0.5))
   view = view.scale(this.transform.scale);
   return view;
 }

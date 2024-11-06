@@ -62,7 +62,6 @@ HMM_Mat4 transform2mat(transform *t) {
   HMM_Mat4 pos = HMM_Translate(t->pos);
   return HMM_MulM4(pos, HMM_MulM4(rot, scale));
 
-  
   if (t->dirty) {
     t->cache = HMM_M4TRS(t->pos, t->rotation, t->scale);
     t->dirty = 0;

@@ -223,8 +223,6 @@ typedef union HMM_Vec2 {
     float Width, Height;
   };
 
-  cpVect cp;
-
   float Elements[2];
   float e[2];
 

@@ -77,14 +77,14 @@ io.chmod = function (file, mode) {
   return tmpchm(file, parseInt(mode, 8));
 };
 
-var tmpfex = io.exists;
+/*var tmpfex = io.exists;
 var icount = 0;
 io.exists = function(path)
 {
   icount++;
   if (console.info) console.info(`exist count: ${icount}`);
   return tmpfex(path)
-}
+}*/
 
 var tmpslurp = io.slurp;
 io.slurp = function (path) {

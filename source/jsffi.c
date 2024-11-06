@@ -28,6 +28,7 @@
 #include "par/par_streamlines.h"
 #include "par/par_shapes.h"
 #include "sokol_glue.h"
+#include "sokol_gfx.h"
 #include "sokol/util/sokol_gl.h"
 #include <stdint.h>
 #include "timer.h"
@@ -305,9 +306,6 @@ struct boundingbox js2bb(JSValue v)
   bb.l = js2number(js_getpropstr(v,"l"));
   return bb;
 }
-
-cpVect js2cvec2(JSValue v) { return js2vec2(v).cp; }
-JSValue cvec22js(cpVect v) { return vec22js((HMM_Vec2)v); }
 
 void js2floatarr(JSValue v, int n, float *a) {
   if (!JS_IsArray(js,v)) return; 
@@ -1095,7 +1093,7 @@ JSC_CCALL(render_make_sprite_ssbo,
     .size = size
   }));
   
-  ret = number2js(offset/96); // 96 size of a sprite struct
+  ret = number2js(offset/sizeof(sprite_ss)); // 96 size of a sprite struct
 )
 
 JSC_CCALL(render_make_t_ssbo,
@@ -1170,102 +1168,6 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, make_sprite_ssbo, 2)
 };
 
-JSC_DCALL(sgl_enable_texture)
-JSC_DCALL(sgl_disable_texture)
-JSC_CCALL(sgl_texture, sgl_texture(js2texture(argv[0])->id, std_sampler))
-JSC_DCALL(sgl_matrix_mode_modelview)
-JSC_DCALL(sgl_matrix_mode_projection)
-JSC_DCALL(sgl_matrix_mode_texture)
-JSC_DCALL(sgl_load_identity)
-JSC_CCALL(sgl_translate,
-  HMM_Vec3 v = js2vec3(argv[0]);
-  sgl_translate(v.x,v.y,v.z);
-)
-JSC_CCALL(sgl_rotate,
-  float rad = js2angle(argv[0]);
-  HMM_Vec3 axis = js2vec3(argv[1]);
-  sgl_rotate(rad, axis.x, axis.y, axis.z);
-)
-
-JSC_CCALL(sgl_scale,
-  HMM_Vec3 v = js2vec3(argv[0]);
-  sgl_scale(v.x, v.y, v.z);
-)
-
-JSC_CCALL(sgl_load_matrix,
-  transform *t = js2transform(argv[0]);
-  sgl_load_matrix(t->cache.e);
-)
-
-JSC_6CALL(sgl_frustum)
-JSC_6CALL(sgl_ortho)
-JSC_4CALL(sgl_perspective)
-JSC_DCALL(sgl_push_matrix)
-JSC_DCALL(sgl_pop_matrix)
-JSC_1CALL(sgl_point_size)
-JSC_DCALL(sgl_begin_points)
-JSC_DCALL(sgl_begin_lines)
-JSC_DCALL(sgl_begin_line_strip)
-JSC_DCALL(sgl_begin_triangles)
-JSC_DCALL(sgl_begin_triangle_strip)
-JSC_DCALL(sgl_begin_quads)
-JSC_DCALL(sgl_end)
-JSC_DCALL(sgl_draw)
-JSC_1CALL(sgl_layer)
-JSC_1CALL(sgl_draw_layer)
-
-JSC_CCALL(sgl_image,
-  texture *t = js2texture(argv[0]);
-//  transform *tr = js2transform(argv[1]);
-  HMM_Vec4 rect = js2vec4(argv[2]);
-  HMM_Vec4 color = js2vec4(argv[3]);
-  sgl_begin_quads();
-  sgl_c4f(color.r, color.g, color.b, color.a);
-  sgl_v2f(0,0);
-  sgl_v2f(0,1);
-  sgl_v2f(1,1);
-  sgl_v2f(1,0);
-  sgl_end();
-//  sgl_defaults();
-)
-
-JSC_CCALL(sgl_image_array,
-  JSValue array = argv[0];
-  sgl_begin_quads();
-  for (int i = 0; i < js_arrlen(array); i++) {
-    sgl_v2f(0,0);
-    sgl_v2f(0,1);
-    sgl_v2f(1,1);
-    sgl_v2f(1,0);
-  }
-  sgl_end();
-)
-
-static const JSCFunctionListEntry js_sgl_funcs[] = {
-  MIST_FUNC_DEF(sgl, enable_texture, 0),
-  MIST_FUNC_DEF(sgl, disable_texture, 0),
-  MIST_FUNC_DEF(sgl, texture, 1),
-  MIST_FUNC_DEF(sgl, matrix_mode_modelview, 0),
-  MIST_FUNC_DEF(sgl, matrix_mode_projection, 0),
-  MIST_FUNC_DEF(sgl, matrix_mode_texture, 0),
-  MIST_FUNC_DEF(sgl, load_identity, 0),
-  MIST_FUNC_DEF(sgl, translate, 1),
-  MIST_FUNC_DEF(sgl, rotate, 2),
-  MIST_FUNC_DEF(sgl, scale, 1),
-  MIST_FUNC_DEF(sgl, load_matrix, 1),
-  MIST_FUNC_DEF(sgl, frustum, 6),
-  MIST_FUNC_DEF(sgl, ortho, 6),
-  MIST_FUNC_DEF(sgl, perspective, 4),
-  MIST_FUNC_DEF(sgl, push_matrix, 0),
-  MIST_FUNC_DEF(sgl, pop_matrix, 0),
-  MIST_FUNC_DEF(sgl, point_size, 1),
-  MIST_FUNC_DEF(sgl, draw, 0),
-  MIST_FUNC_DEF(sgl, layer, 1),
-  MIST_FUNC_DEF(sgl, draw_layer, 1),
-  MIST_FUNC_DEF(sgl, image, 4),
-  MIST_FUNC_DEF(sgl, image_array, 1),
-};
-
 JSC_CCALL(gui_scissor,
   sg_apply_scissor_rect(js2number(argv[0]), js2number(argv[1]), js2number(argv[2]), js2number(argv[3]), 0);
 )
@@ -1323,7 +1225,7 @@ JSC_CCALL(vector_midpoint,
   HMM_Vec2 a = js2vec2(argv[0]);
   HMM_Vec2 b = js2vec2(argv[1]);
 //  HMM_Vec2 c = HMM_AddV2(a,b);
-//  c = HMM_DivV2F(c, 2);
+//  c = HMM_Div2VF(c, 2);
   return vec22js((HMM_Vec2){(a.x+b.x)/2, (a.y+b.y)/2});
 )
 
@@ -2515,10 +2417,9 @@ JSC_SCALL(os_make_gif,
   printf("making gif with %s\n", str);
 
   JSValue gif = JS_NewObject(js);
-
   JSValue delay_arr = JS_NewArray(js);
-
   JSValue jstex = texture2js(tex);
+  JS_SetPropertyStr(js, jstex, "path", JS_DupValue(js, argv[0]));
 
   float yslice = 1.0/frames;
   for (int i = 0; i < frames; i++) {
@@ -2966,7 +2867,6 @@ void ffi_load() {
   QJSGLOBALCLASS(game);
   QJSGLOBALCLASS(gui);
   QJSGLOBALCLASS(render);
-//  QJSGLOBALCLASS(sgl);
   QJSGLOBALCLASS(vector);
   QJSGLOBALCLASS(spline);
   QJSGLOBALCLASS(performance);
@@ -2987,7 +2887,7 @@ void ffi_load() {
   JS_SetPropertyStr(js, globalThis, "layout", js_layout_use(js));
   JS_SetPropertyStr(js, globalThis, "miniz", js_miniz(js));
   JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
-  JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));    
+  JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));
 
 #ifndef NEDITOR
   JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));

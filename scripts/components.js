@@ -42,7 +42,6 @@ var sprite = {
   set diffuse(x) {},
   anim_speed: 1,
   play(str, loop = true, reverse = false) {
-    
     if (!this.animset) {
 //      console.warn(`Sprite has no animset when trying to play ${str}`);
       return;
