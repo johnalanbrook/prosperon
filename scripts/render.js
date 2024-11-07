@@ -1438,6 +1438,7 @@ prosperon.render = function () {
 };
 
 prosperon.process = function process() {
+  layout.newframe();
   profile.report("frame");
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
@@ -1493,6 +1494,7 @@ prosperon.process = function process() {
   profile.endreport('frame');
 
   profile.capture_data();
+
 };
 
 return { render };

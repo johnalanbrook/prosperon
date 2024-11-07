@@ -340,16 +340,12 @@ var Player = {
   },
 
   raw_input(cmd, state, ...args) {
+    this.pawns = this.pawns.filter(x => x.inputs);
     for (var pawn of this.pawns.reversed()) {
-      if (!pawn.inputs) {
-        console.error(`pawn no longer has inputs object.`);
-        continue;
-      }
+      var inputs = pawn.inputs;
 
-      var block = pawn.inputs.block;
-
-      if (!pawn.inputs[cmd]) {
-        if (pawn.inputs.block) return;
+      if (!inputs[cmd]) {
+        if (inputs.block) return;
         continue;
       }
 
@@ -357,29 +353,27 @@ var Player = {
 
       switch (state) {
         case "pressed":
-          fn = pawn.inputs[cmd];
+          fn = inputs[cmd];
           break;
         case "rep":
-          fn = pawn.inputs[cmd].rep ? pawn.inputs[cmd] : null;
+          fn = inputs[cmd].rep ? inputs[cmd] : null;
           break;
         case "released":
-          fn = pawn.inputs[cmd].released;
+          fn = inputs[cmd].released;
           break;
         case "down":
-          if (typeof pawn.inputs[cmd].down === "function") fn = pawn.inputs[cmd].down;
-          else if (pawn.inputs[cmd].down) fn = pawn.inputs[cmd];
+          if (typeof inputs[cmd].down === "function") fn = inputs[cmd].down;
+          else if (inputs[cmd].down) fn = inputs[cmd];
       }
 
-      if (typeof fn === "function") fn.call(pawn, ...args);
-
-      if (!pawn.inputs)
-        if (block) return;
-        else continue;
-
-      if (state === "released") pawn.inputs.release_post?.call(pawn);
-
-      if (!pawn.inputs.fallthru) return;
-      if (pawn.inputs.block) return;
+      var consumed = false;
+      if (typeof fn === "function") {
+        fn.call(pawn, ...args);
+        consumed = true;
+      }
+      if (state === "released") inputs.release_post?.call(pawn);
+      if (inputs.block) return;
+      if (consumed) return;
     }
   },
 

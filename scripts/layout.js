@@ -217,6 +217,8 @@ clay.button = function(str, action, config = {})
   config.action = action;
 }
 
+var hovered = undefined;
+layout.newframe = function() { hovered = undefined; }
 layout.draw_commands = function(cmds, pos = [0,0])
 {
   var mousepos = prosperon.camera.screen2hud(input.mouse.screenpos());
@@ -229,6 +231,7 @@ layout.draw_commands = function(cmds, pos = [0,0])
     if (config.hovered && geometry.rect_point_inside(cmd.boundingbox, mousepos)) {
       config.hovered.__proto__ = config;
       config = config.hovered;
+      hovered = config;
     }
 
     if (config.background_image)
@@ -254,6 +257,14 @@ layout.draw_debug = function(cmds, pos = [0,0])
     render.rectangle(cmd.marginbox, [0,0,1,0.1]);
   }
 }
+
+layout.inputs = {};
+layout.inputs.lm = function()
+{
+  if (hovered && hovered.action) hovered.action();
+}
+
+layout.toString = _ => "layout"
 
 return layout;
 
