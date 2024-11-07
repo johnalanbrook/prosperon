@@ -72,6 +72,7 @@ var entity = {
   },
   set pos(x) {
     this.transform.pos = x;
+    this.sync();
   },
   get angle() {
     return this.transform.angle;

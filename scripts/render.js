@@ -709,6 +709,38 @@ render.draw_gui = true;
 render.draw_gizmos = true;
 
 render.sprites = function render_sprites() {
+  // bucket & draw
+/*  var sorted = allsprites.sort((a,b) => {
+    if (a.gameobject.drawlayer !== b.gameobject.drawlayer) return a.gameobject.drawlayer - b.gameobject.drawlayer;
+    if (a.image.texture !== b.image.texture) return a.image.texture.path.localeCompare(b.image.texture.path);
+    return a.gameobject.transform.pos.y - b.gameobject.transform.pos.y;
+  });
+
+  if (sorted.length === 0) return;
+
+  var tex = undefined;
+  var buckets = [];
+  var group = [sorted[0]];
+
+  for (var i = 1; i < sorted.length; i++) {
+    if (sorted[i].image.texture !== sorted[i-1].image.texture) {
+      buckets.push(group);
+      group = [];
+    }
+    group.push(sorted[i]);
+  }
+  if (group.length>0) buckets.push(group);
+  render.use_shader(spritessboshader);
+  for (var img of buckets) {
+    var sparray = img;
+    if (sparray.length === 0) continue;
+    var ss = sparray[0];
+    ss.baseinstance = render.make_sprite_ssbo(sparray,sprite_ssbo);
+    render.use_mat(ss);
+    render.draw(shape.quad,sprite_ssbo,sparray.length);
+  }
+*/
+
   profile.report("sprites");
   profile.report("drawing");
   render.use_shader(spritessboshader);

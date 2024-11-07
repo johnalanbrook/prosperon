@@ -14,7 +14,7 @@ var make_point_obj = function (o, p) {
 
 var sprite_addbucket = function (sprite) {
   if (!sprite.image) return;
-  var layer = 1000000 + sprite.gameobject.drawlayer * 1000 - sprite.gameobject.pos.y;
+  var layer = sprite.z_value();
   sprite_buckets[layer] ??= {};
   sprite_buckets[layer][sprite.image.texture.path] ??= [];
   sprite_buckets[layer][sprite.image.texture.path].push(sprite);
@@ -40,6 +40,9 @@ var sprite = {
   image: undefined,
   get diffuse() { return this.image.texture; },
   set diffuse(x) {},
+  z_value() {
+    return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;
+  },
   anim_speed: 1,
   play(str, loop = true, reverse = false) {
     if (!this.animset) {
@@ -148,7 +151,7 @@ var sprite = {
   },
   anchor: [0, 0],
   sync() {
-    var layer = 1000000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;
+    var layer = this.z_value();
     if (layer === this._oldlayer && this.path === this._oldpath) return;
 
     sprite_rmbucket(this);
