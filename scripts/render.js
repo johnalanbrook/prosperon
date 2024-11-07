@@ -380,7 +380,7 @@ function create_shader_obj(file) {
       var filez = inc.match(/#include <(.*)>/)[1];
       var macro = io.slurp(filez);
       if (!macro) {
-        filez = `shaders/${filez}`;
+        filez = `${filez}`;
         macro = io.slurp(filez);
       }
       shader = shader.replace(inc, macro);
@@ -471,8 +471,8 @@ function make_shader(shader, pipe) {
   var file = shader;
   shader = io.slurp(file);
   if (!shader) {
-    console.info(`not found! slurping shaders/${file}`);
-    shader = io.slurp(`shaders/${file}`);
+    console.info(`not found! slurping ${file}`);
+    shader = io.slurp(`${file}`);
   }
   var writejson = `.prosperon/${file.name()}.shader.json`;
 
@@ -653,18 +653,18 @@ var polyssboshader;
 var sprite_ssbo;
 
 render.init = function () {
-  textshader = make_shader("shaders/text_base.cg");
-  render.spriteshader = make_shader("shaders/sprite.cg");
-  spritessboshader = make_shader("shaders/sprite_ssbo.cg");
+  textshader = make_shader("text_base.cg");
+  render.spriteshader = make_shader("sprite.cg");
+  spritessboshader = make_shader("sprite_ssbo.cg");
   var postpipe = Object.create(base_pipeline);
   postpipe.cull = cull_map.none;
   postpipe.primitive = primitive_map.triangle;
-  render.postshader = make_shader("shaders/simplepost.cg", postpipe);
-  slice9shader = make_shader("shaders/9slice.cg");
-  circleshader = make_shader("shaders/circle.cg");
-  polyshader = make_shader("shaders/poly.cg");
-  parshader = make_shader("shaders/baseparticle.cg");
-  polyssboshader = make_shader("shaders/poly_ssbo.cg");
+  render.postshader = make_shader("simplepost.cg", postpipe);
+  slice9shader = make_shader("9slice.cg");
+  circleshader = make_shader("circle.cg");
+  polyshader = make_shader("poly.cg");
+  parshader = make_shader("baseparticle.cg");
+  polyssboshader = make_shader("poly_ssbo.cg");
   poly_ssbo = render.make_textssbo();
   sprite_ssbo = render.make_textssbo();
 
@@ -839,7 +839,7 @@ function flush_poly() {
   poly_idx = 0;
 }
 
-render.line = function render_line(points, color = Color.white, thickness = 1) {
+render.line = function render_line(points, color = Color.white, thickness = 1, shader = polyssboshader, pipe = base_pipeline) {
   for (var i = 0; i < points.length - 1; i++) {
     var a = points[i];
     var b = points[i + 1];
@@ -850,6 +850,8 @@ render.line = function render_line(points, color = Color.white, thickness = 1) {
     poly.transform.scale = [dist, thickness, 1];
     poly.color = color;
   }
+  queued_shader = shader;
+  queued_pipe = pipe;
   check_flush(flush_poly);
 };
 
@@ -882,7 +884,6 @@ render.coordinate = function render_coordinate(pos, size, color) {
 var queued_shader;
 var queued_pipe;
 render.rectangle = function render_rectangle(rect, color = Color.white, shader = polyssboshader, pipe = base_pipeline) {
-  var transform = os.make_transform();
   var wh = [rect.width, rect.height];
   var poly = poly_e();
   var pos = [rect.x,rect.y].add([rect.width,rect.height].scale(0.5));
@@ -981,7 +982,7 @@ render.fillmask = function(ref)
 {
   render.forceflush();
   var pipe = stencil_writer(ref);
-  render.use_shader('shaders/screenfill.cg', pipe);
+  render.use_shader('screenfill.cg', pipe);
   render.draw(shape.quad);
 }
 
@@ -1006,7 +1007,7 @@ Object.assign(stencil_inverter, {
 render.invertmask = function()
 {
   render.forceflush();
-  render.use_shader('shaders/screenfill.cg', stencil_inverter);
+  render.use_shader('screenfill.cg', stencil_inverter);
   render.draw(shape.quad);
 }
 
@@ -1021,7 +1022,7 @@ render.mask = function mask(image, pos, scale, rotation = 0, ref = 1)
   else scale = vector.v3one;
     
   var pipe = stencil_writer(ref);
-  render.use_shader('shaders/sprite.cg', pipe);
+  render.use_shader('sprite.cg', pipe);
   var t = os.make_transform();
   t.trs(pos, undefined,scale);
   set_model(t);
@@ -1082,6 +1083,8 @@ render.slice9 = function (image, rect = [0,0], slice = 0, color = Color.white) {
   var tex = image.texture;
   var image_size = calc_image_size(image);
   var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
+
+  check_flush();
   
   slice9_t.trs([rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y])), undefined, size);
   slice = clay.normalizeSpacing(slice);
@@ -1394,8 +1397,8 @@ prosperon.render = function () {
   render.viewport(prosperon.camera.view(), false);
   
   if (render.draw_sprites) render.sprites();
-  if (render.draw_particles) draw_emitters();
   prosperon.draw();
+  if (render.draw_particles) draw_emitters();  
   render.fillmask(0);
   render.forceflush();
   

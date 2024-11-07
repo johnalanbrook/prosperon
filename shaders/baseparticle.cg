@@ -35,6 +35,7 @@ in vec4 color0;
 out vec4 color;
 
 texture2D diffuse;
+@sampler_type smp nonfiltering
 sampler smp;
 
 void main()

@@ -29,6 +29,8 @@ emitter.spawn = function (t) {
 
   var par = this.dead.shift();
   if (par) {
+    par.transform.unit();
+    par.transform.pos = t.pos;
     par.transform.scale = this.scale;
     this.particles.push(par);
     par.time = 0;
@@ -65,6 +67,7 @@ emitter.step = function (dt) {
   // update all particles
   for (var p of this.particles) {
     p.time += dt;
+    p.transform.move(p.body.velocity.scale(dt));
     this.step_hook?.(p);
 
     if (this.kill_hook?.(p) || p.time >= p.life) {
@@ -98,7 +101,6 @@ function update_emitters(dt) {
 
 var arr = [];
 function draw_emitters() {
-  return;
   ssbo ??= render.make_textssbo();
   render.use_shader("shaders/baseparticle.cg");
   var buckets = {};
@@ -115,7 +117,7 @@ function draw_emitters() {
     arr.length = 0;
     var bucket = buckets[path];
     bucket[0].baseinstance = base;
-    render.use_mat(bucket[0]);
+    render.use_mat({diffuse:bucket[0].diffuse.texture});
     for (var e of bucket) {
       if (e.particles.length === 0) continue;
       for (var p of e.particles) arr.push(p);
