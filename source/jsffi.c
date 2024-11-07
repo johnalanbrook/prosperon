@@ -713,7 +713,7 @@ JSC_CCALL(render_set_projection_ortho,
   lrtb extents = js2lrtb(argv[0]);
   float near = js2number(argv[1]);
   float far = js2number(argv[2]);
-  globalview.p = HMM_Orthographic_RH_NO(
+  globalview.p = HMM_Orthographic_RH_ZO(
     extents.l,
     extents.r,
     extents.b,
