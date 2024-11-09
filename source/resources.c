@@ -220,7 +220,6 @@ int fexists(const char *path)
 {
   int len = strlen(path);
   if (mz_zip_reader_locate_file(&core_res, path, NULL, 0) != -1) return 1;
-  else if (!access(path, R_OK)) return 1;
 
   return 0;
 }

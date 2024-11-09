@@ -3,6 +3,18 @@ os.env.doc = "Return the value of the environment variable v.";
 if (os.sys() === "windows") os.user = os.env("USERNAME");
 else os.user = os.env("USER");
 
+var allpaths = io.ls();
+/*var ignore;
+if (ignore = io.slurp('.prosperonignore')) {
+  ignore = ignore.split('\n');
+  for (var ig of ignore) {
+    if (!ig) continue;
+    allpaths = allpaths.filter(x => !x.startsWith(ig));
+  }
+}
+*/
+//console.info(allpaths)
+
 var appy = {};
 appy.inputs = {};
 if (os.sys() === "macos") {
@@ -77,14 +89,11 @@ io.chmod = function (file, mode) {
   return tmpchm(file, parseInt(mode, 8));
 };
 
-/*var tmpfex = io.exists;
-var icount = 0;
+var tmpfex = io.exists;
 io.exists = function(path)
 {
-  icount++;
-  if (console.info) console.info(`exist count: ${icount}`);
-  return tmpfex(path)
-}*/
+  return allpaths.includes(path) || tmpfex(path);
+}
 
 var tmpslurp = io.slurp;
 io.slurp = function (path) {
@@ -115,7 +124,7 @@ io.mkpath = function (dir) {
 var tmpslurpw = io.slurpwrite;
 io.slurpwrite = function (path, c) {
   path = Resources.replpath(path);
-  io.mkpath(path.dir());
+//  io.mkpath(path.dir());
   return tmpslurpw(path, c);
 };
 
@@ -147,22 +156,10 @@ io.globToRegex = function (glob) {
   return new RegExp(regexStr);
 };
 
-io.mixin({
-  extensions(ext) {
-    var paths = io.ls();
-    paths = paths.filter(function (str) {
-      return str.ext() === ext;
-    });
-    return paths;
-  },
-
-  glob(pat) {
-    var paths = io.ls(".");
-    var regex = io.globToRegex(pat);
-    paths = paths.filter(str => str.match(regex)).sort();
-    return paths;
-  },
-});
+io.glob = function(pat) {
+  var regex = io.globToRegex(pat);
+  return allpaths.filter(str => str.match(regex)).sort();
+}
 
 io.doc = {
   doc: "Functions for filesystem input/output commands.",
@@ -298,8 +295,7 @@ Cmdline.register_order(
     say(`Packing into ${packname}`);
 
     io.pack_start(packname);
-    var files = io.ls(".");
-    files = files.filter(f => !f.startsWith(".git"));
+    files = allfiles.filter(f => !f.startsWith(".git"));
     files = files.filter(f => !f.startsWith(".nova"));
     files = files.filter(f => !f.includes(".DS_Store"));
     files = files.filter(f => !f.startsWith(".gitignore"));
