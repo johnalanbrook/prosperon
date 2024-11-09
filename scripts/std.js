@@ -3,7 +3,6 @@ os.env.doc = "Return the value of the environment variable v.";
 if (os.sys() === "windows") os.user = os.env("USERNAME");
 else os.user = os.env("USER");
 
-var allpaths = io.ls();
 /*var ignore;
 if (ignore = io.slurp('.prosperonignore')) {
   ignore = ignore.split('\n');
@@ -89,24 +88,6 @@ io.chmod = function (file, mode) {
   return tmpchm(file, parseInt(mode, 8));
 };
 
-var tmpfex = io.exists;
-io.exists = function(path)
-{
-  return allpaths.includes(path) || tmpfex(path);
-}
-
-var tmpslurp = io.slurp;
-io.slurp = function (path) {
-  path = Resources.replpath(path);
-  return tmpslurp(path);
-};
-
-var tmpslurpb = io.slurpbytes;
-io.slurpbytes = function (path) {
-  path = Resources.replpath(path);
-  return tmpslurpb(path);
-};
-
 io.mkpath = function (dir) {
   if (!dir) return;
   var mkstack = [];
@@ -138,28 +119,6 @@ var tmprm = io.rm;
 io.rm = function (f) {
   tmprm(Resources.replpath(f));
 };
-
-io.globToRegex = function (glob) {
-  // Escape special regex characters
-  // Replace glob characters with regex equivalents
-  let regexStr = glob
-    .replace(/[\.\\]/g, "\\$&") // Escape literal backslashes and dots
-    .replace(/([^\*])\*/g, "$1[^/]*") // * matches any number of characters except /
-    .replace(/\*\*/g, ".*") // ** matches any number of characters, including none
-    .replace(/\[(.*?)\]/g, "[$1]") // Character sets
-    .replace(/\?/g, "."); // ? matches any single character
-
-  // Ensure the regex matches the whole string
-  regexStr = "^" + regexStr + "$";
-
-  // Create and return the regex object
-  return new RegExp(regexStr);
-};
-
-io.glob = function(pat) {
-  var regex = io.globToRegex(pat);
-  return allpaths.filter(str => str.match(regex)).sort();
-}
 
 io.doc = {
   doc: "Functions for filesystem input/output commands.",
@@ -275,7 +234,8 @@ Cmdline.register_order(
       if (io.exists("game.js")) global.app = actor.spawn("game.js");
       else global.app = actor.spawn("nogame.js");
 
-      if (project.icon) window.set_icon(game.texture(project.icon).texture);
+      var icon = game.texture(project.icon);
+      if (icon) window.set_icon(game.texture(icon.texture));
       game.camera = world.spawn("camera2d");
     });
   },

@@ -7,7 +7,6 @@
 #include "sokol/sokol_args.h"
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
-#include "sokol/sokol_fetch.h"
 #include "sokol/util/sokol_gl.h"
 
 #define CUTE_ASEPRITE_IMPLEMENTATION

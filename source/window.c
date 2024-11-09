@@ -48,11 +48,6 @@ void window_suspended(int s)
   script_evalf("prosperon.suspended(%d);", s);
 }
 
-void set_icon(const char *png) {
-  icon = texture_from_file(png);
-  window_seticon(&mainwin, icon);
-}
-
 void window_setfullscreen(window *w, int f)
 {
   if (w->fullscreen == f) return;

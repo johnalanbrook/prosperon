@@ -1040,6 +1040,7 @@ function calc_image_size(img)
 }
 
 render.image = function image(image, rect = [0,0], rotation = 0, color = Color.white) {
+  if (!image) throw Error ('Need an image to render.')
   if (typeof image === "string")
     image = game.texture(image);
 
@@ -1386,6 +1387,7 @@ var imgui_fn = function () {
 */
 
 prosperon.render = function () {
+try{
   render.glue_pass();
   render.set_view(prosperon.camera.transform);
   render.set_projection_ortho({
@@ -1432,16 +1434,33 @@ prosperon.render = function () {
   if (debug.show) imgui_fn();
   profile.endreport("imgui");
 
+//  render.end_pass();
+
+//  render.commit();
+//  profile.report_frame(profile.secs(profile.now()) - frame_t);  
+
+//  endframe();
+} catch(e) {
+  throw e;
+} finally {
   render.end_pass();
-
   render.commit();
-  profile.report_frame(profile.secs(profile.now()) - frame_t);  
-
   endframe();
+}
 };
+
+dmon.watch('.');
+
+function dmon_cb(e)
+{
+  if (e.file.startsWith('.')) return;
+  console.info(json.encode(e))
+}
 
 prosperon.process = function process() {
   layout.newframe();
+  // check for hot reloading
+  dmon.poll(dmon_cb);
   profile.report("frame");
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
@@ -1497,7 +1516,6 @@ prosperon.process = function process() {
   profile.endreport('frame');
 
   profile.capture_data();
-
 };
 
 return { render };

@@ -45,6 +45,7 @@ deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
+deps += dependency('qjs-dmon',static:true)
 
 deps += dependency('threads')
 
@@ -62,7 +63,7 @@ if storefront == 'steam'
 endif
 
 sources = []
-src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','input.c', 'jsffi.c','log.c','miniz.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
+src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','input.c', 'jsffi.c','log.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 

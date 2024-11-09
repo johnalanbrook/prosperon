@@ -318,9 +318,53 @@ globalThis.use = function use(file) {
   return ret;
 };
 
-globalThis.spinup = function spinup(file)
+var allpaths = io.ls();
+
+io.exists = function(path)
 {
-  // spin up this file into its own entity
+  return allpaths.includes(path) || core_db.exists(path);
+}
+
+var tmpslurp = io.slurp;
+io.slurp = function(path)
+{
+  path = Resources.replpath(path);
+  var ret = tmpslurp(path, true) || core_db.slurp(path, true);
+  if (!ret) console.info(`could not slurp ${path}`);
+  return ret;
+}
+
+io.slurpbytes = function(path)
+{
+  path = Resources.replpath(path);
+  var ret = tmpslurp(path) || core_db.slurp(path);
+  if (!ret) throw new Error(`Could not find file ${path} anywhere`);
+  return ret;
+}
+
+var coredata = tmpslurp("core.zip");
+var core_db = miniz.read(coredata);
+
+io.globToRegex = function (glob) {
+  // Escape special regex characters
+  // Replace glob characters with regex equivalents
+  let regexStr = glob
+    .replace(/[\.\\]/g, "\\$&") // Escape literal backslashes and dots
+    .replace(/([^\*])\*/g, "$1[^/]*") // * matches any number of characters except /
+    .replace(/\*\*/g, ".*") // ** matches any number of characters, including none
+    .replace(/\[(.*?)\]/g, "[$1]") // Character sets
+    .replace(/\?/g, "."); // ? matches any single character
+
+  // Ensure the regex matches the whole string
+  regexStr = "^" + regexStr + "$";
+
+  // Create and return the regex object
+  return new RegExp(regexStr);
+};
+
+io.glob = function(pat) {
+  var regex = io.globToRegex(pat);
+  return allpaths.filter(str => str.match(regex)).sort();
 }
 
 function stripped_use(file, script) {
@@ -367,7 +411,7 @@ if (!profile.enabled) use = stripped_use;
 
 Object.assign(globalThis, use("prosperon.js"));
 
-app.interval(_ => {
+/*app.interval(_ => {
   profile.report("hotreload");
   actor.hotreload();
   render.hotreload();
@@ -375,3 +419,4 @@ app.interval(_ => {
   repl.hotreload();
   profile.endreport("hotreload");  
 }, 1);
+*/

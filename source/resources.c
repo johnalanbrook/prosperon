@@ -16,8 +16,6 @@
 
 #include <fcntl.h>
 
-#include "miniz.h"
-
 #ifndef __EMSCRIPTEN__
 #include <ftw.h>
 #endif
@@ -37,19 +35,10 @@ struct dirent *c_dirent = NULL;
 
 char pathbuf[MAXPATH + 1];
 
-static mz_zip_archive core_res;
-
-int LOADED_GAME = 0;
-uint8_t *gamebuf;
-void *zipbuf;
-
-sfetch_handle_t game_h;
-
 void *os_slurp(const char *file, size_t *size)
 {
   FILE *f;
 
-  jump:
   f = fopen(file, "rb");
 
   if (!f) return NULL;
@@ -64,27 +53,6 @@ void *os_slurp(const char *file, size_t *size)
   if (size) *size = fsize;
 
   return slurp;
-}
-
-
-#define MAXGAMESIZE 15*1024*1024
-
-static void response_cb(const sfetch_response_t *r)
-{
-  if (r->fetched) {
-    YughInfo("FINISHED FETCH\n");
-    zipbuf = malloc(r->data.size);
-    memcpy(zipbuf, r->data.ptr, r->data.size);
-    
-  }
-  if (r->finished) {
-    YughInfo("FINISHED RESPONSE\n");
-    LOADED_GAME = 1;
-    void *buf = sfetch_unbind_buffer(r->handle);
-    free(buf);
-    if (r->failed)
-      LOADED_GAME = -1;
-  }
 }
 
 #if defined(__linux__)
@@ -116,46 +84,6 @@ int get_executable_path(char *buffer, unsigned int buffer_size) {
 }
 void *gamedata;
 
-void resources_init() {
-  sfetch_setup(&(sfetch_desc_t){
-    .max_requests = 1024,
-    .num_channels = 4,
-    .num_lanes = 8,
-    .logger = { .func = sg_logging },
-  });
-
-  size_t coresize;
-  void *core = os_slurp("core.zip", &coresize);
-  mz_zip_reader_init_mem(&core_res, core, coresize, 0);
-
-#ifdef __EMSCRIPTEN__
-  gamebuf = malloc(MAXGAMESIZE);
-  game_h = sfetch_send(&(sfetch_request_t){
-    .path="game.zip",
-    .callback = response_cb,
-    .buffer = {
-      .ptr = gamebuf,
-      .size = MAXGAMESIZE
-    }
-  });
-#endif
-}
-
-char *seprint(char *fmt, ...)
-{
-  va_list args;
-  va_start (args, fmt);
-  char test[128];
-  int len = vsnprintf(test, 128, fmt, args);
-  if (len > 128) {
-    char *test = malloc(len+1);
-    vsnprintf(test, len+1, fmt, args);
-    return strdup(test);
-  }
-  
-  return strdup(test);
-}
-
 static char *ext_paths = NULL;
 
 #ifndef __EMSCRIPTEN__
@@ -171,16 +99,9 @@ static int ls_ftw(const char *path, const struct stat *sb, int typeflag)
 
 time_t file_mod_secs(const char *file) {
   struct stat attr;
-
-  mz_uint index;
-  mz_zip_archive_file_stat pstat;
   
   if (!stat(file,&attr))
     return attr.st_mtime;
-  else if ((index = mz_zip_reader_locate_file(&core_res, file, NULL, 0)) != -1) {
-    mz_zip_reader_file_stat(&core_res, index, &pstat);
-    return pstat.m_time;
-  }
     
   return -1;
 }
@@ -216,21 +137,10 @@ char *str_replace_ext(const char *s, const char *newext) {
   return ret;
 }
 
-int fexists(const char *path)
-{
-  int len = strlen(path);
-  if (mz_zip_reader_locate_file(&core_res, path, NULL, 0) != -1) return 1;
-
-  return 0;
-}
-
-
 void *slurp_file(const char *filename, size_t *size)
 {
   if (!access(filename, R_OK))
     return os_slurp(filename, size);
-  else
-    return mz_zip_reader_extract_file_to_heap(&core_res, filename, size, 0);
 }
 
 char *slurp_text(const char *filename, size_t *size)

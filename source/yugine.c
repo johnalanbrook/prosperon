@@ -19,7 +19,6 @@
 #include "sokol/sokol_audio.h"
 #include "sokol/sokol_time.h"
 #include "sokol/sokol_args.h"
-#include "sokol/sokol_fetch.h"
 #include <stb_ds.h>
 #include <stb_truetype.h>
 #include "stb_image.h"
@@ -44,7 +43,6 @@ void c_init() {
 }
 
 void c_frame() {
-  sfetch_dowork();
   script_call_sym(c_process_fn,0,NULL); 
 }
 
@@ -193,7 +191,6 @@ sapp_desc sokol_main(int argc, char **argv) {
   signal(SIGFPE, seghandle);
 #endif
 
-  resources_init();
   stm_setup(); /* time */
   script_startup();
   

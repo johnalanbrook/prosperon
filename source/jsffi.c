@@ -1707,7 +1707,6 @@ static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,secs,1),
 };
 
-JSC_SCALL(io_exists, ret = boolean2js(fexists(str)))
 JSC_CCALL(io_ls, return strarr2js(ls(".")))
 JSC_SSCALL(io_cp, ret = number2js(cp(str,str2)))
 JSC_SSCALL(io_mv, ret = number2js(rename(str,str2)))
@@ -1715,34 +1714,29 @@ JSC_SCALL(io_chdir, ret = number2js(chdir(str)))
 JSC_SCALL(io_rm, ret = number2js(remove(str)))
 JSC_SCALL(io_mkdir, ret = number2js(mkdir(str,0777)))
 
-JSValue js_io_slurpbytes(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  const char *f = js2str(argv[0]);
-  size_t len;
-  unsigned char *d = slurp_file(f,&len);
-  if (!d) {
-    JS_FreeCString(js,f);
-    return JS_UNDEFINED;
-  }
-  JSValue ret = JS_NewArrayBufferCopy(js,d,len);
-  JS_FreeCString(js,f);
-  free(d);
-  return ret;
-}
-
 JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
+  const char *file = js2str(argv[0]);
+  FILE *f = fopen(file, "rb");
+  JS_FreeCString(js,file);  
+  if (!f)
+    return JS_UNDEFINED;
 
-  const char *f = js2str(argv[0]);
-  size_t len;
+  fseek(f,0,SEEK_END);
+  size_t fsize = ftell(f);
+  rewind(f);
+  void *slurp = malloc(fsize);
+  fread(slurp,fsize,1,f);
+  fclose(f);
 
-  char *s = slurp_text(f,&len);
-  JS_FreeCString(js,f);
+  JSValue ret;
+  if (JS_ToBool(js,argv[1]))
+    ret = JS_NewStringLen(js, slurp, fsize);
+  else
+    ret = JS_NewArrayBufferCopy(js, slurp, fsize);
 
-  if (!s) return JS_UNDEFINED;
+  free(slurp);
   
-  JSValue ret = JS_NewStringLen(js, s, len);
-  free(s);
   return ret;
 }
 
@@ -1778,7 +1772,6 @@ JSC_SCALL(io_mod,
 )
 
 static const JSCFunctionListEntry js_io_funcs[] = {
-  MIST_FUNC_DEF(io, exists,1),
   MIST_FUNC_DEF(io, ls, 0),
   MIST_FUNC_DEF(io, cp, 2),
   MIST_FUNC_DEF(io, mv, 2),
@@ -1786,8 +1779,7 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, chdir, 1),
   MIST_FUNC_DEF(io, mkdir, 1),
   MIST_FUNC_DEF(io, chmod, 2),
-  MIST_FUNC_DEF(io, slurp, 1),
-  MIST_FUNC_DEF(io, slurpbytes, 1),
+  MIST_FUNC_DEF(io, slurp, 2),
   MIST_FUNC_DEF(io, slurpwrite, 2),
   MIST_FUNC_DEF(io, mod,1)
 };
@@ -2398,23 +2390,30 @@ JSC_CCALL(os_obj_size,
   
 )
 
-JSC_SCALL(os_make_texture,
-  ret = texture2js(texture_from_file(str));
+JSC_CCALL(os_make_texture,
+  size_t len;
+  void *raw = JS_GetArrayBuffer(js, &len, argv[0]);
+  if (!raw) {
+    JS_ThrowReferenceError(js, "could not load texture with array buffer");
+    return JS_EXCEPTION;
+  }
+  ret = texture2js(texture_fromdata(raw, len));
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
-JSC_SCALL(os_make_gif,
+JSC_CCALL(os_make_gif,
   size_t rawlen;
-  unsigned char *raw = slurp_file(str, &rawlen);
-  if (!raw) goto END;
+  void *raw = JS_GetArrayBuffer(js, &rawlen, argv[0]);
+  if (!raw) {
+    JS_ThrowReferenceError(js, "could not load gif from supplied array buffer");
+    return JS_UNDEFINED;
+  }
   int n;
   texture *tex = calloc(1,sizeof(*tex));
   int frames;
   int *delays;
   tex->data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &frames, &n, 4);
   tex->height *= frames;
-
-  printf("making gif with %s\n", str);
 
   JSValue gif = JS_NewObject(js);
   JSValue delay_arr = JS_NewArray(js);
@@ -2441,14 +2440,13 @@ JSC_SCALL(os_make_gif,
   free(delays);
   
   ret = gif;
-  free(raw);
-
-  END:
 )
 
-JSC_SCALL(os_make_aseprite,
+JSC_CCALL(os_make_aseprite,
   size_t rawlen;
-  unsigned char *raw = slurp_file(str, &rawlen);
+  void *raw = JS_GetArrayBuffer(js,&rawlen,argv[0]);
+  if (!raw) return JS_UNDEFINED;
+  
   ase_t *ase = cute_aseprite_load_from_memory(raw, rawlen, NULL);
 
   JSValue obj = JS_NewObject(js);
@@ -2832,9 +2830,10 @@ JS_SetPropertyFunctionList(js, js_##NAME, js_##NAME##_funcs, countof(js_##NAME##
 JS_SetPrototype(js, js_##NAME, PARENT); \
 
 JSValue js_layout_use(JSContext *js);
-JSValue js_miniz(JSContext *js);
+JSValue js_miniz_use(JSContext *js);
 JSValue js_soloud_use(JSContext *js);
 JSValue js_chipmunk2d_use(JSContext *js);
+JSValue js_dmon_use(JSContext *js);
 
 #ifndef NEDITOR
 JSValue js_imgui(JSContext *js);
@@ -2885,9 +2884,11 @@ void ffi_load() {
   srand(stm_now());
 
   JS_SetPropertyStr(js, globalThis, "layout", js_layout_use(js));
-  JS_SetPropertyStr(js, globalThis, "miniz", js_miniz(js));
+  JS_SetPropertyStr(js, globalThis, "miniz", js_miniz_use(js));
   JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
   JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));
+  JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
+
 
 #ifndef NEDITOR
   JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));

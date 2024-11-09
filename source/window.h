@@ -34,7 +34,6 @@ void window_apply(window *w);
 void window_free(window *w);
 
 void window_setfullscreen(window *w, int f);
-void set_icon(const char *png);
 void window_seticon(struct window *w, struct texture *icon);
 
 #endif

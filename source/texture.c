@@ -247,8 +247,6 @@ struct texture *texture_fromdata(void *raw, long size)
 
   tex->data = data;
 
-  texture_load_gpu(tex);
-
   return tex;
 }
 

@@ -61,7 +61,9 @@ game.engine_start = function (s) {
     function () {
 //      global.mixin("sound.js");
       world_start();
-      window.set_icon(game.texture("moon").texture);
+      var moon = game.texture('moon');
+      if (moon) window.set_icon(moon.texture);
+
       Object.readonly(window.__proto__, "vsync");
       Object.readonly(window.__proto__, "enable_dragndrop");
       Object.readonly(window.__proto__, "enable_clipboard");
@@ -355,7 +357,7 @@ game.texture = function (path) {
   }
 
   if (ext === 'gif') {
-    anim = os.make_gif(path);
+    anim = os.make_gif(io.slurp(path));
     if (!anim) return;
     if (anim.frames.length === 1) {
       // in this case, it's just a single image
@@ -371,9 +373,8 @@ game.texture = function (path) {
     return anim;
   }
 
-  var tex = os.make_texture(path);
-  if (!tex) return;
-  
+  var tex = os.make_texture(io.slurpbytes(path));
+  if (!tex) throw new Error(`Could not make texture from ${path}`);
   var image;
   var anim;
 
