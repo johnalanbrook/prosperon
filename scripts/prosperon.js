@@ -178,21 +178,42 @@ game.doc.pause = "Pause game simulation.";
 game.doc.play = "Resume or start game simulation.";
 game.doc.camera = "Current camera.";
 
-game.tex_hotreload = function () {
-  return;
-  for (var path in game.texture.cache) {
-    if (io.mod(path) > game.texture.time_cache[path]) {
-      var tex = game.texture.cache[path];
-      game.texture.time_cache[path] = io.mod(path);
-      SpriteAnim.hotreload(path);
-      os.texture_swap(path, game.texture.cache[path]);
-      for (var sprite of Object.values(allsprites)) {
-        if (sprite.texture == tex) {
-          sprite.tex_sync();
-        }
+game.tex_hotreload = function (file) {
+  if (!(file in game.texture.cache)) return;
+  var data = io.slurpbytes(file);
+  var tex;
+  if (file.endsWith('.gif')) {
+    var anim = os.make_gif(data);
+    if (anim.frames.length !== 1) return;
+    console.info(json.encode(anim));
+    tex = anim.frames[0].texture;
+  } else if (file.endsWith('.ase') || file.endsWith('.aseprite')) {
+    var anim = os.make_aseprite(data);
+    if (anim.texture) // single picture
+      tex = anim.texture;
+    else {
+      var oldanim = game.texture.cache[file];
+      // load all into gpu
+      for (var a in anim) {
+        oldanim[a] = anim[a];
+        for (let frame of anim[a].frames)
+          frame.texture.load_gpu();
       }
+      return;
     }
-  }
+  } else
+    tex = os.make_texture(data);
+  
+  var img = game.texture.cache[file];
+  tex.load_gpu();
+  console.info(`replacing ${json.encode(img)}`)
+  img.texture = tex;
+  img.rect = {
+    x:0,
+    y:0,
+    width:1,
+    height:1
+  };
 };
 
 var image = {};
@@ -303,6 +324,7 @@ game.is_image = function(obj)
 
 // Any request to it returns an image, which is a texture and rect. But they can
 game.texture = function (path) {
+  if (typeof path !== 'string') throw new Error('need a string for game.texture')
   var parts = path.split(':');
   path = Resources.find_image(parts[0]);
 
@@ -343,8 +365,16 @@ game.texture = function (path) {
   var ext = path.ext();    
 
   if (ext === 'ase' || ext === 'aseprite') {
-    anim = os.make_aseprite(path);
+    console.info(`making out of an aseprite for ${path}`);
+    anim = os.make_aseprite(io.slurpbytes(path));
+    console.info(`raw anim is ${json.encode(anim)}`)
     if (!anim) return;
+    if (anim.texture) {
+      // it was a single image
+      anim.texture.load_gpu();
+      game.texture.cache[path] = anim;
+      return anim;
+    }
     // load all into gpu
     for (var a in anim) 
       for (let frame of anim[a].frames)
@@ -357,7 +387,7 @@ game.texture = function (path) {
   }
 
   if (ext === 'gif') {
-    anim = os.make_gif(io.slurp(path));
+    anim = os.make_gif(io.slurpbytes(path));
     if (!anim) return;
     if (anim.frames.length === 1) {
       // in this case, it's just a single image

@@ -2393,21 +2393,20 @@ JSC_CCALL(os_obj_size,
 JSC_CCALL(os_make_texture,
   size_t len;
   void *raw = JS_GetArrayBuffer(js, &len, argv[0]);
-  if (!raw) {
-    JS_ThrowReferenceError(js, "could not load texture with array buffer");
-    return JS_EXCEPTION;
-  }
-  ret = texture2js(texture_fromdata(raw, len));
+  if (!raw) return JS_ThrowReferenceError(js, "could not load texture with array buffer");
+
+  texture *tex = texture_fromdata(raw, len);
+  if (!tex) return JS_ThrowReferenceError(js, "unable to make texture from the given array buffer");
+
+  ret = texture2js(tex);
   JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
 JSC_CCALL(os_make_gif,
   size_t rawlen;
   void *raw = JS_GetArrayBuffer(js, &rawlen, argv[0]);
-  if (!raw) {
-    JS_ThrowReferenceError(js, "could not load gif from supplied array buffer");
-    return JS_UNDEFINED;
-  }
+  if (!raw) return JS_ThrowReferenceError(js, "could not load gif from supplied array buffer");
+
   int n;
   texture *tex = calloc(1,sizeof(*tex));
   int frames;
@@ -2442,19 +2441,42 @@ JSC_CCALL(os_make_gif,
   ret = gif;
 )
 
+JSValue aseframe2js(JSContext *js, ase_frame_t aframe)
+{
+  JSValue frame = JS_NewObject(js);
+  texture *tex = calloc(1,sizeof(*tex));
+  tex->width = aframe.ase->w;
+  tex->height = aframe.ase->h;
+  tex->data = malloc(tex->width*tex->height*4);
+  memcpy(tex->data, aframe.pixels, tex->width*tex->height*4);
+  js_setpropstr(frame, "texture", texture2js(tex));
+  js_setpropstr(frame, "rect", rect2js((rect){.x=0,.y=0,.w=1,.h=1}));
+  js_setpropstr(frame, "time", number2js((float)aframe.duration_milliseconds/1000.0));
+  return frame;
+}
+
 JSC_CCALL(os_make_aseprite,
   size_t rawlen;
   void *raw = JS_GetArrayBuffer(js,&rawlen,argv[0]);
-  if (!raw) return JS_UNDEFINED;
+  if (!raw) return JS_ThrowReferenceError(js, "could not load aseprite from supplied array buffer");
   
   ase_t *ase = cute_aseprite_load_from_memory(raw, rawlen, NULL);
-
-  JSValue obj = JS_NewObject(js);
 
   int w = ase->w;
   int h = ase->h;
 
   int pixels = w*h;
+
+  if (ase->tag_count == 0) {
+    // we're dealing with a single frame image, or single animation
+    if (ase->frame_count == 1) {
+      JSValue obj = aseframe2js(js,ase->frames[0]);
+      cute_aseprite_free(ase);
+      return obj;
+    }
+  }
+
+  JSValue obj = JS_NewObject(js);
 
   for (int t = 0; t < ase->tag_count; t++) {
     ase_tag_t tag = ase->tags[t];
@@ -2475,17 +2497,7 @@ JSC_CCALL(os_make_aseprite,
     int _frame = 0;
     JSValue frames = JS_NewArray(js);
     for (int f = tag.from_frame; f <= tag.to_frame; f++) {
-      ase_frame_t aframe = ase->frames[f];
-      JSValue frame = JS_NewObject(js);
-
-      texture *tex = calloc(1,sizeof(*tex));
-      tex->width = w;
-      tex->height = h;
-      tex->data = malloc(w*h*4);
-      memcpy(tex->data, aframe.pixels, w*h*4);
-      js_setpropstr(frame, "texture", texture2js(tex));
-      js_setpropstr(frame, "rect", rect2js((rect){.x=0,.y=0,.w=1,.h=1}));
-      js_setpropstr(frame, "time", number2js((float)aframe.duration_milliseconds/1000.0));      
+      JSValue frame = aseframe2js(js,ase->frames[f]);
       js_setprop_num(frames, _frame, frame);
       _frame++;
     }
@@ -2496,13 +2508,6 @@ JSC_CCALL(os_make_aseprite,
   ret = obj;
 
   cute_aseprite_free(ase);
-)
-
-JSC_SCALL(os_texture_swap,
-  texture *old = js2texture(argv[1]);
-  texture *tex = texture_from_file(str);
-  JS_SetOpaque(argv[1], tex);
-  texture_free(old);
 )
 
 JSC_CCALL(os_make_tex_data,
@@ -2788,7 +2793,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_gif, 1),
   MIST_FUNC_DEF(os, make_aseprite, 1),
-  MIST_FUNC_DEF(os, texture_swap, 2),
   MIST_FUNC_DEF(os, make_tex_data, 3),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_transform, 0),

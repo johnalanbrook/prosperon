@@ -53,6 +53,7 @@ Resources.rm_fn = function rm_fn(fn, text) {
 };
 Resources.rm_fn.doc = "Remove calls to a given function from a given text script.";
 
+// Normalizes paths for use in prosperon
 Resources.replpath = function replpath(str, path) {
   if (!str) return str;
   if (str[0] === "/") return str.rm(0);
@@ -70,6 +71,7 @@ Resources.replpath = function replpath(str, path) {
   return str;
 };
 
+// Given a script path, loads it, and replaces certain function calls to conform to environment
 Resources.replstrs = function replstrs(path) {
   if (!path) return;
   var script = io.slurp(path);
@@ -160,7 +162,6 @@ function find_ext(file, ext, root = "") {
   }
 
   var all_files = io.glob(`**/${file}.*`);
-  all_files = all_files.filter(x => !x.startsWith('.'));
   var find = undefined;
   for (var e of ext) {
     var finds = all_files.filter(x => x.ext() === e);
@@ -328,9 +329,9 @@ io.exists = function(path)
 var tmpslurp = io.slurp;
 io.slurp = function(path)
 {
-  path = Resources.replpath(path);
-  var ret = tmpslurp(path, true) || core_db.slurp(path, true);
-  if (!ret) console.info(`could not slurp ${path}`);
+  var findpath = Resources.replpath(path);
+  var ret = tmpslurp(findpath, true) || core_db.slurp(findpath, true);
+  if (!ret) console.info(`could not slurp path ${path} as ${findpath}`)
   return ret;
 }
 
@@ -410,13 +411,4 @@ bare_use("preconfig.js");
 if (!profile.enabled) use = stripped_use;
 
 Object.assign(globalThis, use("prosperon.js"));
-
-/*app.interval(_ => {
-  profile.report("hotreload");
-  actor.hotreload();
-  render.hotreload();
-  game.tex_hotreload();
-  repl.hotreload();
-  profile.endreport("hotreload");  
-}, 1);
-*/
+ 

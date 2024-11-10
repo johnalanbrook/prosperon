@@ -69,7 +69,19 @@ static uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filen
 
 void script_startup() {
   rt = JS_NewRuntime();
-  js = JS_NewContext(rt);
+  js = JS_NewContextRaw(rt);
+  JS_AddIntrinsicBaseObjects(js);
+  JS_AddIntrinsicEval(js);
+  JS_AddIntrinsicRegExp(js);
+  JS_AddIntrinsicJSON(js);
+  JS_AddIntrinsicMapSet(js);
+  JS_AddIntrinsicTypedArrays(js);
+  JS_AddIntrinsicPromise(js);
+  JS_AddIntrinsicProxy(js);
+  JS_AddIntrinsicBigInt(js);
+  JS_AddIntrinsicBigFloat(js);
+  JS_AddIntrinsicBigDecimal(js);
+  JS_AddIntrinsicOperators(js);
 
   ffi_load();
   

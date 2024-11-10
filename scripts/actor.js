@@ -1,7 +1,6 @@
 var actor = {};
 
 var actor_urs = {};
-var script_times = {};
 
 var actor_spawns = {};
 
@@ -17,7 +16,6 @@ globalThis.class_use = function (script, config, base, callback) {
   if (!actor_urs[file]) {
     var newur = Object.create(base);
     actor_urs[file] = newur;
-    script_times[file] = io.mod(file);
     actor_spawns[file] = [];
   }
 
@@ -61,28 +59,23 @@ actor.__stats = function () {
   return stats;
 };
 
-actor.hotreload = function () {
-  for (var i in script_times) {
-    if (io.mod(i) > script_times[i]) {
-      script_times[i] = io.mod(i);
-      var script = Resources.replstrs(i);
-      script = `(function() {
-  	              var self = this;
-	                var $ = this.__proto__;
-                  ${script};
-               })`;
-      var fn = os.eval(i, script);
+actor.hotreload = function (file) {
+  var script = Resources.replstrs(file);
+  script = `(function() {
+             var self = this;
+             var $ = this.__proto__;
+              ${script};
+           })`;
+  var fn = os.eval(file, script);
 
-      for (var obj of actor_spawns[i]) {
-        var a = obj;
-        a.timers.forEachRight(t=>t());
-        a.timers = [];
-        var save = json.decode(json.encode(a));
-        fn.call(a);
-        Object.merge(a, save);
-        check_registers(a);
-      }
-    }
+  for (var obj of actor_spawns[file]) {
+    var a = obj;
+    a.timers.forEachRight(t=>t());
+    a.timers = [];
+    var save = json.decode(json.encode(a));
+    fn.call(a);
+    Object.merge(a, save);
+    check_registers(a);
   }
 };
 

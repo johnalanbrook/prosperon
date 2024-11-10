@@ -235,7 +235,7 @@ Cmdline.register_order(
       else global.app = actor.spawn("nogame.js");
 
       var icon = game.texture(project.icon);
-      if (icon) window.set_icon(game.texture(icon.texture));
+      if (icon) window.set_icon(icon.texture);
       game.camera = world.spawn("camera2d");
     });
   },

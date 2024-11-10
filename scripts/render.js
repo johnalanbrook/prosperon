@@ -1433,17 +1433,11 @@ try{
   profile.report("imgui");
   if (debug.show) imgui_fn();
   profile.endreport("imgui");
-
-//  render.end_pass();
-
-//  render.commit();
-//  profile.report_frame(profile.secs(profile.now()) - frame_t);  
-
-//  endframe();
 } catch(e) {
   throw e;
 } finally {
   render.end_pass();
+  profile.report_frame(profile.secs(profile.now()) - frame_t);    
   render.commit();
   endframe();
 }
@@ -1455,6 +1449,12 @@ function dmon_cb(e)
 {
   if (e.file.startsWith('.')) return;
   console.info(json.encode(e))
+  if (e.file.endsWith('.js'))
+    actor.hotreload(e.file);
+  else if (Resources.is_image(e.file))
+    game.tex_hotreload(e.file);
+  else if (e.file.endsWith('.cg')) // shader
+    render.hotreload(e.file);
 }
 
 prosperon.process = function process() {
