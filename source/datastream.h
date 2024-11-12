@@ -3,6 +3,7 @@
 
 #include <pl_mpeg.h>
 #include <stdint.h>
+#include <quickjs.h>
 
 #include "sokol/sokol_gfx.h"
 
@@ -23,9 +24,9 @@ typedef struct datastream datastream;
 
 struct texture;
 
-void datastream_free(datastream *ds);
+void datastream_free(JSRuntime *rt,datastream *ds);
 
-struct datastream *ds_openvideo(const char *path);
+struct datastream *ds_openvideo(void *raw, size_t rawlen);
 struct texture *ds_maketexture(struct datastream *);
 void ds_advance(struct datastream *ds, double);
 void ds_seek(struct datastream *ds, double);

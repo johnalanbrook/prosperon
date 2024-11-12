@@ -1,20 +1,18 @@
 #include "datastream.h"
 
-#include "config.h"
 #include "limits.h"
-#include "log.h"
-#include "resources.h"
 #include "texture.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include "font.h"
 #include "render.h"
+#include <string.h>
 
 #include "cbuf.h"
 
 #include "sokol/sokol_gfx.h"
 
-void datastream_free(datastream *ds)
+void datastream_free(JSRuntime *rt,datastream *ds)
 {
   sg_destroy_image(ds->img);
   plm_destroy(ds->plm);
@@ -42,25 +40,14 @@ static void render_audio(plm_t *mpeg, plm_samples_t *samples, struct datastream 
 //    ringpush(ds->ring, samples->interleaved[i]);
 }
 
-struct datastream *ds_openvideo(const char *path)
+struct datastream *ds_openvideo(void *raw, size_t rawlen)
 {
   struct datastream *ds = malloc(sizeof(*ds));
-  size_t rawlen;
-  void *raw;
-  raw = slurp_file(path, &rawlen);
   ds->plm = plm_create_with_memory(raw, rawlen, 0);
   free(raw);
 
-  if (!ds->plm) {
-    YughError("Couldn't open %s", path);
-  }
-
-  YughWarn("Opened %s - framerate: %f, samplerate: %d,audio streams: %d, duration: %g",
-          path,
-          plm_get_framerate(ds->plm),
-          plm_get_samplerate(ds->plm),
-	        plm_get_num_audio_streams(ds->plm),
-          plm_get_duration(ds->plm));
+  if (!ds->plm)
+    return NULL;
 
   ds->img = sg_make_image(&(sg_image_desc){
     .width = plm_get_width(ds->plm),

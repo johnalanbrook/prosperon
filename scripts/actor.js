@@ -61,11 +61,7 @@ actor.__stats = function () {
 
 actor.hotreload = function (file) {
   var script = Resources.replstrs(file);
-  script = `(function() {
-             var self = this;
-             var $ = this.__proto__;
-              ${script};
-           })`;
+  script = `(function() { var self = this; var $ = this.__proto__;${script};})`;
   var fn = os.eval(file, script);
 
   for (var obj of actor_spawns[file]) {
@@ -147,7 +143,7 @@ actor.padawans = [];
 
 global.app = Object.create(actor);
 app.die = function () {
-  os.quit();
+  os.exit(0);
 };
 
 return { actor, app };

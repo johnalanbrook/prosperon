@@ -2,6 +2,7 @@ globalThis.gamestate = {};
 
 global.check_registers = function (obj) {
   for (var reg in Register.registries) {
+    if (!Register.registries[reg].register) return;
     if (typeof obj[reg] === "function") {
       var fn = obj[reg].bind(obj);
       fn.layer = obj[reg].layer;
@@ -21,6 +22,7 @@ global.obscure("global");
 global.mixin("render");
 global.mixin("debug");
 global.mixin("repl");
+global.mixin('layout')
 
 var frame_t = profile.secs(profile.now());
 
@@ -54,31 +56,29 @@ sim.stepping = function () {
 
 var physlag = 0;
 
-var gggstart = game.engine_start;
-game.engine_start = function (s) {
-  game.startengine = 1;
-  gggstart(
-    function () {
+prosperon.SIGABRT = function()
+{
+  console.log("ABORT");
+  console.stack();
+}
+
+prosperon.SIGSEGV = function()
+{
+  console.stack();
+  os.exit(1);
+}
+
+prosperon.init = function () {
+  render.init();
+  imgui.init();
+
 //      global.mixin("sound.js");
-      world_start();
-      var moon = game.texture('moon');
-      if (moon) window.set_icon(moon.texture);
-
-      Object.readonly(window.__proto__, "vsync");
-      Object.readonly(window.__proto__, "enable_dragndrop");
-      Object.readonly(window.__proto__, "enable_clipboard");
-      Object.readonly(window.__proto__, "high_dpi");
-      Object.readonly(window.__proto__, "sample_count");
-
-      prosperon.camera = prosperon.make_camera();
-      var camera = prosperon.camera;
-      camera.transform.pos = [0, 0, -100];
-      camera.mode = "keep";
-      camera.break = "fit";
-      camera.size = game.size;
-      gamestate.camera = camera;
-
-      s();
+  world_start();
+  prosperon.camera = prosperon.make_camera();
+  prosperon.camera.transform.pos = [0, 0, -100];
+  prosperon.camera.mode = "keep";
+  prosperon.camera.break = "fit";
+  prosperon.camera.size = game.size;
 
       shape.quad = {
         pos: os.make_buffer([
@@ -119,16 +119,9 @@ game.engine_start = function (s) {
         index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
         count: 6,
       };
-
-      render.init();
-    },
-    prosperon.process,
-    window.size.x,
-    window.size.y,
-  );
+  if (io.exists("game.js")) global.app = actor.spawn("game.js");
+  else global.app = actor.spawn("nogame.js");
 };
-
-game.startengine = 0;
 
 prosperon.release_mode = function () {
   prosperon.debug = false;
@@ -176,7 +169,12 @@ game.doc = {};
 game.doc.object = "Returns the entity belonging to a given id.";
 game.doc.pause = "Pause game simulation.";
 game.doc.play = "Resume or start game simulation.";
-game.doc.camera = "Current camera.";
+
+function calc_image_size(img)
+{
+  if (!img.texture || !img.rect) return;
+  return [img.texture.width*img.rect.width, img.texture.height*img.rect.height];
+}
 
 game.tex_hotreload = function (file) {
   if (!(file in game.texture.cache)) return;
@@ -365,20 +363,22 @@ game.texture = function (path) {
   var ext = path.ext();    
 
   if (ext === 'ase' || ext === 'aseprite') {
-    console.info(`making out of an aseprite for ${path}`);
     anim = os.make_aseprite(io.slurpbytes(path));
-    console.info(`raw anim is ${json.encode(anim)}`)
+
     if (!anim) return;
     if (anim.texture) {
       // it was a single image
       anim.texture.load_gpu();
       game.texture.cache[path] = anim;
+      anim.size = calc_image_size(anim);
       return anim;
     }
     // load all into gpu
     for (var a in anim) 
-      for (let frame of anim[a].frames)
+      for (let frame of anim[a].frames) {
         frame.texture.load_gpu();
+        frame.size = calc_image_size(img);
+      }
 
     game.texture.cache[path] = anim;
     ret = game.texture.cache[path];
@@ -395,10 +395,12 @@ game.texture = function (path) {
       anim.rect = anim.frames[0].rect;
       anim.frames = undefined;
       anim.texture.load_gpu();
+      anim.size = calc_image_size(anim);
       game.texture.cache[path] = anim;
       return anim;
     }
     game.texture.cache[path] = anim;
+    anim.frames[0].size = calc_image_size(anim.frames[0]);
     anim.frames[0].texture.load_gpu();
     return anim;
   }
@@ -434,6 +436,7 @@ game.texture = function (path) {
   game.texture.cache[path] = image;
   game.texture.time_cache[path] = io.mod(path);
 
+  image.size = calc_image_size(image);
   tex.load_gpu();
 
   return game.texture.cache[path];
@@ -511,30 +514,19 @@ prosperon.touchpress = function (touches) {};
 prosperon.touchrelease = function (touches) {};
 prosperon.touchmove = function (touches) {};
 prosperon.clipboardpaste = function (str) {};
-prosperon.quit = function () {
-  prosperon.quit_hook?.();
-};
 
+globalThis.window = {};
 window.size = [640, 480];
+console.log(`window size set to ${window.size.slice()}`)
 window.mode = "keep";
 window.toggle_fullscreen = function () {
   window.fullscreen = !window.fullscreen;
 };
-
-window.set_icon.doc = "Set the icon of the window using the PNG image at path.";
-
+ 
 window.doc = {};
 window.doc.dimensions = "Window width and height packaged in an array [width,height]";
 window.doc.title = "Name in the title bar of the window.";
 window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
-window.__proto__.toJSON = function () {
-  return {
-    size: this.size,
-    fullscreen: this.fullscreen,
-    title: this.title,
-  };
-};
-
 global.mixin("input");
 global.mixin("std");
 global.mixin("diff");
@@ -707,9 +699,6 @@ function world_start() {
   world.ur.fresh = {};
   game.cam = world;
 }
-
-window.title = `Prosperon v${prosperon.version}`;
-window.size = [500, 500];
 
 return {
   Register,

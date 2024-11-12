@@ -1,6 +1,5 @@
 #include "spline.h"
 #include "stb_ds.h"
-#include "log.h"
 #include "transform.h"
 #include "math.h"
 

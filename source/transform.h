@@ -2,6 +2,7 @@
 #define TRANSFORM_H
 
 #include "HandmadeMath.h"
+#include <quickjs.h>
 
 typedef struct transform {
   HMM_Vec3 pos;
@@ -13,7 +14,7 @@ typedef struct transform {
 
 transform *make_transform();
 void transform_apply(transform *t);
-void transform_free(transform *t);
+void transform_free(JSRuntime *rt,transform *t);
 
 #define VEC2_FMT "[%g,%g]"
 #define VEC2_MEMS(s) (s).x, (s).y

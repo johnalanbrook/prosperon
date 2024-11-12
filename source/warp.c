@@ -1,6 +1,5 @@
 #include "warp.h"
 #include "stb_ds.h"
-#include "log.h"
 
 static warp_gravity **warps = NULL;
 

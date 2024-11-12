@@ -1,34 +1,28 @@
 #ifndef OPENGL_RENDER_H
 #define OPENGL_RENDER_H
 
-#include "config.h"
+#if defined __linux__
+  #define SOKOL_GLCORE
+#elif __EMSCRIPTEN__
+  #define SOKOL_WGPU
+#elif __WIN32
+  #define SOKOL_D3D11
+#elif __APPLE__
+  #define SOKOL_METAL
+#endif
 
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
-#include "gameobject.h"
-#include "transform.h"
-#include "model.h"
 
 #define RGBA_MAX 255
-
-#include "window.h"
 
 extern struct rgba color_white;
 extern struct rgba color_black;
 extern struct rgba color_clear;
 extern int TOPLEFT;
 
-extern HMM_Vec3 dirl_pos;
-
-extern HMM_Mat4 projection;
-extern HMM_Mat4 hudproj;
-extern HMM_Mat4 useproj;
-extern sg_pass_action pass_action;
-
 extern sg_sampler std_sampler;
 extern sg_sampler tex_sampler;
-extern sg_image screencolor;
-extern sg_image screendepth;
 
 typedef struct viewstate {
   HMM_Mat4 v;
@@ -39,8 +33,6 @@ typedef struct viewstate {
 extern viewstate globalview;
 
 void render_init();
-
-void openglRender(HMM_Vec2 usesize);
 
 void capture_screen(int x, int y, int w, int h, const char *path);
 
@@ -70,22 +62,13 @@ static inline rgba vec2rgba(HMM_Vec4 v) {
   return (rgba){v.e[0]*255,v.e[1]*255,v.e[2]*255,v.e[3]*255};
 }
 
-struct boundingbox {
-  float t;
-  float b;
-  float r;
-  float l;
-};
-
 // rectangles are always defined with [x,y] in the bottom left
 struct rect {
   float x,y,w,h;
 };
 typedef struct rect rect;
 
-struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh);
 float *rgba2floats(float *r, struct rgba c);
-extern sg_blend_state blend_trans;
 
 static inline float lerp(float f, float a, float b)
 {

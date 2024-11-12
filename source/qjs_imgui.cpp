@@ -91,10 +91,6 @@ static inline ImVec4 js2vec4(JSContext *js, JSValue v)
   return c;
 }
 
-
-static int wantkeys = 0;
-static int wantmouse = 0;
-
 static inline JSValue vec22js(JSContext *js, ImVec2 vec)
 {
   JSValue v = JS_NewObject(js);
@@ -830,17 +826,14 @@ JSC_CCALL(imgui_endframe,
 )
 
 JSC_CCALL(imgui_wantmouse,
-  return JS_NewBool(js,wantmouse);
+  return JS_NewBool(js, ImGui::GetIO().WantCaptureMouse);
 )
 
 JSC_CCALL(imgui_wantkeys,
-  return JS_NewBool(js,wantkeys);
+  return JS_NewBool(js, ImGui::GetIO().WantCaptureKeyboard);
 )
 
-static int START=0;
 JSC_CCALL(imgui_init,
-  if (START) return JS_UNDEFINED;
-  START = 1;
   simgui_desc_t sdesc = {
     .image_pool_size = 1024
   };
@@ -963,9 +956,6 @@ extern "C" {
 void gui_input(sapp_event *e)
 {
   simgui_handle_event(e);
-  ImGuiIO io = ImGui::GetIO();
-  wantkeys = io.WantCaptureKeyboard;
-  wantmouse = io.WantCaptureMouse;
 }
 
 JSValue js_imgui(JSContext *js)

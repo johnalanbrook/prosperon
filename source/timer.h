@@ -7,8 +7,8 @@ typedef struct timer {
   JSValue fn;
 } timer;
 
-timer *timer_make(JSValue fn);
-void timer_free(timer *t);
-void timer_update(double dt);
+timer *timer_make(JSContext *js, JSValue fn);
+void timer_free(JSRuntime *rt, timer *t);
+void timer_update(JSContext *js, double dt);
 
 #endif

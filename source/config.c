@@ -1,13 +1,13 @@
-#include "config.h"
+#include "render.h"
 
 #define SOKOL_TRACE_HOOKS
 #define SOKOL_IMPL
-#include "sokol/sokol_audio.h"
+#define SOKOL_NO_ENTRY
 #include "sokol/sokol_time.h"
-#include "sokol/sokol_args.h"
 #include "sokol/sokol_gfx.h"
 #include "sokol/sokol_app.h"
-#include "sokol/util/sokol_gl.h"
+#include "sokol/sokol_log.h"
+#include "sokol/sokol_glue.h"
 
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include "cute_aseprite.h"
@@ -17,9 +17,6 @@
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #include "stb_rect_pack.h"
-
-#define MSF_GIF_IMPL
-#include "msf_gif.h"
 
 #define STB_HEXWAVE_IMPLEMENTATION
 #include "stb_hexwave.h"

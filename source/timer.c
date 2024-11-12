@@ -4,7 +4,7 @@
 
 timer **timers;
 
-timer *timer_make(JSValue fn)
+timer *timer_make(JSContext *js, JSValue fn)
 {
   timer *t = calloc(sizeof(*t),1);
   t->fn = JS_DupValue(js,fn);
@@ -12,7 +12,7 @@ timer *timer_make(JSValue fn)
   return t;
 }
 
-void timer_free(timer *t)
+void timer_free(JSRuntime *rt, timer *t)
 {
   for (int i = 0; i < arrlen(timers); i++) {
     if (timers[i] == t) {
@@ -21,12 +21,12 @@ void timer_free(timer *t)
     }
   }
   
-  JS_FreeValue(js, t->fn);
+  JS_FreeValueRT(rt, t->fn);
       
   free(t);
 }
 
-void timer_update(double dt)
+void timer_update(JSContext *js, double dt)
 {
   for (int i = 0; i < arrlen(timers); i++) {
     if (timers[i]->remain <= 0) continue;

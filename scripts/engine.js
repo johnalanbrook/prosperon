@@ -1,5 +1,3 @@
-"use math";
-
 os.mem_limit.doc = "Set the memory limit of the runtime in bytes.";
 os.gc_threshold.doc = "Set the threshold before a GC pass is triggered in bytes. This is set to malloc_size + malloc_size>>1 after a GC pass.";
 os.max_stacksize.doc = "Set the max stack size in bytes.";
@@ -217,21 +215,24 @@ Resources.find_font = function(file, root = "") {
 
 console.transcript = "";
 console.say = function (msg) {
-  msg += "\n";
   console.print(msg);
   if (debug.termout) console.term_print(msg);
   console.transcript += msg;
 };
-console.log = console.say;
+
 globalThis.say = console.say;
 globalThis.print = console.print;
+
+console.rec = function(category, priority, line, file, msg)
+{
+  return `${file}:${line}: [${category} ${priority}]: ${msg}`;
+}
 
 console.pprint = function (msg, lvl = 0) {
   if (typeof msg === "object") msg = JSON.stringify(msg, null, 2);
 
   var file = "nofile";
   var line = 0;
-  console.rec(0, msg, file, line);
 
   var caller = new Error().stack.split("\n")[2];
   if (caller) {
@@ -242,8 +243,8 @@ console.pprint = function (msg, lvl = 0) {
     m = md ? md[1] : 0;
     if (m) line = m;
   }
-
-  console.rec(lvl, msg, file, line);
+  var fmt = console.rec("script", lvl, line,file, msg);
+  console.log(fmt);
 };
 
 console.spam = function (msg) {
@@ -277,9 +278,9 @@ console.stack = function (skip = 0) {
 };
 
 console.stdout_lvl = 1;
-console.trace = console.stack;
 
 console.doc = {
+  log: "Output directly to in game console.",
   level: "Set level to output logging to console.",
   info: "Output info level message.",
   warn: "Output warn level message.",
@@ -288,7 +289,6 @@ console.doc = {
   write: "Write raw text to console.",
   say: "Write raw text to console, plus a newline.",
   stack: "Output a stacktrace to console.",
-  console: "Output directly to in game console.",
   clear: "Clear console.",
 };
 

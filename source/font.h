@@ -4,6 +4,8 @@
 #include "sokol/sokol_gfx.h"
 #include "render.h"
 #include "HandmadeMath.h"
+#include <quickjs.h>
+#include "texture.h"
 
 typedef enum {
   LEFT,
@@ -39,9 +41,9 @@ struct sFont {
 typedef struct sFont font;
 typedef struct Character glyph;
 
-void font_free(font *f);
+void font_free(JSRuntime *rt,font *f);
 
-struct sFont *MakeFont(const char *fontfile, int height);
+struct sFont *MakeFont(void *data, size_t len, int height);
 void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color);
 void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap);
 HMM_Vec2 measure_text(const char *text, font *f, float scale, float letterSpacing, float wrap);

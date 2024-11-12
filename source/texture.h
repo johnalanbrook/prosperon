@@ -4,6 +4,7 @@
 #include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
 #include "render.h"
+#include <quickjs.h>
 
 #include "stb_rect_pack.h"
 
@@ -42,13 +43,12 @@ typedef struct img_sampler{
   int mip_filter;
 } img_sampler;
 
-texture *texture_from_file(const char *path);
 texture *texture_fromdata(void *raw, long size);
 texture *texture_empty(int width, int height); // Make an empty texture
 texture *texture_dup(texture *tex); // return an identical texture
 texture *texture_scale(texture *tex, int width, int height); // dup and scale the texture
 
-void texture_free(texture *tex);
+void texture_free(JSRuntime *rt,texture *tex);
 void texture_offload(texture *tex); // Remove the data from this texture
 void texture_load_gpu(texture *tex); // Upload this data to the GPU if it isn't already there. Replace it if it is.
 
@@ -57,6 +57,8 @@ int texture_fill(texture *tex, struct rgba color);
 int texture_fill_rect(texture *tex, struct rect rect, struct rgba color);
 int texture_blit(texture *dst, texture *src, struct rect dstrect, struct rect srcrect, int tile); // copies src into dst, using their respective squares, scaling if necessary
 int texture_flip(texture *tex, int y);
+
+sapp_icon_desc texture2icon(texture *tex);
 
 void texture_save(texture *tex, const char *file); // save the texture data to the given file
 

@@ -41,6 +41,6 @@ say(`Passed ${pass} tests and failed ${fail} [${((pass * 100) / (pass + fail)).t
 say(`Failed tests are:`);
 for (var f of failed) say(f);
 
-os.quit();
+os.exit(0);
 
 return { test };

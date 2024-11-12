@@ -1,46 +1,14 @@
 #include "render.h"
 
-#include "config.h"
-#include "datastream.h"
-#include "font.h"
-#include "gameobject.h"
-#include "log.h"
-#include "window.h"
-#include "model.h"
-#include "stb_ds.h"
-#include "resources.h"
-#include "yugine.h"
-#include "sokol/sokol_app.h"
-#define SOKOL_GLUE_IMPL
-#include "sokol/sokol_glue.h"
-#include "stb_image_write.h"
-
 #include "sokol/sokol_gfx.h"
+#include "sokol/sokol_glue.h"
 #include "sokol/util/sokol_gl.h"
-
-static HMM_Vec2 lastuse = {0};
-
-HMM_Vec2 campos = {0,0};
-float camzoom = 1;
-
-viewstate globalview = {0};
-
-sg_sampler std_sampler;
-sg_sampler nofilter_sampler;
-sg_sampler tex_sampler;
-
-int TOPLEFT = 0;
-
-sg_pass offscreen;
-
-#include "sokol/sokol_app.h"
-
 #include "HandmadeMath.h"
 
-sg_pass_action pass_action = {0};
-sg_pass_action off_action = {0};
-sg_image screencolor = {0};
-sg_image screendepth = {0};
+sg_sampler std_sampler;
+sg_sampler tex_sampler;
+
+viewstate globalview = {0};
 
 struct rfd {
   int num_passes;
@@ -106,7 +74,6 @@ void trace_uninit_##NAME(sg_##NAME id, void *data) \
 void trace_fail_##NAME(sg_##NAME id, void *data) \
 { \
   sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-  YughError("Failed " #NAME " %d: %s", id, desc.label); \
 } \
 
 SG_TRACE_SET(buffer)
@@ -146,7 +113,7 @@ static sg_trace_hooks hooks = {
 void render_init() {
   sg_setup(&(sg_desc){
     .environment = sglue_environment(),
-    .logger = { .func = sg_logging },
+//    .logger = { .func = sg_logging },
     .buffer_pool_size = 1024,
     .image_pool_size = 1024,
   });
@@ -163,93 +130,6 @@ void render_init() {
     .wrap_u = SG_WRAP_REPEAT,
     .wrap_v = SG_WRAP_REPEAT
   });
-
-  sg_features feat = sg_query_features();
-  TOPLEFT = feat.origin_top_left;
-
-  sg_color c = (sg_color){0,0,0,1};
-  pass_action = (sg_pass_action){
-    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = c},
-  };
-  
-  sg_color oc = (sg_color){35.0/255,60.0/255,92.0/255,1};
-  off_action = (sg_pass_action){
-    .colors[0] = {.load_action = SG_LOADACTION_CLEAR, .clear_value = oc},
-    .depth = {
-      .load_action = SG_LOADACTION_CLEAR,
-      .clear_value = 1
-    }
-  };
-  
-  screencolor = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = 500,
-    .height = 500,
-    .pixel_format = sapp_color_format(),
-    .sample_count = 1,
-  });
-  screendepth = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width =500,
-    .height=500,
-    .pixel_format = sapp_depth_format(),
-    .sample_count = 1
-  });
-  
-  offscreen = (sg_pass){
-    .attachments = sg_make_attachments(&(sg_attachments_desc){
-      .colors[0].image = screencolor,
-      .depth_stencil.image = screendepth,
-    }),
-    .action = off_action,
-  };
-}
-
-HMM_Mat4 projection = {0.f};
-HMM_Mat4 hudproj = {0.f};
-HMM_Mat4 useproj = {0};
-
-void openglRender(HMM_Vec2 usesize) {
- if (usesize.x != lastuse.x || usesize.y != lastuse.y) {
-  sg_destroy_image(screencolor);
-  sg_destroy_image(screendepth);
-  sg_destroy_attachments(offscreen.attachments);
-  screencolor = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width = usesize.x,
-    .height = usesize.y,
-    .pixel_format = sapp_color_format(),
-    .sample_count = 1,
-  });
-  screendepth = sg_make_image(&(sg_image_desc){
-    .render_target = true,
-    .width =usesize.x,
-    .height=usesize.y,
-    .pixel_format = sapp_depth_format(),
-    .sample_count = 1
-  });
-  offscreen = (sg_pass){
-    .attachments = sg_make_attachments(&(sg_attachments_desc){
-      .colors[0].image = screencolor,
-      .depth_stencil.image = screendepth
-    }),
-    .action = off_action,
-  };
- }
- lastuse = usesize;
- 
- sg_begin_pass(&offscreen);
-}
-
-struct boundingbox cwh2bb(HMM_Vec2 c, HMM_Vec2 wh) {
-  struct boundingbox bb = {
-    .t = c.Y + wh.Y/2,
-    .b = c.Y - wh.Y/2,
-    .r = c.X + wh.X/2,
-    .l = c.X - wh.X/2
-  };
-
-  return bb;
 }
 
 float *rgba2floats(float *r, struct rgba c)

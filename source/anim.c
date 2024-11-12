@@ -1,5 +1,4 @@
 #include "anim.h"
-#include "log.h"
 #include "stb_ds.h"
 
 void animation_run(struct animation *anim, float now)

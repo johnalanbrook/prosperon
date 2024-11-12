@@ -1,7 +1,5 @@
 #include "model.h"
 
-#include "log.h"
-#include "resources.h"
 #include "stb_ds.h"
 #include "gameobject.h"
 
@@ -268,7 +266,7 @@ skin *make_gltf_skin(cgltf_skin *skin, cgltf_data *data)
 
 void skin_calculate(skin *sk)
 {
-  animation_run(sk->anim, apptime());
+//  animation_run(sk->anim, apptime());
   for (int i = 0; i < arrlen(sk->joints); i++) {
     md5joint *md = sk->joints+i;
     md->t = HMM_M4TRS(md->pos.xyz, md->rot, md->scale.xyz);

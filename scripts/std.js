@@ -17,7 +17,7 @@ if (ignore = io.slurp('.prosperonignore')) {
 var appy = {};
 appy.inputs = {};
 if (os.sys() === "macos") {
-  appy.inputs["S-q"] = os.quit;
+  appy.inputs["S-q"] = os.exit;
 }
 
 appy.inputs.f7 = function () {
@@ -35,7 +35,7 @@ appy.inputs.f10 = function () {
 appy.inputs.f11 = window.toggle_fullscreen;
 appy.inputs.f11.doc = "Toggle window fullscreen.";
 appy.inputs.f11.title = "Toggle Fullscreen";
-appy.inputs["M-f4"] = os.quit;
+appy.inputs["M-f4"] = os.exit;
 
 player[0].control(appy);
 
@@ -109,12 +109,6 @@ io.slurpwrite = function (path, c) {
   return tmpslurpw(path, c);
 };
 
-var tmpcp = io.cp;
-io.cp = function (f1, f2) {
-  io.mkpath(f2.dir());
-  tmpcp(f1, f2);
-};
-
 var tmprm = io.rm;
 io.rm = function (f) {
   tmprm(Resources.replpath(f));
@@ -160,8 +154,6 @@ Cmdline.register_order(
       return;
     }
 
-    window.size = [1280, 720];
-    window.mode = "full";
     sim.pause();
 
     game.engine_start(function () {
@@ -217,27 +209,83 @@ Cmdline.register_order(
     //  game.loadurs();
 
     if (!io.exists(projectfile)) {
-      say("No game to play. Try making one with 'prosperon init'.");
+      console.log("No game to play. Try making one with 'prosperon init'.");
       return;
     }
 
     var project = json.decode(io.slurp(projectfile));
     game.title = project.title;
     game.size = [1280, 720];
-    window.size = game.size;
     if (io.exists("config.js")) global.mixin("config.js");
     else console.warn("No config.js file found. Starting with default parameters.");
+    
+    prosperon.title = project.title;
+    prosperon.width = 1280;
+    prosperon.height = 720;
+    prosperon.cleanup = function(){}
+    prosperon.event = function(e){
+      switch(e.type) {
+        case "mouse_move":
+          prosperon.mousemove(e.mouse, e.mouse_d);
+          break;
+        case "mouse_scroll":
+          prosperon.mousescroll(e.scroll);
+          break;
+        case "key_down":
+          prosperon.keydown(e.key_code, e.key_repeat);
+          break;
+        case "key_up":
+          prosperon.keyup(e.key_code);
+          break;
+        case "mouse_up":
+          prosperon.mouseup(e.mouse_button);
+          break;
+        case "mouse_down":
+          prosperon.mousedown(e.mouse_button);
+          break;
+        case "char":
+          prosperon.textinput(e.char_code);
+          break;
+        case "resized":
+          prosperon.resize([e.window_width, e.window_height]);
+          break;
+        case "iconified":
+          prosperon.iconified(false);
+          break;
+        case "restored":
+          prosperon.iconified(true);
+          break;
+        case "focused":
+          prosperon.focus(true);
+          break;
+        case "unfocused":
+          prosperon.focus(false);
+          break;
+        case "suspended":
+          prosperon.suspended(true);
+          break;
+        case "quit_requested":
+          os.exit(0);
+          break;
+        case "mouse_enter":
+          prosperon.mouseenter();
+          break;
+        case "mouse_leave":
+          prosperon.mouseleave();
+          break;
+      }
+    }
+    prosperon.frame = prosperon.process;
+    prosperon.icon = os.make_texture(io.slurpbytes('moon.gif'));
+    prosperon.high_dpi = 0;
+    prosperon.alpha = 1;
+    prosperon.fullscreen = 0;
+    prosperon.enable_clipboard = true;
+    prosperon.enable_dragndrop=true;
+    prosperon.max_dropped_files=1;
+    prosperon.swap_interval = 1;
 
-    if (project.title) window.title = project.title;
-
-    game.engine_start(function () {
-      if (io.exists("game.js")) global.app = actor.spawn("game.js");
-      else global.app = actor.spawn("nogame.js");
-
-      var icon = game.texture(project.icon);
-      if (icon) window.set_icon(icon.texture);
-      game.camera = world.spawn("camera2d");
-    });
+    game.engine_start(prosperon);
   },
   "Play the game present in this folder.",
 );

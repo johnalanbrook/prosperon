@@ -1,20 +1,16 @@
 #include "font.h"
 
-#include "log.h"
-
 #include <ctype.h>
-#include "log.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <window.h>
-#include "resources.h"
 #include "render.h"
 
 #include "stb_image_write.h"
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
+#include "stb_ds.h"
 
 #include "HandmadeMath.h"
 
@@ -30,7 +26,7 @@ struct text_vert {
 
 static struct text_vert *text_buffer;
 
-void font_free(font *f)
+void font_free(JSRuntime *rt, font *f)
 {
   sg_destroy_image(f->texID);
   free(f);
@@ -38,8 +34,6 @@ void font_free(font *f)
 
 struct sFont *MakeSDFFont(const char *fontfile, int height)
 {
-  YughInfo("Making sdf font %s.", fontfile);
-
   int packsize = 1024;
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
@@ -47,13 +41,13 @@ struct sFont *MakeSDFFont(const char *fontfile, int height)
   char fontpath[256];
   snprintf(fontpath, 256, "fonts/%s", fontfile);
 
-  unsigned char *ttf_buffer = slurp_file(fontpath, NULL);
+//  unsigned char *ttf_buffer = slurp_file(fontpath, NULL);
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_fontinfo fontinfo;
-  if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
-    YughError("Failed to make font %s", fontfile);
-  }
+//  if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
+//    YughError("Failed to make font %s", fontfile);
+//  }
 
   for (int i = 32; i < 95; i++) {
     int w, h, xoff, yoff;
@@ -63,17 +57,15 @@ struct sFont *MakeSDFFont(const char *fontfile, int height)
   return newfont;
 }
 
-struct sFont *MakeFont(const char *fontfile, int height) {
+struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
+  if (!ttf_buffer)
+    return NULL;
+    
   int packsize = 2048;
 
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
 
-  unsigned char *ttf_buffer = slurp_file(fontfile, NULL);
-  if (!ttf_buffer) {
-    YughWarn("Could not find font at %s.", fontfile);
-    return NULL;
-  }
   unsigned char *bitmap = malloc(packsize * packsize);
 
   stbtt_packedchar glyphs[95];
@@ -88,7 +80,7 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
   stbtt_fontinfo fontinfo;
   if (!stbtt_InitFont(&fontinfo, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0))) {
-    YughError("Failed to make font %s", fontfile);
+//    YughError("Failed to make font %s", fontfile);
   }
   
   int ascent, descent, linegap;
@@ -98,7 +90,6 @@ struct sFont *MakeFont(const char *fontfile, int height) {
   newfont->ascent = ascent*emscale;
   newfont->descent = descent*emscale;
   newfont->linegap = linegap*emscale;
-
   newfont->texture = malloc(sizeof(texture));
   newfont->texture->id = sg_make_image(&(sg_image_desc){
     .type = SG_IMAGETYPE_2D,
@@ -131,12 +122,10 @@ struct sFont *MakeFont(const char *fontfile, int height) {
 
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
     newfont->Characters[c].leftbearing = glyph.xoff;
-//    printf("char %c: ascent %g, yoff %g, yoff2 %g\n", c, newfont->ascent, glyph.yoff, glyph.yoff2);
     newfont->Characters[c].topbearing = -glyph.yoff2;//newfont->ascent - glyph.yoff;
     newfont->Characters[c].rect = r;
   }
 
-  free(ttf_buffer);
   free(bitmap);
 
   return newfont;

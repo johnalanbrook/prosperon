@@ -8,7 +8,6 @@ if not get_option('editor')
   add_project_arguments('-DNEDITOR', language:'c')
 endif
 
-add_project_arguments('-Wno-implicit-function-declaration', language: 'c')
 add_project_arguments('-Wno-incompatible-function-pointer-types', language: 'c')
 add_project_arguments('-Wno-incompatible-pointer-types', language: 'c')
 add_project_arguments('-Wno-narrowing', language: 'cpp')
@@ -25,10 +24,12 @@ endif
 
 cc = meson.get_compiler('c')
 
+deps += cc.find_library('jemalloc')
+
 if host_machine.system() == 'linux'
   deps += cc.find_library('asound', required:true)
   deps += [dependency('x11'), dependency('xi'), dependency('xcursor'), dependency('egl'), dependency('gl')]
-  link += '-fuse-ld=mold' # use mold, which is very fast, for debug builds
+#  link += '-fuse-ld=mold' # use mold, which is very fast, for debug builds
 endif
 
 if host_machine.system() == 'windows'
@@ -63,7 +64,7 @@ if storefront == 'steam'
 endif
 
 sources = []
-src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','input.c', 'jsffi.c','log.c','model.c','render.c','script.c','resources.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','window.c','yugine.c']
+src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 

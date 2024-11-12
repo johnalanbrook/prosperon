@@ -1,13 +1,11 @@
 #include "texture.h"
 
-#include "log.h"
 #include "render.h"
 #include "sokol/sokol_gfx.h"
 #include <math.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
-
-#include "resources.h"
+#include <string.h>
 
 #include "stb_image_resize2.h"
 
@@ -159,62 +157,7 @@ void texture_offload(texture *tex)
   }
 }
 
-/* If an empty string or null is put for path, loads default texture */
-struct texture *texture_from_file(const char *path) {
-  if (!path) return NULL;
-
-  size_t rawlen;
-  unsigned char *raw = slurp_file(path, &rawlen);
-  
-  if (!raw) return NULL;
-
-  unsigned char *data;
-
-  struct texture *tex = calloc(1, sizeof(*tex));
-
-  int n;
-
-  char *ext = strrchr(path, '.');
-
-  if (!strcmp(ext, ".qoi")) {
-    qoi_desc qoi;
-    data = qoi_decode(raw, rawlen, &qoi, 4);
-    tex->width = qoi.width;
-    tex->height = qoi.height;
-    n = qoi.channels;
-  } else if (!strcmp(ext, ".svg")) {
-  #ifndef NSVG
-    NSVGimage *svg = nsvgParse(raw, "px", 96);
-    struct NSVGrasterizer *rast = nsvgCreateRasterizer();
-    n=4;
-    tex->width=100;
-    tex->height=100;
-    float scale = tex->width/svg->width;
-    
-    data = malloc(tex->width*tex->height*n);
-    nsvgRasterize(rast, svg, 0, 0, scale, data, tex->width, tex->height, tex->width*n);
-    free(svg);
-    free(rast);
-  #else
-    YughWarn("Prosperon was built without SVG capabilities.");
-    return;
-  #endif
-  } else {
-    data = stbi_load_from_memory(raw, rawlen, &tex->width, &tex->height, &n, 4);
-  }
-  free(raw);
-
-  if (data == NULL) {
-    free(tex);
-    return NULL;
-  }
-
-  tex->data = data;
-    
-  return tex;
-}
-
-void texture_free(texture *tex)
+void texture_free(JSRuntime *rt, texture *tex)
 {
   if (!tex) return;
   if (tex->data)
@@ -497,4 +440,36 @@ void texture_load_gpu(texture *tex)
     sg_image_data img_data = tex_img_data(tex,0);
     sg_update_image(tex->id, &img_data);
   }
+}
+
+sapp_icon_desc texture2icon(texture *tex)
+{
+  sapp_icon_desc desc = {0};
+  if (!tex->data) return desc;
+  struct isize {
+    int size;
+    unsigned char *data;
+  };
+  
+  struct isize sizes[4];
+  sizes[0].size = 16;
+  sizes[1].size = 32;
+  sizes[2].size = 64;
+  sizes[3].size = 128;
+
+  for (int i = 0; i < 4; i++) {
+    sizes[i].data = malloc(4*sizes[i].size*sizes[i].size);
+    stbir_resize_uint8_linear(tex->data, tex->width, tex->height, 0, sizes[i].data, sizes[i].size, sizes[i].size, 0, 4);
+  }
+
+  desc = (sapp_icon_desc){
+    .images = {
+      { .width = sizes[0].size, .height = sizes[0].size, .pixels = { .ptr=sizes[0].data, .size=4*sizes[0].size*sizes[0].size } },
+      { .width = sizes[1].size, .height = sizes[1].size, .pixels = { .ptr=sizes[1].data, .size=4*sizes[1].size*sizes[1].size } },
+      { .width = sizes[2].size, .height = sizes[2].size, .pixels = { .ptr=sizes[2].data, .size=4*sizes[2].size*sizes[2].size } },
+      { .width = sizes[3].size, .height = sizes[3].size, .pixels = { .ptr=sizes[3].data, .size=4*sizes[3].size*sizes[3].size } },            
+    }
+  };
+  
+  return desc;
 }

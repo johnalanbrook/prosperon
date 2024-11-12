@@ -67,7 +67,7 @@ emitter.step = function (dt) {
   // update all particles
   for (var p of this.particles) {
     p.time += dt;
-    p.transform.move(p.body.velocity.scale(dt));
+    p.transform.move(p.body.velocity?.scale(dt));
     this.step_hook?.(p);
 
     if (this.kill_hook?.(p) || p.time >= p.life) {
@@ -101,6 +101,7 @@ function update_emitters(dt) {
 
 var arr = [];
 function draw_emitters() {
+  return;
   ssbo ??= render.make_textssbo();
   render.use_shader("shaders/baseparticle.cg");
   var buckets = {};

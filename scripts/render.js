@@ -278,13 +278,9 @@ render.use_mat = function use_mat(mat) {
   }
 };
 
-var models_array = [];
-
 function set_model(t) {
   if (cur.shader.vs.unimap.model) render.setunim4(0, cur.shader.vs.unimap.model.slot, t);
 }
-
-render.set_model = set_model;
 
 var shaderlang = {
   macos: "metal_macos",
@@ -1047,7 +1043,7 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
   var tex = image.texture;
   if (!tex) return;
 
-  var image_size = calc_image_size(image);
+  var image_size = calc_image_size(image); //image.size;
   
   var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
 
@@ -1131,7 +1127,7 @@ render.flush_text = function () {
 };
 
 var fontcache = {};
-
+var datas= [];
 render.get_font = function(path,size)
 {
   var parts = path.split('.');
@@ -1139,9 +1135,12 @@ render.get_font = function(path,size)
     path = parts[0];
     size = Number(parts[1]);
   }
-  path = Resources.find_font(path);
-  var fontstr = `${path}.${size}`;
-  if (!fontcache[fontstr]) fontcache[fontstr] = os.make_font(path,size);
+  path = Resources.find_font(path);  
+  var fontstr = `${path}.${size}`;  
+  if (fontcache[fontstr]) return fontcache[fontstr];
+  
+  var data = io.slurpbytes(path);
+  fontcache[fontstr] = os.make_font(data,size);
   return fontcache[fontstr];
 }
 
@@ -1277,7 +1276,7 @@ prosperon.make_camera = function () {
   cam.far = -1000;
   cam.ortho = true;
   cam.viewport = [0, 0, 1, 1]; // normalized screen coordinates of where to draw
-  cam.size = window.size.slice(); // The render size of this camera in pixels
+  cam.size = game.size.slice(); // The render size of this camera in pixels
   // In ortho mode, this determines how many pixels it will see
   cam.mode = "stretch";
   cam.screen2world = camscreen2world;
@@ -1310,7 +1309,6 @@ var imdebug = function () {
 };
 
 var imgui_fn = function () {
-  imgui.init();
   imgui.newframe(window.size.x, window.size.y, 0.01);
   if (debug.console)
     debug.console = imgui.window("console", _ => {
@@ -1331,7 +1329,7 @@ var imgui_fn = function () {
           window.set_icon(game.texture(window.icon));
         });
       });
-      imgui.button("quit", os.quit);
+      imgui.button("quit", os.exit);
     });
     imgui.menu("Debug", imdebug);
     imgui.menu("View", _ => {
@@ -1457,6 +1455,7 @@ function dmon_cb(e)
     render.hotreload(e.file);
 }
 
+// Ran once per frame
 prosperon.process = function process() {
   layout.newframe();
   // check for hot reloading

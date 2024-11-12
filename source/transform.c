@@ -12,10 +12,8 @@ transform *make_transform()
   return t;
 }
 
-void transform_free(transform *t) { free(t); }
-
+void transform_free(JSRuntime *rt, transform *t) { free(t); }
 void transform_apply(transform *t) { t->dirty = 1; }
-
 void transform_move(transform *t, HMM_Vec3 v)
 {
   t->pos = HMM_AddV3(t->pos, v);
