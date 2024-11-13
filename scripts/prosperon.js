@@ -18,11 +18,19 @@ global.check_registers = function (obj) {
   }
 };
 
+globalThis.timers = []
+global.setTimeout = function(fn,seconds, ...args) {
+  return prosperon.add_timer(globalThis, _ => fn.apply(undefined,args), seconds);
+}
+global.clearTimeout = function(id) { id(); }
+
+prosperon.delay = setTimeout;
+
 global.obscure("global");
 global.mixin("render");
 global.mixin("debug");
-global.mixin("repl");
 global.mixin('layout')
+globalThis.parseq = use('parseq');
 
 var frame_t = profile.secs(profile.now());
 
@@ -243,6 +251,7 @@ var sheetsize = 1024;
 
 function pack_into_sheet(images)
 {
+  return;
   if (!Array.isArray(images)) images = [images];
   if (images[0].texture.width > 300 && images[0].texture.height > 300) return;
   sheet_frames = sheet_frames.concat(images);
@@ -407,6 +416,7 @@ game.texture = function (path) {
 
   var tex = os.make_texture(io.slurpbytes(path));
   if (!tex) throw new Error(`Could not make texture from ${path}`);
+  tex.path = path;
   var image;
   var anim;
 
@@ -418,18 +428,18 @@ game.texture = function (path) {
       texture: tex,
       rect:{x:0,y:0,width:1,height:1}
     };
-//    pack_into_sheet([image]);
+    pack_into_sheet([image]);
   } else if (Object.keys(anim).length === 1) {
     image = Object.values(anim)[0];
     image.frames.forEach(x => x.texture = tex);
-//    pack_into_sheet(image.frames);
+    pack_into_sheet(image.frames);
   } else {
     var allframes = [];
     for (var a in anim)
       allframes = allframes.concat(anim[a].frames);
 
     for (var frame of allframes) frame.texture = tex;
-//    pack_into_sheet(allframes);
+    pack_into_sheet(allframes);
     image = anim;
   }
   
@@ -503,10 +513,6 @@ Range is given by a semantic versioning number, prefixed with nothing, a ~, or a
 
 prosperon.iconified = function (icon) {};
 prosperon.focus = function (focus) {};
-prosperon.resize = function (dimensions) {
-  window.size.x = dimensions.x;
-  window.size.y = dimensions.y;
-};
 prosperon.suspended = function (sus) {};
 prosperon.mouseenter = function () {};
 prosperon.mouseleave = function () {};
@@ -515,24 +521,11 @@ prosperon.touchrelease = function (touches) {};
 prosperon.touchmove = function (touches) {};
 prosperon.clipboardpaste = function (str) {};
 
-globalThis.window = {};
-window.size = [640, 480];
-console.log(`window size set to ${window.size.slice()}`)
-window.mode = "keep";
-window.toggle_fullscreen = function () {
-  window.fullscreen = !window.fullscreen;
-};
- 
-window.doc = {};
-window.doc.dimensions = "Window width and height packaged in an array [width,height]";
-window.doc.title = "Name in the title bar of the window.";
-window.doc.boundingbox = "Boundingbox of the window, with top and right being its height and width.";
 global.mixin("input");
 global.mixin("std");
 global.mixin("diff");
 global.mixin("color");
 global.mixin("tween");
-global.mixin("ai");
 global.mixin("particle");
 //global.mixin("physics");
 global.mixin("geometry");

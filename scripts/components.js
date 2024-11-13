@@ -16,14 +16,14 @@ var sprite_addbucket = function (sprite) {
   if (!sprite.image) return;
   var layer = sprite.z_value();
   sprite_buckets[layer] ??= {};
-  sprite_buckets[layer][sprite.image.texture.path] ??= [];
-  sprite_buckets[layer][sprite.image.texture.path].push(sprite);
+  sprite_buckets[layer][sprite.image.texture] ??= [];
+  sprite_buckets[layer][sprite.image.texture].push(sprite);
   sprite._oldlayer = layer;
-  sprite._oldpath = sprite.image.texture.path;
+  sprite._oldtex = sprite.image.texture;
 };
 
 var sprite_rmbucket = function (sprite) {
-  if (sprite._oldlayer && sprite._oldpath) sprite_buckets[sprite._oldlayer][sprite._oldpath].remove(sprite);
+  if (sprite._oldlayer && sprite._oldtex) sprite_buckets[sprite._oldlayer][sprite._oldtex].remove(sprite);
   else for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) path.remove(sprite);
 };
 
@@ -44,10 +44,10 @@ var sprite = {
     return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;
   },
   anim_speed: 1,
-  play(str, loop = true, reverse = false) {
+  play(str, loop = true, reverse = false, fn) {
     if (!this.animset) {
 //      console.warn(`Sprite has no animset when trying to play ${str}`);
-      return;
+      return parseq.imm();
     }
     
     if (typeof str === 'string')
@@ -85,7 +85,8 @@ var sprite = {
       self.image = playing.frames[f];
 
       if (done) {
-        self.anim_done?.();
+        // notify requestor
+        fn?.();
         if (!loop) {
           self?.stop();
           return;
@@ -146,13 +147,12 @@ var sprite = {
     this.del_anim?.();
     this.anim = undefined;
     this.gameobject = undefined;
-    this.anim_done = undefined;
     allsprites.remove(this);
   },
   anchor: [0, 0],
   sync() {
     var layer = this.z_value();
-    if (layer === this._oldlayer && this.path === this._oldpath) return;
+    if (layer === this._oldlayer && this.image.texture === this._oldtex) return;
 
     sprite_rmbucket(this);
     sprite_addbucket(this);

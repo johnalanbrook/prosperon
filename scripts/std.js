@@ -32,7 +32,15 @@ appy.inputs.f9 = function () {
 appy.inputs.f10 = function () {
   debug.show = !debug.show;
 };
-appy.inputs.f11 = window.toggle_fullscreen;
+
+prosperon.toggle_fullscreen = function()
+{
+  prosperon.fullscreen = !prosperon.fullscreen;
+  game.fullscreen();
+  console.log(`fullscreen is now ${prosperon.fullscreen}`)
+}
+
+appy.inputs.f11 = prosperon.toggle_fullscreen;
 appy.inputs.f11.doc = "Toggle window fullscreen.";
 appy.inputs.f11.title = "Toggle Fullscreen";
 appy.inputs["M-f4"] = os.exit;
@@ -216,12 +224,11 @@ Cmdline.register_order(
     var project = json.decode(io.slurp(projectfile));
     game.title = project.title;
     game.size = [1280, 720];
-    if (io.exists("config.js")) global.mixin("config.js");
-    else console.warn("No config.js file found. Starting with default parameters.");
     
     prosperon.title = project.title;
     prosperon.width = 1280;
     prosperon.height = 720;
+    prosperon.size = [1280,720];
     prosperon.cleanup = function(){}
     prosperon.event = function(e){
       switch(e.type) {
@@ -247,7 +254,8 @@ Cmdline.register_order(
           prosperon.textinput(e.char_code);
           break;
         case "resized":
-          prosperon.resize([e.window_width, e.window_height]);
+          prosperon.size = e.window_size;
+          prosperon.resize?.(e.window_size);
           break;
         case "iconified":
           prosperon.iconified(false);
@@ -273,18 +281,27 @@ Cmdline.register_order(
         case "mouse_leave":
           prosperon.mouseleave();
           break;
+        case "files_dropped":
+          console.log(json.encode(e));
+          break;
+        }
       }
-    }
+
     prosperon.frame = prosperon.process;
     prosperon.icon = os.make_texture(io.slurpbytes('moon.gif'));
     prosperon.high_dpi = 0;
     prosperon.alpha = 1;
     prosperon.fullscreen = 0;
+    prosperon.sample_count = 1;
     prosperon.enable_clipboard = true;
     prosperon.enable_dragndrop=true;
     prosperon.max_dropped_files=1;
     prosperon.swap_interval = 1;
+    prosperon.title = "Prosperon";
 
+    if (io.exists("config.js")) global.mixin("config.js");
+    else console.warn("No config.js file found. Starting with default parameters.");
+    
     game.engine_start(prosperon);
   },
   "Play the game present in this folder.",

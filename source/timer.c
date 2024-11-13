@@ -29,10 +29,10 @@ void timer_free(JSRuntime *rt, timer *t)
 void timer_update(JSContext *js, double dt)
 {
   for (int i = 0; i < arrlen(timers); i++) {
-    if (timers[i]->remain <= 0) continue;
+    if (timers[i]->remain <= -10000) continue;
     timers[i]->remain -= dt;
     if (timers[i]->remain <= 0) {
-      timers[i]->remain = 0;
+      timers[i]->remain = -10000;
       JSValue fn = JS_DupValue(js, timers[i]->fn);
       script_call_sym(timers[i]->fn, 0, NULL);
       JS_FreeValue(js, fn);

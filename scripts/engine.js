@@ -1,3 +1,11 @@
+Object.defineProperty(Object.prototype, "object_id", {
+  value: function() {
+    return os.value_id(this);
+  }
+});
+
+texture_proto.toString = texture_proto.object_id;
+
 os.mem_limit.doc = "Set the memory limit of the runtime in bytes.";
 os.gc_threshold.doc = "Set the threshold before a GC pass is triggered in bytes. This is set to malloc_size + malloc_size>>1 after a GC pass.";
 os.max_stacksize.doc = "Set the max stack size in bytes.";
@@ -320,7 +328,6 @@ globalThis.use = function use(file) {
 };
 
 var allpaths = io.ls();
-
 io.exists = function(path)
 {
   return allpaths.includes(path) || core_db.exists(path);
@@ -341,6 +348,15 @@ io.slurpbytes = function(path)
   var ret = tmpslurp(path) || core_db.slurp(path);
   if (!ret) throw new Error(`Could not find file ${path} anywhere`);
   return ret;
+}
+
+var ignore = io.slurp('.prosperonignore')
+if (ignore) {
+  ignore = ignore.split('\n');
+  for (var ig of ignore) {
+    if (!ig) continue;
+    allpaths = allpaths.filter(x => !x.startsWith(ig));
+  }
 }
 
 var coredata = tmpslurp("core.zip");

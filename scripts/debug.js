@@ -224,6 +224,40 @@ debug.api.print_doc = function (name) {
   return mdoc;
 };
 
+debug.onchange_var = function(obj, vars, on_change)
+{
+  vars.forEach(prop => {
+    var internal_val = obj[prop];
+    Object.defineProperty(obj, prop, {
+      get() { return internal_val; },
+      set(newval) {
+        if (internal_val !== newval) {
+          on_change(prop, internal_val, newval);
+          internal_val = newval;
+        }
+      },
+      configurable:true,
+      enumerable:true
+    });
+  });
+}
+
+debug.log_var = function(obj, vars)
+{
+  debug.onchange_var(obj,vars, (prop,oldval,newval) => {
+    console.log(`property ${prop} changed from ${oldval} to ${newval}`);
+    console.stack();
+  });
+}
+
+debug.break_var = function(obj,vars)
+{
+  debug.onchange_var(obj,vars,_ => {
+    console.stack();
+    os.exit(1);
+  });
+}
+
 return {
   debug,
   Gizmos,

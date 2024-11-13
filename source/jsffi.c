@@ -116,11 +116,9 @@ JSValue sapp_event2js(JSContext *js, sapp_event *e)
   JS_SetPropertyStr(js, event, "frame_count", JS_NewInt64(js, e->frame_count));
   JS_SetPropertyStr(js, event, "type", JS_NewString(js, sapp_str[e->type]));
   JS_SetPropertyStr(js,event,"mouse", vec22js(js, (HMM_Vec2){e->mouse_x,e->mouse_y}));
-  JS_SetPropertyStr(js,event,"mouse_d", vec22js(js, (HMM_Vec2){e->mouse_dx,e->mouse_dy}));  
-  JS_SetPropertyStr(js, event, "window_width", JS_NewFloat64(js, e->window_width));
-  JS_SetPropertyStr(js, event, "window_height", JS_NewFloat64(js, e->window_height));
-  JS_SetPropertyStr(js, event, "framebuffer_height", JS_NewFloat64(js, e->framebuffer_height));
-  JS_SetPropertyStr(js, event, "framebuffer_height", JS_NewFloat64(js, e->framebuffer_height));    
+  JS_SetPropertyStr(js,event,"mouse_d", vec22js(js, (HMM_Vec2){e->mouse_dx,e->mouse_dy}));
+  JS_SetPropertyStr(js,event, "window_size", vec22js(js, (HMM_Vec2){e->window_width,e->window_height}));
+  JS_SetPropertyStr(js,event, "framebuffer", vec22js(js,(HMM_Vec2){e->framebuffer_width,e->framebuffer_height}));
 
   switch(e->type) {
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
@@ -1540,23 +1538,28 @@ JSC_CCALL(game_engine_start,
   start_desc.alpha = js2number(js, JS_GetPropertyStr(js, argv[0], "alpha"));  
   start_desc.fullscreen = js2number(js, JS_GetPropertyStr(js, argv[0], "fullscreen"));
   start_desc.swap_interval = js2number(js, JS_GetPropertyStr(js, argv[0], "swap_interval"));  
-  start_desc.window_title = "PROSPERON WINDOW";//js2number(js, JS_GetPropertyStr(js, argv[0], "width"));
-  start_desc.enable_clipboard = js2number(js, JS_GetPropertyStr(js, argv[0], "enable_clipboard"));
-  start_desc.enable_dragndrop = js2number(js, JS_GetPropertyStr(js, argv[0], "enable_dragndrop"));
+  start_desc.window_title = JS_ToCString(js, JS_GetPropertyStr(js, argv[0], "title"));
+  start_desc.enable_clipboard = JS_ToBool(js, JS_GetPropertyStr(js, argv[0], "enable_clipboard"));
+  start_desc.enable_dragndrop = JS_ToBool(js, JS_GetPropertyStr(js, argv[0], "enable_dragndrop"));
   start_desc.max_dropped_files = js2number(js, JS_GetPropertyStr(js, argv[0], "max_dropped_files"));
+  start_desc.max_dropped_file_path_length = 2048;
+  start_desc.max_dropped_files = 4;
   start_desc.logger.func = slog_func;
   texture *tex = js2texture(js, JS_GetPropertyStr(js, argv[0], "icon"));
   if (tex) start_desc.icon = texture2icon(tex);
   sapp_run(&start_desc);
 )
 
+JSC_CCALL(game_fullscreen, sapp_toggle_fullscreen());
+
 static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, engine_start, 1),
+  MIST_FUNC_DEF(game, fullscreen, 0),
 };
 
 JSC_CCALL(input_show_keyboard, sapp_show_keyboard(JS_ToBool(js,argv[0])))
 JSValue js_input_keyboard_shown(JSContext *js, JSValue self) { return JS_NewBool(js,sapp_keyboard_shown()); }
-JSC_CCALL(input_mouse_lock, sapp_lock_mouse(js2number(js,argv[0])))
+JSC_CCALL(input_mouse_lock, sapp_lock_mouse(JS_ToBool(js,argv[0])))
 JSC_CCALL(input_mouse_cursor, sapp_set_mouse_cursor(js2number(js,argv[0])))
 JSC_CCALL(input_mouse_show, sapp_show_mouse(JS_ToBool(js,argv[0])))
 
@@ -2276,7 +2279,6 @@ JSC_CCALL(os_make_texture,
   if (!tex) return JS_ThrowReferenceError(js, "unable to make texture from the given array buffer");
 
   ret = texture2js(js,tex);
-  JS_SetPropertyStr(js, ret, "path", JS_DupValue(js,argv[0]));
 )
 
 JSC_CCALL(os_make_gif,
@@ -2294,7 +2296,6 @@ JSC_CCALL(os_make_gif,
   JSValue gif = JS_NewObject(js);
   JSValue delay_arr = JS_NewArray(js);
   JSValue jstex = texture2js(js,tex);
-  JS_SetPropertyStr(js, jstex, "path", JS_DupValue(js, argv[0]));
 
   float yslice = 1.0/frames;
   for (int i = 0; i < frames; i++) {

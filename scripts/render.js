@@ -893,10 +893,6 @@ render.rectangle = function render_rectangle(rect, color = Color.white, shader =
   check_flush(flush_poly);
 };
 
-render.window = function render_window(pos, wh, color) {
-  render.box(pos.add(wh.scale(0.5)), wh, color);
-};
-
 render.text = function (str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
   if (typeof font === 'string')
     font = render.get_font(font);
@@ -1158,15 +1154,15 @@ render.draw = function render_draw(mesh, ssbo, inst = 1, e_start = 0) {
 
 // Camera viewport is a rectangle with the bottom left corner defined as x,y. Units are pixels on the window.
 function camviewport() {
-  var aspect = (((this.viewport[2] - this.viewport[0]) / (this.viewport[3] - this.viewport[1])) * window.size.x) / window.size.y;
+  var aspect = (((this.viewport[2] - this.viewport[0]) / (this.viewport[3] - this.viewport[1])) * prosperon.size.x) / prosperon.size.y;
   var raspect = this.size.x / this.size.y;
 
-  var left = this.viewport[0] * window.size.x;
-  var bottom = this.viewport[1] * window.size.y;
+  var left = this.viewport[0] * prosperon.size.x;
+  var bottom = this.viewport[1] * prosperon.size.y;
 
   var usemode = this.mode;
 
-  if (this.break && this.size.x > window.size.x && this.size.y > window.size.y) usemode = this.break;
+  if (this.break && this.size.x > prosperon.size.x && this.size.y > prosperon.size.y) usemode = this.break;
 
   if (usemode === "fit")
     if (raspect < aspect) usemode = "height";
@@ -1178,8 +1174,8 @@ function camviewport() {
       return {
         x: 0,
         y: 0,
-        width: window.size.x,
-        height: window.size.y
+        width: prosperon.size.x,
+        height: prosperon.size.y
       };
     case "keep":
       return {
@@ -1192,27 +1188,27 @@ function camviewport() {
       var ret = {
         x:left,
         y:0,
-        width:this.size.x*(window.size.y/this.size.y),
-        height:window.size.y
+        width:this.size.x*(prosperon.size.y/this.size.y),
+        height:prosperon.size.y
       };
-      ret.x = (window.size.x - (ret.width-ret.x))/2;
+      ret.x = (prosperon.size.x - (ret.width-ret.x))/2;
       return ret;
     case "width":
       var ret = {
         x:0,
         y:bottom,
-        width:window.size.x,
-        height:this.size.y*(window.size.x/this.size.x)
+        width:prosperon.size.x,
+        height:this.size.y*(prosperon.size.x/this.size.x)
       };
-      ret.y = (window.size.y - (ret.height-ret.y))/2;
+      ret.y = (prosperon.size.y - (ret.height-ret.y))/2;
       return ret;
   }
 
   return {
     x:0,
     y:0,
-    width:window.size.x,
-    height:window.size.y
+    width:prosperon.size.x,
+    height:prosperon.size.y
   };
 }
 
@@ -1236,7 +1232,7 @@ camscreen2world.doc = "Convert a view position for a camera to world.";
 
 // return camera coordinates given a screen position
 function screen2cam(pos) {
-  var winsize = window.size.slice();
+  var winsize = prosperon.size.slice();
   var viewport = this.view();
   var viewpos = pos.sub([viewport.x,viewport.y]);
   viewpos = viewpos.div([viewport.width,viewport.height]);
@@ -1309,7 +1305,7 @@ var imdebug = function () {
 };
 
 var imgui_fn = function () {
-  imgui.newframe(window.size.x, window.size.y, 0.01);
+  imgui.newframe(prosperon.size.x, prosperon.size.y, 0.01);
   if (debug.console)
     debug.console = imgui.window("console", _ => {
       imgui.text(console.transcript);
@@ -1323,10 +1319,10 @@ var imgui_fn = function () {
   imgui.mainmenubar(_ => {
     imgui.menu("File", _ => {
       imgui.menu("Game settings", _ => {
-        window.title = imgui.textinput("Title", window.title);
-        window.icon = imgui.textinput("Icon", window.icon);
+        prosperon.title = imgui.textinput("Title", prosperon.title);
+        prosperon.icon = imgui.textinput("Icon", prosperon.icon);
         imgui.button("Refresh window", _ => {
-          window.set_icon(game.texture(window.icon));
+          prosperon.set_icon(game.texture(prosperon.icon));
         });
       });
       imgui.button("quit", os.exit);
@@ -1350,13 +1346,10 @@ var imgui_fn = function () {
       imtoggle("Draw gizmos", render, "draw_gizmos");
 
       imgui.menu("Window", _ => {
-        window.fullscreen = imgui.checkbox("fullscreen", window.fullscreen);
-        //      window.vsync = imgui.checkbox("vsync", window.vsync);
+        prosperon.fullscreen = imgui.checkbox("fullscreen", prosperon.fullscreen);
+        //      prosperon.vsync = imgui.checkbox("vsync", prosperon.vsync);
         imgui.menu("MSAA", _ => {
-          for (var msaa of gamestate.msaa) imgui.button(msaa + "x", _ => (window.sample_count = msaa));
-        });
-        imgui.menu("Resolution", _ => {
-          for (var res of gamestate.resolutions) imgui.button(res, _ => (window.resolution = res));
+          for (var msaa of gamestate.msaa) imgui.button(msaa + "x", _ => (prosperon.sample_count = msaa));
         });
       });
     });
@@ -1415,14 +1408,14 @@ try{
 
   render.set_projection_ortho({
     l:0,
-    r:window.size.x,
-    b:-window.size.y,
+    r:prosperon.size.x,
+    b:-prosperon.size.y,
     t:0
   },-1,1);
   render.viewport({
     t:0,
-    height:window.size.y,
-    width:window.size.x,
+    height:prosperon.size.y,
+    width:prosperon.size.x,
     l:0
   }, false);
   prosperon.app();
