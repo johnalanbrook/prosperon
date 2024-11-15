@@ -1,6 +1,6 @@
 globalThis.gamestate = {};
 
-global.check_registers = function (obj) {
+global.check_registers = function check_registers(obj) {
   for (var reg in Register.registries) {
     if (!Register.registries[reg].register) return;
     if (typeof obj[reg] === "function") {
@@ -80,7 +80,7 @@ prosperon.init = function () {
   render.init();
   imgui.init();
 
-//      global.mixin("sound.js");
+  globalThis.audio = use("sound.js");
   world_start();
   prosperon.camera = prosperon.make_camera();
   prosperon.camera.transform.pos = [0, 0, -100];
@@ -184,7 +184,7 @@ function calc_image_size(img)
   return [img.texture.width*img.rect.width, img.texture.height*img.rect.height];
 }
 
-game.tex_hotreload = function (file) {
+game.tex_hotreload = function tex_hotreload(file) {
   if (!(file in game.texture.cache)) return;
   var data = io.slurpbytes(file);
   var tex;
@@ -330,7 +330,7 @@ game.is_image = function(obj)
 }
 
 // Any request to it returns an image, which is a texture and rect. But they can
-game.texture = function (path) {
+game.texture = function texture(path) {
   if (typeof path !== 'string') throw new Error('need a string for game.texture')
   var parts = path.split(':');
   path = Resources.find_image(parts[0]);
@@ -362,7 +362,7 @@ game.texture = function (path) {
 
   if (!io.exists(path)) {
     console.error(`Missing texture: ${path}`);
-    game.texture.cache[path] = game.texture("no_tex.gif");
+    game.texture.cache[path] = game.texture("core/icons/no_tex.gif");
     game.texture.time_cache[path] = io.mod(path);
     return game.texture.cache[path];
   }
@@ -547,10 +547,7 @@ var Register = {
       var guid = prosperon.guid();
 
       var dofn = function (...args) {
-        profile.report(`call_${name}_${oname}`);
-        var st = profile.now();
         fn(...args);
-        profile.endreport(`call_${name}_${oname}`);   
       };
 
       var left = 0;
@@ -576,13 +573,12 @@ var Register = {
 
     if (!flush) {
       prosperon[name] = function (...args) {
-        profile.report(name);
+//        profile.fiber_enter(vector.fib);
         fns.forEach(fn => fn(...args));
-        profile.endreport(name);
+//        profile.fiber_leave(vector.fib);
       };
     } else
-      prosperon[name] = function (...args) {
-        profile.report(name);
+      prosperon[name] = function name(...args) {
         var layer = undefined;
         for (var fn of fns) {
           if (layer !== fn.layer) {
@@ -591,7 +587,6 @@ var Register = {
           }
           fn();
         }
-        profile.endreport(name);
       };
 
     prosperon[name].fns = fns;

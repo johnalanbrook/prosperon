@@ -114,8 +114,7 @@ Ease.elastic.c5 = (2 * Math.PI) / 4.5;
 
 var tween = function (from, to, time, fn, endfn) {
   var start = profile.secs(profile.now());
-  var update = function (dt) {
-    profile.report("tween");
+  var update = function tween_update(dt) {
     var elapsed = profile.secs(profile.now()) - start;
     fn(from.lerp(to, elapsed / time));
     if (elapsed >= time) {
@@ -124,7 +123,6 @@ var tween = function (from, to, time, fn, endfn) {
       stop();
       endfn?.();
     }
-    profile.endreport("tween");
   };
   var stop = Register.update.register(update);
   return stop;

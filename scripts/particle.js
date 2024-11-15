@@ -53,7 +53,7 @@ emitter.spawn = function (t) {
   this.spawn_hook(par);
 };
 
-emitter.step = function (dt) {
+emitter.step = function step(dt) {
   // update spawning particles
   if (this.on && this.pps > 0) {
     this.spawn_timer += dt;

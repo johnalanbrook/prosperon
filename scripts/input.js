@@ -67,7 +67,7 @@ function modstr() {
   return s;
 }
 
-prosperon.keydown = function (key, repeat) {
+prosperon.keydown = function keydown(key, repeat) {
   downkeys[key] = true;
 
   if (key == 341 || key == 345) mod.ctrl = 1;
@@ -81,7 +81,7 @@ prosperon.keydown = function (key, repeat) {
   }
 };
 
-prosperon.keyup = function (key) {
+prosperon.keyup = function keyup(key) {
   delete downkeys[key];
 
   if (key == 341 || key == 345) mod.ctrl = 0;
@@ -109,43 +109,43 @@ prosperon.mousemove = function (pos, dx) {
   mousepos = pos;
   player[0].mouse_input("move", pos, dx);
 };
-prosperon.mousescroll = function (dx) {
+prosperon.mousescroll = function mousescroll(dx) {
   player[0].mouse_input(modstr() + "scroll", dx);
 };
-prosperon.mousedown = function (b) {
+prosperon.mousedown = function mousedown(b) {
   player[0].raw_input(modstr() + input.mouse.button[b], "pressed");
   downkeys[input.mouse.button[b]] = true;
 };
-prosperon.mouseup = function (b) {
+prosperon.mouseup = function mouseup(b) {
   player[0].raw_input(input.mouse.button[b], "released");
   delete downkeys[input.mouse.button[b]];
 };
 
 input.mouse = {};
-input.mouse.screenpos = function () {
+input.mouse.screenpos = function mouse_screenpos() {
   return mousepos.slice();
 };
-input.mouse.worldpos = function () {
+input.mouse.worldpos = function mouse_worldpos() {
   return prosperon.camera.screen2world(mousepos);
 };
-input.mouse.viewpos = function()
+input.mouse.viewpos = function mouse_viewpos()
 {
   var world = input.mouse.worldpos();
   
   return mousepos.slice();
 }
-input.mouse.disabled = function () {
+input.mouse.disabled = function mouse_disabled() {
   input.mouse_mode(1);
 };
-input.mouse.normal = function () {
+input.mouse.normal = function mouse_normal() {
   input.mouse_mode(0);
 };
-input.mouse.mode = function (m) {
+input.mouse.mode = function mouse_mode(m) {
   if (input.mouse.custom[m]) input.cursor_img(input.mouse.custom[m]);
   else input.mouse_cursor(m);
 };
 
-input.mouse.set_custom_cursor = function (img, mode = input.mouse.cursor.default) {
+input.mouse.set_custom_cursor = function mouse_cursor(img, mode = input.mouse.cursor.default) {
   if (!img) delete input.mouse.custom[mode];
   else {
     input.cursor_img(img);
@@ -218,7 +218,7 @@ joysticks["wasd"] = {
   dx: "a",
 };
 
-input.procdown = function () {
+input.procdown = function procdown() {
   for (var k in downkeys) player[0].raw_input(keyname_extd(k), "down");
 
   for (var i in joysticks) {
@@ -229,7 +229,7 @@ input.procdown = function () {
   }
 };
 
-input.print_md_kbm = function (pawn) {
+input.print_md_kbm = function print_md_kbm(pawn) {
   if (!("inputs" in pawn)) return;
 
   var str = "";
@@ -259,7 +259,7 @@ input.action = {
   actions: [],
 };
 
-input.tabcomplete = function (val, list) {
+input.tabcomplete = function tabcomplete(val, list) {
   if (!val) return val;
   list.dofilter(function (x) {
     return x.startsWith(val);

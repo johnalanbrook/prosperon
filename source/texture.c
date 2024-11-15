@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 
+#include <tracy/TracyC.h>
+
 #include "qoi.h"
 
 #ifndef NSVG
@@ -152,6 +154,7 @@ int mip_wh(int w, int h, int *mw, int *mh, int lvl)
 void texture_offload(texture *tex)
 {
   if (tex->data) {
+    TracyCFreeN(tex->data, "texture");
     free(tex->data);
     tex->data = NULL;
   }
@@ -160,9 +163,7 @@ void texture_offload(texture *tex)
 void texture_free(JSRuntime *rt, texture *tex)
 {
   if (!tex) return;
-  if (tex->data)
-    free(tex->data);
-
+  texture_offload(tex);
   free(tex);
 }
 
@@ -173,6 +174,7 @@ struct texture *texture_empty(int w, int h)
   tex->data = calloc(w*h*n, sizeof(unsigned char));
   tex->width = w;
   tex->height = h;
+  TracyCAllocN(tex->data, tex->height*tex->width*4, "texture");    
   return tex;
 }
 
@@ -189,6 +191,7 @@ struct texture *texture_fromdata(void *raw, long size)
   }
 
   tex->data = data;
+  TracyCAllocN(tex->data, tex->height*tex->width*4, "texture");  
 
   return tex;
 }

@@ -30,10 +30,9 @@
 #include "timer.h"
 #include <signal.h>
 #include <dirent.h>
-
-#include <fts.h>
-
 #include "cute_aseprite.h"
+
+#include <tracy/TracyC.h>
 
 JSValue number2js(JSContext *js, double g) { return JS_NewFloat64(js,g); }
 double js2number(JSContext *js, JSValue v) {
@@ -611,7 +610,10 @@ JSC_CCALL(render_viewport,
   sg_apply_viewportf(view.x, view.y,view.w,view.h, JS_ToBool(js,argv[1]));
 )
   
-JSC_CCALL(render_commit, sg_commit())
+JSC_CCALL(render_commit,
+  sg_commit();
+  TracyCFrameMark
+)
 JSC_CCALL(render_end_pass, sg_end_pass())
 
 HMM_Mat4 transform2view(transform *t)
@@ -1403,6 +1405,17 @@ JSC_CCALL(vector_median,
   return number2js(js,arr[len/2]);
 )
 
+int fibonacci(int n) {
+  if (n <= 1) return n;
+  return fibonacci(n-1) + fibonacci(n-2);
+}
+JSC_CCALL(vector_fib,
+  int n = js2number(js,argv[0]);
+  int fib = fibonacci(n);
+
+  printf("ANSWER IS %d\n", fib);
+)
+
 static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, dot,2),
   MIST_FUNC_DEF(vector, project,2),
@@ -1426,7 +1439,8 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, sum, 1),
   MIST_FUNC_DEF(vector, sigma, 1),
   MIST_FUNC_DEF(vector, median, 1),
-  MIST_FUNC_DEF(vector, length, 1)
+  MIST_FUNC_DEF(vector, length, 1),
+  MIST_FUNC_DEF(vector, fib, 1),
 };
 
 #define JS_HMM_FN(OP, HMM, SIGN) \
@@ -1649,6 +1663,18 @@ JSC_CCALL(profile_gather_stop,
   JS_SetInterruptHandler(JS_GetRuntime(js),NULL,NULL);
 )
 
+JSC_CCALL(profile_trace_start,
+#ifdef TRACY_MANUAL_LIFETIME
+  ___tracy_startup_profiler();
+#endif
+)
+
+JSC_CCALL(profile_trace_stop,
+#ifdef TRACY_MANUAL_LIFETIME
+  ___tracy_shutdown_profiler();
+#endif
+)
+
 JSC_CCALL(profile_best_t,
   char* result[50];
   double seconds = stm_sec(js2number(js,argv[0]));
@@ -1664,7 +1690,36 @@ JSC_CCALL(profile_best_t,
   ret = JS_NewString(js,result);
 )
 
+JSC_CCALL(profile_message,
+  size_t len;
+  const char *str = JS_ToCStringLen(js, &len, argv[0]);
+  TracyCMessage(str,len);
+  JS_FreeCString(js,str);
+)
+
 JSC_CCALL(profile_secs, return number2js(js,stm_sec(js2number(js,argv[0]))); )
+
+JSC_SCALL(profile_plot,
+  TracyCPlot(str, js2number(js,argv[1]));
+)
+
+JSC_SCALL(profile_plot_config,
+  TracyCPlotConfig(str, js2number(js,argv[1]), JS_ToBool(js,argv[2]), JS_ToBool(js,argv[3]), js2number(js,argv[4]))
+)
+
+JSC_CCALL(profile_fiber_enter,
+  JSAtom atom = JS_ValueToAtom(js,argv[0]);
+  const char *str = JS_AtomToCString(js, atom);
+  TracyCFiberEnter(str);
+  JS_FreeAtom(js,atom);
+)
+
+JSC_CCALL(profile_fiber_leave,
+  JSAtom atom = JS_ValueToAtom(js,argv[0]);
+  const char *str = JS_AtomToCString(js, atom);
+  TracyCFiberLeave(str);
+  JS_FreeAtom(js,atom);
+)
 
 static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
@@ -1672,7 +1727,13 @@ static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,gather,2),
   MIST_FUNC_DEF(profile,gather_rate,1),
   MIST_FUNC_DEF(profile,gather_stop,0),
+  MIST_FUNC_DEF(profile,trace_start,0),
   MIST_FUNC_DEF(profile,secs,1),
+  MIST_FUNC_DEF(profile, message, 1),
+  MIST_FUNC_DEF(profile, plot, 2),
+  MIST_FUNC_DEF(profile, plot_config, 5),
+  MIST_FUNC_DEF(profile, fiber_enter, 1),
+  MIST_FUNC_DEF(profile, fiber_leave, 1),
 };
 
 static void list_files(const char *path, JSContext *js, JSValue v, int *n)
@@ -1790,7 +1851,10 @@ static const JSCFunctionListEntry js_io_funcs[] = {
 JSC_GETSET(transform, pos, vec3)
 JSC_GETSET(transform, scale, vec3f)
 JSC_GETSET(transform, rotation, quat)
-JSC_CCALL(transform_move, transform_move(js2transform(js,self), js2vec3(js,argv[0])); )
+JSC_CCALL(transform_move,
+  transform *t = js2transform(js,self);
+  transform_move(t, js2vec3(js,argv[0]));
+)
 
 JSC_CCALL(transform_lookat,
   HMM_Vec3 point = js2vec3(js,argv[0]);
@@ -2099,6 +2163,7 @@ JSC_CCALL(os_gc, JS_RunGC(JS_GetRuntime(js)))
 JSC_CCALL(os_mem_limit, JS_SetMemoryLimit(JS_GetRuntime(js), js2number(js,argv[0])))
 JSC_CCALL(os_gc_threshold, JS_SetGCThreshold(JS_GetRuntime(js), js2number(js,argv[0])))
 JSC_CCALL(os_max_stacksize, JS_SetMaxStackSize(JS_GetRuntime(js), js2number(js,argv[0])))
+JSC_CCALL(os_rt_info, return JS_GetRTInfo(JS_GetRuntime(js),js))
 
 static JSValue tmp2js(JSContext *js,FILE *tmp)
 {
@@ -2711,6 +2776,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, mem_limit, 1),
   MIST_FUNC_DEF(os, gc_threshold, 1),
   MIST_FUNC_DEF(os, max_stacksize, 1),
+  MIST_FUNC_DEF(os, rt_info, 0),
   MIST_FUNC_DEF(os, dump_value, 1),
   MIST_FUNC_DEF(os, dump_mem, 0),
   MIST_FUNC_DEF(os, dump_shapes, 0),
@@ -2824,15 +2890,15 @@ void ffi_load(JSContext *js) {
 
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
-  signal(SIGHUP, signal_handler);
   signal(SIGSEGV, signal_handler);
-  signal(SIGQUIT, signal_handler);
   signal(SIGABRT, signal_handler);
   atexit(exit_handler);
 
 #ifndef NEDITOR
   JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
 #endif
+
+  TracyCSetThreadName("MAIN_QUICKJS")
   
   JS_FreeValue(js,globalThis);  
 }

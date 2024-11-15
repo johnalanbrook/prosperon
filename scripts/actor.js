@@ -4,7 +4,7 @@ var actor_urs = {};
 
 var actor_spawns = {};
 
-globalThis.class_use = function (script, config, base, callback) {
+globalThis.class_use = function class_use(script, config, base, callback) {
   var file = Resources.find_script(script);
 
   if (!file) {
@@ -27,7 +27,7 @@ globalThis.class_use = function (script, config, base, callback) {
   if (callback) callback(padawan);
 
   var script = Resources.replstrs(file);
-  script = `(function() { var self = this; var $ = this.__proto__; ${script}; })`;
+  script = `(function use_${file.name()}() { var self = this; var $ = this.__proto__; ${script}; })`;
 
   var fn = os.eval(file, script);
   fn.call(padawan);
@@ -59,7 +59,7 @@ actor.__stats = function () {
   return stats;
 };
 
-actor.hotreload = function (file) {
+actor.hotreload = function hotreload(file) {
   var script = Resources.replstrs(file);
   script = `(function() { var self = this; var $ = this.__proto__;${script};})`;
   var fn = os.eval(file, script);

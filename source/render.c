@@ -4,6 +4,9 @@
 #include "sokol/sokol_glue.h"
 #include "sokol/util/sokol_gl.h"
 #include "HandmadeMath.h"
+#include <stdio.h>
+
+#include <tracy/TracyC.h>
 
 sg_sampler std_sampler;
 sg_sampler tex_sampler;
@@ -27,11 +30,6 @@ void trace_apply_uniforms(sg_shader_stage stage, int ub_index, const sg_range *d
   rfd.size_uniforms += data->size;
 }
 
-void trace_draw(int base_e, int num_e, int num_inst, void *data)
-{
-  
-}
-
 void trace_apply_pipeline(sg_pipeline pip, void *data)
 {
 //  YughSpam("Applying pipeline %u %s.", pip, sg_query_pipeline_desc(pip).label);
@@ -42,46 +40,83 @@ void trace_begin_pass(sg_pass pass, const sg_pass_action *action, void *data)
 //  YughSpam("Begin pass %s", pass.label);
 }
 
-#define SG_TRACE_SET(NAME) \
-void trace_alloc_##NAME (sg_##NAME id, void *data) \
-{ \
-  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-} \
-\
-void trace_dealloc_##NAME(sg_##NAME id, void *data) \
-{ \
-  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-} \
-\
-void trace_make_##NAME(sg_##NAME##_desc *desc, void *data) \
-{ \
-} \
-\
-void trace_destroy_##NAME(sg_##NAME id, void *data) \
-{ \
-  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-} \
-\
-void trace_init_##NAME(sg_##NAME id, sg_##NAME##_desc *desc, void *data) \
-{ \
-} \
-\
-void trace_uninit_##NAME(sg_##NAME id, void *data) \
-{ \
-  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-} \
-\
-void trace_fail_##NAME(sg_##NAME id, void *data) \
-{ \
-  sg_##NAME##_desc desc = sg_query_##NAME##_desc(id); \
-} \
+void trace_apply_viewport(int x, int y, int width, int height, bool origin_top_left, void *user_data)
+{
 
-SG_TRACE_SET(buffer)
-SG_TRACE_SET(image)
-SG_TRACE_SET(sampler)
-SG_TRACE_SET(shader)
-SG_TRACE_SET(pipeline)
-SG_TRACE_SET(attachments)
+}
+
+void trace_draw(int base_element, int num_elements, int num_instances, void *user_data)
+{
+  TracyCPlotI("draw", num_elements);
+}
+
+void trace_alloc_buffer(sg_buffer result, void *data) {
+  TracyCMessageL("BUFFER ALLOC");
+}
+void trace_init_buffer(sg_buffer id, const sg_buffer_desc *desc, void *data){
+  TracyCMessageL("BUFFER INIT");
+}
+void trace_make_buffer(const sg_buffer_desc *desc, sg_buffer id, void *data){
+  TracyCAllocN((void*)id.id, desc->data.size, "buffer");
+}
+void trace_append_buffer(sg_buffer id, const sg_range *data, int result, void *user_data) {
+  sg_buffer_desc desc = sg_query_buffer_desc(id);  
+}
+void trace_update_buffer(sg_buffer buf, const sg_range *data, void *user_data){
+  TracyCMessageL("BUFFER UPDATED");
+}
+void trace_uninit_buffer(sg_buffer id, void *data){
+  TracyCMessageL("BUFFER UNINIT");
+}
+void trace_dealloc_buffer(sg_buffer id, void *data){
+  TracyCMessageL("BUFFER DEALLOC");
+}
+void trace_destroy_buffer(sg_buffer id, void *data){
+  TracyCFreeN((void*)id.id, "buffer");
+}
+void trace_fail_buffer(sg_buffer id, void *data){}
+
+void trace_alloc_image(sg_image result, void *data) {
+  TracyCMessageL("IMAGE ALLOC");
+}
+void trace_init_image(sg_image id, const sg_image_desc *desc, void *data){
+  TracyCMessageL("IMAGE INIT");
+}
+
+int image_data_size(sg_image_data *data)
+{
+  int total_size = 0;
+  for (int i = 0; i < SG_CUBEFACE_NUM; i++)
+    for (int j = 0; j < SG_MAX_MIPMAPS; j++)
+      total_size += data->subimage[i][j].size;
+
+  return total_size;
+}
+
+void trace_make_image(const sg_image_desc *desc, sg_image id, void *data){
+  int total_size = 0;
+  for (int i = 0; i < desc->num_mipmaps; i++)
+    total_size += desc->data.subimage[i]->size;
+
+  TracyCAllocN((void*)id.id, image_data_size(&desc->data), "tex_gpu");
+}
+
+void trace_update_image(sg_image id, const sg_image_data *data, void *user_data){
+  TracyCFreeN((void*)id.id, "tex_gpu");
+  TracyCAllocN((void*)id.id, image_data_size(data), "tex_gpu");
+}
+void trace_uninit_image(sg_image id, void *data){
+  TracyCMessageL("IMAGE UNINIT");
+}
+void trace_dealloc_image(sg_image id, void *data){
+  TracyCMessageL("IMAGE DEALLOC");
+}
+void trace_destroy_image(sg_image id, void *data){
+  TracyCFreeN((void*)id.id, "tex_gpu");
+}
+
+void trace_fail_image(sg_image id, void *data){}
+
 
 #define SG_HOOK_SET(NAME) \
 .alloc_##NAME = trace_alloc_##NAME, \
@@ -92,22 +127,18 @@ SG_TRACE_SET(attachments)
 .destroy_##NAME = trace_destroy_##NAME, \
 .make_##NAME = trace_make_##NAME \
 
-void trace_append_buffer(sg_buffer id, sg_range *data, void *user)
-{
-  sg_buffer_desc desc = sg_query_buffer_desc(id);
-//  YughSpam("Appending buffer %d [%s]", id, desc.label);
-}
-
 static sg_trace_hooks hooks = {
   .apply_pipeline = trace_apply_pipeline,
   .begin_pass = trace_begin_pass,
   SG_HOOK_SET(buffer),
+  .append_buffer = trace_append_buffer,
   SG_HOOK_SET(image),
-  SG_HOOK_SET(shader),
-  SG_HOOK_SET(sampler),
-  SG_HOOK_SET(pipeline),
-  SG_HOOK_SET(attachments),
-  .append_buffer = trace_append_buffer
+//  SG_HOOK_SET(shader),
+//  SG_HOOK_SET(sampler),
+//  SG_HOOK_SET(pipeline),
+//  SG_HOOK_SET(attachments),
+
+  .draw = trace_draw,
 };
 
 void render_init() {

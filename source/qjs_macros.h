@@ -1,3 +1,5 @@
+#include <tracy/TracyC.h>
+
 #define MIST_CFUNC_DEF(name, length, func1, props) { name, props, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
 
 #define MIST_FUNC_DEF(TYPE, FN, LEN) MIST_CFUNC_DEF(#FN, LEN, js_##TYPE##_##FN, JS_PROP_C_W_E)

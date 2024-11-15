@@ -22,7 +22,7 @@ var root_config;
 var boxes = [];
 globalThis.clay = {};
 
-clay.normalizeSpacing = function(spacing) {
+clay.normalizeSpacing = function normalizeSpacing(spacing) {
   if (typeof spacing === 'number') {
     return {l: spacing, r: spacing, t: spacing, b: spacing};
   } else if (Array.isArray(spacing)) {
@@ -38,7 +38,7 @@ clay.normalizeSpacing = function(spacing) {
   }
 }
 
-clay.draw = function(size, fn)
+clay.draw = function draw(size, fn)
 {
   lay_ctx.reset();
   boxes = [];
@@ -118,7 +118,7 @@ function image_size(img)
   return [img.rect[2]*img.texture.width, img.rect[3]*img.texture.height]; 
 }
 
-var add_item = function(config)
+function add_item(config)
 {
   // Normalize the child's margin
   var margin = clay.normalizeSpacing(config.margin || 0);
@@ -177,7 +177,7 @@ function rectify_configs(config_array)
   return cleanobj;
 }
 
-clay.image = function(path, ...configs)
+clay.image = function image(path, ...configs)
 {
   var config = rectify_configs(configs);
   var image = game.texture(path);
@@ -186,7 +186,7 @@ clay.image = function(path, ...configs)
   add_item(config);
 }
 
-clay.text = function(str, ...configs)
+clay.text = function text(str, ...configs)
 {
   var config = rectify_configs(configs);
   var tsize = render.text_size(str, config.font);
@@ -208,7 +208,7 @@ var button_base = Object.assign(Object.create(clay_base), {
   hovered:{
   }
 });
-clay.button = function(str, action, config = {})
+clay.button = function button(str, action, config = {})
 {
   config.__proto__ = button_base;
   config.size = render.text_size(str,config.font);
@@ -219,7 +219,7 @@ clay.button = function(str, action, config = {})
 
 var hovered = undefined;
 layout.newframe = function() { hovered = undefined; }
-layout.draw_commands = function(cmds, pos = [0,0])
+layout.draw_commands = function draw_commands(cmds, pos = [0,0])
 {
   var mousepos = prosperon.camera.screen2hud(input.mouse.screenpos());
   for (var cmd of cmds) {
@@ -249,7 +249,7 @@ layout.draw_commands = function(cmds, pos = [0,0])
   }
 }
 
-layout.draw_debug = function(cmds, pos = [0,0])
+layout.draw_debug = function draw_debug(cmds, pos = [0,0])
 {
   for (var cmd of cmds) {
     render.rectangle(cmd.content, [1,0,0,0.1]);

@@ -288,7 +288,7 @@ Cmdline.register_order(
       }
 
     prosperon.frame = prosperon.process;
-    prosperon.icon = os.make_texture(io.slurpbytes('moon.gif'));
+    prosperon.icon = os.make_texture(io.slurpbytes('core/icons/moon.gif'));
     prosperon.high_dpi = 0;
     prosperon.alpha = 1;
     prosperon.fullscreen = 0;

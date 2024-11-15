@@ -6,6 +6,7 @@ link = []
 
 if not get_option('editor')
   add_project_arguments('-DNEDITOR', language:'c')
+  add_project_arguments('-DTRACY_ENABLE', language:'c')
 endif
 
 add_project_arguments('-Wno-incompatible-function-pointer-types', language: 'c')
@@ -23,8 +24,6 @@ if host_machine.system() == 'darwin'
 endif
 
 cc = meson.get_compiler('c')
-
-deps += cc.find_library('jemalloc')
 
 if host_machine.system() == 'linux'
   deps += cc.find_library('asound', required:true)
@@ -47,6 +46,7 @@ deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
 deps += dependency('qjs-dmon',static:true)
+deps += dependency('tracy', static:true)
 
 deps += dependency('threads')
 
@@ -65,7 +65,6 @@ endif
 
 sources = []
 src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c']
-
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 
 srceng = 'source'
@@ -99,8 +98,6 @@ endforeach
 core = custom_target('core.zip',
   output:'core.zip',
   command: ['zip', '-r', '-j', '@OUTPUT@'] + zip_paths,
-  build_by_default: true,
-  build_always:true
 )
 
 prosperon = executable('prosperon', sources,

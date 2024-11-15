@@ -1,7 +1,7 @@
 var unit_transform = os.make_transform();
 
 /*
-  Anatomy of rendering an image
+  Anatomy of rendpering an image
   render.image(path)
   Path can be a file like "toad"
   If this is a gif, this would display the entire range of the animation
@@ -351,7 +351,7 @@ function strip_shader_inputs(shader) {
   for (var a of shader.vs.inputs) a.name = a.name.slice(2);
 }
 
-render.hotreload = function () {
+render.hotreload = function shader_hotreload() {
   for (var i in shader_times) {
     if (io.mod(i) <= shader_times[i]) continue;
     say(`HOT RELOADING SHADER ${i}`);
@@ -490,8 +490,6 @@ function make_shader(shader, pipe) {
     return obj;
   }
   
-  profile.report(`shader_${file}`);  
-
   var compiled = create_shader_obj(file);
   io.slurpwrite(writejson, json.encode(compiled));
   var obj = compiled[os.sys()];
@@ -499,8 +497,6 @@ function make_shader(shader, pipe) {
   shader_cache[file] = obj;
   shader_times[file] = io.mod(file);
   
-  profile.endreport(`shader_${file}`);    
-
   return obj;
 }
 
@@ -737,8 +733,6 @@ render.sprites = function render_sprites() {
   }
 */
 
-  profile.report("sprites");
-  profile.report("drawing");
   render.use_shader(spritessboshader);
   var buckets = component.sprite_buckets();
   for (var l in buckets) {
@@ -752,8 +746,6 @@ render.sprites = function render_sprites() {
       render.draw(shape.quad, sprite_ssbo, sparray.length);
     }
   }
-  profile.endreport("drawing");
-  profile.endreport("sprites");
 };
 
 render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
@@ -1069,7 +1061,7 @@ render.images = function(image, rects, rotations, colors)
 var slice9_t = os.make_transform();
 // pos is the lower left corner, scale is the width and height
 // slice is given in pixels
-render.slice9 = function (image, rect = [0,0], slice = 0, color = Color.white) {
+render.slice9 = function slice9(image, rect = [0,0], slice = 0, color = Color.white) {
   if (typeof image === 'string')
     image = game.texture(image);
 
@@ -1104,7 +1096,7 @@ var textssbos = [];
 var tdraw = 0;
 var cur_font = undefined;
 
-render.flush_text = function () {
+render.flush_text = function flush_text() {
   if (!render.textshader) return;
   tdraw++;
   if (textssbos.length < tdraw) textssbos.push(render.make_textssbo());
@@ -1124,7 +1116,7 @@ render.flush_text = function () {
 
 var fontcache = {};
 var datas= [];
-render.get_font = function(path,size)
+render.get_font = function get_font(path,size)
 {
   var parts = path.split('.');
   if (!isNaN(parts[1])) {
@@ -1147,9 +1139,7 @@ render.rectangle.doc = "Draw a rectangle, with its corners at lowerleft and uppe
 
 render.draw = function render_draw(mesh, ssbo, inst = 1, e_start = 0) {
   sg_bind(mesh, ssbo);
-  profile.report("gpu_draw");
   render.spdraw(e_start, cur.bind.count, inst);
-  profile.endreport("gpu_draw");
 };
 
 // Camera viewport is a rectangle with the bottom left corner defined as x,y. Units are pixels on the window.
@@ -1252,7 +1242,7 @@ function camextents() {
 
 screen2cam.doc = "Convert a screen space position in pixels to a normalized viewport position in a camera.";
 
-prosperon.gizmos = function () {
+prosperon.gizmos = function gizmos() {
   game.all_objects(o => {
     if (o.gizmo) render.image(game.texture(o.gizmo), o.pos);
   });
@@ -1266,7 +1256,7 @@ function screen2hud(pos)
   return campos;
 }
 
-prosperon.make_camera = function () {
+prosperon.make_camera = function make_camera() {
   var cam = world.spawn();
   cam.near = 1;
   cam.far = -1000;
@@ -1294,7 +1284,7 @@ globalThis.imtoggle = function (name, obj, field) {
 };
 var replstr = "";
 
-var imdebug = function () {
+var imdebug = function imdebug() {
   imtoggle("Physics", debug, "draw_phys");
   imtoggle("Bouning boxes", debug, "draw_bb");
   imtoggle("Gizmos", debug, "draw_gizmos");
@@ -1304,7 +1294,7 @@ var imdebug = function () {
   imtoggle("Show ur names", debug, "urnames");
 };
 
-var imgui_fn = function () {
+var imgui_fn = function imgui_fn() {
   imgui.newframe(prosperon.size.x, prosperon.size.y, 0.01);
   if (debug.console)
     debug.console = imgui.window("console", _ => {
@@ -1377,7 +1367,7 @@ var imgui_fn = function () {
   prosperon.window_render(basesize.scale(mult));
 */
 
-prosperon.render = function () {
+prosperon.render = function prosperon_render() {
 try{
   render.glue_pass();
   render.set_view(prosperon.camera.transform);
@@ -1421,14 +1411,11 @@ try{
   prosperon.app();
   render.forceflush();
 
-  profile.report("imgui");
   if (debug.show) imgui_fn();
-  profile.endreport("imgui");
 } catch(e) {
   throw e;
 } finally {
   render.end_pass();
-  profile.report_frame(profile.secs(profile.now()) - frame_t);    
   render.commit();
   endframe();
 }
@@ -1439,7 +1426,6 @@ dmon.watch('.');
 function dmon_cb(e)
 {
   if (e.file.startsWith('.')) return;
-  console.info(json.encode(e))
   if (e.file.endsWith('.js'))
     actor.hotreload(e.file);
   else if (Resources.is_image(e.file))
@@ -1453,32 +1439,17 @@ prosperon.process = function process() {
   layout.newframe();
   // check for hot reloading
   dmon.poll(dmon_cb);
-  profile.report("frame");
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 
   var sst = profile.now();
 
-  /* debugging: check for gc */
-  profile.print_gc();
-
-  var cycles = os.check_cycles();
-  if (cycles) say(cycles);
-
-  profile.report("app update");
   prosperon.appupdate(dt);
-  profile.endreport("app update");  
-
-  profile.report("input");
   input.procdown();
-  profile.endreport("input");  
-
   if (sim.mode === "play" || sim.mode === "step") {
-    profile.report("update");
     prosperon.update(dt * game.timescale);
     update_emitters(dt * game.timescale);
     os.update_timers(dt * game.timescale);
-    profile.endreport("update");    
     if (sim.mode === "step") sim.pause();
   }
 
@@ -1486,7 +1457,7 @@ prosperon.process = function process() {
   sst = profile.now();
 
   if (sim.mode === "play" || sim.mode === "step") {
-/*    profile.report("physics");
+/* 
     physlag += dt;
 
     while (physlag > physics.delta) {
@@ -1495,19 +1466,12 @@ prosperon.process = function process() {
       prosperon.physupdate(physics.delta * game.timescale);
     }
   
-    profile.endreport("physics");    
     profile.pushdata(profile.data.cpu.physics, profile.now() - sst);
     sst = profile.now();
   */  
   }
 
-  profile.report("render");
   prosperon.render();
-  profile.endreport("render");  
-  profile.pushdata(profile.data.cpu.render, profile.now() - sst);
-  profile.endreport('frame');
-
-  profile.capture_data();
 };
 
 return { render };

@@ -1,6 +1,6 @@
 var component = {};
 
-var make_point_obj = function (o, p) {
+function make_point_obj(o, p) {
   return {
     pos: p,
     move(d) {
@@ -12,7 +12,7 @@ var make_point_obj = function (o, p) {
   };
 };
 
-var sprite_addbucket = function (sprite) {
+function sprite_addbucket(sprite) {
   if (!sprite.image) return;
   var layer = sprite.z_value();
   sprite_buckets[layer] ??= {};
@@ -22,7 +22,7 @@ var sprite_addbucket = function (sprite) {
   sprite._oldtex = sprite.image.texture;
 };
 
-var sprite_rmbucket = function (sprite) {
+function sprite_rmbucket(sprite) {
   if (sprite._oldlayer && sprite._oldtex) sprite_buckets[sprite._oldlayer][sprite._oldtex].remove(sprite);
   else for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) path.remove(sprite);
 };
@@ -35,14 +35,12 @@ frog = {
   ...etc
 }
 */
-
+function z_value() {return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;}
 var sprite = {
   image: undefined,
   get diffuse() { return this.image.texture; },
   set diffuse(x) {},
-  z_value() {
-    return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;
-  },
+  z_value:z_value,
   anim_speed: 1,
   play(str, loop = true, reverse = false, fn) {
     if (!this.animset) {
@@ -142,7 +140,7 @@ var sprite = {
   get path() {
     return this._p;
   },
-  kill() {
+  kill: function kill() {
     sprite_rmbucket(this);
     this.del_anim?.();
     this.anim = undefined;
@@ -150,7 +148,7 @@ var sprite = {
     allsprites.remove(this);
   },
   anchor: [0, 0],
-  sync() {
+  sync: function sync() {
     var layer = this.z_value();
     if (layer === this._oldlayer && this.image.texture === this._oldtex) return;
 

@@ -8,6 +8,10 @@
 #include <errno.h>
 #include <stdarg.h>
 #include "jsffi.h"
+#include <malloc.h>
+#include <assert.h>
+
+#include <tracy/TracyC.h>
 
 static JSContext *js = NULL;
 static JSRuntime *rt = NULL;
@@ -69,8 +73,8 @@ void script_startup() {
 
   ffi_load(js);
   
-  char *eng = read_file("engine.js");
-  JSValue v = script_eval("engine.js", eng);
+  char *eng = read_file("core/scripts/engine.js");
+  JSValue v = script_eval("core/scripts/engine.js", eng);
   JS_FreeValue(js, v);
   free(eng);
 }

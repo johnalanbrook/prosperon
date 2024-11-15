@@ -457,7 +457,7 @@ Object.defHidden = function (obj, prop) {
   Object.defineProperty(obj, prop, { enumerable: false, writable: true });
 };
 
-Object.hide = function (obj, ...props) {
+Object.hide = function hide(obj, ...props) {
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj, prop);
     if (!p) continue;
@@ -566,7 +566,7 @@ Object.defineProperty(Object.prototype, "forEach", {
   },
 });
 
-Object.empty = function (obj) {
+Object.empty = function empty(obj) {
   return Object.keys(obj).length === 0;
 };
 
@@ -828,10 +828,10 @@ Array.random = function(arr) {
 function make_swizz() {
   function setelem(n) {
     return {
-      get: function () {
+      get: function get() {
         return this[n];
       },
-      set: function (x) {
+      set: function set(x) {
         this[n] = x;
       },
     };
@@ -1040,7 +1040,7 @@ Object.defineProperty(Array.prototype, "mapvec", {
 });
 
 Object.defineProperty(Array.prototype, "remove", {
-  value: function (b) {
+  value: function remove(b) {
     var idx = this.indexOf(b);
 
     if (idx === -1) return false;

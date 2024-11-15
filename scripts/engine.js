@@ -120,11 +120,11 @@ Resources.is_path = function (str) {
 };
 
 globalThis.json = {};
-json.encode = function (value, replacer, space = 1) {
+json.encode = function json_encode(value, replacer, space = 1) {
   return JSON.stringify(value, replacer, space);
 };
 
-json.decode = function (text, reviver) {
+json.decode = function json_decode(text, reviver) {
   if (!text) return undefined;
   return JSON.parse(text, reviver);
 };
@@ -308,21 +308,17 @@ globalThis.use = function use(file) {
   file = Resources.find_script(file);
 
   if (use_cache[file]) {
-    profile.report(`use_${file}`);  
     var ret = use_cache[file]();
-    profile.endreport(`use_${file}`);  
     return ret;
   }
-  profile.report(`compile_${file}`);
+  
   var script = Resources.replstrs(file);
-  script = `(function() { var self = this; ${script}; })`;
+  var fnname = file.replace(/[^a-zA-Z0-9_$]/g, "_");
+  script = `(function ${fnname}() { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
   use_cache[file] = fn;
-  profile.endreport(`compile_${file}`);
 
-  profile.report(`use_${file}`);  
   var ret = fn();
-  profile.endreport(`use_${file}`);
   
   return ret;
 };
@@ -330,14 +326,14 @@ globalThis.use = function use(file) {
 var allpaths = io.ls();
 io.exists = function(path)
 {
-  return allpaths.includes(path) || core_db.exists(path);
+  return allpaths.includes(path);// || core_db.exists(path);
 }
 
 var tmpslurp = io.slurp;
-io.slurp = function(path)
+io.slurp = function slurp(path)
 {
   var findpath = Resources.replpath(path);
-  var ret = tmpslurp(findpath, true) || core_db.slurp(findpath, true);
+  var ret = tmpslurp(findpath, true); //|| core_db.slurp(findpath, true);
   if (!ret) console.info(`could not slurp path ${path} as ${findpath}`)
   return ret;
 }
@@ -345,7 +341,7 @@ io.slurp = function(path)
 io.slurpbytes = function(path)
 {
   path = Resources.replpath(path);
-  var ret = tmpslurp(path) || core_db.slurp(path);
+  var ret = tmpslurp(path);// || core_db.slurp(path);
   if (!ret) throw new Error(`Could not find file ${path} anywhere`);
   return ret;
 }
@@ -359,10 +355,10 @@ if (ignore) {
   }
 }
 
-var coredata = tmpslurp("core.zip");
-var core_db = miniz.read(coredata);
+//var coredata = tmpslurp("core.zip");
+//var core_db = miniz.read(coredata);
 
-io.globToRegex = function (glob) {
+io.globToRegex = function globToRegex(glob) {
   // Escape special regex characters
   // Replace glob characters with regex equivalents
   let regexStr = glob
@@ -379,7 +375,7 @@ io.globToRegex = function (glob) {
   return new RegExp(regexStr);
 };
 
-io.glob = function(pat) {
+io.glob = function glob(pat) {
   var regex = io.globToRegex(pat);
   return allpaths.filter(str => str.match(regex)).sort();
 }
@@ -393,7 +389,7 @@ function stripped_use(file, script) {
   }
   script ??= Resources.replstrs(file);
 
-  script = `(function() { var self = this; ${script}; })`;
+  script = `(function () { var self = this; ${script}; })`;
   var fn = os.eval(file, script);
   var ret = fn();
 
@@ -403,7 +399,8 @@ function stripped_use(file, script) {
 function bare_use(file) {
   var script = io.slurp(file);
   if (!script) return;
-  script = `(function() { var self = this; ${script}; })`;
+  var fnname = file.replace(/[^a-zA-Z0-9_$]/g, "_");  
+  script = `(function ${fnname}() { var self = this; ${script}; })`;
   Object.assign(globalThis, os.eval(file, script)());
 }
 
@@ -413,8 +410,8 @@ profile.enabled = true;
 console.enabled = true;
 debug.enabled = true;
 
-bare_use("base.js");
-bare_use("profile.js");
+bare_use("core/scripts/base.js");
+bare_use("core/scripts/profile.js");
 
 prosperon.release = function () {
   profile.enabled = false;
@@ -422,9 +419,9 @@ prosperon.release = function () {
   debug.enabled = false;
 };
 
-bare_use("preconfig.js");
+bare_use("core/scripts/preconfig.js");
 
 if (!profile.enabled) use = stripped_use;
 
-Object.assign(globalThis, use("prosperon.js"));
+Object.assign(globalThis, use("core/scripts/prosperon.js"));
  

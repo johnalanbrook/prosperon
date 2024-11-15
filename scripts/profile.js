@@ -328,7 +328,7 @@ profile.report = function(path)
   profile.reports[path].st = profile.now();
 }
 
-profile.endreport = function(path)
+profile.endreport = function endreport(path)
 {
   var rep = profile.reports[path];
   if (!rep || !rep.st) return;
