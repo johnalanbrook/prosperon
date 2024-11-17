@@ -314,7 +314,7 @@ globalThis.use = function use(file) {
   
   var script = Resources.replstrs(file);
   var fnname = file.replace(/[^a-zA-Z0-9_$]/g, "_");
-  script = `(function ${fnname}() { var self = this; ${script}; })`;
+  script = `(function ${fnname}() { var self = this; ${script}; } )`;
   var fn = os.eval(file, script);
   use_cache[file] = fn;
 
@@ -403,8 +403,6 @@ function bare_use(file) {
   script = `(function ${fnname}() { var self = this; ${script}; })`;
   Object.assign(globalThis, os.eval(file, script)());
 }
-
-globalThis.debug = {};
 
 profile.enabled = true;
 console.enabled = true;

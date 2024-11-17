@@ -79,6 +79,7 @@ prosperon.SIGSEGV = function()
 prosperon.init = function () {
   render.init();
   imgui.init();
+  tracy.gpu_init();
 
   globalThis.audio = use("sound.js");
   world_start();
@@ -573,9 +574,9 @@ var Register = {
 
     if (!flush) {
       prosperon[name] = function (...args) {
-//        profile.fiber_enter(vector.fib);
+//        tracy.fiber_enter(vector.fib);
         fns.forEach(fn => fn(...args));
-//        profile.fiber_leave(vector.fib);
+//        tracy.fiber_leave(vector.fib);
       };
     } else
       prosperon[name] = function name(...args) {

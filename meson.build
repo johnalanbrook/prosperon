@@ -3,13 +3,12 @@ project('prosperon', ['c', 'cpp'], default_options : [ 'cpp_std=c++11'])
 libtype = get_option('default_library')
 
 link = []
+src = []
 
 if not get_option('editor')
   add_project_arguments('-DNEDITOR', language:'c')
-  add_project_arguments('-DTRACY_ENABLE', language:'c')
 endif
 
-add_project_arguments('-Wno-incompatible-function-pointer-types', language: 'c')
 add_project_arguments('-Wno-incompatible-pointer-types', language: 'c')
 add_project_arguments('-Wno-narrowing', language: 'cpp')
 
@@ -28,7 +27,7 @@ cc = meson.get_compiler('c')
 if host_machine.system() == 'linux'
   deps += cc.find_library('asound', required:true)
   deps += [dependency('x11'), dependency('xi'), dependency('xcursor'), dependency('egl'), dependency('gl')]
-#  link += '-fuse-ld=mold' # use mold, which is very fast, for debug builds
+  link += '-fuse-ld=mold' # use mold, which is very fast, for debug builds
 endif
 
 if host_machine.system() == 'windows'
@@ -40,14 +39,28 @@ if host_machine.system() == 'emscripten'
   link += '-sUSE_WEBGPU'
 endif
 
-deps += dependency('quickjs', static:true)
+
+tracy_opts = ['fibers=true', 'on_demand=true']
+quickjs_opts = []
+
+src += 'qjs_tracy.c'
+add_project_arguments('-DTRACY_ENABLE', language:['c','cpp'])
+deps += dependency('tracy', static:true, default_options:tracy_opts)
+
+quickjs_opts += 'default_library=static'
+
+deps += dependency('quickjs', static:true, default_options:quickjs_opts)
+
+storefront = get_option('storefront')
+if storefront == 'steam'
+  deps += dependency('qjs-steam',static:false)
+endif
+
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
 deps += dependency('qjs-dmon',static:true)
-deps += dependency('tracy', static:true)
-
 deps += dependency('threads')
 
 if get_option('chipmunk')
@@ -58,13 +71,8 @@ if get_option('enet')
   deps += dependency('qjs-enet',static:true)
 endif
 
-storefront = get_option('storefront')
-if storefront == 'steam'
-  deps += dependency('qjs-steam',static:false)
-endif
-
 sources = []
-src = ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c']
+src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','render_trace.cpp','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c', 'glad.c']
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 
 srceng = 'source'

@@ -1054,8 +1054,38 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
   return;
 };
 
-render.images = function(image, rects, rotations, colors)
+render.images = function images(image, rects)
 {
+  if (!image) throw Error ('Need an image to render.');
+  if (typeof image === "string") image = game.texture(image);
+  var tex = image.texture;
+  if (!tex) return;
+
+  var image_size = calc_image_size(image);
+  
+  if (!lasttex) {
+    check_flush(flush_img);
+    lasttex = tex;
+  }
+
+  if (lasttex !== tex) {
+    flush_img();
+    lasttex = tex;
+  }
+
+//  rects = rects.flat();
+  var rect = rects[0];
+  var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
+  var offset = size.scale([rect.anchor_x, rect.anchor_y]);
+  for (var rect of rects) {
+    var e = img_e();
+    var pos = [rect.x,rect.y].sub(offset);
+    e.transform.trs(pos, undefined, size);
+    e.image = image;
+    e.shade = Color.white;
+  }
+
+  return;
 }
 
 var slice9_t = os.make_transform();
@@ -1324,6 +1354,10 @@ var imgui_fn = function imgui_fn() {
       imtoggle("Meta [f7]", debug, "meta");
       imtoggle("Cheats [f8]", debug, "cheat");
       imtoggle("Console [f9]", debug, "console");
+      if (profile.tracing)
+        imgui.button("stop trace", profile.trace_stop);
+      else
+        imgui.button('start trace', profile.trace_start);
     });
 
     imgui.sokol_gfx();
@@ -1384,7 +1418,6 @@ try{
   if (render.draw_particles) draw_emitters();  
   render.fillmask(0);
   render.forceflush();
-  
   render.set_projection_ortho({
     l:0,
     r:prosperon.camera.size.x,
@@ -1410,7 +1443,6 @@ try{
   }, false);
   prosperon.app();
   render.forceflush();
-
   if (debug.show) imgui_fn();
 } catch(e) {
   throw e;
@@ -1418,6 +1450,25 @@ try{
   render.end_pass();
   render.commit();
   endframe();
+  var cycles = os.gc();
+  if (cycles.length > 0) {
+    cycles.forEach(x => {
+      x.address = x.address.toString(16);
+      x.shape = x.shape.toString(16);
+      x.class = x.class.toString(16);
+    });
+    tracy.message(`GC cycles freed: ${json.encode(cycles)}`);
+  }
+  tracy.gpu_collect();
+  tracy.end_frame();  
+  tracy.gpu_sync();
+
+/*  var rtinfo = os.rt_info();
+  for (var i in rtinfo) {
+    console.log(`${i} is ${rtinfo[i]}`);
+    tracy.plot(i, rtinfo[i]);
+  }*/
+
 }
 };
 
@@ -1471,7 +1522,8 @@ prosperon.process = function process() {
   */  
   }
 
-  prosperon.render();
+  tracy.gpu_zone(prosperon.render);
+//  prosperon.render();
 };
 
 return { render };

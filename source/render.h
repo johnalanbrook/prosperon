@@ -56,6 +56,8 @@ struct rgba {
   unsigned char a;
 };
 
+void render_dump_trace();
+
 typedef struct rgba rgba;
 
 static inline rgba vec2rgba(HMM_Vec4 v) {

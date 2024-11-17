@@ -998,7 +998,7 @@ Object.defineProperty(Array.prototype, "mult", {
 });
 
 Object.defineProperty(Array.prototype, "apply", {
-  value: function (fn) {
+  value: function fnapply(fn) {
     this.forEach(function (x) {
       x[fn].apply(x);
     });
@@ -1006,13 +1006,13 @@ Object.defineProperty(Array.prototype, "apply", {
 });
 
 Object.defineProperty(Array.prototype, "sorted", {
-  value: function () {
+  value: function sorted() {
     return this.toSorted();
   },
 });
 
 Object.defineProperty(Array.prototype, "equal", {
-  value: function (b) {
+  value: function equal(b) {
     if (this.length !== b.length) return false;
     if (b == null) return false;
     if (this === b) return true;
@@ -1052,7 +1052,7 @@ Object.defineProperty(Array.prototype, "remove", {
 });
 
 Object.defineProperty(Array.prototype, "set", {
-  value: function (b) {
+  value: function set(b) {
     if (this.length !== b.length) return;
 
     b.forEach(function (val, i) {
@@ -1062,14 +1062,14 @@ Object.defineProperty(Array.prototype, "set", {
 });
 
 Object.defineProperty(Array.prototype, "flat", {
-  value: function () {
+  value: function flat() {
     return [].concat.apply([], this);
   },
 });
 
 /* Return true if array contains x */
 Object.defineProperty(Array.prototype, "empty", {
-  get: function () {
+  get: function empty() {
     return this.length === 0;
   },
 });
