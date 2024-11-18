@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include "timer.h"
 #include <signal.h>
-#include <dirent.h>
+#include "tinydir.h"
 #include "cute_aseprite.h"
 
 JSValue js_getpropertyuint32(JSContext *js, JSValue v, unsigned int i)
@@ -644,15 +644,15 @@ JSC_CCALL(render_camera_screen2world,
 
 JSC_CCALL(render_set_projection_ortho,
   lrtb extents = js2lrtb(js, argv[0]);
-  float near = js2number(js,argv[1]);
-  float far = js2number(js,argv[2]);
+  float nearme = js2number(js,argv[1]);
+  float farme = js2number(js,argv[2]);
   globalview.p = HMM_Orthographic_RH_ZO(
     extents.l,
     extents.r,
     extents.b,
     extents.t,
-    near,
-    far
+    nearme,
+    farme
   );
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
@@ -660,9 +660,9 @@ JSC_CCALL(render_set_projection_ortho,
 JSC_CCALL(render_set_projection_perspective,
   float fov = js2number(js,argv[0]);
   float aspect = js2number(js,argv[1]);
-  float near = js2number(js,argv[2]);
-  float far = js2number(js,argv[3]);
-  globalview.p = HMM_Perspective_RH_NO(fov, aspect, near, far);
+  float nearme = js2number(js,argv[2]);
+  float farme = js2number(js,argv[3]);
+  globalview.p = HMM_Perspective_RH_NO(fov, aspect, nearme, farme);
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
 
@@ -1667,8 +1667,7 @@ static const JSCFunctionListEntry js_time_funcs[] = {
 };
 
 JSC_SCALL(console_log,
-  printf("%s\n",str);
-  fflush(stdout);
+  printf("%s\n", str);
 )
 
 static const JSCFunctionListEntry js_console_funcs[] = {
@@ -1741,29 +1740,64 @@ static const JSCFunctionListEntry js_debug_funcs[] = {
   MIST_FUNC_DEF(debug, dump_obj, 1),
 };
 
+#ifdef __WIN32
+#include <windows.h>
+#include <stdio.h>
+
+void list_files(const char *path, JSContext *js, JSValue v, int *n) {
+    WIN32_FIND_DATA ffd;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+    char searchPath[MAX_PATH];
+
+    // Prepare the path for search
+    snprintf(searchPath, sizeof(searchPath), "%s/*", path);
+
+    hFind = FindFirstFileEx(searchPath, FindExInfoStandard, &ffd, FindExSearchLimitToDirectories, NULL, 0);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    do {
+        if (strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0) {
+            char filePath[MAX_PATH];
+            snprintf(filePath, sizeof(filePath), "%s/%s", path, ffd.cFileName);
+
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                // If it's a directory, recurse into it
+//                printf("Directory: %s\n", filePath);
+                list_files(filePath, js, v, n);
+            } else {
+                JS_SetPropertyUint32(js, v, *n, JS_NewString(js, filePath+2));
+                *n = *n+1;
+                // If it's a file, print it
+//                printf("File: %s\n", filePath);
+            }
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+
+    FindClose(hFind);
+}
+#else
 static void list_files(const char *path, JSContext *js, JSValue v, int *n)
 {
-  DIR *dir = opendir(path);
-  struct dirent *entry;
-  while ((entry = readdir(dir)) != NULL) {
-    if (strcmp(entry->d_name, ".")  == 0 || strcmp(entry->d_name, "..") == 0)
-      continue;
-
-    char full_path[1024];
-    snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
-    struct stat statbuf;
-    if (stat(full_path, &statbuf) == 0) {
-      if (S_ISDIR(statbuf.st_mode)) {
-        list_files(full_path, js, v, n);
-      } else if (S_ISREG(statbuf.st_mode)) {
-        JS_SetPropertyUint32(js, v, *n, JS_NewString(js, full_path+2));
-        *n = *n + 1;
-      }
+  tinydir_dir dir;
+  tinydir_open(&dir, path);
+  do {
+    tinydir_file file;
+    tinydir_readfile(&dir, &file);
+    if (file.is_dir) {
+      if (!strcmp(file.name, ".") || !strcmp(file.name, "..")) continue;
+      list_files(file.path, js, v, n);
     }
-  }
-  closedir(dir);
+    else {
+      JS_SetPropertyUint32(js, v, *n, JS_NewString(js, file.path+2));
+      *n = *n+1;
+    }
+  } while (!tinydir_next(&dir));
+  
+  tinydir_close(&dir);
 }
-
+#endif
 JSC_CCALL(io_ls, 
   JSValue strarr = JS_NewArray(js);
   int i = 0;
@@ -1775,31 +1809,103 @@ JSC_SCALL(io_chdir, ret = number2js(js,chdir(str)))
 JSC_SCALL(io_rm, ret = number2js(js,remove(str)))
 JSC_SCALL(io_mkdir, ret = number2js(js,mkdir(str,0777)))
 
-JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  const char *file = JS_ToCString(js, argv[0]);
-  
-  FILE *f = fopen(file, "rb");
-  JS_FreeCString(js,file);  
-  if (!f)
-    return JS_UNDEFINED;
+#include <quickjs.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-  fseek(f,0,SEEK_END);
-  size_t fsize = ftell(f);
-  rewind(f);
-  void *slurp = malloc(fsize);
-  fread(slurp,fsize,1,f);
-  fclose(f);
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
-  JSValue ret;
-  if (JS_ToBool(js,argv[1]))
-    ret = JS_NewStringLen(js, slurp, fsize);
-  else
-    ret = JS_NewArrayBufferCopy(js, slurp, fsize);
+JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv) {
+    const char *file = JS_ToCString(js, argv[0]);
+    if (!file)
+        return JS_EXCEPTION;
 
-  free(slurp);
-  
-  return ret;
+    size_t fsize;
+    void *slurp = NULL;
+
+#ifdef _WIN32
+    // Windows file mapping
+    HANDLE hFile = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize)) {
+        CloseHandle(hFile);
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+
+    fsize = (size_t)fileSize.QuadPart;
+    HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (hMapping == NULL) {
+        CloseHandle(hFile);
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+
+    slurp = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+    CloseHandle(hMapping);
+    CloseHandle(hFile);
+
+    if (slurp == NULL) {
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+
+#else
+    // POSIX mmap
+    int fd = open(file, O_RDONLY);
+    if (fd < 0) {
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        close(fd);
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+
+    fsize = sb.st_size;
+    slurp = mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
+    close(fd);
+
+    if (slurp == MAP_FAILED) {
+        JS_FreeCString(js, file);
+        return JS_UNDEFINED;
+    }
+#endif
+
+    JSValue ret;
+    if (JS_ToBool(js, argv[1])) {
+        // Return as string
+        ret = JS_NewStringLen(js, slurp, fsize);
+    } else {
+        // Return as ArrayBuffer
+        ret = JS_NewArrayBufferCopy(js, slurp, fsize);
+    }
+
+#ifdef _WIN32
+    // Unmap on Windows
+    UnmapViewOfFile(slurp);
+#else
+    // Unmap on POSIX
+    munmap(slurp, fsize);
+#endif
+
+    JS_FreeCString(js, file);
+    return ret;
 }
 
 JSValue js_io_slurpwrite(JSContext *js, JSValue self, int argc, JSValue *argv)
@@ -2133,7 +2239,10 @@ JSValue js_os_cwd(JSContext *js, JSValue self, int argc, JSValue *argv)
   return JS_NewString(js,cwd);
 }
 
-JSC_SCALL(os_env, ret = JS_NewString(js,getenv(str)))
+JSC_SCALL(os_env,
+  char *env = getenv(str);
+  if (env) ret = JS_NewString(js,env);
+)
 
 JSValue js_os_sys(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
@@ -2799,7 +2908,7 @@ JSValue js_layout_use(JSContext *js);
 JSValue js_miniz_use(JSContext *js);
 JSValue js_soloud_use(JSContext *js);
 JSValue js_chipmunk2d_use(JSContext *js);
-JSValue js_dmon_use(JSContext *js);
+//JSValue js_dmon_use(JSContext *js);
 
 #ifdef TRACY_ENABLE
 JSValue js_tracy_use(JSContext *js);
@@ -2889,7 +2998,7 @@ void ffi_load(JSContext *js) {
   JS_SetPropertyStr(js, globalThis, "miniz", js_miniz_use(js));
   JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
   JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));
-  JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
+//  JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
   
 #ifdef TRACY_ENABLE
   JS_SetPropertyStr(js, globalThis, "tracy", js_tracy_use(js));

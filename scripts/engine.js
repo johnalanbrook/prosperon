@@ -324,6 +324,9 @@ globalThis.use = function use(file) {
 };
 
 var allpaths = io.ls();
+//console.log(`found ${allpaths.length} files`);
+//console.log(json.encode(allpaths))
+
 io.exists = function(path)
 {
   return allpaths.includes(path);// || core_db.exists(path);
@@ -334,9 +337,8 @@ io.slurp = function slurp(path)
 {
   var findpath = Resources.replpath(path);
   var ret = tmpslurp(findpath, true); //|| core_db.slurp(findpath, true);
-  if (!ret) console.info(`could not slurp path ${path} as ${findpath}`)
   return ret;
-}
+}.hashify();
 
 io.slurpbytes = function(path)
 {

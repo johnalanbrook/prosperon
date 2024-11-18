@@ -466,10 +466,9 @@ function make_shader(shader, pipe) {
 
   var file = shader;
   shader = io.slurp(file);
-  if (!shader) {
-    console.info(`not found! slurping ${file}`);
+  if (!shader)
     shader = io.slurp(`${file}`);
-  }
+
   var writejson = `.prosperon/${file.name()}.shader.json`;
 
   breakme: if (io.exists(writejson)) {
@@ -1450,15 +1449,6 @@ try{
   render.end_pass();
   render.commit();
   endframe();
-  var cycles = os.gc();
-  if (cycles.length > 0) {
-    cycles.forEach(x => {
-      x.address = x.address.toString(16);
-      x.shape = x.shape.toString(16);
-      x.class = x.class.toString(16);
-    });
-    tracy.message(`GC cycles freed: ${json.encode(cycles)}`);
-  }
   tracy.gpu_collect();
   tracy.end_frame();  
   tracy.gpu_sync();
@@ -1472,7 +1462,7 @@ try{
 }
 };
 
-dmon.watch('.');
+//if (dmon) dmon.watch('.');
 
 function dmon_cb(e)
 {
@@ -1489,7 +1479,7 @@ function dmon_cb(e)
 prosperon.process = function process() {
   layout.newframe();
   // check for hot reloading
-  dmon.poll(dmon_cb);
+//  if (dmon) dmon.poll(dmon_cb);
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 

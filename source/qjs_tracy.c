@@ -1,11 +1,12 @@
 #include <quickjs.h>
-#include "glad.h"
 #include <tracy/TracyC.h>
 #include <string.h>
 #include <stdlib.h>
+#include "render.h"
 
 static JSValue js_tracy_fiber_enter(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
+  return JS_UNDEFINED;
 #ifdef TRACY_ON_DEMAND
   if (!TracyCIsConnected) {
     JS_Call(js,argv[0], JS_UNDEFINED,0,NULL);
@@ -24,6 +25,7 @@ static JSValue js_tracy_fiber_enter(JSContext *js, JSValue self, int argc, JSVal
 
 static JSValue js_tracy_fiber_leave(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
+  return JS_UNDEFINED;
 #ifdef TRACY_ON_DEMAND
   if (!TracyCIsConnected)
     return JS_UNDEFINED;
@@ -105,7 +107,6 @@ static JSValue js_tracy_zone_begin(JSContext *js, JSValue self, int argc, JSValu
   }
 #endif
 
-#ifndef DEEP_TRACE
   const char *fn_src = JS_AtomToCString(js, js_fn_filename(js, argv[0]));
   const char *js_fn_name = get_func_name(js, argv[0]);
   const char *fn_name;
@@ -118,13 +119,35 @@ static JSValue js_tracy_zone_begin(JSContext *js, JSValue self, int argc, JSValu
   
   JS_Call(js, argv[0], JS_UNDEFINED, 0, NULL);
   TracyCZoneEnd(TCTX);
-#endif
 }
 
+#ifdef SOKOL_GLCORE
+#include "glad.h"
 GLuint *ids;
 static GLsizei query_count = 64*1024;
 static int qhead = 0;
 static int qtail = 0;
+
+static JSValue js_tracy_gpu_init(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  printf("GLAD LOAD %d\n", gladLoadGL());
+  ids = malloc(sizeof(GLuint)*query_count);
+  glGenQueries(query_count, ids); // generate new query ids
+  int64_t tgpu;
+  glGetInteger64v(GL_TIMESTAMP, &tgpu);
+
+  float period = 1.f;
+  struct ___tracy_gpu_new_context_data gpuctx = {
+    .gpuTime = tgpu,
+    .period = period,
+    .context = 0,
+    .flags = 0,
+    .type = 1
+  };
+  ___tracy_emit_gpu_new_context(gpuctx);
+  
+  return JS_UNDEFINED;
+}
 
 static JSValue js_tracy_gpu_zone_begin(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
@@ -170,44 +193,6 @@ static JSValue js_tracy_gpu_zone_begin(JSContext *js, JSValue self, int argc, JS
   return JS_UNDEFINED;
 }
 
-static JSValue js_tracy_gpu_zone_end(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-#ifdef TRACY_ON_DEMAND
-  if (!TracyCIsConnected)
-    return JS_UNDEFINED;
-#endif
-
-  glQueryCounter(ids[qhead], GL_TIMESTAMP);
-  struct ___tracy_gpu_zone_end_data data = {
-    .queryId = ids[qhead],
-    .context = 0
-  };
-  ___tracy_emit_gpu_zone_end(data);
-  qhead = (qhead+1)%query_count;
-  
-  return JS_UNDEFINED;
-}
-
-static JSValue js_tracy_gpu_init(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  ids = malloc(sizeof(GLuint)*query_count);
-  glGenQueries(query_count, ids); // generate new query ids
-  int64_t tgpu;
-  glGetInteger64v(GL_TIMESTAMP, &tgpu);
-
-  float period = 1.f;
-  struct ___tracy_gpu_new_context_data gpuctx = {
-    .gpuTime = tgpu,
-    .period = period,
-    .context = 0,
-    .flags = 0,
-    .type = 1
-  };
-  ___tracy_emit_gpu_new_context(gpuctx);
-  
-  return JS_UNDEFINED;
-}
-
 static JSValue js_tracy_gpu_sync(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
 #ifdef TRACY_ON_DEMAND
@@ -246,12 +231,62 @@ static JSValue js_tracy_gpu_collect(JSContext *js, JSValue self, int argc, JSVal
   return JS_UNDEFINED;
 }
 
+#elifdef SOKOL_D3D11
+static int max_queries = 64*1024;
+
+static JSValue js_tracy_gpu_init(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+//  D3D11_QUERY_DESC desc= {};
+  return JS_UNDEFINED;
+}
+
+static JSValue js_tracy_gpu_zone_begin(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_Call(js,argv[0], JS_UNDEFINED, 0, NULL);
+  return JS_UNDEFINED;
+}
+
+static JSValue js_tracy_gpu_sync(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_UNDEFINED;
+}
+
+static JSValue js_tracy_gpu_collect(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_UNDEFINED;
+}
+
+#else
+
+static JSValue js_tracy_gpu_init(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_UNDEFINED;
+}
+
+static JSValue js_tracy_gpu_zone_begin(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_Call(js,argv[0], JS_UNDEFINED, 0, NULL);
+}
+
+static JSValue js_tracy_gpu_sync(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_UNDEFINED;
+}
+
+static JSValue js_tracy_gpu_collect(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  return JS_UNDEFINED;
+}
+
+#endif
+
 static const JSCFunctionListEntry js_tracy_funcs[] = {
   JS_CFUNC_DEF("fiber", 1, js_tracy_fiber_enter),
   JS_CFUNC_DEF("fiber_leave", 1, js_tracy_fiber_leave),
   JS_CFUNC_DEF("gpu_zone", 1, js_tracy_gpu_zone_begin),
   JS_CFUNC_DEF("gpu_collect", 0, js_tracy_gpu_collect),
   JS_CFUNC_DEF("gpu_init", 0, js_tracy_gpu_init),
+  JS_CFUNC_DEF("gpu_sync", 0, js_tracy_gpu_sync),
   JS_CFUNC_DEF("end_frame", 0, js_tracy_frame_mark),
   JS_CFUNC_DEF("zone", 1, js_tracy_zone_begin),
   JS_CFUNC_DEF("message", 1, js_tracy_message),

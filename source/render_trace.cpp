@@ -3,7 +3,6 @@
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyOpenGL.hpp>
 
-
 void trace_apply_uniforms(sg_shader_stage stage, int ub_index, const sg_range *data, void *user_data)
 {
 }
@@ -111,6 +110,7 @@ static sg_trace_hooks hooks;
 extern "C"{
 void render_trace_init()
 {
+  return;
   hooks.apply_pipeline = trace_apply_pipeline;
   hooks.begin_pass = trace_begin_pass;
   SG_HOOK_SET(buffer);
@@ -124,8 +124,6 @@ void render_trace_init()
   hooks.draw = trace_draw;
   
   sg_trace_hooks hh = sg_install_trace_hooks(&hooks);
-
-  printf("GLAD LOAD %d\n", gladLoadGL());
   
   TracyGpuContext;
 }

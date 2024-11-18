@@ -24,7 +24,7 @@ function sprite_addbucket(sprite) {
 
 function sprite_rmbucket(sprite) {
   if (sprite._oldlayer && sprite._oldtex) sprite_buckets[sprite._oldlayer][sprite._oldtex].remove(sprite);
-  else for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) path.remove(sprite);
+//  else for (var layer of Object.values(sprite_buckets)) for (var path of Object.values(layer)) path.remove(sprite);
 };
 
 /* an anim is simply an array of images */

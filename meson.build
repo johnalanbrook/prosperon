@@ -32,6 +32,10 @@ endif
 
 if host_machine.system() == 'windows'
   deps += cc.find_library('d3d11')
+  # these are for tracy
+  deps += cc.find_library('ws2_32')
+  deps += cc.find_library('dbghelp')
+  #end
   link += '-static' # Required to pack in mingw dlls on cross compilation
 endif
 
@@ -60,7 +64,7 @@ deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
-deps += dependency('qjs-dmon',static:true)
+#deps += dependency('qjs-dmon',static:true)
 deps += dependency('threads')
 
 if get_option('chipmunk')

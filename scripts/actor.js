@@ -4,7 +4,8 @@ var actor_urs = {};
 
 var actor_spawns = {};
 
-globalThis.class_use = function class_use(script, config, base, callback) {
+function class_eval(script)
+{
   var file = Resources.find_script(script);
 
   if (!file) {
@@ -30,7 +31,22 @@ globalThis.class_use = function class_use(script, config, base, callback) {
   script = `(function use_${file.name()}() { var self = this; var $ = this.__proto__; ${script}; })`;
 
   var fn = os.eval(file, script);
-  fn.call(padawan);
+  return {
+    usefn: fn,
+    file: file,
+    parent: actor_urs[file]
+  };
+}.hashify();
+
+globalThis.class_use = function class_use(script, config, base, callback) {
+  var prog = class_eval(script);
+  var padawan = Object.create(prog.parent);
+  actor_spawns[file].push(padawan);
+  padawan._file = prog.file;
+  padawan._root = prog.file.dir();
+
+  if (callback) callback(padawan);
+  prog.fn.call(padawan);
 
   if (typeof config === "object") Object.merge(padawan, config);
 
