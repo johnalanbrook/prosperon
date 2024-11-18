@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     strcat(cmdstr, argv[i]);
     if (argc > i+1) strcat(cmdstr, " ");
   }
-  printf("evaling: %s\n", cmdstr);  
+
   script_evalf("cmd_args('%s');", cmdstr);
 
   return 0;

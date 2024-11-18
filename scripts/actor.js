@@ -4,8 +4,16 @@ var actor_urs = {};
 
 var actor_spawns = {};
 
-function class_eval(script)
-{
+var script_fns = {};
+
+var script_fn = function script_fn(file) {
+  var script = Resources.replstrs(file);
+  script = `(function use_${file.name()}() { var self = this; var $ = this.__proto__; ${script}; })`;
+  var fn = os.eval(file,script);
+  return fn;
+}.hashify();
+
+globalThis.class_use = function class_use(script, config, base, callback) {
   var file = Resources.find_script(script);
 
   if (!file) {
@@ -27,26 +35,7 @@ function class_eval(script)
 
   if (callback) callback(padawan);
 
-  var script = Resources.replstrs(file);
-  script = `(function use_${file.name()}() { var self = this; var $ = this.__proto__; ${script}; })`;
-
-  var fn = os.eval(file, script);
-  return {
-    usefn: fn,
-    file: file,
-    parent: actor_urs[file]
-  };
-}.hashify();
-
-globalThis.class_use = function class_use(script, config, base, callback) {
-  var prog = class_eval(script);
-  var padawan = Object.create(prog.parent);
-  actor_spawns[file].push(padawan);
-  padawan._file = prog.file;
-  padawan._root = prog.file.dir();
-
-  if (callback) callback(padawan);
-  prog.fn.call(padawan);
+  script_fn(file).call(padawan);
 
   if (typeof config === "object") Object.merge(padawan, config);
 

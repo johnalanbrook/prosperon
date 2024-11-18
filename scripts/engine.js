@@ -101,7 +101,7 @@ Resources.replstrs = function replstrs(path) {
   });
 
   return script;
-};
+}
 
 Resources.is_sound = function (path) {
   var ext = path.ext();
@@ -172,7 +172,6 @@ function find_ext(file, ext, root = "") {
   for (var e of ext) {
     var finds = all_files.filter(x => x.ext() === e);
     if (finds.length > 1) {
-      console.info(finds);
       console.warn(`Found conflicting files when searching for '${file}': ${json.encode(finds)}. Returning the topmost one.`);
       finds.sort((a,b) => a.length-b.length);
       return finds[0];
@@ -324,6 +323,7 @@ globalThis.use = function use(file) {
 };
 
 var allpaths = io.ls();
+allpaths = [...new Set(allpaths)]
 //console.log(`found ${allpaths.length} files`);
 //console.log(json.encode(allpaths))
 
@@ -378,9 +378,86 @@ io.globToRegex = function globToRegex(glob) {
 };
 
 io.glob = function glob(pat) {
+  return doglob(pat);
   var regex = io.globToRegex(pat);
   return allpaths.filter(str => str.match(regex)).sort();
 }
+
+function splitPath(path) {
+  return path.split('/').filter(part => part.length > 0);
+}
+
+function splitPattern(pattern) {
+  return pattern.split('/').filter(part => part.length > 0);
+}
+
+function matchPath(pathParts, patternParts) {
+  let pathIndex = 0;
+  let patternIndex = 0;
+  let starPatternIndex = -1;
+  let starPathIndex = -1;
+
+  while (pathIndex < pathParts.length) {
+    if (patternIndex < patternParts.length) {
+                  if (patternParts[patternIndex] === '**') {
+            // Record the position of '**' in the pattern
+            starPatternIndex = patternIndex;
+            // Record the current position in the path
+            starPathIndex = pathIndex;
+            // Move to the next pattern component
+            patternIndex++;
+            continue;
+          } else if (
+            patternParts[patternIndex] === '*' ||
+            patternParts[patternIndex] === pathParts[pathIndex]
+          ) {
+            // If the pattern is '*' or exact match, move to the next component
+            patternIndex++;
+            pathIndex++;
+            continue;
+          }
+    }
+
+    if (starPatternIndex !== -1) {
+      // If there was a previous '**', backtrack
+      patternIndex = starPatternIndex + 1;
+      starPathIndex++;
+      pathIndex = starPathIndex;
+      continue;
+    }
+
+    // No match and no '**' to backtrack to
+    return false;
+  }
+
+  // Check for remaining '**' in the pattern
+  while (patternIndex < patternParts.length && patternParts[patternIndex] === '**') {
+    patternIndex++;
+  }
+
+  return patternIndex === patternParts.length;
+}
+
+function doglob(pattern) {
+  const patternParts = splitPattern(pattern);
+  const matches = [];
+  console.log("DOGLOB");
+
+  for (let i = 0; i < allpaths.length; i++) {
+    const path = allpaths[i];
+    const pathParts = splitPath(path);
+      console.log(`testing ${json.encode(pathParts)} to ${json.encode(patternParts)}`);
+    if (matchPath(pathParts, patternParts)) {
+
+      matches.push(path);
+    }
+  }
+
+  // Optional: Sort the matches if needed
+  return matches.sort();
+}
+
+console.log(doglob("sprites/*.png"))
 
 function stripped_use(file, script) {
   file = Resources.find_script(file);

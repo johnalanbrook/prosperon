@@ -130,6 +130,7 @@ JSValue sapp_event2js(JSContext *js, sapp_event *e)
   JS_SetPropertyStr(js,event,"mouse_d", vec22js(js, (HMM_Vec2){e->mouse_dx,e->mouse_dy}));
   JS_SetPropertyStr(js,event, "window_size", vec22js(js, (HMM_Vec2){e->window_width,e->window_height}));
   JS_SetPropertyStr(js,event, "framebuffer", vec22js(js,(HMM_Vec2){e->framebuffer_width,e->framebuffer_height}));
+  JSValue files = JS_UNDEFINED;
 
   switch(e->type) {
     case SAPP_EVENTTYPE_MOUSE_SCROLL:
@@ -168,7 +169,7 @@ JSValue sapp_event2js(JSContext *js, sapp_event *e)
       JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
       break;
     case SAPP_EVENTTYPE_FILES_DROPPED:
-      JSValue files = JS_NewObject(js);
+      files = JS_NewObject(js);
       for (int i = 0; i < sapp_get_num_dropped_files(); i++)
         JS_SetPropertyUint32(js,files,i,JS_NewString(js,sapp_get_dropped_file_path(0)));
       JS_SetPropertyStr(js,event,"files",files);
@@ -1788,8 +1789,7 @@ static void list_files(const char *path, JSContext *js, JSValue v, int *n)
     if (file.is_dir) {
       if (!strcmp(file.name, ".") || !strcmp(file.name, "..")) continue;
       list_files(file.path, js, v, n);
-    }
-    else {
+    } else {
       JS_SetPropertyUint32(js, v, *n, JS_NewString(js, file.path+2));
       *n = *n+1;
     }
@@ -1808,6 +1808,35 @@ JSC_SSCALL(io_mv, ret = number2js(js,rename(str,str2)))
 JSC_SCALL(io_chdir, ret = number2js(js,chdir(str)))
 JSC_SCALL(io_rm, ret = number2js(js,remove(str)))
 JSC_SCALL(io_mkdir, ret = number2js(js,mkdir(str,0777)))
+
+// glob sprites/*.png
+// glob **/*.png
+
+int glob_twostar(char *glob, char *text)
+{
+
+}
+
+int glob_star(char *glob, char *text)
+{
+
+}
+
+int glob_match(char *glob, char *text)
+{
+  if (glob[0] == '*') {
+    if (glob[1] == '*')
+      return glob_twostar(glob+2, text);
+    return glob_star(glob+1, text);
+  }
+  
+  if (glob[0] == '?')
+    return glob_match(glob+1,text+1);
+    
+  return 0;
+}
+
+JSC_SSALL(io_glob, return JS_ToBool(js, glob_match(str, str2)); )
 
 #include <quickjs.h>
 #include <stdlib.h>
@@ -3016,4 +3045,3 @@ void ffi_load(JSContext *js) {
   
   JS_FreeValue(js,globalThis);  
 }
-

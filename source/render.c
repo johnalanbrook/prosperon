@@ -55,7 +55,7 @@ void render_init() {
   TracyCPlotConfig("size_update_buffer", TracyPlotFormatMemory, 1, 1, 547498235);
   TracyCPlotConfig("size_append_buffer", TracyPlotFormatMemory, 1, 1, 12345615);
   TracyCPlotConfig("size_update_image", TracyPlotFormatMemory, 1, 1, 49831049);
-  render_trace_init();
+//  render_trace_init();
 #endif
 
   std_sampler = sg_make_sampler(&(sg_sampler_desc){});

@@ -32,9 +32,7 @@ global.mixin("debug");
 global.mixin('layout')
 globalThis.parseq = use('parseq');
 
-var frame_t = profile.secs(profile.now());
-
-var sim = {};
+globalThis.sim = {};
 sim.mode = "play";
 sim.play = function () {
   this.mode = "play";
@@ -61,6 +59,8 @@ sim.step = function () {
 sim.stepping = function () {
   return this.mode === "step";
 };
+
+var frame_t = profile.secs(profile.now());
 
 var physlag = 0;
 

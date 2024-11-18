@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include "jsffi.h"
-#include <malloc.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #include <tracy/TracyC.h>
