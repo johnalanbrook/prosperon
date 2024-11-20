@@ -64,7 +64,7 @@ deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
-#deps += dependency('qjs-dmon',static:true)
+
 deps += dependency('threads')
 
 if get_option('chipmunk')
@@ -76,7 +76,8 @@ if get_option('enet')
 endif
 
 sources = []
-src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','render_trace.cpp','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c', 'glad.c']
+src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','render_trace.cpp','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c', 'glad.c', 'wildmatch.c']
+
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 
 srceng = 'source'
@@ -94,6 +95,7 @@ if get_option('editor')
   foreach imgui : imsrc
     sources += tp / 'imgui' / imgui
   endforeach
+  deps += dependency('qjs-dmon',static:true)
 endif
 
 includers = []

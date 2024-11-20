@@ -4,7 +4,7 @@ var audio = {};
 soloud.init();
 var pcms = {};
 
-audio.pcm = function(file)
+audio.pcm = function pcm(file)
 {
   file = Resources.find_sound(file);
   if (!file) throw new Error(`Could not findfile ${file}`);
@@ -14,13 +14,13 @@ audio.pcm = function(file)
   return newpcm;
 }
 
-audio.play = function (file) {
+audio.play = function play(file) {
   var pcm = audio.pcm(file);
   if (!pcm) return;
   return soloud.play(pcm);
 };
 
-audio.cry = function (file) {
+audio.cry = function cry(file) {
   var voice = audio.play(file);
   if (!voice) return;
   return function() {
@@ -32,7 +32,7 @@ audio.cry = function (file) {
 var song;
 
 // Play 'file' for new song, cross fade for seconds
-audio.music = function (file, fade = 0.5) {
+audio.music = function music(file, fade = 0.5) {
   if (!file) {
     if (song) song.volume = 0;
     return;

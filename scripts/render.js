@@ -1446,6 +1446,12 @@ try{
 } catch(e) {
   throw e;
 } finally {
+  // random tracy image
+/*  var vals = Object.values(game.texture.cache);
+  var tex = vals[Math.floor(Math.random()*vals.length)].texture;
+  var texdata = os.tex_data(tex)
+  tracy.image(texdata, tex.width, tex.height);
+*/
   render.end_pass();
   render.commit();
   endframe();

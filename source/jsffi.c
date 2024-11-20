@@ -1810,33 +1810,16 @@ JSC_SCALL(io_rm, ret = number2js(js,remove(str)))
 JSC_SCALL(io_mkdir, ret = number2js(js,mkdir(str,0777)))
 
 // glob sprites/*.png
-// glob **/*.png
-
-int glob_twostar(char *glob, char *text)
-{
-
-}
-
-int glob_star(char *glob, char *text)
-{
-
-}
-
-int glob_match(char *glob, char *text)
-{
-  if (glob[0] == '*') {
-    if (glob[1] == '*')
-      return glob_twostar(glob+2, text);
-    return glob_star(glob+1, text);
-  }
-  
-  if (glob[0] == '?')
-    return glob_match(glob+1,text+1);
-    
-  return 0;
-}
-
-JSC_SSALL(io_glob, return JS_ToBool(js, glob_match(str, str2)); )
+// glob sprite/**/*.png
+// pattern: sprites/fool.png
+// glob sprites/fool.png
+#include "wildmatch.h"
+JSC_SSCALL(io_glob,
+  if (wildmatch(str, str2, WM_PATHNAME | WM_PERIOD | WM_WILDSTAR) == WM_MATCH)
+    return JS_NewBool(js,1);
+  else
+    return JS_NewBool(js, 0);
+)
 
 #include <quickjs.h>
 #include <stdlib.h>
@@ -1985,7 +1968,8 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io, chmod, 2),
   MIST_FUNC_DEF(io, slurp, 2),
   MIST_FUNC_DEF(io, slurpwrite, 2),
-  MIST_FUNC_DEF(io, mod,1)
+  MIST_FUNC_DEF(io, mod,1),
+  MIST_FUNC_DEF(io, glob, 2),
 };
 
 JSC_GETSET(transform, pos, vec3)
@@ -2873,6 +2857,26 @@ JSC_SCALL(os_kill,
   return JS_UNDEFINED;
 )
 
+#include "glad.h"
+JSC_CCALL(os_tex_data,
+#ifdef SOKOL_GLCORE
+  texture *tex = js2texture(js, argv[0]);
+  sg_gl_image_info glinfo = sg_gl_query_image_info(tex->id);
+  glBindTexture(glinfo.tex_target, glinfo.tex[glinfo.active_slot]);
+  unsigned char *pixels = malloc(tex->width * tex->height * 4);
+  glGetTexImage(glinfo.tex_target, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+  GLenum err = glGetError();
+  if (err != GL_NO_ERROR) {
+    free(pixels);
+    return JS_ThrowReferenceError(js, "could not pull pixel data");
+  }
+  glBindTexture(glinfo.tex_target,0);
+  ret = JS_NewArrayBufferCopy(js,pixels,tex->width*tex->height*4);
+  free(pixels);
+  return ret;
+ #endif
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, turbulence, 4),
   MIST_FUNC_DEF(os, fbm, 4),
@@ -2926,6 +2930,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, gltf_skin, 1),
   MIST_FUNC_DEF(os, skin_calculate, 1),
   MIST_FUNC_DEF(os, kill, 1),
+  MIST_FUNC_DEF(os, tex_data,1),
 };
 
 #define JSSTATIC(NAME, PARENT) \
@@ -2937,7 +2942,6 @@ JSValue js_layout_use(JSContext *js);
 JSValue js_miniz_use(JSContext *js);
 JSValue js_soloud_use(JSContext *js);
 JSValue js_chipmunk2d_use(JSContext *js);
-//JSValue js_dmon_use(JSContext *js);
 
 #ifdef TRACY_ENABLE
 JSValue js_tracy_use(JSContext *js);
@@ -2945,6 +2949,7 @@ JSValue js_tracy_use(JSContext *js);
 
 #ifndef NEDITOR
 JSValue js_imgui(JSContext *js);
+JSValue js_dmon_use(JSContext *js);
 #endif
 
 static void signal_handler(int sig) {
@@ -3027,7 +3032,7 @@ void ffi_load(JSContext *js) {
   JS_SetPropertyStr(js, globalThis, "miniz", js_miniz_use(js));
   JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
   JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));
-//  JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
+
   
 #ifdef TRACY_ENABLE
   JS_SetPropertyStr(js, globalThis, "tracy", js_tracy_use(js));
@@ -3040,6 +3045,7 @@ void ffi_load(JSContext *js) {
   atexit(exit_handler);
 
 #ifndef NEDITOR
+  JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
   JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
 #endif
   

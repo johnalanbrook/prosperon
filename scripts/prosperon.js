@@ -11,11 +11,11 @@ global.check_registers = function check_registers(obj) {
     }
   }
 
-  for (var k in obj) {
+/*  for (var k in obj) {
     if (!k.startsWith("on_")) continue;
     var signal = k.fromfirst("on_");
     Event.observe(signal, obj, obj[k]);
-  }
+  }*/
 };
 
 globalThis.timers = []

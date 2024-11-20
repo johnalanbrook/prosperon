@@ -72,7 +72,6 @@ var entity = {
   },
   set pos(x) {
     this.transform.pos = x;
-    this.sync();
   },
   get angle() {
     return this.transform.angle;
@@ -168,7 +167,7 @@ var entity = {
 */
     ent.reparent(this);
 
-    for (var [prop, p] of Object.entries(ent)) {
+/*    for (var [prop, p] of Object.entries(ent)) {
       if (!p) continue;
       if (typeof p !== "object") continue;
       if (!p.comp) continue;
@@ -176,6 +175,7 @@ var entity = {
       Object.merge(ent[prop], p);
       ent.components[prop] = ent[prop];
     }
+*/
 
     check_registers(ent);
 
@@ -185,8 +185,6 @@ var entity = {
       if (ent.start instanceof Function) ent.start();
     }
 
-    Object.hide(ent, "ur", "components", "objects", "timers", "guid", "master", "guid");
-
     ent._ed = {
       selectable: true,
       dirty: false,
@@ -194,7 +192,7 @@ var entity = {
       urdiff: {},
     };
 
-    Object.hide(ent, "_ed");
+    Object.hide(ent, "ur", "components", "objects", "timers", "guid", "master", "guid", "_ed");    
 
     ent.sync();
 
@@ -215,8 +213,8 @@ var entity = {
 
     if (callback) callback(ent);
 
-    ent.ur.fresh ??= json.decode(json.encode(ent));
-    ent.ur.fresh.objects = {};
+//    ent.ur.fresh ??= json.decode(json.encode(ent));
+//    ent.ur.fresh.objects = {};
 //    for (var i in ent.objects) ent.ur.fresh.objects[i] = ent.objects[i].instance_obj();
 
     return ent;
@@ -407,10 +405,8 @@ var entity = {
   add_component(comp, data) {
     var name = prosperon.guid();
     this.components[name] = comp(this);
-    if (data) {
+    if (data)
       Object.assign(this.components[name], data);
-      this.components[name].sync?.();
-    }
     return this.components[name];
   },
 };

@@ -35,12 +35,12 @@ frog = {
   ...etc
 }
 */
-function z_value() {return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;}
+
 var sprite = {
   image: undefined,
   get diffuse() { return this.image.texture; },
   set diffuse(x) {},
-  z_value:z_value,
+  z_value() {return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;},
   anim_speed: 1,
   play(str, loop = true, reverse = false, fn) {
     if (!this.animset) {

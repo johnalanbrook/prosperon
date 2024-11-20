@@ -195,12 +195,13 @@ Object.defineProperty(Function.prototype, "hashify", {
   value: function () {
     var hash = new Map();
     var fn = this;
-    function ret() {
-      if (!hash.has(arguments[0])) hash.set(arguments[0], fn(...arguments));
+    function hashified(...args) {
+      var key = args[0];
+      if (!hash.has(key)) hash.set(key, fn(...args));
 
-      return hash.get(arguments[0]);
+      return hash.get(key);
     }
-    return ret;
+    return hashified;
   },
 });
 
@@ -235,7 +236,7 @@ console.rec = function(category, priority, line, file, msg)
   return `${file}:${line}: [${category} ${priority}]: ${msg}`;
 }
 
-console.pprint = function (msg, lvl = 0) {
+console.pprint = function pprint(msg, lvl = 0) {
   if (typeof msg === "object") msg = JSON.stringify(msg, null, 2);
 
   var file = "nofile";
@@ -252,21 +253,22 @@ console.pprint = function (msg, lvl = 0) {
   }
   var fmt = console.rec("script", lvl, line,file, msg);
   console.log(fmt);
+  if (tracy) tracy.message(fmt);
 };
 
-console.spam = function (msg) {
+console.spam = function spam(msg) {
   console.pprint(msg, 0);
 };
-console.debug = function (msg) {
+console.debug = function debug(msg) {
   console.pprint(msg, 1);
 };
-console.info = function (msg) {
+console.info = function info(msg) {
   console.pprint(msg, 2);
 };
-console.warn = function (msg) {
+console.warn = function warn(msg) {
   console.pprint(msg, 3);
 };
-console.error = function (msg) {
+console.error = function error (msg) {
   console.pprint(msg + "\n" + console.stackstr(2), 4);
 };
 console.panic = function (msg) {
@@ -377,11 +379,13 @@ io.globToRegex = function globToRegex(glob) {
   return new RegExp(regexStr);
 };
 
+var tmpglob = io.glob;
 io.glob = function glob(pat) {
-  return doglob(pat);
-  var regex = io.globToRegex(pat);
-  return allpaths.filter(str => str.match(regex)).sort();
+  return allpaths.filter(str => tmpglob(pat,str)).sort();
 }
+
+console.log(io.glob("sprites/*.png"))
+console.log(io.glob("**/render.js"))
 
 function splitPath(path) {
   return path.split('/').filter(part => part.length > 0);
@@ -456,8 +460,6 @@ function doglob(pattern) {
   // Optional: Sort the matches if needed
   return matches.sort();
 }
-
-console.log(doglob("sprites/*.png"))
 
 function stripped_use(file, script) {
   file = Resources.find_script(file);

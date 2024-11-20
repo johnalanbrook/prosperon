@@ -460,9 +460,8 @@ Object.defHidden = function (obj, prop) {
 Object.hide = function hide(obj, ...props) {
   for (var prop of props) {
     var p = Object.getOwnPropertyDescriptor(obj, prop);
-    if (!p) continue;
-    p.enumerable = false;
-    Object.defineProperty(obj, prop, p);
+    if (p && p.enumerable)
+      Object.defineProperty(obj, prop, {...p, enumerable:false});
   }
 };
 
