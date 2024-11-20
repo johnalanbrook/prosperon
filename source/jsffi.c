@@ -2034,6 +2034,14 @@ JSC_CCALL(transform_trs,
   t->scale = JS_IsUndefined(argv[2]) ? v3one : js2vec3(js,argv[2]);
 )
 
+JSC_CCALL(transform_rect,
+  transform *t = js2transform(js,self);
+  rect r = js2rect(js,argv[0]);
+  t->pos = (HMM_Vec3){r.x,r.y,0};
+  t->scale = (HMM_Vec3){r.w,r.h,1};
+  t->rotation = QUAT1;
+)
+
 static const JSCFunctionListEntry js_transform_funcs[] = {
   CGETSET_ADD(transform, pos),
   CGETSET_ADD(transform, scale),
@@ -2046,8 +2054,8 @@ static const JSCFunctionListEntry js_transform_funcs[] = {
   MIST_FUNC_DEF(transform, lookat, 1),
   MIST_FUNC_DEF(transform, direction, 1),
   MIST_FUNC_DEF(transform, unit, 0),
+  MIST_FUNC_DEF(transform, rect, 1),
 };
-
 
 JSC_CCALL(datastream_time, return number2js(js,plm_get_time(js2datastream(js,self)->plm)); )
 
@@ -2232,12 +2240,30 @@ JSC_CCALL(geometry_cwh2rect,
   return rect2js(js,r);
 )
 
+JSC_CCALL(geometry_rect_pos,
+  rect r = js2rect(js,argv[0]);
+  return vec22js(js,(HMM_Vec2){
+    .x = r.x,
+    .y = r.y
+  });
+)
+
+JSC_CCALL(geometry_rect_move,
+  rect r = js2rect(js,argv[0]);
+  HMM_Vec2 move = js2vec2(js,argv[1]);
+  r.x += move.x;
+  r.y += move.y;
+  return rect2js(js,r);
+)
+
 static const JSCFunctionListEntry js_geometry_funcs[] = {
   MIST_FUNC_DEF(geometry, rect_intersect, 2),
   MIST_FUNC_DEF(geometry, rect_inside, 2),
   MIST_FUNC_DEF(geometry, rect_random, 1),
   MIST_FUNC_DEF(geometry, cwh2rect, 2),
   MIST_FUNC_DEF(geometry, rect_point_inside, 2),
+  MIST_FUNC_DEF(geometry, rect_pos, 1),
+  MIST_FUNC_DEF(geometry, rect_move, 2),
 };
 
 JSValue js_os_cwd(JSContext *js, JSValue self, int argc, JSValue *argv)

@@ -87,7 +87,6 @@ Resources.replstrs = function replstrs(path) {
   var stem = path.dir();
 
   if (!console.enabled) script = Resources.rm_fn(/console\.(spam|info|warn|error)/, script);
-
   if (!profile.enabled) script = Resources.rm_fn(/profile\.(cache|frame|endcache|endframe)/, script);
 
   if (!debug.enabled) {
@@ -340,7 +339,7 @@ io.slurp = function slurp(path)
   var findpath = Resources.replpath(path);
   var ret = tmpslurp(findpath, true); //|| core_db.slurp(findpath, true);
   return ret;
-}.hashify();
+}
 
 io.slurpbytes = function(path)
 {

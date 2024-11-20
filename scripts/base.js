@@ -795,7 +795,7 @@ Object.defineProperty(Array.prototype, "forTo", {
 });
 
 Object.defineProperty(Array.prototype, "dofilter", {
-  value: function (fn) {
+  value: function array_dofilter(fn) {
     for (let i = 0; i < this.length; i++) {
       if (!fn.call(this, this[i], i, this)) {
         this.splice(i, 1);
@@ -807,19 +807,19 @@ Object.defineProperty(Array.prototype, "dofilter", {
 });
 
 Object.defineProperty(Array.prototype, "reversed", {
-  value: function () {
+  value: function array_reversed() {
     var c = this.slice();
     return c.reverse();
   },
 });
 
 Object.defineProperty(Array.prototype, "rotate", {
-  value: function (a) {
+  value: function array_rotate(a) {
     return Vector.rotate(this, a);
   },
 });
 
-Array.random = function(arr) {
+Array.random = function random(arr) {
   if (!Array.isArray(arr)) return;
   return arr[Math.floor(Math.random()*arr.length)];
 }

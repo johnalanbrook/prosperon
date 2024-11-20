@@ -86,7 +86,7 @@ clay.draw = function draw(size, fn)
 function create_view_fn(base_config)
 {
   var base = Object.assign(Object.create(clay_base), base_config);
-  return function(config = {}, fn) {
+  return function view(config = {}, fn) {
     config.__proto__ = base;
     var item = add_item(config);
 
@@ -223,12 +223,11 @@ layout.draw_commands = function draw_commands(cmds, pos = [0,0])
 {
   var mousepos = prosperon.camera.screen2hud(input.mouse.screenpos());
   for (var cmd of cmds) {
-    cmd.boundingbox.x += pos.x;
-    cmd.boundingbox.y += pos.y;
-    cmd.content.x += pos.x;
-    cmd.content.y += pos.y;
+    var boundingbox = geometry.rect_move(cmd.boundingbox,pos);
+    var content = geometry.rect_move(cmd.content,pos);
     var config = cmd.config;
-    if (config.hovered && geometry.rect_point_inside(cmd.boundingbox, mousepos)) {
+    
+    if (config.hovered && geometry.rect_point_inside(boundingbox, mousepos)) {
       config.hovered.__proto__ = config;
       config = config.hovered;
       hovered = config;
@@ -236,25 +235,31 @@ layout.draw_commands = function draw_commands(cmds, pos = [0,0])
 
     if (config.background_image)
       if (config.slice)
-        render.slice9(config.background_image, cmd.boundingbox, config.slice, config.background_color);
+        render.slice9(config.background_image, boundingbox, config.slice, config.background_color);
       else
-        render.image(config.background_image, cmd.boundingbox, 0, config.color);
+        render.image(config.background_image, boundingbox, 0, config.color);
     else if (config.background_color)
-      render.rectangle(cmd.boundingbox, config.background_color);
+      render.rectangle(boundingbox, config.background_color);
       
     if (config.text)
-      render.text(config.text, cmd.content, config.font, config.font_size, config.color);
+      render.text(config.text, content, config.font, config.font_size, config.color);
     if (config.image)
-      render.image(config.image, cmd.content, 0, config.color);
+      render.image(config.image, content, 0, config.color);
   }
 }
 
+var dbg_colors = {};
+layout.debug_colors = dbg_colors;
+dbg_colors.content = [1,0,0,0.1];
+dbg_colors.boundingbox = [0,1,0,0,0.1];
+dbg_colors.margin = [0,0,1,0.1];
 layout.draw_debug = function draw_debug(cmds, pos = [0,0])
 {
-  for (var cmd of cmds) {
-    render.rectangle(cmd.content, [1,0,0,0.1]);
-    render.rectangle(cmd.boundingbox, [0,1,0,0.1]);
-    render.rectangle(cmd.marginbox, [0,0,1,0.1]);
+  for (var i = 0; i < cmds.length; i++) {
+    var cmd = cmds[i];
+    render.rectangle(geometry.rect_move(cmd.content,pos), dbg_colors.content);
+    render.rectangle(geometry.rect_move(cmd.boundingbox,pos), dbg_colors.boundingbox);
+//    render.rectangle(geometry.rect_move(cmd.marginbox,pos), dbg_colors.margin);
   }
 }
 

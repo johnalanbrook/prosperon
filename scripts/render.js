@@ -732,8 +732,9 @@ render.sprites = function render_sprites() {
   }
 */
 
-  render.use_shader(spritessboshader);
   var buckets = component.sprite_buckets();
+  if (buckets.length === 0) return;
+  render.use_shader(spritessboshader);  
   for (var l in buckets) {
     var layer = buckets[l];
     for (var img in layer) {
@@ -790,7 +791,7 @@ function check_flush(flush_fn) {
 }
 
 render.flush = check_flush;
-render.forceflush = function()
+render.forceflush = function forceflush()
 {
   if (nextflush) nextflush();
   nextflush = undefined;
@@ -871,20 +872,15 @@ render.coordinate = function render_coordinate(pos, size, color) {
 var queued_shader;
 var queued_pipe;
 render.rectangle = function render_rectangle(rect, color = Color.white, shader = polyssboshader, pipe = base_pipeline) {
-  var wh = [rect.width, rect.height];
   var poly = poly_e();
-  var pos = [rect.x,rect.y].add([rect.width,rect.height].scale(0.5));
-  pos = pos.sub([rect.width,rect.height].scale([rect.anchor_x,rect.anchor_y]));
-  poly.transform.move(pos);
-  poly.transform.scale = [wh.x, wh.y, 1];
+  poly.transform.rect(rect);
   poly.color = color;
-  
   queued_shader = shader;
   queued_pipe = pipe;
   check_flush(flush_poly);
 };
 
-render.text = function (str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
+render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
   if (typeof font === 'string')
     font = render.get_font(font);
 
@@ -961,7 +957,7 @@ var stencil_writer = function stencil_writer(ref)
 render.stencil_writer = stencil_writer;
 
 // objects by default draw where the stencil buffer is 0
-render.fillmask = function(ref)
+render.fillmask = function fillmask(ref)
 {
   render.forceflush();
   var pipe = stencil_writer(ref);
@@ -1415,7 +1411,7 @@ try{
   if (render.draw_sprites) render.sprites();
   prosperon.draw();
   if (render.draw_particles) draw_emitters();  
-  render.fillmask(0);
+//  render.fillmask(0);
   render.forceflush();
   render.set_projection_ortho({
     l:0,
@@ -1468,7 +1464,7 @@ try{
 }
 };
 
-//if (dmon) dmon.watch('.');
+if (dmon) dmon.watch('.');
 
 function dmon_cb(e)
 {
@@ -1485,7 +1481,7 @@ function dmon_cb(e)
 prosperon.process = function process() {
   layout.newframe();
   // check for hot reloading
-//  if (dmon) dmon.poll(dmon_cb);
+  if (dmon) dmon.poll(dmon_cb);
   var dt = profile.secs(profile.now()) - frame_t;
   frame_t = profile.secs(profile.now());
 

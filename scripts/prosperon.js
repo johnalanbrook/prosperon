@@ -8,6 +8,7 @@ global.check_registers = function check_registers(obj) {
       fn.layer = obj[reg].layer;
       var name = obj.ur ? obj.ur.name : obj.toString();
       obj.timers.push(Register.registries[reg].register(fn, name));
+      if (!obj[reg].name) Object.defineProperty(obj[reg], 'name', {value:`${obj._file}_${reg}`});
     }
   }
 
@@ -550,6 +551,7 @@ var Register = {
       var dofn = function (...args) {
         fn(...args);
       };
+      Object.defineProperty(dofn, 'name', {value:`do_${oname}`});
 
       var left = 0;
       var right = fns.length - 1;
@@ -579,7 +581,7 @@ var Register = {
 //        tracy.fiber_leave(vector.fib);
       };
     } else
-      prosperon[name] = function name(...args) {
+      prosperon[name] = function (...args) {
         var layer = undefined;
         for (var fn of fns) {
           if (layer !== fn.layer) {
@@ -590,6 +592,7 @@ var Register = {
         }
       };
 
+    Object.defineProperty(prosperon[name], 'name', {value:name});
     prosperon[name].fns = fns;
     n.clear = function () {
       fns = [];
