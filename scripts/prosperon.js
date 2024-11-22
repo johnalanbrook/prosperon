@@ -89,46 +89,29 @@ prosperon.init = function () {
   prosperon.camera.mode = "keep";
   prosperon.camera.break = "fit";
   prosperon.camera.size = game.size;
+  shape.quad = {
+    pos: os.make_buffer([
+      0, 0, 0,
+      0, 1, 0,
+      1, 0, 0,
+      1, 1, 0], 0),
+    verts: 4,
+    uv: os.make_buffer([
+      0, 1,
+      0, 0,
+      1, 1,
+      1, 0], 2),
+    index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
+    count: 6,
+  };
 
-      shape.quad = {
-        pos: os.make_buffer([
-          0, 0, 0,
-          0, 1, 0,
-          1, 0, 0,
-          1, 1, 0], 0),
-        verts: 4,
-        uv: os.make_buffer([
-          0, 1,
-          0, 0,
-          1, 1,
-          1, 0], 2),
-        index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
-        count: 6,
-      };
-
-      shape.triangle = {
-        pos: os.make_buffer([0, 0, 0, 0.5, 1, 0, 1, 0, 0], 0),
-        uv: os.make_buffer([0, 0, 0.5, 1, 1, 0], 2),
-        verts: 3,
-        count: 3,
-        index: os.make_buffer([0, 1, 2], 1),
-      };
-
-      shape.centered_quad = {
-        pos: os.make_buffer([
-          -0.5, -0.5, -0.5,
-          -0.5, 0.5, -0.5,
-          0.5, -0.5, -0.5,
-          0.5, 0.5, -0.5], 0),
-        verts: 4,
-        uv: os.make_buffer([
-          0, 1,
-          0, 0,
-          1, 1,
-          1, 0], 2),
-        index: os.make_buffer([0, 1, 2, 2, 1, 3], 1),
-        count: 6,
-      };
+  shape.triangle = {
+    pos: os.make_buffer([0, 0, 0, 0.5, 1, 0, 1, 0, 0], 0),
+    uv: os.make_buffer([0, 0, 0.5, 1, 1, 0], 2),
+    verts: 3,
+    count: 3,
+    index: os.make_buffer([0, 1, 2], 1),
+  };
   if (io.exists("game.js")) global.app = actor.spawn("game.js");
   else global.app = actor.spawn("nogame.js");
 };

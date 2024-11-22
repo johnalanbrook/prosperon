@@ -219,9 +219,8 @@ clay.button = function button(str, action, config = {})
 
 var hovered = undefined;
 layout.newframe = function() { hovered = undefined; }
-layout.draw_commands = function draw_commands(cmds, pos = [0,0])
+layout.draw_commands = function draw_commands(cmds, pos = [0,0], mousepos)
 {
-  var mousepos = prosperon.camera.screen2hud(input.mouse.screenpos());
   for (var cmd of cmds) {
     var boundingbox = geometry.rect_move(cmd.boundingbox,pos);
     var content = geometry.rect_move(cmd.content,pos);

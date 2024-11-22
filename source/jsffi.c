@@ -30,21 +30,12 @@
 #include "timer.h"
 #include <signal.h>
 #include "tinydir.h"
-#include "cute_aseprite.h"
+#include "cute_aseprite.h" 
 
-JSValue js_getpropertyuint32(JSContext *js, JSValue v, unsigned int i)
-{
-  JSValue ret = JS_GetPropertyUint32(js,v,i);
-  JS_FreeValue(js,ret);
-  return ret;
-}
-
-JSValue js_getpropertystr(JSContext *js, JSValue v, const char *str)
-{
-  JSValue ret = JS_GetPropertyStr(js, v, str);
-  JS_FreeValue(js,ret);
-  return ret;
-}
+#define JS_GETNUM(JS,VAL,I,TO,TYPE) { \
+JSValue val = JS_GetPropertyUint32(JS,VAL,I); \
+TO = js2##TYPE(JS, val); \
+JS_FreeValue(JS, val); } \
 
 JSValue number2js(JSContext *js, double g) { return JS_NewFloat64(js,g); }
 double js2number(JSContext *js, JSValue v) {
@@ -54,8 +45,43 @@ double js2number(JSContext *js, JSValue v) {
   return g;
 }
 
-static inline JSValue boolean2js(JSContext *js, int b) { return JS_NewBool(js,b); }
-static inline int js2boolean(JSContext *js, JSValue v) { return JS_ToBool(js,v); }
+JSValue js_getpropertyuint32(JSContext *js, JSValue v, unsigned int i)
+{
+  JSValue ret = JS_GetPropertyUint32(js,v,i);
+  JS_FreeValue(js,ret);
+  return ret;
+}
+
+double js_getnum_uint32(JSContext *js, JSValue v, unsigned int i)
+{
+  JSValue val = JS_GetPropertyUint32(js,v,i);
+  double ret = js2number(js, val);
+  JS_FreeValue(js,val);
+  return ret;
+}
+
+double js_getnum_str(JSContext *js, JSValue v, const char *str)
+{
+  JSValue val = JS_GetPropertyStr(js,v,str);
+  double ret = js2number(js,val);
+  JS_FreeValue(js,val);
+  return ret;
+}
+
+#define JS_GETPROPSTR(JS, VALUE, TARGET, STR, TYPE) {\
+JSValue __v = JS_GetPropertyStr(JS,VALUE,#STR); \
+TARGET.STR = js2##TYPE(JS, __v); \
+JS_FreeValue(JS,__v); }\
+
+JSValue js_getpropertystr(JSContext *js, JSValue v, const char *str)
+{
+  JSValue ret = JS_GetPropertyStr(js, v, str);
+  JS_FreeValue(js,ret);
+  return ret;
+}
+
+static inline JSValue bool2js(JSContext *js, int b) { return JS_NewBool(js,b); }
+static inline int js2bool(JSContext *js, JSValue v) { return JS_ToBool(js,v); }
 
 #ifndef _WIN32
 #include <sys/resource.h>
@@ -80,10 +106,10 @@ typedef struct lrtb lrtb;
 lrtb js2lrtb(JSContext *js, JSValue v)
 {
   lrtb ret = {0};
-  ret.l = js2number(js,js_getpropertystr(js,v,"l"));
-  ret.b = js2number(js,js_getpropertystr(js,v,"b"));
-  ret.t = js2number(js,js_getpropertystr(js,v,"t"));
-  ret.r = js2number(js,js_getpropertystr(js,v,"r"));
+  JS_GETPROPSTR(js,v,ret,l,number)
+  JS_GETPROPSTR(js,v,ret,b,number)
+  JS_GETPROPSTR(js,v,ret,t,number)
+  JS_GETPROPSTR(js,v,ret,r,number)
   return ret;
 }
 
@@ -235,15 +261,8 @@ static inline HMM_Mat4 js2transform_mat(JSContext *js, JSValue v)
 int js_arrlen(JSContext *js,JSValue v) {
   if (JS_IsUndefined(v)) return 0;
   int len;
-  JS_ToInt32(js, &len, js_getpropertystr(js, v, "length"));
+  len = js_getnum_str(js,v,"length");
   return len;
-}
-
-uint64_t js2uint64(JSContext *js,JSValue v)
-{
-  uint64_t g;
-  JS_ToIndex(js, &g, v);
-  return g;
 }
 
 JSValue angle2js(JSContext *js,double g) {
@@ -257,8 +276,7 @@ double js2angle(JSContext *js,JSValue v) {
 
 struct rgba js2color(JSContext *js,JSValue v) {
   JSValue c[4];
-  for (int i = 0; i < 4; i++)
-    c[i] = js_getpropertyuint32(js, v,i);
+  for (int i = 0; i < 4; i++) c[i] = JS_GetPropertyUint32(js,v,i);
   float a = JS_IsUndefined(c[3]) ? 1.0 : js2number(js,c[3]);
   struct rgba color = {
     .r = js2number(js,c[0])*RGBA_MAX,
@@ -266,6 +284,8 @@ struct rgba js2color(JSContext *js,JSValue v) {
     .b = js2number(js,c[2])*RGBA_MAX,
     .a = a*RGBA_MAX,
   };
+
+  for (int i = 0; i < 4; i++) JS_FreeValue(js,c[i]);
 
   return color;
 }
@@ -283,17 +303,17 @@ JSValue color2js(JSContext *js,struct rgba color)
 HMM_Vec2 js2vec2(JSContext *js,JSValue v)
 {
   HMM_Vec2 v2;
-  v2.X = js2number(js,js_getpropertyuint32(js, v,0));
-  v2.Y = js2number(js,js_getpropertyuint32(js, v,1));
+  v2.X = js_getnum_uint32(js,v,0);
+  v2.Y = js_getnum_uint32(js,v,1);
   return v2;
 }
 
 HMM_Vec3 js2vec3(JSContext *js,JSValue v)
 {
   HMM_Vec3 v3;
-  v3.x = js2number(js,js_getpropertyuint32(js, v,0));
-  v3.y = js2number(js,js_getpropertyuint32(js, v,1));
-  v3.z = js2number(js,js_getpropertyuint32(js, v,2));
+  v3.x = js_getnum_uint32(js, v,0);
+  v3.y = js_getnum_uint32(js, v,1);
+  v3.z = js_getnum_uint32(js, v,2);
   return v3;
 }
 
@@ -335,7 +355,7 @@ HMM_Vec4 js2vec4(JSContext *js, JSValue v)
 {
   HMM_Vec4 v4;
   for (int i = 0; i < 4; i++)
-    v4.e[i] = js2number(js,js_getpropertyuint32(js, v,i));
+    v4.e[i] = js_getnum_uint32(js, v,i);
   return v4;
 }
 
@@ -350,7 +370,7 @@ double arr_vec_length(JSContext *js,JSValue v)
 
   double sum = 0;
   for (int i = 0; i < len; i++)
-    sum += pow(js2number(js,js_getpropertyuint32(js, v, i)), 2);
+    sum += pow(js_getnum_uint32(js, v, i), 2);
 
   return sqrt(sum);
 }
@@ -379,26 +399,6 @@ HMM_Vec2 *js2cpvec2arr(JSContext *js,JSValue v) {
   return arr;
 }
 
-HMM_Vec3 *js2cpvec3arr(JSContext *js,JSValue v)
-{
-  HMM_Vec3 *arr = NULL;
-  int n = js_arrlen(js,v);
-  arrsetlen(arr,n);
-  for (int i = 0; i < n; i++)
-    arr[i] = js2vec3(js,js_getpropertyuint32(js, v,i));
-  return arr;
-}
-
-HMM_Vec2 *jsfloat2vec(JSContext *js,JSValue v)
-{
-  size_t s;
-  void *buf = JS_GetArrayBuffer(js, &s, v);
-  HMM_Vec2 *arr = NULL;
-  int n = s/2;
-  n /= sizeof(float);
-  return arr;
-}
-
 JSValue vecarr2js(JSContext *js,HMM_Vec2 *points, int n) {
   JSValue array = JS_NewArray(js);
   for (int i = 0; i < n; i++)
@@ -419,9 +419,7 @@ int js_print_exception(JSContext *js, JSValue v)
     const char *name = JS_ToCString(js, js_getpropertystr(js,ex, "name"));
     const char *msg = JS_ToCString(js, js_getpropertystr(js,ex, "message"));
     const char *stack = JS_ToCString(js, js_getpropertystr(js,ex, "stack"));
-    int line = 0;
     printf("%s :: %s\n%s", name, msg, stack);
-//    mYughLog(LOG_SCRIPT, LOG_ERROR, line, "script", "%s :: %s\n%s", name, msg, stack);
 
     JS_FreeCString(js, name);
     JS_FreeCString(js, msg);
@@ -435,12 +433,12 @@ int js_print_exception(JSContext *js, JSValue v)
 
 struct rect js2rect(JSContext *js,JSValue v) {
   struct rect rect;
-  rect.x = js2number(js,js_getpropertystr(js,v, "x"));
-  rect.y = js2number(js,js_getpropertystr(js,v, "y"));
-  rect.w = js2number(js,js_getpropertystr(js,v, "width"));
-  rect.h = js2number(js,js_getpropertystr(js,v, "height"));
-  float anchor_x = js2number(js,js_getpropertystr(js,v, "anchor_x"));
-  float anchor_y = js2number(js,js_getpropertystr(js,v, "anchor_y"));
+  JS_GETPROPSTR(js,v,rect,x,number)
+  JS_GETPROPSTR(js,v,rect,y,number)
+  rect.w = js_getnum_str(js,v,"width");
+  rect.h = js_getnum_str(js,v,"height");
+  float anchor_x = js_getnum_str(js,v, "anchor_x");
+  float anchor_y = js_getnum_str(js,v, "anchor_y");
   
   rect.y -= anchor_y*rect.h;
   rect.x -= anchor_x*rect.w;
@@ -539,7 +537,7 @@ int point2segindex(HMM_Vec2 p, HMM_Vec2 *segs, double slop) {
 
 /*JSC_GETSET(warp_gravity, strength, number)
 JSC_GETSET(warp_gravity, decay, number)
-JSC_GETSET(warp_gravity, spherical, boolean)
+JSC_GETSET(warp_gravity, spherical, bool)
 JSC_GETSET(warp_gravity, mask, bitmask)
 JSC_GETSET(warp_gravity, planar_force, vec3)
 
@@ -560,26 +558,45 @@ static const JSCFunctionListEntry js_warp_damp_funcs [] = {
 sg_bindings js2bind(JSContext *js,JSValue v)
 {
   sg_bindings bind = {0};
-  JSValue attrib = js_getpropertystr(js,v, "attrib");
+  JSValue attrib = JS_GetPropertyStr(js,v, "attrib");
+  int len = js_arrlen(js,attrib);
 
-  for (int i = 0; i < js_arrlen(js,attrib); i++)
-    bind.vertex_buffers[i] = *js2sg_buffer(js, js_getpropertyuint32(js, attrib,i));
+  for (int i = 0; i < len; i++) {
+    JSValue v = JS_GetPropertyUint32(js,attrib,i);
+    bind.vertex_buffers[i] = *js2sg_buffer(js, v);
+    JS_FreeValue(js,v);
+  }
+  JS_FreeValue(js,attrib);
     
-  JSValue index = js_getpropertystr(js,v, "index");
-  if (!JS_IsUndefined(index))
+  JSValue index = JS_GetPropertyStr(js,v, "index");
+  if (!JS_IsUndefined(index)) {
     bind.index_buffer = *js2sg_buffer(js, index);
-  
-  JSValue imgs = js_getpropertystr(js,v, "images");
-  JSValue samplers = js_getpropertystr(js,v, "samplers");
-  for (int i = 0; i < js_arrlen(js,imgs); i++) {
-    bind.fs.images[i] = js2texture(js, js_getpropertyuint32(js, imgs, i))->id;
-    int use_std = JS_ToBool(js,js_getpropertyuint32(js, samplers, i));
-    bind.fs.samplers[i] = use_std ? std_sampler : tex_sampler;
+    JS_FreeValue(js,index);
   }
   
-  JSValue ssbo = js_getpropertystr(js,v, "ssbo");
-  for (int i = 0; i < js_arrlen(js,ssbo); i++)
-    bind.vs.storage_buffers[i] = *js2sg_buffer(js, js_getpropertyuint32(js, ssbo,i));
+  JSValue imgs = JS_GetPropertyStr(js,v, "images");
+  JSValue samplers = JS_GetPropertyStr(js,v, "samplers");
+  len = js_arrlen(js,imgs);
+  for (int i = 0; i < len; i++) {
+    JSValue img  =JS_GetPropertyUint32(js,imgs,i);
+    bind.fs.images[i] = js2texture(js, img)->id;
+    JS_FreeValue(js,img);
+    JSValue sampler = JS_GetPropertyUint32(js,samplers,i);
+    int use_std = JS_ToBool(js,sampler);
+    JS_FreeValue(js,sampler);
+    bind.fs.samplers[i] = use_std ? std_sampler : tex_sampler;
+  }
+  JS_FreeValue(js,imgs);
+  JS_FreeValue(js,samplers);
+  
+  JSValue ssbo = JS_GetPropertyStr(js,v, "ssbo");
+  len = js_arrlen(js,ssbo);
+  for (int i = 0; i < len; i++) {
+    JSValue v = JS_GetPropertyUint32(js,ssbo,i);
+    bind.vs.storage_buffers[i] = *js2sg_buffer(js, v);
+    JS_FreeValue(js,v);
+  }
+  JS_FreeValue(js,ssbo);
 
   return bind;
 }
@@ -598,6 +615,10 @@ JSC_CCALL(render_make_textssbo,
     .usage = SG_USAGE_STREAM
   });
   return sg_buffer2js(js, b);
+)
+
+JSC_CCALL(render_pass,
+  
 )
 
 JSC_CCALL(render_glue_pass,
@@ -675,17 +696,18 @@ JSC_CCALL(render_set_view,
 sg_shader_uniform_block_desc js2uniform_block(JSContext *js,JSValue v)
 {
   sg_shader_uniform_block_desc desc = {0};
-    int slot = js2number(js,js_getpropertystr(js,v, "slot"));
-    desc.size = js2number(js,js_getpropertystr(js,v, "size"));
-    desc.layout = SG_UNIFORMLAYOUT_STD140;
+//    int slot = js2number(js,js_getpropertystr(js,v, "slot"));
+  JS_GETPROPSTR(js,v,desc,size,number)
+  desc.layout = SG_UNIFORMLAYOUT_STD140;
 
-    JSValue uniforms = js_getpropertystr(js,v, "uniforms");
-    for (int j = 0; j < js_arrlen(js,uniforms); j++) {
-      JSValue uniform = js_getpropertyuint32(js, uniforms, j);
-      desc.uniforms[j].name = js2strdup(js, js_getpropertystr(js,v, "struct_name"));
-      desc.uniforms[j].array_count = js2number(js,js_getpropertystr(js,uniform, "array_count"));
-      desc.uniforms[j].type = SG_UNIFORMTYPE_FLOAT4;
-    }
+  JSValue uniforms = js_getpropertystr(js,v, "uniforms");
+  for (int j = 0; j < js_arrlen(js,uniforms); j++) {
+    JSValue uniform = JS_GetPropertyUint32(js, uniforms, j);
+    desc.uniforms[j].name = js2strdup(js, js_getpropertystr(js,v, "struct_name"));
+    JS_GETPROPSTR(js,uniform,desc.uniforms[j],array_count,number)
+    desc.uniforms[j].type = SG_UNIFORMTYPE_FLOAT4;
+    JS_FreeValue(js,uniform);
+  }
 
   return desc;
 }
@@ -710,51 +732,67 @@ sg_shader js2shader(JSContext *js,JSValue v)
   JSValue attrs = js_getpropertystr(js,vs, "inputs");
   int atin = js_arrlen(js,attrs);
   for (int i = 0; i < atin; i++) {
-    JSValue u = js_getpropertyuint32(js, attrs, i);
+    JSValue u = JS_GetPropertyUint32(js,attrs,i);
     int slot = js2number(js,js_getpropertystr(js,u, "slot"));    
     desc.attrs[slot].sem_name = js2strdup(js,js_getpropertystr(js,u,"sem_name"));
     desc.attrs[slot].sem_index = js2number(js,js_getpropertystr(js,u, "sem_index"));
+    JS_FreeValue(js,u);
   }
   
-  JSValue vsu = js_getpropertystr(js,vs, "uniform_blocks");
-  for (int i = 0; i < js_arrlen(js,vsu); i++)
-    desc.vs.uniform_blocks[i] = js2uniform_block(js,js_getpropertyuint32(js, vsu, i));
+  JSValue vsu = JS_GetPropertyStr(js,vs, "uniform_blocks");
+  for (int i = 0; i < js_arrlen(js,vsu); i++) {
+    JSValue v = JS_GetPropertyUint32(js,vsu,i);
+    desc.vs.uniform_blocks[i] = js2uniform_block(js,v);
+    JS_FreeValue(js,v);
+  }
+  JS_FreeValue(js,vsu);
   
-  JSValue fsu = js_getpropertystr(js,fs, "uniform_blocks");
-  for (int i = 0; i < js_arrlen(js,fsu); i++)
-    desc.fs.uniform_blocks[i] = js2uniform_block(js,js_getpropertyuint32(js, fsu, i));
+  JSValue fsu = JS_GetPropertyStr(js,fs, "uniform_blocks");
+  for (int i = 0; i < js_arrlen(js,fsu); i++) {
+    JSValue v = JS_GetPropertyUint32(js,fsu,i);
+    desc.fs.uniform_blocks[i] = js2uniform_block(js,v);
+    JS_FreeValue(js,v);
+  }
+  JS_FreeValue(js,fsu);
   
-  JSValue imgs = js_getpropertystr(js,fs, "images");
+  JSValue imgs = JS_GetPropertyStr(js,fs, "images");
   for (int i = 0; i < js_arrlen(js,imgs); i++) {
-    JSValue u = js_getpropertyuint32(js, imgs, i);
-    int slot = js2number(js,js_getpropertystr(js,u, "slot"));
+    JSValue u = JS_GetPropertyUint32(js,imgs,i);
+//    int slot = js2number(js,js_getpropertystr(js,u, "slot"));
     desc.fs.images[i].used = true;
     desc.fs.images[i].multisampled = JS_ToBool(js,js_getpropertystr(js,u, "multisampled"));
     desc.fs.images[i].image_type = SG_IMAGETYPE_2D;
     desc.fs.images[i].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+    JS_FreeValue(js,u);
   }
+  JS_FreeValue(js,imgs);
   
-  JSValue samps = js_getpropertystr(js,fs, "samplers");
+  JSValue samps = JS_GetPropertyStr(js,fs, "samplers");
   for (int i = 0; i < js_arrlen(js,samps); i++) {
-    JSValue sampler = js_getpropertyuint32(js, samps, i);
+    JSValue sampler = JS_GetPropertyUint32(js, samps, i);
     desc.fs.samplers[0].used = true;
     desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
+    JS_FreeValue(js,sampler);
   }
+  JS_FreeValue(js,samps);
   
-  JSValue pairs = js_getpropertystr(js,fs, "image_sampler_pairs");
+  JSValue pairs = JS_GetPropertyStr(js,fs, "image_sampler_pairs");
   for (int i = 0; i < js_arrlen(js,pairs); i++) {
-    JSValue pair = js_getpropertyuint32(js, pairs, i);
+    JSValue pair = JS_GetPropertyUint32(js, pairs, i);
     desc.fs.image_sampler_pairs[0].used = true;
     desc.fs.image_sampler_pairs[0].image_slot = js2number(js,js_getpropertystr(js,pair, "slot"));
     desc.fs.image_sampler_pairs[0].sampler_slot = 0;
     desc.fs.image_sampler_pairs[0].glsl_name = js2strdup(js,js_getpropertystr(js,pair, "name"));
+    JS_FreeValue(js,pair);
   }
+  JS_FreeValue(js,pairs);
   
-  JSValue ssbos = js_getpropertystr(js,vs, "storage_buffers");
+  JSValue ssbos = JS_GetPropertyStr(js,vs, "storage_buffers");
   for (int i = 0; i < js_arrlen(js,ssbos); i++) {
     desc.vs.storage_buffers[i].used = true;
     desc.vs.storage_buffers[i].readonly = true;
   }
+  JS_FreeValue(js,ssbos);
   
   sg_shader sh = sg_make_shader(&desc);
   
@@ -798,11 +836,12 @@ sg_vertex_layout_state js2vertex_layout(JSContext *js,JSValue v)
   sg_vertex_layout_state st = {0};
   JSValue inputs = js_getpropertystr(js,js_getpropertystr(js,v, "vs"), "inputs");
   for (int i = 0; i < js_arrlen(js,inputs); i++) {
-    JSValue attr = js_getpropertyuint32(js, inputs, i);
+    JSValue attr = JS_GetPropertyUint32(js, inputs, i);
     int slot = js2number(js,js_getpropertystr(js,attr, "slot"));
     int mat = js2number(js,js_getpropertystr(js,attr, "mat"));
     st.attrs[slot].format = mat2type(mat);
     st.attrs[slot].buffer_index = slot;
+    JS_FreeValue(js,attr);
   }
   
   return st;
@@ -811,47 +850,47 @@ sg_vertex_layout_state js2vertex_layout(JSContext *js,JSValue v)
 sg_depth_state js2depth(JSContext *js,JSValue v)
 {
   sg_depth_state depth = {0};
-  depth.compare = js2number(js,js_getpropertystr(js,v, "compare"));
-  depth.write_enabled = JS_ToBool(js,js_getpropertystr(js,v, "write"));
-  depth.bias = js2number(js,js_getpropertystr(js,v, "bias"));
-  depth.bias_slope_scale = js2number(js,js_getpropertystr(js,v, "bias_slope_scale"));
-  depth.bias_clamp = js2number(js,js_getpropertystr(js,v, "bias_clamp"));
+  JS_GETPROPSTR(js,v,depth,compare,number)
+  JS_GETPROPSTR(js,v,depth,write_enabled,bool)
+  JS_GETPROPSTR(js,v,depth,bias,number)
+  JS_GETPROPSTR(js,v,depth,bias_slope_scale,number)
+  JS_GETPROPSTR(js,v,depth,bias_clamp,number)
   return depth;
 }
 
 sg_stencil_face_state js2face_state(JSContext *js,JSValue v)
 {
   sg_stencil_face_state face = {0};
-  face.compare = js2number(js,js_getpropertystr(js,v, "compare"));
-  face.fail_op = js2number(js,js_getpropertystr(js,v, "fail"));
-  face.depth_fail_op = js2number(js,js_getpropertystr(js,v, "depth_fail"));
-  face.pass_op = js2number(js,js_getpropertystr(js,v, "pass_op"));
+  JS_GETPROPSTR(js,v,face,compare,number)
+  JS_GETPROPSTR(js,v,face,fail_op,number)
+  JS_GETPROPSTR(js,v,face,depth_fail_op,number)
+  JS_GETPROPSTR(js,v,face,pass_op,number)
   return face;
 }
 
 sg_stencil_state js2stencil(JSContext *js,JSValue v)
 {
   sg_stencil_state stencil = {0};
-  stencil.enabled = JS_ToBool(js,js_getpropertystr(js,v, "enabled"));
-  stencil.read_mask = JS_ToBool(js,js_getpropertystr(js,v, "read")) ? 0xFF : 0x00;
-  stencil.write_mask = JS_ToBool(js,js_getpropertystr(js,v, "write")) ? 0xFF : 0x00;
-  stencil.front = js2face_state(js,js_getpropertystr(js,v, "front"));
-  stencil.back = js2face_state(js,js_getpropertystr(js,v, "back"));
-  stencil.ref = js2number(js,js_getpropertystr(js,v, "ref"));
+  JS_GETPROPSTR(js,v,stencil,enabled,bool)
+  JS_GETPROPSTR(js,v,stencil,read_mask,bool)
+  JS_GETPROPSTR(js,v,stencil,write_mask,bool)
+  JS_GETPROPSTR(js,v,stencil,enabled,bool)
+  JS_GETPROPSTR(js,v,stencil,front,face_state)
+  JS_GETPROPSTR(js,v,stencil,back,face_state)
+  JS_GETPROPSTR(js,v,stencil,ref,number)
   return stencil;
 }
 
-#define GETNUMVALUE(STRUCT, NAME) STRUCT.NAME = js2number(js,js_getpropertystr(js,v, #NAME));
 sg_blend_state js2blend(JSContext *js,JSValue v)
 {
   sg_blend_state blend = {0};
-  blend.enabled = JS_ToBool(js,js_getpropertystr(js,v, "enabled"));
-  GETNUMVALUE(blend, src_factor_rgb);
-  GETNUMVALUE(blend, dst_factor_rgb);
-  GETNUMVALUE(blend, op_rgb);
-  GETNUMVALUE(blend, src_factor_alpha);
-  GETNUMVALUE(blend, dst_factor_alpha);
-  GETNUMVALUE(blend, op_alpha);
+  JS_GETPROPSTR(js,v,blend,enabled,bool)
+  JS_GETPROPSTR(js,v,blend,src_factor_rgb,number)
+  JS_GETPROPSTR(js,v,blend,dst_factor_rgb,number)
+  JS_GETPROPSTR(js,v,blend,op_rgb,number)
+  JS_GETPROPSTR(js,v,blend,src_factor_alpha,number)
+  JS_GETPROPSTR(js,v,blend,dst_factor_alpha,number)
+  JS_GETPROPSTR(js,v,blend,op_alpha,number)
   return blend;
 }
 
@@ -864,14 +903,14 @@ JSC_CCALL(render_make_pipeline,
     p.index_type = SG_INDEXTYPE_UINT16;
   
   JSValue pipe = argv[1];
-  p.primitive_type = js2number(js,js_getpropertystr(js,pipe, "primitive"));
-  p.cull_mode = js2number(js,js_getpropertystr(js,pipe, "cull"));
-  p.face_winding = js2number(js,js_getpropertystr(js,pipe, "face"));
-  p.colors[0].blend = js2blend(js,js_getpropertystr(js,pipe, "blend"));
-  p.colors[0].write_mask = js2number(js,js_getpropertystr(js,pipe, "write_mask"));
-  p.alpha_to_coverage_enabled = JS_ToBool(js,js_getpropertystr(js,pipe, "alpha_to_coverage"));
-  p.depth = js2depth(js,js_getpropertystr(js,pipe, "depth"));
-  p.stencil = js2stencil(js,js_getpropertystr(js,pipe, "stencil"));
+  JS_GETPROPSTR(js,pipe,p,primitive_type,number)
+  JS_GETPROPSTR(js,pipe,p,cull_mode,number)
+  JS_GETPROPSTR(js,pipe,p,face_winding,number)
+  JS_GETPROPSTR(js,pipe,p,colors[0].blend,blend)  
+  JS_GETPROPSTR(js,pipe,p,colors[0].write_mask,number)  
+  JS_GETPROPSTR(js,pipe,p,alpha_to_coverage_enabled,bool)
+  JS_GETPROPSTR(js,pipe,p,depth,depth)  
+  JS_GETPROPSTR(js,pipe,p,stencil,stencil)  
 
   sg_pipeline *g = malloc(sizeof(*g));
   *g = sg_make_pipeline(&p);
@@ -900,7 +939,7 @@ JSC_CCALL(render_setuniv4,
   HMM_Vec4 v = {0};
   if (JS_IsArray(js, argv[2])) {
     for (int i = 0; i < js_arrlen(js,argv[2]); i++)
-     v.e[i] = js2number(js,js_getpropertyuint32(js, argv[2], i));
+     v.e[i] = js_getnum_uint32(js, argv[2], i);
   } else
     v.x = js2number(js,argv[2]);
 
@@ -1258,7 +1297,7 @@ JSC_CCALL(vector_norm,
   JSValue newarr = JS_NewArray(js);
 
   for (int i = 0; i < len; i++)
-    JS_SetPropertyUint32(js, newarr, i, number2js(js,js2number(js,js_getpropertyuint32(js, argv[0],i))/length));
+    JS_SetPropertyUint32(js, newarr, i, number2js(js,js_getnum_uint32(js, argv[0],i)/length));
 
   return newarr;
 )
@@ -1361,7 +1400,7 @@ JSC_CCALL(vector_mean,
   double len =  js_arrlen(js,argv[0]);
   double sum;
   for (int i = 0; i < len; i++)
-    sum += js2number(js,js_getpropertyuint32(js, argv[0], i));
+    sum += js_getnum_uint32(js, argv[0], i);
     
   return number2js(js,sum/len);
 )
@@ -1370,7 +1409,7 @@ JSC_CCALL(vector_sum,
   double sum = 0.0;
   int len = js_arrlen(js,argv[0]);
   for (int i = 0; i < len; i++)
-    sum += js2number(js,js_getpropertyuint32(js, argv[0], i));
+    sum += js_getnum_uint32(js, argv[0], i);
   
   return number2js(js,sum);
 )
@@ -1379,14 +1418,14 @@ JSC_CCALL(vector_sigma,
   int len = js_arrlen(js,argv[0]);
   double sum;
   for (int i = 0; i < len; i++)
-    sum += js2number(js,js_getpropertyuint32(js, argv[0], i));
+    sum += js_getnum_uint32(js, argv[0], i);
   
   double mean = sum/(double)len;
   
   double sq_diff = 0;
 
   for (int i = 0; i < len; i++) {
-    double x = js2number(js,js_getpropertyuint32(js, argv[0],i));
+    double x = js_getnum_uint32(js, argv[0],i);
     sq_diff += pow(x-mean, 2);
   }
   
@@ -1401,7 +1440,7 @@ JSC_CCALL(vector_median,
   double temp;
   
   for (int i = 0; i < len; i++)
-    arr[i] = js2number(js,js_getpropertyuint32(js, argv[0], i));
+    arr[i] = js_getnum_uint32(js, argv[0], i);
     
   for (int i = 0; i < len-1; i++) {
     for (int j = i+1; j < len; j++) {
@@ -1455,7 +1494,7 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, dot,2),
   MIST_FUNC_DEF(vector, project,2),
   MIST_FUNC_DEF(vector, inflate, 2),
-  MIST_FUNC_DEF(vector, rotate, 2),
+  MIST_FUNC_DEF(vector, rotate, 3),
   MIST_FUNC_DEF(vector, add, 2),
   MIST_FUNC_DEF(vector, midpoint, 2),
   MIST_FUNC_DEF(vector, distance, 2),
@@ -1486,7 +1525,7 @@ JSC_CCALL(array_##OP, \
     double n = js2number(js,argv[0]); \
     JSValue arr = JS_NewArray(js); \
     for (int i = 0; i < len; i++) \
-      JS_SetPropertyUint32(js, arr, i, number2js(js,js2number(js,js_getpropertyuint32(js, self,i)) SIGN n)); \
+      JS_SetPropertyUint32(js, arr, i, number2js(js,js_getnum_uint32(js, self,i) SIGN n)); \
     return arr; \
   } \
   switch(len) { \
@@ -1500,8 +1539,8 @@ JSC_CCALL(array_##OP, \
   \
   JSValue arr = JS_NewArray(js); \
   for (int i = 0; i < len; i++) { \
-    double a = js2number(js,js_getpropertyuint32(js, self,i)); \
-    double b = js2number(js,js_getpropertyuint32(js, argv[0],i)); \
+    double a = js_getnum_uint32(js, self,i); \
+    double b = js_getnum_uint32(js, argv[0],i); \
     JS_SetPropertyUint32(js, arr, i, number2js(js,a SIGN b)); \
   } \
   return arr; \
@@ -1518,8 +1557,8 @@ JSC_CCALL(array_lerp,
   JSValue arr =  JS_NewArray(js);
   
   for (int i = 0; i < len; i++) {
-    double from = js2number(js,js_getpropertyuint32(js, self, i));
-    double to = js2number(js,js_getpropertyuint32(js, argv[0], i));
+    double from = js_getnum_uint32(js, self, i);
+    double to = js_getnum_uint32(js, argv[0], i);
     JS_SetPropertyUint32(js, arr, i, number2js(js,(to - from) * t + from));
   }
   return arr;
@@ -1622,7 +1661,6 @@ static const JSCFunctionListEntry js_input_funcs[] = {
 };
 
 JSC_CCALL(prosperon_guid,
-  int bits = 32;
   char guid[33];
   for (int i = 0; i < 4; i++) {
     int r = rand();
@@ -2177,7 +2215,6 @@ JSC_CCALL(performance_unpack_array,
 JSC_CCALL(performance_pack_num, return number2js(js,1.0))
 JSC_CCALL(performance_pack_string, return JS_NewStringLen(js, STRTEST, sizeof(*STRTEST)))
 JSC_CCALL(performance_unpack_string, JS_ToCString(js, argv[0]))
-JSC_CCALL(performance_unpack_32farr, jsfloat2vec(js,argv[0]))
 JSC_CCALL(performance_call_fn_n, 
   for (int i = 0; i < js2number(js,argv[1]); i++)
     script_call_sym(argv[0],0,NULL);
@@ -2191,7 +2228,6 @@ static const JSCFunctionListEntry js_performance_funcs[] = {
   MIST_FUNC_DEF(performance, pack_num, 0),
   MIST_FUNC_DEF(performance, pack_string, 0),
   MIST_FUNC_DEF(performance, unpack_string, 1),
-  MIST_FUNC_DEF(performance, unpack_32farr, 1),
   MIST_FUNC_DEF(performance, call_fn_n, 3)
 };
 
@@ -2654,7 +2690,7 @@ JSC_CCALL(os_make_buffer,
   int type = js2number(js,argv[1]);
   float *b = malloc(sizeof(float)*js_arrlen(js,argv[0]));
   for (int i = 0; i < js_arrlen(js,argv[0]); i++)
-    b[i] = js2number(js,js_getpropertyuint32(js, argv[0],i));
+    b[i] = js_getnum_uint32(js, argv[0],i);
     
   sg_buffer *p = malloc(sizeof(sg_buffer));
   

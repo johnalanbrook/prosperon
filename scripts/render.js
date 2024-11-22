@@ -823,7 +823,7 @@ function flush_poly() {
   render.use_shader(queued_shader, queued_pipe);
   var base = render.make_particle_ssbo(poly_cache.slice(0, poly_idx), poly_ssbo);
   render.use_mat({baseinstance:base});  
-  render.draw(shape.centered_quad, poly_ssbo, poly_idx);
+  render.draw(shape.quad, poly_ssbo, poly_idx);
   poly_idx = 0;
 }
 
