@@ -61,7 +61,7 @@ sim.stepping = function () {
   return this.mode === "step";
 };
 
-var frame_t = profile.secs(profile.now());
+var frame_t = profile.now();
 
 var physlag = 0;
 
@@ -79,7 +79,7 @@ prosperon.SIGSEGV = function()
 
 prosperon.init = function () {
   render.init();
-  imgui.init();
+//  imgui.init();
   tracy.gpu_init();
 
   globalThis.audio = use("sound.js");
@@ -114,6 +114,8 @@ prosperon.init = function () {
   };
   if (io.exists("game.js")) global.app = actor.spawn("game.js");
   else global.app = actor.spawn("nogame.js");
+
+  console.log(io.exists("game.js"))
 };
 
 prosperon.release_mode = function () {
@@ -319,6 +321,16 @@ game.texture = function texture(path) {
   if (typeof path !== 'string') throw new Error('need a string for game.texture')
   var parts = path.split(':');
   path = Resources.find_image(parts[0]);
+
+  if (game.texture.cache[path]) return game.texture.cache[path];
+  var newimg = {};
+  var data = io.slurpbytes(path);
+  newimg.surface = os.make_texture(data);
+  newimg.texture = render._main.load_texture(newimg.surface);
+  game.texture.cache[path] = newimg;
+  console.log(newimg.texture.width);
+  console.log(newimg.texture.height);
+  return newimg;
 
   // Look for a cached version
   var frame;

@@ -323,16 +323,6 @@ globalThis.use = function use(file) {
   return ret;
 };
 
-var allpaths = io.ls();
-allpaths = [...new Set(allpaths)]
-//console.log(`found ${allpaths.length} files`);
-//console.log(json.encode(allpaths))
-
-io.exists = function(path)
-{
-  return allpaths.includes(path);// || core_db.exists(path);
-}
-
 var tmpslurp = io.slurp;
 io.slurp = function slurp(path)
 {
@@ -349,42 +339,13 @@ io.slurpbytes = function(path)
   return ret;
 }
 
-var ignore = io.slurp('.prosperonignore')
-if (ignore) {
-  ignore = ignore.split('\n');
-  for (var ig of ignore) {
-    if (!ig) continue;
-    allpaths = allpaths.filter(x => !x.startsWith(ig));
-  }
-}
-
-//var coredata = tmpslurp("core.zip");
-//var core_db = miniz.read(coredata);
-
-io.globToRegex = function globToRegex(glob) {
-  // Escape special regex characters
-  // Replace glob characters with regex equivalents
-  let regexStr = glob
-    .replace(/[\.\\]/g, "\\$&") // Escape literal backslashes and dots
-    .replace(/([^\*])\*/g, "$1[^/]*") // * matches any number of characters except /
-    .replace(/\*\*/g, ".*") // ** matches any number of characters, including none
-    .replace(/\[(.*?)\]/g, "[$1]") // Character sets
-    .replace(/\?/g, "."); // ? matches any single character
-
-  // Ensure the regex matches the whole string
-  regexStr = "^" + regexStr + "$";
-
-  // Create and return the regex object
-  return new RegExp(regexStr);
-};
-
+var ignore = io.slurp('.prosperonignore').split('\n');
+var allpaths = io.globfs(ignore);
 var tmpglob = io.glob;
 io.glob = function glob(pat) {
-  return allpaths.filter(str => tmpglob(pat,str)).sort();
+//  var allpaths = io.globfs(ignore);
+  return allpaths.filter(str => game.glob(pat,str)).sort();
 }
-
-console.log(io.glob("sprites/*.png"))
-console.log(io.glob("**/render.js"))
 
 function splitPath(path) {
   return path.split('/').filter(part => part.length > 0);
@@ -441,25 +402,6 @@ function matchPath(pathParts, patternParts) {
   return patternIndex === patternParts.length;
 }
 
-function doglob(pattern) {
-  const patternParts = splitPattern(pattern);
-  const matches = [];
-  console.log("DOGLOB");
-
-  for (let i = 0; i < allpaths.length; i++) {
-    const path = allpaths[i];
-    const pathParts = splitPath(path);
-      console.log(`testing ${json.encode(pathParts)} to ${json.encode(patternParts)}`);
-    if (matchPath(pathParts, patternParts)) {
-
-      matches.push(path);
-    }
-  }
-
-  // Optional: Sort the matches if needed
-  return matches.sort();
-}
-
 function stripped_use(file, script) {
   file = Resources.find_script(file);
 
@@ -477,11 +419,15 @@ function stripped_use(file, script) {
 }
 
 function bare_use(file) {
+  try {
   var script = io.slurp(file);
   if (!script) return;
   var fnname = file.replace(/[^a-zA-Z0-9_$]/g, "_");  
   script = `(function ${fnname}() { var self = this; ${script}; })`;
   Object.assign(globalThis, os.eval(file, script)());
+  } catch(e) {
+    console.log(e);
+  }
 }
 
 profile.enabled = true;

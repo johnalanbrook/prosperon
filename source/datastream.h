@@ -5,16 +5,10 @@
 #include <stdint.h>
 #include <quickjs.h>
 
-#include "sokol/sokol_gfx.h"
-
 struct soundstream;
 
 struct datastream {
   plm_t *plm;
-  sg_image img;
-  sg_image y;
-  sg_image cr;
-  sg_image cb;
   int width;
   int height;
   int dirty;

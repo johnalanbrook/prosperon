@@ -1,15 +1,11 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include "sokol/sokol_gfx.h"
 #include "HandmadeMath.h"
 #include "render.h"
 #include <quickjs.h>
-
 #include "stb_rect_pack.h"
-
-#include "sokol_app.h"
-#include "sokol/util/sokol_imgui.h"
+#include <SDL3/SDL_render.h>
 
 #define TEX_SPEC 0
 #define TEX_NORM 1
@@ -24,7 +20,8 @@ extern struct rect ST_UNIT;
 
 /* Represents an actual texture on the GPU */
 struct texture {
-  sg_image id; /* ID reference for the GPU memory location of the texture */
+  SDL_Texture *id;
+  SDL_Surface *surface;
   int width;
   int height;
   HMM_Vec3 dimensions;
@@ -50,15 +47,6 @@ texture *texture_scale(texture *tex, int width, int height); // dup and scale th
 
 void texture_free(JSRuntime *rt,texture *tex);
 void texture_offload(texture *tex); // Remove the data from this texture
-void texture_load_gpu(texture *tex); // Upload this data to the GPU if it isn't already there. Replace it if it is.
-
-int texture_write_pixel(texture *tex, int x, int y, struct rgba color);
-int texture_fill(texture *tex, struct rgba color);
-int texture_fill_rect(texture *tex, struct rect rect, struct rgba color);
-int texture_blit(texture *dst, texture *src, struct rect dstrect, struct rect srcrect, int tile); // copies src into dst, using their respective squares, scaling if necessary
-int texture_flip(texture *tex, int y);
-
-sapp_icon_desc texture2icon(texture *tex);
 
 void texture_save(texture *tex, const char *file); // save the texture data to the given file
 

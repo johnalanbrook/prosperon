@@ -644,6 +644,7 @@ var polyssboshader;
 var sprite_ssbo;
 
 render.init = function () {
+  return;
   textshader = make_shader("text_base.cg");
   render.spriteshader = make_shader("sprite.cg");
   spritessboshader = make_shader("sprite_ssbo.cg");
@@ -828,24 +829,12 @@ function flush_poly() {
 }
 
 render.line = function render_line(points, color = Color.white, thickness = 1, shader = polyssboshader, pipe = base_pipeline) {
-  for (var i = 0; i < points.length - 1; i++) {
-    var a = points[i];
-    var b = points[i + 1];
-    var poly = poly_e();
-    var dist = vector.distance(a, b);
-    poly.transform.move(vector.midpoint(a, b));
-    poly.transform.rotate([0, 0, 1], vector.angle([b.x - a.x, b.y - a.y]));
-    poly.transform.scale = [dist, thickness, 1];
-    poly.color = color;
-  }
-  queued_shader = shader;
-  queued_pipe = pipe;
-  check_flush(flush_poly);
+  render._main.line(points, color);
 };
 
 /* All draw in screen space */
 render.point = function (pos, size, color = Color.blue) {
-  render.circle(pos, size, size, color);
+  render._main.point(pos,color);
 };
 
 render.cross = function render_cross(pos, size, color = Color.red, thickness = 1) {
@@ -872,15 +861,14 @@ render.coordinate = function render_coordinate(pos, size, color) {
 var queued_shader;
 var queued_pipe;
 render.rectangle = function render_rectangle(rect, color = Color.white, shader = polyssboshader, pipe = base_pipeline) {
-  var poly = poly_e();
-  poly.transform.rect(rect);
-  poly.color = color;
-  queued_shader = shader;
-  queued_pipe = pipe;
-  check_flush(flush_poly);
+  render._main.fillrect(rect,color);
 };
 
 render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
+  var pos = [rect.x,rect.y];
+  render._main.fasttext(str, pos, color);
+  return;
+  
   if (typeof font === 'string')
     font = render.get_font(font);
 
@@ -889,7 +877,7 @@ render.text = function text(str, rect, font = cur_font, size = 0, color = Color.
   pos.y -= font.descent;
   if (rect.anchor_y)
     pos.y -= rect.anchor_y*(font.ascent-font.descent);
-  gui.text(str, pos, size, color, wrap, font); // this puts text into buffer
+  os.make_text_buffer(str, pos, size, color, wrap, font); // this puts text into buffer
   cur_font = font;
   check_flush(render.flush_text);
 };
@@ -1018,7 +1006,8 @@ function calc_image_size(img)
   return [img.texture.width*img.rect.width, img.texture.height*img.rect.height];
 }
 
-render.image = function image(image, rect = [0,0], rotation = 0, color = Color.white) {
+render.tile = function tile(image, rect = [0,0], color = Color.white)
+{
   if (!image) throw Error ('Need an image to render.')
   if (typeof image === "string")
     image = game.texture(image);
@@ -1039,6 +1028,39 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
     flush_img();
     lasttex = tex;
   }
+
+  render._main.tile(image.texture, rect, image.rect, 1);
+  return;
+}
+
+render.image = function image(image, rect = [0,0], rotation = 0, color) {
+  if (!image) throw Error ('Need an image to render.')
+  if (typeof image === "string")
+    image = game.texture(image);
+
+  rect.__proto__ = image.texture;
+  render._main.texture(image.texture, rect, image.rect, color);
+  return;
+
+  var tex = image.texture;
+  if (!tex) return;
+
+  var image_size = calc_image_size(image); //image.size;
+  
+  var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
+
+  if (!lasttex) {
+    check_flush(flush_img);
+    lasttex = tex;
+  }
+
+  if (lasttex !== tex) {
+    flush_img();
+    lasttex = tex;
+  }
+
+  render._main.texture(image.texture, rect, image.rect);
+  return;
 
   var e = img_e();
   var pos = [rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y]));
@@ -1149,11 +1171,13 @@ render.get_font = function get_font(path,size)
     size = Number(parts[1]);
   }
   path = Resources.find_font(path);  
-  var fontstr = `${path}.${size}`;  
+  var fontstr = `${path}.${size}`;
+  console.log(`getting ${fontstr}`);
   if (fontcache[fontstr]) return fontcache[fontstr];
   
   var data = io.slurpbytes(path);
   fontcache[fontstr] = os.make_font(data,size);
+  fontcache[fontstr].texture = render._main.load_texture(fontcache[fontstr].surface);
   return fontcache[fontstr];
 }
 
@@ -1396,10 +1420,13 @@ var imgui_fn = function imgui_fn() {
   prosperon.window_render(basesize.scale(mult));
 */
 
+var clearcolor = [100,149,237,255].scale(1/255);
 prosperon.render = function prosperon_render() {
 try{
-  render.glue_pass();
-  render.set_view(prosperon.camera.transform);
+//  render.glue_pass();
+  render._main.draw_color(clearcolor);
+  render._main.clear();
+/*  render.set_view(prosperon.camera.transform);
   render.set_projection_ortho({
     l:-prosperon.camera.size.x/2,
     r:prosperon.camera.size.x/2,
@@ -1409,22 +1436,24 @@ try{
   render.viewport(prosperon.camera.view(), false);
   
   if (render.draw_sprites) render.sprites();
-  prosperon.draw();
-  if (render.draw_particles) draw_emitters();  
+
+  if (render.draw_particles) draw_emitters();
+*/
 //  render.fillmask(0);
-  render.forceflush();
-  render.set_projection_ortho({
+//  render.forceflush();
+/*  render.set_projection_ortho({
     l:0,
     r:prosperon.camera.size.x,
     b:-prosperon.camera.size.y,
     t:0
   },-1,1);
-  
-  render.set_view(unit_transform);
+*/  
+//  render.set_view(unit_transform);
+  prosperon.draw();
   if (render.draw_hud) prosperon.hud();
-  render.forceflush();
+//  render.forceflush();
 
-  render.set_projection_ortho({
+/*  render.set_projection_ortho({
     l:0,
     r:prosperon.size.x,
     b:-prosperon.size.y,
@@ -1436,9 +1465,10 @@ try{
     width:prosperon.size.x,
     l:0
   }, false);
-  prosperon.app();
-  render.forceflush();
-  if (debug.show) imgui_fn();
+*/
+//  prosperon.app();
+//  render.forceflush();
+//  if (debug.show) imgui_fn();
 } catch(e) {
   throw e;
 } finally {
@@ -1448,8 +1478,9 @@ try{
   var texdata = os.tex_data(tex)
   tracy.image(texdata, tex.width, tex.height);
 */
-  render.end_pass();
-  render.commit();
+//  render.end_pass();
+//  render.commit();
+  render._main.present();
   endframe();
   tracy.gpu_collect();
   tracy.end_frame();  
@@ -1482,10 +1513,8 @@ prosperon.process = function process() {
   layout.newframe();
   // check for hot reloading
   if (dmon) dmon.poll(dmon_cb);
-  var dt = profile.secs(profile.now()) - frame_t;
-  frame_t = profile.secs(profile.now());
-
-  var sst = profile.now();
+  var dt = profile.now() - frame_t;
+  frame_t = profile.now();
 
   prosperon.appupdate(dt);
   input.procdown();
@@ -1496,9 +1525,6 @@ prosperon.process = function process() {
     if (sim.mode === "step") sim.pause();
   }
 
-  profile.pushdata(profile.data.cpu.scripts, profile.now() - sst);
-  sst = profile.now();
-
   if (sim.mode === "play" || sim.mode === "step") {
 /* 
     physlag += dt;
@@ -1508,14 +1534,10 @@ prosperon.process = function process() {
       prosperon.phys2d_step(physics.delta * game.timescale);
       prosperon.physupdate(physics.delta * game.timescale);
     }
-  
-    profile.pushdata(profile.data.cpu.physics, profile.now() - sst);
-    sst = profile.now();
   */  
   }
 
   tracy.gpu_zone(prosperon.render);
-//  prosperon.render();
 };
 
 return { render };

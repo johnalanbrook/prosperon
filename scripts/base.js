@@ -838,6 +838,7 @@ function make_swizz() {
 
   function arrsetelem(str, n) {
     Object.defineProperty(Array.prototype, str, setelem(n));
+//    Object.defineProperty(Float32Array.prototype, setelem(n));
   }
 
   var arr_elems = ["x", "y", "z", "w"];

@@ -3,9 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "render.h"
-
-#include <sokol_app.h>
-#include <sokol/sokol_gfx.h>
+#include <SDL3/SDL.h>
 
 static JSValue js_tracy_fiber_enter(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
@@ -474,7 +472,11 @@ static JSValue js_tracy_gpu_collect(JSContext *js, JSValue self, int argc, JSVal
 
 static JSValue js_tracy_image(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
-  return JS_UNDEFINED;
+/*  SDL_Surface *img = js2SDL_Surface(js,argv[0]);
+  SDL_Surface *scaled = SDL_ScaleSurface(img, 320,180,SDL_SCALEMODE_LINEAR);
+  ___tracy_emit_frame_image(scaled->pixels, scaled->w,scaled->h, 0,0);
+  SDL_DestroySurface(scaled);
+  return JS_UNDEFINED;*/
 }
 
 #endif

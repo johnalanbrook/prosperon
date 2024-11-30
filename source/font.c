@@ -16,19 +16,8 @@
 
 struct sFont *use_font;
 
-struct text_vert {
-  HMM_Vec2 pos;
-  HMM_Vec2 wh;
-  HMM_Vec2 uv;
-  HMM_Vec2 st;
-  HMM_Vec4 color;
-};
-
-static struct text_vert *text_buffer;
-
 void font_free(JSRuntime *rt, font *f)
 {
-  sg_destroy_image(f->texID);
   free(f);
 }
 
@@ -61,7 +50,7 @@ struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
   if (!ttf_buffer)
     return NULL;
     
-  int packsize = 2048;
+  int packsize = 1024;
 
   struct sFont *newfont = calloc(1, sizeof(struct sFont));
   newfont->height = height;
@@ -90,21 +79,14 @@ struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
   newfont->ascent = ascent*emscale;
   newfont->descent = descent*emscale;
   newfont->linegap = linegap*emscale;
-  newfont->texture = malloc(sizeof(texture));
-  newfont->texture->id = sg_make_image(&(sg_image_desc){
-    .type = SG_IMAGETYPE_2D,
-    .width = packsize,
-    .height = packsize,
-    .pixel_format = SG_PIXELFORMAT_R8,
-    .usage = SG_USAGE_IMMUTABLE,
-    .data.subimage[0][0] = {
-      .ptr = bitmap,
-      .size = packsize * packsize
-    }
-  });
+  newfont->surface = SDL_CreateSurface(packsize,packsize, SDL_PIXELFORMAT_RGBA32);
+  if (!newfont->surface) printf("SDL ERROR: %s\n", SDL_GetError());  
+  for (int i = 0; i < packsize; i++)
+    for (int j = 0; j < packsize; j++)
+      if (!SDL_WriteSurfacePixel(newfont->surface, j, i, 255,255,255,bitmap[i*packsize+j]))
+        printf("SDLERROR: %s\n", SDL_GetError());
   
-  newfont->texture->width = packsize;
-  newfont->texture->height = packsize;
+  printf("FONT SURFACE IS %p\n", newfont->surface);
 
   for (unsigned char c = 32; c < 127; c++) {
     stbtt_packedchar glyph = glyphs[c - 32];
@@ -131,8 +113,8 @@ struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
   return newfont;
 }
 
-int text_flush(sg_buffer *buf) {
-  if (arrlen(text_buffer) ==  0) return 0;
+int text_flush() {
+/*  if (arrlen(text_buffer) ==  0) return 0;
 
   sg_range verts;
   verts.ptr = text_buffer;
@@ -151,24 +133,52 @@ int text_flush(sg_buffer *buf) {
   int n = arrlen(text_buffer);
   arrsetlen(text_buffer, 0);
   return n;
+*/
 }
 
-void sdrawCharacter(struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+void sdrawCharacter(struct text_vert **buffer, struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
   struct text_vert vert;
 
   vert.pos.x = cursor.X + c.leftbearing;
   vert.pos.y = cursor.Y + c.topbearing;
-  vert.wh = c.size;
+//  vert.wh = c.size;
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;
 
   vert.uv.x = c.rect.x;
   vert.uv.y = c.rect.y;
-  vert.st.x = c.rect.w;
-  vert.st.y = c.rect.h;
+//  vert.st.x = c.rect.w;
+//  vert.st.y = c.rect.h;
   rgba2floats(vert.color.e, color);
 
-  arrput(text_buffer, vert);
+  arrput(*buffer, vert);
+}
+
+void draw_char_verts(struct text_vert **buffer, struct Character c, HMM_Vec2 cursor, float scale, struct rgba color)
+{
+  // Adds four verts: bottom left, bottom right, top left, top right
+  text_vert bl;
+  bl.pos.x = cursor.X + c.leftbearing;
+  bl.pos.y = cursor.Y + c.topbearing;
+  bl.uv.x = c.rect.x;
+  bl.uv.y = c.rect.y+c.rect.h;
+  rgba2floats(bl.color.e, color);
+  arrput(*buffer, bl);
+
+  text_vert br = bl;
+  br.pos.x += c.size.x;
+  br.uv.x += c.rect.w;
+  arrput(*buffer, br);
+  
+  text_vert ul = bl;
+  ul.pos.y -= c.size.y;
+  ul.uv.y = c.rect.y;
+  arrput(*buffer, ul);
+
+  text_vert ur = ul;
+  ur.pos.x += c.size.x;
+  ur.uv.x += c.rect.w;
+  arrput(*buffer, ur);
 }
 
 const char *esc_color(const char *c, struct rgba *color, struct rgba defc)
@@ -229,7 +239,8 @@ HMM_Vec2 measure_text(const char *text, font *f, float size, float letterSpacing
 }
 
 /* pos given in screen coordinates */
-void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap) {
+struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap) {
+  text_vert *buffer = NULL;
   int len = strlen(text);
 
   HMM_Vec2 cursor = pos;
@@ -243,11 +254,11 @@ void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgb
       continue;
     }
 
-    sdrawCharacter(f->Characters[*c], cursor, scale, color);
+    draw_char_verts(&buffer, f->Characters[*c], cursor, scale, color);
     cursor.x += f->Characters[*c].Advance;
   }
-  return;
-
+  return buffer;
+/*
   const char *line, *wordstart, *drawstart;
   line = drawstart = text;
 
@@ -291,5 +302,5 @@ void renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgb
         wordstart++;
       }
     }
-  }
+  }*/
 }

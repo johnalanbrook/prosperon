@@ -74,8 +74,6 @@ clay.draw = function draw(size, fn)
     box.marginbox.y -= margin.t;
     box.marginbox.width += margin.l+margin.r;
     box.marginbox.height += margin.t+margin.b;
-    box.content.y *= -1;
-    box.boundingbox.y *= -1
     box.content.anchor_y = 1;
     box.boundingbox.anchor_y = 1;
   }
@@ -181,7 +179,7 @@ clay.image = function image(path, ...configs)
 {
   var config = rectify_configs(configs);
   var image = game.texture(path);
-  config.image = path;  
+  config.image = image;  
   config.size ??= [image.texture.width, image.texture.height];
   add_item(config);
 }
@@ -223,9 +221,13 @@ layout.draw_commands = function draw_commands(cmds, pos = [0,0], mousepos)
 {
   for (var cmd of cmds) {
     var boundingbox = geometry.rect_move(cmd.boundingbox,pos);
+//    boundingbox.x -= boundingbox.width*pos.anchor_x;
+//    boundingbox.y += boundingbox.height*pos.anchor_y;
     var content = geometry.rect_move(cmd.content,pos);
+//    content.x -= content.width*pos.anchor_x;
+//    content.y += content.height*pos.anchor_y;
     var config = cmd.config;
-    
+
     if (config.hovered && geometry.rect_point_inside(boundingbox, mousepos)) {
       config.hovered.__proto__ = config;
       config = config.hovered;
@@ -256,8 +258,14 @@ layout.draw_debug = function draw_debug(cmds, pos = [0,0])
 {
   for (var i = 0; i < cmds.length; i++) {
     var cmd = cmds[i];
-    render.rectangle(geometry.rect_move(cmd.content,pos), dbg_colors.content);
-    render.rectangle(geometry.rect_move(cmd.boundingbox,pos), dbg_colors.boundingbox);
+    var boundingbox = geometry.rect_move(cmd.boundingbox,pos);
+//    boundingbox.x -= boundingbox.width*pos.anchor_x;
+//    boundingbox.y += boundingbox.height*pos.anchor_y;
+    var content = geometry.rect_move(cmd.content,pos);
+//    content.x -= content.width*pos.anchor_x;
+//    content.y += content.height*pos.anchor_y;
+    render.rectangle(content, dbg_colors.content);
+    render.rectangle(boundingbox, dbg_colors.boundingbox);
 //    render.rectangle(geometry.rect_move(cmd.marginbox,pos), dbg_colors.margin);
   }
 }

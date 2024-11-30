@@ -5,6 +5,7 @@ ar = 'x86_64-w64-mingw32-ar'
 windres = 'x86_64-w64-mingw32-windres'
 strip = 'x86_64-w64-mingw32-strip'
 exe_wrapper = 'wine'
+pkgconfig = 'x86_64-w64-mingw32-pkg-config'
 
 [host_machine]
 system = 'windows'
@@ -15,3 +16,4 @@ endian = 'little'
 [properties]
 link_args = ['-static']
 needs_exe_wrapper = false
+pkg_config_libdir = '/usr/local/lib64/pkgconfig'

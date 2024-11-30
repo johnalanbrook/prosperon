@@ -301,8 +301,15 @@ Cmdline.register_order(
 
     if (io.exists("config.js")) global.mixin("config.js");
     else console.warn("No config.js file found. Starting with default parameters.");
-    
-    game.engine_start(prosperon);
+    var window = game.engine_start(prosperon);
+   console.log(game.renderers());    
+   console.log(game.cameras());
+   var renderer = window.make_renderer("gpu");
+   render._main = renderer;
+
+   prosperon.init();
+
+   while(1) prosperon.process();
   },
   "Play the game present in this folder.",
 );

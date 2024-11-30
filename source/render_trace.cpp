@@ -1,5 +1,4 @@
 #include "glad.h"
-#include "sokol/sokol_gfx.h"
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyOpenGL.hpp>
 

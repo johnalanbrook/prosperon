@@ -10,8 +10,6 @@
 #include "spline.h"
 #include "yugine.h"
 #include <assert.h>
-#include <sokol/sokol_time.h>
-#include <sokol/sokol_app.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -23,14 +21,59 @@
 #include "HandmadeMath.h"
 #include "par/par_streamlines.h"
 #include "par/par_shapes.h"
-#include "sokol_glue.h"
-#include "sokol_gfx.h"
-#include "sokol_log.h"
 #include <stdint.h>
 #include "timer.h"
 #include <signal.h>
-#include "tinydir.h"
-#include "cute_aseprite.h" 
+#include "cute_aseprite.h"
+
+#include "physfs.h"
+
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_gpu.h>
+#include <SDL3/SDL_error.h>
+
+#include <cblas.h>
+
+static JSAtom width_atom;
+static JSAtom height_atom;
+static JSAtom x_atom;
+static JSAtom y_atom;
+static JSAtom anchor_x_atom;
+static JSAtom anchor_y_atom;
+static JSAtom pos_atom;
+static JSAtom uv_atom;
+static JSAtom color_atom;
+static JSAtom indices_atom;
+static JSAtom vertices_atom;
+static JSAtom dst_atom;
+static JSAtom src_atom;
+static JSAtom count_atom;
+
+static inline size_t typed_array_bytes(JSTypedArrayEnum type) {
+    switch(type) {
+        case JS_TYPED_ARRAY_UINT8C:
+        case JS_TYPED_ARRAY_INT8:
+        case JS_TYPED_ARRAY_UINT8:
+            return 1;
+
+        case JS_TYPED_ARRAY_INT16:
+        case JS_TYPED_ARRAY_UINT16:
+            return 2;
+
+        case JS_TYPED_ARRAY_INT32:
+        case JS_TYPED_ARRAY_UINT32:
+        case JS_TYPED_ARRAY_FLOAT32:
+            return 4;
+
+        case JS_TYPED_ARRAY_BIG_INT64:
+        case JS_TYPED_ARRAY_BIG_UINT64:
+        case JS_TYPED_ARRAY_FLOAT64:
+            return 8;
+
+        default:
+            return 0; // Return 0 for unknown types
+    }
+}
 
 #define JS_GETNUM(JS,VAL,I,TO,TYPE) { \
 JSValue val = JS_GetPropertyUint32(JS,VAL,I); \
@@ -60,9 +103,20 @@ double js_getnum_uint32(JSContext *js, JSValue v, unsigned int i)
   return ret;
 }
 
+static HMM_Vec2 campos = (HMM_Vec2){0,0};
+static HMM_Vec2 logical = {0};
+
 double js_getnum_str(JSContext *js, JSValue v, const char *str)
 {
   JSValue val = JS_GetPropertyStr(js,v,str);
+  double ret = js2number(js,val);
+  JS_FreeValue(js,val);
+  return ret;
+}
+
+double js_getnum(JSContext *js, JSValue v, JSAtom prop)
+{
+  JSValue val = JS_GetProperty(js,v,prop);
   double ret = js2number(js,val);
   JS_FreeValue(js,val);
   return ret;
@@ -73,11 +127,53 @@ JSValue __v = JS_GetPropertyStr(JS,VALUE,#STR); \
 TARGET.STR = js2##TYPE(JS, __v); \
 JS_FreeValue(JS,__v); }\
 
+#define JS_GETPROP(JS, VALUE, TARGET, PROP, TYPE) {\
+JSValue __v = JS_GetProperty(JS,VALUE,PROP); \
+TARGET.STR = js2##TYPE(JS, __v); \
+JS_FreeValue(JS,__v); }\
+
 JSValue js_getpropertystr(JSContext *js, JSValue v, const char *str)
 {
   JSValue ret = JS_GetPropertyStr(js, v, str);
   JS_FreeValue(js,ret);
   return ret;
+}
+
+JSValue js_getproperty(JSContext *js, JSValue v, JSAtom atom)
+{
+  JSValue ret = JS_GetProperty(js, v, atom);
+  JS_FreeValue(js,ret);
+  return ret;
+}
+
+void free_gpu_buffer(JSRuntime *rt, void *opaque, void *ptr)
+{
+  free(ptr);
+}
+
+JSValue make_gpu_buffer(JSContext *js, void *data, size_t size, int type, int elements, int copy)
+{
+  JSValue tstack[3];
+  tstack[1] = JS_UNDEFINED;
+  tstack[2] = JS_UNDEFINED;
+  if (copy)
+    tstack[0] = JS_NewArrayBufferCopy(js,data,size);//, make_gpu_buffer, NULL, 1);
+  else
+    tstack[0] = JS_NewArrayBuffer(js,data,size,free_gpu_buffer, NULL, 0);
+  JSValue ret =  JS_NewTypedArray(js, 3, tstack, type);
+  JS_SetPropertyStr(js,ret,"stride", number2js(js,typed_array_bytes(type)*elements));
+  JS_FreeValue(js,tstack[0]);
+  return ret;
+}
+
+void *get_gpu_buffer(JSContext *js, JSValue argv, size_t *stride)
+{
+  size_t o, len, bytes, size;
+  JSValue buf = JS_GetTypedArrayBuffer(js, argv, &o, &len, &bytes);
+  void *data = JS_GetArrayBuffer(js, &size, buf);
+  JS_FreeValue(js,buf); 
+  *stride = js_getnum_str(js, argv, "stride");
+  return data;
 }
 
 static inline JSValue bool2js(JSContext *js, int b) { return JS_NewBool(js,b); }
@@ -121,109 +217,11 @@ JSValue vec22js(JSContext *js,HMM_Vec2 v)
   return array;
 }
 
-const char *sapp_str[] = {
-  "invalid",
-  "key_down",
-  "key_up",
-  "char",
-  "mouse_down",
-  "mouse_up",
-  "mouse_scroll",
-  "mouse_move",
-  "mouse_enter",
-  "mouse_leave",
-  "touches_began",
-  "touches_moved",
-  "touches_ended",
-  "touches_cancelled",
-  "resized",
-  "iconified",
-  "restored",
-  "focused",
-  "unfocused",
-  "suspended",
-  "resumed",
-  "quit_requested",
-  "clipboard_pasted",
-  "files_dropped"
-};
-JSValue sapp_event2js(JSContext *js, sapp_event *e)
-{
-  JSValue event = JS_NewObject(js);
-  JS_SetPropertyStr(js, event, "frame_count", JS_NewInt64(js, e->frame_count));
-  JS_SetPropertyStr(js, event, "type", JS_NewString(js, sapp_str[e->type]));
-  JS_SetPropertyStr(js,event,"mouse", vec22js(js, (HMM_Vec2){e->mouse_x,e->mouse_y}));
-  JS_SetPropertyStr(js,event,"mouse_d", vec22js(js, (HMM_Vec2){e->mouse_dx,e->mouse_dy}));
-  JS_SetPropertyStr(js,event, "window_size", vec22js(js, (HMM_Vec2){e->window_width,e->window_height}));
-  JS_SetPropertyStr(js,event, "framebuffer", vec22js(js,(HMM_Vec2){e->framebuffer_width,e->framebuffer_height}));
-  JSValue files = JS_UNDEFINED;
-
-  switch(e->type) {
-    case SAPP_EVENTTYPE_MOUSE_SCROLL:
-      JS_SetPropertyStr(js, event, "scroll", vec22js(js, (HMM_Vec2){e->scroll_x,e->scroll_y}));
-      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
-      break;
-    case SAPP_EVENTTYPE_KEY_UP:
-    case SAPP_EVENTTYPE_KEY_DOWN:
-      JS_SetPropertyStr(js, event, "key_code", JS_NewInt64(js, e->key_code));
-      JS_SetPropertyStr(js, event, "char_code", JS_NewUint32(js, e->char_code));
-      JS_SetPropertyStr(js, event, "key_repeat", JS_NewBool(js, e->key_repeat));
-      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
-      break;
-    case SAPP_EVENTTYPE_CHAR:
-      JS_SetPropertyStr(js, event, "char_code", JS_NewUint32(js, e->char_code));
-      JS_SetPropertyStr(js, event, "key_repeat", JS_NewBool(js, e->key_repeat));
-      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));            
-      break;
-    case SAPP_EVENTTYPE_TOUCHES_BEGAN:
-    case SAPP_EVENTTYPE_TOUCHES_MOVED:
-    case SAPP_EVENTTYPE_TOUCHES_ENDED:
-      JS_SetPropertyStr(js, event, "num_touches", JS_NewUint32(js, e->num_touches));
-      JSValue touches = JS_NewObject(js);
-      for (int i = 0; i < e->num_touches; i++) {
-        JSValue touch = JS_NewObject(js);
-        JS_SetPropertyStr(js, touch,"id", JS_NewInt64(js,e->touches[i].identifier));
-        JS_SetPropertyStr(js, touch, "pos", vec22js(js, (HMM_Vec2){e->touches[i].pos_x, e->touches[i].pos_y}));
-        JS_SetPropertyStr(js,touch,"changed", JS_NewBool(js,e->touches[i].changed));
-        JS_SetPropertyUint32(js,touches,i, touch);
-      }
-      JS_SetPropertyStr(js,event,"touches",touches);
-      break;
-    case SAPP_EVENTTYPE_MOUSE_UP:
-    case SAPP_EVENTTYPE_MOUSE_DOWN:
-      JS_SetPropertyStr(js, event, "mouse_button", JS_NewUint32(js, e->mouse_button));
-      JS_SetPropertyStr(js, event, "modifiers", JS_NewBool(js, e->modifiers));                  
-      break;
-    case SAPP_EVENTTYPE_FILES_DROPPED:
-      files = JS_NewObject(js);
-      for (int i = 0; i < sapp_get_num_dropped_files(); i++)
-        JS_SetPropertyUint32(js,files,i,JS_NewString(js,sapp_get_dropped_file_path(0)));
-      JS_SetPropertyStr(js,event,"files",files);
-      break;
-    case SAPP_EVENTTYPE_CLIPBOARD_PASTED:
-      JS_SetPropertyStr(js,event,"clipboard",JS_NewString(js,sapp_get_clipboard_string()));
-      break;
-  }
-  return event;
-}
-
 char *js2strdup(JSContext *js, JSValue v) {
   const char *str = JS_ToCString(js, v);
   char *ret = strdup(str);
   JS_FreeCString(js, str);
   return ret;
-}
-
-void sg_buffer_free(JSRuntime *rt,sg_buffer *b)
-{
-  sg_destroy_buffer(*b);
-  free(b);
-}
-
-void sg_pipeline_free(JSRuntime *rt,sg_pipeline *p)
-{
-  sg_destroy_pipeline(*p);
-  free(p);
 }
 
 void skin_free(JSRuntime *rt,skin *sk) {
@@ -233,16 +231,39 @@ void skin_free(JSRuntime *rt,skin *sk) {
 
 #include "qjs_macros.h"
 
+void SDL_Window_free(JSRuntime *rt, SDL_Window *w)
+{
+  SDL_DestroyWindow(w);
+}
+
+void SDL_Renderer_free(JSRuntime *rt, SDL_Renderer *r)
+{
+  SDL_DestroyRenderer(r);
+}
+
+void SDL_Texture_free(JSRuntime *rt, SDL_Texture *t){
+  TracyCFreeN(t, "vram");
+  SDL_DestroyTexture(t);
+}
+void SDL_Surface_free(JSRuntime *rt, SDL_Surface *s) {
+  if (s->flags & SDL_SURFACE_PREALLOCATED)
+    free(s->pixels);
+  TracyCFreeN(s,"texture memory");
+  SDL_DestroySurface(s);
+}
+
 QJSCLASS(transform)
 QJSCLASS(texture)
 QJSCLASS(font)
 //QJSCLASS(warp_gravity)
 //QJSCLASS(warp_damp)
-QJSCLASS(sg_buffer)
-QJSCLASS(sg_pipeline)
 QJSCLASS(datastream)
 QJSCLASS(timer)
 QJSCLASS(skin)
+QJSCLASS(SDL_Window)
+QJSCLASS(SDL_Renderer)
+QJSCLASS(SDL_Texture, TracyCAllocN(n, n->w*n->h*4, "vram");)
+QJSCLASS(SDL_Surface, TracyCAllocN(n, n->pitch*n->h, "texture memory");)
 
 static inline HMM_Mat4 js2transform_mat(JSContext *js, JSValue v)
 {
@@ -263,6 +284,30 @@ int js_arrlen(JSContext *js,JSValue v) {
   int len;
   len = js_getnum_str(js,v,"length");
   return len;
+}
+
+void *get_typed_buffer(JSContext *js, JSValue argv, size_t *len)
+{
+  size_t o,bytes,size;
+  JSValue buf = JS_GetTypedArrayBuffer(js,argv,&o,len,&bytes);
+  void *data = JS_GetArrayBuffer(js,&size,buf);
+  JS_FreeValue(js,buf);
+  return data;
+}
+
+float *js2floatarray(JSContext *js, JSValue v) {
+  JSClassID class = JS_GetClassID(v);
+  if (class == JS_CLASS_FLOAT32_ARRAY) {
+    printf("FAST PATH\n");
+    size_t len;
+    return get_typed_buffer(js,v, &len);
+  }
+//  switch(p->class_id){}
+  int len = js_arrlen(js,v);
+  float *array = malloc(sizeof(float)*len);
+  for (int i = 0; i < len; i++)
+    array[i] = js_getnum_uint32(js,v,i);
+  return array;
 }
 
 JSValue angle2js(JSContext *js,double g) {
@@ -315,6 +360,24 @@ HMM_Vec3 js2vec3(JSContext *js,JSValue v)
   v3.y = js_getnum_uint32(js, v,1);
   v3.z = js_getnum_uint32(js, v,2);
   return v3;
+}
+
+float *js2floats(JSContext *js, JSValue v, size_t *len)
+{
+  *len = js_arrlen(js,v);
+  float *arr = malloc(sizeof(float)* *len);
+  for (int i = 0; i < *len; i++)
+    arr[i] = js_getnum_uint32(js,v,i);
+  return arr;
+}
+
+double *js2doubles(JSContext *js, JSValue v, size_t *len)
+{
+  *len = js_arrlen(js,v);
+  double *arr = malloc(sizeof(double)* *len);
+  for (int i = 0; i < *len; i++)
+    arr[i] = js_getnum_uint32(js,v,i);
+  return arr;
 }
 
 HMM_Vec3 js2vec3f(JSContext *js, JSValue v)
@@ -431,14 +494,20 @@ int js_print_exception(JSContext *js, JSValue v)
   return 0;
 }
 
-struct rect js2rect(JSContext *js,JSValue v) {
-  struct rect rect;
-  JS_GETPROPSTR(js,v,rect,x,number)
-  JS_GETPROPSTR(js,v,rect,y,number)
-  rect.w = js_getnum_str(js,v,"width");
-  rect.h = js_getnum_str(js,v,"height");
-  float anchor_x = js_getnum_str(js,v, "anchor_x");
-  float anchor_y = js_getnum_str(js,v, "anchor_y");
+typedef SDL_FRect rect;
+
+rect js2rect(JSContext *js,JSValue v) {
+  rect rect;
+  rect.w = js_getnum(js,v,width_atom);
+  rect.h = js_getnum(js,v,height_atom);
+  JSValue xv = JS_GetProperty(js,v,x_atom);
+  rect.x = js2number(js,xv);
+  JS_FreeValue(js,xv);
+  JSValue yv = JS_GetProperty(js,v,y_atom);
+  rect.y = js2number(js,yv);
+  JS_FreeValue(js,yv);
+  float anchor_x = js_getnum(js,v, anchor_x_atom);
+  float anchor_y = js_getnum(js,v, anchor_y_atom);
   
   rect.y -= anchor_y*rect.h;
   rect.x -= anchor_x*rect.w;
@@ -446,12 +515,12 @@ struct rect js2rect(JSContext *js,JSValue v) {
   return rect;
 }
 
-JSValue rect2js(JSContext *js,struct rect rect) {
+JSValue rect2js(JSContext *js,rect rect) {
   JSValue obj = JS_NewObject(js);
-  JS_SetPropertyStr(js, obj, "x", number2js(js,rect.x));
-  JS_SetPropertyStr(js, obj, "y", number2js(js,rect.y));
-  JS_SetPropertyStr(js, obj, "width", number2js(js,rect.w));
-  JS_SetPropertyStr(js, obj, "height", number2js(js,rect.h));
+  JS_SetProperty(js, obj, x_atom, number2js(js,rect.x));
+  JS_SetProperty(js, obj, y_atom, number2js(js,rect.y));
+  JS_SetProperty(js, obj, width_atom, number2js(js,rect.w));
+  JS_SetProperty(js, obj, height_atom, number2js(js,rect.h));
   return obj;
 }
 
@@ -555,99 +624,6 @@ static const JSCFunctionListEntry js_warp_damp_funcs [] = {
   CGETSET_ADD(warp_damp, damp)
 };
 */
-sg_bindings js2bind(JSContext *js,JSValue v)
-{
-  sg_bindings bind = {0};
-  JSValue attrib = JS_GetPropertyStr(js,v, "attrib");
-  int len = js_arrlen(js,attrib);
-
-  for (int i = 0; i < len; i++) {
-    JSValue v = JS_GetPropertyUint32(js,attrib,i);
-    bind.vertex_buffers[i] = *js2sg_buffer(js, v);
-    JS_FreeValue(js,v);
-  }
-  JS_FreeValue(js,attrib);
-    
-  JSValue index = JS_GetPropertyStr(js,v, "index");
-  if (!JS_IsUndefined(index)) {
-    bind.index_buffer = *js2sg_buffer(js, index);
-    JS_FreeValue(js,index);
-  }
-  
-  JSValue imgs = JS_GetPropertyStr(js,v, "images");
-  JSValue samplers = JS_GetPropertyStr(js,v, "samplers");
-  len = js_arrlen(js,imgs);
-  for (int i = 0; i < len; i++) {
-    JSValue img  =JS_GetPropertyUint32(js,imgs,i);
-    bind.fs.images[i] = js2texture(js, img)->id;
-    JS_FreeValue(js,img);
-    JSValue sampler = JS_GetPropertyUint32(js,samplers,i);
-    int use_std = JS_ToBool(js,sampler);
-    JS_FreeValue(js,sampler);
-    bind.fs.samplers[i] = use_std ? std_sampler : tex_sampler;
-  }
-  JS_FreeValue(js,imgs);
-  JS_FreeValue(js,samplers);
-  
-  JSValue ssbo = JS_GetPropertyStr(js,v, "ssbo");
-  len = js_arrlen(js,ssbo);
-  for (int i = 0; i < len; i++) {
-    JSValue v = JS_GetPropertyUint32(js,ssbo,i);
-    bind.vs.storage_buffers[i] = *js2sg_buffer(js, v);
-    JS_FreeValue(js,v);
-  }
-  JS_FreeValue(js,ssbo);
-
-  return bind;
-}
-
-JSC_CCALL(render_flushtext,
-  sg_buffer *buf = js2sg_buffer(js, argv[0]);
-  int amt = text_flush(buf);
-  return number2js(js,amt);
-)
-
-JSC_CCALL(render_make_textssbo,
-  sg_buffer *b = malloc(sizeof(*b));
-  *b = sg_make_buffer(&(sg_buffer_desc){
-    .type = SG_BUFFERTYPE_STORAGEBUFFER,
-    .size = 4,
-    .usage = SG_USAGE_STREAM
-  });
-  return sg_buffer2js(js, b);
-)
-
-JSC_CCALL(render_pass,
-  
-)
-
-JSC_CCALL(render_glue_pass,
-  sg_begin_pass(&(sg_pass){
-    .swapchain = sglue_swapchain(),
-    .action = (sg_pass_action){
-      .colors[0] = {
-        .load_action = SG_LOADACTION_CLEAR,
-        .clear_value = (sg_color){0,0,0,1}
-      },
-      .stencil = { .clear_value = 1
-      }
-    }
-  });
-)
-
-// Set the portion of the window to be rendered to
-JSC_CCALL(render_viewport,
-  rect view = js2rect(js,argv[0]);
-  sg_apply_viewportf(view.x, view.y,view.w,view.h, JS_ToBool(js,argv[1]));
-)
-  
-JSC_CCALL(render_commit,
-  sg_commit();
-#ifdef TRACY_ENABLE  
-  render_dump_trace();
-#endif
-)
-JSC_CCALL(render_end_pass, sg_end_pass())
 
 HMM_Mat4 transform2view(transform *t)
 {
@@ -656,13 +632,6 @@ HMM_Mat4 transform2view(transform *t)
   ret = HMM_MulM4(ret, HMM_Scale(t->scale));
   return ret;
 }
-
-JSC_CCALL(render_camera_screen2world,
-  HMM_Mat4 view = transform2view(js2transform(js, js_getpropertystr(js,argv[0], "transform")));
-  view = HMM_InvGeneralM4(view);
-  HMM_Vec4 p = js2vec4(js, argv[1]);
-  return vec42js(js, HMM_MulM4V4(view, p));
-)
 
 JSC_CCALL(render_set_projection_ortho,
   lrtb extents = js2lrtb(js, argv[0]);
@@ -693,415 +662,6 @@ JSC_CCALL(render_set_view,
   globalview.vp = HMM_MulM4(globalview.p, globalview.v);
 )
 
-sg_shader_uniform_block_desc js2uniform_block(JSContext *js,JSValue v)
-{
-  sg_shader_uniform_block_desc desc = {0};
-//    int slot = js2number(js,js_getpropertystr(js,v, "slot"));
-  JS_GETPROPSTR(js,v,desc,size,number)
-  desc.layout = SG_UNIFORMLAYOUT_STD140;
-
-  JSValue uniforms = js_getpropertystr(js,v, "uniforms");
-  for (int j = 0; j < js_arrlen(js,uniforms); j++) {
-    JSValue uniform = JS_GetPropertyUint32(js, uniforms, j);
-    desc.uniforms[j].name = js2strdup(js, js_getpropertystr(js,v, "struct_name"));
-    JS_GETPROPSTR(js,uniform,desc.uniforms[j],array_count,number)
-    desc.uniforms[j].type = SG_UNIFORMTYPE_FLOAT4;
-    JS_FreeValue(js,uniform);
-  }
-
-  return desc;
-}
-
-sg_shader js2shader(JSContext *js,JSValue v)
-{
-  sg_shader_desc desc = {0};
-  JSValue prog = v;
-  desc.label = js2strdup(js, js_getpropertystr(js,v, "name"));
-  JSValue vs = js_getpropertystr(js,prog, "vs");
-  JSValue fs = js_getpropertystr(js,prog, "fs");
-  const char *vsf = JS_ToCString(js, js_getpropertystr(js,vs, "code"));
-  const char *fsf = JS_ToCString(js, js_getpropertystr(js,fs, "code"));
-  desc.vs.source = vsf;
-  desc.fs.source = fsf;
-  const char *vsmain = JS_ToCString(js, js_getpropertystr(js,vs, "entry_point"));
-  const char *fsmain = JS_ToCString(js, js_getpropertystr(js,fs, "entry_point"));
-  desc.vs.entry = vsmain;
-  desc.fs.entry = fsmain;
-  desc.vs.d3d11_target = "vs_4_0";
-  desc.fs.d3d11_target = "ps_4_0";
-  JSValue attrs = js_getpropertystr(js,vs, "inputs");
-  int atin = js_arrlen(js,attrs);
-  for (int i = 0; i < atin; i++) {
-    JSValue u = JS_GetPropertyUint32(js,attrs,i);
-    int slot = js2number(js,js_getpropertystr(js,u, "slot"));    
-    desc.attrs[slot].sem_name = js2strdup(js,js_getpropertystr(js,u,"sem_name"));
-    desc.attrs[slot].sem_index = js2number(js,js_getpropertystr(js,u, "sem_index"));
-    JS_FreeValue(js,u);
-  }
-  
-  JSValue vsu = JS_GetPropertyStr(js,vs, "uniform_blocks");
-  for (int i = 0; i < js_arrlen(js,vsu); i++) {
-    JSValue v = JS_GetPropertyUint32(js,vsu,i);
-    desc.vs.uniform_blocks[i] = js2uniform_block(js,v);
-    JS_FreeValue(js,v);
-  }
-  JS_FreeValue(js,vsu);
-  
-  JSValue fsu = JS_GetPropertyStr(js,fs, "uniform_blocks");
-  for (int i = 0; i < js_arrlen(js,fsu); i++) {
-    JSValue v = JS_GetPropertyUint32(js,fsu,i);
-    desc.fs.uniform_blocks[i] = js2uniform_block(js,v);
-    JS_FreeValue(js,v);
-  }
-  JS_FreeValue(js,fsu);
-  
-  JSValue imgs = JS_GetPropertyStr(js,fs, "images");
-  for (int i = 0; i < js_arrlen(js,imgs); i++) {
-    JSValue u = JS_GetPropertyUint32(js,imgs,i);
-//    int slot = js2number(js,js_getpropertystr(js,u, "slot"));
-    desc.fs.images[i].used = true;
-    desc.fs.images[i].multisampled = JS_ToBool(js,js_getpropertystr(js,u, "multisampled"));
-    desc.fs.images[i].image_type = SG_IMAGETYPE_2D;
-    desc.fs.images[i].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-    JS_FreeValue(js,u);
-  }
-  JS_FreeValue(js,imgs);
-  
-  JSValue samps = JS_GetPropertyStr(js,fs, "samplers");
-  for (int i = 0; i < js_arrlen(js,samps); i++) {
-    JSValue sampler = JS_GetPropertyUint32(js, samps, i);
-    desc.fs.samplers[0].used = true;
-    desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-    JS_FreeValue(js,sampler);
-  }
-  JS_FreeValue(js,samps);
-  
-  JSValue pairs = JS_GetPropertyStr(js,fs, "image_sampler_pairs");
-  for (int i = 0; i < js_arrlen(js,pairs); i++) {
-    JSValue pair = JS_GetPropertyUint32(js, pairs, i);
-    desc.fs.image_sampler_pairs[0].used = true;
-    desc.fs.image_sampler_pairs[0].image_slot = js2number(js,js_getpropertystr(js,pair, "slot"));
-    desc.fs.image_sampler_pairs[0].sampler_slot = 0;
-    desc.fs.image_sampler_pairs[0].glsl_name = js2strdup(js,js_getpropertystr(js,pair, "name"));
-    JS_FreeValue(js,pair);
-  }
-  JS_FreeValue(js,pairs);
-  
-  JSValue ssbos = JS_GetPropertyStr(js,vs, "storage_buffers");
-  for (int i = 0; i < js_arrlen(js,ssbos); i++) {
-    desc.vs.storage_buffers[i].used = true;
-    desc.vs.storage_buffers[i].readonly = true;
-  }
-  JS_FreeValue(js,ssbos);
-  
-  sg_shader sh = sg_make_shader(&desc);
-  
-  JS_FreeCString(js,vsf);
-  JS_FreeCString(js,fsf);
-  JS_FreeCString(js,vsmain);
-  JS_FreeCString(js,fsmain);
-  
-  return sh;
-}
-
-static int mat2type(int mat)
-{
-  switch(mat) {
-    case MAT_POS:
-    case MAT_NORM:
-      return SG_VERTEXFORMAT_FLOAT3;
-    case MAT_PPOS:
-    case MAT_WH:
-    case MAT_ST:
-      return SG_VERTEXFORMAT_FLOAT2;
-    case MAT_UV:
-      return SG_VERTEXFORMAT_USHORT2N;
-    case MAT_TAN:
-      return SG_VERTEXFORMAT_UINT10_N2;
-    case MAT_BONE:
-      return SG_VERTEXFORMAT_UBYTE4;
-    case MAT_WEIGHT:
-    case MAT_COLOR:
-      return SG_VERTEXFORMAT_UBYTE4N;
-    case MAT_ANGLE:
-    case MAT_SCALE:
-      return SG_VERTEXFORMAT_FLOAT;
-  };
-  
-  return -1;
-}
-
-sg_vertex_layout_state js2vertex_layout(JSContext *js,JSValue v)
-{
-  sg_vertex_layout_state st = {0};
-  JSValue inputs = js_getpropertystr(js,js_getpropertystr(js,v, "vs"), "inputs");
-  for (int i = 0; i < js_arrlen(js,inputs); i++) {
-    JSValue attr = JS_GetPropertyUint32(js, inputs, i);
-    int slot = js2number(js,js_getpropertystr(js,attr, "slot"));
-    int mat = js2number(js,js_getpropertystr(js,attr, "mat"));
-    st.attrs[slot].format = mat2type(mat);
-    st.attrs[slot].buffer_index = slot;
-    JS_FreeValue(js,attr);
-  }
-  
-  return st;
-}
-
-sg_depth_state js2depth(JSContext *js,JSValue v)
-{
-  sg_depth_state depth = {0};
-  JS_GETPROPSTR(js,v,depth,compare,number)
-  JS_GETPROPSTR(js,v,depth,write_enabled,bool)
-  JS_GETPROPSTR(js,v,depth,bias,number)
-  JS_GETPROPSTR(js,v,depth,bias_slope_scale,number)
-  JS_GETPROPSTR(js,v,depth,bias_clamp,number)
-  return depth;
-}
-
-sg_stencil_face_state js2face_state(JSContext *js,JSValue v)
-{
-  sg_stencil_face_state face = {0};
-  JS_GETPROPSTR(js,v,face,compare,number)
-  JS_GETPROPSTR(js,v,face,fail_op,number)
-  JS_GETPROPSTR(js,v,face,depth_fail_op,number)
-  JS_GETPROPSTR(js,v,face,pass_op,number)
-  return face;
-}
-
-sg_stencil_state js2stencil(JSContext *js,JSValue v)
-{
-  sg_stencil_state stencil = {0};
-  JS_GETPROPSTR(js,v,stencil,enabled,bool)
-  JS_GETPROPSTR(js,v,stencil,read_mask,bool)
-  JS_GETPROPSTR(js,v,stencil,write_mask,bool)
-  JS_GETPROPSTR(js,v,stencil,enabled,bool)
-  JS_GETPROPSTR(js,v,stencil,front,face_state)
-  JS_GETPROPSTR(js,v,stencil,back,face_state)
-  JS_GETPROPSTR(js,v,stencil,ref,number)
-  return stencil;
-}
-
-sg_blend_state js2blend(JSContext *js,JSValue v)
-{
-  sg_blend_state blend = {0};
-  JS_GETPROPSTR(js,v,blend,enabled,bool)
-  JS_GETPROPSTR(js,v,blend,src_factor_rgb,number)
-  JS_GETPROPSTR(js,v,blend,dst_factor_rgb,number)
-  JS_GETPROPSTR(js,v,blend,op_rgb,number)
-  JS_GETPROPSTR(js,v,blend,src_factor_alpha,number)
-  JS_GETPROPSTR(js,v,blend,dst_factor_alpha,number)
-  JS_GETPROPSTR(js,v,blend,op_alpha,number)
-  return blend;
-}
-
-JSC_CCALL(render_make_pipeline,
-  sg_pipeline_desc p = {0};
-  p.shader = js2shader(js,argv[0]);
-  p.layout = js2vertex_layout(js,argv[0]);
-  p.primitive_type = js2number(js,js_getpropertystr(js,argv[0], "primitive"));
-  if (JS_ToBool(js,js_getpropertystr(js,argv[0], "indexed")))
-    p.index_type = SG_INDEXTYPE_UINT16;
-  
-  JSValue pipe = argv[1];
-  JS_GETPROPSTR(js,pipe,p,primitive_type,number)
-  JS_GETPROPSTR(js,pipe,p,cull_mode,number)
-  JS_GETPROPSTR(js,pipe,p,face_winding,number)
-  JS_GETPROPSTR(js,pipe,p,colors[0].blend,blend)  
-  JS_GETPROPSTR(js,pipe,p,colors[0].write_mask,number)  
-  JS_GETPROPSTR(js,pipe,p,alpha_to_coverage_enabled,bool)
-  JS_GETPROPSTR(js,pipe,p,depth,depth)  
-  JS_GETPROPSTR(js,pipe,p,stencil,stencil)  
-
-  sg_pipeline *g = malloc(sizeof(*g));
-  *g = sg_make_pipeline(&p);
-  return sg_pipeline2js(js,g);
-)
-
-JSC_CCALL(render_setuniv,
-  HMM_Vec4 f = {0};
-  f.x = js2number(js,argv[2]);
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(f));
-)
-
-JSC_CCALL(render_setuniv2,
-  HMM_Vec4 v = {0};
-  v.xy = js2vec2(js,argv[2]);
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(v.e));
-)
-
-JSC_CCALL(render_setuniv3,
-  HMM_Vec4 f = {0};
-  f.xyz = js2vec3(js,argv[2]);
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(f.e));
-)
-
-JSC_CCALL(render_setuniv4,
-  HMM_Vec4 v = {0};
-  if (JS_IsArray(js, argv[2])) {
-    for (int i = 0; i < js_arrlen(js,argv[2]); i++)
-     v.e[i] = js_getnum_uint32(js, argv[2], i);
-  } else
-    v.x = js2number(js,argv[2]);
-
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(v.e));
-)
-
-JSC_CCALL(render_setuniproj,
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(globalview.p.e));
-)
-
-JSC_CCALL(render_setuniview,
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(globalview.v.e));
-)
-
-JSC_CCALL(render_setunivp,
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(globalview.vp.e));
-)
-
-JSC_CCALL(render_setunibones,
-  skin *sk = js2skin(js, argv[2]);
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(sk->binds));
-)
-
-JSC_CCALL(render_setunim4,
-  HMM_Mat4 m = MAT1;
-  if (JS_IsArray(js, argv[2])) {
-    JSValue arr = argv[2];
-    int n = js_arrlen(js,arr);
-    if (n == 1)
-      m = transform2mat(js2transform(js,js_getpropertyuint32(js, arr,0)));
-    else {
-      for (int i = 0; i < n; i++) {
-        HMM_Mat4 p = transform2mat(js2transform(js,js_getpropertyuint32(js, arr, i)));
-        m = HMM_MulM4(p,m);
-      }
-    }
-  } else if (!JS_IsUndefined(argv[2]))
-    m = transform2mat(js2transform(js,argv[2]));
-
-  sg_apply_uniforms(js2number(js,argv[0]), js2number(js,argv[1]), SG_RANGE_REF(m.e));
-);
-
-JSC_CCALL(render_setbind,
-  sg_bindings bind = js2bind(js,argv[0]);
-  sg_apply_bindings(&bind);
-)
-
-typedef struct particle_ss {
-  HMM_Mat4 model;
-  HMM_Vec4 color;
-} particle_ss;
-
-JSC_CCALL(render_make_particle_ssbo,
-  JSValue array = argv[0];
-  size_t size = js_arrlen(js,array)*(sizeof(particle_ss));
-  sg_buffer *b = js2sg_buffer(js, argv[1]);
-  if (!b) return JS_UNDEFINED;
-  particle_ss ms[js_arrlen(js,array)];
-
-  if (sg_query_buffer_will_overflow(*b, size)) {
-    sg_buffer_desc desc = sg_query_buffer_desc(*b);
-    sg_destroy_buffer(*b);
-
-    *b = sg_make_buffer(&(sg_buffer_desc){
-      .type = SG_BUFFERTYPE_STORAGEBUFFER,
-      .size = size+desc.size,
-      .usage = SG_USAGE_STREAM,
-      .label = "particle ssbo buffer"
-    });
-  }
-
-  for (int i = 0; i < js_arrlen(js,array); i++) {
-    JSValue sub = js_getpropertyuint32(js, array,i);
-    ms[i].model = transform2mat(js2transform(js,js_getpropertystr(js,sub, "transform")));
-    ms[i].color = js2vec4(js,js_getpropertystr(js,sub,"color"));
-  }
-
-  int offset = sg_append_buffer(*b, (&(sg_range){
-    .ptr = ms,
-    .size = size
-  }));
-
-  ret = number2js(js,offset/sizeof(particle_ss));
-)
-
-typedef struct sprite_ss {
-  HMM_Mat4 model;
-  rect rect;
-  HMM_Vec4 shade;
-} sprite_ss;
-
-JSC_CCALL(render_make_sprite_ssbo,
-  JSValue array = argv[0];
-  size_t size = js_arrlen(js,array)*(sizeof(sprite_ss));
-  sg_buffer *b = js2sg_buffer(js, argv[1]);
-  if (!b) return JS_UNDEFINED;
-  
-  sprite_ss ms[js_arrlen(js,array)];
-  
-  if (sg_query_buffer_will_overflow(*b, size)) {
-    sg_buffer_desc desc = sg_query_buffer_desc(*b);
-    sg_destroy_buffer(*b);
-    *b = sg_make_buffer(&(sg_buffer_desc){
-      .type = SG_BUFFERTYPE_STORAGEBUFFER,
-      .size = size+desc.size,
-      .usage = SG_USAGE_STREAM,
-      .label = "sprite ssbo buffer"
-    });
-  }
-
-  for (int i = 0; i < js_arrlen(js,array); i++) {
-    JSValue sub = js_getpropertyuint32(js, array,i);
-    
-//    transform *tr = js2transform(js,js_getpropertystr(js,sub, "transform"));
-    JSValue image = js_getpropertystr(js,sub, "image");
-    
-    ms[i].model = js2transform_mat(js, js_getpropertystr(js,sub,"transform"));// transform2mat(tr);
-    ms[i].rect = js2rect(js,js_getpropertystr(js,image,"rect"));
-    ms[i].shade = js2vec4(js,js_getpropertystr(js,sub,"shade"));
-  }
-
-  int offset = sg_append_buffer(*b, (&(sg_range){
-    .ptr = ms,
-    .size = size
-  }));
-  
-  ret = number2js(js,offset/sizeof(sprite_ss)); // 96 size of a sprite struct
-)
-
-JSC_CCALL(render_make_t_ssbo,
-  JSValue array = argv[0];
-  size_t size = js_arrlen(js,array)*sizeof(HMM_Mat4);
-  sg_buffer *b = js2sg_buffer(js, argv[1]);
-  if (!b) return JS_UNDEFINED;
-  
-  HMM_Mat4 ms[js_arrlen(js,array)];
-
-  if (sg_query_buffer_will_overflow(*b, size)) {
-    sg_destroy_buffer(*b);
-    *b = sg_make_buffer(&(sg_buffer_desc){
-      .type = SG_BUFFERTYPE_STORAGEBUFFER,
-      .size = size,
-      .usage = SG_USAGE_STREAM,
-      .label = "transform buffer"
-    });
-  }
-
-  for (int i = 0; i < js_arrlen(js,array); i++)
-    ms[i] = transform2mat(js2transform(js,js_getpropertyuint32(js, array, i)));
-
-  sg_append_buffer(*b, (&(sg_range){
-    .ptr = ms,
-    .size = size
-  }));
-)
-
-JSC_CCALL(render_spdraw,
-  sg_draw(js2number(js,argv[0]),js2number(js,argv[1]),js2number(js,argv[2]));
-)
-
-JSC_CCALL(render_setpipeline, sg_apply_pipeline(*js2sg_pipeline(js,argv[0]));)
-
 JSC_SCALL(render_text_size,
   font *f = js2font(js,argv[1]);
   float size = js2number(js,argv[2]);
@@ -1111,57 +671,107 @@ JSC_SCALL(render_text_size,
   ret = vec22js(js,measure_text(str, f, size, letterSpacing, wrap));
 )
 
+JSC_CCALL(render_draw_color,
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  struct rgba rgba = js2color(js,argv[0]);
+  SDL_SetRenderDrawColor(renderer, rgba.r, rgba.g, rgba.b, rgba.a);
+)
+
 static const JSCFunctionListEntry js_render_funcs[] = {
-  MIST_FUNC_DEF(render, flushtext, 1),
-  MIST_FUNC_DEF(render, camera_screen2world, 2),
-  MIST_FUNC_DEF(render, make_textssbo, 0),
-  MIST_FUNC_DEF(render, viewport, 4),
-  MIST_FUNC_DEF(render, end_pass, 0),
-  MIST_FUNC_DEF(render, commit, 0),
-  MIST_FUNC_DEF(render, glue_pass, 0),
   MIST_FUNC_DEF(render, text_size, 5),
   MIST_FUNC_DEF(render, set_projection_ortho, 3),
   MIST_FUNC_DEF(render, set_projection_perspective, 4),  
   MIST_FUNC_DEF(render, set_view, 1),
-  MIST_FUNC_DEF(render, make_pipeline, 1),
-  MIST_FUNC_DEF(render, setuniv3, 2),
-  MIST_FUNC_DEF(render, setuniv, 2),
-  MIST_FUNC_DEF(render, spdraw, 3),
-  MIST_FUNC_DEF(render, setunibones, 3),
-  MIST_FUNC_DEF(render, setbind, 1),
-  MIST_FUNC_DEF(render, setuniproj, 2),
-  MIST_FUNC_DEF(render, setuniview, 2),
-  MIST_FUNC_DEF(render, setunivp, 2),
-  MIST_FUNC_DEF(render, setunim4, 3),
-  MIST_FUNC_DEF(render, setuniv2, 2),
-  MIST_FUNC_DEF(render, setuniv4, 2),
-  MIST_FUNC_DEF(render, setpipeline, 1),
-  MIST_FUNC_DEF(render, make_t_ssbo, 2),
-  MIST_FUNC_DEF(render, make_particle_ssbo, 2),
-  MIST_FUNC_DEF(render, make_sprite_ssbo, 2)
 };
 
-JSC_CCALL(gui_scissor,
-  sg_apply_scissor_rect(js2number(js,argv[0]), js2number(js,argv[1]), js2number(js,argv[2]), js2number(js,argv[3]), 0);
-)
+static JSValue idx_buffer = JS_UNDEFINED;
+static int idx_count = 0;
 
-JSC_CCALL(gui_text,
+JSValue make_quad_indices_buffer(JSContext *js, int quads)
+{
+  int count = quads*6;
+  if (!JS_IsUndefined(idx_buffer) && idx_count >= count)
+    return JS_DupValue(js,idx_buffer);
+  
+  int verts = quads*4;
+  uint16_t *indices = malloc(sizeof(*indices)*count);
+  for (int i = 0, v = 0; v < verts; i +=6, v += 4) {
+    indices[i] = v;
+    indices[i+1] = v+1;
+    indices[i+2] = v+2;
+    indices[i+3] = v+2;
+    indices[i+4] = v+1;
+    indices[i+5] = v+3;
+  }
+
+  if (!JS_IsUndefined(idx_buffer))
+    JS_FreeValue(js,idx_buffer);
+    
+  idx_buffer = make_gpu_buffer(js,indices, sizeof(*indices)*count, JS_TYPED_ARRAY_UINT16, 1,0);
+  return JS_DupValue(js,idx_buffer);
+}
+
+JSC_CCALL(os_make_text_buffer,
   const char *s = JS_ToCString(js, argv[0]);
-  HMM_Vec2 pos = js2vec2(js,argv[1]);
+  HMM_Vec2 startpos = js2vec2(js,argv[1]);
   float size = js2number(js,argv[2]);
   font *f = js2font(js,argv[5]);
   if (!size) size = f->height;
   struct rgba c = js2color(js,argv[3]);
   int wrap = js2number(js,argv[4]);
-  renderText(s, pos, f, size, c, wrap);
+  text_vert *buffer = renderText(s, startpos, f, size, c, wrap);
+  size_t verts = arrlen(buffer);  
+
+  HMM_Vec2 *pos = malloc(arrlen(buffer)*sizeof(HMM_Vec2));
+  HMM_Vec2 *uv = malloc(arrlen(buffer)*sizeof(HMM_Vec2));
+  HMM_Vec4 *color = malloc(arrlen(buffer)*sizeof(HMM_Vec4));
+
+  for (int i = 0; i < arrlen(buffer); i++) {
+    pos[i] = buffer[i].pos;
+    pos[i].y *= -1;
+    pos[i].y += logical.y;
+    uv[i] = buffer[i].uv;
+    color[i] = buffer[i].color;
+  }
+
+  arrfree(buffer);    
+
+  JSValue jspos = make_gpu_buffer(js, pos, sizeof(HMM_Vec2)*arrlen(buffer), JS_TYPED_ARRAY_FLOAT32, 2,0);
+  JSValue jsuv = make_gpu_buffer(js, uv, sizeof(HMM_Vec2)*arrlen(buffer), JS_TYPED_ARRAY_FLOAT32, 2,0);
+  JSValue jscolor = make_gpu_buffer(js, color, sizeof(HMM_Vec4)*arrlen(buffer), JS_TYPED_ARRAY_FLOAT32, 4,0);
+
+/*
+  JSValue jsbuffer = JS_NewArrayBuffer(js,buffer,sizeof(*buffer)*arrlen(buffer), free_gpu_buffer, NULL, 0);
+  JSValue tstack[3];
+  tstack[0] = jsbuffer;
+  tstack[1] = JS_UNDEFINED;//number2js(js,0);
+  tstack[2] = JS_UNDEFINED;
+  JSValue jspos = JS_NewTypedArray(js, 3, tstack, JS_TYPED_ARRAY_FLOAT32);
+  JS_SetPropertyStr(js,jspos, "stride", number2js(js,sizeof(*buffer)));
+  tstack[1] = number2js(js,8);
+  JSValue jsuv = JS_NewTypedArray(js,3,tstack,JS_TYPED_ARRAY_FLOAT32);
+  JS_SetPropertyStr(js,jsuv, "stride", number2js(js,sizeof(*buffer)));  
+  tstack[1] = number2js(js,16);
+  JSValue jscolor = JS_NewTypedArray(js,3,tstack,JS_TYPED_ARRAY_FLOAT32);
+  JS_SetPropertyStr(js,jscolor, "stride", number2js(js,sizeof(*buffer)));
+*/
+
+  size_t quads = verts/4;
+  size_t count = verts/2*3;  
+  JSValue jsidx = make_quad_indices_buffer(js, quads);
+  
   JS_FreeCString(js, s);
+
+  ret = JS_NewObject(js);
+  JS_SetProperty(js, ret, pos_atom, jspos);
+  JS_SetProperty(js, ret, uv_atom, jsuv);
+  JS_SetProperty(js, ret, color_atom, jscolor);
+  JS_SetProperty(js, ret, indices_atom, jsidx);
+  JS_SetProperty(js, ret, vertices_atom, number2js(js, verts));
+  JS_SetProperty(js, ret, count_atom, number2js(js, count));
+
   return ret;
 )
-
-static const JSCFunctionListEntry js_gui_funcs[] = {
-  MIST_FUNC_DEF(gui, scissor, 4),
-  MIST_FUNC_DEF(gui, text, 6),
-};
 
 JSC_CCALL(spline_catmull,
   HMM_Vec2 *points = js2cpvec2arr(js,argv[0]);
@@ -1190,7 +800,15 @@ static const JSCFunctionListEntry js_spline_funcs[] = {
   MIST_FUNC_DEF(spline, bezier, 2)
 };
 
-JSValue js_vector_dot(JSContext *js, JSValue self, int argc, JSValue *argv) { return number2js(js,HMM_DotV2(js2vec2(js,argv[0]), js2vec2(js,argv[1]))) ; };
+JSValue js_vector_dot(JSContext *js, JSValue self, int argc, JSValue *argv) {
+  size_t alen, blen;
+  float *a = js2floats(js,argv[0], &alen);
+  float *b = js2floats(js,argv[1], &blen);
+  JSValue ret = number2js(js, cblas_sdot(alen, a, 1, b,1));
+  free(a);
+  free(b);
+  return ret;
+};
 
 JSC_CCALL(vector_project, return vec22js(js,HMM_ProjV2(js2vec2(js,argv[0]), js2vec2(js,argv[1]))))
 
@@ -1267,6 +885,31 @@ JSC_CCALL(vector_inflate,
 
 JSC_CCALL(vector_rotate,
   HMM_Vec2 vec = js2vec2(js,argv[0]);
+  double angle = js2angle(js, argv[1]);
+  HMM_Vec2 pivot = JS_IsUndefined(argv[2]) ? v2zero : js2vec2(js,argv[2]);  
+  // vec = vec - pivot
+  cblas_saxpy(2, -1.0f, pivot.e, 1, vec.e, 1);
+
+  // Length of the vector (r)
+  float r = sqrtf(cblas_sdot(2, vec.e, 1, vec.e, 1));
+  
+  // Update angle
+  angle += atan2f(vec.y, vec.x);
+
+  // Update vec to rotated position
+  vec.x = r * cosf(angle);
+  vec.y = r * sinf(angle);
+
+  // vec = vec + pivot
+  cblas_saxpy(2, 1.0f, pivot.e, 1, vec.e, 1);
+
+  // Convert back to JS and return
+  return vec22js(js, vec);
+)
+/*
+
+JSC_CCALL(vector_rotate,
+  HMM_Vec2 vec = js2vec2(js,argv[0]);
   double angle = js2angle(js,argv[1]);
   HMM_Vec2 pivot = JS_IsUndefined(argv[2]) ? v2zero : js2vec2(js,argv[2]);
   vec = HMM_SubV2(vec,pivot);
@@ -1276,7 +919,7 @@ JSC_CCALL(vector_rotate,
   vec.y = r*sin(angle);
   return vec22js(js,HMM_AddV2(vec,pivot));
 )
-
+*/
 JSC_CCALL(vector_add,
   HMM_Vec4 a = js2vec4(js,argv[0]);
   HMM_Vec4 b = js2vec4(js,argv[1]);
@@ -1414,6 +1057,14 @@ JSC_CCALL(vector_sum,
   return number2js(js,sum);
 )
 
+JSC_CCALL(vector_fastsum,
+  float sum = 0.0;
+  size_t len;
+  float *a = get_typed_buffer(js, argv[0], &len);
+  sum = cblas_sasum(len, a,1);
+  ret = number2js(js,sum);
+)
+
 JSC_CCALL(vector_sigma,
   int len = js_arrlen(js,argv[0]);
   double sum;
@@ -1490,6 +1141,19 @@ JSC_CCALL(vector_from_to,
   JS_SetPropertyUint32(js, ret, steps+1, vec22js(js,to));
 )
 
+JSC_CCALL(vector_float32add,
+  size_t len;
+  float *vec_a = get_typed_buffer(js,self, &len);
+  float *vec_b = get_typed_buffer(js,argv[0], &len);
+  cblas_saxpy(len,1.0f,vec_b,1,vec_a,1);
+  JSValue tstack[3];
+  tstack[0] = JS_NewArrayBufferCopy(js,vec_a,sizeof(float)*4);
+  tstack[1] = JS_UNDEFINED;
+  tstack[2] = JS_UNDEFINED;
+  ret = JS_NewTypedArray(js, 3, tstack, JS_TYPED_ARRAY_FLOAT32);
+  JS_FreeValue(js,tstack[0]);
+)
+
 static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, dot,2),
   MIST_FUNC_DEF(vector, project,2),
@@ -1511,11 +1175,13 @@ static const JSCFunctionListEntry js_vector_funcs[] = {
   MIST_FUNC_DEF(vector, random_range, 2),
   MIST_FUNC_DEF(vector, mean, 1),
   MIST_FUNC_DEF(vector, sum, 1),
+  MIST_FUNC_DEF(vector, fastsum, 1),
   MIST_FUNC_DEF(vector, sigma, 1),
   MIST_FUNC_DEF(vector, median, 1),
   MIST_FUNC_DEF(vector, length, 1),
   MIST_FUNC_DEF(vector, fib, 1),
   MIST_FUNC_DEF(vector, from_to, 5),
+  MIST_FUNC_DEF(vector, float32add, 2),
 };
 
 #define JS_HMM_FN(OP, HMM, SIGN) \
@@ -1546,6 +1212,53 @@ JSC_CCALL(array_##OP, \
   return arr; \
 ) \
 
+/*JSC_CCALL(array_add,
+  int len = js_arrlen(js,self); 
+  if (!JS_IsArray(js, argv[0])) { 
+    double n = js2number(js,argv[0]); 
+    JSValue arr = JS_NewArray(js); 
+    for (int i = 0; i < len; i++) 
+      JS_SetPropertyUint32(js, arr, i, number2js(js,js_getnum_uint32(js, self,i) + n)); 
+    return arr; 
+  } 
+  
+  JSValue arr = JS_NewArray(js);
+  size_t len_a, len_b;
+  float *a = js2floats(js,self, &len_a);
+  float *b = js2floats(js,argv[0], &len_b);
+  cblas_saxpy(len_a, 1.0, a, 1, b, 1);
+  for (int i = 0; i < len; i++)
+    JS_SetPropertyUint32(js, arr, i, number2js(js,b[i]));
+
+  ret = arr;
+  free(a);
+  free(b);
+  return arr; 
+) */
+
+/*JSC_CCALL(array_add,
+  int len = js_arrlen(js,self);
+  if (!JS_IsArray(js,argv[0])) {
+    double n = js2number(js,argv[0]);
+    JSValue arr = JS_NewArray(js);
+    for (int i = 0; i < len; i++)
+      JS_SetPropertyUint32(js,arr,i,number2js(js,js_getnum_uint32(js,self,i) + n));
+
+    return arr;
+  }
+  float *vec_a = js2floatarray(js,self);
+  float *vec_b = js2floatarray(js,argv[0]);
+  cblas_saxpy(len,1.0f,vec_b,1,vec_a,1);
+  JSValue tstack[3];
+  tstack[0] = JS_NewArrayBuffer(js,vec_a,sizeof(float)*2,free_gpu_buffer, NULL, 0);
+  tstack[1] = JS_UNDEFINED;
+  tstack[2] = JS_UNDEFINED;
+  ret = JS_NewTypedArray(js, 3, tstack, JS_TYPED_ARRAY_FLOAT32);
+  JS_FreeValue(js,tstack[0]);
+  free(vec_b);
+)
+*/
+
 JS_HMM_FN(add, Add, +)
 JS_HMM_FN(sub, Sub, -)
 JS_HMM_FN(div, Div, /)
@@ -1572,90 +1285,539 @@ static const JSCFunctionListEntry js_array_funcs[] = {
   PROTO_FUNC_DEF(array, lerp, 2)
 };
 
-static JSValue js_sg_init;
-static JSValue js_sg_frame;
-static JSValue js_sg_event;
-static JSValue js_sg_cleanup;
+JSC_SCALL(game_engine_start,
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_CAMERA) < 0)
+    return JS_ThrowReferenceError("Couldn't initialize SDL: %s\n", SDL_GetError());
 
-static void c_init(JSContext *js)
-{
-  render_init();
-  script_call_sym(js_sg_init, 0,NULL);
-}
+  const char *title = JS_ToCString(js,js_getpropertystr(js,argv[0], "title"));
+  SDL_Window *new = SDL_CreateWindow(title, js2number(js, js_getproperty(js,argv[0], width_atom)), js2number(js,js_getproperty(js,argv[0], height_atom)), SDL_WINDOW_RESIZABLE);
 
-static void c_frame(JSContext *js)
-{
-  script_call_sym(js_sg_frame,0,NULL);
-}
+  if (!new) return JS_ThrowReferenceError("Couldn't open window: %s\n", SDL_GetError());
 
-static void c_cleanup(JSContext *js)
-{
-  script_call_sym(js_sg_cleanup,0,NULL);
-  sg_shutdown();
-  sapp_quit();  
-}
+  SDL_StartTextInput(new);
 
-void gui_input(sapp_event *e);
-
-static void c_event(const sapp_event *e, JSContext *js)
-{
-#ifndef NEDITOR
-  gui_input(e);
-#endif
-
-  JSValue event = sapp_event2js(js, e);
-  script_call_sym(js_sg_event, 1, &event);
-  JS_FreeValue(js,event);
-}
-
-JSC_CCALL(game_engine_start,
-  sapp_desc start_desc = {0};
-
-  start_desc.user_data = js;
-  start_desc.init_userdata_cb = c_init;  
-  start_desc.frame_userdata_cb = c_frame;
-  start_desc.event_userdata_cb = c_event;
-  start_desc.cleanup_userdata_cb = c_cleanup;
-  js_sg_init = JS_DupValue(js, js_getpropertystr(js,argv[0], "init"));
-  js_sg_frame = JS_DupValue(js, js_getpropertystr(js,argv[0], "frame"));
-  js_sg_cleanup = JS_DupValue(js, js_getpropertystr(js,argv[0], "cleanup"));
-  js_sg_event = JS_DupValue(js, js_getpropertystr(js,argv[0], "event"));
-  start_desc.width = js2number(js, js_getpropertystr(js, argv[0], "width"));
-  start_desc.height = js2number(js, js_getpropertystr(js, argv[0], "height"));
-  start_desc.sample_count = js2number(js, js_getpropertystr(js, argv[0], "sample_count"));
-  start_desc.high_dpi = js2number(js, js_getpropertystr(js, argv[0], "high_dpi"));
-  start_desc.alpha = js2number(js, js_getpropertystr(js, argv[0], "alpha"));  
-  start_desc.fullscreen = js2number(js, js_getpropertystr(js, argv[0], "fullscreen"));
-  start_desc.swap_interval = js2number(js, js_getpropertystr(js, argv[0], "swap_interval"));  
-  start_desc.window_title = JS_ToCString(js, js_getpropertystr(js, argv[0], "title"));
-  start_desc.enable_clipboard = JS_ToBool(js, js_getpropertystr(js, argv[0], "enable_clipboard"));
-  start_desc.enable_dragndrop = JS_ToBool(js, js_getpropertystr(js, argv[0], "enable_dragndrop"));
-  start_desc.max_dropped_files = js2number(js, js_getpropertystr(js, argv[0], "max_dropped_files"));
-  start_desc.max_dropped_file_path_length = 2048;
-  start_desc.max_dropped_files = 4;
-  start_desc.logger.func = slog_func;
-  texture *tex = js2texture(js, js_getpropertystr(js, argv[0], "icon"));
-  if (tex) start_desc.icon = texture2icon(tex);
-  sapp_run(&start_desc);
+  return SDL_Window2js(js,new);
 )
 
-JSC_CCALL(game_fullscreen, sapp_toggle_fullscreen());
+static JSValue event2js(JSContext *js, SDL_Event event)
+{
+  JSValue e = JS_NewObject(js);
+  JS_SetPropertyStr(js,e,"timestamp", number2js(js,event.common.timestamp));
+  
+  switch(event.type) {
+    case SDL_EVENT_QUIT:
+      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"quit"));
+      break;
+    case SDL_EVENT_MOUSE_MOTION:
+      JS_SetPropertyStr(js, e, "type", JS_NewString(js, "mouse"));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.motion.windowID));
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.motion.which));
+      JS_SetPropertyStr(js, e, "state", number2js(js,event.motion.state));
+      JS_SetPropertyStr(js,e, "mouse", vec22js(js,(HMM_Vec2){event.motion.x,event.motion.y}));
+      JS_SetPropertyStr(js,e,"mouse_d", vec22js(js,(HMM_Vec2){event.motion.xrel, event.motion.yrel}));
+      break;
+    case SDL_EVENT_MOUSE_WHEEL:
+      JS_SetPropertyStr(js,e,"type",JS_NewString(js,"wheel"));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.wheel.windowID));
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.wheel.which));
+      JS_SetPropertyStr(js,e,"scroll", vec22js(js,(HMM_Vec2){event.wheel.x,event.wheel.y}));
+      JS_SetPropertyStr(js,e, "mouse", vec22js(js,(HMM_Vec2){event.wheel.mouse_x,event.wheel.mouse_y}));
+      break;
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+      JS_SetPropertyStr(js,e,"type",JS_NewString(js,"mouse_button"));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.button.windowID));
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.button.which));
+      JS_SetPropertyStr(js,e,"down", JS_NewBool(js,event.button.down));
+      JS_SetPropertyStr(js,e,"clicks", number2js(js,event.button.clicks));
+      JS_SetPropertyStr(js,e,"mouse", vec22js(js,(HMM_Vec2){event.button.x,event.button.y}));
+      break;
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_UP:
+      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"key"));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.key.windowID));
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.key.which));
+      JS_SetPropertyStr(js,e,"down", JS_NewBool(js,event.key.down));
+      JS_SetPropertyStr(js,e,"repeat", JS_NewBool(js,event.key.repeat));
+      JS_SetPropertyStr(js,e,"key", number2js(js,event.key.key));
+      JS_SetPropertyStr(js,e,"scancode", number2js(js,event.key.scancode));
+      JS_SetPropertyStr(js,e,"mod", number2js(js,event.key.mod));
+      break;
+    case SDL_EVENT_FINGER_MOTION:
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_FINGER_UP:
+      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"touch"));
+      JS_SetPropertyStr(js,e,"touch", number2js(js,event.tfinger.touchID));
+      JS_SetPropertyStr(js,e,"finger", number2js(js,event.tfinger.fingerID));
+      JS_SetPropertyStr(js,e,"pos", vec22js(js, (HMM_Vec2){event.tfinger.x, event.tfinger.y}));
+      JS_SetPropertyStr(js,e,"pos_d", vec22js(js,(HMM_Vec2){event.tfinger.x, event.tfinger.dy}));
+      JS_SetPropertyStr(js,e,"pressure", number2js(js,event.tfinger.pressure));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.key.windowID));
+      break;
+    case SDL_EVENT_DROP_BEGIN:
+    case SDL_EVENT_DROP_FILE:
+    case SDL_EVENT_DROP_TEXT:
+    case SDL_EVENT_DROP_COMPLETE:
+    case SDL_EVENT_DROP_POSITION:
+      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"drop"));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.drop.windowID));
+      JS_SetPropertyStr(js,e,"pos", vec22js(js, (HMM_Vec2){event.drop.x,event.drop.y}));
+      JS_SetPropertyStr(js,e,"data", JS_NewString(js,event.drop.data));
+      JS_SetPropertyStr(js,e,"source",JS_NewString(js,event.drop.source));
+      break;
+    case SDL_EVENT_TEXT_INPUT:
+      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"text"));
+      JS_SetPropertyStr(js,e,"window", number2js(js,event.text.windowID));
+      JS_SetPropertyStr(js,e,"text", JS_NewString(js,event.text.text));
+      break;
+  }
+  return e;
+}
+
+// Polls and handles all input events
+JSC_CCALL(game_engine_input,
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    JSValue e = event2js(js,event);
+    JS_Call(js,argv[0], JS_UNDEFINED, 1, &e);
+  }
+)
+
+JSC_CCALL(game_engine_delay,
+  SDL_Delay(js2number(js,argv[0]));
+)
+
+JSC_CCALL(game_renderers,
+  int num = SDL_GetNumRenderDrivers();
+  JSValue arr = JS_NewArray(js);
+  for (int i = 0; i < num; i++)
+    JS_SetPropertyUint32(js, arr, i, JS_NewString(js, SDL_GetRenderDriver(i)));
+
+  return arr;
+)
+
+JSC_CCALL(game_cameras,
+  SDL_CameraID *ids = SDL_GetCameras(NULL);
+  JSValue jsids = JS_NewArray(js);
+
+  SDL_CameraID *id = ids;
+  while (*id) {
+    printf("camera %d\n", *id);
+    id++;
+  }
+/*  for (int i = 0; i < num; i++) {
+    JS_SetPropertyUint32(js,jsids, i, number2js(js,ids[i]));
+  }
+
+  SDL_OpenCamera(ids[0], NULL);*/
+
+  return jsids;
+)
+
+#include "wildmatch.h"
+JSC_SSCALL(game_glob,
+  if (wildmatch(str, str2, WM_PATHNAME | WM_PERIOD | WM_WILDSTAR) == WM_MATCH)
+    return JS_NewBool(js,1);
+  else
+    return JS_NewBool(js, 0);
+)
 
 static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, engine_start, 1),
-  MIST_FUNC_DEF(game, fullscreen, 0),
+  MIST_FUNC_DEF(game, engine_input,1),
+  MIST_FUNC_DEF(game, engine_delay, 1),
+  MIST_FUNC_DEF(game, renderers, 0),
+  MIST_FUNC_DEF(game, cameras, 0),
+  MIST_FUNC_DEF(game, glob, 2),
 };
 
-JSC_CCALL(input_show_keyboard, sapp_show_keyboard(JS_ToBool(js,argv[0])))
-JSValue js_input_keyboard_shown(JSContext *js, JSValue self) { return JS_NewBool(js,sapp_keyboard_shown()); }
-JSC_CCALL(input_mouse_lock, sapp_lock_mouse(JS_ToBool(js,argv[0])))
-JSC_CCALL(input_mouse_cursor, sapp_set_mouse_cursor(js2number(js,argv[0])))
-JSC_CCALL(input_mouse_show, sapp_show_mouse(JS_ToBool(js,argv[0])))
+JSC_SCALL(SDL_Window_make_renderer,
+  SDL_Window *win = js2SDL_Window(js,self);
+  SDL_PropertiesID props = SDL_CreateProperties();
+  SDL_SetNumberProperty(props, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 0);
+  SDL_SetPointerProperty(props, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, win);
+  SDL_SetStringProperty(props, SDL_PROP_RENDERER_CREATE_NAME_STRING, str);
+  SDL_Renderer *r = SDL_CreateRendererWithProperties(props);
+  SDL_DestroyProperties(props);
+  if (!r) return JS_ThrowReferenceError(js, SDL_GetError());
+  SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+  return SDL_Renderer2js(js,r);
+)
+
+JSC_CCALL(SDL_Window_fullscreen,
+  SDL_SetWindowFullscreen(js2SDL_Window(js,self), SDL_WINDOW_FULLSCREEN)
+)
+
+JSValue js_SDL_Window_keyboard_shown(JSContext *js, JSValue self) {
+  SDL_Window *window = js2SDL_Window(js,self);
+  return JS_NewBool(js,SDL_ScreenKeyboardShown(window));
+}
+
+
+static const JSCFunctionListEntry js_SDL_Window_funcs[] = {
+  MIST_FUNC_DEF(SDL_Window, fullscreen, 0),
+  MIST_FUNC_DEF(SDL_Window, make_renderer, 1),
+  MIST_FUNC_DEF(SDL_Window, keyboard_shown, 0),
+};
+
+JSC_CCALL(SDL_Renderer_clear,
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  SDL_RenderClear(renderer);
+)
+
+JSC_CCALL(SDL_Renderer_present,
+  SDL_RenderPresent(js2SDL_Renderer(js,self));
+)
+
+JSC_CCALL(SDL_Renderer_draw_color,
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  struct rgba color = js2color(js,argv[0]);
+  SDL_SetRenderDrawColor(renderer, color.r,color.g,color.b,color.a);
+)
+
+JSC_CCALL(SDL_Renderer_rect,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (!JS_IsUndefined(argv[1])) {
+    struct rgba color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+  }
+
+  if (JS_IsArray(js,argv[0])) {
+    int len = js_arrlen(js,argv[0]);
+    rect rects[len];
+    for (int i = 0; i < len; i++) {
+      JSValue val = JS_GetPropertyUint32(js,argv[0],i);
+      rects[i] = js2rect(js,val);
+      rects[i].y *= -1;
+      rects[i].y += logical.y;
+      rects[i].y -= rects[i].h;
+      JS_FreeValue(js,val);
+    }
+    SDL_RenderRects(r,rects,len);
+    return JS_UNDEFINED;
+  }
+  
+  rect rect = js2rect(js,argv[0]);
+  rect.y *= -1;
+  rect.y += logical.y;
+  rect.y -= rect.h;
+  
+  SDL_RenderRect(r, &rect);
+)
+
+JSC_CCALL(renderer_load_texture,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  SDL_Surface *surf = js2SDL_Surface(js,argv[0]);
+  SDL_Texture *tex = SDL_CreateTextureFromSurface(r,surf);
+  ret = SDL_Texture2js(js,tex);
+  JS_SetProperty(js,ret,width_atom, number2js(js,tex->w));
+  JS_SetProperty(js,ret,height_atom, number2js(js,tex->h));
+)
+
+JSC_CCALL(SDL_Renderer_fillrect,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (!JS_IsUndefined(argv[1])) {
+    struct rgba color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+  }
+
+  if (JS_IsArray(js,argv[0])) {
+    int len = js_arrlen(js,argv[0]);
+    rect rects[len];
+    for (int i = 0; i < len; i++) {
+      JSValue val = JS_GetPropertyUint32(js,argv[0],i);
+      rects[i] = js2rect(js,val);
+      JS_FreeValue(js,val);
+    }
+    SDL_RenderFillRects(r,rects,len);
+    return JS_UNDEFINED;
+  }
+  rect rect = js2rect(js,argv[0]);
+  rect.y *= -1;
+  rect.y += logical.y;
+  rect.y -= rect.h;
+  
+  SDL_RenderFillRect(r, &rect);
+)
+
+JSC_CCALL(renderer_texture,
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
+  rect dst = js2rect(js,argv[1]);
+  dst.y *= -1;
+  dst.y += logical.y;
+  dst.y -= dst.h;
+  
+  if (!JS_IsUndefined(argv[3])) {
+    struct rgba color = js2color(js,argv[3]);
+    SDL_SetTextureColorMod(tex, color.r, color.g, color.b);
+  }
+  if (JS_IsUndefined(argv[2]))
+    SDL_RenderTexture(renderer,tex,NULL,&dst);
+  else {
+
+    rect src = js2rect(js,argv[2]);
+
+    SDL_RenderTexture(renderer,tex,&src,&dst);
+  }
+)
+
+JSC_CCALL(renderer_tile,
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  if (!renderer) return JS_ThrowTypeError(js,"self was not a renderer");
+  SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
+  if (!tex) return JS_ThrowTypeError(js,"first argument was not a texture");
+  rect dst = js2rect(js,argv[1]);
+  if (!dst.w) dst.w = tex->w;
+  if (!dst.h) dst.h = tex->h;
+  float scale = js2number(js,argv[3]);
+  if (!scale) scale = 1;
+  if (JS_IsUndefined(argv[2]))
+    SDL_RenderTextureTiled(renderer,tex,NULL,scale, &dst);
+  else {
+    rect src = js2rect(js,argv[2]);
+    SDL_RenderTextureTiled(renderer,tex,&src,scale, &dst);
+  }
+)
+
+JSC_CCALL(renderer_9slice,
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
+  rect *dst, *src = NULL;
+  lrtb bounds = js2lrtb(js,argv[2]);
+  
+)
+
+JSC_CCALL(renderer_get_image,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  SDL_Surface *surf = NULL;
+  if (!JS_IsUndefined(argv[0])) {
+    rect rect = js2rect(js,argv[0]);
+    surf = SDL_RenderReadPixels(r,&rect);
+  } else
+    surf = SDL_RenderReadPixels(r,NULL);
+  if (!surf) return JS_ThrowReferenceError(js, "could not make surface from renderer");
+  return SDL_Surface2js(js,surf);
+)
+
+JSC_SCALL(renderer_fasttext,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (!JS_IsUndefined(argv[2])) {
+    struct rgba color = js2color(js,argv[2]);  
+    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+  }
+  HMM_Vec2 pos = js2vec2(js,argv[1]);
+  pos.y *= -1;
+  pos.y += logical.y;
+  SDL_RenderDebugText(r, pos.x, pos.y, str);
+)
+
+JSC_CCALL(renderer_line,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (!JS_IsUndefined(argv[1])) {
+    struct rgba color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+  }
+
+  if (JS_IsArray(js,argv[0])) {
+    int len = js_arrlen(js,argv[0]);
+    HMM_Vec2 points[len];
+    assert(sizeof(HMM_Vec2) == sizeof(SDL_FPoint));
+    for (int i = 0; i < len; i++) {
+      JSValue val = JS_GetPropertyUint32(js,argv[0],i);
+      points[i] = js2vec2(js,val);
+      JS_FreeValue(js,val);
+    }
+    SDL_RenderLines(r,points,len);
+  }
+)
+
+JSC_CCALL(renderer_point,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (!JS_IsUndefined(argv[1])) {
+    struct rgba color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+  }
+
+  if (JS_IsArray(js,argv[0])) {
+    int len = js_arrlen(js,argv[0]);
+    HMM_Vec2 points[len];
+    assert(sizeof(HMM_Vec2) ==sizeof(SDL_FPoint));
+    for (int i = 0; i < len; i++) {
+      JSValue val = JS_GetPropertyUint32(js,argv[0],i);
+      points[i] = js2vec2(js,val);
+      JS_FreeValue(js,val);
+    }
+    SDL_RenderPoints(r, points, len);
+    return JS_UNDEFINED;
+  }
+
+  HMM_Vec2 point = js2vec2(js,argv[0]);
+  SDL_RenderPoint(r,point.x,point.y);
+)
+
+// Function to translate a list of 2D points
+void Translate2DPoints(HMM_Vec2 *points, int count, HMM_Vec3 position, HMM_Quat rotation, HMM_Vec3 scale) {
+    // Precompute the 2D rotation matrix from the quaternion
+    float xx = rotation.x * rotation.x;
+    float yy = rotation.y * rotation.y;
+    float zz = rotation.z * rotation.z;
+    float xy = rotation.x * rotation.y;
+    float xz = rotation.x * rotation.z;
+    float yz = rotation.y * rotation.z;
+    float xw = rotation.x * rotation.w;
+    float yw = rotation.y * rotation.w;
+    float zw = rotation.z * rotation.w;
+
+    // Extract 2D affine rotation and scaling
+    float m00 = (1.0f - 2.0f * (yy + zz)) * scale.x; // Row 1, Column 1
+    float m01 = (2.0f * (xy + zw)) * scale.y;        // Row 1, Column 2
+    float m10 = (2.0f * (xy - zw)) * scale.x;        // Row 2, Column 1
+    float m11 = (1.0f - 2.0f * (xx + zz)) * scale.y; // Row 2, Column 2
+
+    // Translation components (ignore the z position)
+    float tx = position.x;
+    float ty = position.y;
+
+    // Transform each point
+    for (int i = 0; i < count; ++i) {
+        HMM_Vec2 p = points[i];
+        points[i].x = m00 * p.x + m01 * p.y + tx;
+        points[i].y = m10 * p.x + m11 * p.y + ty;
+    }
+}
+
+// Should take a single struct with pos, color, uv, and indices arrays
+JSC_CCALL(renderer_geometry,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  JSValue pos = JS_GetPropertyStr(js,argv[1], "pos");
+  JSValue color = JS_GetPropertyStr(js,argv[1], "color");
+  JSValue uv = JS_GetPropertyStr(js,argv[1], "uv");
+  JSValue indices = JS_GetPropertyStr(js,argv[1], "indices");
+  int vertices = js_getnum_str(js, argv[1], "vertices");
+  int count = js_getnum_str(js, argv[1], "count");
+
+  size_t pos_stride, indices_stride, uv_stride, color_stride;
+  void *posdata = get_gpu_buffer(js,pos, &pos_stride);
+  void *idxdata = get_gpu_buffer(js,indices, &indices_stride);
+  void *uvdata = get_gpu_buffer(js,uv, &uv_stride);
+  void *colordata = get_gpu_buffer(js,color,&color_stride);
+
+  SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
+
+  HMM_Vec2 *trans_pos = malloc(vertices*sizeof(HMM_Vec2));
+  memcpy(trans_pos,posdata, sizeof(HMM_Vec2)*vertices);
+
+  for (int i = 0; i < vertices; i++) {
+    trans_pos[i].x -= campos.x;
+    trans_pos[i].y -= campos.y;
+  }
+    
+  if (!SDL_RenderGeometryRaw(r, tex, trans_pos, pos_stride,colordata,color_stride,uvdata, uv_stride, vertices, idxdata, count, indices_stride))
+    ret = JS_ThrowReferenceError(js, SDL_GetError());
+
+    free(trans_pos);
+
+  JS_FreeValue(js,pos);
+  JS_FreeValue(js,color);
+  JS_FreeValue(js,uv);
+  JS_FreeValue(js,indices);
+)
+
+JSC_CCALL(renderer_logical_size,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  HMM_Vec2 v = js2vec2(js,argv[0]);
+  logical = v;  
+  SDL_SetRenderLogicalPresentation(r,v.x,v.y,SDL_LOGICAL_PRESENTATION_LETTERBOX);
+)
+
+JSC_CCALL(renderer_viewport,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (JS_IsUndefined(argv[0]))
+    SDL_SetRenderViewport(r,NULL);
+  else {
+    rect view = js2rect(js,argv[0]);
+    SDL_SetRenderViewport(r,&view);
+  }
+)
+
+JSC_CCALL(renderer_clip,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (JS_IsUndefined(argv[0]))
+    SDL_SetRenderClipRect(r,NULL);
+  else {
+    rect view = js2rect(js,argv[0]);
+    SDL_SetRenderClipRect(r,&view);
+  }
+)
+
+JSC_CCALL(renderer_scale,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  HMM_Vec2 v = js2vec2(js,argv[0]);
+  SDL_SetRenderScale(r, v.x, v.y);
+)
+
+JSC_CCALL(renderer_campos,
+  campos = js2vec2(js,argv[0]);
+)
+
+JSC_CCALL(renderer_vsync,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  SDL_SetRenderVSync(r,js2number(js,argv[0]));
+)
+
+JSC_CCALL(renderer_coords,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  HMM_Vec2 pos, coord;
+  pos = js2vec2(js,argv[0]);
+  SDL_RenderCoordinatesFromWindow(r,pos.x,pos.y, &coord.x, &coord.y);
+  return vec22js(js,coord);
+)
+
+static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
+  MIST_FUNC_DEF(SDL_Renderer, draw_color, 1),
+  MIST_FUNC_DEF(SDL_Renderer, present, 0),
+  MIST_FUNC_DEF(SDL_Renderer, clear, 0),
+  MIST_FUNC_DEF(SDL_Renderer, rect, 2),
+  MIST_FUNC_DEF(SDL_Renderer, fillrect, 2),
+  MIST_FUNC_DEF(renderer, line, 2),
+  MIST_FUNC_DEF(renderer, point, 2),
+  MIST_FUNC_DEF(renderer, load_texture, 1),
+  MIST_FUNC_DEF(renderer, texture, 4),
+  MIST_FUNC_DEF(renderer, 9slice, 4),
+  MIST_FUNC_DEF(renderer, tile, 4),
+  MIST_FUNC_DEF(renderer, get_image, 1),
+  MIST_FUNC_DEF(renderer, fasttext, 2),
+  MIST_FUNC_DEF(renderer, geometry, 2),
+  MIST_FUNC_DEF(renderer, scale, 1),
+  MIST_FUNC_DEF(renderer, campos, 1),
+  MIST_FUNC_DEF(renderer,logical_size,1),
+  MIST_FUNC_DEF(renderer,viewport,1),
+  MIST_FUNC_DEF(renderer,clip,1),
+  MIST_FUNC_DEF(renderer,vsync,1),
+  MIST_FUNC_DEF(renderer, coords, 1),
+};
+
+static const JSCFunctionListEntry js_SDL_Surface_funcs[] = {};
+
+JSC_CCALL(texture_mode,
+  SDL_Texture *tex = js2SDL_Texture(js,self);
+  SDL_SetTextureScaleMode(tex,js2number(js,argv[0]));
+)
+
+static const JSCFunctionListEntry js_SDL_Texture_funcs[] = {
+  MIST_FUNC_DEF(texture, mode, 1),
+};
+
+JSC_CCALL(input_mouse_lock, SDL_CaptureMouse(JS_ToBool(js,argv[0])))
+JSC_CCALL(input_mouse_show,
+  if (JS_ToBool(js,argv[0]))
+    SDL_ShowCursor();
+  else
+    SDL_HideCursor();
+)
 
 static const JSCFunctionListEntry js_input_funcs[] = {
-  MIST_FUNC_DEF(input, show_keyboard, 1),
-  MIST_FUNC_DEF(input, keyboard_shown, 0),
-  MIST_FUNC_DEF(input, mouse_cursor, 1),
   MIST_FUNC_DEF(input, mouse_show, 1),
   MIST_FUNC_DEF(input, mouse_lock, 1),
 };
@@ -1676,9 +1838,6 @@ JSC_CCALL(prosperon_guid,
 
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, guid, 0),
-};
-
-static const JSCFunctionListEntry js_sg_buffer_funcs[] = {
 };
 
 JSC_CCALL(time_now, 
@@ -1713,8 +1872,6 @@ static const JSCFunctionListEntry js_console_funcs[] = {
   MIST_FUNC_DEF(console,log,1),
 };
 
-JSC_CCALL(profile_now, return number2js(js,stm_now()))
-
 static JSValue instr_v = JS_UNDEFINED;
 int iiihandle(JSRuntime *rt, void *data)
 {
@@ -1738,7 +1895,7 @@ JSC_CCALL(profile_gather_stop,
 
 JSC_CCALL(profile_best_t,
   char* result[50];
-  double seconds = stm_sec(js2number(js,argv[0]));
+  double seconds = SDL_GetTicksNS()/1000000000.f;
   if (seconds < 1e-6)
     snprintf(result, 50, "%.2f ns", seconds * 1e9);
   else if (seconds < 1e-3)
@@ -1751,7 +1908,7 @@ JSC_CCALL(profile_best_t,
   ret = JS_NewString(js,result);
 )
 
-JSC_CCALL(profile_secs, return number2js(js,stm_sec(js2number(js,argv[0]))); )
+JSC_CCALL(profile_now, return number2js(js, SDL_GetTicksNS()/1000000000.f))
 
 static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,now,0),
@@ -1759,7 +1916,6 @@ static const JSCFunctionListEntry js_profile_funcs[] = {
   MIST_FUNC_DEF(profile,gather,2),
   MIST_FUNC_DEF(profile,gather_rate,1),
   MIST_FUNC_DEF(profile,gather_stop,0),
-  MIST_FUNC_DEF(profile,secs,1),
 };
 
 JSC_CCALL(debug_stack_depth, return number2js(js,js_debugger_stack_depth(js)))
@@ -1779,235 +1935,154 @@ static const JSCFunctionListEntry js_debug_funcs[] = {
   MIST_FUNC_DEF(debug, dump_obj, 1),
 };
 
-#ifdef __WIN32
-#include <windows.h>
-#include <stdio.h>
-
-void list_files(const char *path, JSContext *js, JSValue v, int *n) {
-    WIN32_FIND_DATA ffd;
-    HANDLE hFind = INVALID_HANDLE_VALUE;
-    char searchPath[MAX_PATH];
-
-    // Prepare the path for search
-    snprintf(searchPath, sizeof(searchPath), "%s/*", path);
-
-    hFind = FindFirstFileEx(searchPath, FindExInfoStandard, &ffd, FindExSearchLimitToDirectories, NULL, 0);
-    if (hFind == INVALID_HANDLE_VALUE) {
-        return;
-    }
-
-    do {
-        if (strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0) {
-            char filePath[MAX_PATH];
-            snprintf(filePath, sizeof(filePath), "%s/%s", path, ffd.cFileName);
-
-            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                // If it's a directory, recurse into it
-//                printf("Directory: %s\n", filePath);
-                list_files(filePath, js, v, n);
-            } else {
-                JS_SetPropertyUint32(js, v, *n, JS_NewString(js, filePath+2));
-                *n = *n+1;
-                // If it's a file, print it
-//                printf("File: %s\n", filePath);
-            }
-        }
-    } while (FindNextFile(hFind, &ffd) != 0);
-
-    FindClose(hFind);
-}
-#else
-static void list_files(const char *path, JSContext *js, JSValue v, int *n)
-{
-  tinydir_dir dir;
-  tinydir_open(&dir, path);
-  do {
-    tinydir_file file;
-    tinydir_readfile(&dir, &file);
-    if (file.is_dir) {
-      if (!strcmp(file.name, ".") || !strcmp(file.name, "..")) continue;
-      list_files(file.path, js, v, n);
-    } else {
-      JS_SetPropertyUint32(js, v, *n, JS_NewString(js, file.path+2));
-      *n = *n+1;
-    }
-  } while (!tinydir_next(&dir));
-  
-  tinydir_close(&dir);
-}
-#endif
-JSC_CCALL(io_ls, 
-  JSValue strarr = JS_NewArray(js);
-  int i = 0;
-  list_files(".", js, strarr, &i);
-  return strarr;
+JSC_SCALL(io_rm,
+  if (!PHYSFS_delete(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 )
-JSC_SSCALL(io_mv, ret = number2js(js,rename(str,str2)))
-JSC_SCALL(io_chdir, ret = number2js(js,chdir(str)))
-JSC_SCALL(io_rm, ret = number2js(js,remove(str)))
-JSC_SCALL(io_mkdir, ret = number2js(js,mkdir(str,0777)))
+JSC_SCALL(io_mkdir,
+  if (!PHYSFS_mkdir(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));  
+)
 
-// glob sprites/*.png
-// glob sprite/**/*.png
-// pattern: sprites/fool.png
-// glob sprites/fool.png
-#include "wildmatch.h"
-JSC_SSCALL(io_glob,
-  if (wildmatch(str, str2, WM_PATHNAME | WM_PERIOD | WM_WILDSTAR) == WM_MATCH)
-    return JS_NewBool(js,1);
+JSC_SCALL(io_exists, ret = JS_NewBool(js,PHYSFS_exists(str)); )
+
+JSC_SCALL(io_stat,
+  PHYSFS_Stat stat;
+  if (!PHYSFS_stat(str, &stat))
+    return JS_ThrowReferenceError(js, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+
+  ret = JS_NewObject(js);
+  JS_SetPropertyStr(js,ret,"filesize", number2js(js,stat.filesize));
+  JS_SetPropertyStr(js,ret,"modtime", number2js(js,stat.modtime));
+  JS_SetPropertyStr(js,ret,"createtime", number2js(js,stat.createtime));
+  JS_SetPropertyStr(js,ret,"accesstime", number2js(js,stat.accesstime));
+)
+
+JSC_SCALL(io_slurp,
+  PHYSFS_File *f = PHYSFS_openRead(str);
+  if (!f) {
+    ret = JS_ThrowReferenceError(js,"physfs error when slurping %s: %s", str, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    goto END;
+  }
+  PHYSFS_Stat stat;
+  PHYSFS_stat(str,&stat);
+  void *data = malloc(stat.filesize);
+  PHYSFS_readBytes(f,data,stat.filesize);
+  PHYSFS_close(f);  
+  if (JS_ToBool(js,argv[1]))
+    ret = JS_NewStringLen(js,data, stat.filesize);
   else
-    return JS_NewBool(js, 0);
+    ret = JS_NewArrayBufferCopy(js,data,stat.filesize);
+
+  END:
 )
 
-#include <quickjs.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#endif
-
-JSValue js_io_slurp(JSContext *js, JSValue self, int argc, JSValue *argv) {
-    const char *file = JS_ToCString(js, argv[0]);
-    if (!file)
-        return JS_EXCEPTION;
-
-    size_t fsize;
-    void *slurp = NULL;
-
-#ifdef _WIN32
-    // Windows file mapping
-    HANDLE hFile = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-
-    LARGE_INTEGER fileSize;
-    if (!GetFileSizeEx(hFile, &fileSize)) {
-        CloseHandle(hFile);
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-
-    fsize = (size_t)fileSize.QuadPart;
-    HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-    if (hMapping == NULL) {
-        CloseHandle(hFile);
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-
-    slurp = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    CloseHandle(hMapping);
-    CloseHandle(hFile);
-
-    if (slurp == NULL) {
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-
-#else
-    // POSIX mmap
-    int fd = open(file, O_RDONLY);
-    if (fd < 0) {
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-
-    struct stat sb;
-    if (fstat(fd, &sb) == -1) {
-        close(fd);
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-
-    fsize = sb.st_size;
-    slurp = mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
-
-    if (slurp == MAP_FAILED) {
-        JS_FreeCString(js, file);
-        return JS_UNDEFINED;
-    }
-#endif
-
-    JSValue ret;
-    if (JS_ToBool(js, argv[1])) {
-        // Return as string
-        ret = JS_NewStringLen(js, slurp, fsize);
-    } else {
-        // Return as ArrayBuffer
-        ret = JS_NewArrayBufferCopy(js, slurp, fsize);
-    }
-
-#ifdef _WIN32
-    // Unmap on Windows
-    UnmapViewOfFile(slurp);
-#else
-    // Unmap on POSIX
-    munmap(slurp, fsize);
-#endif
-
-    JS_FreeCString(js, file);
-    return ret;
-}
-
-JSValue js_io_slurpwrite(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  const char *f = JS_ToCString(js, argv[0]);
-  FILE *file = fopen(f,"wb");
-  if (!file) return JS_ThrowReferenceError(js, "could not open file for writing at %s", f);
+JSC_SCALL(io_slurpwrite,
+  PHYSFS_File *f = PHYSFS_openWrite(str);
+  if (!f) {
+    ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    goto END;
+  }
   size_t len;
-  JSValue ret;
-  if (JS_IsString(argv[1])) {
-    const char *data = JS_ToCStringLen(js, &len, argv[1]);
-    ret = number2js(js, fwrite(data, len, 1, file));
-    JS_FreeCString(js,data);
-    fclose(file);
-  } else {
-    unsigned char *data = JS_GetArrayBuffer(js, &len, argv[1]);
-    ret = number2js(js,fwrite(data,len,1,file));
-    fclose(file);
+  unsigned char *data;
+  if (JS_IsString(argv[1]))
+    data = JS_ToCStringLen(js,&len,argv[1]);
+   else
+    data = JS_GetArrayBuffer(js,&len, argv[1]);
+
+  size_t wrote = PHYSFS_writeBytes(f,data, len);
+  PHYSFS_close(f);  
+  if (wrote == -1 || wrote < len)
+    ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+  
+  END:
+)
+
+JSC_SCALL(io_mount,
+  if (!PHYSFS_mount(str,NULL,0)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+)
+
+JSC_SCALL(io_unmount,
+  if (!PHYSFS_unmount(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+)
+
+JSC_SCALL(io_writepath,
+  if (!PHYSFS_setWriteDir(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+)
+
+struct globdata {
+  JSContext *js;
+  JSValue arr;
+  char **globs;
+  int idx;
+};
+
+int globfs_cb(struct globdata *data, char *dir, char *file)
+{
+  int needfree = 0;
+  char *path;
+  if (dir[0] == 0) path = file;
+  else {
+    path = malloc(strlen(dir) + strlen(file) + 2);
+    path[0] = 0;
+    strcat(path,dir);
+    strcat(path,"/");
+    strcat(path,file);
+    needfree = 1;
   }
 
-  return ret;
+  char **glob = data->globs;
+  while (*glob != NULL) {
+    if (wildmatch(*glob, path, WM_PATHNAME | WM_PERIOD | WM_WILDSTAR) == WM_MATCH)
+      goto END;
+    *glob++;
+  }
+
+  if (PHYSFS_isDirectory(path)) {
+    PHYSFS_enumerate(path, globfs_cb, data);
+    goto END;
+  }
+
+  JS_SetPropertyUint32(data->js, data->arr, data->idx++, JS_NewString(data->js,path));
+
+  END:
+  if (needfree) free(path);
+  return 1;
 }
 
-JSValue js_io_chmod(JSContext *js, JSValue self, int argc, JSValue *argv)
-{
-  const char *f = JS_ToCString(js, argv[0]);
-  int mod = js2number(js,argv[1]);
-  chmod(f, mod);
-  return JS_UNDEFINED;
-}
+JSC_CCALL(io_globfs,
+  ret = JS_NewArray(js);
+  struct globdata data;
+  data.js = js;
+  data.arr = ret;
+  data.idx = 0;
+  int globs_len = js_arrlen(js,argv[0]);
+  char *globs[globs_len+1];
+  for (int i = 0; i < globs_len; i++) {
+    JSValue g = JS_GetPropertyUint32(js,argv[0],i);
+    globs[i] = JS_ToCString(js,g);
+    JS_FreeValue(js,g);
+  }
+  globs[globs_len] = NULL;
+  data.globs = globs;
 
-JSC_SCALL(io_mod,
-  #ifndef __EMSCRIPTEN__
-  struct stat attr;
-  if (!stat(str,&attr))
-    ret = number2js(js,attr.st_mtime);
-  else
-    return JS_UNDEFINED;//JS_ThrowReferenceError(js, "could not get file attributes of %s", str);
-  #endif
+  PHYSFS_enumerate("", globfs_cb, &data);
+
+  return data.arr;
 )
 
+JSC_CCALL(io_basedir, return JS_NewString(js,PHYSFS_getBaseDir()))
+
 static const JSCFunctionListEntry js_io_funcs[] = {
-  MIST_FUNC_DEF(io, mv, 2),
-  MIST_FUNC_DEF(io, ls, 0),
   MIST_FUNC_DEF(io, rm, 1),
-  MIST_FUNC_DEF(io, chdir, 1),
   MIST_FUNC_DEF(io, mkdir, 1),
-  MIST_FUNC_DEF(io, chmod, 2),
-  MIST_FUNC_DEF(io, slurp, 2),
-  MIST_FUNC_DEF(io, slurpwrite, 2),
-  MIST_FUNC_DEF(io, mod,1),
-  MIST_FUNC_DEF(io, glob, 2),
+  MIST_FUNC_DEF(io,stat,1),
+  MIST_FUNC_DEF(io, globfs, 1),
+  MIST_FUNC_DEF(io, exists, 1),
+  MIST_FUNC_DEF(io, mount, 1),
+  MIST_FUNC_DEF(io,unmount,1),
+  MIST_FUNC_DEF(io,slurp,2),
+  MIST_FUNC_DEF(io,slurpwrite,2),
+  MIST_FUNC_DEF(io,writepath, 1),
+  MIST_FUNC_DEF(io,basedir, 0),
 };
 
 JSC_GETSET(transform, pos, vec3)
@@ -2122,13 +2197,13 @@ JSC_GET(texture, vram, number)
 
 JSC_SCALL(texture_save, texture_save(js2texture(js,self), str));
 
-JSC_CCALL(texture_blit,
-  texture_blit(js2texture(js,self), js2texture(js,argv[0]), js2rect(js,argv[1]), js2rect(js,argv[2]), JS_ToBool(js,argv[3]));
+JSC_CCALL(texture_blit, 
+//  texture_blit(js2texture(js,self), js2texture(js,argv[0]), js2rect(js,argv[1]), js2rect(js,argv[2]), JS_ToBool(js,argv[3]));
 )
 
 JSC_CCALL(texture_getid,
   texture *tex = js2texture(js,self);
-  return number2js(js,tex->id.id);
+  return number2js(js,(int)tex->id);
 )
 
 JSC_CCALL(texture_inram, return JS_NewBool(js,(int)js2texture(js,self)->data));
@@ -2151,7 +2226,7 @@ JSC_CCALL(texture_write_pixel,
 )
 
 JSC_CCALL(texture_dup,
-  ret = texture2js(js,texture_dup(js2texture(js,self)));
+//  ret = texture2js(js,texture_dup(js2texture(js,self)));
 )
 
 JSC_CCALL(texture_scale,
@@ -2159,7 +2234,10 @@ JSC_CCALL(texture_scale,
 )
 
 JSC_CCALL(texture_load_gpu,
-  texture_load_gpu(js2texture(js,self));
+  return JS_UNDEFINED;
+  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
+  SDL_Surface *surface = js2SDL_Surface(js,argv[0]);
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
 )
 
 JSC_CCALL(texture_offload,
@@ -2231,13 +2309,12 @@ static const JSCFunctionListEntry js_performance_funcs[] = {
   MIST_FUNC_DEF(performance, call_fn_n, 3)
 };
 
-JSC_CCALL(geometry_rect_intersect,
+JSC_CCALL(geometry_rect_intersection,
   rect a = js2rect(js,argv[0]);
   rect b = js2rect(js,argv[1]);
-  return JS_NewBool(js,a.x < (b.x+b.w) &&
-         (a.x + a.w) > b.x &&
-         a.y < (b.y + b.h) &&
-         (a.y + a.h) > b.y );
+  rect c;
+  SDL_GetRectIntersectionFloat(&a, &b, &c);
+  return rect2js(js,c);
 )
 
 JSC_CCALL(geometry_rect_inside,
@@ -2287,13 +2364,12 @@ JSC_CCALL(geometry_rect_pos,
 JSC_CCALL(geometry_rect_move,
   rect r = js2rect(js,argv[0]);
   HMM_Vec2 move = js2vec2(js,argv[1]);
-  r.x += move.x;
-  r.y += move.y;
+  cblas_saxpy(2, 1.0f, move.e, 1, &r, 1);
   return rect2js(js,r);
 )
 
 static const JSCFunctionListEntry js_geometry_funcs[] = {
-  MIST_FUNC_DEF(geometry, rect_intersect, 2),
+  MIST_FUNC_DEF(geometry, rect_intersection, 2),
   MIST_FUNC_DEF(geometry, rect_inside, 2),
   MIST_FUNC_DEF(geometry, rect_random, 1),
   MIST_FUNC_DEF(geometry, cwh2rect, 2),
@@ -2523,10 +2599,33 @@ JSC_CCALL(os_make_texture,
   void *raw = JS_GetArrayBuffer(js, &len, argv[0]);
   if (!raw) return JS_ThrowReferenceError(js, "could not load texture with array buffer");
 
-  texture *tex = texture_fromdata(raw, len);
-  if (!tex) return JS_ThrowReferenceError(js, "unable to make texture from the given array buffer");
+  struct texture *tex = calloc(1, sizeof(*tex));
 
-  ret = texture2js(js,tex);
+  int n, width, height;
+  void *data = stbi_load_from_memory(raw, len, &width, &height, &n, 0);
+
+  if (data == NULL)
+    return JS_ThrowReferenceError(js, "no known image type from pixel data");
+
+  int FMT = 0;
+  if (n == 4)
+    FMT = SDL_PIXELFORMAT_RGBA32;
+  else if (n == 3)
+    FMT = SDL_PIXELFORMAT_RGB24;
+  else {
+    free(data);
+    return JS_ThrowReferenceError(js, "unknown pixel format");
+  }
+   
+  SDL_Surface *surf = SDL_CreateSurfaceFrom(width,height,FMT, data, width*n);
+  if (!surf) {
+    free(data);
+    return JS_ThrowReferenceError(js, SDL_GetError());
+  }
+
+  ret = SDL_Surface2js(js,surf);
+  JS_SetProperty(js,ret,width_atom,number2js(js,surf->w));
+  JS_SetProperty(js,ret,height_atom,number2js(js,surf->h));
 )
 
 JSC_CCALL(os_make_gif,
@@ -2647,7 +2746,8 @@ JSC_CCALL(os_make_font,
   font *f = MakeFont(data, len, js2number(js,argv[1]));
   if (!f) return JS_ThrowReferenceError(js, "could not create font");
   ret = font2js(js,f);
-  JS_SetPropertyStr(js, ret, "texture", texture2js(js,f->texture));
+  JS_SetPropertyStr(js, ret, "surface", SDL_Surface2js(js,f->surface));
+  printf("texture is %dx%d at %p\n", f->surface->w, f->surface->h, f->surface);
 )
 
 JSC_CCALL(os_make_transform, return transform2js(js,make_transform()))
@@ -2662,11 +2762,11 @@ JSC_SCALL(os_gltf_buffer,
   cgltf_result result = cgltf_parse_file(&options, str, &data);
   result = cgltf_load_buffers(&options, data, str);
 
-  sg_buffer *b = malloc(sizeof(*b));
-  *b = accessor2buffer(&data->accessors[buffer_idx], type);
+  SDL_GPUBuffer *b = SDL_CreateGPUBuffer(NULL,NULL);
+//  *b = accessor2buffer(&data->accessors[buffer_idx], type);
   cgltf_free(data);
 
-  ret = sg_buffer2js(js,b);
+//  ret = sg_buffer2js(js,b);
 )
 
 JSC_SCALL(os_gltf_skin,
@@ -2691,7 +2791,7 @@ JSC_CCALL(os_make_buffer,
   float *b = malloc(sizeof(float)*js_arrlen(js,argv[0]));
   for (int i = 0; i < js_arrlen(js,argv[0]); i++)
     b[i] = js_getnum_uint32(js, argv[0],i);
-    
+/*    
   sg_buffer *p = malloc(sizeof(sg_buffer));
   
   switch(type) {
@@ -2710,17 +2810,21 @@ JSC_CCALL(os_make_buffer,
   }
 
   free(b);
-  return sg_buffer2js(js,p);
+  return sg_buffer2js(js,p);*/
+)
+
+JSC_CCALL(os_make_color_buffer,
+  int count = js2number(js,argv[1]);
+  HMM_Vec4 color = js2vec4(js,argv[0]);
+  HMM_Vec4 *buffer = malloc(sizeof(HMM_Vec4) * count);
+  for (int i =  0; i < count; i++)
+    memcpy(buffer+i, &color, sizeof(HMM_Vec4));
+  ret = make_gpu_buffer(js,buffer,sizeof(HMM_Vec4)*count,JS_TYPED_ARRAY_FLOAT32,4,0);
 )
 
 JSC_CCALL(os_make_line_prim,
   JSValue prim = JS_NewObject(js);
   HMM_Vec2 *v = js2cpvec2arr(js,argv[0]);
-  parsl_position par_v[arrlen(v)];
-  for (int i = 0; i < arrlen(v); i++) {
-    par_v[i].x = v[i].x;
-    par_v[i].y = v[i].y;
-  }
   
   parsl_context *par_ctx = parsl_create_context((parsl_config){
     .thickness = js2number(js,argv[1]),
@@ -2733,43 +2837,33 @@ JSC_CCALL(os_make_line_prim,
   parsl_mesh *m = parsl_mesh_from_lines(par_ctx, (parsl_spine_list){
     .num_vertices = arrlen(v),
     .num_spines = 1,
-    .vertices = par_v,
+    .vertices = v,
     .spine_lengths = spine_lens,
     .closed = JS_ToBool(js,argv[3])
   });
-  HMM_Vec3 a_pos[m->num_vertices];
+
+  JS_SetPropertyStr(js, prim, "pos", make_gpu_buffer(js,m->positions,sizeof(*m->positions)*m->num_vertices, JS_TYPED_ARRAY_FLOAT32, 2,1));
   
-  for (int i = 0; i < m->num_vertices; i++) {
-    a_pos[i].x = m->positions[i].x;
-    a_pos[i].y = m->positions[i].y;
-    a_pos[i].z = 0;
-  }
-  
-  sg_buffer *pos = malloc(sizeof(*pos));
-  *pos = sg_make_buffer(&(sg_buffer_desc){
-    .data = SG_RANGE(a_pos),
-  });
-  JS_SetPropertyStr(js, prim, "pos", sg_buffer2js(js,pos));
-  JS_SetPropertyStr(js, prim, "count", number2js(js,m->num_triangles*3));
-  sg_buffer *idx = malloc(sizeof(*idx));
-  *idx = par_idx_buffer(m->triangle_indices, m->num_triangles*3);
-  JS_SetPropertyStr(js, prim, "index", sg_buffer2js(js,idx));
+  JS_SetPropertyStr(js, prim, "indices", make_gpu_buffer(js,m->triangle_indices,sizeof(*m->triangle_indices)*m->num_triangles*3, JS_TYPED_ARRAY_UINT32, 1,1));
   
   float uv[m->num_vertices*2];
   for (int i = 0; i < m->num_vertices; i++) {
     uv[i*2] = m->annotations[i].u_along_curve;
     uv[i*2+1] = m->annotations[i].v_across_curve;
   }
-  sg_buffer *buv = malloc(sizeof(*buv));
-  *buv = texcoord_floats(uv, m->num_vertices*2);
-  JS_SetPropertyStr(js, prim, "uv", sg_buffer2js(js,buv));
+
+  JS_SetPropertyStr(js, prim, "uv", make_gpu_buffer(js, uv, sizeof(uv), JS_TYPED_ARRAY_FLOAT32,2,1));
+  JS_SetPropertyStr(js,prim,"vertices", number2js(js,m->num_vertices));
+  JS_SetPropertyStr(js,prim,"count", number2js(js,m->num_triangles*3));
+
+  parsl_destroy_context(par_ctx);
   
   return prim;
 )
 
 JSValue parmesh2js(JSContext *js,par_shapes_mesh *m)
 {
-  JSValue obj = JS_NewObject(js);
+/*  JSValue obj = JS_NewObject(js);
   sg_buffer *pos = malloc(sizeof(*pos));
   *pos = float_buffer(m->points, 3*m->npoints);
   JS_SetPropertyStr(js, obj, "pos", sg_buffer2js(js,pos));
@@ -2800,6 +2894,7 @@ JSValue parmesh2js(JSContext *js,par_shapes_mesh *m)
   
   par_shapes_free_mesh(m);
   return obj;
+*/
 }
 
 JSC_CCALL(os_make_cylinder,
@@ -2844,7 +2939,7 @@ JSC_CCALL(os_make_video,
   datastream *ds = ds_openvideo(data, len);
   ret = datastream2js(js,ds);
   texture *t = malloc(sizeof(texture));
-  t->id = ds->img;
+//  t->id = ds->img;
   JS_SetPropertyStr(js, ret, "texture", texture2js(js,t));
 )
 
@@ -2919,29 +3014,79 @@ JSC_SCALL(os_kill,
   return JS_UNDEFINED;
 )
 
-#include "glad.h"
-JSC_CCALL(os_tex_data,
-#ifdef SOKOL_GLCORE
-  texture *tex = js2texture(js, argv[0]);
-  sg_gl_image_info glinfo = sg_gl_query_image_info(tex->id);
-  glBindTexture(glinfo.tex_target, glinfo.tex[glinfo.active_slot]);
-  unsigned char *pixels = malloc(tex->width * tex->height * 4);
-  glGetTexImage(glinfo.tex_target, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-  GLenum err = glGetError();
-  if (err != GL_NO_ERROR) {
-    free(pixels);
-    return JS_ThrowReferenceError(js, "could not pull pixel data");
+JSC_CCALL(os_make_sprite_mesh,
+  JSValue sprites = argv[0];
+  JSValue old = argv[1];
+  size_t quads = js_arrlen(js,argv[0]);
+  size_t verts = quads*4;
+  size_t count = quads*6;
+
+  HMM_Vec2 *posdata = malloc(sizeof(*posdata)*verts);
+  HMM_Vec2 *uvdata = malloc(sizeof(*uvdata)*verts);
+  HMM_Vec4 *colordata = malloc(sizeof(*colordata)*verts);
+
+  for (int i = 0; i < quads; i++) {
+    JSValue sub = JS_GetPropertyUint32(js,sprites,i);
+    JSValue jsdst = JS_GetProperty(js,sub,dst_atom);
+    JSValue jssrc = JS_GetProperty(js,sub,src_atom);
+    JSValue jscolor = JS_GetProperty(js,sub,color_atom);
+    HMM_Vec4 color;
+    rect dst = js2rect(js,jsdst);
+
+    rect src;
+    if (JS_IsUndefined(jssrc))
+      src = (rect){.x = 0, .y = 0, .w = 1, .h = 1};
+    else
+      src = js2rect(js,jssrc);
+    
+    if (JS_IsUndefined(jscolor))
+      color = (HMM_Vec4){1,1,1,1};
+    else
+      color = js2vec4(js,jscolor);
+
+    // Calculate the base index for the current quad
+    size_t base = i * 4;
+
+    // Define the four corners of the destination rectangle
+    posdata[base + 0] = (HMM_Vec2){ dst.x,             dst.y + dst.h };
+    posdata[base + 1] = (HMM_Vec2){ dst.x + dst.w, dst.y + dst.h };
+    posdata[base + 2] = (HMM_Vec2){ dst.x,             dst.y };
+    posdata[base + 3] = (HMM_Vec2){ dst.x + dst.w, dst.y };
+
+    // Define the UV coordinates based on the source rectangle
+    uvdata[base + 0] = (HMM_Vec2){ src.x,                  src.y + src.h };
+    uvdata[base + 1] = (HMM_Vec2){ src.x + src.w,      src.y + src.h };    
+    uvdata[base + 2] = (HMM_Vec2){ src.x,                  src.y };
+    uvdata[base + 3] = (HMM_Vec2){ src.x + src.w,      src.y };
+
+    cblas_scopy(4, color.e, 1, &(colordata[base+0].x),1);
+    cblas_scopy(4, color.e, 1, &(colordata[base+1].x),1);
+    cblas_scopy(4, color.e, 1, &(colordata[base+2].x),1);
+    cblas_scopy(4, color.e, 1, &(colordata[base+3].x),1);
+/*    colordata[base + 0] = color;
+    colordata[base + 1] = color;
+    colordata[base + 2] = color;
+    colordata[base + 3] = color;
+    */
+    JS_FreeValue(js,sub);
+    JS_FreeValue(js,jscolor);
+    JS_FreeValue(js,jsdst);
+    JS_FreeValue(js,jssrc);
   }
-  glBindTexture(glinfo.tex_target,0);
-  ret = JS_NewArrayBufferCopy(js,pixels,tex->width*tex->height*4);
-  free(pixels);
-  return ret;
- #endif
+
+  ret = JS_NewObject(js);
+  JS_SetProperty(js, ret, pos_atom, make_gpu_buffer(js, posdata, sizeof(*posdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
+  JS_SetProperty(js, ret, uv_atom, make_gpu_buffer(js, uvdata, sizeof(*uvdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
+  JS_SetProperty(js, ret, color_atom, make_gpu_buffer(js, colordata, sizeof(*colordata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
+  JS_SetProperty(js, ret, indices_atom, make_quad_indices_buffer(js, quads));
+  JS_SetProperty(js, ret, vertices_atom, number2js(js, verts));
+  JS_SetProperty(js, ret, count_atom, number2js(js, count));
 )
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, turbulence, 4),
   MIST_FUNC_DEF(os, fbm, 4),
+  MIST_FUNC_DEF(os, make_color_buffer, 2),
   MIST_FUNC_DEF(os, backend, 0),
   MIST_FUNC_DEF(os, ridge, 5),
   MIST_FUNC_DEF(os, perlin, 3),
@@ -2974,6 +3119,8 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_plane, 2),
   MIST_FUNC_DEF(os, make_video, 1),
   MIST_FUNC_DEF(os, make_timer, 1),
+  MIST_FUNC_DEF(os, make_sprite_mesh, 2),
+  MIST_FUNC_DEF(os, make_text_buffer, 6),
   MIST_FUNC_DEF(os, update_timers, 1),
   MIST_FUNC_DEF(os, mem, 1),
   MIST_FUNC_DEF(os, mem_limit, 1),
@@ -2992,7 +3139,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, gltf_skin, 1),
   MIST_FUNC_DEF(os, skin_calculate, 1),
   MIST_FUNC_DEF(os, kill, 1),
-  MIST_FUNC_DEF(os, tex_data,1),
 };
 
 #define JSSTATIC(NAME, PARENT) \
@@ -3010,7 +3156,7 @@ JSValue js_tracy_use(JSContext *js);
 #endif
 
 #ifndef NEDITOR
-JSValue js_imgui(JSContext *js);
+//JSValue js_imgui(JSContext *js);
 JSValue js_dmon_use(JSContext *js);
 #endif
 
@@ -3047,15 +3193,18 @@ static void exit_handler()
 }
 
 void ffi_load(JSContext *js) {
-  stm_setup(); /* time */
   cycles = tmpfile();
   quickjs_set_cycleout(cycles);
   
   JSValue globalThis = JS_GetGlobalObject(js);
 
+  QJSCLASSPREP_FUNCS(SDL_Window)
+  QJSCLASSPREP_FUNCS(SDL_Surface)
+  QJSCLASSPREP_FUNCS(SDL_Texture)
+  QJSCLASSPREP_FUNCS(SDL_Renderer)
+
   QJSGLOBALCLASS(os);
   
-  QJSCLASSPREP_FUNCS(sg_buffer);  
   QJSCLASSPREP_FUNCS(transform);
 //  QJSCLASSPREP_FUNCS(warp_gravity);
 //  QJSCLASSPREP_FUNCS(warp_damp);
@@ -3063,6 +3212,7 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(timer);
+
 
   QJSGLOBALCLASS(input);
   QJSGLOBALCLASS(io);
@@ -3072,7 +3222,6 @@ void ffi_load(JSContext *js) {
   QJSGLOBALCLASS(profile);
   QJSGLOBALCLASS(debug);
   QJSGLOBALCLASS(game);
-  QJSGLOBALCLASS(gui);
   QJSGLOBALCLASS(render);
   QJSGLOBALCLASS(vector);
   QJSGLOBALCLASS(spline);
@@ -3088,14 +3237,11 @@ void ffi_load(JSContext *js) {
   array_proto = js_getpropertystr(js,array_proto, "prototype");
   JS_SetPropertyFunctionList(js, array_proto, js_array_funcs, countof(js_array_funcs));
 
-  srand(stm_now());
-
   JS_SetPropertyStr(js, globalThis, "layout", js_layout_use(js));
   JS_SetPropertyStr(js, globalThis, "miniz", js_miniz_use(js));
   JS_SetPropertyStr(js, globalThis, "soloud", js_soloud_use(js));
   JS_SetPropertyStr(js, globalThis, "chipmunk2d", js_chipmunk2d_use(js));
 
-  
 #ifdef TRACY_ENABLE
   JS_SetPropertyStr(js, globalThis, "tracy", js_tracy_use(js));
 #endif
@@ -3108,8 +3254,23 @@ void ffi_load(JSContext *js) {
 
 #ifndef NEDITOR
   JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
-  JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
+//  JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
 #endif
-  
+
+  x_atom = JS_NewAtom(js,"x");
+  y_atom = JS_NewAtom(js,"y");
+  width_atom = JS_NewAtom(js,"width");
+  height_atom = JS_NewAtom(js,"height");
+  anchor_x_atom = JS_NewAtom(js, "anchor_x");
+  anchor_y_atom = JS_NewAtom(js,"anchor_y");
+  src_atom = JS_NewAtom(js,"src");
+  pos_atom = JS_NewAtom(js, "pos");
+  uv_atom = JS_NewAtom(js, "uv");
+  color_atom = JS_NewAtom(js, "color");
+  indices_atom = JS_NewAtom(js, "indices");
+  vertices_atom = JS_NewAtom(js, "vertices");
+  dst_atom = JS_NewAtom(js, "dst");
+  count_atom = JS_NewAtom(js, "count");
+
   JS_FreeValue(js,globalThis);  
 }

@@ -1,14 +1,5 @@
 #include "render.h"
 
-#define SOKOL_TRACE_HOOKS
-#define SOKOL_IMPL
-#define SOKOL_NO_ENTRY
-#include "sokol/sokol_time.h"
-#include "sokol/sokol_gfx.h"
-#include "sokol/sokol_app.h"
-#include "sokol/sokol_log.h"
-#include "sokol/sokol_glue.h"
-
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include "cute_aseprite.h"
 

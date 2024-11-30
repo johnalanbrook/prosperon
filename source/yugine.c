@@ -2,7 +2,13 @@
 #include "script.h"
 #include <string.h>
 
+#include "physfs.h"
+
 int main(int argc, char **argv) {
+  PHYSFS_init(argv[0]);
+  char *base = PHYSFS_getBaseDir();
+  PHYSFS_setWriteDir(base);
+  PHYSFS_mount(base,NULL,0);
   script_startup(); // runs engine.js
 
   int argsize = 0;

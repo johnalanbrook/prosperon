@@ -21,13 +21,11 @@
 
 #include "texture.h"
 
-#include "sokol/sokol_gfx.h"
-
 #include "jsffi.h"
 
 unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
 
-sg_buffer texcoord_floats(float *f, int n)
+SDL_GPUBuffer *texcoord_floats(float *f, int n)
 {
   unsigned short packed[n];
   for (int i = 0; i < n; i++) {
@@ -37,43 +35,47 @@ sg_buffer texcoord_floats(float *f, int n)
     packed[i] = pack_short_tex(v);
   }
 
-  return sg_make_buffer(&(sg_buffer_desc){
+/*  return sg_make_buffer(&(sg_buffer_desc){
     .data = SG_RANGE(packed),
     .label = "tex coord vert buffer",
-  });
+  });*/
+  return NULL;
 }
 
-sg_buffer par_idx_buffer(uint32_t *p, int v)
+SDL_GPUBuffer *par_idx_buffer(uint32_t *p, int v)
 {
   uint16_t idx[v];
   for (int i = 0; i < v; i++) idx[i] = p[i];
   
-  return sg_make_buffer(&(sg_buffer_desc){
+/*  return sg_make_buffer(&(sg_buffer_desc){
     .data = SG_RANGE(idx),
     .type = SG_BUFFERTYPE_INDEXBUFFER
-  });
+  });*/
+  return NULL;
 }
 
-sg_buffer float_buffer(float *f, int v)
+SDL_GPUBuffer *float_buffer(float *f, int v)
 {
-  return sg_make_buffer(&(sg_buffer_desc){
+  return NULL;
+/*  return sg_make_buffer(&(sg_buffer_desc){
     .data = (sg_range){
       .ptr = f,
       .size = sizeof(*f)*v
     }
-  });
+  });*/
 }
 
-sg_buffer index_buffer(float *f, int verts)
+SDL_GPUBuffer *index_buffer(float *f, int verts)
 {
-  uint16_t idxs[verts];
+  return NULL;
+/*  uint16_t idxs[verts];
   for (int i = 0; i < verts; i++)
     idxs[i] = f[i];
   
   return sg_make_buffer(&(sg_buffer_desc){
     .data = SG_RANGE(idxs),
     .type = SG_BUFFERTYPE_INDEXBUFFER,
-  });
+  });*/
 }
 
 uint32_t pack_int10_n2(float *norm)
@@ -87,40 +89,44 @@ uint32_t pack_int10_n2(float *norm)
 }
 
 // Pack an array of normals into 
-sg_buffer normal_floats(float *f, int n)
+SDL_GPUBuffer *normal_floats(float *f, int n)
 {
   return float_buffer(f, n);
-  uint32_t packed_norms[n/3];
+/*  uint32_t packed_norms[n/3];
   for (int v = 0, i = 0; v < n/3; v++, i+= 3)
     packed_norms[v] = pack_int10_n2(f+i);
 
   return sg_make_buffer(&(sg_buffer_desc){
     .data = SG_RANGE(packed_norms),
     .label = "normal vert buffer",
-  });
+  });*/
 }
 
-sg_buffer ubyten_buffer(float *f, int v)
+SDL_GPUBuffer *ubyten_buffer(float *f, int v)
 {
-  unsigned char b[v];
+  return NULL;
+/*  unsigned char b[v];
   for (int i = 0; i < (v); i++)
     b[i] = f[i]*255;
     
-  return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});
+  return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});*/
 }
 
-sg_buffer ubyte_buffer(float *f, int v)
+SDL_GPUBuffer *ubyte_buffer(float *f, int v)
 {
-  unsigned char b[v];
+  return NULL;
+/*  unsigned char b[v];
   for (int i = 0; i < (v); i++)
     b[i] = f[i];
     
   return sg_make_buffer(&(sg_buffer_desc){.data=SG_RANGE(b)});
+*/
 }
 
-sg_buffer accessor2buffer(cgltf_accessor *a, int type)
+SDL_GPUBuffer *accessor2buffer(cgltf_accessor *a, int type)
 {
-  int n = cgltf_accessor_unpack_floats(a, NULL, 0);
+  return NULL;
+/*  int n = cgltf_accessor_unpack_floats(a, NULL, 0);
   float vs[n];
   cgltf_accessor_unpack_floats(a, vs, n);
 
@@ -150,6 +156,7 @@ sg_buffer accessor2buffer(cgltf_accessor *a, int type)
   .data.size = 4,
   .usage = SG_USAGE_STREAM
   });
+*/
 }
 
 void packFloats(float *src, float *dest, int srcLength) {

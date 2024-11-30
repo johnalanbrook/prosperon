@@ -86,7 +86,6 @@ function add_callgraph(fn, line, time, alone) {
 
 var hittar = 500; // number of call instructions before getting a new frame
 var hitpct = 0.2; // amount to randomize it
-var start_gather = profile.now();
 
 profile.cpu_start = undefined;
 

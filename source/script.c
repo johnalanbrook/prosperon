@@ -1,7 +1,6 @@
 #include "script.h"
 #include "jsffi.h"
 #include "stb_ds.h"
-#include <sokol/sokol_time.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -10,8 +9,6 @@
 #include "jsffi.h"
 #include <stdlib.h>
 #include <assert.h>
-
-#include <tracy/TracyC.h>
 
 static JSContext *js = NULL;
 static JSRuntime *rt = NULL;

@@ -60,10 +60,23 @@ if storefront == 'steam'
   deps += dependency('qjs-steam',static:false)
 endif
 
+cmake = import('cmake')
+#cmake_ozz = cmake.subproject('ozz')
+
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
+deps += dependency('sdl3')
+#deps += cc.find_library('openblas')
+deps += dependency('cblas')
+deps += dependency('physfs',static:true)
+#deps += cmake_ozz.dependency('ozz_base')
+#deps += dependency('sdl2_image')
+#deps += dependency('ogg') # for sdl2_mixer
+#deps += dependency('sdl2_mixer')
+#deps += dependency('sdl2_ttf')
+
 
 deps += dependency('threads')
 
@@ -76,14 +89,14 @@ if get_option('enet')
 endif
 
 sources = []
-src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','render_trace.cpp','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c', 'glad.c', 'wildmatch.c']
+src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c', 'glad.c', 'wildmatch.c']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 
 srceng = 'source'
 tp = srceng / 'thirdparty'
 
-includes = [srceng,tp / 'cgltf',tp / 'imgui',tp / 'par',tp / 'sokol',tp / 'stb',tp,tp / 'pl_mpeg/include']
+includes = [srceng,tp / 'cgltf',tp / 'imgui',tp / 'par',tp / 'stb',tp,tp / 'pl_mpeg/include']
 
 foreach file : src
     full_path = join_paths('source', file)
@@ -91,10 +104,10 @@ foreach file : src
 endforeach
 
 if get_option('editor')
-  sources += 'source/qjs_imgui.cpp'
-  foreach imgui : imsrc
-    sources += tp / 'imgui' / imgui
-  endforeach
+#  sources += 'source/qjs_imgui.cpp'
+#  foreach imgui : imsrc
+#    sources += tp / 'imgui' / imgui
+#  endforeach
   deps += dependency('qjs-dmon',static:true)
 endif
 

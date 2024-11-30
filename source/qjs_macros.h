@@ -81,31 +81,27 @@ JSValue js_global_get_##ENTRY (JSContext *js, JSValue self) { \
 JSValue js_##ID##_get_##ENTRY (JSContext *js, JSValue self) { \
   return TYPE##2js(js,js2##ID (js, self)->ENTRY); } \
 
-#define QJSCLASS(TYPE)\
+#define QJSCLASS(TYPE, ...)\
 static JSClassID js_##TYPE##_id;\
-static int js_##TYPE##_count = 0; \
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
 TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
-js_##TYPE##_count--; \
 TYPE##_free(rt,n);}\
-static JSClassDef js_##TYPE##_class = {\
+static inline JSClassDef js_##TYPE##_class = {\
   #TYPE,\
   .finalizer = js_##TYPE##_finalizer,\
 };\
-TYPE *js2##TYPE (JSContext *js, JSValue val) { \
+static inline TYPE *js2##TYPE (JSContext *js, JSValue val) { \
   if (JS_IsUndefined(val)) return NULL; \
-  assert(JS_GetClassID(val) == js_##TYPE##_id); \
+  if (JS_GetClassID(val) != js_##TYPE##_id) return NULL; \
   return JS_GetOpaque(val,js_##TYPE##_id); \
 }\
-JSValue TYPE##2js(JSContext *js, TYPE *n) { \
+static inline JSValue TYPE##2js(JSContext *js, TYPE *n) { \
+  __VA_ARGS__ \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   JS_SetOpaque(j,n);\
-  js_##TYPE##_count++; \
   return j; }\
 \
 static JSValue js_##TYPE##_memid (JSContext *js, JSValue self) { return JS_NewString(js,"p"); } \
-static JSValue js_##TYPE##_memsize (JSContext *js, JSValue self) { return number2js(js,sizeof(TYPE)); } \
-static JSValue js_##TYPE##__count (JSContext *js, JSValue self) { return number2js(js,js_##TYPE##_count); } \
 
 #define QJSGLOBALCLASS(NAME) \
 JSValue NAME = JS_NewObject(js); \
@@ -119,8 +115,6 @@ JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
 JSValue TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
 JS_SetPropertyStr(js, TYPE##_proto, "memid", JS_NewCFunction(js, &js_##TYPE##_memid, "memid", 0)); \
-JS_SetPropertyStr(js, TYPE##_proto, "memsize", JS_NewCFunction(js, &js_##TYPE##_memsize, "memsize", 0)); \
-JS_SetPropertyStr(js, TYPE##_proto, "_count", JS_NewCFunction(js, &js_##TYPE##__count, "_count", 0)); \
 JS_SetPropertyStr(js, globalThis, #TYPE "_proto", JS_DupValue(js,TYPE##_proto)); \
 JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
 

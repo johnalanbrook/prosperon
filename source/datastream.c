@@ -10,11 +10,9 @@
 
 #include "cbuf.h"
 
-#include "sokol/sokol_gfx.h"
-
 void datastream_free(JSRuntime *rt,datastream *ds)
 {
-  sg_destroy_image(ds->img);
+//  sg_destroy_image(ds->img);
   plm_destroy(ds->plm);
   free(ds);
 }
@@ -29,9 +27,9 @@ static void render_frame(plm_t *mpeg, plm_frame_t *frame, struct datastream *ds)
   uint8_t rgb[frame->height*frame->width*4];
   memset(rgb,255,frame->height*frame->width*4);
   plm_frame_to_rgba(frame, rgb, frame->width*4);
-  sg_image_data imgd = {0};
-  imgd.subimage[0][0] = SG_RANGE(rgb);
-  sg_update_image(ds->img, &imgd);
+//  sg_image_data imgd = {0};
+//  imgd.subimage[0][0] = SG_RANGE(rgb);
+//  sg_update_image(ds->img, &imgd);
   ds->dirty = true;
 }
 
@@ -49,14 +47,14 @@ struct datastream *ds_openvideo(void *raw, size_t rawlen)
   if (!ds->plm)
     return NULL;
 
-  ds->img = sg_make_image(&(sg_image_desc){
+/*  ds->img = sg_make_image(&(sg_image_desc){
     .width = plm_get_width(ds->plm),
     .height = plm_get_height(ds->plm),
     .usage = SG_USAGE_STREAM,
     .type = SG_IMAGETYPE_2D,
     .pixel_format = SG_PIXELFORMAT_RGBA8,
   });  
-  
+*/  
   plm_set_video_decode_callback(ds->plm, render_frame, ds);
   
   return ds;
