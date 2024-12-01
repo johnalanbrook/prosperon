@@ -253,7 +253,6 @@ void SDL_Surface_free(JSRuntime *rt, SDL_Surface *s) {
 }
 
 QJSCLASS(transform)
-QJSCLASS(texture)
 QJSCLASS(font)
 //QJSCLASS(warp_gravity)
 //QJSCLASS(warp_damp)
@@ -1798,7 +1797,66 @@ static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(renderer, coords, 1),
 };
 
-static const JSCFunctionListEntry js_SDL_Surface_funcs[] = {};
+JSC_CCALL(surface_blit,
+  SDL_Surface *dst = js2SDL_Surface(js,self);
+  rect dstrect = js2rect(js,argv[0]);
+  SDL_Surface *src = js2SDL_Surface(js,argv[1]);
+  rect srcrect = js2rect(js,argv[2]);
+  SDL_BlitSurfaceScaled(src, &srcrect, dst, &dstrect, SDL_SCALEMODE_LINEAR);
+)
+
+JSC_CCALL(surface_scale,
+  SDL_Surface *src = js2SDL_Surface(js,self);
+  HMM_Vec2 wh = js2vec2(js,argv[0]);
+  SDL_Surface *new = SDL_CreateSurface(wh.x,wh.y, SDL_PIXELFORMAT_RGBA32);
+  SDL_BlitSurfaceScaled(src, NULL, new, NULL, SDL_SCALEMODE_LINEAR);
+  ret = SDL_Surface2js(js,new);
+)
+
+static SDL_PixelFormatDetails pdetails = {
+    .format = SDL_PIXELFORMAT_RGBA8888, // Standard RGBA8888 format
+    .bits_per_pixel = 32,              // 8 bits per channel, 4 channels = 32 bits
+    .bytes_per_pixel = 4,              // 4 bytes per pixel
+    .padding = {0, 0},                 // Unused padding
+    .Rmask = 0xFF000000,               // Red mask
+    .Gmask = 0x00FF0000,               // Green mask
+    .Bmask = 0x0000FF00,               // Blue mask
+    .Amask = 0x000000FF,               // Alpha mask
+    .Rbits = 8,                        // 8 bits for Red
+    .Gbits = 8,                        // 8 bits for Green
+    .Bbits = 8,                        // 8 bits for Blue
+    .Abits = 8,                        // 8 bits for Alpha
+    .Rshift = 24,                      // Red shift
+    .Gshift = 16,                      // Green shift
+    .Bshift = 8,                       // Blue shift
+    .Ashift = 0                        // Alpha shift
+};
+
+JSC_CCALL(surface_fill,
+  SDL_Surface *src = js2SDL_Surface(js,self);
+  struct rgba color = js2color(js,argv[0]);
+  rect r = {
+    .x = 0,
+    .y = 0,
+    .w = src->w,
+    .h = src->h
+  };
+  SDL_FillSurfaceRect(src, &r, SDL_MapRGBA(&pdetails, NULL, color.r,color.g,color.b,color.a));
+)
+
+JSC_CCALL(surface_rect,
+  SDL_Surface *dst = js2SDL_Surface(js,self);
+  rect r = js2rect(js,argv[0]);  
+  struct rgba color = js2color(js,argv[1]);
+  SDL_FillSurfaceRect(dst,&r,SDL_MapRGBA(&pdetails,NULL,color.r,color.g,color.b,color.a));
+)
+
+static const JSCFunctionListEntry js_SDL_Surface_funcs[] = {
+  MIST_FUNC_DEF(surface, blit, 3),
+  MIST_FUNC_DEF(surface, scale, 1),
+  MIST_FUNC_DEF(surface,fill,1),
+  MIST_FUNC_DEF(surface,rect,2),
+};
 
 JSC_CCALL(texture_mode,
   SDL_Texture *tex = js2SDL_Texture(js,self);
@@ -2191,77 +2249,6 @@ static const JSCFunctionListEntry js_datastream_funcs[] = {
   MIST_FUNC_DEF(datastream, framerate, 0),
 };
 
-JSC_GET(texture, width, number)
-JSC_GET(texture, height, number)
-JSC_GET(texture, vram, number)
-
-JSC_SCALL(texture_save, texture_save(js2texture(js,self), str));
-
-JSC_CCALL(texture_blit, 
-//  texture_blit(js2texture(js,self), js2texture(js,argv[0]), js2rect(js,argv[1]), js2rect(js,argv[2]), JS_ToBool(js,argv[3]));
-)
-
-JSC_CCALL(texture_getid,
-  texture *tex = js2texture(js,self);
-  return number2js(js,(int)tex->id);
-)
-
-JSC_CCALL(texture_inram, return JS_NewBool(js,(int)js2texture(js,self)->data));
-
-JSC_CCALL(texture_fill,
-//  texture_fill(js2texture(js,self), js2color(js,argv[0]));
-)
-
-JSC_CCALL(texture_fill_rect,
-//  texture_fill_rect(js2texture(js,self), js2rect(js,argv[0]), js2color(js,argv[1]));
-)
-
-JSC_CCALL(texture_flip,
-//  texture_flip(js2texture(js,self), JS_ToBool(js,argv[0]));
-)
-
-JSC_CCALL(texture_write_pixel,
-  HMM_Vec2 c = js2vec2(js,argv[0]);
-//  texture_write_pixel(js2texture(js,self), c.x, c.y, js2color(js,argv[1]));
-)
-
-JSC_CCALL(texture_dup,
-//  ret = texture2js(js,texture_dup(js2texture(js,self)));
-)
-
-JSC_CCALL(texture_scale,
-  ret = texture2js(js,texture_scale(js2texture(js,self), js2number(js,argv[0]), js2number(js,argv[1])));
-)
-
-JSC_CCALL(texture_load_gpu,
-  return JS_UNDEFINED;
-  SDL_Renderer *renderer = js2SDL_Renderer(js,self);
-  SDL_Surface *surface = js2SDL_Surface(js,argv[0]);
-  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-)
-
-JSC_CCALL(texture_offload,
-  texture_offload(js2texture(js,self));
-)
-
-static const JSCFunctionListEntry js_texture_funcs[] = {
-  MIST_GET(texture, width),
-  MIST_GET(texture, height),
-  MIST_GET(texture, vram),
-  MIST_FUNC_DEF(texture, save, 1),
-  MIST_FUNC_DEF(texture, write_pixel, 2),  
-  MIST_FUNC_DEF(texture, fill, 1),
-  MIST_FUNC_DEF(texture, fill_rect, 2),
-  MIST_FUNC_DEF(texture, dup, 0),
-  MIST_FUNC_DEF(texture, scale, 2),
-  MIST_FUNC_DEF(texture, flip, 1),
-  MIST_FUNC_DEF(texture, blit, 4),
-  MIST_FUNC_DEF(texture, getid, 0),
-  MIST_FUNC_DEF(texture, inram, 0),
-  MIST_FUNC_DEF(texture, load_gpu, 0),
-  MIST_FUNC_DEF(texture, offload, 0),
-};
-
 JSC_GETSET_CALLBACK(timer, fn)
 JSC_GETSET(timer, remain, number)
 
@@ -2642,7 +2629,7 @@ JSC_CCALL(os_make_gif,
 
   JSValue gif = JS_NewObject(js);
   JSValue delay_arr = JS_NewArray(js);
-  JSValue jstex = texture2js(js,tex);
+  JSValue jstex = JS_UNDEFINED; //texture2js(js,tex);
 
   float yslice = 1.0/frames;
   for (int i = 0; i < frames; i++) {
@@ -2674,7 +2661,7 @@ JSValue aseframe2js(JSContext *js, ase_frame_t aframe)
   tex->height = aframe.ase->h;
   tex->data = malloc(tex->width*tex->height*4);
   memcpy(tex->data, aframe.pixels, tex->width*tex->height*4);
-  JS_SetPropertyStr(js, frame, "texture", texture2js(js,tex));
+//  JS_SetPropertyStr(js, frame, "texture", texture2js(js,tex));
   JS_SetPropertyStr(js, frame, "rect", rect2js(js,(rect){.x=0,.y=0,.w=1,.h=1}));
   JS_SetPropertyStr(js, frame, "time", number2js(js,(float)aframe.duration_milliseconds/1000.0));
   return frame;
@@ -2735,8 +2722,10 @@ JSC_CCALL(os_make_aseprite,
   cute_aseprite_free(ase);
 )
 
-JSC_CCALL(os_make_tex_data,
-  ret = texture2js(js,texture_empty(js2number(js,argv[0]), js2number(js,argv[1])))
+JSC_CCALL(os_make_surface,
+  HMM_Vec2 wh = js2vec2(js,argv[0]);
+  SDL_Surface *surface = SDL_CreateSurface(wh.x, wh.y, SDL_PIXELFORMAT_RGBA32);
+  ret = SDL_Surface2js(js, surface);
 )
 
 JSC_CCALL(os_make_font,
@@ -2940,7 +2929,7 @@ JSC_CCALL(os_make_video,
   ret = datastream2js(js,ds);
   texture *t = malloc(sizeof(texture));
 //  t->id = ds->img;
-  JS_SetPropertyStr(js, ret, "texture", texture2js(js,t));
+//  JS_SetPropertyStr(js, ret, "texture", texture2js(js,t));
 )
 
 JSC_CCALL(os_skin_calculate,
@@ -3103,7 +3092,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_texture, 1),
   MIST_FUNC_DEF(os, make_gif, 1),
   MIST_FUNC_DEF(os, make_aseprite, 1),
-  MIST_FUNC_DEF(os, make_tex_data, 3),
+  MIST_FUNC_DEF(os, make_surface, 1),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_transform, 0),
   MIST_FUNC_DEF(os, make_buffer, 1),
@@ -3208,7 +3197,6 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(transform);
 //  QJSCLASSPREP_FUNCS(warp_gravity);
 //  QJSCLASSPREP_FUNCS(warp_damp);
-  QJSCLASSPREP_FUNCS(texture);
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(timer);
@@ -3231,7 +3219,6 @@ void ffi_load(JSContext *js) {
   JS_SetPropertyStr(js, prosperon, "version", JS_NewString(js,"ver"));
   JS_SetPropertyStr(js, prosperon, "revision", JS_NewString(js,"com"));
   JS_SetPropertyStr(js, prosperon, "date", JS_NewString(js,"date"));
-  JS_SetPropertyStr(js, globalThis, "texture", JS_DupValue(js,texture_proto));
 
   JSValue array_proto = js_getpropertystr(js,globalThis, "Array");
   array_proto = js_getpropertystr(js,array_proto, "prototype");

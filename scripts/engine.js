@@ -4,8 +4,6 @@ Object.defineProperty(Object.prototype, "object_id", {
   }
 });
 
-texture_proto.toString = texture_proto.object_id;
-
 os.mem_limit.doc = "Set the memory limit of the runtime in bytes.";
 os.gc_threshold.doc = "Set the threshold before a GC pass is triggered in bytes. This is set to malloc_size + malloc_size>>1 after a GC pass.";
 os.max_stacksize.doc = "Set the max stack size in bytes.";

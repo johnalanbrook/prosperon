@@ -865,8 +865,8 @@ render.rectangle = function render_rectangle(rect, color = Color.white, shader =
 };
 
 render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
-  var pos = [rect.x,rect.y];
-  render._main.fasttext(str, pos, color);
+  var mesh = os.make_text_buffer(str, rect, 0, color, wrap, font);
+  render._main.geometry(font.texture, mesh);
   return;
   
   if (typeof font === 'string')
@@ -1038,7 +1038,6 @@ render.image = function image(image, rect = [0,0], rotation = 0, color) {
   if (typeof image === "string")
     image = game.texture(image);
 
-  rect.__proto__ = image.texture;
   render._main.texture(image.texture, rect, image.rect, color);
   return;
 

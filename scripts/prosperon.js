@@ -215,23 +215,6 @@ image.dimensions = function()
   return [this.texture.width, this.texture.height].scale([this.rect[2], this.rect[3]]);
 }
 
-texture_proto.copy = function(src, pos, rect)
-{
-  var pixel_rect = {
-    x: rect.x*src.width,
-    y: rect.y*src.height,
-    width: rect.width*src.width,
-    height: rect.height*src.height
-  };
-
-  this.blit(src, {
-    x: pos[0],
-    y: pos[1],
-    width: rect.width*src.width,
-    height: rect.height*src.height
-  }, pixel_rect, false);
-}
-
 var spritesheet;
 var sheet_frames = [];
 var sheetsize = 1024;
@@ -328,8 +311,6 @@ game.texture = function texture(path) {
   newimg.surface = os.make_texture(data);
   newimg.texture = render._main.load_texture(newimg.surface);
   game.texture.cache[path] = newimg;
-  console.log(newimg.texture.width);
-  console.log(newimg.texture.height);
   return newimg;
 
   // Look for a cached version

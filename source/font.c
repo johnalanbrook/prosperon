@@ -104,7 +104,7 @@ struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
 
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
     newfont->Characters[c].leftbearing = glyph.xoff;
-    newfont->Characters[c].topbearing = -glyph.yoff2;//newfont->ascent - glyph.yoff;
+    newfont->Characters[c].topbearing = -glyph.yoff2;//newfont->ascent - glyph.yoff;   -glyph.yoff2;
     newfont->Characters[c].rect = r;
   }
 
