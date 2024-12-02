@@ -1,6 +1,6 @@
 #include "jsffi.h"
 
-#include "script.h"
+#include "script.h" 
 #include "font.h"
 #include "datastream.h"
 #include "stb_ds.h"
@@ -32,7 +32,11 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_error.h>
 
+#ifdef __APPLE__
+#include <Accelerate/Accelerate.h>
+#else
 #include <cblas.h>
+#endif
 
 static JSAtom width_atom;
 static JSAtom height_atom;
@@ -1438,7 +1442,7 @@ JSC_SCALL(SDL_Window_make_renderer,
   SDL_SetStringProperty(props, SDL_PROP_RENDERER_CREATE_NAME_STRING, str);
   SDL_Renderer *r = SDL_CreateRendererWithProperties(props);
   SDL_DestroyProperties(props);
-  if (!r) return JS_ThrowReferenceError(js, SDL_GetError());
+  if (!r) return JS_ThrowReferenceError(js, "Error creating renderer: %s",SDL_GetError());
   SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
   return SDL_Renderer2js(js,r);
 )
@@ -1713,7 +1717,7 @@ JSC_CCALL(renderer_geometry,
   }
     
   if (!SDL_RenderGeometryRaw(r, tex, trans_pos, pos_stride,colordata,color_stride,uvdata, uv_stride, vertices, idxdata, count, indices_stride))
-    ret = JS_ThrowReferenceError(js, SDL_GetError());
+    ret = JS_ThrowReferenceError(js, "Error rendering geometry: %s",SDL_GetError());
 
     free(trans_pos);
 
@@ -2607,7 +2611,7 @@ JSC_CCALL(os_make_texture,
   SDL_Surface *surf = SDL_CreateSurfaceFrom(width,height,FMT, data, width*n);
   if (!surf) {
     free(data);
-    return JS_ThrowReferenceError(js, SDL_GetError());
+    return JS_ThrowReferenceError(js, "Error creating surface from data: %s",SDL_GetError());
   }
 
   ret = SDL_Surface2js(js,surf);

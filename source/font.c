@@ -104,7 +104,7 @@ struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
 
     newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
     newfont->Characters[c].leftbearing = glyph.xoff;
-    newfont->Characters[c].topbearing = -glyph.yoff2;//newfont->ascent - glyph.yoff;   -glyph.yoff2;
+    newfont->Characters[c].topbearing = glyph.yoff2;//newfont->ascent - glyph.yoff;   -glyph.yoff2;
     newfont->Characters[c].rect = r;
   }
 
@@ -159,7 +159,7 @@ void draw_char_verts(struct text_vert **buffer, struct Character c, HMM_Vec2 cur
   // Adds four verts: bottom left, bottom right, top left, top right
   text_vert bl;
   bl.pos.x = cursor.X + c.leftbearing;
-  bl.pos.y = cursor.Y + c.topbearing;
+  bl.pos.y = cursor.Y - c.topbearing;
   bl.uv.x = c.rect.x;
   bl.uv.y = c.rect.y+c.rect.h;
   rgba2floats(bl.color.e, color);

@@ -259,7 +259,6 @@ profile.data = {};
 profile.curframe = 0;
 profile.snapshot = {};
 
-var classes = ["gameobject", "transform", "dsp_node", "texture", "font", "warp_gravity", "warp_damp", "sg_buffer", "datastream", "cpShape", "cpConstraint", "timer", "skin"];
 var get_snapshot = function()
 {
  var snap = profile.snapshot;
@@ -275,14 +274,6 @@ var get_snapshot = function()
  snap.memory.texture_vram = game.texture.total_vram();
 
  snap.particles = stat_emitters();
-
- snap.obj ??= {};
- for (var i of classes) {
-   var proto = globalThis[`${i}_proto`];
-   if (!proto) continue;
-   snap.obj[i] = proto._count();
-   snap.obj[i + "_mem"] = proto._count() * proto.memsize();
- }
 }
 
 var monitors = [];

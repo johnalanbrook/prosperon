@@ -16,7 +16,7 @@ deps = []
 
 if host_machine.system() == 'darwin'
   add_project_arguments('-x', 'objective-c', language: 'c')
-  fworks = ['foundation', 'metal', 'audiotoolbox', 'metalkit', 'avfoundation', 'quartzcore', 'cocoa']
+  fworks = ['foundation', 'metal', 'audiotoolbox', 'metalkit', 'avfoundation', 'quartzcore', 'cocoa', 'accelerate']
   foreach fkit : fworks
     deps += dependency('appleframeworks', modules: fkit)
   endforeach
@@ -43,7 +43,6 @@ if host_machine.system() == 'emscripten'
   link += '-sUSE_WEBGPU'
 endif
 
-
 tracy_opts = ['fibers=true', 'on_demand=true']
 quickjs_opts = []
 
@@ -62,14 +61,17 @@ endif
 
 cmake = import('cmake')
 #cmake_ozz = cmake.subproject('ozz')
+cmake_sdl3 = cmake.subproject('SDL')
+message('CMake targets:\n - ' + '\n - '.join(cmake_sdl3.target_list()))
+sdl3_lib = cmake_sdl3.dependency('SDL3-shared')
 
+#deps += dependency('openblas')
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
-deps += dependency('sdl3')
-#deps += cc.find_library('openblas')
-deps += dependency('cblas')
+deps += sdl3_lib
+
 deps += dependency('physfs',static:true)
 #deps += cmake_ozz.dependency('ozz_base')
 #deps += dependency('sdl2_image')
@@ -89,7 +91,7 @@ if get_option('enet')
 endif
 
 sources = []
-src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c', 'glad.c', 'wildmatch.c']
+src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c',  'wildmatch.c']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 

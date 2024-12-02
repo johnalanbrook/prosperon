@@ -86,7 +86,7 @@ static JSClassID js_##TYPE##_id;\
 static void js_##TYPE##_finalizer(JSRuntime *rt, JSValue val){\
 TYPE *n = JS_GetOpaque(val, js_##TYPE##_id);\
 TYPE##_free(rt,n);}\
-static inline JSClassDef js_##TYPE##_class = {\
+static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
   .finalizer = js_##TYPE##_finalizer,\
 };\
@@ -101,7 +101,6 @@ static inline JSValue TYPE##2js(JSContext *js, TYPE *n) { \
   JS_SetOpaque(j,n);\
   return j; }\
 \
-static JSValue js_##TYPE##_memid (JSContext *js, JSValue self) { return JS_NewString(js,"p"); } \
 
 #define QJSGLOBALCLASS(NAME) \
 JSValue NAME = JS_NewObject(js); \
@@ -114,13 +113,6 @@ JS_NewClassID(&js_##TYPE##_id);\
 JS_NewClass(JS_GetRuntime(js), js_##TYPE##_id, &js_##TYPE##_class);\
 JSValue TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
-JS_SetPropertyStr(js, TYPE##_proto, "memid", JS_NewCFunction(js, &js_##TYPE##_memid, "memid", 0)); \
-JS_SetPropertyStr(js, globalThis, #TYPE "_proto", JS_DupValue(js,TYPE##_proto)); \
 JS_SetClassProto(js, js_##TYPE##_id, TYPE##_proto); \
-
-#define PREP_PARENT(TYPE, PARENT) \
-TYPE##_proto = JS_NewObject(js); \
-JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
-JS_SetPrototype(js, TYPE##_proto, PARENT##_proto); \
 
 #define countof(x) (sizeof(x)/sizeof((x)[0]))
