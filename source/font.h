@@ -6,6 +6,7 @@
 #include <quickjs.h>
 #include "texture.h"
 #include <SDL3/SDL.h>
+#include "render.h"
 
 typedef enum {
   LEFT,
@@ -25,13 +26,14 @@ typedef struct text_vert text_vert;
 struct shader;
 struct window;
 
-/// Holds all state information relevant to a character as loaded using FreeType
-struct Character {
-  float Advance; // Horizontal offset to advance to next glyph
-  float leftbearing; // X offset from cursor to render at
-  float topbearing; // Y offset from cursor to render at 
-  struct rect rect; // the rect on the font image to render from, uv coordinates
-  HMM_Vec2 size; // The pixel size of this letter
+struct character {
+  float advance;
+  rect quad;
+  rect uv;
+  float xoff;
+  float yoff;
+  float width;
+  float height;
 };
 
 // text data
@@ -40,7 +42,7 @@ struct sFont {
   float ascent; // pixels
   float descent; // pixels
   float linegap; //pixels
-  struct Character Characters[256];
+  struct character Characters[256];
   SDL_Surface *surface;
 };
 

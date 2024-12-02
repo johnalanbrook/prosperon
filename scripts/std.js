@@ -12,7 +12,6 @@ if (ignore = io.slurp('.prosperonignore')) {
   }
 }
 */
-//console.info(allpaths)
 
 var appy = {};
 appy.inputs = {};
@@ -302,8 +301,6 @@ Cmdline.register_order(
     if (io.exists("config.js")) global.mixin("config.js");
     else console.warn("No config.js file found. Starting with default parameters.");
     var window = game.engine_start(prosperon);
-   console.log(game.renderers());    
-   console.log(game.cameras());
    var renderer = window.make_renderer("gpu");
    render._main = renderer;
 

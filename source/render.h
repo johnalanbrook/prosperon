@@ -54,6 +54,8 @@ struct rect {
   float x,y,w,h;
 };
 
+typedef SDL_FRect rect;
+
 float *rgba2floats(float *r, struct rgba c);
 
 static inline float lerp(float f, float a, float b)

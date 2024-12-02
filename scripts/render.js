@@ -865,6 +865,8 @@ render.rectangle = function render_rectangle(rect, color = Color.white, shader =
 };
 
 render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
+  if (typeof font === 'string')
+    font = render.get_font(font)
   var mesh = os.make_text_buffer(str, rect, 0, color, wrap, font);
   render._main.geometry(font.texture, mesh);
   return;
@@ -1171,7 +1173,6 @@ render.get_font = function get_font(path,size)
   }
   path = Resources.find_font(path);  
   var fontstr = `${path}.${size}`;
-  console.log(`getting ${fontstr}`);
   if (fontcache[fontstr]) return fontcache[fontstr];
   
   var data = io.slurpbytes(path);

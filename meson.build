@@ -24,6 +24,13 @@ endif
 
 cc = meson.get_compiler('c')
 
+# adding cblas
+if host_machine.system() == 'darwin'
+  deps += dependency('appleframeworks', modules: 'accelerate')
+else
+  deps += dependency('cblas')
+endif
+
 if host_machine.system() == 'linux'
   deps += cc.find_library('asound', required:true)
   deps += [dependency('x11'), dependency('xi'), dependency('xcursor'), dependency('egl'), dependency('gl')]
@@ -59,26 +66,12 @@ if storefront == 'steam'
   deps += dependency('qjs-steam',static:false)
 endif
 
-cmake = import('cmake')
-#cmake_ozz = cmake.subproject('ozz')
-cmake_sdl3 = cmake.subproject('SDL')
-message('CMake targets:\n - ' + '\n - '.join(cmake_sdl3.target_list()))
-sdl3_lib = cmake_sdl3.dependency('SDL3-shared')
-
-#deps += dependency('openblas')
 deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
-deps += sdl3_lib
-
+deps += dependency('sdl3')
 deps += dependency('physfs',static:true)
-#deps += cmake_ozz.dependency('ozz_base')
-#deps += dependency('sdl2_image')
-#deps += dependency('ogg') # for sdl2_mixer
-#deps += dependency('sdl2_mixer')
-#deps += dependency('sdl2_ttf')
-
 
 deps += dependency('threads')
 

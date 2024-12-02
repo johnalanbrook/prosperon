@@ -86,26 +86,24 @@ struct sFont *MakeFont(void *ttf_buffer, size_t len, int height) {
       if (!SDL_WriteSurfacePixel(newfont->surface, j, i, 255,255,255,bitmap[i*packsize+j]))
         printf("SDLERROR: %s\n", SDL_GetError());
   
-  printf("FONT SURFACE IS %p\n", newfont->surface);
-
   for (unsigned char c = 32; c < 127; c++) {
     stbtt_packedchar glyph = glyphs[c - 32];
 
-    struct rect r;
-    r.x = (glyph.x0) / (float)packsize;
-    r.w = (glyph.x1-glyph.x0) / (float)packsize;
-    r.y = (glyph.y1) / (float)packsize;
-    r.h = (glyph.y0-glyph.y1) / (float)packsize;
+    rect uv;
+    uv.x = (glyph.x0) / (float)packsize;
+    uv.w = (glyph.x1-glyph.x0) / (float)packsize;
+    uv.y = (glyph.y1) / (float)packsize;
+    uv.h = (glyph.y0-glyph.y1) / (float)packsize;
+    newfont->Characters[c].uv = uv;
 
-    newfont->Characters[c].size = (HMM_Vec2){
-      .x = glyph.x1-glyph.x0,
-      .y = glyph.y1-glyph.y0
-    };
-
-    newfont->Characters[c].Advance = glyph.xadvance; /* x distance from this char to the next */
-    newfont->Characters[c].leftbearing = glyph.xoff;
-    newfont->Characters[c].topbearing = glyph.yoff2;//newfont->ascent - glyph.yoff;   -glyph.yoff2;
-    newfont->Characters[c].rect = r;
+    rect quad;
+    quad.x = glyph.xoff;
+    quad.w = glyph.xoff2-glyph.xoff;
+    quad.y = -glyph.yoff2;
+    quad.h = glyph.yoff2-glyph.yoff;
+    newfont->Characters[c].quad = quad;
+    newfont->Characters[c].advance = glyph.xadvance;
+//    printf("glyph for %c is x0,y0,x1,y1: %d,%d,%d,%d\n xoff %g, yoff %g, xadvance %g, xoff2 %g, yoff2 %g\n", c, glyph.x0, glyph.y1, glyph.x1, glyph.y1, glyph.xoff, glyph.yoff, glyph.xadvance, glyph.xoff2, glyph.yoff2);
   }
 
   free(bitmap);
@@ -136,17 +134,17 @@ int text_flush() {
 */
 }
 
-void sdrawCharacter(struct text_vert **buffer, struct Character c, HMM_Vec2 cursor, float scale, struct rgba color) {
+void sdrawCharacter(struct text_vert **buffer, stbtt_packedchar c, HMM_Vec2 cursor, float scale, struct rgba color) {
   struct text_vert vert;
 
-  vert.pos.x = cursor.X + c.leftbearing;
-  vert.pos.y = cursor.Y + c.topbearing;
+//  vert.pos.x = cursor.X + c.leftbearing;
+//  vert.pos.y = cursor.Y + c.topbearing;
 //  vert.wh = c.size;
 
 //  if (vert.pos.x > frame.l || vert.pos.y > frame.t || (vert.pos.y + vert.wh.y) < frame.b || (vert.pos.x + vert.wh.x) < frame.l) return;
 
-  vert.uv.x = c.rect.x;
-  vert.uv.y = c.rect.y;
+//  vert.uv.x = c.rect.x;
+//  vert.uv.y = c.rect.y;
 //  vert.st.x = c.rect.w;
 //  vert.st.y = c.rect.h;
   rgba2floats(vert.color.e, color);
@@ -154,30 +152,32 @@ void sdrawCharacter(struct text_vert **buffer, struct Character c, HMM_Vec2 curs
   arrput(*buffer, vert);
 }
 
-void draw_char_verts(struct text_vert **buffer, struct Character c, HMM_Vec2 cursor, float scale, struct rgba color)
+void draw_char_verts(struct text_vert **buffer, struct character c, HMM_Vec2 cursor, float scale, struct rgba color)
 {
+  // packedchar has 
   // Adds four verts: bottom left, bottom right, top left, top right
   text_vert bl;
-  bl.pos.x = cursor.X + c.leftbearing;
-  bl.pos.y = cursor.Y - c.topbearing;
-  bl.uv.x = c.rect.x;
-  bl.uv.y = c.rect.y+c.rect.h;
+  bl.pos.x = cursor.X + c.quad.x;
+  bl.pos.y = cursor.Y + c.quad.y;
+  bl.uv.x = c.uv.x;
+  bl.uv.y = c.uv.y;
   rgba2floats(bl.color.e, color);
   arrput(*buffer, bl);
 
+  
   text_vert br = bl;
-  br.pos.x += c.size.x;
-  br.uv.x += c.rect.w;
+  br.pos.x += c.quad.w;
+  br.uv.x += c.uv.w;
   arrput(*buffer, br);
   
   text_vert ul = bl;
-  ul.pos.y -= c.size.y;
-  ul.uv.y = c.rect.y;
+  ul.pos.y += c.quad.h;
+  ul.uv.y += c.uv.h;
   arrput(*buffer, ul);
 
   text_vert ur = ul;
-  ur.pos.x += c.size.x;
-  ur.uv.x += c.rect.w;
+  ur.pos.x = br.pos.x;
+  ur.uv.x = br.uv.x;
   arrput(*buffer, ur);
 }
 
@@ -229,7 +229,7 @@ HMM_Vec2 measure_text(const char *text, font *f, float size, float letterSpacing
       height += lineHeight + f->linegap;
       continue;
     }
-    lineWidth += f->Characters[*c].Advance + letterSpacing;
+    lineWidth += f->Characters[*c].advance + letterSpacing;
   }
 
   maxWidth = fmaxf(maxWidth, lineWidth);
@@ -255,7 +255,7 @@ struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scal
     }
 
     draw_char_verts(&buffer, f->Characters[*c], cursor, scale, color);
-    cursor.x += f->Characters[*c].Advance;
+    cursor.x += f->Characters[*c].advance;
   }
   return buffer;
 /*
@@ -267,7 +267,7 @@ struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scal
   while (*line != '\0') {
     if (isblank(*line)) {
       sdrawCharacter(f->Characters[*line], cursor, scale, usecolor);
-      cursor.X += f->Characters[*line].Advance * scale;
+      cursor.X += f->Characters[*line].advance * scale;
       line++;
     } else if (isspace(*line)) {
       sdrawCharacter(f->Characters[*line], cursor, scale, usecolor);
@@ -283,7 +283,7 @@ struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scal
 
       while (!isspace(*line) && *line != '\0') {
 
-        wordWidth += f->Characters[*line].Advance * scale; 
+        wordWidth += f->Characters[*line].advance * scale; 
         line++;
       }
 
@@ -298,7 +298,7 @@ struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scal
 
         sdrawCharacter(f->Characters[*wordstart], cursor, scale, usecolor);
 
-        cursor.X += f->Characters[*wordstart].Advance * scale;
+        cursor.X += f->Characters[*wordstart].advance * scale;
         wordstart++;
       }
     }

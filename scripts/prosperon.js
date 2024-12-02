@@ -114,8 +114,6 @@ prosperon.init = function () {
   };
   if (io.exists("game.js")) global.app = actor.spawn("game.js");
   else global.app = actor.spawn("nogame.js");
-
-  console.log(io.exists("game.js"))
 };
 
 prosperon.release_mode = function () {

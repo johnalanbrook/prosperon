@@ -15,6 +15,7 @@ var clay_base = {
   margin:0,
   offset:[0,0],
   size:undefined,
+  background_color: undefined
 };
 
 var root_item;
@@ -38,7 +39,7 @@ clay.normalizeSpacing = function normalizeSpacing(spacing) {
   }
 }
 
-clay.draw = function draw(size, fn)
+clay.draw = function draw(size, fn, config = {})
 {
   lay_ctx.reset();
   boxes = [];
@@ -74,6 +75,10 @@ clay.draw = function draw(size, fn)
     box.marginbox.y -= margin.t;
     box.marginbox.width += margin.l+margin.r;
     box.marginbox.height += margin.t+margin.b;
+    box.content.y *= -1;
+    box.content.y += size.y;
+    box.boundingbox.y *= -1;
+    box.boundingbox.y += size.y;
     box.content.anchor_y = 1;
     box.boundingbox.anchor_y = 1;
   }
@@ -220,13 +225,10 @@ layout.newframe = function() { hovered = undefined; }
 layout.draw_commands = function draw_commands(cmds, pos = [0,0], mousepos)
 {
   for (var cmd of cmds) {
-    var boundingbox = geometry.rect_move(cmd.boundingbox,pos);
-//    boundingbox.x -= boundingbox.width*pos.anchor_x;
-//    boundingbox.y += boundingbox.height*pos.anchor_y;
-    var content = geometry.rect_move(cmd.content,pos);
-//    content.x -= content.width*pos.anchor_x;
-//    content.y += content.height*pos.anchor_y;
-    var config = cmd.config;
+    var config = cmd.config;  
+    var boundingbox = geometry.rect_move(cmd.boundingbox,pos.add(config.offset));
+    var content = geometry.rect_move(cmd.content,pos.add(config.offset));
+
 
     if (config.hovered && geometry.rect_point_inside(boundingbox, mousepos)) {
       config.hovered.__proto__ = config;
@@ -259,11 +261,7 @@ layout.draw_debug = function draw_debug(cmds, pos = [0,0])
   for (var i = 0; i < cmds.length; i++) {
     var cmd = cmds[i];
     var boundingbox = geometry.rect_move(cmd.boundingbox,pos);
-//    boundingbox.x -= boundingbox.width*pos.anchor_x;
-//    boundingbox.y += boundingbox.height*pos.anchor_y;
     var content = geometry.rect_move(cmd.content,pos);
-//    content.x -= content.width*pos.anchor_x;
-//    content.y += content.height*pos.anchor_y;
     render.rectangle(content, dbg_colors.content);
     render.rectangle(boundingbox, dbg_colors.boundingbox);
 //    render.rectangle(geometry.rect_move(cmd.marginbox,pos), dbg_colors.margin);

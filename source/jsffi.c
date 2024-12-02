@@ -497,8 +497,6 @@ int js_print_exception(JSContext *js, JSValue v)
   return 0;
 }
 
-typedef SDL_FRect rect;
-
 rect js2rect(JSContext *js,JSValue v) {
   rect rect;
   rect.w = js_getnum(js,v,width_atom);
@@ -716,12 +714,13 @@ JSValue make_quad_indices_buffer(JSContext *js, int quads)
 
 JSC_CCALL(os_make_text_buffer,
   const char *s = JS_ToCString(js, argv[0]);
-  HMM_Vec2 startpos = js2vec2(js,argv[1]);
+  rect rectpos = js2rect(js,argv[1]);
   float size = js2number(js,argv[2]);
   font *f = js2font(js,argv[5]);
   if (!size) size = f->height;
   struct rgba c = js2color(js,argv[3]);
   int wrap = js2number(js,argv[4]);
+  HMM_Vec2 startpos = {.x = rectpos.x, .y = rectpos.y };
   text_vert *buffer = renderText(s, startpos, f, size, c, wrap);
   size_t verts = arrlen(buffer);  
 
@@ -2740,7 +2739,6 @@ JSC_CCALL(os_make_font,
   if (!f) return JS_ThrowReferenceError(js, "could not create font");
   ret = font2js(js,f);
   JS_SetPropertyStr(js, ret, "surface", SDL_Surface2js(js,f->surface));
-  printf("texture is %dx%d at %p\n", f->surface->w, f->surface->h, f->surface);
 )
 
 JSC_CCALL(os_make_transform, return transform2js(js,make_transform()))
