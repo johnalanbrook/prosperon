@@ -1431,6 +1431,7 @@ JSC_CCALL(game_renderers,
 JSC_CCALL(game_cameras,
   int num;
   SDL_CameraID *ids = SDL_GetCameras(&num);
+  if (num == 0) return JS_UNDEFINED;
   JSValue jsids = JS_NewArray(js);
   for (int i = 0; i < num; i++)
     JS_SetPropertyUint32(js,jsids, i, number2js(js,ids[i]));
@@ -2306,24 +2307,20 @@ static const JSCFunctionListEntry js_transform_funcs[] = {
 };
 
 JSC_CCALL(datastream_time, return number2js(js,plm_get_time(js2datastream(js,self)->plm)); )
-
-JSC_CCALL(datastream_advance_frames,  ds_advanceframes(js2datastream(js,self), js2number(js,argv[0])))
-
 JSC_CCALL(datastream_seek, ds_seek(js2datastream(js,self), js2number(js,argv[0])))
-
 JSC_CCALL(datastream_advance, ds_advance(js2datastream(js,self), js2number(js,argv[0])))
-
 JSC_CCALL(datastream_duration, return number2js(js,ds_length(js2datastream(js,self))))
-
 JSC_CCALL(datastream_framerate, return number2js(js,plm_get_framerate(js2datastream(js,self)->plm)))
+
+JSC_GETSET_CALLBACK(datastream, callback)
 
 static const JSCFunctionListEntry js_datastream_funcs[] = {
   MIST_FUNC_DEF(datastream, time, 0),
-  MIST_FUNC_DEF(datastream, advance_frames, 1),
   MIST_FUNC_DEF(datastream, seek, 1),
   MIST_FUNC_DEF(datastream, advance, 1),
   MIST_FUNC_DEF(datastream, duration, 0),
   MIST_FUNC_DEF(datastream, framerate, 0),
+  CGETSET_ADD(datastream, callback),
 };
 
 JSC_GETSET_CALLBACK(timer, fn)
@@ -2663,8 +2660,6 @@ JSC_CCALL(os_make_texture,
   void *raw = JS_GetArrayBuffer(js, &len, argv[0]);
   if (!raw) return JS_ThrowReferenceError(js, "could not load texture with array buffer");
 
-  struct texture *tex = calloc(1, sizeof(*tex));
-
   int n, width, height;
   void *data = stbi_load_from_memory(raw, len, &width, &height, &n, 0);
 
@@ -2696,33 +2691,24 @@ JSC_CCALL(os_make_gif,
   if (!raw) return JS_ThrowReferenceError(js, "could not load gif from supplied array buffer");
 
   int n;
-  texture *tex = calloc(1,sizeof(*tex));
   int frames;
   int *delays;
-  tex->data = stbi_load_gif_from_memory(raw, rawlen, &delays, &tex->width, &tex->height, &frames, &n, 4);
-  tex->height *= frames;
+  int width;
+  int height;
+  void *pixels = stbi_load_gif_from_memory(raw, rawlen, &delays, &width, &height, &frames, &n, 4);
 
   JSValue gif = JS_NewObject(js);
   JSValue delay_arr = JS_NewArray(js);
-  JSValue jstex = JS_UNDEFINED; //texture2js(js,tex);
 
-  float yslice = 1.0/frames;
   for (int i = 0; i < frames; i++) {
     JSValue frame = JS_NewObject(js);
     JS_SetPropertyStr(js, frame, "time", number2js(js,(float)delays[i]/1000.0));
-    JS_SetPropertyStr(js, frame, "rect", rect2js(js,(rect){
-      .x = 0,
-      .y = yslice*i,
-      .w = 1,
-      .h = yslice
-    }));
-    JS_SetPropertyStr(js, frame, "texture", JS_DupValue(js,jstex));
+    SDL_Surface *framesurf = SDL_CreateSurfaceFrom(width,height,SDL_PIXELFORMAT_RGBA32,pixels+(width*height*4*i), width*4);
+    JS_SetPropertyStr(js, frame, "surface", SDL_Surface2js(js,framesurf));
     JS_SetPropertyUint32(js, delay_arr, i, frame);
   }
 
   JS_SetPropertyStr(js, gif, "frames", delay_arr);
-  JS_FreeValue(js,jstex);
-
   free(delays);
   
   ret = gif;
@@ -2731,12 +2717,8 @@ JSC_CCALL(os_make_gif,
 JSValue aseframe2js(JSContext *js, ase_frame_t aframe)
 {
   JSValue frame = JS_NewObject(js);
-  texture *tex = calloc(1,sizeof(*tex));
-  tex->width = aframe.ase->w;
-  tex->height = aframe.ase->h;
-  tex->data = malloc(tex->width*tex->height*4);
-  memcpy(tex->data, aframe.pixels, tex->width*tex->height*4);
-//  JS_SetPropertyStr(js, frame, "texture", texture2js(js,tex));
+  SDL_Surface *surf = SDL_CreateSurfaceFrom(aframe.ase->w, aframe.ase->h, SDL_PIXELFORMAT_RGBA32, aframe.pixels, aframe.ase->w*4);
+  JS_SetPropertyStr(js, frame, "surface", SDL_Surface2js(js,surf));
   JS_SetPropertyStr(js, frame, "rect", rect2js(js,(rect){.x=0,.y=0,.w=1,.h=1}));
   JS_SetPropertyStr(js, frame, "time", number2js(js,(float)aframe.duration_milliseconds/1000.0));
   return frame;
@@ -2969,14 +2951,30 @@ JSC_CCALL(os_make_plane,
   return parmesh2js(js,par_shapes_create_plane(js2number(js,argv[0]), js2number(js,argv[1])));
 )
 
+static void render_frame(plm_t *mpeg, plm_frame_t *frame, datastream *ds) {
+  if (JS_IsUndefined(ds->callback)) return;
+  uint8_t *rgb = malloc(frame->height*frame->width*4);
+  memset(rgb,255,frame->height*frame->width*4);
+  plm_frame_to_rgba(frame, rgb, frame->width*4);
+  SDL_Surface *surf = SDL_CreateSurfaceFrom(frame->width,frame->height, SDL_PIXELFORMAT_RGBA32, rgb, frame->width*4);
+  JSValue s[1];
+  s[0] = SDL_Surface2js(ds->js,surf);
+  JSValue cb = JS_DupValue(ds->js,ds->callback);
+  JSValue ret = JS_Call(ds->js, cb, JS_UNDEFINED, 1, s);
+  JS_FreeValue(ds->js,ret);
+  JS_FreeValue(ds->js,cb);
+  free(rgb);
+}
+
 JSC_CCALL(os_make_video,
   size_t len;
   void *data = JS_GetArrayBuffer(js,&len,argv[0]);
   datastream *ds = ds_openvideo(data, len);
-  ret = datastream2js(js,ds);
-  texture *t = malloc(sizeof(texture));
-//  t->id = ds->img;
-//  JS_SetPropertyStr(js, ret, "texture", texture2js(js,t));
+  if (!ds) return JS_ThrowReferenceError(js, "Video file was not valid.");
+  ds->js = js;
+  ds->callback = JS_UNDEFINED;
+  plm_set_video_decode_callback(ds->plm, render_frame, ds);
+  return datastream2js(js,ds);  
 )
 
 JSC_CCALL(os_skin_calculate,

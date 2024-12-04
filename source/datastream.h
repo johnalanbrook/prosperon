@@ -5,26 +5,23 @@
 #include <stdint.h>
 #include <quickjs.h>
 
-struct soundstream;
+#include <SDL3/SDL.h>
 
 struct datastream {
   plm_t *plm;
+  JSValue callback;
+  JSContext *js;
   int width;
   int height;
-  int dirty;
 };
 
 typedef struct datastream datastream;
 
-struct texture;
-
 void datastream_free(JSRuntime *rt,datastream *ds);
 
 struct datastream *ds_openvideo(void *raw, size_t rawlen);
-struct texture *ds_maketexture(struct datastream *);
-void ds_advance(struct datastream *ds, double);
+void ds_advance(struct datastream *ds, double); // advance time in seconds
 void ds_seek(struct datastream *ds, double);
-void ds_advanceframes(struct datastream *ds, int frames);
 void ds_pause(struct datastream *ds);
 void ds_stop(struct datastream *ds);
 int ds_videodone(struct datastream *ds);

@@ -112,19 +112,19 @@ Ease.elastic = {
 Ease.elastic.c4 = (2 * Math.PI) / 3;
 Ease.elastic.c5 = (2 * Math.PI) / 4.5;
 
-var tween = function (from, to, time, fn, endfn) {
-  var start = profile.secs(profile.now());
+var tween = function (from, to, time, fn) {
+  var start = profile.now()
+
   var update = function tween_update(dt) {
-    var elapsed = profile.secs(profile.now()) - start;
+    var elapsed = profile.now() - start;
     fn(from.lerp(to, elapsed / time));
     if (elapsed >= time) {
       fn(to);
-      if (stop.then) stop.then();
       stop();
-      endfn?.();
     }
   };
   var stop = Register.update.register(update);
+  console.log(update)
   return stop;
 };
 

@@ -19,10 +19,6 @@
 
 #include "jsffi.h"
 
-#include "texture.h"
-
-#include "jsffi.h"
-
 unsigned short pack_short_tex(float c) { return c * USHRT_MAX; }
 
 SDL_GPUBuffer *texcoord_floats(float *f, int n)

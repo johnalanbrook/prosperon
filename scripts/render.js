@@ -1014,6 +1014,9 @@ render.tile = function tile(image, rect = [0,0], color = Color.white)
   if (typeof image === "string")
     image = game.texture(image);
 
+  render._main.tile(image, rect, undefined, 1);
+  return;
+
   var tex = image.texture;
   if (!tex) return;
 
@@ -1136,10 +1139,6 @@ render.slice9 = function slice9(image, rect = [0,0], slice = 0, color = Color.wh
   render.draw(shape.quad);
 };
 
-function endframe() {
-  tdraw = 0;
-}
-
 var textssbos = [];
 var tdraw = 0;
 var cur_font = undefined;
@@ -1190,6 +1189,16 @@ render.draw = function render_draw(mesh, ssbo, inst = 1, e_start = 0) {
   sg_bind(mesh, ssbo);
   render.spdraw(e_start, cur.bind.count, inst);
 };
+
+render.viewport = function(rect)
+{
+  render._main.viewport(rect);
+}
+
+render.scissor = function(rect)
+{
+  render.viewport(rect)
+}
 
 // Camera viewport is a rectangle with the bottom left corner defined as x,y. Units are pixels on the window.
 function camviewport() {
@@ -1423,75 +1432,19 @@ var imgui_fn = function imgui_fn() {
 var clearcolor = [100,149,237,255].scale(1/255);
 prosperon.render = function prosperon_render() {
 try{
-//  render.glue_pass();
   render._main.draw_color(clearcolor);
   render._main.clear();
-/*  render.set_view(prosperon.camera.transform);
-  render.set_projection_ortho({
-    l:-prosperon.camera.size.x/2,
-    r:prosperon.camera.size.x/2,
-    b:-prosperon.camera.size.y/2,
-    t:prosperon.camera.size.y/2
-  }, prosperon.camera.near,prosperon.camera.far);
-  render.viewport(prosperon.camera.view(), false);
-  
-  if (render.draw_sprites) render.sprites();
-
-  if (render.draw_particles) draw_emitters();
-*/
-//  render.fillmask(0);
-//  render.forceflush();
-/*  render.set_projection_ortho({
-    l:0,
-    r:prosperon.camera.size.x,
-    b:-prosperon.camera.size.y,
-    t:0
-  },-1,1);
-*/  
-//  render.set_view(unit_transform);
+  // set to world cam
   prosperon.draw();
   if (render.draw_hud) prosperon.hud();
-//  render.forceflush();
 
-/*  render.set_projection_ortho({
-    l:0,
-    r:prosperon.size.x,
-    b:-prosperon.size.y,
-    t:0
-  },-1,1);
-  render.viewport({
-    t:0,
-    height:prosperon.size.y,
-    width:prosperon.size.x,
-    l:0
-  }, false);
-*/
 //  prosperon.app();
-//  render.forceflush();
 //  if (debug.show) imgui_fn();
 } catch(e) {
   throw e;
 } finally {
-  // random tracy image
-/*  var vals = Object.values(game.texture.cache);
-  var tex = vals[Math.floor(Math.random()*vals.length)].texture;
-  var texdata = os.tex_data(tex)
-  tracy.image(texdata, tex.width, tex.height);
-*/
-//  render.end_pass();
-//  render.commit();
   render._main.present();
-  endframe();
-  tracy.gpu_collect();
   tracy.end_frame();  
-  tracy.gpu_sync();
-
-/*  var rtinfo = os.rt_info();
-  for (var i in rtinfo) {
-    console.log(`${i} is ${rtinfo[i]}`);
-    tracy.plot(i, rtinfo[i]);
-  }*/
-
 }
 };
 
@@ -1537,7 +1490,8 @@ prosperon.process = function process() {
   */  
   }
 
-  tracy.gpu_zone(prosperon.render);
+  prosperon.render();
+//  tracy.gpu_zone(prosperon.render);
 };
 
 return { render };

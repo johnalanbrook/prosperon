@@ -4,7 +4,6 @@
 #include "render.h"
 #include "HandmadeMath.h"
 #include <quickjs.h>
-#include "texture.h"
 #include <SDL3/SDL.h>
 #include "render.h"
 

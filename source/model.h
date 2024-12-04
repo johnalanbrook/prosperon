@@ -5,7 +5,6 @@
 #include "transform.h"
 #include "gameobject.h"
 #include "anim.h"
-#include "texture.h"
 #include "cgltf.h"
 
 #define MAT_POS 0
