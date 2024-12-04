@@ -864,7 +864,7 @@ render.rectangle = function render_rectangle(rect, color = Color.white, shader =
   render._main.fillrect(rect,color);
 };
 
-render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = -1, ) {
+render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = 0) {
   if (typeof font === 'string')
     font = render.get_font(font)
   var mesh = os.make_text_buffer(str, rect, 0, color, wrap, font);
@@ -885,11 +885,11 @@ render.text = function text(str, rect, font = cur_font, size = 0, color = Color.
 };
 
 var tttsize = render.text_size;
-render.text_size = function(str, font)
+render.text_size = function(str, font, ...args)
 {
   if (typeof font === 'string')
     font = render.get_font(font);
-  return tttsize(str,font); 
+  return tttsize(str,font, ...args); 
 }
 
 var lasttex = undefined;

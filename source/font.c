@@ -211,35 +211,79 @@ const char *esc_color(const char *c, struct rgba *color, struct rgba defc)
 // text is a string, font f, size is height in pixels, wrap is how long a line is before wrapping. -1to not wrap
 HMM_Vec2 measure_text(const char *text, font *f, float size, float letterSpacing, float wrap)
 {
-  HMM_Vec2 dim = {0};
-  float maxWidth = 0; // max width of any line
-  float lineWidth = 0; // current line width
-  float scale = size/f->height;
-  scale = 1;
-  float lineHeight = f->ascent - f->descent;
-  lineHeight *= scale;
-  letterSpacing *= scale;
+  int breakAtWord = 0;
+    HMM_Vec2 dim = {0};
+    float maxWidth = 0; // Maximum width of any line
+    float lineWidth = 0; // Current line width
+    float scale = size / f->height;
+    float lineHeight = (f->ascent - f->descent) * scale;
+    letterSpacing *= scale;
 
-  float height = lineHeight; // total height
+    float height = lineHeight; // Total height
+    const char *wordStart = text; // Start of the current word for word wrapping
+    float wordWidth = 0; // Width of the current word
+    float spaceWidth = f->Characters[' '].advance + letterSpacing; // Space character width
 
-  for (char *c = text; *c != 0; c++) {
-    if (*c == '\n') {
-      maxWidth = fmaxf(maxWidth, lineWidth);
-      lineWidth = 0;
-      height += lineHeight + f->linegap;
-      continue;
+    for (const char *c = text; *c != '\0'; c++) {
+        if (*c == '\n') {
+            // Handle explicit line breaks
+            maxWidth = fmaxf(maxWidth, lineWidth);
+            lineWidth = 0;
+            height += lineHeight + f->linegap;
+            wordStart = c + 1;
+            wordWidth = 0;
+            continue;
+        }
+
+        float charWidth = f->Characters[*c].advance + letterSpacing;
+
+        // Handle wrapping
+        if (wrap > 0 && lineWidth + charWidth > wrap) {
+            if (breakAtWord && *c != ' ') {
+                // Roll back to the last word if breaking at word boundaries
+                if (wordWidth > 0) {
+                    lineWidth -= wordWidth + spaceWidth;
+                    c = wordStart - 1; // Reset to start of the word
+                }
+            }
+
+            // Finish the current line and reset
+            maxWidth = fmaxf(maxWidth, lineWidth);
+            lineWidth = 0;
+            height += lineHeight + f->linegap;
+            wordStart = c + 1; // Start a new word
+            wordWidth = 0;
+
+            // Skip to next character if wrapping on letters
+            if (!breakAtWord) {
+                lineWidth += charWidth;
+                continue;
+            }
+        }
+
+        lineWidth += charWidth;
+
+        // Update word width if breaking at word boundaries
+        if (breakAtWord) {
+            if (*c == ' ') {
+                wordWidth = 0;
+                wordStart = c + 1;
+            } else {
+                wordWidth += charWidth;
+            }
+        }
     }
-    lineWidth += f->Characters[*c].advance + letterSpacing;
-  }
 
-  maxWidth = fmaxf(maxWidth, lineWidth);
-  dim.x = maxWidth;
-  dim.y = height;
-  return dim;
+    // Finalize dimensions
+    maxWidth = fmaxf(maxWidth, lineWidth);
+    dim.x = maxWidth;
+    dim.y = height;
+
+    return dim;
 }
-
 /* pos given in screen coordinates */
 struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap) {
+  int wrapAtWord = 1;
   text_vert *buffer = NULL;
   int len = strlen(text);
 
@@ -250,57 +294,23 @@ struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scal
   for (char *c = text; *c != 0; c++) {
     if (*c == '\n') {
       cursor.x = pos.x;
-      cursor.y += lineHeight + f->linegap;
+      cursor.y -= lineHeight + f->linegap;
+      lineWidth = 0;
       continue;
     }
 
-    draw_char_verts(&buffer, f->Characters[*c], cursor, scale, color);
-    cursor.x += f->Characters[*c].advance;
-  }
-  return buffer;
-/*
-  const char *line, *wordstart, *drawstart;
-  line = drawstart = text;
-
-  struct rgba usecolor = color;
-
-  while (*line != '\0') {
-    if (isblank(*line)) {
-      sdrawCharacter(f->Characters[*line], cursor, scale, usecolor);
-      cursor.X += f->Characters[*line].advance * scale;
-      line++;
-    } else if (isspace(*line)) {
-      sdrawCharacter(f->Characters[*line], cursor, scale, usecolor);
-      cursor.Y -= scale * f->linegap;
-      cursor.X = pos.X;
-      line++;
-    } else {
-      if (*line == '\e')
-        line = esc_color(line, &usecolor, color);
-
-      wordstart = line;
-      int wordWidth = 0;
-
-      while (!isspace(*line) && *line != '\0') {
-
-        wordWidth += f->Characters[*line].advance * scale; 
-        line++;
-      }
-
-      if (wrap > 0 && (cursor.X + wordWidth - pos.X) >= wrap) {
-        cursor.X = pos.X;
-        cursor.Y -= scale * f->linegap;
-      }
-
-      while (wordstart < line) {
-        if (*wordstart == '\e')
-          wordstart = esc_color(wordstart, &usecolor, color);
-
-        sdrawCharacter(f->Characters[*wordstart], cursor, scale, usecolor);
-
-        cursor.X += f->Characters[*wordstart].advance * scale;
-        wordstart++;
-      }
+    struct character chara = f->Characters[*c];
+   
+    if (wrap > 0 && lineWidth + chara.advance > wrap) {
+      cursor.x = pos.x;
+      cursor.y -= lineHeight + f->linegap;
+      lineWidth = 0;
     }
-  }*/
+  
+    draw_char_verts(&buffer, chara, cursor, scale, color);
+    lineWidth += chara.advance;
+    cursor.x += chara.advance;
+  }
+  
+  return buffer;
 }

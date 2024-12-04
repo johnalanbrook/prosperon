@@ -32,6 +32,8 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_error.h>
 
+#include <cv.hpp>
+
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
 #else
@@ -256,6 +258,11 @@ void SDL_Surface_free(JSRuntime *rt, SDL_Surface *s) {
   SDL_DestroySurface(s);
 }
 
+void SDL_Camera_free(JSRuntime *rt, SDL_Camera *cam)
+{
+  SDL_CloseCamera(cam);
+}
+
 QJSCLASS(transform)
 QJSCLASS(font)
 //QJSCLASS(warp_gravity)
@@ -265,8 +272,18 @@ QJSCLASS(timer)
 QJSCLASS(skin)
 QJSCLASS(SDL_Window)
 QJSCLASS(SDL_Renderer)
-QJSCLASS(SDL_Texture, TracyCAllocN(n, n->w*n->h*4, "vram");)
-QJSCLASS(SDL_Surface, TracyCAllocN(n, n->pitch*n->h, "texture memory");)
+
+QJSCLASS(SDL_Camera)
+QJSCLASS(SDL_Texture,
+  TracyCAllocN(n, n->w*n->h*4, "vram");
+  JS_SetProperty(js, j, width_atom, number2js(js,n->w));
+  JS_SetProperty(js,j,height_atom,number2js(js,n->h));
+)
+QJSCLASS(SDL_Surface,
+  TracyCAllocN(n, n->pitch*n->h, "texture memory"); 
+  JS_SetProperty(js, j, width_atom, number2js(js,n->w));
+  JS_SetProperty(js,j,height_atom,number2js(js,n->h));
+)
 
 static inline HMM_Mat4 js2transform_mat(JSContext *js, JSValue v)
 {
@@ -672,6 +689,15 @@ JSC_SCALL(render_text_size,
   ret = vec22js(js,measure_text(str, f, size, letterSpacing, wrap));
 )
 
+JSC_SCALL(render_text_rect,
+  rect r = {0};
+  font *f = js2font(js,argv[1]);
+  float wrap = js2number(js,argv[2]);
+  HMM_Vec2 dim = measure_text(str, f, 0, 0, wrap); 
+  r.w = dim.x;
+  r.h = dim.y;
+)
+
 JSC_CCALL(render_draw_color,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
   struct rgba rgba = js2color(js,argv[0]);
@@ -683,6 +709,7 @@ static const JSCFunctionListEntry js_render_funcs[] = {
   MIST_FUNC_DEF(render, set_projection_ortho, 3),
   MIST_FUNC_DEF(render, set_projection_perspective, 4),  
   MIST_FUNC_DEF(render, set_view, 1),
+  MIST_FUNC_DEF(render, draw_color, 1),
 };
 
 static JSValue idx_buffer = JS_UNDEFINED;
@@ -1372,6 +1399,9 @@ static JSValue event2js(JSContext *js, SDL_Event event)
       JS_SetPropertyStr(js,e,"window", number2js(js,event.text.windowID));
       JS_SetPropertyStr(js,e,"text", JS_NewString(js,event.text.text));
       break;
+    case SDL_EVENT_CAMERA_DEVICE_APPROVED:
+      JS_SetPropertyStr(js,e,"type", JS_NewString(js, "camera approved"));
+      break;
   }
   return e;
 }
@@ -1399,21 +1429,21 @@ JSC_CCALL(game_renderers,
 )
 
 JSC_CCALL(game_cameras,
-  SDL_CameraID *ids = SDL_GetCameras(NULL);
+  int num;
+  SDL_CameraID *ids = SDL_GetCameras(&num);
   JSValue jsids = JS_NewArray(js);
-
-  SDL_CameraID *id = ids;
-  while (*id) {
-    printf("camera %d\n", *id);
-    id++;
-  }
-/*  for (int i = 0; i < num; i++) {
+  for (int i = 0; i < num; i++)
     JS_SetPropertyUint32(js,jsids, i, number2js(js,ids[i]));
-  }
-
-  SDL_OpenCamera(ids[0], NULL);*/
 
   return jsids;
+)
+
+JSC_CCALL(game_open_camera,
+  int id = js2number(js,argv[0]);
+  SDL_Camera *cam = SDL_OpenCamera(id, NULL);
+  if (!cam) ret = JS_ThrowReferenceError(js, "Could not open camera %d: %s\n", id, SDL_GetError());
+  else
+    ret = SDL_Camera2js(js,cam);
 )
 
 #include "wildmatch.h"
@@ -1430,6 +1460,7 @@ static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, engine_delay, 1),
   MIST_FUNC_DEF(game, renderers, 0),
   MIST_FUNC_DEF(game, cameras, 0),
+  MIST_FUNC_DEF(game, open_camera, 1),
   MIST_FUNC_DEF(game, glob, 2),
 };
 
@@ -1510,7 +1541,9 @@ JSC_CCALL(SDL_Renderer_rect,
 JSC_CCALL(renderer_load_texture,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   SDL_Surface *surf = js2SDL_Surface(js,argv[0]);
+  if (!surf) return JS_ThrowReferenceError(js, "Surface was not a surface.");
   SDL_Texture *tex = SDL_CreateTextureFromSurface(r,surf);
+  if (!tex) return JS_ThrowReferenceError(js, "Could not create texture from surface: %s", SDL_GetError());
   ret = SDL_Texture2js(js,tex);
   JS_SetProperty(js,ret,width_atom, number2js(js,tex->w));
   JS_SetProperty(js,ret,height_atom, number2js(js,tex->h));
@@ -1587,7 +1620,7 @@ JSC_CCALL(renderer_9slice,
   SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
   rect *dst, *src = NULL;
   lrtb bounds = js2lrtb(js,argv[2]);
-  
+  SDL_RenderTexture9Grid(renderer, tex, src, bounds.l, bounds.r, bounds.t, bounds.b, 0.0, dst);
 )
 
 JSC_CCALL(renderer_get_image,
@@ -1665,10 +1698,6 @@ void Translate2DPoints(HMM_Vec2 *points, int count, HMM_Vec3 position, HMM_Quat 
     float yy = rotation.y * rotation.y;
     float zz = rotation.z * rotation.z;
     float xy = rotation.x * rotation.y;
-    float xz = rotation.x * rotation.z;
-    float yz = rotation.y * rotation.z;
-    float xw = rotation.x * rotation.w;
-    float yw = rotation.y * rotation.w;
     float zw = rotation.z * rotation.w;
 
     // Extract 2D affine rotation and scaling
@@ -1854,11 +1883,57 @@ JSC_CCALL(surface_rect,
   SDL_FillSurfaceRect(dst,&r,SDL_MapRGBA(&pdetails,NULL,color.r,color.g,color.b,color.a));
 )
 
+JSC_CCALL(surface_dup,
+  SDL_Surface *surf = js2SDL_Surface(js,self);
+  SDL_Surface *conv = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA8888);
+  if (!conv)
+    return JS_ThrowReferenceError(js, "could not blit to dup'd surface: %s", SDL_GetError());
+
+  return SDL_Surface2js(js,conv);
+)
+
 static const JSCFunctionListEntry js_SDL_Surface_funcs[] = {
   MIST_FUNC_DEF(surface, blit, 3),
   MIST_FUNC_DEF(surface, scale, 1),
   MIST_FUNC_DEF(surface,fill,1),
   MIST_FUNC_DEF(surface,rect,2),
+  MIST_FUNC_DEF(surface, dup, 0),
+};
+
+JSC_CCALL(camera_frame,
+  SDL_ClearError();
+  SDL_Camera *cam = js2SDL_Camera(js,self);
+  if (!cam) return JS_ThrowReferenceError(js,"Self was not a camera: %s", SDL_GetError());
+  SDL_Surface *surf = SDL_AcquireCameraFrame(cam, NULL);
+  if (!surf) {
+    const char *msg = SDL_GetError();
+    if (msg[0] != 0)
+      return JS_ThrowReferenceError(js,"Could not get camera frame: %s", SDL_GetError());
+    else return JS_UNDEFINED;
+  }
+  return SDL_Surface2js(js,surf);
+  SDL_Surface *newsurf = SDL_CreateSurface(surf->w, surf->h, surf->format);
+  SDL_ReleaseCameraFrame(cam,surf);
+
+  int didit = SDL_BlitSurface(surf, NULL, newsurf, NULL);
+  if (!didit) {
+    SDL_DestroySurface(newsurf);
+    return JS_ThrowReferenceError(js, "Could not blit: %s", SDL_GetError());
+  }
+
+  return SDL_Surface2js(js,newsurf);
+)
+
+JSC_CCALL(camera_release_frame,
+  SDL_Camera *cam = js2SDL_Camera(js,self);
+  SDL_Surface *surf = js2SDL_Surface(js,argv[0]);
+  SDL_ReleaseCameraFrame(cam,surf);
+)
+
+static const JSCFunctionListEntry js_SDL_Camera_funcs[] = 
+{
+  MIST_FUNC_DEF(camera, frame, 0),
+  MIST_FUNC_DEF(camera, release_frame, 1),
 };
 
 JSC_CCALL(texture_mode,
@@ -1941,7 +2016,6 @@ int iiihandle(JSRuntime *rt, void *data)
 }
 
 JSC_CCALL(profile_gather,
-  int count = js2number(js,argv[0]);
   instr_v = JS_DupValue(js, argv[1]);
   JS_SetInterruptHandler(JS_GetRuntime(js), iiihandle, NULL);
 )
@@ -2604,7 +2678,7 @@ JSC_CCALL(os_make_texture,
     FMT = SDL_PIXELFORMAT_RGB24;
   else {
     free(data);
-    return JS_ThrowReferenceError(js, "unknown pixel format");
+    return JS_ThrowReferenceError(js, "unknown pixel format. got %d channels", n);
   }
    
   SDL_Surface *surf = SDL_CreateSurfaceFrom(width,height,FMT, data, width*n);
@@ -2614,8 +2688,6 @@ JSC_CCALL(os_make_texture,
   }
 
   ret = SDL_Surface2js(js,surf);
-  JS_SetProperty(js,ret,width_atom,number2js(js,surf->w));
-  JS_SetProperty(js,ret,height_atom,number2js(js,surf->h));
 )
 
 JSC_CCALL(os_make_gif,
@@ -2775,33 +2847,6 @@ JSC_SCALL(os_gltf_skin,
 
   CLEANUP:
   cgltf_free(data);
-)
-
-JSC_CCALL(os_make_buffer,
-  int type = js2number(js,argv[1]);
-  float *b = malloc(sizeof(float)*js_arrlen(js,argv[0]));
-  for (int i = 0; i < js_arrlen(js,argv[0]); i++)
-    b[i] = js_getnum_uint32(js, argv[0],i);
-/*    
-  sg_buffer *p = malloc(sizeof(sg_buffer));
-  
-  switch(type) {
-    case 0:
-      *p = sg_make_buffer(&(sg_buffer_desc){
-        .size = sizeof(float)*js_arrlen(js,argv[0]),
-        .data = b
-      });
-      break;
-    case 1:
-      *p = index_buffer(b, js_arrlen(js,argv[0]));
-      break;
-    case 2:
-      *p = texcoord_floats(b, js_arrlen(js,argv[0]));
-      break;
-  }
-
-  free(b);
-  return sg_buffer2js(js,p);*/
 )
 
 JSC_CCALL(os_make_color_buffer,
@@ -3074,6 +3119,14 @@ JSC_CCALL(os_make_sprite_mesh,
   JS_SetProperty(js, ret, count_atom, number2js(js, count));
 )
 
+bool detectImageInWebcam(SDL_Surface *a, SDL_Surface *b, double t);
+JSC_CCALL(os_match_img,
+  SDL_Surface *img1 = js2SDL_Surface(js,argv[0]);
+  SDL_Surface *img2 = js2SDL_Surface(js,argv[1]);
+  double threshold = js2number(js,argv[2]);
+  return JS_NewBool(js, detectImageInWebcam(img1,img2,threshold));
+)
+
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, turbulence, 4),
   MIST_FUNC_DEF(os, fbm, 4),
@@ -3097,7 +3150,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_surface, 1),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_transform, 0),
-  MIST_FUNC_DEF(os, make_buffer, 1),
   MIST_FUNC_DEF(os, make_line_prim, 4),
   MIST_FUNC_DEF(os, make_cylinder, 2),
   MIST_FUNC_DEF(os, make_cone, 2),
@@ -3130,6 +3182,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, gltf_skin, 1),
   MIST_FUNC_DEF(os, skin_calculate, 1),
   MIST_FUNC_DEF(os, kill, 1),
+  MIST_FUNC_DEF(os, match_img, 3),
 };
 
 #define JSSTATIC(NAME, PARENT) \
@@ -3193,6 +3246,7 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(SDL_Surface)
   QJSCLASSPREP_FUNCS(SDL_Texture)
   QJSCLASSPREP_FUNCS(SDL_Renderer)
+  QJSCLASSPREP_FUNCS(SDL_Camera)
 
   QJSGLOBALCLASS(os);
   
@@ -3202,6 +3256,7 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(timer);
+
 
 
   QJSGLOBALCLASS(input);

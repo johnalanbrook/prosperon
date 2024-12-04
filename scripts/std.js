@@ -301,7 +301,7 @@ Cmdline.register_order(
     if (io.exists("config.js")) global.mixin("config.js");
     else console.warn("No config.js file found. Starting with default parameters.");
     var window = game.engine_start(prosperon);
-   var renderer = window.make_renderer("gpu");
+   var renderer = window.make_renderer("vulkan");
    render._main = renderer;
 
    prosperon.init();

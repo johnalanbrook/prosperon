@@ -11,6 +11,7 @@ endif
 
 add_project_arguments('-Wno-incompatible-pointer-types', language: 'c')
 add_project_arguments('-Wno-narrowing', language: 'cpp')
+add_project_arguments('-Wno-missing-braces', language:'c')
 
 deps = []
 
@@ -73,6 +74,8 @@ deps += dependency('qjs-soloud',static:true)
 deps += dependency('sdl3')
 deps += dependency('physfs',static:true)
 
+deps += dependency('opencv')
+
 deps += dependency('threads')
 
 if get_option('chipmunk')
@@ -84,7 +87,7 @@ if get_option('enet')
 endif
 
 sources = []
-src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c',  'wildmatch.c']
+src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c','texture.c', 'timer.c', 'transform.c','warp.c','yugine.c',  'wildmatch.c', 'cv.cpp']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
 

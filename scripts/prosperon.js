@@ -89,7 +89,7 @@ prosperon.init = function () {
   prosperon.camera.mode = "keep";
   prosperon.camera.break = "fit";
   prosperon.camera.size = game.size;
-  shape.quad = {
+/*  shape.quad = {
     pos: os.make_buffer([
       0, 0, 0,
       0, 1, 0,
@@ -111,7 +111,7 @@ prosperon.init = function () {
     verts: 3,
     count: 3,
     index: os.make_buffer([0, 1, 2], 1),
-  };
+  };*/
   if (io.exists("game.js")) global.app = actor.spawn("game.js");
   else global.app = actor.spawn("nogame.js");
 };
@@ -299,7 +299,10 @@ game.is_image = function(obj)
 
 // Any request to it returns an image, which is a texture and rect. But they can
 game.texture = function texture(path) {
-  if (typeof path !== 'string') throw new Error('need a string for game.texture')
+  if (typeof path !== 'string') {
+    return path;
+    throw new Error('need a string for game.texture')
+  }
   var parts = path.split(':');
   path = Resources.find_image(parts[0]);
 

@@ -192,8 +192,8 @@ clay.image = function image(path, ...configs)
 clay.text = function text(str, ...configs)
 {
   var config = rectify_configs(configs);
-  var tsize = render.text_size(str, config.font);
   config.size ??= [0,0];
+  var tsize = render.text_size(str, config.font, 0, 0, config.size.x);
   config.size = config.size.map((x,i) => Math.max(x, tsize[i]));
   config.text = str;
   add_item(config);
@@ -245,7 +245,7 @@ layout.draw_commands = function draw_commands(cmds, pos = [0,0], mousepos)
       render.rectangle(boundingbox, config.background_color);
       
     if (config.text)
-      render.text(config.text, content, config.font, config.font_size, config.color);
+      render.text(config.text, content, config.font, config.font_size, config.color, config.size.x);
     if (config.image)
       render.image(config.image, content, 0, config.color);
   }

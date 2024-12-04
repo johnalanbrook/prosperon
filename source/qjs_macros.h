@@ -96,9 +96,9 @@ static inline TYPE *js2##TYPE (JSContext *js, JSValue val) { \
   return JS_GetOpaque(val,js_##TYPE##_id); \
 }\
 static inline JSValue TYPE##2js(JSContext *js, TYPE *n) { \
-  __VA_ARGS__ \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   JS_SetOpaque(j,n);\
+  __VA_ARGS__ \
   return j; }\
 \
 
