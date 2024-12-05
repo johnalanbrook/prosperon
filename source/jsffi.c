@@ -339,15 +339,17 @@ double js2angle(JSContext *js,JSValue v) {
   return n * HMM_TurnToRad;
 }
 
-struct rgba js2color(JSContext *js,JSValue v) {
+typedef HMM_Vec4 colorf;
+
+colorf js2color(JSContext *js,JSValue v) {
   JSValue c[4];
   for (int i = 0; i < 4; i++) c[i] = JS_GetPropertyUint32(js,v,i);
   float a = JS_IsUndefined(c[3]) ? 1.0 : js2number(js,c[3]);
-  struct rgba color = {
-    .r = js2number(js,c[0])*RGBA_MAX,
-    .g = js2number(js,c[1])*RGBA_MAX,
-    .b = js2number(js,c[2])*RGBA_MAX,
-    .a = a*RGBA_MAX,
+  colorf color = {
+    .r = js2number(js,c[0]),
+    .g = js2number(js,c[1]),
+    .b = js2number(js,c[2]),
+    .a = a,
   };
 
   for (int i = 0; i < 4; i++) JS_FreeValue(js,c[i]);
@@ -355,13 +357,13 @@ struct rgba js2color(JSContext *js,JSValue v) {
   return color;
 }
 
-JSValue color2js(JSContext *js,struct rgba color)
+JSValue color2js(JSContext *js, colorf color)
 {
   JSValue arr = JS_NewArray(js);
-  JS_SetPropertyUint32(js, arr,0,number2js(js,(double)color.r/255));
-  JS_SetPropertyUint32(js, arr,1,number2js(js,(double)color.g/255));  
-  JS_SetPropertyUint32(js, arr,2,number2js(js,(double)color.b/255));
-  JS_SetPropertyUint32(js, arr,3,number2js(js,(double)color.a/255));
+  JS_SetPropertyUint32(js, arr,0,number2js(js,(double)color.r));
+  JS_SetPropertyUint32(js, arr,1,number2js(js,(double)color.g));  
+  JS_SetPropertyUint32(js, arr,2,number2js(js,(double)color.b));
+  JS_SetPropertyUint32(js, arr,3,number2js(js,(double)color.a));
   return arr;
 }
 
@@ -700,8 +702,8 @@ JSC_SCALL(render_text_rect,
 
 JSC_CCALL(render_draw_color,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
-  struct rgba rgba = js2color(js,argv[0]);
-  SDL_SetRenderDrawColor(renderer, rgba.r, rgba.g, rgba.b, rgba.a);
+  colorf rgba = js2color(js,argv[0]);
+  SDL_SetRenderDrawColorFloat(renderer, rgba.r, rgba.g, rgba.b, rgba.a);
 )
 
 static const JSCFunctionListEntry js_render_funcs[] = {
@@ -745,7 +747,7 @@ JSC_CCALL(os_make_text_buffer,
   float size = js2number(js,argv[2]);
   font *f = js2font(js,argv[5]);
   if (!size) size = f->height;
-  struct rgba c = js2color(js,argv[3]);
+  colorf c = js2color(js,argv[3]);
   int wrap = js2number(js,argv[4]);
   HMM_Vec2 startpos = {.x = rectpos.x, .y = rectpos.y };
   text_vert *buffer = renderText(s, startpos, f, size, c, wrap);
@@ -1455,6 +1457,22 @@ JSC_SSCALL(game_glob,
     return JS_NewBool(js, 0);
 )
 
+JSC_CCALL(game_camera_name,
+  const char *name = SDL_GetCameraName(js2number(js,argv[0]));
+  if (!name) return JS_ThrowReferenceError(js, "Could not get camera name from id %d.", js2number(js,argv[0]));
+  
+  return JS_NewString(js, name);
+)
+
+JSC_CCALL(game_camera_position,
+  SDL_CameraPosition pos = SDL_GetCameraPosition(js2number(js,argv[0]));
+  switch(pos) {
+    case SDL_CAMERA_POSITION_UNKNOWN: return JS_NewString(js,"unknown");
+    case SDL_CAMERA_POSITION_FRONT_FACING: return JS_NewString(js,"front");
+    case SDL_CAMERA_POSITION_BACK_FACING: return JS_NewString(js,"back");
+  }
+)
+
 static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, engine_start, 1),
   MIST_FUNC_DEF(game, engine_input,1),
@@ -1462,6 +1480,8 @@ static const JSCFunctionListEntry js_game_funcs[] = {
   MIST_FUNC_DEF(game, renderers, 0),
   MIST_FUNC_DEF(game, cameras, 0),
   MIST_FUNC_DEF(game, open_camera, 1),
+  MIST_FUNC_DEF(game, camera_name,1),
+  MIST_FUNC_DEF(game, camera_position,1),
   MIST_FUNC_DEF(game, glob, 2),
 };
 
@@ -1505,15 +1525,15 @@ JSC_CCALL(SDL_Renderer_present,
 
 JSC_CCALL(SDL_Renderer_draw_color,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
-  struct rgba color = js2color(js,argv[0]);
-  SDL_SetRenderDrawColor(renderer, color.r,color.g,color.b,color.a);
+  colorf color = js2color(js,argv[0]);
+  SDL_SetRenderDrawColorFloat(renderer, color.r,color.g,color.b,color.a);
 )
 
 JSC_CCALL(SDL_Renderer_rect,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   if (!JS_IsUndefined(argv[1])) {
-    struct rgba color = js2color(js,argv[1]);  
-    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+    colorf color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColorFloat(r, color.r, color.g, color.b, color.a);
   }
 
   if (JS_IsArray(js,argv[0])) {
@@ -1553,8 +1573,8 @@ JSC_CCALL(renderer_load_texture,
 JSC_CCALL(SDL_Renderer_fillrect,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   if (!JS_IsUndefined(argv[1])) {
-    struct rgba color = js2color(js,argv[1]);  
-    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+    colorf color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColorFloat(r, color.r, color.g, color.b, color.a);
   }
 
   if (JS_IsArray(js,argv[0])) {
@@ -1585,8 +1605,9 @@ JSC_CCALL(renderer_texture,
   dst.y -= dst.h;
   
   if (!JS_IsUndefined(argv[3])) {
-    struct rgba color = js2color(js,argv[3]);
-    SDL_SetTextureColorMod(tex, color.r, color.g, color.b);
+    colorf color = js2color(js,argv[3]);
+    SDL_SetTextureColorModFloat(tex, color.r, color.g, color.b);
+    SDL_SetTextureAlphaModFloat(tex,color.a);
   }
   if (JS_IsUndefined(argv[2]))
     SDL_RenderTexture(renderer,tex,NULL,&dst);
@@ -1639,8 +1660,8 @@ JSC_CCALL(renderer_get_image,
 JSC_SCALL(renderer_fasttext,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   if (!JS_IsUndefined(argv[2])) {
-    struct rgba color = js2color(js,argv[2]);  
-    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+    colorf color = js2color(js,argv[2]);  
+    SDL_SetRenderDrawColorFloat(r, color.r, color.g, color.b, color.a);
   }
   HMM_Vec2 pos = js2vec2(js,argv[1]);
   pos.y *= -1;
@@ -1651,8 +1672,8 @@ JSC_SCALL(renderer_fasttext,
 JSC_CCALL(renderer_line,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   if (!JS_IsUndefined(argv[1])) {
-    struct rgba color = js2color(js,argv[1]);  
-    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+    colorf color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColorFloat(r, color.r, color.g, color.b, color.a);
   }
 
   if (JS_IsArray(js,argv[0])) {
@@ -1671,8 +1692,8 @@ JSC_CCALL(renderer_line,
 JSC_CCALL(renderer_point,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   if (!JS_IsUndefined(argv[1])) {
-    struct rgba color = js2color(js,argv[1]);  
-    SDL_SetRenderDrawColor(r, color.r, color.g, color.b, color.a);
+    colorf color = js2color(js,argv[1]);  
+    SDL_SetRenderDrawColorFloat(r, color.r, color.g, color.b, color.a);
   }
 
   if (JS_IsArray(js,argv[0])) {
@@ -1867,21 +1888,21 @@ static SDL_PixelFormatDetails pdetails = {
 
 JSC_CCALL(surface_fill,
   SDL_Surface *src = js2SDL_Surface(js,self);
-  struct rgba color = js2color(js,argv[0]);
+  colorf color = js2color(js,argv[0]);
   rect r = {
     .x = 0,
     .y = 0,
     .w = src->w,
     .h = src->h
   };
-  SDL_FillSurfaceRect(src, &r, SDL_MapRGBA(&pdetails, NULL, color.r,color.g,color.b,color.a));
+  //SDL_FillSurfaceRect(src, &r, SDL_MapRGBA(&pdetails, NULL, color.r,color.g,color.b,color.a));
 )
 
 JSC_CCALL(surface_rect,
   SDL_Surface *dst = js2SDL_Surface(js,self);
   rect r = js2rect(js,argv[0]);  
-  struct rgba color = js2color(js,argv[1]);
-  SDL_FillSurfaceRect(dst,&r,SDL_MapRGBA(&pdetails,NULL,color.r,color.g,color.b,color.a));
+  colorf color = js2color(js,argv[1]);
+  //SDL_FillSurfaceRect(dst,&r,SDL_MapRGBA(&pdetails,NULL,color.r,color.g,color.b,color.a));
 )
 
 JSC_CCALL(surface_dup,
@@ -3117,12 +3138,15 @@ JSC_CCALL(os_make_sprite_mesh,
   JS_SetProperty(js, ret, count_atom, number2js(js, count));
 )
 
-bool detectImageInWebcam(SDL_Surface *a, SDL_Surface *b, double t);
+SDL_FRect *detectImageInWebcam(SDL_Surface *a, SDL_Surface *b, double t);
 JSC_CCALL(os_match_img,
   SDL_Surface *img1 = js2SDL_Surface(js,argv[0]);
   SDL_Surface *img2 = js2SDL_Surface(js,argv[1]);
   double threshold = js2number(js,argv[2]);
-  return JS_NewBool(js, detectImageInWebcam(img1,img2,threshold));
+  SDL_FRect *r = detectImageInWebcam(img1,img2,threshold);
+  if (!r) return JS_UNDEFINED;
+  ret = rect2js(js, *r);
+  free(r);
 )
 
 static const JSCFunctionListEntry js_os_funcs[] = {

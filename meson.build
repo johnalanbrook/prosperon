@@ -24,12 +24,12 @@ if host_machine.system() == 'darwin'
 endif
 
 cc = meson.get_compiler('c')
-
-# adding cblas
+  deps += dependency('sdl3')  
 if host_machine.system() == 'darwin'
   deps += dependency('appleframeworks', modules: 'accelerate')
 else
   deps += dependency('cblas')
+
 endif
 
 if host_machine.system() == 'linux'
@@ -71,10 +71,12 @@ deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
-deps += dependency('sdl3')
+
 deps += dependency('physfs',static:true)
 
-deps += dependency('opencv')
+
+deps += dependency('opencv4')
+#deps += cc.find_library('opencv')
 
 deps += dependency('threads')
 

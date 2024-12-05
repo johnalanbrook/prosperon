@@ -44,6 +44,8 @@ struct rgba {
 };
 
 typedef struct rgba rgba;
+typedef HMM_Vec4 rgbaf;
+typedef HMM_Vec4 colorf;
 
 static inline rgba vec2rgba(HMM_Vec4 v) {
   return (rgba){v.e[0]*255,v.e[1]*255,v.e[2]*255,v.e[3]*255};

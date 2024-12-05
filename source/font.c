@@ -152,7 +152,7 @@ void sdrawCharacter(struct text_vert **buffer, stbtt_packedchar c, HMM_Vec2 curs
   arrput(*buffer, vert);
 }
 
-void draw_char_verts(struct text_vert **buffer, struct character c, HMM_Vec2 cursor, float scale, struct rgba color)
+void draw_char_verts(struct text_vert **buffer, struct character c, HMM_Vec2 cursor, float scale, colorf color)
 {
   // packedchar has 
   // Adds four verts: bottom left, bottom right, top left, top right
@@ -161,7 +161,7 @@ void draw_char_verts(struct text_vert **buffer, struct character c, HMM_Vec2 cur
   bl.pos.y = cursor.Y + c.quad.y;
   bl.uv.x = c.uv.x;
   bl.uv.y = c.uv.y;
-  rgba2floats(bl.color.e, color);
+  bl.color = color;
   arrput(*buffer, bl);
 
   
@@ -282,7 +282,7 @@ HMM_Vec2 measure_text(const char *text, font *f, float size, float letterSpacing
     return dim;
 }
 /* pos given in screen coordinates */
-struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap) {
+struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scale, colorf color, float wrap) {
   int wrapAtWord = 1;
   text_vert *buffer = NULL;
   int len = strlen(text);

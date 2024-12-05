@@ -382,7 +382,7 @@ typedef union HMM_Vec4 {
     HMM_Vec2 cp;
     HMM_Vec2 wh;
   };
-
+  
   HMM_Quat quat;
   struct {float x, y, z, w; };
   struct {float r, g, b, a; };

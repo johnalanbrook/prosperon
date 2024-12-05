@@ -124,7 +124,6 @@ var tween = function (from, to, time, fn) {
     }
   };
   var stop = Register.update.register(update);
-  console.log(update)
   return stop;
 };
 

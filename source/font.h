@@ -51,7 +51,7 @@ typedef struct Character glyph;
 void font_free(JSRuntime *rt,font *f);
 
 struct sFont *MakeFont(void *data, size_t len, int height);
-struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scale, struct rgba color, float wrap);
+struct text_vert *renderText(const char *text, HMM_Vec2 pos, font *f, float scale, colorf color, float wrap);
 HMM_Vec2 measure_text(const char *text, font *f, float scale, float letterSpacing, float wrap);
 
 // Flushes all letters from renderText calls into the provided buffer
