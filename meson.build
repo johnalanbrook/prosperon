@@ -17,7 +17,7 @@ deps = []
 
 if host_machine.system() == 'darwin'
   add_project_arguments('-x', 'objective-c', language: 'c')
-  fworks = ['foundation', 'metal', 'audiotoolbox', 'metalkit', 'avfoundation', 'quartzcore', 'cocoa', 'accelerate']
+  fworks = ['foundation', 'metal', 'audiotoolbox', 'metalkit', 'avfoundation', 'quartzcore', 'cocoa']
   foreach fkit : fworks
     deps += dependency('appleframeworks', modules: fkit)
   endforeach
@@ -27,6 +27,8 @@ cc = meson.get_compiler('c')
   deps += dependency('sdl3')  
 if host_machine.system() == 'darwin'
   deps += dependency('appleframeworks', modules: 'accelerate')
+  add_project_arguments('-DACCELERATE_NEW_LAPACK=1', language:'c')
+  add_project_arguments('-DACCELERATE_LAPACK_ILP64=1', language:'c')
 else
   deps += dependency('cblas')
 

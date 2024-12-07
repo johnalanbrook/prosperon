@@ -53,8 +53,7 @@ cv::Mat SDL_SurfaceToMat_YUY2(SDL_Surface* surface) {
 // Function to perform feature matching
 
 extern "C" {
-    // Modified function to return a pointer to Rectangle instead of a bool
-    SDL_FRect* detectImageInWebcam(SDL_Surface* webcamSurface, SDL_Surface* targetSurface, double matchThreshold = 10.0) {
+    int detectImageInWebcam(SDL_Surface* webcamSurface, SDL_Surface* targetSurface) {
         // Convert SDL_Surface to cv::Mat
         cv::Mat webcamMat = SDL_SurfaceToMat(webcamSurface);
         cv::Mat targetMat = SDL_SurfaceToMat(targetSurface);
@@ -104,36 +103,6 @@ extern "C" {
         }
     
         // Determine if enough good matches are found
-        if (static_cast<double>(goodMatches.size()) >= matchThreshold) {
-            // Collect the locations of the matched keypoints in the webcam image
-            std::vector<cv::Point> pointsWebcam;
-            pointsWebcam.reserve(goodMatches.size());
-            for (const auto& match : goodMatches) {
-                pointsWebcam.emplace_back(keypointsWebcam[match.trainIdx].pt);
-            }
-    
-            // Compute the bounding rectangle that encompasses all matched points
-            cv::Rect boundingRect = cv::boundingRect(pointsWebcam);
-    
-            // Allocate memory for the Rectangle struct
-            SDL_FRect* rect = (SDL_FRect*)malloc(sizeof(*rect));
-            if (!rect) {
-                // Allocation failed
-                fprintf(stderr, "Memory allocation for Rectangle failed.\n");
-                return NULL;
-            }
-    
-            // Populate the Rectangle struct with bounding rectangle data
-            
-            rect->x = boundingRect.x;
-            rect->y = boundingRect.y;
-            rect->w = boundingRect.width;
-            rect->h = boundingRect.height;
-    
-            return rect;
-        } else {
-            // Not enough matches; return NULL
-            return NULL;
-        }
-    }
+        return goodMatches.size();
+  }
 }

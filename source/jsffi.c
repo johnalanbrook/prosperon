@@ -182,9 +182,6 @@ void *get_gpu_buffer(JSContext *js, JSValue argv, size_t *stride)
   return data;
 }
 
-static inline JSValue bool2js(JSContext *js, int b) { return JS_NewBool(js,b); }
-static inline int js2bool(JSContext *js, JSValue v) { return JS_ToBool(js,v); }
-
 #ifndef _WIN32
 #include <sys/resource.h>
 #endif
@@ -284,20 +281,6 @@ QJSCLASS(SDL_Surface,
   JS_SetProperty(js, j, width_atom, number2js(js,n->w));
   JS_SetProperty(js,j,height_atom,number2js(js,n->h));
 )
-
-static inline HMM_Mat4 js2transform_mat(JSContext *js, JSValue v)
-{
-  transform *T = js2transform(js, v);
-  transform *P = js2transform(js, js_getpropertystr(js,v, "parent"));
-  if (P) {
-    HMM_Mat4 pm = transform2mat(P);
-    HMM_Mat4 tm = transform2mat(T);
-    
-    return HMM_MulM4(pm, tm);
-  }
-
-  return transform2mat(T);
-}
 
 int js_arrlen(JSContext *js,JSValue v) {
   if (JS_IsUndefined(v)) return 0;
@@ -691,15 +674,6 @@ JSC_SCALL(render_text_size,
   ret = vec22js(js,measure_text(str, f, size, letterSpacing, wrap));
 )
 
-JSC_SCALL(render_text_rect,
-  rect r = {0};
-  font *f = js2font(js,argv[1]);
-  float wrap = js2number(js,argv[2]);
-  HMM_Vec2 dim = measure_text(str, f, 0, 0, wrap); 
-  r.w = dim.x;
-  r.h = dim.y;
-)
-
 JSC_CCALL(render_draw_color,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
   colorf rgba = js2color(js,argv[0]);
@@ -1072,7 +1046,7 @@ JSC_CCALL(vector_random_range, return number2js(js,rand_range(js2number(js,argv[
 
 JSC_CCALL(vector_mean,
   double len =  js_arrlen(js,argv[0]);
-  double sum;
+  double sum = 0;
   for (int i = 0; i < len; i++)
     sum += js_getnum_uint32(js, argv[0], i);
     
@@ -1098,7 +1072,7 @@ JSC_CCALL(vector_fastsum,
 
 JSC_CCALL(vector_sigma,
   int len = js_arrlen(js,argv[0]);
-  double sum;
+  double sum = 0;
   for (int i = 0; i < len; i++)
     sum += js_getnum_uint32(js, argv[0], i);
   
@@ -1318,12 +1292,12 @@ static const JSCFunctionListEntry js_array_funcs[] = {
 
 JSC_SCALL(game_engine_start,
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_CAMERA) < 0)
-    return JS_ThrowReferenceError("Couldn't initialize SDL: %s\n", SDL_GetError());
+    return JS_ThrowReferenceError(js, "Couldn't initialize SDL: %s\n", SDL_GetError());
 
   const char *title = JS_ToCString(js,js_getpropertystr(js,argv[0], "title"));
   SDL_Window *new = SDL_CreateWindow(title, js2number(js, js_getproperty(js,argv[0], width_atom)), js2number(js,js_getproperty(js,argv[0], height_atom)), SDL_WINDOW_RESIZABLE);
 
-  if (!new) return JS_ThrowReferenceError("Couldn't open window: %s\n", SDL_GetError());
+  if (!new) return JS_ThrowReferenceError(js, "Couldn't open window: %s\n", SDL_GetError());
 
   SDL_StartTextInput(new);
 
@@ -1459,7 +1433,7 @@ JSC_SSCALL(game_glob,
 
 JSC_CCALL(game_camera_name,
   const char *name = SDL_GetCameraName(js2number(js,argv[0]));
-  if (!name) return JS_ThrowReferenceError(js, "Could not get camera name from id %d.", js2number(js,argv[0]));
+  if (!name) return JS_ThrowReferenceError(js, "Could not get camera name from id %d.", (int)js2number(js,argv[0]));
   
   return JS_NewString(js, name);
 )
@@ -1470,7 +1444,7 @@ JSC_CCALL(game_camera_position,
     case SDL_CAMERA_POSITION_UNKNOWN: return JS_NewString(js,"unknown");
     case SDL_CAMERA_POSITION_FRONT_FACING: return JS_NewString(js,"front");
     case SDL_CAMERA_POSITION_BACK_FACING: return JS_NewString(js,"back");
-  }
+  } 
 )
 
 static const JSCFunctionListEntry js_game_funcs[] = {
@@ -1506,7 +1480,6 @@ JSValue js_SDL_Window_keyboard_shown(JSContext *js, JSValue self) {
   SDL_Window *window = js2SDL_Window(js,self);
   return JS_NewBool(js,SDL_ScreenKeyboardShown(window));
 }
-
 
 static const JSCFunctionListEntry js_SDL_Window_funcs[] = {
   MIST_FUNC_DEF(SDL_Window, fullscreen, 0),
@@ -1895,15 +1868,15 @@ JSC_CCALL(surface_fill,
     .w = src->w,
     .h = src->h
   };
-  //SDL_FillSurfaceRect(src, &r, SDL_MapRGBA(&pdetails, NULL, color.r,color.g,color.b,color.a));
+  SDL_FillSurfaceRect(src, &r, SDL_MapRGBA(&pdetails, NULL, color.r*255,color.g*255,color.b*255,color.a*255));
 )
 
 JSC_CCALL(surface_rect,
   SDL_Surface *dst = js2SDL_Surface(js,self);
   rect r = js2rect(js,argv[0]);  
   colorf color = js2color(js,argv[1]);
-  //SDL_FillSurfaceRect(dst,&r,SDL_MapRGBA(&pdetails,NULL,color.r,color.g,color.b,color.a));
-)
+  SDL_FillSurfaceRect(dst,&r,SDL_MapRGBA(&pdetails,NULL, color.r*255,color.g*255,color.b*255,color.a*255));
+) 
 
 JSC_CCALL(surface_dup,
   SDL_Surface *surf = js2SDL_Surface(js,self);
@@ -2093,10 +2066,10 @@ static const JSCFunctionListEntry js_debug_funcs[] = {
 };
 
 JSC_SCALL(io_rm,
-  if (!PHYSFS_delete(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+  if (!PHYSFS_delete(str)) ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 )
 JSC_SCALL(io_mkdir,
-  if (!PHYSFS_mkdir(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));  
+  if (!PHYSFS_mkdir(str)) ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));  
 )
 
 JSC_SCALL(io_exists, ret = JS_NewBool(js,PHYSFS_exists(str)); )
@@ -2104,7 +2077,7 @@ JSC_SCALL(io_exists, ret = JS_NewBool(js,PHYSFS_exists(str)); )
 JSC_SCALL(io_stat,
   PHYSFS_Stat stat;
   if (!PHYSFS_stat(str, &stat))
-    return JS_ThrowReferenceError(js, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    return JS_ThrowReferenceError(js, "%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 
   ret = JS_NewObject(js);
   JS_SetPropertyStr(js,ret,"filesize", number2js(js,stat.filesize));
@@ -2135,7 +2108,7 @@ JSC_SCALL(io_slurp,
 JSC_SCALL(io_slurpwrite,
   PHYSFS_File *f = PHYSFS_openWrite(str);
   if (!f) {
-    ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
     goto END;
   }
   size_t len;
@@ -2148,21 +2121,21 @@ JSC_SCALL(io_slurpwrite,
   size_t wrote = PHYSFS_writeBytes(f,data, len);
   PHYSFS_close(f);  
   if (wrote == -1 || wrote < len)
-    ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
   
   END:
 )
 
 JSC_SCALL(io_mount,
-  if (!PHYSFS_mount(str,NULL,0)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+  if (!PHYSFS_mount(str,NULL,0)) ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 )
 
 JSC_SCALL(io_unmount,
-  if (!PHYSFS_unmount(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+  if (!PHYSFS_unmount(str)) ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 )
 
 JSC_SCALL(io_writepath,
-  if (!PHYSFS_setWriteDir(str)) ret = JS_ThrowReferenceError(js,PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+  if (!PHYSFS_setWriteDir(str)) ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 )
 
 struct globdata {
@@ -2193,7 +2166,9 @@ int globfs_cb(struct globdata *data, char *dir, char *file)
     *glob++;
   }
 
-  if (PHYSFS_isDirectory(path)) {
+  PHYSFS_Stat stat;
+  PHYSFS_stat(path, &stat);
+  if (stat.filetype == PHYSFS_FILETYPE_DIRECTORY) {
     PHYSFS_enumerate(path, globfs_cb, data);
     goto END;
   }
@@ -2367,7 +2342,6 @@ static const JSCFunctionListEntry js_font_funcs[] = {
 const char *STRTEST = "TEST STRING";
 
 JSC_CCALL(performance_barecall,)
-JSC_CCALL(performance_unpack_num, int i = js2number(js,argv[0]))
 JSC_CCALL(performance_unpack_array,
   void *v = js2cpvec2arr(js,argv[0]);
   arrfree(v);
@@ -2383,7 +2357,6 @@ JSC_CCALL(performance_call_fn_n,
 
 static const JSCFunctionListEntry js_performance_funcs[] = {
   MIST_FUNC_DEF(performance, barecall,0),
-  MIST_FUNC_DEF(performance, unpack_num, 1),
   MIST_FUNC_DEF(performance, unpack_array, 1),
   MIST_FUNC_DEF(performance, pack_num, 0),
   MIST_FUNC_DEF(performance, pack_string, 0),
@@ -2479,31 +2452,8 @@ JSC_SCALL(os_env,
 
 JSValue js_os_sys(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
-  #ifdef __linux__
-  return JS_NewString(js,"linux");
-  #elif defined(_WIN32) || defined(_WIN64)
-  return JS_NewString(js,"windows");
-  #elif defined(IOS)
-  return JS_NewString(js,"ios");
-  #elif defined(__APPLE__)
-  return JS_NewString(js,"macos");
-  #elif defined(__EMSCRIPTEN__)
-  return JS_NewString(js,"web");
-  #endif
-  return JS_UNDEFINED;
+  return JS_NewString(js, SDL_GetPlatform());
 }
-
-JSC_CCALL(os_backend,
-  #ifdef SOKOL_GLCORE
-  return JS_NewString(js,"opengl");
-  #elifdef SOKOL_WGPU
-  return JS_NewString(js,"wgpu");
-  #elifdef SOKOL_D3D11
-  return JS_NewString(js,"directx");
-  #elifdef SOKOL_METAL
-  return JS_NewString(js,"metal");
-  #endif
-)
 
 JSC_CCALL(os_exit, exit(js2number(js,argv[0]));)
 JSC_CCALL(os_gc,
@@ -2696,7 +2646,7 @@ JSC_CCALL(os_make_texture,
     free(data);
     return JS_ThrowReferenceError(js, "unknown pixel format. got %d channels", n);
   }
-   
+    
   SDL_Surface *surf = SDL_CreateSurfaceFrom(width,height,FMT, data, width*n);
   if (!surf) {
     free(data);
@@ -2902,6 +2852,7 @@ JSC_CCALL(os_make_line_prim,
 
 JSValue parmesh2js(JSContext *js,par_shapes_mesh *m)
 {
+  return JS_UNDEFINED;
 /*  JSValue obj = JS_NewObject(js);
   sg_buffer *pos = malloc(sizeof(*pos));
   *pos = float_buffer(m->points, 3*m->npoints);
@@ -3138,22 +3089,18 @@ JSC_CCALL(os_make_sprite_mesh,
   JS_SetProperty(js, ret, count_atom, number2js(js, count));
 )
 
-SDL_FRect *detectImageInWebcam(SDL_Surface *a, SDL_Surface *b, double t);
+int detectImageInWebcam(SDL_Surface *a, SDL_Surface *b);
 JSC_CCALL(os_match_img,
   SDL_Surface *img1 = js2SDL_Surface(js,argv[0]);
   SDL_Surface *img2 = js2SDL_Surface(js,argv[1]);
-  double threshold = js2number(js,argv[2]);
-  SDL_FRect *r = detectImageInWebcam(img1,img2,threshold);
-  if (!r) return JS_UNDEFINED;
-  ret = rect2js(js, *r);
-  free(r);
+  int n = detectImageInWebcam(img1,img2);
+  return number2js(js,n);
 )
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, turbulence, 4),
   MIST_FUNC_DEF(os, fbm, 4),
   MIST_FUNC_DEF(os, make_color_buffer, 2),
-  MIST_FUNC_DEF(os, backend, 0),
   MIST_FUNC_DEF(os, ridge, 5),
   MIST_FUNC_DEF(os, perlin, 3),
   MIST_FUNC_DEF(os, rectpack, 3),
@@ -3204,7 +3151,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, gltf_skin, 1),
   MIST_FUNC_DEF(os, skin_calculate, 1),
   MIST_FUNC_DEF(os, kill, 1),
-  MIST_FUNC_DEF(os, match_img, 3),
+  MIST_FUNC_DEF(os, match_img, 2),
 };
 
 #define JSSTATIC(NAME, PARENT) \

@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  SDL_FRect *detectImageInWebcam(SDL_Surface *webcam, SDL_Surface *img, double threshold);
+  int detectImageInWebcam(SDL_Surface *webcam, SDL_Surface *img);
 
 #ifdef __cplusplus
 }
