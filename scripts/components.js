@@ -773,4 +773,4 @@ Object.mix(os.make_circle2d(), {
   },
 });
 
-return { component, SpriteAnim };
+return { component };

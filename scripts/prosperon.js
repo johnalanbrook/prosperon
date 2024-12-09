@@ -250,54 +250,12 @@ function pack_into_sheet(images)
   return spritesheet;
 }
 
-var SpriteAnim = {};
-globalThis.SpriteAnim = SpriteAnim;
-SpriteAnim.aseprite = function (path) {
-  function aseframeset2anim(frameset, meta) {
-    var anim = {};
-    anim.frames = [];
-    var dim = meta.size;
-
-    var ase_make_frame = function (ase_frame) {
-      var f = ase_frame.frame;
-      var frame = {};
-      frame.rect = {
-        x: f.x / dim.w,
-        y: f.y / dim.h,        
-        width: f.w / dim.w,
-        height: f.h / dim.h,
-      };
-      frame.time = ase_frame.duration / 1000;
-      anim.frames.push(frame);
-    };
-
-    frameset.forEach(ase_make_frame);
-    anim.dim = frameset[0].sourceSize;
-    anim.loop = true;
-    return anim;
-  }
-
-  var data = json.decode(io.slurp(path));
-  if (!data?.meta?.app.includes("aseprite")) return;
-  var anims = {};
-  var frames = Array.isArray(data.frames) ? data.frames : Object.values(data.frames);
-
-  if (!data.meta.frameTags || data.meta.frameTags.length === 0) {
-    anims[0] = aseframeset2anim(frames, data.meta);
-    return anims;
-  }
-  for (var tag of data.meta.frameTags)
-    anims[tag.name] = aseframeset2anim(frames.slice(tag.from, tag.to + 1), data.meta);
-
-  return anims;
-};
-
 game.is_image = function(obj)
 {
   if (obj.texture && obj.rect) return true;
 }
 
-// Any request to it returns an image, which is a texture and rect. But they can
+// Any request to it returns an image, which is a texture and rect.
 game.texture = function texture(path) {
   if (typeof path !== 'string') {
     return path;
@@ -307,10 +265,22 @@ game.texture = function texture(path) {
   path = Resources.find_image(parts[0]);
 
   if (game.texture.cache[path]) return game.texture.cache[path];
-  var newimg = {};
   var data = io.slurpbytes(path);
-  newimg.surface = os.make_texture(data);
-  newimg.texture = render._main.load_texture(newimg.surface);
+  var newimg;
+  switch(path.ext()) {
+    case 'gif':
+      newimg = os.make_gif(data);
+      break;
+    case 'ase':
+      newimg = os.make_aseprite(data);
+      break;
+    default:
+      newimg = {
+        surface: os.make_texture(data)
+      };
+      newimg.texture = render._main.load_texture(newimg.surface);
+      break;
+  }
   game.texture.cache[path] = newimg;
   return newimg;
 
@@ -399,9 +369,6 @@ game.texture = function texture(path) {
   var image;
   var anim;
 
-  if (io.exists(path.set_ext(".json")))
-    anim = SpriteAnim.aseprite(path.set_ext(".json"));
-
   if (!anim) {
     image = {
       texture: tex,
@@ -489,16 +456,6 @@ prosperon.semver.valid.doc = `Test if semantic version v is valid, given a range
 Range is given by a semantic versioning number, prefixed with nothing, a ~, or a ^.
 ~ means that MAJOR and MINOR must match exactly, but any PATCH greater or equal is valid.
 ^ means that MAJOR must match exactly, but any MINOR and PATCH greater or equal is valid.`;
-
-prosperon.iconified = function (icon) {};
-prosperon.focus = function (focus) {};
-prosperon.suspended = function (sus) {};
-prosperon.mouseenter = function () {};
-prosperon.mouseleave = function () {};
-prosperon.touchpress = function (touches) {};
-prosperon.touchrelease = function (touches) {};
-prosperon.touchmove = function (touches) {};
-prosperon.clipboardpaste = function (str) {};
 
 global.mixin("input");
 global.mixin("std");
@@ -667,6 +624,24 @@ function world_start() {
   world.ur = {};
   world.ur.fresh = {};
   game.cam = world;
+}
+
+function make_spritesheet(paths, width, height)
+{
+  var textures = paths.map(path => game.texture(path));
+  var sizes = textures.map(tex => [tex.width, tex.height]);
+  var pos = os.rectpack(width, height, sizes);
+  if (!pos) return;
+  
+  var sheet = os.make_tex_data(width,height);
+
+  var st = profile.now();
+  for (var i = 0; i < pos.length; i++)
+    sheet.copy(textures[i], pos[i].x, pos[i].y);
+
+  sheet.save("spritesheet.qoi");
+  gamestate.spritess = sheet;
+  sheet.load_gpu();
 }
 
 return {

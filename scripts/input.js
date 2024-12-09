@@ -103,13 +103,13 @@ var mousepos = [0, 0];
 prosperon.textinput = function (c) {
   player[0].raw_input("char", "pressed", c);
 };
-prosperon.mousemove = function (pos, dx) {
+prosperon.mouse_move = function (pos, dx) {
   pos.y *= -1;
   dx.y *= -1;
   mousepos = pos;
   player[0].mouse_input("move", pos, dx);
 };
-prosperon.mousescroll = function mousescroll(dx) {
+prosperon.mouse_scroll = function mousescroll(dx) {
   player[0].mouse_input(modstr() + "scroll", dx);
 };
 prosperon.mousedown = function mousedown(b) {

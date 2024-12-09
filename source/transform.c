@@ -53,19 +53,14 @@ HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir)
   return mat3_t_pos(m, dir);
 }
 
-HMM_Mat4 transform2mat(transform *t) {
+HMM_Mat4 transform2mat(transform *t)
+{
   return HMM_M4TRS(t->pos, t->rotation, t->scale);
-  HMM_Mat4 scale = HMM_Scale(t->scale);
-  HMM_Mat4 rot = HMM_QToM4(t->rotation);
-  HMM_Mat4 pos = HMM_Translate(t->pos);
-  return HMM_MulM4(pos, HMM_MulM4(rot, scale));
+}
 
-  if (t->dirty) {
-    t->cache = HMM_M4TRS(t->pos, t->rotation, t->scale);
-    t->dirty = 0;
-  }
-  
-  return t->cache;
+HMM_Mat3 transform2mat3(transform *t)
+{
+  return HMM_M3TRS(t->pos.xy, t->rotation.x, t->scale.xy);
 }
 
 HMM_Quat angle2rotation(float angle)

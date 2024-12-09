@@ -52,6 +52,11 @@ char* read_file(const char* filename) {
     return content;
 }
 
+int js_interrupt(JSRuntime *rt, void *data)
+{
+//  printf("INTERRUPT\n");
+}
+
 void script_startup() {
   rt = JS_NewRuntime();
   js = JS_NewContextRaw(rt);

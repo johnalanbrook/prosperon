@@ -109,6 +109,7 @@ double js_getnum_uint32(JSContext *js, JSValue v, unsigned int i)
   return ret;
 }
 
+static HMM_Mat3 cam_mat;
 static HMM_Vec2 campos = (HMM_Vec2){0,0};
 static HMM_Vec2 logical = {0};
 
@@ -260,6 +261,11 @@ void SDL_Camera_free(JSRuntime *rt, SDL_Camera *cam)
   SDL_CloseCamera(cam);
 }
 
+void SDL_Cursor_free(JSRuntime *rt, SDL_Cursor *c)
+{
+  SDL_DestroyCursor(c);
+}
+
 QJSCLASS(transform)
 QJSCLASS(font)
 //QJSCLASS(warp_gravity)
@@ -267,9 +273,9 @@ QJSCLASS(font)
 QJSCLASS(datastream)
 QJSCLASS(timer)
 QJSCLASS(skin)
+
 QJSCLASS(SDL_Window)
 QJSCLASS(SDL_Renderer)
-
 QJSCLASS(SDL_Camera)
 QJSCLASS(SDL_Texture,
   TracyCAllocN(n, n->w*n->h*4, "vram");
@@ -281,6 +287,8 @@ QJSCLASS(SDL_Surface,
   JS_SetProperty(js, j, width_atom, number2js(js,n->w));
   JS_SetProperty(js,j,height_atom,number2js(js,n->h));
 )
+
+QJSCLASS(SDL_Cursor)
 
 int js_arrlen(JSContext *js,JSValue v) {
   if (JS_IsUndefined(v)) return 0;
@@ -511,11 +519,21 @@ rect js2rect(JSContext *js,JSValue v) {
   JS_FreeValue(js,yv);
   float anchor_x = js_getnum(js,v, anchor_x_atom);
   float anchor_y = js_getnum(js,v, anchor_y_atom);
-  
+
   rect.y -= anchor_y*rect.h;
   rect.x -= anchor_x*rect.w;
 
   return rect;
+}
+
+rect transform_rect(rect in, HMM_Mat3 *t)
+{
+  in.y *= -1;
+  in.y += logical.y;
+  in.y -= in.h;
+  in.x -= t->Columns[2].x;
+  in.y -= t->Columns[2].y;
+  return in;
 }
 
 JSValue rect2js(JSContext *js,rect rect) {
@@ -733,8 +751,6 @@ JSC_CCALL(os_make_text_buffer,
 
   for (int i = 0; i < arrlen(buffer); i++) {
     pos[i] = buffer[i].pos;
-    pos[i].y *= -1;
-    pos[i].y += logical.y;
     uv[i] = buffer[i].uv;
     color[i] = buffer[i].color;
   }
@@ -1426,9 +1442,9 @@ JSC_CCALL(game_open_camera,
 #include "wildmatch.h"
 JSC_SSCALL(game_glob,
   if (wildmatch(str, str2, WM_PATHNAME | WM_PERIOD | WM_WILDSTAR) == WM_MATCH)
-    return JS_NewBool(js,1);
+    ret = JS_NewBool(js,1);
   else
-    return JS_NewBool(js, 0);
+    ret = JS_NewBool(js, 0);
 )
 
 JSC_CCALL(game_camera_name,
@@ -1481,10 +1497,84 @@ JSValue js_SDL_Window_keyboard_shown(JSContext *js, JSValue self) {
   return JS_NewBool(js,SDL_ScreenKeyboardShown(window));
 }
 
+JSValue js_window_theme(JSContext *js, JSValue self)
+{
+  return JS_UNDEFINED;
+}
+
+JSValue js_window_safe_area(JSContext *js, JSValue self)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  rect r;
+  SDL_GetWindowSafeArea(w, &r);
+  return rect2js(js,r);
+}
+
+JSValue js_window_bordered(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  SDL_SetWindowBordered(w, JS_ToBool(js,argv[0]));
+  return JS_UNDEFINED;
+}
+
+JSValue js_window_get_title(JSContext *js, JSValue self)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  const char *title = SDL_GetWindowTitle(w);
+  return JS_NewString(js,title);
+  
+}
+
+JSValue js_window_set_title(JSContext *js, JSValue self, JSValue val)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  const char *title = JS_ToCString(js,val);
+  SDL_SetWindowTitle(w,title);
+  JS_FreeCString(js,title);
+  return JS_UNDEFINED;
+}
+
+JSValue js_window_get_size(JSContext *js, JSValue self)
+{
+  SDL_Window *win = js2SDL_Window(js,self);
+  int w, h;
+  SDL_GetWindowSize(win, &w, &h);
+  return vec22js(js, (HMM_Vec2){w,h});
+}
+
+JSValue js_window_set_size(JSContext *js, JSValue self, JSValue val)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  HMM_Vec2 size = js2vec2(js,val);
+  SDL_SetWindowSize(w,size.x,size.y);
+}
+
+JSValue js_window_set_icon(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  SDL_Surface *s = js2SDL_Surface(js,argv[0]);
+  if (!SDL_SetWindowIcon(w,s))
+    return JS_ThrowReferenceError(js, "could not set window icon: %s", SDL_GetError());
+}
+
+JSValue js_window_mouse_grab(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  SDL_Window *w = js2SDL_Window(js,self);
+  SDL_SetWindowMouseGrab(w, JS_ToBool(js,argv[0]));
+  
+}
+
 static const JSCFunctionListEntry js_SDL_Window_funcs[] = {
   MIST_FUNC_DEF(SDL_Window, fullscreen, 0),
   MIST_FUNC_DEF(SDL_Window, make_renderer, 1),
   MIST_FUNC_DEF(SDL_Window, keyboard_shown, 0),
+  MIST_FUNC_DEF(window, theme, 0),
+  MIST_FUNC_DEF(window, safe_area, 0),
+  MIST_FUNC_DEF(window, bordered, 1),
+  MIST_FUNC_DEF(window, set_icon, 1),
+  CGETSET_ADD(window, title),
+  CGETSET_ADD(window, size),
+  MIST_FUNC_DEF(window, mouse_grab, 1),
 };
 
 JSC_CCALL(SDL_Renderer_clear,
@@ -1514,10 +1604,7 @@ JSC_CCALL(SDL_Renderer_rect,
     rect rects[len];
     for (int i = 0; i < len; i++) {
       JSValue val = JS_GetPropertyUint32(js,argv[0],i);
-      rects[i] = js2rect(js,val);
-      rects[i].y *= -1;
-      rects[i].y += logical.y;
-      rects[i].y -= rects[i].h;
+      rects[i] = transform_rect(js2rect(js,val), &cam_mat);
       JS_FreeValue(js,val);
     }
     SDL_RenderRects(r,rects,len);
@@ -1525,9 +1612,7 @@ JSC_CCALL(SDL_Renderer_rect,
   }
   
   rect rect = js2rect(js,argv[0]);
-  rect.y *= -1;
-  rect.y += logical.y;
-  rect.y -= rect.h;
+  rect = transform_rect(rect, &cam_mat);
   
   SDL_RenderRect(r, &rect);
 )
@@ -1558,24 +1643,19 @@ JSC_CCALL(SDL_Renderer_fillrect,
       rects[i] = js2rect(js,val);
       JS_FreeValue(js,val);
     }
-    SDL_RenderFillRects(r,rects,len);
-    return JS_UNDEFINED;
+    if (!SDL_RenderFillRects(r,rects,len))
+      return JS_ThrowReferenceError("Could not render rectangle: %s", SDL_GetError());
   }
-  rect rect = js2rect(js,argv[0]);
-  rect.y *= -1;
-  rect.y += logical.y;
-  rect.y -= rect.h;
+  rect rect = transform_rect(js2rect(js,argv[0]),&cam_mat);
   
-  SDL_RenderFillRect(r, &rect);
+  if (!SDL_RenderFillRect(r, &rect))
+    return JS_ThrowReferenceError("Could not render rectangle: %s", SDL_GetError());
 )
 
 JSC_CCALL(renderer_texture,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
   SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
-  rect dst = js2rect(js,argv[1]);
-  dst.y *= -1;
-  dst.y += logical.y;
-  dst.y -= dst.h;
+  rect dst = transform_rect(js2rect(js,argv[1]), &cam_mat);
   
   if (!JS_IsUndefined(argv[3])) {
     colorf color = js2color(js,argv[3]);
@@ -1588,7 +1668,7 @@ JSC_CCALL(renderer_texture,
 
     rect src = js2rect(js,argv[2]);
 
-    SDL_RenderTexture(renderer,tex,&src,&dst);
+    SDL_RenderTextureRotated(renderer, tex, &src, &dst, 0, NULL, SDL_FLIP_NONE);
   }
 )
 
@@ -1610,12 +1690,18 @@ JSC_CCALL(renderer_tile,
   }
 )
 
-JSC_CCALL(renderer_9slice,
+JSC_CCALL(renderer_slice9,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
   SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
-  rect *dst, *src = NULL;
   lrtb bounds = js2lrtb(js,argv[2]);
-  SDL_RenderTexture9Grid(renderer, tex, src, bounds.l, bounds.r, bounds.t, bounds.b, 0.0, dst);
+  rect src, dst;
+  src = transform_rect(js2rect(js,argv[3]),&cam_mat);
+  dst = transform_rect(js2rect(js,argv[1]), &cam_mat);
+
+  SDL_RenderTexture9Grid(renderer, tex,
+    JS_IsUndefined(argv[3]) ? NULL : &src,
+    bounds.l, bounds.r, bounds.t, bounds.b, 0.0,
+    JS_IsUndefined(argv[1]) ? NULL : &dst);
 )
 
 JSC_CCALL(renderer_get_image,
@@ -1734,10 +1820,8 @@ JSC_CCALL(renderer_geometry,
   HMM_Vec2 *trans_pos = malloc(vertices*sizeof(HMM_Vec2));
   memcpy(trans_pos,posdata, sizeof(HMM_Vec2)*vertices);
 
-  for (int i = 0; i < vertices; i++) {
-    trans_pos[i].x -= campos.x;
-    trans_pos[i].y -= campos.y;
-  }
+  for (int i = 0; i < vertices; i++)
+    trans_pos[i] = HMM_MulM3V3(cam_mat, (HMM_Vec3){trans_pos[i].x, trans_pos[i].y, 1}).xy;
     
   if (!SDL_RenderGeometryRaw(r, tex, trans_pos, pos_stride,colordata,color_stride,uvdata, uv_stride, vertices, idxdata, count, indices_stride))
     ret = JS_ThrowReferenceError(js, "Error rendering geometry: %s",SDL_GetError());
@@ -1800,6 +1884,21 @@ JSC_CCALL(renderer_coords,
   return vec22js(js,coord);
 )
 
+JSC_CCALL(renderer_camera,
+  HMM_Mat3 t;
+  t.Columns[0] = (HMM_Vec3){1,0,0};
+  t.Columns[1] = (HMM_Vec3){0,-1,0};
+  t.Columns[2] = (HMM_Vec3){0,logical.y,1};
+
+  transform *tra = js2transform(js,argv[0]);
+  tra->pos.x -= logical.x/2;
+  tra->pos.y -= logical.y/2;
+  HMM_Mat3 T = transform2mat3(tra);
+  cam_mat = HMM_MulM3(t,T);
+  tra->pos.x += logical.x/2;
+  tra->pos.y += logical.y/2;
+)
+
 static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(SDL_Renderer, draw_color, 1),
   MIST_FUNC_DEF(SDL_Renderer, present, 0),
@@ -1810,7 +1909,7 @@ static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(renderer, point, 2),
   MIST_FUNC_DEF(renderer, load_texture, 1),
   MIST_FUNC_DEF(renderer, texture, 4),
-  MIST_FUNC_DEF(renderer, 9slice, 4),
+  MIST_FUNC_DEF(renderer, slice9, 4),
   MIST_FUNC_DEF(renderer, tile, 4),
   MIST_FUNC_DEF(renderer, get_image, 1),
   MIST_FUNC_DEF(renderer, fasttext, 2),
@@ -1822,6 +1921,7 @@ static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(renderer,clip,1),
   MIST_FUNC_DEF(renderer,vsync,1),
   MIST_FUNC_DEF(renderer, coords, 1),
+  MIST_FUNC_DEF(renderer, camera, 1),
 };
 
 JSC_CCALL(surface_blit,
@@ -1931,6 +2031,8 @@ static const JSCFunctionListEntry js_SDL_Camera_funcs[] =
   MIST_FUNC_DEF(camera, release_frame, 1),
 };
 
+static const JSCFunctionListEntry js_SDL_Cursor_funcs[] = {};
+
 JSC_CCALL(texture_mode,
   SDL_Texture *tex = js2SDL_Texture(js,self);
   SDL_SetTextureScaleMode(tex,js2number(js,argv[0]));
@@ -1948,9 +2050,17 @@ JSC_CCALL(input_mouse_show,
     SDL_HideCursor();
 )
 
+JSC_CCALL(input_cursor_set,
+  SDL_Cursor *c = js2SDL_Cursor(js,argv[0]);
+  printf("setting cursor to %p\n", c);
+  if (!SDL_SetCursor(c))
+    return JS_ThrowReferenceError(js, "could not set cursor: %s", SDL_GetError());
+)
+
 static const JSCFunctionListEntry js_input_funcs[] = {
   MIST_FUNC_DEF(input, mouse_show, 1),
   MIST_FUNC_DEF(input, mouse_lock, 1),
+  MIST_FUNC_DEF(input, cursor_set, 1),
 };
 
 JSC_CCALL(prosperon_guid,
@@ -2161,7 +2271,7 @@ int globfs_cb(struct globdata *data, char *dir, char *file)
 
   char **glob = data->globs;
   while (*glob != NULL) {
-    if (wildmatch(*glob, path, WM_PATHNAME | WM_PERIOD | WM_WILDSTAR) == WM_MATCH)
+    if (wildmatch(*glob, path, WM_WILDSTAR) == WM_MATCH)
       goto END;
     *glob++;
   }
@@ -2669,20 +2779,40 @@ JSC_CCALL(os_make_gif,
   void *pixels = stbi_load_gif_from_memory(raw, rawlen, &delays, &width, &height, &frames, &n, 4);
 
   JSValue gif = JS_NewObject(js);
+  ret = gif;
+
+  if (frames == 1) {
+    // still image, so return just that
+    JS_SetPropertyStr(js, gif, "surface", SDL_Surface2js(js,SDL_CreateSurfaceFrom(width,height,SDL_PIXELFORMAT_RGBA32, pixels, width*4)));
+    return gif;
+  }
+
   JSValue delay_arr = JS_NewArray(js);
 
   for (int i = 0; i < frames; i++) {
     JSValue frame = JS_NewObject(js);
     JS_SetPropertyStr(js, frame, "time", number2js(js,(float)delays[i]/1000.0));
-    SDL_Surface *framesurf = SDL_CreateSurfaceFrom(width,height,SDL_PIXELFORMAT_RGBA32,pixels+(width*height*4*i), width*4);
+    void *frame_pixels = malloc(width*height*4);
+    if (!frame_pixels) {
+      JS_FreeValue(js,gif);
+      ret = JS_ThrowOutOfMemory(js);
+      goto CLEANUP;
+    }
+    memcpy(frame_pixels, (unsigned char*)pixels+(width*height*4*i), width*height*4);
+    SDL_Surface *framesurf = SDL_CreateSurfaceFrom(width,height,SDL_PIXELFORMAT_RGBA32,frame_pixels, width*4);
+    if (!framesurf) {
+      ret = JS_ThrowReferenceError(js, "failed to create SDL_Surface: %s", SDL_GetError());
+      goto CLEANUP;
+    }
     JS_SetPropertyStr(js, frame, "surface", SDL_Surface2js(js,framesurf));
     JS_SetPropertyUint32(js, delay_arr, i, frame);
   }
 
   JS_SetPropertyStr(js, gif, "frames", delay_arr);
+
+CLEANUP:
   free(delays);
-  
-  ret = gif;
+  free(pixels);
 )
 
 JSValue aseframe2js(JSContext *js, ase_frame_t aframe)
@@ -2754,6 +2884,15 @@ JSC_CCALL(os_make_surface,
   HMM_Vec2 wh = js2vec2(js,argv[0]);
   SDL_Surface *surface = SDL_CreateSurface(wh.x, wh.y, SDL_PIXELFORMAT_RGBA32);
   ret = SDL_Surface2js(js, surface);
+)
+
+JSC_CCALL(os_make_cursor,
+  SDL_Surface *s = js2SDL_Surface(js,argv[0]);
+  HMM_Vec2 hot = js2vec2(js,argv[1]);
+  SDL_Cursor *c = SDL_CreateColorCursor(s, hot.x, hot.y);
+  if (!c) return JS_ThrowReferenceError("couldn't make cursor: %s", SDL_GetError());
+  printf("made cursor %p\n", c);
+  return SDL_Cursor2js(js,c);
 )
 
 JSC_CCALL(os_make_font,
@@ -3117,6 +3256,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_gif, 1),
   MIST_FUNC_DEF(os, make_aseprite, 1),
   MIST_FUNC_DEF(os, make_surface, 1),
+  MIST_FUNC_DEF(os, make_cursor, 1),
   MIST_FUNC_DEF(os, make_font, 2),
   MIST_FUNC_DEF(os, make_transform, 0),
   MIST_FUNC_DEF(os, make_line_prim, 4),
@@ -3216,6 +3356,7 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(SDL_Texture)
   QJSCLASSPREP_FUNCS(SDL_Renderer)
   QJSCLASSPREP_FUNCS(SDL_Camera)
+  QJSCLASSPREP_FUNCS(SDL_Cursor)
 
   QJSGLOBALCLASS(os);
   
@@ -3225,8 +3366,6 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(font);
   QJSCLASSPREP_FUNCS(datastream);
   QJSCLASSPREP_FUNCS(timer);
-
-
 
   QJSGLOBALCLASS(input);
   QJSGLOBALCLASS(io);

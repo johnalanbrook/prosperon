@@ -664,6 +664,13 @@ Object.defineProperty(String.prototype, "ext", {
   },
 });
 
+Object.defineProperty(String.prototype, 'has_ext', {
+  value: function() {
+    var lastdot = this.lastIndexOf('.');
+    return lastdot > 0 && lastdot < this.length-1;
+  }
+});
+
 Object.defineProperty(String.prototype, "set_ext", {
   value: function (val) {
     return this.strip_ext() + val;

@@ -1801,6 +1801,24 @@ HMM_Mat4 HMM_M4TRS(HMM_Vec3 t, HMM_Quat q, HMM_Vec3 s)
   return l;
 }
 
+HMM_Mat3 HMM_M3TRS(HMM_Vec2 pos, float angle, HMM_Vec2 s)
+{
+  HMM_Mat3 m;
+  float *lm = (float*)&m;
+  lm[0] = s.x*cos(angle);
+  lm[1] = s.x * sin(angle);
+  lm[2] = 0;
+  
+  lm[3] = -s.y*sin(angle);
+  lm[4] = s.y*cos(angle);
+  lm[5] = 0;
+
+  lm[6] = pos.x;
+  lm[7] = pos.y;
+  lm[8] = 1;
+  return m;
+}
+
 // This method taken from Mike Day at Insomniac Games.
 // https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2015/01/matrix-to-quat.pdf
 //

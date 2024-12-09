@@ -660,6 +660,7 @@ HMM_Quat HMM_NLerp(HMM_Quat Left, float Time, HMM_Quat Right);
 HMM_Quat HMM_SLerp(HMM_Quat Left, float Time, HMM_Quat Right);
 HMM_Mat4 HMM_QToM4(HMM_Quat Left);
 HMM_Mat4 HMM_M4TRS(HMM_Vec3 t, HMM_Quat q, HMM_Vec3 s);
+HMM_Mat3 HMM_M3TRS(HMM_Vec2 t, float angle, HMM_Vec2 s);
 
 HMM_Quat HMM_M4ToQ_RH(HMM_Mat4 M);
 HMM_Quat HMM_M4ToQ_LH(HMM_Mat4 M);

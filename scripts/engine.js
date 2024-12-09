@@ -153,18 +153,21 @@ Resources.is_image = function (path) {
 
 var res_cache = {};
 
-function find_ext(file, ext, root = "") {
+// ext is a list of extensions to search
+function find_ext(file, ext) {
   if (!file) return;
 
   var file_ext = file.ext();
+  var has_ext = file_ext.length > 0;
 
-  if (ext.some(x => x === file_ext)) return file;
   for (var e of ext) {
     var nf = `${file}.${e}`;
     if (io.exists(nf)) return nf;
   }
 
-  var all_files = io.glob(`**/${file}.*`);
+  var glob_pat = has_ext ? `**/${file}` : `**/${file}.*`;
+
+  var all_files = io.glob(glob_pat);
   var find = undefined;
   for (var e of ext) {
     var finds = all_files.filter(x => x.ext() === e);
@@ -338,11 +341,18 @@ io.slurpbytes = function(path)
 }
 
 var ignore = io.slurp('.prosperonignore').split('\n');
-var allpaths = io.globfs(ignore);
+var allpaths;
 var tmpglob = io.glob;
 io.glob = function glob(pat) {
-//  var allpaths = io.globfs(ignore);
+  if (!allpaths)
+    allpaths = io.globfs(ignore);
+
   return allpaths.filter(str => game.glob(pat,str)).sort();
+}
+
+io.invalidate = function()
+{
+  allpaths = undefined;
 }
 
 function splitPath(path) {

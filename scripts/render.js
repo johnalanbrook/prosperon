@@ -1038,47 +1038,23 @@ render.tile = function tile(image, rect = [0,0], color = Color.white)
   return;
 }
 
-render.image = function image(image, rect = [0,0], rotation = 0, color) {
+render.image = function image(image, rect = [0,0], rotation = 0, color = Color.white) {
   if (!image) throw Error ('Need an image to render.')
   if (typeof image === "string")
     image = game.texture(image);
 
+  rect.width ??= image.texture.width;
+  rect.height ??= image.texture.height;
+
   render._main.texture(image.texture, rect, image.rect, color);
-  return;
-
-  var tex = image.texture;
-  if (!tex) return;
-
-  var image_size = calc_image_size(image); //image.size;
-  
-  var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
-
-  if (!lasttex) {
-    check_flush(flush_img);
-    lasttex = tex;
-  }
-
-  if (lasttex !== tex) {
-    flush_img();
-    lasttex = tex;
-  }
-
-  render._main.texture(image.texture, rect, image.rect);
-  return;
-
-  var e = img_e();
-  var pos = [rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y]));
-  e.transform.trs(pos, undefined, size);
-  e.image = image;
-  e.shade = color;
-
-  return;
 };
 
 render.images = function images(image, rects)
 {
   if (!image) throw Error ('Need an image to render.');
   if (typeof image === "string") image = game.texture(image);
+  for (var rect of rects) render.image(image,rect);
+  return;
   var tex = image.texture;
   if (!tex) return;
 
@@ -1109,34 +1085,16 @@ render.images = function images(image, rects)
   return;
 }
 
-var slice9_t = os.make_transform();
-// pos is the lower left corner, scale is the width and height
 // slice is given in pixels
 render.slice9 = function slice9(image, rect = [0,0], slice = 0, color = Color.white) {
   if (typeof image === 'string')
     image = game.texture(image);
 
-  var tex = image.texture;
-  var image_size = calc_image_size(image);
-  var size = [rect.width ? rect.width : image_size.x, rect.height ? rect.height : image_size.y];
+  rect.width ??= image.texture.width;
+  rect.height ??= image.texture.height;
+  slice = clay.normalizeSpacing(slice);  
 
-  check_flush();
-  
-  slice9_t.trs([rect.x,rect.y].sub(size.scale([rect.anchor_x, rect.anchor_y])), undefined, size);
-  slice = clay.normalizeSpacing(slice);
-  var border = [slice.l/image_size.x, slice.b/image_size.y, slice.r/image_size.x, slice.t/image_size.y];
-  render.use_shader(slice9shader);
-  set_model(slice9_t);
-  render.use_mat({
-    shade: color,
-    diffuse: tex,
-    win_tex_scale: size.div(image_size),
-    rect: [image.rect.x, image.rect.y,image.rect.width,image.rect.height],
-    frag_rect: [image.rect.x, image.rect.y,image.rect.width,image.rect.height],    
-    border: border,
-  });
-
-  render.draw(shape.quad);
+  render._main.slice9(image.texture, rect, slice);
 };
 
 var textssbos = [];
@@ -1202,6 +1160,7 @@ render.scissor = function(rect)
 
 // Camera viewport is a rectangle with the bottom left corner defined as x,y. Units are pixels on the window.
 function camviewport() {
+
   var aspect = (((this.viewport[2] - this.viewport[0]) / (this.viewport[3] - this.viewport[1])) * prosperon.size.x) / prosperon.size.y;
   var raspect = this.size.x / this.size.y;
 
@@ -1288,16 +1247,6 @@ function screen2cam(pos) {
   return viewpos;
 }
 
-function camextents() {
-  var half = this.size; //.scale(0.5);
-  return {
-    l: this.pos.x - half.x,
-    r: this.pos.x + half.x,
-    t: this.pos.y + half.y,
-    b: this.pos.y - half.y,
-  };
-}
-
 screen2cam.doc = "Convert a screen space position in pixels to a normalized viewport position in a camera.";
 
 prosperon.gizmos = function gizmos() {
@@ -1314,20 +1263,33 @@ function screen2hud(pos)
   return campos;
 }
 
+/* cameras
+ * Cameras have a position and rotation. They are not affected by scale.
+*/
+
 prosperon.make_camera = function make_camera() {
   var cam = world.spawn();
   cam.near = 1;
   cam.far = -1000;
-  cam.ortho = true;
+  cam.ortho = true; // True if this is a 2d camera
   cam.viewport = [0, 0, 1, 1]; // normalized screen coordinates of where to draw
-  cam.size = game.size.slice(); // The render size of this camera in pixels
+  cam.size = prosperon.size.slice() // The render size of this camera in pixels
   // In ortho mode, this determines how many pixels it will see
   cam.mode = "stretch";
   cam.screen2world = camscreen2world;
   cam.screen2cam = screen2cam;
   cam.screen2hud = screen2hud;
-  cam.extents = camextents;
   cam.view = camviewport;
+  cam.zoom = 1; // the "scale factor" this camera demonstrates
+  // camera renders draw calls, and then hud
+  cam.render = function() {
+    render._main.camera(this.transform);
+    render._main.scale([this.zoom, this.zoom]);
+    prosperon.draw();
+    render._main.scale([1,1]);
+    render._main.camera(unit_transform);
+    prosperon.hud();
+  }
   return cam;
 };
 
@@ -1434,14 +1396,14 @@ prosperon.render = function prosperon_render() {
 try{
   render._main.draw_color(clearcolor);
   render._main.clear();
-  // set to world cam
-  prosperon.draw();
-  if (render.draw_hud) prosperon.hud();
-
+  // render each camera
+  prosperon.camera.render();
 //  prosperon.app();
 //  if (debug.show) imgui_fn();
 } catch(e) {
-  throw e;
+  console.log(e);
+  console.log(e.stack)
+//  throw e;
 } finally {
   render._main.present();
   tracy.end_frame();  
@@ -1452,6 +1414,8 @@ if (dmon) dmon.watch('.');
 
 function dmon_cb(e)
 {
+  io.invalidated();
+  
   if (e.file.startsWith('.')) return;
   if (e.file.endsWith('.js'))
     actor.hotreload(e.file);
@@ -1470,13 +1434,33 @@ prosperon.process = function process() {
   frame_t = profile.now();
 
   prosperon.appupdate(dt);
+
   input.procdown();
-  if (sim.mode === "play" || sim.mode === "step") {
-    prosperon.update(dt * game.timescale);
-    update_emitters(dt * game.timescale);
-    os.update_timers(dt * game.timescale);
-    if (sim.mode === "step") sim.pause();
-  }
+
+  game.engine_input(e => {
+    switch(e.type) {
+      case "quit":
+        os.exit(0);
+        break;
+      case "mouse":
+        prosperon.mousemove(e.mouse, e.mouse_d);
+        break;
+      case "text":
+        prosperon.textinput(e.text);
+        break;
+      case "key":
+        if (e.down)
+          prosperon.keydown(e.key);
+        else
+          prosperon.keyup(e.key);
+        break;
+    }
+  });
+  
+  update_emitters(dt * game.timescale);
+  os.update_timers(dt * game.timescale);
+  prosperon.update(dt*game.timescale);  
+  if (sim.mode === "step") sim.pause();
 
   if (sim.mode === "play" || sim.mode === "step") {
 /* 

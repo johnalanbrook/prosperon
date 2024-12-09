@@ -39,6 +39,7 @@ HMM_Vec3 mat3_t_pos(HMM_Mat4 m, HMM_Vec3 pos);
 HMM_Vec3 mat3_t_dir(HMM_Mat4 m, HMM_Vec3 dir);
 
 HMM_Mat4 transform2mat(transform *t);
+HMM_Mat3 transform2mat3(transform *t);
 transform mat2transform(HMM_Mat4 m);
 
 HMM_Quat angle2rotation(float angle);

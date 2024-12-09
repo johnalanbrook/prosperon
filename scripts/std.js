@@ -83,6 +83,10 @@ Resources.gif.frames = function (path) {
   return render.gif_frames(path);
 };
 
+prosperon.SIGINT = function() {
+  os.exit();
+}
+
 /*
   io path rules. Starts with, meaning:
   "@": user path
@@ -221,15 +225,14 @@ Cmdline.register_order(
     }
 
     var project = json.decode(io.slurp(projectfile));
-    game.title = project.title;
-    game.size = [1280, 720];
-    
+
     prosperon.title = project.title;
     prosperon.width = 1280;
     prosperon.height = 720;
-    prosperon.size = [1280,720];
+    prosperon.size = [1280, 720];    
     prosperon.cleanup = function(){}
     prosperon.event = function(e){
+      prosperon[e.type]?.(e);
       switch(e.type) {
         case "mouse_move":
           prosperon.mousemove(e.mouse, e.mouse_d);
@@ -252,33 +255,8 @@ Cmdline.register_order(
         case "char":
           prosperon.textinput(e.char_code);
           break;
-        case "resized":
-          prosperon.size = e.window_size;
-          prosperon.resize?.(e.window_size);
-          break;
-        case "iconified":
-          prosperon.iconified(false);
-          break;
-        case "restored":
-          prosperon.iconified(true);
-          break;
-        case "focused":
-          prosperon.focus(true);
-          break;
-        case "unfocused":
-          prosperon.focus(false);
-          break;
-        case "suspended":
-          prosperon.suspended(true);
-          break;
         case "quit_requested":
           os.exit(0);
-          break;
-        case "mouse_enter":
-          prosperon.mouseenter();
-          break;
-        case "mouse_leave":
-          prosperon.mouseleave();
           break;
         case "files_dropped":
           console.log(json.encode(e));
@@ -300,8 +278,8 @@ Cmdline.register_order(
 
     if (io.exists("config.js")) global.mixin("config.js");
     else console.warn("No config.js file found. Starting with default parameters.");
-    var window = game.engine_start(prosperon);
-   var renderer = window.make_renderer("gpu");
+   prosperon.window = game.engine_start(prosperon);
+   var renderer = prosperon.window.make_renderer("gpu");
    render._main = renderer;
 
    prosperon.init();
