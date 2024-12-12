@@ -93,7 +93,7 @@ endif
 sources = []
 src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c', 'timer.c', 'transform.c','warp.c','yugine.c',  'wildmatch.c', 'cv.cpp']
 
-imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp']
+imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp', 'imgui_impl_sdlrenderer3.cpp', 'imgui_impl_sdl3.cpp']
 
 srceng = 'source'
 tp = srceng / 'thirdparty'
@@ -106,10 +106,10 @@ foreach file : src
 endforeach
 
 if get_option('editor')
-#  sources += 'source/qjs_imgui.cpp'
-#  foreach imgui : imsrc
-#    sources += tp / 'imgui' / imgui
-#  endforeach
+  sources += 'source/qjs_imgui.cpp'
+  foreach imgui : imsrc
+    sources += tp / 'imgui' / imgui
+  endforeach
   deps += dependency('qjs-dmon',static:true)
 endif
 

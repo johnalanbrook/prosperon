@@ -222,13 +222,13 @@ clay.button = function button(str, action, config = {})
 
 var hovered = undefined;
 layout.newframe = function() { hovered = undefined; }
+// mousepos given in hud coordinates
 layout.draw_commands = function draw_commands(cmds, pos = [0,0], mousepos)
 {
   for (var cmd of cmds) {
     var config = cmd.config;  
     var boundingbox = geometry.rect_move(cmd.boundingbox,pos.add(config.offset));
     var content = geometry.rect_move(cmd.content,pos.add(config.offset));
-
 
     if (config.hovered && geometry.rect_point_inside(boundingbox, mousepos)) {
       config.hovered.__proto__ = config;

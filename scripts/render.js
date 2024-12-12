@@ -749,6 +749,21 @@ render.sprites = function render_sprites() {
   }
 };
 
+function draw_sprites()
+{
+  var buckets = component.sprite_buckets();
+  if (buckets.length === 0) return;
+  for (var l in buckets) {
+    var layer = buckets[l];
+    for (var img in layer) {
+      var sparray = layer[img];
+      if (sparray.length === 0) continue;
+      var geometry = os.make_sprite_mesh(sparray);
+      render.geometry(sparray[0], geometry);
+    }
+  }
+}
+
 render.circle = function render_circle(pos, radius, color, inner_radius = 1) {
   check_flush();
 
@@ -1038,6 +1053,11 @@ render.tile = function tile(image, rect = [0,0], color = Color.white)
   return;
 }
 
+render.geometry = function(material, geometry)
+{
+  render._main.geometry(material.diffuse.texture, geometry);
+}
+
 render.image = function image(image, rect = [0,0], rotation = 0, color = Color.white) {
   if (!image) throw Error ('Need an image to render.')
   if (typeof image === "string")
@@ -1219,30 +1239,31 @@ function camviewport() {
   };
 }
 
-// pos is pixels on the screen, lower left[0,0]
+// pos is screen coordinates
 function camscreen2world(pos) {
   var view = this.screen2cam(pos);
-  view.x *= this.size.x;
-  view.y *= this.size.y;
+  var viewport = render._main.get_viewport();
+  view.x *= viewport.width;
+  view.y *= viewport.height;
   view = view.add(this.pos.xy);
-  view = view.sub(this.size.scale(0.5))
-  view = view.scale(this.transform.scale);
+  view = view.sub([viewport.width,viewport.height].scale(0.5))
+//  view = view.scale(this.transform.scale);
   return view;
 }
 
 // world coordinates, the "actual" view relative to the game's universe
 // camera coordinates, normalized from 0 to 1 inside of a camera's viewport, bottom left is 0,0, top right is 1,1
-// screen coordinates, pixels, 0,0 at the top left of the window and [w,h] at the top right of the screen
+// screen coordinates, pixels, 0,0 at the top left of the window and [w,h] at the bottom right of the window
 // hud coordinates, same as screen coordinates but the top left is 0,0
 
 camscreen2world.doc = "Convert a view position for a camera to world.";
 
 // return camera coordinates given a screen position
 function screen2cam(pos) {
-  var winsize = prosperon.size.slice();
-  var viewport = this.view();
-  var viewpos = pos.sub([viewport.x,viewport.y]);
-  viewpos = viewpos.div([viewport.width,viewport.height]);
+  var tpos = render._main.coords(pos);
+  var viewport = render._main.get_viewport();
+  var viewpos = tpos.div([viewport.width,viewport.height]);
+  viewpos.y *= -1;
   viewpos.y += 1;
   return viewpos;
 }
@@ -1258,8 +1279,8 @@ prosperon.gizmos = function gizmos() {
 function screen2hud(pos)
 {
   var campos = this.screen2cam(pos);
-  campos = campos.scale(this.size);
-  campos.y -= this.size.y;
+  var viewport = render._main.get_viewport();  
+  campos = campos.scale([viewport.width,viewport.height]);
   return campos;
 }
 
@@ -1283,11 +1304,12 @@ prosperon.make_camera = function make_camera() {
   cam.zoom = 1; // the "scale factor" this camera demonstrates
   // camera renders draw calls, and then hud
   cam.render = function() {
-    render._main.camera(this.transform);
+    render._main.camera(this.transform,true);
     render._main.scale([this.zoom, this.zoom]);
     prosperon.draw();
+    draw_sprites();
     render._main.scale([1,1]);
-    render._main.camera(unit_transform);
+    render._main.camera(unit_transform,false);
     prosperon.hud();
   }
   return cam;
@@ -1313,6 +1335,8 @@ var imdebug = function imdebug() {
   imtoggle("Debug overlay", debug, "show");
   imtoggle("Show ur names", debug, "urnames");
 };
+
+var observed_tex = undefined;
 
 var imgui_fn = function imgui_fn() {
   imgui.newframe(prosperon.size.x, prosperon.size.y, 0.01);
@@ -1371,8 +1395,22 @@ var imgui_fn = function imgui_fn() {
     prosperon.menu_hook?.();
   });
 
+  if (observed_tex) {
+    imgui.window("texture", _ => {
+      imgui.image(observed_tex.texture);
+    });
+  }
+
+  imgui.window("textures", _ => {
+    for (var img in game.texture.cache) {
+      imgui.button(img, _ => {
+        observed_tex = game.texture.cache[img];
+      });
+    }
+  });
+
   prosperon.imgui();
-  imgui.endframe();
+  imgui.endframe(render._main);
 };
 
   // figure out the highest resolution we can render at that's an integer
@@ -1391,21 +1429,24 @@ var imgui_fn = function imgui_fn() {
   prosperon.window_render(basesize.scale(mult));
 */
 
+var present_thread = undefined;
 var clearcolor = [100,149,237,255].scale(1/255);
 prosperon.render = function prosperon_render() {
 try{
+
   render._main.draw_color(clearcolor);
   render._main.clear();
   // render each camera
   prosperon.camera.render();
 //  prosperon.app();
-//  if (debug.show) imgui_fn();
+  if (debug.show) imgui_fn();
 } catch(e) {
   console.log(e);
   console.log(e.stack)
 //  throw e;
 } finally {
-  render._main.present();
+  if (present_thread) present_thread.wait();
+  present_thread = render._main.present();
   tracy.end_frame();  
 }
 };
@@ -1438,23 +1479,7 @@ prosperon.process = function process() {
   input.procdown();
 
   game.engine_input(e => {
-    switch(e.type) {
-      case "quit":
-        os.exit(0);
-        break;
-      case "mouse":
-        prosperon.mousemove(e.mouse, e.mouse_d);
-        break;
-      case "text":
-        prosperon.textinput(e.text);
-        break;
-      case "key":
-        if (e.down)
-          prosperon.keydown(e.key);
-        else
-          prosperon.keyup(e.key);
-        break;
-    }
+    prosperon[e.type]?.(e);
   });
   
   update_emitters(dt * game.timescale);
@@ -1477,5 +1502,7 @@ prosperon.process = function process() {
   prosperon.render();
 //  tracy.gpu_zone(prosperon.render);
 };
+
+
 
 return { render };

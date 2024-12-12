@@ -90,12 +90,12 @@ static JSClassDef js_##TYPE##_class = {\
   #TYPE,\
   .finalizer = js_##TYPE##_finalizer,\
 };\
-static inline TYPE *js2##TYPE (JSContext *js, JSValue val) { \
+TYPE *js2##TYPE (JSContext *js, JSValue val) { \
   if (JS_IsUndefined(val)) return NULL; \
   if (JS_GetClassID(val) != js_##TYPE##_id) return NULL; \
   return JS_GetOpaque(val,js_##TYPE##_id); \
 }\
-static inline JSValue TYPE##2js(JSContext *js, TYPE *n) { \
+JSValue TYPE##2js(JSContext *js, TYPE *n) { \
   JSValue j = JS_NewObjectClass(js,js_##TYPE##_id);\
   JS_SetOpaque(j,n);\
   __VA_ARGS__ \

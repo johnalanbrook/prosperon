@@ -79,7 +79,7 @@ prosperon.SIGSEGV = function()
 
 prosperon.init = function () {
   render.init();
-//  imgui.init();
+  imgui.init(render._main);
   tracy.gpu_init();
 
   globalThis.audio = use("sound.js");
@@ -270,15 +270,38 @@ game.texture = function texture(path) {
   switch(path.ext()) {
     case 'gif':
       newimg = os.make_gif(data);
+      if (newimg.surface) {
+        newimg.texture = render._main.load_texture(newimg.surface);
+        newimg.texture.mode(0);
+      }
+      else
+        for (var frame of newimg.frames) {
+          frame.texture = render._main.load_texture(frame.surface);
+          frame.texture.mode(0);
+        }
       break;
     case 'ase':
+    case 'aseprite':
       newimg = os.make_aseprite(data);
+      if (newimg.surface) {
+        newimg.texture = render._main.load_texture(newimg.surface);
+        newimg.texture.mode(0);
+      } else {
+        for (var anim in newimg) {
+          var a = newimg[anim];
+          for (var frame of a.frames) {
+            frame.texture = render._main.load_texture(frame.surface);
+            frame.texture.mode(0)
+          }
+        }
+      }
       break;
     default:
       newimg = {
         surface: os.make_texture(data)
       };
       newimg.texture = render._main.load_texture(newimg.surface);
+      newimg.texture.mode(0);
       break;
   }
   game.texture.cache[path] = newimg;

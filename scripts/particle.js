@@ -6,8 +6,6 @@ emitter.spawn_timer = 0;
 emitter.pps = 0;
 emitter.color = Color.white;
 
-var ssbo;
-
 emitter.kill = function () {
   emitters.remove(this);
 };
@@ -86,9 +84,8 @@ var emitters = [];
 
 var make_emitter = function () {
   var e = Object.create(emitter);
-  e.ssbo = render.make_textssbo();
-  e.shape = shape.centered_quad;
-  e.shader = "shaders/baseparticle.cg";
+//  e.shape = shape.centered_quad;
+//  e.shader = "shaders/baseparticle.cg";
   e.particles = [];
   e.dead = [];
   emitters.push(e);
@@ -101,9 +98,6 @@ function update_emitters(dt) {
 
 var arr = [];
 function draw_emitters() {
-  return;
-  ssbo ??= render.make_textssbo();
-  render.use_shader("shaders/baseparticle.cg");
   var buckets = {};
   var base = 0;
   for (var e of emitters) {
@@ -117,14 +111,12 @@ function draw_emitters() {
   for (var path in buckets) {
     arr.length = 0;
     var bucket = buckets[path];
-    bucket[0].baseinstance = base;
-    render.use_mat({diffuse:bucket[0].diffuse.texture});
     for (var e of bucket) {
       if (e.particles.length === 0) continue;
       for (var p of e.particles) arr.push(p);
    }
-    render.make_particle_ssbo(arr, ssbo);
-    render.draw(bucket[0].shape, ssbo, arr.length);
+    var sprite_mesh = os.make_sprite_mesh(arr);
+    render.geometry(bucket[0], sprite_mesh);
     base += arr.length;
   }
 }

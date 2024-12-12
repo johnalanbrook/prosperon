@@ -12,6 +12,8 @@ function make_point_obj(o, p) {
   };
 };
 
+
+
 function sprite_addbucket(sprite) {
   if (!sprite.image) return;
   var layer = sprite.z_value();
@@ -38,7 +40,7 @@ frog = {
 
 var sprite = {
   image: undefined,
-  get diffuse() { return this.image.texture; },
+  get diffuse() { return this.image; },
   set diffuse(x) {},
   z_value() {return 100000 + this.gameobject.drawlayer * 1000 - this.gameobject.pos.y;},
   anim_speed: 1,
@@ -100,8 +102,7 @@ var sprite = {
     if (this.anim) this.stop();
     this.sync();
     this.play();
-    if (this.image)
-    this.transform.scale = [this.image.texture.width*this.image.rect.width, this.image.texture.height*this.image.rect.height];
+    this.transform.scale = [this.image.texture.width, this.image.texture.height];
   },
   stop() {
     this.del_anim?.();

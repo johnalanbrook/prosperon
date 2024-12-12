@@ -3,15 +3,16 @@
 #include "imnodes.h"
 #include "quickjs.h"
 
-#include "sokol_app.h"
-#include "sokol_gfx.h"
+#include <SDL3/SDL.h>
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlrenderer3.h"
 
-#include "render.h"
-#define SOKOL_IMPL
-#include "util/sokol_imgui.h"
-#include "util/sokol_gfx_imgui.h"
+extern "C" {
+SDL_Renderer *js2SDL_Renderer(JSContext *js, JSValue v);
+SDL_Texture *js2SDL_Texture(JSContext *js, JSValue v);
+}
 
-static sgimgui_t sgimgui;
+static int START = 0;
 
 #define JSC_CCALL(NAME, ...) static JSValue js_##NAME (JSContext *js, JSValue self, int argc, JSValue *argv) { \
   JSValue ret = JS_UNDEFINED; \
@@ -322,22 +323,6 @@ JSC_SCALL(imgui_button,
     JS_Call(js, argv[1], JS_UNDEFINED, 0, NULL);
 )
 
-JSC_CCALL(imgui_sokol_gfx,
-  sgimgui_draw(&sgimgui);
-  if (ImGui::BeginMenu("sokol-gfx")) {
-    ImGui::MenuItem("Capabilities", 0, &sgimgui.caps_window.open);
-    ImGui::MenuItem("Frame Stats", 0, &sgimgui.frame_stats_window.open);
-    ImGui::MenuItem("Buffers", 0, &sgimgui.buffer_window.open);
-    ImGui::MenuItem("Images", 0, &sgimgui.image_window.open);
-    ImGui::MenuItem("Samplers", 0, &sgimgui.sampler_window.open);
-    ImGui::MenuItem("Shaders", 0, &sgimgui.shader_window.open);
-    ImGui::MenuItem("Pipelines", 0, &sgimgui.pipeline_window.open);
-    ImGui::MenuItem("Attachments", 0, &sgimgui.attachments_window.open);
-    ImGui::MenuItem("Calls", 0, &sgimgui.capture_window.open);
-    ImGui::EndMenu();
-  }
-)
-
 JSC_SCALL(imgui_slider,
 /*  float low = JS_IsUndefined(argv[2]) ? 0.0 : js2number(js, argv[2]);
   float high = JS_IsUndefined(argv[3]) ? 1.0 : js2number(js, argv[3]);
@@ -408,30 +393,14 @@ JSC_CCALL(imgui_pushid,
 JSC_CCALL(imgui_popid, ImGui::PopID(); )
 
 JSC_CCALL(imgui_image,
-/*  texture *tex = js2texture(argv[0]);
-  simgui_image_desc_t sg = {};
-  sg.image = tex->id;
-  sg.sampler = std_sampler;
-  simgui_image_t ss = simgui_make_image(&sg);
-  
-  ImGui::Image(simgui_imtextureid(ss), ImVec2(tex->width, tex->height), ImVec2(0,0), ImVec2(1,1));
-  
-  simgui_destroy_image(ss);
-*/
+  SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
+  ImGui::Image((ImTextureID)tex, ImVec2(tex->w, tex->h), ImVec2(0,0), ImVec2(1,1));
 )
 
-JSC_CCALL(imgui_imagebutton,
-/*  texture *tex = js2texture(argv[1]);
-  simgui_image_desc_t sg = {};
-  sg.image = tex->id;
-  sg.sampler = std_sampler;
-  simgui_image_t ss = simgui_make_image(&sg);
-  
-  
-  if (ImGui::ImageButton(str, simgui_imtextureid(ss), ImVec2(tex->width, tex->height)))
+JSC_SCALL(imgui_imagebutton,
+  SDL_Texture *tex = js2SDL_Texture(js,argv[1]);
+  if (ImGui::ImageButton(str, (ImTextureID)tex, ImVec2(tex->w, tex->h)))
     JS_Call(js, argv[2], JS_UNDEFINED, 0, NULL);
-    
-  simgui_destroy_image(ss);*/
 )
 
 JSC_CCALL(imgui_sameline, ImGui::SameLine(js2number(js, argv[0])) )
@@ -777,27 +746,6 @@ JSC_CCALL(imgui_axisfmt,
   ImPlot::SetupAxisFormat(y, (ImPlotFormatter)jsformatter, (void*)(axis_fmts+y));
 )
 
-#define FSTAT(KEY) js_setpropstr(v, #KEY, number2js(stats.KEY));
-JSC_CCALL(imgui_framestats,
-  JSValue v = JS_NewObject(js);
-/*  sg_frame_stats stats = sg_query_frame_stats();
-  FSTAT(num_passes)
-  FSTAT(num_apply_viewport)
-  FSTAT(num_apply_scissor_rect)
-  FSTAT(num_apply_pipeline)
-  FSTAT(num_apply_bindings)
-  FSTAT(num_apply_uniforms)
-  FSTAT(num_draw)
-  FSTAT(num_update_buffer)
-  FSTAT(num_append_buffer)
-  FSTAT(num_update_image)
-  FSTAT(size_apply_uniforms)
-  FSTAT(size_update_buffer)
-  FSTAT(size_append_buffer)
-  FSTAT(size_update_image)*/
-  return v;
-)
-
 JSC_CCALL(imgui_setaxes,
   int x = num_to_xaxis(js2number(js, argv[0]));
   int y = num_to_yaxis(js2number(js, argv[1]));
@@ -813,16 +761,22 @@ JSC_SCALL(imgui_setclipboard,
 )
 
 JSC_CCALL(imgui_newframe,
-  simgui_frame_desc_t frame = {
-    .width = js2number(js, argv[0]),
-    .height = js2number(js,argv[1]),
-    .delta_time = js2number(js,argv[2])
-  };
-  simgui_new_frame(&frame);
+  ImGui_ImplSDLRenderer3_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
 )
 
 JSC_CCALL(imgui_endframe,
-  simgui_render();
+  SDL_Renderer *ren = js2SDL_Renderer(js,argv[0]);
+  ImGui::Render();
+  int w,h;
+  SDL_RendererLogicalPresentation mode;
+  SDL_GetRenderLogicalPresentation(ren, &w, &h, &mode);
+  SDL_SetRenderLogicalPresentation(ren, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+  ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), ren);
+  SDL_SetRenderLogicalPresentation(ren,w,h,mode);
+  ImGui::UpdatePlatformWindows();
+  ImGui::RenderPlatformWindowsDefault();
 )
 
 JSC_CCALL(imgui_wantmouse,
@@ -834,23 +788,26 @@ JSC_CCALL(imgui_wantkeys,
 )
 
 JSC_CCALL(imgui_init,
-  simgui_desc_t sdesc = {
-    .image_pool_size = 1024
-  };
-  simgui_setup(&sdesc);
-  
-  sgimgui_desc_t desc = {0};
-  sgimgui_init(&sgimgui, &desc);
-
-  sgimgui.frame_stats_window.disable_sokol_imgui_stats = true;
-
+  ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+  printf("Has viewports? %d\n", ImGuiBackendFlags_PlatformHasViewports);
+  ImGui::StyleColorsDark();
+
+  SDL_Renderer *render = js2SDL_Renderer(js, argv[0]);
+  SDL_Window *win = SDL_GetRenderWindow(render);
+  ImGui_ImplSDL3_InitForSDLRenderer(win, render);
+  ImGui_ImplSDLRenderer3_Init(render);
+
   io.IniFilename = ".prosperon/imgui.ini";
   ImGui::LoadIniSettingsFromDisk(".prosperon/imgui.ini");
 
   ImPlot::CreateContext();
   ImNodes::CreateContext();
-  sg_enable_frame_stats();
+  START = 1;
 )
 
 #define MIST_FUNC_DEF(CLASS,NAME,AMT) JS_CFUNC_DEF(#NAME, AMT, js_##CLASS##_##NAME)
@@ -861,7 +818,6 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, plotlimits, 0),
   MIST_FUNC_DEF(imgui, setaxes, 2),
   MIST_FUNC_DEF(imgui, setupaxis, 1),
-  MIST_FUNC_DEF(imgui, framestats, 0),
   MIST_FUNC_DEF(imgui, inplot, 1),
   MIST_FUNC_DEF(imgui, window, 2),
   MIST_FUNC_DEF(imgui, menu, 2),
@@ -896,7 +852,6 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, plothovered, 0),
   MIST_FUNC_DEF(imgui, axeslimits, 4),
   MIST_FUNC_DEF(imgui, fitaxis, 1),
-  MIST_FUNC_DEF(imgui, sokol_gfx, 0),
   MIST_FUNC_DEF(imgui, columns, 1),
   MIST_FUNC_DEF(imgui, nextcolumn, 0),
   MIST_FUNC_DEF(imgui, collapsingheader, 1),
@@ -946,16 +901,17 @@ static const JSCFunctionListEntry js_imgui_funcs[] = {
   MIST_FUNC_DEF(imgui, width, 1),
   MIST_FUNC_DEF(imgui, setclipboard, 1),
   MIST_FUNC_DEF(imgui, newframe, 3),
-  MIST_FUNC_DEF(imgui, endframe, 0),
+  MIST_FUNC_DEF(imgui, endframe, 1),
   MIST_FUNC_DEF(imgui, wantmouse, 0),
   MIST_FUNC_DEF(imgui, wantkeys, 0),
-  MIST_FUNC_DEF(imgui, init, 0),
+  MIST_FUNC_DEF(imgui, init, 1),
 };
 
 extern "C" {
-void gui_input(sapp_event *e)
+void gui_input(SDL_Event *e)
 {
-  simgui_handle_event(e);
+  if (!START) return;
+  ImGui_ImplSDL3_ProcessEvent(e);
 }
 
 JSValue js_imgui(JSContext *js)
@@ -966,6 +922,7 @@ JSValue js_imgui(JSContext *js)
   return imgui;
 }
 }
+
 static int js_init_imgui(JSContext *js, JSModuleDef *m) {
   JS_SetModuleExportList(js, m, js_imgui_funcs, sizeof(js_imgui_funcs)/sizeof(JSCFunctionListEntry));
   JS_SetModuleExport(js, m, "default", js_imgui(js));

@@ -3,6 +3,8 @@ os.env.doc = "Return the value of the environment variable v.";
 if (os.sys() === "windows") os.user = os.env("USERNAME");
 else os.user = os.env("USER");
 
+console.log(os.user)
+
 /*var ignore;
 if (ignore = io.slurp('.prosperonignore')) {
   ignore = ignore.split('\n');
@@ -232,28 +234,14 @@ Cmdline.register_order(
     prosperon.size = [1280, 720];    
     prosperon.cleanup = function(){}
     prosperon.event = function(e){
+      console.log(json.encode(e))
       prosperon[e.type]?.(e);
       switch(e.type) {
-        case "mouse_move":
-          prosperon.mousemove(e.mouse, e.mouse_d);
-          break;
-        case "mouse_scroll":
-          prosperon.mousescroll(e.scroll);
-          break;
         case "key_down":
           prosperon.keydown(e.key_code, e.key_repeat);
           break;
         case "key_up":
           prosperon.keyup(e.key_code);
-          break;
-        case "mouse_up":
-          prosperon.mouseup(e.mouse_button);
-          break;
-        case "mouse_down":
-          prosperon.mousedown(e.mouse_button);
-          break;
-        case "char":
-          prosperon.textinput(e.char_code);
           break;
         case "quit_requested":
           os.exit(0);
@@ -278,9 +266,13 @@ Cmdline.register_order(
 
     if (io.exists("config.js")) global.mixin("config.js");
     else console.warn("No config.js file found. Starting with default parameters.");
+    
    prosperon.window = game.engine_start(prosperon);
    var renderer = prosperon.window.make_renderer("gpu");
    render._main = renderer;
+var tt = game.texture('moon');
+tt.texture.__proto__.toString = function() { return os.value_id(this); }
+
 
    prosperon.init();
 

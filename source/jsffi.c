@@ -54,6 +54,7 @@ static JSAtom vertices_atom;
 static JSAtom dst_atom;
 static JSAtom src_atom;
 static JSAtom count_atom;
+static JSAtom transform_atom;
 
 static inline size_t typed_array_bytes(JSTypedArrayEnum type) {
     switch(type) {
@@ -110,8 +111,6 @@ double js_getnum_uint32(JSContext *js, JSValue v, unsigned int i)
 }
 
 static HMM_Mat3 cam_mat;
-static HMM_Vec2 campos = (HMM_Vec2){0,0};
-static HMM_Vec2 logical = {0};
 
 double js_getnum_str(JSContext *js, JSValue v, const char *str)
 {
@@ -266,6 +265,28 @@ void SDL_Cursor_free(JSRuntime *rt, SDL_Cursor *c)
   SDL_DestroyCursor(c);
 }
 
+void SDL_GPUDevice_free(JSRuntime *rt, SDL_GPUDevice *d)
+{
+  SDL_DestroyGPUDevice(d);
+}
+
+void SDL_GPUCommandBuffer_free(JSRuntime *rt, SDL_GPUCommandBuffer *c)
+{
+  SDL_SubmitGPUCommandBuffer(c);
+}
+
+void SDL_Thread_free(JSRuntime *rt, SDL_Thread *t)
+{
+}
+
+void SDL_GPUComputePass_free(JSRuntime *rt, SDL_GPUComputePass *c) { SDL_EndGPUComputePass(c); }
+void SDL_GPUCopyPass_free(JSRuntime *rt, SDL_GPUCopyPass *c) { SDL_EndGPUCopyPass(c); }
+void SDL_GPURenderPass_free(JSRuntime *rt, SDL_GPURenderPass *c) { SDL_EndGPURenderPass(c); }
+
+#define GPURELEASECLASS(NAME) \
+void SDL_GPU##NAME##_free(JSRuntime *rt, SDL_GPU##NAME *c) { printf("IMPLEMENT %s FREE\n", #NAME); } \
+QJSCLASS(SDL_GPU##NAME) \
+
 QJSCLASS(transform)
 QJSCLASS(font)
 //QJSCLASS(warp_gravity)
@@ -287,6 +308,20 @@ QJSCLASS(SDL_Surface,
   JS_SetProperty(js, j, width_atom, number2js(js,n->w));
   JS_SetProperty(js,j,height_atom,number2js(js,n->h));
 )
+QJSCLASS(SDL_GPUDevice)
+QJSCLASS(SDL_Thread)
+
+GPURELEASECLASS(Buffer)
+GPURELEASECLASS(ComputePipeline)
+GPURELEASECLASS(GraphicsPipeline)
+GPURELEASECLASS(Sampler)
+GPURELEASECLASS(Shader)
+GPURELEASECLASS(Texture)
+
+QJSCLASS(SDL_GPUCommandBuffer)
+QJSCLASS(SDL_GPUComputePass)
+QJSCLASS(SDL_GPUCopyPass)
+QJSCLASS(SDL_GPURenderPass)
 
 QJSCLASS(SDL_Cursor)
 
@@ -295,6 +330,18 @@ int js_arrlen(JSContext *js,JSValue v) {
   int len;
   len = js_getnum_str(js,v,"length");
   return len;
+}
+
+static inline HMM_Mat3 js2transform_mat3(JSContext *js, JSValue v)
+{
+  transform *T = js2transform(js,v);
+  transform *P = js2transform(js,js_getpropertystr(js,v,"parent"));
+  if (P) {
+    HMM_Mat3 pm = transform2mat3(P);
+    HMM_Mat3 tm = transform2mat3(T);
+    return HMM_MulM3(pm,tm);
+  }
+  return transform2mat3(T);
 }
 
 void *get_typed_buffer(JSContext *js, JSValue argv, size_t *len)
@@ -526,11 +573,22 @@ rect js2rect(JSContext *js,JSValue v) {
   return rect;
 }
 
-rect transform_rect(rect in, HMM_Mat3 *t)
+rect transform_rect(SDL_Renderer *ren, rect in, HMM_Mat3 *t)
 {
+  HMM_Vec3 bottom_left = (HMM_Vec3){in.x,in.y,1.0};
+  HMM_Vec3 transformed_bl = HMM_MulM3V3(*t, bottom_left);
+  in.x = transformed_bl.x;
+  in.y = transformed_bl.y;
+  in.y = in.y - in.h; // should be done for any platform that draws rectangles from top left
+  return in;
+}
+
+HMM_Vec2 transform_point(SDL_Renderer *ren, HMM_Vec2 in, HMM_Mat3 *t)
+{
+  rect logical;
+  SDL_GetRenderLogicalPresentationRect(ren, &logical);
   in.y *= -1;
-  in.y += logical.y;
-  in.y -= in.h;
+  in.y += logical.h;
   in.x -= t->Columns[2].x;
   in.y -= t->Columns[2].y;
   return in;
@@ -1320,25 +1378,219 @@ JSC_SCALL(game_engine_start,
   return SDL_Window2js(js,new);
 )
 
+typedef struct {
+  SDL_EventType key;
+  JSAtom value;
+} SDL_EventTypePair;
+
+struct {SDL_EventType key; JSAtom value; } *event_hash = NULL;
+
+void fill_event_atoms(JSContext *js)
+{
+  if (event_hash != NULL) return;
+
+  // Application events
+  hmput(event_hash, SDL_EVENT_QUIT, JS_NewAtom(js, "quit"));
+  hmput(event_hash, SDL_EVENT_TERMINATING, JS_NewAtom(js, "terminating"));
+  hmput(event_hash, SDL_EVENT_LOW_MEMORY, JS_NewAtom(js, "low_memory"));
+  hmput(event_hash, SDL_EVENT_WILL_ENTER_BACKGROUND, JS_NewAtom(js, "will_enter_background"));
+  hmput(event_hash, SDL_EVENT_DID_ENTER_BACKGROUND, JS_NewAtom(js, "did_enter_background"));
+  hmput(event_hash, SDL_EVENT_WILL_ENTER_FOREGROUND, JS_NewAtom(js, "will_enter_foreground"));
+  hmput(event_hash, SDL_EVENT_DID_ENTER_FOREGROUND, JS_NewAtom(js, "did_enter_foreground"));
+  hmput(event_hash, SDL_EVENT_LOCALE_CHANGED, JS_NewAtom(js, "locale_changed"));
+  hmput(event_hash, SDL_EVENT_SYSTEM_THEME_CHANGED, JS_NewAtom(js, "system_theme_changed"));
+
+  // Display events
+  hmput(event_hash, SDL_EVENT_DISPLAY_ORIENTATION, JS_NewAtom(js, "display_orientation"));
+  hmput(event_hash, SDL_EVENT_DISPLAY_ADDED, JS_NewAtom(js, "display_added"));
+  hmput(event_hash, SDL_EVENT_DISPLAY_REMOVED, JS_NewAtom(js, "display_removed"));
+  hmput(event_hash, SDL_EVENT_DISPLAY_MOVED, JS_NewAtom(js, "display_moved"));
+  hmput(event_hash, SDL_EVENT_DISPLAY_DESKTOP_MODE_CHANGED, JS_NewAtom(js, "display_desktop_mode_changed"));
+  hmput(event_hash, SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED, JS_NewAtom(js, "display_current_mode_changed"));
+  hmput(event_hash, SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED, JS_NewAtom(js, "display_content_scale_changed"));
+
+  // Window events
+  hmput(event_hash, SDL_EVENT_WINDOW_SHOWN, JS_NewAtom(js, "window_shown"));
+  hmput(event_hash, SDL_EVENT_WINDOW_HIDDEN, JS_NewAtom(js, "window_hidden"));
+  hmput(event_hash, SDL_EVENT_WINDOW_EXPOSED, JS_NewAtom(js, "window_exposed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_MOVED, JS_NewAtom(js, "window_moved"));
+  hmput(event_hash, SDL_EVENT_WINDOW_RESIZED, JS_NewAtom(js, "window_resized"));
+  hmput(event_hash, SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED, JS_NewAtom(js, "window_pixel_size_changed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_METAL_VIEW_RESIZED, JS_NewAtom(js, "window_metal_view_resized"));
+  hmput(event_hash, SDL_EVENT_WINDOW_MINIMIZED, JS_NewAtom(js, "window_minimized"));
+  hmput(event_hash, SDL_EVENT_WINDOW_MAXIMIZED, JS_NewAtom(js, "window_maximized"));
+  hmput(event_hash, SDL_EVENT_WINDOW_RESTORED, JS_NewAtom(js, "window_restored"));
+  hmput(event_hash, SDL_EVENT_WINDOW_MOUSE_ENTER, JS_NewAtom(js, "window_mouse_enter"));
+  hmput(event_hash, SDL_EVENT_WINDOW_MOUSE_LEAVE, JS_NewAtom(js, "window_mouse_leave"));
+  hmput(event_hash, SDL_EVENT_WINDOW_FOCUS_GAINED, JS_NewAtom(js, "window_focus_gained"));
+  hmput(event_hash, SDL_EVENT_WINDOW_FOCUS_LOST, JS_NewAtom(js, "window_focus_lost"));
+  hmput(event_hash, SDL_EVENT_WINDOW_CLOSE_REQUESTED, JS_NewAtom(js, "window_close_requested"));
+  hmput(event_hash, SDL_EVENT_WINDOW_HIT_TEST, JS_NewAtom(js, "window_hit_test"));
+  hmput(event_hash, SDL_EVENT_WINDOW_ICCPROF_CHANGED, JS_NewAtom(js, "window_iccprof_changed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_DISPLAY_CHANGED, JS_NewAtom(js, "window_display_changed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED, JS_NewAtom(js, "window_display_scale_changed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_SAFE_AREA_CHANGED, JS_NewAtom(js, "window_safe_area_changed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_OCCLUDED, JS_NewAtom(js, "window_occluded"));
+  hmput(event_hash, SDL_EVENT_WINDOW_ENTER_FULLSCREEN, JS_NewAtom(js, "window_enter_fullscreen"));
+  hmput(event_hash, SDL_EVENT_WINDOW_LEAVE_FULLSCREEN, JS_NewAtom(js, "window_leave_fullscreen"));
+  hmput(event_hash, SDL_EVENT_WINDOW_DESTROYED, JS_NewAtom(js, "window_destroyed"));
+  hmput(event_hash, SDL_EVENT_WINDOW_HDR_STATE_CHANGED, JS_NewAtom(js, "window_hdr_state_changed"));
+
+  // Keyboard events
+  hmput(event_hash, SDL_EVENT_KEY_DOWN, JS_NewAtom(js, "key_down"));
+  hmput(event_hash, SDL_EVENT_KEY_UP, JS_NewAtom(js, "key_up"));
+  hmput(event_hash, SDL_EVENT_TEXT_EDITING, JS_NewAtom(js, "text_editing"));
+  hmput(event_hash, SDL_EVENT_TEXT_INPUT, JS_NewAtom(js, "text_input"));
+  hmput(event_hash, SDL_EVENT_KEYMAP_CHANGED, JS_NewAtom(js, "keymap_changed"));
+  hmput(event_hash, SDL_EVENT_KEYBOARD_ADDED, JS_NewAtom(js, "keyboard_added"));
+  hmput(event_hash, SDL_EVENT_KEYBOARD_REMOVED, JS_NewAtom(js, "keyboard_removed"));
+  hmput(event_hash, SDL_EVENT_TEXT_EDITING_CANDIDATES, JS_NewAtom(js, "text_editing_candidates"));
+
+  // Mouse events
+  hmput(event_hash, SDL_EVENT_MOUSE_MOTION, JS_NewAtom(js, "mouse_motion"));
+  hmput(event_hash, SDL_EVENT_MOUSE_BUTTON_DOWN, JS_NewAtom(js, "mouse_button_down"));
+  hmput(event_hash, SDL_EVENT_MOUSE_BUTTON_UP, JS_NewAtom(js, "mouse_button_up"));
+  hmput(event_hash, SDL_EVENT_MOUSE_WHEEL, JS_NewAtom(js, "mouse_wheel"));
+  hmput(event_hash, SDL_EVENT_MOUSE_ADDED, JS_NewAtom(js, "mouse_added"));
+  hmput(event_hash, SDL_EVENT_MOUSE_REMOVED, JS_NewAtom(js, "mouse_removed"));
+
+  // Joystick events
+  hmput(event_hash, SDL_EVENT_JOYSTICK_AXIS_MOTION, JS_NewAtom(js, "joystick_axis_motion"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_BALL_MOTION, JS_NewAtom(js, "joystick_ball_motion"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_HAT_MOTION, JS_NewAtom(js, "joystick_hat_motion"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_BUTTON_DOWN, JS_NewAtom(js, "joystick_button_down"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_BUTTON_UP, JS_NewAtom(js, "joystick_button_up"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_ADDED, JS_NewAtom(js, "joystick_added"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_REMOVED, JS_NewAtom(js, "joystick_removed"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_BATTERY_UPDATED, JS_NewAtom(js, "joystick_battery_updated"));
+  hmput(event_hash, SDL_EVENT_JOYSTICK_UPDATE_COMPLETE, JS_NewAtom(js, "joystick_update_complete"));
+
+  // Gamepad events
+  hmput(event_hash, SDL_EVENT_GAMEPAD_AXIS_MOTION, JS_NewAtom(js, "gamepad_axis_motion"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_BUTTON_DOWN, JS_NewAtom(js, "gamepad_button_down"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_BUTTON_UP, JS_NewAtom(js, "gamepad_button_up"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_ADDED, JS_NewAtom(js, "gamepad_added"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_REMOVED, JS_NewAtom(js, "gamepad_removed"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_REMAPPED, JS_NewAtom(js, "gamepad_remapped"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN, JS_NewAtom(js, "gamepad_touchpad_down"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION, JS_NewAtom(js, "gamepad_touchpad_motion"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_TOUCHPAD_UP, JS_NewAtom(js, "gamepad_touchpad_up"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_SENSOR_UPDATE, JS_NewAtom(js, "gamepad_sensor_update"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_UPDATE_COMPLETE, JS_NewAtom(js, "gamepad_update_complete"));
+  hmput(event_hash, SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED, JS_NewAtom(js, "gamepad_steam_handle_updated"));
+
+  // Touch events
+  hmput(event_hash, SDL_EVENT_FINGER_DOWN, JS_NewAtom(js, "finger_down"));
+  hmput(event_hash, SDL_EVENT_FINGER_UP, JS_NewAtom(js, "finger_up"));
+  hmput(event_hash, SDL_EVENT_FINGER_MOTION, JS_NewAtom(js, "finger_motion"));
+
+  // Clipboard events
+  hmput(event_hash, SDL_EVENT_CLIPBOARD_UPDATE, JS_NewAtom(js, "clipboard_update"));
+
+  // Drag and drop events
+  hmput(event_hash, SDL_EVENT_DROP_FILE, JS_NewAtom(js, "drop_file"));
+  hmput(event_hash, SDL_EVENT_DROP_TEXT, JS_NewAtom(js, "drop_text"));
+  hmput(event_hash, SDL_EVENT_DROP_BEGIN, JS_NewAtom(js, "drop_begin"));
+  hmput(event_hash, SDL_EVENT_DROP_COMPLETE, JS_NewAtom(js, "drop_complete"));
+  hmput(event_hash, SDL_EVENT_DROP_POSITION, JS_NewAtom(js, "drop_position"));
+
+  // Audio device events
+  hmput(event_hash, SDL_EVENT_AUDIO_DEVICE_ADDED, JS_NewAtom(js, "audio_device_added"));
+  hmput(event_hash, SDL_EVENT_AUDIO_DEVICE_REMOVED, JS_NewAtom(js, "audio_device_removed"));
+  hmput(event_hash, SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED, JS_NewAtom(js, "audio_device_format_changed"));
+
+  // Sensor events
+  hmput(event_hash, SDL_EVENT_SENSOR_UPDATE, JS_NewAtom(js, "sensor_update"));
+
+  // Pen events
+  hmput(event_hash, SDL_EVENT_PEN_PROXIMITY_IN, JS_NewAtom(js, "pen_proximity_in"));
+  hmput(event_hash, SDL_EVENT_PEN_PROXIMITY_OUT, JS_NewAtom(js, "pen_proximity_out"));
+  hmput(event_hash, SDL_EVENT_PEN_DOWN, JS_NewAtom(js, "pen_down"));
+  hmput(event_hash, SDL_EVENT_PEN_UP, JS_NewAtom(js, "pen_up"));
+  hmput(event_hash, SDL_EVENT_PEN_BUTTON_DOWN, JS_NewAtom(js, "pen_button_down"));
+  hmput(event_hash, SDL_EVENT_PEN_BUTTON_UP, JS_NewAtom(js, "pen_button_up"));
+  hmput(event_hash, SDL_EVENT_PEN_MOTION, JS_NewAtom(js, "pen_motion"));
+  hmput(event_hash, SDL_EVENT_PEN_AXIS, JS_NewAtom(js, "pen_axis"));
+
+  // Camera events
+  hmput(event_hash, SDL_EVENT_CAMERA_DEVICE_ADDED, JS_NewAtom(js, "camera_device_added"));
+  hmput(event_hash, SDL_EVENT_CAMERA_DEVICE_REMOVED, JS_NewAtom(js, "camera_device_removed"));
+  hmput(event_hash, SDL_EVENT_CAMERA_DEVICE_APPROVED, JS_NewAtom(js, "camera_device_approved"));
+  hmput(event_hash, SDL_EVENT_CAMERA_DEVICE_DENIED, JS_NewAtom(js, "camera_device_denied"));
+
+  // Render events
+  hmput(event_hash, SDL_EVENT_RENDER_TARGETS_RESET, JS_NewAtom(js, "render_targets_reset"));
+  hmput(event_hash, SDL_EVENT_RENDER_DEVICE_RESET, JS_NewAtom(js, "render_device_reset"));
+  hmput(event_hash, SDL_EVENT_RENDER_DEVICE_LOST, JS_NewAtom(js, "render_device_lost"));
+}
+
+static JSAtom mouse2atom(JSContext *js, int mouse)
+{
+  switch(mouse) {
+    case SDL_BUTTON_LEFT: return JS_NewAtom(js,"left");
+    case SDL_BUTTON_MIDDLE: return JS_NewAtom(js,"middle");
+    case SDL_BUTTON_RIGHT: return JS_NewAtom(js,"right");
+    case SDL_BUTTON_X1: return JS_NewAtom(js,"x1");
+    case SDL_BUTTON_X2: return JS_NewAtom(js,"x2");
+  }
+  return JS_NewAtom(js,"left");
+}
+
+static JSValue js_keymod(JSContext *js)
+{
+  SDL_Keymod modstate = SDL_GetModState();
+  JSValue ret = JS_NewObject(js);
+  if (SDL_KMOD_CTRL & modstate)
+    JS_SetPropertyStr(js,ret,"ctrl", JS_NewBool(js,1));
+  if (SDL_KMOD_SHIFT & modstate)
+    JS_SetPropertyStr(js,ret,"shift", JS_NewBool(js,1));
+  if (SDL_KMOD_ALT & modstate)
+    JS_SetPropertyStr(js,ret,"alt", JS_NewBool(js,1));
+  if (SDL_KMOD_GUI & modstate)
+    JS_SetPropertyStr(js,ret,"super", JS_NewBool(js,1));
+  if (SDL_KMOD_NUM & modstate)
+    JS_SetPropertyStr(js,ret,"numlock", JS_NewBool(js,1));
+  if (SDL_KMOD_CAPS & modstate)
+    JS_SetPropertyStr(js,ret,"caps", JS_NewBool(js,1));
+  if (SDL_KMOD_SCROLL & modstate)
+    JS_SetPropertyStr(js,ret,"scrolllock", JS_NewBool(js,1));
+  if (SDL_KMOD_MODE & modstate)
+    JS_SetPropertyStr(js,ret,"mode", JS_NewBool(js,1));
+
+  return ret;
+}
+
 static JSValue event2js(JSContext *js, SDL_Event event)
 {
   JSValue e = JS_NewObject(js);
+  JS_SetPropertyStr(js, e, "type", JS_AtomToString(js,hmget(event_hash, event.type)));
   JS_SetPropertyStr(js,e,"timestamp", number2js(js,event.common.timestamp));
-  
+
   switch(event.type) {
-    case SDL_EVENT_QUIT:
-      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"quit"));
+    case SDL_EVENT_AUDIO_DEVICE_ADDED:
+    case SDL_EVENT_AUDIO_DEVICE_REMOVED:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.adevice.which));
+      JS_SetPropertyStr(js,e,"recording", JS_NewBool(js,event.adevice.recording));
+      break;
+    case SDL_EVENT_DISPLAY_ORIENTATION:
+    case SDL_EVENT_DISPLAY_ADDED:
+    case SDL_EVENT_DISPLAY_REMOVED:
+    case SDL_EVENT_DISPLAY_MOVED:
+    case SDL_EVENT_DISPLAY_DESKTOP_MODE_CHANGED:
+    case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
+    case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.display.displayID));
+      JS_SetPropertyStr(js,e,"data1", number2js(js,event.display.data1));
+      JS_SetPropertyStr(js,e,"data2", number2js(js,event.display.data2));
       break;
     case SDL_EVENT_MOUSE_MOTION:
-      JS_SetPropertyStr(js, e, "type", JS_NewString(js, "mouse"));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.motion.windowID));
       JS_SetPropertyStr(js,e,"which", number2js(js,event.motion.which));
       JS_SetPropertyStr(js, e, "state", number2js(js,event.motion.state));
-      JS_SetPropertyStr(js,e, "mouse", vec22js(js,(HMM_Vec2){event.motion.x,event.motion.y}));
-      JS_SetPropertyStr(js,e,"mouse_d", vec22js(js,(HMM_Vec2){event.motion.xrel, event.motion.yrel}));
+      JS_SetPropertyStr(js,e, "pos", vec22js(js,(HMM_Vec2){event.motion.x,event.motion.y}));
+      JS_SetPropertyStr(js,e,"d_pos", vec22js(js,(HMM_Vec2){event.motion.xrel, event.motion.yrel}));
       break;
     case SDL_EVENT_MOUSE_WHEEL:
-      JS_SetPropertyStr(js,e,"type",JS_NewString(js,"wheel"));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.wheel.windowID));
       JS_SetPropertyStr(js,e,"which", number2js(js,event.wheel.which));
       JS_SetPropertyStr(js,e,"scroll", vec22js(js,(HMM_Vec2){event.wheel.x,event.wheel.y}));
@@ -1346,32 +1598,34 @@ static JSValue event2js(JSContext *js, SDL_Event event)
       break;
     case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
-      JS_SetPropertyStr(js,e,"type",JS_NewString(js,"mouse_button"));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.button.windowID));
       JS_SetPropertyStr(js,e,"which", number2js(js,event.button.which));
       JS_SetPropertyStr(js,e,"down", JS_NewBool(js,event.button.down));
+      JS_SetPropertyStr(js,e,"button", JS_AtomToString(js,mouse2atom(js,event.button.button)));
       JS_SetPropertyStr(js,e,"clicks", number2js(js,event.button.clicks));
       JS_SetPropertyStr(js,e,"mouse", vec22js(js,(HMM_Vec2){event.button.x,event.button.y}));
       break;
+    case SDL_EVENT_SENSOR_UPDATE:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.sensor.which));
+      JS_SetPropertyStr(js,e, "sensor_timestamp", number2js(js,event.sensor.sensor_timestamp));
+      break;
     case SDL_EVENT_KEY_DOWN:
     case SDL_EVENT_KEY_UP:
-      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"key"));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.key.windowID));
       JS_SetPropertyStr(js,e,"which", number2js(js,event.key.which));
       JS_SetPropertyStr(js,e,"down", JS_NewBool(js,event.key.down));
       JS_SetPropertyStr(js,e,"repeat", JS_NewBool(js,event.key.repeat));
       JS_SetPropertyStr(js,e,"key", number2js(js,event.key.key));
       JS_SetPropertyStr(js,e,"scancode", number2js(js,event.key.scancode));
-      JS_SetPropertyStr(js,e,"mod", number2js(js,event.key.mod));
+      JS_SetPropertyStr(js,e,"mod", js_keymod(js));
       break;
     case SDL_EVENT_FINGER_MOTION:
     case SDL_EVENT_FINGER_DOWN:
     case SDL_EVENT_FINGER_UP:
-      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"touch"));
       JS_SetPropertyStr(js,e,"touch", number2js(js,event.tfinger.touchID));
       JS_SetPropertyStr(js,e,"finger", number2js(js,event.tfinger.fingerID));
       JS_SetPropertyStr(js,e,"pos", vec22js(js, (HMM_Vec2){event.tfinger.x, event.tfinger.y}));
-      JS_SetPropertyStr(js,e,"pos_d", vec22js(js,(HMM_Vec2){event.tfinger.x, event.tfinger.dy}));
+      JS_SetPropertyStr(js,e,"d_pos", vec22js(js,(HMM_Vec2){event.tfinger.x, event.tfinger.dy}));
       JS_SetPropertyStr(js,e,"pressure", number2js(js,event.tfinger.pressure));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.key.windowID));
       break;
@@ -1380,28 +1634,122 @@ static JSValue event2js(JSContext *js, SDL_Event event)
     case SDL_EVENT_DROP_TEXT:
     case SDL_EVENT_DROP_COMPLETE:
     case SDL_EVENT_DROP_POSITION:
-      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"drop"));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.drop.windowID));
       JS_SetPropertyStr(js,e,"pos", vec22js(js, (HMM_Vec2){event.drop.x,event.drop.y}));
       JS_SetPropertyStr(js,e,"data", JS_NewString(js,event.drop.data));
       JS_SetPropertyStr(js,e,"source",JS_NewString(js,event.drop.source));
       break;
     case SDL_EVENT_TEXT_INPUT:
-      JS_SetPropertyStr(js,e,"type", JS_NewString(js,"text"));
       JS_SetPropertyStr(js,e,"window", number2js(js,event.text.windowID));
       JS_SetPropertyStr(js,e,"text", JS_NewString(js,event.text.text));
+      JS_SetPropertyStr(js,e,"mod", js_keymod(js));
       break;
     case SDL_EVENT_CAMERA_DEVICE_APPROVED:
-      JS_SetPropertyStr(js,e,"type", JS_NewString(js, "camera approved"));
+    case SDL_EVENT_CAMERA_DEVICE_REMOVED:
+    case SDL_EVENT_CAMERA_DEVICE_ADDED:
+    case SDL_EVENT_CAMERA_DEVICE_DENIED:
+      JS_SetPropertyStr(js, e, "which", number2js(js,event.cdevice.which));
+      break;
+    case SDL_EVENT_CLIPBOARD_UPDATE:
+      JS_SetPropertyStr(js, e, "owner", JS_NewBool(js,event.clipboard.owner));
+      break;
+    case SDL_EVENT_WINDOW_SHOWN:
+    case SDL_EVENT_WINDOW_HIDDEN:
+    case SDL_EVENT_WINDOW_EXPOSED:
+    case SDL_EVENT_WINDOW_MOVED:
+    case SDL_EVENT_WINDOW_RESIZED:
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+    case SDL_EVENT_WINDOW_METAL_VIEW_RESIZED:
+    case SDL_EVENT_WINDOW_MINIMIZED:
+    case SDL_EVENT_WINDOW_MAXIMIZED:
+    case SDL_EVENT_WINDOW_RESTORED:
+    case SDL_EVENT_WINDOW_MOUSE_ENTER:
+    case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+    case SDL_EVENT_WINDOW_FOCUS_GAINED:
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+    case SDL_EVENT_WINDOW_HIT_TEST:
+    case SDL_EVENT_WINDOW_ICCPROF_CHANGED:
+    case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+    case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+    case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+    case SDL_EVENT_WINDOW_OCCLUDED:
+    case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+    case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+    case SDL_EVENT_WINDOW_DESTROYED:
+    case SDL_EVENT_WINDOW_HDR_STATE_CHANGED:      
+    /* rest of SDL_EVENT_WINDOW_ here */
+      JS_SetPropertyStr(js,e,"which", number2js(js, event.window.windowID));
+      JS_SetPropertyStr(js,e,"data1", number2js(js, event.window.data1));
+      JS_SetPropertyStr(js,e,"data2", number2js(js, event.window.data2));
+      break;
+
+    case SDL_EVENT_JOYSTICK_ADDED:
+    case SDL_EVENT_JOYSTICK_REMOVED:
+    case SDL_EVENT_JOYSTICK_UPDATE_COMPLETE:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.jdevice.which));
+      break;
+    case SDL_EVENT_JOYSTICK_AXIS_MOTION:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.jaxis.which));
+      JS_SetPropertyStr(js,e,"axis", number2js(js,event.jaxis.axis));
+      JS_SetPropertyStr(js,e,"value", number2js(js,event.jaxis.value));
+      break;
+    case SDL_EVENT_JOYSTICK_BALL_MOTION:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.jball.which));
+      JS_SetPropertyStr(js,e,"ball",number2js(js,event.jball.ball));
+      JS_SetPropertyStr(js,e, "rel", vec22js(js,(HMM_Vec2){event.jball.xrel,event.jball.yrel}));
+      break;
+    case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
+    case SDL_EVENT_JOYSTICK_BUTTON_UP:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.jbutton.which));
+      JS_SetPropertyStr(js,e,"button", number2js(js,event.jbutton.button));
+      JS_SetPropertyStr(js,e,"down", JS_NewBool(js,event.jbutton.down));
+      break;
+
+    case SDL_EVENT_GAMEPAD_ADDED:
+    case SDL_EVENT_GAMEPAD_REMOVED:
+    case SDL_EVENT_GAMEPAD_REMAPPED:
+    case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE:
+    case SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.gdevice.which));
+      break;
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.gaxis.which));
+      JS_SetPropertyStr(js,e,"axis", number2js(js,event.gaxis.axis));
+      JS_SetPropertyStr(js,e,"value", number2js(js,event.gaxis.value));
+      break;
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.gbutton.which));
+      JS_SetPropertyStr(js,e,"button", number2js(js,event.gbutton.button));
+      JS_SetPropertyStr(js,e,"down", JS_NewBool(js,event.gbutton.down));
+      break;
+    case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
+    case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
+    case SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.gtouchpad.which));
+      JS_SetPropertyStr(js,e,"touchpad", number2js(js,event.gtouchpad.touchpad));
+      JS_SetPropertyStr(js,e,"finger", number2js(js,event.gtouchpad.finger));
+      JS_SetPropertyStr(js,e,"pos", vec22js(js,(HMM_Vec2){event.gtouchpad.x,event.gtouchpad.y}));
+      JS_SetPropertyStr(js,e,"pressure", number2js(js,event.gtouchpad.pressure));
+      break;
+    case SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
+      JS_SetPropertyStr(js,e,"which", number2js(js,event.gsensor.which));
+      JS_SetPropertyStr(js,e,"sensor", number2js(js,event.gsensor.sensor));
+      JS_SetPropertyStr(js,e,"sensor_timestamp", number2js(js,event.gsensor.sensor_timestamp));
       break;
   }
   return e;
 }
 
+void gui_input(SDL_Event *e);
 // Polls and handles all input events
 JSC_CCALL(game_engine_input,
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
+#ifndef NEDITOR
+    gui_input(&event);
+#endif
     JSValue e = event2js(js,event);
     JS_Call(js,argv[0], JS_UNDEFINED, 1, &e);
   }
@@ -1582,8 +1930,21 @@ JSC_CCALL(SDL_Renderer_clear,
   SDL_RenderClear(renderer);
 )
 
+const char *tn = "present thread";
+static int present_thread(SDL_Renderer *r)
+{
+  TracyCZone(present,1)
+  SDL_RenderPresent(r);
+  TracyCZoneEnd(present)
+  return 0;
+}
+
 JSC_CCALL(SDL_Renderer_present,
-  SDL_RenderPresent(js2SDL_Renderer(js,self));
+//  SDL_Thread *thread;
+  SDL_Renderer *ren = js2SDL_Renderer(js,self);
+//  thread  = SDL_CreateThread(present_thread, "present", ren);
+  SDL_RenderPresent(ren);
+//  return SDL_Thread2js(js,thread);
 )
 
 JSC_CCALL(SDL_Renderer_draw_color,
@@ -1604,7 +1965,7 @@ JSC_CCALL(SDL_Renderer_rect,
     rect rects[len];
     for (int i = 0; i < len; i++) {
       JSValue val = JS_GetPropertyUint32(js,argv[0],i);
-      rects[i] = transform_rect(js2rect(js,val), &cam_mat);
+      rects[i] = transform_rect(r,js2rect(js,val), &cam_mat);
       JS_FreeValue(js,val);
     }
     SDL_RenderRects(r,rects,len);
@@ -1612,7 +1973,8 @@ JSC_CCALL(SDL_Renderer_rect,
   }
   
   rect rect = js2rect(js,argv[0]);
-  rect = transform_rect(rect, &cam_mat);
+  
+  rect = transform_rect(r,rect, &cam_mat);
   
   SDL_RenderRect(r, &rect);
 )
@@ -1646,7 +2008,7 @@ JSC_CCALL(SDL_Renderer_fillrect,
     if (!SDL_RenderFillRects(r,rects,len))
       return JS_ThrowReferenceError("Could not render rectangle: %s", SDL_GetError());
   }
-  rect rect = transform_rect(js2rect(js,argv[0]),&cam_mat);
+  rect rect = transform_rect(r,js2rect(js,argv[0]),&cam_mat);
   
   if (!SDL_RenderFillRect(r, &rect))
     return JS_ThrowReferenceError("Could not render rectangle: %s", SDL_GetError());
@@ -1655,7 +2017,7 @@ JSC_CCALL(SDL_Renderer_fillrect,
 JSC_CCALL(renderer_texture,
   SDL_Renderer *renderer = js2SDL_Renderer(js,self);
   SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
-  rect dst = transform_rect(js2rect(js,argv[1]), &cam_mat);
+  rect dst = transform_rect(renderer,js2rect(js,argv[1]), &cam_mat);
   
   if (!JS_IsUndefined(argv[3])) {
     colorf color = js2color(js,argv[3]);
@@ -1695,8 +2057,8 @@ JSC_CCALL(renderer_slice9,
   SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
   lrtb bounds = js2lrtb(js,argv[2]);
   rect src, dst;
-  src = transform_rect(js2rect(js,argv[3]),&cam_mat);
-  dst = transform_rect(js2rect(js,argv[1]), &cam_mat);
+  src = transform_rect(renderer,js2rect(js,argv[3]),&cam_mat);
+  dst = transform_rect(renderer,js2rect(js,argv[1]), &cam_mat);
 
   SDL_RenderTexture9Grid(renderer, tex,
     JS_IsUndefined(argv[3]) ? NULL : &src,
@@ -1723,9 +2085,9 @@ JSC_SCALL(renderer_fasttext,
     SDL_SetRenderDrawColorFloat(r, color.r, color.g, color.b, color.a);
   }
   HMM_Vec2 pos = js2vec2(js,argv[1]);
-  pos.y *= -1;
-  pos.y += logical.y;
-  SDL_RenderDebugText(r, pos.x, pos.y, str);
+  pos.y += 8;
+  HMM_Vec2 tpos = HMM_MulM3V3(cam_mat, (HMM_Vec3){pos.x,pos.y,1}).xy;
+  SDL_RenderDebugText(r, tpos.x, tpos.y, str);
 )
 
 JSC_CCALL(renderer_line,
@@ -1768,7 +2130,7 @@ JSC_CCALL(renderer_point,
     return JS_UNDEFINED;
   }
 
-  HMM_Vec2 point = js2vec2(js,argv[0]);
+  HMM_Vec2 point = transform_point(r, js2vec2(js,argv[0]), &cam_mat);
   SDL_RenderPoint(r,point.x,point.y);
 )
 
@@ -1837,8 +2199,7 @@ JSC_CCALL(renderer_geometry,
 JSC_CCALL(renderer_logical_size,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   HMM_Vec2 v = js2vec2(js,argv[0]);
-  logical = v;  
-  SDL_SetRenderLogicalPresentation(r,v.x,v.y,SDL_LOGICAL_PRESENTATION_LETTERBOX);
+  SDL_SetRenderLogicalPresentation(r,v.x,v.y,SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 )
 
 JSC_CCALL(renderer_viewport,
@@ -1849,6 +2210,18 @@ JSC_CCALL(renderer_viewport,
     rect view = js2rect(js,argv[0]);
     SDL_SetRenderViewport(r,&view);
   }
+)
+
+JSC_CCALL(renderer_get_viewport,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);  
+  SDL_Rect vp;
+  SDL_GetRenderViewport(r, &vp);
+  rect re;
+  re.x = vp.x;
+  re.y = vp.y;
+  re.h = vp.h;
+  re.w = vp.w;
+  return rect2js(js,re);
 )
 
 JSC_CCALL(renderer_clip,
@@ -1867,15 +2240,12 @@ JSC_CCALL(renderer_scale,
   SDL_SetRenderScale(r, v.x, v.y);
 )
 
-JSC_CCALL(renderer_campos,
-  campos = js2vec2(js,argv[0]);
-)
-
 JSC_CCALL(renderer_vsync,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   SDL_SetRenderVSync(r,js2number(js,argv[0]));
 )
 
+// This returns the coordinates inside the 
 JSC_CCALL(renderer_coords,
   SDL_Renderer *r = js2SDL_Renderer(js,self);
   HMM_Vec2 pos, coord;
@@ -1885,18 +2255,40 @@ JSC_CCALL(renderer_coords,
 )
 
 JSC_CCALL(renderer_camera,
-  HMM_Mat3 t;
-  t.Columns[0] = (HMM_Vec3){1,0,0};
-  t.Columns[1] = (HMM_Vec3){0,-1,0};
-  t.Columns[2] = (HMM_Vec3){0,logical.y,1};
+  int centered = JS_ToBool(js,argv[1]);
+  SDL_Renderer *ren = js2SDL_Renderer(js,self);
+  SDL_Rect vp;
+  SDL_GetRenderViewport(ren, &vp);
+  HMM_Mat3 proj;
+  proj.Columns[0] = (HMM_Vec3){1,0,0};
+  proj.Columns[1] = (HMM_Vec3){0,-1,0};
+  if (centered)
+    proj.Columns[2] = (HMM_Vec3){vp.w/2.0,vp.h/2.0,1};
+  else
+    proj.Columns[2] = (HMM_Vec3){0,vp.h,1};
+    
+  transform *tra = js2transform(js,argv[0]);  
+  HMM_Mat3 view;
+  view.Columns[0] = (HMM_Vec3){1,0,0};
+  view.Columns[1] = (HMM_Vec3){0,1,0};
+  view.Columns[2] = (HMM_Vec3){-tra->pos.x, -tra->pos.y,1};
+  cam_mat = HMM_MulM3(proj,view);
+)
 
-  transform *tra = js2transform(js,argv[0]);
-  tra->pos.x -= logical.x/2;
-  tra->pos.y -= logical.y/2;
-  HMM_Mat3 T = transform2mat3(tra);
-  cam_mat = HMM_MulM3(t,T);
-  tra->pos.x += logical.x/2;
-  tra->pos.y += logical.y/2;
+JSC_CCALL(renderer_screen2world,
+  HMM_Mat3 inv = HMM_InvGeneralM3(cam_mat);
+  HMM_Vec3 pos = js2vec3(js,argv[0]);
+  return vec22js(js, HMM_MulM3V3(inv, pos).xy);
+)
+
+JSC_CCALL(renderer_target,
+  SDL_Renderer *r = js2SDL_Renderer(js,self);
+  if (JS_IsUndefined(argv[0]))
+    SDL_SetRenderTarget(r, NULL);
+  else {
+    SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
+    SDL_SetRenderTarget(r,tex);
+  }
 )
 
 static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
@@ -1915,13 +2307,53 @@ static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(renderer, fasttext, 2),
   MIST_FUNC_DEF(renderer, geometry, 2),
   MIST_FUNC_DEF(renderer, scale, 1),
-  MIST_FUNC_DEF(renderer, campos, 1),
   MIST_FUNC_DEF(renderer,logical_size,1),
   MIST_FUNC_DEF(renderer,viewport,1),
   MIST_FUNC_DEF(renderer,clip,1),
   MIST_FUNC_DEF(renderer,vsync,1),
   MIST_FUNC_DEF(renderer, coords, 1),
-  MIST_FUNC_DEF(renderer, camera, 1),
+  MIST_FUNC_DEF(renderer, camera, 2),
+  MIST_FUNC_DEF(renderer, get_viewport,0),
+  MIST_FUNC_DEF(renderer, screen2world, 1),
+  MIST_FUNC_DEF(renderer, target, 1),
+};
+
+JSC_CCALL(gpu_claim_window,
+  SDL_GPUDevice *d = js2SDL_GPUDevice(js,self);
+  SDL_Window *w = js2SDL_Window(js, argv[0]);
+  SDL_ClaimWindowForGPUDevice(d,w);
+)
+
+JSC_CCALL(gpu_graphics_pipeline,
+  SDL_GPUGraphicsPipelineCreateInfo info = {0};
+  info.vertex_shader = js2SDL_GPUShader(js, js_getpropertystr(js,argv[0], "vertex"));
+  info.fragment_shader = js2SDL_GPUShader(js, js_getpropertystr(js,argv[0], "fragment"));
+  // etc ...
+)
+
+static const JSCFunctionListEntry js_SDL_GPUDevice_funcs[] = {
+  MIST_FUNC_DEF(gpu, claim_window, 1),
+  MIST_FUNC_DEF(gpu, graphics_pipeline,1),
+};
+
+JSC_CCALL(renderpass_bind_pipeline,
+  SDL_GPURenderPass *r = js2SDL_GPURenderPass(js,self);
+  SDL_GPUGraphicsPipeline *pipe = js2SDL_GPUGraphicsPipeline(js,argv[0]);
+  SDL_BindGPUGraphicsPipeline(r,pipe);
+)
+
+JSC_CCALL(renderpass_draw,
+  SDL_GPURenderPass *r = js2SDL_GPURenderPass(js,self);
+  SDL_DrawGPUPrimitives(r, js2number(js,argv[0]), js2number(js,argv[1]), js2number(js,argv[2]), js2number(js,argv[3]));
+)
+
+static const JSCFunctionListEntry js_SDL_GPURenderPass_funcs[] = {
+  MIST_FUNC_DEF(renderpass, bind_pipeline, 1),
+  MIST_FUNC_DEF(renderpass, draw, 4),
+};
+
+static const JSCFunctionListEntry js_SDL_GPUCommandBuffer_funcs[] = {
+  
 };
 
 JSC_CCALL(surface_blit,
@@ -1995,6 +2427,15 @@ static const JSCFunctionListEntry js_SDL_Surface_funcs[] = {
   MIST_FUNC_DEF(surface, dup, 0),
 };
 
+JSC_CCALL(thread_wait,
+  SDL_Thread *th = js2SDL_Thread(js,self);
+  SDL_WaitThread(th, NULL);
+)
+
+static const JSCFunctionListEntry js_SDL_Thread_funcs[] = {
+  MIST_FUNC_DEF(thread,wait,0),
+};
+
 JSC_CCALL(camera_frame,
   SDL_ClearError();
   SDL_Camera *cam = js2SDL_Camera(js,self);
@@ -2057,10 +2498,20 @@ JSC_CCALL(input_cursor_set,
     return JS_ThrowReferenceError(js, "could not set cursor: %s", SDL_GetError());
 )
 
+JSC_CCALL(input_keyname,
+  return JS_NewString(js, SDL_GetKeyName(js2number(js,argv[0])));
+)
+
+JSC_CCALL(input_keymod,
+  return js_keymod(js);
+)
+
 static const JSCFunctionListEntry js_input_funcs[] = {
   MIST_FUNC_DEF(input, mouse_show, 1),
   MIST_FUNC_DEF(input, mouse_lock, 1),
   MIST_FUNC_DEF(input, cursor_set, 1),
+  MIST_FUNC_DEF(input, keyname, 1),
+  MIST_FUNC_DEF(input, keymod, 0),
 };
 
 JSC_CCALL(prosperon_guid,
@@ -2077,8 +2528,14 @@ JSC_CCALL(prosperon_guid,
   return JS_NewString(js,guid);
 )
 
+JSC_SCALL(prosperon_openurl,
+  if (!SDL_OpenURL(str))
+    ret = JS_ThrowReferenceError(js, "unable to open url %s: %s\n", str, SDL_GetError());
+)
+
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, guid, 0),
+  MIST_FUNC_DEF(prosperon, openurl, 1),
 };
 
 JSC_CCALL(time_now, 
@@ -2135,7 +2592,7 @@ JSC_CCALL(profile_gather_stop,
 
 JSC_CCALL(profile_best_t,
   char* result[50];
-  double seconds = SDL_GetTicksNS()/1000000000.f;
+  double seconds = js2number(js,argv[0]);
   if (seconds < 1e-6)
     snprintf(result, 50, "%.2f ns", seconds * 1e9);
   else if (seconds < 1e-3)
@@ -2145,7 +2602,7 @@ JSC_CCALL(profile_best_t,
   else
     snprintf(result, 50, "%.2f s", seconds);
 
-  ret = JS_NewString(js,result);
+  return JS_NewString(js,result);
 )
 
 JSC_CCALL(profile_now, return number2js(js, SDL_GetTicksNS()/1000000000.f))
@@ -2248,6 +2705,12 @@ JSC_SCALL(io_writepath,
   if (!PHYSFS_setWriteDir(str)) ret = JS_ThrowReferenceError(js,"%s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 )
 
+JSC_SSCALL(io_gamemode,
+  const char *prefdir = PHYSFS_getPrefDir(str, str2);
+  printf("%s\n", prefdir);
+  PHYSFS_setWriteDir(prefdir);
+)
+
 struct globdata {
   JSContext *js;
   JSValue arr;
@@ -2325,6 +2788,7 @@ static const JSCFunctionListEntry js_io_funcs[] = {
   MIST_FUNC_DEF(io,slurpwrite,2),
   MIST_FUNC_DEF(io,writepath, 1),
   MIST_FUNC_DEF(io,basedir, 0),
+  MIST_FUNC_DEF(io, gamemode, 2),
 };
 
 JSC_GETSET(transform, pos, vec3)
@@ -2818,7 +3282,9 @@ CLEANUP:
 JSValue aseframe2js(JSContext *js, ase_frame_t aframe)
 {
   JSValue frame = JS_NewObject(js);
-  SDL_Surface *surf = SDL_CreateSurfaceFrom(aframe.ase->w, aframe.ase->h, SDL_PIXELFORMAT_RGBA32, aframe.pixels, aframe.ase->w*4);
+  void *frame_pixels = malloc(aframe.ase->w*aframe.ase->h*4);
+  memcpy(frame_pixels, aframe.pixels, aframe.ase->w*aframe.ase->h*4);
+  SDL_Surface *surf = SDL_CreateSurfaceFrom(aframe.ase->w, aframe.ase->h, SDL_PIXELFORMAT_RGBA32, frame_pixels, aframe.ase->w*4);
   JS_SetPropertyStr(js, frame, "surface", SDL_Surface2js(js,surf));
   JS_SetPropertyStr(js, frame, "rect", rect2js(js,(rect){.x=0,.y=0,.w=1,.h=1}));
   JS_SetPropertyStr(js, frame, "time", number2js(js,(float)aframe.duration_milliseconds/1000.0));
@@ -3159,6 +3625,14 @@ JSC_SCALL(os_kill,
   return JS_UNDEFINED;
 )
 
+// Given an array of sprites, make the necessary geometry
+// A sprite is expected to have:
+// transform: a transform encoding position and rotation. its scale is in pixels - so a scale of 1 means the image will draw only on a single pixel.
+// image: a standard prosperon image of a surface, rect, and texture
+// color: the color this sprite should be hued by
+
+// This might change depending on the backend, so best to not investigate. It should be consumed with "renderer_geometry"
+// It might be a list of rectangles, it might be a handful of buffers, etc ..
 JSC_CCALL(os_make_sprite_mesh,
   JSValue sprites = argv[0];
   JSValue old = argv[1];
@@ -3168,15 +3642,15 @@ JSC_CCALL(os_make_sprite_mesh,
 
   HMM_Vec2 *posdata = malloc(sizeof(*posdata)*verts);
   HMM_Vec2 *uvdata = malloc(sizeof(*uvdata)*verts);
-  HMM_Vec4 *colordata = malloc(sizeof(*colordata)*verts);
+  HMM_Vec4 *colordata = malloc(sizeof(*colordata)*quads);
 
   for (int i = 0; i < quads; i++) {
     JSValue sub = JS_GetPropertyUint32(js,sprites,i);
-    JSValue jsdst = JS_GetProperty(js,sub,dst_atom);
+    JSValue jstransform = JS_GetProperty(js,sub,transform_atom);
+    transform *tr = js2transform(js,jstransform);
     JSValue jssrc = JS_GetProperty(js,sub,src_atom);
     JSValue jscolor = JS_GetProperty(js,sub,color_atom);
     HMM_Vec4 color;
-    rect dst = js2rect(js,jsdst);
 
     rect src;
     if (JS_IsUndefined(jssrc))
@@ -3192,11 +3666,16 @@ JSC_CCALL(os_make_sprite_mesh,
     // Calculate the base index for the current quad
     size_t base = i * 4;
 
-    // Define the four corners of the destination rectangle
-    posdata[base + 0] = (HMM_Vec2){ dst.x,             dst.y + dst.h };
-    posdata[base + 1] = (HMM_Vec2){ dst.x + dst.w, dst.y + dst.h };
-    posdata[base + 2] = (HMM_Vec2){ dst.x,             dst.y };
-    posdata[base + 3] = (HMM_Vec2){ dst.x + dst.w, dst.y };
+    HMM_Mat3 trmat = js2transform_mat3(js,jstransform);
+
+    HMM_Vec3 base_quad[4] = {
+      {0.0,0.0,1.0},
+      {1.0,0.0,1.0},
+      {0.0,1.0,1.0},
+      {1.0,1.0,1.0}
+    };
+    for (int j = 0; j < 4; j++)
+      posdata[base+j] = HMM_MulM3V3(trmat, base_quad[j]).xy;
 
     // Define the UV coordinates based on the source rectangle
     uvdata[base + 0] = (HMM_Vec2){ src.x,                  src.y + src.h };
@@ -3204,25 +3683,17 @@ JSC_CCALL(os_make_sprite_mesh,
     uvdata[base + 2] = (HMM_Vec2){ src.x,                  src.y };
     uvdata[base + 3] = (HMM_Vec2){ src.x + src.w,      src.y };
 
-    cblas_scopy(4, color.e, 1, &(colordata[base+0].x),1);
-    cblas_scopy(4, color.e, 1, &(colordata[base+1].x),1);
-    cblas_scopy(4, color.e, 1, &(colordata[base+2].x),1);
-    cblas_scopy(4, color.e, 1, &(colordata[base+3].x),1);
-/*    colordata[base + 0] = color;
-    colordata[base + 1] = color;
-    colordata[base + 2] = color;
-    colordata[base + 3] = color;
-    */
+    colordata[i] = color;
+
     JS_FreeValue(js,sub);
     JS_FreeValue(js,jscolor);
-    JS_FreeValue(js,jsdst);
     JS_FreeValue(js,jssrc);
   }
 
   ret = JS_NewObject(js);
   JS_SetProperty(js, ret, pos_atom, make_gpu_buffer(js, posdata, sizeof(*posdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
   JS_SetProperty(js, ret, uv_atom, make_gpu_buffer(js, uvdata, sizeof(*uvdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
-  JS_SetProperty(js, ret, color_atom, make_gpu_buffer(js, colordata, sizeof(*colordata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
+  JS_SetProperty(js, ret, color_atom, make_gpu_buffer(js, colordata, sizeof(*colordata) * quads, JS_TYPED_ARRAY_FLOAT32, 0, 0));
   JS_SetProperty(js, ret, indices_atom, make_quad_indices_buffer(js, quads));
   JS_SetProperty(js, ret, vertices_atom, number2js(js, verts));
   JS_SetProperty(js, ret, count_atom, number2js(js, count));
@@ -3234,6 +3705,12 @@ JSC_CCALL(os_match_img,
   SDL_Surface *img2 = js2SDL_Surface(js,argv[1]);
   int n = detectImageInWebcam(img1,img2);
   return number2js(js,n);
+)
+
+JSC_CCALL(os_sleep,
+  double time = js2number(js,argv[0]);
+  time *= 1000000000.;
+  SDL_DelayNS(time);
 )
 
 static const JSCFunctionListEntry js_os_funcs[] = {
@@ -3292,6 +3769,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, skin_calculate, 1),
   MIST_FUNC_DEF(os, kill, 1),
   MIST_FUNC_DEF(os, match_img, 2),
+  MIST_FUNC_DEF(os, sleep, 1),
 };
 
 #define JSSTATIC(NAME, PARENT) \
@@ -3309,7 +3787,7 @@ JSValue js_tracy_use(JSContext *js);
 #endif
 
 #ifndef NEDITOR
-//JSValue js_imgui(JSContext *js);
+JSValue js_imgui(JSContext *js);
 JSValue js_dmon_use(JSContext *js);
 #endif
 
@@ -3353,6 +3831,7 @@ void ffi_load(JSContext *js) {
 
   QJSCLASSPREP_FUNCS(SDL_Window)
   QJSCLASSPREP_FUNCS(SDL_Surface)
+  QJSCLASSPREP_FUNCS(SDL_Thread)
   QJSCLASSPREP_FUNCS(SDL_Texture)
   QJSCLASSPREP_FUNCS(SDL_Renderer)
   QJSCLASSPREP_FUNCS(SDL_Camera)
@@ -3406,7 +3885,7 @@ void ffi_load(JSContext *js) {
 
 #ifndef NEDITOR
   JS_SetPropertyStr(js, globalThis, "dmon", js_dmon_use(js));
-//  JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
+  JS_SetPropertyStr(js, globalThis, "imgui", js_imgui(js));
 #endif
 
   x_atom = JS_NewAtom(js,"x");
@@ -3423,6 +3902,9 @@ void ffi_load(JSContext *js) {
   vertices_atom = JS_NewAtom(js, "vertices");
   dst_atom = JS_NewAtom(js, "dst");
   count_atom = JS_NewAtom(js, "count");
+  transform_atom = JS_NewAtom(js,"transform");
+
+  fill_event_atoms(js);
 
   JS_FreeValue(js,globalThis);  
 }

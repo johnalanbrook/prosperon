@@ -1,65 +1,12 @@
-input.keycodes = {
-  32: "space",
-  45: "minus",
-  256: "escape",
-  257: "enter",
-  258: "tab",
-  259: "backspace",
-  260: "insert",
-  261: "delete",
-  262: "right",
-  263: "left",
-  264: "down",
-  265: "up",
-  266: "pgup",
-  267: "pgdown",
-  268: "home",
-  269: "end",
-};
-
-input.codekeys = {};
-for (var code in input.keycodes) input.codekeys[input.keycodes[code]] = code;
-
-var mod = {
-  shift: 0,
-  ctrl: 0,
-  alt: 0,
-  super: 0,
-};
-
-/*
-released
-rep
-pressed
-down
-*/
-
-function keycode(name) {
-  return charCodeAt(name);
-}
-
-function keyname_extd(key) {
-  if (!parseInt(key)) return key;
-
-  if (key > 289 && key < 302) {
-    var num = key - 289;
-    return `f${num}`;
-  }
-
-  if (key >= 320 && key <= 329) {
-    var num = key - 320;
-    return `kp${num}`;
-  }
-
-  if (input.keycodes[key]) return input.keycodes[key];
-  if (key >= 32 && key <= 126) return String.fromCharCode(key).lc();
-
-  return undefined;
-}
-
 var downkeys = {};
 
-function modstr() {
+function keyname(key)
+{
+  var str = input.keyname(key);
+  return str.toLowerCase();
+}
+
+function modstr(mod = input.keymod()) {
   var s = "";
   if (mod.ctrl) s += "C-";
   if (mod.alt) s += "M-";
@@ -67,59 +14,52 @@ function modstr() {
   return s;
 }
 
-prosperon.keydown = function keydown(key, repeat) {
-  downkeys[key] = true;
-
-  if (key == 341 || key == 345) mod.ctrl = 1;
-  else if (key == 342 || key == 346) mod.alt = 1;
-  else if (key == 343 || key == 347) mod.super = 1;
-  else if (key == 340 || key == 344) mod.shift = 1;
-  else {
-    var emacs = modstr() + keyname_extd(key);
-    if (repeat) player[0].raw_input(emacs, "rep");
-    else player[0].raw_input(emacs, "pressed");
-  }
+prosperon.key_down = function key_down(e) {
+  downkeys[e.key] = true;
+  var emacs = modstr(e.mod) + keyname(e.key);
+  if (e.repeat) player[0].raw_input(emacs, "rep");
+  else player[0].raw_input(emacs, "pressed");
 };
 
-prosperon.keyup = function keyup(key) {
-  delete downkeys[key];
+prosperon.quit = function()
+{
+  os.exit(0);
+}
 
-  if (key == 341 || key == 345) mod.ctrl = 0;
-  else if (key == 342 || key == 346) mod.alt = 0;
-  else if (key == 343 || key == 347) mod.super = 0;
-  else if (key == 340 || key == 344) mod.shift = 0;
-  else {
-    var emacs = modstr() + keyname_extd(key);
-    player[0].raw_input(emacs, "released");
-  }
+prosperon.key_up = function key_up(e) {
+  delete downkeys[e.key];
+  var emacs = modstr(e.mod) + keyname(e.key);
+  player[0].raw_input(emacs, "released");
 };
 
-prosperon.droppedfile = function (path) {
+prosperon.drop_file = function (path) {
   player[0].raw_input("drop", "pressed", path);
 };
 
 var mousepos = [0, 0];
 
-prosperon.textinput = function (c) {
-  player[0].raw_input("char", "pressed", c);
+prosperon.text_input = function (e) {
+  player[0].raw_input("char", "pressed", e.text);
 };
-prosperon.mouse_move = function (pos, dx) {
-  pos.y *= -1;
-  dx.y *= -1;
-  mousepos = pos;
-  player[0].mouse_input("move", pos, dx);
+
+prosperon.mouse_motion = function (e)
+{
+  mousepos = e.pos;
+  player[0].mouse_input("move", e.pos, e.d_pos);
 };
-prosperon.mouse_scroll = function mousescroll(dx) {
-  player[0].mouse_input(modstr() + "scroll", dx);
+prosperon.mouse_wheel = function mousescroll(e) {
+  player[0].mouse_input(modstr() + "scroll", e.scroll);
 };
-prosperon.mousedown = function mousedown(b) {
-  player[0].raw_input(modstr() + input.mouse.button[b], "pressed");
-  downkeys[input.mouse.button[b]] = true;
-};
-prosperon.mouseup = function mouseup(b) {
-  player[0].raw_input(input.mouse.button[b], "released");
-  delete downkeys[input.mouse.button[b]];
-};
+
+prosperon.mouse_button_down = function(e)
+{
+  player[0].raw_input(modstr() + e.button, "pressed");  
+}
+
+prosperon.mouse_button_up = function(e)
+{
+  player[0].raw_input(modstr() + e.button, "released");
+}
 
 input.mouse = {};
 input.mouse.screenpos = function mouse_screenpos() {
@@ -152,28 +92,6 @@ input.mouse.set_custom_cursor = function mouse_cursor(img, mode = input.mouse.cu
     input.mouse.custom[mode] = img;
   }
 };
-
-input.mouse.button = {
-  /* left, right, middle mouse */
-  0: "lm",
-  1: "rm",
-  2: "mm",
-};
-input.mouse.custom = [];
-input.mouse.cursor = {
-  default: 0,
-  arrow: 1,
-  ibeam: 2,
-  cross: 3,
-  hand: 4,
-  ew: 5,
-  ns: 6,
-  nwse: 7,
-  nesw: 8,
-  resize: 9,
-  no: 10,
-};
-
 input.mouse.doc = {};
 input.mouse.doc.pos = "The screen position of the mouse.";
 input.mouse.doc.worldpos = "The position in the game world of the mouse.";
@@ -185,18 +103,6 @@ input.keyboard.down = function (code) {
   if (typeof code === "number") return downkeys[code];
   if (typeof code === "string") return downkeys[code.uc().charCodeAt()] || downkeys[code.lc().charCodeAt()];
   return undefined;
-};
-
-input.state2str = function (state) {
-  if (typeof state === "string") return state;
-  switch (state) {
-    case 0:
-      return "down";
-    case 1:
-      return "pressed";
-    case 2:
-      return "released";
-  }
 };
 
 input.print_pawn_kbm = function (pawn) {
@@ -219,7 +125,7 @@ joysticks["wasd"] = {
 };
 
 input.procdown = function procdown() {
-  for (var k in downkeys) player[0].raw_input(keyname_extd(k), "down");
+  for (var k in downkeys) player[0].raw_input(keyname(k), "down");
 
   for (var i in joysticks) {
     var joy = joysticks[i];
