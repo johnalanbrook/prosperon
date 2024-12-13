@@ -232,27 +232,6 @@ Cmdline.register_order(
     prosperon.width = 1280;
     prosperon.height = 720;
     prosperon.size = [1280, 720];    
-    prosperon.cleanup = function(){}
-    prosperon.event = function(e){
-      console.log(json.encode(e))
-      prosperon[e.type]?.(e);
-      switch(e.type) {
-        case "key_down":
-          prosperon.keydown(e.key_code, e.key_repeat);
-          break;
-        case "key_up":
-          prosperon.keyup(e.key_code);
-          break;
-        case "quit_requested":
-          os.exit(0);
-          break;
-        case "files_dropped":
-          console.log(json.encode(e));
-          break;
-        }
-      }
-
-    prosperon.frame = prosperon.process;
     prosperon.icon = os.make_texture(io.slurpbytes('core/icons/moon.gif'));
     prosperon.high_dpi = 0;
     prosperon.alpha = 1;

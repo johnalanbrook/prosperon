@@ -32,12 +32,10 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_error.h>
 
-#include <cv.hpp>
-
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
-#else
-#include <cblas.h>
+//#else
+//#include <cblas.h>
 #endif
 
 static JSAtom width_atom;
@@ -244,10 +242,6 @@ void SDL_Renderer_free(JSRuntime *rt, SDL_Renderer *r)
   SDL_DestroyRenderer(r);
 }
 
-void SDL_Texture_free(JSRuntime *rt, SDL_Texture *t){
-  TracyCFreeN(t, "vram");
-  SDL_DestroyTexture(t);
-}
 void SDL_Surface_free(JSRuntime *rt, SDL_Surface *s) {
   if (s->flags & SDL_SURFACE_PREALLOCATED)
     free(s->pixels);
@@ -298,11 +292,18 @@ QJSCLASS(skin)
 QJSCLASS(SDL_Window)
 QJSCLASS(SDL_Renderer)
 QJSCLASS(SDL_Camera)
+
+void SDL_Texture_free(JSRuntime *rt, SDL_Texture *t){
+  TracyCFreeN(t, "vram");
+  SDL_DestroyTexture(t);
+}
+
 QJSCLASS(SDL_Texture,
   TracyCAllocN(n, n->w*n->h*4, "vram");
   JS_SetProperty(js, j, width_atom, number2js(js,n->w));
   JS_SetProperty(js,j,height_atom,number2js(js,n->h));
 )
+
 QJSCLASS(SDL_Surface,
   TracyCAllocN(n, n->pitch*n->h, "texture memory"); 
   JS_SetProperty(js, j, width_atom, number2js(js,n->w));
@@ -883,10 +884,10 @@ JSValue js_vector_dot(JSContext *js, JSValue self, int argc, JSValue *argv) {
   size_t alen, blen;
   float *a = js2floats(js,argv[0], &alen);
   float *b = js2floats(js,argv[1], &blen);
-  JSValue ret = number2js(js, cblas_sdot(alen, a, 1, b,1));
+//  JSValue ret = number2js(js, cblas_sdot(alen, a, 1, b,1));
   free(a);
   free(b);
-  return ret;
+  return JS_UNDEFINED;
 };
 
 JSC_CCALL(vector_project, return vec22js(js,HMM_ProjV2(js2vec2(js,argv[0]), js2vec2(js,argv[1]))))
@@ -967,10 +968,12 @@ JSC_CCALL(vector_rotate,
   double angle = js2angle(js, argv[1]);
   HMM_Vec2 pivot = JS_IsUndefined(argv[2]) ? v2zero : js2vec2(js,argv[2]);  
   // vec = vec - pivot
-  cblas_saxpy(2, -1.0f, pivot.e, 1, vec.e, 1);
+//  cblas_saxpy(2, -1.0f, pivot.e, 1, vec.e, 1);
+  vec = HMM_SubV2(vec,pivot);
 
   // Length of the vector (r)
-  float r = sqrtf(cblas_sdot(2, vec.e, 1, vec.e, 1));
+//  float r = sqrtf(cblas_sdot(2, vec.e, 1, vec.e, 1));
+  float r = HMM_LenV2(vec);
   
   // Update angle
   angle += atan2f(vec.y, vec.x);
@@ -980,7 +983,8 @@ JSC_CCALL(vector_rotate,
   vec.y = r * sinf(angle);
 
   // vec = vec + pivot
-  cblas_saxpy(2, 1.0f, pivot.e, 1, vec.e, 1);
+//  cblas_saxpy(2, 1.0f, pivot.e, 1, vec.e, 1);
+  vec = HMM_AddV2(vec,pivot);
 
   // Convert back to JS and return
   return vec22js(js, vec);
@@ -1140,7 +1144,7 @@ JSC_CCALL(vector_fastsum,
   float sum = 0.0;
   size_t len;
   float *a = get_typed_buffer(js, argv[0], &len);
-  sum = cblas_sasum(len, a,1);
+//  sum = cblas_sasum(len, a,1);
   ret = number2js(js,sum);
 )
 
@@ -1224,7 +1228,7 @@ JSC_CCALL(vector_float32add,
   size_t len;
   float *vec_a = get_typed_buffer(js,self, &len);
   float *vec_b = get_typed_buffer(js,argv[0], &len);
-  cblas_saxpy(len,1.0f,vec_b,1,vec_a,1);
+//  cblas_saxpy(len,1.0f,vec_b,1,vec_a,1);
   JSValue tstack[3];
   tstack[0] = JS_NewArrayBufferCopy(js,vec_a,sizeof(float)*4);
   tstack[1] = JS_UNDEFINED;
@@ -1737,6 +1741,10 @@ static JSValue event2js(JSContext *js, SDL_Event event)
       JS_SetPropertyStr(js,e,"which", number2js(js,event.gsensor.which));
       JS_SetPropertyStr(js,e,"sensor", number2js(js,event.gsensor.sensor));
       JS_SetPropertyStr(js,e,"sensor_timestamp", number2js(js,event.gsensor.sensor_timestamp));
+      break;
+    case SDL_EVENT_USER:
+      JS_SetPropertyStr(js,e,"cb", JS_DupValue(js,*(JSValue*)event.user.data1));
+      JS_FreeValue(js,*(JSValue*)event.user.data1);
       break;
   }
   return e;
@@ -2533,9 +2541,22 @@ JSC_SCALL(prosperon_openurl,
     ret = JS_ThrowReferenceError(js, "unable to open url %s: %s\n", str, SDL_GetError());
 )
 
+JSC_CCALL(prosperon_push_event,
+  SDL_UserEvent e;
+  SDL_zero(e);
+  e.type = SDL_EVENT_USER;
+  e.timestamp = SDL_GetTicksNS();
+  e.code = 0;
+  JSValue fn = JS_DupValue(js,argv[0]);
+  e.data1 = malloc(sizeof(JSValue));
+  *(JSValue*)e.data1 = fn;
+  SDL_PushEvent(&e);
+)
+
 static const JSCFunctionListEntry js_prosperon_funcs[] = {
   MIST_FUNC_DEF(prosperon, guid, 0),
   MIST_FUNC_DEF(prosperon, openurl, 1),
+  MIST_FUNC_DEF(prosperon, push_event, 1),
 };
 
 JSC_CCALL(time_now, 
@@ -2993,7 +3014,9 @@ JSC_CCALL(geometry_rect_pos,
 JSC_CCALL(geometry_rect_move,
   rect r = js2rect(js,argv[0]);
   HMM_Vec2 move = js2vec2(js,argv[1]);
-  cblas_saxpy(2, 1.0f, move.e, 1, &r, 1);
+//  cblas_saxpy(2, 1.0f, move.e, 1, &r, 1);
+  r.x += move.x;
+  r.y += move.y;
   return rect2js(js,r);
 )
 
@@ -3294,9 +3317,11 @@ JSValue aseframe2js(JSContext *js, ase_frame_t aframe)
 JSC_CCALL(os_make_aseprite,
   size_t rawlen;
   void *raw = JS_GetArrayBuffer(js,&rawlen,argv[0]);
-  if (!raw) return JS_ThrowReferenceError(js, "could not load aseprite from supplied array buffer");
   
   ase_t *ase = cute_aseprite_load_from_memory(raw, rawlen, NULL);
+
+  if (!ase)
+    return JS_ThrowReferenceError(js, "could not load aseprite from supplied array buffer: %s", aseprite_GetError());
 
   int w = ase->w;
   int h = ase->h;
@@ -3700,13 +3725,13 @@ JSC_CCALL(os_make_sprite_mesh,
 )
 
 int detectImageInWebcam(SDL_Surface *a, SDL_Surface *b);
-JSC_CCALL(os_match_img,
+/*JSC_CCALL(os_match_img,
   SDL_Surface *img1 = js2SDL_Surface(js,argv[0]);
   SDL_Surface *img2 = js2SDL_Surface(js,argv[1]);
   int n = detectImageInWebcam(img1,img2);
   return number2js(js,n);
 )
-
+*/
 JSC_CCALL(os_sleep,
   double time = js2number(js,argv[0]);
   time *= 1000000000.;
@@ -3768,7 +3793,7 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, gltf_skin, 1),
   MIST_FUNC_DEF(os, skin_calculate, 1),
   MIST_FUNC_DEF(os, kill, 1),
-  MIST_FUNC_DEF(os, match_img, 2),
+//  MIST_FUNC_DEF(os, match_img, 2),
   MIST_FUNC_DEF(os, sleep, 1),
 };
 

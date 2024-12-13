@@ -151,6 +151,12 @@ Resources.is_image = function (path) {
   return Resources.images.some(x => x === ext);
 };
 
+Resources.shaders = ["hlsl", "glsl", "cg"]
+Resources.is_shader = function(path) {
+  var ext = path.ext();
+  return Resources.shaders.some(x => x === ext)
+}
+
 var res_cache = {};
 
 // ext is a list of extensions to search
@@ -268,11 +274,14 @@ console.info = function info(msg) {
 console.warn = function warn(msg) {
   console.pprint(msg, 3);
 };
-console.error = function error (msg) {
-  console.pprint(msg + "\n" + console.stackstr(2), 4);
+console.error = function error (e) {
+  console.log(e);
+  console.log(e.stack);
 };
-console.panic = function (msg) {
-  console.pprint(msg + "\n" + console.stackstr(2), 5);
+console.panic = function (e) {
+  console.log("PANIC!")
+  console.error(e);
+  os.quit();
 };
 console.stackstr = function (skip = 0) {
   var err = new Error();

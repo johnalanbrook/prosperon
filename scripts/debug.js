@@ -258,6 +258,15 @@ debug.break_var = function(obj,vars)
   });
 }
 
+debug.try = function(fn)
+{
+  try {
+    fn();
+  } catch(e) {
+    console.error(e)
+  }
+}
+
 return {
   debug,
   Gizmos,

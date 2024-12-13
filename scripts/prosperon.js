@@ -169,42 +169,75 @@ function calc_image_size(img)
   return [img.texture.width*img.rect.width, img.texture.height*img.rect.height];
 }
 
+function create_image(path)
+{
+  var data = io.slurpbytes(path);
+  var newimg;
+  switch(path.ext()) {
+    case 'gif':
+      newimg = os.make_gif(data);
+      if (newimg.surface) {
+        newimg.texture = render._main.load_texture(newimg.surface);
+        newimg.texture.mode(0);
+      }
+      else
+        for (var frame of newimg.frames) {
+          frame.texture = render._main.load_texture(frame.surface);
+          frame.texture.mode(0);
+        }
+      break;
+    case 'ase':
+    case 'aseprite':
+      console.log(`loading aseprite file ${path}`)
+      console.log(`buffer size is ${data.byteLength}`)
+      newimg = os.make_aseprite(data);
+      if (newimg.surface) {
+        newimg.texture = render._main.load_texture(newimg.surface);
+        newimg.texture.mode(0);
+      } else {
+        for (var anim in newimg) {
+          var a = newimg[anim];
+          for (var frame of a.frames) {
+            frame.texture = render._main.load_texture(frame.surface);
+            frame.texture.mode(0)
+          }
+        }
+      }
+      break;
+    default:
+      newimg = {
+        surface: os.make_texture(data)
+      };
+      newimg.texture = render._main.load_texture(newimg.surface);
+      newimg.texture.mode(0);
+      break;
+  }
+  return newimg;
+}
+
+function merge_objects(oldobj,newobj, properties) {
+  function recursive_merge(target,src) {
+    for (var key of Object.keys(src)) {
+      if (properties.includes(key)) {
+        target[key] = src[key];
+        continue;
+      }
+      if (src[key] && typeof src[key] === 'object' && target[key] && typeof target[key] === 'object')
+        recursive_merge(target[key],src[key])
+    }
+  }
+  recursive_merge(oldobj,newobj);
+}
+
 game.tex_hotreload = function tex_hotreload(file) {
   if (!(file in game.texture.cache)) return;
-  var data = io.slurpbytes(file);
-  var tex;
-  if (file.endsWith('.gif')) {
-    var anim = os.make_gif(data);
-    if (anim.frames.length !== 1) return;
-    console.info(json.encode(anim));
-    tex = anim.frames[0].texture;
-  } else if (file.endsWith('.ase') || file.endsWith('.aseprite')) {
-    var anim = os.make_aseprite(data);
-    if (anim.texture) // single picture
-      tex = anim.texture;
-    else {
-      var oldanim = game.texture.cache[file];
-      // load all into gpu
-      for (var a in anim) {
-        oldanim[a] = anim[a];
-        for (let frame of anim[a].frames)
-          frame.texture.load_gpu();
-      }
-      return;
-    }
-  } else
-    tex = os.make_texture(data);
-  
-  var img = game.texture.cache[file];
-  tex.load_gpu();
-  console.info(`replacing ${json.encode(img)}`)
-  img.texture = tex;
-  img.rect = {
-    x:0,
-    y:0,
-    width:1,
-    height:1
-  };
+
+  var img = create_image(file);
+  var oldimg = game.texture.cache[file];
+  console.log(json.encode(img))
+
+  merge_objects(oldimg,img, ['surface', 'texture', 'loop', 'time']);
+  game.texture.cache[file] = img;
 };
 
 var image = {};
@@ -264,48 +297,8 @@ game.texture = function texture(path) {
   var parts = path.split(':');
   path = Resources.find_image(parts[0]);
 
-  if (game.texture.cache[path]) return game.texture.cache[path];
-  var data = io.slurpbytes(path);
-  var newimg;
-  switch(path.ext()) {
-    case 'gif':
-      newimg = os.make_gif(data);
-      if (newimg.surface) {
-        newimg.texture = render._main.load_texture(newimg.surface);
-        newimg.texture.mode(0);
-      }
-      else
-        for (var frame of newimg.frames) {
-          frame.texture = render._main.load_texture(frame.surface);
-          frame.texture.mode(0);
-        }
-      break;
-    case 'ase':
-    case 'aseprite':
-      newimg = os.make_aseprite(data);
-      if (newimg.surface) {
-        newimg.texture = render._main.load_texture(newimg.surface);
-        newimg.texture.mode(0);
-      } else {
-        for (var anim in newimg) {
-          var a = newimg[anim];
-          for (var frame of a.frames) {
-            frame.texture = render._main.load_texture(frame.surface);
-            frame.texture.mode(0)
-          }
-        }
-      }
-      break;
-    default:
-      newimg = {
-        surface: os.make_texture(data)
-      };
-      newimg.texture = render._main.load_texture(newimg.surface);
-      newimg.texture.mode(0);
-      break;
-  }
-  game.texture.cache[path] = newimg;
-  return newimg;
+  game.texture.cache[path] ??= create_image(path);
+  return game.texture.cache[path];
 
   // Look for a cached version
   var frame;

@@ -12,6 +12,8 @@ endif
 add_project_arguments('-Wno-incompatible-pointer-types', language: 'c')
 add_project_arguments('-Wno-narrowing', language: 'cpp')
 add_project_arguments('-Wno-missing-braces', language:'c')
+add_project_arguments('-Wl,--disable-new-dtags', language:'cpp')
+add_project_arguments('-Wl,--disable-new-dtags', language:'c')
 
 deps = []
 
@@ -24,14 +26,12 @@ if host_machine.system() == 'darwin'
 endif
 
 cc = meson.get_compiler('c')
-  deps += dependency('sdl3')  
+deps += dependency('sdl3') 
+
 if host_machine.system() == 'darwin'
   deps += dependency('appleframeworks', modules: 'accelerate')
   add_project_arguments('-DACCELERATE_NEW_LAPACK=1', language:'c')
   add_project_arguments('-DACCELERATE_LAPACK_ILP64=1', language:'c')
-else
-  deps += dependency('cblas')
-
 endif
 
 if host_machine.system() == 'linux'
@@ -43,7 +43,7 @@ endif
 if host_machine.system() == 'windows'
   deps += cc.find_library('d3d11')
   # these are for tracy
-  deps += cc.find_library('ws2_32')
+  deps += cc.find_library('ws2_32', required:true)
   deps += cc.find_library('dbghelp')
   #end
   link += '-static' # Required to pack in mingw dlls on cross compilation
@@ -74,10 +74,9 @@ deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
 
-deps += dependency('physfs',static:true)
+deps += dependency('physfs')
 
-
-deps += dependency('opencv4')
+#deps += dependency('opencv4')
 #deps += cc.find_library('opencv')
 
 deps += dependency('threads')
@@ -91,7 +90,7 @@ if get_option('enet')
 endif
 
 sources = []
-src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c', 'timer.c', 'transform.c','warp.c','yugine.c',  'wildmatch.c', 'cv.cpp']
+src += ['anim.c', 'config.c', 'datastream.c','font.c','gameobject.c','HandmadeMath.c','jsffi.c','model.c','render.c','script.c','simplex.c','spline.c', 'timer.c', 'transform.c','warp.c','yugine.c',  'wildmatch.c']
 
 imsrc = ['GraphEditor.cpp','ImCurveEdit.cpp','ImGradient.cpp','imgui_draw.cpp','imgui_tables.cpp','imgui_widgets.cpp','imgui.cpp','ImGuizmo.cpp','imnodes.cpp','implot_items.cpp','implot.cpp', 'imgui_impl_sdlrenderer3.cpp', 'imgui_impl_sdl3.cpp']
 

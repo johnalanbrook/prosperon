@@ -1,7 +1,6 @@
-/* This file runs after the audio system is initiated */
+soloud.init();
 
 var audio = {};
-soloud.init();
 var pcms = {};
 
 audio.pcm = function pcm(file)

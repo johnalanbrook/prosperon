@@ -1053,7 +1053,7 @@ render.tile = function tile(image, rect = [0,0], color = Color.white)
   return;
 }
 
-render.geometry = function(material, geometry)
+render.geometry = function geometry(material, geometry)
 {
   render._main.geometry(material.diffuse.texture, geometry);
 }
@@ -1395,20 +1395,27 @@ var imgui_fn = function imgui_fn() {
     prosperon.menu_hook?.();
   });
 
+/*
   if (observed_tex) {
     imgui.window("texture", _ => {
-      imgui.image(observed_tex.texture);
+      imgui.image(observed_tex);
     });
   }
 
+  var texs = {};
+  for (var path in game.texture.cache) {
+    var image = game.texture.cache[path];
+    if (image.texture && !texs[image.texture])
+      texs[image.texture] = image.texture;
+  }
   imgui.window("textures", _ => {
-    for (var img in game.texture.cache) {
+    for (var img in texs) {
       imgui.button(img, _ => {
-        observed_tex = game.texture.cache[img];
+        observed_tex = texs[img];
       });
     }
   });
-
+*/
   prosperon.imgui();
   imgui.endframe(render._main);
 };
@@ -1433,17 +1440,15 @@ var present_thread = undefined;
 var clearcolor = [100,149,237,255].scale(1/255);
 prosperon.render = function prosperon_render() {
 try{
-
   render._main.draw_color(clearcolor);
   render._main.clear();
-  // render each camera
-  prosperon.camera.render();
-//  prosperon.app();
-  if (debug.show) imgui_fn();
+  
+try { prosperon.camera.render(); } catch(e) { console.error(e) }
+try { prosperon.app(); } catch(e) { console.error(e) }
+if (debug.show) try { imgui_fn(); } catch(e) { console.error(e) }
+
 } catch(e) {
-  console.log(e);
-  console.log(e.stack)
-//  throw e;
+  console.error(e)
 } finally {
   if (present_thread) present_thread.wait();
   present_thread = render._main.present();
@@ -1455,38 +1460,40 @@ if (dmon) dmon.watch('.');
 
 function dmon_cb(e)
 {
-  io.invalidated();
-  
+try {
+  io.invalidate();
   if (e.file.startsWith('.')) return;
   if (e.file.endsWith('.js'))
     actor.hotreload(e.file);
   else if (Resources.is_image(e.file))
     game.tex_hotreload(e.file);
-  else if (e.file.endsWith('.cg')) // shader
-    render.hotreload(e.file);
+} catch(e) { console.error(e); }
 }
 
 // Ran once per frame
 prosperon.process = function process() {
+try {
   layout.newframe();
   // check for hot reloading
   if (dmon) dmon.poll(dmon_cb);
   var dt = profile.now() - frame_t;
   frame_t = profile.now();
 
-  prosperon.appupdate(dt);
-
-  input.procdown();
-
   game.engine_input(e => {
     prosperon[e.type]?.(e);
   });
-  
+
+try { prosperon.appupdate(dt); } catch(e) { console.error(e) }
+
+  input.procdown();
+
+try {
   update_emitters(dt * game.timescale);
   os.update_timers(dt * game.timescale);
-  prosperon.update(dt*game.timescale);  
-  if (sim.mode === "step") sim.pause();
+  prosperon.update(dt*game.timescale);
+} catch(e) { console.error(e) }
 
+  if (sim.mode === "step") sim.pause();
   if (sim.mode === "play" || sim.mode === "step") {
 /* 
     physlag += dt;
@@ -1501,8 +1508,9 @@ prosperon.process = function process() {
 
   prosperon.render();
 //  tracy.gpu_zone(prosperon.render);
+} catch(e) {
+  console.error(e)
+}
 };
-
-
 
 return { render };

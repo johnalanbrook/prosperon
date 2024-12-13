@@ -306,11 +306,31 @@ struct ase_t
 	void* mem_ctx;
 };
 
+#define ASEPRITE_ERROR_MAX 256
+static char aseprite_error[ASEPRITE_ERROR_MAX] = {0};
+
+static const char *aseprite_GetError() {
+  return aseprite_error;
+}
+
+static void aseprite_clear_error() {
+  aseprite_error[0] = 0;
+}
+
+static void aseprite_set_error(const char *msg) {
+  if (msg) {
+    strncpy(aseprite_error, msg, ASEPRITE_ERROR_MAX-1);
+    aseprite_error[ASEPRITE_ERROR_MAX-1] = 0;
+  } else
+    aseprite_error[0] = 0;
+}
+
 #endif // CUTE_ASEPRITE_H
 
 #ifdef CUTE_ASEPRITE_IMPLEMENTATION
 #ifndef CUTE_ASEPRITE_IMPLEMENTATION_ONCE
 #define CUTE_ASEPRITE_IMPLEMENTATION_ONCE
+
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 	#define _CRT_SECURE_NO_WARNINGS
@@ -925,9 +945,12 @@ static ase_color_t s_color(ase_t* ase, void* src, int index)
 
 ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ctx)
 {
-	ase_t* ase = (ase_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_t), mem_ctx);
-	CUTE_ASEPRITE_MEMSET(ase, 0, sizeof(*ase));
-
+  aseprite_clear_error();
+  if (!memory || size < 6) {
+    aseprite_set_error("Invalid memory buffer or size too small.");
+    return NULL;
+  }
+  
 	ase_state_t state = { 0, 0, 0 };
 	ase_state_t* s = &state;
 	s->in = (uint8_t*)memory;
@@ -936,7 +959,19 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 
 	s_skip(s, sizeof(uint32_t)); // File size.
 	int magic = (int)s_read_uint16(s);
-	CUTE_ASEPRITE_ASSERT(magic == 0xA5E0);
+  if (magic != 0xA5E0) { 
+    aseprite_set_error("Incorrect magic number. Not a valid Aseprite file.");
+    return NULL;
+  }
+
+  #define LOAD_ERROR(msg) { aseprite_set_error(msg); cute_aseprite_free(ase); return NULL; }
+
+	ase_t* ase = (ase_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_t), mem_ctx);
+  if (!ase) {
+    aseprite_set_error("Failed to allocate memory for aseprite import.");
+    return NULL;
+  }
+	CUTE_ASEPRITE_MEMSET(ase, 0, sizeof(*ase));
 
 	ase->frame_count = (int)s_read_uint16(s);
 	ase->w = s_read_uint16(s);
@@ -944,10 +979,11 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	uint16_t bpp = s_read_uint16(s) / 8;
 	if (bpp == 4) ase->mode = ASE_MODE_RGBA;
 	else if (bpp == 2) ase->mode = ASE_MODE_GRAYSCALE;
-	else {
-		CUTE_ASEPRITE_ASSERT(bpp == 1);
-		ase->mode = ASE_MODE_INDEXED;
-	}
+	else if (bpp == 1)
+    ase->mode = ASE_MODE_INDEXED;
+  else
+    LOAD_ERROR("Unsupported bits per pixel.");
+
 	uint32_t valid_layer_opacity = s_read_uint32(s) & 1;
 	int speed = s_read_uint16(s);
 	s_skip(s, sizeof(uint32_t) * 2); // Spec says skip these bytes, as they're zero'd.
@@ -963,6 +999,9 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	s_skip(s, 84); // For future use (set to zero).
 
 	ase->frames = (ase_frame_t*)CUTE_ASEPRITE_ALLOC((int)(sizeof(ase_frame_t)) * ase->frame_count, mem_ctx);
+  if (!ase->frames)
+    LOAD_ERROR("Failed to allocate memory for frames.");
+    
 	CUTE_ASEPRITE_MEMSET(ase->frames, 0, sizeof(ase_frame_t) * (size_t)ase->frame_count);
 
 	ase_udata_t* last_udata = NULL;
@@ -977,7 +1016,9 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		frame->ase = ase;
 		s_skip(s, sizeof(uint32_t)); // Frame size.
 		magic = (int)s_read_uint16(s);
-		CUTE_ASEPRITE_ASSERT(magic == 0xF1FA);
+    if (magic != 0xF1FA)
+      LOAD_ERROR("Frame is not an aseprite magic number.");
+
 		int chunk_count = (int)s_read_uint16(s);
 		frame->duration_milliseconds = s_read_uint16(s);
 		if (frame->duration_milliseconds == 0) frame->duration_milliseconds = speed;
