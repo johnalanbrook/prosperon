@@ -79,7 +79,7 @@ prosperon.SIGSEGV = function()
 
 prosperon.init = function () {
   render.init();
-  imgui.init(render._main);
+//  imgui.init(render._main);
   tracy.gpu_init();
 
   globalThis.audio = use("sound.js");
@@ -188,8 +188,6 @@ function create_image(path)
       break;
     case 'ase':
     case 'aseprite':
-      console.log(`loading aseprite file ${path}`)
-      console.log(`buffer size is ${data.byteLength}`)
       newimg = os.make_aseprite(data);
       if (newimg.surface) {
         newimg.texture = render._main.load_texture(newimg.surface);

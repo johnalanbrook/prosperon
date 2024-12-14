@@ -54,6 +54,55 @@ static JSAtom src_atom;
 static JSAtom count_atom;
 static JSAtom transform_atom;
 
+// GPU ATOMS  
+static JSAtom cw_atom;
+static JSAtom ccw_atom;
+static JSAtom zero_atom;
+static JSAtom one_atom;
+static JSAtom add_atom;
+static JSAtom sub_atom;
+static JSAtom rev_sub_atom;
+static JSAtom min_atom;
+static JSAtom max_atom;
+static JSAtom none_atom;
+static JSAtom front_atom;
+static JSAtom back_atom;
+static JSAtom never_atom;
+static JSAtom less_atom;
+static JSAtom equal_atom;
+static JSAtom less_equal_atom;
+static JSAtom greater_atom;
+static JSAtom not_equal_atom;
+static JSAtom greater_equal_atom;
+static JSAtom always_atom;
+static JSAtom keep_atom;
+static JSAtom zero_stencil_atom;
+static JSAtom replace_atom;
+static JSAtom incr_clamp_atom;
+static JSAtom decr_clamp_atom;
+static JSAtom invert_atom;
+static JSAtom incr_wrap_atom;
+static JSAtom decr_wrap_atom;
+static JSAtom point_atom;
+static JSAtom line_atom;
+static JSAtom linestrip_atom;
+static JSAtom triangle_atom;
+static JSAtom trianglestrip_atom;
+static JSAtom src_color_atom;
+static JSAtom one_minus_src_color_atom;
+static JSAtom dst_color_atom;
+static JSAtom one_minus_dst_color_atom;
+static JSAtom src_alpha_atom;
+static JSAtom one_minus_src_alpha_atom;
+static JSAtom dst_alpha_atom;
+static JSAtom one_minus_dst_alpha_atom;
+static JSAtom constant_color_atom;
+static JSAtom one_minus_constant_color_atom;
+static JSAtom src_alpha_saturate_atom;
+static JSAtom none_cull_atom;
+static JSAtom front_cull_atom;
+static JSAtom back_cull_atom;
+
 static inline size_t typed_array_bytes(JSTypedArrayEnum type) {
     switch(type) {
         case JS_TYPED_ARRAY_UINT8C:
@@ -1844,6 +1893,13 @@ JSC_SCALL(SDL_Window_make_renderer,
   return SDL_Renderer2js(js,r);
 )
 
+JSC_SCALL(SDL_Window_make_gpu,
+  SDL_Window *win = js2SDL_Window(js,self);
+  SDL_GPUDevice *gpu = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, 1, NULL);
+  SDL_ClaimWindowForGPUDevice(gpu, win);
+  return SDL_GPUDevice2js(js,gpu);
+)
+
 JSC_CCALL(SDL_Window_fullscreen,
   SDL_SetWindowFullscreen(js2SDL_Window(js,self), SDL_WINDOW_FULLSCREEN)
 )
@@ -1923,6 +1979,7 @@ JSValue js_window_mouse_grab(JSContext *js, JSValue self, int argc, JSValue *arg
 static const JSCFunctionListEntry js_SDL_Window_funcs[] = {
   MIST_FUNC_DEF(SDL_Window, fullscreen, 0),
   MIST_FUNC_DEF(SDL_Window, make_renderer, 1),
+  MIST_FUNC_DEF(SDL_Window, make_gpu, 0),
   MIST_FUNC_DEF(SDL_Window, keyboard_shown, 0),
   MIST_FUNC_DEF(window, theme, 0),
   MIST_FUNC_DEF(window, safe_area, 0),
@@ -2326,6 +2383,7 @@ static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(renderer, target, 1),
 };
 
+// GPU API
 JSC_CCALL(gpu_claim_window,
   SDL_GPUDevice *d = js2SDL_GPUDevice(js,self);
   SDL_Window *w = js2SDL_Window(js, argv[0]);
@@ -2339,9 +2397,534 @@ JSC_CCALL(gpu_graphics_pipeline,
   // etc ...
 )
 
+JSC_CCALL(gpu_load_texture,
+  SDL_GPUDevice *d = js2SDL_GPUDevice(js,self);
+  SDL_Surface *surf = js2SDL_Surface(js,argv[0]);
+  if (!surf) return JS_ThrowReferenceError(js, "Surface was not a surface.");
+  SDL_GPUTexture *tex = SDL_CreateGPUTexture(d, &(SDL_GPUTextureCreateInfo) {
+    .type = SDL_GPU_TEXTURETYPE_2D,
+    .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+    .width = surf->w,
+    .height = surf->h,
+    .layer_count_or_depth = 1,
+    .num_levels = 1,
+    .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER
+  });
+  SDL_GPUTransferBuffer *tex_buffer = SDL_CreateGPUTransferBuffer(
+    d,
+    &(SDL_GPUTransferBufferCreateInfo) {
+      .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+      .size = surf->pitch*surf->h
+    });
+  void *tex_ptr = SDL_MapGPUTransferBuffer(
+    d,
+    tex_buffer,
+    false
+  );
+  memcpy(tex_ptr, surf->pixels, surf->pitch*surf->h);
+  SDL_UnmapGPUTransferBuffer(d, tex_buffer);
+  SDL_GPUCommandBuffer *uploadcmd = SDL_AcquireGPUCommandBuffer(d);
+  SDL_GPUCopyPass *copypass = SDL_BeginGPUCopyPass(uploadcmd);
+  SDL_UploadToGPUTexture(
+    copypass,
+    &(SDL_GPUTextureTransferInfo) {
+      .transfer_buffer = tex_buffer,
+      .offset = 0
+    },
+    &(SDL_GPUTextureRegion) {
+      .texture = tex,
+      .w = surf->w,
+      .h = surf->h,
+      .d = 1
+    },
+    false
+  );
+
+  SDL_EndGPUCopyPass(copypass);
+  SDL_SubmitGPUCommandBuffer(uploadcmd);
+  SDL_ReleaseGPUTransferBuffer(d,tex_buffer);
+
+  ret = SDL_GPUTexture2js(js,tex);
+  JS_SetProperty(js,ret,width_atom, number2js(js,surf->w));
+  JS_SetProperty(js,ret,height_atom, number2js(js,surf->h));
+)
+
+JSC_CCALL(gpu_logical_size,
+)
+
+static SDL_GPUVertexInputState state_2d;
+
+int atom2front_face(JSAtom atom)
+{
+	if(atom == cw_atom) return SDL_GPU_FRONTFACE_CLOCKWISE;
+	else return SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+}
+
+int atom2cull_mode(JSAtom atom)
+{
+	if(atom == front_atom) return SDL_GPU_CULLMODE_FRONT;
+	else if(atom == back_atom) return SDL_GPU_CULLMODE_BACK;
+	else return SDL_GPU_CULLMODE_NONE;
+}
+
+int atom2primitive_type(JSAtom atom)
+{
+	if(atom == point_atom) return SDL_GPU_PRIMITIVETYPE_POINTLIST;
+	else if(atom == line_atom) return SDL_GPU_PRIMITIVETYPE_LINELIST;
+	else if(atom == linestrip_atom) return SDL_GPU_PRIMITIVETYPE_LINESTRIP;
+	else if(atom == trianglestrip_atom) return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+	else return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+}
+
+int atom2depth_compare(JSAtom atom)
+{
+	if(atom == never_atom) return SDL_GPU_COMPAREOP_NEVER;
+	else if(atom == less_atom) return SDL_GPU_COMPAREOP_LESS;
+	else if(atom == equal_atom) return SDL_GPU_COMPAREOP_EQUAL;
+	else if(atom == less_equal_atom) return SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+	else if(atom == greater_atom) return SDL_GPU_COMPAREOP_GREATER;
+	else if(atom == not_equal_atom) return SDL_GPU_COMPAREOP_NOT_EQUAL;
+	else if(atom == greater_equal_atom) return SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+	else return SDL_GPU_COMPAREOP_ALWAYS;
+}
+
+int atom2stencil_op(JSAtom atom)
+{
+	if(atom == keep_atom) return SDL_GPU_STENCILOP_KEEP;
+	else if(atom == zero_stencil_atom) return SDL_GPU_STENCILOP_ZERO;
+	else if(atom == replace_atom) return SDL_GPU_STENCILOP_REPLACE;
+	else if(atom == incr_clamp_atom) return SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP;
+	else if(atom == decr_clamp_atom) return SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP;
+	else if(atom == invert_atom) return SDL_GPU_STENCILOP_INVERT;
+	else if(atom == incr_wrap_atom) return SDL_GPU_STENCILOP_INCREMENT_AND_WRAP;
+	else if(atom == decr_wrap_atom) return SDL_GPU_STENCILOP_DECREMENT_AND_WRAP;
+	else return SDL_GPU_STENCILOP_KEEP;
+}
+
+int atom2blend_factor(JSAtom atom)
+{
+	if(atom == zero_atom) return SDL_GPU_BLENDFACTOR_ZERO;
+	else if(atom == one_atom) return SDL_GPU_BLENDFACTOR_ONE;
+	else if(atom == src_color_atom) return SDL_GPU_BLENDFACTOR_SRC_COLOR;
+	else if(atom == one_minus_src_color_atom) return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+	else if(atom == dst_color_atom) return SDL_GPU_BLENDFACTOR_DST_COLOR;
+	else if(atom == one_minus_dst_color_atom) return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR;
+	else if(atom == src_alpha_atom) return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+	else if(atom == one_minus_src_alpha_atom) return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	else if(atom == dst_alpha_atom) return SDL_GPU_BLENDFACTOR_DST_ALPHA;
+	else if(atom == one_minus_dst_alpha_atom) return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	else if(atom == constant_color_atom) return SDL_GPU_BLENDFACTOR_CONSTANT_COLOR;
+	else if(atom == one_minus_constant_color_atom) return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
+	else if(atom == src_alpha_saturate_atom) return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
+	else return SDL_GPU_BLENDFACTOR_ONE;
+}
+
+int atom2blend_op(JSAtom atom)
+{
+	if(atom == add_atom) return SDL_GPU_BLENDOP_ADD;
+	else if(atom == sub_atom) return SDL_GPU_BLENDOP_SUBTRACT;
+	else if(atom == rev_sub_atom) return SDL_GPU_BLENDOP_REVERSE_SUBTRACT;
+	else if(atom == min_atom) return SDL_GPU_BLENDOP_MIN;
+	else if(atom == max_atom) return SDL_GPU_BLENDOP_MAX;
+	else return SDL_GPU_BLENDOP_ADD;
+}
+
+JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *argv) {
+  SDL_GPUDevice *device = js2SDL_GPUDevice(js,self);
+  if (argc < 1)
+    return JS_ThrowTypeError(js, "gpu_pipeline requires a pipeline object");
+
+  JSValue pipe = argv[0];
+  if (!JS_IsObject(pipe))
+    return JS_ThrowTypeError(js, "gpu_pipeline argument must be an object");
+
+
+  SDL_GPUGraphicsPipelineCreateInfo info = {0};
+
+  // Vertex and Fragment Shaders
+  JSValue vertex_val = JS_GetPropertyStr(js, pipe, "vertex");
+  if (JS_IsUndefined(vertex_val)) {
+    JS_FreeValue(js, vertex_val);
+    return JS_ThrowTypeError(js, "pipeline object must have a 'vertex' shader");
+  }
+  
+  info.vertex_shader = js2SDL_GPUShader(js, vertex_val);
+  JS_FreeValue(js, vertex_val);
+
+  JSValue fragment_val = JS_GetPropertyStr(js, pipe, "fragment");
+  if (JS_IsUndefined(fragment_val)) {
+    JS_FreeValue(js, fragment_val);
+    return JS_ThrowTypeError(js, "pipeline object must have a 'fragment' shader");
+  }
+  info.fragment_shader = js2SDL_GPUShader(js, fragment_val);
+  JS_FreeValue(js, fragment_val);
+
+  if (info.vertex_shader == NULL || info.fragment_shader == NULL) return JS_ThrowInternalError(js, "Failed to retrieve shaders");
+
+  // Vertex Input State
+//  info.vertex_input_state = state2d; // Assuming state2d is predefined
+
+  // Primitive Type
+  JSValue primitive_val = JS_GetPropertyStr(js, pipe, "primitive");
+  JSAtom primitive_atom = JS_ValueToAtom(js, primitive_val);
+  info.primitive_type = atom2primitive_type(primitive_atom);
+  JS_FreeAtom(js, primitive_atom);
+  JS_FreeValue(js, primitive_val);
+
+  // Rasterizer State
+  // Fill Mode
+  JSValue fill_val = JS_GetPropertyStr(js, pipe, "fill");
+  info.rasterizer_state.fill_mode = JS_ToBool(js, fill_val) ? SDL_GPU_FILLMODE_FILL : SDL_GPU_FILLMODE_LINE;
+  JS_FreeValue(js, fill_val);
+
+  // Cull Mode
+  JSValue cull_val = JS_GetPropertyStr(js, pipe, "cull");
+  JSAtom cull_atom = JS_ValueToAtom(js, cull_val);
+  info.rasterizer_state.cull_mode = atom2cull_mode(cull_atom);
+  JS_FreeAtom(js, cull_atom);
+  JS_FreeValue(js, cull_val);
+
+  // Front Face
+  JSValue face_val = JS_GetPropertyStr(js, pipe, "face");
+  JSAtom face_atom = JS_ValueToAtom(js, face_val);
+  info.rasterizer_state.front_face = atom2front_face(face_atom);
+  JS_FreeAtom(js, face_atom);
+  JS_FreeValue(js, face_val);
+
+  // Depth Bias (assuming defaults if not specified)
+  JSValue depth_bias_val = JS_GetPropertyStr(js, pipe, "depth_bias");
+  if (!JS_IsUndefined(depth_bias_val)) JS_ToFloat64(js, &info.rasterizer_state.depth_bias_constant_factor, depth_bias_val);
+  JS_FreeValue(js, depth_bias_val);
+
+  JSValue depth_bias_slope_scale_val = JS_GetPropertyStr(js, pipe, "depth_bias_slope_scale");
+  if (!JS_IsUndefined(depth_bias_slope_scale_val))
+    JS_ToFloat64(js, &info.rasterizer_state.depth_bias_slope_factor, depth_bias_slope_scale_val);
+
+  JS_FreeValue(js, depth_bias_slope_scale_val);
+
+  JSValue depth_bias_clamp_val = JS_GetPropertyStr(js, pipe, "depth_bias_clamp");
+  if (!JS_IsUndefined(depth_bias_clamp_val))
+    JS_ToFloat64(js, &info.rasterizer_state.depth_bias_clamp, depth_bias_clamp_val);
+  JS_FreeValue(js, depth_bias_clamp_val);
+
+  // Enable Depth Bias (assuming false if not specified)
+  JSValue enable_depth_bias_val = JS_GetPropertyStr(js, pipe, "enable_depth_bias");
+  info.rasterizer_state.enable_depth_bias = JS_ToBool(js, enable_depth_bias_val);
+  JS_FreeValue(js, enable_depth_bias_val);
+
+  // Enable Depth Clip (assuming true if not specified)
+  JSValue enable_depth_clip_val = JS_GetPropertyStr(js, pipe, "enable_depth_clip");
+  if (JS_IsUndefined(enable_depth_clip_val))
+    info.rasterizer_state.enable_depth_clip = true; // Default
+  else
+  info.rasterizer_state.enable_depth_clip = JS_ToBool(js, enable_depth_clip_val);
+  JS_FreeValue(js, enable_depth_clip_val);
+
+  // Depth Stencil State
+  JSValue depth_val = JS_GetPropertyStr(js, pipe, "depth");
+  if (JS_IsObject(depth_val)) {
+    JSValue compare_val = JS_GetPropertyStr(js, depth_val, "compare");
+    if (!JS_IsUndefined(compare_val)) {
+      JSAtom compare_atom = JS_ValueToAtom(js, compare_val);
+      info.depth_stencil_state.compare_op = atom2depth_compare(compare_atom);
+      JS_FreeAtom(js, compare_atom);
+    }
+    JS_FreeValue(js, compare_val);
+
+    // Enable Depth Test
+    JSValue test_val = JS_GetPropertyStr(js, depth_val, "test");
+    if (!JS_IsUndefined(test_val))
+      info.depth_stencil_state.enable_depth_test = JS_ToBool(js, test_val);
+
+    JS_FreeValue(js, test_val);
+
+    // Enable Depth Write
+    JSValue write_val = JS_GetPropertyStr(js, depth_val, "write");
+    if (!JS_IsUndefined(write_val))
+      info.depth_stencil_state.enable_depth_write = JS_ToBool(js, write_val);
+    JS_FreeValue(js, write_val);
+
+    // Depth Bias Factors
+    JSValue bias_val = JS_GetPropertyStr(js, depth_val, "bias");
+    if (!JS_IsUndefined(bias_val))
+      JS_ToFloat64(js, &info.rasterizer_state.depth_bias_constant_factor, bias_val);
+    JS_FreeValue(js, bias_val);
+
+    JSValue bias_slope_scale_val = JS_GetPropertyStr(js, depth_val, "bias_slope_scale");
+    if (!JS_IsUndefined(bias_slope_scale_val))
+      JS_ToFloat64(js, &info.rasterizer_state.depth_bias_slope_factor, bias_slope_scale_val);
+    JS_FreeValue(js, bias_slope_scale_val);
+
+    JSValue bias_clamp_val = JS_GetPropertyStr(js, depth_val, "bias_clamp");
+    if (!JS_IsUndefined(bias_clamp_val))
+      JS_ToFloat64(js, &info.rasterizer_state.depth_bias_clamp, bias_clamp_val);
+    JS_FreeValue(js, bias_clamp_val);
+  }
+  JS_FreeValue(js, depth_val);
+
+  // Stencil State
+  JSValue stencil_val = JS_GetPropertyStr(js, pipe, "stencil");
+  if (JS_IsObject(stencil_val)) {
+    JSValue enabled_val = JS_GetPropertyStr(js, stencil_val, "enabled");
+    if (!JS_IsUndefined(enabled_val))
+      info.depth_stencil_state.enable_stencil_test = JS_ToBool(js, enabled_val);
+    JS_FreeValue(js, enabled_val);
+
+    // Front Stencil
+    JSValue front_val = JS_GetPropertyStr(js, stencil_val, "front");
+    if (JS_IsObject(front_val)) {
+      JSValue compare_val = JS_GetPropertyStr(js, front_val, "compare");
+      if (!JS_IsUndefined(compare_val)) {
+        JSAtom compare_atom = JS_ValueToAtom(js, compare_val);
+        info.depth_stencil_state.front_stencil_state.compare_op = atom2depth_compare(compare_atom);
+        JS_FreeAtom(js, compare_atom);
+      }
+      JS_FreeValue(js, compare_val);
+
+      JSValue fail_val = JS_GetPropertyStr(js, front_val, "fail");
+      if (!JS_IsUndefined(fail_val)) {
+        JSAtom fail_atom = JS_ValueToAtom(js, fail_val);
+        info.depth_stencil_state.front_stencil_state.fail_op = atom2stencil_op(fail_atom);
+        JS_FreeAtom(js, fail_atom);
+      }
+      JS_FreeValue(js, fail_val);
+
+      JSValue depth_fail_val = JS_GetPropertyStr(js, front_val, "depth_fail");
+      if (!JS_IsUndefined(depth_fail_val)) {
+        JSAtom depth_fail_atom = JS_ValueToAtom(js, depth_fail_val);
+        info.depth_stencil_state.front_stencil_state.depth_fail_op = atom2stencil_op(depth_fail_atom);
+        JS_FreeAtom(js, depth_fail_atom);
+      }
+      JS_FreeValue(js, depth_fail_val);
+
+            JSValue pass_val = JS_GetPropertyStr(js, front_val, "pass");
+            if (!JS_IsUndefined(pass_val)) {
+                JSAtom pass_atom = JS_ValueToAtom(js, pass_val);
+                info.depth_stencil_state.front_stencil_state.pass_op = atom2stencil_op(pass_atom);
+                JS_FreeAtom(js, pass_atom);
+            }
+            JS_FreeValue(js, pass_val);
+        }
+        JS_FreeValue(js, front_val);
+
+        // Back Stencil
+        JSValue back_val = JS_GetPropertyStr(js, stencil_val, "back");
+        if (JS_IsObject(back_val)) {
+            JSValue compare_val = JS_GetPropertyStr(js, back_val, "compare");
+            if (!JS_IsUndefined(compare_val)) {
+                JSAtom compare_atom = JS_ValueToAtom(js, compare_val);
+                info.depth_stencil_state.back_stencil_state.compare_op = atom2depth_compare(compare_atom);
+                JS_FreeAtom(js, compare_atom);
+            }
+            JS_FreeValue(js, compare_val);
+
+            JSValue fail_val = JS_GetPropertyStr(js, back_val, "fail");
+            if (!JS_IsUndefined(fail_val)) {
+                JSAtom fail_atom = JS_ValueToAtom(js, fail_val);
+                info.depth_stencil_state.back_stencil_state.fail_op = atom2stencil_op(fail_atom);
+                JS_FreeAtom(js, fail_atom);
+            }
+            JS_FreeValue(js, fail_val);
+
+            JSValue depth_fail_val = JS_GetPropertyStr(js, back_val, "depth_fail");
+            if (!JS_IsUndefined(depth_fail_val)) {
+                JSAtom depth_fail_atom = JS_ValueToAtom(js, depth_fail_val);
+                info.depth_stencil_state.back_stencil_state.depth_fail_op = atom2stencil_op(depth_fail_atom);
+                JS_FreeAtom(js, depth_fail_atom);
+            }
+            JS_FreeValue(js, depth_fail_val);
+
+            JSValue pass_val = JS_GetPropertyStr(js, back_val, "pass");
+            if (!JS_IsUndefined(pass_val)) {
+                JSAtom pass_atom = JS_ValueToAtom(js, pass_val);
+                info.depth_stencil_state.back_stencil_state.pass_op = atom2stencil_op(pass_atom);
+                JS_FreeAtom(js, pass_atom);
+            }
+            JS_FreeValue(js, pass_val);
+        }
+        JS_FreeValue(js, back_val);
+
+        // Compare Mask
+        JSValue compare_mask_val = JS_GetPropertyStr(js, stencil_val, "compare_mask");
+        if (!JS_IsUndefined(compare_mask_val)) {
+            JS_ToUint32(js, &info.depth_stencil_state.compare_mask, compare_mask_val);
+        }
+        JS_FreeValue(js, compare_mask_val);
+
+        // Write Mask
+        JSValue write_mask_val = JS_GetPropertyStr(js, stencil_val, "write_mask");
+        if (!JS_IsUndefined(write_mask_val)) {
+            JS_ToUint32(js, &info.depth_stencil_state.write_mask, write_mask_val);
+        }
+        JS_FreeValue(js, write_mask_val);
+    }
+    JS_FreeValue(js, stencil_val);
+
+    // Blend State
+    JSValue blend_val = JS_GetPropertyStr(js, pipe, "blend");
+    if (JS_IsObject(blend_val)) {
+        // Enable Blend
+        JSValue enabled_val = JS_GetPropertyStr(js, blend_val, "enabled");
+        if (!JS_IsUndefined(enabled_val)) {
+            info.target_info.has_depth_stencil_target = true; // Assuming blend requires depth stencil
+            // Depending on SDL_GPU's API, adjust accordingly
+            // For now, we'll set blend_state fields
+            // But since target_info is separate, we need to handle it appropriately
+            // This depends on SDL_GPU's actual structure, which isn't fully detailed here
+        }
+        JS_FreeValue(js, enabled_val);
+
+        // Blend Factors and Operations
+        JSValue src_factor_rgb_val = JS_GetPropertyStr(js, blend_val, "src_factor_rgb");
+        if (!JS_IsUndefined(src_factor_rgb_val)) {
+            JSAtom src_factor_rgb_atom = JS_ValueToAtom(js, src_factor_rgb_val);
+            info.target_info.color_target_descriptions = NULL; // Placeholder
+            // info.blend_state.src_factor_rgb = atom2blend_factor(src_factor_rgb_atom);
+            // Similarly set other blend factors and operations
+            // This depends on how SDL_GPU handles blending in target_info
+            // Since SDL_GPUGraphicsPipelineCreateInfo has target_info, blending might be part of color_target_descriptions
+            // Adjust accordingly based on SDL_GPU's API
+            // For demonstration, we'll skip detailed blend state handling here
+            JS_FreeAtom(js, src_factor_rgb_atom);
+        }
+        JS_FreeValue(js, src_factor_rgb_val);
+
+        // Similarly handle other blend factors and operations
+        // Skipping detailed implementation due to lack of SDL_GPU specifics
+    }
+    JS_FreeValue(js, blend_val);
+
+    // Alpha to Coverage
+    JSValue atc_val = JS_GetPropertyStr(js, pipe, "alpha_to_coverage");
+    info.multisample_state.sample_mask = 0xFFFFFFFF; // Default
+    info.multisample_state.enable_mask = JS_ToBool(js, JS_GetPropertyStr(js, pipe, "multisample.domask")) ? 1 : 0;
+    info.multisample_state.sample_count = 1; // Default
+    // Adjust based on JS object
+    JSValue multisample_val = JS_GetPropertyStr(js, pipe, "multisample");
+    if (JS_IsObject(multisample_val)) {
+        JSValue count_val = JS_GetPropertyStr(js, multisample_val, "count");
+        if (!JS_IsUndefined(count_val)) {
+            JS_ToInt32(js, (int32_t*)&info.multisample_state.sample_count, count_val);
+        }
+        JS_FreeValue(js, count_val);
+
+        JSValue mask_val = JS_GetPropertyStr(js, multisample_val, "mask");
+        if (!JS_IsUndefined(mask_val)) {
+            JS_ToUint32(js, &info.multisample_state.sample_mask, mask_val);
+        }
+        JS_FreeValue(js, mask_val);
+
+        JSValue domask_val = JS_GetPropertyStr(js, multisample_val, "domask");
+        if (!JS_IsUndefined(domask_val)) {
+            info.multisample_state.enable_mask = JS_ToBool(js, domask_val);
+        }
+        JS_FreeValue(js, domask_val);
+    }
+    JS_FreeValue(js, multisample_val);
+
+    info.blend_state.alpha_to_coverage = JS_ToBool(js, atc_val);
+    JS_FreeValue(js, atc_val);
+
+    // Target Info
+    // For simplicity, assume a single color target with a default format
+    // You can expand this to handle multiple targets based on your needs
+    SDL_GPUColorTargetDescription color_target_desc = { SDL_GPU_RGBA8 }; // Default format
+    info.target_info.color_target_descriptions = &color_target_desc;
+    info.target_info.num_color_targets = 1;
+    info.target_info.depth_stencil_format = SDL_GPU_DEPTH24_STENCIL8; // Default depth-stencil format
+    JSValue has_depth_stencil_target_val = JS_GetPropertyStr(js, pipe, "has_depth_stencil_target");
+    if (!JS_IsUndefined(has_depth_stencil_target_val)) {
+        info.target_info.has_depth_stencil_target = JS_ToBool(js, has_depth_stencil_target_val);
+    } else {
+        info.target_info.has_depth_stencil_target = true; // Default
+    }
+    JS_FreeValue(js, has_depth_stencil_target_val);
+
+    // Label (optional)
+    JSValue label_val = JS_GetPropertyStr(js, pipe, "label");
+    if (JS_IsString(label_val)) {
+        const char *label_str = JS_ToCString(js, label_val);
+        if (label_str) {
+            // Assuming SDL_GPUGraphicsPipelineCreateInfo has a label field
+            // Modify the struct if necessary
+            // Example:
+            // strncpy(info.label, label_str, sizeof(info.label) - 1);
+            // info.label[sizeof(info.label) - 1] = '\0';
+            // For demonstration, we'll ignore it
+            JS_FreeCString(js, label_str);
+        }
+    }
+    JS_FreeValue(js, label_val);
+
+    // Create the pipeline
+    SDL_GPUGraphicsPipeline *pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!pipeline) return JS_ThrowInternalError(js, "Failed to create GPU pipeline");
+
+    return SDL_GPUGraphicsPipeline2js(js, pipeline);
+}
+
+static SDL_GPUCommandBuffer *cmds = NULL;
+static SDL_GPUTexture *swapchain = NULL;
+static SDL_GPURenderPass *pass = NULL;
+
+JSC_CCALL(gpu_newframe,
+  if (cmds) return JS_UNDEFINED;
+  SDL_GPUDevice *d = js2SDL_GPUDevice(js,self);
+  cmds = SDL_AcquireGPUCommandBuffer(d);
+  if (!cmds) return JS_ThrowReferenceError(js,"Unable to acquire command buffer: %s", SDL_GetError());
+  SDL_Window *win = js2SDL_Window(js,argv[0]);
+  if (!SDL_AcquireGPUSwapchainTexture(cmds,win,&swapchain, NULL, NULL))
+    return JS_ThrowReferenceError(js, "Unable to acquire swapchain: %s", SDL_GetError());
+  SDL_GPUColorTargetInfo info = {0};
+  info.texture = swapchain;
+  info.clear_color = (SDL_FColor){0,0,0,1.0};
+  info.load_op = SDL_GPU_LOADOP_CLEAR;
+  info.store_op = SDL_GPU_STOREOP_STORE;
+  pass = SDL_BeginGPURenderPass(cmds, &info, 1, NULL);
+)
+
+JSC_CCALL(gpu_present,
+  SDL_EndGPURenderPass(pass);
+  SDL_SubmitGPUCommandBuffer(cmds);
+)
+
+JSC_CCALL(gpu_camera,
+
+)
+
+JSC_CCALL(gpu_scale,
+
+)
+
+JSC_CCALL(gpu_texture,
+/*  SDL_GPUTexture *tex = js2SDL_Texture(js,argv[0]);
+  rect dst = transform_rect(renderer,js2rect(js,argv[1]), &cam_mat);
+  
+  if (!JS_IsUndefined(argv[3])) {
+    colorf color = js2color(js,argv[3]);
+    SDL_SetTextureColorModFloat(tex, color.r, color.g, color.b);
+    SDL_SetTextureAlphaModFloat(tex,color.a);
+  }
+  if (JS_IsUndefined(argv[2]))
+    SDL_RenderTexture(renderer,tex,NULL,&dst);
+  else {
+
+    rect src = js2rect(js,argv[2]);
+
+    SDL_RenderTextureRotated(renderer, tex, &src, &dst, 0, NULL, SDL_FLIP_NONE);
+  }
+  */
+)
+
 static const JSCFunctionListEntry js_SDL_GPUDevice_funcs[] = {
   MIST_FUNC_DEF(gpu, claim_window, 1),
   MIST_FUNC_DEF(gpu, graphics_pipeline,1),
+  MIST_FUNC_DEF(gpu, load_texture, 1),
+  MIST_FUNC_DEF(gpu, logical_size, 1),
+  MIST_FUNC_DEF(gpu, newframe, 1),
+  MIST_FUNC_DEF(gpu,present,0),
+  MIST_FUNC_DEF(gpu, camera, 1),
+  MIST_FUNC_DEF(gpu, scale, 1),
 };
 
 JSC_CCALL(renderpass_bind_pipeline,
@@ -2352,16 +2935,15 @@ JSC_CCALL(renderpass_bind_pipeline,
 
 JSC_CCALL(renderpass_draw,
   SDL_GPURenderPass *r = js2SDL_GPURenderPass(js,self);
-  SDL_DrawGPUPrimitives(r, js2number(js,argv[0]), js2number(js,argv[1]), js2number(js,argv[2]), js2number(js,argv[3]));
+  SDL_DrawGPUIndexedPrimitives(r, js2number(js,argv[0]), js2number(js,argv[1]), js2number(js,argv[2]), js2number(js,argv[3]), js2number(js,argv[4]));
 )
 
 static const JSCFunctionListEntry js_SDL_GPURenderPass_funcs[] = {
   MIST_FUNC_DEF(renderpass, bind_pipeline, 1),
-  MIST_FUNC_DEF(renderpass, draw, 4),
+  MIST_FUNC_DEF(renderpass, draw, 5),
 };
 
 static const JSCFunctionListEntry js_SDL_GPUCommandBuffer_funcs[] = {
-  
 };
 
 JSC_CCALL(surface_blit,
@@ -2489,6 +3071,14 @@ JSC_CCALL(texture_mode,
 
 static const JSCFunctionListEntry js_SDL_Texture_funcs[] = {
   MIST_FUNC_DEF(texture, mode, 1),
+};
+
+JSC_CCALL(gputexture_mode,
+
+)
+
+static const JSCFunctionListEntry js_SDL_GPUTexture_funcs[] = {
+  MIST_FUNC_DEF(gputexture, mode, 1),
 };
 
 JSC_CCALL(input_mouse_lock, SDL_CaptureMouse(JS_ToBool(js,argv[0])))
@@ -3861,6 +4451,11 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(SDL_Renderer)
   QJSCLASSPREP_FUNCS(SDL_Camera)
   QJSCLASSPREP_FUNCS(SDL_Cursor)
+  QJSCLASSPREP_FUNCS(SDL_GPUDevice)
+  QJSCLASSPREP_FUNCS(SDL_GPUTexture)
+//  QJSCLASSPREP_FUNCS(SDL_Cursor)
+//  QJSCLASSPREP_FUNCS(SDL_Cursor)
+  
 
   QJSGLOBALCLASS(os);
   
@@ -3928,6 +4523,54 @@ void ffi_load(JSContext *js) {
   dst_atom = JS_NewAtom(js, "dst");
   count_atom = JS_NewAtom(js, "count");
   transform_atom = JS_NewAtom(js,"transform");
+
+  cw_atom = JS_NewAtom(js,"cw");
+  ccw_atom = JS_NewAtom(js,"ccw");
+  zero_atom = JS_NewAtom(js, "zero");
+  one_atom = JS_NewAtom(js, "one");
+  add_atom = JS_NewAtom(js, "add");
+  sub_atom = JS_NewAtom(js, "sub");
+  rev_sub_atom = JS_NewAtom(js, "rev_sub");
+  min_atom = JS_NewAtom(js, "min");
+  max_atom = JS_NewAtom(js, "max");
+  none_atom = JS_NewAtom(js, "none");
+  front_atom = JS_NewAtom(js, "front");
+  back_atom = JS_NewAtom(js, "back");
+  never_atom = JS_NewAtom(js, "never");
+  less_atom = JS_NewAtom(js, "less");
+  equal_atom = JS_NewAtom(js, "equal");
+  less_equal_atom = JS_NewAtom(js, "less_equal");
+  greater_atom = JS_NewAtom(js, "greater");
+  not_equal_atom = JS_NewAtom(js, "not_equal");
+  greater_equal_atom = JS_NewAtom(js, "greater_equal");
+  always_atom = JS_NewAtom(js, "always");
+  keep_atom = JS_NewAtom(js, "keep");
+  zero_stencil_atom = JS_NewAtom(js, "zero");
+  replace_atom = JS_NewAtom(js, "replace");
+  incr_clamp_atom = JS_NewAtom(js, "incr_clamp");
+  decr_clamp_atom = JS_NewAtom(js, "decr_clamp");
+  invert_atom = JS_NewAtom(js, "invert");
+  incr_wrap_atom = JS_NewAtom(js, "incr_wrap");
+  decr_wrap_atom = JS_NewAtom(js, "decr_wrap");
+  point_atom = JS_NewAtom(js, "point");
+  line_atom = JS_NewAtom(js, "line");
+  linestrip_atom = JS_NewAtom(js, "linestrip");
+  triangle_atom = JS_NewAtom(js, "triangle");
+  trianglestrip_atom = JS_NewAtom(js, "trianglestrip");
+  src_color_atom = JS_NewAtom(js, "src_color");
+  one_minus_src_color_atom = JS_NewAtom(js, "one_minus_src_color");
+  dst_color_atom = JS_NewAtom(js, "dst_color");
+  one_minus_dst_color_atom = JS_NewAtom(js, "one_minus_dst_color");
+  src_alpha_atom = JS_NewAtom(js, "src_alpha");
+  one_minus_src_alpha_atom = JS_NewAtom(js, "one_minus_src_alpha");
+  dst_alpha_atom = JS_NewAtom(js, "dst_alpha");
+  one_minus_dst_alpha_atom = JS_NewAtom(js, "one_minus_dst_alpha");
+  constant_color_atom = JS_NewAtom(js, "constant_color");
+  one_minus_constant_color_atom = JS_NewAtom(js, "one_minus_constant_color");
+  src_alpha_saturate_atom = JS_NewAtom(js, "src_alpha_saturate");
+  none_cull_atom = JS_NewAtom(js, "none");
+  front_cull_atom = JS_NewAtom(js, "front");
+  back_cull_atom = JS_NewAtom(js, "back");  
 
   fill_event_atoms(js);
 

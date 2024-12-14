@@ -53,129 +53,12 @@ var cur = {};
 cur.images = [];
 cur.samplers = [];
 
-/* A pipeline defines the characteristics of the incoming draw.
-  {
-    shader <--- the shader determines the vertex layout, 
-    depth
-      compare always (never/less/equal/less_equal/greater/not_equal/greater_equal/always)
-      write false
-      bias 0
-      bias_slope_scale 0
-      bias_clamp 0
-    stencil
-      enabled false
-      front/back
-        compare always
-        fail_op keep (zero/replace/incr_clamp/decr_clamp/invert/incr_wrap/decr_wrap)
-        depth_fail_op keep
-        pass_op keep
-      read true
-      write false
-      ref 0 (0-255)
-    color
-      write_mask rgba
-      blend
-        enabled false
-        src_factor_rgb one
-        dst_factor_rgb zero
-        op_rgb add
-        src_factor_alpha one
-        dst_factor_alpha zero
-        op_alpha add
-    cull none
-    face_winding cw
-    alpha_to_coverage false
-    label ""
-*/
-
-var blendop = {
-  add: 1,
-  subtract: 2,
-  reverse_subtract: 3
-};
-
-var blendfactor = {
-  zero: 1,
-  one: 2,
-  src_color: 3,
-  one_minus_src_color: 4,
-  src_alpha: 5,
-  one_minus_src_alpha: 6,
-  dst_color: 7,
-  one_minus_dst_color: 8,
-  dst_alpha: 9,
-  one_minus_dst_alpha: 10,
-  src_alpha_saturated: 11,
-  blend_color: 12,
-  one_minus_blend_color: 13,
-  blend_alpha: 14,
-  one_minus_blend_alpha: 15
-};
-
-var colormask = {
-  none: 0x10,
-  r: 0x1,
-  g: 0x2,
-  rg: 0x3,
-  b: 0x4,
-  rb: 0x5,
-  gb: 0x6,
-  rgb: 0x7,
-  a: 0x8,
-  ra: 0x9,
-  ga: 0xA,
-  rga: 0xB,
-  ba: 0xC,
-  rba: 0xD,
-  gba: 0xE,
-  rgba: 0xF
-};
-
-var primitive_map = {
-  point: 1,
-  line: 2,
-  linestrip: 3,
-  triangle: 4,
-  trianglestrip: 5,
-};
-
-var cull_map = {
-  none: 1,
-  front: 2,
-  back: 3,
-};
-
-var stencilop = {
-  keep: 1,
-  zero: 2,
-  replace: 3,
-  incr_clamp: 4,
-  decr_clamp: 5,
-  invert: 6,
-  incr_wrap: 7,
-  decr_wrap: 8
-};
-
-var face_map = {
-  ccw: 1,
-  cw: 2,
-};
-
-var compare = {
-  never: 1,
-  less: 2,
-  equal: 3,
-  less_equal: 4,
-  greater: 5,
-  not_equal: 6,
-  greater_equal: 7,
-  always: 8
-};
-
 var base_pipeline = {
-  primitive: primitive_map.triangle,
+  primitive: "triangle", // point, line, linestrip, triangle, trianglestrip
+  fill: true, // false for lines
   depth: {
-    compare: compare.always,
+    compare: "always",  // never/less/equal/less_equal/greater/not_equal/greater_equal/always
+    test: true,
     write: false,
     bias: 0,
     bias_slope_scale: 0,
@@ -184,45 +67,41 @@ var base_pipeline = {
   stencil: {
     enabled: true,
     front: {
-      compare: compare.equal,
-      fail_op: stencilop.keep,
-      depth_fail_op: stencilop.keep,
-      pass_op: stencilop.keep
+      compare: "equal", // never/less/equal/less_equal/greater/neq/greq/always
+      fail: "keep", // keep/zero/replace/incr_clamp/decr_clamp/invert/incr_wrap/decr_wrap
+      depth_fail: "keep",
+      pass: "keep"
     },
     back: {
-      compare: compare.equal,
-      fail_op: stencilop.keep,
-      depth_fail_op: stencilop.keep,
-      pass_op: stencilop.keep
+      compare: "equal", // never/less/equal/less_equal/greater/neq/greq/always
+      fail: "keep", // keep/zero/replace/incr_clamp/decr_clamp/invert/incr_wrap/decr_wrap
+      depth_fail: "keep",
+      pass: "keep"
     },
-    read: true,
-    write: false,
-    ref: 0
+    test: true,
+    compare_mask: 0,
+    write_mask: 0
   },
-  write_mask: colormask.rgba,
   blend: {
     enabled: false,
-    src_factor_rgb: blendfactor.one,
-    dst_factor_rgb: blendfactor.zero,
-    op_rgb: blendop.add,
-    src_factor_alpha: blendfactor.one,
-    dst_factor_alpha: blendfactor.zero,
-    op_alpha: blendop.add,
+    src_factor_rgb: "one", // zero/one/src_color/one_minus_src_color/dst_color/one_minus_dst_color/src_alpha/one_minus_src_alpha/dst_alpha/one_minus_dst_alpha/constant_color/one_minus_constant_color/src_alpha_saturate
+    dst_factor_rgb: "zero",
+    op_rgb: "add", // add/sub/rev_sub/min/max
+    src_factor_alpha: "one",
+    dst_factor_alpha: "zero",
+    op_alpha: "add"
   },
-  cull: cull_map.none,
-  face: face_map.cw,
+  cull: "none", // none/front/back
+  face: "cw", // cw/ccw
   alpha_to_coverage: false,
+  multisample: {
+    count: 1, // number of multisamples
+    mask: 0xFFFFFFFF,
+    domask: false
+  },
   label: "scripted pipeline"
 }
-
 render.base_pipeline = base_pipeline;
-render.colormask = colormask;
-render.primitive_map = primitive_map;
-render.cull_map = cull_map;
-render.stencilop = stencilop;
-render.face_map = face_map;
-render.compare = compare;
-render.blendfactor = blendfactor;
 
 var pipe_shaders = new WeakMap();
 
@@ -281,29 +160,6 @@ render.use_mat = function use_mat(mat) {
 function set_model(t) {
   if (cur.shader.vs.unimap.model) render.setunim4(0, cur.shader.vs.unimap.model.slot, t);
 }
-
-var shaderlang = {
-  macos: "metal_macos",
-  windows: "hlsl5",
-  linux: "glsl430",
-  web: "wgsl",
-  ios: "metal_ios",
-};
-
-var attr_map = {
-  a_pos: 0,
-  a_uv: 1,
-  a_norm: 2,
-  a_joint: 3,
-  a_weight: 4,
-  a_color: 5,
-  a_tan: 6,
-  a_angle: 7,
-  a_wh: 8,
-  a_st: 9,
-  a_ppos: 10,
-  a_scale: 11,
-};
 
 render.poly_prim = function poly_prim(verts) {
   var index = [];
@@ -366,6 +222,9 @@ render.hotreload = function shader_hotreload() {
 };
 
 function create_shader_obj(file) {
+  var driver = os.gpu_driver();
+  switch(driver) {
+  }
   var files = [file];
   var out = ".prosperon/tmp.shader";
   var shader = io.slurp(file);
@@ -936,10 +795,10 @@ function img_e() {
 }
 
 var stencil_write = {
-  compare: compare.always,
-  fail_op: stencilop.replace,
-  depth_fail_op:stencilop.replace,
-  pass_op: stencilop.replace
+  compare: "always",
+  fail_op: "replace",
+  depth_fail_op: "replace",
+  pass_op: "replace"
 };
 
 var stencil_writer = function stencil_writer(ref)
@@ -971,13 +830,13 @@ render.fillmask = function fillmask(ref)
 }
 
 var stencil_invert = {
-  compare: compare.always,
-  fail_op: stencilop.invert,
-  depth_fail_op: stencilop.invert,
-  pass_op: stencilop.invert
+  compare: "always",
+  fail_op: "invert",
+  depth_fail_op: "invert",
+  pass_op: "invert"
 };
 var stencil_inverter = Object.create(base_pipeline);
-Object.assign(stencil_inverter, {
+/*Object.assign(stencil_inverter, {
   stencil: {
     enabled: true,
     front: stencil_invert,
@@ -987,7 +846,7 @@ Object.assign(stencil_inverter, {
     ref: 0
   },
   write_mask: colormask.none
-});
+});*/
 render.invertmask = function()
 {
   render.forceflush();
@@ -1339,6 +1198,7 @@ var imdebug = function imdebug() {
 var observed_tex = undefined;
 
 var imgui_fn = function imgui_fn() {
+  return;
   imgui.newframe(prosperon.size.x, prosperon.size.y, 0.01);
   if (debug.console)
     debug.console = imgui.window("console", _ => {
@@ -1440,8 +1300,9 @@ var present_thread = undefined;
 var clearcolor = [100,149,237,255].scale(1/255);
 prosperon.render = function prosperon_render() {
 try{
-  render._main.draw_color(clearcolor);
-  render._main.clear();
+  render._main.newframe(prosperon.window, clearcolor);
+//  render._main.draw_color(clearcolor);
+//  render._main.clear();
   
 try { prosperon.camera.render(); } catch(e) { console.error(e) }
 try { prosperon.app(); } catch(e) { console.error(e) }
