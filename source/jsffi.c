@@ -6,6 +6,8 @@
 #include "stb_ds.h"
 #include "stb_image.h"
 #include "stb_rect_pack.h"
+#define STB_DXT_IMPLEMENTATION
+#include "stb_dxt.h"
 #include "string.h"
 #include "spline.h"
 #include "yugine.h"
@@ -25,8 +27,12 @@
 #include "timer.h"
 #include <signal.h>
 #include "cute_aseprite.h"
-
+#include "cgltf.h"
 #include "physfs.h"
+
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
@@ -65,6 +71,7 @@ static JSAtom rev_sub_atom;
 static JSAtom min_atom;
 static JSAtom max_atom;
 static JSAtom none_atom;
+static JSAtom norm_atom;
 static JSAtom front_atom;
 static JSAtom back_atom;
 static JSAtom never_atom;
@@ -102,6 +109,43 @@ static JSAtom src_alpha_saturate_atom;
 static JSAtom none_cull_atom;
 static JSAtom front_cull_atom;
 static JSAtom back_cull_atom;
+
+// For sampler filtering:
+static JSAtom nearest_atom;
+static JSAtom linear_atom;
+
+// For sampler mipmap modes:
+static JSAtom mipmap_nearest_atom;
+static JSAtom mipmap_linear_atom;
+
+// For sampler address modes:
+static JSAtom repeat_atom;
+static JSAtom mirror_atom;
+static JSAtom clamp_edge_atom;
+static JSAtom clamp_border_atom;
+
+static JSAtom vertex_atom;
+static JSAtom index_atom;
+static JSAtom indirect_atom;
+
+typedef struct texture_vertex {
+  float x, y, z;
+  float u, v;
+  uint8_t r, g, b,a;
+} texture_vertex;
+
+typedef struct app_data {
+  HMM_Mat4 vp;
+  HMM_Mat4 view;
+  float time;
+} app_data;
+
+typedef struct {
+  HMM_Mat4 camera_matrix;
+  size_t start_vert;
+  size_t start_indx;
+} render_batch;
+static render_batch *batches = NULL;
 
 static inline size_t typed_array_bytes(JSTypedArrayEnum type) {
     switch(type) {
@@ -199,6 +243,8 @@ JSValue js_getproperty(JSContext *js, JSValue v, JSAtom atom)
   return ret;
 }
 
+SDL_Window *global_window;
+
 void free_gpu_buffer(JSRuntime *rt, void *opaque, void *ptr)
 {
   free(ptr);
@@ -219,13 +265,14 @@ JSValue make_gpu_buffer(JSContext *js, void *data, size_t size, int type, int el
   return ret;
 }
 
-void *get_gpu_buffer(JSContext *js, JSValue argv, size_t *stride)
+void *get_gpu_buffer(JSContext *js, JSValue argv, size_t *stride, size_t *size)
 {
-  size_t o, len, bytes, size;
+  size_t o, len, bytes, msize;
   JSValue buf = JS_GetTypedArrayBuffer(js, argv, &o, &len, &bytes);
-  void *data = JS_GetArrayBuffer(js, &size, buf);
+  void *data = JS_GetArrayBuffer(js, &msize, buf);
   JS_FreeValue(js,buf); 
   *stride = js_getnum_str(js, argv, "stride");
+  if (size) *size = msize;
   return data;
 }
 
@@ -315,7 +362,6 @@ void SDL_GPUDevice_free(JSRuntime *rt, SDL_GPUDevice *d)
 
 void SDL_GPUCommandBuffer_free(JSRuntime *rt, SDL_GPUCommandBuffer *c)
 {
-  SDL_SubmitGPUCommandBuffer(c);
 }
 
 void SDL_Thread_free(JSRuntime *rt, SDL_Thread *t)
@@ -323,8 +369,8 @@ void SDL_Thread_free(JSRuntime *rt, SDL_Thread *t)
 }
 
 void SDL_GPUComputePass_free(JSRuntime *rt, SDL_GPUComputePass *c) { SDL_EndGPUComputePass(c); }
-void SDL_GPUCopyPass_free(JSRuntime *rt, SDL_GPUCopyPass *c) { SDL_EndGPUCopyPass(c); }
-void SDL_GPURenderPass_free(JSRuntime *rt, SDL_GPURenderPass *c) { SDL_EndGPURenderPass(c); }
+void SDL_GPUCopyPass_free(JSRuntime *rt, SDL_GPUCopyPass *c) {  }
+void SDL_GPURenderPass_free(JSRuntime *rt, SDL_GPURenderPass *c) {  }
 
 #define GPURELEASECLASS(NAME) \
 void SDL_GPU##NAME##_free(JSRuntime *rt, SDL_GPU##NAME *c) { printf("IMPLEMENT %s FREE\n", #NAME); } \
@@ -1427,7 +1473,7 @@ JSC_SCALL(game_engine_start,
   if (!new) return JS_ThrowReferenceError(js, "Couldn't open window: %s\n", SDL_GetError());
 
   SDL_StartTextInput(new);
-
+  global_window = new;
   return SDL_Window2js(js,new);
 )
 
@@ -1895,8 +1941,7 @@ JSC_SCALL(SDL_Window_make_renderer,
 
 JSC_SCALL(SDL_Window_make_gpu,
   SDL_Window *win = js2SDL_Window(js,self);
-  SDL_GPUDevice *gpu = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, 1, NULL);
-  SDL_ClaimWindowForGPUDevice(gpu, win);
+  SDL_GPUDevice *gpu = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, 1, NULL);
   return SDL_GPUDevice2js(js,gpu);
 )
 
@@ -1979,7 +2024,7 @@ JSValue js_window_mouse_grab(JSContext *js, JSValue self, int argc, JSValue *arg
 static const JSCFunctionListEntry js_SDL_Window_funcs[] = {
   MIST_FUNC_DEF(SDL_Window, fullscreen, 0),
   MIST_FUNC_DEF(SDL_Window, make_renderer, 1),
-  MIST_FUNC_DEF(SDL_Window, make_gpu, 0),
+  MIST_FUNC_DEF(SDL_Window, make_gpu, 2),
   MIST_FUNC_DEF(SDL_Window, keyboard_shown, 0),
   MIST_FUNC_DEF(window, theme, 0),
   MIST_FUNC_DEF(window, safe_area, 0),
@@ -2237,10 +2282,10 @@ JSC_CCALL(renderer_geometry,
   int count = js_getnum_str(js, argv[1], "count");
 
   size_t pos_stride, indices_stride, uv_stride, color_stride;
-  void *posdata = get_gpu_buffer(js,pos, &pos_stride);
-  void *idxdata = get_gpu_buffer(js,indices, &indices_stride);
-  void *uvdata = get_gpu_buffer(js,uv, &uv_stride);
-  void *colordata = get_gpu_buffer(js,color,&color_stride);
+  void *posdata = get_gpu_buffer(js,pos, &pos_stride, NULL);
+  void *idxdata = get_gpu_buffer(js,indices, &indices_stride, NULL);
+  void *uvdata = get_gpu_buffer(js,uv, &uv_stride, NULL);
+  void *colordata = get_gpu_buffer(js,color,&color_stride, NULL);
 
   SDL_Texture *tex = js2SDL_Texture(js,argv[0]);
 
@@ -2356,6 +2401,323 @@ JSC_CCALL(renderer_target,
   }
 )
 
+#include "cgltf.h"
+#include <math.h>
+
+#include "cgltf.h"
+#include <math.h>
+
+static void generate_normals(float* positions, size_t vertex_count, uint16_t* indices, size_t index_count, int16_t* normal_data) {
+    // Initialize normals to zero
+    float* temp_normals = malloc(sizeof(float)*3*vertex_count);
+    for (size_t i = 0; i < vertex_count*3; i++) {
+        temp_normals[i] = 0.0f;
+    }
+
+    // Compute face normals and accumulate
+    for (size_t i = 0; i < index_count; i += 3) {
+        uint16_t i0 = indices[i+0];
+        uint16_t i1 = indices[i+1];
+        uint16_t i2 = indices[i+2];
+
+        float* p0 = &positions[i0*3];
+        float* p1 = &positions[i1*3];
+        float* p2 = &positions[i2*3];
+
+        float ux = p1[0] - p0[0];
+        float uy = p1[1] - p0[1];
+        float uz = p1[2] - p0[2];
+
+        float vx = p2[0] - p0[0];
+        float vy = p2[1] - p0[1];
+        float vz = p2[2] - p0[2];
+
+        // Cross product (u x v)
+        float nx = uy*vz - uz*vy;
+        float ny = uz*vx - ux*vz;
+        float nz = ux*vy - uy*vx;
+
+        // Accumulate to each vertex normal
+        temp_normals[i0*3+0] += nx; temp_normals[i0*3+1] += ny; temp_normals[i0*3+2] += nz;
+        temp_normals[i1*3+0] += nx; temp_normals[i1*3+1] += ny; temp_normals[i1*3+2] += nz;
+        temp_normals[i2*3+0] += nx; temp_normals[i2*3+1] += ny; temp_normals[i2*3+2] += nz;
+    }
+
+    // Normalize and pack
+    for (size_t i = 0; i < vertex_count; i++) {
+        float x = temp_normals[i*3+0];
+        float y = temp_normals[i*3+1];
+        float z = temp_normals[i*3+2];
+        float length = sqrtf(x*x + y*y + z*z);
+        if (length > 1e-6f) {
+            x /= length; y /= length; z /= length;
+        } else {
+            x = 0; y = 0; z = 1; // arbitrary default
+        }
+
+        normal_data[i*3+0] = (int16_t)(x * 32767.0f);
+        normal_data[i*3+1] = (int16_t)(y * 32767.0f);
+        normal_data[i*3+2] = (int16_t)(z * 32767.0f);
+    }
+
+    free(temp_normals);
+}
+
+JSC_CCALL(gpu_load_gltf_model,
+  const char* path = JS_ToCString(js, argv[0]);
+  if (!path) {
+    // Handle error
+    return JS_EXCEPTION;
+  }
+
+  cgltf_options options = {0};
+  cgltf_data* data = NULL;
+
+  cgltf_result result = cgltf_parse_file(&options, path, &data);
+  if (result != cgltf_result_success) {
+    JS_FreeCString(js, path);
+    return JS_EXCEPTION;
+  }
+
+  result = cgltf_load_buffers(&options, data, path);
+  JS_FreeCString(js, path);
+  if (result != cgltf_result_success) {
+    cgltf_free(data);
+    return JS_EXCEPTION;
+  }
+
+  if (data->meshes_count == 0 || data->meshes[0].primitives_count == 0) {
+    cgltf_free(data);
+    return JS_EXCEPTION;
+  }
+
+  cgltf_primitive* prim = &data->meshes[0].primitives[0];
+  cgltf_accessor* indices_accessor = prim->indices;
+
+  // Load indices first, so we have them for normal generation if needed.
+  size_t index_count = 0;
+  uint16_t* indices_data = NULL;
+  if (indices_accessor) {
+    index_count = indices_accessor->count;
+    // Check if we can fit indices into uint16
+    // For simplicity, assume we can (if index accessor max index > 65535, we must use bigger type)
+    indices_data = malloc(sizeof(uint16_t)*index_count);
+    for (size_t i = 0; i < index_count; i++) {
+      size_t idx = cgltf_accessor_read_index(indices_accessor, i);
+      indices_data[i] = (uint16_t)idx;
+    }
+  }
+
+  // We'll fill these out as we find attributes
+  float* positions = NULL;   size_t vertex_count = 0;
+  int16_t* normals_packed = NULL;
+  int have_normals = 0;
+  uint16_t* uvs_packed = NULL;
+
+  ret = JS_NewObject(js);
+
+  // Iterate over attributes and handle them immediately
+  for (size_t i = 0; i < prim->attributes_count; i++) {
+    cgltf_attribute* attr = &prim->attributes[i];
+    cgltf_accessor* accessor = attr->data;
+
+    switch (attr->type) {
+      case cgltf_attribute_type_position: {
+        // Load positions immediately
+        vertex_count = accessor->count;
+        positions = malloc(sizeof(float)*3*vertex_count);
+        for (size_t v = 0; v < vertex_count; v++) {
+          cgltf_accessor_read_float(accessor, v, &positions[v*3], 3);
+        }
+
+        // Create a JS buffer for positions right now
+        // Positions remain float32.
+        JS_SetProperty(js, ret, pos_atom,
+          make_gpu_buffer(js, positions, sizeof(float)*3*vertex_count, JS_TYPED_ARRAY_FLOAT32, 3, 0));
+
+        break;
+      }
+      case cgltf_attribute_type_normal: {
+        // Load normals and pack into int16 right away
+        // If no positions yet, we must assume they come first or handle after we find positions.
+        // We'll assume position found first as per instructions.
+        have_normals = 1;
+        normals_packed = malloc(sizeof(int16_t)*3*accessor->count);
+
+        for (size_t v = 0; v < accessor->count; v++) {
+          float n[3];
+          cgltf_accessor_read_float(accessor, v, n, 3);
+          // Normalize just in case (should be normalized anyway)
+          float len = sqrtf(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+          if (len > 1e-6f) { n[0]/=len; n[1]/=len; n[2]/=len; } else { n[0]=0; n[1]=0; n[2]=1; }
+
+          normals_packed[v*3+0] = (int16_t)(n[0] * 32767.0f);
+          normals_packed[v*3+1] = (int16_t)(n[1] * 32767.0f);
+          normals_packed[v*3+2] = (int16_t)(n[2] * 32767.0f);
+        }
+
+        // Immediately store normals
+        JS_SetProperty(js, ret, norm_atom,
+          make_gpu_buffer(js, normals_packed, sizeof(int16_t)*3*accessor->count, JS_TYPED_ARRAY_INT16, 3, 1 /* normalized */));
+        break;
+      }
+      case cgltf_attribute_type_texcoord: {
+        // Assume texcoord_0 only
+        if (attr->index == 0) {
+          // Pack UVs into uint16 normalized
+          uvs_packed = malloc(sizeof(uint16_t)*2*accessor->count);
+          for (size_t v = 0; v < accessor->count; v++) {
+            float uv[2];
+            cgltf_accessor_read_float(accessor, v, uv, 2);
+            // Clamp and convert to [0,1]
+            float u = uv[0]; if (u < 0) u=0; if (u>1) u=1;
+            float vv = uv[1]; if (vv < 0) vv=0; if (vv>1) vv=1;
+            uvs_packed[v*2+0] = (uint16_t)(u * 65535.0f);
+            uvs_packed[v*2+1] = (uint16_t)(vv * 65535.0f);
+          }
+
+          // Immediately store UVs
+          JS_SetProperty(js, ret, uv_atom,
+            make_gpu_buffer(js, uvs_packed, sizeof(uint16_t)*2*accessor->count, JS_TYPED_ARRAY_UINT16, 2, 1 /* normalized */));
+        }
+        break;
+      }
+      default:
+        // Other attributes not handled here.
+        break;
+    }
+  }
+
+  // If we didn't find normals, generate them now.
+  if (!have_normals) {
+    if (!positions) {
+      // Can't generate normals without positions
+      cgltf_free(data);
+      if (positions) free(positions);
+      if (indices_data) free(indices_data);
+      if (uvs_packed) free(uvs_packed);
+      return JS_EXCEPTION;
+    }
+
+    // If we have no indices, we can generate normals in a non-indexed fashion,
+    // but here we assume we have indices. If not, handle that case as needed.
+    if (indices_data && index_count > 0) {
+      normals_packed = malloc(sizeof(int16_t)*3*vertex_count);
+      generate_normals(positions, vertex_count, indices_data, index_count, normals_packed);
+
+      JS_SetProperty(js, ret, norm_atom,
+        make_gpu_buffer(js, normals_packed, sizeof(int16_t)*3*vertex_count, JS_TYPED_ARRAY_INT16, 3, 1 /* normalized */));
+    } else {
+      // Non-indexed normal generation would go here if needed.
+      // For simplicity, just create default normals (0,0,1)
+      normals_packed = malloc(sizeof(int16_t)*3*vertex_count);
+      for (size_t i = 0; i < vertex_count; i++) {
+        normals_packed[i*3+0] = 0;
+        normals_packed[i*3+1] = 0;
+        normals_packed[i*3+2] = 32767; // (0,0,1)
+      }
+      JS_SetProperty(js, ret, norm_atom,
+        make_gpu_buffer(js, normals_packed, sizeof(int16_t)*3*vertex_count, JS_TYPED_ARRAY_INT16, 3, 1));
+    }
+  }
+
+  // Store indices if we have them
+  if (indices_data && index_count > 0) {
+    JS_SetProperty(js, ret, indices_atom,
+      make_gpu_buffer(js, indices_data, sizeof(uint16_t)*index_count, JS_TYPED_ARRAY_UINT16, 1, 0));
+  }
+
+  // Store vertices and count
+  // count is usually the number of indices if available, else vertex_count
+  JS_SetProperty(js, ret, vertices_atom, number2js(js, vertex_count));
+  JS_SetProperty(js, ret, count_atom, number2js(js, index_count > 0 ? index_count : vertex_count));
+
+  // Cleanup
+  free(positions);
+  free(normals_packed);
+  free(uvs_packed);
+  free(indices_data);
+
+  cgltf_free(data);
+
+  return ret;
+)
+
+// Given an array of sprites, make the necessary geometry
+// A sprite is expected to have:
+// transform: a transform encoding position and rotation. its scale is in pixels - so a scale of 1 means the image will draw only on a single pixel.
+// image: a standard prosperon image of a surface, rect, and texture
+// color: the color this sprite should be hued by
+
+// This might change depending on the backend, so best to not investigate. It should be consumed with "renderer_geometry"
+// It might be a list of rectangles, it might be a handful of buffers, etc ..
+JSC_CCALL(renderer_make_sprite_mesh,
+  JSValue sprites = argv[0];
+  JSValue old = argv[1];
+  size_t quads = js_arrlen(js,argv[0]);
+  size_t verts = quads*4;
+  size_t count = quads*6;
+
+  HMM_Vec2 *posdata = malloc(sizeof(*posdata)*verts);
+  HMM_Vec2 *uvdata = malloc(sizeof(*uvdata)*verts);
+  HMM_Vec4 *colordata = malloc(sizeof(*colordata)*quads);
+
+  for (int i = 0; i < quads; i++) {
+    JSValue sub = JS_GetPropertyUint32(js,sprites,i);
+    JSValue jstransform = JS_GetProperty(js,sub,transform_atom);
+    transform *tr = js2transform(js,jstransform);
+    JSValue jssrc = JS_GetProperty(js,sub,src_atom);
+    JSValue jscolor = JS_GetProperty(js,sub,color_atom);
+    HMM_Vec4 color;
+
+    rect src;
+    if (JS_IsUndefined(jssrc))
+      src = (rect){.x = 0, .y = 0, .w = 1, .h = 1};
+    else
+      src = js2rect(js,jssrc);
+    
+    if (JS_IsUndefined(jscolor))
+      color = (HMM_Vec4){1,1,1,1};
+    else
+      color = js2vec4(js,jscolor);
+
+    // Calculate the base index for the current quad
+    size_t base = i * 4;
+
+    HMM_Mat3 trmat = js2transform_mat3(js,jstransform);
+
+    HMM_Vec3 base_quad[4] = {
+      {0.0,0.0,1.0},
+      {1.0,0.0,1.0},
+      {0.0,1.0,1.0},
+      {1.0,1.0,1.0}
+    };
+    for (int j = 0; j < 4; j++)
+      posdata[base+j] = HMM_MulM3V3(trmat, base_quad[j]).xy;
+
+    // Define the UV coordinates based on the source rectangle
+    uvdata[base + 0] = (HMM_Vec2){ src.x,                  src.y + src.h };
+    uvdata[base + 1] = (HMM_Vec2){ src.x + src.w,      src.y + src.h };    
+    uvdata[base + 2] = (HMM_Vec2){ src.x,                  src.y };
+    uvdata[base + 3] = (HMM_Vec2){ src.x + src.w,      src.y };
+
+    colordata[i] = color;
+
+    JS_FreeValue(js,sub);
+    JS_FreeValue(js,jscolor);
+    JS_FreeValue(js,jssrc);
+  }
+
+  ret = JS_NewObject(js);
+  JS_SetProperty(js, ret, pos_atom, make_gpu_buffer(js, posdata, sizeof(*posdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
+  JS_SetProperty(js, ret, uv_atom, make_gpu_buffer(js, uvdata, sizeof(*uvdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
+  JS_SetProperty(js, ret, color_atom, make_gpu_buffer(js, colordata, sizeof(*colordata) * quads, JS_TYPED_ARRAY_FLOAT32, 0, 0));
+  JS_SetProperty(js, ret, indices_atom, make_quad_indices_buffer(js, quads));
+  JS_SetProperty(js, ret, vertices_atom, number2js(js, verts));
+  JS_SetProperty(js, ret, count_atom, number2js(js, count));
+)
+
+
 static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(SDL_Renderer, draw_color, 1),
   MIST_FUNC_DEF(SDL_Renderer, present, 0),
@@ -2381,6 +2743,7 @@ static const JSCFunctionListEntry js_SDL_Renderer_funcs[] = {
   MIST_FUNC_DEF(renderer, get_viewport,0),
   MIST_FUNC_DEF(renderer, screen2world, 1),
   MIST_FUNC_DEF(renderer, target, 1),
+  MIST_FUNC_DEF(renderer, make_sprite_mesh, 2),
 };
 
 // GPU API
@@ -2390,42 +2753,204 @@ JSC_CCALL(gpu_claim_window,
   SDL_ClaimWindowForGPUDevice(d,w);
 )
 
-JSC_CCALL(gpu_graphics_pipeline,
-  SDL_GPUGraphicsPipelineCreateInfo info = {0};
-  info.vertex_shader = js2SDL_GPUShader(js, js_getpropertystr(js,argv[0], "vertex"));
-  info.fragment_shader = js2SDL_GPUShader(js, js_getpropertystr(js,argv[0], "fragment"));
-  // etc ...
-)
-
 JSC_CCALL(gpu_load_texture,
-  SDL_GPUDevice *d = js2SDL_GPUDevice(js,self);
-  SDL_Surface *surf = js2SDL_Surface(js,argv[0]);
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js, self);
+  SDL_Surface *surf = js2SDL_Surface(js, argv[0]);
   if (!surf) return JS_ThrowReferenceError(js, "Surface was not a surface.");
-  SDL_GPUTexture *tex = SDL_CreateGPUTexture(d, &(SDL_GPUTextureCreateInfo) {
+
+  int compression_level = 0;
+  if (argc > 1)
+    compression_level = JS_ToBool(js,argv[1]);
+
+  compression_level = 2; // use DXT highqual if available
+
+  int dofree = 0;
+  
+SDL_PixelFormat sfmt = surf->format;
+const SDL_PixelFormatDetails *pdetails = SDL_GetPixelFormatDetails(sfmt);
+
+if (!pdetails) {
+    // If we can't get pixel format details, fall back to converting to RGBA8888
+    surf = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA8888);
+    dofree = 1;
+    sfmt = SDL_PIXELFORMAT_RGBA8888;
+    pdetails = SDL_GetPixelFormatDetails(sfmt);
+    if (!pdetails) {
+        // Should never happen with RGBA8888, but just in case
+        return JS_ThrowReferenceError(js, "Unable to get pixel format details.");
+    }
+}
+
+// Check if format has alpha
+bool has_alpha = (pdetails->Amask != 0);
+
+// Choose a GPU format that closely matches the surface's format
+SDL_GPUTextureFormat chosen_format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+
+switch (sfmt) {
+    case SDL_PIXELFORMAT_RGBA32:
+    case SDL_PIXELFORMAT_ABGR32:
+    case SDL_PIXELFORMAT_ARGB32:
+    case SDL_PIXELFORMAT_BGRA32:
+        // 8-8-8-8 format with alpha present
+        chosen_format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        break;
+
+    case SDL_PIXELFORMAT_RGBX8888:
+    case SDL_PIXELFORMAT_XRGB8888:
+    case SDL_PIXELFORMAT_BGRX8888:
+    case SDL_PIXELFORMAT_XBGR8888:
+        // 8-8-8-8 format no alpha
+        chosen_format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        break;
+
+    case SDL_PIXELFORMAT_RGBA4444:
+    case SDL_PIXELFORMAT_ABGR4444:
+    case SDL_PIXELFORMAT_ARGB4444:
+    case SDL_PIXELFORMAT_BGRA4444:
+        // 4-4-4-4 format
+        chosen_format = SDL_GPU_TEXTUREFORMAT_B4G4R4A4_UNORM;
+        break;
+
+    case SDL_PIXELFORMAT_RGB565:
+    case SDL_PIXELFORMAT_BGR565:
+        // 5-6-5 format
+        chosen_format = SDL_GPU_TEXTUREFORMAT_B5G6R5_UNORM;
+        break;
+
+    case SDL_PIXELFORMAT_RGBA5551:
+    case SDL_PIXELFORMAT_ARGB1555:
+    case SDL_PIXELFORMAT_BGRA5551:
+    case SDL_PIXELFORMAT_ABGR1555:
+        // 5-5-5-1 format
+        chosen_format = SDL_GPU_TEXTUREFORMAT_B5G5R5A1_UNORM;
+        break;
+
+    default:
+        // If no direct mapping, convert to RGBA8888
+        // Note: If we reach here, we probably don't have a direct map
+        surf = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA8888);
+        dofree = 1;
+        sfmt = SDL_PIXELFORMAT_RGBA8888;
+        pdetails = SDL_GetPixelFormatDetails(sfmt);
+        chosen_format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        has_alpha = true;
+        break;
+}
+
+// If compression_level > 0, we override format with BC1/BC3
+bool compress = (compression_level > 0);
+int stb_mode = STB_DXT_NORMAL;
+SDL_GPUTextureFormat compressed_format = chosen_format;
+
+if (compress) {
+    if (has_alpha)
+        compressed_format = SDL_GPU_TEXTUREFORMAT_BC3_RGBA_UNORM; // DXT5
+    else
+        compressed_format = SDL_GPU_TEXTUREFORMAT_BC1_RGBA_UNORM; // DXT1
+
+    if (compression_level > 1) stb_mode = STB_DXT_HIGHQUAL;
+}
+
+SDL_GPUTexture *tex = SDL_CreateGPUTexture(gpu, &(SDL_GPUTextureCreateInfo) {
     .type = SDL_GPU_TEXTURETYPE_2D,
-    .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+    .format = compress ? compressed_format : chosen_format,
     .width = surf->w,
     .height = surf->h,
     .layer_count_or_depth = 1,
     .num_levels = 1,
     .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER
-  });
-  SDL_GPUTransferBuffer *tex_buffer = SDL_CreateGPUTransferBuffer(
-    d,
+});
+
+const void *pixel_data = surf->pixels;
+size_t pixel_data_size = surf->pitch * surf->h;
+unsigned char *upload_data = NULL;
+size_t upload_size = pixel_data_size;
+
+if (compress) {
+    // Compress with stb_dxt
+    int block_width = (surf->w + 3) / 4;
+    int block_height = (surf->h + 3) / 4;
+    int block_size = (compressed_format == SDL_GPU_TEXTUREFORMAT_BC1_RGBA_UNORM) ? 8 : 16;
+    int blocks_count = block_width * block_height;
+
+    unsigned char *compressed_data = (unsigned char*)malloc(blocks_count * block_size);
+    if (!compressed_data) {
+        if (dofree) SDL_DestroySurface(surf);
+        return JS_ThrowOutOfMemory(js);
+    }
+
+    const unsigned char *src_pixels = (const unsigned char *)pixel_data;
+    for (int by = 0; by < block_height; ++by) {
+        for (int bx = 0; bx < block_width; ++bx) {
+            unsigned char block_rgba[4*4*4];
+            memset(block_rgba, 0, sizeof(block_rgba));
+
+            for (int y = 0; y < 4; ++y) {
+                for (int x = 0; x < 4; ++x) {
+                    int sx = bx*4 + x;
+                    int sy = by*4 + y;
+                    if (sx < surf->w && sy < surf->h) {
+                        const unsigned char *pixel = src_pixels + sy * surf->pitch + sx * pdetails->bytes_per_pixel;
+                        Uint32 pixelValue = 0;
+                        // Copy pixel data into a Uint32 for SDL_GetRGBA-like extraction
+                        // We'll use masks/shifts from pdetails
+                        memcpy(&pixelValue, pixel, pdetails->bytes_per_pixel);
+
+                        // Extract RGBA
+                        unsigned char r = (pixelValue & pdetails->Rmask) >> pdetails->Rshift;
+                        unsigned char g = (pixelValue & pdetails->Gmask) >> pdetails->Gshift;
+                        unsigned char b = (pixelValue & pdetails->Bmask) >> pdetails->Bshift;
+                        unsigned char a = pdetails->Amask ? ((pixelValue & pdetails->Amask) >> pdetails->Ashift) : 255;
+
+                        // If bits are not fully 8-bit, scale them:
+                        // pdetails->Rbits (etc.) give how many bits each channel uses
+                        int Rmax = (1 << pdetails->Rbits) - 1;
+                        int Gmax = (1 << pdetails->Gbits) - 1;
+                        int Bmax = (1 << pdetails->Bbits) - 1;
+                        int Amax = pdetails->Abits ? ((1 << pdetails->Abits) - 1) : 255;
+
+                        if (pdetails->Rbits < 8) r = (r * 255) / Rmax;
+                        if (pdetails->Gbits < 8) g = (g * 255) / Gmax;
+                        if (pdetails->Bbits < 8) b = (b * 255) / Bmax;
+                        if (pdetails->Amask && pdetails->Abits < 8) a = (a * 255) / Amax;
+
+                        // Set block pixel
+                        block_rgba[(y*4+x)*4+0] = r;
+                        block_rgba[(y*4+x)*4+1] = g;
+                        block_rgba[(y*4+x)*4+2] = b;
+                        block_rgba[(y*4+x)*4+3] = a;
+                    }
+                }
+            }
+
+            unsigned char *dest_block = compressed_data + (by * block_width + bx)*block_size;
+            int alpha = (compressed_format == SDL_GPU_TEXTUREFORMAT_BC3_RGBA_UNORM) ? 1 : 0;
+            stb_compress_dxt_block(dest_block, block_rgba, alpha, stb_mode);
+        }
+    }
+
+    upload_data = compressed_data;
+    upload_size = blocks_count * block_size;
+} else {
+    // No compression, upload directly
+    upload_data = (unsigned char*)pixel_data; 
+    upload_size = pixel_data_size;
+}
+
+SDL_GPUTransferBuffer *tex_buffer = SDL_CreateGPUTransferBuffer(
+    gpu,
     &(SDL_GPUTransferBufferCreateInfo) {
       .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-      .size = surf->pitch*surf->h
+      .size = upload_size
     });
-  void *tex_ptr = SDL_MapGPUTransferBuffer(
-    d,
-    tex_buffer,
-    false
-  );
-  memcpy(tex_ptr, surf->pixels, surf->pitch*surf->h);
-  SDL_UnmapGPUTransferBuffer(d, tex_buffer);
-  SDL_GPUCommandBuffer *uploadcmd = SDL_AcquireGPUCommandBuffer(d);
-  SDL_GPUCopyPass *copypass = SDL_BeginGPUCopyPass(uploadcmd);
-  SDL_UploadToGPUTexture(
+void *tex_ptr = SDL_MapGPUTransferBuffer(gpu, tex_buffer, false);
+memcpy(tex_ptr, upload_data, upload_size);
+SDL_UnmapGPUTransferBuffer(gpu, tex_buffer);
+
+SDL_GPUCommandBuffer *uploadcmd = SDL_AcquireGPUCommandBuffer(gpu);
+SDL_GPUCopyPass *copypass = SDL_BeginGPUCopyPass(uploadcmd);
+SDL_UploadToGPUTexture(
     copypass,
     &(SDL_GPUTextureTransferInfo) {
       .transfer_buffer = tex_buffer,
@@ -2438,18 +2963,25 @@ JSC_CCALL(gpu_load_texture,
       .d = 1
     },
     false
-  );
+);
 
-  SDL_EndGPUCopyPass(copypass);
-  SDL_SubmitGPUCommandBuffer(uploadcmd);
-  SDL_ReleaseGPUTransferBuffer(d,tex_buffer);
+SDL_EndGPUCopyPass(copypass);
+SDL_SubmitGPUCommandBuffer(uploadcmd);
+SDL_ReleaseGPUTransferBuffer(gpu, tex_buffer);
 
-  ret = SDL_GPUTexture2js(js,tex);
-  JS_SetProperty(js,ret,width_atom, number2js(js,surf->w));
-  JS_SetProperty(js,ret,height_atom, number2js(js,surf->h));
+if (compress) {
+    free(upload_data);
+}
+
+ret = SDL_GPUTexture2js(js, tex);
+JS_SetProperty(js, ret, width_atom, number2js(js, surf->w));
+JS_SetProperty(js, ret, height_atom, number2js(js, surf->h));
+
+if (dofree) SDL_DestroySurface(surf);
 )
 
 JSC_CCALL(gpu_logical_size,
+  
 )
 
 static SDL_GPUVertexInputState state_2d;
@@ -2476,7 +3008,7 @@ int atom2primitive_type(JSAtom atom)
 	else return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 }
 
-int atom2depth_compare(JSAtom atom)
+int atom2compare_op(JSAtom atom)
 {
 	if(atom == never_atom) return SDL_GPU_COMPAREOP_NEVER;
 	else if(atom == less_atom) return SDL_GPU_COMPAREOP_LESS;
@@ -2529,8 +3061,8 @@ int atom2blend_op(JSAtom atom)
 	else return SDL_GPU_BLENDOP_ADD;
 }
 
-JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *argv) {
-  SDL_GPUDevice *device = js2SDL_GPUDevice(js,self);
+static JSValue js_gpu_make_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *argv) {
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
   if (argc < 1)
     return JS_ThrowTypeError(js, "gpu_pipeline requires a pipeline object");
 
@@ -2538,8 +3070,58 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
   if (!JS_IsObject(pipe))
     return JS_ThrowTypeError(js, "gpu_pipeline argument must be an object");
 
-
   SDL_GPUGraphicsPipelineCreateInfo info = {0};
+
+  info.vertex_input_state = (SDL_GPUVertexInputState){
+			.num_vertex_buffers = 4,
+			.vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]){{
+				.slot = 0,
+				.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+				.instance_step_rate = 0,
+				.pitch = sizeof(float)*3
+			}, {
+        .slot = 1,
+        .pitch = sizeof(float)*2,
+        .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+        .instance_step_rate = 0
+      },
+      {
+        .slot = 2,
+        .pitch = sizeof(float)*4,
+        .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+        .instance_step_rate=0
+      },
+      {
+        .slot = 3,
+        .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+        .instance_step_rate = 0,
+        .pitch = sizeof(float)*3
+      }},
+			.num_vertex_attributes = 4,
+			.vertex_attributes = (SDL_GPUVertexAttribute[]){{
+				.buffer_slot = 0,
+				.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+				.location = 0,
+				.offset = 0
+			}, {
+				.buffer_slot = 1,
+				.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+				.location = 1,
+				.offset = 0,
+			}, {
+        .buffer_slot = 2,
+        .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+        .location = 2,
+        .offset = 0
+      }, {
+        .buffer_slot = 3,
+        .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+        .location = 3,
+        .offset = 0
+      }
+      }
+		};
+
 
   // Vertex and Fragment Shaders
   JSValue vertex_val = JS_GetPropertyStr(js, pipe, "vertex");
@@ -2626,7 +3208,7 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
     JSValue compare_val = JS_GetPropertyStr(js, depth_val, "compare");
     if (!JS_IsUndefined(compare_val)) {
       JSAtom compare_atom = JS_ValueToAtom(js, compare_val);
-      info.depth_stencil_state.compare_op = atom2depth_compare(compare_atom);
+      info.depth_stencil_state.compare_op = atom2compare_op(compare_atom);
       JS_FreeAtom(js, compare_atom);
     }
     JS_FreeValue(js, compare_val);
@@ -2676,7 +3258,7 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
       JSValue compare_val = JS_GetPropertyStr(js, front_val, "compare");
       if (!JS_IsUndefined(compare_val)) {
         JSAtom compare_atom = JS_ValueToAtom(js, compare_val);
-        info.depth_stencil_state.front_stencil_state.compare_op = atom2depth_compare(compare_atom);
+        info.depth_stencil_state.front_stencil_state.compare_op = atom2compare_op(compare_atom);
         JS_FreeAtom(js, compare_atom);
       }
       JS_FreeValue(js, compare_val);
@@ -2713,7 +3295,7 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
             JSValue compare_val = JS_GetPropertyStr(js, back_val, "compare");
             if (!JS_IsUndefined(compare_val)) {
                 JSAtom compare_atom = JS_ValueToAtom(js, compare_val);
-                info.depth_stencil_state.back_stencil_state.compare_op = atom2depth_compare(compare_atom);
+                info.depth_stencil_state.back_stencil_state.compare_op = atom2compare_op(compare_atom);
                 JS_FreeAtom(js, compare_atom);
             }
             JS_FreeValue(js, compare_val);
@@ -2796,11 +3378,11 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
 
     // Alpha to Coverage
     JSValue atc_val = JS_GetPropertyStr(js, pipe, "alpha_to_coverage");
-    info.multisample_state.sample_mask = 0xFFFFFFFF; // Default
-    info.multisample_state.enable_mask = JS_ToBool(js, JS_GetPropertyStr(js, pipe, "multisample.domask")) ? 1 : 0;
-    info.multisample_state.sample_count = 1; // Default
+//    info.multisample_state.sample_mask = 0xFFFFFFFF; // Default
+//    info.multisample_state.enable_mask = JS_ToBool(js, JS_GetPropertyStr(js, pipe, "multisample.domask")) ? 1 : 0;
+//    info.multisample_state.sample_count = 1; // Default
     // Adjust based on JS object
-    JSValue multisample_val = JS_GetPropertyStr(js, pipe, "multisample");
+/*    JSValue multisample_val = JS_GetPropertyStr(js, pipe, "multisample");
     if (JS_IsObject(multisample_val)) {
         JSValue count_val = JS_GetPropertyStr(js, multisample_val, "count");
         if (!JS_IsUndefined(count_val)) {
@@ -2821,17 +3403,17 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
         JS_FreeValue(js, domask_val);
     }
     JS_FreeValue(js, multisample_val);
-
-    info.blend_state.alpha_to_coverage = JS_ToBool(js, atc_val);
+*/
+//    info.blend_state.alpha_to_coverage = JS_ToBool(js, atc_val);
     JS_FreeValue(js, atc_val);
 
     // Target Info
     // For simplicity, assume a single color target with a default format
     // You can expand this to handle multiple targets based on your needs
-    SDL_GPUColorTargetDescription color_target_desc = { SDL_GPU_RGBA8 }; // Default format
-    info.target_info.color_target_descriptions = &color_target_desc;
+//    SDL_GPUColorTargetDescription color_target_desc = { SDL_GPU_RGBA8 }; // Default format
+//    info.target_info.color_target_descriptions = &color_target_desc;
     info.target_info.num_color_targets = 1;
-    info.target_info.depth_stencil_format = SDL_GPU_DEPTH24_STENCIL8; // Default depth-stencil format
+//    info.target_info.depth_stencil_format = SDL_GPU_DEPTH24_STENCIL8; // Default depth-stencil format
     JSValue has_depth_stencil_target_val = JS_GetPropertyStr(js, pipe, "has_depth_stencil_target");
     if (!JS_IsUndefined(has_depth_stencil_target_val)) {
         info.target_info.has_depth_stencil_target = JS_ToBool(js, has_depth_stencil_target_val);
@@ -2856,75 +3438,637 @@ JSValue gpu_pipeline(JSContext *js, JSValueConst self, int argc, JSValueConst *a
     }
     JS_FreeValue(js, label_val);
 
+    JSValue jswin = JS_GetPropertyStr(js,self,"window");
+    SDL_Window *win = js2SDL_Window(js, jswin);
+    info.target_info =(SDL_GPUGraphicsPipelineTargetInfo) {
+      .num_color_targets = 1,
+      .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
+        .format = SDL_GetGPUSwapchainTextureFormat(gpu, win)
+      }}
+    };
+    JS_FreeValue(js,jswin);
+
     // Create the pipeline
-    SDL_GPUGraphicsPipeline *pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    SDL_GPUGraphicsPipeline *pipeline = SDL_CreateGPUGraphicsPipeline(gpu, &info);
     if (!pipeline) return JS_ThrowInternalError(js, "Failed to create GPU pipeline");
+
+    printf("MADE PIPELINE\n");
 
     return SDL_GPUGraphicsPipeline2js(js, pipeline);
 }
 
-static SDL_GPUCommandBuffer *cmds = NULL;
-static SDL_GPUTexture *swapchain = NULL;
-static SDL_GPURenderPass *pass = NULL;
-
 JSC_CCALL(gpu_newframe,
-  if (cmds) return JS_UNDEFINED;
-  SDL_GPUDevice *d = js2SDL_GPUDevice(js,self);
-  cmds = SDL_AcquireGPUCommandBuffer(d);
-  if (!cmds) return JS_ThrowReferenceError(js,"Unable to acquire command buffer: %s", SDL_GetError());
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  
   SDL_Window *win = js2SDL_Window(js,argv[0]);
-  if (!SDL_AcquireGPUSwapchainTexture(cmds,win,&swapchain, NULL, NULL))
-    return JS_ThrowReferenceError(js, "Unable to acquire swapchain: %s", SDL_GetError());
-  SDL_GPUColorTargetInfo info = {0};
-  info.texture = swapchain;
-  info.clear_color = (SDL_FColor){0,0,0,1.0};
-  info.load_op = SDL_GPU_LOADOP_CLEAR;
-  info.store_op = SDL_GPU_STOREOP_STORE;
-  pass = SDL_BeginGPURenderPass(cmds, &info, 1, NULL);
 )
 
-JSC_CCALL(gpu_present,
+// Helper conversion functions:
+int atom2filter(JSAtom atom)
+{
+    if (atom == nearest_atom) return SDL_GPU_FILTER_NEAREST;
+    if (atom == linear_atom) return SDL_GPU_FILTER_LINEAR;
+    // Default
+    return SDL_GPU_FILTER_LINEAR;
+}
+
+int atom2mipmap_mode(JSAtom atom)
+{
+    if (atom == mipmap_nearest_atom) return SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+    if (atom == mipmap_linear_atom) return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+    return SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+}
+
+int atom2address_mode(JSAtom atom)
+{
+    if (atom == repeat_atom) return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+    if (atom == mirror_atom) return SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT;
+    if (atom == clamp_edge_atom) return SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+    return SDL_GPU_SAMPLERADDRESSMODE_REPEAT; // Default
+}
+
+// Now the function to create the sampler
+static JSValue js_gpu_make_sampler(JSContext *js, JSValueConst self, int argc, JSValueConst *argv) {
+    // We need at least 1 argument: the sampler description object
+    if (argc < 1)
+        return JS_ThrowTypeError(js, "gpu_sampler requires a sampler object");
+
+    JSValue sampler_obj = argv[0];
+    if (!JS_IsObject(sampler_obj))
+        return JS_ThrowTypeError(js, "gpu_sampler argument must be an object");
+
+    SDL_GPUDevice *device = js2SDL_GPUDevice(js, self);
+    if (!device)
+        return JS_ThrowInternalError(js, "Invalid GPU device");
+
+    SDL_GPUSamplerCreateInfo info;
+    SDL_memset(&info, 0, sizeof(info));
+
+    // Get min_filter
+    JSValue min_val = JS_GetPropertyStr(js, sampler_obj, "min_filter");
+    if (!JS_IsUndefined(min_val)) {
+        JSAtom min_atom = JS_ValueToAtom(js, min_val);
+        info.min_filter = atom2filter(min_atom);
+        JS_FreeAtom(js, min_atom);
+    } else {
+        info.min_filter = SDL_GPU_FILTER_LINEAR; // default
+    }
+    JS_FreeValue(js, min_val);
+
+    // Get mag_filter
+    JSValue mag_val = JS_GetPropertyStr(js, sampler_obj, "mag_filter");
+    if (!JS_IsUndefined(mag_val)) {
+        JSAtom mag_atom = JS_ValueToAtom(js, mag_val);
+        info.mag_filter = atom2filter(mag_atom);
+        JS_FreeAtom(js, mag_atom);
+    } else {
+        info.mag_filter = SDL_GPU_FILTER_LINEAR; // default
+    }
+    JS_FreeValue(js, mag_val);
+
+    // mipmap_mode
+    JSValue mipmap_val = JS_GetPropertyStr(js, sampler_obj, "mipmap_mode");
+    if (!JS_IsUndefined(mipmap_val)) {
+        JSAtom mipmap_atom = JS_ValueToAtom(js, mipmap_val);
+        info.mipmap_mode = atom2mipmap_mode(mipmap_atom);
+        JS_FreeAtom(js, mipmap_atom);
+    } else {
+        info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR; // default
+    }
+    JS_FreeValue(js, mipmap_val);
+
+    // address_mode_u
+    JSValue address_u_val = JS_GetPropertyStr(js, sampler_obj, "address_mode_u");
+    if (!JS_IsUndefined(address_u_val)) {
+        JSAtom address_u_atom = JS_ValueToAtom(js, address_u_val);
+        info.address_mode_u = atom2address_mode(address_u_atom);
+        JS_FreeAtom(js, address_u_atom);
+    } else {
+        info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT; // default
+    }
+    JS_FreeValue(js, address_u_val);
+
+    // address_mode_v
+    JSValue address_v_val = JS_GetPropertyStr(js, sampler_obj, "address_mode_v");
+    if (!JS_IsUndefined(address_v_val)) {
+        JSAtom address_v_atom = JS_ValueToAtom(js, address_v_val);
+        info.address_mode_v = atom2address_mode(address_v_atom);
+        JS_FreeAtom(js, address_v_atom);
+    } else {
+        info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT; // default
+    }
+    JS_FreeValue(js, address_v_val);
+
+    // address_mode_w
+    JSValue address_w_val = JS_GetPropertyStr(js, sampler_obj, "address_mode_w");
+    if (!JS_IsUndefined(address_w_val)) {
+        JSAtom address_w_atom = JS_ValueToAtom(js, address_w_val);
+        info.address_mode_w = atom2address_mode(address_w_atom);
+        JS_FreeAtom(js, address_w_atom);
+    } else {
+        info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT; // default
+    }
+    JS_FreeValue(js, address_w_val);
+
+    // mip_lod_bias
+    JSValue mip_lod_bias_val = JS_GetPropertyStr(js, sampler_obj, "mip_lod_bias");
+    if (!JS_IsUndefined(mip_lod_bias_val)) {
+        JS_ToFloat64(js, &info.mip_lod_bias, mip_lod_bias_val);
+    } else {
+        info.mip_lod_bias = 0.0f; // default
+    }
+    JS_FreeValue(js, mip_lod_bias_val);
+
+    // max_anisotropy
+    JSValue max_anisotropy_val = JS_GetPropertyStr(js, sampler_obj, "max_anisotropy");
+    if (!JS_IsUndefined(max_anisotropy_val)) {
+        JS_ToFloat64(js, &info.max_anisotropy, max_anisotropy_val);
+    } else {
+        info.max_anisotropy = 1.0f; // default
+    }
+    JS_FreeValue(js, max_anisotropy_val);
+
+    // compare_op
+    JSValue compare_op_val = JS_GetPropertyStr(js, sampler_obj, "compare_op");
+    if (!JS_IsUndefined(compare_op_val)) {
+        JSAtom compare_op_atom = JS_ValueToAtom(js, compare_op_val);
+        info.compare_op = atom2compare_op(compare_op_atom);
+        JS_FreeAtom(js, compare_op_atom);
+    } else {
+        info.compare_op = SDL_GPU_COMPAREOP_ALWAYS; // default
+    }
+    JS_FreeValue(js, compare_op_val);
+
+    // min_lod
+    JSValue min_lod_val = JS_GetPropertyStr(js, sampler_obj, "min_lod");
+    if (!JS_IsUndefined(min_lod_val)) {
+        JS_ToFloat64(js, &info.min_lod, min_lod_val);
+    } else {
+        info.min_lod = 0.0f; // default
+    }
+    JS_FreeValue(js, min_lod_val);
+
+    // max_lod
+    JSValue max_lod_val = JS_GetPropertyStr(js, sampler_obj, "max_lod");
+    if (!JS_IsUndefined(max_lod_val)) {
+        JS_ToFloat64(js, &info.max_lod, max_lod_val);
+    } else {
+        info.max_lod = 1000.0f; // arbitrary large number as default
+    }
+    JS_FreeValue(js, max_lod_val);
+
+    // enable_anisotropy
+    JSValue enable_anisotropy_val = JS_GetPropertyStr(js, sampler_obj, "enable_anisotropy");
+    if (!JS_IsUndefined(enable_anisotropy_val)) {
+        info.enable_anisotropy = JS_ToBool(js, enable_anisotropy_val);
+    } else {
+        info.enable_anisotropy = false; // default
+    }
+    JS_FreeValue(js, enable_anisotropy_val);
+
+    // enable_compare
+    JSValue enable_compare_val = JS_GetPropertyStr(js, sampler_obj, "enable_compare");
+    if (!JS_IsUndefined(enable_compare_val)) {
+        info.enable_compare = JS_ToBool(js, enable_compare_val);
+    } else {
+        info.enable_compare = false; // default
+    }
+    JS_FreeValue(js, enable_compare_val);
+
+    // props (extensions)
+    // If you don't need extensions, set to 0. Otherwise retrieve from JS.
+    info.props = 0;
+
+    // Create the sampler
+    SDL_GPUSampler *sampler = SDL_CreateGPUSampler(device, &info);
+    if (!sampler) {
+        return JS_ThrowInternalError(js, "Failed to create GPU sampler");
+    }
+
+    // Convert sampler pointer to JS object or handle as needed
+    printf("sampler created was %p\n", sampler);
+    return SDL_GPUSampler2js(js, sampler); // You need to implement SDL_GPUSampler2js similar to pipeline
+}
+
+/*JSC_CCALL(gpu_present,
+for (size_t i = 0; i < arrlen(batches)-1; i++) {
+    size_t vert_end   = batches[i+1].start_vert; // one past the last vertex of this batch
+    size_t vert_count = vert_end - vert_start;
+
+    size_t idx_end   = batches[i+1].start_indx; // one past the last index of this batch
+    size_t idx_count = idx_end - idx_start;
+
+    SDL_DrawGPUIndexedPrimitives(
+        pass,
+        (int)idx_count,  // How many indices to draw
+        1,               // Instance count
+        (int)idx_start,  // Starting index offset
+        (int)vert_start, // Vertex offset
+        0                // First instance (if using instancing)
+    );
+    vert_start = vert_end;
+    idx_start = idx_end;
+}
+  
   SDL_EndGPURenderPass(pass);
+
   SDL_SubmitGPUCommandBuffer(cmds);
+  SDL_ReleaseGPUBuffer(gpu,vertex_buffer);
+  SDL_ReleaseGPUBuffer(gpu,index_buffer);
+  arrsetlen(global_verts,0);
+  arrsetlen(global_indices,0);
 )
+*/
 
 JSC_CCALL(gpu_camera,
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  SDL_Rect vp;
+  vp.w = 1280;
+  vp.h = 718;
+  int centered = JS_ToBool(js,argv[1]);
 
+  HMM_Mat4 proj;
+if (centered) {
+  // World coordinates: (0,0) at screen center, Y up
+  proj = HMM_Orthographic_RH_NO(
+      -(float)vp.w * 0.5f, (float)vp.w * 0.5f, // left, right
+      -(float)vp.h * 0.5f, (float)vp.h * 0.5f, // bottom, top
+      -1.0f, 1.0f
+  );
+} else {
+  // UI coordinates: (0,0) at bottom-left corner, Y up
+  proj = HMM_Orthographic_RH_NO(
+      0.0f, (float)vp.w,   // left, right
+      0.0f, (float)vp.h,   // bottom, top
+      -1.0f, 1.0f
+  );
+
+}
+
+transform *tra = js2transform(js, argv[0]);
+HMM_Mat4 view = HMM_Translate((HMM_Vec3){-tra->pos.x, -tra->pos.y, 0.0f});
 )
 
 JSC_CCALL(gpu_scale,
 
 )
 
+/*
+JSC_CCALL(gpu_geometry,
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  SDL_GPUTexture *tex = js2SDL_GPUTexture(js, argv[0]);
+
+  // Extract geometry data from the JS object in argv[1]
+  JSValue geom_obj = argv[1];
+  JSValue pos_val = JS_GetPropertyStr(js, geom_obj, "pos");
+  JSValue color_val = JS_GetPropertyStr(js, geom_obj, "color");
+  JSValue uv_val = JS_GetPropertyStr(js, geom_obj, "uv");
+  JSValue indices_val = JS_GetPropertyStr(js, geom_obj, "indices");
+
+  int vertices = js_getnum_str(js, geom_obj, "vertices");
+  int count = js_getnum_str(js, geom_obj, "count");
+
+  size_t pos_stride, color_stride, uv_stride, indices_stride;
+  void *posdata = get_gpu_buffer(js, pos_val, &pos_stride, NULL);
+  void *colordata = get_gpu_buffer(js, color_val, &color_stride, NULL);
+  void *uvdata = get_gpu_buffer(js, uv_val, &uv_stride, NULL);
+  void *idxdata = get_gpu_buffer(js, indices_val, &indices_stride, NULL);
+
+  // Transform positions by camera matrix
+  // Assuming posdata is an array of HMM_Vec2 or {float x, float y}
+  HMM_Vec2 *trans_pos = malloc(vertices * sizeof(HMM_Vec2));
+  memcpy(trans_pos, posdata, sizeof(HMM_Vec2)*vertices);
+
+  for (int i = 0; i < vertices; i++) {
+    HMM_Vec3 p3 = {trans_pos[i].X, trans_pos[i].Y, 1.0f};
+    HMM_Vec3 tp = HMM_MulM3V3(cam_mat, p3);
+    trans_pos[i].X = tp.X;
+    trans_pos[i].Y = tp.Y;
+  }
+
+  // We'll read each vertex's data and push into global_verts as texture_vertex.
+  // Assume:
+  // - posdata: HMM_Vec2 per vertex
+  // - uvdata: HMM_Vec2 per vertex
+  // - colordata: float[4] per vertex (r,g,b,a)
+  // Adjust indexing according to strides if needed. For simplicity, assume contiguous arrays.
+  unsigned char *pPos = (unsigned char *)posdata;
+  unsigned char *pUV = (unsigned char *)uvdata;
+  unsigned char *pColor = (unsigned char *)colordata;
+
+  // z coordinate (for 2D rendering, just 0)
+  float z = 0.0f;
+
+  for (int i = 0; i < vertices; i++) {
+    // Position
+    float px = trans_pos[i].X;
+    float py = trans_pos[i].Y;
+
+    // UV
+    HMM_Vec2 *uv_ptr = (HMM_Vec2*)(pUV + i * uv_stride);
+    float u = uv_ptr->X;
+    float v = uv_ptr->Y;
+
+    // Color
+    float *c_ptr = (float *)(pColor + i * color_stride);
+    uint8_t r = (uint8_t)(c_ptr[0] * 255.0f);
+    uint8_t g = (uint8_t)(c_ptr[1] * 255.0f);
+    uint8_t b = (uint8_t)(c_ptr[2] * 255.0f);
+    uint8_t a = (uint8_t)(c_ptr[3] * 255.0f);
+
+    texture_vertex vert = {
+      px, py, z,
+      u, v,
+      r, g, b, a
+    };
+
+    arrput(global_verts, vert);
+  }
+
+  // Now handle indices
+  // Indices might be Uint16 or Uint32, check indices_stride or known format
+  // Suppose they are Uint16
+  Uint16 *idx_ptr = (Uint16 *)idxdata;
+
+  for (int i = 0; i < count; i++) {
+    // Adjust index by base_vert
+    arrput(global_indices, idx_ptr[i]);
+  }
+
+  free(trans_pos);
+
+  // Clean up JS values
+  JS_FreeValue(js, pos_val);
+  JS_FreeValue(js, color_val);
+  JS_FreeValue(js, uv_val);
+  JS_FreeValue(js, indices_val);
+)
+*/
+
 JSC_CCALL(gpu_texture,
-/*  SDL_GPUTexture *tex = js2SDL_Texture(js,argv[0]);
-  rect dst = transform_rect(renderer,js2rect(js,argv[1]), &cam_mat);
+/*  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  SDL_GPUTexture *tex = js2SDL_GPUTexture(js, argv[0]);
+
+  rect dst = js2rect(js,argv[1]);
   
+  // Determine the coloring
+  uint8_t r = 255, g = 255, b = 255, a = 255;
   if (!JS_IsUndefined(argv[3])) {
     colorf color = js2color(js,argv[3]);
-    SDL_SetTextureColorModFloat(tex, color.r, color.g, color.b);
-    SDL_SetTextureAlphaModFloat(tex,color.a);
+    r = (uint8_t)(color.r * 255.0f);
+    g = (uint8_t)(color.g * 255.0f);
+    b = (uint8_t)(color.b * 255.0f);
+    a = (uint8_t)(color.a * 255.0f);
   }
-  if (JS_IsUndefined(argv[2]))
-    SDL_RenderTexture(renderer,tex,NULL,&dst);
-  else {
 
-    rect src = js2rect(js,argv[2]);
+  // If source rect is provided, compute normalized UVs, else use full texture
+  float src_x = 0.0f;
+  float src_y = 0.0f;
+  float src_w = 1.0;
+  float src_h = 1.0;
 
-    SDL_RenderTextureRotated(renderer, tex, &src, &dst, 0, NULL, SDL_FLIP_NONE);
+  if (!JS_IsUndefined(argv[2])) {
+    rect src = js2rect(js, argv[2]);
+    src_x = (float)src.x;
+    src_y = (float)src.y;
+    src_w = (float)src.w;
+    src_h = (float)src.h;
   }
-  */
+
+  float u0 = src_x;
+  float v1 = src_y;
+  float u1 = (src_x + src_w);
+  float v0 = (src_y + src_h);
+
+  // Set z = 0 for 2D rendering
+  float z = 0.0f;
+  
+  texture_vertex verts[4];
+
+  verts[0] = (texture_vertex){ (float)dst.x,          (float)dst.y,          z, u0, v0, r,g,b,a };
+  verts[1] = (texture_vertex){ (float)(dst.x+dst.w),  (float)dst.y,          z, u1, v0, r,g,b,a };
+  verts[2] = (texture_vertex){ (float)(dst.x+dst.w),  (float)(dst.y+dst.h),  z, u1, v1, r,g,b,a };
+  verts[3] = (texture_vertex){ (float)dst.x,          (float)(dst.y+dst.h),  z, u0, v1, r,g,b,a };
+
+  size_t base_vert = arrlen(global_verts);
+  for (int i = 0; i < 4; i++)
+    arrput(global_verts,verts[i]);
+
+  Uint16 indices[6] = {0, 1, 2, 2, 3, 0};
+  for (int i = 0; i < 6; i++)
+    arrput(global_indices, indices[i]);*/
 )
+
+JSC_CCALL(gpu_viewport,
+  
+)
+
+JSC_CCALL(gpu_make_sprite_mesh,
+  size_t quads = js_arrlen(js, argv[0]);
+  size_t verts = quads*4;
+  size_t count = quads*6;
+
+  HMM_Vec3 *posdata = malloc(sizeof(*posdata)*verts);
+  HMM_Vec2 *uvdata = malloc(sizeof(*uvdata)*verts);
+  HMM_Vec4 *colordata = malloc(sizeof(*colordata)*verts);
+
+  for (int i = 0; i < quads; i++) {
+    JSValue sub = JS_GetPropertyUint32(js,argv[0],i);
+    JSValue jstransform = JS_GetProperty(js,sub,transform_atom);
+    transform *tr = js2transform(js,jstransform);
+    JSValue jssrc = JS_GetProperty(js,sub,src_atom);
+    JSValue jscolor = JS_GetProperty(js,sub,color_atom);
+    HMM_Vec4 color;
+
+    rect src;
+    if (JS_IsUndefined(jssrc))
+      src = (rect){.x = 0, .y = 0, .w = 1, .h = 1};
+    else
+      src = js2rect(js,jssrc);
+    
+    if (JS_IsUndefined(jscolor))
+      color = (HMM_Vec4){1,1,1,1};
+    else
+      color = js2vec4(js,jscolor);
+
+    // Calculate the base index for the current quad
+    size_t base = i * 4;
+
+    HMM_Mat3 trmat = js2transform_mat3(js,jstransform);
+
+    HMM_Vec3 base_quad[4] = {
+      {0.0,0.0,1.0},
+      {1.0,0.0,1.0},
+      {0.0,1.0,1.0},
+      {1.0,1.0,1.0}
+    };
+    for (int j = 0; j < 4; j++)
+      posdata[base+j] = HMM_MulM3V3(trmat, base_quad[j]);
+
+    // Define the UV coordinates based on the source rectangle
+    uvdata[base + 0] = (HMM_Vec2){ src.x,                  src.y + src.h };
+    uvdata[base + 1] = (HMM_Vec2){ src.x + src.w,      src.y + src.h };    
+    uvdata[base + 2] = (HMM_Vec2){ src.x,                  src.y };
+    uvdata[base + 3] = (HMM_Vec2){ src.x + src.w,      src.y };
+
+    colordata[4*i + 0] = color;
+    colordata[4*i + 1] = color;
+    colordata[4*i + 2] = color;
+    colordata[4*i + 3] = color;
+
+    JS_FreeValue(js,sub);
+    JS_FreeValue(js,jscolor);
+    JS_FreeValue(js,jssrc);
+  }
+
+  ret = JS_NewObject(js);
+  JS_SetProperty(js, ret, pos_atom, make_gpu_buffer(js, posdata, sizeof(*posdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 1));
+  JS_SetProperty(js, ret, uv_atom, make_gpu_buffer(js, uvdata, sizeof(*uvdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 1));
+  JS_SetProperty(js, ret, color_atom, make_gpu_buffer(js, colordata, sizeof(*colordata) * verts, JS_TYPED_ARRAY_FLOAT32, 0, 1));
+  JS_SetProperty(js, ret, indices_atom, make_quad_indices_buffer(js, quads));
+  JS_SetProperty(js, ret, vertices_atom, number2js(js, verts));
+  JS_SetProperty(js, ret, count_atom, number2js(js, count));
+)
+
+JSC_CCALL(gpu_driver,
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  ret = JS_NewString(js, SDL_GetGPUDeviceDriver(gpu));
+)
+
+JSC_CCALL(gpu_set_pipeline,
+  JSValue pipeline = JS_GetPropertyStr(js, argv[0], "gpu");
+  if (JS_IsUndefined(pipeline))
+    return JS_ThrowReferenceError(js, "Must use make_pipeline before setting.");
+)
+
+JSC_CCALL(gpu_make_shader,
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  SDL_GPUShaderStage stage = !JS_ToBool(js,argv[1]);;
+
+  size_t size;
+  void *code = JS_GetArrayBuffer(js, &size, argv[0]);
+
+  SDL_GPUShader *shader = SDL_CreateGPUShader(gpu, &(SDL_GPUShaderCreateInfo) {
+    .code_size = size,
+    .code = code,
+    .entrypoint = "main",
+    .format = SDL_GPU_SHADERFORMAT_SPIRV,
+    .stage = stage,
+    .num_samplers = js2number(js,argv[2]),
+    .num_storage_textures = js2number(js,argv[3]),
+    .num_storage_buffers = js2number(js,argv[4]),
+    .num_uniform_buffers = js2number(js,argv[5])
+  });
+  if (!shader) return JS_ThrowReferenceError(js, "Unable to create shader: %s", SDL_GetError());
+  return SDL_GPUShader2js(js,shader);
+)
+
+JSC_CCALL(gpu_acquire_cmd_buffer,
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js, self);
+  SDL_GPUCommandBuffer *cb = SDL_AcquireGPUCommandBuffer(gpu);
+  if (!cb) return JS_ThrowReferenceError(js,"Unable to acquire command buffer: %s", SDL_GetError());
+  // Wrap cb in a JS object
+  return SDL_GPUCommandBuffer2js(js, cb);
+)
+
+static Uint32 atom2usage(JSContext *js, JSAtom atom) {
+    if (atom == vertex_atom) {
+        return SDL_GPU_BUFFERUSAGE_VERTEX;
+    } else if (atom == index_atom) {
+        return SDL_GPU_BUFFERUSAGE_INDEX;
+    } else if (atom == indirect_atom) {
+        return SDL_GPU_BUFFERUSAGE_INDIRECT;
+    }
+    // Default fallback if unrecognized
+    return SDL_GPU_BUFFERUSAGE_VERTEX;
+}
+
+JSC_CCALL(gpu_upload,
+  SDL_GPUDevice *gpu = js2SDL_GPUDevice(js,self);
+  SDL_GPUCommandBuffer *cmds = SDL_AcquireGPUCommandBuffer(gpu);
+  SDL_GPUCopyPass *copypass = SDL_BeginGPUCopyPass(cmds);
+  
+  JSAtom usage_atom = JS_ValueToAtom(js, argv[1]);
+  Uint32 flag = atom2usage(js, usage_atom);
+  JS_FreeAtom(js, usage_atom);  
+
+  JSValue buffers = argv[0]; // process the entire array of buffers
+  size_t len = js_arrlen(js,buffers);
+  SDL_GPUTransferBuffer *transfer_buffers[len];
+
+  for (int i = 0; i < len; i++) {
+  JSValue js_buf = JS_GetPropertyUint32(js,buffers,i);
+  JSValue js_idx = JS_GetPropertyStr(js,js_buf, "index");
+
+  Uint32 flag;
+
+  if (JS_IsUndefined(js_idx))
+    flag = SDL_GPU_BUFFERUSAGE_VERTEX;
+  else {
+    flag = SDL_GPU_BUFFERUSAGE_INDEX;
+    JS_FreeValue(js,js_idx);
+  }
+    
+  
+  size_t stride, size;
+  void *data = get_gpu_buffer(js, js_buf, &stride, &size);
+
+  SDL_GPUBuffer *gpu_buffer = SDL_CreateGPUBuffer(
+    gpu,
+    &(SDL_GPUBufferCreateInfo) {
+      .size = size,
+      .usage = flag,
+    }
+  );
+
+  JS_SetPropertyStr(js,js_buf, "gpu", SDL_GPUBuffer2js(js,gpu_buffer));
+  JS_FreeValue(js,js_buf);
+
+  transfer_buffers[i] = SDL_CreateGPUTransferBuffer(
+    gpu,
+    &(SDL_GPUTransferBufferCreateInfo) {
+      .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+      .size = size
+    }
+  );
+
+  void *mapped_data = SDL_MapGPUTransferBuffer(gpu, transfer_buffers[i], false);
+  memcpy(mapped_data, data, size);
+  SDL_UnmapGPUTransferBuffer(gpu, transfer_buffers[i]);
+  
+  SDL_UploadToGPUBuffer(copypass,
+    &(SDL_GPUTransferBufferLocation) { .transfer_buffer = transfer_buffers[i], .offset = 0 },
+    &(SDL_GPUBufferRegion) { .buffer = gpu_buffer, .offset = 0, .size = size },
+    false
+  );
+  }
+  SDL_EndGPUCopyPass(copypass);
+  SDL_SubmitGPUCommandBuffer(cmds);
+  
+  for (int i = 0; i < len; i++)
+    SDL_ReleaseGPUTransferBuffer(gpu, transfer_buffers[i]);
+)
+
 
 static const JSCFunctionListEntry js_SDL_GPUDevice_funcs[] = {
   MIST_FUNC_DEF(gpu, claim_window, 1),
-  MIST_FUNC_DEF(gpu, graphics_pipeline,1),
-  MIST_FUNC_DEF(gpu, load_texture, 1),
+  MIST_FUNC_DEF(gpu, make_pipeline, 1), // loads pipeline state into an object
+  MIST_FUNC_DEF(gpu, make_sampler,1),
+  MIST_FUNC_DEF(gpu, set_pipeline, 1), // grabs the gpu property off a pipeline value to load
+  MIST_FUNC_DEF(gpu, load_texture, 2),
   MIST_FUNC_DEF(gpu, logical_size, 1),
   MIST_FUNC_DEF(gpu, newframe, 1),
-  MIST_FUNC_DEF(gpu,present,0),
-  MIST_FUNC_DEF(gpu, camera, 1),
+  MIST_FUNC_DEF(gpu, camera, 2),
   MIST_FUNC_DEF(gpu, scale, 1),
+  MIST_FUNC_DEF(gpu, texture, 4),
+//  MIST_FUNC_DEF(gpu, geometry, 2),
+  MIST_FUNC_DEF(gpu, viewport, 1),
+  MIST_FUNC_DEF(gpu, make_sprite_mesh, 2),
+  MIST_FUNC_DEF(gpu, driver, 0),
+  MIST_FUNC_DEF(gpu, make_shader, 6),
+  MIST_FUNC_DEF(gpu, load_gltf_model, 1),
+  MIST_FUNC_DEF(gpu, acquire_cmd_buffer, 0),
+  MIST_FUNC_DEF(gpu, upload, 1),
 };
 
 JSC_CCALL(renderpass_bind_pipeline,
@@ -2934,16 +4078,345 @@ JSC_CCALL(renderpass_bind_pipeline,
 )
 
 JSC_CCALL(renderpass_draw,
-  SDL_GPURenderPass *r = js2SDL_GPURenderPass(js,self);
-  SDL_DrawGPUIndexedPrimitives(r, js2number(js,argv[0]), js2number(js,argv[1]), js2number(js,argv[2]), js2number(js,argv[3]), js2number(js,argv[4]));
+  SDL_GPURenderPass *pass = js2SDL_GPURenderPass(js,self);
+  SDL_DrawGPUIndexedPrimitives(pass, js2number(js,argv[0]), js2number(js,argv[1]), js2number(js,argv[2]), js2number(js,argv[3]), js2number(js,argv[4]));
+)
+
+JSC_CCALL(renderpass_bind_model,
+  SDL_GPURenderPass *pass = js2SDL_GPURenderPass(js, self);
+  JSValue model = argv[0];
+
+  // Helper macro to get and convert a GPU buffer from a property if it exists
+  #define GET_GPU_BUFFER_IF_EXISTS(NAME) \
+    JSValue NAME##_val = JS_GetPropertyStr(js, model, #NAME); \
+    SDL_GPUBuffer *NAME##_buf = NULL; \
+    if (!JS_IsUndefined(NAME##_val)) { \
+      JSValue NAME##_gpu_val = JS_GetPropertyStr(js, NAME##_val, "gpu"); \
+      if (!JS_IsUndefined(NAME##_gpu_val)) { \
+        NAME##_buf = js2SDL_GPUBuffer(js, NAME##_gpu_val); \
+      } \
+      JS_FreeValue(js, NAME##_gpu_val); \
+    } \
+    JS_FreeValue(js, NAME##_val);
+
+  // Attempt to retrieve each attribute buffer
+  GET_GPU_BUFFER_IF_EXISTS(pos)
+  GET_GPU_BUFFER_IF_EXISTS(uv)
+  GET_GPU_BUFFER_IF_EXISTS(color)
+  GET_GPU_BUFFER_IF_EXISTS(normal)
+
+  // Indices (we assume these must always be present for indexed draws)
+  JSValue indices_val = JS_GetPropertyStr(js, model, "indices");
+  SDL_GPUBuffer *indices_buf = NULL;
+  if (!JS_IsUndefined(indices_val)) {
+    JSValue indices_gpu_val = JS_GetPropertyStr(js, indices_val, "gpu");
+    if (!JS_IsUndefined(indices_gpu_val)) {
+      indices_buf = js2SDL_GPUBuffer(js, indices_gpu_val);
+      JS_FreeValue(js, indices_gpu_val);
+    } else {
+      JS_FreeValue(js, indices_val);
+      return JS_ThrowInternalError(js, "Model has indices but no GPU buffer property.");
+    }
+  } else {
+    JS_FreeValue(js, indices_val);
+    return JS_ThrowReferenceError(js, "Model must have an 'indices' property.");
+  }
+  JS_FreeValue(js, indices_val);
+
+  // Bind each buffer if it exists. We know our pipeline expects:
+  // slot 0: pos (float3)
+  // slot 1: uv (float2)
+  // slot 2: color (float4)
+  // slot 3: normal (float3)
+  //
+  // If a buffer is missing, we just don't bind anything for that slot.
+
+  SDL_GPUBufferBinding binding;
+
+  if (pos_buf) {
+    binding.buffer = pos_buf;
+    binding.offset = 0;
+    SDL_BindGPUVertexBuffers(pass, 0, &binding, 1); // pos at slot 0
+  }
+
+  if (uv_buf) {
+    binding.buffer = uv_buf;
+    binding.offset = 0;
+    SDL_BindGPUVertexBuffers(pass, 1, &binding, 1); // uv at slot 1
+  }
+
+  if (color_buf) {
+    binding.buffer = color_buf;
+    binding.offset = 0;
+    SDL_BindGPUVertexBuffers(pass, 2, &binding, 1); // color at slot 2
+  }
+
+  if (normal_buf) {
+    binding.buffer = normal_buf;
+    binding.offset = 0;
+    SDL_BindGPUVertexBuffers(pass, 3, &binding, 1); // normal at slot 3
+  }
+
+  // Bind the index buffer
+  // If your indices are 16-bit, pass SDL_GPU_INDEXELEMENTSIZE_16BIT
+  // If they're 32-bit, pass SDL_GPU_INDEXELEMENTSIZE_32BIT.
+  // Our model_buffer code used uint32 for indices, so let's assume 32-bit.
+  SDL_BindGPUIndexBuffer(pass, &(SDL_GPUBufferBinding){.buffer = indices_buf, .offset = 0}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+
+  return JS_UNDEFINED;
+)
+
+JSC_CCALL(renderpass_end,
+  SDL_GPURenderPass *pass = js2SDL_GPURenderPass(js,self);
+  SDL_EndGPURenderPass(pass);
+)
+
+
+JSC_CCALL(renderpass_bind_mat,
+  SDL_GPURenderPass *pass = js2SDL_GPURenderPass(js, self);
+  JSValue mat = argv[0];
+
+  // Look for the diffuse property on the material
+  JSValue diffuse_val = JS_GetPropertyStr(js, mat, "diffuse");
+  if (!JS_IsUndefined(diffuse_val)) {
+    // Retrieve the GPU texture from diffuse.gpu
+    JSValue diffuse_gpu_val = JS_GetPropertyStr(js, diffuse_val, "texture");
+    SDL_GPUTexture *texture = js2SDL_GPUTexture(js, diffuse_gpu_val);
+
+    // Retrieve the sampler from diffuse.sampler
+    JSValue sampler_val = JS_GetPropertyStr(js, diffuse_val, "sampler");
+    SDL_GPUSampler *sampler = NULL;
+    if (JS_IsUndefined(sampler_val))
+      return JS_ThrowReferenceError(js,"Image needs a sampler!");
+    sampler = js2SDL_GPUSampler(js, sampler_val);
+
+    // Free JS values now that we have native pointers
+    JS_FreeValue(js, sampler_val);
+    JS_FreeValue(js, diffuse_gpu_val);
+    JS_FreeValue(js, diffuse_val);
+
+    // If both texture and sampler are valid, bind them
+    if (texture && sampler) {
+      SDL_BindGPUFragmentSamplers(
+        pass,
+        0,
+        &(SDL_GPUTextureSamplerBinding){ .texture = texture, .sampler = sampler },
+        1
+      );
+    }
+  } else {
+    // No diffuse property, do nothing
+    JS_FreeValue(js, diffuse_val);
+  }
 )
 
 static const JSCFunctionListEntry js_SDL_GPURenderPass_funcs[] = {
   MIST_FUNC_DEF(renderpass, bind_pipeline, 1),
+  MIST_FUNC_DEF(renderpass, bind_model, 1),
+  MIST_FUNC_DEF(renderpass, bind_mat, 1),
   MIST_FUNC_DEF(renderpass, draw, 5),
+  MIST_FUNC_DEF(renderpass, end, 0),
 };
 
+JSC_CCALL(copypass_end,
+  SDL_GPUCopyPass *pass = js2SDL_GPUCopyPass(js,self);
+  SDL_EndGPUCopyPass(pass);
+)
+
+float gw, gh;
+
+// On GPUCommandBuffer object
+JSC_CCALL(cmd_render_pass,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  SDL_GPUColorTargetInfo info = {0};
+  SDL_GPUTexture *swapchain;
+  Uint32 w, h;
+  SDL_AcquireGPUSwapchainTexture(
+    cmds,
+    global_window,
+    &swapchain,
+    &w,
+    &h
+  );
+  gw = w;
+  gh = h;
+  info.texture = swapchain;
+  info.clear_color = (SDL_FColor){1.0,0,0,1.0};
+  info.load_op = SDL_GPU_LOADOP_CLEAR;
+  info.store_op = SDL_GPU_STOREOP_STORE; 
+  SDL_GPURenderPass *pass = SDL_BeginGPURenderPass(cmds, &info, 1, NULL);
+  if (!pass) return JS_ThrowInternalError(js, "Failed to begin render pass");
+  return SDL_GPURenderPass2js(js,pass);
+)
+
+JSC_CCALL(cmd_bind_pipeline,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  SDL_GPUGraphicsPipeline *pipeline = js2SDL_GPUGraphicsPipeline(js, argv[0]);
+  SDL_BindGPUGraphicsPipeline(cmds, pipeline);
+)
+
+JSC_CCALL(cmd_bind_vertex_buffer,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  int slot;
+  JS_ToInt32(js, &slot, argv[0]);
+  SDL_GPUBuffer *buffer = js2SDL_GPUBuffer(js, argv[1]);
+  size_t offset = 0;
+  if (argc > 2) JS_ToIndex(js, &offset, argv[2]); 
+  SDL_BindGPUVertexBuffers(cmds, slot, &(SDL_GPUBufferBinding){.buffer = buffer, .offset = offset}, 1);
+)
+
+JSC_CCALL(cmd_bind_index_buffer,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  SDL_GPUBuffer *buffer = js2SDL_GPUBuffer(js, argv[0]);
+  size_t offset = 0;
+  if (argc > 1) JS_ToIndex(js, &offset, argv[1]);
+  SDL_BindGPUIndexBuffer(cmds, &(SDL_GPUBufferBinding){.buffer = buffer, .offset = offset}, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+)
+
+JSC_CCALL(cmd_bind_fragment_sampler,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  int slot;
+  JS_ToInt32(js, &slot, argv[0]);
+  SDL_GPUTexture *tex = js2SDL_GPUTexture(js, argv[1]);
+  SDL_GPUSampler *sampler = js2SDL_GPUSampler(js, argv[2]);
+  SDL_BindGPUFragmentSamplers(cmds, slot, &(SDL_GPUTextureSamplerBinding){.texture = tex, .sampler = sampler}, 1);
+)
+
+JSC_CCALL(cmd_push_vertex_uniform_data,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  int slot;
+  JS_ToInt32(js, &slot, argv[0]);
+  size_t buf_size;
+  void *data = JS_GetArrayBuffer(js, &buf_size, argv[1]);
+  SDL_PushGPUVertexUniformData(cmds, slot, data, buf_size);
+)
+
+JSC_CCALL(cmd_push_fragment_uniform_data,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  int slot;
+  JS_ToInt32(js, &slot, argv[0]);
+  size_t buf_size;
+  void *data = JS_GetArrayBuffer(js, &buf_size, argv[1]);
+  SDL_PushGPUFragmentUniformData(cmds, slot, data, buf_size);
+)
+
+JSC_CCALL(cmd_submit,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js,self);
+  SDL_SubmitGPUCommandBuffer(cmds);
+)
+
+JSC_CCALL(cmd_camera,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js,self);  
+  SDL_Rect vp;
+  vp.w = gw;
+  vp.h = gh;
+  int centered = JS_ToBool(js,argv[1]);
+
+  HMM_Mat4 proj;
+if (centered) {
+  // World coordinates: (0,0) at screen center, Y up
+  proj = HMM_Orthographic_RH_NO(
+      -(float)vp.w * 0.5f, (float)vp.w * 0.5f, // left, right
+      -(float)vp.h * 0.5f, (float)vp.h * 0.5f, // bottom, top
+      -1.0f, 1.0f
+  );
+} else {
+  // UI coordinates: (0,0) at bottom-left corner, Y up
+  proj = HMM_Orthographic_RH_NO(
+      0.0f, (float)vp.w,   // left, right
+      0.0f, (float)vp.h,   // bottom, top
+      -1.0f, 1.0f
+  );
+
+}
+
+
+
+transform *tra = js2transform(js, argv[0]);
+HMM_Mat4 view = HMM_Translate((HMM_Vec3){-tra->pos.x, -tra->pos.y, 0.0f});
+
+    // Update uniforms for this batch
+    app_data data = {0};
+    data.vp = HMM_MulM4(proj, view);
+    data.time = SDL_GetTicksNS() / 1000000000.0f;
+    SDL_PushGPUVertexUniformData(cmds, 0, &data, sizeof(data));
+)
+
+JSC_CCALL(cmd_camera_perspective,
+  SDL_GPUCommandBuffer *cmds = js2SDL_GPUCommandBuffer(js, self);
+  SDL_Rect vp;
+  vp.w = gw;
+  vp.h = gh;
+
+  // Get camera object
+  JSValue camera_obj = argv[0];
+
+  // Extract camera parameters
+  // transform property
+  JSValue jstransform = JS_GetPropertyStr(js, camera_obj, "transform");
+  if (JS_IsUndefined(jstransform))
+    return JS_ThrowReferenceError(js, "Camera object must have a transform property.");
+
+  transform *tra = js2transform(js, jstransform);
+  JS_FreeValue(js,jstransform);
+
+  // fov property (assume in degrees, convert to radians)
+  JSValue fov_val = JS_GetPropertyStr(js, camera_obj, "fov");
+  if (JS_IsUndefined(fov_val))
+    return JS_ThrowReferenceError(js, "Camera object must have an fov property.");
+
+  float fov_degrees = js2number(js, fov_val);
+  float fov = fov_degrees * (HMM_PI / 180.0f); // convert to radians
+  JS_FreeValue(js, fov_val);
+
+  // near property
+  JSValue near_val = JS_GetPropertyStr(js, camera_obj, "near");
+  if (JS_IsUndefined(near_val))
+    return JS_ThrowReferenceError(js, "Camera object must have a near property.");
+  float near_plane = js2number(js, near_val);
+  JS_FreeValue(js, near_val);
+
+  // far property
+  JSValue far_val = JS_GetPropertyStr(js, camera_obj, "far");
+  if (JS_IsUndefined(far_val))
+    return JS_ThrowReferenceError(js, "Camera object must have a far property.");
+  float far_plane = js2number(js, far_val);
+  JS_FreeValue(js, far_val);
+
+  // Compute aspect ratio
+  float aspect = (float)vp.w / (float)vp.h;
+
+  // Create a perspective projection matrix
+  HMM_Mat4 proj = HMM_Perspective_RH_NO(fov, aspect, near_plane, far_plane);
+
+  // Compute a view matrix from the camera transform
+  // If transform includes rotation and position, we should create a full transform matrix and invert it.
+  // Assuming js2transform_mat4 returns a full world transform matrix of the camera (position & rotation):
+  HMM_Mat4 camera_world = transform2mat(tra);
+  HMM_Mat4 view = HMM_InvGeneralM4(camera_world);
+
+  // If rotation isn't handled by js2transform_mat4, and only position is known:
+  // HMM_Mat4 view = HMM_Translate(HMM_Vec3{-tra->pos.x, -tra->pos.y, -tra->pos.z});
+  // For a proper camera, though, you'll want to consider orientation as well.
+
+  // Update uniforms
+  app_data data = {0};
+  data.vp = HMM_MulM4(proj, view);
+  data.time = SDL_GetTicksNS() / 1000000000.0f;
+  SDL_PushGPUVertexUniformData(cmds, 0, &data, sizeof(data));
+)
+
 static const JSCFunctionListEntry js_SDL_GPUCommandBuffer_funcs[] = {
+  MIST_FUNC_DEF(cmd, render_pass, 1),
+  MIST_FUNC_DEF(cmd, bind_pipeline, 1),
+  MIST_FUNC_DEF(cmd, bind_vertex_buffer, 2),
+  MIST_FUNC_DEF(cmd, bind_index_buffer, 1),
+  MIST_FUNC_DEF(cmd, bind_fragment_sampler, 3),
+  MIST_FUNC_DEF(cmd, push_vertex_uniform_data, 2),
+  MIST_FUNC_DEF(cmd, push_fragment_uniform_data, 2),
+  MIST_FUNC_DEF(cmd, submit, 0),
+  MIST_FUNC_DEF(cmd, camera, 2),
+  MIST_FUNC_DEF(cmd, camera_perspective, 1),
 };
 
 JSC_CCALL(surface_blit,
@@ -3990,6 +5463,154 @@ JSC_CCALL(os_make_transform, return transform2js(js,make_transform()))
 
 JSC_SCALL(os_system, return number2js(js,system(str)); )
 
+JSC_SCALL(os_model_buffer,
+  int mesh_idx = 0;
+  const struct aiScene *scene = aiImportFile(
+    str,
+    aiProcess_Triangulate |
+    aiProcess_GenNormals |
+    aiProcess_GenUVCoords |
+    aiProcess_FlipUVs     |
+    aiProcess_OptimizeMeshes |
+    aiProcess_JoinIdenticalVertices
+  );
+
+  if (!scene) {
+    JS_ThrowInternalError(js, "Failed to load model: %s", aiGetErrorString());
+    return JS_UNDEFINED;
+  }
+
+  if (mesh_idx < 0 || mesh_idx >= (int)scene->mNumMeshes) {
+    JS_ThrowInternalError(js, "Invalid mesh index");
+    aiReleaseImport(scene);
+    return JS_UNDEFINED;
+  }
+
+  struct aiMesh *mesh = scene->mMeshes[mesh_idx];
+
+  if (!mesh->mVertices) {
+    JS_ThrowInternalError(js, "Mesh has no vertices");
+    aiReleaseImport(scene);
+    return JS_UNDEFINED;
+  }
+
+  size_t num_verts = mesh->mNumVertices;
+  float *posdata = NULL;
+  float *normdata = NULL;
+  float *uvdata = NULL;
+  float *colordata = NULL; // New: To provide a default color
+  Uint16 *indicesdata = NULL;
+
+  // Positions (float3)
+  posdata = malloc(sizeof(float)*3*num_verts);
+  for (size_t i = 0; i < num_verts; i++) {
+    posdata[i*3+0] = mesh->mVertices[i].x;
+    posdata[i*3+1] = mesh->mVertices[i].y;
+    posdata[i*3+2] = mesh->mVertices[i].z;
+  }
+
+  // Normals (float3) - guaranteed by aiProcess_GenNormals, but check anyway
+  if (mesh->mNormals) {
+    normdata = malloc(sizeof(float)*3*num_verts);
+    for (size_t i = 0; i < num_verts; i++) {
+      normdata[i*3+0] = mesh->mNormals[i].x;
+      normdata[i*3+1] = mesh->mNormals[i].y;
+      normdata[i*3+2] = mesh->mNormals[i].z;
+    }
+  } else {
+    // Provide a default normal if none are available
+    normdata = malloc(sizeof(float)*3*num_verts);
+    for (size_t i = 0; i < num_verts; i++) {
+      normdata[i*3+0] = 0.0f;
+      normdata[i*3+1] = 0.0f;
+      normdata[i*3+2] = 1.0f;
+    }
+  }
+
+  // UVs (float2)
+  if (mesh->mTextureCoords[0]) {
+    uvdata = malloc(sizeof(float)*2*num_verts);
+    for (size_t i = 0; i < num_verts; i++) {
+      uvdata[i*2+0] = mesh->mTextureCoords[0][i].x;
+      uvdata[i*2+1] = mesh->mTextureCoords[0][i].y;
+    }
+  } else {
+    // Default UVs if not present
+    uvdata = malloc(sizeof(float)*2*num_verts);
+    for (size_t i = 0; i < num_verts; i++) {
+      uvdata[i*2+0] = 0.0f;
+      uvdata[i*2+1] = 0.0f;
+    }
+  }
+
+  // Colors (float4) - Assimp may provide vertex colors, but if not, default to white
+  // Check if there's a color channel
+  if (mesh->mColors[0]) {
+    colordata = malloc(sizeof(float)*4*num_verts);
+    for (size_t i = 0; i < num_verts; i++) {
+      colordata[i*4+0] = mesh->mColors[0][i].r;
+      colordata[i*4+1] = mesh->mColors[0][i].g;
+      colordata[i*4+2] = mesh->mColors[0][i].b;
+      colordata[i*4+3] = mesh->mColors[0][i].a;
+    }
+  } else {
+    colordata = malloc(sizeof(float)*4*num_verts);
+    for (size_t i = 0; i < num_verts; i++) {
+      colordata[i*4+0] = 1.0f;
+      colordata[i*4+1] = 1.0f;
+      colordata[i*4+2] = 1.0f;
+      colordata[i*4+3] = 1.0f;
+    }
+  }
+
+  // Indices
+  size_t num_faces = mesh->mNumFaces;
+  size_t index_count = num_faces * 3; 
+  indicesdata = malloc(sizeof(Uint16)*index_count);
+  for (size_t i = 0; i < num_faces; i++) {
+    const struct aiFace *face = &mesh->mFaces[i];
+    indicesdata[i*3+0] = face->mIndices[0];
+    indicesdata[i*3+1] = face->mIndices[1];
+    indicesdata[i*3+2] = face->mIndices[2];
+  }
+
+  // Create a JS object to hold the buffers
+  ret = JS_NewObject(js);
+
+  // Positions: float3
+  JS_SetProperty(js, ret, pos_atom,
+    make_gpu_buffer(js, posdata, sizeof(float)*3*num_verts, JS_TYPED_ARRAY_FLOAT32, 3, 1));
+
+  // UV: float2
+  JS_SetProperty(js, ret, uv_atom,
+    make_gpu_buffer(js, uvdata, sizeof(float)*2*num_verts, JS_TYPED_ARRAY_FLOAT32, 2, 1));
+
+  // Color: float4
+  JS_SetProperty(js, ret, color_atom,
+    make_gpu_buffer(js, colordata, sizeof(float)*4*num_verts, JS_TYPED_ARRAY_FLOAT32, 4, 1));
+
+  // Normal: float3
+  JS_SetProperty(js, ret, norm_atom,
+    make_gpu_buffer(js, normdata, sizeof(float)*3*num_verts, JS_TYPED_ARRAY_FLOAT32, 3, 1));
+
+  // Indices: uint32
+  JS_SetProperty(js, ret, indices_atom,
+    make_gpu_buffer(js, indicesdata, sizeof(unsigned int)*index_count, JS_TYPED_ARRAY_UINT16, 0, 1));
+
+  // Metadata
+  JS_SetProperty(js, ret, vertices_atom, number2js(js, (double)num_verts));
+  JS_SetProperty(js, ret, count_atom, number2js(js, (double)index_count));
+
+  // Cleanup
+  free(posdata);
+  free(normdata);
+  free(uvdata);
+  free(colordata);
+  free(indicesdata);
+
+  aiReleaseImport(scene);
+)
+
 JSC_SCALL(os_gltf_buffer,
   int buffer_idx = js2number(js,argv[1]);
   int type = js2number(js,argv[2]);
@@ -4239,81 +5860,6 @@ JSC_SCALL(os_kill,
   raise(sig);
   return JS_UNDEFINED;
 )
-
-// Given an array of sprites, make the necessary geometry
-// A sprite is expected to have:
-// transform: a transform encoding position and rotation. its scale is in pixels - so a scale of 1 means the image will draw only on a single pixel.
-// image: a standard prosperon image of a surface, rect, and texture
-// color: the color this sprite should be hued by
-
-// This might change depending on the backend, so best to not investigate. It should be consumed with "renderer_geometry"
-// It might be a list of rectangles, it might be a handful of buffers, etc ..
-JSC_CCALL(os_make_sprite_mesh,
-  JSValue sprites = argv[0];
-  JSValue old = argv[1];
-  size_t quads = js_arrlen(js,argv[0]);
-  size_t verts = quads*4;
-  size_t count = quads*6;
-
-  HMM_Vec2 *posdata = malloc(sizeof(*posdata)*verts);
-  HMM_Vec2 *uvdata = malloc(sizeof(*uvdata)*verts);
-  HMM_Vec4 *colordata = malloc(sizeof(*colordata)*quads);
-
-  for (int i = 0; i < quads; i++) {
-    JSValue sub = JS_GetPropertyUint32(js,sprites,i);
-    JSValue jstransform = JS_GetProperty(js,sub,transform_atom);
-    transform *tr = js2transform(js,jstransform);
-    JSValue jssrc = JS_GetProperty(js,sub,src_atom);
-    JSValue jscolor = JS_GetProperty(js,sub,color_atom);
-    HMM_Vec4 color;
-
-    rect src;
-    if (JS_IsUndefined(jssrc))
-      src = (rect){.x = 0, .y = 0, .w = 1, .h = 1};
-    else
-      src = js2rect(js,jssrc);
-    
-    if (JS_IsUndefined(jscolor))
-      color = (HMM_Vec4){1,1,1,1};
-    else
-      color = js2vec4(js,jscolor);
-
-    // Calculate the base index for the current quad
-    size_t base = i * 4;
-
-    HMM_Mat3 trmat = js2transform_mat3(js,jstransform);
-
-    HMM_Vec3 base_quad[4] = {
-      {0.0,0.0,1.0},
-      {1.0,0.0,1.0},
-      {0.0,1.0,1.0},
-      {1.0,1.0,1.0}
-    };
-    for (int j = 0; j < 4; j++)
-      posdata[base+j] = HMM_MulM3V3(trmat, base_quad[j]).xy;
-
-    // Define the UV coordinates based on the source rectangle
-    uvdata[base + 0] = (HMM_Vec2){ src.x,                  src.y + src.h };
-    uvdata[base + 1] = (HMM_Vec2){ src.x + src.w,      src.y + src.h };    
-    uvdata[base + 2] = (HMM_Vec2){ src.x,                  src.y };
-    uvdata[base + 3] = (HMM_Vec2){ src.x + src.w,      src.y };
-
-    colordata[i] = color;
-
-    JS_FreeValue(js,sub);
-    JS_FreeValue(js,jscolor);
-    JS_FreeValue(js,jssrc);
-  }
-
-  ret = JS_NewObject(js);
-  JS_SetProperty(js, ret, pos_atom, make_gpu_buffer(js, posdata, sizeof(*posdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
-  JS_SetProperty(js, ret, uv_atom, make_gpu_buffer(js, uvdata, sizeof(*uvdata) * verts, JS_TYPED_ARRAY_FLOAT32, 2, 0));
-  JS_SetProperty(js, ret, color_atom, make_gpu_buffer(js, colordata, sizeof(*colordata) * quads, JS_TYPED_ARRAY_FLOAT32, 0, 0));
-  JS_SetProperty(js, ret, indices_atom, make_quad_indices_buffer(js, quads));
-  JS_SetProperty(js, ret, vertices_atom, number2js(js, verts));
-  JS_SetProperty(js, ret, count_atom, number2js(js, count));
-)
-
 int detectImageInWebcam(SDL_Surface *a, SDL_Surface *b);
 /*JSC_CCALL(os_match_img,
   SDL_Surface *img1 = js2SDL_Surface(js,argv[0]);
@@ -4330,6 +5876,7 @@ JSC_CCALL(os_sleep,
 
 static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, turbulence, 4),
+  MIST_FUNC_DEF(os, model_buffer, 1),
   MIST_FUNC_DEF(os, fbm, 4),
   MIST_FUNC_DEF(os, make_color_buffer, 2),
   MIST_FUNC_DEF(os, ridge, 5),
@@ -4363,7 +5910,6 @@ static const JSCFunctionListEntry js_os_funcs[] = {
   MIST_FUNC_DEF(os, make_plane, 2),
   MIST_FUNC_DEF(os, make_video, 1),
   MIST_FUNC_DEF(os, make_timer, 1),
-  MIST_FUNC_DEF(os, make_sprite_mesh, 2),
   MIST_FUNC_DEF(os, make_text_buffer, 6),
   MIST_FUNC_DEF(os, update_timers, 1),
   MIST_FUNC_DEF(os, mem, 1),
@@ -4453,8 +5999,13 @@ void ffi_load(JSContext *js) {
   QJSCLASSPREP_FUNCS(SDL_Cursor)
   QJSCLASSPREP_FUNCS(SDL_GPUDevice)
   QJSCLASSPREP_FUNCS(SDL_GPUTexture)
-//  QJSCLASSPREP_FUNCS(SDL_Cursor)
-//  QJSCLASSPREP_FUNCS(SDL_Cursor)
+  QJSCLASSPREP_FUNCS(SDL_GPUCommandBuffer)
+  QJSCLASSPREP_FUNCS(SDL_GPURenderPass)
+//  QJSCLASSPREP_FUNCS(SDL_GPUGraphicsPipeline)
+//  QJSCLASSPREP_FUNCS(SDL_GPUSampler)
+//  QJSCLASSPREP_FUNCS(SDL_GPUShader)
+//  QJSCLASSPREP_FUNCS(SDL_GPUBuffer)
+//  QJSCLASSPREP_FUNCS(SDL_GPUTransferBuffer)
   
 
   QJSGLOBALCLASS(os);
@@ -4570,7 +6121,22 @@ void ffi_load(JSContext *js) {
   src_alpha_saturate_atom = JS_NewAtom(js, "src_alpha_saturate");
   none_cull_atom = JS_NewAtom(js, "none");
   front_cull_atom = JS_NewAtom(js, "front");
-  back_cull_atom = JS_NewAtom(js, "back");  
+  back_cull_atom = JS_NewAtom(js, "back");
+  norm_atom = JS_NewAtom(js,"norm");
+
+  nearest_atom = JS_NewAtom(js, "nearest");
+  linear_atom = JS_NewAtom(js, "linear");
+
+  mipmap_nearest_atom = JS_NewAtom(js, "nearest");  // For mipmap mode "nearest"
+  mipmap_linear_atom = JS_NewAtom(js, "linear");    // For mipmap mode "linear"
+
+  repeat_atom = JS_NewAtom(js, "repeat");
+  mirror_atom = JS_NewAtom(js, "mirror");
+  clamp_edge_atom = JS_NewAtom(js, "clamp_edge");
+  clamp_border_atom = JS_NewAtom(js, "clamp_border");
+  vertex_atom = JS_NewAtom(js, "vertex");
+  index_atom = JS_NewAtom(js, "index");
+  indirect_atom = JS_NewAtom(js, "indirect");
 
   fill_event_atoms(js);
 

@@ -247,9 +247,9 @@ Cmdline.register_order(
     else console.warn("No config.js file found. Starting with default parameters.");
     
    prosperon.window = game.engine_start(prosperon);
-//   var renderer = prosperon.window.make_renderer("gpu");
-//   render._main = renderer;
    render._main = prosperon.window.make_gpu();
+   render._main.window = prosperon.window;
+   render._main.claim_window(prosperon.window);
    var tt = game.texture('moon');
    tt.texture.__proto__.toString = function() { return os.value_id(this); }
 

@@ -43,6 +43,8 @@ var unit_transform = os.make_transform();
   },
 */
 
+var sprite_mesh = {};
+
 render.doc = {
   doc: "Functions for rendering modes.",
   normal: "Final render with all lighting.",
@@ -54,6 +56,8 @@ cur.images = [];
 cur.samplers = [];
 
 var base_pipeline = {
+  vertex: "sprite.vert",
+  frag: "sprite.frag",
   primitive: "triangle", // point, line, linestrip, triangle, trianglestrip
   fill: true, // false for lines
   depth: {
@@ -101,64 +105,13 @@ var base_pipeline = {
   },
   label: "scripted pipeline"
 }
-render.base_pipeline = base_pipeline;
 
-var pipe_shaders = new WeakMap();
+var pipeline_3d = Object.create(base_pipeline);
 
-// Uses the shader with the specified pipeline. If none specified, uses the base pipeline
-render.use_shader = function use_shader(shader, pipeline = base_pipeline) {
-  if (typeof shader === "string") shader = make_shader(shader);
-  if (cur.shader === shader) return;
-  
-  if (!pipe_shaders.has(shader)) pipe_shaders.set(shader, new WeakMap());
-  var shader_pipelines = pipe_shaders.get(shader);
-  if (!shader_pipelines.has(pipeline)) {
-    var new_pipeline = render.make_pipeline(shader,pipeline);
-    shader_pipelines.set(pipeline, new_pipeline);
-  }
-  
-  var use_pipeline = shader_pipelines.get(pipeline);
-  if (cur.shader === shader && cur.pipeline === use_pipeline) return;
-  
-  cur.shader = shader;
-  cur.bind = undefined;
-  cur.mesh = undefined;
-  cur.ssbo = undefined;
-  cur.images = [];
-  cur.pipeline = use_pipeline;
-  
-  // Grab or create a pipeline obj that utilizes the specific shader and pipeline
-  render.setpipeline(use_pipeline);
-  shader_globals(cur.shader);
-};
-
-render.use_pipeline = function use_pipeline(pipeline) {
-
-}
-
-render.use_mat = function use_mat(mat) {
-  if (!cur.shader) return;
-  if (cur.mat === mat) return;
-
-  shader_apply_material(cur.shader, mat, cur.mat);
-
-  cur.mat = mat;
-
-  cur.images.length = 0;
-  cur.samplers.length = 0;
-  if (!cur.shader.fs.images) return;
-  for (var img of cur.shader.fs.images) {
-    if (mat[img.name]) cur.images.push(mat[img.name]);
-    else cur.images.push(game.texture("no_tex.gif"));
-  }
-  for (var smp of cur.shader.fs.samplers) {
-    var std = smp.sampler_type === "nonfiltering";
-    cur.samplers.push(std);
-  }
-};
-
-function set_model(t) {
-  if (cur.shader.vs.unimap.model) render.setunim4(0, cur.shader.vs.unimap.model.slot, t);
+function use_pipeline(pipeline) {
+  if (!pipeline.gpu)
+    pipeline.gpu = gpu.make_pipeline(pipeline);
+  render._main.set_pipeline(pipeline);
 }
 
 render.poly_prim = function poly_prim(verts) {
@@ -181,25 +134,6 @@ render.poly_prim = function poly_prim(verts) {
   };
 };
 
-var uni_globals = {
-  time(stage, slot) {
-    render.setuniv(stage, slot, profile.secs(profile.now()));
-  },
-  projection(stage, slot) {
-    render.setuniproj(stage, slot);
-  },
-  view(stage, slot) {
-    render.setuniview(stage, slot);
-  },
-  vp(stage, slot) {
-    render.setunivp(stage, slot);
-  },
-};
-
-function set_global_uni(uni, stage) {
-  uni_globals[uni.name]?.(stage, uni.slot);
-}
-
 var shader_cache = {};
 var shader_times = {};
 
@@ -221,153 +155,13 @@ render.hotreload = function shader_hotreload() {
   }
 };
 
-function create_shader_obj(file) {
-  var driver = os.gpu_driver();
-  switch(driver) {
-  }
-  var files = [file];
-  var out = ".prosperon/tmp.shader";
-  var shader = io.slurp(file);
-
-  var incs = shader.match(/#include <.*>/g);
-  if (incs)
-    for (var inc of incs) {
-      var filez = inc.match(/#include <(.*)>/)[1];
-      var macro = io.slurp(filez);
-      if (!macro) {
-        filez = `${filez}`;
-        macro = io.slurp(filez);
-      }
-      shader = shader.replace(inc, macro);
-      files.push(filez);
-    }
-
-  shader = shader.replace(/uniform\s+(\w+)\s+(\w+);/g, "uniform _$2 { $1 $2; };");
-  shader = shader.replace(/(texture2D|sampler) /g, "uniform $1 ");
-
-  io.slurpwrite(out, shader);
-
-  var compiled = {};
-
-  // shader file is created, now cross compile to all targets
-  for (var platform in shaderlang) {
-    var backend = shaderlang[platform];
-    var ret = os.system(`sokol-shdc -f bare_yaml --slang=${backend} -i ${out} -o ${out}`);
-    if (ret) {
-      console.error(`error compiling shader ${file}. No compilation found for ${platform}:${backend}, and no cross compiler available.`);
-      return;
-    }
-
-    /* Take YAML and create the shader object */
-    var yamlfile = `${out}_reflection.yaml`;
-    var jjson = yaml.tojson(io.slurp(yamlfile));
-    var obj = json.decode(jjson);
-    io.rm(yamlfile);
-
-    obj = obj.shaders[0].programs[0];
-    function add_code(stage) {
-      stage.code = io.slurp(stage.path);
-
-      io.rm(stage.path);
-      delete stage.path;
-    }
-
-    add_code(obj.vs);
-    if (!obj.fs && obj.vs.fs) {
-      obj.fs = obj.vs.fs;
-      delete obj.vs.fs;
-    }
-
-    add_code(obj.fs);
-
-    obj.indexed = true;
-
-    if (obj.vs.inputs)
-      for (var i of obj.vs.inputs) {
-        if (!(i.name in attr_map)) i.mat = -1;
-        else i.mat = attr_map[i.name];
-      }
-
-    function make_unimap(stage) {
-      if (!stage.uniform_blocks) return {};
-      var unimap = {};
-      for (var uni of stage.uniform_blocks) {
-        var uniname = uni.struct_name[0] == "_" ? uni.struct_name.slice(1) : uni.struct_name;
-
-        unimap[uniname] = {
-          name: uniname,
-          slot: Number(uni.slot),
-          size: Number(uni.size),
-        };
-      }
-
-      return unimap;
-    }
-
-    obj.vs.unimap = make_unimap(obj.vs);
-    obj.fs.unimap = make_unimap(obj.fs);
-
-    obj.name = file;
-
-    strip_shader_inputs(obj);
-
-    compiled[platform] = obj;
-  }
-
-  compiled.files = files;
-  compiled.source = shader;
-
-  return compiled;
-}
-
-function make_shader(shader, pipe) {
-  if (shader_cache[shader]) return shader_cache[shader];
-
-  var file = shader;
-  shader = io.slurp(file);
-  if (!shader)
-    shader = io.slurp(`${file}`);
-
-  var writejson = `.prosperon/${file.name()}.shader.json`;
-
-  breakme: if (io.exists(writejson)) {
-    var data = json.decode(io.slurp(writejson));
-    var filemod = io.mod(writejson);
-    if (!data.files) break breakme;
-    for (var i of data.files) {
-      if (io.mod(i) > filemod) {
-        break breakme;
-      }
-    }
-    
-    var shaderobj = json.decode(io.slurp(writejson));
-    var obj = shaderobj[os.sys()];
-    
-    shader_cache[file] = obj;
-    shader_times[file] = io.mod(file);
-    return obj;
-  }
-  
-  var compiled = create_shader_obj(file);
-  io.slurpwrite(writejson, json.encode(compiled));
-  var obj = compiled[os.sys()];
-
-  shader_cache[file] = obj;
-  shader_times[file] = io.mod(file);
-  
-  return obj;
-}
-
-var shader_unisize = {
-  4: render.setuniv,
-  8: render.setuniv2,
-  12: render.setuniv3,
-  16: render.setuniv4,
-};
-
-function shader_globals(shader) {
-  for (var p in shader.vs.unimap) set_global_uni(shader.vs.unimap[p], 0);
-  for (var p in shader.fs.unimap) set_global_uni(shader.fs.unimap[p], 1);
+function make_shader(shader, ...args) {
+  var file = `shaders/spirv/${shader}.spv`;
+  if (shader_cache[file]) return shader_cache[file];
+  shader = io.slurpbytes(file);
+  shader = render._main.make_shader(shader, ...args);
+  shader_cache[file] = shader;
+  return shader;
 }
 
 function shader_apply_material(shader, material = {}, old = {}) {
@@ -491,40 +285,95 @@ render.device = {
   gamegear: [160, 144, 3.2],
 };
 
-render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
+var sprite_stack = [];
 
-var textshader;
-var circleshader;
-var polyshader;
-var slice9shader;
-var parshader;
-var spritessboshader;
-var polyssboshader;
-var sprite_ssbo;
+render.device.doc = `Device resolutions given as [x,y,inches diagonal].`;
+var std_sampler;
+
+function upload_model(model)
+{
+  var bufs = [];
+  for (var i in model) {
+    if (typeof model[i] !== 'object') continue;
+    if (i === 'indices') model[i].index = true;
+    bufs.push(model[i]);
+  }
+  render._main.upload(bufs);  
+}
+
+var campos = [0,0,500];
+
+function gpupresent()
+{
+  var myimg = game.texture("pockle");
+  myimg.sampler = std_sampler;
+  var spritemesh = render._main.make_sprite_mesh(sprite_stack);
+  upload_model(spritemesh);
+
+  sprite_stack.length = 0;
+  
+  var cmds = render._main.acquire_cmd_buffer();  
+  var pass = cmds.render_pass();
+try{  
+  pass.bind_pipeline(base_pipeline.gpu);
+  pass.bind_model(spritemesh);
+  pass.bind_mat({diffuse:myimg});
+  cmds.camera(prosperon.camera.transform);
+  pass.draw(spritemesh.count,1,0,0,0);
+  prosperon.camera.transform.pos = campos;
+  campos.y -= 0.1;
+  campos.z += 0.1;
+  prosperon.camera.fov = 60;
+  prosperon.camera.near = 0.1;
+  prosperon.camera.far = 100000;
+  cmds.camera_perspective(prosperon.camera);
+  pass.bind_pipeline(pipeline_model.gpu);
+  pass.bind_model(ducky);
+  pass.draw(ducky.count,1,0,0,0);
+  cmds.camera(prosperon.camera.transform, true);
+  pass.bind_pipeline(base_pipeline.gpu);
+  pass.draw(spritemesh.count,1,0,0,0);
+} catch(e) { console.log(e); } finally {
+  pass.end();
+  cmds.submit();  
+}
+
+}
+
+var ducky;
+var pipeline_model;
 
 render.init = function () {
-  return;
-  textshader = make_shader("text_base.cg");
-  render.spriteshader = make_shader("sprite.cg");
-  spritessboshader = make_shader("sprite_ssbo.cg");
-  var postpipe = Object.create(base_pipeline);
-  postpipe.cull = cull_map.none;
-  postpipe.primitive = primitive_map.triangle;
-  render.postshader = make_shader("simplepost.cg", postpipe);
-  slice9shader = make_shader("9slice.cg");
-  circleshader = make_shader("circle.cg");
-  polyshader = make_shader("poly.cg");
-  parshader = make_shader("baseparticle.cg");
-  polyssboshader = make_shader("poly_ssbo.cg");
-  poly_ssbo = render.make_textssbo();
-  sprite_ssbo = render.make_textssbo();
-
-  render.textshader = textshader;
+  io.mount("core");
+  render._main.present = gpupresent;
+  ducky = os.model_buffer("Duck.glb");
+  upload_model(ducky);
+  for (var i in ducky) console.log(`ducky has ${i}`)
+  console.log(ducky.count)
+  var sprite_vert = make_shader("sprite.vert", true,0,0,0,1);
+  var sprite_frag = make_shader("sprite.frag", false,1,0,0,0);
+  base_pipeline.vertex = sprite_vert;
+  base_pipeline.fragment = sprite_frag;
+  base_pipeline.gpu = render._main.make_pipeline(base_pipeline);
+  var model_vert = make_shader("model.vert", true, 0,0,0,1);
+  var model_frag = make_shader("model.frag", false, 0,0,0,0);
+  pipeline_model = Object.create(base_pipeline);
+  pipeline_model.vertex = model_vert;
+  pipeline_model.fragment = model_frag;
+  pipeline_model.gpu = render._main.make_pipeline(pipeline_model);
+  
+  std_sampler = render._main.make_sampler({
+    min_filter: "nearest",
+    mag_filter: "nearest",
+    mipmap_mode: "nearest",
+    address_mode_u: "clamp_edge",
+    address_mode_v: "clamp_edge",
+    address_mode_w: "clamp_edge"
+  });
 
 /*  os.make_circle2d().draw = function () {
     render.circle(this.body().transform().pos, this.radius, [1, 1, 0, 1]);
   };
-
 
   var disabled = [148 / 255, 148 / 255, 148 / 255, 1];
   var sleep = [1, 140 / 255, 228 / 255, 1];
@@ -617,7 +466,7 @@ function draw_sprites()
     for (var img in layer) {
       var sparray = layer[img];
       if (sparray.length === 0) continue;
-      var geometry = os.make_sprite_mesh(sparray);
+      var geometry = render._main.make_sprite_mesh(sparray);
       render.geometry(sparray[0], geometry);
     }
   }
@@ -702,7 +551,7 @@ function flush_poly() {
   poly_idx = 0;
 }
 
-render.line = function render_line(points, color = Color.white, thickness = 1, shader = polyssboshader, pipe = base_pipeline) {
+render.line = function render_line(points, color = Color.white, thickness = 1, pipe = base_pipeline) {
   render._main.line(points, color);
 };
 
@@ -711,14 +560,14 @@ render.point = function (pos, size, color = Color.blue) {
   render._main.point(pos,color);
 };
 
-render.cross = function render_cross(pos, size, color = Color.red, thickness = 1) {
+render.cross = function render_cross(pos, size, color = Color.red, thickness = 1, pipe = base_pipeline) {
   var a = [pos.add([0, size]), pos.add([0, -size])];
   var b = [pos.add([size, 0]), pos.add([-size, 0])];
   render.line(a, color, thickness);
   render.line(b, color, thickness);
 };
 
-render.arrow = function render_arrow(start, end, color = Color.red, wingspan = 4, wingangle = 10) {
+render.arrow = function render_arrow(start, end, color = Color.red, wingspan = 4, wingangle = 10, pipe = base_pipeline) {
   var dir = end.sub(start).normalized();
   var wing1 = [Vector.rotate(dir, wingangle).scale(wingspan).add(end), end];
   var wing2 = [Vector.rotate(dir, -wingangle).scale(wingspan).add(end), end];
@@ -734,11 +583,11 @@ render.coordinate = function render_coordinate(pos, size, color) {
 
 var queued_shader;
 var queued_pipe;
-render.rectangle = function render_rectangle(rect, color = Color.white, shader = polyssboshader, pipe = base_pipeline) {
+render.rectangle = function render_rectangle(rect, color = Color.white, pipe = base_pipeline) {
   render._main.fillrect(rect,color);
 };
 
-render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = 0) {
+render.text = function text(str, rect, font = cur_font, size = 0, color = Color.white, wrap = 0, pipe = base_pipeline) {
   if (typeof font === 'string')
     font = render.get_font(font)
   var mesh = os.make_text_buffer(str, rect, 0, color, wrap, font);
@@ -924,8 +773,14 @@ render.image = function image(image, rect = [0,0], rotation = 0, color = Color.w
 
   rect.width ??= image.texture.width;
   rect.height ??= image.texture.height;
-
-  render._main.texture(image.texture, rect, image.rect, color);
+  var T = os.make_transform();
+  T.rect(rect);
+  sprite_stack.push({
+    transform: T,
+    color: color,
+    image:image
+  });
+//  render._main.texture(image.texture, rect, image.rect, color);
 };
 
 render.images = function images(image, rects)
@@ -1163,13 +1018,14 @@ prosperon.make_camera = function make_camera() {
   cam.zoom = 1; // the "scale factor" this camera demonstrates
   // camera renders draw calls, and then hud
   cam.render = function() {
-    render._main.camera(this.transform,true);
-    render._main.scale([this.zoom, this.zoom]);
     prosperon.draw();
     draw_sprites();
+    render._main.camera(this.transform,true);
+    render._main.scale([this.zoom, this.zoom]);
+    prosperon.hud();
     render._main.scale([1,1]);
     render._main.camera(unit_transform,false);
-    prosperon.hud();
+
   }
   return cam;
 };
@@ -1296,7 +1152,6 @@ var imgui_fn = function imgui_fn() {
   prosperon.window_render(basesize.scale(mult));
 */
 
-var present_thread = undefined;
 var clearcolor = [100,149,237,255].scale(1/255);
 prosperon.render = function prosperon_render() {
 try{
@@ -1311,8 +1166,7 @@ if (debug.show) try { imgui_fn(); } catch(e) { console.error(e) }
 } catch(e) {
   console.error(e)
 } finally {
-  if (present_thread) present_thread.wait();
-  present_thread = render._main.present();
+  render._main.present();
   tracy.end_frame();  
 }
 };

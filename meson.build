@@ -73,7 +73,7 @@ deps += dependency('qjs-layout',static:true)
 deps += dependency('qjs-nota',static:true)
 deps += dependency('qjs-miniz',static:true)
 deps += dependency('qjs-soloud',static:true)
-
+deps += dependency('assimp')
 deps += dependency('physfs')
 
 #deps += dependency('opencv4')
